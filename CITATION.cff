@@ -1,0 +1,150 @@
+cff-version: 1.2.0
+message: "If you use pls4all in academic work, please cite the software and the relevant foundational papers below."
+title: "pls4all: A portable Partial Least Squares engine with a stable C ABI"
+abstract: >-
+  pls4all reimplements the Partial Least Squares family in C++17 behind a
+  stable C ABI, with first-class bindings for Python, R, MATLAB, JavaScript /
+  WebAssembly and Android. It targets near-infrared spectroscopy,
+  chemometrics, omics and process monitoring, with Adaptive Operator-Mixture
+  PLS (AOM-PLS) and Per-Operator-Per-Component PLS (POP-PLS) as scientific
+  differentiators.
+type: software
+authors:
+  - family-names: Beurier
+    given-names: Grégory
+    affiliation: "CIRAD"
+repository-code: "https://github.com/GBeurier/pls4all"
+url: "https://github.com/GBeurier/pls4all"
+license: "CECILL-2.1"
+version: 0.1.0-phase0
+date-released: "2026-05-14"
+keywords:
+  - partial-least-squares
+  - PLS
+  - PLS-DA
+  - OPLS
+  - SIMPLS
+  - NIPALS
+  - chemometrics
+  - near-infrared
+  - NIRS
+  - spectroscopy
+  - omics
+  - AOM-PLS
+  - POP-PLS
+  - variable-selection
+  - C-ABI
+  - bindings
+
+references:
+  - type: article
+    authors:
+      - family-names: Wold
+        given-names: Svante
+      - family-names: Sjöström
+        given-names: Michael
+      - family-names: Eriksson
+        given-names: Lennart
+    title: "PLS-regression: a basic tool of chemometrics"
+    journal: "Chemometrics and Intelligent Laboratory Systems"
+    year: 2001
+    volume: 58
+    issue: 2
+    pages: "109-130"
+  - type: article
+    authors:
+      - family-names: de Jong
+        given-names: Sijmen
+    title: "SIMPLS: An alternative approach to partial least squares regression"
+    journal: "Chemometrics and Intelligent Laboratory Systems"
+    year: 1993
+    volume: 18
+    issue: 3
+    pages: "251-263"
+  - type: article
+    authors:
+      - family-names: Dayal
+        given-names: Bhupinder S.
+      - family-names: MacGregor
+        given-names: John F.
+    title: "Improved PLS algorithms"
+    journal: "Journal of Chemometrics"
+    year: 1997
+    volume: 11
+    issue: 1
+    pages: "73-85"
+  - type: article
+    authors:
+      - family-names: Trygg
+        given-names: Johan
+      - family-names: Wold
+        given-names: Svante
+    title: "Orthogonal projections to latent structures (O-PLS)"
+    journal: "Journal of Chemometrics"
+    year: 2002
+    volume: 16
+    issue: 3
+    pages: "119-128"
+  - type: article
+    authors:
+      - family-names: Bylesjö
+        given-names: Max
+      - family-names: Rantalainen
+        given-names: Mattias
+      - family-names: Cloarec
+        given-names: Olivier
+      - family-names: Nicholson
+        given-names: Jeremy K.
+      - family-names: Holmes
+        given-names: Elaine
+      - family-names: Trygg
+        given-names: Johan
+    title: "OPLS discriminant analysis: combining the strengths of PLS-DA and SIMCA classification"
+    journal: "Journal of Chemometrics"
+    year: 2006
+    volume: 20
+    issue: 8-10
+    pages: "341-351"
+  - type: article
+    authors:
+      - family-names: Rosipal
+        given-names: Roman
+      - family-names: Trejo
+        given-names: Leonard J.
+    title: "Kernel partial least squares regression in reproducing kernel Hilbert space"
+    journal: "Journal of Machine Learning Research"
+    year: 2001
+    volume: 2
+    pages: "97-123"
+  - type: article
+    authors:
+      - family-names: Nørgaard
+        given-names: Lars
+      - family-names: Saudland
+        given-names: Anders
+      - family-names: Wagner
+        given-names: Jens
+      - family-names: Nielsen
+        given-names: Jens P.
+      - family-names: Munck
+        given-names: Lars
+      - family-names: Engelsen
+        given-names: Søren B.
+    title: "Interval partial least-squares regression (iPLS): A comparative chemometric study"
+    journal: "Applied Spectroscopy"
+    year: 2000
+    volume: 54
+    issue: 3
+    pages: "413-419"
+  - type: article
+    authors:
+      - family-names: Hubert
+        given-names: Mia
+      - family-names: Vanden Branden
+        given-names: Karlien
+    title: "Robust methods for partial least squares regression"
+    journal: "Journal of Chemometrics"
+    year: 2003
+    volume: 17
+    issue: 10
+    pages: "537-549"
