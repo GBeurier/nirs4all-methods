@@ -8,6 +8,7 @@
 add_executable(pls4all_tests
     main.cpp
     abi/test_lifecycle.cpp
+    abi/test_cars_selection.cpp
     abi/test_classification_extensions.cpp
     abi/test_classification_metrics.cpp
     abi/test_lw_pls.cpp

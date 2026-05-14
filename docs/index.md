@@ -38,7 +38,8 @@ Phase 5c stability-selection kernels compute Monte-Carlo coefficient mean/std
 ratios for MCUVE-style feature ranking, and Phase 5d UVE kernels threshold
 real-feature stability against deterministic artificial variables. Phase 5e
 SPA kernels seed from PLS coefficient magnitude and add projection-diverse
-variables.
+variables, and Phase 5f CARS kernels run deterministic exponential-retention
+subset elimination with k-fold CV scoring.
 Component-coefficient kernels expose the
 original-scale regression coefficients for each latent prefix. SIMPLS component
 prefixes can also be scored by deterministic k-fold CV for component-count

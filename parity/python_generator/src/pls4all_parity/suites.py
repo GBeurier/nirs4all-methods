@@ -1662,6 +1662,132 @@ def _spa_selection_expected(
     }
 
 
+def _copy_columns(X: np.ndarray, columns: Sequence[int]) -> np.ndarray:
+    return np.asarray(X, dtype=np.float64)[:, np.asarray([int(c) for c in columns], dtype=np.int64)]
+
+
+def _pls_coefficient_scores(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+) -> np.ndarray:
+    model = PLSRegression(n_components=int(n_components), scale=True, max_iter=500, tol=1e-6)
+    model.fit(np.asarray(X, dtype=np.float64), np.asarray(Y, dtype=np.float64))
+    coefficients = _pls_original_scale_coefficients(model)
+    return np.max(np.abs(coefficients), axis=1)
+
+
+def _kfold_pls_rmse(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+) -> float:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    predictions = np.zeros_like(Y, dtype=np.float64)
+    for train, test in _validation_folds("kfold", X.shape[0], n_splits):
+        train_index = np.asarray(train, dtype=np.int64)
+        test_index = np.asarray(test, dtype=np.int64)
+        model = PLSRegression(n_components=int(n_components), scale=True, max_iter=500, tol=1e-6)
+        model.fit(X[train_index], Y[train_index])
+        fold_predictions = model.predict(X[test_index]).astype(np.float64, copy=False)
+        if fold_predictions.ndim == 1:
+            fold_predictions = fold_predictions.reshape(-1, 1)
+        predictions[test_index, :] = fold_predictions
+    metrics = _regression_metrics_expected(Y, predictions)
+    return float(metrics["metrics"]["values"][0])
+
+
+def _cars_retained_count(n_features: int,
+                         min_features: int,
+                         iteration: int,
+                         n_iterations: int) -> int:
+    if n_iterations <= 1:
+        return int(max(min_features, min(n_features, min_features)))
+    ratio = float(min_features) / float(n_features)
+    fraction = float(iteration) / float(n_iterations - 1)
+    retained = int(math.ceil(float(n_features) * (ratio ** fraction)))
+    return int(max(min_features, min(n_features, retained)))
+
+
+def _cars_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    n_iterations: int,
+    min_features: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    p = int(X.shape[1])
+    active = list(range(p))
+    coefficient_rows: list[float] = []
+    rmse_values: list[float] = []
+    retained_counts: list[int] = []
+    candidates: list[list[int]] = []
+    best_iteration = -1
+    best_rmse = math.inf
+
+    for iteration in range(int(n_iterations)):
+        active_x = _copy_columns(X, active)
+        active_scores = _pls_coefficient_scores(active_x, Y, n_components)
+        full_scores = np.zeros(p, dtype=np.float64)
+        for local_idx, feature in enumerate(active):
+            full_scores[int(feature)] = float(active_scores[local_idx])
+        coefficient_rows.extend(full_scores.tolist())
+
+        retain_count = _cars_retained_count(p, int(min_features), iteration, int(n_iterations))
+        retain_count = min(retain_count, len(active))
+        order = sorted(active, key=lambda feature: (-float(full_scores[int(feature)]), int(feature)))
+        candidate = sorted(int(feature) for feature in order[:retain_count])
+        candidate_x = _copy_columns(X, candidate)
+        rmse = _kfold_pls_rmse(candidate_x, Y, n_components, n_splits)
+
+        retained_counts.append(int(retain_count))
+        rmse_values.append(float(rmse))
+        candidates.append(candidate)
+        if rmse < best_rmse:
+            best_rmse = float(rmse)
+            best_iteration = int(iteration)
+        active = candidate
+
+    selected = candidates[best_iteration]
+    return {
+        "coefficient_scores": {
+            "shape": [int(n_iterations), p],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": coefficient_rows,
+        },
+        "rmse_by_iteration": {
+            "shape": [1, int(n_iterations)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": rmse_values,
+        },
+        "retained_counts": {
+            "shape": [1, int(n_iterations)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": retained_counts,
+        },
+        "selected_indices": {
+            "shape": [1, int(len(selected))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected,
+        },
+        "best_iteration": int(best_iteration),
+        "best_rmse": float(best_rmse),
+    }
+
+
 def _component_coefficients_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -3446,6 +3572,55 @@ def _spa_selection_fixture(
     }
 
 
+def _cars_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    n_iterations: int,
+    min_features: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._cars_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":    "pls_regression",
+                "solver":       "nipals",
+                "n_components": int(n_components),
+                "n_splits":     int(n_splits),
+                "n_iterations": int(n_iterations),
+                "min_features": int(min_features),
+                "reference":    "sklearn PLSRegression deterministic CARS-PLS",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _cars_selection_expected(X,
+                                             Y,
+                                             n_components,
+                                             n_splits,
+                                             n_iterations,
+                                             min_features),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-CARS-selection",
+        },
+    }
+
+
 def _component_coefficients_fixture(
     fixture_id: str,
     seed: int,
@@ -4746,6 +4921,39 @@ def synthetic_spa_pls_projection_v1() -> dict[str, Any]:
                                   Y=Y,
                                   n_components=2,
                                   top_k=5)
+
+
+def synthetic_cars_pls_competitive_v1() -> dict[str, Any]:
+    """28 samples, 12 features, 2 targets for deterministic CARS-PLS selection."""
+    seed = 66
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(28, 5))
+    X = np.column_stack([
+        0.95 * latent[:, 0] + 0.05 * latent[:, 1] + 0.04 * rng.standard_normal(size=28),
+        -0.52 * latent[:, 0] + 0.55 * latent[:, 2] + 0.05 * rng.standard_normal(size=28),
+        0.73 * latent[:, 1] - 0.18 * latent[:, 3] + 0.05 * rng.standard_normal(size=28),
+        0.20 * latent[:, 0] + 0.83 * latent[:, 3] + 0.04 * rng.standard_normal(size=28),
+        -0.62 * latent[:, 2] + 0.31 * latent[:, 3] + 0.05 * rng.standard_normal(size=28),
+        0.33 * latent[:, 4] + 0.15 * latent[:, 0] + 0.06 * rng.standard_normal(size=28),
+        0.24 * latent[:, 1] - 0.21 * latent[:, 4] + 0.07 * rng.standard_normal(size=28),
+        np.sin(np.linspace(0.0, 3.5 * np.pi, 28)) + 0.04 * rng.standard_normal(size=28),
+        np.cos(np.linspace(0.0, 2.5 * np.pi, 28)) + 0.04 * rng.standard_normal(size=28),
+        rng.standard_normal(size=28) * 0.11,
+        0.30 * np.linspace(-1.0, 1.0, 28) + 0.10 * rng.standard_normal(size=28),
+        rng.standard_normal(size=28) * 0.16,
+    ])
+    Y = np.column_stack([
+        1.16 * latent[:, 0] - 0.48 * latent[:, 2] + 0.34 * latent[:, 4] + 0.05 * rng.standard_normal(size=28),
+        -0.43 * latent[:, 1] + 0.71 * latent[:, 3] - 0.20 * latent[:, 4] + 0.05 * rng.standard_normal(size=28),
+    ])
+    return _cars_selection_fixture("synthetic_cars_pls_competitive_v1",
+                                   seed=seed,
+                                   X=X,
+                                   Y=Y,
+                                   n_components=2,
+                                   n_splits=4,
+                                   n_iterations=6,
+                                   min_features=3)
 
 
 def synthetic_component_coefficients_pls2_v1() -> dict[str, Any]:

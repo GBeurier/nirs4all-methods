@@ -166,6 +166,14 @@ HEADER_SPECS = {
         "struct": "SpaSelectionFixture",
         "array": "kSpaSelectionFixtures",
     },
+    "cars-selection": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "cars_selection_fixtures.hpp",
+        "fixtures": (
+            "synthetic_cars_pls_competitive_v1",
+        ),
+        "struct": "CarsSelectionFixture",
+        "array": "kCarsSelectionFixtures",
+    },
     "component-coefficients": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "component_coefficients_fixtures.hpp",
         "fixtures": (
@@ -1870,6 +1878,94 @@ def generate_spa_selection(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_cars_selection(fixture_ids: Sequence[str],
+                            fixture_dir: Path,
+                            out: Path,
+                            family: str,
+                            struct_name: str,
+                            array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct CarsSelectionIndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_components;",
+        "    std::int32_t n_splits;",
+        "    std::int32_t n_iterations;",
+        "    std::int32_t min_features;",
+        "    std::int32_t best_iteration;",
+        "    double best_rmse;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    MatrixRef coefficient_scores;",
+        "    MatrixRef rmse_by_iteration;",
+        "    CarsSelectionIndexRef retained_counts;",
+        "    CarsSelectionIndexRef selected_indices;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        y_name = f"{prefix}_Y"
+        coefficients_name = f"{prefix}_coefficient_scores"
+        rmse_name = f"{prefix}_rmse_by_iteration"
+        retained_name = f"{prefix}_retained_counts"
+        selected_name = f"{prefix}_selected_indices"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
+        _emit_array(lines, coefficients_name, expected["coefficient_scores"]["values"])
+        _emit_array(lines, rmse_name, expected["rmse_by_iteration"]["values"])
+        _emit_int_array(lines, retained_name, expected["retained_counts"]["values"])
+        _emit_int_array(lines, selected_name, expected["selected_indices"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['n_components'])},\n"
+            f"        {int(params['n_splits'])},\n"
+            f"        {int(params['n_iterations'])},\n"
+            f"        {int(params['min_features'])},\n"
+            f"        {int(expected['best_iteration'])},\n"
+            f"        {_format_double(float(expected['best_rmse']))},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
+            f"        {_matrix_ref(coefficients_name, expected['coefficient_scores'])},\n"
+            f"        {_matrix_ref(rmse_name, expected['rmse_by_iteration'])},\n"
+            f"        CarsSelectionIndexRef{{{retained_name}, sizeof({retained_name}) / sizeof(std::int64_t)}},\n"
+            f"        CarsSelectionIndexRef{{{selected_name}, sizeof({selected_name}) / sizeof(std::int64_t)}}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_component_coefficients(fixture_ids: Sequence[str],
                                     fixture_dir: Path,
                                     out: Path,
@@ -2128,6 +2224,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "spa-selection":
         generate_spa_selection(fixture_ids, args.fixture_dir, out, args.family,
                                str(spec["struct"]), str(spec["array"]))
+    elif args.family == "cars-selection":
+        generate_cars_selection(fixture_ids, args.fixture_dir, out, args.family,
+                                str(spec["struct"]), str(spec["array"]))
     elif args.family == "component-coefficients":
         generate_component_coefficients(fixture_ids, args.fixture_dir, out, args.family,
                                         str(spec["struct"]), str(spec["array"]))

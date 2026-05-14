@@ -24,6 +24,7 @@ configure_file(
 add_library(pls4all_core OBJECT
     core/status.cpp
     core/version.cpp
+    core/cars_selection.cpp
     core/classification_metrics.cpp
     core/component_coefficients.cpp
     core/context.cpp

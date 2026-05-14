@@ -8,9 +8,9 @@ The canonical technical spec is [`Direction_Technique.md`](Direction_Technique.m
 
 ## Current checkpoint — 2026-05-14
 
-Latest local tag: `phase-5e-spa-selection` (`0.44.0+abi.1.0.0`).
+Latest local tag: `phase-5f-cars-selection` (`0.45.0+abi.1.0.0`).
 
-- Local reference gate is green: 73 deterministic parity fixtures, 161 C++ ABI/core tests, CLI selfcheck, Python smoke, ABI symbol diff, dependency audit, UBSAN and ASAN+UBSAN.
+- Local reference gate is green: 74 deterministic parity fixtures, 163 C++ ABI/core tests, CLI selfcheck, Python smoke, ABI symbol diff, dependency audit, UBSAN and ASAN+UBSAN.
 - GitHub Actions are intentionally parked for now to avoid spending runner quota; the actionable gate is the local parity/sanitizer run.
 - Phase 4 has shipped the main advanced CPU kernels currently targeted before variable selection: SIMPLS, SVD, PCR, kernel/wide-kernel, orthogonal-scores, power/randomized-SVD, PLSCanonical, PLSSVD, PLS-DA, OPLS/OPLS-DA, component-count CV, PLS-LDA, PLS-logistic, MB-PLS and LW-PLS.
 - Phase 5a has shipped deterministic variable-selection rankers over existing fitted-model scores: VIP, original-scale coefficient magnitude and selectivity ratio, with sklearn parity.
@@ -18,8 +18,9 @@ Latest local tag: `phase-5e-spa-selection` (`0.44.0+abi.1.0.0`).
 - Phase 5c has shipped deterministic Monte-Carlo coefficient-stability ranking, with sklearn parity.
 - Phase 5d has shipped deterministic UVE artificial-variable thresholding, with sklearn parity.
 - Phase 5e has shipped deterministic SPA-PLS projection selection, with Python/sklearn parity.
+- Phase 5f has shipped deterministic CARS-PLS competitive adaptive reweighted sampling, with Python/sklearn parity.
 - Phase 2 bindings are still mostly skeletons: Python has a minimal ctypes lifecycle/config binding, while R/MATLAB/JS/Android remain README-level placeholders.
-- Active implementation track: Phase 5 variable selection, next moving from SPA to CARS/random-frog/GA-style wrappers.
+- Active implementation track: Phase 5 variable selection, next moving from CARS to random-frog/GA-style wrappers.
 
 ## Phase 0 — ABI & Build Foundation · **shipped**
 
@@ -115,8 +116,9 @@ Each binding ships a parity-test suite that loads the JSON fixtures and asserts 
 - Monte-Carlo coefficient stability shipped as `phase-5c-stability-selection`.
 - UVE artificial-variable thresholding shipped as `phase-5d-uve-selection`.
 - SPA-PLS projection selector shipped as `phase-5e-spa-selection`.
+- CARS-PLS deterministic competitive-adaptive selector shipped as `phase-5f-cars-selection`.
 - Remaining stability methods: EMCUVE-PLS and randomisation tests.
-- Wrappers / metaheuristics: CARS, SCARS, Random Frog, GA-PLS, Shaving, BVE-PLS, T2-PLS, WVC-PLS.
+- Wrappers / metaheuristics: SCARS, Random Frog, GA-PLS, Shaving, BVE-PLS, T2-PLS, WVC-PLS.
 
 ## Phase 6 — AOM-PLS & POP-PLS · the scientific differentiator
 
