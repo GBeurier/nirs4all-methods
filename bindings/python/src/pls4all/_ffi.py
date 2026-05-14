@@ -1,0 +1,131 @@
+"""ctypes loader + raw symbol signatures."""
+
+from __future__ import annotations
+
+import ctypes
+import ctypes.util
+import os
+import sys
+from pathlib import Path
+
+_PACKAGE_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _PACKAGE_DIR.parents[3] if _PACKAGE_DIR.parents[3].name == "pls4all" else None
+
+
+def _candidate_paths() -> list[Path]:
+    paths: list[Path] = []
+
+    env = os.environ.get("PLS4ALL_LIB_PATH")
+    if env:
+        paths.append(Path(env))
+
+    # Wheel layout: bindings/python/src/pls4all/lib/libp4a*
+    for p in (_PACKAGE_DIR / "lib").glob("libp4a*"):
+        paths.append(p)
+    for p in (_PACKAGE_DIR / "lib").glob("p4a*"):
+        paths.append(p)
+
+    # Developer convenience: repo-root build directory.
+    if _REPO_ROOT is not None:
+        for preset in ("dev-release", "dev-debug"):
+            for name in ("libp4a.so", "libp4a.dylib", "libp4a.so.0.1.0", "p4a.dll"):
+                p = _REPO_ROOT / "build" / preset / "cpp" / "src" / name
+                if p.exists():
+                    paths.append(p)
+
+    # System search path.
+    if sys.platform.startswith("linux"):
+        sys_path = ctypes.util.find_library("p4a")
+        if sys_path:
+            paths.append(Path(sys_path))
+    elif sys.platform == "darwin":
+        sys_path = ctypes.util.find_library("p4a")
+        if sys_path:
+            paths.append(Path(sys_path))
+    elif sys.platform == "win32":
+        for name in ("p4a.dll", "libp4a.dll"):
+            paths.append(Path(name))
+    return paths
+
+
+def _load_library() -> ctypes.CDLL:
+    errors = []
+    for path in _candidate_paths():
+        try:
+            return ctypes.CDLL(str(path))
+        except OSError as exc:
+            errors.append((path, exc))
+    msg = ["could not locate libp4a. Tried:"]
+    for p, e in errors:
+        msg.append(f"  - {p}: {e}")
+    msg.append(
+        "Set the PLS4ALL_LIB_PATH environment variable to the absolute path of "
+        "libp4a.so / libp4a.dylib / p4a.dll."
+    )
+    raise ImportError("\n".join(msg))
+
+
+lib = _load_library()
+
+# ---- p4a_get_* (version queries) ----
+lib.p4a_get_abi_version_major.restype = ctypes.c_uint32
+lib.p4a_get_abi_version_minor.restype = ctypes.c_uint32
+lib.p4a_get_abi_version_patch.restype = ctypes.c_uint32
+lib.p4a_get_abi_version_int.restype   = ctypes.c_uint32
+lib.p4a_get_version_string.restype    = ctypes.c_char_p
+lib.p4a_get_build_info.restype        = ctypes.c_char_p
+lib.p4a_get_git_revision.restype      = ctypes.c_char_p
+
+# ---- p4a_status / dtype / backend ----
+lib.p4a_status_to_string.restype  = ctypes.c_char_p
+lib.p4a_status_to_string.argtypes = [ctypes.c_int]
+
+lib.p4a_dtype_size.restype  = ctypes.c_size_t
+lib.p4a_dtype_size.argtypes = [ctypes.c_int]
+lib.p4a_dtype_to_string.restype  = ctypes.c_char_p
+lib.p4a_dtype_to_string.argtypes = [ctypes.c_int]
+
+lib.p4a_backend_is_available.restype  = ctypes.c_int
+lib.p4a_backend_is_available.argtypes = [ctypes.c_int]
+lib.p4a_backend_to_string.restype  = ctypes.c_char_p
+lib.p4a_backend_to_string.argtypes = [ctypes.c_int]
+
+# ---- p4a_context_* ----
+lib.p4a_context_create.restype  = ctypes.c_int
+lib.p4a_context_create.argtypes = [ctypes.POINTER(ctypes.c_void_p)]
+lib.p4a_context_destroy.restype  = None
+lib.p4a_context_destroy.argtypes = [ctypes.c_void_p]
+lib.p4a_context_set_seed.restype  = ctypes.c_int
+lib.p4a_context_set_seed.argtypes = [ctypes.c_void_p, ctypes.c_uint64]
+lib.p4a_context_get_seed.restype  = ctypes.c_int
+lib.p4a_context_get_seed.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64)]
+lib.p4a_context_set_backend.restype  = ctypes.c_int
+lib.p4a_context_set_backend.argtypes = [ctypes.c_void_p, ctypes.c_int]
+lib.p4a_context_get_backend.restype  = ctypes.c_int
+lib.p4a_context_get_backend.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int)]
+lib.p4a_context_set_num_threads.restype  = ctypes.c_int
+lib.p4a_context_set_num_threads.argtypes = [ctypes.c_void_p, ctypes.c_int32]
+lib.p4a_context_get_num_threads.restype  = ctypes.c_int
+lib.p4a_context_get_num_threads.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
+lib.p4a_context_last_error.restype  = ctypes.c_char_p
+lib.p4a_context_last_error.argtypes = [ctypes.c_void_p]
+lib.p4a_context_clear_error.restype  = None
+lib.p4a_context_clear_error.argtypes = [ctypes.c_void_p]
+
+# ---- p4a_config_* (a representative subset; Phase 2 fills out the rest) ----
+lib.p4a_config_create.restype  = ctypes.c_int
+lib.p4a_config_create.argtypes = [ctypes.POINTER(ctypes.c_void_p)]
+lib.p4a_config_destroy.restype  = None
+lib.p4a_config_destroy.argtypes = [ctypes.c_void_p]
+lib.p4a_config_set_n_components.restype  = ctypes.c_int
+lib.p4a_config_set_n_components.argtypes = [ctypes.c_void_p, ctypes.c_int32]
+lib.p4a_config_get_n_components.restype  = ctypes.c_int
+lib.p4a_config_get_n_components.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
+lib.p4a_config_set_tol.restype  = ctypes.c_int
+lib.p4a_config_set_tol.argtypes = [ctypes.c_void_p, ctypes.c_double]
+lib.p4a_config_get_tol.restype  = ctypes.c_int
+lib.p4a_config_get_tol.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_double)]
+lib.p4a_config_set_algorithm.restype  = ctypes.c_int
+lib.p4a_config_set_algorithm.argtypes = [ctypes.c_void_p, ctypes.c_int]
+lib.p4a_config_get_algorithm.restype  = ctypes.c_int
+lib.p4a_config_get_algorithm.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int)]

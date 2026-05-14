@@ -1,0 +1,20 @@
+{
+  "fixtures": {
+    "synthetic_small_pls1_v1": {
+      "bytes": 40760,
+      "path": "synthetic_small_pls1_v1.json",
+      "sha256": "f6236147b6ebcbd4118eaf0de143797b0525f66402d7841e3d850e83e9141510"
+    },
+    "synthetic_small_pls2_v1": {
+      "bytes": 51576,
+      "path": "synthetic_small_pls2_v1.json",
+      "sha256": "7fbb52b1dbdb5eb57e319aaf46b43c9a538c8fcea0f85bfc951ca69d65c7f8ba"
+    },
+    "synthetic_tiny_centered_v1": {
+      "bytes": 4415,
+      "path": "synthetic_tiny_centered_v1.json",
+      "sha256": "af1ba75c8acf527d2fa24e6a09f935dd244abd86f9a227b0d4925ca4bbab01f6"
+    }
+  },
+  "schema_version": 1
+}

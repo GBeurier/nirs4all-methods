@@ -1,0 +1,64 @@
+name: Parity gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  fixture-determinism:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned generator deps
+        working-directory: parity/python_generator
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-lock.txt
+          pip install -e .
+
+      - name: Verify fixtures are bit-identical to checked-in copies
+        working-directory: parity/python_generator
+        run: generate-fixtures --check --out ../fixtures
+
+      - name: Build libp4a (Linux gcc-12 Release)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-12 g++-12 ninja-build cmake
+          cmake --preset ci-linux-gcc12-release
+          cmake --build --preset ci-linux-gcc12-release --parallel
+
+      - name: Run pls4all Python binding smoke test
+        env:
+          PLS4ALL_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libp4a.so.0.1.0
+        run: |
+          pip install -e bindings/python
+          python -c "
+          import pls4all
+          assert pls4all.version().startswith('0.1.0')
+          with pls4all.Context() as ctx, pls4all.Config() as cfg:
+              cfg.n_components = 3
+              assert cfg.n_components == 3
+              try:
+                  ctx.backend = pls4all.Backend.CUDA
+                  raise AssertionError('expected BACKEND_UNAVAILABLE')
+              except pls4all.Pls4allError as e:
+                  assert e.status_name == 'backend unavailable'
+          print('python binding smoke OK from CI')
+          "
+
+      - name: Confirm Phase 0 'red-by-design' marker
+        run: |
+          # The C-side fixture loader is part of PR-1 (Phase 1). At Phase 0
+          # the model_fit stub returns NOT_IMPLEMENTED, which the Python
+          # binding wraps. Phase 1 inverts this and runs the actual numerical
+          # comparator against parity/fixtures/*.json.
+          echo "Phase 0 parity gate validates fixture determinism only; numerical comparison lands in PR-1."
