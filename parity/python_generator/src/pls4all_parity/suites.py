@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import math
 from typing import Any, Sequence
 
@@ -1561,6 +1562,76 @@ def _bipls_selection_expected(
             "layout": "row_major",
             "dtype": "i64",
             "values": [int(index) for index in best_active],
+        },
+        "selected_feature_indices": {
+            "shape": [1, int(len(selected_features))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected_features,
+        },
+    }
+
+
+def _sipls_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    interval_width: int,
+    combination_size: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    intervals = _interval_partitions(X.shape[1], interval_width)
+    folds = _validation_folds("kfold", X.shape[0], n_splits)
+    combinations = [
+        [int(index) for index in combo]
+        for combo in itertools.combinations(range(len(intervals)), int(combination_size))
+    ]
+    rmse_values = [
+        _bipls_cv_rmse(X, Y, intervals, combo, folds, n_components)
+        for combo in combinations
+    ]
+    best_index = min(range(len(combinations)), key=lambda i: (float(rmse_values[i]), combinations[i]))
+    best_combo = combinations[best_index]
+
+    selected_features: list[int] = []
+    for interval_index in best_combo:
+        start, length = intervals[int(interval_index)]
+        selected_features.extend(range(start, start + length))
+
+    return {
+        "intervals": {
+            "shape": [int(len(intervals)), 2],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [value for interval in intervals for value in interval],
+        },
+        "candidate_interval_indices": {
+            "shape": [int(len(combinations)), int(combination_size)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(index) for combo in combinations for index in combo],
+        },
+        "rmse_by_combination": {
+            "shape": [1, int(len(rmse_values))],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": [float(value) for value in rmse_values],
+        },
+        "best_combination_index": {
+            "shape": [1],
+            "layout": "row_major",
+            "dtype": "i32",
+            "values": [int(best_index)],
+        },
+        "selected_interval_indices": {
+            "shape": [1, int(len(best_combo))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(index) for index in best_combo],
         },
         "selected_feature_indices": {
             "shape": [1, int(len(selected_features))],
@@ -4685,6 +4756,55 @@ def _bipls_selection_fixture(
     }
 
 
+def _sipls_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    interval_width: int,
+    combination_size: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._sipls_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":        "pls_regression",
+                "solver":           "nipals",
+                "n_components":     int(n_components),
+                "n_splits":         int(n_splits),
+                "interval_width":   int(interval_width),
+                "combination_size": int(combination_size),
+                "reference":        "sklearn PLSRegression deterministic synergy interval PLS",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _sipls_selection_expected(X,
+                                              Y,
+                                              n_components,
+                                              n_splits,
+                                              interval_width,
+                                              combination_size),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-siPLS-selection",
+        },
+    }
+
+
 def _coefficient_stability_fixture(
     fixture_id: str,
     seed: int,
@@ -6600,6 +6720,42 @@ def synthetic_bipls_backward_intervals_v1() -> dict[str, Any]:
                                     n_splits=4,
                                     interval_width=3,
                                     min_intervals=2)
+
+
+def synthetic_sipls_interval_combinations_v1() -> dict[str, Any]:
+    """26 samples, 15 features, 2 targets for deterministic synergy interval PLS."""
+    seed = 88
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(26, 4))
+    X = np.column_stack([
+        0.22 * latent[:, 0] + 0.16 * latent[:, 1] + 0.14 * rng.standard_normal(size=26),
+        -0.18 * latent[:, 2] + 0.10 * rng.standard_normal(size=26),
+        rng.standard_normal(size=26) * 0.18,
+        0.88 * latent[:, 0] - 0.26 * latent[:, 2] + 0.04 * rng.standard_normal(size=26),
+        -0.46 * latent[:, 0] + 0.42 * latent[:, 2] + 0.04 * rng.standard_normal(size=26),
+        0.31 * latent[:, 0] + 0.35 * latent[:, 2] + 0.05 * rng.standard_normal(size=26),
+        np.sin(np.linspace(0.0, 2.5 * np.pi, 26)) + 0.06 * rng.standard_normal(size=26),
+        rng.standard_normal(size=26) * 0.13,
+        np.linspace(-0.4, 0.4, 26) + 0.08 * rng.standard_normal(size=26),
+        0.71 * latent[:, 1] - 0.38 * latent[:, 3] + 0.04 * rng.standard_normal(size=26),
+        -0.25 * latent[:, 1] + 0.82 * latent[:, 3] + 0.05 * rng.standard_normal(size=26),
+        0.43 * latent[:, 1] + 0.29 * latent[:, 3] + 0.05 * rng.standard_normal(size=26),
+        np.cos(np.linspace(0.0, 3.0 * np.pi, 26)) + 0.06 * rng.standard_normal(size=26),
+        rng.standard_normal(size=26) * 0.16,
+        np.linspace(0.5, -0.5, 26) + 0.10 * rng.standard_normal(size=26),
+    ])
+    Y = np.column_stack([
+        1.00 * latent[:, 0] - 0.46 * latent[:, 2] + 0.05 * rng.standard_normal(size=26),
+        -0.43 * latent[:, 1] + 0.69 * latent[:, 3] + 0.05 * rng.standard_normal(size=26),
+    ])
+    return _sipls_selection_fixture("synthetic_sipls_interval_combinations_v1",
+                                    seed=seed,
+                                    X=X,
+                                    Y=Y,
+                                    n_components=2,
+                                    n_splits=4,
+                                    interval_width=3,
+                                    combination_size=2)
 
 
 def synthetic_coefficient_stability_mcuve_v1() -> dict[str, Any]:

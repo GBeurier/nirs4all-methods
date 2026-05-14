@@ -6,4 +6,4 @@ versions of scikit-learn / NumPy (see ``requirements-lock.txt``) so the
 output is bit-identical across runs.
 """
 
-__version__ = "0.55.0"
+__version__ = "0.56.0"

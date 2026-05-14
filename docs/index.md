@@ -35,6 +35,7 @@ ordering for VIP, original-scale coefficient magnitude and selectivity ratio.
 Phase 5b interval-selection kernels scan contiguous feature windows with
 deterministic k-fold PLS CV for moving-window / iPLS-style selection.
 Phase 5p biPLS kernels perform deterministic backward interval elimination by CV.
+Phase 5q siPLS kernels exhaustively score fixed-size interval combinations by CV.
 Phase 5c stability-selection kernels compute Monte-Carlo coefficient mean/std
 ratios for MCUVE-style feature ranking, Phase 5d UVE kernels threshold
 real-feature stability against deterministic artificial variables, and Phase 5n

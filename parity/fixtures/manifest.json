@@ -315,6 +315,11 @@
       "path": "synthetic_simpls_tiny_pls1_v1.json",
       "sha256": "0965802da213e45bfdab5c47eb4fe57de6f87f78ab9686f07a35a62a610c6ece"
     },
+    "synthetic_sipls_interval_combinations_v1": {
+      "bytes": 15492,
+      "path": "synthetic_sipls_interval_combinations_v1.json",
+      "sha256": "72e6d960b379ac184c0a33b1e2b6a2aa174937985ec771f6945823e014ca1262"
+    },
     "synthetic_small_pls1_v1": {
       "bytes": 40765,
       "path": "synthetic_small_pls1_v1.json",

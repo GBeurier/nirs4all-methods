@@ -2,7 +2,7 @@
 
 > A portable PLS / NIRS engine with a stable C ABI and thin first-class bindings for Python, R, MATLAB, JavaScript / WebAssembly and Android.
 
-**Status — Phase 1 shipped, Phase 3r preprocessing / validation core live, PLSCanonical, PLSSVD, PLS-DA, PLS-LDA, PLS-logistic, MB-PLS, LW-PLS, OPLS / OPLS-DA, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power, randomized-SVD, PCR and Phase 5p variable-selection core live · API unstable until v1.0 · Not yet on PyPI / CRAN / npm.**
+**Status — Phase 1 shipped, Phase 3r preprocessing / validation core live, PLSCanonical, PLSSVD, PLS-DA, PLS-LDA, PLS-logistic, MB-PLS, LW-PLS, OPLS / OPLS-DA, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power, randomized-SVD, PCR and Phase 5q variable-selection core live · API unstable until v1.0 · Not yet on PyPI / CRAN / npm.**
 
 `pls4all` reimplements the full Partial Least Squares family in C++17 behind a small, stable C ABI. The same numerical core powers every binding, so a model trained in Python predicts byte-for-byte the same way in R, MATLAB, a browser or on Android.
 
@@ -27,7 +27,7 @@ See [`Overview.md`](Overview.md) for the full taxonomy of targeted PLS variants,
 | 3 — NIRS preprocessing & validation | in progress | pipeline fit/transform · identity · center · autoscale · Pareto · SNV · MSC · EMSC · detrend · SG · ASLS · Norris-Williams · Haar wavelet · OSC · EPO · regression metrics · validation splits · k-fold CV engine · advanced splitters · binary/multiclass classification metrics · calibration · VIP/selectivity ratio · coefficients by component |
 | 4 — Advanced PLS variants | in progress | SIMPLS · SVD · PCR · kernel PLS · PLSCanonical · PLSSVD · OPLS · PLS-DA · PLS-LDA · PLS-logistic · MB-PLS · LW-PLS · component CV |
 | 2 — Language bindings (real wheels / CRAN / AAR) | planned | ctypes (Python) · `.Call` (R) · MEX (MATLAB) · WASM (JS) · JNI (Android) |
-| 5 — Variable selection | in progress | VIP/coefficient/selectivity-ratio rankers shipped · interval/moving-window CV scan shipped · biPLS backward-interval selector shipped · coefficient-stability selector shipped · UVE artificial-variable selector shipped · EMCUVE ensemble selector shipped · randomization-test selector shipped · SPA selector shipped · CARS selector shipped · Random Frog selector shipped · SCARS selector shipped · GA-PLS selector shipped · shaving selector shipped · BVE-PLS selector shipped · T2-PLS selector shipped · WVC-PLS selector shipped · siPLS |
+| 5 — Variable selection | in progress | VIP/coefficient/selectivity-ratio rankers shipped · interval/moving-window CV scan shipped · biPLS backward-interval selector shipped · siPLS interval-combination selector shipped · coefficient-stability selector shipped · UVE artificial-variable selector shipped · EMCUVE ensemble selector shipped · randomization-test selector shipped · SPA selector shipped · CARS selector shipped · Random Frog selector shipped · SCARS selector shipped · GA-PLS selector shipped · shaving selector shipped · BVE-PLS selector shipped · T2-PLS selector shipped · WVC-PLS selector shipped |
 | 6 — AOM-PLS & POP-PLS | planned | Operator bank · soft / hard / sparse gating · per-component AOM |
 | 7 — Accelerated backends | planned | BLAS · OpenMP · CUDA · batch APIs for CV / bootstrap / MCUVE / AOM sweeps |
 
@@ -85,7 +85,9 @@ deterministic top-k ordering for VIP, original-scale coefficient magnitude and
 selectivity-ratio scores. Phase 5b interval-selection kernels scan contiguous
 feature windows with deterministic k-fold PLS CV for moving-window / iPLS-style
 selection, and Phase 5p biPLS kernels perform deterministic backward
-interval elimination by CV. Phase 5c stability-selection kernels compute Monte-Carlo
+interval elimination by CV. Phase 5q siPLS kernels exhaustively score
+fixed-size interval combinations by CV and retain the best synergistic subset.
+Phase 5c stability-selection kernels compute Monte-Carlo
 coefficient mean/std ratios for MCUVE-style ranking, Phase 5d UVE kernels
 threshold real-variable stability against deterministic artificial variables,
 and Phase 5n EMCUVE kernels ensemble MC-UVE members with a deterministic vote
@@ -141,7 +143,7 @@ If you use `pls4all` in academic work, please cite:
   title   = {pls4all: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/pls4all},
-  version = {0.55.0}
+  version = {0.56.0}
 }
 ```
 
