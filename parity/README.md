@@ -18,10 +18,12 @@ parity/
 │   ├── synthetic_simpls_small_pls2_v1.json
 │   ├── synthetic_svd_tiny_pls1_v1.json
 │   ├── synthetic_svd_small_pls2_v1.json
+│   ├── synthetic_kernel_tiny_pls1_v1.json
+│   ├── synthetic_kernel_wide_pls2_v1.json
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.
-├── python_generator/              Pinned scikit-learn + NumPy SIMPLS/SVD/PCR adapters.
+├── python_generator/              Pinned scikit-learn + NumPy SIMPLS/kernel/SVD/PCR adapters.
 └── r_generator/                   Pinned pls / ropls / mixOmics adapters.
 ```
 
@@ -50,7 +52,8 @@ Rscript generate_fixtures.R --check       # asserts bit-identity
 The checked-in fixtures are green in CI. NIPALS fixtures are generated from
 scikit-learn `PLSRegression`; SIMPLS fixtures are generated from a deterministic
 NumPy port of the local `nirs4all`/AOM SIMPLS reference; SVD fixtures are
-generated from NumPy covariance-SVD directions with regression deflation. PCR
+generated from NumPy covariance-SVD directions with regression deflation.
+Kernel fixtures are generated from a NumPy linear-kernel PLS reference. PCR
 fixtures are generated from NumPy PCA/SVD with score-space least squares. C++
 parity tests assert predictions, coefficients, preprocessing statistics and
 latent arrays within `tolerances.md`.

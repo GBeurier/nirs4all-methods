@@ -39,6 +39,15 @@ HEADER_SPECS = {
         "struct": "PcrFixture",
         "array": "kPcrFixtures",
     },
+    "kernel": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "kernel_fixtures.hpp",
+        "fixtures": (
+            "synthetic_kernel_tiny_pls1_v1",
+            "synthetic_kernel_wide_pls2_v1",
+        ),
+        "struct": "KernelFixture",
+        "array": "kKernelFixtures",
+    },
 }
 
 

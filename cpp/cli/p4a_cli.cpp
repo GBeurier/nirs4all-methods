@@ -154,6 +154,18 @@ int cmd_selfcheck() {
     p4a_array_free(simpls_pred);
     p4a_model_destroy(simpls_model);
 
+    CHECK(p4a_config_set_solver(cfg, P4A_SOLVER_KERNEL_ALGORITHM) == P4A_OK);
+    p4a_model_t* kernel_model = nullptr;
+    CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &kernel_model) == P4A_OK);
+    CHECK(kernel_model != nullptr);
+    p4a_array_t* kernel_pred = nullptr;
+    CHECK(p4a_model_predict_alloc(ctx, kernel_model, &X, &kernel_pred) == P4A_OK);
+    CHECK(p4a_array_shape(kernel_pred, &rows, &cols) == P4A_OK);
+    CHECK(rows == 4);
+    CHECK(cols == 1);
+    p4a_array_free(kernel_pred);
+    p4a_model_destroy(kernel_model);
+
     CHECK(p4a_config_set_solver(cfg, P4A_SOLVER_SVD) == P4A_OK);
     p4a_model_t* svd_model = nullptr;
     CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &svd_model) == P4A_OK);

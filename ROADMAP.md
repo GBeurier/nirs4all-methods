@@ -50,6 +50,7 @@ Goal: useful for real spectroscopy.
 - SIMPLS core solver shipped as `phase-4a-simpls`.
 - SVD PLS core solver shipped as `phase-4b-svd`.
 - PCR baseline shipped as `phase-4c-pcr`.
+- Linear kernel-algorithm PLS shipped as `phase-4d-kernel`.
 - SIMPLS with materialised auto-prefix CV scoring (à la `aompls`).
 - Kernel-algorithm PLS for wide matrices (`p >> n`).
 - OPLS, OPLS-DA.

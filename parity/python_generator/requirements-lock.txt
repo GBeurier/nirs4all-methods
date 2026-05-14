@@ -1,7 +1,7 @@
 # Parity-generator lockfile. Re-pin with `pip-compile pyproject.toml --output-file=requirements-lock.txt`
 # whenever the pyproject pins change.
 #
-# Current checked-in fixtures use scikit-learn and deterministic NumPy SIMPLS/SVD/PCR
+# Current checked-in fixtures use scikit-learn and deterministic NumPy SIMPLS/kernel/SVD/PCR
 # ports. Cross-implementation nirs4all/R adapters will get their own lock rows
 # when they become active.
 numpy==1.26.4

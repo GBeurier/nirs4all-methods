@@ -2,7 +2,7 @@
 
 > A portable PLS / NIRS engine with a stable C ABI and thin first-class bindings for Python, R, MATLAB, JavaScript / WebAssembly and Android.
 
-**Status — Phase 1 shipped, SIMPLS, SVD and PCR core live · API unstable until v1.0 · Not yet on PyPI / CRAN / npm.**
+**Status — Phase 1 shipped, SIMPLS, kernel, SVD and PCR core live · API unstable until v1.0 · Not yet on PyPI / CRAN / npm.**
 
 `pls4all` reimplements the full Partial Least Squares family in C++17 behind a small, stable C ABI. The same numerical core powers every binding, so a model trained in Python predicts byte-for-byte the same way in R, MATLAB, a browser or on Android.
 
@@ -47,11 +47,11 @@ ctest --preset dev-release --output-on-failure
 ./build/dev-release/cpp/cli/pls4all_cli --abi-info
 ```
 
-The core currently implements NIPALS, SIMPLS and SVD PLS regression plus PCR
+The core currently implements NIPALS, SIMPLS, kernel and SVD PLS regression plus PCR
 behind the stable C ABI: `p4a_model_fit`, `predict`, `transform`, fitted-array
 accessors and binary import/export are live for `P4A_ALGO_PLS_REGRESSION` with
-`P4A_SOLVER_NIPALS`, `P4A_SOLVER_SIMPLS` or `P4A_SOLVER_SVD`, and for
-`P4A_ALGO_PCR` with `P4A_SOLVER_SVD`.
+`P4A_SOLVER_NIPALS`, `P4A_SOLVER_SIMPLS`, `P4A_SOLVER_KERNEL_ALGORITHM` or
+`P4A_SOLVER_SVD`, and for `P4A_ALGO_PCR` with `P4A_SOLVER_SVD`.
 
 ## Project layout
 
@@ -77,7 +77,7 @@ If you use `pls4all` in academic work, please cite:
   title   = {pls4all: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/pls4all},
-  version = {0.5.0}
+  version = {0.6.0}
 }
 ```
 

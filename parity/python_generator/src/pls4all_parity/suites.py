@@ -199,6 +199,106 @@ def _svd_pls_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[s
     }
 
 
+def _kernel_pls_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+
+    Xk, x_mean, x_scale = _center_scale(X)
+    Yk, y_mean, y_scale = _center_scale(Y)
+    n, p = Xk.shape
+    n_targets = Yk.shape[1]
+    K = int(n_components)
+
+    W = np.zeros((p, K), dtype=np.float64)
+    P = np.zeros((p, K), dtype=np.float64)
+    Q = np.zeros((n_targets, K), dtype=np.float64)
+    T = np.zeros((n, K), dtype=np.float64)
+    eps = np.finfo(np.float64).eps
+
+    for comp in range(K):
+        initial_target = None
+        for target in range(n_targets):
+            if np.any(np.abs(Yk[:, target]) > eps):
+                initial_target = target
+                break
+        if initial_target is None:
+            raise RuntimeError(f"kernel PLS Y residual collapsed at component {comp}")
+
+        kernel = Xk @ Xk.T
+        y_score = Yk[:, initial_target].copy()
+        old_t = np.zeros(n, dtype=np.float64)
+        converged = False
+        x_weights = np.zeros(p, dtype=np.float64)
+        t = np.zeros(n, dtype=np.float64)
+        q_load = np.zeros(n_targets, dtype=np.float64)
+
+        for iteration in range(500):
+            y_ss = float(y_score @ y_score)
+            if y_ss <= eps:
+                raise RuntimeError(f"kernel PLS Y score collapsed at component {comp}")
+            raw_t = (kernel @ y_score) / y_ss
+            raw_norm = np.linalg.norm(raw_t)
+            if raw_norm <= eps:
+                raise RuntimeError(f"kernel PLS X score collapsed at component {comp}")
+            t = raw_t / raw_norm
+            x_weights = ((Xk.T @ y_score) / y_ss) / raw_norm
+            t_ss = float(t @ t)
+            q_load = (Yk.T @ t) / t_ss
+            q_ss = float(q_load @ q_load)
+            if q_ss <= eps:
+                raise RuntimeError(f"kernel PLS Y loadings collapsed at component {comp}")
+            y_score = (Yk @ q_load) / q_ss
+
+            if iteration > 0 or n_targets == 1:
+                diff_same = float((t - old_t) @ (t - old_t))
+                diff_opposite = float((t + old_t) @ (t + old_t))
+                if min(diff_same, diff_opposite) < 1e-6 or n_targets == 1:
+                    converged = True
+                    break
+            old_t = t.copy()
+
+        if not converged:
+            raise RuntimeError(f"kernel PLS iteration failed to converge at component {comp}")
+
+        sign_idx = int(np.argmax(np.abs(x_weights)))
+        if x_weights[sign_idx] < 0.0:
+            x_weights = -x_weights
+            t = -t
+            q_load = -q_load
+
+        t_ss = float(t @ t)
+        p_load = (Xk.T @ t) / t_ss
+        q_ss = float(q_load @ q_load)
+        Xk = Xk - np.outer(t, p_load)
+        Yk = Yk - np.outer(t, q_load)
+
+        W[:, comp] = x_weights
+        P[:, comp] = p_load
+        Q[:, comp] = q_load
+        T[:, comp] = t
+
+    rotations = W @ np.linalg.inv(P.T @ W)
+    coef_std = rotations @ Q.T
+    coef = coef_std * (y_scale.reshape(1, -1) / x_scale.reshape(-1, 1))
+    preds = y_mean.reshape(1, -1) + (X - x_mean.reshape(1, -1)) @ coef
+    return {
+        "coefficients":  {"shape": list(coef.shape),       "values": _flatten_rowmajor(coef)},
+        "intercept":     {"shape": [n_targets],            "values": y_mean.astype(np.float64).tolist()},
+        "x_mean":        {"shape": [p],                    "values": x_mean.astype(np.float64).tolist()},
+        "x_scale":       {"shape": [p],                    "values": x_scale.astype(np.float64).tolist()},
+        "y_mean":        {"shape": [n_targets],            "values": y_mean.astype(np.float64).tolist()},
+        "y_scale":       {"shape": [n_targets],            "values": y_scale.astype(np.float64).tolist()},
+        "weights_W":     {"shape": list(W.shape),          "values": _flatten_rowmajor(W), "sign_invariant": True},
+        "loadings_P":    {"shape": list(P.shape),          "values": _flatten_rowmajor(P), "sign_invariant": True},
+        "y_loadings_Q":  {"shape": list(Q.shape),          "values": _flatten_rowmajor(Q), "sign_invariant": True},
+        "rotations_R":   {"shape": list(rotations.shape),  "values": _flatten_rowmajor(rotations), "sign_invariant": True},
+        "scores_T":      {"shape": list(T.shape),          "values": _flatten_rowmajor(T), "sign_invariant": True},
+        "predict_train": {"shape": list(preds.shape),      "values": _flatten_rowmajor(preds)},
+    }
+
+
 def _pcr_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, Any]:
     X = np.asarray(X, dtype=np.float64)
     Y = np.asarray(Y, dtype=np.float64)
@@ -375,6 +475,41 @@ def _svd_fixture(
     }
 
 
+def _kernel_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._kernel_pls_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "n_components":   n_components,
+                "scale":          True,
+                "deflation_mode": "regression",
+                "algorithm":      "kernelpls",
+                "reference":      "NumPy linear kernel PLS with regression deflation",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _kernel_pls_expected(X, Y, n_components),
+        "comparison_policy": {
+            "components_alignment": "first-k-prefix",
+            "sign_resolver":        "max_abs_element_positive",
+            "tolerance_table_row":  "pls4all-numpy-kernelpls",
+        },
+    }
+
+
 def _pcr_fixture(
     fixture_id: str,
     seed: int,
@@ -494,6 +629,26 @@ def synthetic_svd_small_pls2_v1() -> dict[str, Any]:
     Y = X @ W + rng.standard_normal(size=(14, 3)) * 0.035
     return _svd_fixture("synthetic_svd_small_pls2_v1", seed=31,
                         X=X, Y=Y, n_components=3)
+
+
+def synthetic_kernel_tiny_pls1_v1() -> dict[str, Any]:
+    """9 samples, 5 features, 1 target, n_components=2."""
+    rng = np.random.default_rng(seed=50)
+    X = rng.standard_normal(size=(9, 5))
+    true_w = np.array([0.55, -0.20, 0.35, -0.45, 0.15])
+    Y = (X @ true_w + rng.standard_normal(size=9) * 0.025).reshape(-1, 1)
+    return _kernel_fixture("synthetic_kernel_tiny_pls1_v1", seed=50,
+                           X=X, Y=Y, n_components=2)
+
+
+def synthetic_kernel_wide_pls2_v1() -> dict[str, Any]:
+    """8 samples, 12 features, 2 targets, n_components=3."""
+    rng = np.random.default_rng(seed=51)
+    X = rng.standard_normal(size=(8, 12))
+    W = rng.standard_normal(size=(12, 2)) * 0.25
+    Y = X @ W + rng.standard_normal(size=(8, 2)) * 0.03
+    return _kernel_fixture("synthetic_kernel_wide_pls2_v1", seed=51,
+                           X=X, Y=Y, n_components=3)
 
 
 def synthetic_pcr_tiny_pls1_v1() -> dict[str, Any]:
