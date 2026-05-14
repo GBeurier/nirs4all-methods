@@ -1015,9 +1015,12 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     const bool supported_pls_canonical =
         cfg.algorithm == P4A_ALGO_PLS_CANONICAL &&
         (cfg.solver == P4A_SOLVER_NIPALS || cfg.solver == P4A_SOLVER_SVD);
+    const bool supported_opls =
+        cfg.algorithm == P4A_ALGO_OPLS && cfg.solver == P4A_SOLVER_NIPALS;
     const bool supported_pcr =
         cfg.algorithm == P4A_ALGO_PCR && cfg.solver == P4A_SOLVER_SVD;
-    if (!supported_pls_regression && !supported_pls_canonical && !supported_pcr) {
+    if (!supported_pls_regression && !supported_pls_canonical && !supported_opls &&
+        !supported_pcr) {
         ctx.set_error(
             "this release supports P4A_ALGO_PLS_REGRESSION with P4A_SOLVER_NIPALS, "
             "P4A_SOLVER_ORTHOGONAL_SCORES, P4A_SOLVER_SIMPLS, "
@@ -1025,18 +1028,25 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
             "P4A_SOLVER_SVD, P4A_SOLVER_POWER or P4A_SOLVER_RANDOMIZED_SVD, "
             "P4A_ALGO_PLS_CANONICAL with P4A_SOLVER_NIPALS or P4A_SOLVER_SVD, "
             "P4A_ALGO_PLS_DA with the PLS regression solver set, "
+            "P4A_ALGO_OPLS with P4A_SOLVER_NIPALS, "
             "plus P4A_ALGO_PCR with P4A_SOLVER_SVD");
         return P4A_ERR_UNSUPPORTED;
     }
     const bool supported_deflation =
         ((supported_pls_regression || supported_pcr) &&
          cfg.deflation == P4A_DEFLATION_REGRESSION) ||
-        (supported_pls_canonical && cfg.deflation == P4A_DEFLATION_CANONICAL);
+        (supported_pls_canonical && cfg.deflation == P4A_DEFLATION_CANONICAL) ||
+        (supported_opls && cfg.deflation == P4A_DEFLATION_ORTHOGONAL);
     if (!supported_deflation) {
         ctx.set_error(
             "this release supports P4A_DEFLATION_REGRESSION for PLS regression/PCR "
-            "and P4A_DEFLATION_CANONICAL for PLS canonical");
+            "and P4A_DEFLATION_CANONICAL for PLS canonical and "
+            "P4A_DEFLATION_ORTHOGONAL for OPLS");
         return P4A_ERR_UNSUPPORTED;
+    }
+    if (supported_opls && Y.cols != 1) {
+        ctx.set_error("P4A_ALGO_OPLS currently supports exactly one Y target");
+        return P4A_ERR_SHAPE_MISMATCH;
     }
     if (cfg.pipeline != nullptr || cfg.operator_bank != nullptr || cfg.gating_strategy != nullptr) {
         ctx.set_error("pipelines, operator banks and gating strategies are not yet supported by model_fit");
@@ -1815,6 +1825,298 @@ p4a_status_t fit_pls_canonical_svd(
     std::unique_ptr<Model>& out_model) {
     return fit_pls_canonical_impl(ctx, cfg, X, Y, out_model,
                                   CanonicalWeightSolver::Svd);
+}
+
+p4a_status_t fit_opls_nipals(
+    Context& ctx,
+    const Config& cfg,
+    const p4a_matrix_view_t& X,
+    const p4a_matrix_view_t& Y,
+    std::unique_ptr<Model>& out_model) {
+    out_model.reset();
+
+    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    std::vector<double> x_original;
+    std::vector<double> y_original;
+    status = copy_matrix_checked(ctx, X, "X", x_original);
+    if (status != P4A_OK) {
+        return status;
+    }
+    status = copy_matrix_checked(ctx, Y, "Y", y_original);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    const std::size_t n = static_cast<std::size_t>(X.rows);
+    const std::size_t p = static_cast<std::size_t>(X.cols);
+    const std::size_t a = static_cast<std::size_t>(cfg.n_components);
+
+    auto model = std::make_unique<Model>();
+    model->algorithm = cfg.algorithm;
+    model->solver = cfg.solver;
+    model->deflation = cfg.deflation;
+    model->n_samples = X.rows;
+    model->n_features = static_cast<std::int32_t>(X.cols);
+    model->n_targets = static_cast<std::int32_t>(Y.cols);
+    model->n_components = cfg.n_components;
+    model->center_x = cfg.center_x;
+    model->scale_x = cfg.scale_x;
+    model->center_y = cfg.center_y;
+    model->scale_y = cfg.scale_y;
+    model->store_scores = cfg.store_scores;
+    model->tol = cfg.tol;
+    model->max_iter = cfg.max_iter;
+
+    std::vector<double> xk;
+    std::vector<double> yk;
+    center_scale_in_place(x_original, n, p, cfg.center_x != 0, cfg.scale_x != 0,
+                          model->x_mean, model->x_scale, xk);
+    center_scale_in_place(y_original, n, 1U, cfg.center_y != 0, cfg.scale_y != 0,
+                          model->y_mean, model->y_scale, yk);
+
+    resize_fill(model->coefficients, p, 0.0);
+    resize_fill(model->weights_w, p * a, 0.0);
+    resize_fill(model->loadings_p, p * a, 0.0);
+    resize_fill(model->y_loadings_q, a, 0.0);
+    resize_fill(model->rotations_r, p * a, 0.0);
+    std::vector<double> scores_t;
+    std::vector<double> y_scores_u;
+    resize_fill(scores_t, n * a, 0.0);
+    resize_fill(y_scores_u, n * a, 0.0);
+
+    std::vector<double> projection;
+    resize_fill(projection, p * p, 0.0);
+    for (std::size_t feature = 0; feature < p; ++feature) {
+        projection[idx(feature, p, feature)] = 1.0;
+    }
+
+    auto projection_times_vector =
+        [&](const std::vector<double>& weights, std::vector<double>& out) {
+            resize_fill(out, p, 0.0);
+            for (std::size_t row = 0; row < p; ++row) {
+                double sum = 0.0;
+                for (std::size_t col = 0; col < p; ++col) {
+                    sum += projection[idx(row, p, col)] * weights[col];
+                }
+                out[row] = sum;
+            }
+        };
+
+    auto sign_normalize =
+        [&](std::vector<double>& weights,
+            std::vector<double>* scores,
+            std::vector<double>* loadings,
+            double* y_loading) {
+            std::size_t sign_idx = 0;
+            double sign_abs = std::fabs(weights[0]);
+            for (std::size_t feature = 1; feature < p; ++feature) {
+                const double candidate = std::fabs(weights[feature]);
+                if (candidate > sign_abs) {
+                    sign_idx = feature;
+                    sign_abs = candidate;
+                }
+            }
+            if (weights[sign_idx] >= 0.0) {
+                return;
+            }
+            for (double& value : weights) {
+                value = -value;
+            }
+            if (scores != nullptr) {
+                for (double& value : *scores) {
+                    value = -value;
+                }
+            }
+            if (loadings != nullptr) {
+                for (double& value : *loadings) {
+                    value = -value;
+                }
+            }
+            if (y_loading != nullptr) {
+                *y_loading = -*y_loading;
+            }
+        };
+
+    auto predictive_component =
+        [&](const std::vector<double>& x_work,
+            std::size_t component,
+            std::vector<double>& weights,
+            std::vector<double>& scores,
+            std::vector<double>& loadings,
+            double& y_loading) -> p4a_status_t {
+            resize_fill(weights, p, 0.0);
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                double sum = 0.0;
+                for (std::size_t row = 0; row < n; ++row) {
+                    sum += x_work[idx(row, p, feature)] * yk[row];
+                }
+                weights[feature] = sum;
+            }
+            const double weight_norm = std::sqrt(squared_norm(weights));
+            if (weight_norm <= std::numeric_limits<double>::epsilon()) {
+                ctx.set_errorf("OPLS predictive weights vanished at component %llu",
+                               ull(component));
+                return P4A_ERR_NUMERICAL_FAILURE;
+            }
+            for (double& value : weights) {
+                value /= weight_norm;
+            }
+
+            matrix_vector_product(x_work, n, p, weights, scores);
+            const double score_ss = squared_norm(scores);
+            if (score_ss <= std::numeric_limits<double>::epsilon()) {
+                ctx.set_errorf("OPLS predictive score vanished at component %llu",
+                               ull(component));
+                return P4A_ERR_NUMERICAL_FAILURE;
+            }
+
+            resize_fill(loadings, p, 0.0);
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                double sum = 0.0;
+                for (std::size_t row = 0; row < n; ++row) {
+                    sum += x_work[idx(row, p, feature)] * scores[row];
+                }
+                loadings[feature] = sum / score_ss;
+            }
+
+            double y_sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                y_sum += yk[row] * scores[row];
+            }
+            y_loading = y_sum / score_ss;
+            sign_normalize(weights, &scores, &loadings, &y_loading);
+            return P4A_OK;
+        };
+
+    for (std::size_t orth = 0; orth + 1U < a; ++orth) {
+        std::vector<double> predictive_weights;
+        std::vector<double> predictive_scores;
+        std::vector<double> predictive_loadings;
+        double predictive_y_loading = 0.0;
+        status = predictive_component(xk, orth + 1U, predictive_weights,
+                                      predictive_scores, predictive_loadings,
+                                      predictive_y_loading);
+        if (status != P4A_OK) {
+            return status;
+        }
+
+        const double predictive_weight_ss = squared_norm(predictive_weights);
+        if (predictive_weight_ss <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("OPLS predictive weight norm vanished at orthogonal component %llu",
+                           ull(orth));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        const double alignment = dot(predictive_weights, predictive_loadings) /
+                                 predictive_weight_ss;
+        std::vector<double> orth_weights;
+        resize_fill(orth_weights, p, 0.0);
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            orth_weights[feature] =
+                predictive_loadings[feature] - predictive_weights[feature] * alignment;
+        }
+        const double orth_weight_norm = std::sqrt(squared_norm(orth_weights));
+        if (orth_weight_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("OPLS orthogonal weights vanished at component %llu",
+                           ull(orth));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : orth_weights) {
+            value /= orth_weight_norm;
+        }
+        sign_normalize(orth_weights, nullptr, nullptr, nullptr);
+
+        std::vector<double> orth_scores;
+        matrix_vector_product(xk, n, p, orth_weights, orth_scores);
+        const double orth_score_ss = squared_norm(orth_scores);
+        if (orth_score_ss <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("OPLS orthogonal score vanished at component %llu",
+                           ull(orth));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+
+        std::vector<double> orth_loadings;
+        resize_fill(orth_loadings, p, 0.0);
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += xk[idx(row, p, feature)] * orth_scores[row];
+            }
+            orth_loadings[feature] = sum / orth_score_ss;
+        }
+
+        std::vector<double> raw_rotation;
+        projection_times_vector(orth_weights, raw_rotation);
+
+        const std::size_t col = orth + 1U;
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            model->weights_w[idx(feature, a, col)] = orth_weights[feature];
+            model->loadings_p[idx(feature, a, col)] = orth_loadings[feature];
+            model->rotations_r[idx(feature, a, col)] = raw_rotation[feature];
+        }
+        for (std::size_t row = 0; row < n; ++row) {
+            scores_t[idx(row, a, col)] = orth_scores[row];
+        }
+
+        for (std::size_t row = 0; row < n; ++row) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                xk[idx(row, p, feature)] -= orth_scores[row] * orth_loadings[feature];
+            }
+        }
+        for (std::size_t row = 0; row < p; ++row) {
+            for (std::size_t col_update = 0; col_update < p; ++col_update) {
+                projection[idx(row, p, col_update)] -=
+                    raw_rotation[row] * orth_loadings[col_update];
+            }
+        }
+    }
+
+    std::vector<double> predictive_weights;
+    std::vector<double> predictive_scores;
+    std::vector<double> predictive_loadings;
+    double predictive_y_loading = 0.0;
+    status = predictive_component(xk, 0U, predictive_weights, predictive_scores,
+                                  predictive_loadings, predictive_y_loading);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    std::vector<double> raw_predictive_rotation;
+    projection_times_vector(predictive_weights, raw_predictive_rotation);
+    const double predictive_denom = dot(predictive_loadings, predictive_weights);
+    if (std::fabs(predictive_denom) <= std::numeric_limits<double>::epsilon()) {
+        ctx.set_error("OPLS predictive denominator vanished");
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+
+    for (std::size_t feature = 0; feature < p; ++feature) {
+        model->weights_w[idx(feature, a, 0U)] = predictive_weights[feature];
+        model->loadings_p[idx(feature, a, 0U)] = predictive_loadings[feature];
+        model->rotations_r[idx(feature, a, 0U)] = raw_predictive_rotation[feature];
+        const double coef_std =
+            raw_predictive_rotation[feature] * predictive_y_loading / predictive_denom;
+        model->coefficients[feature] =
+            coef_std * model->y_scale[0] / model->x_scale[feature];
+    }
+    model->y_loadings_q[0] = predictive_y_loading;
+    const double y_score_denom =
+        predictive_y_loading * predictive_y_loading + std::numeric_limits<double>::epsilon();
+    for (std::size_t row = 0; row < n; ++row) {
+        scores_t[idx(row, a, 0U)] = predictive_scores[row];
+        y_scores_u[idx(row, a, 0U)] = yk[row] * predictive_y_loading / y_score_denom;
+    }
+
+    if (cfg.store_scores != 0) {
+        model->scores_t = std::move(scores_t);
+        model->y_scores_u = std::move(y_scores_u);
+    }
+
+    out_model = std::move(model);
+    ctx.clear_error();
+    return P4A_OK;
 }
 
 p4a_status_t fit_pls_regression_orthogonal_scores(

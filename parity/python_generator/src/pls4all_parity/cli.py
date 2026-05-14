@@ -49,6 +49,8 @@ def _generate_all() -> dict[str, bytes]:
         "synthetic_canonical_svd_small_pls2_v1": _serialize(suites.synthetic_canonical_svd_small_pls2_v1()),
         "synthetic_pls_da_binary_v1": _serialize(suites.synthetic_pls_da_binary_v1()),
         "synthetic_pls_da_multiclass_v1": _serialize(suites.synthetic_pls_da_multiclass_v1()),
+        "synthetic_opls_tiny_pls1_v1": _serialize(suites.synthetic_opls_tiny_pls1_v1()),
+        "synthetic_opls_small_pls1_v1": _serialize(suites.synthetic_opls_small_pls1_v1()),
         "synthetic_kernel_tiny_pls1_v1": _serialize(suites.synthetic_kernel_tiny_pls1_v1()),
         "synthetic_kernel_wide_pls2_v1": _serialize(suites.synthetic_kernel_wide_pls2_v1()),
         "synthetic_wide_kernel_pls1_v1": _serialize(suites.synthetic_wide_kernel_pls1_v1()),

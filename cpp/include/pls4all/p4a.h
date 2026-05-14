@@ -41,7 +41,9 @@
  *     for P4A_ALGO_PLS_CANONICAL + P4A_SOLVER_NIPALS/P4A_SOLVER_SVD +
  *     P4A_DEFLATION_CANONICAL; PLS-DA dummy-response scores for
  *     P4A_ALGO_PLS_DA + the PLS regression solver set +
- *     P4A_DEFLATION_REGRESSION; plus PCR for P4A_ALGO_PCR + P4A_SOLVER_SVD +
+ *     P4A_DEFLATION_REGRESSION; OPLS1 for P4A_ALGO_OPLS +
+ *     P4A_SOLVER_NIPALS + P4A_DEFLATION_ORTHOGONAL; plus PCR for
+ *     P4A_ALGO_PCR + P4A_SOLVER_SVD +
  *     P4A_DEFLATION_REGRESSION.
  *   - Predict / transform / model-array accessors and binary serialization
  *     are implemented for fitted core PLS models.
@@ -495,11 +497,12 @@ P4A_API p4a_status_t p4a_pipeline_transform_alloc(p4a_context_t* ctx,
  * P4A_SOLVER_POWER or P4A_SOLVER_RANDOMIZED_SVD using
  * P4A_DEFLATION_REGRESSION; P4A_ALGO_PLS_CANONICAL with P4A_SOLVER_NIPALS or
  * P4A_SOLVER_SVD using P4A_DEFLATION_CANONICAL; P4A_ALGO_PLS_DA with the PLS
- * regression solver set using P4A_DEFLATION_REGRESSION; and P4A_ALGO_PCR with
- * P4A_SOLVER_SVD using P4A_DEFLATION_REGRESSION. Unsupported algorithms /
- * solvers / deflation modes return P4A_ERR_UNSUPPORTED. Later Phase 4
- * increments add OPLS / PLS-DA; Phase 6 adds AOM-PLS through the
- * operator_bank + gating_strategy hooks set on the config.
+ * regression solver set using P4A_DEFLATION_REGRESSION; P4A_ALGO_OPLS with
+ * one Y target, P4A_SOLVER_NIPALS and P4A_DEFLATION_ORTHOGONAL; and
+ * P4A_ALGO_PCR with P4A_SOLVER_SVD using P4A_DEFLATION_REGRESSION.
+ * Unsupported algorithms / solvers / deflation modes return
+ * P4A_ERR_UNSUPPORTED. Later Phase 4 increments add OPLS-DA; Phase 6 adds
+ * AOM-PLS through the operator_bank + gating_strategy hooks set on the config.
  */
 P4A_API p4a_status_t p4a_model_fit(
     p4a_context_t* ctx,
@@ -595,7 +598,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.12.0+abi.1.0.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.13.0+abi.1.0.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 

@@ -57,9 +57,10 @@ Goal: useful for real spectroscopy.
 - Randomized-SVD PLS shipped as `phase-4h-randomized-svd`.
 - PLSCanonical with NIPALS/SVD and canonical deflation shipped as `phase-4i-canonical`.
 - PLS-DA dummy-response score model shipped as `phase-4j-pls-da`.
+- OPLS1 with one predictive component and orthogonal corrections shipped as `phase-4k-opls`.
 - SIMPLS with materialised auto-prefix CV scoring (à la `aompls`).
-- OPLS, OPLS-DA.
-- PLS-DA, PLS-LDA, PLS-logistic.
+- OPLS-DA.
+- PLS-LDA, PLS-logistic.
 - MB-PLS with `Block` API; per-block weighting.
 - LW-PLS (locally-weighted PLS) with KD-tree neighbours.
 

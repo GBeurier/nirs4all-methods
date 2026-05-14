@@ -392,6 +392,9 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
         algorithm == static_cast<std::uint32_t>(P4A_ALGO_PLS_CANONICAL) &&
         (solver == static_cast<std::uint32_t>(P4A_SOLVER_NIPALS) ||
          solver == static_cast<std::uint32_t>(P4A_SOLVER_SVD));
+    const bool supported_opls =
+        algorithm == static_cast<std::uint32_t>(P4A_ALGO_OPLS) &&
+        solver == static_cast<std::uint32_t>(P4A_SOLVER_NIPALS);
     const bool supported_pcr =
         algorithm == static_cast<std::uint32_t>(P4A_ALGO_PCR) &&
         solver == static_cast<std::uint32_t>(P4A_SOLVER_SVD);
@@ -399,8 +402,11 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
         ((supported_pls_regression || supported_pcr) &&
          deflation == static_cast<std::uint32_t>(P4A_DEFLATION_REGRESSION)) ||
         (supported_pls_canonical &&
-         deflation == static_cast<std::uint32_t>(P4A_DEFLATION_CANONICAL));
-    if ((!supported_pls_regression && !supported_pls_canonical && !supported_pcr) ||
+         deflation == static_cast<std::uint32_t>(P4A_DEFLATION_CANONICAL)) ||
+        (supported_opls &&
+         deflation == static_cast<std::uint32_t>(P4A_DEFLATION_ORTHOGONAL));
+    if ((!supported_pls_regression && !supported_pls_canonical && !supported_opls &&
+         !supported_pcr) ||
         !supported_deflation) {
         return false;
     }
@@ -413,6 +419,9 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
         !valid_flag(center_x) || !valid_flag(scale_x) ||
         !valid_flag(center_y) || !valid_flag(scale_y) ||
         !valid_flag(store_scores) || !(tol > 0.0) || max_iter == 0U) {
+        return false;
+    }
+    if (supported_opls && n_targets != 1U) {
         return false;
     }
 
@@ -499,6 +508,9 @@ P4A_API p4a_status_t p4a_model_fit(
                 status = ::pls4all::core::fit_pls_canonical_nipals(
                     *as_core(ctx), *cfg, *X, *Y, fitted);
             }
+        } else if (cfg->algorithm == P4A_ALGO_OPLS) {
+            status = ::pls4all::core::fit_opls_nipals(
+                *as_core(ctx), *cfg, *X, *Y, fitted);
         } else if (cfg->solver == P4A_SOLVER_KERNEL_ALGORITHM ||
                    cfg->solver == P4A_SOLVER_WIDE_KERNEL) {
             status = ::pls4all::core::fit_pls_regression_kernel(

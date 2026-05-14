@@ -30,6 +30,16 @@
       "path": "synthetic_kernel_wide_pls2_v1.json",
       "sha256": "c16a2deb57be64e48d15dc89e70f725589d89dfef7a29d64d04e1dcf2ca72e31"
     },
+    "synthetic_opls_small_pls1_v1": {
+      "bytes": 11891,
+      "path": "synthetic_opls_small_pls1_v1.json",
+      "sha256": "01c2d5b09c33debddd769c4ca43adfefc35674c2b891ee22a2cf5edbd03d52c3"
+    },
+    "synthetic_opls_tiny_pls1_v1": {
+      "bytes": 7921,
+      "path": "synthetic_opls_tiny_pls1_v1.json",
+      "sha256": "364638adf41618595b84de6931e5cc17ac1deb8c3573f6f05d867f5f4b98b449"
+    },
     "synthetic_oscores_small_pls2_v1": {
       "bytes": 11599,
       "path": "synthetic_oscores_small_pls2_v1.json",

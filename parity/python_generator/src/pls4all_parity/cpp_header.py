@@ -75,6 +75,15 @@ HEADER_SPECS = {
         "struct": "PlsDaFixture",
         "array": "kPlsDaFixtures",
     },
+    "opls": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "opls_fixtures.hpp",
+        "fixtures": (
+            "synthetic_opls_tiny_pls1_v1",
+            "synthetic_opls_small_pls1_v1",
+        ),
+        "struct": "OplsFixture",
+        "array": "kOplsFixtures",
+    },
     "pcr": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "pcr_fixtures.hpp",
         "fixtures": (
