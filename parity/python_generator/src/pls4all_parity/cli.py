@@ -65,6 +65,7 @@ def _generate_all() -> dict[str, bytes]:
         "synthetic_mb_pls_block_weighted_v1": _serialize(suites.synthetic_mb_pls_block_weighted_v1()),
         "synthetic_lw_pls_local_window_v1": _serialize(suites.synthetic_lw_pls_local_window_v1()),
         "synthetic_variable_importance_pls2_v1": _serialize(suites.synthetic_variable_importance_pls2_v1()),
+        "synthetic_variable_selection_rankers_v1": _serialize(suites.synthetic_variable_selection_rankers_v1()),
         "synthetic_component_coefficients_pls2_v1": _serialize(suites.synthetic_component_coefficients_pls2_v1()),
         "synthetic_validation_kfold_balanced_v1": _serialize(suites.synthetic_validation_kfold_balanced_v1()),
         "synthetic_validation_leave_one_out_v1": _serialize(suites.synthetic_validation_leave_one_out_v1()),

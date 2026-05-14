@@ -1296,6 +1296,81 @@ def _variable_importance_expected(
     }
 
 
+def _rank_descending(values: np.ndarray, top_k: int) -> np.ndarray:
+    scores = np.asarray(values, dtype=np.float64).reshape(-1)
+    order = sorted(range(scores.size), key=lambda index: (-float(scores[index]), int(index)))
+    return np.asarray(order[:int(top_k)], dtype=np.int64)
+
+
+def _variable_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    top_k: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    base = _variable_importance_expected(X, Y, n_components)
+    vip = np.asarray(base["vip"]["values"], dtype=np.float64)
+    selectivity_ratio = np.asarray(base["selectivity_ratio"]["values"], dtype=np.float64)
+
+    model = PLSRegression(n_components=n_components, scale=True, max_iter=500, tol=1e-6)
+    model.fit(X, Y)
+    W = model.x_weights_.astype(np.float64, copy=False)
+    P = model.x_loadings_.astype(np.float64, copy=False)
+    Q = model.y_loadings_.astype(np.float64, copy=False)
+    x_scale = model._x_std.astype(np.float64)
+    y_scale = np.atleast_1d(model._y_std).astype(np.float64)
+    rotations = W @ np.linalg.inv(P.T @ W)
+    coefficients = rotations @ Q.T
+    coefficients = coefficients * y_scale.reshape(1, -1) / x_scale.reshape(-1, 1)
+    coefficient_magnitude = np.max(np.abs(coefficients), axis=1)
+
+    vip_indices = _rank_descending(vip, top_k)
+    coefficient_indices = _rank_descending(coefficient_magnitude, top_k)
+    selectivity_indices = _rank_descending(selectivity_ratio, top_k)
+    return {
+        "vip_scores": {
+            "shape": [1, int(vip.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": vip.astype(np.float64).tolist(),
+        },
+        "vip_indices": {
+            "shape": [1, int(top_k)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": vip_indices.astype(int).tolist(),
+        },
+        "coefficient_scores": {
+            "shape": [1, int(coefficient_magnitude.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": coefficient_magnitude.astype(np.float64).tolist(),
+        },
+        "coefficient_indices": {
+            "shape": [1, int(top_k)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": coefficient_indices.astype(int).tolist(),
+        },
+        "selectivity_ratio_scores": {
+            "shape": [1, int(selectivity_ratio.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": selectivity_ratio.astype(np.float64).tolist(),
+        },
+        "selectivity_ratio_indices": {
+            "shape": [1, int(top_k)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selectivity_indices.astype(int).tolist(),
+        },
+    }
+
+
 def _component_coefficients_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -2858,6 +2933,44 @@ def _variable_importance_fixture(
     }
 
 
+def _variable_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    top_k: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._variable_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "n_components": int(n_components),
+                "top_k":        int(top_k),
+                "reference":    "sklearn PLSRegression VIP, coefficient magnitude and selectivity-ratio rankers",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _variable_selection_expected(X, Y, n_components, top_k),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-variable-selection-rankers",
+        },
+    }
+
+
 def _component_coefficients_fixture(
     fixture_id: str,
     seed: int,
@@ -4010,6 +4123,32 @@ def synthetic_variable_importance_pls2_v1() -> dict[str, Any]:
                                         X=X,
                                         Y=Y,
                                         n_components=2)
+
+
+def synthetic_variable_selection_rankers_v1() -> dict[str, Any]:
+    """18 samples, 7 features, 2 targets for deterministic ranker parity."""
+    seed = 59
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(18, 3))
+    X = np.column_stack([
+        0.88 * latent[:, 0] + 0.15 * latent[:, 1],
+        -0.52 * latent[:, 0] + 0.31 * latent[:, 2],
+        0.42 * latent[:, 1] - 0.28 * latent[:, 2],
+        0.26 * latent[:, 0] + 0.64 * latent[:, 1],
+        -0.18 * latent[:, 1] + 0.59 * latent[:, 2],
+        np.cos(np.linspace(0.0, 2.5 * np.pi, 18)),
+        rng.standard_normal(size=18) * 0.05,
+    ])
+    Y = np.column_stack([
+        1.12 * latent[:, 0] - 0.44 * latent[:, 2] + rng.standard_normal(size=18) * 0.035,
+        -0.61 * latent[:, 1] + 0.36 * latent[:, 2] + rng.standard_normal(size=18) * 0.035,
+    ])
+    return _variable_selection_fixture("synthetic_variable_selection_rankers_v1",
+                                       seed=seed,
+                                       X=X,
+                                       Y=Y,
+                                       n_components=2,
+                                       top_k=3)
 
 
 def synthetic_component_coefficients_pls2_v1() -> dict[str, Any]:

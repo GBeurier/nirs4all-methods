@@ -2,7 +2,7 @@
 # whenever the pyproject pins change.
 #
 # Current checked-in fixtures use scikit-learn and deterministic NumPy
-# preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/PLS-LDA/PLS-logistic/MB-PLS/LW-PLS/OPLS/OPLS-DA/SVD/PCR/metrics/classification/classification-extensions/variable-importance/component-coefficients/validation/advanced-validation/CV/component-CV
+# preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/PLS-LDA/PLS-logistic/MB-PLS/LW-PLS/OPLS/OPLS-DA/SVD/PCR/metrics/classification/classification-extensions/variable-importance/variable-selection/component-coefficients/validation/advanced-validation/CV/component-CV
 # ports. Cross-implementation nirs4all/R adapters will get their own lock rows
 # when they become active.
 numpy==1.26.4

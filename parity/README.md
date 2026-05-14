@@ -65,6 +65,7 @@ parity/
 │   ├── synthetic_mb_pls_block_weighted_v1.json
 │   ├── synthetic_lw_pls_local_window_v1.json
 │   ├── synthetic_variable_importance_pls2_v1.json
+│   ├── synthetic_variable_selection_rankers_v1.json
 │   ├── synthetic_component_coefficients_pls2_v1.json
 │   ├── synthetic_validation_kfold_balanced_v1.json
 │   ├── synthetic_validation_leave_one_out_v1.json
@@ -80,7 +81,7 @@ parity/
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.
-├── python_generator/              Pinned scikit-learn + NumPy/SciPy preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/PLS-LDA/PLS-logistic/MB-PLS/LW-PLS/OPLS/OPLS-DA/SVD/PCR/validation/CV adapters.
+├── python_generator/              Pinned scikit-learn + NumPy/SciPy preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/PLS-LDA/PLS-logistic/MB-PLS/LW-PLS/OPLS/OPLS-DA/SVD/PCR/validation/CV/variable-selection adapters.
 └── r_generator/                   Pinned pls / ropls / mixOmics adapters.
 ```
 
@@ -136,6 +137,9 @@ formulas for sensitivity, specificity, balanced accuracy, precision/F1, MCC and
 average-rank AUC.
 Variable-importance fixtures are generated from sklearn `PLSRegression` scores,
 weights and loadings for VIP and selectivity-ratio parity.
+Variable-selection fixtures rank those VIP scores, original-scale coefficient
+magnitudes and selectivity-ratio scores with deterministic score-descending /
+index-ascending tie handling.
 Component-coefficient fixtures are generated from sklearn `PLSRegression`
 weights/loadings and gate original-scale coefficient blocks for every latent
 prefix.
@@ -145,4 +149,5 @@ fixtures use scikit-learn `PLSRegression` over the same deterministic k-fold
 plans and gate out-of-sample predictions plus aggregate metrics.
 C++ parity tests assert predictions, coefficients, preprocessing statistics,
 transforms, CV predictions, regression/classification metrics, variable
-importance, component coefficients and latent arrays within `tolerances.md`.
+importance, variable-selection rankers, component coefficients and latent arrays
+within `tolerances.md`.

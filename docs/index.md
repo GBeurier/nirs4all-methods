@@ -30,7 +30,9 @@ specificity, balanced accuracy, precision/F1, MCC and average-rank AUC;
 multiclass extensions cover macro/micro averages with one-vs-rest AUC, and
 binary calibration curves use fixed probability bins. Variable-importance
 kernels compute VIP scores and selectivity ratio from fitted models with stored
-scores, and component-coefficient kernels expose the
+scores, and Phase 5a variable-selection rankers expose deterministic top-k
+ordering for VIP, original-scale coefficient magnitude and selectivity ratio.
+Component-coefficient kernels expose the
 original-scale regression coefficients for each latent prefix. SIMPLS component
 prefixes can also be scored by deterministic k-fold CV for component-count
 selection, and the internal PLS-LDA and PLS-logistic kernels fit classifier

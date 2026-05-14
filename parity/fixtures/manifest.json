@@ -330,6 +330,11 @@
       "path": "synthetic_variable_importance_pls2_v1.json",
       "sha256": "e0843ccc9ae65581be3f7815d12416975b5543e6ab5a73e7d27842dc69ee33e9"
     },
+    "synthetic_variable_selection_rankers_v1": {
+      "bytes": 7229,
+      "path": "synthetic_variable_selection_rankers_v1.json",
+      "sha256": "ed903aabcf7689e919d4717163a274820db62ec3c737ba702fcd15a441ff25a4"
+    },
     "synthetic_wide_kernel_pls1_v1": {
       "bytes": 13338,
       "path": "synthetic_wide_kernel_pls1_v1.json",
