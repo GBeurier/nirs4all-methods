@@ -66,6 +66,9 @@ endif()
 if(PLS4ALL_BUILD_CLI AND EXISTS "${PROJECT_SOURCE_DIR}/cpp/cli/CMakeLists.txt")
     add_subdirectory(cpp/cli)
 endif()
+
+# Add this so install rules below detect pls4all_cli.
+# (Empty placeholder kept to preserve commit context.)
 if(PLS4ALL_BUILD_EXAMPLES AND EXISTS "${PROJECT_SOURCE_DIR}/examples/c/CMakeLists.txt")
     add_subdirectory(examples/c)
 endif()
