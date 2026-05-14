@@ -67,6 +67,7 @@ def _generate_all() -> dict[str, bytes]:
         "synthetic_variable_importance_pls2_v1": _serialize(suites.synthetic_variable_importance_pls2_v1()),
         "synthetic_variable_selection_rankers_v1": _serialize(suites.synthetic_variable_selection_rankers_v1()),
         "synthetic_interval_selection_moving_window_v1": _serialize(suites.synthetic_interval_selection_moving_window_v1()),
+        "synthetic_bipls_backward_intervals_v1": _serialize(suites.synthetic_bipls_backward_intervals_v1()),
         "synthetic_coefficient_stability_mcuve_v1": _serialize(suites.synthetic_coefficient_stability_mcuve_v1()),
         "synthetic_uve_artificial_variables_v1": _serialize(suites.synthetic_uve_artificial_variables_v1()),
         "synthetic_emcuve_pls_ensemble_v1": _serialize(suites.synthetic_emcuve_pls_ensemble_v1()),

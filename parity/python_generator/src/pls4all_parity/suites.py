@@ -1441,6 +1441,136 @@ def _interval_selection_expected(
     }
 
 
+def _interval_partitions(n_features: int, interval_width: int) -> list[tuple[int, int]]:
+    intervals: list[tuple[int, int]] = []
+    for start in range(0, int(n_features), int(interval_width)):
+        length = min(int(interval_width), int(n_features) - start)
+        intervals.append((int(start), int(length)))
+    return intervals
+
+
+def _select_interval_columns(X: np.ndarray,
+                             intervals: list[tuple[int, int]],
+                             active: list[int]) -> np.ndarray:
+    columns: list[int] = []
+    for interval_index in active:
+        start, length = intervals[int(interval_index)]
+        columns.extend(range(start, start + length))
+    return X[:, np.asarray(columns, dtype=np.int64)]
+
+
+def _bipls_cv_rmse(X: np.ndarray,
+                   Y: np.ndarray,
+                   intervals: list[tuple[int, int]],
+                   active: list[int],
+                   folds: list[tuple[list[int], list[int]]],
+                   n_components: int) -> float:
+    X_active = _select_interval_columns(X, intervals, active)
+    predictions = np.zeros_like(Y, dtype=np.float64)
+    for train, test in folds:
+        train_index = np.asarray(train, dtype=np.int64)
+        test_index = np.asarray(test, dtype=np.int64)
+        model = PLSRegression(n_components=n_components, scale=True, max_iter=500, tol=1e-6)
+        model.fit(X_active[train_index], Y[train_index])
+        fold_predictions = model.predict(X_active[test_index]).astype(np.float64, copy=False)
+        if fold_predictions.ndim == 1:
+            fold_predictions = fold_predictions.reshape(-1, 1)
+        predictions[test_index, :] = fold_predictions
+    metrics = _regression_metrics_expected(Y, predictions)["metrics"]["values"]
+    return float(metrics[0])
+
+
+def _bipls_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    interval_width: int,
+    min_intervals: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    intervals = _interval_partitions(X.shape[1], interval_width)
+    folds = _validation_folds("kfold", X.shape[0], n_splits)
+    active = list(range(len(intervals)))
+
+    rmse_path = [_bipls_cv_rmse(X, Y, intervals, active, folds, n_components)]
+    active_counts = [len(active)]
+    removed_intervals: list[int] = []
+    best_step = 0
+    best_rmse = rmse_path[0]
+    best_active = active.copy()
+
+    while len(active) > int(min_intervals):
+        candidates: list[tuple[float, int, list[int]]] = []
+        for interval_index in active:
+            trial = [index for index in active if index != interval_index]
+            rmse = _bipls_cv_rmse(X, Y, intervals, trial, folds, n_components)
+            candidates.append((float(rmse), int(interval_index), trial))
+        candidates.sort(key=lambda item: (item[0], item[1]))
+        chosen_rmse, removed, chosen_active = candidates[0]
+        removed_intervals.append(int(removed))
+        active = chosen_active
+        rmse_path.append(float(chosen_rmse))
+        active_counts.append(len(active))
+        if chosen_rmse < best_rmse:
+            best_rmse = float(chosen_rmse)
+            best_step = len(rmse_path) - 1
+            best_active = active.copy()
+
+    selected_features: list[int] = []
+    for interval_index in best_active:
+        start, length = intervals[int(interval_index)]
+        selected_features.extend(range(start, start + length))
+
+    return {
+        "intervals": {
+            "shape": [int(len(intervals)), 2],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [value for interval in intervals for value in interval],
+        },
+        "removed_intervals": {
+            "shape": [1, int(len(removed_intervals))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": removed_intervals,
+        },
+        "active_counts": {
+            "shape": [1, int(len(active_counts))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": active_counts,
+        },
+        "rmse_path": {
+            "shape": [1, int(len(rmse_path))],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": rmse_path,
+        },
+        "best_step": {
+            "shape": [1],
+            "layout": "row_major",
+            "dtype": "i32",
+            "values": [int(best_step)],
+        },
+        "selected_interval_indices": {
+            "shape": [1, int(len(best_active))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(index) for index in best_active],
+        },
+        "selected_feature_indices": {
+            "shape": [1, int(len(selected_features))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected_features,
+        },
+    }
+
+
 def _pls_original_scale_coefficients(model: PLSRegression) -> np.ndarray:
     W = model.x_weights_.astype(np.float64, copy=False)
     P = model.x_loadings_.astype(np.float64, copy=False)
@@ -4506,6 +4636,55 @@ def _interval_selection_fixture(
     }
 
 
+def _bipls_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    interval_width: int,
+    min_intervals: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._bipls_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":      "pls_regression",
+                "solver":         "nipals",
+                "n_components":   int(n_components),
+                "n_splits":       int(n_splits),
+                "interval_width": int(interval_width),
+                "min_intervals":  int(min_intervals),
+                "reference":      "sklearn PLSRegression deterministic backward interval PLS",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _bipls_selection_expected(X,
+                                              Y,
+                                              n_components,
+                                              n_splits,
+                                              interval_width,
+                                              min_intervals),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-biPLS-selection",
+        },
+    }
+
+
 def _coefficient_stability_fixture(
     fixture_id: str,
     seed: int,
@@ -6388,6 +6567,39 @@ def synthetic_interval_selection_moving_window_v1() -> dict[str, Any]:
                                        n_splits=5,
                                        interval_width=3,
                                        step=1)
+
+
+def synthetic_bipls_backward_intervals_v1() -> dict[str, Any]:
+    """24 samples, 12 features, 2 targets for deterministic backward interval PLS."""
+    seed = 87
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(24, 4))
+    X = np.column_stack([
+        0.92 * latent[:, 0] + 0.10 * latent[:, 1] + 0.04 * rng.standard_normal(size=24),
+        -0.42 * latent[:, 0] + 0.50 * latent[:, 2] + 0.04 * rng.standard_normal(size=24),
+        0.34 * latent[:, 0] - 0.20 * latent[:, 2] + 0.05 * rng.standard_normal(size=24),
+        0.64 * latent[:, 1] - 0.22 * latent[:, 3] + 0.05 * rng.standard_normal(size=24),
+        0.20 * latent[:, 0] + 0.76 * latent[:, 3] + 0.04 * rng.standard_normal(size=24),
+        -0.53 * latent[:, 2] + 0.28 * latent[:, 3] + 0.05 * rng.standard_normal(size=24),
+        rng.standard_normal(size=24) * 0.16,
+        np.sin(np.linspace(0.0, 3.0 * np.pi, 24)) + 0.05 * rng.standard_normal(size=24),
+        rng.standard_normal(size=24) * 0.14,
+        np.cos(np.linspace(0.0, 2.0 * np.pi, 24)) + 0.05 * rng.standard_normal(size=24),
+        np.linspace(-0.5, 0.5, 24) + 0.12 * rng.standard_normal(size=24),
+        rng.standard_normal(size=24) * 0.18,
+    ])
+    Y = np.column_stack([
+        1.08 * latent[:, 0] - 0.48 * latent[:, 2] + 0.05 * rng.standard_normal(size=24),
+        -0.41 * latent[:, 1] + 0.66 * latent[:, 3] + 0.05 * rng.standard_normal(size=24),
+    ])
+    return _bipls_selection_fixture("synthetic_bipls_backward_intervals_v1",
+                                    seed=seed,
+                                    X=X,
+                                    Y=Y,
+                                    n_components=2,
+                                    n_splits=4,
+                                    interval_width=3,
+                                    min_intervals=2)
 
 
 def synthetic_coefficient_stability_mcuve_v1() -> dict[str, Any]:

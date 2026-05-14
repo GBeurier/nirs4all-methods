@@ -1,5 +1,10 @@
 {
   "fixtures": {
+    "synthetic_bipls_backward_intervals_v1": {
+      "bytes": 12145,
+      "path": "synthetic_bipls_backward_intervals_v1.json",
+      "sha256": "e0a41d8eacdb9234d80aa63e73db65528c3178143a4047c9fe50fa12dc69cda3"
+    },
     "synthetic_bve_pls_backward_v1": {
       "bytes": 11490,
       "path": "synthetic_bve_pls_backward_v1.json",

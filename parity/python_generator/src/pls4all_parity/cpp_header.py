@@ -142,6 +142,14 @@ HEADER_SPECS = {
         "struct": "IntervalSelectionFixture",
         "array": "kIntervalSelectionFixtures",
     },
+    "bipls-selection": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "bipls_selection_fixtures.hpp",
+        "fixtures": (
+            "synthetic_bipls_backward_intervals_v1",
+        ),
+        "struct": "BiplsSelectionFixture",
+        "array": "kBiplsSelectionFixtures",
+    },
     "stability-selection": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "stability_selection_fixtures.hpp",
         "fixtures": (
@@ -1702,6 +1710,100 @@ def generate_interval_selection(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_bipls_selection(fixture_ids: Sequence[str],
+                             fixture_dir: Path,
+                             out: Path,
+                             family: str,
+                             struct_name: str,
+                             array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct BiplsSelectionIndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_components;",
+        "    std::int32_t n_splits;",
+        "    std::int32_t interval_width;",
+        "    std::int32_t min_intervals;",
+        "    std::int32_t best_step;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    BiplsSelectionIndexRef intervals;",
+        "    BiplsSelectionIndexRef removed_intervals;",
+        "    BiplsSelectionIndexRef active_counts;",
+        "    MatrixRef rmse_path;",
+        "    BiplsSelectionIndexRef selected_interval_indices;",
+        "    BiplsSelectionIndexRef selected_feature_indices;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        y_name = f"{prefix}_Y"
+        intervals_name = f"{prefix}_intervals"
+        removed_name = f"{prefix}_removed_intervals"
+        counts_name = f"{prefix}_active_counts"
+        rmse_name = f"{prefix}_rmse_path"
+        selected_intervals_name = f"{prefix}_selected_interval_indices"
+        selected_features_name = f"{prefix}_selected_feature_indices"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
+        _emit_int_array(lines, intervals_name, expected["intervals"]["values"])
+        _emit_int_array(lines, removed_name, expected["removed_intervals"]["values"])
+        _emit_int_array(lines, counts_name, expected["active_counts"]["values"])
+        _emit_array(lines, rmse_name, expected["rmse_path"]["values"])
+        _emit_int_array(lines, selected_intervals_name, expected["selected_interval_indices"]["values"])
+        _emit_int_array(lines, selected_features_name, expected["selected_feature_indices"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['n_components'])},\n"
+            f"        {int(params['n_splits'])},\n"
+            f"        {int(params['interval_width'])},\n"
+            f"        {int(params['min_intervals'])},\n"
+            f"        {int(expected['best_step']['values'][0])},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
+            f"        BiplsSelectionIndexRef{{{intervals_name}, sizeof({intervals_name}) / sizeof(std::int64_t)}},\n"
+            f"        BiplsSelectionIndexRef{{{removed_name}, sizeof({removed_name}) / sizeof(std::int64_t)}},\n"
+            f"        BiplsSelectionIndexRef{{{counts_name}, sizeof({counts_name}) / sizeof(std::int64_t)}},\n"
+            f"        {_matrix_ref(rmse_name, expected['rmse_path'])},\n"
+            f"        BiplsSelectionIndexRef{{{selected_intervals_name}, sizeof({selected_intervals_name}) / sizeof(std::int64_t)}},\n"
+            f"        BiplsSelectionIndexRef{{{selected_features_name}, sizeof({selected_features_name}) / sizeof(std::int64_t)}}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_stability_selection(fixture_ids: Sequence[str],
                                  fixture_dir: Path,
                                  out: Path,
@@ -3148,6 +3250,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "interval-selection":
         generate_interval_selection(fixture_ids, args.fixture_dir, out, args.family,
                                     str(spec["struct"]), str(spec["array"]))
+    elif args.family == "bipls-selection":
+        generate_bipls_selection(fixture_ids, args.fixture_dir, out, args.family,
+                                 str(spec["struct"]), str(spec["array"]))
     elif args.family == "stability-selection":
         generate_stability_selection(fixture_ids, args.fixture_dir, out, args.family,
                                      str(spec["struct"]), str(spec["array"]))

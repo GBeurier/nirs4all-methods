@@ -8,15 +8,16 @@ The canonical technical spec is [`Direction_Technique.md`](Direction_Technique.m
 
 ## Current checkpoint — 2026-05-14
 
-Latest local tag: `phase-5o-randomization-selection` (`0.54.0+abi.1.0.0`).
+Latest local tag: `phase-5p-bipls-selection` (`0.55.0+abi.1.0.0`).
 
-- Local reference gate is green: 83 deterministic parity fixtures, 181 C++ ABI/core tests, CLI selfcheck, Python smoke, ABI symbol diff, dependency audit, UBSAN and ASAN+UBSAN.
+- Local reference gate is green: 84 deterministic parity fixtures, 183 C++ ABI/core tests, CLI selfcheck, Python smoke, ABI symbol diff, dependency audit, UBSAN and ASAN+UBSAN.
 - GitHub Actions are intentionally parked for now to avoid spending runner quota; the actionable gate is the local parity/sanitizer run.
 - Phase 4 has shipped the main advanced CPU kernels currently targeted before variable selection: SIMPLS, SVD, PCR, kernel/wide-kernel, orthogonal-scores, power/randomized-SVD, PLSCanonical, PLSSVD, PLS-DA, OPLS/OPLS-DA, component-count CV, PLS-LDA, PLS-logistic, MB-PLS and LW-PLS.
 - Phase 5a has shipped deterministic variable-selection rankers over existing fitted-model scores: VIP, original-scale coefficient magnitude and selectivity ratio, with sklearn parity.
 - Phase 5b has shipped deterministic contiguous interval / moving-window CV scans over NIPALS PLS regression, with sklearn parity.
 - Phase 5c has shipped deterministic Monte-Carlo coefficient-stability ranking, with sklearn parity.
 - Phase 5d has shipped deterministic UVE artificial-variable thresholding, with sklearn parity.
+- Phase 5p has shipped deterministic biPLS backward interval elimination, with Python/sklearn parity.
 - Phase 5e has shipped deterministic SPA-PLS projection selection, with Python/sklearn parity.
 - Phase 5f has shipped deterministic CARS-PLS competitive adaptive reweighted sampling, with Python/sklearn parity.
 - Phase 5g has shipped deterministic Random Frog PLS subset sampling, with Python/sklearn parity.
@@ -29,7 +30,7 @@ Latest local tag: `phase-5o-randomization-selection` (`0.54.0+abi.1.0.0`).
 - Phase 5n has shipped deterministic EMCUVE ensemble MC-UVE voting, with Python/sklearn parity.
 - Phase 5o has shipped deterministic PLS randomization-test selection, with Python/sklearn parity.
 - Phase 2 bindings are still mostly skeletons: Python has a minimal ctypes lifecycle/config binding, while R/MATLAB/JS/Android remain README-level placeholders.
-- Active implementation track: Phase 5 variable selection, next moving from randomization tests to interval-combination variants and remaining wrapper/metaheuristic selectors.
+- Active implementation track: Phase 5 variable selection, next moving from biPLS to siPLS interval combinations and remaining wrapper/metaheuristic selectors.
 
 ## Phase 0 — ABI & Build Foundation · **shipped**
 
@@ -121,7 +122,8 @@ Each binding ships a parity-test suite that loads the JSON fixtures and asserts 
 
 - VIP selector, regression-coefficient selector, selectivity-ratio selector shipped as `phase-5a-variable-selection-rankers`.
 - Contiguous interval / moving-window CV scan shipped as `phase-5b-interval-selection`.
-- Remaining interval methods: biPLS, siPLS and interval-combination search.
+- Backward interval PLS selector shipped as `phase-5p-bipls-selection`.
+- Remaining interval methods: siPLS and interval-combination search.
 - Monte-Carlo coefficient stability shipped as `phase-5c-stability-selection`.
 - UVE artificial-variable thresholding shipped as `phase-5d-uve-selection`.
 - SPA-PLS projection selector shipped as `phase-5e-spa-selection`.
@@ -135,7 +137,7 @@ Each binding ships a parity-test suite that loads the JSON fixtures and asserts 
 - WVC-PLS deterministic weighted-variable-contribution selector shipped as `phase-5m-wvc-selection`.
 - EMCUVE deterministic ensemble MC-UVE vote-rule selector shipped as `phase-5n-emcuve-selection`.
 - PLS randomization-test selector shipped as `phase-5o-randomization-selection`.
-- Remaining interval-combination and wrappers / metaheuristics: biPLS/siPLS, thresholded/factor WVC extensions, REP/IPW/ST-PLS.
+- Remaining interval-combination and wrappers / metaheuristics: siPLS, thresholded/factor WVC extensions, REP/IPW/ST-PLS.
 
 ## Phase 6 — AOM-PLS & POP-PLS · the scientific differentiator
 
