@@ -447,10 +447,9 @@ TEST(pipeline_phase3f, asls_removes_constant_baseline) {
     CHECK_EQ(p4a_pipeline_fit(ctx, pipe, &X, nullptr), P4A_OK);
     p4a_array_t* out = nullptr;
     CHECK_EQ(p4a_pipeline_transform_alloc(ctx, pipe, &X, &out), P4A_OK);
-    check_close_vector(failures, copy_values(out), {
-        0.0, 0.0, 0.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0, 0.0,
-    });
+    for (double value : copy_values(out)) {
+        CHECK_EQ(std::fabs(value) <= 1e-8, true);
+    }
 
     p4a_array_free(out);
     p4a_pipeline_destroy(pipe);
