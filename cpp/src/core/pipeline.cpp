@@ -321,12 +321,87 @@ struct AslsParams {
     std::int32_t iterations{10};
 };
 
+struct NorrisWilliamsParams {
+    std::int32_t segment{5};
+    std::int32_t gap{3};
+    std::int32_t derivative_order{1};
+};
+
 [[nodiscard]] double factorial(std::int32_t n) noexcept {
     double out = 1.0;
     for (std::int32_t i = 2; i <= n; ++i) {
         out *= static_cast<double>(i);
     }
     return out;
+}
+
+[[nodiscard]] double binomial(std::int32_t n, std::int32_t k) noexcept {
+    if (k < 0 || k > n) {
+        return 0.0;
+    }
+    if (k > n - k) {
+        k = n - k;
+    }
+    double out = 1.0;
+    for (std::int32_t i = 1; i <= k; ++i) {
+        out *= static_cast<double>(n - k + i);
+        out /= static_cast<double>(i);
+    }
+    return out;
+}
+
+void norris_williams_filter(const NorrisWilliamsParams& params,
+                            std::vector<double>& coeffs) {
+    const std::size_t segment = static_cast<std::size_t>(params.segment);
+    const std::size_t gap = static_cast<std::size_t>(params.gap);
+    const std::size_t order = static_cast<std::size_t>(params.derivative_order);
+    coeffs.clear();
+    coeffs.reserve((order + 1U) * segment + order * gap);
+    for (std::size_t block = 0; block <= order; ++block) {
+        const double sign = ((params.derivative_order - static_cast<std::int32_t>(block)) % 2) == 0
+            ? 1.0
+            : -1.0;
+        const double value =
+            sign * binomial(params.derivative_order, static_cast<std::int32_t>(block)) /
+            static_cast<double>(params.segment);
+        for (std::size_t i = 0; i < segment; ++i) {
+            coeffs.push_back(value);
+        }
+        if (block < order) {
+            for (std::size_t i = 0; i < gap; ++i) {
+                coeffs.push_back(0.0);
+            }
+        }
+    }
+}
+
+[[nodiscard]] p4a_status_t apply_norris_williams(::pls4all::core::Context& ctx,
+                                                 const std::vector<double>& values,
+                                                 std::size_t rows,
+                                                 std::size_t cols,
+                                                 const NorrisWilliamsParams& params,
+                                                 std::vector<double>& out) {
+    (void)ctx;
+    std::vector<double> coeffs;
+    norris_williams_filter(params, coeffs);
+    const std::int64_t half = static_cast<std::int64_t>(coeffs.size() / 2U);
+    const std::int64_t max_col = static_cast<std::int64_t>(cols - 1U);
+    out.assign(rows * cols, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t col = 0; col < cols; ++col) {
+            double sum = 0.0;
+            for (std::size_t k = 0; k < coeffs.size(); ++k) {
+                std::int64_t source =
+                    static_cast<std::int64_t>(col) +
+                    static_cast<std::int64_t>(k) - half;
+                source = std::max<std::int64_t>(0, std::min<std::int64_t>(source, max_col));
+                sum += coeffs[k] *
+                       values[idx(row, cols, static_cast<std::size_t>(source))];
+            }
+            out[idx(row, cols, col)] = sum;
+        }
+    }
+    return P4A_OK;
 }
 
 [[nodiscard]] p4a_status_t compute_savgol_coeffs(::pls4all::core::Context& ctx,
@@ -793,6 +868,62 @@ struct AslsParams {
                                params.iterations);
 }
 
+[[nodiscard]] p4a_status_t validate_norris_williams(::pls4all::core::Context& ctx,
+                                                    const NorrisWilliamsParams& params) {
+    if ((params.segment % 2) == 0 || params.segment < 1 || params.segment > 101) {
+        ctx.set_error("Norris-Williams segment size must be an odd integer in [1, 101]");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    if ((params.gap % 2) == 0 || params.gap < 1 || params.gap > 101) {
+        ctx.set_error("Norris-Williams gap size must be an odd integer in [1, 101]");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    if (params.derivative_order < 1 || params.derivative_order > 4) {
+        ctx.set_error("Norris-Williams derivative order must be an integer in [1, 4]");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    const std::int32_t filter_length =
+        (params.derivative_order + 1) * params.segment +
+        params.derivative_order * params.gap;
+    if (filter_length > 501) {
+        ctx.set_error("Norris-Williams filter length must not exceed 501");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t parse_norris_williams(::pls4all::core::Context& ctx,
+                                                 const ::pls4all::core::OperatorEntry& entry,
+                                                 NorrisWilliamsParams& params) {
+    params = NorrisWilliamsParams{};
+    if (entry.params.empty()) {
+        return validate_norris_williams(ctx, params);
+    }
+    if (entry.params.size() != 3U) {
+        ctx.set_error("Norris-Williams expects zero params or segment/gap/derivative_order");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    p4a_status_t status = parse_integer_param(ctx, entry.params[0], 1, 101,
+                                              "Norris-Williams segment size",
+                                              params.segment);
+    if (status != P4A_OK) {
+        return status;
+    }
+    status = parse_integer_param(ctx, entry.params[1], 1, 101,
+                                 "Norris-Williams gap size",
+                                 params.gap);
+    if (status != P4A_OK) {
+        return status;
+    }
+    status = parse_integer_param(ctx, entry.params[2], 1, 4,
+                                 "Norris-Williams derivative order",
+                                 params.derivative_order);
+    if (status != P4A_OK) {
+        return status;
+    }
+    return validate_norris_williams(ctx, params);
+}
+
 }  // namespace
 
 namespace pls4all::core {
@@ -976,6 +1107,25 @@ p4a_status_t Pipeline::fit(Context& ctx, const p4a_matrix_view_t& X) {
                 }
                 break;
             }
+            case P4A_OP_NORRIS_WILLIAMS: {
+                NorrisWilliamsParams params;
+                status = parse_norris_williams(ctx, entry, params);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                state.scale.assign({
+                    static_cast<double>(params.segment),
+                    static_cast<double>(params.gap),
+                    static_cast<double>(params.derivative_order),
+                });
+                status = apply_norris_williams(ctx, current, rows, cols, params, next);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                break;
+            }
             default:
                 ctx.set_errorf("pipeline operator %d is not implemented in this release",
                                static_cast<int>(entry.kind));
@@ -1097,6 +1247,21 @@ p4a_status_t Pipeline::transform(Context& ctx,
                 params.asymmetry = state.scale[1];
                 params.iterations = static_cast<std::int32_t>(state.scale[2]);
                 status = apply_asls(ctx, current, rows, cols, params, next);
+                if (status != P4A_OK) {
+                    return status;
+                }
+                break;
+            }
+            case P4A_OP_NORRIS_WILLIAMS: {
+                if (state.scale.size() != 3U) {
+                    ctx.set_error("fitted Norris-Williams operator is missing parameters");
+                    return P4A_ERR_INTERNAL;
+                }
+                NorrisWilliamsParams params;
+                params.segment = static_cast<std::int32_t>(state.scale[0]);
+                params.gap = static_cast<std::int32_t>(state.scale[1]);
+                params.derivative_order = static_cast<std::int32_t>(state.scale[2]);
+                status = apply_norris_williams(ctx, current, rows, cols, params, next);
                 if (status != P4A_OK) {
                     return status;
                 }

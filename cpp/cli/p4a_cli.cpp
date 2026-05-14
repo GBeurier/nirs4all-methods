@@ -221,6 +221,20 @@ int cmd_selfcheck() {
     p4a_array_free(x_asls);
     p4a_pipeline_destroy(asls_pipe);
 
+    p4a_pipeline_t* norris_pipe = nullptr;
+    const double norris_params[] = {5.0, 3.0, 1.0};
+    CHECK(p4a_pipeline_create(&norris_pipe) == P4A_OK);
+    CHECK(p4a_pipeline_add_operator(norris_pipe, P4A_OP_NORRIS_WILLIAMS,
+                                    norris_params, 3) == P4A_OK);
+    CHECK(p4a_pipeline_fit(ctx, norris_pipe, &X_msc, nullptr) == P4A_OK);
+    p4a_array_t* x_norris = nullptr;
+    CHECK(p4a_pipeline_transform_alloc(ctx, norris_pipe, &X_msc, &x_norris) == P4A_OK);
+    CHECK(p4a_array_shape(x_norris, &pipe_rows, &pipe_cols) == P4A_OK);
+    CHECK(pipe_rows == 4);
+    CHECK(pipe_cols == 5);
+    p4a_array_free(x_norris);
+    p4a_pipeline_destroy(norris_pipe);
+
     // Model smoke: NIPALS fit, predict, transform and export.
     p4a_model_t* model = nullptr;
     CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &model) == P4A_OK);

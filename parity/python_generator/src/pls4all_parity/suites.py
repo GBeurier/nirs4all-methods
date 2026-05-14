@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import numpy as np
@@ -515,6 +516,29 @@ def _pipeline_apply(X: np.ndarray, operators: list[str]) -> np.ndarray:
                     weights = np.where(row > baseline, asymmetry_f, 1.0 - asymmetry_f)
                 corrected[row_idx, :] = row - baseline
             out = corrected
+        elif op.startswith("norris_williams_"):
+            _, _, segment, gap, derivative_order = op.split("_")
+            segment_i = int(segment)
+            gap_i = int(gap)
+            order_i = int(derivative_order)
+            coeffs: list[float] = []
+            for block in range(order_i + 1):
+                sign = 1.0 if ((order_i - block) % 2) == 0 else -1.0
+                value = sign * float(math.comb(order_i, block)) / float(segment_i)
+                coeffs.extend([value] * segment_i)
+                if block < order_i:
+                    coeffs.extend([0.0] * gap_i)
+            coeff_arr = np.asarray(coeffs, dtype=np.float64)
+            half = len(coeffs) // 2
+            transformed = np.zeros_like(out)
+            for row_idx, row in enumerate(out):
+                for col in range(out.shape[1]):
+                    acc = 0.0
+                    for k, coeff in enumerate(coeff_arr):
+                        source = min(max(col + k - half, 0), out.shape[1] - 1)
+                        acc += float(coeff) * float(row[source])
+                    transformed[row_idx, col] = acc
+            out = transformed
         else:
             raise ValueError(f"unsupported pipeline operator fixture: {op}")
     return out.astype(np.float64, copy=False)
@@ -1988,6 +2012,18 @@ def synthetic_pipeline_asls_v1() -> dict[str, Any]:
     ])
     return _pipeline_fixture("synthetic_pipeline_asls_v1", seed=50,
                              X=X, operators=["asls_100.0_0.01_8"])
+
+
+def synthetic_pipeline_norris_williams_v1() -> dict[str, Any]:
+    """3 samples, 11 wavelengths for Norris-Williams gap-segment parity."""
+    x = np.linspace(-1.0, 1.0, 11, dtype=np.float64)
+    X = np.vstack([
+        0.2 + 1.1 * x + 0.5 * x * x + np.sin(3.0 * x) * 0.1,
+        -0.4 + 0.7 * x - 0.2 * x * x + np.cos(2.0 * x) * 0.15,
+        1.0 - 0.5 * x + 0.3 * x * x + np.array([0.00, 0.02, -0.01, 0.03, -0.02, 0.00, 0.01, -0.03, 0.02, -0.01, 0.00]),
+    ])
+    return _pipeline_fixture("synthetic_pipeline_norris_williams_v1", seed=51,
+                             X=X, operators=["norris_williams_5_3_1"])
 
 
 def synthetic_power_tiny_pls1_v1() -> dict[str, Any]:

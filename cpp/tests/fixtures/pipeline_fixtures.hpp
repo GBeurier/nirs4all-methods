@@ -328,6 +328,42 @@ inline const std::int32_t synthetic_pipeline_asls_v1_n_params[] = {
     3,
 };
 
+inline const double synthetic_pipeline_norris_williams_v1_x[] = {
+    -0.41411200080598687, -0.42754631805511517, -0.37738476308781954, -0.25320390859672259,
+    -0.056464247339503504, 0.20000000000000001, 0.49646424733950389, 0.81320390859672287,
+    1.1373847630878196, 1.4675463180551152, 1.8141120008059868, -1.3624220254820714,
+    -1.0923799283451934, -0.83764633682849898, -0.60749399359792511, -0.40984085089956729,
+    -0.25, -0.12984085089956715, -0.04749399359792518, 0.0023536631715010067,
+    0.027620071654806566, 0.037577974517928561, 1.8, 1.6119999999999999,
+    1.3980000000000001, 1.278, 1.0920000000000001, 1,
+    0.92199999999999993, 0.81799999999999995, 0.82799999999999996, 0.78200000000000003,
+    0.80000000000000004,
+};
+
+inline const double synthetic_pipeline_norris_williams_v1_transform_train[] = {
+    0.4159942664690785, 0.65411200080598708, 0.93222973514289553, 1.239718711671645,
+    1.5551956642892089, 1.7865435965406529, 1.9151956642892087, 1.9277187116716448,
+    1.8122297351428953, 1.5741120008059868, 1.2959942664690782, 0.91545761903695988,
+    1.0734880876830744, 1.1954576190369597, 1.2289413841204591, 1.18150184129333,
+    1.0640000000000001, 0.89049815870666971, 0.67505861587954097, 0.48454238096304036,
+    0.32651191231692556, 0.20454238096304034, -0.66200000000000025, -0.77800000000000014,
+    -0.86800000000000055, -0.89240000000000019, -0.8520000000000002, -0.77200000000000024,
+    -0.63400000000000023, -0.4795999999999998, -0.33799999999999975, -0.22199999999999986,
+    -0.13199999999999978,
+};
+
+inline const p4a_operator_kind_t synthetic_pipeline_norris_williams_v1_operators[] = {
+    P4A_OP_NORRIS_WILLIAMS,
+};
+
+inline const double synthetic_pipeline_norris_williams_v1_params[] = {
+    5, 3, 1,
+};
+
+inline const std::int32_t synthetic_pipeline_norris_williams_v1_n_params[] = {
+    3,
+};
+
 inline const PipelineFixture kPipelineFixtures[] = {
     {
         "synthetic_pipeline_identity_v1",
@@ -427,6 +463,15 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_asls_v1_n_params,
         MatrixRef{3, 10, synthetic_pipeline_asls_v1_x, sizeof(synthetic_pipeline_asls_v1_x) / sizeof(double), false},
         MatrixRef{3, 10, synthetic_pipeline_asls_v1_transform_train, sizeof(synthetic_pipeline_asls_v1_transform_train) / sizeof(double), false}
+    },
+    {
+        "synthetic_pipeline_norris_williams_v1",
+        synthetic_pipeline_norris_williams_v1_operators,
+        sizeof(synthetic_pipeline_norris_williams_v1_operators) / sizeof(p4a_operator_kind_t),
+        synthetic_pipeline_norris_williams_v1_params,
+        synthetic_pipeline_norris_williams_v1_n_params,
+        MatrixRef{3, 11, synthetic_pipeline_norris_williams_v1_x, sizeof(synthetic_pipeline_norris_williams_v1_x) / sizeof(double), false},
+        MatrixRef{3, 11, synthetic_pipeline_norris_williams_v1_transform_train, sizeof(synthetic_pipeline_norris_williams_v1_transform_train) / sizeof(double), false}
     }
 };
 

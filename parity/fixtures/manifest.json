@@ -110,6 +110,11 @@
       "path": "synthetic_pipeline_msc_v1.json",
       "sha256": "d57551c786c2ef39b00a550a46ab8375d6fbed72f8296ee6ed7d28bd07834402"
     },
+    "synthetic_pipeline_norris_williams_v1": {
+      "bytes": 2749,
+      "path": "synthetic_pipeline_norris_williams_v1.json",
+      "sha256": "d0c3e7af9c0b8022e7fc547bdc25fd0cb1bb485c859e18d55405fddb4a03f732"
+    },
     "synthetic_pipeline_pareto_v1": {
       "bytes": 1504,
       "path": "synthetic_pipeline_pareto_v1.json",

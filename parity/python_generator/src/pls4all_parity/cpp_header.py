@@ -53,6 +53,7 @@ HEADER_SPECS = {
             "synthetic_pipeline_savgol_smooth_v1",
             "synthetic_pipeline_savgol_derivative_v1",
             "synthetic_pipeline_asls_v1",
+            "synthetic_pipeline_norris_williams_v1",
         ),
         "struct": "PipelineFixture",
         "array": "kPipelineFixtures",
@@ -337,6 +338,13 @@ def _pipeline_operator(name: str) -> tuple[str, list[float]]:
             float(lam),
             float(asymmetry),
             float(iterations),
+        ]
+    if name.startswith("norris_williams_"):
+        _prefix, _kind, segment, gap, derivative_order = name.split("_")
+        return "P4A_OP_NORRIS_WILLIAMS", [
+            float(segment),
+            float(gap),
+            float(derivative_order),
         ]
     return mapping[name], []
 

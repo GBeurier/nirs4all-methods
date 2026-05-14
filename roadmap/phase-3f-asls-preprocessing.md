@@ -31,4 +31,4 @@ common NIRS baseline correction.
 
 - Sparse/banded solver optimization for long spectra.
 - OSC / EPO supervised preprocessing.
-- Wavelet denoising and Norris-Williams derivative variants.
+- Wavelet denoising.
