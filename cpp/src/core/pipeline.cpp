@@ -70,7 +70,7 @@ void write_value(p4a_matrix_view_t& v,
     return P4A_OK;
 }
 
-struct OscParams {
+struct ProjectionParams {
     std::int32_t max_iter{100};
     double tol{1e-10};
 };
@@ -332,7 +332,7 @@ void apply_snv(const std::vector<double>& values,
                                            const std::vector<double>& values,
                                            std::size_t rows,
                                            std::size_t cols,
-                                           const OscParams& params,
+                                           const ProjectionParams& params,
                                            std::vector<double>& weights) {
     weights.assign(cols, 0.0);
     std::size_t best_col = 0;
@@ -385,6 +385,73 @@ void apply_snv(const std::vector<double>& values,
         double diff = 0.0;
         for (std::size_t col = 0; col < cols; ++col) {
             const double delta = next[col] - weights[col];
+            diff += delta * delta;
+        }
+        weights = next;
+        if (diff <= params.tol) {
+            return P4A_OK;
+        }
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t dominant_covariance_left_weight(::pls4all::core::Context& ctx,
+                                                           const std::vector<double>& covariance,
+                                                           std::size_t x_cols,
+                                                           std::size_t y_cols,
+                                                           const ProjectionParams& params,
+                                                           std::vector<double>& weights) {
+    weights.assign(x_cols, 0.0);
+    std::size_t best_row = 0;
+    double best_ss = -1.0;
+    for (std::size_t row = 0; row < x_cols; ++row) {
+        double sumsq = 0.0;
+        for (std::size_t col = 0; col < y_cols; ++col) {
+            const double value = covariance[idx(row, y_cols, col)];
+            sumsq += value * value;
+        }
+        if (sumsq > best_ss) {
+            best_ss = sumsq;
+            best_row = row;
+        }
+    }
+    if (best_ss <= std::numeric_limits<double>::epsilon()) {
+        ctx.set_error("EPO external covariance vanished");
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+    weights[best_row] = 1.0;
+
+    std::vector<double> right(y_cols, 0.0);
+    std::vector<double> next(x_cols, 0.0);
+    for (std::int32_t iter = 0; iter < params.max_iter; ++iter) {
+        std::fill(right.begin(), right.end(), 0.0);
+        for (std::size_t col = 0; col < y_cols; ++col) {
+            for (std::size_t row = 0; row < x_cols; ++row) {
+                right[col] += covariance[idx(row, y_cols, col)] * weights[row];
+            }
+        }
+        std::fill(next.begin(), next.end(), 0.0);
+        for (std::size_t row = 0; row < x_cols; ++row) {
+            for (std::size_t col = 0; col < y_cols; ++col) {
+                next[row] += covariance[idx(row, y_cols, col)] * right[col];
+            }
+        }
+        const double norm = std::sqrt(vector_sumsq(next));
+        if (norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_error("EPO dominant direction vanished");
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : next) {
+            value /= norm;
+        }
+        if (vector_dot(next, weights) < 0.0) {
+            for (double& value : next) {
+                value = -value;
+            }
+        }
+        double diff = 0.0;
+        for (std::size_t row = 0; row < x_cols; ++row) {
+            const double delta = next[row] - weights[row];
             diff += delta * delta;
         }
         weights = next;
@@ -521,7 +588,7 @@ struct WaveletParams {
 }
 
 [[nodiscard]] bool operator_requires_y(p4a_operator_kind_t kind) noexcept {
-    return kind == P4A_OP_OSC;
+    return kind == P4A_OP_OSC || kind == P4A_OP_EPO;
 }
 
 [[nodiscard]] bool pipeline_requires_y(
@@ -838,7 +905,7 @@ void norris_williams_filter(const NorrisWilliamsParams& params,
                                    std::size_t rows,
                                    std::size_t cols,
                                    std::size_t y_cols,
-                                   const OscParams& params,
+                                   const ProjectionParams& params,
                                    std::vector<double>& mean,
                                    std::vector<double>& weights,
                                    std::vector<double>& loadings,
@@ -883,6 +950,67 @@ void norris_williams_filter(const NorrisWilliamsParams& params,
         loadings[col] = sum / score_ss;
     }
     return apply_osc_filter(ctx, values, rows, cols, mean, weights, loadings, out);
+}
+
+[[nodiscard]] p4a_status_t apply_epo_filter(::pls4all::core::Context& ctx,
+                                            const std::vector<double>& values,
+                                            std::size_t rows,
+                                            std::size_t cols,
+                                            const std::vector<double>& mean,
+                                            const std::vector<double>& direction,
+                                            std::vector<double>& out) {
+    if (mean.size() != cols || direction.size() != cols) {
+        ctx.set_error("EPO fitted state has inconsistent dimensions");
+        return P4A_ERR_INTERNAL;
+    }
+    out.assign(rows * cols, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        double score = 0.0;
+        for (std::size_t col = 0; col < cols; ++col) {
+            score += (values[idx(row, cols, col)] - mean[col]) * direction[col];
+        }
+        for (std::size_t col = 0; col < cols; ++col) {
+            out[idx(row, cols, col)] = values[idx(row, cols, col)] - score * direction[col];
+        }
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t fit_epo(::pls4all::core::Context& ctx,
+                                   const std::vector<double>& values,
+                                   const std::vector<double>& y_values,
+                                   std::size_t rows,
+                                   std::size_t cols,
+                                   std::size_t y_cols,
+                                   const ProjectionParams& params,
+                                   std::vector<double>& mean,
+                                   std::vector<double>& direction,
+                                   std::vector<double>& out) {
+    std::vector<double> x_centered;
+    center_columns(values, rows, cols, mean, x_centered);
+
+    std::vector<double> y_mean;
+    std::vector<double> y_centered;
+    center_columns(y_values, rows, y_cols, y_mean, y_centered);
+
+    std::vector<double> covariance(cols * y_cols, 0.0);
+    for (std::size_t col = 0; col < cols; ++col) {
+        for (std::size_t y_col = 0; y_col < y_cols; ++y_col) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < rows; ++row) {
+                sum += x_centered[idx(row, cols, col)] *
+                       y_centered[idx(row, y_cols, y_col)];
+            }
+            covariance[idx(col, y_cols, y_col)] = sum;
+        }
+    }
+
+    p4a_status_t status =
+        dominant_covariance_left_weight(ctx, covariance, cols, y_cols, params, direction);
+    if (status != P4A_OK) {
+        return status;
+    }
+    return apply_epo_filter(ctx, values, rows, cols, mean, direction, out);
 }
 
 [[nodiscard]] p4a_status_t apply_msc(::pls4all::core::Context& ctx,
@@ -1290,8 +1418,8 @@ void norris_williams_filter(const NorrisWilliamsParams& params,
 
 [[nodiscard]] p4a_status_t parse_osc(::pls4all::core::Context& ctx,
                                      const ::pls4all::core::OperatorEntry& entry,
-                                     OscParams& params) {
-    params = OscParams{};
+                                     ProjectionParams& params) {
+    params = ProjectionParams{};
     if (entry.params.empty()) {
         return P4A_OK;
     }
@@ -1308,6 +1436,31 @@ void norris_williams_filter(const NorrisWilliamsParams& params,
     params.tol = entry.params[1];
     if (!std::isfinite(params.tol) || params.tol <= 0.0) {
         ctx.set_error("OSC tol must be finite and positive");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t parse_epo(::pls4all::core::Context& ctx,
+                                     const ::pls4all::core::OperatorEntry& entry,
+                                     ProjectionParams& params) {
+    params = ProjectionParams{};
+    if (entry.params.empty()) {
+        return P4A_OK;
+    }
+    if (entry.params.size() != 2U) {
+        ctx.set_error("EPO expects zero params or max_iter/tol");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    p4a_status_t status = parse_integer_param(ctx, entry.params[0], 1, 1000,
+                                              "EPO max_iter",
+                                              params.max_iter);
+    if (status != P4A_OK) {
+        return status;
+    }
+    params.tol = entry.params[1];
+    if (!std::isfinite(params.tol) || params.tol <= 0.0) {
+        ctx.set_error("EPO tol must be finite and positive");
         return P4A_ERR_INVALID_ARGUMENT;
     }
     return P4A_OK;
@@ -1343,7 +1496,7 @@ p4a_status_t Pipeline::fit(Context& ctx,
     std::size_t y_cols = 0;
     if (needs_y) {
         if (Y == nullptr) {
-            ctx.set_error("pipeline operator OSC requires a non-null Y matrix at fit");
+            ctx.set_error("supervised pipeline operator requires a non-null Y matrix at fit");
             return P4A_ERR_INVALID_ARGUMENT;
         }
         status = validate_float_view(ctx, *Y, "Y");
@@ -1565,7 +1718,7 @@ p4a_status_t Pipeline::fit(Context& ctx,
                 break;
             }
             case P4A_OP_OSC: {
-                OscParams params;
+                ProjectionParams params;
                 status = parse_osc(ctx, entry, params);
                 if (status != P4A_OK) {
                     states_.clear();
@@ -1575,6 +1728,22 @@ p4a_status_t Pipeline::fit(Context& ctx,
                 state.extra.reserve(cols);
                 status = fit_osc(ctx, current, y_values, rows, cols, y_cols, params,
                                  state.location, state.scale, state.extra, next);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                break;
+            }
+            case P4A_OP_EPO: {
+                ProjectionParams params;
+                status = parse_epo(ctx, entry, params);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                state.scale.reserve(cols);
+                status = fit_epo(ctx, current, y_values, rows, cols, y_cols, params,
+                                 state.location, state.scale, next);
                 if (status != P4A_OK) {
                     states_.clear();
                     return status;
@@ -1739,6 +1908,14 @@ p4a_status_t Pipeline::transform(Context& ctx,
             case P4A_OP_OSC: {
                 status = apply_osc_filter(ctx, current, rows, cols,
                                           state.location, state.scale, state.extra, next);
+                if (status != P4A_OK) {
+                    return status;
+                }
+                break;
+            }
+            case P4A_OP_EPO: {
+                status = apply_epo_filter(ctx, current, rows, cols,
+                                          state.location, state.scale, next);
                 if (status != P4A_OK) {
                     return status;
                 }

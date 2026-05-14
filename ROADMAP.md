@@ -37,7 +37,7 @@ Goal: a reliable, serialisable, portable PLS engine.
 
 Goal: useful for real spectroscopy.
 
-- SNV, MSC, EMSC, Detrend, Savitzky-Golay smoothing + 1st/2nd derivatives, ASLS baseline, Norris-Williams derivatives, Haar wavelet denoising, OSC.
+- SNV, MSC, EMSC, Detrend, Savitzky-Golay smoothing + 1st/2nd derivatives, ASLS baseline, Norris-Williams derivatives, Haar wavelet denoising, OSC, EPO.
 - Stateful `Preprocessor` C++ interface; pipeline-of-preprocessors with explicit `fit` / `transform`.
 - Phase 3a shipped as `phase-3a-preprocessing-pipeline`: pipeline fit/transform plus identity, center, autoscale, Pareto scale and SNV.
 - Phase 3b shipped as `phase-3b-msc-preprocessing`: multiplicative scatter correction in the same fitted pipeline contract.
@@ -48,6 +48,7 @@ Goal: useful for real spectroscopy.
 - Phase 3g shipped as `phase-3g-norris-williams-preprocessing`: Norris-Williams gap-segment derivatives.
 - Phase 3h shipped as `phase-3h-wavelet-preprocessing`: Haar wavelet denoising with soft-thresholded detail coefficients.
 - Phase 3i shipped as `phase-3i-osc-preprocessing`: supervised one-component orthogonal signal correction.
+- Phase 3j shipped as `phase-3j-epo-preprocessing`: supervised one-component external parameter orthogonalization.
 - Cross-validation engine: k-fold, LOO, Kennard-Stone, SPXY, holdout, external folds, repeated k-fold, Monte-Carlo CV.
 - Metrics: RMSEC, RMSECV, RMSEP, R², Q², bias, RPD, RPIQ, MAE, slope/intercept obs-vs-pred, sensitivity, specificity, balanced accuracy, AUC, MCC.
 - VIP, selectivity ratio, regression coefficients per component.
@@ -94,7 +95,7 @@ Each binding ships a parity-test suite that loads the JSON fixtures and asserts 
 
 ## Phase 6 — AOM-PLS & POP-PLS · the scientific differentiator
 
-- Operator bank as composable, stateful `Preprocessor` objects (Identity, SNV, MSC, SG-deriv-1/2, Polynomial Detrend, ASLS, Norris-Williams, Haar Wavelet, OSC).
+- Operator bank as composable, stateful `Preprocessor` objects (Identity, SNV, MSC, SG-deriv-1/2, Polynomial Detrend, ASLS, Norris-Williams, Haar Wavelet, OSC, EPO).
 - Soft gating (weighted mixture), hard gating (discrete pick), sparse gating (penalised mixture).
 - Per-component / per-block / per-target AOM.
 - AOM-NIPALS, AOM-SIMPLS, AOM-OPLS, AOM-MB-PLS.

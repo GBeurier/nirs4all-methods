@@ -445,6 +445,29 @@ def _osc_dominant_weight(values: np.ndarray, max_iter: int, tol: float) -> np.nd
     return weights
 
 
+def _epo_dominant_direction(covariance: np.ndarray, max_iter: int, tol: float) -> np.ndarray:
+    row_sumsq = np.sum(covariance * covariance, axis=1)
+    best_row = int(np.argmax(row_sumsq))
+    if float(row_sumsq[best_row]) <= np.finfo(np.float64).eps:
+        raise RuntimeError("EPO external covariance vanished")
+    weights = np.zeros(covariance.shape[0], dtype=np.float64)
+    weights[best_row] = 1.0
+    for _ in range(max_iter):
+        right = covariance.T @ weights
+        nxt = covariance @ right
+        norm = float(np.linalg.norm(nxt))
+        if norm <= np.finfo(np.float64).eps:
+            raise RuntimeError("EPO dominant direction vanished")
+        nxt = nxt / norm
+        if float(nxt @ weights) < 0.0:
+            nxt = -nxt
+        diff = float((nxt - weights) @ (nxt - weights))
+        weights = nxt
+        if diff <= tol:
+            break
+    return weights
+
+
 def _pipeline_apply(X: np.ndarray, operators: list[str], Y: np.ndarray | None = None) -> np.ndarray:
     out = np.asarray(X, dtype=np.float64).copy()
     y = None if Y is None else np.asarray(Y, dtype=np.float64)
@@ -626,6 +649,23 @@ def _pipeline_apply(X: np.ndarray, operators: list[str], Y: np.ndarray | None = 
                 raise RuntimeError("OSC training score vanished")
             loadings = (x_centered.T @ scores) / score_ss
             out = out - np.outer(scores, loadings)
+        elif op == "epo" or op.startswith("epo_"):
+            if y is None:
+                raise ValueError("EPO pipeline fixture requires Y")
+            if op == "epo":
+                max_iter_i = 100
+                tol_f = 1e-10
+            else:
+                _prefix, max_iter, tol = op.split("_")
+                max_iter_i = int(max_iter)
+                tol_f = float(tol)
+            x_mean = out.mean(axis=0)
+            x_centered = out - x_mean.reshape(1, -1)
+            y_centered = y - y.mean(axis=0).reshape(1, -1)
+            covariance = x_centered.T @ y_centered
+            direction = _epo_dominant_direction(covariance, max_iter_i, tol_f)
+            scores = x_centered @ direction
+            out = out - np.outer(scores, direction)
         else:
             raise ValueError(f"unsupported pipeline operator fixture: {op}")
     return out.astype(np.float64, copy=False)
@@ -2143,6 +2183,29 @@ def synthetic_pipeline_osc_v1() -> dict[str, Any]:
     X = y @ y_loading.reshape(1, -1) + orthogonal_score.reshape(-1, 1) @ orthogonal_loading.reshape(1, -1) + residual
     return _pipeline_fixture("synthetic_pipeline_osc_v1", seed=53,
                              X=X, Y=y, operators=["osc_100_1e-12"])
+
+
+def synthetic_pipeline_epo_v1() -> dict[str, Any]:
+    """6 samples, 5 wavelengths for one-component EPO parity."""
+    external = np.array([-1.0, -0.6, -0.1, 0.2, 0.7, 1.1], dtype=np.float64).reshape(-1, 1)
+    analyte = np.linspace(-0.8, 0.9, 6, dtype=np.float64)
+    analyte_loading = np.array([0.30, 0.55, -0.20, 0.15, 0.45], dtype=np.float64)
+    external_loading = np.array([0.95, -0.35, 0.25, 0.75, -0.40], dtype=np.float64)
+    residual = np.array([
+        [0.01, -0.02, 0.00, 0.02, -0.01],
+        [0.00, 0.01, -0.03, 0.01, 0.02],
+        [-0.02, 0.00, 0.02, -0.01, 0.01],
+        [0.03, -0.01, 0.01, 0.00, -0.02],
+        [-0.01, 0.02, -0.01, 0.03, 0.00],
+        [0.02, -0.03, 0.00, -0.02, 0.01],
+    ], dtype=np.float64)
+    X = (
+        analyte.reshape(-1, 1) @ analyte_loading.reshape(1, -1)
+        + external @ external_loading.reshape(1, -1)
+        + residual
+    )
+    return _pipeline_fixture("synthetic_pipeline_epo_v1", seed=54,
+                             X=X, Y=external, operators=["epo_100_1e-12"])
 
 
 def synthetic_power_tiny_pls1_v1() -> dict[str, Any]:

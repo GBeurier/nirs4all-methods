@@ -100,6 +100,11 @@
       "path": "synthetic_pipeline_emsc_v1.json",
       "sha256": "3ddc25425036c77dd9315bba12d8947554201d4c3adc577e6e79b37919b9a3b6"
     },
+    "synthetic_pipeline_epo_v1": {
+      "bytes": 2695,
+      "path": "synthetic_pipeline_epo_v1.json",
+      "sha256": "cc578b42705942785c66c97341f584eba16d91cf8b9a46ba339a58ce091cfff5"
+    },
     "synthetic_pipeline_identity_v1": {
       "bytes": 1319,
       "path": "synthetic_pipeline_identity_v1.json",

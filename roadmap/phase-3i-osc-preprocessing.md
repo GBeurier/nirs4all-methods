@@ -34,4 +34,4 @@ operator inside the fitted preprocessing pipeline.
 
 - Multi-component OSC with explicit component count.
 - Alternative OSC algorithms and convergence diagnostics.
-- EPO preprocessing.
+- EPO preprocessing shipped in Phase 3j.

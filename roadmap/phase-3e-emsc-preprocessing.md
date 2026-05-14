@@ -27,6 +27,6 @@ fit/transform separation and deterministic NumPy parity.
 ## Deferred
 
 - External interferent spectra in EMSC.
-- Orthogonal signal correction (`P4A_OP_OSC`) shipped in Phase 3i; EPO still
-  requires supervised `Y` semantics and serialization decisions.
+- Orthogonal signal correction (`P4A_OP_OSC`) shipped in Phase 3i; EPO shipped
+  in Phase 3j.
 - ASLS baseline correction shipped in Phase 3f.

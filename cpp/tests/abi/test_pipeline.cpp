@@ -692,19 +692,73 @@ TEST(pipeline_phase3i, osc_rejects_invalid_params_and_singular_y) {
     p4a_context_destroy(ctx);
 }
 
-TEST(pipeline_phase3a, unsupported_operators_fail_at_fit_with_context_error) {
+TEST(pipeline_phase3j, epo_requires_y_and_valid_params_at_fit) {
     p4a_context_t* ctx = nullptr;
     p4a_pipeline_t* pipe = nullptr;
     CHECK_EQ(p4a_context_create(&ctx), P4A_OK);
     CHECK_EQ(p4a_pipeline_create(&pipe), P4A_OK);
-    CHECK_EQ(p4a_pipeline_add_operator(pipe, P4A_OP_EPO, nullptr, 0), P4A_OK);
+    const double params[] = {100.0, 1e-12};
+    CHECK_EQ(p4a_pipeline_add_operator(pipe, P4A_OP_EPO, params, 2), P4A_OK);
 
-    double x[] = {1.0, 2.0, 3.0, 4.0};
+    double x[] = {
+        1.0, 2.0, 1.5,
+        2.0, 2.5, 2.0,
+        3.0, 3.0, 3.5,
+        4.0, 3.5, 4.0,
+    };
+    double y[] = {0.0, 1.0, 1.5, 3.0};
     p4a_matrix_view_t X{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X, x, 2, 2, P4A_DTYPE_F64), P4A_OK);
-    CHECK_EQ(p4a_pipeline_fit(ctx, pipe, &X, nullptr), P4A_ERR_NOT_IMPLEMENTED);
-    CHECK_STR_CONTAINS(p4a_context_last_error(ctx), "not implemented");
+    p4a_matrix_view_t Y{};
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X, x, 4, 3, P4A_DTYPE_F64), P4A_OK);
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&Y, y, 4, 1, P4A_DTYPE_F64), P4A_OK);
 
+    CHECK_EQ(p4a_pipeline_fit(ctx, pipe, &X, nullptr), P4A_ERR_INVALID_ARGUMENT);
+    CHECK_STR_CONTAINS(p4a_context_last_error(ctx), "Y");
+    CHECK_EQ(p4a_pipeline_fit(ctx, pipe, &X, &Y), P4A_OK);
+
+    p4a_array_t* out = nullptr;
+    CHECK_EQ(p4a_pipeline_transform_alloc(ctx, pipe, &X, &out), P4A_OK);
+    std::int64_t rows = 0;
+    std::int64_t cols = 0;
+    CHECK_EQ(p4a_array_shape(out, &rows, &cols), P4A_OK);
+    CHECK_EQ(rows, 4);
+    CHECK_EQ(cols, 3);
+
+    p4a_array_free(out);
     p4a_pipeline_destroy(pipe);
+    p4a_context_destroy(ctx);
+}
+
+TEST(pipeline_phase3j, epo_rejects_invalid_params_and_zero_external_covariance) {
+    p4a_context_t* ctx = nullptr;
+    CHECK_EQ(p4a_context_create(&ctx), P4A_OK);
+
+    double x[] = {
+        1.0, 2.0, 3.0,
+        1.0, 2.0, 3.0,
+        1.0, 2.0, 3.0,
+        1.0, 2.0, 3.0,
+    };
+    double y[] = {0.0, 1.0, 2.0, 3.0};
+    p4a_matrix_view_t X{};
+    p4a_matrix_view_t Y{};
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X, x, 4, 3, P4A_DTYPE_F64), P4A_OK);
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&Y, y, 4, 1, P4A_DTYPE_F64), P4A_OK);
+
+    p4a_pipeline_t* bad_tol = nullptr;
+    const double bad_params[] = {100.0, 0.0};
+    CHECK_EQ(p4a_pipeline_create(&bad_tol), P4A_OK);
+    CHECK_EQ(p4a_pipeline_add_operator(bad_tol, P4A_OP_EPO, bad_params, 2), P4A_OK);
+    CHECK_EQ(p4a_pipeline_fit(ctx, bad_tol, &X, &Y), P4A_ERR_INVALID_ARGUMENT);
+    CHECK_STR_CONTAINS(p4a_context_last_error(ctx), "tol");
+    p4a_pipeline_destroy(bad_tol);
+
+    p4a_pipeline_t* zero_covariance = nullptr;
+    CHECK_EQ(p4a_pipeline_create(&zero_covariance), P4A_OK);
+    CHECK_EQ(p4a_pipeline_add_operator(zero_covariance, P4A_OP_EPO, nullptr, 0), P4A_OK);
+    CHECK_EQ(p4a_pipeline_fit(ctx, zero_covariance, &X, &Y), P4A_ERR_NUMERICAL_FAILURE);
+    CHECK_STR_CONTAINS(p4a_context_last_error(ctx), "covariance");
+    p4a_pipeline_destroy(zero_covariance);
+
     p4a_context_destroy(ctx);
 }

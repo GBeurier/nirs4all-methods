@@ -31,5 +31,5 @@ common NIRS baseline correction.
 
 - Sparse/banded solver optimization for long spectra.
 - Supervised OSC preprocessing shipped in Phase 3i.
-- EPO supervised preprocessing.
+- EPO supervised preprocessing shipped in Phase 3j.
 - Haar wavelet denoising shipped in Phase 3h.

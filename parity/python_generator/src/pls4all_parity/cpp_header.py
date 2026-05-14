@@ -56,6 +56,7 @@ HEADER_SPECS = {
             "synthetic_pipeline_norris_williams_v1",
             "synthetic_pipeline_wavelet_haar_v1",
             "synthetic_pipeline_osc_v1",
+            "synthetic_pipeline_epo_v1",
         ),
         "struct": "PipelineFixture",
         "array": "kPipelineFixtures",
@@ -359,6 +360,14 @@ def _pipeline_operator(name: str) -> tuple[str, list[float]]:
     if name.startswith("osc_"):
         _prefix, max_iter, tol = name.split("_")
         return "P4A_OP_OSC", [
+            float(max_iter),
+            float(tol),
+        ]
+    if name == "epo":
+        return "P4A_OP_EPO", []
+    if name.startswith("epo_"):
+        _prefix, max_iter, tol = name.split("_")
+        return "P4A_OP_EPO", [
             float(max_iter),
             float(tol),
         ]

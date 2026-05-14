@@ -28,4 +28,4 @@ inside the fitted preprocessing pipeline.
 - Wavelength-spacing scaling (`delta.wav`) as an explicit param.
 - Haar wavelet denoising shipped in Phase 3h.
 - Supervised OSC preprocessing shipped in Phase 3i.
-- EPO supervised preprocessing.
+- EPO supervised preprocessing shipped in Phase 3j.

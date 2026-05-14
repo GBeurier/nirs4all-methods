@@ -34,9 +34,8 @@
  *     P4A_OP_CENTER, P4A_OP_AUTOSCALE, P4A_OP_PARETO_SCALE, P4A_OP_SNV,
  *     P4A_OP_MSC, P4A_OP_EMSC, P4A_OP_DETREND_POLY, P4A_OP_SAVGOL_SMOOTH,
  *     P4A_OP_SAVGOL_DERIVATIVE, P4A_OP_NORRIS_WILLIAMS,
- *     P4A_OP_ASLS_BASELINE, P4A_OP_WAVELET_DENOISE and P4A_OP_OSC.
- *     Remaining preprocessing operators return P4A_ERR_NOT_IMPLEMENTED until
- *     their dedicated Phase 3 follow-ups.
+ *     P4A_OP_ASLS_BASELINE, P4A_OP_WAVELET_DENOISE, P4A_OP_OSC and
+ *     P4A_OP_EPO.
  *   - p4a_model_fit implements dependency-free NIPALS, orthogonal-scores,
  *     SIMPLS, kernel, wide-kernel, SVD, power-iteration and randomized-SVD PLS
  *     regression (PLS1 / PLS2) for P4A_ALGO_PLS_REGRESSION +
@@ -465,11 +464,11 @@ P4A_API void         p4a_gating_strategy_destroy(p4a_gating_strategy_t* gs);
 
 /* ---- Preprocessing pipeline ----
  * Pipeline = ordered list of operators that share fit/transform.
- * Phase 3a/3b/3c/3d/3e/3f/3g/3h/3i implements identity, center, autoscale,
+ * Phase 3a/3b/3c/3d/3e/3f/3g/3h/3i/3j implements identity, center, autoscale,
  * Pareto scaling, SNV, MSC, EMSC, polynomial detrending, Savitzky-Golay
  * smoothing/derivatives, Norris-Williams gap-segment derivatives, ASLS
  * baseline correction, Haar wavelet denoising and supervised one-component
- * OSC with leakage-safe training statistics.
+ * OSC / EPO with leakage-safe training statistics.
  * Unsupported operators are accepted by add_operator so pipelines remain
  * serialisable later, but fit returns P4A_ERR_NOT_IMPLEMENTED until the
  * operator body lands.
@@ -488,7 +487,7 @@ P4A_API p4a_status_t p4a_pipeline_size          (const p4a_pipeline_t* pipe,
                                                   int32_t* out_size);
 
 /* `Y` is optional for unsupervised preprocessing operators and may be NULL.
- * Supervised operators such as OSC require a non-NULL Y at fit time. */
+ * Supervised operators such as OSC and EPO require a non-NULL Y at fit time. */
 P4A_API p4a_status_t p4a_pipeline_fit            (p4a_context_t* ctx,
                                                    p4a_pipeline_t* pipe,
                                                    const p4a_matrix_view_t* X,
@@ -618,7 +617,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.25.0+abi.1.0.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.26.0+abi.1.0.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 

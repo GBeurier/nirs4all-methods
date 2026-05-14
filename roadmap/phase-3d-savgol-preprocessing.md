@@ -42,5 +42,4 @@ preprocessing pipeline while keeping the C ABI unchanged.
 - External interferent spectra for EMSC; fitted-reference polynomial EMSC
   shipped in Phase 3e.
 - ASLS baseline correction.
-- OSC supervised preprocessing shipped in Phase 3i; EPO still requires
-  dedicated supervised preprocessing work.
+- OSC supervised preprocessing shipped in Phase 3i; EPO shipped in Phase 3j.
