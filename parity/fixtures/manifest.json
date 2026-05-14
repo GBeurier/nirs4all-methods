@@ -65,6 +65,11 @@
       "path": "synthetic_kernel_wide_pls2_v1.json",
       "sha256": "c16a2deb57be64e48d15dc89e70f725589d89dfef7a29d64d04e1dcf2ca72e31"
     },
+    "synthetic_lw_pls_local_window_v1": {
+      "bytes": 7758,
+      "path": "synthetic_lw_pls_local_window_v1.json",
+      "sha256": "215aae05689c4b5c0852209e0d5d4ef7fc031c381bb48be6a5e00621062caaa2"
+    },
     "synthetic_mb_pls_block_weighted_v1": {
       "bytes": 9127,
       "path": "synthetic_mb_pls_block_weighted_v1.json",

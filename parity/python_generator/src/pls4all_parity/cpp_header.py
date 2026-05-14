@@ -110,6 +110,14 @@ HEADER_SPECS = {
         "struct": "MbPlsFixture",
         "array": "kMbPlsFixtures",
     },
+    "lw-pls": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "lw_pls_fixtures.hpp",
+        "fixtures": (
+            "synthetic_lw_pls_local_window_v1",
+        ),
+        "struct": "LwPlsFixture",
+        "array": "kLwPlsFixtures",
+    },
     "variable-importance": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "variable_importance_fixtures.hpp",
         "fixtures": (
@@ -1262,6 +1270,81 @@ def generate_mb_pls(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_lw_pls(fixture_ids: Sequence[str],
+                    fixture_dir: Path,
+                    out: Path,
+                    family: str,
+                    struct_name: str,
+                    array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct LwPlsIndexRef {",
+        "    std::int64_t rows;",
+        "    std::int64_t cols;",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_components;",
+        "    std::int32_t n_neighbors;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    MatrixRef predictions;",
+        "    LwPlsIndexRef neighbor_indices;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        y_name = f"{prefix}_Y"
+        pred_name = f"{prefix}_predictions"
+        neighbors_name = f"{prefix}_neighbor_indices"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
+        _emit_array(lines, pred_name, expected["predictions"]["values"])
+        _emit_int_array(lines, neighbors_name, expected["neighbor_indices"]["values"])
+        neighbor_rows, neighbor_cols = _shape(expected["neighbor_indices"]["shape"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['n_components'])},\n"
+            f"        {int(params['n_neighbors'])},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
+            f"        {_matrix_ref(pred_name, expected['predictions'])},\n"
+            f"        LwPlsIndexRef{{{neighbor_rows}, {neighbor_cols}, {neighbors_name}, sizeof({neighbors_name}) / sizeof(std::int64_t)}}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_variable_importance(fixture_ids: Sequence[str],
                                  fixture_dir: Path,
                                  out: Path,
@@ -1561,6 +1644,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                               str(spec["struct"]), str(spec["array"]))
     elif args.family == "mb-pls":
         generate_mb_pls(fixture_ids, args.fixture_dir, out, args.family,
+                        str(spec["struct"]), str(spec["array"]))
+    elif args.family == "lw-pls":
+        generate_lw_pls(fixture_ids, args.fixture_dir, out, args.family,
                         str(spec["struct"]), str(spec["array"]))
     elif args.family == "variable-importance":
         generate_variable_importance(fixture_ids, args.fixture_dir, out, args.family,

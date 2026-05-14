@@ -80,7 +80,7 @@ Goal: useful for real spectroscopy.
 - PLS-LDA score-space classifier shipped as `phase-4p-pls-lda`.
 - PLS-logistic score-space classifier shipped as `phase-4q-pls-logistic`.
 - MB-PLS block-weighted kernel shipped as `phase-4r-mb-pls`.
-- LW-PLS (locally-weighted PLS) with KD-tree neighbours.
+- LW-PLS local-window kernel shipped as `phase-4s-lw-pls`.
 
 ## Phase 2 — Language bindings (now with real algorithms behind them)
 

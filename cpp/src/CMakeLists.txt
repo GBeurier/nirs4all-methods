@@ -37,6 +37,7 @@ add_library(pls4all_core OBJECT
     core/model_selection.cpp
     core/operator_bank.cpp
     core/gating_strategy.cpp
+    core/lw_pls.cpp
     core/pls_lda.cpp
     core/pls_logistic.cpp
     core/pipeline.cpp

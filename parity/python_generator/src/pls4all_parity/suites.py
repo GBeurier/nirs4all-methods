@@ -1210,6 +1210,51 @@ def _mb_pls_expected(
     }
 
 
+def _lw_pls_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_neighbors: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    Xs, _x_mean, _x_scale = _center_scale(X)
+    n = X.shape[0]
+    k = int(n_neighbors)
+    if k < int(n_components) + 1 or k > n:
+        raise ValueError("n_neighbors must be in [n_components + 1, n_samples]")
+    predictions = np.zeros((n, Y.shape[1]), dtype=np.float64)
+    neighbor_indices = np.zeros((n, k), dtype=np.int64)
+    for row in range(n):
+        deltas = Xs - Xs[row, :]
+        distances = np.sum(deltas * deltas, axis=1)
+        order = sorted(range(n), key=lambda idx_value: (float(distances[idx_value]), int(idx_value)))
+        selected = np.asarray(order[:k], dtype=np.int64)
+        neighbor_indices[row, :] = selected
+        model = PLSRegression(n_components=int(n_components), scale=True, max_iter=500, tol=1e-6)
+        model.fit(X[selected, :], Y[selected, :])
+        pred = model.predict(X[row:row + 1, :]).astype(np.float64, copy=False)
+        if pred.ndim == 1:
+            pred = pred.reshape(1, -1)
+        predictions[row, :] = pred[0, :]
+    return {
+        "predictions": {
+            "shape": list(predictions.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(predictions),
+        },
+        "neighbor_indices": {
+            "shape": list(neighbor_indices.shape),
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": neighbor_indices.reshape(-1, order="C").astype(int).tolist(),
+        },
+    }
+
+
 def _variable_importance_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -2737,6 +2782,46 @@ def _mb_pls_fixture(
     }
 
 
+def _lw_pls_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_neighbors: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._lw_pls_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":     "lw_pls",
+                "solver":        "nipals",
+                "n_components":  int(n_components),
+                "n_neighbors":   int(n_neighbors),
+                "reference":     "Python global-autoscaled kNN local-window PLS using sklearn PLSRegression",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _lw_pls_expected(X, Y, n_components, n_neighbors),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-local-window-LWPLS",
+        },
+    }
+
+
 def _variable_importance_fixture(
     fixture_id: str,
     seed: int,
@@ -3875,6 +3960,31 @@ def synthetic_mb_pls_block_weighted_v1() -> dict[str, Any]:
                            Y=Y,
                            block_sizes=[2, 3, 2],
                            n_components=2)
+
+
+def synthetic_lw_pls_local_window_v1() -> dict[str, Any]:
+    """18 samples, 5 features and 2 targets for local-window LW-PLS parity."""
+    seed = 101
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(18, 3))
+    trend = np.linspace(-0.7, 0.8, 18)
+    X = np.column_stack([
+        0.91 * latent[:, 0] + 0.14 * trend,
+        -0.42 * latent[:, 0] + 0.35 * latent[:, 1],
+        0.58 * latent[:, 1] - 0.26 * latent[:, 2],
+        0.33 * latent[:, 0] + 0.51 * latent[:, 2],
+        np.sin(np.linspace(0.0, 2.3 * np.pi, 18)) + 0.12 * latent[:, 1],
+    ]) + rng.standard_normal(size=(18, 5)) * 0.045
+    Y = np.column_stack([
+        1.02 * latent[:, 0] - 0.48 * latent[:, 2] + 0.08 * trend,
+        -0.56 * latent[:, 1] + 0.62 * latent[:, 2] - 0.05 * trend,
+    ]) + rng.standard_normal(size=(18, 2)) * 0.04
+    return _lw_pls_fixture("synthetic_lw_pls_local_window_v1",
+                           seed=seed,
+                           X=X,
+                           Y=Y,
+                           n_components=2,
+                           n_neighbors=9)
 
 
 def synthetic_variable_importance_pls2_v1() -> dict[str, Any]:

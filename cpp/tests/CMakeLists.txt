@@ -10,6 +10,7 @@ add_executable(pls4all_tests
     abi/test_lifecycle.cpp
     abi/test_classification_extensions.cpp
     abi/test_classification_metrics.cpp
+    abi/test_lw_pls.cpp
     abi/test_component_coefficients.cpp
     abi/test_config_setters.cpp
     abi/test_cross_validation.cpp

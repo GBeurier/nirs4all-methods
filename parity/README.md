@@ -63,6 +63,7 @@ parity/
 │   ├── synthetic_pls_lda_multiclass_v1.json
 │   ├── synthetic_pls_logistic_multiclass_v1.json
 │   ├── synthetic_mb_pls_block_weighted_v1.json
+│   ├── synthetic_lw_pls_local_window_v1.json
 │   ├── synthetic_variable_importance_pls2_v1.json
 │   ├── synthetic_component_coefficients_pls2_v1.json
 │   ├── synthetic_validation_kfold_balanced_v1.json
@@ -79,7 +80,7 @@ parity/
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.
-├── python_generator/              Pinned scikit-learn + NumPy/SciPy preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/PLS-LDA/PLS-logistic/MB-PLS/OPLS/OPLS-DA/SVD/PCR/validation/CV adapters.
+├── python_generator/              Pinned scikit-learn + NumPy/SciPy preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/PLS-LDA/PLS-logistic/MB-PLS/LW-PLS/OPLS/OPLS-DA/SVD/PCR/validation/CV adapters.
 └── r_generator/                   Pinned pls / ropls / mixOmics adapters.
 ```
 
@@ -120,7 +121,8 @@ latent projection prediction convention. PLS-DA fixtures use dummy-coded class
 targets fitted through scikit-learn `PLSRegression`. PLS-LDA and PLS-logistic
 fixtures reuse those score spaces with deterministic NumPy classifier heads.
 MB-PLS fixtures use deterministic block autoscaling and weighting before
-fitting sklearn `PLSRegression(scale=False)`. OPLS and
+fitting sklearn `PLSRegression(scale=False)`. LW-PLS fixtures use deterministic
+global-autoscaled kNN windows and local sklearn `PLSRegression` refits. OPLS and
 OPLS-DA fixtures are generated from a deterministic NumPy OPLS NIPALS recurrence
 with one shared predictive score for multi-response targets.
 PCR fixtures are generated from NumPy PCA/SVD with score-space
