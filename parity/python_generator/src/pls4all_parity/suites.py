@@ -2858,6 +2858,101 @@ def _rep_selection_expected(
     }
 
 
+def _ipw_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    n_iterations: int,
+    top_k: int,
+    damping: float,
+    weight_floor: float,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    p = int(X.shape[1])
+    weights = np.ones(p, dtype=np.float64)
+    score_rows: list[float] = []
+    weight_rows: list[float] = []
+    rmse_values: list[float] = []
+    selected_by_iteration: list[int] = []
+    candidates: list[list[int]] = []
+    best_iteration = -1
+    best_rmse = math.inf
+    base_scores = _pls_coefficient_scores(X, Y, n_components)
+
+    for iteration in range(int(n_iterations)):
+        scores = np.asarray(base_scores, dtype=np.float64) * weights
+        max_score = float(np.max(scores))
+        if not math.isfinite(max_score) or max_score <= np.finfo(np.float64).eps:
+            raise RuntimeError("IPW coefficient scores collapsed")
+        scores = scores / max_score
+        score_rows.extend(scores.astype(np.float64).tolist())
+
+        weights = float(damping) * weights + (1.0 - float(damping)) * scores
+        weights = np.maximum(float(weight_floor), weights)
+        max_weight = float(np.max(weights))
+        if not math.isfinite(max_weight) or max_weight <= np.finfo(np.float64).eps:
+            raise RuntimeError("IPW weights collapsed")
+        weights = weights / max_weight
+        weight_rows.extend(weights.astype(np.float64).tolist())
+
+        ranking = sorted(range(p), key=lambda feature: (-float(weights[int(feature)]), int(feature)))
+        selected = sorted(int(feature) for feature in ranking[:int(top_k)])
+        selected_by_iteration.extend(selected)
+        rmse = _kfold_pls_rmse(_copy_columns(X, selected), Y, n_components, n_splits)
+        rmse_values.append(float(rmse))
+        candidates.append(selected)
+        if rmse < best_rmse:
+            best_rmse = float(rmse)
+            best_iteration = int(iteration)
+
+    final_ranking = sorted(range(p), key=lambda feature: (-float(weights[int(feature)]), int(feature)))
+    selected = candidates[best_iteration]
+    return {
+        "score_path": {
+            "shape": [int(n_iterations), p],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": score_rows,
+        },
+        "weight_path": {
+            "shape": [int(n_iterations), p],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": weight_rows,
+        },
+        "rmse_by_iteration": {
+            "shape": [1, int(n_iterations)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": rmse_values,
+        },
+        "selected_by_iteration": {
+            "shape": [int(n_iterations), int(top_k)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected_by_iteration,
+        },
+        "ranking_indices": {
+            "shape": [1, p],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(feature) for feature in final_ranking],
+        },
+        "selected_indices": {
+            "shape": [1, int(len(selected))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected,
+        },
+        "best_iteration": int(best_iteration),
+        "best_rmse": float(best_rmse),
+    }
+
+
 def _bve_selection_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -5525,6 +5620,61 @@ def _rep_selection_fixture(
     }
 
 
+def _ipw_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    n_iterations: int,
+    top_k: int,
+    damping: float,
+    weight_floor: float,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._ipw_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":     "pls_regression",
+                "solver":        "nipals",
+                "n_components":  int(n_components),
+                "n_splits":      int(n_splits),
+                "n_iterations":  int(n_iterations),
+                "top_k":         int(top_k),
+                "damping":       float(damping),
+                "weight_floor":  float(weight_floor),
+                "reference":     "sklearn PLSRegression deterministic IPW-PLS",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _ipw_selection_expected(X,
+                                            Y,
+                                            n_components,
+                                            n_splits,
+                                            n_iterations,
+                                            top_k,
+                                            damping,
+                                            weight_floor),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-IPW-selection",
+        },
+    }
+
+
 def _bve_selection_fixture(
     fixture_id: str,
     seed: int,
@@ -7375,6 +7525,41 @@ def synthetic_rep_pls_recursive_v1() -> dict[str, Any]:
                                   n_steps=5,
                                   min_features=4,
                                   remove_count=2)
+
+
+def synthetic_ipw_pls_reweighted_v1() -> dict[str, Any]:
+    """30 samples, 11 features, 2 targets for deterministic IPW-PLS selection."""
+    seed = 78
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(30, 5))
+    wave = np.linspace(0.0, 2.6 * np.pi, 30)
+    X = np.column_stack([
+        0.94 * latent[:, 0] + 0.11 * latent[:, 1] + 0.04 * rng.standard_normal(size=30),
+        -0.46 * latent[:, 0] + 0.58 * latent[:, 2] + 0.05 * rng.standard_normal(size=30),
+        0.69 * latent[:, 1] - 0.24 * latent[:, 3] + 0.05 * rng.standard_normal(size=30),
+        0.21 * latent[:, 0] + 0.82 * latent[:, 3] + 0.04 * rng.standard_normal(size=30),
+        -0.50 * latent[:, 2] + 0.34 * latent[:, 3] + 0.05 * rng.standard_normal(size=30),
+        0.48 * latent[:, 4] + 0.16 * latent[:, 0] + 0.06 * rng.standard_normal(size=30),
+        0.32 * latent[:, 1] - 0.20 * latent[:, 4] + 0.07 * rng.standard_normal(size=30),
+        np.sin(1.20 * wave) + 0.05 * rng.standard_normal(size=30),
+        np.cos(1.35 * wave) + 0.05 * rng.standard_normal(size=30),
+        0.27 * np.linspace(-1.0, 1.0, 30) + 0.09 * rng.standard_normal(size=30),
+        rng.standard_normal(size=30) * 0.14,
+    ])
+    Y = np.column_stack([
+        1.08 * latent[:, 0] - 0.42 * latent[:, 2] + 0.31 * latent[:, 4] + 0.05 * rng.standard_normal(size=30),
+        -0.43 * latent[:, 1] + 0.74 * latent[:, 3] - 0.19 * latent[:, 4] + 0.05 * rng.standard_normal(size=30),
+    ])
+    return _ipw_selection_fixture("synthetic_ipw_pls_reweighted_v1",
+                                  seed=seed,
+                                  X=X,
+                                  Y=Y,
+                                  n_components=2,
+                                  n_splits=5,
+                                  n_iterations=5,
+                                  top_k=5,
+                                  damping=0.45,
+                                  weight_floor=0.05)
 
 
 def synthetic_bve_pls_backward_v1() -> dict[str, Any]:

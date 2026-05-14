@@ -90,6 +90,11 @@
       "path": "synthetic_interval_selection_moving_window_v1.json",
       "sha256": "342faea05975186db950a9477e68563b65eecc0e831d5b2bff8b73b5415366c7"
     },
+    "synthetic_ipw_pls_reweighted_v1": {
+      "bytes": 16825,
+      "path": "synthetic_ipw_pls_reweighted_v1.json",
+      "sha256": "8537966570ffb6dedcbeb0748a77f07f6601d256f1e31c4fbf50eeb70e9dc2f3"
+    },
     "synthetic_kernel_tiny_pls1_v1": {
       "bytes": 6003,
       "path": "synthetic_kernel_tiny_pls1_v1.json",
