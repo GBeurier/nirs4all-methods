@@ -198,6 +198,116 @@ void apply_snv(const std::vector<double>& values,
     }
 }
 
+[[nodiscard]] bool solve_linear_system(std::vector<double> matrix,
+                                       std::vector<double> rhs,
+                                       std::size_t n,
+                                       std::vector<double>& solution) {
+    solution.assign(n, 0.0);
+    for (std::size_t col = 0; col < n; ++col) {
+        std::size_t pivot = col;
+        double pivot_abs = std::fabs(matrix[idx(col, n, col)]);
+        for (std::size_t row = col + 1U; row < n; ++row) {
+            const double candidate = std::fabs(matrix[idx(row, n, col)]);
+            if (candidate > pivot_abs) {
+                pivot = row;
+                pivot_abs = candidate;
+            }
+        }
+        if (pivot_abs <= std::numeric_limits<double>::epsilon()) {
+            return false;
+        }
+        if (pivot != col) {
+            for (std::size_t j = 0; j < n; ++j) {
+                std::swap(matrix[idx(col, n, j)], matrix[idx(pivot, n, j)]);
+            }
+            std::swap(rhs[col], rhs[pivot]);
+        }
+        const double diag = matrix[idx(col, n, col)];
+        for (std::size_t j = col; j < n; ++j) {
+            matrix[idx(col, n, j)] /= diag;
+        }
+        rhs[col] /= diag;
+        for (std::size_t row = 0; row < n; ++row) {
+            if (row == col) {
+                continue;
+            }
+            const double factor = matrix[idx(row, n, col)];
+            for (std::size_t j = col; j < n; ++j) {
+                matrix[idx(row, n, j)] -= factor * matrix[idx(col, n, j)];
+            }
+            rhs[row] -= factor * rhs[col];
+        }
+    }
+    solution = std::move(rhs);
+    return true;
+}
+
+[[nodiscard]] p4a_status_t apply_detrend_poly(::pls4all::core::Context& ctx,
+                                              const std::vector<double>& values,
+                                              std::size_t rows,
+                                              std::size_t cols,
+                                              std::int32_t degree,
+                                              std::vector<double>& out) {
+    if (degree < 0) {
+        ctx.set_error("detrend polynomial degree must be non-negative");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    if (static_cast<std::size_t>(degree) >= cols) {
+        ctx.set_error("detrend polynomial degree must be smaller than the column count");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    const std::size_t terms = static_cast<std::size_t>(degree) + 1U;
+    std::vector<double> x(cols, 0.0);
+    for (std::size_t col = 0; col < cols; ++col) {
+        x[col] = cols > 1U
+            ? -1.0 + 2.0 * static_cast<double>(col) / static_cast<double>(cols - 1U)
+            : 0.0;
+    }
+    std::vector<double> powers(cols * terms, 1.0);
+    for (std::size_t col = 0; col < cols; ++col) {
+        for (std::size_t term = 1; term < terms; ++term) {
+            powers[idx(col, terms, term)] =
+                powers[idx(col, terms, term - 1U)] * x[col];
+        }
+    }
+    std::vector<double> gram(terms * terms, 0.0);
+    for (std::size_t row_term = 0; row_term < terms; ++row_term) {
+        for (std::size_t col_term = 0; col_term < terms; ++col_term) {
+            double sum = 0.0;
+            for (std::size_t col = 0; col < cols; ++col) {
+                sum += powers[idx(col, terms, row_term)] *
+                       powers[idx(col, terms, col_term)];
+            }
+            gram[idx(row_term, terms, col_term)] = sum;
+        }
+    }
+
+    out.assign(rows * cols, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        std::vector<double> rhs(terms, 0.0);
+        for (std::size_t term = 0; term < terms; ++term) {
+            double sum = 0.0;
+            for (std::size_t col = 0; col < cols; ++col) {
+                sum += values[idx(row, cols, col)] * powers[idx(col, terms, term)];
+            }
+            rhs[term] = sum;
+        }
+        std::vector<double> coeffs;
+        if (!solve_linear_system(gram, rhs, terms, coeffs)) {
+            ctx.set_error("failed to solve detrend polynomial normal equations");
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (std::size_t col = 0; col < cols; ++col) {
+            double trend = 0.0;
+            for (std::size_t term = 0; term < terms; ++term) {
+                trend += coeffs[term] * powers[idx(col, terms, term)];
+            }
+            out[idx(row, cols, col)] = values[idx(row, cols, col)] - trend;
+        }
+    }
+    return P4A_OK;
+}
+
 [[nodiscard]] p4a_status_t apply_msc(::pls4all::core::Context& ctx,
                                      const std::vector<double>& values,
                                      const std::vector<double>& reference,
@@ -251,6 +361,38 @@ void apply_snv(const std::vector<double>& values,
     return P4A_OK;
 }
 
+[[nodiscard]] p4a_status_t require_no_params(::pls4all::core::Context& ctx,
+                                             const ::pls4all::core::OperatorEntry& entry,
+                                             const char* name) {
+    if (!entry.params.empty()) {
+        ctx.set_errorf("%s does not accept parameters in this release", name);
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t parse_degree(::pls4all::core::Context& ctx,
+                                        const ::pls4all::core::OperatorEntry& entry,
+                                        std::int32_t& degree) {
+    degree = 1;
+    if (entry.params.empty()) {
+        return P4A_OK;
+    }
+    if (entry.params.size() != 1U) {
+        ctx.set_error("detrend polynomial expects zero params or one degree param");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    const double raw = entry.params[0];
+    const double rounded = std::round(raw);
+    if (!std::isfinite(raw) || std::fabs(raw - rounded) > 1e-12 ||
+        rounded < 0.0 || rounded > 5.0) {
+        ctx.set_error("detrend polynomial degree must be an integer in [0, 5]");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    degree = static_cast<std::int32_t>(rounded);
+    return P4A_OK;
+}
+
 }  // namespace
 
 namespace pls4all::core {
@@ -279,12 +421,6 @@ p4a_status_t Pipeline::fit(Context& ctx, const p4a_matrix_view_t& X) {
     states_.reserve(entries_.size());
 
     for (const OperatorEntry& entry : entries_) {
-        if (!entry.params.empty()) {
-            ctx.set_error("phase-3a pipeline operators do not accept parameters");
-            states_.clear();
-            return P4A_ERR_INVALID_ARGUMENT;
-        }
-
         OperatorState state;
         state.kind = entry.kind;
         state.n_features = X.cols;
@@ -292,27 +428,57 @@ p4a_status_t Pipeline::fit(Context& ctx, const p4a_matrix_view_t& X) {
 
         switch (entry.kind) {
             case P4A_OP_IDENTITY:
+                status = require_no_params(ctx, entry, "identity");
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
                 next = current;
                 break;
             case P4A_OP_CENTER:
+                status = require_no_params(ctx, entry, "center");
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
                 fit_column_center(current, rows, cols, state.location);
                 state.scale.assign(cols, 1.0);
                 apply_column_transform(current, state.location, state.scale, rows, cols, next);
                 break;
             case P4A_OP_AUTOSCALE:
+                status = require_no_params(ctx, entry, "autoscale");
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
                 fit_column_center(current, rows, cols, state.location);
                 fit_column_scale(current, state.location, rows, cols, false, state.scale);
                 apply_column_transform(current, state.location, state.scale, rows, cols, next);
                 break;
             case P4A_OP_PARETO_SCALE:
+                status = require_no_params(ctx, entry, "pareto scale");
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
                 fit_column_center(current, rows, cols, state.location);
                 fit_column_scale(current, state.location, rows, cols, true, state.scale);
                 apply_column_transform(current, state.location, state.scale, rows, cols, next);
                 break;
             case P4A_OP_SNV:
+                status = require_no_params(ctx, entry, "SNV");
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
                 apply_snv(current, rows, cols, next);
                 break;
             case P4A_OP_MSC:
+                status = require_no_params(ctx, entry, "MSC");
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
                 fit_column_center(current, rows, cols, state.location);
                 status = apply_msc(ctx, current, state.location, rows, cols, next);
                 if (status != P4A_OK) {
@@ -320,6 +486,21 @@ p4a_status_t Pipeline::fit(Context& ctx, const p4a_matrix_view_t& X) {
                     return status;
                 }
                 break;
+            case P4A_OP_DETREND_POLY: {
+                std::int32_t degree = 1;
+                status = parse_degree(ctx, entry, degree);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                state.scale.assign(1U, static_cast<double>(degree));
+                status = apply_detrend_poly(ctx, current, rows, cols, degree, next);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                break;
+            }
             default:
                 ctx.set_errorf("pipeline operator %d is not implemented in this release",
                                static_cast<int>(entry.kind));
@@ -388,6 +569,17 @@ p4a_status_t Pipeline::transform(Context& ctx,
                 break;
             case P4A_OP_MSC:
                 status = apply_msc(ctx, current, state.location, rows, cols, next);
+                if (status != P4A_OK) {
+                    return status;
+                }
+                break;
+            case P4A_OP_DETREND_POLY:
+                if (state.scale.empty()) {
+                    ctx.set_error("fitted detrend operator is missing its degree");
+                    return P4A_ERR_INTERNAL;
+                }
+                status = apply_detrend_poly(ctx, current, rows, cols,
+                                            static_cast<std::int32_t>(state.scale[0]), next);
                 if (status != P4A_OK) {
                     return status;
                 }

@@ -48,6 +48,7 @@ HEADER_SPECS = {
             "synthetic_pipeline_pareto_v1",
             "synthetic_pipeline_snv_v1",
             "synthetic_pipeline_msc_v1",
+            "synthetic_pipeline_detrend_poly_v1",
         ),
         "struct": "PipelineFixture",
         "array": "kPipelineFixtures",
@@ -300,7 +301,7 @@ def generate(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
-def _pipeline_operator_symbol(name: str) -> str:
+def _pipeline_operator(name: str) -> tuple[str, list[float]]:
     mapping = {
         "identity": "P4A_OP_IDENTITY",
         "center": "P4A_OP_CENTER",
@@ -309,7 +310,10 @@ def _pipeline_operator_symbol(name: str) -> str:
         "snv": "P4A_OP_SNV",
         "msc": "P4A_OP_MSC",
     }
-    return mapping[name]
+    if name.startswith("detrend_poly_"):
+        degree = float(int(name.rsplit("_", 1)[1]))
+        return "P4A_OP_DETREND_POLY", [degree]
+    return mapping[name], []
 
 
 def generate_pipeline(fixture_ids: Sequence[str],
@@ -336,6 +340,8 @@ def generate_pipeline(fixture_ids: Sequence[str],
         "    const char* id;",
         "    const p4a_operator_kind_t* operators;",
         "    std::size_t n_operators;",
+        "    const double* params;",
+        "    const std::int32_t* n_params;",
         "    MatrixRef X;",
         "    MatrixRef transform_train;",
         "};",
@@ -351,12 +357,28 @@ def generate_pipeline(fixture_ids: Sequence[str],
         ops_name = f"{prefix}_operators"
         _emit_array(lines, x_name, fixture["data"]["X"]["values"])
         _emit_array(lines, transformed_name, fixture["expected"]["transform_train"]["values"])
-        operators = [
-            _pipeline_operator_symbol(op)
+        parsed_ops = [
+            _pipeline_operator(op)
             for op in fixture["generator"]["params"]["operators"]
         ]
+        operators = [symbol for symbol, _params in parsed_ops]
+        flat_params = [value for _symbol_name, params in parsed_ops for value in params]
+        n_params = [len(params) for _symbol_name, params in parsed_ops]
+        params_name = f"{prefix}_params"
+        n_params_name = f"{prefix}_n_params"
         lines.append(f"inline const p4a_operator_kind_t {ops_name}[] = {{")
         lines.append(f"    {', '.join(operators)},")
+        lines.append("};")
+        lines.append("")
+        lines.append(f"inline const double {params_name}[] = {{")
+        if flat_params:
+            lines.append(f"    {', '.join(_format_double(v) for v in flat_params)},")
+        else:
+            lines.append("    0.0,")
+        lines.append("};")
+        lines.append("")
+        lines.append(f"inline const std::int32_t {n_params_name}[] = {{")
+        lines.append(f"    {', '.join(str(v) for v in n_params)},")
         lines.append("};")
         lines.append("")
         entries.append(
@@ -364,6 +386,8 @@ def generate_pipeline(fixture_ids: Sequence[str],
             f'        "{fid}",\n'
             f"        {ops_name},\n"
             f"        sizeof({ops_name}) / sizeof(p4a_operator_kind_t),\n"
+            f"        {params_name},\n"
+            f"        {n_params_name},\n"
             f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
             f"        {_matrix_ref(transformed_name, fixture['expected']['transform_train'])}\n"
             "    }"

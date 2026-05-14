@@ -453,6 +453,15 @@ def _pipeline_apply(X: np.ndarray, operators: list[str]) -> np.ndarray:
                 intercept = row_mean - slope * ref_mean
                 corrected[row_idx, :] = (row - intercept) / slope
             out = corrected
+        elif op.startswith("detrend_poly_"):
+            degree = int(op.rsplit("_", 1)[1])
+            x = np.linspace(-1.0, 1.0, out.shape[1], dtype=np.float64)
+            design = np.vander(x, N=degree + 1, increasing=True)
+            trend = np.zeros_like(out)
+            for row_idx, row in enumerate(out):
+                coeffs, *_ = np.linalg.lstsq(design, row, rcond=None)
+                trend[row_idx, :] = design @ coeffs
+            out = out - trend
         else:
             raise ValueError(f"unsupported pipeline operator fixture: {op}")
     return out.astype(np.float64, copy=False)
@@ -1862,6 +1871,18 @@ def synthetic_pipeline_msc_v1() -> dict[str, Any]:
     ])
     return _pipeline_fixture("synthetic_pipeline_msc_v1", seed=45,
                              X=X, operators=["msc"])
+
+
+def synthetic_pipeline_detrend_poly_v1() -> dict[str, Any]:
+    """3 samples, 6 wavelengths for degree-2 row-wise polynomial detrending."""
+    x = np.linspace(-1.0, 1.0, 6, dtype=np.float64)
+    X = np.vstack([
+        1.0 + 0.3 * x + 0.8 * x * x + np.array([0.02, -0.04, 0.03, -0.02, 0.01, 0.00]),
+        -0.4 + 0.7 * x - 0.2 * x * x + np.array([-0.01, 0.03, -0.02, 0.04, -0.03, 0.01]),
+        0.2 - 0.5 * x + 0.4 * x * x + np.array([0.00, 0.02, -0.03, 0.01, -0.01, 0.02]),
+    ])
+    return _pipeline_fixture("synthetic_pipeline_detrend_poly_v1", seed=46,
+                             X=X, operators=["detrend_poly_2"])
 
 
 def synthetic_power_tiny_pls1_v1() -> dict[str, Any]:

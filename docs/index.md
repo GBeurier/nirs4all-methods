@@ -17,7 +17,7 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
 The C ABI surface is feature-complete (96 `p4a_*` symbols). Lifecycle for
 context / config / matrix-view / operator-bank / gating-strategy / pipeline
 is implemented, and pipeline fit/transform is live for identity, center,
-autoscale, Pareto scaling, SNV and MSC. The supported fitted-model path is now live for NIPALS,
+autoscale, Pareto scaling, SNV, MSC and polynomial detrending. The supported fitted-model path is now live for NIPALS,
 orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and
 randomized-SVD PLS regression
 (PLS1 / PLS2), PLSCanonical with NIPALS/SVD, PLSSVD direct cross-covariance

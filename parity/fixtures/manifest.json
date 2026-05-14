@@ -85,6 +85,11 @@
       "path": "synthetic_pipeline_center_v1.json",
       "sha256": "b23a5a4fa1dc2f480c988a0ee28d73308820dc186b453cba8e8123dbd362b3a0"
     },
+    "synthetic_pipeline_detrend_poly_v1": {
+      "bytes": 1908,
+      "path": "synthetic_pipeline_detrend_poly_v1.json",
+      "sha256": "ffac9cafdf5245e91a71661b9dffede5a6b3705a2f84250a651983f8309d6b34"
+    },
     "synthetic_pipeline_identity_v1": {
       "bytes": 1313,
       "path": "synthetic_pipeline_identity_v1.json",

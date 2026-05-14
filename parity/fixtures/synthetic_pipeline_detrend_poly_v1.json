@@ -1,0 +1,93 @@
+{
+  "comparison_policy": {
+    "components_alignment": "exact",
+    "sign_resolver": "none",
+    "tolerance_table_row": "pls4all-numpy-preprocessing"
+  },
+  "data": {
+    "X": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "rng_seed": 46,
+      "shape": [
+        3,
+        6
+      ],
+      "values": [
+        1.52,
+        1.068,
+        1.002,
+        1.072,
+        1.478,
+        2.1,
+        -1.31,
+        -0.862,
+        -0.5680000000000001,
+        -0.2279999999999999,
+        -0.082,
+        0.10999999999999992,
+        1.1,
+        0.664,
+        0.28600000000000003,
+        0.12599999999999995,
+        0.03400000000000001,
+        0.12000000000000004
+      ]
+    },
+    "Y": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "rng_seed": 46,
+      "shape": [
+        3,
+        1
+      ],
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "expected": {
+    "transform_train": {
+      "shape": [
+        3,
+        6
+      ],
+      "values": [
+        0.014642857142856736,
+        -0.038928571428571646,
+        0.03428571428571425,
+        -0.01571428571428557,
+        0.011071428571428621,
+        -0.005357142857142616,
+        -0.010000000000000231,
+        0.02485714285714269,
+        -0.027428571428571802,
+        0.033142857142856946,
+        -0.033428571428571606,
+        0.012857142857142775,
+        -0.00821428571428573,
+        0.022499999999999964,
+        -0.022857142857142798,
+        0.015714285714285722,
+        -0.011785714285714274,
+        0.004642857142857101
+      ]
+    }
+  },
+  "fixture_id": "synthetic_pipeline_detrend_poly_v1",
+  "generator": {
+    "git_revision_sha": "unknown",
+    "name": "pls4all_parity.suites._pipeline_expected",
+    "params": {
+      "operators": [
+        "detrend_poly_2"
+      ],
+      "reference": "NumPy preprocessing pipeline"
+    },
+    "version": "1"
+  },
+  "schema_version": 1
+}

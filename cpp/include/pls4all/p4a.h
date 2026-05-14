@@ -31,8 +31,8 @@
  *   - Lifecycle / config / version / matrix-view are fully implemented.
  *   - Pipeline / operator-bank / gating-strategy lifecycle is implemented.
  *     Pipeline `_fit` / `_transform` are live for P4A_OP_IDENTITY,
- *     P4A_OP_CENTER, P4A_OP_AUTOSCALE, P4A_OP_PARETO_SCALE, P4A_OP_SNV
- *     and P4A_OP_MSC.
+ *     P4A_OP_CENTER, P4A_OP_AUTOSCALE, P4A_OP_PARETO_SCALE, P4A_OP_SNV,
+ *     P4A_OP_MSC and P4A_OP_DETREND_POLY.
  *     Remaining preprocessing operators return P4A_ERR_NOT_IMPLEMENTED until
  *     their dedicated Phase 3 follow-ups.
  *   - p4a_model_fit implements dependency-free NIPALS, orthogonal-scores,
@@ -463,10 +463,11 @@ P4A_API void         p4a_gating_strategy_destroy(p4a_gating_strategy_t* gs);
 
 /* ---- Preprocessing pipeline ----
  * Pipeline = ordered list of operators that share fit/transform.
- * Phase 3a/3b implements identity, center, autoscale, Pareto scaling, SNV
- * and MSC with leakage-safe training statistics. Unsupported operators are accepted
- * by add_operator so pipelines remain serialisable later, but fit returns
- * P4A_ERR_NOT_IMPLEMENTED until the operator body lands.
+ * Phase 3a/3b/3c implements identity, center, autoscale, Pareto scaling, SNV,
+ * MSC and polynomial detrending with leakage-safe training statistics.
+ * Unsupported operators are accepted by add_operator so pipelines remain
+ * serialisable later, but fit returns P4A_ERR_NOT_IMPLEMENTED until the
+ * operator body lands.
  */
 P4A_API p4a_status_t p4a_pipeline_create        (p4a_pipeline_t** out);
 P4A_API void         p4a_pipeline_destroy       (p4a_pipeline_t* pipe);
@@ -612,7 +613,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.18.0+abi.1.0.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.19.0+abi.1.0.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 

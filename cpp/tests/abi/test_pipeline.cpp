@@ -96,8 +96,12 @@ TEST(pipeline_phase3a, generated_fixtures_match_python_reference) {
         p4a_pipeline_t* pipe = nullptr;
         CHECK_EQ(p4a_context_create(&ctx), P4A_OK);
         CHECK_EQ(p4a_pipeline_create(&pipe), P4A_OK);
+        std::size_t param_offset = 0;
         for (std::size_t op = 0; op < fixture.n_operators; ++op) {
-            CHECK_EQ(p4a_pipeline_add_operator(pipe, fixture.operators[op], nullptr, 0), P4A_OK);
+            const std::int32_t n_params = fixture.n_params[op];
+            const double* params = n_params > 0 ? fixture.params + param_offset : nullptr;
+            CHECK_EQ(p4a_pipeline_add_operator(pipe, fixture.operators[op], params, n_params), P4A_OK);
+            param_offset += static_cast<std::size_t>(n_params);
         }
 
         p4a_matrix_view_t X{};
@@ -189,6 +193,92 @@ TEST(pipeline_phase3a, snv_is_rowwise_and_handles_flat_rows) {
     });
 
     p4a_array_free(out);
+    p4a_pipeline_destroy(pipe);
+    p4a_context_destroy(ctx);
+}
+
+TEST(pipeline_phase3c, detrend_poly_default_degree_is_linear) {
+    p4a_context_t* ctx = nullptr;
+    p4a_pipeline_t* pipe = nullptr;
+    CHECK_EQ(p4a_context_create(&ctx), P4A_OK);
+    CHECK_EQ(p4a_pipeline_create(&pipe), P4A_OK);
+    CHECK_EQ(p4a_pipeline_add_operator(pipe, P4A_OP_DETREND_POLY, nullptr, 0), P4A_OK);
+
+    double x[] = {
+        1.0, 2.0, 4.0,
+        3.0, 2.0, 1.0,
+    };
+    p4a_matrix_view_t X{};
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X, x, 2, 3, P4A_DTYPE_F64), P4A_OK);
+    CHECK_EQ(p4a_pipeline_fit(ctx, pipe, &X, nullptr), P4A_OK);
+    p4a_array_t* out = nullptr;
+    CHECK_EQ(p4a_pipeline_transform_alloc(ctx, pipe, &X, &out), P4A_OK);
+    check_close_vector(failures, copy_values(out), {
+         1.0 / 6.0, -1.0 / 3.0,  1.0 / 6.0,
+         0.0,        0.0,         0.0,
+    });
+
+    p4a_array_free(out);
+    p4a_pipeline_destroy(pipe);
+    p4a_context_destroy(ctx);
+}
+
+TEST(pipeline_phase3c, detrend_poly_rejects_invalid_degrees) {
+    p4a_context_t* ctx = nullptr;
+    CHECK_EQ(p4a_context_create(&ctx), P4A_OK);
+
+    double x[] = {1.0, 2.0, 3.0, 4.0};
+    p4a_matrix_view_t X{};
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X, x, 2, 2, P4A_DTYPE_F64), P4A_OK);
+
+    p4a_pipeline_t* non_integer = nullptr;
+    const double non_integer_degree[] = {1.5};
+    CHECK_EQ(p4a_pipeline_create(&non_integer), P4A_OK);
+    CHECK_EQ(p4a_pipeline_add_operator(non_integer, P4A_OP_DETREND_POLY,
+                                       non_integer_degree, 1),
+             P4A_OK);
+    CHECK_EQ(p4a_pipeline_fit(ctx, non_integer, &X, nullptr), P4A_ERR_INVALID_ARGUMENT);
+    CHECK_STR_CONTAINS(p4a_context_last_error(ctx), "integer");
+    p4a_pipeline_destroy(non_integer);
+
+    p4a_pipeline_t* too_many = nullptr;
+    const double too_many_params[] = {1.0, 2.0};
+    CHECK_EQ(p4a_pipeline_create(&too_many), P4A_OK);
+    CHECK_EQ(p4a_pipeline_add_operator(too_many, P4A_OP_DETREND_POLY,
+                                       too_many_params, 2),
+             P4A_OK);
+    CHECK_EQ(p4a_pipeline_fit(ctx, too_many, &X, nullptr), P4A_ERR_INVALID_ARGUMENT);
+    CHECK_STR_CONTAINS(p4a_context_last_error(ctx), "zero params or one");
+    p4a_pipeline_destroy(too_many);
+
+    p4a_pipeline_t* degree_equals_cols = nullptr;
+    const double degree[] = {2.0};
+    CHECK_EQ(p4a_pipeline_create(&degree_equals_cols), P4A_OK);
+    CHECK_EQ(p4a_pipeline_add_operator(degree_equals_cols, P4A_OP_DETREND_POLY,
+                                       degree, 1),
+             P4A_OK);
+    CHECK_EQ(p4a_pipeline_fit(ctx, degree_equals_cols, &X, nullptr),
+             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_STR_CONTAINS(p4a_context_last_error(ctx), "smaller than the column count");
+    p4a_pipeline_destroy(degree_equals_cols);
+
+    p4a_context_destroy(ctx);
+}
+
+TEST(pipeline_phase3c, no_param_operators_reject_params_at_fit) {
+    p4a_context_t* ctx = nullptr;
+    p4a_pipeline_t* pipe = nullptr;
+    CHECK_EQ(p4a_context_create(&ctx), P4A_OK);
+    CHECK_EQ(p4a_pipeline_create(&pipe), P4A_OK);
+    const double param[] = {1.0};
+    CHECK_EQ(p4a_pipeline_add_operator(pipe, P4A_OP_CENTER, param, 1), P4A_OK);
+
+    double x[] = {1.0, 2.0, 3.0, 4.0};
+    p4a_matrix_view_t X{};
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X, x, 2, 2, P4A_DTYPE_F64), P4A_OK);
+    CHECK_EQ(p4a_pipeline_fit(ctx, pipe, &X, nullptr), P4A_ERR_INVALID_ARGUMENT);
+    CHECK_STR_CONTAINS(p4a_context_last_error(ctx), "center");
+
     p4a_pipeline_destroy(pipe);
     p4a_context_destroy(ctx);
 }
