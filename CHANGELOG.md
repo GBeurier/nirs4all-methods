@@ -9,6 +9,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 Next phase: broaden the algorithm family beyond NIPALS PLS regression, with
 reference parity and benchmarks for every added method.
 
+## [0.3.0-simpls] — 2026-05-14
+
+SIMPLS core increment.
+
+### Added
+
+- Dependency-free SIMPLS regression solver for PLS1 / PLS2 behind
+  `P4A_SOLVER_SIMPLS`.
+- Deterministic NumPy SIMPLS parity fixtures plus C++ parity coverage for
+  predictions, coefficients, preprocessing statistics, latent arrays,
+  transform scores and serialization round-trips.
+- CLI selfcheck smoke for the SIMPLS fit / predict path.
+
+### Changed
+
+- Project version is now `0.3.0+abi.1.0.0`; the C ABI remains unchanged.
+- The model import path now accepts serialized NIPALS and SIMPLS models.
+
 ## [0.2.0-phase1] — 2026-05-14
 
 Phase 1 — PLS CPU reference. Roadmap at [`roadmap/phase-1.md`](roadmap/phase-1.md).

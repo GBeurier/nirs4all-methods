@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CeCILL-2.1
 //
-// Internal fitted-model state and dependency-free NIPALS PLS regression.
+// Internal fitted-model state and dependency-free PLS regression solvers.
 
 #pragma once
 
@@ -56,6 +56,13 @@ class Model {
 };
 
 [[nodiscard]] p4a_status_t fit_pls_regression_nipals(
+    Context& ctx,
+    const Config& cfg,
+    const p4a_matrix_view_t& X,
+    const p4a_matrix_view_t& Y,
+    std::unique_ptr<Model>& out_model);
+
+[[nodiscard]] p4a_status_t fit_pls_regression_simpls(
     Context& ctx,
     const Config& cfg,
     const p4a_matrix_view_t& X,

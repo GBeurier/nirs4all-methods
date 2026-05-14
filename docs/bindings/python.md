@@ -1,6 +1,6 @@
 # Python binding
 
-Phase 0 ships a ctypes-only wrapper that exposes ABI introspection and the
+The current package ships a ctypes-only wrapper that exposes ABI introspection and the
 context / config lifecycles. See [`bindings/python/README.md`](../../bindings/python/README.md) for installation and loader rules.
 
 ## Hello-version
@@ -8,7 +8,7 @@ context / config lifecycles. See [`bindings/python/README.md`](../../bindings/py
 ```python
 import pls4all
 
-print(pls4all.version())          # "0.2.0+abi.1.0.0"
+print(pls4all.version())          # "0.3.0+abi.1.0.0"
 print(pls4all.abi_version())      # (1, 0, 0)
 print(pls4all.build_info())       # ""
 
@@ -20,6 +20,10 @@ with pls4all.Context() as ctx:
     except pls4all.Pls4allError as exc:
         print(exc.status_name)    # "backend unavailable"
         print(exc.last_error)     # "backend 5 is not compiled into this build of libp4a"
+
+with pls4all.Config() as cfg:
+    cfg.solver = pls4all.Solver.SIMPLS
+    assert cfg.solver == pls4all.Solver.SIMPLS
 ```
 
 Phase 2 expands the surface to a full sklearn-compatible estimator with

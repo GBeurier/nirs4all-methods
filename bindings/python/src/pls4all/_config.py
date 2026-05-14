@@ -1,5 +1,8 @@
-"""Pythonic wrapper around p4a_config_t. Phase 0 surfaces a small subset of
-setters (algorithm, n_components, tol); Phase 2 expands to the full set."""
+"""Pythonic wrapper around p4a_config_t.
+
+The ctypes binding still exposes a small subset of setters; Phase 2 expands it
+to the full model-estimator surface.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +10,7 @@ import ctypes
 
 from ._errors import Pls4allError
 from ._ffi import lib
-from ._types import Status
+from ._types import Solver, Status
 
 
 def _check(status: int) -> None:
@@ -16,7 +19,7 @@ def _check(status: int) -> None:
 
 
 class Config:
-    """Phase 0 wrapper around p4a_config_t."""
+    """Thin wrapper around p4a_config_t."""
 
     def __init__(self) -> None:
         h = ctypes.c_void_p(0)
@@ -55,6 +58,16 @@ class Config:
     @n_components.setter
     def n_components(self, value: int) -> None:
         _check(lib.p4a_config_set_n_components(self._h, ctypes.c_int32(int(value))))
+
+    @property
+    def solver(self) -> Solver:
+        out = ctypes.c_int(0)
+        _check(lib.p4a_config_get_solver(self._h, ctypes.byref(out)))
+        return Solver(int(out.value))
+
+    @solver.setter
+    def solver(self, value: Solver | int) -> None:
+        _check(lib.p4a_config_set_solver(self._h, ctypes.c_int(int(value))))
 
     @property
     def tol(self) -> float:

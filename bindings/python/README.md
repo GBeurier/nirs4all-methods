@@ -1,13 +1,14 @@
 # Python binding
 
-Phase 0 ships a minimal **ctypes-only** Python binding that:
+The current Python package ships a minimal **ctypes-only** binding that:
 
 - loads `libp4a.{so,dll,dylib}` via `ctypes.CDLL`,
 - exposes the version / status / dtype / backend introspection queries,
 - exposes a Pythonic `Context` and `Config` wrapper for the lifecycle calls,
 - raises a typed exception (`Pls4allError`) on any non-OK status, capturing the per-context `last_error` message.
 
-A real wheel with NumPy zero-copy `p4a_matrix_view_t` conversion + a sklearn-compatible estimator lands in Phase 2 (after Phase 1's NIPALS PLS goes live).
+A real wheel with NumPy zero-copy `p4a_matrix_view_t` conversion + a
+sklearn-compatible estimator lands in Phase 2 on top of the live C core.
 
 ## Build the underlying library
 
@@ -32,7 +33,7 @@ In order:
 
 ```python
 import pls4all
-print(pls4all.version())       # "0.2.0+abi.1.0.0"
+print(pls4all.version())       # "0.3.0+abi.1.0.0"
 print(pls4all.abi_version())   # (1, 0, 0)
 
 with pls4all.Context() as ctx:
@@ -42,4 +43,8 @@ with pls4all.Context() as ctx:
         ctx.backend = pls4all.Backend.CUDA
     except pls4all.Pls4allError as e:
         print(e)               # 'backend 5 is not compiled into this build of libp4a'
+
+with pls4all.Config() as cfg:
+    cfg.solver = pls4all.Solver.SIMPLS
+    assert cfg.solver == pls4all.Solver.SIMPLS
 ```

@@ -41,23 +41,26 @@ jobs:
 
       - name: Run pls4all Python binding smoke test
         env:
-          PLS4ALL_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libp4a.so.0.2.0
+          PLS4ALL_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libp4a.so.0.3.0
         run: |
           pip install -e bindings/python
-          python -c "
+          python - <<'PY'
           import pls4all
-          assert pls4all.version().startswith('0.2.0')
+
+          assert pls4all.version().startswith("0.3.0")
           with pls4all.Context() as ctx, pls4all.Config() as cfg:
               cfg.n_components = 3
+              cfg.solver = pls4all.Solver.SIMPLS
               assert cfg.n_components == 3
+              assert cfg.solver == pls4all.Solver.SIMPLS
               try:
                   ctx.backend = pls4all.Backend.CUDA
-                  raise AssertionError('expected BACKEND_UNAVAILABLE')
+                  raise AssertionError("expected BACKEND_UNAVAILABLE")
               except pls4all.Pls4allError as e:
-                  assert e.status_name == 'backend unavailable'
-          print('python binding smoke OK from CI')
-          "
+                  assert e.status_name == "backend unavailable"
+          print("python binding smoke OK from CI")
+          PY
 
-      - name: Confirm Phase 1 parity gate
+      - name: Confirm core parity gate
         run: |
-          echo "Phase 1 parity gate validates fixture determinism and C++ NIPALS numerical parity."
+          echo "Core parity gate validates fixture determinism plus C++ NIPALS and SIMPLS numerical parity."

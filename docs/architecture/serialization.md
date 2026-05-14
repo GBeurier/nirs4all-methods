@@ -1,6 +1,6 @@
 # Serialization
 
-Phase 1 implements the first binary fitted-model format behind:
+The C ABI implements the first binary fitted-model format behind:
 
 - `p4a_model_export_size`
 - `p4a_model_export_to_buffer`
@@ -17,8 +17,8 @@ u32 writer_abi_minor
 u32 writer_abi_patch
 ```
 
-The payload stores Phase 1 model metadata, preprocessing statistics,
-coefficients, latent matrices and optional training scores. A trailing FNV-1a
+The payload stores model metadata, preprocessing statistics, coefficients,
+latent matrices and optional training scores. A trailing FNV-1a
 64-bit checksum covers every byte before the checksum field. Imports reject bad
 magic, truncated payloads, impossible dimensions, length mismatches and checksum
 failures with `P4A_ERR_CORRUPT_BUFFER`; unsupported format versions return

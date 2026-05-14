@@ -1,8 +1,8 @@
-# Phase 0 lockfile. Re-pin with `pip-compile pyproject.toml --output-file=requirements-lock.txt`
+# Parity-generator lockfile. Re-pin with `pip-compile pyproject.toml --output-file=requirements-lock.txt`
 # whenever the pyproject pins change.
 #
-# nirs4all is intentionally tracked here because at least one Phase 0 fixture
-# is regenerated from its SIMPLS implementation in subsequent phases.
+# nirs4all is intentionally tracked here for upcoming cross-implementation
+# fixtures; current SIMPLS fixtures use a deterministic NumPy port.
 numpy==1.26.4
 scikit-learn==1.4.2
 scipy==1.11.4

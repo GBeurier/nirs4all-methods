@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pls4all-parity-generator"
-version = "0.1.0"
-description = "Generate pls4all parity fixtures from pinned reference PLS implementations (scikit-learn, nirs4all)."
+version = "0.3.0"
+description = "Generate pls4all parity fixtures from pinned reference PLS implementations."
 authors = [{ name = "Grégory Beurier and contributors" }]
 license = "CECILL-2.1"
 requires-python = ">=3.10"
@@ -15,8 +15,8 @@ dependencies = [
   "scipy==1.11.4",
   "joblib==1.4.0"
 ]
-# nirs4all 0.8.x is treated as optional at Phase 0 (the adapter skip()s if it
-# is not importable). Pin it via requirements-lock.txt for full coverage.
+# nirs4all 0.8.x remains pinned in requirements-lock.txt for later cross-impl
+# fixtures; the current SIMPLS fixtures use a deterministic NumPy port.
 
 [project.scripts]
 generate-fixtures = "pls4all_parity.cli:main"

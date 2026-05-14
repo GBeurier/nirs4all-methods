@@ -117,7 +117,7 @@ int cmd_selfcheck() {
     CHECK(p4a_matrix_view_validate(&X) == P4A_OK);
     CHECK(p4a_matrix_view_validate(&Y) == P4A_OK);
 
-    // Phase 1 model smoke: fit, predict, transform and export.
+    // Model smoke: NIPALS fit, predict, transform and export.
     p4a_model_t* model = NULL;
     CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &model) == P4A_OK);
     CHECK(model != NULL);
@@ -141,6 +141,18 @@ int cmd_selfcheck() {
     CHECK(p4a_model_export_size(model, &export_size) == P4A_OK);
     CHECK(export_size > 64);
     p4a_model_destroy(model);
+
+    CHECK(p4a_config_set_solver(cfg, P4A_SOLVER_SIMPLS) == P4A_OK);
+    p4a_model_t* simpls_model = NULL;
+    CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &simpls_model) == P4A_OK);
+    CHECK(simpls_model != NULL);
+    p4a_array_t* simpls_pred = NULL;
+    CHECK(p4a_model_predict_alloc(ctx, simpls_model, &X, &simpls_pred) == P4A_OK);
+    CHECK(p4a_array_shape(simpls_pred, &rows, &cols) == P4A_OK);
+    CHECK(rows == 4);
+    CHECK(cols == 1);
+    p4a_array_free(simpls_pred);
+    p4a_model_destroy(simpls_model);
 
     p4a_config_destroy(cfg);
     p4a_context_destroy(ctx);

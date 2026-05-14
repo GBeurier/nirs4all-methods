@@ -30,11 +30,13 @@ def _serialize(fixture: dict) -> bytes:
 
 
 def _generate_all() -> dict[str, bytes]:
-    """Run every Phase 0 fixture producer; return id -> bytes mapping."""
+    """Run every checked-in fixture producer; return id -> bytes mapping."""
     return {
         "synthetic_small_pls1_v1":    _serialize(suites.synthetic_small_pls1_v1()),
         "synthetic_small_pls2_v1":    _serialize(suites.synthetic_small_pls2_v1()),
         "synthetic_tiny_centered_v1": _serialize(suites.synthetic_tiny_centered_v1()),
+        "synthetic_simpls_tiny_pls1_v1": _serialize(suites.synthetic_simpls_tiny_pls1_v1()),
+        "synthetic_simpls_small_pls2_v1": _serialize(suites.synthetic_simpls_small_pls2_v1()),
     }
 
 

@@ -28,7 +28,7 @@ def _candidate_paths() -> list[Path]:
     # Developer convenience: repo-root build directory.
     if _REPO_ROOT is not None:
         for preset in ("dev-release", "dev-debug"):
-            for name in ("libp4a.so", "libp4a.dylib", "libp4a.so.0.2.0", "libp4a.so.0.1.0", "p4a.dll"):
+            for name in ("libp4a.so", "libp4a.dylib", "libp4a.so.0.3.0", "libp4a.so.0.2.0", "libp4a.so.0.1.0", "p4a.dll"):
                 p = _REPO_ROOT / "build" / preset / "cpp" / "src" / name
                 if p.exists():
                     paths.append(p)
@@ -129,3 +129,7 @@ lib.p4a_config_set_algorithm.restype  = ctypes.c_int
 lib.p4a_config_set_algorithm.argtypes = [ctypes.c_void_p, ctypes.c_int]
 lib.p4a_config_get_algorithm.restype  = ctypes.c_int
 lib.p4a_config_get_algorithm.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int)]
+lib.p4a_config_set_solver.restype  = ctypes.c_int
+lib.p4a_config_set_solver.argtypes = [ctypes.c_void_p, ctypes.c_int]
+lib.p4a_config_get_solver.restype  = ctypes.c_int
+lib.p4a_config_get_solver.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int)]

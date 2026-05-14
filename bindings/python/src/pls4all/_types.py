@@ -1,5 +1,4 @@
-"""Enums mirroring p4a.h. Phase 2 expands this with the full algorithm /
-solver / deflation / operator-kind / gating-mode / model-array sets."""
+"""Enums mirroring the p4a.h values exposed by the current ctypes binding."""
 
 from __future__ import annotations
 
@@ -45,3 +44,14 @@ class Dtype(IntEnum):
     F32     = 2
     I32     = 3
     I64     = 4
+
+
+class Solver(IntEnum):
+    NIPALS            = 0
+    SIMPLS            = 1
+    ORTHOGONAL_SCORES = 2
+    KERNEL_ALGORITHM  = 3
+    WIDE_KERNEL       = 4
+    SVD               = 5
+    POWER             = 6
+    RANDOMIZED_SVD    = 7

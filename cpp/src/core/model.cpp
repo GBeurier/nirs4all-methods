@@ -222,24 +222,204 @@ void matrix_vector_product(const std::vector<double>& matrix,
     }
 }
 
+void canonicalize_direction_sign(std::vector<double>& direction) noexcept {
+    if (direction.empty()) {
+        return;
+    }
+    std::size_t sign_idx = 0;
+    double sign_abs = std::fabs(direction[0]);
+    for (std::size_t i = 1; i < direction.size(); ++i) {
+        const double candidate = std::fabs(direction[i]);
+        if (candidate > sign_abs) {
+            sign_idx = i;
+            sign_abs = candidate;
+        }
+    }
+    if (direction[sign_idx] < 0.0) {
+        for (double& value : direction) {
+            value = -value;
+        }
+    }
+}
+
+[[nodiscard]] p4a_status_t dominant_left_singular_direction(
+    ::pls4all::core::Context& ctx,
+    const std::vector<double>& covariance,
+    std::size_t features,
+    std::size_t targets,
+    std::int32_t max_iter,
+    double tol,
+    std::size_t component,
+    std::vector<double>& out) {
+    resize_fill(out, features, 0.0);
+    if (targets == 1U) {
+        for (std::size_t feature = 0; feature < features; ++feature) {
+            out[feature] = covariance[idx(feature, targets, 0)];
+        }
+        if (squared_norm(out) <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("SIMPLS covariance vanished at component %zu", component);
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        canonicalize_direction_sign(out);
+        return P4A_OK;
+    }
+
+    std::size_t best_target = 0;
+    double best_norm = 0.0;
+    for (std::size_t target = 0; target < targets; ++target) {
+        double norm = 0.0;
+        for (std::size_t feature = 0; feature < features; ++feature) {
+            const double value = covariance[idx(feature, targets, target)];
+            norm += value * value;
+        }
+        if (norm > best_norm) {
+            best_norm = norm;
+            best_target = target;
+        }
+    }
+    if (best_norm <= std::numeric_limits<double>::epsilon()) {
+        ctx.set_errorf("SIMPLS covariance vanished at component %zu", component);
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+    const double initial_norm = std::sqrt(best_norm);
+    for (std::size_t feature = 0; feature < features; ++feature) {
+        out[feature] = covariance[idx(feature, targets, best_target)] / initial_norm;
+    }
+
+    std::vector<double> right;
+    std::vector<double> next_left;
+    resize_fill(right, targets, 0.0);
+    resize_fill(next_left, features, 0.0);
+    const double stop_tol = std::min(std::max(tol, 1e-14), 1e-12);
+    bool converged = false;
+    for (std::int32_t iter = 0; iter < max_iter; ++iter) {
+        for (std::size_t target = 0; target < targets; ++target) {
+            double sum = 0.0;
+            for (std::size_t feature = 0; feature < features; ++feature) {
+                sum += covariance[idx(feature, targets, target)] * out[feature];
+            }
+            right[target] = sum;
+        }
+        const double right_norm = std::sqrt(squared_norm(right));
+        if (right_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("SIMPLS right singular direction vanished at component %zu", component);
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : right) {
+            value /= right_norm;
+        }
+
+        for (std::size_t feature = 0; feature < features; ++feature) {
+            double sum = 0.0;
+            for (std::size_t target = 0; target < targets; ++target) {
+                sum += covariance[idx(feature, targets, target)] * right[target];
+            }
+            next_left[feature] = sum;
+        }
+        const double left_norm = std::sqrt(squared_norm(next_left));
+        if (left_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("SIMPLS left singular direction vanished at component %zu", component);
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : next_left) {
+            value /= left_norm;
+        }
+        if (dot(next_left, out) < 0.0) {
+            for (double& value : next_left) {
+                value = -value;
+            }
+        }
+
+        double diff = 0.0;
+        for (std::size_t feature = 0; feature < features; ++feature) {
+            const double delta = next_left[feature] - out[feature];
+            diff += delta * delta;
+        }
+        out = next_left;
+        if (diff < stop_tol * stop_tol) {
+            converged = true;
+            break;
+        }
+    }
+    if (!converged) {
+        ctx.set_errorf("SIMPLS singular-vector iteration failed to converge at component %zu",
+                       component);
+        return P4A_ERR_CONVERGENCE_FAILED;
+    }
+    canonicalize_direction_sign(out);
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t compute_rotations_and_coefficients(
+    ::pls4all::core::Context& ctx,
+    ::pls4all::core::Model& model,
+    std::size_t features,
+    std::size_t targets,
+    std::size_t components) {
+    std::vector<double> ptw;
+    resize_fill(ptw, components * components, 0.0);
+    for (std::size_t row_comp = 0; row_comp < components; ++row_comp) {
+        for (std::size_t col_comp = 0; col_comp < components; ++col_comp) {
+            double sum = 0.0;
+            for (std::size_t feature = 0; feature < features; ++feature) {
+                sum += model.loadings_p[idx(feature, components, row_comp)] *
+                       model.weights_w[idx(feature, components, col_comp)];
+            }
+            ptw[idx(row_comp, components, col_comp)] = sum;
+        }
+    }
+
+    std::vector<double> ptw_inv;
+    if (!invert_square(ptw, components, ptw_inv)) {
+        ctx.set_error("failed to invert P.T @ W while computing rotations");
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+
+    resize_fill(model.rotations_r, features * components, 0.0);
+    for (std::size_t feature = 0; feature < features; ++feature) {
+        for (std::size_t comp = 0; comp < components; ++comp) {
+            double sum = 0.0;
+            for (std::size_t inner = 0; inner < components; ++inner) {
+                sum += model.weights_w[idx(feature, components, inner)] *
+                       ptw_inv[idx(inner, components, comp)];
+            }
+            model.rotations_r[idx(feature, components, comp)] = sum;
+        }
+    }
+
+    resize_fill(model.coefficients, features * targets, 0.0);
+    for (std::size_t feature = 0; feature < features; ++feature) {
+        for (std::size_t target = 0; target < targets; ++target) {
+            double sum = 0.0;
+            for (std::size_t comp = 0; comp < components; ++comp) {
+                sum += model.rotations_r[idx(feature, components, comp)] *
+                       model.y_loadings_q[idx(target, components, comp)];
+            }
+            model.coefficients[idx(feature, targets, target)] =
+                sum * model.y_scale[target] / model.x_scale[feature];
+        }
+    }
+    return P4A_OK;
+}
+
 [[nodiscard]] p4a_status_t validate_fit_request(::pls4all::core::Context& ctx,
                                                 const ::pls4all::core::Config& cfg,
                                                 const p4a_matrix_view_t& X,
                                                 const p4a_matrix_view_t& Y) noexcept {
     if (cfg.algorithm != P4A_ALGO_PLS_REGRESSION) {
-        ctx.set_error("Phase 1 supports only P4A_ALGO_PLS_REGRESSION");
+        ctx.set_error("this release supports only P4A_ALGO_PLS_REGRESSION");
         return P4A_ERR_UNSUPPORTED;
     }
-    if (cfg.solver != P4A_SOLVER_NIPALS) {
-        ctx.set_error("Phase 1 supports only P4A_SOLVER_NIPALS");
+    if (cfg.solver != P4A_SOLVER_NIPALS && cfg.solver != P4A_SOLVER_SIMPLS) {
+        ctx.set_error("this release supports only P4A_SOLVER_NIPALS and P4A_SOLVER_SIMPLS");
         return P4A_ERR_UNSUPPORTED;
     }
     if (cfg.deflation != P4A_DEFLATION_REGRESSION) {
-        ctx.set_error("Phase 1 supports only P4A_DEFLATION_REGRESSION");
+        ctx.set_error("this release supports only P4A_DEFLATION_REGRESSION");
         return P4A_ERR_UNSUPPORTED;
     }
     if (cfg.pipeline != nullptr || cfg.operator_bank != nullptr || cfg.gating_strategy != nullptr) {
-        ctx.set_error("pipelines, operator banks and gating strategies land after Phase 1");
+        ctx.set_error("pipelines, operator banks and gating strategies are not yet supported by model_fit");
         return P4A_ERR_UNSUPPORTED;
     }
 
@@ -267,7 +447,7 @@ void matrix_vector_product(const std::vector<double>& matrix,
     }
     if (X.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max()) ||
         Y.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max())) {
-        ctx.set_error("matrix column count exceeds the Phase 1 ABI limits");
+        ctx.set_error("matrix column count exceeds the ABI limits");
         return P4A_ERR_INVALID_ARGUMENT;
     }
     const std::int64_t rank_upper_bound = std::min(X.rows, X.cols);
@@ -629,47 +809,205 @@ p4a_status_t fit_pls_regression_nipals(
         }
     }
 
-    std::vector<double> ptw;
-    resize_fill(ptw, a * a, 0.0);
-    for (std::size_t row_comp = 0; row_comp < a; ++row_comp) {
-        for (std::size_t col_comp = 0; col_comp < a; ++col_comp) {
-            double sum = 0.0;
-            for (std::size_t feature = 0; feature < p; ++feature) {
-                sum += model->loadings_p[idx(feature, a, row_comp)] *
-                       model->weights_w[idx(feature, a, col_comp)];
-            }
-            ptw[idx(row_comp, a, col_comp)] = sum;
-        }
-    }
-    std::vector<double> ptw_inv;
-    if (!invert_square(ptw, a, ptw_inv)) {
-        ctx.set_error("failed to invert P.T @ W while computing rotations");
-        return P4A_ERR_NUMERICAL_FAILURE;
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    if (status != P4A_OK) {
+        return status;
     }
 
-    resize_fill(model->rotations_r, p * a, 0.0);
-    for (std::size_t feature = 0; feature < p; ++feature) {
-        for (std::size_t comp = 0; comp < a; ++comp) {
-            double sum = 0.0;
-            for (std::size_t inner = 0; inner < a; ++inner) {
-                sum += model->weights_w[idx(feature, a, inner)] *
-                       ptw_inv[idx(inner, a, comp)];
-            }
-            model->rotations_r[idx(feature, a, comp)] = sum;
-        }
+    if (cfg.store_scores != 0) {
+        model->scores_t = std::move(scores_t);
+        model->y_scores_u = std::move(y_scores_u);
     }
 
-    resize_fill(model->coefficients, p * q, 0.0);
+    out_model = std::move(model);
+    ctx.clear_error();
+    return P4A_OK;
+}
+
+p4a_status_t fit_pls_regression_simpls(
+    Context& ctx,
+    const Config& cfg,
+    const p4a_matrix_view_t& X,
+    const p4a_matrix_view_t& Y,
+    std::unique_ptr<Model>& out_model) {
+    out_model.reset();
+
+    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    std::vector<double> x_original;
+    std::vector<double> y_original;
+    status = copy_matrix_checked(ctx, X, "X", x_original);
+    if (status != P4A_OK) {
+        return status;
+    }
+    status = copy_matrix_checked(ctx, Y, "Y", y_original);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    const std::size_t n = static_cast<std::size_t>(X.rows);
+    const std::size_t p = static_cast<std::size_t>(X.cols);
+    const std::size_t q = static_cast<std::size_t>(Y.cols);
+    const std::size_t a = static_cast<std::size_t>(cfg.n_components);
+
+    auto model = std::make_unique<Model>();
+    model->algorithm = cfg.algorithm;
+    model->solver = cfg.solver;
+    model->deflation = cfg.deflation;
+    model->n_samples = X.rows;
+    model->n_features = static_cast<std::int32_t>(X.cols);
+    model->n_targets = static_cast<std::int32_t>(Y.cols);
+    model->n_components = cfg.n_components;
+    model->center_x = cfg.center_x;
+    model->scale_x = cfg.scale_x;
+    model->center_y = cfg.center_y;
+    model->scale_y = cfg.scale_y;
+    model->store_scores = cfg.store_scores;
+    model->tol = cfg.tol;
+    model->max_iter = cfg.max_iter;
+
+    std::vector<double> xk;
+    std::vector<double> yk;
+    center_scale_in_place(x_original, n, p, cfg.center_x != 0, cfg.scale_x != 0,
+                          model->x_mean, model->x_scale, xk);
+    center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
+                          model->y_mean, model->y_scale, yk);
+
+    resize_fill(model->weights_w, p * a, 0.0);
+    resize_fill(model->loadings_p, p * a, 0.0);
+    resize_fill(model->y_loadings_q, q * a, 0.0);
+    std::vector<double> scores_t;
+    std::vector<double> y_scores_u;
+    resize_fill(scores_t, n * a, 0.0);
+    resize_fill(y_scores_u, n * a, 0.0);
+
+    std::vector<double> covariance;
+    resize_fill(covariance, p * q, 0.0);
     for (std::size_t feature = 0; feature < p; ++feature) {
         for (std::size_t target = 0; target < q; ++target) {
             double sum = 0.0;
-            for (std::size_t comp = 0; comp < a; ++comp) {
-                sum += model->rotations_r[idx(feature, a, comp)] *
-                       model->y_loadings_q[idx(target, a, comp)];
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += xk[idx(row, p, feature)] * yk[idx(row, q, target)];
             }
-            model->coefficients[idx(feature, q, target)] =
-                sum * model->y_scale[target] / model->x_scale[feature];
+            covariance[idx(feature, q, target)] = sum;
         }
+    }
+
+    std::vector<double> basis_v;
+    resize_fill(basis_v, p * a, 0.0);
+
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        std::vector<double> direction;
+        status = dominant_left_singular_direction(ctx, covariance, p, q, cfg.max_iter,
+                                                  cfg.tol, comp, direction);
+        if (status != P4A_OK) {
+            return status;
+        }
+
+        std::vector<double> x_score;
+        matrix_vector_product(xk, n, p, direction, x_score);
+        const double x_score_norm = std::sqrt(squared_norm(x_score));
+        if (x_score_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("SIMPLS X score vanished at component %zu", comp);
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : x_score) {
+            value /= x_score_norm;
+        }
+        for (double& value : direction) {
+            value /= x_score_norm;
+        }
+
+        std::vector<double> x_loadings;
+        resize_fill(x_loadings, p, 0.0);
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += xk[idx(row, p, feature)] * x_score[row];
+            }
+            x_loadings[feature] = sum;
+        }
+
+        std::vector<double> y_loadings;
+        resize_fill(y_loadings, q, 0.0);
+        for (std::size_t target = 0; target < q; ++target) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += yk[idx(row, q, target)] * x_score[row];
+            }
+            y_loadings[target] = sum;
+        }
+
+        std::vector<double> v = x_loadings;
+        if (comp > 0U) {
+            for (std::size_t prev = 0; prev < comp; ++prev) {
+                double projection = 0.0;
+                for (std::size_t feature = 0; feature < p; ++feature) {
+                    projection += basis_v[idx(feature, a, prev)] * v[feature];
+                }
+                for (std::size_t feature = 0; feature < p; ++feature) {
+                    v[feature] -= basis_v[idx(feature, a, prev)] * projection;
+                }
+            }
+        }
+        const double v_norm = std::sqrt(squared_norm(v));
+        if (v_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("SIMPLS deflation basis vanished at component %zu", comp);
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : v) {
+            value /= v_norm;
+        }
+
+        std::vector<double> y_scores;
+        resize_fill(y_scores, n, 0.0);
+        const double y_loading_ss = squared_norm(y_loadings);
+        if (y_loading_ss > std::numeric_limits<double>::epsilon()) {
+            for (std::size_t row = 0; row < n; ++row) {
+                double sum = 0.0;
+                for (std::size_t target = 0; target < q; ++target) {
+                    sum += yk[idx(row, q, target)] * y_loadings[target];
+                }
+                y_scores[row] = sum / y_loading_ss;
+            }
+        }
+
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            model->weights_w[idx(feature, a, comp)] = direction[feature];
+            model->loadings_p[idx(feature, a, comp)] = x_loadings[feature];
+            basis_v[idx(feature, a, comp)] = v[feature];
+        }
+        for (std::size_t target = 0; target < q; ++target) {
+            model->y_loadings_q[idx(target, a, comp)] = y_loadings[target];
+        }
+        for (std::size_t row = 0; row < n; ++row) {
+            scores_t[idx(row, a, comp)] = x_score[row];
+            y_scores_u[idx(row, a, comp)] = y_scores[row];
+        }
+
+        std::vector<double> v_transpose_s;
+        resize_fill(v_transpose_s, q, 0.0);
+        for (std::size_t target = 0; target < q; ++target) {
+            double sum = 0.0;
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                sum += v[feature] * covariance[idx(feature, q, target)];
+            }
+            v_transpose_s[target] = sum;
+        }
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            for (std::size_t target = 0; target < q; ++target) {
+                covariance[idx(feature, q, target)] -=
+                    v[feature] * v_transpose_s[target];
+            }
+        }
+    }
+
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    if (status != P4A_OK) {
+        return status;
     }
 
     if (cfg.store_scores != 0) {

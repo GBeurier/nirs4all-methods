@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: CeCILL-2.1 */
 /*
- * pls4all — public C ABI v0.1.0.
+ * pls4all — public C ABI v1.0.0.
  *
  * Stability: experimental until v1.0.0. Every breaking change before that
  * version bumps the ABI MAJOR (see p4a_version.h). After v1.0.0 the ABI
@@ -27,15 +27,15 @@
  *     `p4a_array_t*` and the opaque handles below; both have explicit
  *     `p4a_*_destroy` / `p4a_array_free` functions.
  *
- * Phase 1 status (rev 1.0.0 of this header — May 2026):
+ * Current implementation status (rev 1.0.0 of this header — May 2026):
  *   - Lifecycle / config / version / matrix-view are fully implemented.
  *   - Pipeline / operator-bank / gating-strategy lifecycle is implemented.
  *     Pipeline `_fit` / `_transform` operations remain deferred to Phase 3.
- *   - p4a_model_fit implements dependency-free NIPALS PLS regression
- *     (PLS1 / PLS2) for P4A_ALGO_PLS_REGRESSION + P4A_SOLVER_NIPALS +
- *     P4A_DEFLATION_REGRESSION.
+ *   - p4a_model_fit implements dependency-free NIPALS and SIMPLS PLS
+ *     regression (PLS1 / PLS2) for P4A_ALGO_PLS_REGRESSION +
+ *     P4A_SOLVER_NIPALS or P4A_SOLVER_SIMPLS + P4A_DEFLATION_REGRESSION.
  *   - Predict / transform / model-array accessors and binary serialization
- *     are implemented for fitted Phase 1 models.
+ *     are implemented for fitted core PLS models.
  *
  * Status-code contracts (apply uniformly unless overridden in a function's
  * own doc comment):
@@ -479,11 +479,11 @@ P4A_API p4a_status_t p4a_pipeline_transform_alloc(p4a_context_t* ctx,
  * 10. Model lifecycle
  * ==========================================================================
  *
- * Phase 1 implements P4A_ALGO_PLS_REGRESSION with P4A_SOLVER_NIPALS and
- * P4A_DEFLATION_REGRESSION. Unsupported algorithms / solvers / deflation
- * modes return P4A_ERR_UNSUPPORTED. Phase 4 adds SIMPLS / OPLS / PLS-DA;
- * Phase 6 adds AOM-PLS through the operator_bank + gating_strategy hooks set
- * on the config.
+ * The current core implements P4A_ALGO_PLS_REGRESSION with P4A_SOLVER_NIPALS
+ * or P4A_SOLVER_SIMPLS and P4A_DEFLATION_REGRESSION. Unsupported algorithms /
+ * solvers / deflation modes return P4A_ERR_UNSUPPORTED. Later Phase 4
+ * increments add kernel PLS / OPLS / PLS-DA; Phase 6 adds AOM-PLS through the
+ * operator_bank + gating_strategy hooks set on the config.
  */
 P4A_API p4a_status_t p4a_model_fit(
     p4a_context_t* ctx,
@@ -579,7 +579,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.1.0+abi.1.0.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.3.0+abi.1.0.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 

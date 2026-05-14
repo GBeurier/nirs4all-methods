@@ -35,6 +35,91 @@ def _expected_from_pls(model: PLSRegression, X: np.ndarray, Y: np.ndarray) -> di
     }
 
 
+def _center_scale(X: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    mean = X.mean(axis=0)
+    centered = X - mean
+    scale = centered.std(axis=0, ddof=1)
+    scale = np.where((scale == 0.0) | ~np.isfinite(scale), 1.0, scale)
+    return centered / scale, mean, scale
+
+
+def _dominant_direction(S: np.ndarray) -> np.ndarray:
+    if S.shape[1] == 1:
+        r = S[:, 0].copy()
+    else:
+        U, _singular_values, _Vt = np.linalg.svd(S, full_matrices=False)
+        r = U[:, 0].copy()
+    sign_idx = int(np.argmax(np.abs(r)))
+    if r[sign_idx] < 0.0:
+        r = -r
+    return r
+
+
+def _simpls_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+
+    Xs, x_mean, x_scale = _center_scale(X)
+    Ys, y_mean, y_scale = _center_scale(Y)
+    n, p = Xs.shape
+    q = Ys.shape[1]
+    K = int(n_components)
+
+    Z = np.zeros((p, K), dtype=np.float64)
+    P = np.zeros((p, K), dtype=np.float64)
+    Q = np.zeros((q, K), dtype=np.float64)
+    T = np.zeros((n, K), dtype=np.float64)
+    V = np.zeros((p, K), dtype=np.float64)
+    S = Xs.T @ Ys
+    eps = np.finfo(np.float64).eps
+
+    for comp in range(K):
+        r = _dominant_direction(S)
+        t = Xs @ r
+        t_norm = np.linalg.norm(t)
+        if t_norm <= eps:
+            raise RuntimeError(f"SIMPLS score collapsed at component {comp}")
+        t = t / t_norm
+        r = r / t_norm
+        p_load = Xs.T @ t
+        q_load = Ys.T @ t
+        v = p_load.copy()
+        if comp > 0:
+            v = v - V[:, :comp] @ (V[:, :comp].T @ v)
+        v_norm = np.linalg.norm(v)
+        if v_norm <= eps:
+            raise RuntimeError(f"SIMPLS deflation basis collapsed at component {comp}")
+        v = v / v_norm
+
+        Z[:, comp] = r
+        P[:, comp] = p_load
+        Q[:, comp] = q_load
+        T[:, comp] = t
+        V[:, comp] = v
+        S = S - np.outer(v, v.T @ S)
+
+    rotations = Z @ np.linalg.inv(P.T @ Z)
+    coef_std = rotations @ Q.T
+    coef = coef_std * (y_scale.reshape(1, -1) / x_scale.reshape(-1, 1))
+    preds = y_mean.reshape(1, -1) + (X - x_mean.reshape(1, -1)) @ coef
+    return {
+        "coefficients":  {"shape": list(coef.shape),       "values": _flatten_rowmajor(coef)},
+        "intercept":     {"shape": [q],                    "values": y_mean.astype(np.float64).tolist()},
+        "x_mean":        {"shape": [p],                    "values": x_mean.astype(np.float64).tolist()},
+        "x_scale":       {"shape": [p],                    "values": x_scale.astype(np.float64).tolist()},
+        "y_mean":        {"shape": [q],                    "values": y_mean.astype(np.float64).tolist()},
+        "y_scale":       {"shape": [q],                    "values": y_scale.astype(np.float64).tolist()},
+        "weights_W":     {"shape": list(Z.shape),          "values": _flatten_rowmajor(Z), "sign_invariant": True},
+        "loadings_P":    {"shape": list(P.shape),          "values": _flatten_rowmajor(P), "sign_invariant": True},
+        "y_loadings_Q":  {"shape": list(Q.shape),          "values": _flatten_rowmajor(Q), "sign_invariant": True},
+        "rotations_R":   {"shape": list(rotations.shape),  "values": _flatten_rowmajor(rotations), "sign_invariant": True},
+        "scores_T":      {"shape": list(T.shape),          "values": _flatten_rowmajor(T), "sign_invariant": True},
+        "predict_train": {"shape": list(preds.shape),      "values": _flatten_rowmajor(preds)},
+    }
+
+
 def _fixture(
     fixture_id: str,
     seed: int,
@@ -73,6 +158,41 @@ def _fixture(
     }
 
 
+def _simpls_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._simpls_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "n_components":   n_components,
+                "scale":          True,
+                "deflation_mode": "regression",
+                "algorithm":      "simpls",
+                "reference":      "NumPy port of nirs4all AOM_v0 simpls_standard",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _simpls_expected(X, Y, n_components),
+        "comparison_policy": {
+            "components_alignment": "first-k-prefix",
+            "sign_resolver":        "max_abs_element_positive",
+            "tolerance_table_row":  "pls4all-numpy-simpls",
+        },
+    }
+
+
 def synthetic_small_pls1_v1() -> dict[str, Any]:
     """50 samples, 20 features, 1 target, n_components=3."""
     rng = np.random.default_rng(seed=0)
@@ -104,3 +224,29 @@ def synthetic_tiny_centered_v1() -> dict[str, Any]:
     return _fixture("synthetic_tiny_centered_v1", seed=2,
                     X=X, Y=Y, n_components=2,
                     tolerance_table_row="sklearn/PLSRegression/self_roundtrip")
+
+
+def synthetic_simpls_tiny_pls1_v1() -> dict[str, Any]:
+    """8 samples, 4 features, 1 target, n_components=2."""
+    rng = np.random.default_rng(seed=20)
+    X = rng.standard_normal(size=(8, 4))
+    true_w = np.array([0.7, -0.25, 0.4, -0.1])
+    Y = (X @ true_w + rng.standard_normal(size=8) * 0.03).reshape(-1, 1)
+    return _simpls_fixture("synthetic_simpls_tiny_pls1_v1", seed=20,
+                           X=X, Y=Y, n_components=2)
+
+
+def synthetic_simpls_small_pls2_v1() -> dict[str, Any]:
+    """12 samples, 5 features, 2 targets, n_components=2."""
+    rng = np.random.default_rng(seed=21)
+    X = rng.standard_normal(size=(12, 5))
+    W = np.array([
+        [0.50, -0.10],
+        [-0.35, 0.45],
+        [0.20, 0.15],
+        [0.05, -0.40],
+        [0.30, 0.25],
+    ])
+    Y = X @ W + rng.standard_normal(size=(12, 2)) * 0.04
+    return _simpls_fixture("synthetic_simpls_small_pls2_v1", seed=21,
+                           X=X, Y=Y, n_components=2)
