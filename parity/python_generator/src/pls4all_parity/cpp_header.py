@@ -79,6 +79,15 @@ HEADER_SPECS = {
         "struct": "ValidationFixture",
         "array": "kValidationFixtures",
     },
+    "cross-validation": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "cross_validation_fixtures.hpp",
+        "fixtures": (
+            "synthetic_cv_kfold_nipals_pls1_v1",
+            "synthetic_cv_kfold_nipals_pls2_v1",
+        ),
+        "struct": "CrossValidationFixture",
+        "array": "kCrossValidationFixtures",
+    },
     "power": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "power_fixtures.hpp",
         "fixtures": (
@@ -555,6 +564,10 @@ def _index_ref(array_name: str) -> str:
     return f"IndexRef{{{array_name}, sizeof({array_name}) / sizeof(std::int64_t)}}"
 
 
+def _cv_index_ref(array_name: str) -> str:
+    return f"CvIndexRef{{{array_name}, sizeof({array_name}) / sizeof(std::int64_t)}}"
+
+
 def generate_validation(fixture_ids: Sequence[str],
                         fixture_dir: Path,
                         out: Path,
@@ -631,6 +644,86 @@ def generate_validation(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_cross_validation(fixture_ids: Sequence[str],
+                              fixture_dir: Path,
+                              out: Path,
+                              family: str,
+                              struct_name: str,
+                              array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct CvIndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_components;",
+        "    std::int32_t n_splits;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    MatrixRef predictions;",
+        "    MatrixRef metrics;",
+        "    CvIndexRef test_offsets;",
+        "    CvIndexRef test_indices;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        y_name = f"{prefix}_Y"
+        pred_name = f"{prefix}_predictions"
+        metrics_name = f"{prefix}_metrics"
+        offsets_name = f"{prefix}_test_offsets"
+        indices_name = f"{prefix}_test_indices"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
+        _emit_array(lines, pred_name, expected["predictions"]["values"])
+        _emit_array(lines, metrics_name, expected["metrics"]["values"])
+        _emit_int_array(lines, offsets_name, expected["test_offsets"]["values"])
+        _emit_int_array(lines, indices_name, expected["test_indices"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['n_components'])},\n"
+            f"        {int(params['n_splits'])},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
+            f"        {_matrix_ref(pred_name, expected['predictions'])},\n"
+            f"        {_matrix_ref(metrics_name, expected['metrics'])},\n"
+            f"        {_cv_index_ref(offsets_name)},\n"
+            f"        {_cv_index_ref(indices_name)}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--family", choices=sorted(HEADER_SPECS), default="simpls",
@@ -651,6 +744,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "validation":
         generate_validation(fixture_ids, args.fixture_dir, out, args.family,
                             str(spec["struct"]), str(spec["array"]))
+    elif args.family == "cross-validation":
+        generate_cross_validation(fixture_ids, args.fixture_dir, out, args.family,
+                                  str(spec["struct"]), str(spec["array"]))
     else:
         generate(fixture_ids, args.fixture_dir, out, args.family,
                  str(spec["struct"]), str(spec["array"]))

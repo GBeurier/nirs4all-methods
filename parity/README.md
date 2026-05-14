@@ -60,10 +60,12 @@ parity/
 │   ├── synthetic_validation_kfold_balanced_v1.json
 │   ├── synthetic_validation_leave_one_out_v1.json
 │   ├── synthetic_validation_holdout_v1.json
+│   ├── synthetic_cv_kfold_nipals_pls1_v1.json
+│   ├── synthetic_cv_kfold_nipals_pls2_v1.json
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.
-├── python_generator/              Pinned scikit-learn + NumPy/SciPy preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/OPLS/OPLS-DA/SVD/PCR adapters.
+├── python_generator/              Pinned scikit-learn + NumPy/SciPy preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/OPLS/OPLS-DA/SVD/PCR/CV adapters.
 └── r_generator/                   Pinned pls / ropls / mixOmics adapters.
 ```
 
@@ -111,6 +113,8 @@ Savitzky-Golay, ASLS, Norris-Williams, Haar wavelet, supervised OSC and EPO tran
 Regression metric fixtures are generated from deterministic NumPy formulas for
 RMSE, MAE, bias, R2/Q2, observed-vs-predicted slope/intercept, RPD and RPIQ.
 Validation split fixtures are generated from deterministic Python references
-for balanced contiguous k-fold, leave-one-out and holdout plans.
+for balanced contiguous k-fold, leave-one-out and holdout plans. Cross-validation
+fixtures use scikit-learn `PLSRegression` over the same deterministic k-fold
+plans and gate out-of-sample predictions plus aggregate metrics.
 C++ parity tests assert predictions, coefficients, preprocessing statistics,
-transforms, metrics and latent arrays within `tolerances.md`.
+transforms, CV predictions, metrics and latent arrays within `tolerances.md`.

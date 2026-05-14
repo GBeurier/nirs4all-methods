@@ -3758,6 +3758,49 @@ p4a_status_t predict_into(Context& ctx,
     return P4A_OK;
 }
 
+p4a_status_t fit_model(Context& ctx,
+                       const Config& cfg,
+                       const p4a_matrix_view_t& X,
+                       const p4a_matrix_view_t& Y,
+                       std::unique_ptr<Model>& out_model) {
+    if (cfg.algorithm == P4A_ALGO_PCR) {
+        return fit_pcr_svd(ctx, cfg, X, Y, out_model);
+    }
+    if (cfg.algorithm == P4A_ALGO_PLS_SVD) {
+        return fit_pls_svd(ctx, cfg, X, Y, out_model);
+    }
+    if (cfg.algorithm == P4A_ALGO_PLS_CANONICAL) {
+        if (cfg.solver == P4A_SOLVER_SVD) {
+            return fit_pls_canonical_svd(ctx, cfg, X, Y, out_model);
+        }
+        return fit_pls_canonical_nipals(ctx, cfg, X, Y, out_model);
+    }
+    if (cfg.algorithm == P4A_ALGO_OPLS ||
+        cfg.algorithm == P4A_ALGO_OPLS_DA) {
+        return fit_opls_nipals(ctx, cfg, X, Y, out_model);
+    }
+    if (cfg.solver == P4A_SOLVER_KERNEL_ALGORITHM ||
+        cfg.solver == P4A_SOLVER_WIDE_KERNEL) {
+        return fit_pls_regression_kernel(ctx, cfg, X, Y, out_model);
+    }
+    if (cfg.solver == P4A_SOLVER_SIMPLS) {
+        return fit_pls_regression_simpls(ctx, cfg, X, Y, out_model);
+    }
+    if (cfg.solver == P4A_SOLVER_ORTHOGONAL_SCORES) {
+        return fit_pls_regression_orthogonal_scores(ctx, cfg, X, Y, out_model);
+    }
+    if (cfg.solver == P4A_SOLVER_POWER) {
+        return fit_pls_regression_power(ctx, cfg, X, Y, out_model);
+    }
+    if (cfg.solver == P4A_SOLVER_RANDOMIZED_SVD) {
+        return fit_pls_regression_randomized_svd(ctx, cfg, X, Y, out_model);
+    }
+    if (cfg.solver == P4A_SOLVER_SVD) {
+        return fit_pls_regression_svd(ctx, cfg, X, Y, out_model);
+    }
+    return fit_pls_regression_nipals(ctx, cfg, X, Y, out_model);
+}
+
 p4a_status_t transform_into(Context& ctx,
                             const Model& model,
                             const p4a_matrix_view_t& X,

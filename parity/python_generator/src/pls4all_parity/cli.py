@@ -60,6 +60,8 @@ def _generate_all() -> dict[str, bytes]:
         "synthetic_validation_kfold_balanced_v1": _serialize(suites.synthetic_validation_kfold_balanced_v1()),
         "synthetic_validation_leave_one_out_v1": _serialize(suites.synthetic_validation_leave_one_out_v1()),
         "synthetic_validation_holdout_v1": _serialize(suites.synthetic_validation_holdout_v1()),
+        "synthetic_cv_kfold_nipals_pls1_v1": _serialize(suites.synthetic_cv_kfold_nipals_pls1_v1()),
+        "synthetic_cv_kfold_nipals_pls2_v1": _serialize(suites.synthetic_cv_kfold_nipals_pls2_v1()),
         "synthetic_power_tiny_pls1_v1": _serialize(suites.synthetic_power_tiny_pls1_v1()),
         "synthetic_power_small_pls2_v1": _serialize(suites.synthetic_power_small_pls2_v1()),
         "synthetic_randomized_svd_tiny_pls1_v1": _serialize(suites.synthetic_randomized_svd_tiny_pls1_v1()),

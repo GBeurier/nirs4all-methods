@@ -790,6 +790,46 @@ def _validation_expected(kind: str,
     }
 
 
+def _cross_validation_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+
+    folds = _validation_folds("kfold", X.shape[0], n_splits)
+    predictions = np.zeros_like(Y, dtype=np.float64)
+    test_offsets = [0]
+    test_indices: list[int] = []
+    for train, test in folds:
+        train_index = np.asarray(train, dtype=np.int64)
+        test_index = np.asarray(test, dtype=np.int64)
+        model = PLSRegression(n_components=n_components, scale=True, max_iter=500, tol=1e-6)
+        model.fit(X[train_index], Y[train_index])
+        fold_predictions = model.predict(X[test_index]).astype(np.float64, copy=False)
+        if fold_predictions.ndim == 1:
+            fold_predictions = fold_predictions.reshape(-1, 1)
+        predictions[test_index, :] = fold_predictions
+        test_indices.extend(test)
+        test_offsets.append(len(test_indices))
+
+    return {
+        "predictions": {
+            "shape": list(predictions.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(predictions),
+        },
+        "test_offsets": {"values": test_offsets},
+        "test_indices": {"values": test_indices},
+        **_regression_metrics_expected(Y, predictions),
+    }
+
+
 def _power_pls_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, Any]:
     X = np.asarray(X, dtype=np.float64)
     Y = np.asarray(Y, dtype=np.float64)
@@ -1710,6 +1750,46 @@ def _validation_fixture(
     }
 
 
+def _cross_validation_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._cross_validation_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":    "pls_regression",
+                "solver":       "nipals",
+                "n_components": int(n_components),
+                "n_splits":     int(n_splits),
+                "reference":    "sklearn.cross_decomposition.PLSRegression with deterministic k-fold splits",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _cross_validation_expected(X, Y, n_components, n_splits),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression/kfold-cv",
+        },
+    }
+
+
 def _power_fixture(
     fixture_id: str,
     seed: int,
@@ -2438,6 +2518,47 @@ def synthetic_validation_holdout_v1() -> dict[str, Any]:
                                n_samples=8,
                                holdout_start=2,
                                holdout_count=3)
+
+
+def synthetic_cv_kfold_nipals_pls1_v1() -> dict[str, Any]:
+    """12 samples, 5 features, 1 target, 3-fold out-of-sample PLSRegression."""
+    seed = 56
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(12, 2))
+    X = np.column_stack([
+        0.92 * latent[:, 0] + 0.15 * latent[:, 1],
+        -0.33 * latent[:, 0] + 0.71 * latent[:, 1],
+        0.58 * latent[:, 0] - 0.18 * latent[:, 1],
+        np.linspace(-1.0, 1.0, 12),
+        rng.standard_normal(size=12) * 0.08,
+    ])
+    Y = (1.35 * latent[:, 0] - 0.42 * latent[:, 1] +
+         rng.standard_normal(size=12) * 0.05).reshape(-1, 1)
+    return _cross_validation_fixture("synthetic_cv_kfold_nipals_pls1_v1",
+                                     seed=seed, X=X, Y=Y,
+                                     n_components=2, n_splits=3)
+
+
+def synthetic_cv_kfold_nipals_pls2_v1() -> dict[str, Any]:
+    """16 samples, 6 features, 2 targets, 4-fold out-of-sample PLSRegression."""
+    seed = 57
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(16, 3))
+    X = np.column_stack([
+        0.76 * latent[:, 0] + 0.22 * latent[:, 1],
+        -0.41 * latent[:, 0] + 0.64 * latent[:, 2],
+        0.35 * latent[:, 1] - 0.55 * latent[:, 2],
+        0.48 * latent[:, 0] + 0.31 * latent[:, 1] - 0.16 * latent[:, 2],
+        np.sin(np.linspace(0.0, 2.0 * np.pi, 16)),
+        rng.standard_normal(size=16) * 0.06,
+    ])
+    Y = np.column_stack([
+        1.18 * latent[:, 0] - 0.38 * latent[:, 2] + rng.standard_normal(size=16) * 0.04,
+        -0.74 * latent[:, 1] + 0.52 * latent[:, 2] + rng.standard_normal(size=16) * 0.04,
+    ])
+    return _cross_validation_fixture("synthetic_cv_kfold_nipals_pls2_v1",
+                                     seed=seed, X=X, Y=Y,
+                                     n_components=2, n_splits=4)
 
 
 def synthetic_power_tiny_pls1_v1() -> dict[str, Any]:

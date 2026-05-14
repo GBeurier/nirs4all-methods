@@ -26,6 +26,7 @@ add_library(pls4all_core OBJECT
     core/version.cpp
     core/context.cpp
     core/config.cpp
+    core/cross_validation.cpp
     core/matrix_view.cpp
     core/metrics.cpp
     core/model.cpp

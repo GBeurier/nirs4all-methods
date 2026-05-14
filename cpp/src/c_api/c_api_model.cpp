@@ -497,48 +497,8 @@ P4A_API p4a_status_t p4a_model_fit(
     }
     try {
         std::unique_ptr<::pls4all::core::Model> fitted;
-        p4a_status_t status = P4A_ERR_UNSUPPORTED;
-        if (cfg->algorithm == P4A_ALGO_PCR) {
-            status = ::pls4all::core::fit_pcr_svd(
-                *as_core(ctx), *cfg, *X, *Y, fitted);
-        } else if (cfg->algorithm == P4A_ALGO_PLS_SVD) {
-            status = ::pls4all::core::fit_pls_svd(
-                *as_core(ctx), *cfg, *X, *Y, fitted);
-        } else if (cfg->algorithm == P4A_ALGO_PLS_CANONICAL) {
-            if (cfg->solver == P4A_SOLVER_SVD) {
-                status = ::pls4all::core::fit_pls_canonical_svd(
-                    *as_core(ctx), *cfg, *X, *Y, fitted);
-            } else {
-                status = ::pls4all::core::fit_pls_canonical_nipals(
-                    *as_core(ctx), *cfg, *X, *Y, fitted);
-            }
-        } else if (cfg->algorithm == P4A_ALGO_OPLS ||
-                   cfg->algorithm == P4A_ALGO_OPLS_DA) {
-            status = ::pls4all::core::fit_opls_nipals(
-                *as_core(ctx), *cfg, *X, *Y, fitted);
-        } else if (cfg->solver == P4A_SOLVER_KERNEL_ALGORITHM ||
-                   cfg->solver == P4A_SOLVER_WIDE_KERNEL) {
-            status = ::pls4all::core::fit_pls_regression_kernel(
-                *as_core(ctx), *cfg, *X, *Y, fitted);
-        } else if (cfg->solver == P4A_SOLVER_SIMPLS) {
-            status = ::pls4all::core::fit_pls_regression_simpls(
-                *as_core(ctx), *cfg, *X, *Y, fitted);
-        } else if (cfg->solver == P4A_SOLVER_ORTHOGONAL_SCORES) {
-            status = ::pls4all::core::fit_pls_regression_orthogonal_scores(
-                *as_core(ctx), *cfg, *X, *Y, fitted);
-        } else if (cfg->solver == P4A_SOLVER_POWER) {
-            status = ::pls4all::core::fit_pls_regression_power(
-                *as_core(ctx), *cfg, *X, *Y, fitted);
-        } else if (cfg->solver == P4A_SOLVER_RANDOMIZED_SVD) {
-            status = ::pls4all::core::fit_pls_regression_randomized_svd(
-                *as_core(ctx), *cfg, *X, *Y, fitted);
-        } else if (cfg->solver == P4A_SOLVER_SVD) {
-            status = ::pls4all::core::fit_pls_regression_svd(
-                *as_core(ctx), *cfg, *X, *Y, fitted);
-        } else {
-            status = ::pls4all::core::fit_pls_regression_nipals(
-                *as_core(ctx), *cfg, *X, *Y, fitted);
-        }
+        const p4a_status_t status =
+            ::pls4all::core::fit_model(*as_core(ctx), *cfg, *X, *Y, fitted);
         if (status != P4A_OK) {
             return status;
         }
