@@ -55,6 +55,7 @@ HEADER_SPECS = {
             "synthetic_pipeline_asls_v1",
             "synthetic_pipeline_norris_williams_v1",
             "synthetic_pipeline_wavelet_haar_v1",
+            "synthetic_pipeline_osc_v1",
         ),
         "struct": "PipelineFixture",
         "array": "kPipelineFixtures",
@@ -353,6 +354,14 @@ def _pipeline_operator(name: str) -> tuple[str, list[float]]:
             float(levels),
             float(threshold),
         ]
+    if name == "osc":
+        return "P4A_OP_OSC", []
+    if name.startswith("osc_"):
+        _prefix, max_iter, tol = name.split("_")
+        return "P4A_OP_OSC", [
+            float(max_iter),
+            float(tol),
+        ]
     return mapping[name], []
 
 
@@ -383,6 +392,7 @@ def generate_pipeline(fixture_ids: Sequence[str],
         "    const double* params;",
         "    const std::int32_t* n_params;",
         "    MatrixRef X;",
+        "    MatrixRef Y;",
         "    MatrixRef transform_train;",
         "};",
         "",
@@ -393,9 +403,11 @@ def generate_pipeline(fixture_ids: Sequence[str],
         fid = fixture["fixture_id"]
         prefix = _symbol(fid)
         x_name = f"{prefix}_x"
+        y_name = f"{prefix}_y"
         transformed_name = f"{prefix}_transform_train"
         ops_name = f"{prefix}_operators"
         _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
         _emit_array(lines, transformed_name, fixture["expected"]["transform_train"]["values"])
         parsed_ops = [
             _pipeline_operator(op)
@@ -429,6 +441,7 @@ def generate_pipeline(fixture_ids: Sequence[str],
             f"        {params_name},\n"
             f"        {n_params_name},\n"
             f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
             f"        {_matrix_ref(transformed_name, fixture['expected']['transform_train'])}\n"
             "    }"
         )

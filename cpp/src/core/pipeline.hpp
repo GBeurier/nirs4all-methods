@@ -37,7 +37,9 @@ class Pipeline {
         return fitted_;
     }
 
-    [[nodiscard]] p4a_status_t fit(Context& ctx, const p4a_matrix_view_t& X);
+    [[nodiscard]] p4a_status_t fit(Context& ctx,
+                                   const p4a_matrix_view_t& X,
+                                   const p4a_matrix_view_t* Y);
     [[nodiscard]] p4a_status_t transform(Context& ctx,
                                          const p4a_matrix_view_t& X,
                                          p4a_matrix_view_t& out) const;
@@ -48,6 +50,7 @@ class Pipeline {
         std::int64_t n_features{0};
         std::vector<double> location;
         std::vector<double> scale;
+        std::vector<double> extra;
     };
 
     std::vector<OperatorEntry> entries_;

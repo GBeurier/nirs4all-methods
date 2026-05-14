@@ -121,13 +121,12 @@ P4A_API p4a_status_t p4a_pipeline_fit(p4a_context_t* ctx,
                                        p4a_pipeline_t* pipe,
                                        const p4a_matrix_view_t* X,
                                        const p4a_matrix_view_t* Y) {
-    (void)Y;
     if (ctx == nullptr || pipe == nullptr || X == nullptr) {
         set_error(ctx, "null pointer in p4a_pipeline_fit");
         return P4A_ERR_NULL_POINTER;
     }
     try {
-        return as_core(pipe)->fit(*as_core(ctx), *X);
+        return as_core(pipe)->fit(*as_core(ctx), *X, Y);
     } catch (const std::bad_alloc&) {
         set_error(ctx, "out of memory in p4a_pipeline_fit");
         return P4A_ERR_OUT_OF_MEMORY;

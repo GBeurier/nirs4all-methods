@@ -19,7 +19,8 @@ context / config / matrix-view / operator-bank / gating-strategy / pipeline
 is implemented, and pipeline fit/transform is live for identity, center,
 autoscale, Pareto scaling, SNV, MSC, EMSC, polynomial detrending and
 Savitzky-Golay smoothing/derivatives, Norris-Williams gap-segment derivatives,
-ASLS baseline correction and Haar wavelet denoising. The supported fitted-model path is now live for NIPALS,
+ASLS baseline correction, Haar wavelet denoising and supervised one-component
+OSC. The supported fitted-model path is now live for NIPALS,
 orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and
 randomized-SVD PLS regression
 (PLS1 / PLS2), PLSCanonical with NIPALS/SVD, PLSSVD direct cross-covariance

@@ -17,6 +17,7 @@ struct PipelineFixture {
     const double* params;
     const std::int32_t* n_params;
     MatrixRef X;
+    MatrixRef Y;
     MatrixRef transform_train;
 };
 
@@ -24,6 +25,10 @@ inline const double synthetic_pipeline_identity_v1_x[] = {
     1, 2, 3, 4,
     5, 6, 7, 8,
     9, 2, 4, 8,
+};
+
+inline const double synthetic_pipeline_identity_v1_y[] = {
+    0, 0, 0, 0,
 };
 
 inline const double synthetic_pipeline_identity_v1_transform_train[] = {
@@ -50,6 +55,10 @@ inline const double synthetic_pipeline_center_v1_x[] = {
     9, 2, 4, 8,
 };
 
+inline const double synthetic_pipeline_center_v1_y[] = {
+    0, 0, 0, 0,
+};
+
 inline const double synthetic_pipeline_center_v1_transform_train[] = {
     -2.5, -2.75, -3.5, 0.5,
     0.25, -0.5, 3.5, 3.25,
@@ -72,6 +81,10 @@ inline const double synthetic_pipeline_autoscale_v1_x[] = {
     1, 2, 3, 4,
     5, 6, 7, 8,
     9, 2, 4, 8,
+};
+
+inline const double synthetic_pipeline_autoscale_v1_y[] = {
+    0, 0, 0, 0,
 };
 
 inline const double synthetic_pipeline_autoscale_v1_transform_train[] = {
@@ -98,6 +111,10 @@ inline const double synthetic_pipeline_pareto_v1_x[] = {
     9, 2, 4, 8,
 };
 
+inline const double synthetic_pipeline_pareto_v1_y[] = {
+    0, 0, 0, 0,
+};
+
 inline const double synthetic_pipeline_pareto_v1_transform_train[] = {
     -1.5369703823781609, -1.7392527130926085, -2.1517585353294253, 0.30739407647563216,
     0.15811388300841897, -0.30739407647563216, 2.1517585353294253, 2.0554804791094465,
@@ -120,6 +137,10 @@ inline const double synthetic_pipeline_snv_v1_x[] = {
     1, 2, 3, 2,
     2, 2, 3, 5,
     7,
+};
+
+inline const double synthetic_pipeline_snv_v1_y[] = {
+    0, 0, 0,
 };
 
 inline const double synthetic_pipeline_snv_v1_transform_train[] = {
@@ -146,6 +167,10 @@ inline const double synthetic_pipeline_msc_v1_x[] = {
     5.3899999999999997, 8.6699999999999999, 2.25, 3.6000000000000001,
     6.3000000000000007, 10.350000000000001, 15.750000000000002, 1.0700000000000001,
     1.6899999999999999, 2.9300000000000002, 4.79, 7.2700000000000005,
+};
+
+inline const double synthetic_pipeline_msc_v1_y[] = {
+    0, 0, 0, 0,
 };
 
 inline const double synthetic_pipeline_msc_v1_transform_train[] = {
@@ -179,6 +204,10 @@ inline const double synthetic_pipeline_emsc_v1_x[] = {
     5.1787346938775523, 5.4683265306122468, 7.4780816326530637, 8.7260000000000026,
 };
 
+inline const double synthetic_pipeline_emsc_v1_y[] = {
+    0, 0, 0, 0,
+};
+
 inline const double synthetic_pipeline_emsc_v1_transform_train[] = {
     1.2155523279016054, 2.4688727264769503, 3.9712808187552042, 5.3806460299620085,
     7.5384246385964619, 8.0312090766556512, 10.890592063102297, 12.815475889978387,
@@ -210,6 +239,10 @@ inline const double synthetic_pipeline_detrend_poly_v1_x[] = {
     0.034000000000000009, 0.12000000000000004,
 };
 
+inline const double synthetic_pipeline_detrend_poly_v1_y[] = {
+    0, 0, 0,
+};
+
 inline const double synthetic_pipeline_detrend_poly_v1_transform_train[] = {
     0.014642857142856736, -0.038928571428571646, 0.034285714285714253, -0.01571428571428557,
     0.011071428571428621, -0.0053571428571426161, -0.010000000000000231, 0.024857142857142689,
@@ -238,6 +271,10 @@ inline const double synthetic_pipeline_savgol_smooth_v1_x[] = {
     0.96749498660405442, 0.91929742682568172, 1.9000000000000001, 1.6637500000000001,
     1.385, 1.2537500000000001, 1.1300000000000001, 0.97375000000000012,
     0.93500000000000005, 0.88375000000000004, 0.92000000000000015,
+};
+
+inline const double synthetic_pipeline_savgol_smooth_v1_y[] = {
+    0, 0, 0,
 };
 
 inline const double synthetic_pipeline_savgol_smooth_v1_transform_train[] = {
@@ -272,6 +309,10 @@ inline const double synthetic_pipeline_savgol_derivative_v1_x[] = {
     -0.29999999999999993, 0.050000000000000155, 0.50000000000000011,
 };
 
+inline const double synthetic_pipeline_savgol_derivative_v1_y[] = {
+    0, 0, 0,
+};
+
 inline const double synthetic_pipeline_savgol_derivative_v1_transform_train[] = {
     0.36593749999999953, 0.52312499999999973, 0.56937499999999996, 0.46000000000000008,
     0.40687500000000021, 0.41000000000000031, 0.46937500000000043, 0.41812500000000058,
@@ -303,6 +344,10 @@ inline const double synthetic_pipeline_asls_v1_x[] = {
     0.48999999999999999, 0.59037037037037043, 0.75814814814814813, 0.93333333333333335,
     1.1659259259259258, 1.5559259259259259, 1.5333333333333334, 1.488148148148148,
     1.6003703703703704, 1.7400000000000002,
+};
+
+inline const double synthetic_pipeline_asls_v1_y[] = {
+    0, 0, 0,
 };
 
 inline const double synthetic_pipeline_asls_v1_transform_train[] = {
@@ -340,6 +385,10 @@ inline const double synthetic_pipeline_norris_williams_v1_x[] = {
     0.80000000000000004,
 };
 
+inline const double synthetic_pipeline_norris_williams_v1_y[] = {
+    0, 0, 0,
+};
+
 inline const double synthetic_pipeline_norris_williams_v1_transform_train[] = {
     0.4159942664690785, 0.65411200080598708, 0.93222973514289553, 1.239718711671645,
     1.5551956642892089, 1.7865435965406529, 1.9151956642892087, 1.9277187116716448,
@@ -374,6 +423,10 @@ inline const double synthetic_pipeline_wavelet_haar_v1_x[] = {
     0.80249999999999999, 0.83312499999999989, 0.78000000000000003,
 };
 
+inline const double synthetic_pipeline_wavelet_haar_v1_y[] = {
+    0, 0, 0,
+};
+
 inline const double synthetic_pipeline_wavelet_haar_v1_transform_train[] = {
     0.55621320343559633, 0.56378679656440334, 0.72999999999999976, 0.72999999999999976,
     0.96621320343559636, 0.97378679656440337, 1.1162132034355963, 1.1537867965644033,
@@ -396,6 +449,45 @@ inline const std::int32_t synthetic_pipeline_wavelet_haar_v1_n_params[] = {
     2,
 };
 
+inline const double synthetic_pipeline_osc_v1_x[] = {
+    0.52000000000000002, -0.16500000000000004, -0.37, 0.54000000000000004,
+    0.059999999999999956, -0.94999999999999996, 0.495, -0.48999999999999999,
+    -0.54999999999999993, 0.42999999999999999, 0.32000000000000006, -0.15000000000000002,
+    -0.0099999999999999707, 0.24999999999999994, -0.020000000000000018, -0.20999999999999991,
+    0.084999999999999964, 0.020000000000000115, -0.16999999999999998, 0.0099999999999999343,
+    0.82000000000000006, -0.41000000000000003, 0.46000000000000008, 0.44999999999999996,
+    -0.39000000000000001, -0.46999999999999997, 0.14500000000000002, 0.37,
+    -0.52000000000000002, -0.099999999999999964,
+};
+
+inline const double synthetic_pipeline_osc_v1_y[] = {
+    -1, -0.59999999999999998, -0.19999999999999996, 0.20000000000000018,
+    0.60000000000000009, 1,
+};
+
+inline const double synthetic_pipeline_osc_v1_transform_train[] = {
+    0.048211658691724668, 0.055713016274572147, -0.48226291136903143, 0.21804981189137002,
+    0.20651312390614834, 0.032181624363770478, 0.035513722230498423, -0.25628805972932323,
+    0.1202445377176794, 0.12498504852894904, 0.01396632305866724, -0.0068306801901576175,
+    -0.082821281371924863, 0.041161435686139475, 0.075038274800991164, -0.0081496878483439394,
+    -0.009430038494413498, 0.068030656374541643, -0.032256566606107734, -0.052684295488866932,
+    -0.016774259897375687, -0.018538501967358623, 0.26088801195414735, -0.12101799004055724,
+    -0.1301410758013799, -0.039435658368442539, -0.056427517853140957, 0.47245358414159072,
+    -0.2261812286485238, -0.2337110759458419,
+};
+
+inline const p4a_operator_kind_t synthetic_pipeline_osc_v1_operators[] = {
+    P4A_OP_OSC,
+};
+
+inline const double synthetic_pipeline_osc_v1_params[] = {
+    100, 9.9999999999999998e-13,
+};
+
+inline const std::int32_t synthetic_pipeline_osc_v1_n_params[] = {
+    2,
+};
+
 inline const PipelineFixture kPipelineFixtures[] = {
     {
         "synthetic_pipeline_identity_v1",
@@ -404,6 +496,7 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_identity_v1_params,
         synthetic_pipeline_identity_v1_n_params,
         MatrixRef{4, 3, synthetic_pipeline_identity_v1_x, sizeof(synthetic_pipeline_identity_v1_x) / sizeof(double), false},
+        MatrixRef{4, 1, synthetic_pipeline_identity_v1_y, sizeof(synthetic_pipeline_identity_v1_y) / sizeof(double), false},
         MatrixRef{4, 3, synthetic_pipeline_identity_v1_transform_train, sizeof(synthetic_pipeline_identity_v1_transform_train) / sizeof(double), false}
     },
     {
@@ -413,6 +506,7 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_center_v1_params,
         synthetic_pipeline_center_v1_n_params,
         MatrixRef{4, 3, synthetic_pipeline_center_v1_x, sizeof(synthetic_pipeline_center_v1_x) / sizeof(double), false},
+        MatrixRef{4, 1, synthetic_pipeline_center_v1_y, sizeof(synthetic_pipeline_center_v1_y) / sizeof(double), false},
         MatrixRef{4, 3, synthetic_pipeline_center_v1_transform_train, sizeof(synthetic_pipeline_center_v1_transform_train) / sizeof(double), false}
     },
     {
@@ -422,6 +516,7 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_autoscale_v1_params,
         synthetic_pipeline_autoscale_v1_n_params,
         MatrixRef{4, 3, synthetic_pipeline_autoscale_v1_x, sizeof(synthetic_pipeline_autoscale_v1_x) / sizeof(double), false},
+        MatrixRef{4, 1, synthetic_pipeline_autoscale_v1_y, sizeof(synthetic_pipeline_autoscale_v1_y) / sizeof(double), false},
         MatrixRef{4, 3, synthetic_pipeline_autoscale_v1_transform_train, sizeof(synthetic_pipeline_autoscale_v1_transform_train) / sizeof(double), false}
     },
     {
@@ -431,6 +526,7 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_pareto_v1_params,
         synthetic_pipeline_pareto_v1_n_params,
         MatrixRef{4, 3, synthetic_pipeline_pareto_v1_x, sizeof(synthetic_pipeline_pareto_v1_x) / sizeof(double), false},
+        MatrixRef{4, 1, synthetic_pipeline_pareto_v1_y, sizeof(synthetic_pipeline_pareto_v1_y) / sizeof(double), false},
         MatrixRef{4, 3, synthetic_pipeline_pareto_v1_transform_train, sizeof(synthetic_pipeline_pareto_v1_transform_train) / sizeof(double), false}
     },
     {
@@ -440,6 +536,7 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_snv_v1_params,
         synthetic_pipeline_snv_v1_n_params,
         MatrixRef{3, 3, synthetic_pipeline_snv_v1_x, sizeof(synthetic_pipeline_snv_v1_x) / sizeof(double), false},
+        MatrixRef{3, 1, synthetic_pipeline_snv_v1_y, sizeof(synthetic_pipeline_snv_v1_y) / sizeof(double), false},
         MatrixRef{3, 3, synthetic_pipeline_snv_v1_transform_train, sizeof(synthetic_pipeline_snv_v1_transform_train) / sizeof(double), false}
     },
     {
@@ -449,6 +546,7 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_msc_v1_params,
         synthetic_pipeline_msc_v1_n_params,
         MatrixRef{4, 5, synthetic_pipeline_msc_v1_x, sizeof(synthetic_pipeline_msc_v1_x) / sizeof(double), false},
+        MatrixRef{4, 1, synthetic_pipeline_msc_v1_y, sizeof(synthetic_pipeline_msc_v1_y) / sizeof(double), false},
         MatrixRef{4, 5, synthetic_pipeline_msc_v1_transform_train, sizeof(synthetic_pipeline_msc_v1_transform_train) / sizeof(double), false}
     },
     {
@@ -458,6 +556,7 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_emsc_v1_params,
         synthetic_pipeline_emsc_v1_n_params,
         MatrixRef{4, 8, synthetic_pipeline_emsc_v1_x, sizeof(synthetic_pipeline_emsc_v1_x) / sizeof(double), false},
+        MatrixRef{4, 1, synthetic_pipeline_emsc_v1_y, sizeof(synthetic_pipeline_emsc_v1_y) / sizeof(double), false},
         MatrixRef{4, 8, synthetic_pipeline_emsc_v1_transform_train, sizeof(synthetic_pipeline_emsc_v1_transform_train) / sizeof(double), false}
     },
     {
@@ -467,6 +566,7 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_detrend_poly_v1_params,
         synthetic_pipeline_detrend_poly_v1_n_params,
         MatrixRef{3, 6, synthetic_pipeline_detrend_poly_v1_x, sizeof(synthetic_pipeline_detrend_poly_v1_x) / sizeof(double), false},
+        MatrixRef{3, 1, synthetic_pipeline_detrend_poly_v1_y, sizeof(synthetic_pipeline_detrend_poly_v1_y) / sizeof(double), false},
         MatrixRef{3, 6, synthetic_pipeline_detrend_poly_v1_transform_train, sizeof(synthetic_pipeline_detrend_poly_v1_transform_train) / sizeof(double), false}
     },
     {
@@ -476,6 +576,7 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_savgol_smooth_v1_params,
         synthetic_pipeline_savgol_smooth_v1_n_params,
         MatrixRef{3, 9, synthetic_pipeline_savgol_smooth_v1_x, sizeof(synthetic_pipeline_savgol_smooth_v1_x) / sizeof(double), false},
+        MatrixRef{3, 1, synthetic_pipeline_savgol_smooth_v1_y, sizeof(synthetic_pipeline_savgol_smooth_v1_y) / sizeof(double), false},
         MatrixRef{3, 9, synthetic_pipeline_savgol_smooth_v1_transform_train, sizeof(synthetic_pipeline_savgol_smooth_v1_transform_train) / sizeof(double), false}
     },
     {
@@ -485,6 +586,7 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_savgol_derivative_v1_params,
         synthetic_pipeline_savgol_derivative_v1_n_params,
         MatrixRef{3, 9, synthetic_pipeline_savgol_derivative_v1_x, sizeof(synthetic_pipeline_savgol_derivative_v1_x) / sizeof(double), false},
+        MatrixRef{3, 1, synthetic_pipeline_savgol_derivative_v1_y, sizeof(synthetic_pipeline_savgol_derivative_v1_y) / sizeof(double), false},
         MatrixRef{3, 9, synthetic_pipeline_savgol_derivative_v1_transform_train, sizeof(synthetic_pipeline_savgol_derivative_v1_transform_train) / sizeof(double), false}
     },
     {
@@ -494,6 +596,7 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_asls_v1_params,
         synthetic_pipeline_asls_v1_n_params,
         MatrixRef{3, 10, synthetic_pipeline_asls_v1_x, sizeof(synthetic_pipeline_asls_v1_x) / sizeof(double), false},
+        MatrixRef{3, 1, synthetic_pipeline_asls_v1_y, sizeof(synthetic_pipeline_asls_v1_y) / sizeof(double), false},
         MatrixRef{3, 10, synthetic_pipeline_asls_v1_transform_train, sizeof(synthetic_pipeline_asls_v1_transform_train) / sizeof(double), false}
     },
     {
@@ -503,6 +606,7 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_norris_williams_v1_params,
         synthetic_pipeline_norris_williams_v1_n_params,
         MatrixRef{3, 11, synthetic_pipeline_norris_williams_v1_x, sizeof(synthetic_pipeline_norris_williams_v1_x) / sizeof(double), false},
+        MatrixRef{3, 1, synthetic_pipeline_norris_williams_v1_y, sizeof(synthetic_pipeline_norris_williams_v1_y) / sizeof(double), false},
         MatrixRef{3, 11, synthetic_pipeline_norris_williams_v1_transform_train, sizeof(synthetic_pipeline_norris_williams_v1_transform_train) / sizeof(double), false}
     },
     {
@@ -512,7 +616,18 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_wavelet_haar_v1_params,
         synthetic_pipeline_wavelet_haar_v1_n_params,
         MatrixRef{3, 9, synthetic_pipeline_wavelet_haar_v1_x, sizeof(synthetic_pipeline_wavelet_haar_v1_x) / sizeof(double), false},
+        MatrixRef{3, 1, synthetic_pipeline_wavelet_haar_v1_y, sizeof(synthetic_pipeline_wavelet_haar_v1_y) / sizeof(double), false},
         MatrixRef{3, 9, synthetic_pipeline_wavelet_haar_v1_transform_train, sizeof(synthetic_pipeline_wavelet_haar_v1_transform_train) / sizeof(double), false}
+    },
+    {
+        "synthetic_pipeline_osc_v1",
+        synthetic_pipeline_osc_v1_operators,
+        sizeof(synthetic_pipeline_osc_v1_operators) / sizeof(p4a_operator_kind_t),
+        synthetic_pipeline_osc_v1_params,
+        synthetic_pipeline_osc_v1_n_params,
+        MatrixRef{6, 5, synthetic_pipeline_osc_v1_x, sizeof(synthetic_pipeline_osc_v1_x) / sizeof(double), false},
+        MatrixRef{6, 1, synthetic_pipeline_osc_v1_y, sizeof(synthetic_pipeline_osc_v1_y) / sizeof(double), false},
+        MatrixRef{6, 5, synthetic_pipeline_osc_v1_transform_train, sizeof(synthetic_pipeline_osc_v1_transform_train) / sizeof(double), false}
     }
 };
 

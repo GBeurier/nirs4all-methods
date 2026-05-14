@@ -70,6 +70,11 @@ void write_value(p4a_matrix_view_t& v,
     return P4A_OK;
 }
 
+struct OscParams {
+    std::int32_t max_iter{100};
+    double tol{1e-10};
+};
+
 [[nodiscard]] bool element_count(std::int64_t rows,
                                  std::int64_t cols,
                                  std::size_t& out) noexcept {
@@ -174,6 +179,20 @@ void apply_column_transform(const std::vector<double>& values,
     }
 }
 
+void center_columns(const std::vector<double>& values,
+                    std::size_t rows,
+                    std::size_t cols,
+                    std::vector<double>& mean,
+                    std::vector<double>& centered) {
+    fit_column_center(values, rows, cols, mean);
+    centered.assign(rows * cols, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t col = 0; col < cols; ++col) {
+            centered[idx(row, cols, col)] = values[idx(row, cols, col)] - mean[col];
+        }
+    }
+}
+
 void apply_snv(const std::vector<double>& values,
                std::size_t rows,
                std::size_t cols,
@@ -241,6 +260,139 @@ void apply_snv(const std::vector<double>& values,
     }
     solution = std::move(rhs);
     return true;
+}
+
+[[nodiscard]] double vector_sumsq(const std::vector<double>& values) noexcept {
+    double out = 0.0;
+    for (double value : values) {
+        out += value * value;
+    }
+    return out;
+}
+
+[[nodiscard]] double vector_dot(const std::vector<double>& left,
+                                const std::vector<double>& right) noexcept {
+    double out = 0.0;
+    const std::size_t n = std::min(left.size(), right.size());
+    for (std::size_t i = 0; i < n; ++i) {
+        out += left[i] * right[i];
+    }
+    return out;
+}
+
+[[nodiscard]] p4a_status_t y_orthogonal_residual(::pls4all::core::Context& ctx,
+                                                 const std::vector<double>& x_centered,
+                                                 const std::vector<double>& y_centered,
+                                                 std::size_t rows,
+                                                 std::size_t x_cols,
+                                                 std::size_t y_cols,
+                                                 std::vector<double>& residual) {
+    std::vector<double> gram(y_cols * y_cols, 0.0);
+    for (std::size_t row = 0; row < y_cols; ++row) {
+        for (std::size_t col = 0; col < y_cols; ++col) {
+            double sum = 0.0;
+            for (std::size_t sample = 0; sample < rows; ++sample) {
+                sum += y_centered[idx(sample, y_cols, row)] *
+                       y_centered[idx(sample, y_cols, col)];
+            }
+            gram[idx(row, y_cols, col)] = sum;
+        }
+    }
+
+    residual.assign(rows * x_cols, 0.0);
+    std::vector<double> rhs(y_cols, 0.0);
+    std::vector<double> coeffs;
+    for (std::size_t x_col = 0; x_col < x_cols; ++x_col) {
+        std::fill(rhs.begin(), rhs.end(), 0.0);
+        for (std::size_t y_col = 0; y_col < y_cols; ++y_col) {
+            double sum = 0.0;
+            for (std::size_t sample = 0; sample < rows; ++sample) {
+                sum += y_centered[idx(sample, y_cols, y_col)] *
+                       x_centered[idx(sample, x_cols, x_col)];
+            }
+            rhs[y_col] = sum;
+        }
+        if (!solve_linear_system(gram, rhs, y_cols, coeffs)) {
+            ctx.set_error("OSC Y normal equations are singular");
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (std::size_t sample = 0; sample < rows; ++sample) {
+            double projection = 0.0;
+            for (std::size_t y_col = 0; y_col < y_cols; ++y_col) {
+                projection += y_centered[idx(sample, y_cols, y_col)] * coeffs[y_col];
+            }
+            residual[idx(sample, x_cols, x_col)] =
+                x_centered[idx(sample, x_cols, x_col)] - projection;
+        }
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t dominant_weight(::pls4all::core::Context& ctx,
+                                           const std::vector<double>& values,
+                                           std::size_t rows,
+                                           std::size_t cols,
+                                           const OscParams& params,
+                                           std::vector<double>& weights) {
+    weights.assign(cols, 0.0);
+    std::size_t best_col = 0;
+    double best_ss = -1.0;
+    for (std::size_t col = 0; col < cols; ++col) {
+        double sumsq = 0.0;
+        for (std::size_t row = 0; row < rows; ++row) {
+            const double value = values[idx(row, cols, col)];
+            sumsq += value * value;
+        }
+        if (sumsq > best_ss) {
+            best_ss = sumsq;
+            best_col = col;
+        }
+    }
+    if (best_ss <= std::numeric_limits<double>::epsilon()) {
+        ctx.set_error("OSC found no X variation orthogonal to Y");
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+    weights[best_col] = 1.0;
+
+    std::vector<double> scores(rows, 0.0);
+    std::vector<double> next(cols, 0.0);
+    for (std::int32_t iter = 0; iter < params.max_iter; ++iter) {
+        std::fill(scores.begin(), scores.end(), 0.0);
+        for (std::size_t row = 0; row < rows; ++row) {
+            for (std::size_t col = 0; col < cols; ++col) {
+                scores[row] += values[idx(row, cols, col)] * weights[col];
+            }
+        }
+        std::fill(next.begin(), next.end(), 0.0);
+        for (std::size_t col = 0; col < cols; ++col) {
+            for (std::size_t row = 0; row < rows; ++row) {
+                next[col] += values[idx(row, cols, col)] * scores[row];
+            }
+        }
+        const double norm = std::sqrt(vector_sumsq(next));
+        if (norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_error("OSC dominant direction vanished");
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : next) {
+            value /= norm;
+        }
+        if (vector_dot(next, weights) < 0.0) {
+            for (double& value : next) {
+                value = -value;
+            }
+        }
+        double diff = 0.0;
+        for (std::size_t col = 0; col < cols; ++col) {
+            const double delta = next[col] - weights[col];
+            diff += delta * delta;
+        }
+        weights = next;
+        if (diff <= params.tol) {
+            return P4A_OK;
+        }
+    }
+    return P4A_OK;
 }
 
 [[nodiscard]] p4a_status_t apply_detrend_poly(::pls4all::core::Context& ctx,
@@ -366,6 +518,20 @@ struct WaveletParams {
         return value + threshold;
     }
     return 0.0;
+}
+
+[[nodiscard]] bool operator_requires_y(p4a_operator_kind_t kind) noexcept {
+    return kind == P4A_OP_OSC;
+}
+
+[[nodiscard]] bool pipeline_requires_y(
+    const std::vector<::pls4all::core::OperatorEntry>& entries) noexcept {
+    for (const auto& entry : entries) {
+        if (operator_requires_y(entry.kind)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 [[nodiscard]] double binomial(std::int32_t n, std::int32_t k) noexcept {
@@ -639,6 +805,84 @@ void norris_williams_filter(const NorrisWilliamsParams& params,
         }
     }
     return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t apply_osc_filter(::pls4all::core::Context& ctx,
+                                            const std::vector<double>& values,
+                                            std::size_t rows,
+                                            std::size_t cols,
+                                            const std::vector<double>& mean,
+                                            const std::vector<double>& weights,
+                                            const std::vector<double>& loadings,
+                                            std::vector<double>& out) {
+    if (mean.size() != cols || weights.size() != cols || loadings.size() != cols) {
+        ctx.set_error("OSC fitted state has inconsistent dimensions");
+        return P4A_ERR_INTERNAL;
+    }
+    out.assign(rows * cols, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        double score = 0.0;
+        for (std::size_t col = 0; col < cols; ++col) {
+            score += (values[idx(row, cols, col)] - mean[col]) * weights[col];
+        }
+        for (std::size_t col = 0; col < cols; ++col) {
+            out[idx(row, cols, col)] = values[idx(row, cols, col)] - score * loadings[col];
+        }
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t fit_osc(::pls4all::core::Context& ctx,
+                                   const std::vector<double>& values,
+                                   const std::vector<double>& y_values,
+                                   std::size_t rows,
+                                   std::size_t cols,
+                                   std::size_t y_cols,
+                                   const OscParams& params,
+                                   std::vector<double>& mean,
+                                   std::vector<double>& weights,
+                                   std::vector<double>& loadings,
+                                   std::vector<double>& out) {
+    std::vector<double> x_centered;
+    center_columns(values, rows, cols, mean, x_centered);
+
+    std::vector<double> y_mean;
+    std::vector<double> y_centered;
+    center_columns(y_values, rows, y_cols, y_mean, y_centered);
+
+    std::vector<double> x_orthogonal;
+    p4a_status_t status =
+        y_orthogonal_residual(ctx, x_centered, y_centered, rows, cols, y_cols, x_orthogonal);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    status = dominant_weight(ctx, x_orthogonal, rows, cols, params, weights);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    std::vector<double> scores(rows, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t col = 0; col < cols; ++col) {
+            scores[row] += x_centered[idx(row, cols, col)] * weights[col];
+        }
+    }
+    const double score_ss = vector_sumsq(scores);
+    if (score_ss <= std::numeric_limits<double>::epsilon()) {
+        ctx.set_error("OSC training score vanished");
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+
+    loadings.assign(cols, 0.0);
+    for (std::size_t col = 0; col < cols; ++col) {
+        double sum = 0.0;
+        for (std::size_t row = 0; row < rows; ++row) {
+            sum += x_centered[idx(row, cols, col)] * scores[row];
+        }
+        loadings[col] = sum / score_ss;
+    }
+    return apply_osc_filter(ctx, values, rows, cols, mean, weights, loadings, out);
 }
 
 [[nodiscard]] p4a_status_t apply_msc(::pls4all::core::Context& ctx,
@@ -1044,11 +1288,38 @@ void norris_williams_filter(const NorrisWilliamsParams& params,
     return P4A_OK;
 }
 
+[[nodiscard]] p4a_status_t parse_osc(::pls4all::core::Context& ctx,
+                                     const ::pls4all::core::OperatorEntry& entry,
+                                     OscParams& params) {
+    params = OscParams{};
+    if (entry.params.empty()) {
+        return P4A_OK;
+    }
+    if (entry.params.size() != 2U) {
+        ctx.set_error("OSC expects zero params or max_iter/tol");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    p4a_status_t status = parse_integer_param(ctx, entry.params[0], 1, 1000,
+                                              "OSC max_iter",
+                                              params.max_iter);
+    if (status != P4A_OK) {
+        return status;
+    }
+    params.tol = entry.params[1];
+    if (!std::isfinite(params.tol) || params.tol <= 0.0) {
+        ctx.set_error("OSC tol must be finite and positive");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    return P4A_OK;
+}
+
 }  // namespace
 
 namespace pls4all::core {
 
-p4a_status_t Pipeline::fit(Context& ctx, const p4a_matrix_view_t& X) {
+p4a_status_t Pipeline::fit(Context& ctx,
+                           const p4a_matrix_view_t& X,
+                           const p4a_matrix_view_t* Y) {
     fitted_ = false;
     states_.clear();
 
@@ -1065,6 +1336,35 @@ p4a_status_t Pipeline::fit(Context& ctx, const p4a_matrix_view_t& X) {
     status = copy_matrix_checked(ctx, X, "X", current);
     if (status != P4A_OK) {
         return status;
+    }
+
+    const bool needs_y = pipeline_requires_y(entries_);
+    std::vector<double> y_values;
+    std::size_t y_cols = 0;
+    if (needs_y) {
+        if (Y == nullptr) {
+            ctx.set_error("pipeline operator OSC requires a non-null Y matrix at fit");
+            return P4A_ERR_INVALID_ARGUMENT;
+        }
+        status = validate_float_view(ctx, *Y, "Y");
+        if (status != P4A_OK) {
+            return status;
+        }
+        if (Y->rows != X.rows) {
+            ctx.set_errorf("Y rows (%lld) must match X rows (%lld) for supervised preprocessing",
+                           static_cast<long long>(Y->rows),
+                           static_cast<long long>(X.rows));
+            return P4A_ERR_SHAPE_MISMATCH;
+        }
+        if (Y->cols < 1) {
+            ctx.set_error("supervised preprocessing requires at least one Y column");
+            return P4A_ERR_INVALID_ARGUMENT;
+        }
+        status = copy_matrix_checked(ctx, *Y, "Y", y_values);
+        if (status != P4A_OK) {
+            return status;
+        }
+        y_cols = static_cast<std::size_t>(Y->cols);
     }
 
     const std::size_t rows = static_cast<std::size_t>(X.rows);
@@ -1264,6 +1564,23 @@ p4a_status_t Pipeline::fit(Context& ctx, const p4a_matrix_view_t& X) {
                 }
                 break;
             }
+            case P4A_OP_OSC: {
+                OscParams params;
+                status = parse_osc(ctx, entry, params);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                state.scale.reserve(cols);
+                state.extra.reserve(cols);
+                status = fit_osc(ctx, current, y_values, rows, cols, y_cols, params,
+                                 state.location, state.scale, state.extra, next);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                break;
+            }
             default:
                 ctx.set_errorf("pipeline operator %d is not implemented in this release",
                                static_cast<int>(entry.kind));
@@ -1414,6 +1731,14 @@ p4a_status_t Pipeline::transform(Context& ctx,
                 params.levels = static_cast<std::int32_t>(state.scale[0]);
                 params.threshold = state.scale[1];
                 status = apply_wavelet_denoise(ctx, current, rows, cols, params, next);
+                if (status != P4A_OK) {
+                    return status;
+                }
+                break;
+            }
+            case P4A_OP_OSC: {
+                status = apply_osc_filter(ctx, current, rows, cols,
+                                          state.location, state.scale, state.extra, next);
                 if (status != P4A_OK) {
                     return status;
                 }

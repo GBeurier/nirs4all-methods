@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pls4all-parity-generator"
-version = "0.24.0"
+version = "0.25.0"
 description = "Generate pls4all parity fixtures from pinned reference PLS implementations."
 authors = [{ name = "Grégory Beurier and contributors" }]
 license = "CECILL-2.1"
@@ -20,7 +20,7 @@ dependencies = [
 # wide-kernel, orthogonal-scores, power, randomized-SVD, canonical, PLSSVD,
 # PLS-DA, OPLS, OPLS-DA, SVD and PCR fixtures use deterministic NumPy ports;
 # Savitzky-Golay preprocessing fixtures use pinned SciPy signal reference code;
-# Haar wavelet denoising uses a deterministic NumPy reference.
+# Haar wavelet denoising and OSC use deterministic NumPy references.
 
 [project.scripts]
 generate-fixtures = "pls4all_parity.cli:main"

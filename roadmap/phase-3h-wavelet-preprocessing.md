@@ -28,4 +28,5 @@ denoising operator inside the fitted preprocessing pipeline.
 
 - Additional wavelet families beyond Haar.
 - Robust threshold estimators such as MAD/universal threshold.
-- Supervised OSC / EPO preprocessing.
+- Supervised OSC preprocessing shipped in Phase 3i.
+- EPO preprocessing.

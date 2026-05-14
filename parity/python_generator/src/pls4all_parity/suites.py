@@ -422,8 +422,32 @@ def _pls_svd_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[s
     }
 
 
-def _pipeline_apply(X: np.ndarray, operators: list[str]) -> np.ndarray:
+def _osc_dominant_weight(values: np.ndarray, max_iter: int, tol: float) -> np.ndarray:
+    col_sumsq = np.sum(values * values, axis=0)
+    best_col = int(np.argmax(col_sumsq))
+    if float(col_sumsq[best_col]) <= np.finfo(np.float64).eps:
+        raise RuntimeError("OSC found no X variation orthogonal to Y")
+    weights = np.zeros(values.shape[1], dtype=np.float64)
+    weights[best_col] = 1.0
+    for _ in range(max_iter):
+        scores = values @ weights
+        nxt = values.T @ scores
+        norm = float(np.linalg.norm(nxt))
+        if norm <= np.finfo(np.float64).eps:
+            raise RuntimeError("OSC dominant direction vanished")
+        nxt = nxt / norm
+        if float(nxt @ weights) < 0.0:
+            nxt = -nxt
+        diff = float((nxt - weights) @ (nxt - weights))
+        weights = nxt
+        if diff <= tol:
+            break
+    return weights
+
+
+def _pipeline_apply(X: np.ndarray, operators: list[str], Y: np.ndarray | None = None) -> np.ndarray:
     out = np.asarray(X, dtype=np.float64).copy()
+    y = None if Y is None else np.asarray(Y, dtype=np.float64)
     for op in operators:
         if op == "identity":
             out = out.copy()
@@ -579,13 +603,36 @@ def _pipeline_apply(X: np.ndarray, operators: list[str]) -> np.ndarray:
                     active = size
                 transformed[row_idx, :] = work[:n_cols]
             out = transformed
+        elif op == "osc" or op.startswith("osc_"):
+            if y is None:
+                raise ValueError("OSC pipeline fixture requires Y")
+            if op == "osc":
+                max_iter_i = 100
+                tol_f = 1e-10
+            else:
+                _prefix, max_iter, tol = op.split("_")
+                max_iter_i = int(max_iter)
+                tol_f = float(tol)
+            x_mean = out.mean(axis=0)
+            x_centered = out - x_mean.reshape(1, -1)
+            y_centered = y - y.mean(axis=0).reshape(1, -1)
+            gram = y_centered.T @ y_centered
+            projection = y_centered @ np.linalg.solve(gram, y_centered.T @ x_centered)
+            x_orthogonal = x_centered - projection
+            weights = _osc_dominant_weight(x_orthogonal, max_iter_i, tol_f)
+            scores = x_centered @ weights
+            score_ss = float(scores @ scores)
+            if score_ss <= np.finfo(np.float64).eps:
+                raise RuntimeError("OSC training score vanished")
+            loadings = (x_centered.T @ scores) / score_ss
+            out = out - np.outer(scores, loadings)
         else:
             raise ValueError(f"unsupported pipeline operator fixture: {op}")
     return out.astype(np.float64, copy=False)
 
 
-def _pipeline_expected(X: np.ndarray, operators: list[str]) -> dict[str, Any]:
-    transformed = _pipeline_apply(X, operators)
+def _pipeline_expected(X: np.ndarray, operators: list[str], Y: np.ndarray | None = None) -> dict[str, Any]:
+    transformed = _pipeline_apply(X, operators, Y)
     return {
         "transform_train": {
             "shape": list(transformed.shape),
@@ -1412,9 +1459,10 @@ def _pipeline_fixture(
     seed: int,
     X: np.ndarray,
     operators: list[str],
+    Y: np.ndarray | None = None,
 ) -> dict[str, Any]:
     X = np.asarray(X, dtype=np.float64)
-    Y = np.zeros((X.shape[0], 1), dtype=np.float64)
+    Y = np.zeros((X.shape[0], 1), dtype=np.float64) if Y is None else np.asarray(Y, dtype=np.float64)
     return {
         "schema_version": 1,
         "fixture_id":     fixture_id,
@@ -1431,7 +1479,7 @@ def _pipeline_fixture(
             "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
             "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
         },
-        "expected": _pipeline_expected(X, operators),
+        "expected": _pipeline_expected(X, operators, Y),
         "comparison_policy": {
             "components_alignment": "exact",
             "sign_resolver":        "none",
@@ -2076,6 +2124,25 @@ def synthetic_pipeline_wavelet_haar_v1() -> dict[str, Any]:
     ])
     return _pipeline_fixture("synthetic_pipeline_wavelet_haar_v1", seed=52,
                              X=X, operators=["wavelet_haar_2_0.03"])
+
+
+def synthetic_pipeline_osc_v1() -> dict[str, Any]:
+    """6 samples, 5 wavelengths for supervised one-component OSC parity."""
+    y = np.linspace(-1.0, 1.0, 6, dtype=np.float64).reshape(-1, 1)
+    orthogonal_score = np.array([0.9, -0.7, 0.4, -0.3, 0.6, -0.9], dtype=np.float64)
+    y_loading = np.array([0.40, -0.25, 0.55, 0.10, -0.35], dtype=np.float64)
+    orthogonal_loading = np.array([1.00, -0.45, 0.20, 0.70, -0.30], dtype=np.float64)
+    residual = np.array([
+        [0.02, -0.01, 0.00, 0.01, -0.02],
+        [-0.01, 0.03, -0.02, 0.00, 0.01],
+        [0.00, -0.02, 0.02, -0.01, 0.03],
+        [0.01, 0.00, -0.03, 0.02, -0.01],
+        [-0.02, 0.01, 0.01, -0.03, 0.00],
+        [0.03, -0.01, 0.00, 0.01, -0.02],
+    ], dtype=np.float64)
+    X = y @ y_loading.reshape(1, -1) + orthogonal_score.reshape(-1, 1) @ orthogonal_loading.reshape(1, -1) + residual
+    return _pipeline_fixture("synthetic_pipeline_osc_v1", seed=53,
+                             X=X, Y=y, operators=["osc_100_1e-12"])
 
 
 def synthetic_power_tiny_pls1_v1() -> dict[str, Any]:
