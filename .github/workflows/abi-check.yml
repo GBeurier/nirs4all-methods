@@ -1,0 +1,96 @@
+name: ABI Surface
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-12 g++-12 ninja-build cmake
+      - run: cmake --preset ci-linux-gcc12-release
+      - run: cmake --build --preset ci-linux-gcc12-release --target pls4all_c --parallel
+      - name: Extract exported symbols
+        run: |
+          LIB=$(find build -name 'libp4a.so.*' | head -n 1)
+          echo "Inspecting $LIB"
+          nm -D --defined-only "$LIB" | grep -E '^[0-9a-f]+ T ' | awk '{print $3}' | sort -u > /tmp/exported.txt
+          echo "----- exported -----"
+          cat /tmp/exported.txt
+          echo "----- expected -----"
+          cat cpp/abi/expected_symbols_linux.txt
+          echo "----- diff -----"
+          diff -u cpp/abi/expected_symbols_linux.txt /tmp/exported.txt
+      - name: Assert every exported symbol starts with p4a_
+        run: |
+          if grep -v '^p4a_' /tmp/exported.txt; then
+            echo "Forbidden non-p4a_ symbol exported"
+            exit 1
+          fi
+      - name: Runtime-dependency audit (forbidden libs)
+        run: |
+          LIB=$(find build -name 'libp4a.so.*' | head -n 1)
+          deps=$(ldd "$LIB" 2>&1)
+          echo "$deps"
+          # Forbidden runtime-dep list per roadmap §5.3.
+          if echo "$deps" | grep -iE 'libopenblas|libmkl|libpython|libR\.|librcpp|libboost|libeigen|libpybind11|libembind|libnlohmann|libyaml-cpp'; then
+            echo "ERROR: libp4a links a forbidden runtime dependency"
+            exit 1
+          fi
+
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install ninja cmake
+      - run: cmake --preset ci-macos-clang-release
+      - run: cmake --build --preset ci-macos-clang-release --target pls4all_c --parallel
+      - name: Extract exported symbols
+        run: |
+          LIB=$(find build -name 'libp4a*.dylib' | head -n 1)
+          echo "Inspecting $LIB"
+          nm -gU "$LIB" | awk '{print $3}' | sed 's/^_//' | sort -u > /tmp/exported.txt
+          cat /tmp/exported.txt
+      - name: Assert every exported symbol starts with p4a_
+        run: |
+          if grep -v '^p4a_' /tmp/exported.txt; then
+            echo "Forbidden non-p4a_ symbol exported"
+            exit 1
+          fi
+      - name: Runtime-dependency audit (forbidden libs)
+        run: |
+          LIB=$(find build -name 'libp4a*.dylib' | head -n 1)
+          deps=$(otool -L "$LIB")
+          echo "$deps"
+          if echo "$deps" | grep -iE 'openblas|libmkl|libpython|libR\.|librcpp|libboost|libeigen|libpybind11|libembind|libnlohmann|libyaml-cpp'; then
+            echo "ERROR: libp4a links a forbidden runtime dependency"
+            exit 1
+          fi
+
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: microsoft/setup-msbuild@v2
+      - run: cmake --preset ci-windows-msvc-release
+      - run: cmake --build --preset ci-windows-msvc-release --target pls4all_c --parallel --config Release
+      - name: Extract exported symbols
+        shell: pwsh
+        run: |
+          $dll = Get-ChildItem build -Recurse -Filter "p4a.dll" | Select-Object -First 1
+          if (-not $dll) { Write-Error "p4a.dll not built"; exit 1 }
+          $vcvars = "${env:VCINSTALLDIR}Tools\MSVC"
+          $dumpbin = Get-ChildItem -Path $vcvars -Filter dumpbin.exe -Recurse | Where-Object { $_.FullName -like '*Hostx64*x64*' } | Select-Object -First 1
+          if (-not $dumpbin) { Write-Error "dumpbin not found"; exit 1 }
+          & $dumpbin.FullName /EXPORTS $dll.FullName |
+            Select-String -Pattern '^\s+\d+\s+\w+\s+\w+\s+(p4a_\w+)' |
+            ForEach-Object { $_.Matches[0].Groups[1].Value } |
+            Sort-Object -Unique | Out-File -Encoding ascii exported.txt
+          Get-Content exported.txt
