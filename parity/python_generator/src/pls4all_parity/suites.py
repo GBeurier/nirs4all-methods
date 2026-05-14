@@ -1529,6 +1529,16 @@ def _deterministic_reference_noise(n_samples: int,
     return noise
 
 
+def _splitmix_permutation(n_samples: int, seed: int) -> np.ndarray:
+    state = int(seed) & _MASK64
+    permutation = np.arange(int(n_samples), dtype=np.int64)
+    for upper in range(int(n_samples) - 1, 0, -1):
+        state, bits = _splitmix64_next(state)
+        swap_with = int(bits % (upper + 1))
+        permutation[upper], permutation[swap_with] = permutation[swap_with], permutation[upper]
+    return permutation
+
+
 def _uve_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -1652,6 +1662,79 @@ def _emcuve_expected(
             "layout": "row_major",
             "dtype": "f64",
             "values": noise_thresholds.astype(np.float64).tolist(),
+        },
+        "selected_indices": {
+            "shape": [1, int(len(selected))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected,
+        },
+    }
+
+
+def _pls_coefficient_scores(X: np.ndarray,
+                            Y: np.ndarray,
+                            n_components: int) -> np.ndarray:
+    model = PLSRegression(n_components=int(n_components), scale=True, max_iter=500, tol=1e-6)
+    model.fit(X, Y)
+    coefficients = _pls_original_scale_coefficients(model)
+    return np.max(np.abs(coefficients), axis=1).astype(np.float64)
+
+
+def _randomization_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_permutations: int,
+    seed: int,
+    alpha: float,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    if n_permutations < 1:
+        raise ValueError("n_permutations must be positive")
+    if not 0.0 <= float(alpha) <= 1.0:
+        raise ValueError("alpha must be in [0, 1]")
+
+    observed = _pls_coefficient_scores(X, Y, n_components)
+    exceedance_counts = np.zeros(observed.size, dtype=np.int64)
+    for permutation_index in range(int(n_permutations)):
+        member_seed = (int(seed) + (int(permutation_index) + 1) * _SPLITMIX_GOLDEN) & _MASK64
+        permutation = _splitmix_permutation(X.shape[0], member_seed)
+        permuted_scores = _pls_coefficient_scores(X, Y[permutation], n_components)
+        exceedance_counts += (permuted_scores >= observed).astype(np.int64)
+
+    p_values = (exceedance_counts.astype(np.float64) + 1.0) / float(int(n_permutations) + 1)
+    selected = [
+        int(feature)
+        for feature in range(int(observed.size))
+        if float(p_values[feature]) <= float(alpha)
+    ]
+    selected.sort(key=lambda feature: (
+        float(p_values[feature]),
+        -float(observed[feature]),
+        int(feature),
+    ))
+    return {
+        "observed_scores": {
+            "shape": [1, int(observed.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": observed.astype(np.float64).tolist(),
+        },
+        "p_values": {
+            "shape": [1, int(p_values.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": p_values.astype(np.float64).tolist(),
+        },
+        "exceedance_counts": {
+            "shape": [1, int(exceedance_counts.size)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": exceedance_counts.astype(int).tolist(),
         },
         "selected_indices": {
             "shape": [1, int(len(selected))],
@@ -4584,6 +4667,55 @@ def _emcuve_fixture(
     }
 
 
+def _randomization_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_permutations: int,
+    randomization_seed: int,
+    alpha: float,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._randomization_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":          "pls_regression",
+                "solver":             "nipals",
+                "n_components":       int(n_components),
+                "n_permutations":     int(n_permutations),
+                "randomization_seed": int(randomization_seed),
+                "alpha":              float(alpha),
+                "reference":          "sklearn PLSRegression deterministic Y-permutation coefficient test",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _randomization_selection_expected(X,
+                                                      Y,
+                                                      n_components,
+                                                      n_permutations,
+                                                      randomization_seed,
+                                                      alpha),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-randomization-selection",
+        },
+    }
+
+
 def _spa_selection_fixture(
     fixture_id: str,
     seed: int,
@@ -6354,6 +6486,38 @@ def synthetic_emcuve_pls_ensemble_v1() -> dict[str, Any]:
                            noise_seed=84,
                            n_ensembles=5,
                            vote_threshold=0.6)
+
+
+def synthetic_randomization_pls_permutation_v1() -> dict[str, Any]:
+    """28 samples, 10 features, 2 targets for deterministic PLS randomisation tests."""
+    seed = 85
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(28, 4))
+    trend = np.linspace(-1.0, 1.0, 28)
+    X = np.column_stack([
+        1.05 * latent[:, 0] + 0.05 * rng.standard_normal(size=28),
+        -0.62 * latent[:, 0] + 0.55 * latent[:, 2] + 0.05 * rng.standard_normal(size=28),
+        0.74 * latent[:, 1] - 0.18 * latent[:, 3] + 0.05 * rng.standard_normal(size=28),
+        0.22 * latent[:, 0] + 0.82 * latent[:, 3] + 0.04 * rng.standard_normal(size=28),
+        -0.66 * latent[:, 2] + 0.31 * latent[:, 3] + 0.05 * rng.standard_normal(size=28),
+        0.32 * latent[:, 1] + 0.22 * latent[:, 2] + 0.07 * rng.standard_normal(size=28),
+        np.sin(np.linspace(0.0, 3.0 * np.pi, 28)) + 0.05 * rng.standard_normal(size=28),
+        np.cos(np.linspace(0.0, 2.0 * np.pi, 28)) + 0.05 * rng.standard_normal(size=28),
+        0.30 * trend + 0.12 * rng.standard_normal(size=28),
+        rng.standard_normal(size=28) * 0.18,
+    ])
+    Y = np.column_stack([
+        1.24 * latent[:, 0] - 0.55 * latent[:, 2] + 0.05 * rng.standard_normal(size=28),
+        -0.48 * latent[:, 1] + 0.78 * latent[:, 3] + 0.05 * rng.standard_normal(size=28),
+    ])
+    return _randomization_selection_fixture("synthetic_randomization_pls_permutation_v1",
+                                            seed=seed,
+                                            X=X,
+                                            Y=Y,
+                                            n_components=2,
+                                            n_permutations=15,
+                                            randomization_seed=86,
+                                            alpha=0.25)
 
 
 def synthetic_spa_pls_projection_v1() -> dict[str, Any]:

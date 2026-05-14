@@ -166,6 +166,14 @@ HEADER_SPECS = {
         "struct": "EmcuveSelectionFixture",
         "array": "kEmcuveSelectionFixtures",
     },
+    "randomization-selection": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "randomization_selection_fixtures.hpp",
+        "fixtures": (
+            "synthetic_randomization_pls_permutation_v1",
+        ),
+        "struct": "RandomizationSelectionFixture",
+        "array": "kRandomizationSelectionFixtures",
+    },
     "spa-selection": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "spa_selection_fixtures.hpp",
         "fixtures": (
@@ -1958,6 +1966,90 @@ def generate_emcuve_selection(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_randomization_selection(fixture_ids: Sequence[str],
+                                     fixture_dir: Path,
+                                     out: Path,
+                                     family: str,
+                                     struct_name: str,
+                                     array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct RandomizationSelectionIndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_components;",
+        "    std::int32_t n_permutations;",
+        "    std::uint64_t randomization_seed;",
+        "    double alpha;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    MatrixRef observed_scores;",
+        "    MatrixRef p_values;",
+        "    RandomizationSelectionIndexRef exceedance_counts;",
+        "    RandomizationSelectionIndexRef selected_indices;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        y_name = f"{prefix}_Y"
+        observed_name = f"{prefix}_observed_scores"
+        p_values_name = f"{prefix}_p_values"
+        counts_name = f"{prefix}_exceedance_counts"
+        selected_name = f"{prefix}_selected_indices"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
+        _emit_array(lines, observed_name, expected["observed_scores"]["values"])
+        _emit_array(lines, p_values_name, expected["p_values"]["values"])
+        _emit_int_array(lines, counts_name, expected["exceedance_counts"]["values"])
+        _emit_int_array(lines, selected_name, expected["selected_indices"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['n_components'])},\n"
+            f"        {int(params['n_permutations'])},\n"
+            f"        UINT64_C({int(params['randomization_seed'])}),\n"
+            f"        {_format_double(float(params['alpha']))},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
+            f"        {_matrix_ref(observed_name, expected['observed_scores'])},\n"
+            f"        {_matrix_ref(p_values_name, expected['p_values'])},\n"
+            f"        RandomizationSelectionIndexRef{{{counts_name}, sizeof({counts_name}) / sizeof(std::int64_t)}},\n"
+            f"        RandomizationSelectionIndexRef{{{selected_name}, sizeof({selected_name}) / sizeof(std::int64_t)}}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_spa_selection(fixture_ids: Sequence[str],
                            fixture_dir: Path,
                            out: Path,
@@ -3065,6 +3157,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "emcuve-selection":
         generate_emcuve_selection(fixture_ids, args.fixture_dir, out, args.family,
                                   str(spec["struct"]), str(spec["array"]))
+    elif args.family == "randomization-selection":
+        generate_randomization_selection(fixture_ids, args.fixture_dir, out, args.family,
+                                         str(spec["struct"]), str(spec["array"]))
     elif args.family == "spa-selection":
         generate_spa_selection(fixture_ids, args.fixture_dir, out, args.family,
                                str(spec["struct"]), str(spec["array"]))

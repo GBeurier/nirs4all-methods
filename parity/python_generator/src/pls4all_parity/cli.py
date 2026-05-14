@@ -70,6 +70,7 @@ def _generate_all() -> dict[str, bytes]:
         "synthetic_coefficient_stability_mcuve_v1": _serialize(suites.synthetic_coefficient_stability_mcuve_v1()),
         "synthetic_uve_artificial_variables_v1": _serialize(suites.synthetic_uve_artificial_variables_v1()),
         "synthetic_emcuve_pls_ensemble_v1": _serialize(suites.synthetic_emcuve_pls_ensemble_v1()),
+        "synthetic_randomization_pls_permutation_v1": _serialize(suites.synthetic_randomization_pls_permutation_v1()),
         "synthetic_spa_pls_projection_v1": _serialize(suites.synthetic_spa_pls_projection_v1()),
         "synthetic_cars_pls_competitive_v1": _serialize(suites.synthetic_cars_pls_competitive_v1()),
         "synthetic_random_frog_pls_v1": _serialize(suites.synthetic_random_frog_pls_v1()),

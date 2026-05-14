@@ -275,6 +275,11 @@
       "path": "synthetic_random_frog_pls_v1.json",
       "sha256": "25730f7ecb76beabf641b8904fe00af1f46a6051e3747279c497e5327288dbe7"
     },
+    "synthetic_randomization_pls_permutation_v1": {
+      "bytes": 11971,
+      "path": "synthetic_randomization_pls_permutation_v1.json",
+      "sha256": "11ba4ef55e549f005552684349208517e9c3a025e8f0742e56c5484316fd1298"
+    },
     "synthetic_randomized_svd_small_pls2_v1": {
       "bytes": 12498,
       "path": "synthetic_randomized_svd_small_pls2_v1.json",

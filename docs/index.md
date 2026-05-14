@@ -37,7 +37,9 @@ deterministic k-fold PLS CV for moving-window / iPLS-style selection.
 Phase 5c stability-selection kernels compute Monte-Carlo coefficient mean/std
 ratios for MCUVE-style feature ranking, Phase 5d UVE kernels threshold
 real-feature stability against deterministic artificial variables, and Phase 5n
-EMCUVE kernels ensemble MC-UVE members with a deterministic vote rule. Phase 5e
+EMCUVE kernels ensemble MC-UVE members with a deterministic vote rule. Phase 5o
+randomization-test kernels compare observed PLS coefficient scores against
+deterministic Y permutations with empirical p-values. Phase 5e
 SPA kernels seed from PLS coefficient magnitude and add projection-diverse
 variables, and Phase 5f CARS kernels run deterministic exponential-retention
 subset elimination with k-fold CV scoring. Phase 5g Random Frog kernels run
