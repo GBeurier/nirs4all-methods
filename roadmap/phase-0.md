@@ -647,6 +647,8 @@ P4A_API p4a_status_t p4a_pipeline_clone         (const p4a_pipeline_t* src,
 P4A_API p4a_status_t p4a_pipeline_add_operator  (p4a_pipeline_t* pipe,
                                                   p4a_operator_kind_t kind,
                                                   const double* params, int32_t n_params);
+P4A_API p4a_status_t p4a_pipeline_size          (const p4a_pipeline_t* pipe,
+                                                  int32_t* out_size);
 P4A_API p4a_status_t p4a_pipeline_fit           (p4a_context_t* ctx,
                                                   p4a_pipeline_t* pipe,
                                                   const p4a_matrix_view_t* X,
