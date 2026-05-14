@@ -26,9 +26,11 @@ deterministic k-fold, leave-one-out, holdout, external-fold, repeated k-fold,
 Monte-Carlo, Kennard-Stone and SPXY plans, and the internal CV engine refits
 fold-local regression models to produce out-of-sample predictions and aggregate
 metrics. Binary classification metrics cover sensitivity,
-specificity, balanced accuracy, precision/F1, MCC and average-rank AUC.
-Variable-importance kernels compute VIP scores and selectivity ratio from fitted
-models with stored scores, and component-coefficient kernels expose the
+specificity, balanced accuracy, precision/F1, MCC and average-rank AUC;
+multiclass extensions cover macro/micro averages with one-vs-rest AUC, and
+binary calibration curves use fixed probability bins. Variable-importance
+kernels compute VIP scores and selectivity ratio from fitted models with stored
+scores, and component-coefficient kernels expose the
 original-scale regression coefficients for each latent prefix. The supported fitted-model path is now live for NIPALS,
 orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and
 randomized-SVD PLS regression

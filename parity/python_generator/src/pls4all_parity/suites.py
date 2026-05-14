@@ -809,6 +809,120 @@ def _binary_classification_metrics_expected(
     }
 
 
+def _multiclass_classification_metrics_expected(
+    labels: np.ndarray,
+    scores: np.ndarray,
+    n_classes: int,
+) -> dict[str, Any]:
+    y_true = np.asarray(labels, dtype=np.int32).reshape(-1)
+    y_score = np.asarray(scores, dtype=np.float64)
+    y_pred = np.argmax(y_score, axis=1).astype(np.int32)
+    confusion = np.zeros((int(n_classes), int(n_classes)), dtype=np.float64)
+    for actual, predicted in zip(y_true, y_pred):
+        confusion[int(actual), int(predicted)] += 1.0
+
+    per_class: list[float] = []
+    sensitivity_values: list[float] = []
+    specificity_values: list[float] = []
+    precision_values: list[float] = []
+    f1_values: list[float] = []
+    auc_values: list[float] = []
+    sum_tp = 0.0
+    sum_fp = 0.0
+    sum_fn = 0.0
+    for cls in range(int(n_classes)):
+        tp = float(confusion[cls, cls])
+        fn = float(np.sum(confusion[cls, :]) - tp)
+        fp = float(np.sum(confusion[:, cls]) - tp)
+        tn = float(y_true.size - tp - fn - fp)
+        sum_tp += tp
+        sum_fp += fp
+        sum_fn += fn
+        sensitivity = 0.0 if (tp + fn) == 0.0 else tp / (tp + fn)
+        specificity = 0.0 if (tn + fp) == 0.0 else tn / (tn + fp)
+        precision = 0.0 if (tp + fp) == 0.0 else tp / (tp + fp)
+        f1 = 0.0 if (precision + sensitivity) == 0.0 else 2.0 * precision * sensitivity / (precision + sensitivity)
+        binary = (y_true == cls).astype(np.int32)
+        auc_ovr = _auc_average_ranks(binary, y_score[:, cls])
+        sensitivity_values.append(float(sensitivity))
+        specificity_values.append(float(specificity))
+        precision_values.append(float(precision))
+        f1_values.append(float(f1))
+        auc_values.append(float(auc_ovr))
+        per_class.extend([float(sensitivity), float(specificity), float(precision), float(f1), float(auc_ovr)])
+
+    accuracy = float(np.mean(y_true == y_pred))
+    micro_precision = 0.0 if (sum_tp + sum_fp) == 0.0 else float(sum_tp / (sum_tp + sum_fp))
+    micro_recall = 0.0 if (sum_tp + sum_fn) == 0.0 else float(sum_tp / (sum_tp + sum_fn))
+    micro_f1 = 0.0 if (micro_precision + micro_recall) == 0.0 else float(2.0 * micro_precision * micro_recall / (micro_precision + micro_recall))
+    summary = [
+        float(y_true.size),
+        float(n_classes),
+        accuracy,
+        float(np.mean(sensitivity_values)),
+        float(np.mean(specificity_values)),
+        float(np.mean(precision_values)),
+        float(np.mean(f1_values)),
+        float(np.mean(auc_values)),
+        micro_precision,
+        micro_recall,
+        micro_f1,
+    ]
+    return {
+        "summary_metrics": {
+            "shape": [1, len(summary)],
+            "names": [
+                "count", "n_classes", "accuracy", "macro_sensitivity",
+                "macro_specificity", "macro_precision", "macro_f1",
+                "macro_auc_ovr", "micro_precision", "micro_recall",
+                "micro_f1",
+            ],
+            "values": summary,
+        },
+        "per_class_metrics": {
+            "shape": [int(n_classes), 5],
+            "names": ["sensitivity", "specificity", "precision", "f1", "auc_ovr"],
+            "values": per_class,
+        },
+        "confusion_matrix": {
+            "shape": [int(n_classes), int(n_classes)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(confusion),
+        },
+    }
+
+
+def _binary_calibration_curve_expected(
+    labels: np.ndarray,
+    scores: np.ndarray,
+    n_bins: int,
+) -> dict[str, Any]:
+    y_true = np.asarray(labels, dtype=np.int32).reshape(-1)
+    y_score = np.asarray(scores, dtype=np.float64).reshape(-1)
+    n_bins = int(n_bins)
+    values: list[float] = []
+    for bin_idx in range(n_bins):
+        lower = float(bin_idx / n_bins)
+        upper = float((bin_idx + 1) / n_bins)
+        bins = np.floor(y_score * n_bins).astype(np.int64)
+        bins = np.clip(bins, 0, n_bins - 1)
+        mask = bins == bin_idx
+        count = int(np.sum(mask))
+        mean_score = 0.0 if count == 0 else float(np.mean(y_score[mask]))
+        positive_rate = 0.0 if count == 0 else float(np.mean(y_true[mask]))
+        values.extend([lower, upper, float(count), mean_score, positive_rate])
+    return {
+        "calibration_curve": {
+            "shape": [n_bins, 5],
+            "names": ["bin_lower", "bin_upper", "count", "mean_score", "positive_rate"],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": values,
+        },
+    }
+
+
 def _variable_importance_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -2068,6 +2182,52 @@ def _classification_metrics_fixture(
     }
 
 
+def _classification_extensions_fixture(
+    fixture_id: str,
+    kind: str,
+    seed: int,
+    labels: np.ndarray,
+    scores: np.ndarray,
+    n_classes: int = 0,
+    n_bins: int = 0,
+) -> dict[str, Any]:
+    labels = np.asarray(labels, dtype=np.int32)
+    scores = np.asarray(scores, dtype=np.float64)
+    if kind == "multiclass":
+        expected = _multiclass_classification_metrics_expected(labels, scores, n_classes)
+        reference = "NumPy multiclass macro/micro metrics with one-vs-rest AUC"
+    elif kind == "calibration":
+        expected = _binary_calibration_curve_expected(labels, scores, n_bins)
+        reference = "NumPy binary fixed-bin calibration curve"
+    else:
+        raise ValueError(f"unsupported classification extension fixture kind: {kind}")
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._classification_extensions_fixture",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "kind":       kind,
+                "n_classes":  int(n_classes),
+                "n_bins":     int(n_bins),
+                "reference":  reference,
+            },
+        },
+        "data": {
+            "labels": {"shape": list(labels.shape), "layout": "row_major", "dtype": "i32", "rng_seed": seed, "values": labels.reshape(-1, order="C").astype(int).tolist()},
+            "scores": {"shape": list(scores.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(scores)},
+        },
+        "expected": expected,
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "pls4all-numpy-classification-extensions",
+        },
+    }
+
+
 def _variable_importance_fixture(
     fixture_id: str,
     seed: int,
@@ -3023,6 +3183,56 @@ def synthetic_classification_binary_metrics_v1() -> dict[str, Any]:
                                            labels=labels,
                                            scores=scores,
                                            threshold=0.5)
+
+
+def synthetic_classification_multiclass_metrics_v1() -> dict[str, Any]:
+    """15 labels and 3 score columns for multiclass macro/micro metric parity."""
+    labels = np.array([
+        0, 1, 2, 1, 0,
+        2, 2, 0, 1, 0,
+        2, 1, 0, 1, 2,
+    ], dtype=np.int32).reshape(-1, 1)
+    scores = np.array([
+        [0.82, 0.11, 0.07],
+        [0.21, 0.62, 0.17],
+        [0.16, 0.31, 0.53],
+        [0.34, 0.45, 0.21],
+        [0.47, 0.42, 0.11],
+        [0.12, 0.39, 0.49],
+        [0.28, 0.26, 0.46],
+        [0.51, 0.18, 0.31],
+        [0.22, 0.36, 0.42],
+        [0.39, 0.44, 0.17],
+        [0.17, 0.23, 0.60],
+        [0.27, 0.54, 0.19],
+        [0.58, 0.24, 0.18],
+        [0.30, 0.48, 0.22],
+        [0.24, 0.30, 0.46],
+    ], dtype=np.float64)
+    return _classification_extensions_fixture("synthetic_classification_multiclass_metrics_v1",
+                                              kind="multiclass",
+                                              seed=95,
+                                              labels=labels,
+                                              scores=scores,
+                                              n_classes=3)
+
+
+def synthetic_classification_calibration_curve_v1() -> dict[str, Any]:
+    """16 binary labels and calibrated probabilities for fixed-bin calibration parity."""
+    labels = np.array([
+        0, 0, 1, 0, 1, 1, 0, 1,
+        0, 1, 0, 1, 1, 0, 1, 0,
+    ], dtype=np.int32).reshape(-1, 1)
+    scores = np.array([
+        0.03, 0.18, 0.24, 0.31, 0.37, 0.42, 0.46, 0.51,
+        0.58, 0.63, 0.68, 0.74, 0.79, 0.83, 0.91, 1.00,
+    ], dtype=np.float64).reshape(-1, 1)
+    return _classification_extensions_fixture("synthetic_classification_calibration_curve_v1",
+                                              kind="calibration",
+                                              seed=96,
+                                              labels=labels,
+                                              scores=scores,
+                                              n_bins=5)
 
 
 def synthetic_variable_importance_pls2_v1() -> dict[str, Any]:

@@ -53,10 +53,10 @@ Goal: useful for real spectroscopy.
 - Phase 3l shipped as `phase-3l-validation-splits`: deterministic internal k-fold, LOO and holdout split generators.
 - Phase 3m shipped as `phase-3m-cross-validation-engine`: internal k-fold regression CV orchestration with out-of-sample predictions and aggregate regression metrics.
 - Phase 3n shipped as `phase-3n-classification-metrics`: internal binary classification metrics for sensitivity, specificity, balanced accuracy, precision/F1, MCC and AUC.
-- Classification extensions: multi-class macro/micro averaging and calibration curves.
 - Phase 3o shipped as `phase-3o-variable-importance`: internal VIP and selectivity-ratio kernels for fitted PLS models with stored scores.
 - Phase 3p shipped as `phase-3p-component-coefficients`: original-scale regression coefficient blocks for each latent-component prefix.
 - Phase 3q shipped as `phase-3q-advanced-validation-splits`: deterministic external folds, repeated k-fold, Monte-Carlo, Kennard-Stone and SPXY split generators.
+- Phase 3r shipped as `phase-3r-classification-extensions`: multiclass macro/micro metrics with one-vs-rest AUC and binary fixed-bin calibration curves.
 
 (Phase 3 ships before Phase 2 — bindings benefit from having real algorithms to expose.)
 

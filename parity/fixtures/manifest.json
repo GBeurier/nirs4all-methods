@@ -25,6 +25,16 @@
       "path": "synthetic_classification_binary_metrics_v1.json",
       "sha256": "86b0060dad377ef1aa03dc97e7516919e2a7cc76bb371f243659dcffb846a34f"
     },
+    "synthetic_classification_calibration_curve_v1": {
+      "bytes": 2025,
+      "path": "synthetic_classification_calibration_curve_v1.json",
+      "sha256": "ee7cb20becc2d7c255961cedf1e675637b6872ddac4b3638e551f3407c98be05"
+    },
+    "synthetic_classification_multiclass_metrics_v1": {
+      "bytes": 3155,
+      "path": "synthetic_classification_multiclass_metrics_v1.json",
+      "sha256": "1cfad8180602990c5a3bd0b21446053610bab018fec9ae0a2a0928dc0e8c9ce0"
+    },
     "synthetic_component_coefficients_pls2_v1": {
       "bytes": 5750,
       "path": "synthetic_component_coefficients_pls2_v1.json",

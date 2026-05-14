@@ -77,6 +77,15 @@ HEADER_SPECS = {
         "struct": "ClassificationMetricsFixture",
         "array": "kClassificationMetricsFixtures",
     },
+    "classification-extensions": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "classification_extension_fixtures.hpp",
+        "fixtures": (
+            "synthetic_classification_multiclass_metrics_v1",
+            "synthetic_classification_calibration_curve_v1",
+        ),
+        "struct": "ClassificationExtensionFixture",
+        "array": "kClassificationExtensionFixtures",
+    },
     "variable-importance": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "variable_importance_fixtures.hpp",
         "fixtures": (
@@ -882,6 +891,93 @@ def generate_classification_metrics(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_classification_extensions(fixture_ids: Sequence[str],
+                                       fixture_dir: Path,
+                                       out: Path,
+                                       family: str,
+                                       struct_name: str,
+                                       array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct ClassificationExtensionLabelRef {",
+        "    std::int64_t rows;",
+        "    std::int64_t cols;",
+        "    const std::int32_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    const char* kind;",
+        "    std::int32_t n_classes;",
+        "    std::int32_t n_bins;",
+        "    ClassificationExtensionLabelRef labels;",
+        "    MatrixRef scores;",
+        "    MatrixRef summary_metrics;",
+        "    MatrixRef per_class_metrics;",
+        "    MatrixRef confusion_matrix;",
+        "    MatrixRef calibration_curve;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    empty_matrix_ref = "MatrixRef{0, 0, nullptr, 0, false}"
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        labels_name = f"{prefix}_labels"
+        scores_name = f"{prefix}_scores"
+        names = {
+            "summary_metrics": f"{prefix}_summary_metrics",
+            "per_class_metrics": f"{prefix}_per_class_metrics",
+            "confusion_matrix": f"{prefix}_confusion_matrix",
+            "calibration_curve": f"{prefix}_calibration_curve",
+        }
+        _emit_i32_array(lines, labels_name, fixture["data"]["labels"]["values"])
+        _emit_array(lines, scores_name, fixture["data"]["scores"]["values"])
+        refs = {field: empty_matrix_ref for field in names}
+        for field, array_name_for_field in names.items():
+            if field in fixture["expected"]:
+                _emit_array(lines, array_name_for_field, fixture["expected"][field]["values"])
+                refs[field] = _matrix_ref(array_name_for_field, fixture["expected"][field])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f'        "{params["kind"]}",\n'
+            f"        {int(params['n_classes'])},\n"
+            f"        {int(params['n_bins'])},\n"
+            f"        {_class_label_ref(labels_name, fixture['data']['labels']).replace('ClassLabelRef', 'ClassificationExtensionLabelRef')},\n"
+            f"        {_matrix_ref(scores_name, fixture['data']['scores'])},\n"
+            f"        {refs['summary_metrics']},\n"
+            f"        {refs['per_class_metrics']},\n"
+            f"        {refs['confusion_matrix']},\n"
+            f"        {refs['calibration_curve']}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_variable_importance(fixture_ids: Sequence[str],
                                  fixture_dir: Path,
                                  out: Path,
@@ -1104,6 +1200,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "classification-metrics":
         generate_classification_metrics(fixture_ids, args.fixture_dir, out, args.family,
                                         str(spec["struct"]), str(spec["array"]))
+    elif args.family == "classification-extensions":
+        generate_classification_extensions(fixture_ids, args.fixture_dir, out, args.family,
+                                           str(spec["struct"]), str(spec["array"]))
     elif args.family == "variable-importance":
         generate_variable_importance(fixture_ids, args.fixture_dir, out, args.family,
                                      str(spec["struct"]), str(spec["array"]))

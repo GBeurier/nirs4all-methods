@@ -2,7 +2,7 @@
 
 > A portable PLS / NIRS engine with a stable C ABI and thin first-class bindings for Python, R, MATLAB, JavaScript / WebAssembly and Android.
 
-**Status — Phase 1 shipped, Phase 3q preprocessing / validation core live, PLSCanonical, PLSSVD, PLS-DA, OPLS / OPLS-DA, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power, randomized-SVD and PCR core live · API unstable until v1.0 · Not yet on PyPI / CRAN / npm.**
+**Status — Phase 1 shipped, Phase 3r preprocessing / validation core live, PLSCanonical, PLSSVD, PLS-DA, OPLS / OPLS-DA, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power, randomized-SVD and PCR core live · API unstable until v1.0 · Not yet on PyPI / CRAN / npm.**
 
 `pls4all` reimplements the full Partial Least Squares family in C++17 behind a small, stable C ABI. The same numerical core powers every binding, so a model trained in Python predicts byte-for-byte the same way in R, MATLAB, a browser or on Android.
 
@@ -24,7 +24,7 @@ See [`Overview.md`](Overview.md) for the full taxonomy of targeted PLS variants,
 | --- | --- | --- |
 | 0 — ABI & build foundation | shipped (`phase-0`) | Callable `libp4a` with stable C ABI, full CI matrix, parity scaffolding |
 | 1 — PLS CPU reference | shipped (`phase-1`) | NIPALS PLS1 / PLS2, predict, transform, binary export/import |
-| 3 — NIRS preprocessing & validation | in progress | pipeline fit/transform · identity · center · autoscale · Pareto · SNV · MSC · EMSC · detrend · SG · ASLS · Norris-Williams · Haar wavelet · OSC · EPO · regression metrics · validation splits · k-fold CV engine · advanced splitters · binary classification metrics · VIP/selectivity ratio · coefficients by component |
+| 3 — NIRS preprocessing & validation | in progress | pipeline fit/transform · identity · center · autoscale · Pareto · SNV · MSC · EMSC · detrend · SG · ASLS · Norris-Williams · Haar wavelet · OSC · EPO · regression metrics · validation splits · k-fold CV engine · advanced splitters · binary/multiclass classification metrics · calibration · VIP/selectivity ratio · coefficients by component |
 | 4 — Advanced PLS variants | in progress | SIMPLS · SVD · PCR · kernel PLS · PLSCanonical · PLSSVD · OPLS · PLS-DA · MB-PLS · LW-PLS |
 | 2 — Language bindings (real wheels / CRAN / AAR) | planned | ctypes (Python) · `.Call` (R) · MEX (MATLAB) · WASM (JS) · JNI (Android) |
 | 5 — Variable selection | planned | VIP · iPLS · MCUVE · CARS · SPA · Random Frog · GA-PLS |
@@ -77,9 +77,11 @@ sklearn-parity out-of-sample k-fold regression cross-validation by refitting the
 selected model on each fold and scoring the stitched predictions.
 Binary classification metric kernels cover sensitivity, specificity, balanced
 accuracy, accuracy, precision, F1, MCC and average-rank AUC for PLS-DA style
-scores. Variable-importance kernels compute VIP scores and selectivity ratio
-from fitted models with stored scores, and coefficient kernels materialise the
-original-scale regression coefficients for every component prefix.
+scores. Multiclass metric kernels add macro/micro averaging plus one-vs-rest
+AUC, and calibration kernels produce fixed-bin binary reliability curves.
+Variable-importance kernels compute VIP scores and selectivity ratio from fitted
+models with stored scores, and coefficient kernels materialise the original-scale
+regression coefficients for every component prefix.
 
 ## Project layout
 
@@ -105,7 +107,7 @@ If you use `pls4all` in academic work, please cite:
   title   = {pls4all: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/pls4all},
-  version = {0.33.0}
+  version = {0.34.0}
 }
 ```
 

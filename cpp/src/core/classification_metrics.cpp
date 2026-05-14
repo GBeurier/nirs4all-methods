@@ -183,6 +183,53 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
     return (positive_rank_sum - pos * (pos + 1.0) * 0.5) / (pos * neg);
 }
 
+[[nodiscard]] p4a_status_t copy_multiclass_labels(::pls4all::core::Context& ctx,
+                                                  const p4a_matrix_view_t& labels,
+                                                  std::int32_t n_classes,
+                                                  std::vector<std::int32_t>& out) {
+    std::size_t n_values = 0;
+    if (!checked_element_count(labels.rows, labels.cols, n_values)) {
+        ctx.set_error("multiclass label input shape is too large");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    out.clear();
+    out.reserve(n_values);
+    const auto rows = static_cast<std::size_t>(labels.rows);
+    const auto cols = static_cast<std::size_t>(labels.cols);
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t col = 0; col < cols; ++col) {
+            const double label_value = read_numeric(labels, row, col);
+            if (!std::isfinite(label_value)) {
+                ctx.set_errorf("labels contains NaN or Inf at row %llu col %llu",
+                               ull(row),
+                               ull(col));
+                return P4A_ERR_INVALID_ARGUMENT;
+            }
+            if (std::floor(label_value) != label_value ||
+                label_value < 0.0 ||
+                label_value >= static_cast<double>(n_classes)) {
+                ctx.set_errorf("labels must be integer class ids in [0, %d); got %.17g",
+                               static_cast<int>(n_classes),
+                               label_value);
+                return P4A_ERR_INVALID_ARGUMENT;
+            }
+            out.push_back(static_cast<std::int32_t>(label_value));
+        }
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] double mean_or_zero(const std::vector<double>& values) noexcept {
+    if (values.empty()) {
+        return 0.0;
+    }
+    double total = 0.0;
+    for (const double value : values) {
+        total += value;
+    }
+    return total / static_cast<double>(values.size());
+}
+
 }  // namespace
 
 namespace pls4all::core {
@@ -283,6 +330,255 @@ p4a_status_t compute_binary_classification_metrics(
     } catch (...) {
         ctx.set_error("unexpected exception while computing binary classification metrics");
         out = BinaryClassificationMetrics{};
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+p4a_status_t compute_multiclass_classification_metrics(
+    Context& ctx,
+    const p4a_matrix_view_t& labels,
+    const p4a_matrix_view_t& scores,
+    std::int32_t n_classes,
+    MulticlassClassificationMetrics& out) {
+    try {
+        out = MulticlassClassificationMetrics{};
+        if (n_classes < 2) {
+            ctx.set_errorf("n_classes must be >= 2; got %d", static_cast<int>(n_classes));
+            return P4A_ERR_INVALID_ARGUMENT;
+        }
+
+        p4a_status_t status = validate_view(ctx, labels, "labels", false);
+        if (status != P4A_OK) {
+            return status;
+        }
+        status = validate_view(ctx, scores, "scores", true);
+        if (status != P4A_OK) {
+            return status;
+        }
+        if (scores.cols != n_classes) {
+            ctx.set_errorf("scores cols (%lld) must equal n_classes (%d)",
+                           static_cast<long long>(scores.cols),
+                           static_cast<int>(n_classes));
+            return P4A_ERR_SHAPE_MISMATCH;
+        }
+
+        std::vector<std::int32_t> y_true;
+        status = copy_multiclass_labels(ctx, labels, n_classes, y_true);
+        if (status != P4A_OK) {
+            return status;
+        }
+        if (static_cast<std::int64_t>(y_true.size()) != scores.rows) {
+            ctx.set_errorf("label count (%llu) must match score rows (%lld)",
+                           ull(y_true.size()),
+                           static_cast<long long>(scores.rows));
+            return P4A_ERR_SHAPE_MISMATCH;
+        }
+
+        const auto n_samples = static_cast<std::size_t>(scores.rows);
+        const auto n_cls = static_cast<std::size_t>(n_classes);
+        std::vector<double> score_values(n_samples * n_cls, 0.0);
+        std::vector<std::int64_t> class_counts(n_cls, 0);
+        for (std::size_t row = 0; row < n_samples; ++row) {
+            class_counts[static_cast<std::size_t>(y_true[row])] += 1;
+            for (std::size_t cls = 0; cls < n_cls; ++cls) {
+                const double value = read_numeric(scores, row, cls);
+                if (!std::isfinite(value)) {
+                    ctx.set_errorf("scores contains NaN or Inf at row %llu col %llu",
+                                   ull(row),
+                                   ull(cls));
+                    return P4A_ERR_INVALID_ARGUMENT;
+                }
+                score_values[row * n_cls + cls] = value;
+            }
+        }
+        for (std::size_t cls = 0; cls < n_cls; ++cls) {
+            if (class_counts[cls] == 0) {
+                ctx.set_errorf("class %llu has no labels", ull(cls));
+                return P4A_ERR_INVALID_ARGUMENT;
+            }
+        }
+
+        out.count = static_cast<std::int64_t>(n_samples);
+        out.n_classes = n_classes;
+        out.confusion_matrix.assign(n_cls * n_cls, 0);
+        out.sensitivity.assign(n_cls, 0.0);
+        out.specificity.assign(n_cls, 0.0);
+        out.precision.assign(n_cls, 0.0);
+        out.f1.assign(n_cls, 0.0);
+        out.auc_ovr.assign(n_cls, 0.0);
+
+        std::int64_t correct = 0;
+        for (std::size_t row = 0; row < n_samples; ++row) {
+            std::size_t predicted = 0;
+            double best_score = score_values[row * n_cls];
+            for (std::size_t cls = 1; cls < n_cls; ++cls) {
+                const double value = score_values[row * n_cls + cls];
+                if (value > best_score) {
+                    best_score = value;
+                    predicted = cls;
+                }
+            }
+            const auto actual = static_cast<std::size_t>(y_true[row]);
+            out.confusion_matrix[actual * n_cls + predicted] += 1;
+            if (actual == predicted) {
+                correct += 1;
+            }
+        }
+
+        std::int64_t sum_tp = 0;
+        std::int64_t sum_fp = 0;
+        std::int64_t sum_fn = 0;
+        for (std::size_t cls = 0; cls < n_cls; ++cls) {
+            const std::int64_t tp = out.confusion_matrix[cls * n_cls + cls];
+            std::int64_t row_total = 0;
+            std::int64_t col_total = 0;
+            for (std::size_t other = 0; other < n_cls; ++other) {
+                row_total += out.confusion_matrix[cls * n_cls + other];
+                col_total += out.confusion_matrix[other * n_cls + cls];
+            }
+            const std::int64_t fn = row_total - tp;
+            const std::int64_t fp = col_total - tp;
+            const std::int64_t tn = out.count - tp - fn - fp;
+            sum_tp += tp;
+            sum_fp += fp;
+            sum_fn += fn;
+
+            const double dtp = static_cast<double>(tp);
+            const double dfn = static_cast<double>(fn);
+            const double dfp = static_cast<double>(fp);
+            const double dtn = static_cast<double>(tn);
+            out.sensitivity[cls] = (dtp + dfn) <= kEps ? 0.0 : dtp / (dtp + dfn);
+            out.specificity[cls] = (dtn + dfp) <= kEps ? 0.0 : dtn / (dtn + dfp);
+            out.precision[cls] = (dtp + dfp) <= kEps ? 0.0 : dtp / (dtp + dfp);
+            out.f1[cls] = (out.precision[cls] + out.sensitivity[cls]) <= kEps
+                ? 0.0
+                : 2.0 * out.precision[cls] * out.sensitivity[cls] /
+                    (out.precision[cls] + out.sensitivity[cls]);
+
+            std::vector<std::int32_t> binary_labels(n_samples, 0);
+            std::vector<double> class_scores(n_samples, 0.0);
+            for (std::size_t row = 0; row < n_samples; ++row) {
+                binary_labels[row] = y_true[row] == static_cast<std::int32_t>(cls) ? 1 : 0;
+                class_scores[row] = score_values[row * n_cls + cls];
+            }
+            out.auc_ovr[cls] = auc_with_average_ranks(binary_labels,
+                                                      class_scores,
+                                                      class_counts[cls],
+                                                      out.count - class_counts[cls]);
+        }
+
+        out.accuracy = static_cast<double>(correct) / static_cast<double>(out.count);
+        out.macro_sensitivity = mean_or_zero(out.sensitivity);
+        out.macro_specificity = mean_or_zero(out.specificity);
+        out.macro_precision = mean_or_zero(out.precision);
+        out.macro_f1 = mean_or_zero(out.f1);
+        out.macro_auc_ovr = mean_or_zero(out.auc_ovr);
+        const double micro_tp = static_cast<double>(sum_tp);
+        const double micro_fp = static_cast<double>(sum_fp);
+        const double micro_fn = static_cast<double>(sum_fn);
+        out.micro_precision = (micro_tp + micro_fp) <= kEps ? 0.0 : micro_tp / (micro_tp + micro_fp);
+        out.micro_recall = (micro_tp + micro_fn) <= kEps ? 0.0 : micro_tp / (micro_tp + micro_fn);
+        out.micro_f1 = (out.micro_precision + out.micro_recall) <= kEps
+            ? 0.0
+            : 2.0 * out.micro_precision * out.micro_recall /
+                (out.micro_precision + out.micro_recall);
+
+        ctx.clear_error();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        ctx.set_error("out of memory while computing multiclass classification metrics");
+        out = MulticlassClassificationMetrics{};
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        ctx.set_error("unexpected exception while computing multiclass classification metrics");
+        out = MulticlassClassificationMetrics{};
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+p4a_status_t compute_binary_calibration_curve(
+    Context& ctx,
+    const p4a_matrix_view_t& labels,
+    const p4a_matrix_view_t& scores,
+    std::int32_t n_bins,
+    BinaryCalibrationCurve& out) {
+    try {
+        out = BinaryCalibrationCurve{};
+        if (n_bins < 1) {
+            ctx.set_errorf("n_bins must be >= 1; got %d", static_cast<int>(n_bins));
+            return P4A_ERR_INVALID_ARGUMENT;
+        }
+
+        p4a_status_t status = validate_view(ctx, labels, "labels", false);
+        if (status != P4A_OK) {
+            return status;
+        }
+        status = validate_view(ctx, scores, "scores", true);
+        if (status != P4A_OK) {
+            return status;
+        }
+        if (labels.rows != scores.rows || labels.cols != scores.cols) {
+            ctx.set_errorf("labels shape (%lld, %lld) must match scores shape (%lld, %lld)",
+                           static_cast<long long>(labels.rows),
+                           static_cast<long long>(labels.cols),
+                           static_cast<long long>(scores.rows),
+                           static_cast<long long>(scores.cols));
+            return P4A_ERR_SHAPE_MISMATCH;
+        }
+
+        std::vector<std::int32_t> y_true;
+        std::vector<double> y_score;
+        status = copy_inputs(ctx, labels, scores, y_true, y_score);
+        if (status != P4A_OK) {
+            return status;
+        }
+
+        const auto bins = static_cast<std::size_t>(n_bins);
+        out.n_bins = n_bins;
+        out.counts.assign(bins, 0);
+        out.bin_lower.assign(bins, 0.0);
+        out.bin_upper.assign(bins, 0.0);
+        out.mean_score.assign(bins, 0.0);
+        out.positive_rate.assign(bins, 0.0);
+        std::vector<double> score_sums(bins, 0.0);
+        std::vector<double> positive_sums(bins, 0.0);
+
+        for (std::size_t bin = 0; bin < bins; ++bin) {
+            out.bin_lower[bin] = static_cast<double>(bin) / static_cast<double>(bins);
+            out.bin_upper[bin] = static_cast<double>(bin + 1U) / static_cast<double>(bins);
+        }
+        for (std::size_t i = 0; i < y_score.size(); ++i) {
+            const double score = y_score[i];
+            if (score < 0.0 || score > 1.0) {
+                ctx.set_errorf("calibration scores must be in [0, 1]; got %.17g", score);
+                out = BinaryCalibrationCurve{};
+                return P4A_ERR_INVALID_ARGUMENT;
+            }
+            std::size_t bin = static_cast<std::size_t>(std::floor(score * static_cast<double>(bins)));
+            if (bin >= bins) {
+                bin = bins - 1U;
+            }
+            out.counts[bin] += 1;
+            score_sums[bin] += score;
+            positive_sums[bin] += static_cast<double>(y_true[i]);
+        }
+        for (std::size_t bin = 0; bin < bins; ++bin) {
+            if (out.counts[bin] > 0) {
+                const double count = static_cast<double>(out.counts[bin]);
+                out.mean_score[bin] = score_sums[bin] / count;
+                out.positive_rate[bin] = positive_sums[bin] / count;
+            }
+        }
+
+        ctx.clear_error();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        ctx.set_error("out of memory while computing binary calibration curve");
+        out = BinaryCalibrationCurve{};
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        ctx.set_error("unexpected exception while computing binary calibration curve");
+        out = BinaryCalibrationCurve{};
         return P4A_ERR_INTERNAL;
     }
 }

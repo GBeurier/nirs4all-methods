@@ -1,0 +1,120 @@
+{
+  "comparison_policy": {
+    "components_alignment": "exact",
+    "sign_resolver": "none",
+    "tolerance_table_row": "pls4all-numpy-classification-extensions"
+  },
+  "data": {
+    "labels": {
+      "dtype": "i32",
+      "layout": "row_major",
+      "rng_seed": 96,
+      "shape": [
+        16,
+        1
+      ],
+      "values": [
+        0,
+        0,
+        1,
+        0,
+        1,
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        1,
+        0,
+        1,
+        0
+      ]
+    },
+    "scores": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "rng_seed": 96,
+      "shape": [
+        16,
+        1
+      ],
+      "values": [
+        0.03,
+        0.18,
+        0.24,
+        0.31,
+        0.37,
+        0.42,
+        0.46,
+        0.51,
+        0.58,
+        0.63,
+        0.68,
+        0.74,
+        0.79,
+        0.83,
+        0.91,
+        1.0
+      ]
+    }
+  },
+  "expected": {
+    "calibration_curve": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "names": [
+        "bin_lower",
+        "bin_upper",
+        "count",
+        "mean_score",
+        "positive_rate"
+      ],
+      "shape": [
+        5,
+        5
+      ],
+      "values": [
+        0.0,
+        0.2,
+        2.0,
+        0.105,
+        0.0,
+        0.2,
+        0.4,
+        3.0,
+        0.3066666666666667,
+        0.6666666666666666,
+        0.4,
+        0.6,
+        4.0,
+        0.49250000000000005,
+        0.5,
+        0.6,
+        0.8,
+        4.0,
+        0.71,
+        0.75,
+        0.8,
+        1.0,
+        3.0,
+        0.9133333333333334,
+        0.3333333333333333
+      ]
+    }
+  },
+  "fixture_id": "synthetic_classification_calibration_curve_v1",
+  "generator": {
+    "git_revision_sha": "unknown",
+    "name": "pls4all_parity.suites._classification_extensions_fixture",
+    "params": {
+      "kind": "calibration",
+      "n_bins": 5,
+      "n_classes": 0,
+      "reference": "NumPy binary fixed-bin calibration curve"
+    },
+    "version": "1"
+  },
+  "schema_version": 1
+}
