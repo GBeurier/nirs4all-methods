@@ -52,6 +52,7 @@ HEADER_SPECS = {
             "synthetic_pipeline_detrend_poly_v1",
             "synthetic_pipeline_savgol_smooth_v1",
             "synthetic_pipeline_savgol_derivative_v1",
+            "synthetic_pipeline_asls_v1",
         ),
         "struct": "PipelineFixture",
         "array": "kPipelineFixtures",
@@ -329,6 +330,13 @@ def _pipeline_operator(name: str) -> tuple[str, list[float]]:
             float(poly_degree),
             float(derivative_order),
             float(delta),
+        ]
+    if name.startswith("asls_"):
+        _prefix, lam, asymmetry, iterations = name.split("_")
+        return "P4A_OP_ASLS_BASELINE", [
+            float(lam),
+            float(asymmetry),
+            float(iterations),
         ]
     return mapping[name], []
 

@@ -315,6 +315,12 @@ struct SavGolParams {
     double delta{1.0};
 };
 
+struct AslsParams {
+    double lambda{100000.0};
+    double asymmetry{0.001};
+    std::int32_t iterations{10};
+};
+
 [[nodiscard]] double factorial(std::int32_t n) noexcept {
     double out = 1.0;
     for (std::int32_t i = 2; i <= n; ++i) {
@@ -400,6 +406,66 @@ struct SavGolParams {
                        values[idx(row, cols, static_cast<std::size_t>(source))];
             }
             out[idx(row, cols, col)] = sum;
+        }
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t apply_asls(::pls4all::core::Context& ctx,
+                                      const std::vector<double>& values,
+                                      std::size_t rows,
+                                      std::size_t cols,
+                                      const AslsParams& params,
+                                      std::vector<double>& out) {
+    if (cols < 3U) {
+        ctx.set_error("ASLS baseline requires at least 3 columns");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+
+    std::vector<double> penalty(cols * cols, 0.0);
+    for (std::size_t diff = 0; diff + 2U < cols; ++diff) {
+        const std::size_t i0 = diff;
+        const std::size_t i1 = diff + 1U;
+        const std::size_t i2 = diff + 2U;
+        penalty[idx(i0, cols, i0)] += 1.0;
+        penalty[idx(i0, cols, i1)] -= 2.0;
+        penalty[idx(i0, cols, i2)] += 1.0;
+        penalty[idx(i1, cols, i0)] -= 2.0;
+        penalty[idx(i1, cols, i1)] += 4.0;
+        penalty[idx(i1, cols, i2)] -= 2.0;
+        penalty[idx(i2, cols, i0)] += 1.0;
+        penalty[idx(i2, cols, i1)] -= 2.0;
+        penalty[idx(i2, cols, i2)] += 1.0;
+    }
+    for (double& value : penalty) {
+        value *= params.lambda;
+    }
+
+    out.assign(rows * cols, 0.0);
+    std::vector<double> weights(cols, 1.0);
+    std::vector<double> baseline(cols, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        std::fill(weights.begin(), weights.end(), 1.0);
+        for (std::int32_t iter = 0; iter < params.iterations; ++iter) {
+            std::vector<double> matrix = penalty;
+            std::vector<double> rhs(cols, 0.0);
+            for (std::size_t col = 0; col < cols; ++col) {
+                matrix[idx(col, cols, col)] += weights[col];
+                rhs[col] = weights[col] * values[idx(row, cols, col)];
+            }
+            if (!solve_linear_system(matrix, rhs, cols, baseline)) {
+                ctx.set_errorf("failed to solve ASLS baseline system at row %llu",
+                               ull(row));
+                return P4A_ERR_NUMERICAL_FAILURE;
+            }
+            for (std::size_t col = 0; col < cols; ++col) {
+                weights[col] = values[idx(row, cols, col)] > baseline[col]
+                    ? params.asymmetry
+                    : 1.0 - params.asymmetry;
+            }
+        }
+        for (std::size_t col = 0; col < cols; ++col) {
+            out[idx(row, cols, col)] = values[idx(row, cols, col)] - baseline[col];
         }
     }
     return P4A_OK;
@@ -700,6 +766,33 @@ struct SavGolParams {
     return validate_savgol_params(ctx, params);
 }
 
+[[nodiscard]] p4a_status_t parse_asls(::pls4all::core::Context& ctx,
+                                      const ::pls4all::core::OperatorEntry& entry,
+                                      AslsParams& params) {
+    params = AslsParams{};
+    if (entry.params.empty()) {
+        return P4A_OK;
+    }
+    if (entry.params.size() != 3U) {
+        ctx.set_error("ASLS baseline expects zero params or lambda/asymmetry/iterations");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    params.lambda = entry.params[0];
+    params.asymmetry = entry.params[1];
+    if (!std::isfinite(params.lambda) || params.lambda <= 0.0) {
+        ctx.set_error("ASLS lambda must be finite and positive");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    if (!std::isfinite(params.asymmetry) ||
+        params.asymmetry <= 0.0 || params.asymmetry >= 1.0) {
+        ctx.set_error("ASLS asymmetry must be finite and in (0, 1)");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    return parse_integer_param(ctx, entry.params[2], 1, 100,
+                               "ASLS iteration count",
+                               params.iterations);
+}
+
 }  // namespace
 
 namespace pls4all::core {
@@ -864,6 +957,25 @@ p4a_status_t Pipeline::fit(Context& ctx, const p4a_matrix_view_t& X) {
                 }
                 break;
             }
+            case P4A_OP_ASLS_BASELINE: {
+                AslsParams params;
+                status = parse_asls(ctx, entry, params);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                state.scale.assign({
+                    params.lambda,
+                    params.asymmetry,
+                    static_cast<double>(params.iterations),
+                });
+                status = apply_asls(ctx, current, rows, cols, params, next);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                break;
+            }
             default:
                 ctx.set_errorf("pipeline operator %d is not implemented in this release",
                                static_cast<int>(entry.kind));
@@ -970,6 +1082,21 @@ p4a_status_t Pipeline::transform(Context& ctx,
                 params.derivative_order = static_cast<std::int32_t>(state.scale[2]);
                 params.delta = state.scale[3];
                 status = apply_savgol(ctx, current, rows, cols, params, next);
+                if (status != P4A_OK) {
+                    return status;
+                }
+                break;
+            }
+            case P4A_OP_ASLS_BASELINE: {
+                if (state.scale.size() != 3U) {
+                    ctx.set_error("fitted ASLS operator is missing parameters");
+                    return P4A_ERR_INTERNAL;
+                }
+                AslsParams params;
+                params.lambda = state.scale[0];
+                params.asymmetry = state.scale[1];
+                params.iterations = static_cast<std::int32_t>(state.scale[2]);
+                status = apply_asls(ctx, current, rows, cols, params, next);
                 if (status != P4A_OK) {
                     return status;
                 }

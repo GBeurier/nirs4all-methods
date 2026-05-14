@@ -75,6 +75,11 @@
       "path": "synthetic_pcr_tiny_pls1_v1.json",
       "sha256": "f8c7e3d9e0cc0e22dae2d569fb43cc1ac639cd50ce5942fc9f51bb1a2641a952"
     },
+    "synthetic_pipeline_asls_v1": {
+      "bytes": 2689,
+      "path": "synthetic_pipeline_asls_v1.json",
+      "sha256": "5ad3516573d84edcedcbc00541f5bf715131f8ccd44493dcdd031f10cd07c790"
+    },
     "synthetic_pipeline_autoscale_v1": {
       "bytes": 1445,
       "path": "synthetic_pipeline_autoscale_v1.json",

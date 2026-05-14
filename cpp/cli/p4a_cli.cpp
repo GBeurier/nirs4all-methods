@@ -207,6 +207,20 @@ int cmd_selfcheck() {
     p4a_array_free(x_savgol);
     p4a_pipeline_destroy(savgol_pipe);
 
+    p4a_pipeline_t* asls_pipe = nullptr;
+    const double asls_params[] = {10000.0, 0.01, 5.0};
+    CHECK(p4a_pipeline_create(&asls_pipe) == P4A_OK);
+    CHECK(p4a_pipeline_add_operator(asls_pipe, P4A_OP_ASLS_BASELINE,
+                                    asls_params, 3) == P4A_OK);
+    CHECK(p4a_pipeline_fit(ctx, asls_pipe, &X_msc, nullptr) == P4A_OK);
+    p4a_array_t* x_asls = nullptr;
+    CHECK(p4a_pipeline_transform_alloc(ctx, asls_pipe, &X_msc, &x_asls) == P4A_OK);
+    CHECK(p4a_array_shape(x_asls, &pipe_rows, &pipe_cols) == P4A_OK);
+    CHECK(pipe_rows == 4);
+    CHECK(pipe_cols == 5);
+    p4a_array_free(x_asls);
+    p4a_pipeline_destroy(asls_pipe);
+
     // Model smoke: NIPALS fit, predict, transform and export.
     p4a_model_t* model = nullptr;
     CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &model) == P4A_OK);

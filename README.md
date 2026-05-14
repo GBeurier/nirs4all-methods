@@ -62,8 +62,8 @@ with one or more response columns, `P4A_SOLVER_NIPALS` and
 The preprocessing pipeline ABI is live for `P4A_OP_IDENTITY`, `P4A_OP_CENTER`,
 `P4A_OP_AUTOSCALE`, `P4A_OP_PARETO_SCALE`, `P4A_OP_SNV`, `P4A_OP_MSC`,
 `P4A_OP_EMSC`, `P4A_OP_DETREND_POLY`, `P4A_OP_SAVGOL_SMOOTH` and
-`P4A_OP_SAVGOL_DERIVATIVE`, with explicit fit/transform separation for
-leakage-safe downstream CV. For PLSSVD,
+`P4A_OP_SAVGOL_DERIVATIVE`, and `P4A_OP_ASLS_BASELINE`, with explicit
+fit/transform separation for leakage-safe downstream CV. For PLSSVD,
 `transform` returns direct cross-covariance SVD X scores and
 `predict` uses the deterministic latent projection `X @ W @ V.T` scaled back to
 the response space.
@@ -92,7 +92,7 @@ If you use `pls4all` in academic work, please cite:
   title   = {pls4all: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/pls4all},
-  version = {0.21.0}
+  version = {0.22.0}
 }
 ```
 

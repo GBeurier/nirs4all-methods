@@ -29,4 +29,4 @@ fit/transform separation and deterministic NumPy parity.
 - External interferent spectra in EMSC.
 - Orthogonal signal correction (`P4A_OP_OSC`) and EPO, which require supervised
   `Y` semantics and serialization decisions.
-- ASLS baseline correction.
+- ASLS baseline correction shipped in Phase 3f.

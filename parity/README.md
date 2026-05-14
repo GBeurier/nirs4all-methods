@@ -51,6 +51,7 @@ parity/
 │   ├── synthetic_pipeline_detrend_poly_v1.json
 │   ├── synthetic_pipeline_savgol_smooth_v1.json
 │   ├── synthetic_pipeline_savgol_derivative_v1.json
+│   ├── synthetic_pipeline_asls_v1.json
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.

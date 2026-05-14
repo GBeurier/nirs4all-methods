@@ -493,6 +493,28 @@ def _pipeline_apply(X: np.ndarray, operators: list[str]) -> np.ndarray:
                                 delta=float(delta),
                                 axis=1,
                                 mode="nearest")
+        elif op.startswith("asls_"):
+            _, lam, asymmetry, iterations = op.split("_")
+            lam_f = float(lam)
+            asymmetry_f = float(asymmetry)
+            iterations_i = int(iterations)
+            n_cols = out.shape[1]
+            penalty = np.zeros((n_cols, n_cols), dtype=np.float64)
+            for diff in range(n_cols - 2):
+                stencil = np.array([1.0, -2.0, 1.0], dtype=np.float64)
+                penalty[diff:diff + 3, diff:diff + 3] += np.outer(stencil, stencil)
+            penalty *= lam_f
+            corrected = np.zeros_like(out)
+            for row_idx, row in enumerate(out):
+                weights = np.ones(n_cols, dtype=np.float64)
+                baseline = np.zeros(n_cols, dtype=np.float64)
+                for _ in range(iterations_i):
+                    matrix = penalty + np.diag(weights)
+                    rhs = weights * row
+                    baseline = np.linalg.solve(matrix, rhs)
+                    weights = np.where(row > baseline, asymmetry_f, 1.0 - asymmetry_f)
+                corrected[row_idx, :] = row - baseline
+            out = corrected
         else:
             raise ValueError(f"unsupported pipeline operator fixture: {op}")
     return out.astype(np.float64, copy=False)
@@ -1953,6 +1975,19 @@ def synthetic_pipeline_savgol_derivative_v1() -> dict[str, Any]:
     ])
     return _pipeline_fixture("synthetic_pipeline_savgol_derivative_v1", seed=48,
                              X=X, operators=["savgol_derivative_5_2_1_1.0"])
+
+
+def synthetic_pipeline_asls_v1() -> dict[str, Any]:
+    """3 samples, 10 wavelengths for asymmetric least-squares baseline parity."""
+    x = np.linspace(0.0, 1.0, 10, dtype=np.float64)
+    baseline = 0.4 + 0.8 * x + 0.25 * x * x
+    X = np.vstack([
+        baseline + np.array([0.00, 0.04, 0.18, 0.50, 0.22, 0.05, 0.02, 0.00, 0.03, 0.01]),
+        0.7 * baseline + np.array([0.02, 0.03, 0.12, 0.24, 0.62, 0.31, 0.07, 0.02, 0.00, 0.01]),
+        1.2 * baseline + np.array([0.01, 0.00, 0.05, 0.10, 0.20, 0.45, 0.28, 0.08, 0.03, 0.00]),
+    ])
+    return _pipeline_fixture("synthetic_pipeline_asls_v1", seed=50,
+                             X=X, operators=["asls_100.0_0.01_8"])
 
 
 def synthetic_power_tiny_pls1_v1() -> dict[str, Any]:
