@@ -25,7 +25,7 @@ See [`Overview.md`](Overview.md) for the full taxonomy of targeted PLS variants,
 | 0 — ABI & build foundation | shipped (`phase-0`) | Callable `libp4a` with stable C ABI, full CI matrix, parity scaffolding |
 | 1 — PLS CPU reference | shipped (`phase-1`) | NIPALS PLS1 / PLS2, predict, transform, binary export/import |
 | 3 — NIRS preprocessing & validation | in progress | pipeline fit/transform · identity · center · autoscale · Pareto · SNV · MSC · EMSC · detrend · SG · ASLS · Norris-Williams · Haar wavelet · OSC · EPO · regression metrics · validation splits · k-fold CV engine · advanced splitters · binary/multiclass classification metrics · calibration · VIP/selectivity ratio · coefficients by component |
-| 4 — Advanced PLS variants | in progress | SIMPLS · SVD · PCR · kernel PLS · PLSCanonical · PLSSVD · OPLS · PLS-DA · MB-PLS · LW-PLS |
+| 4 — Advanced PLS variants | in progress | SIMPLS · SVD · PCR · kernel PLS · PLSCanonical · PLSSVD · OPLS · PLS-DA · component CV · MB-PLS · LW-PLS |
 | 2 — Language bindings (real wheels / CRAN / AAR) | planned | ctypes (Python) · `.Call` (R) · MEX (MATLAB) · WASM (JS) · JNI (Android) |
 | 5 — Variable selection | planned | VIP · iPLS · MCUVE · CARS · SPA · Random Frog · GA-PLS |
 | 6 — AOM-PLS & POP-PLS | planned | Operator bank · soft / hard / sparse gating · per-component AOM |
@@ -81,7 +81,8 @@ scores. Multiclass metric kernels add macro/micro averaging plus one-vs-rest
 AUC, and calibration kernels produce fixed-bin binary reliability curves.
 Variable-importance kernels compute VIP scores and selectivity ratio from fitted
 models with stored scores, and coefficient kernels materialise the original-scale
-regression coefficients for every component prefix.
+regression coefficients for every component prefix. Internal model-selection
+kernels can score SIMPLS component prefixes by deterministic k-fold CV.
 
 ## Project layout
 
@@ -107,7 +108,7 @@ If you use `pls4all` in academic work, please cite:
   title   = {pls4all: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/pls4all},
-  version = {0.34.0}
+  version = {0.35.0}
 }
 ```
 

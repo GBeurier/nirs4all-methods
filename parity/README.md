@@ -72,6 +72,7 @@ parity/
 │   ├── synthetic_validation_spxy_v1.json
 │   ├── synthetic_cv_kfold_nipals_pls1_v1.json
 │   ├── synthetic_cv_kfold_nipals_pls2_v1.json
+│   ├── synthetic_component_cv_simpls_pls2_v1.json
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.

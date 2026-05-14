@@ -1269,6 +1269,110 @@ def _cross_validation_expected(
     }
 
 
+def _simpls_predict(
+    X_train: np.ndarray,
+    Y_train: np.ndarray,
+    X_test: np.ndarray,
+    n_components: int,
+) -> np.ndarray:
+    X_train = np.asarray(X_train, dtype=np.float64)
+    Y_train = np.asarray(Y_train, dtype=np.float64)
+    X_test = np.asarray(X_test, dtype=np.float64)
+    if Y_train.ndim == 1:
+        Y_train = Y_train.reshape(-1, 1)
+
+    Xs, x_mean, x_scale = _center_scale(X_train)
+    Ys, y_mean, y_scale = _center_scale(Y_train)
+    p = Xs.shape[1]
+    q = Ys.shape[1]
+    K = int(n_components)
+    Z = np.zeros((p, K), dtype=np.float64)
+    P = np.zeros((p, K), dtype=np.float64)
+    Q = np.zeros((q, K), dtype=np.float64)
+    V = np.zeros((p, K), dtype=np.float64)
+    S = Xs.T @ Ys
+    eps = np.finfo(np.float64).eps
+    for comp in range(K):
+        r = _dominant_direction(S)
+        t = Xs @ r
+        t_norm = np.linalg.norm(t)
+        if t_norm <= eps:
+            raise RuntimeError(f"SIMPLS score collapsed at component {comp}")
+        t = t / t_norm
+        r = r / t_norm
+        p_load = Xs.T @ t
+        q_load = Ys.T @ t
+        v = p_load.copy()
+        if comp > 0:
+            v = v - V[:, :comp] @ (V[:, :comp].T @ v)
+        v_norm = np.linalg.norm(v)
+        if v_norm <= eps:
+            raise RuntimeError(f"SIMPLS deflation basis collapsed at component {comp}")
+        v = v / v_norm
+        Z[:, comp] = r
+        P[:, comp] = p_load
+        Q[:, comp] = q_load
+        V[:, comp] = v
+        S = S - np.outer(v, v.T @ S)
+    rotations = Z @ np.linalg.inv(P.T @ Z)
+    coef_std = rotations @ Q.T
+    coef = coef_std * (y_scale.reshape(1, -1) / x_scale.reshape(-1, 1))
+    return y_mean.reshape(1, -1) + (X_test - x_mean.reshape(1, -1)) @ coef
+
+
+def _component_cv_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components_max: int,
+    n_splits: int,
+    solver: str,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    folds = _validation_folds("kfold", X.shape[0], n_splits)
+    rows: list[float] = []
+    rmse_values: list[float] = []
+    for n_components in range(1, int(n_components_max) + 1):
+        predictions = np.zeros_like(Y, dtype=np.float64)
+        for train, test in folds:
+            train_index = np.asarray(train, dtype=np.int64)
+            test_index = np.asarray(test, dtype=np.int64)
+            if solver == "simpls":
+                fold_predictions = _simpls_predict(X[train_index],
+                                                   Y[train_index],
+                                                   X[test_index],
+                                                   n_components)
+            elif solver == "nipals":
+                model = PLSRegression(n_components=n_components, scale=True, max_iter=500, tol=1e-6)
+                model.fit(X[train_index], Y[train_index])
+                fold_predictions = model.predict(X[test_index]).astype(np.float64, copy=False)
+            else:
+                raise ValueError(f"unsupported component CV solver: {solver}")
+            if fold_predictions.ndim == 1:
+                fold_predictions = fold_predictions.reshape(-1, 1)
+            predictions[test_index, :] = fold_predictions
+        metrics = _regression_metrics_expected(Y, predictions)["metrics"]["values"]
+        rows.extend(metrics)
+        rmse_values.append(float(metrics[0]))
+    best_n_components = int(np.argmin(np.asarray(rmse_values, dtype=np.float64)) + 1)
+    return {
+        "metrics_by_component": {
+            "shape": [int(n_components_max), 9],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": rows,
+        },
+        "best_n_components": {
+            "shape": [1],
+            "layout": "row_major",
+            "dtype": "i32",
+            "values": [best_n_components],
+        },
+    }
+
+
 def _power_pls_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, Any]:
     X = np.asarray(X, dtype=np.float64)
     Y = np.asarray(Y, dtype=np.float64)
@@ -2462,6 +2566,47 @@ def _cross_validation_fixture(
     }
 
 
+def _component_cv_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components_max: int,
+    n_splits: int,
+    solver: str,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._component_cv_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":        "pls_regression",
+                "solver":           solver,
+                "n_components_max": int(n_components_max),
+                "n_splits":         int(n_splits),
+                "reference":        "NumPy SIMPLS deterministic k-fold component-count CV",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _component_cv_expected(X, Y, n_components_max, n_splits, solver),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "pls4all-numpy-simpls-component-cv",
+        },
+    }
+
+
 def _power_fixture(
     fixture_id: str,
     seed: int,
@@ -3420,6 +3565,32 @@ def synthetic_cv_kfold_nipals_pls2_v1() -> dict[str, Any]:
     return _cross_validation_fixture("synthetic_cv_kfold_nipals_pls2_v1",
                                      seed=seed, X=X, Y=Y,
                                      n_components=2, n_splits=4)
+
+
+def synthetic_component_cv_simpls_pls2_v1() -> dict[str, Any]:
+    """18 samples, 6 features, 2 targets, SIMPLS CV for 1..3 components."""
+    seed = 97
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(18, 3))
+    X = np.column_stack([
+        0.81 * latent[:, 0] + 0.22 * latent[:, 1],
+        -0.47 * latent[:, 0] + 0.58 * latent[:, 2],
+        0.39 * latent[:, 1] - 0.42 * latent[:, 2],
+        0.34 * latent[:, 0] + 0.27 * latent[:, 1] - 0.16 * latent[:, 2],
+        np.linspace(-0.9, 0.9, 18),
+        rng.standard_normal(size=18) * 0.05,
+    ])
+    Y = np.column_stack([
+        1.12 * latent[:, 0] - 0.31 * latent[:, 2] + rng.standard_normal(size=18) * 0.035,
+        -0.68 * latent[:, 1] + 0.57 * latent[:, 2] + rng.standard_normal(size=18) * 0.035,
+    ])
+    return _component_cv_fixture("synthetic_component_cv_simpls_pls2_v1",
+                                 seed=seed,
+                                 X=X,
+                                 Y=Y,
+                                 n_components_max=3,
+                                 n_splits=3,
+                                 solver="simpls")
 
 
 def synthetic_power_tiny_pls1_v1() -> dict[str, Any]:

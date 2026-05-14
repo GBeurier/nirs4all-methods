@@ -33,6 +33,7 @@ add_library(pls4all_core OBJECT
     core/matrix_view.cpp
     core/metrics.cpp
     core/model.cpp
+    core/model_selection.cpp
     core/operator_bank.cpp
     core/gating_strategy.cpp
     core/pipeline.cpp
