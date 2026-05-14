@@ -3058,6 +3058,53 @@ def _wvc_selection_expected(
     }
 
 
+def _wvc_threshold_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    normalize: bool,
+    score_threshold: float,
+    threshold_factor: float,
+    min_selected: int,
+) -> dict[str, Any]:
+    base = _wvc_selection_expected(X,
+                                   Y,
+                                   n_components,
+                                   top_k=np.asarray(X).shape[1],
+                                   normalize=normalize)
+    final_scores = np.asarray(base["final_scores"]["values"], dtype=np.float64)
+    ranked = [int(index) for index in base["selected_indices"]["values"]]
+    mean_score = float(np.mean(final_scores))
+    effective_threshold = max(float(score_threshold), float(threshold_factor) * mean_score)
+    selected = [
+        int(index)
+        for index in ranked
+        if float(final_scores[int(index)]) >= effective_threshold
+    ]
+    if len(selected) < int(min_selected):
+        selected = ranked[:int(min_selected)]
+
+    return {
+        "final_scores": base["final_scores"],
+        "ranked_indices": {
+            "shape": [1, int(len(ranked))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": ranked,
+        },
+        "selected_indices": {
+            "shape": [1, int(len(selected))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected,
+        },
+        "mean_score": float(mean_score),
+        "score_threshold": float(score_threshold),
+        "threshold_factor": float(threshold_factor),
+        "effective_threshold": float(effective_threshold),
+    }
+
+
 def _component_coefficients_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -5478,6 +5525,58 @@ def _wvc_selection_fixture(
     }
 
 
+def _wvc_threshold_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    normalize: bool,
+    score_threshold: float,
+    threshold_factor: float,
+    min_selected: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._wvc_threshold_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":        "pls_regression",
+                "solver":           "wvc2_svd",
+                "n_components":     int(n_components),
+                "normalize":        bool(normalize),
+                "score_threshold":  float(score_threshold),
+                "threshold_factor": float(threshold_factor),
+                "min_selected":     int(min_selected),
+                "reference":        "NumPy WVC-PLS threshold/factor selection rule",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _wvc_threshold_selection_expected(X,
+                                                      Y,
+                                                      n_components,
+                                                      normalize,
+                                                      score_threshold,
+                                                      threshold_factor,
+                                                      min_selected),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "numpy/WVC-PLS-threshold-selection",
+        },
+    }
+
+
 def _component_coefficients_fixture(
     fixture_id: str,
     seed: int,
@@ -7193,6 +7292,41 @@ def synthetic_wvc_pls_numeric_v1() -> dict[str, Any]:
                                   n_components=3,
                                   top_k=5,
                                   normalize=True)
+
+
+def synthetic_wvc_threshold_factor_v1() -> dict[str, Any]:
+    """24 samples, 10 features, 1 target for thresholded/factor WVC-PLS selection."""
+    seed = 84
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(24, 4))
+    wave = np.linspace(0.0, 2.1 * np.pi, 24)
+    X = np.column_stack([
+        0.86 * latent[:, 0] + 0.13 * latent[:, 1] + 0.04 * rng.standard_normal(size=24),
+        -0.38 * latent[:, 0] + 0.61 * latent[:, 2] + 0.04 * rng.standard_normal(size=24),
+        0.62 * latent[:, 1] - 0.24 * latent[:, 3] + 0.05 * rng.standard_normal(size=24),
+        0.22 * latent[:, 0] + 0.78 * latent[:, 3] + 0.04 * rng.standard_normal(size=24),
+        -0.51 * latent[:, 2] + 0.31 * latent[:, 3] + 0.05 * rng.standard_normal(size=24),
+        0.34 * latent[:, 0] - 0.20 * latent[:, 1] + 0.06 * rng.standard_normal(size=24),
+        np.sin(1.2 * wave) + 0.05 * rng.standard_normal(size=24),
+        np.cos(1.5 * wave) + 0.05 * rng.standard_normal(size=24),
+        0.24 * np.linspace(-1.0, 1.0, 24) + 0.09 * rng.standard_normal(size=24),
+        rng.standard_normal(size=24) * 0.14,
+    ])
+    Y = (
+        1.08 * latent[:, 0]
+        - 0.40 * latent[:, 2]
+        + 0.34 * latent[:, 3]
+        + 0.05 * rng.standard_normal(size=24)
+    ).reshape(-1, 1)
+    return _wvc_threshold_selection_fixture("synthetic_wvc_threshold_factor_v1",
+                                            seed=seed,
+                                            X=X,
+                                            Y=Y,
+                                            n_components=3,
+                                            normalize=True,
+                                            score_threshold=0.62,
+                                            threshold_factor=1.05,
+                                            min_selected=3)
 
 
 def synthetic_component_coefficients_pls2_v1() -> dict[str, Any]:

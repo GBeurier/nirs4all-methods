@@ -262,6 +262,14 @@ HEADER_SPECS = {
         "struct": "WvcSelectionFixture",
         "array": "kWvcSelectionFixtures",
     },
+    "wvc-threshold-selection": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "wvc_threshold_selection_fixtures.hpp",
+        "fixtures": (
+            "synthetic_wvc_threshold_factor_v1",
+        ),
+        "struct": "WvcThresholdSelectionFixture",
+        "array": "kWvcThresholdSelectionFixtures",
+    },
     "component-coefficients": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "component_coefficients_fixtures.hpp",
         "fixtures": (
@@ -3099,6 +3107,92 @@ def generate_wvc_selection(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_wvc_threshold_selection(fixture_ids: Sequence[str],
+                                     fixture_dir: Path,
+                                     out: Path,
+                                     family: str,
+                                     struct_name: str,
+                                     array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct WvcThresholdSelectionIndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_components;",
+        "    bool normalize;",
+        "    double score_threshold;",
+        "    double threshold_factor;",
+        "    std::int32_t min_selected;",
+        "    double mean_score;",
+        "    double effective_threshold;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    MatrixRef final_scores;",
+        "    WvcThresholdSelectionIndexRef ranked_indices;",
+        "    WvcThresholdSelectionIndexRef selected_indices;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        y_name = f"{prefix}_Y"
+        final_name = f"{prefix}_final_scores"
+        ranked_name = f"{prefix}_ranked_indices"
+        selected_name = f"{prefix}_selected_indices"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
+        _emit_array(lines, final_name, expected["final_scores"]["values"])
+        _emit_int_array(lines, ranked_name, expected["ranked_indices"]["values"])
+        _emit_int_array(lines, selected_name, expected["selected_indices"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['n_components'])},\n"
+            f"        {str(bool(params['normalize'])).lower()},\n"
+            f"        {_format_double(float(params['score_threshold']))},\n"
+            f"        {_format_double(float(params['threshold_factor']))},\n"
+            f"        {int(params['min_selected'])},\n"
+            f"        {_format_double(float(expected['mean_score']))},\n"
+            f"        {_format_double(float(expected['effective_threshold']))},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
+            f"        {_matrix_ref(final_name, expected['final_scores'])},\n"
+            f"        WvcThresholdSelectionIndexRef{{{ranked_name}, sizeof({ranked_name}) / sizeof(std::int64_t)}},\n"
+            f"        WvcThresholdSelectionIndexRef{{{selected_name}, sizeof({selected_name}) / sizeof(std::int64_t)}}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_component_coefficients(fixture_ids: Sequence[str],
                                     fixture_dir: Path,
                                     out: Path,
@@ -3393,6 +3487,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "wvc-selection":
         generate_wvc_selection(fixture_ids, args.fixture_dir, out, args.family,
                                str(spec["struct"]), str(spec["array"]))
+    elif args.family == "wvc-threshold-selection":
+        generate_wvc_threshold_selection(fixture_ids, args.fixture_dir, out, args.family,
+                                         str(spec["struct"]), str(spec["array"]))
     elif args.family == "component-coefficients":
         generate_component_coefficients(fixture_ids, args.fixture_dir, out, args.family,
                                         str(spec["struct"]), str(spec["array"]))

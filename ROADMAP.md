@@ -8,9 +8,9 @@ The canonical technical spec is [`Direction_Technique.md`](Direction_Technique.m
 
 ## Current checkpoint — 2026-05-14
 
-Latest local tag: `phase-5q-sipls-selection` (`0.56.0+abi.1.0.0`).
+Latest local tag: `phase-5r-wvc-threshold-selection` (`0.57.0+abi.1.0.0`).
 
-- Local reference gate is green: 85 deterministic parity fixtures, 185 C++ ABI/core tests, CLI selfcheck, Python smoke, ABI symbol diff, dependency audit, UBSAN and ASAN+UBSAN.
+- Local reference gate is green: 86 deterministic parity fixtures, 187 C++ ABI/core tests, CLI selfcheck, Python smoke, ABI symbol diff, dependency audit, UBSAN and ASAN+UBSAN.
 - GitHub Actions are intentionally parked for now to avoid spending runner quota; the actionable gate is the local parity/sanitizer run.
 - Phase 4 has shipped the main advanced CPU kernels currently targeted before variable selection: SIMPLS, SVD, PCR, kernel/wide-kernel, orthogonal-scores, power/randomized-SVD, PLSCanonical, PLSSVD, PLS-DA, OPLS/OPLS-DA, component-count CV, PLS-LDA, PLS-logistic, MB-PLS and LW-PLS.
 - Phase 5a has shipped deterministic variable-selection rankers over existing fitted-model scores: VIP, original-scale coefficient magnitude and selectivity ratio, with sklearn parity.
@@ -28,10 +28,11 @@ Latest local tag: `phase-5q-sipls-selection` (`0.56.0+abi.1.0.0`).
 - Phase 5k has shipped deterministic BVE-PLS backward elimination, with Python/sklearn parity.
 - Phase 5l has shipped deterministic T2-PLS loading-weight selection, with Python/sklearn parity.
 - Phase 5m has shipped deterministic WVC-PLS numeric-regression selection, with NumPy/plsVarSel parity.
+- Phase 5r has shipped deterministic thresholded/factor WVC selection, with NumPy parity.
 - Phase 5n has shipped deterministic EMCUVE ensemble MC-UVE voting, with Python/sklearn parity.
 - Phase 5o has shipped deterministic PLS randomization-test selection, with Python/sklearn parity.
 - Phase 2 bindings are still mostly skeletons: Python has a minimal ctypes lifecycle/config binding, while R/MATLAB/JS/Android remain README-level placeholders.
-- Active implementation track: Phase 5 variable selection, next moving to thresholded/factor WVC extensions and remaining wrapper/metaheuristic selectors.
+- Active implementation track: Phase 5 variable selection, next moving to REP/IPW/ST-PLS wrapper/metaheuristic selectors.
 
 ## Phase 0 — ABI & Build Foundation · **shipped**
 
@@ -136,9 +137,10 @@ Each binding ships a parity-test suite that loads the JSON fixtures and asserts 
 - BVE-PLS deterministic backward-elimination selector shipped as `phase-5k-bve-selection`.
 - T2-PLS deterministic loading-weight selector shipped as `phase-5l-t2-selection`.
 - WVC-PLS deterministic weighted-variable-contribution selector shipped as `phase-5m-wvc-selection`.
+- Thresholded/factor WVC selector shipped as `phase-5r-wvc-threshold-selection`.
 - EMCUVE deterministic ensemble MC-UVE vote-rule selector shipped as `phase-5n-emcuve-selection`.
 - PLS randomization-test selector shipped as `phase-5o-randomization-selection`.
-- Remaining wrappers / metaheuristics: thresholded/factor WVC extensions, REP/IPW/ST-PLS.
+- Remaining wrappers / metaheuristics: REP/IPW/ST-PLS.
 
 ## Phase 6 — AOM-PLS & POP-PLS · the scientific differentiator
 

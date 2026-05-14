@@ -28,6 +28,22 @@ struct WvcSelectionResult {
     std::vector<std::int64_t> selected_indices;
 };
 
+struct WvcThresholdSelectionResult {
+    std::int32_t n_features{0};
+    std::int32_t n_targets{0};
+    std::int32_t n_components{0};
+    std::int32_t min_selected{0};
+    std::int32_t normalize{0};
+    double score_threshold{0.0};
+    double threshold_factor{0.0};
+    double mean_score{0.0};
+    double effective_threshold{0.0};
+
+    std::vector<double> final_scores;
+    std::vector<std::int64_t> ranked_indices;
+    std::vector<std::int64_t> selected_indices;
+};
+
 [[nodiscard]] p4a_status_t select_by_wvc(Context& ctx,
                                          const p4a_matrix_view_t& X,
                                          const p4a_matrix_view_t& Y,
@@ -35,5 +51,15 @@ struct WvcSelectionResult {
                                          std::int32_t top_k,
                                          bool normalize,
                                          WvcSelectionResult& out);
+
+[[nodiscard]] p4a_status_t select_by_wvc_threshold(Context& ctx,
+                                                   const p4a_matrix_view_t& X,
+                                                   const p4a_matrix_view_t& Y,
+                                                   std::int32_t n_components,
+                                                   bool normalize,
+                                                   double score_threshold,
+                                                   double threshold_factor,
+                                                   std::int32_t min_selected,
+                                                   WvcThresholdSelectionResult& out);
 
 }  // namespace pls4all::core

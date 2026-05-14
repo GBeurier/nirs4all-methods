@@ -424,6 +424,11 @@
       "bytes": 12453,
       "path": "synthetic_wvc_pls_numeric_v1.json",
       "sha256": "3fd0bb8315653604dcb2d697f443c1bfd2f0ddc4f4e7d051b83bac8641d37d3d"
+    },
+    "synthetic_wvc_threshold_factor_v1": {
+      "bytes": 9672,
+      "path": "synthetic_wvc_threshold_factor_v1.json",
+      "sha256": "b9a1b7539886bf6a8d6744da367f385488dd66bb03cf8fe78f2ba2a236c84f56"
     }
   },
   "schema_version": 1

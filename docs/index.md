@@ -57,6 +57,8 @@ Phase 5l T2-PLS kernels compute Hotelling T2 on PLS loading weights, apply
 alpha-specific UCL thresholds with top-k fallback, and score subsets by k-fold CV.
 Phase 5m WVC-PLS kernels compute normalized weighted-variable-contribution
 scores from SVD PLS components and expose deterministic top-k selection.
+Phase 5r WVC-threshold kernels apply fixed-threshold and factor-of-mean rules
+with a minimum-selected fallback.
 Component-coefficient kernels expose the
 original-scale regression coefficients for each latent prefix. SIMPLS component
 prefixes can also be scored by deterministic k-fold CV for component-count

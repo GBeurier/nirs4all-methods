@@ -347,4 +347,87 @@ p4a_status_t select_by_wvc(Context& ctx,
     }
 }
 
+p4a_status_t select_by_wvc_threshold(Context& ctx,
+                                     const p4a_matrix_view_t& X,
+                                     const p4a_matrix_view_t& Y,
+                                     std::int32_t n_components,
+                                     bool normalize,
+                                     double score_threshold,
+                                     double threshold_factor,
+                                     std::int32_t min_selected,
+                                     WvcThresholdSelectionResult& out) {
+    try {
+        out = WvcThresholdSelectionResult{};
+        p4a_status_t status = validate_request(ctx, X, Y, n_components, 1);
+        if (status != P4A_OK) {
+            return status;
+        }
+        if (!std::isfinite(score_threshold) || score_threshold < 0.0) {
+            ctx.set_error("WVC threshold score_threshold must be finite and non-negative");
+            return P4A_ERR_INVALID_ARGUMENT;
+        }
+        if (!std::isfinite(threshold_factor) || threshold_factor < 0.0) {
+            ctx.set_error("WVC threshold_factor must be finite and non-negative");
+            return P4A_ERR_INVALID_ARGUMENT;
+        }
+        if (min_selected < 1 || static_cast<std::int64_t>(min_selected) > X.cols) {
+            ctx.set_errorf("min_selected must be in [1, %lld]; got %d",
+                           static_cast<long long>(X.cols),
+                           static_cast<int>(min_selected));
+            return P4A_ERR_INVALID_ARGUMENT;
+        }
+
+        WvcSelectionResult base;
+        status = select_by_wvc(ctx,
+                               X,
+                               Y,
+                               n_components,
+                               static_cast<std::int32_t>(X.cols),
+                               normalize,
+                               base);
+        if (status != P4A_OK) {
+            out = WvcThresholdSelectionResult{};
+            return status;
+        }
+
+        out.final_scores = base.final_scores;
+        out.ranked_indices = base.selected_indices;
+        double sum = 0.0;
+        for (const double value : out.final_scores) {
+            sum += value;
+        }
+        out.mean_score = sum / static_cast<double>(out.final_scores.size());
+        out.score_threshold = score_threshold;
+        out.threshold_factor = threshold_factor;
+        out.effective_threshold = std::max(score_threshold, threshold_factor * out.mean_score);
+
+        for (const std::int64_t feature : out.ranked_indices) {
+            const double score = out.final_scores[static_cast<std::size_t>(feature)];
+            if (score >= out.effective_threshold) {
+                out.selected_indices.push_back(feature);
+            }
+        }
+        if (out.selected_indices.size() < static_cast<std::size_t>(min_selected)) {
+            out.selected_indices.assign(out.ranked_indices.begin(),
+                                        out.ranked_indices.begin() + min_selected);
+        }
+
+        out.n_features = base.n_features;
+        out.n_targets = base.n_targets;
+        out.n_components = n_components;
+        out.min_selected = min_selected;
+        out.normalize = normalize ? 1 : 0;
+        ctx.clear_error();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        ctx.set_error("out of memory while running thresholded WVC-PLS selection");
+        out = WvcThresholdSelectionResult{};
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        ctx.set_error("unexpected exception while running thresholded WVC-PLS selection");
+        out = WvcThresholdSelectionResult{};
+        return P4A_ERR_INTERNAL;
+    }
+}
+
 }  // namespace pls4all::core

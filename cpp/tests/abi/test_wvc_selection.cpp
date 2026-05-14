@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "fixtures/wvc_threshold_selection_fixtures.hpp"
 #include "fixtures/wvc_selection_fixtures.hpp"
 #include "harness.hpp"
 
@@ -57,10 +58,11 @@ void check_close_values(int& failures,
     }
 }
 
+template <typename IndexRef>
 void check_indices(int& failures,
                    const char* label,
                    const std::vector<std::int64_t>& actual,
-                   const ::pls4all::test::fixtures::WvcSelectionIndexRef& expected) {
+                   const IndexRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -81,6 +83,20 @@ void check_indices(int& failures,
                          static_cast<long long>(expected.values[i]));
             return;
         }
+    }
+}
+
+void check_scalar(int& failures, const char* label, double actual, double expected) {
+    const double diff = std::fabs(actual - expected);
+    const double scale = std::max(std::max(std::fabs(actual), std::fabs(expected)), 1.0);
+    if (diff > kAbsTol && diff > kRelTol * scale) {
+        ++failures;
+        std::fprintf(stderr,
+                     "  FAIL %s: actual %.17g expected %.17g diff %.3g\n",
+                     label,
+                     actual,
+                     expected,
+                     diff);
     }
 }
 
@@ -110,6 +126,38 @@ void check_fixture(int& failures,
     check_close_values(failures, "wvc_scores", result.wvc_scores, fixture.wvc_scores);
     check_close_values(failures, "final_scores", result.final_scores, fixture.final_scores);
     check_indices(failures, "selected_indices", result.selected_indices, fixture.selected_indices);
+}
+
+void check_threshold_fixture(
+    int& failures,
+    const ::pls4all::test::fixtures::WvcThresholdSelectionFixture& fixture) {
+    ::pls4all::core::Context ctx;
+    p4a_matrix_view_t X = matrix_view(fixture.X);
+    p4a_matrix_view_t Y = matrix_view(fixture.Y);
+
+    ::pls4all::core::WvcThresholdSelectionResult result;
+    CHECK_EQ(::pls4all::core::select_by_wvc_threshold(ctx,
+                                                      X,
+                                                      Y,
+                                                      fixture.n_components,
+                                                      fixture.normalize,
+                                                      fixture.score_threshold,
+                                                      fixture.threshold_factor,
+                                                      fixture.min_selected,
+                                                      result),
+             P4A_OK);
+    CHECK_EQ(result.n_features, static_cast<std::int32_t>(fixture.X.cols));
+    CHECK_EQ(result.n_targets, static_cast<std::int32_t>(fixture.Y.cols));
+    CHECK_EQ(result.n_components, fixture.n_components);
+    CHECK_EQ(result.min_selected, fixture.min_selected);
+    CHECK_EQ(result.normalize, fixture.normalize ? 1 : 0);
+    check_scalar(failures, "score_threshold", result.score_threshold, fixture.score_threshold);
+    check_scalar(failures, "threshold_factor", result.threshold_factor, fixture.threshold_factor);
+    check_scalar(failures, "mean_score", result.mean_score, fixture.mean_score);
+    check_scalar(failures, "effective_threshold", result.effective_threshold, fixture.effective_threshold);
+    check_close_values(failures, "threshold_final_scores", result.final_scores, fixture.final_scores);
+    check_indices(failures, "threshold_ranked_indices", result.ranked_indices, fixture.ranked_indices);
+    check_indices(failures, "threshold_selected_indices", result.selected_indices, fixture.selected_indices);
 }
 
 }  // namespace
@@ -173,4 +221,59 @@ TEST(wvc_selection_phase5m, rejects_invalid_wvc_requests) {
                                             fixture.normalize,
                                             result),
              P4A_ERR_SHAPE_MISMATCH);
+}
+
+TEST(wvc_threshold_selection_phase5r, generated_fixture_matches_python_reference) {
+    for (const auto& fixture : ::pls4all::test::fixtures::kWvcThresholdSelectionFixtures) {
+        check_threshold_fixture(failures, fixture);
+    }
+}
+
+TEST(wvc_threshold_selection_phase5r, rejects_invalid_threshold_requests) {
+    const auto& fixture = ::pls4all::test::fixtures::kWvcThresholdSelectionFixtures[0];
+    ::pls4all::core::Context ctx;
+    p4a_matrix_view_t X = matrix_view(fixture.X);
+    p4a_matrix_view_t Y = matrix_view(fixture.Y);
+    ::pls4all::core::WvcThresholdSelectionResult result;
+
+    CHECK_EQ(::pls4all::core::select_by_wvc_threshold(ctx,
+                                                      X,
+                                                      Y,
+                                                      0,
+                                                      fixture.normalize,
+                                                      fixture.score_threshold,
+                                                      fixture.threshold_factor,
+                                                      fixture.min_selected,
+                                                      result),
+             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::pls4all::core::select_by_wvc_threshold(ctx,
+                                                      X,
+                                                      Y,
+                                                      fixture.n_components,
+                                                      fixture.normalize,
+                                                      -0.1,
+                                                      fixture.threshold_factor,
+                                                      fixture.min_selected,
+                                                      result),
+             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::pls4all::core::select_by_wvc_threshold(ctx,
+                                                      X,
+                                                      Y,
+                                                      fixture.n_components,
+                                                      fixture.normalize,
+                                                      fixture.score_threshold,
+                                                      -0.1,
+                                                      fixture.min_selected,
+                                                      result),
+             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::pls4all::core::select_by_wvc_threshold(ctx,
+                                                      X,
+                                                      Y,
+                                                      fixture.n_components,
+                                                      fixture.normalize,
+                                                      fixture.score_threshold,
+                                                      fixture.threshold_factor,
+                                                      0,
+                                                      result),
+             P4A_ERR_INVALID_ARGUMENT);
 }
