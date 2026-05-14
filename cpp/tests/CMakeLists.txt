@@ -14,12 +14,14 @@ add_executable(pls4all_tests
     abi/test_matrix_view.cpp
     abi/test_error_messages.cpp
     abi/test_oom_paths.cpp
+    abi/test_metrics.cpp
     abi/test_pipeline.cpp
     abi/test_model_stubs.cpp)
-target_link_libraries(pls4all_tests PRIVATE pls4all_c)
+target_link_libraries(pls4all_tests PRIVATE pls4all_c pls4all_core)
 target_include_directories(pls4all_tests
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
+        ${PROJECT_SOURCE_DIR}/cpp/src
         ${PROJECT_BINARY_DIR}/generated)
 pls4all_add_warnings(pls4all_tests)
 

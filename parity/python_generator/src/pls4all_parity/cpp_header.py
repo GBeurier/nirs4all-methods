@@ -61,6 +61,14 @@ HEADER_SPECS = {
         "struct": "PipelineFixture",
         "array": "kPipelineFixtures",
     },
+    "metrics": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "metrics_fixtures.hpp",
+        "fixtures": (
+            "synthetic_metrics_regression_v1",
+        ),
+        "struct": "MetricsFixture",
+        "array": "kMetricsFixtures",
+    },
     "power": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "power_fixtures.hpp",
         "fixtures": (
@@ -465,6 +473,60 @@ def generate_pipeline(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_metrics(fixture_ids: Sequence[str],
+                     fixture_dir: Path,
+                     out: Path,
+                     family: str,
+                     struct_name: str,
+                     array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    MatrixRef observed;",
+        "    MatrixRef predicted;",
+        "    MatrixRef expected;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        observed_name = f"{prefix}_observed"
+        predicted_name = f"{prefix}_predicted"
+        expected_name = f"{prefix}_expected"
+        _emit_array(lines, observed_name, fixture["data"]["Y_true"]["values"])
+        _emit_array(lines, predicted_name, fixture["data"]["Y_pred"]["values"])
+        _emit_array(lines, expected_name, fixture["expected"]["metrics"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {_matrix_ref(observed_name, fixture['data']['Y_true'])},\n"
+            f"        {_matrix_ref(predicted_name, fixture['data']['Y_pred'])},\n"
+            f"        {_matrix_ref(expected_name, fixture['expected']['metrics'])}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--family", choices=sorted(HEADER_SPECS), default="simpls",
@@ -479,6 +541,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.family == "pipeline":
         generate_pipeline(fixture_ids, args.fixture_dir, out, args.family,
                           str(spec["struct"]), str(spec["array"]))
+    elif args.family == "metrics":
+        generate_metrics(fixture_ids, args.fixture_dir, out, args.family,
+                         str(spec["struct"]), str(spec["array"]))
     else:
         generate(fixture_ids, args.fixture_dir, out, args.family,
                  str(spec["struct"]), str(spec["array"]))

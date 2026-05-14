@@ -30,6 +30,11 @@
       "path": "synthetic_kernel_wide_pls2_v1.json",
       "sha256": "c16a2deb57be64e48d15dc89e70f725589d89dfef7a29d64d04e1dcf2ca72e31"
     },
+    "synthetic_metrics_regression_v1": {
+      "bytes": 1871,
+      "path": "synthetic_metrics_regression_v1.json",
+      "sha256": "ccbf602742a1f9b9df3f086aeb78ba4573fe4180b57d417c2bbc43a61975d9c7"
+    },
     "synthetic_opls_da_binary_v1": {
       "bytes": 11376,
       "path": "synthetic_opls_da_binary_v1.json",

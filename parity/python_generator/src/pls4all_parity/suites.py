@@ -681,6 +681,62 @@ def _pipeline_expected(X: np.ndarray, operators: list[str], Y: np.ndarray | None
     }
 
 
+def _percentile_linear(values: np.ndarray, probability: float) -> float:
+    values = np.sort(np.asarray(values, dtype=np.float64).reshape(-1))
+    if values.size == 0:
+        return 0.0
+    if values.size == 1:
+        return float(values[0])
+    position = probability * float(values.size - 1)
+    lo = int(math.floor(position))
+    hi = min(lo + 1, int(values.size - 1))
+    frac = position - float(lo)
+    return float(values[lo] * (1.0 - frac) + values[hi] * frac)
+
+
+def _regression_metrics_expected(Y_true: np.ndarray, Y_pred: np.ndarray) -> dict[str, Any]:
+    y_true = np.asarray(Y_true, dtype=np.float64)
+    y_pred = np.asarray(Y_pred, dtype=np.float64)
+    error = y_pred - y_true
+    flat_true = y_true.reshape(-1)
+    flat_pred = y_pred.reshape(-1)
+    flat_error = error.reshape(-1)
+    n = flat_true.size
+    eps = np.finfo(np.float64).eps
+    mean_true = float(flat_true.mean())
+    mean_pred = float(flat_pred.mean())
+    sse = float(np.sum(flat_error * flat_error))
+    tss = float(np.sum((flat_true - mean_true) ** 2))
+    pred_ss = float(np.sum((flat_pred - mean_pred) ** 2))
+    pred_true_cov = float(np.sum((flat_pred - mean_pred) * (flat_true - mean_true)))
+    rmse = float(np.sqrt(sse / float(n)))
+    r2 = 1.0 if (tss <= eps and sse <= eps) else (0.0 if tss <= eps else 1.0 - sse / tss)
+    slope = 0.0 if pred_ss <= eps else pred_true_cov / pred_ss
+    intercept = mean_true - slope * mean_pred
+    stddev = float(np.sqrt(tss / float(n - 1))) if n > 1 else 0.0
+    q1 = _percentile_linear(flat_true, 0.25)
+    q3 = _percentile_linear(flat_true, 0.75)
+    ratio_denominator = max(rmse, eps)
+    values = [
+        rmse,
+        float(np.mean(np.abs(flat_error))),
+        float(np.mean(flat_error)),
+        r2,
+        r2,
+        slope,
+        intercept,
+        stddev / ratio_denominator,
+        (q3 - q1) / ratio_denominator,
+    ]
+    return {
+        "metrics": {
+            "shape": [1, len(values)],
+            "names": ["rmse", "mae", "bias", "r2", "q2", "slope", "intercept", "rpd", "rpiq"],
+            "values": values,
+        },
+    }
+
+
 def _power_pls_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, Any]:
     X = np.asarray(X, dtype=np.float64)
     Y = np.asarray(Y, dtype=np.float64)
@@ -1528,6 +1584,38 @@ def _pipeline_fixture(
     }
 
 
+def _metrics_fixture(
+    fixture_id: str,
+    seed: int,
+    Y_true: np.ndarray,
+    Y_pred: np.ndarray,
+) -> dict[str, Any]:
+    Y_true = np.asarray(Y_true, dtype=np.float64)
+    Y_pred = np.asarray(Y_pred, dtype=np.float64)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._regression_metrics_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "reference":      "NumPy regression metric kernels",
+            },
+        },
+        "data": {
+            "Y_true": {"shape": list(Y_true.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y_true)},
+            "Y_pred": {"shape": list(Y_pred.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y_pred)},
+        },
+        "expected": _regression_metrics_expected(Y_true, Y_pred),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "pls4all-numpy-regression-metrics",
+        },
+    }
+
+
 def _power_fixture(
     fixture_id: str,
     seed: int,
@@ -2206,6 +2294,32 @@ def synthetic_pipeline_epo_v1() -> dict[str, Any]:
     )
     return _pipeline_fixture("synthetic_pipeline_epo_v1", seed=54,
                              X=X, Y=external, operators=["epo_100_1e-12"])
+
+
+def synthetic_metrics_regression_v1() -> dict[str, Any]:
+    """8 samples, 2 targets for regression metric parity."""
+    Y_true = np.array([
+        [0.20, -1.10],
+        [1.35, -0.45],
+        [2.10, 0.05],
+        [2.95, 0.62],
+        [3.40, 1.20],
+        [4.15, 1.95],
+        [5.05, 2.35],
+        [5.80, 3.10],
+    ], dtype=np.float64)
+    residual = np.array([
+        [0.05, -0.03],
+        [-0.10, 0.08],
+        [0.12, -0.07],
+        [-0.04, 0.10],
+        [0.09, -0.11],
+        [-0.13, 0.06],
+        [0.07, -0.05],
+        [-0.08, 0.09],
+    ], dtype=np.float64)
+    return _metrics_fixture("synthetic_metrics_regression_v1", seed=55,
+                            Y_true=Y_true, Y_pred=Y_true + residual)
 
 
 def synthetic_power_tiny_pls1_v1() -> dict[str, Any]:

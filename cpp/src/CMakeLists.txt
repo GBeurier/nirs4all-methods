@@ -27,6 +27,7 @@ add_library(pls4all_core OBJECT
     core/context.cpp
     core/config.cpp
     core/matrix_view.cpp
+    core/metrics.cpp
     core/model.cpp
     core/operator_bank.cpp
     core/gating_strategy.cpp

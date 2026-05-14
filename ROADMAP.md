@@ -49,8 +49,9 @@ Goal: useful for real spectroscopy.
 - Phase 3h shipped as `phase-3h-wavelet-preprocessing`: Haar wavelet denoising with soft-thresholded detail coefficients.
 - Phase 3i shipped as `phase-3i-osc-preprocessing`: supervised one-component orthogonal signal correction.
 - Phase 3j shipped as `phase-3j-epo-preprocessing`: supervised one-component external parameter orthogonalization.
+- Phase 3k shipped as `phase-3k-regression-metrics`: internal regression metric kernels for RMSE, MAE, bias, R2/Q2, observed-vs-predicted slope/intercept, RPD and RPIQ.
 - Cross-validation engine: k-fold, LOO, Kennard-Stone, SPXY, holdout, external folds, repeated k-fold, Monte-Carlo CV.
-- Metrics: RMSEC, RMSECV, RMSEP, R², Q², bias, RPD, RPIQ, MAE, slope/intercept obs-vs-pred, sensitivity, specificity, balanced accuracy, AUC, MCC.
+- Classification metrics: sensitivity, specificity, balanced accuracy, AUC, MCC.
 - VIP, selectivity ratio, regression coefficients per component.
 
 (Phase 3 ships before Phase 2 — bindings benefit from having real algorithms to expose.)

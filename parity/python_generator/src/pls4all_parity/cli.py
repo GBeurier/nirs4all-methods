@@ -56,6 +56,7 @@ def _generate_all() -> dict[str, bytes]:
         "synthetic_pipeline_wavelet_haar_v1": _serialize(suites.synthetic_pipeline_wavelet_haar_v1()),
         "synthetic_pipeline_osc_v1": _serialize(suites.synthetic_pipeline_osc_v1()),
         "synthetic_pipeline_epo_v1": _serialize(suites.synthetic_pipeline_epo_v1()),
+        "synthetic_metrics_regression_v1": _serialize(suites.synthetic_metrics_regression_v1()),
         "synthetic_power_tiny_pls1_v1": _serialize(suites.synthetic_power_tiny_pls1_v1()),
         "synthetic_power_small_pls2_v1": _serialize(suites.synthetic_power_small_pls2_v1()),
         "synthetic_randomized_svd_tiny_pls1_v1": _serialize(suites.synthetic_randomized_svd_tiny_pls1_v1()),
