@@ -270,6 +270,11 @@
       "path": "synthetic_randomized_svd_tiny_pls1_v1.json",
       "sha256": "a22d1668f73a8ef13aaa1f93e9914206e26477a28c8c9246742f0d541d77784c"
     },
+    "synthetic_scars_pls_stability_v1": {
+      "bytes": 18762,
+      "path": "synthetic_scars_pls_stability_v1.json",
+      "sha256": "c51e08f8cab9aca77020f020ca7145c16e92bfd454df09f49154e968bc27ab5b"
+    },
     "synthetic_simpls_small_pls2_v1": {
       "bytes": 7755,
       "path": "synthetic_simpls_small_pls2_v1.json",

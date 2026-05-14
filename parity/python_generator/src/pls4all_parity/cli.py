@@ -72,6 +72,7 @@ def _generate_all() -> dict[str, bytes]:
         "synthetic_spa_pls_projection_v1": _serialize(suites.synthetic_spa_pls_projection_v1()),
         "synthetic_cars_pls_competitive_v1": _serialize(suites.synthetic_cars_pls_competitive_v1()),
         "synthetic_random_frog_pls_v1": _serialize(suites.synthetic_random_frog_pls_v1()),
+        "synthetic_scars_pls_stability_v1": _serialize(suites.synthetic_scars_pls_stability_v1()),
         "synthetic_component_coefficients_pls2_v1": _serialize(suites.synthetic_component_coefficients_pls2_v1()),
         "synthetic_validation_kfold_balanced_v1": _serialize(suites.synthetic_validation_kfold_balanced_v1()),
         "synthetic_validation_leave_one_out_v1": _serialize(suites.synthetic_validation_leave_one_out_v1()),

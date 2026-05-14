@@ -40,7 +40,9 @@ real-feature stability against deterministic artificial variables. Phase 5e
 SPA kernels seed from PLS coefficient magnitude and add projection-diverse
 variables, and Phase 5f CARS kernels run deterministic exponential-retention
 subset elimination with k-fold CV scoring. Phase 5g Random Frog kernels run
-deterministic subset walks and rank variables by inclusion frequency.
+deterministic subset walks and rank variables by inclusion frequency. Phase 5h
+SCARS kernels run deterministic calibration subsampling with stability-weighted
+CARS retention.
 Component-coefficient kernels expose the
 original-scale regression coefficients for each latent prefix. SIMPLS component
 prefixes can also be scored by deterministic k-fold CV for component-count

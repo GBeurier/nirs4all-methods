@@ -45,6 +45,7 @@ add_library(pls4all_core OBJECT
     core/pls_logistic.cpp
     core/pipeline.cpp
     core/random_frog_selection.cpp
+    core/scars_selection.cpp
     core/spa_selection.cpp
     core/stability_selection.cpp
     core/uve_selection.cpp

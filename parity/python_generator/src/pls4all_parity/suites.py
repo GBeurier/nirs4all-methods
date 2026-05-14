@@ -1982,6 +1982,121 @@ def _random_frog_selection_expected(
     }
 
 
+def _scars_sample_rows(n_samples: int, sample_count: int, state: int) -> tuple[int, list[int]]:
+    keyed: list[tuple[int, int]] = []
+    for sample in range(int(n_samples)):
+        state, bits = _splitmix64_next(state)
+        keyed.append((int(bits), int(sample)))
+    keyed.sort()
+    return state, sorted(sample for _bits, sample in keyed[:int(sample_count)])
+
+
+def _scars_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    n_iterations: int,
+    min_features: int,
+    sample_fraction: float,
+    seed: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    n, p = X.shape
+    sample_count = int(math.ceil(float(n) * float(sample_fraction)))
+    sample_count = max(int(n_components), max(2, sample_count))
+    sample_count = min(int(n), sample_count)
+
+    active = list(range(int(p)))
+    coefficient_rows: list[float] = []
+    rmse_values: list[float] = []
+    retained_counts: list[int] = []
+    candidates: list[list[int]] = []
+    stability_sums = np.zeros(int(p), dtype=np.float64)
+    best_iteration = -1
+    best_rmse = math.inf
+    state = int(seed) & _MASK64
+
+    for iteration in range(int(n_iterations)):
+        state, rows = _scars_sample_rows(n, sample_count, state)
+        active_x = X[np.asarray(rows, dtype=np.int64)[:, None], np.asarray(active, dtype=np.int64)]
+        active_y = Y[np.asarray(rows, dtype=np.int64), :]
+        active_scores = _pls_coefficient_scores(active_x, active_y, n_components)
+
+        full_scores = np.zeros(int(p), dtype=np.float64)
+        score_sum = float(np.sum(active_scores))
+        for local_idx, feature in enumerate(active):
+            raw_score = float(active_scores[local_idx])
+            full_scores[int(feature)] = raw_score
+            if score_sum > np.finfo(np.float64).eps:
+                stability_sums[int(feature)] += raw_score / score_sum
+        coefficient_rows.extend(full_scores.tolist())
+
+        running_stability = stability_sums / float(iteration + 1)
+        retain_count = _cars_retained_count(p, int(min_features), iteration, int(n_iterations))
+        retain_count = min(retain_count, len(active))
+        order = sorted(
+            active,
+            key=lambda feature: (
+                -float(running_stability[int(feature)]),
+                -float(full_scores[int(feature)]),
+                int(feature),
+            ),
+        )
+        candidate = sorted(int(feature) for feature in order[:retain_count])
+        candidate_x = _copy_columns(X, candidate)
+        rmse = _kfold_pls_rmse(candidate_x, Y, n_components, n_splits)
+
+        retained_counts.append(int(retain_count))
+        rmse_values.append(float(rmse))
+        candidates.append(candidate)
+        if rmse < best_rmse:
+            best_rmse = float(rmse)
+            best_iteration = int(iteration)
+        active = candidate
+
+    selected = candidates[best_iteration]
+    stability_scores = stability_sums / float(n_iterations)
+    return {
+        "coefficient_scores": {
+            "shape": [int(n_iterations), int(p)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": coefficient_rows,
+        },
+        "stability_scores": {
+            "shape": [1, int(p)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": stability_scores.tolist(),
+        },
+        "rmse_by_iteration": {
+            "shape": [1, int(n_iterations)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": rmse_values,
+        },
+        "retained_counts": {
+            "shape": [1, int(n_iterations)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": retained_counts,
+        },
+        "selected_indices": {
+            "shape": [1, int(len(selected))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected,
+        },
+        "sample_count": int(sample_count),
+        "best_iteration": int(best_iteration),
+        "best_rmse": float(best_rmse),
+    }
+
+
 def _component_coefficients_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -3881,6 +3996,61 @@ def _random_frog_selection_fixture(
     }
 
 
+def _scars_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    n_iterations: int,
+    min_features: int,
+    sample_fraction: float,
+    scars_seed: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._scars_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":       "pls_regression",
+                "solver":          "nipals",
+                "n_components":    int(n_components),
+                "n_splits":        int(n_splits),
+                "n_iterations":    int(n_iterations),
+                "min_features":    int(min_features),
+                "sample_fraction": float(sample_fraction),
+                "seed":            int(scars_seed),
+                "reference":       "sklearn PLSRegression deterministic SCARS-PLS",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _scars_selection_expected(X,
+                                              Y,
+                                              n_components,
+                                              n_splits,
+                                              n_iterations,
+                                              min_features,
+                                              sample_fraction,
+                                              scars_seed),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-SCARS-selection",
+        },
+    }
+
+
 def _component_coefficients_fixture(
     fixture_id: str,
     seed: int,
@@ -5251,6 +5421,43 @@ def synthetic_random_frog_pls_v1() -> dict[str, Any]:
                                           max_size=8,
                                           top_k=5,
                                           frog_seed=6801)
+
+
+def synthetic_scars_pls_stability_v1() -> dict[str, Any]:
+    """32 samples, 13 features, 2 targets for deterministic SCARS-PLS selection."""
+    seed = 69
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(32, 5))
+    wave = np.linspace(0.0, 2.4 * np.pi, 32)
+    X = np.column_stack([
+        0.92 * latent[:, 0] + 0.12 * latent[:, 1] + 0.04 * rng.standard_normal(size=32),
+        -0.50 * latent[:, 0] + 0.48 * latent[:, 2] + 0.05 * rng.standard_normal(size=32),
+        0.68 * latent[:, 1] - 0.22 * latent[:, 3] + 0.05 * rng.standard_normal(size=32),
+        0.20 * latent[:, 0] + 0.84 * latent[:, 3] + 0.04 * rng.standard_normal(size=32),
+        -0.52 * latent[:, 2] + 0.36 * latent[:, 3] + 0.05 * rng.standard_normal(size=32),
+        0.41 * latent[:, 4] + 0.13 * latent[:, 0] + 0.06 * rng.standard_normal(size=32),
+        0.26 * latent[:, 1] - 0.22 * latent[:, 4] + 0.07 * rng.standard_normal(size=32),
+        np.sin(1.3 * wave) + 0.05 * rng.standard_normal(size=32),
+        np.cos(1.6 * wave) + 0.05 * rng.standard_normal(size=32),
+        0.24 * np.linspace(-1.0, 1.0, 32) + 0.10 * rng.standard_normal(size=32),
+        rng.standard_normal(size=32) * 0.13,
+        0.35 * latent[:, 2] - 0.17 * latent[:, 4] + 0.08 * rng.standard_normal(size=32),
+        rng.standard_normal(size=32) * 0.16,
+    ])
+    Y = np.column_stack([
+        1.12 * latent[:, 0] - 0.42 * latent[:, 2] + 0.33 * latent[:, 4] + 0.05 * rng.standard_normal(size=32),
+        -0.38 * latent[:, 1] + 0.72 * latent[:, 3] - 0.24 * latent[:, 4] + 0.05 * rng.standard_normal(size=32),
+    ])
+    return _scars_selection_fixture("synthetic_scars_pls_stability_v1",
+                                    seed=seed,
+                                    X=X,
+                                    Y=Y,
+                                    n_components=2,
+                                    n_splits=4,
+                                    n_iterations=7,
+                                    min_features=4,
+                                    sample_fraction=0.75,
+                                    scars_seed=7201)
 
 
 def synthetic_component_coefficients_pls2_v1() -> dict[str, Any]:
