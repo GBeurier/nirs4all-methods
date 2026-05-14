@@ -37,6 +37,7 @@ add_executable(pls4all_tests
     abi/test_pls_logistic.cpp
     abi/test_randomization_selection.cpp
     abi/test_random_frog_selection.cpp
+    abi/test_rep_selection.cpp
     abi/test_scars_selection.cpp
     abi/test_shaving_selection.cpp
     abi/test_sipls_selection.cpp

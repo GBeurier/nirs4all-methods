@@ -295,6 +295,11 @@
       "path": "synthetic_randomized_svd_tiny_pls1_v1.json",
       "sha256": "a22d1668f73a8ef13aaa1f93e9914206e26477a28c8c9246742f0d541d77784c"
     },
+    "synthetic_rep_pls_recursive_v1": {
+      "bytes": 15148,
+      "path": "synthetic_rep_pls_recursive_v1.json",
+      "sha256": "a76c98a25a4a6c5e8dfd56a65d935eb7c8c4767404ff5c3c75ac341f5471f8ec"
+    },
     "synthetic_scars_pls_stability_v1": {
       "bytes": 18762,
       "path": "synthetic_scars_pls_stability_v1.json",

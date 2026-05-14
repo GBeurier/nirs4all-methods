@@ -16,7 +16,7 @@ authors:
 repository-code: "https://github.com/GBeurier/pls4all"
 url: "https://github.com/GBeurier/pls4all"
 license: "CECILL-2.1"
-version: 0.57.0-wvc-threshold-selection
+version: 0.58.0-rep-selection
 date-released: "2026-05-14"
 keywords:
   - partial-least-squares

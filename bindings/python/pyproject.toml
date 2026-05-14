@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pls4all"
-version = "0.57.0"
+version = "0.58.0"
 description = "Python binding for the pls4all C ABI — a portable PLS / NIRS engine."
 authors = [{ name = "Grégory Beurier and contributors" }]
 license = "CECILL-2.1"

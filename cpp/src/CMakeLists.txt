@@ -53,6 +53,7 @@ add_library(pls4all_core OBJECT
     core/pipeline.cpp
     core/randomization_selection.cpp
     core/random_frog_selection.cpp
+    core/rep_selection.cpp
     core/scars_selection.cpp
     core/shaving_selection.cpp
     core/spa_selection.cpp
