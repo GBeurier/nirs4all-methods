@@ -206,6 +206,14 @@ HEADER_SPECS = {
         "struct": "ShavingSelectionFixture",
         "array": "kShavingSelectionFixtures",
     },
+    "bve-selection": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "bve_selection_fixtures.hpp",
+        "fixtures": (
+            "synthetic_bve_pls_backward_v1",
+        ),
+        "struct": "BveSelectionFixture",
+        "array": "kBveSelectionFixtures",
+    },
     "component-coefficients": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "component_coefficients_fixtures.hpp",
         "fixtures": (
@@ -2390,6 +2398,98 @@ def generate_shaving_selection(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_bve_selection(fixture_ids: Sequence[str],
+                           fixture_dir: Path,
+                           out: Path,
+                           family: str,
+                           struct_name: str,
+                           array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct BveSelectionIndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_components;",
+        "    std::int32_t n_splits;",
+        "    std::int32_t n_steps;",
+        "    std::int32_t min_features;",
+        "    std::int32_t best_step;",
+        "    double best_rmse;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    MatrixRef candidate_rmse;",
+        "    MatrixRef rmse_by_step;",
+        "    BveSelectionIndexRef retained_counts;",
+        "    BveSelectionIndexRef removed_indices;",
+        "    BveSelectionIndexRef selected_indices;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        y_name = f"{prefix}_Y"
+        candidates_name = f"{prefix}_candidate_rmse"
+        rmse_name = f"{prefix}_rmse_by_step"
+        retained_name = f"{prefix}_retained_counts"
+        removed_name = f"{prefix}_removed_indices"
+        selected_name = f"{prefix}_selected_indices"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
+        _emit_array(lines, candidates_name, expected["candidate_rmse"]["values"])
+        _emit_array(lines, rmse_name, expected["rmse_by_step"]["values"])
+        _emit_int_array(lines, retained_name, expected["retained_counts"]["values"])
+        _emit_int_array(lines, removed_name, expected["removed_indices"]["values"])
+        _emit_int_array(lines, selected_name, expected["selected_indices"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['n_components'])},\n"
+            f"        {int(params['n_splits'])},\n"
+            f"        {int(params['n_steps'])},\n"
+            f"        {int(params['min_features'])},\n"
+            f"        {int(expected['best_step'])},\n"
+            f"        {_format_double(float(expected['best_rmse']))},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
+            f"        {_matrix_ref(candidates_name, expected['candidate_rmse'])},\n"
+            f"        {_matrix_ref(rmse_name, expected['rmse_by_step'])},\n"
+            f"        BveSelectionIndexRef{{{retained_name}, sizeof({retained_name}) / sizeof(std::int64_t)}},\n"
+            f"        BveSelectionIndexRef{{{removed_name}, sizeof({removed_name}) / sizeof(std::int64_t)}},\n"
+            f"        BveSelectionIndexRef{{{selected_name}, sizeof({selected_name}) / sizeof(std::int64_t)}}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_component_coefficients(fixture_ids: Sequence[str],
                                     fixture_dir: Path,
                                     out: Path,
@@ -2663,6 +2763,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "shaving-selection":
         generate_shaving_selection(fixture_ids, args.fixture_dir, out, args.family,
                                    str(spec["struct"]), str(spec["array"]))
+    elif args.family == "bve-selection":
+        generate_bve_selection(fixture_ids, args.fixture_dir, out, args.family,
+                               str(spec["struct"]), str(spec["array"]))
     elif args.family == "component-coefficients":
         generate_component_coefficients(fixture_ids, args.fixture_dir, out, args.family,
                                         str(spec["struct"]), str(spec["array"]))

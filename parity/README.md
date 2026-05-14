@@ -75,6 +75,7 @@ parity/
 │   ├── synthetic_scars_pls_stability_v1.json
 │   ├── synthetic_ga_pls_wrapper_v1.json
 │   ├── synthetic_shaving_pls_recursive_v1.json
+│   ├── synthetic_bve_pls_backward_v1.json
 │   ├── synthetic_component_coefficients_pls2_v1.json
 │   ├── synthetic_validation_kfold_balanced_v1.json
 │   ├── synthetic_validation_leave_one_out_v1.json
@@ -90,7 +91,7 @@ parity/
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.
-├── python_generator/              Pinned scikit-learn + NumPy/SciPy preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/PLS-LDA/PLS-logistic/MB-PLS/LW-PLS/OPLS/OPLS-DA/SVD/PCR/validation/CV/variable-selection/interval-selection/stability-selection/UVE/SPA/CARS/RandomFrog/SCARS/GA/Shaving adapters.
+├── python_generator/              Pinned scikit-learn + NumPy/SciPy preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/PLS-LDA/PLS-logistic/MB-PLS/LW-PLS/OPLS/OPLS-DA/SVD/PCR/validation/CV/variable-selection/interval-selection/stability-selection/UVE/SPA/CARS/RandomFrog/SCARS/GA/Shaving/BVE adapters.
 └── r_generator/                   Pinned pls / ropls / mixOmics adapters.
 ```
 
@@ -162,7 +163,8 @@ frequencies. SCARS fixtures use deterministic calibration subsampling,
 stability-weighted CARS retention and k-fold RMSE scoring. GA-PLS fixtures use
 deterministic population initialization, elitism, crossover, mutation and k-fold
 RMSE fitness. Shaving fixtures recursively eliminate low-score PLS variables and
-score every retained subset by k-fold RMSE.
+score every retained subset by k-fold RMSE. BVE fixtures greedily evaluate every
+one-variable removal by k-fold RMSE and keep the best backward path/subset.
 Component-coefficient fixtures are generated from sklearn `PLSRegression`
 weights/loadings and gate original-scale coefficient blocks for every latent
 prefix.
@@ -173,4 +175,4 @@ plans and gate out-of-sample predictions plus aggregate metrics.
 C++ parity tests assert predictions, coefficients, preprocessing statistics,
 transforms, CV predictions, regression/classification metrics, variable
 importance, variable-selection rankers, component coefficients and latent arrays
-plus interval/stability/UVE/SPA/CARS/RandomFrog/SCARS/GA/Shaving-selection scans within `tolerances.md`.
+plus interval/stability/UVE/SPA/CARS/RandomFrog/SCARS/GA/Shaving/BVE-selection scans within `tolerances.md`.

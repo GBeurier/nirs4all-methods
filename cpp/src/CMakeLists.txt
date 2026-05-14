@@ -22,6 +22,7 @@ configure_file(
 # right.
 # ---------------------------------------------------------------------------
 add_library(pls4all_core OBJECT
+    core/bve_selection.cpp
     core/status.cpp
     core/version.cpp
     core/cars_selection.cpp

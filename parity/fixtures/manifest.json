@@ -1,5 +1,10 @@
 {
   "fixtures": {
+    "synthetic_bve_pls_backward_v1": {
+      "bytes": 11490,
+      "path": "synthetic_bve_pls_backward_v1.json",
+      "sha256": "8e2d23a8747af4ac193694bf6c8859486c5827de08136fabe4df173948f4510c"
+    },
     "synthetic_canonical_small_pls2_v1": {
       "bytes": 10175,
       "path": "synthetic_canonical_small_pls2_v1.json",

@@ -46,6 +46,8 @@ CARS retention. Phase 5i GA-PLS kernels use deterministic population search
 with elitism, crossover, mutation and k-fold CV fitness.
 Phase 5j shaving kernels recursively eliminate low-score PLS variables while
 scoring each retained subset by deterministic k-fold CV.
+Phase 5k BVE kernels greedily evaluate every one-variable removal by
+deterministic k-fold CV RMSE and keep the best backward path/subset.
 Component-coefficient kernels expose the
 original-scale regression coefficients for each latent prefix. SIMPLS component
 prefixes can also be scored by deterministic k-fold CV for component-count

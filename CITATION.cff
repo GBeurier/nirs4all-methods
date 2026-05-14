@@ -16,7 +16,7 @@ authors:
 repository-code: "https://github.com/GBeurier/pls4all"
 url: "https://github.com/GBeurier/pls4all"
 license: "CECILL-2.1"
-version: 0.49.0-shaving-selection
+version: 0.50.0-bve-selection
 date-released: "2026-05-14"
 keywords:
   - partial-least-squares

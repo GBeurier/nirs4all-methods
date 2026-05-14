@@ -2399,6 +2399,94 @@ def _shaving_selection_expected(
     }
 
 
+def _bve_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    n_steps: int,
+    min_features: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    p = int(X.shape[1])
+    active = list(range(p))
+    candidate_rmse_rows: list[float] = []
+    rmse_values: list[float] = []
+    retained_counts: list[int] = []
+    removed_indices: list[int] = []
+    candidates: list[list[int]] = []
+    best_step = -1
+    best_rmse = math.inf
+
+    for step in range(int(n_steps)):
+        row = np.zeros(p, dtype=np.float64)
+        best_removed = -1
+        best_candidate: list[int] = []
+        best_candidate_rmse = math.inf
+        for feature in active:
+            candidate = [int(item) for item in active if int(item) != int(feature)]
+            if len(candidate) < int(min_features):
+                continue
+            rmse = _kfold_pls_rmse(_copy_columns(X, candidate), Y, n_components, n_splits)
+            row[int(feature)] = float(rmse)
+            if (rmse < best_candidate_rmse or
+                    (rmse == best_candidate_rmse and (best_removed < 0 or int(feature) < best_removed))):
+                best_candidate_rmse = float(rmse)
+                best_removed = int(feature)
+                best_candidate = candidate
+        if best_removed < 0:
+            raise RuntimeError("BVE failed to produce a candidate")
+
+        candidate_rmse_rows.extend(row.tolist())
+        rmse_values.append(float(best_candidate_rmse))
+        retained_counts.append(int(len(best_candidate)))
+        removed_indices.append(int(best_removed))
+        candidates.append(best_candidate)
+        if best_candidate_rmse < best_rmse:
+            best_rmse = float(best_candidate_rmse)
+            best_step = int(step)
+        active = best_candidate
+
+    selected = candidates[best_step]
+    return {
+        "candidate_rmse": {
+            "shape": [int(n_steps), p],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": candidate_rmse_rows,
+        },
+        "rmse_by_step": {
+            "shape": [1, int(n_steps)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": rmse_values,
+        },
+        "retained_counts": {
+            "shape": [1, int(n_steps)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": retained_counts,
+        },
+        "removed_indices": {
+            "shape": [1, int(n_steps)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": removed_indices,
+        },
+        "selected_indices": {
+            "shape": [1, int(len(selected))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected,
+        },
+        "best_step": int(best_step),
+        "best_rmse": float(best_rmse),
+    }
+
+
 def _component_coefficients_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -4466,6 +4554,55 @@ def _shaving_selection_fixture(
     }
 
 
+def _bve_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    n_steps: int,
+    min_features: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._bve_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":    "pls_regression",
+                "solver":       "nipals",
+                "n_components": int(n_components),
+                "n_splits":     int(n_splits),
+                "n_steps":      int(n_steps),
+                "min_features": int(min_features),
+                "reference":    "sklearn PLSRegression deterministic BVE-PLS",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _bve_selection_expected(X,
+                                            Y,
+                                            n_components,
+                                            n_splits,
+                                            n_steps,
+                                            min_features),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-BVE-selection",
+        },
+    }
+
+
 def _component_coefficients_fixture(
     fixture_id: str,
     seed: int,
@@ -5946,6 +6083,37 @@ def synthetic_shaving_pls_recursive_v1() -> dict[str, Any]:
                                       n_steps=5,
                                       min_features=3,
                                       shave_fraction=0.25)
+
+
+def synthetic_bve_pls_backward_v1() -> dict[str, Any]:
+    """26 samples, 9 features, 2 targets for deterministic BVE-PLS selection."""
+    seed = 75
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(26, 4))
+    wave = np.linspace(0.0, 2.0 * np.pi, 26)
+    X = np.column_stack([
+        0.91 * latent[:, 0] + 0.10 * latent[:, 1] + 0.04 * rng.standard_normal(size=26),
+        -0.44 * latent[:, 0] + 0.54 * latent[:, 2] + 0.05 * rng.standard_normal(size=26),
+        0.67 * latent[:, 1] - 0.21 * latent[:, 3] + 0.05 * rng.standard_normal(size=26),
+        0.19 * latent[:, 0] + 0.80 * latent[:, 3] + 0.04 * rng.standard_normal(size=26),
+        -0.48 * latent[:, 2] + 0.29 * latent[:, 3] + 0.05 * rng.standard_normal(size=26),
+        np.sin(1.4 * wave) + 0.05 * rng.standard_normal(size=26),
+        np.cos(1.1 * wave) + 0.05 * rng.standard_normal(size=26),
+        0.24 * np.linspace(-1.0, 1.0, 26) + 0.10 * rng.standard_normal(size=26),
+        rng.standard_normal(size=26) * 0.15,
+    ])
+    Y = np.column_stack([
+        1.09 * latent[:, 0] - 0.40 * latent[:, 2] + 0.05 * rng.standard_normal(size=26),
+        -0.42 * latent[:, 1] + 0.75 * latent[:, 3] + 0.05 * rng.standard_normal(size=26),
+    ])
+    return _bve_selection_fixture("synthetic_bve_pls_backward_v1",
+                                  seed=seed,
+                                  X=X,
+                                  Y=Y,
+                                  n_components=2,
+                                  n_splits=5,
+                                  n_steps=5,
+                                  min_features=3)
 
 
 def synthetic_component_coefficients_pls2_v1() -> dict[str, Any]:
