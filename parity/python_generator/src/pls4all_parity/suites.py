@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
+from scipy.signal import savgol_filter
 from sklearn.cross_decomposition import PLSRegression
 
 
@@ -462,6 +463,24 @@ def _pipeline_apply(X: np.ndarray, operators: list[str]) -> np.ndarray:
                 coeffs, *_ = np.linalg.lstsq(design, row, rcond=None)
                 trend[row_idx, :] = design @ coeffs
             out = out - trend
+        elif op.startswith("savgol_smooth_"):
+            _, _, window, poly_degree = op.split("_")
+            out = savgol_filter(out,
+                                window_length=int(window),
+                                polyorder=int(poly_degree),
+                                deriv=0,
+                                delta=1.0,
+                                axis=1,
+                                mode="nearest")
+        elif op.startswith("savgol_derivative_"):
+            _, _, window, poly_degree, derivative_order, delta = op.split("_")
+            out = savgol_filter(out,
+                                window_length=int(window),
+                                polyorder=int(poly_degree),
+                                deriv=int(derivative_order),
+                                delta=float(delta),
+                                axis=1,
+                                mode="nearest")
         else:
             raise ValueError(f"unsupported pipeline operator fixture: {op}")
     return out.astype(np.float64, copy=False)
@@ -1307,7 +1326,7 @@ def _pipeline_fixture(
             "git_revision_sha": "unknown",
             "params": {
                 "operators":      operators,
-                "reference":      "NumPy preprocessing pipeline",
+                "reference":      "NumPy/SciPy preprocessing pipeline",
             },
         },
         "data": {
@@ -1883,6 +1902,30 @@ def synthetic_pipeline_detrend_poly_v1() -> dict[str, Any]:
     ])
     return _pipeline_fixture("synthetic_pipeline_detrend_poly_v1", seed=46,
                              X=X, operators=["detrend_poly_2"])
+
+
+def synthetic_pipeline_savgol_smooth_v1() -> dict[str, Any]:
+    """3 samples, 9 wavelengths for Savitzky-Golay smoothing parity."""
+    x = np.linspace(-1.0, 1.0, 9, dtype=np.float64)
+    X = np.vstack([
+        0.3 + 0.2 * x + 1.4 * x * x + np.array([0.05, -0.04, 0.02, -0.03, 0.01, 0.02, -0.01, 0.03, -0.02]),
+        np.sin(2.0 * x) + np.array([-0.02, 0.03, -0.01, 0.04, -0.02, 0.00, 0.02, -0.03, 0.01]),
+        1.1 - 0.5 * x + 0.3 * x * x + np.array([0.00, 0.02, -0.04, 0.01, 0.03, -0.02, 0.01, -0.01, 0.02]),
+    ])
+    return _pipeline_fixture("synthetic_pipeline_savgol_smooth_v1", seed=47,
+                             X=X, operators=["savgol_smooth_5_2"])
+
+
+def synthetic_pipeline_savgol_derivative_v1() -> dict[str, Any]:
+    """3 samples, 9 wavelengths for first-derivative Savitzky-Golay parity."""
+    x = np.linspace(-1.0, 1.0, 9, dtype=np.float64)
+    X = np.vstack([
+        0.4 + 1.5 * x - 0.2 * x * x + 0.6 * x * x * x,
+        np.cos(2.5 * x) + 0.2 * x,
+        -0.7 + 0.4 * x + 0.8 * x * x,
+    ])
+    return _pipeline_fixture("synthetic_pipeline_savgol_derivative_v1", seed=48,
+                             X=X, operators=["savgol_derivative_5_2_1_1.0"])
 
 
 def synthetic_power_tiny_pls1_v1() -> dict[str, Any]:

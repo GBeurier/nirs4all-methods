@@ -283,6 +283,92 @@ TEST(pipeline_phase3c, no_param_operators_reject_params_at_fit) {
     p4a_context_destroy(ctx);
 }
 
+TEST(pipeline_phase3d, savgol_smooth_matches_quadratic_interior) {
+    p4a_context_t* ctx = nullptr;
+    p4a_pipeline_t* pipe = nullptr;
+    CHECK_EQ(p4a_context_create(&ctx), P4A_OK);
+    CHECK_EQ(p4a_pipeline_create(&pipe), P4A_OK);
+    const double params[] = {5.0, 2.0};
+    CHECK_EQ(p4a_pipeline_add_operator(pipe, P4A_OP_SAVGOL_SMOOTH, params, 2), P4A_OK);
+
+    double x[] = {
+        4.0, 1.0, 0.0, 1.0, 4.0,
+        5.0, 2.0, 1.0, 2.0, 5.0,
+    };
+    p4a_matrix_view_t X{};
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X, x, 2, 5, P4A_DTYPE_F64), P4A_OK);
+    CHECK_EQ(p4a_pipeline_fit(ctx, pipe, &X, nullptr), P4A_OK);
+    p4a_array_t* out = nullptr;
+    CHECK_EQ(p4a_pipeline_transform_alloc(ctx, pipe, &X, &out), P4A_OK);
+    const std::vector<double> values = copy_values(out);
+    CHECK_EQ(values.size(), 10U);
+    CHECK_EQ(std::fabs(values[2] - 0.0) <= kAbsTol, true);
+    CHECK_EQ(std::fabs(values[7] - 1.0) <= kAbsTol, true);
+
+    p4a_array_free(out);
+    p4a_pipeline_destroy(pipe);
+    p4a_context_destroy(ctx);
+}
+
+TEST(pipeline_phase3d, savgol_derivative_default_is_first_derivative) {
+    p4a_context_t* ctx = nullptr;
+    p4a_pipeline_t* pipe = nullptr;
+    CHECK_EQ(p4a_context_create(&ctx), P4A_OK);
+    CHECK_EQ(p4a_pipeline_create(&pipe), P4A_OK);
+    CHECK_EQ(p4a_pipeline_add_operator(pipe, P4A_OP_SAVGOL_DERIVATIVE, nullptr, 0), P4A_OK);
+
+    double x[] = {
+        0.0, 1.0, 2.0, 3.0, 4.0,
+    };
+    p4a_matrix_view_t X{};
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X, x, 1, 5, P4A_DTYPE_F64), P4A_OK);
+    CHECK_EQ(p4a_pipeline_fit(ctx, pipe, &X, nullptr), P4A_OK);
+    p4a_array_t* out = nullptr;
+    CHECK_EQ(p4a_pipeline_transform_alloc(ctx, pipe, &X, &out), P4A_OK);
+    check_close_vector(failures, copy_values(out), {
+        0.5, 0.8, 1.0, 0.8, 0.5,
+    });
+
+    p4a_array_free(out);
+    p4a_pipeline_destroy(pipe);
+    p4a_context_destroy(ctx);
+}
+
+TEST(pipeline_phase3d, savgol_rejects_invalid_params_at_fit) {
+    p4a_context_t* ctx = nullptr;
+    CHECK_EQ(p4a_context_create(&ctx), P4A_OK);
+
+    double x[] = {
+        0.0, 1.0, 2.0, 3.0, 4.0,
+        1.0, 2.0, 3.0, 4.0, 5.0,
+    };
+    p4a_matrix_view_t X{};
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X, x, 2, 5, P4A_DTYPE_F64), P4A_OK);
+
+    p4a_pipeline_t* even_window = nullptr;
+    const double even_params[] = {4.0, 2.0};
+    CHECK_EQ(p4a_pipeline_create(&even_window), P4A_OK);
+    CHECK_EQ(p4a_pipeline_add_operator(even_window, P4A_OP_SAVGOL_SMOOTH,
+                                       even_params, 2),
+             P4A_OK);
+    CHECK_EQ(p4a_pipeline_fit(ctx, even_window, &X, nullptr), P4A_ERR_INVALID_ARGUMENT);
+    CHECK_STR_CONTAINS(p4a_context_last_error(ctx), "odd integer");
+    p4a_pipeline_destroy(even_window);
+
+    p4a_pipeline_t* derivative_too_high = nullptr;
+    const double derivative_params[] = {5.0, 1.0, 2.0};
+    CHECK_EQ(p4a_pipeline_create(&derivative_too_high), P4A_OK);
+    CHECK_EQ(p4a_pipeline_add_operator(derivative_too_high, P4A_OP_SAVGOL_DERIVATIVE,
+                                       derivative_params, 3),
+             P4A_OK);
+    CHECK_EQ(p4a_pipeline_fit(ctx, derivative_too_high, &X, nullptr),
+             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_STR_CONTAINS(p4a_context_last_error(ctx), "must not exceed");
+    p4a_pipeline_destroy(derivative_too_high);
+
+    p4a_context_destroy(ctx);
+}
+
 TEST(pipeline_phase3a, unsupported_operators_fail_at_fit_with_context_error) {
     p4a_context_t* ctx = nullptr;
     p4a_pipeline_t* pipe = nullptr;

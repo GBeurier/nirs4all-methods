@@ -85,7 +85,7 @@
       "operators": [
         "detrend_poly_2"
       ],
-      "reference": "NumPy preprocessing pipeline"
+      "reference": "NumPy/SciPy preprocessing pipeline"
     },
     "version": "1"
   },

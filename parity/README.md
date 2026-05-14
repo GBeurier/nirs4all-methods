@@ -48,10 +48,12 @@ parity/
 │   ├── synthetic_pipeline_snv_v1.json
 │   ├── synthetic_pipeline_msc_v1.json
 │   ├── synthetic_pipeline_detrend_poly_v1.json
+│   ├── synthetic_pipeline_savgol_smooth_v1.json
+│   ├── synthetic_pipeline_savgol_derivative_v1.json
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.
-├── python_generator/              Pinned scikit-learn + NumPy preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/OPLS/OPLS-DA/SVD/PCR adapters.
+├── python_generator/              Pinned scikit-learn + NumPy/SciPy preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/OPLS/OPLS-DA/SVD/PCR adapters.
 └── r_generator/                   Pinned pls / ropls / mixOmics adapters.
 ```
 

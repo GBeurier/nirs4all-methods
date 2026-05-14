@@ -308,6 +308,103 @@ void apply_snv(const std::vector<double>& values,
     return P4A_OK;
 }
 
+struct SavGolParams {
+    std::int32_t window{5};
+    std::int32_t poly_degree{2};
+    std::int32_t derivative_order{0};
+    double delta{1.0};
+};
+
+[[nodiscard]] double factorial(std::int32_t n) noexcept {
+    double out = 1.0;
+    for (std::int32_t i = 2; i <= n; ++i) {
+        out *= static_cast<double>(i);
+    }
+    return out;
+}
+
+[[nodiscard]] p4a_status_t compute_savgol_coeffs(::pls4all::core::Context& ctx,
+                                                 const SavGolParams& params,
+                                                 std::vector<double>& coeffs) {
+    const std::size_t window = static_cast<std::size_t>(params.window);
+    const std::size_t terms = static_cast<std::size_t>(params.poly_degree) + 1U;
+    const std::int32_t half = params.window / 2;
+
+    std::vector<double> powers(window * terms, 1.0);
+    for (std::size_t sample = 0; sample < window; ++sample) {
+        const double x = static_cast<double>(static_cast<std::int32_t>(sample) - half);
+        for (std::size_t term = 1; term < terms; ++term) {
+            powers[idx(sample, terms, term)] =
+                powers[idx(sample, terms, term - 1U)] * x;
+        }
+    }
+
+    std::vector<double> gram(terms * terms, 0.0);
+    for (std::size_t row_term = 0; row_term < terms; ++row_term) {
+        for (std::size_t col_term = 0; col_term < terms; ++col_term) {
+            double sum = 0.0;
+            for (std::size_t sample = 0; sample < window; ++sample) {
+                sum += powers[idx(sample, terms, row_term)] *
+                       powers[idx(sample, terms, col_term)];
+            }
+            gram[idx(row_term, terms, col_term)] = sum;
+        }
+    }
+
+    std::vector<double> rhs(terms, 0.0);
+    rhs[static_cast<std::size_t>(params.derivative_order)] =
+        factorial(params.derivative_order) /
+        std::pow(params.delta, static_cast<double>(params.derivative_order));
+
+    std::vector<double> projection;
+    if (!solve_linear_system(gram, rhs, terms, projection)) {
+        ctx.set_error("failed to solve Savitzky-Golay normal equations");
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+
+    coeffs.assign(window, 0.0);
+    for (std::size_t sample = 0; sample < window; ++sample) {
+        double coeff = 0.0;
+        for (std::size_t term = 0; term < terms; ++term) {
+            coeff += projection[term] * powers[idx(sample, terms, term)];
+        }
+        coeffs[sample] = coeff;
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t apply_savgol(::pls4all::core::Context& ctx,
+                                        const std::vector<double>& values,
+                                        std::size_t rows,
+                                        std::size_t cols,
+                                        const SavGolParams& params,
+                                        std::vector<double>& out) {
+    std::vector<double> coeffs;
+    p4a_status_t status = compute_savgol_coeffs(ctx, params, coeffs);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    const std::int64_t half = static_cast<std::int64_t>(params.window / 2);
+    const std::int64_t max_col = static_cast<std::int64_t>(cols - 1U);
+    out.assign(rows * cols, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t col = 0; col < cols; ++col) {
+            double sum = 0.0;
+            for (std::size_t k = 0; k < coeffs.size(); ++k) {
+                std::int64_t source =
+                    static_cast<std::int64_t>(col) +
+                    static_cast<std::int64_t>(k) - half;
+                source = std::max<std::int64_t>(0, std::min<std::int64_t>(source, max_col));
+                sum += coeffs[k] *
+                       values[idx(row, cols, static_cast<std::size_t>(source))];
+            }
+            out[idx(row, cols, col)] = sum;
+        }
+    }
+    return P4A_OK;
+}
+
 [[nodiscard]] p4a_status_t apply_msc(::pls4all::core::Context& ctx,
                                      const std::vector<double>& values,
                                      const std::vector<double>& reference,
@@ -391,6 +488,114 @@ void apply_snv(const std::vector<double>& values,
     }
     degree = static_cast<std::int32_t>(rounded);
     return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t parse_integer_param(::pls4all::core::Context& ctx,
+                                               double raw,
+                                               std::int32_t min_value,
+                                               std::int32_t max_value,
+                                               const char* name,
+                                               std::int32_t& out) {
+    const double rounded = std::round(raw);
+    if (!std::isfinite(raw) || std::fabs(raw - rounded) > 1e-12 ||
+        rounded < static_cast<double>(min_value) ||
+        rounded > static_cast<double>(max_value)) {
+        ctx.set_errorf("%s must be an integer in [%d, %d]",
+                       name,
+                       static_cast<int>(min_value),
+                       static_cast<int>(max_value));
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    out = static_cast<std::int32_t>(rounded);
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t validate_savgol_params(::pls4all::core::Context& ctx,
+                                                  const SavGolParams& params) {
+    if ((params.window % 2) == 0 || params.window < 3 || params.window > 501) {
+        ctx.set_error("Savitzky-Golay window length must be an odd integer in [3, 501]");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    if (params.poly_degree < 0 || params.poly_degree >= params.window) {
+        ctx.set_error("Savitzky-Golay polynomial degree must be non-negative and smaller than the window length");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    if (params.derivative_order < 0 || params.derivative_order > 2) {
+        ctx.set_error("Savitzky-Golay derivative order must be 0, 1 or 2");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    if (params.derivative_order > params.poly_degree) {
+        ctx.set_error("Savitzky-Golay derivative order must not exceed polynomial degree");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    if (!std::isfinite(params.delta) || params.delta <= 0.0) {
+        ctx.set_error("Savitzky-Golay delta must be finite and positive");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t parse_savgol_smooth(::pls4all::core::Context& ctx,
+                                               const ::pls4all::core::OperatorEntry& entry,
+                                               SavGolParams& params) {
+    params = SavGolParams{};
+    params.derivative_order = 0;
+    if (entry.params.empty()) {
+        return validate_savgol_params(ctx, params);
+    }
+    if (entry.params.size() != 2U) {
+        ctx.set_error("Savitzky-Golay smooth expects zero params or window/poly_degree");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    p4a_status_t status = parse_integer_param(ctx, entry.params[0], 3, 501,
+                                              "Savitzky-Golay window length",
+                                              params.window);
+    if (status != P4A_OK) {
+        return status;
+    }
+    status = parse_integer_param(ctx, entry.params[1], 0, 500,
+                                 "Savitzky-Golay polynomial degree",
+                                 params.poly_degree);
+    if (status != P4A_OK) {
+        return status;
+    }
+    return validate_savgol_params(ctx, params);
+}
+
+[[nodiscard]] p4a_status_t parse_savgol_derivative(::pls4all::core::Context& ctx,
+                                                   const ::pls4all::core::OperatorEntry& entry,
+                                                   SavGolParams& params) {
+    params = SavGolParams{};
+    params.derivative_order = 1;
+    if (entry.params.empty()) {
+        return validate_savgol_params(ctx, params);
+    }
+    if (entry.params.size() != 3U && entry.params.size() != 4U) {
+        ctx.set_error("Savitzky-Golay derivative expects zero params or window/poly_degree/derivative_order[/delta]");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    p4a_status_t status = parse_integer_param(ctx, entry.params[0], 3, 501,
+                                              "Savitzky-Golay window length",
+                                              params.window);
+    if (status != P4A_OK) {
+        return status;
+    }
+    status = parse_integer_param(ctx, entry.params[1], 0, 500,
+                                 "Savitzky-Golay polynomial degree",
+                                 params.poly_degree);
+    if (status != P4A_OK) {
+        return status;
+    }
+    status = parse_integer_param(ctx, entry.params[2], 1, 2,
+                                 "Savitzky-Golay derivative order",
+                                 params.derivative_order);
+    if (status != P4A_OK) {
+        return status;
+    }
+    if (entry.params.size() == 4U) {
+        params.delta = entry.params[3];
+    }
+    return validate_savgol_params(ctx, params);
 }
 
 }  // namespace
@@ -501,6 +706,46 @@ p4a_status_t Pipeline::fit(Context& ctx, const p4a_matrix_view_t& X) {
                 }
                 break;
             }
+            case P4A_OP_SAVGOL_SMOOTH: {
+                SavGolParams params;
+                status = parse_savgol_smooth(ctx, entry, params);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                state.scale.assign({
+                    static_cast<double>(params.window),
+                    static_cast<double>(params.poly_degree),
+                    static_cast<double>(params.derivative_order),
+                    params.delta,
+                });
+                status = apply_savgol(ctx, current, rows, cols, params, next);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                break;
+            }
+            case P4A_OP_SAVGOL_DERIVATIVE: {
+                SavGolParams params;
+                status = parse_savgol_derivative(ctx, entry, params);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                state.scale.assign({
+                    static_cast<double>(params.window),
+                    static_cast<double>(params.poly_degree),
+                    static_cast<double>(params.derivative_order),
+                    params.delta,
+                });
+                status = apply_savgol(ctx, current, rows, cols, params, next);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                break;
+            }
             default:
                 ctx.set_errorf("pipeline operator %d is not implemented in this release",
                                static_cast<int>(entry.kind));
@@ -584,6 +829,23 @@ p4a_status_t Pipeline::transform(Context& ctx,
                     return status;
                 }
                 break;
+            case P4A_OP_SAVGOL_SMOOTH:
+            case P4A_OP_SAVGOL_DERIVATIVE: {
+                if (state.scale.size() != 4U) {
+                    ctx.set_error("fitted Savitzky-Golay operator is missing parameters");
+                    return P4A_ERR_INTERNAL;
+                }
+                SavGolParams params;
+                params.window = static_cast<std::int32_t>(state.scale[0]);
+                params.poly_degree = static_cast<std::int32_t>(state.scale[1]);
+                params.derivative_order = static_cast<std::int32_t>(state.scale[2]);
+                params.delta = state.scale[3];
+                status = apply_savgol(ctx, current, rows, cols, params, next);
+                if (status != P4A_OK) {
+                    return status;
+                }
+                break;
+            }
             default:
                 ctx.set_error("fitted pipeline contains an unsupported operator");
                 return P4A_ERR_INTERNAL;

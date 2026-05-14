@@ -196,6 +196,70 @@ inline const std::int32_t synthetic_pipeline_detrend_poly_v1_n_params[] = {
     1,
 };
 
+inline const double synthetic_pipeline_savgol_smooth_v1_x[] = {
+    1.55, 0.89749999999999974, 0.56999999999999995, 0.3075,
+    0.31, 0.45750000000000002, 0.73999999999999999, 1.2674999999999998,
+    1.8799999999999999, -0.92929742682568173, -0.96749498660405442, -0.85147098480789651,
+    -0.43942553860420303, -0.02, 0.47942553860420301, 0.86147098480789652,
+    0.96749498660405442, 0.91929742682568172, 1.9000000000000001, 1.6637500000000001,
+    1.385, 1.2537500000000001, 1.1300000000000001, 0.97375000000000012,
+    0.93500000000000005, 0.88375000000000004, 0.92000000000000015,
+};
+
+inline const double synthetic_pipeline_savgol_smooth_v1_transform_train[] = {
+    1.4102857142857137, 1.0035714285714279, 0.53057142857142803, 0.33492857142857113,
+    0.30057142857142838, 0.4472142857142854, 0.76314285714285657, 1.3135714285714277,
+    1.7677142857142847, -0.94906457092264773, -0.96315619473091973, -0.81457602182160771,
+    -0.47039078942761853, 0.0031428571428571347, 0.47610507514190425, 0.83743316467875051,
+    0.96058476615949118, 0.94077885663693339, 1.8631428571428561, 1.6640714285714275,
+    1.4132857142857136, 1.2451785714285708, 1.113714285714285, 0.99774999999999969,
+    0.91528571428571381, 0.90292857142857097, 0.90628571428571392,
+};
+
+inline const p4a_operator_kind_t synthetic_pipeline_savgol_smooth_v1_operators[] = {
+    P4A_OP_SAVGOL_SMOOTH,
+};
+
+inline const double synthetic_pipeline_savgol_smooth_v1_params[] = {
+    5, 2,
+};
+
+inline const std::int32_t synthetic_pipeline_savgol_smooth_v1_n_params[] = {
+    2,
+};
+
+inline const double synthetic_pipeline_savgol_derivative_v1_x[] = {
+    -1.8999999999999999, -1.090625, -0.47499999999999998, 0.0031250000000000219,
+    0.40000000000000002, 0.77187500000000009, 1.1749999999999998, 1.6656249999999999,
+    2.2999999999999998, -1.0011436155469338, -0.44953350618957416, 0.21532236239526867,
+    0.76096311950521789, 1, 0.86096311950521798, 0.41532236239526865,
+    -0.14953350618957412, -0.60114361554693363, -0.30000000000000004, -0.54999999999999993,
+    -0.69999999999999996, -0.74999999999999989, -0.69999999999999996, -0.54999999999999993,
+    -0.29999999999999993, 0.050000000000000155, 0.50000000000000011,
+};
+
+inline const double synthetic_pipeline_savgol_derivative_v1_transform_train[] = {
+    0.36593749999999953, 0.52312499999999973, 0.56937499999999996, 0.46000000000000008,
+    0.40687500000000021, 0.41000000000000031, 0.46937500000000043, 0.41812500000000058,
+    0.28843750000000073, 0.29845420652417626, 0.47406794480465053, 0.52127838567886609,
+    0.34056708889943188, 0.050000000000000336, -0.24056708889943132, -0.42127838567886583,
+    -0.39406794480465068, -0.24845420652417666, -0.10500000000000009, -0.13000000000000017,
+    -0.1000000000000002, -2.2204460492503131e-16, 0.099999999999999811, 0.1999999999999999,
+    0.29999999999999999, 0.29000000000000015, 0.20500000000000018,
+};
+
+inline const p4a_operator_kind_t synthetic_pipeline_savgol_derivative_v1_operators[] = {
+    P4A_OP_SAVGOL_DERIVATIVE,
+};
+
+inline const double synthetic_pipeline_savgol_derivative_v1_params[] = {
+    5, 2, 1, 1,
+};
+
+inline const std::int32_t synthetic_pipeline_savgol_derivative_v1_n_params[] = {
+    4,
+};
+
 inline const PipelineFixture kPipelineFixtures[] = {
     {
         "synthetic_pipeline_identity_v1",
@@ -259,6 +323,24 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_detrend_poly_v1_n_params,
         MatrixRef{3, 6, synthetic_pipeline_detrend_poly_v1_x, sizeof(synthetic_pipeline_detrend_poly_v1_x) / sizeof(double), false},
         MatrixRef{3, 6, synthetic_pipeline_detrend_poly_v1_transform_train, sizeof(synthetic_pipeline_detrend_poly_v1_transform_train) / sizeof(double), false}
+    },
+    {
+        "synthetic_pipeline_savgol_smooth_v1",
+        synthetic_pipeline_savgol_smooth_v1_operators,
+        sizeof(synthetic_pipeline_savgol_smooth_v1_operators) / sizeof(p4a_operator_kind_t),
+        synthetic_pipeline_savgol_smooth_v1_params,
+        synthetic_pipeline_savgol_smooth_v1_n_params,
+        MatrixRef{3, 9, synthetic_pipeline_savgol_smooth_v1_x, sizeof(synthetic_pipeline_savgol_smooth_v1_x) / sizeof(double), false},
+        MatrixRef{3, 9, synthetic_pipeline_savgol_smooth_v1_transform_train, sizeof(synthetic_pipeline_savgol_smooth_v1_transform_train) / sizeof(double), false}
+    },
+    {
+        "synthetic_pipeline_savgol_derivative_v1",
+        synthetic_pipeline_savgol_derivative_v1_operators,
+        sizeof(synthetic_pipeline_savgol_derivative_v1_operators) / sizeof(p4a_operator_kind_t),
+        synthetic_pipeline_savgol_derivative_v1_params,
+        synthetic_pipeline_savgol_derivative_v1_n_params,
+        MatrixRef{3, 9, synthetic_pipeline_savgol_derivative_v1_x, sizeof(synthetic_pipeline_savgol_derivative_v1_x) / sizeof(double), false},
+        MatrixRef{3, 9, synthetic_pipeline_savgol_derivative_v1_transform_train, sizeof(synthetic_pipeline_savgol_derivative_v1_transform_train) / sizeof(double), false}
     }
 };
 

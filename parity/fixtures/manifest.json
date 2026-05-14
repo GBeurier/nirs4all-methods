@@ -76,39 +76,49 @@
       "sha256": "f8c7e3d9e0cc0e22dae2d569fb43cc1ac639cd50ce5942fc9f51bb1a2641a952"
     },
     "synthetic_pipeline_autoscale_v1": {
-      "bytes": 1439,
+      "bytes": 1445,
       "path": "synthetic_pipeline_autoscale_v1.json",
-      "sha256": "b86b61cef860d6e88665726a08623c980a87475d6338e5fdb1df9c7b81fc057a"
+      "sha256": "fe001b339f2e1c919e66c761493c3b3b6e1b9b94c89a34052d06398a4b0a0445"
     },
     "synthetic_pipeline_center_v1": {
-      "bytes": 1319,
+      "bytes": 1325,
       "path": "synthetic_pipeline_center_v1.json",
-      "sha256": "b23a5a4fa1dc2f480c988a0ee28d73308820dc186b453cba8e8123dbd362b3a0"
+      "sha256": "a6cc33ed92b723fb072c5f6b24e2c6abeff8b577069815d74812cd40848e53e3"
     },
     "synthetic_pipeline_detrend_poly_v1": {
-      "bytes": 1908,
+      "bytes": 1914,
       "path": "synthetic_pipeline_detrend_poly_v1.json",
-      "sha256": "ffac9cafdf5245e91a71661b9dffede5a6b3705a2f84250a651983f8309d6b34"
+      "sha256": "67acfa198f65737a4f6cc5e7db5ca321ff6ce877fc32b4891734b4fbec819cc3"
     },
     "synthetic_pipeline_identity_v1": {
-      "bytes": 1313,
+      "bytes": 1319,
       "path": "synthetic_pipeline_identity_v1.json",
-      "sha256": "deb06f4dc11d0abe5a25bb03f2cd50f3caa9ab72c588c9a1d9d34c362115e600"
+      "sha256": "a41c4bfcfef72acab1fac367ba11e85354a8ef78bab711ac90f53a4331ed2baf"
     },
     "synthetic_pipeline_msc_v1": {
-      "bytes": 1883,
+      "bytes": 1889,
       "path": "synthetic_pipeline_msc_v1.json",
-      "sha256": "14da4fb942ad8359479192d7dc539006dc74414528eb19af982b543e01afacc8"
+      "sha256": "d57551c786c2ef39b00a550a46ab8375d6fbed72f8296ee6ed7d28bd07834402"
     },
     "synthetic_pipeline_pareto_v1": {
-      "bytes": 1498,
+      "bytes": 1504,
       "path": "synthetic_pipeline_pareto_v1.json",
-      "sha256": "eb4f63de0413ab2db00f145d3854b702ecdcc4e9fa5d9658cc1f076eb029b8c8"
+      "sha256": "0a1d5ab3ba903bcca7d48169965d4b950555501faaaafcf0435b7fc22cc2eb1e"
+    },
+    "synthetic_pipeline_savgol_derivative_v1": {
+      "bytes": 2433,
+      "path": "synthetic_pipeline_savgol_derivative_v1.json",
+      "sha256": "bc9bf399b1e1a40876647df27777abd1aa31677adc27e85c9b3cdc7d64e2ccfb"
+    },
+    "synthetic_pipeline_savgol_smooth_v1": {
+      "bytes": 2371,
+      "path": "synthetic_pipeline_savgol_smooth_v1.json",
+      "sha256": "b9eefef5be9348de1aa9eec2e44e6134c6929dc066f1c6d83df4a59b2a0a2808"
     },
     "synthetic_pipeline_snv_v1": {
-      "bytes": 1214,
+      "bytes": 1220,
       "path": "synthetic_pipeline_snv_v1.json",
-      "sha256": "3225963b49229753f4a831636c3771551d91a85424580b1a1359b46012ce81e3"
+      "sha256": "f1e08adc0c6962873a5f744c6f8e2a8491e010f0d82c7966dfaccda1386c98bc"
     },
     "synthetic_pls_da_binary_v1": {
       "bytes": 9888,
