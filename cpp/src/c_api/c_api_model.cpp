@@ -28,10 +28,6 @@ inline const ::pls4all::core::Model* as_core(const p4a_model_t* model) noexcept 
     return static_cast<const ::pls4all::core::Model*>(model);
 }
 
-inline ::pls4all::core::Array* as_core(p4a_array_t* arr) noexcept {
-    return static_cast<::pls4all::core::Array*>(arr);
-}
-
 inline const ::pls4all::core::Array* as_core(const p4a_array_t* arr) noexcept {
     return static_cast<const ::pls4all::core::Array*>(arr);
 }

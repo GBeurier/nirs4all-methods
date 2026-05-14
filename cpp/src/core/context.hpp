@@ -20,6 +20,12 @@
 
 #include "pls4all/p4a.h"
 
+#if defined(__GNUC__) || defined(__clang__)
+#  define P4A_PRINTF_LIKE(fmt_index, first_arg) __attribute__((format(printf, fmt_index, first_arg)))
+#else
+#  define P4A_PRINTF_LIKE(fmt_index, first_arg)
+#endif
+
 namespace pls4all::core {
 
 class Context {
@@ -57,7 +63,7 @@ class Context {
     // Writes a NUL-terminated, safely-truncated message into the error
     // buffer. Always succeeds. Pre-existing content is overwritten.
     void set_error(const char* msg) noexcept;
-    void set_errorf(const char* fmt, ...) noexcept __attribute__((format(printf, 2, 3)));
+    void set_errorf(const char* fmt, ...) noexcept P4A_PRINTF_LIKE(2, 3);
 
   private:
     std::uint64_t seed_;
@@ -72,3 +78,5 @@ class Context {
 // Opaque struct alias. p4a.h declares `struct p4a_context_s; typedef … p4a_context_t;`;
 // we attach the C++ Context implementation directly to that tag.
 struct p4a_context_s : public ::pls4all::core::Context {};
+
+#undef P4A_PRINTF_LIKE

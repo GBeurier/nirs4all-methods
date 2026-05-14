@@ -15,8 +15,9 @@ dependencies = [
   "scipy==1.11.4",
   "joblib==1.4.0"
 ]
-# nirs4all 0.8.x remains pinned in requirements-lock.txt for later cross-impl
-# fixtures; the current SIMPLS fixtures use a deterministic NumPy port.
+# Cross-implementation nirs4all/R adapters will get their own locked dependency
+# rows when they become active. The current SIMPLS fixtures use a deterministic
+# NumPy port.
 
 [project.scripts]
 generate-fixtures = "pls4all_parity.cli:main"
