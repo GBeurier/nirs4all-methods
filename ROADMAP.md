@@ -54,6 +54,7 @@ Goal: useful for real spectroscopy.
 - Wide-kernel PLS shipped as `phase-4e-wide-kernel`.
 - Orthogonal-scores PLS shipped as `phase-4f-orthogonal-scores`.
 - Power-iteration PLS shipped as `phase-4g-power`.
+- Randomized-SVD PLS shipped as `phase-4h-randomized-svd`.
 - SIMPLS with materialised auto-prefix CV scoring (à la `aompls`).
 - OPLS, OPLS-DA.
 - PLS-DA, PLS-LDA, PLS-logistic.

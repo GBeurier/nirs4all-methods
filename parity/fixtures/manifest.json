@@ -40,6 +40,16 @@
       "path": "synthetic_power_tiny_pls1_v1.json",
       "sha256": "6154449cf1c35ab83c7caa5511051a138b1f3a12b8e201ccc4eab4893b3a7040"
     },
+    "synthetic_randomized_svd_small_pls2_v1": {
+      "bytes": 12498,
+      "path": "synthetic_randomized_svd_small_pls2_v1.json",
+      "sha256": "84d81c8bcfdd2423d3fcd9a035069537a1fd480538084acccdd1a9f75c3db431"
+    },
+    "synthetic_randomized_svd_tiny_pls1_v1": {
+      "bytes": 6325,
+      "path": "synthetic_randomized_svd_tiny_pls1_v1.json",
+      "sha256": "a22d1668f73a8ef13aaa1f93e9914206e26477a28c8c9246742f0d541d77784c"
+    },
     "synthetic_simpls_small_pls2_v1": {
       "bytes": 7755,
       "path": "synthetic_simpls_small_pls2_v1.json",

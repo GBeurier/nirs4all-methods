@@ -383,7 +383,8 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
          solver == static_cast<std::uint32_t>(P4A_SOLVER_KERNEL_ALGORITHM) ||
          solver == static_cast<std::uint32_t>(P4A_SOLVER_WIDE_KERNEL) ||
          solver == static_cast<std::uint32_t>(P4A_SOLVER_SVD) ||
-         solver == static_cast<std::uint32_t>(P4A_SOLVER_POWER));
+         solver == static_cast<std::uint32_t>(P4A_SOLVER_POWER) ||
+         solver == static_cast<std::uint32_t>(P4A_SOLVER_RANDOMIZED_SVD));
     const bool supported_pcr =
         algorithm == static_cast<std::uint32_t>(P4A_ALGO_PCR) &&
         solver == static_cast<std::uint32_t>(P4A_SOLVER_SVD);
@@ -490,6 +491,9 @@ P4A_API p4a_status_t p4a_model_fit(
                 *as_core(ctx), *cfg, *X, *Y, fitted);
         } else if (cfg->solver == P4A_SOLVER_POWER) {
             status = ::pls4all::core::fit_pls_regression_power(
+                *as_core(ctx), *cfg, *X, *Y, fitted);
+        } else if (cfg->solver == P4A_SOLVER_RANDOMIZED_SVD) {
+            status = ::pls4all::core::fit_pls_regression_randomized_svd(
                 *as_core(ctx), *cfg, *X, *Y, fitted);
         } else if (cfg->solver == P4A_SOLVER_SVD) {
             status = ::pls4all::core::fit_pls_regression_svd(

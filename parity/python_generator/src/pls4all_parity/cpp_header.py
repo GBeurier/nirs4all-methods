@@ -39,6 +39,15 @@ HEADER_SPECS = {
         "struct": "PowerFixture",
         "array": "kPowerFixtures",
     },
+    "randomized-svd": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "randomized_svd_fixtures.hpp",
+        "fixtures": (
+            "synthetic_randomized_svd_tiny_pls1_v1",
+            "synthetic_randomized_svd_small_pls2_v1",
+        ),
+        "struct": "RandomizedSvdFixture",
+        "array": "kRandomizedSvdFixtures",
+    },
     "pcr": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "pcr_fixtures.hpp",
         "fixtures": (

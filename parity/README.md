@@ -26,10 +26,12 @@ parity/
 │   ├── synthetic_oscores_small_pls2_v1.json
 │   ├── synthetic_power_tiny_pls1_v1.json
 │   ├── synthetic_power_small_pls2_v1.json
+│   ├── synthetic_randomized_svd_tiny_pls1_v1.json
+│   ├── synthetic_randomized_svd_small_pls2_v1.json
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.
-├── python_generator/              Pinned scikit-learn + NumPy SIMPLS/kernel/wide/oscores/power/SVD/PCR adapters.
+├── python_generator/              Pinned scikit-learn + NumPy SIMPLS/kernel/wide/oscores/power/randomized/SVD/PCR adapters.
 └── r_generator/                   Pinned pls / ropls / mixOmics adapters.
 ```
 
@@ -62,6 +64,7 @@ generated from NumPy covariance-SVD directions with regression deflation.
 Kernel and wide-kernel fixtures are generated from a NumPy linear-kernel PLS
 reference. Orthogonal-scores fixtures are generated from a NumPy port of the
 R `pls` `oscorespls.fit` recurrence. Power fixtures are generated from NumPy
-singular-pair power iteration. PCR fixtures are generated from NumPy PCA/SVD with score-space
+singular-pair power iteration. Randomized-SVD fixtures mirror the C++
+SplitMix64-seeded singular-vector iteration. PCR fixtures are generated from NumPy PCA/SVD with score-space
 least squares. C++ parity tests assert predictions, coefficients,
 preprocessing statistics and latent arrays within `tolerances.md`.
