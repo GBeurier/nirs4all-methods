@@ -54,6 +54,16 @@
       "bytes": 4415,
       "path": "synthetic_tiny_centered_v1.json",
       "sha256": "0ebdedcdbfd29927b14677ac2cb5f35ef55774a9806bbe9f44e0d899555f6d58"
+    },
+    "synthetic_wide_kernel_pls1_v1": {
+      "bytes": 13338,
+      "path": "synthetic_wide_kernel_pls1_v1.json",
+      "sha256": "f2df817dbc7b2aee6b0f3ba17e0359fef810342aaee2136ff20acef017fd25aa"
+    },
+    "synthetic_wide_kernel_pls2_v1": {
+      "bytes": 23604,
+      "path": "synthetic_wide_kernel_pls2_v1.json",
+      "sha256": "9e2dfa81dbe0bc20b542e07f5cf439c5a54505c7f295e3004c8283165cc6d66a"
     }
   },
   "schema_version": 1

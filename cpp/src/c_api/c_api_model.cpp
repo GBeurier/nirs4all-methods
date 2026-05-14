@@ -380,6 +380,7 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
         (solver == static_cast<std::uint32_t>(P4A_SOLVER_NIPALS) ||
          solver == static_cast<std::uint32_t>(P4A_SOLVER_SIMPLS) ||
          solver == static_cast<std::uint32_t>(P4A_SOLVER_KERNEL_ALGORITHM) ||
+         solver == static_cast<std::uint32_t>(P4A_SOLVER_WIDE_KERNEL) ||
          solver == static_cast<std::uint32_t>(P4A_SOLVER_SVD));
     const bool supported_pcr =
         algorithm == static_cast<std::uint32_t>(P4A_ALGO_PCR) &&
@@ -475,7 +476,8 @@ P4A_API p4a_status_t p4a_model_fit(
         if (cfg->algorithm == P4A_ALGO_PCR) {
             status = ::pls4all::core::fit_pcr_svd(
                 *as_core(ctx), *cfg, *X, *Y, fitted);
-        } else if (cfg->solver == P4A_SOLVER_KERNEL_ALGORITHM) {
+        } else if (cfg->solver == P4A_SOLVER_KERNEL_ALGORITHM ||
+                   cfg->solver == P4A_SOLVER_WIDE_KERNEL) {
             status = ::pls4all::core::fit_pls_regression_kernel(
                 *as_core(ctx), *cfg, *X, *Y, fitted);
         } else if (cfg->solver == P4A_SOLVER_SIMPLS) {

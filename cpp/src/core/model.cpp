@@ -697,14 +697,16 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         (cfg.solver == P4A_SOLVER_NIPALS ||
          cfg.solver == P4A_SOLVER_SIMPLS ||
          cfg.solver == P4A_SOLVER_KERNEL_ALGORITHM ||
+         cfg.solver == P4A_SOLVER_WIDE_KERNEL ||
          cfg.solver == P4A_SOLVER_SVD);
     const bool supported_pcr =
         cfg.algorithm == P4A_ALGO_PCR && cfg.solver == P4A_SOLVER_SVD;
     if (!supported_pls && !supported_pcr) {
         ctx.set_error(
             "this release supports P4A_ALGO_PLS_REGRESSION with P4A_SOLVER_NIPALS, "
-            "P4A_SOLVER_SIMPLS, P4A_SOLVER_KERNEL_ALGORITHM or P4A_SOLVER_SVD, "
-            "plus P4A_ALGO_PCR with P4A_SOLVER_SVD");
+            "P4A_SOLVER_SIMPLS, P4A_SOLVER_KERNEL_ALGORITHM, "
+            "P4A_SOLVER_WIDE_KERNEL or P4A_SOLVER_SVD, plus P4A_ALGO_PCR "
+            "with P4A_SOLVER_SVD");
         return P4A_ERR_UNSUPPORTED;
     }
     if (cfg.deflation != P4A_DEFLATION_REGRESSION) {

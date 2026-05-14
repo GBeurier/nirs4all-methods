@@ -510,6 +510,41 @@ def _kernel_fixture(
     }
 
 
+def _wide_kernel_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._kernel_pls_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "n_components":   n_components,
+                "scale":          True,
+                "deflation_mode": "regression",
+                "algorithm":      "wide-kernelpls",
+                "reference":      "NumPy linear wide-kernel PLS with regression deflation",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _kernel_pls_expected(X, Y, n_components),
+        "comparison_policy": {
+            "components_alignment": "first-k-prefix",
+            "sign_resolver":        "max_abs_element_positive",
+            "tolerance_table_row":  "pls4all-numpy-wide-kernelpls",
+        },
+    }
+
+
 def _pcr_fixture(
     fixture_id: str,
     seed: int,
@@ -649,6 +684,26 @@ def synthetic_kernel_wide_pls2_v1() -> dict[str, Any]:
     Y = X @ W + rng.standard_normal(size=(8, 2)) * 0.03
     return _kernel_fixture("synthetic_kernel_wide_pls2_v1", seed=51,
                            X=X, Y=Y, n_components=3)
+
+
+def synthetic_wide_kernel_pls1_v1() -> dict[str, Any]:
+    """7 samples, 18 features, 1 target, n_components=3."""
+    rng = np.random.default_rng(seed=60)
+    X = rng.standard_normal(size=(7, 18))
+    true_w = rng.standard_normal(size=18) * 0.20
+    Y = (X @ true_w + rng.standard_normal(size=7) * 0.02).reshape(-1, 1)
+    return _wide_kernel_fixture("synthetic_wide_kernel_pls1_v1", seed=60,
+                                X=X, Y=Y, n_components=3)
+
+
+def synthetic_wide_kernel_pls2_v1() -> dict[str, Any]:
+    """9 samples, 24 features, 3 targets, n_components=4."""
+    rng = np.random.default_rng(seed=61)
+    X = rng.standard_normal(size=(9, 24))
+    W = rng.standard_normal(size=(24, 3)) * 0.18
+    Y = X @ W + rng.standard_normal(size=(9, 3)) * 0.025
+    return _wide_kernel_fixture("synthetic_wide_kernel_pls2_v1", seed=61,
+                                X=X, Y=Y, n_components=4)
 
 
 def synthetic_pcr_tiny_pls1_v1() -> dict[str, Any]:

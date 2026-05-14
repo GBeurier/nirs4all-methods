@@ -48,6 +48,15 @@ HEADER_SPECS = {
         "struct": "KernelFixture",
         "array": "kKernelFixtures",
     },
+    "wide-kernel": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "wide_kernel_fixtures.hpp",
+        "fixtures": (
+            "synthetic_wide_kernel_pls1_v1",
+            "synthetic_wide_kernel_pls2_v1",
+        ),
+        "struct": "WideKernelFixture",
+        "array": "kWideKernelFixtures",
+    },
 }
 
 
