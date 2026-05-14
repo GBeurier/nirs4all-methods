@@ -20,6 +20,12 @@ namespace {
 constexpr double kAbsTol = 1e-9;
 constexpr double kRelTol = 1e-9;
 
+#if defined(__GNUC__) || defined(__clang__)
+#  define P4A_TEST_NOINLINE __attribute__((noinline))
+#else
+#  define P4A_TEST_NOINLINE
+#endif
+
 struct Handles {
     p4a_context_t* ctx{nullptr};
     p4a_config_t* cfg{nullptr};
@@ -31,6 +37,14 @@ struct Handles {
         p4a_context_destroy(ctx);
     }
 };
+
+P4A_TEST_NOINLINE void flip_last_byte(std::vector<unsigned char>& bytes) {
+    if (bytes.empty()) {
+        return;
+    }
+    const std::size_t last = bytes.size() - 1U;
+    bytes[last] = static_cast<unsigned char>(bytes[last] ^ 0x01U);
+}
 
 [[nodiscard]] std::vector<double> copy_values(const p4a_array_t* arr) {
     std::int64_t rows = 0;
@@ -181,6 +195,8 @@ void fit_svd_fixture(int& failures,
 }
 
 }  // namespace
+
+#undef P4A_TEST_NOINLINE
 
 TEST(model_phase1, fixture_parity_for_pls1_and_pls2) {
     for (const auto& fixture : ::pls4all::test::fixtures::kPhase1Fixtures) {
@@ -493,7 +509,7 @@ TEST(model_phase1, serialization_roundtrip_preserves_predictions) {
     p4a_model_destroy(imported);
 
     std::vector<unsigned char> corrupted = buffer;
-    corrupted.back() ^= 0x01U;
+    flip_last_byte(corrupted);
     p4a_model_t* corrupt_model = nullptr;
     CHECK_EQ(p4a_model_import_from_buffer(h.ctx, corrupted.data(), corrupted.size(), &corrupt_model),
              P4A_ERR_CORRUPT_BUFFER);
