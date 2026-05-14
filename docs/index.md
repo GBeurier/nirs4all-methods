@@ -33,7 +33,8 @@ kernels compute VIP scores and selectivity ratio from fitted models with stored
 scores, and component-coefficient kernels expose the
 original-scale regression coefficients for each latent prefix. SIMPLS component
 prefixes can also be scored by deterministic k-fold CV for component-count
-selection. The supported fitted-model path is now live for NIPALS,
+selection, and the internal PLS-LDA kernel fits LDA decision scores on PLS score
+spaces. The supported fitted-model path is now live for NIPALS,
 orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and
 randomized-SVD PLS regression
 (PLS1 / PLS2), PLSCanonical with NIPALS/SVD, PLSSVD direct cross-covariance

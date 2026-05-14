@@ -60,6 +60,7 @@ parity/
 │   ├── synthetic_classification_binary_metrics_v1.json
 │   ├── synthetic_classification_multiclass_metrics_v1.json
 │   ├── synthetic_classification_calibration_curve_v1.json
+│   ├── synthetic_pls_lda_multiclass_v1.json
 │   ├── synthetic_variable_importance_pls2_v1.json
 │   ├── synthetic_component_coefficients_pls2_v1.json
 │   ├── synthetic_validation_kfold_balanced_v1.json

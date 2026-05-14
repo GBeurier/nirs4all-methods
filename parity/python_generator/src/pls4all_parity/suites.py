@@ -923,6 +923,53 @@ def _binary_calibration_curve_expected(
     }
 
 
+def _pls_lda_expected(
+    X: np.ndarray,
+    labels: np.ndarray,
+    n_classes: int,
+    n_components: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    y = np.asarray(labels, dtype=np.int32).reshape(-1)
+    dummy = np.zeros((y.size, int(n_classes)), dtype=np.float64)
+    dummy[np.arange(y.size), y] = 1.0
+    pls = PLSRegression(n_components=int(n_components), scale=True, max_iter=500, tol=1e-6)
+    pls.fit(X, dummy)
+    scores = pls._x_scores.astype(np.float64, copy=False)
+
+    means = np.zeros((int(n_classes), int(n_components)), dtype=np.float64)
+    counts = np.zeros(int(n_classes), dtype=np.int64)
+    for cls in range(int(n_classes)):
+        mask = y == cls
+        counts[cls] = int(np.sum(mask))
+        means[cls, :] = np.mean(scores[mask, :], axis=0)
+
+    covariance = np.zeros((int(n_components), int(n_components)), dtype=np.float64)
+    for row, cls in enumerate(y):
+        delta = scores[row, :] - means[int(cls), :]
+        covariance += np.outer(delta, delta)
+    covariance = covariance / float(y.size - int(n_classes))
+    covariance_inv = np.linalg.inv(covariance)
+    inv_means = means @ covariance_inv.T
+    constants = -0.5 * np.sum(means * inv_means, axis=1) + np.log(counts.astype(np.float64) / float(y.size))
+    decision_scores = scores @ inv_means.T + constants.reshape(1, -1)
+    predictions = np.argmax(decision_scores, axis=1).astype(np.int32)
+    return {
+        "predictions": {
+            "shape": [int(y.size)],
+            "layout": "row_major",
+            "dtype": "i32",
+            "values": predictions.astype(int).tolist(),
+        },
+        "decision_scores": {
+            "shape": list(decision_scores.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(decision_scores),
+        },
+    }
+
+
 def _variable_importance_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -2332,6 +2379,44 @@ def _classification_extensions_fixture(
     }
 
 
+def _pls_lda_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    labels: np.ndarray,
+    n_classes: int,
+    n_components: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    labels = np.asarray(labels, dtype=np.int32).reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._pls_lda_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":    "pls_lda",
+                "solver":       "nipals",
+                "n_classes":    int(n_classes),
+                "n_components": int(n_components),
+                "reference":    "Python sklearn PLSRegression scores with NumPy pooled-covariance LDA",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "labels": {"shape": list(labels.shape), "layout": "row_major", "dtype": "i32", "rng_seed": seed, "values": labels.reshape(-1, order="C").astype(int).tolist()},
+        },
+        "expected": _pls_lda_expected(X, labels, n_classes, n_components),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-scores-plus-numpy-LDA",
+        },
+    }
+
+
 def _variable_importance_fixture(
     fixture_id: str,
     seed: int,
@@ -3378,6 +3463,35 @@ def synthetic_classification_calibration_curve_v1() -> dict[str, Any]:
                                               labels=labels,
                                               scores=scores,
                                               n_bins=5)
+
+
+def synthetic_pls_lda_multiclass_v1() -> dict[str, Any]:
+    """18 samples, 5 features and 3 classes for PLS-score LDA parity."""
+    seed = 98
+    rng = np.random.default_rng(seed)
+    labels = np.repeat(np.arange(3, dtype=np.int32), 6)
+    class_centers = np.array([
+        [1.2, -0.4],
+        [-0.7, 1.1],
+        [-0.6, -0.9],
+    ], dtype=np.float64)
+    latent = np.vstack([
+        class_centers[int(label)] + rng.standard_normal(size=2) * 0.18
+        for label in labels
+    ])
+    X = np.column_stack([
+        0.82 * latent[:, 0] + 0.18 * latent[:, 1],
+        -0.31 * latent[:, 0] + 0.67 * latent[:, 1],
+        0.44 * latent[:, 0] - 0.29 * latent[:, 1],
+        np.sin(np.linspace(0.0, 1.5 * np.pi, labels.size)),
+        rng.standard_normal(size=labels.size) * 0.04,
+    ])
+    return _pls_lda_fixture("synthetic_pls_lda_multiclass_v1",
+                            seed=seed,
+                            X=X,
+                            labels=labels,
+                            n_classes=3,
+                            n_components=2)
 
 
 def synthetic_variable_importance_pls2_v1() -> dict[str, Any]:

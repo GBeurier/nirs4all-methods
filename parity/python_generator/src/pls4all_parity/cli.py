@@ -60,6 +60,7 @@ def _generate_all() -> dict[str, bytes]:
         "synthetic_classification_binary_metrics_v1": _serialize(suites.synthetic_classification_binary_metrics_v1()),
         "synthetic_classification_multiclass_metrics_v1": _serialize(suites.synthetic_classification_multiclass_metrics_v1()),
         "synthetic_classification_calibration_curve_v1": _serialize(suites.synthetic_classification_calibration_curve_v1()),
+        "synthetic_pls_lda_multiclass_v1": _serialize(suites.synthetic_pls_lda_multiclass_v1()),
         "synthetic_variable_importance_pls2_v1": _serialize(suites.synthetic_variable_importance_pls2_v1()),
         "synthetic_component_coefficients_pls2_v1": _serialize(suites.synthetic_component_coefficients_pls2_v1()),
         "synthetic_validation_kfold_balanced_v1": _serialize(suites.synthetic_validation_kfold_balanced_v1()),

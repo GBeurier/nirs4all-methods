@@ -77,7 +77,8 @@ Goal: useful for real spectroscopy.
 - Multi-response OPLS and multi-class OPLS-DA common predictive score model shipped as `phase-4m-multiclass-opls-da`.
 - PLSSVD cross-covariance score model shipped as `phase-4n-pls-svd`.
 - SIMPLS component-count CV scoring shipped as `phase-4o-simpls-component-cv`.
-- PLS-LDA, PLS-logistic.
+- PLS-LDA score-space classifier shipped as `phase-4p-pls-lda`.
+- PLS-logistic.
 - MB-PLS with `Block` API; per-block weighting.
 - LW-PLS (locally-weighted PLS) with KD-tree neighbours.
 

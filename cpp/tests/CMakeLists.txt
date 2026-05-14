@@ -22,6 +22,7 @@ add_executable(pls4all_tests
     abi/test_metrics.cpp
     abi/test_model_selection.cpp
     abi/test_pipeline.cpp
+    abi/test_pls_lda.cpp
     abi/test_validation.cpp
     abi/test_validation_advanced.cpp
     abi/test_model_stubs.cpp)
