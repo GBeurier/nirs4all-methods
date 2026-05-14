@@ -368,6 +368,58 @@ def _svd_pls_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[s
     }
 
 
+def _pls_svd_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+
+    Xs, x_mean, x_scale = _center_scale(X)
+    Ys, y_mean, y_scale = _center_scale(Y)
+    n, p = Xs.shape
+    q = Ys.shape[1]
+    K = int(n_components)
+    C = Xs.T @ Ys
+    U, singular_values, Vt = np.linalg.svd(C, full_matrices=False)
+    U = U[:, :K].astype(np.float64, copy=True)
+    Vt = Vt[:K, :].astype(np.float64, copy=True)
+    for comp in range(K):
+        sign_idx = int(np.argmax(np.abs(U[:, comp])))
+        if U[sign_idx, comp] < 0.0:
+            U[:, comp] = -U[:, comp]
+            Vt[comp, :] = -Vt[comp, :]
+    V = Vt.T
+
+    T = Xs @ U
+    U_scores = Ys @ V
+    P = np.zeros((p, K), dtype=np.float64)
+    eps = np.finfo(np.float64).eps
+    for comp in range(K):
+        t = T[:, comp]
+        t_ss = float(t @ t)
+        if t_ss <= eps:
+            raise RuntimeError(f"PLSSVD X score collapsed at component {comp}")
+        P[:, comp] = (Xs.T @ t) / t_ss
+
+    coef_std = U @ V.T
+    coef = coef_std * (y_scale.reshape(1, -1) / x_scale.reshape(-1, 1))
+    preds = y_mean.reshape(1, -1) + (X - x_mean.reshape(1, -1)) @ coef
+    return {
+        "coefficients":  {"shape": list(coef.shape),       "values": _flatten_rowmajor(coef)},
+        "intercept":     {"shape": [q],                    "values": y_mean.astype(np.float64).tolist()},
+        "x_mean":        {"shape": [p],                    "values": x_mean.astype(np.float64).tolist()},
+        "x_scale":       {"shape": [p],                    "values": x_scale.astype(np.float64).tolist()},
+        "y_mean":        {"shape": [q],                    "values": y_mean.astype(np.float64).tolist()},
+        "y_scale":       {"shape": [q],                    "values": y_scale.astype(np.float64).tolist()},
+        "weights_W":     {"shape": list(U.shape),          "values": _flatten_rowmajor(U), "sign_invariant": True},
+        "loadings_P":    {"shape": list(P.shape),          "values": _flatten_rowmajor(P), "sign_invariant": True},
+        "y_loadings_Q":  {"shape": list(V.shape),          "values": _flatten_rowmajor(V), "sign_invariant": True},
+        "rotations_R":   {"shape": list(U.shape),          "values": _flatten_rowmajor(U), "sign_invariant": True},
+        "scores_T":      {"shape": list(T.shape),          "values": _flatten_rowmajor(T), "sign_invariant": True},
+        "predict_train": {"shape": list(preds.shape),      "values": _flatten_rowmajor(preds)},
+    }
+
+
 def _power_pls_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, Any]:
     X = np.asarray(X, dtype=np.float64)
     Y = np.asarray(Y, dtype=np.float64)
@@ -1146,6 +1198,41 @@ def _svd_fixture(
     }
 
 
+def _pls_svd_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._pls_svd_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "n_components":   n_components,
+                "scale":          True,
+                "deflation_mode": "canonical",
+                "algorithm":      "pls-svd",
+                "reference":      "NumPy mirror of sklearn PLSSVD cross-covariance SVD",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _pls_svd_expected(X, Y, n_components),
+        "comparison_policy": {
+            "components_alignment": "first-k-prefix",
+            "sign_resolver":        "max_abs_element_positive",
+            "tolerance_table_row":  "sklearn/PLSSVD",
+        },
+    }
+
+
 def _power_fixture(
     fixture_id: str,
     seed: int,
@@ -1588,6 +1675,40 @@ def synthetic_svd_small_pls2_v1() -> dict[str, Any]:
     Y = X @ W + rng.standard_normal(size=(14, 3)) * 0.035
     return _svd_fixture("synthetic_svd_small_pls2_v1", seed=31,
                         X=X, Y=Y, n_components=3)
+
+
+def synthetic_pls_svd_tiny_v1() -> dict[str, Any]:
+    """11 samples, 5 features, 2 targets, n_components=2 for direct PLSSVD."""
+    rng = np.random.default_rng(seed=32)
+    X = rng.standard_normal(size=(11, 5))
+    W = np.array([
+        [0.42, -0.20],
+        [-0.35, 0.48],
+        [0.28, 0.18],
+        [0.10, -0.36],
+        [0.31, 0.24],
+    ])
+    Y = X @ W + rng.standard_normal(size=(11, 2)) * 0.03
+    return _pls_svd_fixture("synthetic_pls_svd_tiny_v1", seed=32,
+                            X=X, Y=Y, n_components=2)
+
+
+def synthetic_pls_svd_small_v1() -> dict[str, Any]:
+    """15 samples, 7 features, 3 targets, n_components=3 for direct PLSSVD."""
+    rng = np.random.default_rng(seed=33)
+    X = rng.standard_normal(size=(15, 7))
+    W = np.array([
+        [0.30, -0.15, 0.20],
+        [-0.40, 0.35, -0.10],
+        [0.15, 0.25, 0.45],
+        [0.05, -0.30, 0.10],
+        [0.50, 0.10, -0.35],
+        [-0.20, 0.40, 0.25],
+        [0.18, 0.22, -0.28],
+    ])
+    Y = X @ W + rng.standard_normal(size=(15, 3)) * 0.035
+    return _pls_svd_fixture("synthetic_pls_svd_small_v1", seed=33,
+                            X=X, Y=Y, n_components=3)
 
 
 def synthetic_power_tiny_pls1_v1() -> dict[str, Any]:

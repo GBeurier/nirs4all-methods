@@ -19,7 +19,8 @@ context / config / matrix-view / operator-bank / gating-strategy / pipeline
 is implemented. The supported fitted-model path is now live for NIPALS,
 orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and
 randomized-SVD PLS regression
-(PLS1 / PLS2), PLSCanonical with NIPALS/SVD, PLS-DA dummy-response scores,
+(PLS1 / PLS2), PLSCanonical with NIPALS/SVD, PLSSVD direct cross-covariance
+scores, PLS-DA dummy-response scores,
 OPLS / OPLS-DA common predictive scores with orthogonal corrections, plus PCR: fit, predict,
 transform, fitted-array accessors and binary import/export.
 

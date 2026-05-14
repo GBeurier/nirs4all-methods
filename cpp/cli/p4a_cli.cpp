@@ -211,6 +211,23 @@ int cmd_selfcheck() {
     p4a_array_free(svd_pred);
     p4a_model_destroy(svd_model);
 
+    CHECK(p4a_config_set_algorithm(cfg, P4A_ALGO_PLS_SVD) == P4A_OK);
+    CHECK(p4a_config_set_deflation(cfg, P4A_DEFLATION_CANONICAL) == P4A_OK);
+    CHECK(p4a_config_set_n_components(cfg, 2) == P4A_OK);
+    CHECK(p4a_config_set_solver(cfg, P4A_SOLVER_SVD) == P4A_OK);
+    p4a_model_t* pls_svd_model = nullptr;
+    CHECK(p4a_model_fit(ctx, cfg, &X, &Y_multi, &pls_svd_model) == P4A_OK);
+    CHECK(pls_svd_model != nullptr);
+    p4a_array_t* pls_svd_scores = nullptr;
+    CHECK(p4a_model_transform_alloc(ctx, pls_svd_model, &X, &pls_svd_scores) == P4A_OK);
+    CHECK(p4a_array_shape(pls_svd_scores, &rows, &cols) == P4A_OK);
+    CHECK(rows == 4);
+    CHECK(cols == 2);
+    p4a_array_free(pls_svd_scores);
+    p4a_model_destroy(pls_svd_model);
+
+    CHECK(p4a_config_set_algorithm(cfg, P4A_ALGO_PLS_REGRESSION) == P4A_OK);
+    CHECK(p4a_config_set_deflation(cfg, P4A_DEFLATION_REGRESSION) == P4A_OK);
     CHECK(p4a_config_set_solver(cfg, P4A_SOLVER_POWER) == P4A_OK);
     p4a_model_t* power_model = nullptr;
     CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &power_model) == P4A_OK);

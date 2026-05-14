@@ -392,6 +392,9 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
         algorithm == static_cast<std::uint32_t>(P4A_ALGO_PLS_CANONICAL) &&
         (solver == static_cast<std::uint32_t>(P4A_SOLVER_NIPALS) ||
          solver == static_cast<std::uint32_t>(P4A_SOLVER_SVD));
+    const bool supported_pls_svd =
+        algorithm == static_cast<std::uint32_t>(P4A_ALGO_PLS_SVD) &&
+        solver == static_cast<std::uint32_t>(P4A_SOLVER_SVD);
     const bool opls_chassis_algorithm =
         algorithm == static_cast<std::uint32_t>(P4A_ALGO_OPLS) ||
         algorithm == static_cast<std::uint32_t>(P4A_ALGO_OPLS_DA);
@@ -403,12 +406,12 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
     const bool supported_deflation =
         ((supported_pls_regression || supported_pcr) &&
          deflation == static_cast<std::uint32_t>(P4A_DEFLATION_REGRESSION)) ||
-        (supported_pls_canonical &&
+        ((supported_pls_canonical || supported_pls_svd) &&
          deflation == static_cast<std::uint32_t>(P4A_DEFLATION_CANONICAL)) ||
         (supported_opls &&
          deflation == static_cast<std::uint32_t>(P4A_DEFLATION_ORTHOGONAL));
-    if ((!supported_pls_regression && !supported_pls_canonical && !supported_opls &&
-         !supported_pcr) ||
+    if ((!supported_pls_regression && !supported_pls_canonical && !supported_pls_svd &&
+         !supported_opls && !supported_pcr) ||
         !supported_deflation) {
         return false;
     }
@@ -497,6 +500,9 @@ P4A_API p4a_status_t p4a_model_fit(
         p4a_status_t status = P4A_ERR_UNSUPPORTED;
         if (cfg->algorithm == P4A_ALGO_PCR) {
             status = ::pls4all::core::fit_pcr_svd(
+                *as_core(ctx), *cfg, *X, *Y, fitted);
+        } else if (cfg->algorithm == P4A_ALGO_PLS_SVD) {
+            status = ::pls4all::core::fit_pls_svd(
                 *as_core(ctx), *cfg, *X, *Y, fitted);
         } else if (cfg->algorithm == P4A_ALGO_PLS_CANONICAL) {
             if (cfg->solver == P4A_SOLVER_SVD) {

@@ -33,7 +33,7 @@ In order:
 
 ```python
 import pls4all
-print(pls4all.version())       # "0.15.0+abi.1.0.0"
+print(pls4all.version())       # "0.16.0+abi.1.0.0"
 print(pls4all.abi_version())   # (1, 0, 0)
 
 with pls4all.Context() as ctx:
@@ -51,4 +51,8 @@ with pls4all.Config() as cfg:
     assert cfg.algorithm == pls4all.Algorithm.PCR
     assert cfg.solver == pls4all.Solver.SVD
     assert cfg.deflation == pls4all.Deflation.REGRESSION
+    cfg.algorithm = pls4all.Algorithm.PLS_SVD
+    cfg.deflation = pls4all.Deflation.CANONICAL
+    assert cfg.algorithm == pls4all.Algorithm.PLS_SVD
+    assert cfg.deflation == pls4all.Deflation.CANONICAL
 ```

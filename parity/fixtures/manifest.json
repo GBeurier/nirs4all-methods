@@ -85,6 +85,16 @@
       "path": "synthetic_pls_da_multiclass_v1.json",
       "sha256": "e5de5b9865d1142f230309db3b8b05a2fc1452c348e59a7fba9d19d5d598ebb6"
     },
+    "synthetic_pls_svd_small_v1": {
+      "bytes": 12461,
+      "path": "synthetic_pls_svd_small_v1.json",
+      "sha256": "de59a91dc89b1ca43f88e1d39cec1838fcff86578db0571f849e7bdd3acc866d"
+    },
+    "synthetic_pls_svd_tiny_v1": {
+      "bytes": 7417,
+      "path": "synthetic_pls_svd_tiny_v1.json",
+      "sha256": "c502960e3497247823623b185330e3d9b0f9dbb4e852a6f6db4d48a6c453b611"
+    },
     "synthetic_power_small_pls2_v1": {
       "bytes": 12451,
       "path": "synthetic_power_small_pls2_v1.json",

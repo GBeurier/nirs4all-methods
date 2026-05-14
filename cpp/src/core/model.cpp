@@ -1015,20 +1015,23 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     const bool supported_pls_canonical =
         cfg.algorithm == P4A_ALGO_PLS_CANONICAL &&
         (cfg.solver == P4A_SOLVER_NIPALS || cfg.solver == P4A_SOLVER_SVD);
+    const bool supported_pls_svd =
+        cfg.algorithm == P4A_ALGO_PLS_SVD && cfg.solver == P4A_SOLVER_SVD;
     const bool opls_chassis_algorithm =
         cfg.algorithm == P4A_ALGO_OPLS || cfg.algorithm == P4A_ALGO_OPLS_DA;
     const bool supported_opls =
         opls_chassis_algorithm && cfg.solver == P4A_SOLVER_NIPALS;
     const bool supported_pcr =
         cfg.algorithm == P4A_ALGO_PCR && cfg.solver == P4A_SOLVER_SVD;
-    if (!supported_pls_regression && !supported_pls_canonical && !supported_opls &&
-        !supported_pcr) {
+    if (!supported_pls_regression && !supported_pls_canonical && !supported_pls_svd &&
+        !supported_opls && !supported_pcr) {
         ctx.set_error(
             "this release supports P4A_ALGO_PLS_REGRESSION with P4A_SOLVER_NIPALS, "
             "P4A_SOLVER_ORTHOGONAL_SCORES, P4A_SOLVER_SIMPLS, "
             "P4A_SOLVER_KERNEL_ALGORITHM, P4A_SOLVER_WIDE_KERNEL or "
             "P4A_SOLVER_SVD, P4A_SOLVER_POWER or P4A_SOLVER_RANDOMIZED_SVD, "
             "P4A_ALGO_PLS_CANONICAL with P4A_SOLVER_NIPALS or P4A_SOLVER_SVD, "
+            "P4A_ALGO_PLS_SVD with P4A_SOLVER_SVD, "
             "P4A_ALGO_PLS_DA with the PLS regression solver set, "
             "P4A_ALGO_OPLS/P4A_ALGO_OPLS_DA with P4A_SOLVER_NIPALS, "
             "plus P4A_ALGO_PCR with P4A_SOLVER_SVD");
@@ -1037,12 +1040,13 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     const bool supported_deflation =
         ((supported_pls_regression || supported_pcr) &&
          cfg.deflation == P4A_DEFLATION_REGRESSION) ||
-        (supported_pls_canonical && cfg.deflation == P4A_DEFLATION_CANONICAL) ||
+        ((supported_pls_canonical || supported_pls_svd) &&
+         cfg.deflation == P4A_DEFLATION_CANONICAL) ||
         (supported_opls && cfg.deflation == P4A_DEFLATION_ORTHOGONAL);
     if (!supported_deflation) {
         ctx.set_error(
             "this release supports P4A_DEFLATION_REGRESSION for PLS regression/PCR "
-            "and P4A_DEFLATION_CANONICAL for PLS canonical and "
+            "and P4A_DEFLATION_CANONICAL for PLS canonical/PLSSVD and "
             "P4A_DEFLATION_ORTHOGONAL for OPLS");
         return P4A_ERR_UNSUPPORTED;
     }
@@ -1079,7 +1083,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         return P4A_ERR_INVALID_ARGUMENT;
     }
     std::int64_t rank_upper_bound = std::min(X.rows, X.cols);
-    if (cfg.algorithm == P4A_ALGO_PLS_CANONICAL) {
+    if (cfg.algorithm == P4A_ALGO_PLS_CANONICAL || cfg.algorithm == P4A_ALGO_PLS_SVD) {
         rank_upper_bound = std::min(rank_upper_bound, Y.cols);
     }
     if (static_cast<std::int64_t>(cfg.n_components) > rank_upper_bound) {
@@ -1823,6 +1827,166 @@ p4a_status_t fit_pls_canonical_svd(
     std::unique_ptr<Model>& out_model) {
     return fit_pls_canonical_impl(ctx, cfg, X, Y, out_model,
                                   CanonicalWeightSolver::Svd);
+}
+
+p4a_status_t fit_pls_svd(
+    Context& ctx,
+    const Config& cfg,
+    const p4a_matrix_view_t& X,
+    const p4a_matrix_view_t& Y,
+    std::unique_ptr<Model>& out_model) {
+    out_model.reset();
+
+    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    std::vector<double> x_original;
+    std::vector<double> y_original;
+    status = copy_matrix_checked(ctx, X, "X", x_original);
+    if (status != P4A_OK) {
+        return status;
+    }
+    status = copy_matrix_checked(ctx, Y, "Y", y_original);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    const std::size_t n = static_cast<std::size_t>(X.rows);
+    const std::size_t p = static_cast<std::size_t>(X.cols);
+    const std::size_t q = static_cast<std::size_t>(Y.cols);
+    const std::size_t a = static_cast<std::size_t>(cfg.n_components);
+
+    auto model = std::make_unique<Model>();
+    model->algorithm = cfg.algorithm;
+    model->solver = cfg.solver;
+    model->deflation = cfg.deflation;
+    model->n_samples = X.rows;
+    model->n_features = static_cast<std::int32_t>(X.cols);
+    model->n_targets = static_cast<std::int32_t>(Y.cols);
+    model->n_components = cfg.n_components;
+    model->center_x = cfg.center_x;
+    model->scale_x = cfg.scale_x;
+    model->center_y = cfg.center_y;
+    model->scale_y = cfg.scale_y;
+    model->store_scores = cfg.store_scores;
+    model->tol = cfg.tol;
+    model->max_iter = cfg.max_iter;
+
+    std::vector<double> xs;
+    std::vector<double> ys;
+    center_scale_in_place(x_original, n, p, cfg.center_x != 0, cfg.scale_x != 0,
+                          model->x_mean, model->x_scale, xs);
+    center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
+                          model->y_mean, model->y_scale, ys);
+
+    resize_fill(model->coefficients, p * q, 0.0);
+    resize_fill(model->weights_w, p * a, 0.0);
+    resize_fill(model->loadings_p, p * a, 0.0);
+    resize_fill(model->y_loadings_q, q * a, 0.0);
+    resize_fill(model->rotations_r, p * a, 0.0);
+    std::vector<double> scores_t;
+    std::vector<double> y_scores_u;
+    resize_fill(scores_t, n * a, 0.0);
+    resize_fill(y_scores_u, n * a, 0.0);
+
+    std::vector<double> covariance;
+    resize_fill(covariance, p * q, 0.0);
+    for (std::size_t feature = 0; feature < p; ++feature) {
+        for (std::size_t target = 0; target < q; ++target) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += xs[idx(row, p, feature)] * ys[idx(row, q, target)];
+            }
+            covariance[idx(feature, q, target)] = sum;
+        }
+    }
+
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        std::vector<double> x_weights;
+        std::vector<double> y_weights;
+        status = dominant_svd_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
+                                   comp, x_weights, y_weights);
+        if (status != P4A_OK) {
+            return status;
+        }
+
+        double singular_value = 0.0;
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            for (std::size_t target = 0; target < q; ++target) {
+                singular_value += x_weights[feature] *
+                                  covariance[idx(feature, q, target)] *
+                                  y_weights[target];
+            }
+        }
+        if (!(singular_value > std::numeric_limits<double>::epsilon())) {
+            ctx.set_errorf("PLSSVD singular value vanished at component %llu",
+                           ull(comp));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+
+        std::vector<double> x_score;
+        std::vector<double> y_score;
+        matrix_vector_product(xs, n, p, x_weights, x_score);
+        matrix_vector_product(ys, n, q, y_weights, y_score);
+        const double x_score_ss = squared_norm(x_score);
+        if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("PLSSVD X score vanished at component %llu", ull(comp));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+
+        std::vector<double> x_loadings;
+        resize_fill(x_loadings, p, 0.0);
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += xs[idx(row, p, feature)] * x_score[row];
+            }
+            x_loadings[feature] = sum / x_score_ss;
+        }
+
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            model->weights_w[idx(feature, a, comp)] = x_weights[feature];
+            model->loadings_p[idx(feature, a, comp)] = x_loadings[feature];
+            model->rotations_r[idx(feature, a, comp)] = x_weights[feature];
+        }
+        for (std::size_t target = 0; target < q; ++target) {
+            model->y_loadings_q[idx(target, a, comp)] = y_weights[target];
+        }
+        for (std::size_t row = 0; row < n; ++row) {
+            scores_t[idx(row, a, comp)] = x_score[row];
+            y_scores_u[idx(row, a, comp)] = y_score[row];
+        }
+
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            for (std::size_t target = 0; target < q; ++target) {
+                covariance[idx(feature, q, target)] -=
+                    singular_value * x_weights[feature] * y_weights[target];
+            }
+        }
+    }
+
+    for (std::size_t feature = 0; feature < p; ++feature) {
+        for (std::size_t target = 0; target < q; ++target) {
+            double sum = 0.0;
+            for (std::size_t comp = 0; comp < a; ++comp) {
+                sum += model->weights_w[idx(feature, a, comp)] *
+                       model->y_loadings_q[idx(target, a, comp)];
+            }
+            model->coefficients[idx(feature, q, target)] =
+                sum * model->y_scale[target] / model->x_scale[feature];
+        }
+    }
+
+    if (cfg.store_scores != 0) {
+        model->scores_t = std::move(scores_t);
+        model->y_scores_u = std::move(y_scores_u);
+    }
+
+    out_model = std::move(model);
+    ctx.clear_error();
+    return P4A_OK;
 }
 
 p4a_status_t fit_opls_nipals(

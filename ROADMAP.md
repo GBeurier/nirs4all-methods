@@ -60,6 +60,7 @@ Goal: useful for real spectroscopy.
 - OPLS1 with one predictive component and orthogonal corrections shipped as `phase-4k-opls`.
 - Binary OPLS-DA dummy-response score model shipped as `phase-4l-opls-da`.
 - Multi-response OPLS and multi-class OPLS-DA common predictive score model shipped as `phase-4m-multiclass-opls-da`.
+- PLSSVD cross-covariance score model shipped as `phase-4n-pls-svd`.
 - SIMPLS with materialised auto-prefix CV scoring (à la `aompls`).
 - PLS-LDA, PLS-logistic.
 - MB-PLS with `Block` API; per-block weighting.
