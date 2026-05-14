@@ -1509,6 +1509,77 @@ def _coefficient_stability_expected(
     }
 
 
+def _deterministic_reference_noise(n_samples: int,
+                                   n_features: int,
+                                   seed: int) -> np.ndarray:
+    state = int(seed) & _MASK64
+    noise = np.zeros((int(n_samples), int(n_features)), dtype=np.float64)
+    for row in range(int(n_samples)):
+        for col in range(int(n_features)):
+            state, noise[row, col] = _uniform_signed_from_state(state)
+    for col in range(int(n_features)):
+        values = noise[:, col]
+        mean = float(np.mean(values))
+        centered = values - mean
+        std = float(np.std(centered, ddof=1))
+        if not np.isfinite(std) or std <= np.finfo(np.float64).eps:
+            std = 1.0
+        noise[:, col] = centered / std
+    return noise
+
+
+def _uve_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_repeats: int,
+    test_count: int,
+    validation_seed: int,
+    noise_features: int,
+    noise_seed: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    noise = _deterministic_reference_noise(X.shape[0], int(noise_features), int(noise_seed))
+    augmented = np.hstack([X, noise])
+    stability = _coefficient_stability_expected(augmented,
+                                                Y,
+                                                n_components,
+                                                n_repeats,
+                                                test_count,
+                                                validation_seed,
+                                                top_k=augmented.shape[1])
+    scores = np.asarray(stability["stability_scores"]["values"], dtype=np.float64)
+    real_scores = scores[:X.shape[1]]
+    noise_scores = scores[X.shape[1]:]
+    threshold = float(np.max(noise_scores))
+    full_order = _rank_descending(real_scores, real_scores.size)
+    selected = [int(index) for index in full_order if float(real_scores[int(index)]) > threshold]
+    return {
+        "real_stability_scores": {
+            "shape": [1, int(real_scores.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": real_scores.astype(np.float64).tolist(),
+        },
+        "noise_stability_scores": {
+            "shape": [1, int(noise_scores.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": noise_scores.astype(np.float64).tolist(),
+        },
+        "noise_threshold": threshold,
+        "selected_indices": {
+            "shape": [1, int(len(selected))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected,
+        },
+    }
+
+
 def _component_coefficients_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -3198,6 +3269,61 @@ def _coefficient_stability_fixture(
     }
 
 
+def _uve_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_repeats: int,
+    test_count: int,
+    validation_seed: int,
+    noise_features: int,
+    noise_seed: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._uve_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":       "pls_regression",
+                "solver":          "nipals",
+                "n_components":    int(n_components),
+                "n_repeats":       int(n_repeats),
+                "test_count":      int(test_count),
+                "validation_seed": int(validation_seed),
+                "noise_features":  int(noise_features),
+                "noise_seed":      int(noise_seed),
+                "reference":       "sklearn PLSRegression UVE artificial-variable threshold",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _uve_expected(X,
+                                  Y,
+                                  n_components,
+                                  n_repeats,
+                                  test_count,
+                                  validation_seed,
+                                  noise_features,
+                                  noise_seed),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-UVE",
+        },
+    }
+
+
 def _component_coefficients_fixture(
     fixture_id: str,
     seed: int,
@@ -4436,6 +4562,38 @@ def synthetic_coefficient_stability_mcuve_v1() -> dict[str, Any]:
                                           n_repeats=8,
                                           test_count=6,
                                           top_k=3)
+
+
+def synthetic_uve_artificial_variables_v1() -> dict[str, Any]:
+    """26 samples, 9 features, 2 targets for UVE artificial-variable thresholding."""
+    seed = 62
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(26, 4))
+    X = np.column_stack([
+        0.92 * latent[:, 0] + 0.06 * latent[:, 1] + 0.04 * rng.standard_normal(size=26),
+        -0.48 * latent[:, 0] + 0.54 * latent[:, 2] + 0.05 * rng.standard_normal(size=26),
+        0.72 * latent[:, 1] - 0.16 * latent[:, 3] + 0.05 * rng.standard_normal(size=26),
+        0.20 * latent[:, 0] + 0.86 * latent[:, 3] + 0.04 * rng.standard_normal(size=26),
+        -0.61 * latent[:, 2] + 0.33 * latent[:, 3] + 0.05 * rng.standard_normal(size=26),
+        0.25 * latent[:, 0] - 0.18 * latent[:, 1] + 0.08 * rng.standard_normal(size=26),
+        rng.standard_normal(size=26) * 0.12,
+        np.sin(np.linspace(0.0, 4.0 * np.pi, 26)) + 0.04 * rng.standard_normal(size=26),
+        rng.standard_normal(size=26) * 0.15,
+    ])
+    Y = np.column_stack([
+        1.18 * latent[:, 0] - 0.53 * latent[:, 2] + 0.05 * rng.standard_normal(size=26),
+        -0.47 * latent[:, 1] + 0.73 * latent[:, 3] + 0.05 * rng.standard_normal(size=26),
+    ])
+    return _uve_fixture("synthetic_uve_artificial_variables_v1",
+                        seed=seed,
+                        X=X,
+                        Y=Y,
+                        n_components=2,
+                        n_repeats=9,
+                        test_count=6,
+                        validation_seed=63,
+                        noise_features=5,
+                        noise_seed=64)
 
 
 def synthetic_component_coefficients_pls2_v1() -> dict[str, Any]:

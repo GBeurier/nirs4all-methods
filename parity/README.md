@@ -68,6 +68,7 @@ parity/
 │   ├── synthetic_variable_selection_rankers_v1.json
 │   ├── synthetic_interval_selection_moving_window_v1.json
 │   ├── synthetic_coefficient_stability_mcuve_v1.json
+│   ├── synthetic_uve_artificial_variables_v1.json
 │   ├── synthetic_component_coefficients_pls2_v1.json
 │   ├── synthetic_validation_kfold_balanced_v1.json
 │   ├── synthetic_validation_leave_one_out_v1.json
@@ -83,7 +84,7 @@ parity/
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.
-├── python_generator/              Pinned scikit-learn + NumPy/SciPy preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/PLS-LDA/PLS-logistic/MB-PLS/LW-PLS/OPLS/OPLS-DA/SVD/PCR/validation/CV/variable-selection/interval-selection/stability-selection adapters.
+├── python_generator/              Pinned scikit-learn + NumPy/SciPy preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/PLS-LDA/PLS-logistic/MB-PLS/LW-PLS/OPLS/OPLS-DA/SVD/PCR/validation/CV/variable-selection/interval-selection/stability-selection/UVE adapters.
 └── r_generator/                   Pinned pls / ropls / mixOmics adapters.
 ```
 
@@ -156,4 +157,4 @@ plans and gate out-of-sample predictions plus aggregate metrics.
 C++ parity tests assert predictions, coefficients, preprocessing statistics,
 transforms, CV predictions, regression/classification metrics, variable
 importance, variable-selection rankers, component coefficients and latent arrays
-plus interval/stability-selection scans within `tolerances.md`.
+plus interval/stability/UVE-selection scans within `tolerances.md`.

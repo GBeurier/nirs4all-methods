@@ -295,6 +295,11 @@
       "path": "synthetic_tiny_centered_v1.json",
       "sha256": "0ebdedcdbfd29927b14677ac2cb5f35ef55774a9806bbe9f44e0d899555f6d58"
     },
+    "synthetic_uve_artificial_variables_v1": {
+      "bytes": 10284,
+      "path": "synthetic_uve_artificial_variables_v1.json",
+      "sha256": "c8a744df989e5190657dbd00eb95a495e16c17dce843434f337e13daac7c6fca"
+    },
     "synthetic_validation_external_folds_v1": {
       "bytes": 1787,
       "path": "synthetic_validation_external_folds_v1.json",
