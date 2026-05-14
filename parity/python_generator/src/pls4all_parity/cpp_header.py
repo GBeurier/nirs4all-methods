@@ -11,11 +11,26 @@ from typing import Any, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 FIXTURE_DIR = REPO_ROOT / "parity" / "fixtures"
-DEFAULT_OUT = REPO_ROOT / "cpp" / "tests" / "fixtures" / "simpls_fixtures.hpp"
-DEFAULT_FIXTURES = (
-    "synthetic_simpls_tiny_pls1_v1",
-    "synthetic_simpls_small_pls2_v1",
-)
+HEADER_SPECS = {
+    "simpls": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "simpls_fixtures.hpp",
+        "fixtures": (
+            "synthetic_simpls_tiny_pls1_v1",
+            "synthetic_simpls_small_pls2_v1",
+        ),
+        "struct": "SimplsFixture",
+        "array": "kSimplsFixtures",
+    },
+    "svd": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "svd_fixtures.hpp",
+        "fixtures": (
+            "synthetic_svd_tiny_pls1_v1",
+            "synthetic_svd_small_pls2_v1",
+        ),
+        "struct": "SvdFixture",
+        "array": "kSvdFixtures",
+    },
+}
 
 
 def _symbol(name: str) -> str:
@@ -62,11 +77,16 @@ def _load_fixture(fixture_id: str, fixture_dir: Path) -> dict[str, Any]:
         return json.load(fh)
 
 
-def generate(fixture_ids: Sequence[str], fixture_dir: Path, out: Path) -> None:
+def generate(fixture_ids: Sequence[str],
+             fixture_dir: Path,
+             out: Path,
+             family: str,
+             struct_name: str,
+             array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
         "// SPDX-License-Identifier: CeCILL-2.1",
-        "// Generated mechanically from parity/fixtures/*simpls*.json.",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
         "#include <cstddef>",
@@ -76,7 +96,7 @@ def generate(fixture_ids: Sequence[str], fixture_dir: Path, out: Path) -> None:
         "",
         "namespace pls4all::test::fixtures {",
         "",
-        "struct SimplsFixture {",
+        f"struct {struct_name} {{",
         "    const char* id;",
         "    std::int32_t n_components;",
         "    MatrixRef X;",
@@ -123,9 +143,9 @@ def generate(fixture_ids: Sequence[str], fixture_dir: Path, out: Path) -> None:
             payload: dict[str, Any] = fixture
             for key in path:
                 payload = payload[key]
-            array_name = f"{prefix}_{suffix}"
-            _emit_array(lines, array_name, payload["values"])
-            refs[suffix] = _matrix_ref(array_name, payload)
+            field_array_name = f"{prefix}_{suffix}"
+            _emit_array(lines, field_array_name, payload["values"])
+            refs[suffix] = _matrix_ref(field_array_name, payload)
         n_components = int(fixture["generator"]["params"]["n_components"])
         entries.append(
             "    {\n"
@@ -148,7 +168,7 @@ def generate(fixture_ids: Sequence[str], fixture_dir: Path, out: Path) -> None:
             "    }"
         )
 
-    lines.append("inline const SimplsFixture kSimplsFixtures[] = {")
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
@@ -160,12 +180,18 @@ def generate(fixture_ids: Sequence[str], fixture_dir: Path, out: Path) -> None:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--family", choices=sorted(HEADER_SPECS), default="simpls",
+                        help="Fixture family to emit when fixture ids are omitted.")
     parser.add_argument("--fixture-dir", type=Path, default=FIXTURE_DIR)
-    parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
-    parser.add_argument("fixture_ids", nargs="*", default=list(DEFAULT_FIXTURES))
+    parser.add_argument("--out", type=Path, default=None)
+    parser.add_argument("fixture_ids", nargs="*")
     args = parser.parse_args(argv)
-    generate(args.fixture_ids, args.fixture_dir, args.out)
-    print(f"Wrote {args.out}")
+    spec = HEADER_SPECS[args.family]
+    out = args.out or spec["out"]
+    fixture_ids = args.fixture_ids or list(spec["fixtures"])
+    generate(fixture_ids, args.fixture_dir, out, args.family,
+             str(spec["struct"]), str(spec["array"]))
+    print(f"Wrote {out}")
     return 0
 
 

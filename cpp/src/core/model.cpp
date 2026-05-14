@@ -249,6 +249,282 @@ void canonicalize_direction_sign(std::vector<double>& direction) noexcept {
     }
 }
 
+void canonicalize_svd_pair_sign(std::vector<double>& left,
+                                std::vector<double>& right) noexcept {
+    if (left.empty()) {
+        return;
+    }
+    std::size_t sign_idx = 0;
+    double sign_abs = std::fabs(left[0]);
+    for (std::size_t i = 1; i < left.size(); ++i) {
+        const double candidate = std::fabs(left[i]);
+        if (candidate > sign_abs) {
+            sign_idx = i;
+            sign_abs = candidate;
+        }
+    }
+    if (left[sign_idx] < 0.0) {
+        for (double& value : left) {
+            value = -value;
+        }
+        for (double& value : right) {
+            value = -value;
+        }
+    }
+}
+
+[[nodiscard]] p4a_status_t largest_symmetric_eigenvector(
+    ::pls4all::core::Context& ctx,
+    const std::vector<double>& symmetric,
+    std::size_t n,
+    std::int32_t max_iter,
+    double tol,
+    const char* label,
+    std::size_t component,
+    std::vector<double>& eigenvector,
+    double& eigenvalue) {
+    resize_fill(eigenvector, n, 0.0);
+    eigenvalue = 0.0;
+    if (n == 0U || symmetric.size() != n * n) {
+        ctx.set_errorf("%s eigenproblem shape is invalid at component %llu",
+                       label,
+                       ull(component));
+        return P4A_ERR_INTERNAL;
+    }
+    if (n == 1U) {
+        eigenvalue = symmetric[0];
+        eigenvector[0] = 1.0;
+        if (!(eigenvalue > std::numeric_limits<double>::epsilon())) {
+            ctx.set_errorf("%s covariance vanished at component %llu", label, ull(component));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        return P4A_OK;
+    }
+
+    std::vector<double> a = symmetric;
+    std::vector<double> vectors;
+    resize_fill(vectors, n * n, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        vectors[idx(i, n, i)] = 1.0;
+    }
+
+    const std::size_t requested_limit =
+        static_cast<std::size_t>(std::max<std::int32_t>(max_iter, 1));
+    const std::size_t floor_limit = 32U * n * n;
+    const std::size_t rotation_limit = std::max(requested_limit, floor_limit);
+    const double stop_tol = std::min(std::max(tol, 1e-14), 1e-12);
+    bool converged = false;
+
+    for (std::size_t iter = 0; iter < rotation_limit; ++iter) {
+        std::size_t pivot_p = 0;
+        std::size_t pivot_q = 1;
+        double max_off = 0.0;
+        double diag_scale = 1.0;
+        for (std::size_t row = 0; row < n; ++row) {
+            diag_scale = std::max(diag_scale, std::fabs(a[idx(row, n, row)]));
+            for (std::size_t col = row + 1U; col < n; ++col) {
+                const double off = std::fabs(a[idx(row, n, col)]);
+                if (off > max_off) {
+                    max_off = off;
+                    pivot_p = row;
+                    pivot_q = col;
+                }
+            }
+        }
+        if (max_off <= stop_tol * diag_scale) {
+            converged = true;
+            break;
+        }
+
+        const double app = a[idx(pivot_p, n, pivot_p)];
+        const double aqq = a[idx(pivot_q, n, pivot_q)];
+        const double apq = a[idx(pivot_p, n, pivot_q)];
+        if (apq == 0.0) {
+            converged = true;
+            break;
+        }
+        const double tau = (aqq - app) / (2.0 * apq);
+        const double tau_sign = tau >= 0.0 ? 1.0 : -1.0;
+        const double t = tau_sign / (std::fabs(tau) + std::sqrt(1.0 + tau * tau));
+        const double c = 1.0 / std::sqrt(1.0 + t * t);
+        const double s = t * c;
+
+        a[idx(pivot_p, n, pivot_p)] = app - t * apq;
+        a[idx(pivot_q, n, pivot_q)] = aqq + t * apq;
+        a[idx(pivot_p, n, pivot_q)] = 0.0;
+        a[idx(pivot_q, n, pivot_p)] = 0.0;
+
+        for (std::size_t k = 0; k < n; ++k) {
+            if (k == pivot_p || k == pivot_q) {
+                continue;
+            }
+            const double akp = a[idx(k, n, pivot_p)];
+            const double akq = a[idx(k, n, pivot_q)];
+            const double next_p = c * akp - s * akq;
+            const double next_q = s * akp + c * akq;
+            a[idx(k, n, pivot_p)] = next_p;
+            a[idx(pivot_p, n, k)] = next_p;
+            a[idx(k, n, pivot_q)] = next_q;
+            a[idx(pivot_q, n, k)] = next_q;
+        }
+
+        for (std::size_t row = 0; row < n; ++row) {
+            const double vip = vectors[idx(row, n, pivot_p)];
+            const double viq = vectors[idx(row, n, pivot_q)];
+            vectors[idx(row, n, pivot_p)] = c * vip - s * viq;
+            vectors[idx(row, n, pivot_q)] = s * vip + c * viq;
+        }
+    }
+
+    if (!converged) {
+        ctx.set_errorf("%s Jacobi SVD failed to converge at component %llu",
+                       label,
+                       ull(component));
+        return P4A_ERR_CONVERGENCE_FAILED;
+    }
+
+    std::size_t best = 0;
+    double best_value = a[idx(0, n, 0)];
+    for (std::size_t i = 1; i < n; ++i) {
+        const double candidate = a[idx(i, n, i)];
+        if (candidate > best_value) {
+            best_value = candidate;
+            best = i;
+        }
+    }
+    if (!(best_value > std::numeric_limits<double>::epsilon())) {
+        ctx.set_errorf("%s covariance vanished at component %llu", label, ull(component));
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+
+    for (std::size_t i = 0; i < n; ++i) {
+        eigenvector[i] = vectors[idx(i, n, best)];
+    }
+    const double norm = std::sqrt(squared_norm(eigenvector));
+    if (norm <= std::numeric_limits<double>::epsilon()) {
+        ctx.set_errorf("%s eigenvector vanished at component %llu", label, ull(component));
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+    for (double& value : eigenvector) {
+        value /= norm;
+    }
+    eigenvalue = best_value;
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t dominant_svd_pair(
+    ::pls4all::core::Context& ctx,
+    const std::vector<double>& covariance,
+    std::size_t features,
+    std::size_t targets,
+    std::int32_t max_iter,
+    double tol,
+    std::size_t component,
+    std::vector<double>& left,
+    std::vector<double>& right) {
+    resize_fill(left, features, 0.0);
+    resize_fill(right, targets, 0.0);
+    if (targets == 1U) {
+        double norm_sq = 0.0;
+        for (std::size_t feature = 0; feature < features; ++feature) {
+            const double value = covariance[idx(feature, targets, 0)];
+            left[feature] = value;
+            norm_sq += value * value;
+        }
+        if (norm_sq <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("SVD covariance vanished at component %llu", ull(component));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        const double norm = std::sqrt(norm_sq);
+        for (double& value : left) {
+            value /= norm;
+        }
+        right[0] = 1.0;
+        canonicalize_svd_pair_sign(left, right);
+        return P4A_OK;
+    }
+
+    double singular_value = 0.0;
+    p4a_status_t status = P4A_OK;
+    if (targets <= features) {
+        std::vector<double> gram;
+        resize_fill(gram, targets * targets, 0.0);
+        for (std::size_t row = 0; row < targets; ++row) {
+            for (std::size_t col = row; col < targets; ++col) {
+                double sum = 0.0;
+                for (std::size_t feature = 0; feature < features; ++feature) {
+                    sum += covariance[idx(feature, targets, row)] *
+                           covariance[idx(feature, targets, col)];
+                }
+                gram[idx(row, targets, col)] = sum;
+                gram[idx(col, targets, row)] = sum;
+            }
+        }
+        double eigenvalue = 0.0;
+        status = largest_symmetric_eigenvector(ctx, gram, targets, max_iter, tol,
+                                               "SVD right", component, right, eigenvalue);
+        if (status != P4A_OK) {
+            return status;
+        }
+        singular_value = std::sqrt(eigenvalue);
+        for (std::size_t feature = 0; feature < features; ++feature) {
+            double sum = 0.0;
+            for (std::size_t target = 0; target < targets; ++target) {
+                sum += covariance[idx(feature, targets, target)] * right[target];
+            }
+            left[feature] = sum / singular_value;
+        }
+    } else {
+        std::vector<double> gram;
+        resize_fill(gram, features * features, 0.0);
+        for (std::size_t row = 0; row < features; ++row) {
+            for (std::size_t col = row; col < features; ++col) {
+                double sum = 0.0;
+                for (std::size_t target = 0; target < targets; ++target) {
+                    sum += covariance[idx(row, targets, target)] *
+                           covariance[idx(col, targets, target)];
+                }
+                gram[idx(row, features, col)] = sum;
+                gram[idx(col, features, row)] = sum;
+            }
+        }
+        double eigenvalue = 0.0;
+        status = largest_symmetric_eigenvector(ctx, gram, features, max_iter, tol,
+                                               "SVD left", component, left, eigenvalue);
+        if (status != P4A_OK) {
+            return status;
+        }
+        singular_value = std::sqrt(eigenvalue);
+        for (std::size_t target = 0; target < targets; ++target) {
+            double sum = 0.0;
+            for (std::size_t feature = 0; feature < features; ++feature) {
+                sum += covariance[idx(feature, targets, target)] * left[feature];
+            }
+            right[target] = sum / singular_value;
+        }
+    }
+
+    if (!(singular_value > std::numeric_limits<double>::epsilon())) {
+        ctx.set_errorf("SVD singular value vanished at component %llu", ull(component));
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+    double left_norm = std::sqrt(squared_norm(left));
+    double right_norm = std::sqrt(squared_norm(right));
+    if (left_norm <= std::numeric_limits<double>::epsilon() ||
+        right_norm <= std::numeric_limits<double>::epsilon()) {
+        ctx.set_errorf("SVD singular vectors vanished at component %llu", ull(component));
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+    for (double& value : left) {
+        value /= left_norm;
+    }
+    for (double& value : right) {
+        value /= right_norm;
+    }
+    canonicalize_svd_pair_sign(left, right);
+    return P4A_OK;
+}
+
 [[nodiscard]] p4a_status_t dominant_left_singular_direction(
     ::pls4all::core::Context& ctx,
     const std::vector<double>& covariance,
@@ -420,8 +696,11 @@ void canonicalize_direction_sign(std::vector<double>& direction) noexcept {
         ctx.set_error("this release supports only P4A_ALGO_PLS_REGRESSION");
         return P4A_ERR_UNSUPPORTED;
     }
-    if (cfg.solver != P4A_SOLVER_NIPALS && cfg.solver != P4A_SOLVER_SIMPLS) {
-        ctx.set_error("this release supports only P4A_SOLVER_NIPALS and P4A_SOLVER_SIMPLS");
+    if (cfg.solver != P4A_SOLVER_NIPALS &&
+        cfg.solver != P4A_SOLVER_SIMPLS &&
+        cfg.solver != P4A_SOLVER_SVD) {
+        ctx.set_error(
+            "this release supports only P4A_SOLVER_NIPALS, P4A_SOLVER_SIMPLS and P4A_SOLVER_SVD");
         return P4A_ERR_UNSUPPORTED;
     }
     if (cfg.deflation != P4A_DEFLATION_REGRESSION) {
@@ -770,6 +1049,169 @@ p4a_status_t fit_pls_regression_nipals(
 
         std::vector<double> y_scores;
         resize_fill(y_scores, n, 0.0);
+        const double y_score_denom = y_weight_ss + std::numeric_limits<double>::epsilon();
+        for (std::size_t row = 0; row < n; ++row) {
+            double sum = 0.0;
+            for (std::size_t target = 0; target < q; ++target) {
+                sum += yk[idx(row, q, target)] * y_weights[target];
+            }
+            y_scores[row] = sum / y_score_denom;
+        }
+
+        std::vector<double> x_loadings;
+        resize_fill(x_loadings, p, 0.0);
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += x_score[row] * xk[idx(row, p, feature)];
+            }
+            x_loadings[feature] = sum / x_score_ss;
+        }
+        for (std::size_t row = 0; row < n; ++row) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
+            }
+        }
+
+        std::vector<double> y_loadings;
+        resize_fill(y_loadings, q, 0.0);
+        for (std::size_t target = 0; target < q; ++target) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += x_score[row] * yk[idx(row, q, target)];
+            }
+            y_loadings[target] = sum / x_score_ss;
+        }
+        for (std::size_t row = 0; row < n; ++row) {
+            for (std::size_t target = 0; target < q; ++target) {
+                yk[idx(row, q, target)] -= x_score[row] * y_loadings[target];
+            }
+        }
+
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            model->weights_w[idx(feature, a, comp)] = x_weights[feature];
+            model->loadings_p[idx(feature, a, comp)] = x_loadings[feature];
+        }
+        for (std::size_t target = 0; target < q; ++target) {
+            model->y_loadings_q[idx(target, a, comp)] = y_loadings[target];
+        }
+        for (std::size_t row = 0; row < n; ++row) {
+            scores_t[idx(row, a, comp)] = x_score[row];
+            y_scores_u[idx(row, a, comp)] = y_scores[row];
+        }
+    }
+
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    if (cfg.store_scores != 0) {
+        model->scores_t = std::move(scores_t);
+        model->y_scores_u = std::move(y_scores_u);
+    }
+
+    out_model = std::move(model);
+    ctx.clear_error();
+    return P4A_OK;
+}
+
+p4a_status_t fit_pls_regression_svd(
+    Context& ctx,
+    const Config& cfg,
+    const p4a_matrix_view_t& X,
+    const p4a_matrix_view_t& Y,
+    std::unique_ptr<Model>& out_model) {
+    out_model.reset();
+
+    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    std::vector<double> x_original;
+    std::vector<double> y_original;
+    status = copy_matrix_checked(ctx, X, "X", x_original);
+    if (status != P4A_OK) {
+        return status;
+    }
+    status = copy_matrix_checked(ctx, Y, "Y", y_original);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    const std::size_t n = static_cast<std::size_t>(X.rows);
+    const std::size_t p = static_cast<std::size_t>(X.cols);
+    const std::size_t q = static_cast<std::size_t>(Y.cols);
+    const std::size_t a = static_cast<std::size_t>(cfg.n_components);
+
+    auto model = std::make_unique<Model>();
+    model->algorithm = cfg.algorithm;
+    model->solver = cfg.solver;
+    model->deflation = cfg.deflation;
+    model->n_samples = X.rows;
+    model->n_features = static_cast<std::int32_t>(X.cols);
+    model->n_targets = static_cast<std::int32_t>(Y.cols);
+    model->n_components = cfg.n_components;
+    model->center_x = cfg.center_x;
+    model->scale_x = cfg.scale_x;
+    model->center_y = cfg.center_y;
+    model->scale_y = cfg.scale_y;
+    model->store_scores = cfg.store_scores;
+    model->tol = cfg.tol;
+    model->max_iter = cfg.max_iter;
+
+    std::vector<double> xk;
+    std::vector<double> yk;
+    center_scale_in_place(x_original, n, p, cfg.center_x != 0, cfg.scale_x != 0,
+                          model->x_mean, model->x_scale, xk);
+    center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
+                          model->y_mean, model->y_scale, yk);
+
+    resize_fill(model->weights_w, p * a, 0.0);
+    resize_fill(model->loadings_p, p * a, 0.0);
+    resize_fill(model->y_loadings_q, q * a, 0.0);
+    std::vector<double> scores_t;
+    std::vector<double> y_scores_u;
+    resize_fill(scores_t, n * a, 0.0);
+    resize_fill(y_scores_u, n * a, 0.0);
+
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        std::vector<double> covariance;
+        resize_fill(covariance, p * q, 0.0);
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            for (std::size_t target = 0; target < q; ++target) {
+                double sum = 0.0;
+                for (std::size_t row = 0; row < n; ++row) {
+                    sum += xk[idx(row, p, feature)] * yk[idx(row, q, target)];
+                }
+                covariance[idx(feature, q, target)] = sum;
+            }
+        }
+
+        std::vector<double> x_weights;
+        std::vector<double> y_weights;
+        status = dominant_svd_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
+                                   comp, x_weights, y_weights);
+        if (status != P4A_OK) {
+            return status;
+        }
+
+        std::vector<double> x_score;
+        matrix_vector_product(xk, n, p, x_weights, x_score);
+        const double x_score_ss = squared_norm(x_score);
+        if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("SVD X score vanished at component %llu", ull(comp));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+
+        std::vector<double> y_scores;
+        resize_fill(y_scores, n, 0.0);
+        const double y_weight_ss = squared_norm(y_weights);
+        if (y_weight_ss <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("SVD Y weights vanished at component %llu", ull(comp));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
         const double y_score_denom = y_weight_ss + std::numeric_limits<double>::epsilon();
         for (std::size_t row = 0; row < n; ++row) {
             double sum = 0.0;

@@ -22,6 +22,13 @@ target_include_directories(pls4all_tests
         ${PROJECT_BINARY_DIR}/generated)
 pls4all_add_warnings(pls4all_tests)
 
+if(WIN32 AND TARGET pls4all_c)
+    add_custom_command(TARGET pls4all_tests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:pls4all_c>
+                $<TARGET_FILE_DIR:pls4all_tests>)
+endif()
+
 add_test(NAME pls4all_tests
          COMMAND pls4all_tests)
 set_tests_properties(pls4all_tests PROPERTIES TIMEOUT 60)

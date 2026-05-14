@@ -41,6 +41,10 @@ set_target_properties(pls4all_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 if(PLS4ALL_ENABLE_FAULT_INJECTION)
     target_compile_definitions(pls4all_core PUBLIC PLS4ALL_ENABLE_FAULT_INJECTION=1)
 endif()
+set(_pls4all_sanitizer_build OFF)
+if(PLS4ALL_ENABLE_ASAN OR PLS4ALL_ENABLE_UBSAN OR PLS4ALL_ENABLE_TSAN)
+    set(_pls4all_sanitizer_build ON)
+endif()
 # Dead-code stripping in non-Debug configs (multi-config-safe).
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
     target_compile_options(pls4all_core PRIVATE
@@ -92,8 +96,10 @@ if(PLS4ALL_BUILD_SHARED)
 
     # Undefined-symbol enforcement + dead-code stripping at link time.
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        if(NOT _pls4all_sanitizer_build)
+            target_link_options(pls4all_c PRIVATE -Wl,--no-undefined)
+        endif()
         target_link_options(pls4all_c PRIVATE
-            -Wl,--no-undefined
             -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/c_api/p4a_linux.map
             $<$<NOT:$<CONFIG:Debug>>:-Wl,--gc-sections>)
     elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")

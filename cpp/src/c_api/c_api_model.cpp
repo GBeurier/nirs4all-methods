@@ -377,7 +377,8 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
     }
     if (algorithm != static_cast<std::uint32_t>(P4A_ALGO_PLS_REGRESSION) ||
         (solver != static_cast<std::uint32_t>(P4A_SOLVER_NIPALS) &&
-         solver != static_cast<std::uint32_t>(P4A_SOLVER_SIMPLS)) ||
+         solver != static_cast<std::uint32_t>(P4A_SOLVER_SIMPLS) &&
+         solver != static_cast<std::uint32_t>(P4A_SOLVER_SVD)) ||
         deflation != static_cast<std::uint32_t>(P4A_DEFLATION_REGRESSION)) {
         return false;
     }
@@ -467,6 +468,9 @@ P4A_API p4a_status_t p4a_model_fit(
         p4a_status_t status = P4A_ERR_UNSUPPORTED;
         if (cfg->solver == P4A_SOLVER_SIMPLS) {
             status = ::pls4all::core::fit_pls_regression_simpls(
+                *as_core(ctx), *cfg, *X, *Y, fitted);
+        } else if (cfg->solver == P4A_SOLVER_SVD) {
+            status = ::pls4all::core::fit_pls_regression_svd(
                 *as_core(ctx), *cfg, *X, *Y, fitted);
         } else {
             status = ::pls4all::core::fit_pls_regression_nipals(

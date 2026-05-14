@@ -8,7 +8,7 @@ context / config lifecycles. See [`bindings/python/README.md`](../../bindings/py
 ```python
 import pls4all
 
-print(pls4all.version())          # "0.3.0+abi.1.0.0"
+print(pls4all.version())          # "0.4.0+abi.1.0.0"
 print(pls4all.abi_version())      # (1, 0, 0)
 print(pls4all.build_info())       # ""
 
@@ -22,8 +22,8 @@ with pls4all.Context() as ctx:
         print(exc.last_error)     # "backend 5 is not compiled into this build of libp4a"
 
 with pls4all.Config() as cfg:
-    cfg.solver = pls4all.Solver.SIMPLS
-    assert cfg.solver == pls4all.Solver.SIMPLS
+    cfg.solver = pls4all.Solver.SVD
+    assert cfg.solver == pls4all.Solver.SVD
 ```
 
 Phase 2 expands the surface to a full sklearn-compatible estimator with

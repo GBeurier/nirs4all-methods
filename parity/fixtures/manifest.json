@@ -20,6 +20,16 @@
       "path": "synthetic_small_pls2_v1.json",
       "sha256": "66e8201b19ca6a9a10c4f45a25dfeca87efdfced1bd3b8c90773f8bd8a7266e7"
     },
+    "synthetic_svd_small_pls2_v1": {
+      "bytes": 11167,
+      "path": "synthetic_svd_small_pls2_v1.json",
+      "sha256": "02cd3e54ecf0ef9c4c1aeeebef2de68a1e089b63692380b87827cd2f67212186"
+    },
+    "synthetic_svd_tiny_pls1_v1": {
+      "bytes": 5444,
+      "path": "synthetic_svd_tiny_pls1_v1.json",
+      "sha256": "999d4116a7a4428dd502ce4d9e3b6faa06aa625907d8789df5f78ad58fef9dab"
+    },
     "synthetic_tiny_centered_v1": {
       "bytes": 4415,
       "path": "synthetic_tiny_centered_v1.json",

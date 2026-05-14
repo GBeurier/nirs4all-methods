@@ -9,6 +9,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 Next phase: broaden the algorithm family beyond NIPALS PLS regression, with
 reference parity and benchmarks for every added method.
 
+## [0.4.0-svd] — 2026-05-14
+
+SVD solver increment.
+
+### Added
+
+- Dependency-free SVD regression solver for PLS1 / PLS2 behind
+  `P4A_SOLVER_SVD`, using exact covariance SVD directions with regression
+  deflation.
+- Deterministic NumPy SVD parity fixtures plus C++ parity coverage for
+  predictions, coefficients, preprocessing statistics, latent arrays,
+  transform scores and serialization round-trips.
+- CLI selfcheck smoke for the SVD fit / predict path.
+
+### Changed
+
+- Project version is now `0.4.0+abi.1.0.0`; the C ABI remains unchanged.
+- The model import path now accepts serialized NIPALS, SIMPLS and SVD models.
+
 ## [0.3.0-simpls] — 2026-05-14
 
 SIMPLS core increment.
