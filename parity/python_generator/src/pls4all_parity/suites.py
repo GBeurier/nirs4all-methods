@@ -35,6 +35,31 @@ def _expected_from_pls(model: PLSRegression, X: np.ndarray, Y: np.ndarray) -> di
     }
 
 
+def _expected_from_pls_da(model: PLSRegression, X: np.ndarray, Y: np.ndarray) -> dict[str, Any]:
+    coef = model.coef_.astype(np.float64, copy=False)
+    if coef.shape == (Y.shape[1], X.shape[1]):
+        coef = coef.T
+    coef = coef / model._x_std.astype(np.float64).reshape(-1, 1)
+    intercept = np.atleast_1d(model.intercept_).astype(np.float64, copy=False)
+    preds = model.predict(X).astype(np.float64, copy=False)
+    if preds.ndim == 1:
+        preds = preds.reshape(-1, 1)
+    return {
+        "coefficients":  {"shape": list(coef.shape),       "values": _flatten_rowmajor(coef)},
+        "intercept":     {"shape": list(intercept.shape),  "values": intercept.tolist()},
+        "x_mean":        {"shape": [X.shape[1]],           "values": model._x_mean.astype(np.float64).tolist()},
+        "x_scale":       {"shape": [X.shape[1]],           "values": model._x_std.astype(np.float64).tolist()},
+        "y_mean":        {"shape": [Y.shape[1]],           "values": np.atleast_1d(model._y_mean).astype(np.float64).tolist()},
+        "y_scale":       {"shape": [Y.shape[1]],           "values": np.atleast_1d(model._y_std).astype(np.float64).tolist()},
+        "weights_W":     {"shape": list(model.x_weights_.shape),  "values": _flatten_rowmajor(model.x_weights_),  "sign_invariant": True},
+        "loadings_P":    {"shape": list(model.x_loadings_.shape), "values": _flatten_rowmajor(model.x_loadings_), "sign_invariant": True},
+        "y_loadings_Q":  {"shape": list(model.y_loadings_.shape), "values": _flatten_rowmajor(model.y_loadings_), "sign_invariant": True},
+        "rotations_R":   {"shape": list(model.x_rotations_.shape),"values": _flatten_rowmajor(model.x_rotations_),"sign_invariant": True},
+        "scores_T":      {"shape": list(model._x_scores.shape),   "values": _flatten_rowmajor(model._x_scores),   "sign_invariant": True},
+        "predict_train": {"shape": list(preds.shape),       "values": _flatten_rowmajor(preds)},
+    }
+
+
 def _center_scale(X: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     mean = X.mean(axis=0)
     centered = X - mean
@@ -1101,6 +1126,43 @@ def _canonical_fixture(
     }
 
 
+def _pls_da_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+) -> dict[str, Any]:
+    model = PLSRegression(n_components=n_components, scale=True)
+    model.fit(X, Y)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._expected_from_pls_da",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "n_components":   n_components,
+                "scale":          True,
+                "deflation_mode": "regression",
+                "algorithm":      "pls-da-dummy",
+                "reference":      "sklearn PLSRegression on dummy-coded class targets",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _expected_from_pls_da(model, X, Y),
+        "comparison_policy": {
+            "components_alignment": "first-k-prefix",
+            "sign_resolver":        "max_abs_element_positive",
+            "tolerance_table_row":  "sklearn/PLSDA-dummy/PLSRegression",
+        },
+    }
+
+
 def _kernel_fixture(
     fixture_id: str,
     seed: int,
@@ -1440,6 +1502,50 @@ def synthetic_canonical_svd_small_pls2_v1() -> dict[str, Any]:
     return _canonical_fixture("synthetic_canonical_svd_small_pls2_v1",
                               seed=103, X=X, Y=Y, n_components=3,
                               solver="svd")
+
+
+def synthetic_pls_da_binary_v1() -> dict[str, Any]:
+    """18 samples, 6 features, 2 dummy targets, n_components=2."""
+    rng = np.random.default_rng(seed=110)
+    X = rng.standard_normal(size=(18, 6))
+    W = np.array([
+        [0.45, -0.20],
+        [-0.30, 0.36],
+        [0.24, 0.18],
+        [0.12, -0.42],
+        [0.38, 0.16],
+        [-0.22, 0.30],
+    ])
+    logits = X @ W + rng.standard_normal(size=(18, 2)) * 0.05
+    labels = np.argmax(logits, axis=1)
+    labels[0] = 0
+    labels[1] = 1
+    Y = np.eye(2, dtype=np.float64)[labels]
+    return _pls_da_fixture("synthetic_pls_da_binary_v1",
+                           seed=110, X=X, Y=Y, n_components=2)
+
+
+def synthetic_pls_da_multiclass_v1() -> dict[str, Any]:
+    """21 samples, 7 features, 3 dummy targets, n_components=3."""
+    rng = np.random.default_rng(seed=111)
+    X = rng.standard_normal(size=(21, 7))
+    W = np.array([
+        [0.36, -0.16, 0.22],
+        [-0.28, 0.42, -0.12],
+        [0.18, 0.24, 0.38],
+        [0.44, -0.20, 0.08],
+        [-0.32, 0.26, -0.34],
+        [0.16, 0.36, 0.28],
+        [0.30, -0.10, 0.34],
+    ])
+    logits = X @ W + rng.standard_normal(size=(21, 3)) * 0.05
+    labels = np.argmax(logits, axis=1)
+    labels[0] = 0
+    labels[1] = 1
+    labels[2] = 2
+    Y = np.eye(3, dtype=np.float64)[labels]
+    return _pls_da_fixture("synthetic_pls_da_multiclass_v1",
+                           seed=111, X=X, Y=Y, n_components=3)
 
 
 def synthetic_kernel_tiny_pls1_v1() -> dict[str, Any]:

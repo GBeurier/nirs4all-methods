@@ -66,6 +66,15 @@ HEADER_SPECS = {
         "struct": "CanonicalSvdFixture",
         "array": "kCanonicalSvdFixtures",
     },
+    "pls-da": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "pls_da_fixtures.hpp",
+        "fixtures": (
+            "synthetic_pls_da_binary_v1",
+            "synthetic_pls_da_multiclass_v1",
+        ),
+        "struct": "PlsDaFixture",
+        "array": "kPlsDaFixtures",
+    },
     "pcr": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "pcr_fixtures.hpp",
         "fixtures": (

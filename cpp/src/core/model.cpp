@@ -1000,8 +1000,10 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
                                                 const ::pls4all::core::Config& cfg,
                                                 const p4a_matrix_view_t& X,
                                                 const p4a_matrix_view_t& Y) noexcept {
+    const bool regression_chassis_algorithm =
+        cfg.algorithm == P4A_ALGO_PLS_REGRESSION || cfg.algorithm == P4A_ALGO_PLS_DA;
     const bool supported_pls_regression =
-        cfg.algorithm == P4A_ALGO_PLS_REGRESSION &&
+        regression_chassis_algorithm &&
         (cfg.solver == P4A_SOLVER_NIPALS ||
          cfg.solver == P4A_SOLVER_ORTHOGONAL_SCORES ||
          cfg.solver == P4A_SOLVER_SIMPLS ||
@@ -1022,6 +1024,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
             "P4A_SOLVER_KERNEL_ALGORITHM, P4A_SOLVER_WIDE_KERNEL or "
             "P4A_SOLVER_SVD, P4A_SOLVER_POWER or P4A_SOLVER_RANDOMIZED_SVD, "
             "P4A_ALGO_PLS_CANONICAL with P4A_SOLVER_NIPALS or P4A_SOLVER_SVD, "
+            "P4A_ALGO_PLS_DA with the PLS regression solver set, "
             "plus P4A_ALGO_PCR with P4A_SOLVER_SVD");
         return P4A_ERR_UNSUPPORTED;
     }

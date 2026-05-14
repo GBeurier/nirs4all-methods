@@ -32,10 +32,12 @@ parity/
 │   ├── synthetic_canonical_small_pls2_v1.json
 │   ├── synthetic_canonical_svd_tiny_pls1_v1.json
 │   ├── synthetic_canonical_svd_small_pls2_v1.json
+│   ├── synthetic_pls_da_binary_v1.json
+│   ├── synthetic_pls_da_multiclass_v1.json
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.
-├── python_generator/              Pinned scikit-learn + NumPy SIMPLS/kernel/wide/oscores/power/randomized/canonical/SVD/PCR adapters.
+├── python_generator/              Pinned scikit-learn + NumPy SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLS-DA/SVD/PCR adapters.
 └── r_generator/                   Pinned pls / ropls / mixOmics adapters.
 ```
 
@@ -70,6 +72,7 @@ reference. Orthogonal-scores fixtures are generated from a NumPy port of the
 R `pls` `oscorespls.fit` recurrence. Power fixtures are generated from NumPy
 singular-pair power iteration. Randomized-SVD fixtures mirror the C++
 SplitMix64-seeded singular-vector iteration. PLSCanonical fixtures mirror
-scikit-learn canonical deflation for NIPALS and SVD. PCR fixtures are generated from NumPy PCA/SVD with score-space
+scikit-learn canonical deflation for NIPALS and SVD. PLS-DA fixtures use
+dummy-coded class targets fitted through scikit-learn `PLSRegression`. PCR fixtures are generated from NumPy PCA/SVD with score-space
 least squares. C++ parity tests assert predictions, coefficients,
 preprocessing statistics and latent arrays within `tolerances.md`.

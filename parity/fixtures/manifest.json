@@ -50,6 +50,16 @@
       "path": "synthetic_pcr_tiny_pls1_v1.json",
       "sha256": "f8c7e3d9e0cc0e22dae2d569fb43cc1ac639cd50ce5942fc9f51bb1a2641a952"
     },
+    "synthetic_pls_da_binary_v1": {
+      "bytes": 9888,
+      "path": "synthetic_pls_da_binary_v1.json",
+      "sha256": "b47e6e074919cb2f47c7f47f8173b0fb0c70ffffe0177717336f5797d8a0e45a"
+    },
+    "synthetic_pls_da_multiclass_v1": {
+      "bytes": 14245,
+      "path": "synthetic_pls_da_multiclass_v1.json",
+      "sha256": "e5de5b9865d1142f230309db3b8b05a2fc1452c348e59a7fba9d19d5d598ebb6"
+    },
     "synthetic_power_small_pls2_v1": {
       "bytes": 12451,
       "path": "synthetic_power_small_pls2_v1.json",

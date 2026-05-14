@@ -375,8 +375,11 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
         !r.f64(tol) || !r.u32(max_iter)) {
         return false;
     }
+    const bool regression_chassis_algorithm =
+        algorithm == static_cast<std::uint32_t>(P4A_ALGO_PLS_REGRESSION) ||
+        algorithm == static_cast<std::uint32_t>(P4A_ALGO_PLS_DA);
     const bool supported_pls_regression =
-        algorithm == static_cast<std::uint32_t>(P4A_ALGO_PLS_REGRESSION) &&
+        regression_chassis_algorithm &&
         (solver == static_cast<std::uint32_t>(P4A_SOLVER_NIPALS) ||
          solver == static_cast<std::uint32_t>(P4A_SOLVER_ORTHOGONAL_SCORES) ||
          solver == static_cast<std::uint32_t>(P4A_SOLVER_SIMPLS) ||
