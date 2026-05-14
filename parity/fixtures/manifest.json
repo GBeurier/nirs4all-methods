@@ -135,6 +135,11 @@
       "path": "synthetic_pipeline_snv_v1.json",
       "sha256": "f1e08adc0c6962873a5f744c6f8e2a8491e010f0d82c7966dfaccda1386c98bc"
     },
+    "synthetic_pipeline_wavelet_haar_v1": {
+      "bytes": 2310,
+      "path": "synthetic_pipeline_wavelet_haar_v1.json",
+      "sha256": "8a6cf15216702400add62dc178f3e712830c456fd2509afcf1b67f88bf99ae45"
+    },
     "synthetic_pls_da_binary_v1": {
       "bytes": 9888,
       "path": "synthetic_pls_da_binary_v1.json",

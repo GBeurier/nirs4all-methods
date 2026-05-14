@@ -235,6 +235,20 @@ int cmd_selfcheck() {
     p4a_array_free(x_norris);
     p4a_pipeline_destroy(norris_pipe);
 
+    p4a_pipeline_t* wavelet_pipe = nullptr;
+    const double wavelet_params[] = {1.0, 0.01};
+    CHECK(p4a_pipeline_create(&wavelet_pipe) == P4A_OK);
+    CHECK(p4a_pipeline_add_operator(wavelet_pipe, P4A_OP_WAVELET_DENOISE,
+                                    wavelet_params, 2) == P4A_OK);
+    CHECK(p4a_pipeline_fit(ctx, wavelet_pipe, &X_msc, nullptr) == P4A_OK);
+    p4a_array_t* x_wavelet = nullptr;
+    CHECK(p4a_pipeline_transform_alloc(ctx, wavelet_pipe, &X_msc, &x_wavelet) == P4A_OK);
+    CHECK(p4a_array_shape(x_wavelet, &pipe_rows, &pipe_cols) == P4A_OK);
+    CHECK(pipe_rows == 4);
+    CHECK(pipe_cols == 5);
+    p4a_array_free(x_wavelet);
+    p4a_pipeline_destroy(wavelet_pipe);
+
     // Model smoke: NIPALS fit, predict, transform and export.
     p4a_model_t* model = nullptr;
     CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &model) == P4A_OK);

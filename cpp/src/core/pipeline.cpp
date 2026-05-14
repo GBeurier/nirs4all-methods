@@ -3,6 +3,7 @@
 #include "core/pipeline.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <cmath>
 #include <limits>
 #include <utility>
@@ -327,12 +328,44 @@ struct NorrisWilliamsParams {
     std::int32_t derivative_order{1};
 };
 
+struct WaveletParams {
+    std::int32_t levels{1};
+    double threshold{0.0};
+};
+
 [[nodiscard]] double factorial(std::int32_t n) noexcept {
     double out = 1.0;
     for (std::int32_t i = 2; i <= n; ++i) {
         out *= static_cast<double>(i);
     }
     return out;
+}
+
+[[nodiscard]] std::size_t next_power_of_two(std::size_t value) noexcept {
+    std::size_t out = 1U;
+    while (out < value) {
+        out *= 2U;
+    }
+    return out;
+}
+
+[[nodiscard]] std::int32_t max_haar_levels(std::size_t size) noexcept {
+    std::int32_t levels = 0;
+    while (size >= 2U) {
+        size /= 2U;
+        ++levels;
+    }
+    return levels;
+}
+
+[[nodiscard]] double soft_threshold(double value, double threshold) noexcept {
+    if (value > threshold) {
+        return value - threshold;
+    }
+    if (value < -threshold) {
+        return value + threshold;
+    }
+    return 0.0;
 }
 
 [[nodiscard]] double binomial(std::int32_t n, std::int32_t k) noexcept {
@@ -541,6 +574,68 @@ void norris_williams_filter(const NorrisWilliamsParams& params,
         }
         for (std::size_t col = 0; col < cols; ++col) {
             out[idx(row, cols, col)] = values[idx(row, cols, col)] - baseline[col];
+        }
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t apply_wavelet_denoise(::pls4all::core::Context& ctx,
+                                                 const std::vector<double>& values,
+                                                 std::size_t rows,
+                                                 std::size_t cols,
+                                                 const WaveletParams& params,
+                                                 std::vector<double>& out) {
+    const std::size_t padded = next_power_of_two(cols);
+    if (params.levels > max_haar_levels(padded)) {
+        ctx.set_error("wavelet denoise levels exceed the padded signal length");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    constexpr double kInvSqrt2 = 0.707106781186547524400844362104849039;
+    out.assign(rows * cols, 0.0);
+    std::vector<double> work(padded, 0.0);
+    std::vector<double> temp(padded, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t col = 0; col < cols; ++col) {
+            work[col] = values[idx(row, cols, col)];
+        }
+        for (std::size_t col = cols; col < padded; ++col) {
+            work[col] = work[cols - 1U];
+        }
+
+        std::size_t active = padded;
+        for (std::int32_t level = 0; level < params.levels; ++level) {
+            const std::size_t half = active / 2U;
+            for (std::size_t i = 0; i < half; ++i) {
+                const double left = work[2U * i];
+                const double right = work[2U * i + 1U];
+                temp[i] = (left + right) * kInvSqrt2;
+                temp[half + i] =
+                    soft_threshold((left - right) * kInvSqrt2, params.threshold);
+            }
+            std::copy(temp.begin(),
+                      temp.begin() + static_cast<std::vector<double>::difference_type>(active),
+                      work.begin());
+            active = half;
+        }
+
+        active = padded >> static_cast<unsigned>(params.levels);
+        for (std::int32_t level = params.levels - 1; level >= 0; --level) {
+            const std::size_t half = active;
+            const std::size_t size = half * 2U;
+            for (std::size_t i = 0; i < half; ++i) {
+                const double average = work[i];
+                const double detail = work[half + i];
+                temp[2U * i] = (average + detail) * kInvSqrt2;
+                temp[2U * i + 1U] = (average - detail) * kInvSqrt2;
+            }
+            std::copy(temp.begin(),
+                      temp.begin() + static_cast<std::vector<double>::difference_type>(size),
+                      work.begin());
+            active = size;
+        }
+
+        for (std::size_t col = 0; col < cols; ++col) {
+            out[idx(row, cols, col)] = work[col];
         }
     }
     return P4A_OK;
@@ -924,6 +1019,31 @@ void norris_williams_filter(const NorrisWilliamsParams& params,
     return validate_norris_williams(ctx, params);
 }
 
+[[nodiscard]] p4a_status_t parse_wavelet(::pls4all::core::Context& ctx,
+                                         const ::pls4all::core::OperatorEntry& entry,
+                                         WaveletParams& params) {
+    params = WaveletParams{};
+    if (entry.params.empty()) {
+        return P4A_OK;
+    }
+    if (entry.params.size() != 2U) {
+        ctx.set_error("wavelet denoise expects zero params or levels/threshold");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    p4a_status_t status = parse_integer_param(ctx, entry.params[0], 0, 20,
+                                              "wavelet denoise levels",
+                                              params.levels);
+    if (status != P4A_OK) {
+        return status;
+    }
+    params.threshold = entry.params[1];
+    if (!std::isfinite(params.threshold) || params.threshold < 0.0) {
+        ctx.set_error("wavelet denoise threshold must be finite and non-negative");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    return P4A_OK;
+}
+
 }  // namespace
 
 namespace pls4all::core {
@@ -1126,6 +1246,24 @@ p4a_status_t Pipeline::fit(Context& ctx, const p4a_matrix_view_t& X) {
                 }
                 break;
             }
+            case P4A_OP_WAVELET_DENOISE: {
+                WaveletParams params;
+                status = parse_wavelet(ctx, entry, params);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                state.scale.assign({
+                    static_cast<double>(params.levels),
+                    params.threshold,
+                });
+                status = apply_wavelet_denoise(ctx, current, rows, cols, params, next);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                break;
+            }
             default:
                 ctx.set_errorf("pipeline operator %d is not implemented in this release",
                                static_cast<int>(entry.kind));
@@ -1262,6 +1400,20 @@ p4a_status_t Pipeline::transform(Context& ctx,
                 params.gap = static_cast<std::int32_t>(state.scale[1]);
                 params.derivative_order = static_cast<std::int32_t>(state.scale[2]);
                 status = apply_norris_williams(ctx, current, rows, cols, params, next);
+                if (status != P4A_OK) {
+                    return status;
+                }
+                break;
+            }
+            case P4A_OP_WAVELET_DENOISE: {
+                if (state.scale.size() != 2U) {
+                    ctx.set_error("fitted wavelet denoise operator is missing parameters");
+                    return P4A_ERR_INTERNAL;
+                }
+                WaveletParams params;
+                params.levels = static_cast<std::int32_t>(state.scale[0]);
+                params.threshold = state.scale[1];
+                status = apply_wavelet_denoise(ctx, current, rows, cols, params, next);
                 if (status != P4A_OK) {
                     return status;
                 }

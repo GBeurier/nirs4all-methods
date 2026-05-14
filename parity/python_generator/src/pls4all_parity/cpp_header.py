@@ -54,6 +54,7 @@ HEADER_SPECS = {
             "synthetic_pipeline_savgol_derivative_v1",
             "synthetic_pipeline_asls_v1",
             "synthetic_pipeline_norris_williams_v1",
+            "synthetic_pipeline_wavelet_haar_v1",
         ),
         "struct": "PipelineFixture",
         "array": "kPipelineFixtures",
@@ -345,6 +346,12 @@ def _pipeline_operator(name: str) -> tuple[str, list[float]]:
             float(segment),
             float(gap),
             float(derivative_order),
+        ]
+    if name.startswith("wavelet_haar_"):
+        _prefix, _kind, levels, threshold = name.split("_")
+        return "P4A_OP_WAVELET_DENOISE", [
+            float(levels),
+            float(threshold),
         ]
     return mapping[name], []
 

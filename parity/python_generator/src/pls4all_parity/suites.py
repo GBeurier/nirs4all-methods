@@ -539,6 +539,46 @@ def _pipeline_apply(X: np.ndarray, operators: list[str]) -> np.ndarray:
                         acc += float(coeff) * float(row[source])
                     transformed[row_idx, col] = acc
             out = transformed
+        elif op.startswith("wavelet_haar_"):
+            _, _, levels, threshold = op.split("_")
+            levels_i = int(levels)
+            threshold_f = float(threshold)
+            n_cols = out.shape[1]
+            padded = 1
+            while padded < n_cols:
+                padded *= 2
+            inv_sqrt2 = 1.0 / np.sqrt(2.0)
+            transformed = np.zeros_like(out)
+            for row_idx, row in enumerate(out):
+                work = np.empty(padded, dtype=np.float64)
+                work[:n_cols] = row
+                work[n_cols:] = row[-1]
+                active = padded
+                for _ in range(levels_i):
+                    half = active // 2
+                    temp = work.copy()
+                    for i in range(half):
+                        left = work[2 * i]
+                        right = work[2 * i + 1]
+                        temp[i] = (left + right) * inv_sqrt2
+                        detail = (left - right) * inv_sqrt2
+                        temp[half + i] = np.sign(detail) * max(abs(detail) - threshold_f, 0.0)
+                    work[:active] = temp[:active]
+                    active = half
+                active = padded >> levels_i
+                for _ in range(levels_i):
+                    half = active
+                    size = half * 2
+                    temp = work.copy()
+                    for i in range(half):
+                        average = work[i]
+                        detail = work[half + i]
+                        temp[2 * i] = (average + detail) * inv_sqrt2
+                        temp[2 * i + 1] = (average - detail) * inv_sqrt2
+                    work[:size] = temp[:size]
+                    active = size
+                transformed[row_idx, :] = work[:n_cols]
+            out = transformed
         else:
             raise ValueError(f"unsupported pipeline operator fixture: {op}")
     return out.astype(np.float64, copy=False)
@@ -2024,6 +2064,18 @@ def synthetic_pipeline_norris_williams_v1() -> dict[str, Any]:
     ])
     return _pipeline_fixture("synthetic_pipeline_norris_williams_v1", seed=51,
                              X=X, operators=["norris_williams_5_3_1"])
+
+
+def synthetic_pipeline_wavelet_haar_v1() -> dict[str, Any]:
+    """3 samples, 9 wavelengths for Haar wavelet denoising parity."""
+    x = np.linspace(0.0, 1.0, 9, dtype=np.float64)
+    X = np.vstack([
+        0.5 + 0.8 * x + np.array([0.02, -0.03, 0.04, -0.05, 0.03, -0.02, 0.01, -0.01, 0.02]),
+        np.sin(2.5 * x) + np.array([-0.01, 0.02, -0.04, 0.03, -0.02, 0.04, -0.03, 0.01, 0.00]),
+        1.0 - 0.4 * x + 0.2 * x * x + np.array([0.00, 0.03, -0.02, 0.01, -0.04, 0.02, -0.01, 0.03, -0.02]),
+    ])
+    return _pipeline_fixture("synthetic_pipeline_wavelet_haar_v1", seed=52,
+                             X=X, operators=["wavelet_haar_2_0.03"])
 
 
 def synthetic_power_tiny_pls1_v1() -> dict[str, Any]:

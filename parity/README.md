@@ -53,6 +53,7 @@ parity/
 │   ├── synthetic_pipeline_savgol_derivative_v1.json
 │   ├── synthetic_pipeline_asls_v1.json
 │   ├── synthetic_pipeline_norris_williams_v1.json
+│   ├── synthetic_pipeline_wavelet_haar_v1.json
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.
@@ -99,6 +100,7 @@ OPLS-DA fixtures are generated from a deterministic NumPy OPLS NIPALS recurrence
 with one shared predictive score for multi-response targets.
 PCR fixtures are generated from NumPy PCA/SVD with score-space
 least squares. Preprocessing pipeline fixtures are generated from deterministic
-NumPy identity, center, autoscale, Pareto, SNV, MSC and polynomial detrending transforms. C++ parity tests
+NumPy identity, center, autoscale, Pareto, SNV, MSC, EMSC, polynomial detrending,
+Savitzky-Golay, ASLS, Norris-Williams and Haar wavelet transforms. C++ parity tests
 assert predictions, coefficients, preprocessing statistics, transforms and
 latent arrays within `tolerances.md`.

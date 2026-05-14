@@ -364,6 +364,38 @@ inline const std::int32_t synthetic_pipeline_norris_williams_v1_n_params[] = {
     3,
 };
 
+inline const double synthetic_pipeline_wavelet_haar_v1_x[] = {
+    0.52000000000000002, 0.56999999999999995, 0.73999999999999999, 0.75,
+    0.93000000000000005, 0.97999999999999998, 1.1100000000000001, 1.1900000000000002,
+    1.3200000000000001, -0.01, 0.32743851458038087, 0.54509727294046217,
+    0.83608110826069304, 0.92898461935558618, 1.0399655856782488, 0.92408578160969379,
+    0.82578931325829696, 0.59847214410395655, 1, 0.98312500000000003,
+    0.89249999999999996, 0.88812499999999994, 0.81000000000000005, 0.84812500000000002,
+    0.80249999999999999, 0.83312499999999989, 0.78000000000000003,
+};
+
+inline const double synthetic_pipeline_wavelet_haar_v1_transform_train[] = {
+    0.55621320343559633, 0.56378679656440334, 0.72999999999999976, 0.72999999999999976,
+    0.96621320343559636, 0.97378679656440337, 1.1162132034355963, 1.1537867965644033,
+    1.3199999999999996, 0.026213203435596365, 0.32122531114478431, 0.55131047637605846,
+    0.7998679048250964, 0.93519782279118224, 1.0037523822426522, 0.91787257817409718,
+    0.86200251669389338, 0.59847214410395633, 0.97656249999999967, 0.97656249999999967,
+    0.90531249999999952, 0.90531249999999952, 0.8234374999999996, 0.8234374999999996,
+    0.8234374999999996, 0.8234374999999996, 0.77999999999999969,
+};
+
+inline const p4a_operator_kind_t synthetic_pipeline_wavelet_haar_v1_operators[] = {
+    P4A_OP_WAVELET_DENOISE,
+};
+
+inline const double synthetic_pipeline_wavelet_haar_v1_params[] = {
+    2, 0.029999999999999999,
+};
+
+inline const std::int32_t synthetic_pipeline_wavelet_haar_v1_n_params[] = {
+    2,
+};
+
 inline const PipelineFixture kPipelineFixtures[] = {
     {
         "synthetic_pipeline_identity_v1",
@@ -472,6 +504,15 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_norris_williams_v1_n_params,
         MatrixRef{3, 11, synthetic_pipeline_norris_williams_v1_x, sizeof(synthetic_pipeline_norris_williams_v1_x) / sizeof(double), false},
         MatrixRef{3, 11, synthetic_pipeline_norris_williams_v1_transform_train, sizeof(synthetic_pipeline_norris_williams_v1_transform_train) / sizeof(double), false}
+    },
+    {
+        "synthetic_pipeline_wavelet_haar_v1",
+        synthetic_pipeline_wavelet_haar_v1_operators,
+        sizeof(synthetic_pipeline_wavelet_haar_v1_operators) / sizeof(p4a_operator_kind_t),
+        synthetic_pipeline_wavelet_haar_v1_params,
+        synthetic_pipeline_wavelet_haar_v1_n_params,
+        MatrixRef{3, 9, synthetic_pipeline_wavelet_haar_v1_x, sizeof(synthetic_pipeline_wavelet_haar_v1_x) / sizeof(double), false},
+        MatrixRef{3, 9, synthetic_pipeline_wavelet_haar_v1_transform_train, sizeof(synthetic_pipeline_wavelet_haar_v1_transform_train) / sizeof(double), false}
     }
 };
 

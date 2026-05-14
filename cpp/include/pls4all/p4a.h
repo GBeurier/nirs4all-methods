@@ -32,9 +32,9 @@
  *   - Pipeline / operator-bank / gating-strategy lifecycle is implemented.
  *     Pipeline `_fit` / `_transform` are live for P4A_OP_IDENTITY,
  *     P4A_OP_CENTER, P4A_OP_AUTOSCALE, P4A_OP_PARETO_SCALE, P4A_OP_SNV,
- *     P4A_OP_MSC, P4A_OP_EMSC, P4A_OP_DETREND_POLY, P4A_OP_SAVGOL_SMOOTH
- *     P4A_OP_SAVGOL_DERIVATIVE, P4A_OP_NORRIS_WILLIAMS and
- *     P4A_OP_ASLS_BASELINE.
+ *     P4A_OP_MSC, P4A_OP_EMSC, P4A_OP_DETREND_POLY, P4A_OP_SAVGOL_SMOOTH,
+ *     P4A_OP_SAVGOL_DERIVATIVE, P4A_OP_NORRIS_WILLIAMS,
+ *     P4A_OP_ASLS_BASELINE and P4A_OP_WAVELET_DENOISE.
  *     Remaining preprocessing operators return P4A_ERR_NOT_IMPLEMENTED until
  *     their dedicated Phase 3 follow-ups.
  *   - p4a_model_fit implements dependency-free NIPALS, orthogonal-scores,
@@ -465,10 +465,11 @@ P4A_API void         p4a_gating_strategy_destroy(p4a_gating_strategy_t* gs);
 
 /* ---- Preprocessing pipeline ----
  * Pipeline = ordered list of operators that share fit/transform.
- * Phase 3a/3b/3c/3d/3e/3f/3g implements identity, center, autoscale,
+ * Phase 3a/3b/3c/3d/3e/3f/3g/3h implements identity, center, autoscale,
  * Pareto scaling, SNV, MSC, EMSC, polynomial detrending, Savitzky-Golay
- * smoothing/derivatives, Norris-Williams gap-segment derivatives and ASLS
- * baseline correction with leakage-safe training statistics.
+ * smoothing/derivatives, Norris-Williams gap-segment derivatives, ASLS
+ * baseline correction and Haar wavelet denoising with leakage-safe training
+ * statistics.
  * Unsupported operators are accepted by add_operator so pipelines remain
  * serialisable later, but fit returns P4A_ERR_NOT_IMPLEMENTED until the
  * operator body lands.
@@ -617,7 +618,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.23.0+abi.1.0.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.24.0+abi.1.0.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
