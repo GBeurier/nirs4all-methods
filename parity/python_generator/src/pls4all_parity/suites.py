@@ -970,6 +970,153 @@ def _pls_lda_expected(
     }
 
 
+def _softmax_baseline_logits(design: np.ndarray,
+                             beta: np.ndarray,
+                             n_classes: int) -> tuple[np.ndarray, np.ndarray]:
+    logits_tail = design @ beta.T
+    logits = np.column_stack([
+        np.zeros(design.shape[0], dtype=np.float64),
+        logits_tail,
+    ])
+    shifted = logits - np.max(logits, axis=1, keepdims=True)
+    exp_values = np.exp(shifted)
+    probabilities = exp_values / np.sum(exp_values, axis=1, keepdims=True)
+    if probabilities.shape[1] != int(n_classes):
+        raise RuntimeError("probability shape mismatch")
+    return logits, probabilities
+
+
+def _baseline_logistic_objective(design: np.ndarray,
+                                 labels: np.ndarray,
+                                 beta: np.ndarray,
+                                 ridge: float,
+                                 n_classes: int) -> float:
+    logits, _probabilities = _softmax_baseline_logits(design, beta, n_classes)
+    shifted = logits - np.max(logits, axis=1, keepdims=True)
+    log_den = np.max(logits, axis=1) + np.log(np.sum(np.exp(shifted), axis=1))
+    chosen = np.zeros(labels.size, dtype=np.float64)
+    non_baseline = labels > 0
+    chosen[non_baseline] = logits[np.arange(labels.size)[non_baseline], labels[non_baseline]]
+    penalty = 0.5 * float(ridge) * float(np.sum(beta[:, 1:] * beta[:, 1:]))
+    return float(np.sum(log_den - chosen) + penalty)
+
+
+def _fit_baseline_multinomial_logistic(
+    scores: np.ndarray,
+    labels: np.ndarray,
+    n_classes: int,
+    ridge: float = 1e-4,
+    max_iter: int = 500,
+    tol: float = 1e-10,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    scores = np.asarray(scores, dtype=np.float64)
+    y = np.asarray(labels, dtype=np.int32).reshape(-1)
+    design = np.column_stack([np.ones(scores.shape[0], dtype=np.float64), scores])
+    n, d = design.shape
+    c = int(n_classes)
+    m = c - 1
+    beta = np.zeros((m, d), dtype=np.float64)
+
+    for _iteration in range(int(max_iter)):
+        _logits, probabilities = _softmax_baseline_logits(design, beta, c)
+        gradient = np.zeros((m, d), dtype=np.float64)
+        hessian = np.zeros((m * d, m * d), dtype=np.float64)
+        for row in range(n):
+            z = design[row, :]
+            zz = np.outer(z, z)
+            for cls_j in range(m):
+                pj = probabilities[row, cls_j + 1]
+                yj = 1.0 if int(y[row]) == cls_j + 1 else 0.0
+                gradient[cls_j, :] += (pj - yj) * z
+                for cls_l in range(m):
+                    pl = probabilities[row, cls_l + 1]
+                    weight = pj * ((1.0 if cls_j == cls_l else 0.0) - pl)
+                    start_j = cls_j * d
+                    start_l = cls_l * d
+                    hessian[start_j:start_j + d, start_l:start_l + d] += weight * zz
+
+        for cls_j in range(m):
+            for feature in range(1, d):
+                offset = cls_j * d + feature
+                gradient[cls_j, feature] += float(ridge) * beta[cls_j, feature]
+                hessian[offset, offset] += float(ridge)
+
+        step = np.linalg.solve(hessian, gradient.reshape(-1, order="C")).reshape(m, d)
+        max_step = float(np.max(np.abs(step)))
+        current = _baseline_logistic_objective(design, y, beta, ridge, c)
+        alpha = 1.0
+        accepted = False
+        candidate = beta.copy()
+        for _line_search in range(32):
+            candidate = beta - alpha * step
+            trial = _baseline_logistic_objective(design, y, candidate, ridge, c)
+            if math.isfinite(trial) and (trial <= current or alpha * max_step <= tol):
+                accepted = True
+                break
+            alpha *= 0.5
+        if not accepted:
+            raise RuntimeError("baseline multinomial logistic line search failed")
+        beta = candidate
+        if alpha * max_step <= tol:
+            break
+
+    logits, probabilities = _softmax_baseline_logits(design, beta, c)
+    predictions = np.argmax(logits, axis=1).astype(np.int32)
+    return beta[:, 0], beta[:, 1:], logits, probabilities, predictions
+
+
+def _pls_logistic_expected(
+    X: np.ndarray,
+    labels: np.ndarray,
+    n_classes: int,
+    n_components: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    y = np.asarray(labels, dtype=np.int32).reshape(-1)
+    dummy = np.zeros((y.size, int(n_classes)), dtype=np.float64)
+    dummy[np.arange(y.size), y] = 1.0
+    pls = PLSRegression(n_components=int(n_components), scale=True, max_iter=500, tol=1e-6)
+    pls.fit(X, dummy)
+    scores = pls._x_scores.astype(np.float64, copy=False)
+    intercepts, coefficients, logits, probabilities, predictions = _fit_baseline_multinomial_logistic(
+        scores,
+        y,
+        int(n_classes),
+    )
+    return {
+        "predictions": {
+            "shape": [int(y.size)],
+            "layout": "row_major",
+            "dtype": "i32",
+            "values": predictions.astype(int).tolist(),
+        },
+        "decision_scores": {
+            "shape": list(logits.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(logits),
+        },
+        "probabilities": {
+            "shape": list(probabilities.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(probabilities),
+        },
+        "intercepts": {
+            "shape": [int(n_classes) - 1],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": intercepts.astype(np.float64).tolist(),
+        },
+        "coefficients": {
+            "shape": [int(n_classes) - 1, int(n_components)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(coefficients),
+        },
+    }
+
+
 def _variable_importance_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -2417,6 +2564,45 @@ def _pls_lda_fixture(
     }
 
 
+def _pls_logistic_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    labels: np.ndarray,
+    n_classes: int,
+    n_components: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    labels = np.asarray(labels, dtype=np.int32).reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._pls_logistic_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":    "pls_logistic",
+                "solver":       "nipals",
+                "n_classes":    int(n_classes),
+                "n_components": int(n_components),
+                "ridge":        1e-4,
+                "reference":    "Python sklearn PLSRegression scores with NumPy baseline multinomial logistic Newton",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "labels": {"shape": list(labels.shape), "layout": "row_major", "dtype": "i32", "rng_seed": seed, "values": labels.reshape(-1, order="C").astype(int).tolist()},
+        },
+        "expected": _pls_logistic_expected(X, labels, n_classes, n_components),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-scores-plus-numpy-logistic",
+        },
+    }
+
+
 def _variable_importance_fixture(
     fixture_id: str,
     seed: int,
@@ -3492,6 +3678,37 @@ def synthetic_pls_lda_multiclass_v1() -> dict[str, Any]:
                             labels=labels,
                             n_classes=3,
                             n_components=2)
+
+
+def synthetic_pls_logistic_multiclass_v1() -> dict[str, Any]:
+    """24 samples, 6 features and 3 classes for PLS-score logistic parity."""
+    seed = 99
+    rng = np.random.default_rng(seed)
+    labels = np.repeat(np.arange(3, dtype=np.int32), 8)
+    class_centers = 0.6 * np.array([
+        [0.85, -0.35],
+        [-0.55, 0.72],
+        [-0.32, -0.64],
+    ], dtype=np.float64)
+    latent = np.vstack([
+        class_centers[int(label)] + rng.standard_normal(size=2) * 0.42
+        for label in labels
+    ])
+    trend = np.linspace(-0.45, 0.55, labels.size)
+    X = np.column_stack([
+        0.74 * latent[:, 0] + 0.22 * latent[:, 1] + 0.06 * trend,
+        -0.24 * latent[:, 0] + 0.61 * latent[:, 1] - 0.04 * trend,
+        0.48 * latent[:, 0] - 0.21 * latent[:, 1],
+        -0.18 * latent[:, 0] - 0.37 * latent[:, 1] + 0.03 * trend,
+        np.sin(np.linspace(0.0, 1.25 * np.pi, labels.size)) * 0.28,
+        rng.standard_normal(size=labels.size) * 0.09,
+    ])
+    return _pls_logistic_fixture("synthetic_pls_logistic_multiclass_v1",
+                                 seed=seed,
+                                 X=X,
+                                 labels=labels,
+                                 n_classes=3,
+                                 n_components=2)
 
 
 def synthetic_variable_importance_pls2_v1() -> dict[str, Any]:

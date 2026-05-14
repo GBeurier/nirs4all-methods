@@ -37,6 +37,7 @@ add_library(pls4all_core OBJECT
     core/operator_bank.cpp
     core/gating_strategy.cpp
     core/pls_lda.cpp
+    core/pls_logistic.cpp
     core/pipeline.cpp
     core/validation.cpp)
 target_include_directories(pls4all_core

@@ -78,7 +78,7 @@ Goal: useful for real spectroscopy.
 - PLSSVD cross-covariance score model shipped as `phase-4n-pls-svd`.
 - SIMPLS component-count CV scoring shipped as `phase-4o-simpls-component-cv`.
 - PLS-LDA score-space classifier shipped as `phase-4p-pls-lda`.
-- PLS-logistic.
+- PLS-logistic score-space classifier shipped as `phase-4q-pls-logistic`.
 - MB-PLS with `Block` API; per-block weighting.
 - LW-PLS (locally-weighted PLS) with KD-tree neighbours.
 

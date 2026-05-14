@@ -205,6 +205,11 @@
       "path": "synthetic_pls_lda_multiclass_v1.json",
       "sha256": "7561bc43bdd191657569d06f79fab21e6083030dee43ce76aaeb7c3532895288"
     },
+    "synthetic_pls_logistic_multiclass_v1": {
+      "bytes": 10411,
+      "path": "synthetic_pls_logistic_multiclass_v1.json",
+      "sha256": "0f9d84fb37b8379e9077dff6a893e258406d37a4107d50b9a10437880beac7db"
+    },
     "synthetic_pls_svd_small_v1": {
       "bytes": 12461,
       "path": "synthetic_pls_svd_small_v1.json",

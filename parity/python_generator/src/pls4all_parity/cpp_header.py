@@ -94,6 +94,14 @@ HEADER_SPECS = {
         "struct": "PlsLdaFixture",
         "array": "kPlsLdaFixtures",
     },
+    "pls-logistic": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "pls_logistic_fixtures.hpp",
+        "fixtures": (
+            "synthetic_pls_logistic_multiclass_v1",
+        ),
+        "struct": "PlsLogisticFixture",
+        "array": "kPlsLogisticFixtures",
+    },
     "variable-importance": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "variable_importance_fixtures.hpp",
         "fixtures": (
@@ -1069,6 +1077,93 @@ def generate_pls_lda(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_pls_logistic(fixture_ids: Sequence[str],
+                          fixture_dir: Path,
+                          out: Path,
+                          family: str,
+                          struct_name: str,
+                          array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct PlsLogisticLabelRef {",
+        "    std::int64_t rows;",
+        "    std::int64_t cols;",
+        "    const std::int32_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_classes;",
+        "    std::int32_t n_components;",
+        "    MatrixRef X;",
+        "    PlsLogisticLabelRef labels;",
+        "    PlsLogisticLabelRef predictions;",
+        "    MatrixRef decision_scores;",
+        "    MatrixRef probabilities;",
+        "    MatrixRef intercepts;",
+        "    MatrixRef coefficients;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        x_name = f"{prefix}_X"
+        labels_name = f"{prefix}_labels"
+        pred_name = f"{prefix}_predictions"
+        scores_name = f"{prefix}_decision_scores"
+        probabilities_name = f"{prefix}_probabilities"
+        intercepts_name = f"{prefix}_intercepts"
+        coefficients_name = f"{prefix}_coefficients"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_i32_array(lines, labels_name, fixture["data"]["labels"]["values"])
+        _emit_i32_array(lines, pred_name, fixture["expected"]["predictions"]["values"])
+        _emit_array(lines, scores_name, fixture["expected"]["decision_scores"]["values"])
+        _emit_array(lines, probabilities_name, fixture["expected"]["probabilities"]["values"])
+        _emit_array(lines, intercepts_name, fixture["expected"]["intercepts"]["values"])
+        _emit_array(lines, coefficients_name, fixture["expected"]["coefficients"]["values"])
+        label_ref = _class_label_ref(labels_name, fixture["data"]["labels"]).replace("ClassLabelRef", "PlsLogisticLabelRef")
+        pred_ref = _class_label_ref(pred_name, fixture["expected"]["predictions"]).replace("ClassLabelRef", "PlsLogisticLabelRef")
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['n_classes'])},\n"
+            f"        {int(params['n_components'])},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {label_ref},\n"
+            f"        {pred_ref},\n"
+            f"        {_matrix_ref(scores_name, fixture['expected']['decision_scores'])},\n"
+            f"        {_matrix_ref(probabilities_name, fixture['expected']['probabilities'])},\n"
+            f"        {_matrix_ref(intercepts_name, fixture['expected']['intercepts'])},\n"
+            f"        {_matrix_ref(coefficients_name, fixture['expected']['coefficients'])}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_variable_importance(fixture_ids: Sequence[str],
                                  fixture_dir: Path,
                                  out: Path,
@@ -1363,6 +1458,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "pls-lda":
         generate_pls_lda(fixture_ids, args.fixture_dir, out, args.family,
                          str(spec["struct"]), str(spec["array"]))
+    elif args.family == "pls-logistic":
+        generate_pls_logistic(fixture_ids, args.fixture_dir, out, args.family,
+                              str(spec["struct"]), str(spec["array"]))
     elif args.family == "variable-importance":
         generate_variable_importance(fixture_ids, args.fixture_dir, out, args.family,
                                      str(spec["struct"]), str(spec["array"]))
