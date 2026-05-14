@@ -17,6 +17,7 @@ add_executable(pls4all_tests
     abi/test_variable_importance.cpp
     abi/test_version.cpp
     abi/test_matrix_view.cpp
+    abi/test_mb_pls.cpp
     abi/test_error_messages.cpp
     abi/test_oom_paths.cpp
     abi/test_metrics.cpp

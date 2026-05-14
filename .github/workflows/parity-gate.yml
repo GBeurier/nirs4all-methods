@@ -47,13 +47,13 @@ jobs:
 
       - name: Run pls4all Python binding smoke test
         env:
-          PLS4ALL_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libp4a.so.0.37.0
+          PLS4ALL_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libp4a.so.0.38.0
         run: |
           pip install -e bindings/python
           python - <<'PY'
           import pls4all
 
-          assert pls4all.version().startswith("0.37.0")
+          assert pls4all.version().startswith("0.38.0")
           with pls4all.Context() as ctx, pls4all.Config() as cfg:
               cfg.n_components = 3
               cfg.algorithm = pls4all.Algorithm.PCR
@@ -103,4 +103,4 @@ jobs:
 
       - name: Confirm core parity gate
         run: |
-          echo "Core parity gate validates fixture determinism plus C++ preprocessing pipeline including Haar wavelets, OSC and EPO, regression metrics, NIPALS, PLSCanonical, PLSSVD, PLS-DA, PLS-LDA, PLS-logistic, OPLS, multi-class OPLS-DA, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power, randomized-SVD and PCR numerical parity."
+          echo "Core parity gate validates fixture determinism plus C++ preprocessing pipeline including Haar wavelets, OSC and EPO, regression metrics, NIPALS, PLSCanonical, PLSSVD, PLS-DA, PLS-LDA, PLS-logistic, MB-PLS, OPLS, multi-class OPLS-DA, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power, randomized-SVD and PCR numerical parity."

@@ -1117,6 +1117,99 @@ def _pls_logistic_expected(
     }
 
 
+def _mb_pls_transform(
+    X: np.ndarray,
+    block_sizes: Sequence[int],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    X = np.asarray(X, dtype=np.float64)
+    sizes = [int(size) for size in block_sizes]
+    if not sizes or any(size <= 0 for size in sizes) or sum(sizes) != X.shape[1]:
+        raise ValueError("block_sizes must be positive and sum to X columns")
+    transformed = np.zeros_like(X, dtype=np.float64)
+    means = np.zeros(X.shape[1], dtype=np.float64)
+    scales = np.ones(X.shape[1], dtype=np.float64)
+    feature_weights = np.ones(X.shape[1], dtype=np.float64)
+    block_weights = np.zeros(len(sizes), dtype=np.float64)
+    start = 0
+    for block_idx, size in enumerate(sizes):
+        stop = start + size
+        block = X[:, start:stop]
+        centered = block - np.mean(block, axis=0)
+        scale = np.std(centered, axis=0, ddof=1)
+        scale = np.where((scale == 0.0) | ~np.isfinite(scale), 1.0, scale)
+        weight = 1.0 / math.sqrt(float(size))
+        transformed[:, start:stop] = centered / scale * weight
+        means[start:stop] = np.mean(block, axis=0)
+        scales[start:stop] = scale
+        feature_weights[start:stop] = weight
+        block_weights[block_idx] = weight
+        start = stop
+    return transformed, means, scales, feature_weights, block_weights
+
+
+def _mb_pls_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    block_sizes: Sequence[int],
+    n_components: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    transformed, means, scales, feature_weights, block_weights = _mb_pls_transform(X, block_sizes)
+    model = PLSRegression(n_components=int(n_components), scale=False, max_iter=500, tol=1e-6)
+    model.fit(transformed, Y)
+    coef = model.coef_.astype(np.float64, copy=False)
+    if coef.shape == (Y.shape[1], X.shape[1]):
+        coef = coef.T
+    coef_original = coef * feature_weights.reshape(-1, 1) / scales.reshape(-1, 1)
+    model_x_mean = model._x_mean.astype(np.float64)
+    y_mean = np.atleast_1d(model._y_mean).astype(np.float64)
+    intercept = y_mean - model_x_mean @ coef - means @ coef_original
+    preds = model.predict(transformed).astype(np.float64, copy=False)
+    if preds.ndim == 1:
+        preds = preds.reshape(-1, 1)
+    return {
+        "predictions": {
+            "shape": list(preds.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(preds),
+        },
+        "coefficients": {
+            "shape": list(coef_original.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(coef_original),
+        },
+        "intercept": {
+            "shape": [int(Y.shape[1])],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": intercept.astype(np.float64).tolist(),
+        },
+        "x_mean": {
+            "shape": [int(X.shape[1])],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": means.astype(np.float64).tolist(),
+        },
+        "x_scale": {
+            "shape": [int(X.shape[1])],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": scales.astype(np.float64).tolist(),
+        },
+        "block_weights": {
+            "shape": [len(block_weights)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": block_weights.astype(np.float64).tolist(),
+        },
+    }
+
+
 def _variable_importance_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -2603,6 +2696,47 @@ def _pls_logistic_fixture(
     }
 
 
+def _mb_pls_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    block_sizes: Sequence[int],
+    n_components: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    sizes = [int(size) for size in block_sizes]
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._mb_pls_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":    "mb_pls",
+                "solver":       "nipals",
+                "n_components": int(n_components),
+                "block_sizes":  sizes,
+                "reference":    "Python block-autoscaled weighted MB-PLS using sklearn PLSRegression(scale=False)",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _mb_pls_expected(X, Y, sizes, n_components),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-block-weighted-MBPLS",
+        },
+    }
+
+
 def _variable_importance_fixture(
     fixture_id: str,
     seed: int,
@@ -3709,6 +3843,38 @@ def synthetic_pls_logistic_multiclass_v1() -> dict[str, Any]:
                                  labels=labels,
                                  n_classes=3,
                                  n_components=2)
+
+
+def synthetic_mb_pls_block_weighted_v1() -> dict[str, Any]:
+    """20 samples, 3 blocks, 7 features and 2 targets for MB-PLS parity."""
+    seed = 100
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(20, 3))
+    block_1 = np.column_stack([
+        0.82 * latent[:, 0] + 0.15 * latent[:, 1],
+        -0.34 * latent[:, 0] + 0.48 * latent[:, 2],
+    ]) + rng.standard_normal(size=(20, 2)) * 0.04
+    block_2 = np.column_stack([
+        0.62 * latent[:, 1] - 0.18 * latent[:, 2],
+        0.23 * latent[:, 0] + 0.41 * latent[:, 1],
+        -0.27 * latent[:, 0] + 0.54 * latent[:, 2],
+    ]) + rng.standard_normal(size=(20, 3)) * 0.05
+    grid = np.linspace(0.0, 2.0 * np.pi, 20)
+    block_3 = np.column_stack([
+        np.sin(grid) + 0.16 * latent[:, 0],
+        np.cos(0.5 * grid) + 0.22 * latent[:, 2],
+    ]) + rng.standard_normal(size=(20, 2)) * 0.03
+    X = np.column_stack([block_1, block_2, block_3])
+    Y = np.column_stack([
+        1.05 * latent[:, 0] - 0.52 * latent[:, 2] + rng.standard_normal(size=20) * 0.04,
+        -0.42 * latent[:, 1] + 0.73 * latent[:, 2] + rng.standard_normal(size=20) * 0.04,
+    ])
+    return _mb_pls_fixture("synthetic_mb_pls_block_weighted_v1",
+                           seed=seed,
+                           X=X,
+                           Y=Y,
+                           block_sizes=[2, 3, 2],
+                           n_components=2)
 
 
 def synthetic_variable_importance_pls2_v1() -> dict[str, Any]:

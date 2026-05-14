@@ -31,6 +31,7 @@ add_library(pls4all_core OBJECT
     core/config.cpp
     core/cross_validation.cpp
     core/matrix_view.cpp
+    core/mb_pls.cpp
     core/metrics.cpp
     core/model.cpp
     core/model_selection.cpp

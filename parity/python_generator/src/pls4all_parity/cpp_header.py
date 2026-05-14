@@ -102,6 +102,14 @@ HEADER_SPECS = {
         "struct": "PlsLogisticFixture",
         "array": "kPlsLogisticFixtures",
     },
+    "mb-pls": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "mb_pls_fixtures.hpp",
+        "fixtures": (
+            "synthetic_mb_pls_block_weighted_v1",
+        ),
+        "struct": "MbPlsFixture",
+        "array": "kMbPlsFixtures",
+    },
     "variable-importance": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "variable_importance_fixtures.hpp",
         "fixtures": (
@@ -1164,6 +1172,96 @@ def generate_pls_logistic(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_mb_pls(fixture_ids: Sequence[str],
+                    fixture_dir: Path,
+                    out: Path,
+                    family: str,
+                    struct_name: str,
+                    array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct MbPlsBlockRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_components;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    MbPlsBlockRef block_sizes;",
+        "    MatrixRef predictions;",
+        "    MatrixRef coefficients;",
+        "    MatrixRef intercept;",
+        "    MatrixRef x_mean;",
+        "    MatrixRef x_scale;",
+        "    MatrixRef block_weights;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        y_name = f"{prefix}_Y"
+        block_sizes_name = f"{prefix}_block_sizes"
+        pred_name = f"{prefix}_predictions"
+        coefficients_name = f"{prefix}_coefficients"
+        intercept_name = f"{prefix}_intercept"
+        mean_name = f"{prefix}_x_mean"
+        scale_name = f"{prefix}_x_scale"
+        weights_name = f"{prefix}_block_weights"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
+        _emit_int_array(lines, block_sizes_name, params["block_sizes"])
+        _emit_array(lines, pred_name, expected["predictions"]["values"])
+        _emit_array(lines, coefficients_name, expected["coefficients"]["values"])
+        _emit_array(lines, intercept_name, expected["intercept"]["values"])
+        _emit_array(lines, mean_name, expected["x_mean"]["values"])
+        _emit_array(lines, scale_name, expected["x_scale"]["values"])
+        _emit_array(lines, weights_name, expected["block_weights"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['n_components'])},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
+            f"        MbPlsBlockRef{{{block_sizes_name}, sizeof({block_sizes_name}) / sizeof(std::int64_t)}},\n"
+            f"        {_matrix_ref(pred_name, expected['predictions'])},\n"
+            f"        {_matrix_ref(coefficients_name, expected['coefficients'])},\n"
+            f"        {_matrix_ref(intercept_name, expected['intercept'])},\n"
+            f"        {_matrix_ref(mean_name, expected['x_mean'])},\n"
+            f"        {_matrix_ref(scale_name, expected['x_scale'])},\n"
+            f"        {_matrix_ref(weights_name, expected['block_weights'])}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_variable_importance(fixture_ids: Sequence[str],
                                  fixture_dir: Path,
                                  out: Path,
@@ -1461,6 +1559,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "pls-logistic":
         generate_pls_logistic(fixture_ids, args.fixture_dir, out, args.family,
                               str(spec["struct"]), str(spec["array"]))
+    elif args.family == "mb-pls":
+        generate_mb_pls(fixture_ids, args.fixture_dir, out, args.family,
+                        str(spec["struct"]), str(spec["array"]))
     elif args.family == "variable-importance":
         generate_variable_importance(fixture_ids, args.fixture_dir, out, args.family,
                                      str(spec["struct"]), str(spec["array"]))

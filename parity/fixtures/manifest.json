@@ -65,6 +65,11 @@
       "path": "synthetic_kernel_wide_pls2_v1.json",
       "sha256": "c16a2deb57be64e48d15dc89e70f725589d89dfef7a29d64d04e1dcf2ca72e31"
     },
+    "synthetic_mb_pls_block_weighted_v1": {
+      "bytes": 9127,
+      "path": "synthetic_mb_pls_block_weighted_v1.json",
+      "sha256": "dab4847645590e2539e4d2b1d67101db083cff1b54e9210c415aa1de7a74a83d"
+    },
     "synthetic_metrics_regression_v1": {
       "bytes": 1871,
       "path": "synthetic_metrics_regression_v1.json",

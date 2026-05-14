@@ -34,7 +34,9 @@ scores, and component-coefficient kernels expose the
 original-scale regression coefficients for each latent prefix. SIMPLS component
 prefixes can also be scored by deterministic k-fold CV for component-count
 selection, and the internal PLS-LDA and PLS-logistic kernels fit classifier
-scores on PLS score spaces. The supported fitted-model path is now live for NIPALS,
+scores on PLS score spaces. The internal MB-PLS kernel fits block-autoscaled,
+block-weighted PLS models and maps coefficients back to original feature space.
+The supported fitted-model path is now live for NIPALS,
 orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and
 randomized-SVD PLS regression
 (PLS1 / PLS2), PLSCanonical with NIPALS/SVD, PLSSVD direct cross-covariance
