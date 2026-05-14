@@ -47,6 +47,7 @@ HEADER_SPECS = {
             "synthetic_pipeline_autoscale_v1",
             "synthetic_pipeline_pareto_v1",
             "synthetic_pipeline_snv_v1",
+            "synthetic_pipeline_msc_v1",
         ),
         "struct": "PipelineFixture",
         "array": "kPipelineFixtures",
@@ -306,6 +307,7 @@ def _pipeline_operator_symbol(name: str) -> str:
         "autoscale": "P4A_OP_AUTOSCALE",
         "pareto": "P4A_OP_PARETO_SCALE",
         "snv": "P4A_OP_SNV",
+        "msc": "P4A_OP_MSC",
     }
     return mapping[name]
 

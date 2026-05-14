@@ -198,7 +198,7 @@ TEST(pipeline_phase3a, unsupported_operators_fail_at_fit_with_context_error) {
     p4a_pipeline_t* pipe = nullptr;
     CHECK_EQ(p4a_context_create(&ctx), P4A_OK);
     CHECK_EQ(p4a_pipeline_create(&pipe), P4A_OK);
-    CHECK_EQ(p4a_pipeline_add_operator(pipe, P4A_OP_MSC, nullptr, 0), P4A_OK);
+    CHECK_EQ(p4a_pipeline_add_operator(pipe, P4A_OP_EMSC, nullptr, 0), P4A_OK);
 
     double x[] = {1.0, 2.0, 3.0, 4.0};
     p4a_matrix_view_t X{};

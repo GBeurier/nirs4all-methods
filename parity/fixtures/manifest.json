@@ -90,6 +90,11 @@
       "path": "synthetic_pipeline_identity_v1.json",
       "sha256": "deb06f4dc11d0abe5a25bb03f2cd50f3caa9ab72c588c9a1d9d34c362115e600"
     },
+    "synthetic_pipeline_msc_v1": {
+      "bytes": 1883,
+      "path": "synthetic_pipeline_msc_v1.json",
+      "sha256": "14da4fb942ad8359479192d7dc539006dc74414528eb19af982b543e01afacc8"
+    },
     "synthetic_pipeline_pareto_v1": {
       "bytes": 1498,
       "path": "synthetic_pipeline_pareto_v1.json",

@@ -40,6 +40,7 @@ Goal: useful for real spectroscopy.
 - SNV, MSC, EMSC, Detrend, Savitzky-Golay smoothing + 1st/2nd derivatives, ASLS baseline.
 - Stateful `Preprocessor` C++ interface; pipeline-of-preprocessors with explicit `fit` / `transform`.
 - Phase 3a shipped as `phase-3a-preprocessing-pipeline`: pipeline fit/transform plus identity, center, autoscale, Pareto scale and SNV.
+- Phase 3b shipped as `phase-3b-msc-preprocessing`: multiplicative scatter correction in the same fitted pipeline contract.
 - Cross-validation engine: k-fold, LOO, Kennard-Stone, SPXY, holdout, external folds, repeated k-fold, Monte-Carlo CV.
 - Metrics: RMSEC, RMSECV, RMSEP, R², Q², bias, RPD, RPIQ, MAE, slope/intercept obs-vs-pred, sensitivity, specificity, balanced accuracy, AUC, MCC.
 - VIP, selectivity ratio, regression coefficients per component.

@@ -98,6 +98,26 @@ inline const p4a_operator_kind_t synthetic_pipeline_snv_v1_operators[] = {
     P4A_OP_SNV,
 };
 
+inline const double synthetic_pipeline_msc_v1_x[] = {
+    1.3500000000000001, 2.4500000000000002, 4.6500000000000004, 7.9500000000000011,
+    12.350000000000001, 0.46999999999999997, 1.29, 2.9299999999999997,
+    5.3899999999999997, 8.6699999999999999, 2.25, 3.6000000000000001,
+    6.3000000000000007, 10.350000000000001, 15.750000000000002, 1.0700000000000001,
+    1.6899999999999999, 2.9300000000000002, 4.79, 7.2700000000000005,
+};
+
+inline const double synthetic_pipeline_msc_v1_transform_train[] = {
+    1.2849999999999995, 2.2574999999999998, 4.2024999999999997, 7.1200000000000019,
+    11.010000000000002, 1.2850000000000006, 2.2575000000000007, 4.2025000000000006,
+    7.120000000000001, 11.010000000000002, 1.2849999999999995, 2.2574999999999998,
+    4.2025000000000006, 7.1200000000000019, 11.010000000000003, 1.285000000000001,
+    2.2575000000000007, 4.2025000000000015, 7.120000000000001, 11.010000000000002,
+};
+
+inline const p4a_operator_kind_t synthetic_pipeline_msc_v1_operators[] = {
+    P4A_OP_MSC,
+};
+
 inline const PipelineFixture kPipelineFixtures[] = {
     {
         "synthetic_pipeline_identity_v1",
@@ -133,6 +153,13 @@ inline const PipelineFixture kPipelineFixtures[] = {
         sizeof(synthetic_pipeline_snv_v1_operators) / sizeof(p4a_operator_kind_t),
         MatrixRef{3, 3, synthetic_pipeline_snv_v1_x, sizeof(synthetic_pipeline_snv_v1_x) / sizeof(double), false},
         MatrixRef{3, 3, synthetic_pipeline_snv_v1_transform_train, sizeof(synthetic_pipeline_snv_v1_transform_train) / sizeof(double), false}
+    },
+    {
+        "synthetic_pipeline_msc_v1",
+        synthetic_pipeline_msc_v1_operators,
+        sizeof(synthetic_pipeline_msc_v1_operators) / sizeof(p4a_operator_kind_t),
+        MatrixRef{4, 5, synthetic_pipeline_msc_v1_x, sizeof(synthetic_pipeline_msc_v1_x) / sizeof(double), false},
+        MatrixRef{4, 5, synthetic_pipeline_msc_v1_transform_train, sizeof(synthetic_pipeline_msc_v1_transform_train) / sizeof(double), false}
     }
 };
 

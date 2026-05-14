@@ -1,0 +1,98 @@
+{
+  "comparison_policy": {
+    "components_alignment": "exact",
+    "sign_resolver": "none",
+    "tolerance_table_row": "pls4all-numpy-preprocessing"
+  },
+  "data": {
+    "X": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "rng_seed": 45,
+      "shape": [
+        4,
+        5
+      ],
+      "values": [
+        1.35,
+        2.45,
+        4.65,
+        7.950000000000001,
+        12.350000000000001,
+        0.47,
+        1.29,
+        2.9299999999999997,
+        5.39,
+        8.67,
+        2.25,
+        3.6,
+        6.300000000000001,
+        10.350000000000001,
+        15.750000000000002,
+        1.07,
+        1.69,
+        2.93,
+        4.79,
+        7.2700000000000005
+      ]
+    },
+    "Y": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "rng_seed": 45,
+      "shape": [
+        4,
+        1
+      ],
+      "values": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "expected": {
+    "transform_train": {
+      "shape": [
+        4,
+        5
+      ],
+      "values": [
+        1.2849999999999995,
+        2.2575,
+        4.2025,
+        7.120000000000002,
+        11.010000000000002,
+        1.2850000000000006,
+        2.2575000000000007,
+        4.202500000000001,
+        7.120000000000001,
+        11.010000000000002,
+        1.2849999999999995,
+        2.2575,
+        4.202500000000001,
+        7.120000000000002,
+        11.010000000000003,
+        1.285000000000001,
+        2.2575000000000007,
+        4.2025000000000015,
+        7.120000000000001,
+        11.010000000000002
+      ]
+    }
+  },
+  "fixture_id": "synthetic_pipeline_msc_v1",
+  "generator": {
+    "git_revision_sha": "unknown",
+    "name": "pls4all_parity.suites._pipeline_expected",
+    "params": {
+      "operators": [
+        "msc"
+      ],
+      "reference": "NumPy preprocessing pipeline"
+    },
+    "version": "1"
+  },
+  "schema_version": 1
+}

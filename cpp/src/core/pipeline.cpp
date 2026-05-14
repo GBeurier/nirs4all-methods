@@ -198,6 +198,59 @@ void apply_snv(const std::vector<double>& values,
     }
 }
 
+[[nodiscard]] p4a_status_t apply_msc(::pls4all::core::Context& ctx,
+                                     const std::vector<double>& values,
+                                     const std::vector<double>& reference,
+                                     std::size_t rows,
+                                     std::size_t cols,
+                                     std::vector<double>& out) {
+    if (cols < 2U) {
+        ctx.set_error("MSC requires at least 2 columns");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    double ref_mean = 0.0;
+    for (double value : reference) {
+        ref_mean += value;
+    }
+    ref_mean /= static_cast<double>(cols);
+    double ref_ss = 0.0;
+    for (double value : reference) {
+        const double centered = value - ref_mean;
+        ref_ss += centered * centered;
+    }
+    if (ref_ss <= std::numeric_limits<double>::epsilon() || !std::isfinite(ref_ss)) {
+        ctx.set_error("MSC reference spectrum has zero variance");
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+
+    out.assign(rows * cols, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        double row_mean = 0.0;
+        for (std::size_t col = 0; col < cols; ++col) {
+            row_mean += values[idx(row, cols, col)];
+        }
+        row_mean /= static_cast<double>(cols);
+
+        double cov = 0.0;
+        for (std::size_t col = 0; col < cols; ++col) {
+            cov += (reference[col] - ref_mean) *
+                   (values[idx(row, cols, col)] - row_mean);
+        }
+        const double slope = cov / ref_ss;
+        if (std::fabs(slope) <= std::numeric_limits<double>::epsilon() ||
+            !std::isfinite(slope)) {
+            ctx.set_errorf("MSC slope vanished at row %llu", ull(row));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        const double intercept = row_mean - slope * ref_mean;
+        for (std::size_t col = 0; col < cols; ++col) {
+            out[idx(row, cols, col)] =
+                (values[idx(row, cols, col)] - intercept) / slope;
+        }
+    }
+    return P4A_OK;
+}
+
 }  // namespace
 
 namespace pls4all::core {
@@ -259,8 +312,16 @@ p4a_status_t Pipeline::fit(Context& ctx, const p4a_matrix_view_t& X) {
             case P4A_OP_SNV:
                 apply_snv(current, rows, cols, next);
                 break;
+            case P4A_OP_MSC:
+                fit_column_center(current, rows, cols, state.location);
+                status = apply_msc(ctx, current, state.location, rows, cols, next);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                break;
             default:
-                ctx.set_errorf("pipeline operator %d is not implemented in phase 3a",
+                ctx.set_errorf("pipeline operator %d is not implemented in this release",
                                static_cast<int>(entry.kind));
                 states_.clear();
                 return P4A_ERR_NOT_IMPLEMENTED;
@@ -324,6 +385,12 @@ p4a_status_t Pipeline::transform(Context& ctx,
                 break;
             case P4A_OP_SNV:
                 apply_snv(current, rows, cols, next);
+                break;
+            case P4A_OP_MSC:
+                status = apply_msc(ctx, current, state.location, rows, cols, next);
+                if (status != P4A_OK) {
+                    return status;
+                }
                 break;
             default:
                 ctx.set_error("fitted pipeline contains an unsupported operator");

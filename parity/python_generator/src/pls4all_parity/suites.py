@@ -442,6 +442,17 @@ def _pipeline_apply(X: np.ndarray, operators: list[str]) -> np.ndarray:
             scale = out.std(axis=1, ddof=1, keepdims=True)
             scale = np.where((scale == 0.0) | ~np.isfinite(scale), 1.0, scale)
             out = (out - mean) / scale
+        elif op == "msc":
+            reference = out.mean(axis=0)
+            ref_mean = float(reference.mean())
+            ref_ss = float(np.sum((reference - ref_mean) ** 2))
+            corrected = np.zeros_like(out)
+            for row_idx, row in enumerate(out):
+                row_mean = float(row.mean())
+                slope = float(np.sum((reference - ref_mean) * (row - row_mean)) / ref_ss)
+                intercept = row_mean - slope * ref_mean
+                corrected[row_idx, :] = (row - intercept) / slope
+            out = corrected
         else:
             raise ValueError(f"unsupported pipeline operator fixture: {op}")
     return out.astype(np.float64, copy=False)
@@ -1838,6 +1849,19 @@ def synthetic_pipeline_snv_v1() -> dict[str, Any]:
     ], dtype=np.float64)
     return _pipeline_fixture("synthetic_pipeline_snv_v1", seed=44,
                              X=X, operators=["snv"])
+
+
+def synthetic_pipeline_msc_v1() -> dict[str, Any]:
+    """4 samples, 5 wavelengths for multiplicative scatter correction parity."""
+    reference = np.array([1.0, 2.0, 4.0, 7.0, 11.0], dtype=np.float64)
+    X = np.vstack([
+        0.25 + 1.10 * reference,
+        -0.35 + 0.82 * reference,
+        0.90 + 1.35 * reference,
+        0.45 + 0.62 * reference,
+    ])
+    return _pipeline_fixture("synthetic_pipeline_msc_v1", seed=45,
+                             X=X, operators=["msc"])
 
 
 def synthetic_power_tiny_pls1_v1() -> dict[str, Any]:

@@ -116,15 +116,24 @@ int cmd_selfcheck() {
         0.0, 0.0, 1.0,
         1.0, 0.0, 0.0,
     };
+    double x_msc_buf[20] = {
+        1.35, 2.45, 4.65, 7.95, 12.35,
+        0.47, 1.29, 2.93, 5.39, 8.67,
+        2.25, 3.60, 6.30, 10.35, 15.75,
+        1.07, 1.69, 2.93, 4.79, 7.27,
+    };
     p4a_matrix_view_t X;
     p4a_matrix_view_t Y;
     p4a_matrix_view_t Y_multi;
+    p4a_matrix_view_t X_msc;
     CHECK(p4a_matrix_view_init_rowmajor(&X, xbuf, 4, 3, P4A_DTYPE_F64) == P4A_OK);
     CHECK(p4a_matrix_view_init_rowmajor(&Y, ybuf, 4, 1, P4A_DTYPE_F64) == P4A_OK);
     CHECK(p4a_matrix_view_init_rowmajor(&Y_multi, y_multi_buf, 4, 3, P4A_DTYPE_F64) == P4A_OK);
+    CHECK(p4a_matrix_view_init_rowmajor(&X_msc, x_msc_buf, 4, 5, P4A_DTYPE_F64) == P4A_OK);
     CHECK(p4a_matrix_view_validate(&X) == P4A_OK);
     CHECK(p4a_matrix_view_validate(&Y) == P4A_OK);
     CHECK(p4a_matrix_view_validate(&Y_multi) == P4A_OK);
+    CHECK(p4a_matrix_view_validate(&X_msc) == P4A_OK);
 
     // Pipeline smoke: fit/transform for the Phase 3a preprocessing subset.
     p4a_pipeline_t* pipe = nullptr;
@@ -141,6 +150,18 @@ int cmd_selfcheck() {
     CHECK(pipe_cols == 3);
     p4a_array_free(x_preprocessed);
     p4a_pipeline_destroy(pipe);
+
+    p4a_pipeline_t* msc_pipe = nullptr;
+    CHECK(p4a_pipeline_create(&msc_pipe) == P4A_OK);
+    CHECK(p4a_pipeline_add_operator(msc_pipe, P4A_OP_MSC, nullptr, 0) == P4A_OK);
+    CHECK(p4a_pipeline_fit(ctx, msc_pipe, &X_msc, nullptr) == P4A_OK);
+    p4a_array_t* x_msc = nullptr;
+    CHECK(p4a_pipeline_transform_alloc(ctx, msc_pipe, &X_msc, &x_msc) == P4A_OK);
+    CHECK(p4a_array_shape(x_msc, &pipe_rows, &pipe_cols) == P4A_OK);
+    CHECK(pipe_rows == 4);
+    CHECK(pipe_cols == 5);
+    p4a_array_free(x_msc);
+    p4a_pipeline_destroy(msc_pipe);
 
     // Model smoke: NIPALS fit, predict, transform and export.
     p4a_model_t* model = nullptr;
