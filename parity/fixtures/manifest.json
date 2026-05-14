@@ -70,6 +70,11 @@
       "path": "synthetic_cv_kfold_nipals_pls2_v1.json",
       "sha256": "16ad168459f44db4818a1e07ffc30f39c81f83357b905cbca25db06cd2d607b1"
     },
+    "synthetic_emcuve_pls_ensemble_v1": {
+      "bytes": 13588,
+      "path": "synthetic_emcuve_pls_ensemble_v1.json",
+      "sha256": "2f13c8396fa184913e4220cf3cf25fc4171b4af0f766dc179c2000af8018a12f"
+    },
     "synthetic_ga_pls_wrapper_v1": {
       "bytes": 15310,
       "path": "synthetic_ga_pls_wrapper_v1.json",

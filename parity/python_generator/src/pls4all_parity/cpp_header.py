@@ -158,6 +158,14 @@ HEADER_SPECS = {
         "struct": "UveSelectionFixture",
         "array": "kUveSelectionFixtures",
     },
+    "emcuve-selection": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "emcuve_selection_fixtures.hpp",
+        "fixtures": (
+            "synthetic_emcuve_pls_ensemble_v1",
+        ),
+        "struct": "EmcuveSelectionFixture",
+        "array": "kEmcuveSelectionFixtures",
+    },
     "spa-selection": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "spa_selection_fixtures.hpp",
         "fixtures": (
@@ -1858,6 +1866,98 @@ def generate_uve_selection(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_emcuve_selection(fixture_ids: Sequence[str],
+                              fixture_dir: Path,
+                              out: Path,
+                              family: str,
+                              struct_name: str,
+                              array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct EmcuveSelectionIndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_components;",
+        "    std::int32_t n_repeats;",
+        "    std::int64_t test_count;",
+        "    std::int32_t noise_features;",
+        "    std::int32_t n_ensembles;",
+        "    std::uint64_t validation_seed;",
+        "    std::uint64_t noise_seed;",
+        "    double vote_threshold;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    MatrixRef mean_real_stability_scores;",
+        "    MatrixRef vote_frequencies;",
+        "    MatrixRef noise_thresholds;",
+        "    EmcuveSelectionIndexRef selected_indices;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        y_name = f"{prefix}_Y"
+        mean_name = f"{prefix}_mean_real_stability_scores"
+        votes_name = f"{prefix}_vote_frequencies"
+        thresholds_name = f"{prefix}_noise_thresholds"
+        selected_name = f"{prefix}_selected_indices"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
+        _emit_array(lines, mean_name, expected["mean_real_stability_scores"]["values"])
+        _emit_array(lines, votes_name, expected["vote_frequencies"]["values"])
+        _emit_array(lines, thresholds_name, expected["noise_thresholds"]["values"])
+        _emit_int_array(lines, selected_name, expected["selected_indices"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['n_components'])},\n"
+            f"        {int(params['n_repeats'])},\n"
+            f"        {int(params['test_count'])},\n"
+            f"        {int(params['noise_features'])},\n"
+            f"        {int(params['n_ensembles'])},\n"
+            f"        UINT64_C({int(params['validation_seed'])}),\n"
+            f"        UINT64_C({int(params['noise_seed'])}),\n"
+            f"        {_format_double(float(params['vote_threshold']))},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
+            f"        {_matrix_ref(mean_name, expected['mean_real_stability_scores'])},\n"
+            f"        {_matrix_ref(votes_name, expected['vote_frequencies'])},\n"
+            f"        {_matrix_ref(thresholds_name, expected['noise_thresholds'])},\n"
+            f"        EmcuveSelectionIndexRef{{{selected_name}, sizeof({selected_name}) / sizeof(std::int64_t)}}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_spa_selection(fixture_ids: Sequence[str],
                            fixture_dir: Path,
                            out: Path,
@@ -2962,6 +3062,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "uve-selection":
         generate_uve_selection(fixture_ids, args.fixture_dir, out, args.family,
                                str(spec["struct"]), str(spec["array"]))
+    elif args.family == "emcuve-selection":
+        generate_emcuve_selection(fixture_ids, args.fixture_dir, out, args.family,
+                                  str(spec["struct"]), str(spec["array"]))
     elif args.family == "spa-selection":
         generate_spa_selection(fixture_ids, args.fixture_dir, out, args.family,
                                str(spec["struct"]), str(spec["array"]))

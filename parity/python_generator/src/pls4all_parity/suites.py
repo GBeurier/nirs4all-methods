@@ -1581,6 +1581,87 @@ def _uve_expected(
     }
 
 
+def _emcuve_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_repeats: int,
+    test_count: int,
+    validation_seed: int,
+    noise_features: int,
+    noise_seed: int,
+    n_ensembles: int,
+    vote_threshold: float,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    if n_ensembles < 1:
+        raise ValueError("n_ensembles must be positive")
+    if not 0.0 < float(vote_threshold) <= 1.0:
+        raise ValueError("vote_threshold must be in (0, 1]")
+
+    p = int(X.shape[1])
+    vote_counts = np.zeros(p, dtype=np.float64)
+    stability_sums = np.zeros(p, dtype=np.float64)
+    noise_thresholds = np.zeros(int(n_ensembles), dtype=np.float64)
+    for ensemble_index in range(int(n_ensembles)):
+        member_seed = (int(noise_seed) + int(ensemble_index) * _SPLITMIX_GOLDEN) & _MASK64
+        member = _uve_expected(X,
+                               Y,
+                               n_components,
+                               n_repeats,
+                               test_count,
+                               validation_seed,
+                               noise_features,
+                               member_seed)
+        real_scores = np.asarray(member["real_stability_scores"]["values"], dtype=np.float64)
+        stability_sums += real_scores
+        noise_thresholds[ensemble_index] = float(member["noise_threshold"])
+        for feature in member["selected_indices"]["values"]:
+            vote_counts[int(feature)] += 1.0
+
+    vote_frequencies = vote_counts / float(n_ensembles)
+    mean_real_scores = stability_sums / float(n_ensembles)
+    selected = [
+        int(feature)
+        for feature in range(p)
+        if float(vote_frequencies[feature]) >= float(vote_threshold)
+    ]
+    selected.sort(key=lambda feature: (
+        -float(vote_frequencies[feature]),
+        -float(mean_real_scores[feature]),
+        int(feature),
+    ))
+    return {
+        "mean_real_stability_scores": {
+            "shape": [1, int(mean_real_scores.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": mean_real_scores.astype(np.float64).tolist(),
+        },
+        "vote_frequencies": {
+            "shape": [1, int(vote_frequencies.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": vote_frequencies.astype(np.float64).tolist(),
+        },
+        "noise_thresholds": {
+            "shape": [1, int(noise_thresholds.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": noise_thresholds.astype(np.float64).tolist(),
+        },
+        "selected_indices": {
+            "shape": [1, int(len(selected))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected,
+        },
+    }
+
+
 def _standardized_columns(X: np.ndarray) -> np.ndarray:
     X = np.asarray(X, dtype=np.float64)
     mean = np.mean(X, axis=0)
@@ -4442,6 +4523,67 @@ def _uve_fixture(
     }
 
 
+def _emcuve_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_repeats: int,
+    test_count: int,
+    validation_seed: int,
+    noise_features: int,
+    noise_seed: int,
+    n_ensembles: int,
+    vote_threshold: float,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._emcuve_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":       "pls_regression",
+                "solver":          "nipals",
+                "n_components":    int(n_components),
+                "n_repeats":       int(n_repeats),
+                "test_count":      int(test_count),
+                "validation_seed": int(validation_seed),
+                "noise_features":  int(noise_features),
+                "noise_seed":      int(noise_seed),
+                "n_ensembles":     int(n_ensembles),
+                "vote_threshold":  float(vote_threshold),
+                "reference":       "sklearn PLSRegression ensemble MC-UVE vote rule",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _emcuve_expected(X,
+                                     Y,
+                                     n_components,
+                                     n_repeats,
+                                     test_count,
+                                     validation_seed,
+                                     noise_features,
+                                     noise_seed,
+                                     n_ensembles,
+                                     vote_threshold),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-EMCUVE",
+        },
+    }
+
+
 def _spa_selection_fixture(
     fixture_id: str,
     seed: int,
@@ -6175,6 +6317,43 @@ def synthetic_uve_artificial_variables_v1() -> dict[str, Any]:
                         validation_seed=63,
                         noise_features=5,
                         noise_seed=64)
+
+
+def synthetic_emcuve_pls_ensemble_v1() -> dict[str, Any]:
+    """30 samples, 11 features, 2 targets for deterministic EMCUVE voting."""
+    seed = 82
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(30, 5))
+    trend = np.linspace(-1.0, 1.0, 30)
+    X = np.column_stack([
+        0.96 * latent[:, 0] + 0.04 * latent[:, 1] + 0.04 * rng.standard_normal(size=30),
+        -0.50 * latent[:, 0] + 0.58 * latent[:, 2] + 0.05 * rng.standard_normal(size=30),
+        0.69 * latent[:, 1] - 0.20 * latent[:, 3] + 0.05 * rng.standard_normal(size=30),
+        0.18 * latent[:, 0] + 0.87 * latent[:, 3] + 0.05 * rng.standard_normal(size=30),
+        -0.64 * latent[:, 2] + 0.37 * latent[:, 3] + 0.05 * rng.standard_normal(size=30),
+        0.42 * latent[:, 4] + 0.18 * latent[:, 0] + 0.06 * rng.standard_normal(size=30),
+        0.26 * latent[:, 1] - 0.24 * latent[:, 4] + 0.08 * rng.standard_normal(size=30),
+        np.sin(np.linspace(0.0, 3.5 * np.pi, 30)) + 0.04 * rng.standard_normal(size=30),
+        np.cos(np.linspace(0.0, 2.5 * np.pi, 30)) + 0.05 * rng.standard_normal(size=30),
+        0.28 * trend + 0.12 * rng.standard_normal(size=30),
+        rng.standard_normal(size=30) * 0.16,
+    ])
+    Y = np.column_stack([
+        1.16 * latent[:, 0] - 0.57 * latent[:, 2] + 0.31 * latent[:, 4] + 0.05 * rng.standard_normal(size=30),
+        -0.44 * latent[:, 1] + 0.71 * latent[:, 3] - 0.26 * latent[:, 4] + 0.05 * rng.standard_normal(size=30),
+    ])
+    return _emcuve_fixture("synthetic_emcuve_pls_ensemble_v1",
+                           seed=seed,
+                           X=X,
+                           Y=Y,
+                           n_components=2,
+                           n_repeats=8,
+                           test_count=7,
+                           validation_seed=83,
+                           noise_features=6,
+                           noise_seed=84,
+                           n_ensembles=5,
+                           vote_threshold=0.6)
 
 
 def synthetic_spa_pls_projection_v1() -> dict[str, Any]:
