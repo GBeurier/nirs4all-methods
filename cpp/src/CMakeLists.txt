@@ -25,7 +25,8 @@ add_library(pls4all_core OBJECT
     core/status.cpp
     core/version.cpp
     core/context.cpp
-    core/config.cpp)
+    core/config.cpp
+    core/matrix_view.cpp)
 target_include_directories(pls4all_core
     PUBLIC  ${PROJECT_SOURCE_DIR}/cpp/include
             ${PROJECT_BINARY_DIR}/generated
@@ -51,7 +52,8 @@ pls4all_add_warnings(pls4all_core)
 set(_pls4all_c_sources
     c_api/c_api_version.cpp
     c_api/c_api_context.cpp
-    c_api/c_api_config.cpp)
+    c_api/c_api_config.cpp
+    c_api/c_api_matrix.cpp)
 
 function(pls4all_apply_c_target target)
     # Embed all pls4all_core objects directly into the C-API target so that
