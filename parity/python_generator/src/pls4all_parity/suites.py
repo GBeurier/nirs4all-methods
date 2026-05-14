@@ -7,6 +7,7 @@ from typing import Any, Sequence
 
 import numpy as np
 from scipy.signal import savgol_filter
+from scipy.special import betaincinv
 from sklearn.cross_decomposition import PLSRegression
 
 
@@ -2487,6 +2488,114 @@ def _bve_selection_expected(
     }
 
 
+def _round2(values: np.ndarray) -> np.ndarray:
+    return np.round(np.asarray(values, dtype=np.float64), 2)
+
+
+def _t2_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    alpha: Sequence[float],
+    min_selected: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    model = PLSRegression(n_components=n_components, scale=True, max_iter=500, tol=1e-6)
+    model.fit(X, Y)
+    W = model.x_weights_.astype(np.float64, copy=False)
+    p_features, p_components = W.shape
+    if p_features <= p_components + 1:
+        raise RuntimeError("T2-PLS requires more features than components + 1")
+
+    mean = W.mean(axis=0)
+    centered = W - mean.reshape(1, -1)
+    covariance = (centered.T @ centered) / float(p_features - 1)
+    inv_covariance = np.linalg.inv(covariance)
+    raw_t2 = np.einsum("ij,jk,ik->i", centered, inv_covariance, centered)
+    t2_scores = _round2(raw_t2)
+
+    alpha_values = [float(item) for item in alpha]
+    ucl_values: list[float] = []
+    rmse_values: list[float] = []
+    selected_counts: list[int] = []
+    selected_mask: list[int] = []
+    selected_by_alpha: list[list[int]] = []
+
+    beta_a = float(p_components) / 2.0
+    beta_b = float(p_features - p_components - 1) / 2.0
+    ucl_factor = float((p_features - 1) * (p_features - 1)) / float(p_features)
+    for level in alpha_values:
+        raw_ucl = ucl_factor * float(betaincinv(beta_a, beta_b, 1.0 - level))
+        ucl = float(np.round(raw_ucl, 2))
+        ucl_values.append(ucl)
+        selected = [int(i) for i, value in enumerate(t2_scores) if float(value) > ucl]
+        if len(selected) < int(min_selected):
+            order = sorted(range(p_features), key=lambda i: (-float(t2_scores[i]), int(i)))
+            selected = [int(i) for i in order[:int(min_selected)]]
+        mask = np.zeros(p_features, dtype=np.int64)
+        for feature in selected:
+            mask[int(feature)] = 1
+        selected_mask.extend(int(item) for item in mask.tolist())
+        selected_by_alpha.append(selected)
+        selected_counts.append(int(len(selected)))
+        rmse_values.append(float(_kfold_pls_rmse(_copy_columns(X, selected), Y, n_components, n_splits)))
+
+    best_error_index = min(range(len(alpha_values)), key=lambda i: (rmse_values[i], i))
+    min_set_index = min(range(len(alpha_values)), key=lambda i: (selected_counts[i], rmse_values[i], i))
+    return {
+        "t2_scores": {
+            "shape": [1, p_features],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": t2_scores.astype(np.float64, copy=False).tolist(),
+        },
+        "ucl_by_alpha": {
+            "shape": [1, len(alpha_values)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": ucl_values,
+        },
+        "rmse_by_alpha": {
+            "shape": [1, len(alpha_values)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": rmse_values,
+        },
+        "selected_counts": {
+            "shape": [1, len(alpha_values)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected_counts,
+        },
+        "selected_mask": {
+            "shape": [len(alpha_values), p_features],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected_mask,
+        },
+        "selected_indices_best_error": {
+            "shape": [1, len(selected_by_alpha[best_error_index])],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected_by_alpha[best_error_index],
+        },
+        "selected_indices_min_set": {
+            "shape": [1, len(selected_by_alpha[min_set_index])],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected_by_alpha[min_set_index],
+        },
+        "best_error_index": int(best_error_index),
+        "min_set_index": int(min_set_index),
+        "best_rmse": float(rmse_values[best_error_index]),
+        "min_set_rmse": float(rmse_values[min_set_index]),
+    }
+
+
 def _component_coefficients_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -4603,6 +4712,56 @@ def _bve_selection_fixture(
     }
 
 
+def _t2_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    alpha: Sequence[float],
+    min_selected: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    alpha_values = [float(item) for item in alpha]
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._t2_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":     "pls_regression",
+                "solver":        "nipals",
+                "n_components":  int(n_components),
+                "n_splits":      int(n_splits),
+                "alpha":         alpha_values,
+                "min_selected":  int(min_selected),
+                "reference":     "sklearn PLSRegression plus plsVarSel-style Hotelling T2-PLS",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _t2_selection_expected(X,
+                                           Y,
+                                           n_components,
+                                           n_splits,
+                                           alpha_values,
+                                           min_selected),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-T2-selection",
+        },
+    }
+
+
 def _component_coefficients_fixture(
     fixture_id: str,
     seed: int,
@@ -6114,6 +6273,39 @@ def synthetic_bve_pls_backward_v1() -> dict[str, Any]:
                                   n_splits=5,
                                   n_steps=5,
                                   min_features=3)
+
+
+def synthetic_t2_pls_hotelling_v1() -> dict[str, Any]:
+    """27 samples, 11 features, 2 targets for deterministic T2-PLS selection."""
+    seed = 79
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(27, 4))
+    wave = np.linspace(0.0, 2.4 * np.pi, 27)
+    X = np.column_stack([
+        0.88 * latent[:, 0] + 0.12 * latent[:, 1] + 0.04 * rng.standard_normal(size=27),
+        -0.41 * latent[:, 0] + 0.57 * latent[:, 2] + 0.04 * rng.standard_normal(size=27),
+        0.63 * latent[:, 1] - 0.28 * latent[:, 3] + 0.05 * rng.standard_normal(size=27),
+        0.22 * latent[:, 0] + 0.77 * latent[:, 3] + 0.05 * rng.standard_normal(size=27),
+        -0.52 * latent[:, 2] + 0.31 * latent[:, 3] + 0.05 * rng.standard_normal(size=27),
+        0.43 * latent[:, 0] - 0.18 * latent[:, 1] + 0.06 * rng.standard_normal(size=27),
+        np.sin(1.2 * wave) + 0.05 * rng.standard_normal(size=27),
+        np.cos(1.6 * wave) + 0.05 * rng.standard_normal(size=27),
+        0.30 * np.linspace(-1.0, 1.0, 27) + 0.09 * rng.standard_normal(size=27),
+        rng.standard_normal(size=27) * 0.13,
+        0.20 * latent[:, 2] - 0.15 * latent[:, 0] + 0.08 * rng.standard_normal(size=27),
+    ])
+    Y = np.column_stack([
+        1.05 * latent[:, 0] - 0.37 * latent[:, 2] + 0.20 * latent[:, 3] + 0.05 * rng.standard_normal(size=27),
+        -0.40 * latent[:, 1] + 0.70 * latent[:, 3] - 0.17 * latent[:, 2] + 0.05 * rng.standard_normal(size=27),
+    ])
+    return _t2_selection_fixture("synthetic_t2_pls_hotelling_v1",
+                                 seed=seed,
+                                 X=X,
+                                 Y=Y,
+                                 n_components=3,
+                                 n_splits=5,
+                                 alpha=[0.8, 0.6, 0.4, 0.2, 0.05],
+                                 min_selected=5)
 
 
 def synthetic_component_coefficients_pls2_v1() -> dict[str, Any]:

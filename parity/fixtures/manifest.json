@@ -325,6 +325,11 @@
       "path": "synthetic_svd_tiny_pls1_v1.json",
       "sha256": "999d4116a7a4428dd502ce4d9e3b6faa06aa625907d8789df5f78ad58fef9dab"
     },
+    "synthetic_t2_pls_hotelling_v1": {
+      "bytes": 13584,
+      "path": "synthetic_t2_pls_hotelling_v1.json",
+      "sha256": "ce3bc47d8b1d3a8a40caca276ebcbbd5139bf79ba6c5666a6165dde3b721a0eb"
+    },
     "synthetic_tiny_centered_v1": {
       "bytes": 4415,
       "path": "synthetic_tiny_centered_v1.json",

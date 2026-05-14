@@ -76,6 +76,7 @@ def _generate_all() -> dict[str, bytes]:
         "synthetic_ga_pls_wrapper_v1": _serialize(suites.synthetic_ga_pls_wrapper_v1()),
         "synthetic_shaving_pls_recursive_v1": _serialize(suites.synthetic_shaving_pls_recursive_v1()),
         "synthetic_bve_pls_backward_v1": _serialize(suites.synthetic_bve_pls_backward_v1()),
+        "synthetic_t2_pls_hotelling_v1": _serialize(suites.synthetic_t2_pls_hotelling_v1()),
         "synthetic_component_coefficients_pls2_v1": _serialize(suites.synthetic_component_coefficients_pls2_v1()),
         "synthetic_validation_kfold_balanced_v1": _serialize(suites.synthetic_validation_kfold_balanced_v1()),
         "synthetic_validation_leave_one_out_v1": _serialize(suites.synthetic_validation_leave_one_out_v1()),

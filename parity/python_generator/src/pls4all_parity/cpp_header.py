@@ -214,6 +214,14 @@ HEADER_SPECS = {
         "struct": "BveSelectionFixture",
         "array": "kBveSelectionFixtures",
     },
+    "t2-selection": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "t2_selection_fixtures.hpp",
+        "fixtures": (
+            "synthetic_t2_pls_hotelling_v1",
+        ),
+        "struct": "T2SelectionFixture",
+        "array": "kT2SelectionFixtures",
+    },
     "component-coefficients": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "component_coefficients_fixtures.hpp",
         "fixtures": (
@@ -2490,6 +2498,117 @@ def generate_bve_selection(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_t2_selection(fixture_ids: Sequence[str],
+                          fixture_dir: Path,
+                          out: Path,
+                          family: str,
+                          struct_name: str,
+                          array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct T2SelectionIndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        "struct T2SelectionAlphaRef {",
+        "    const double* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_components;",
+        "    std::int32_t n_splits;",
+        "    std::int32_t min_selected;",
+        "    std::int32_t best_error_index;",
+        "    std::int32_t min_set_index;",
+        "    double best_rmse;",
+        "    double min_set_rmse;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    T2SelectionAlphaRef alpha;",
+        "    MatrixRef t2_scores;",
+        "    MatrixRef ucl_by_alpha;",
+        "    MatrixRef rmse_by_alpha;",
+        "    T2SelectionIndexRef selected_counts;",
+        "    T2SelectionIndexRef selected_mask;",
+        "    T2SelectionIndexRef selected_indices_best_error;",
+        "    T2SelectionIndexRef selected_indices_min_set;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        y_name = f"{prefix}_Y"
+        alpha_name = f"{prefix}_alpha"
+        t2_name = f"{prefix}_t2_scores"
+        ucl_name = f"{prefix}_ucl_by_alpha"
+        rmse_name = f"{prefix}_rmse_by_alpha"
+        counts_name = f"{prefix}_selected_counts"
+        mask_name = f"{prefix}_selected_mask"
+        best_name = f"{prefix}_selected_indices_best_error"
+        min_name = f"{prefix}_selected_indices_min_set"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
+        _emit_array(lines, alpha_name, params["alpha"])
+        _emit_array(lines, t2_name, expected["t2_scores"]["values"])
+        _emit_array(lines, ucl_name, expected["ucl_by_alpha"]["values"])
+        _emit_array(lines, rmse_name, expected["rmse_by_alpha"]["values"])
+        _emit_int_array(lines, counts_name, expected["selected_counts"]["values"])
+        _emit_int_array(lines, mask_name, expected["selected_mask"]["values"])
+        _emit_int_array(lines, best_name, expected["selected_indices_best_error"]["values"])
+        _emit_int_array(lines, min_name, expected["selected_indices_min_set"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['n_components'])},\n"
+            f"        {int(params['n_splits'])},\n"
+            f"        {int(params['min_selected'])},\n"
+            f"        {int(expected['best_error_index'])},\n"
+            f"        {int(expected['min_set_index'])},\n"
+            f"        {_format_double(float(expected['best_rmse']))},\n"
+            f"        {_format_double(float(expected['min_set_rmse']))},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
+            f"        T2SelectionAlphaRef{{{alpha_name}, sizeof({alpha_name}) / sizeof(double)}},\n"
+            f"        {_matrix_ref(t2_name, expected['t2_scores'])},\n"
+            f"        {_matrix_ref(ucl_name, expected['ucl_by_alpha'])},\n"
+            f"        {_matrix_ref(rmse_name, expected['rmse_by_alpha'])},\n"
+            f"        T2SelectionIndexRef{{{counts_name}, sizeof({counts_name}) / sizeof(std::int64_t)}},\n"
+            f"        T2SelectionIndexRef{{{mask_name}, sizeof({mask_name}) / sizeof(std::int64_t)}},\n"
+            f"        T2SelectionIndexRef{{{best_name}, sizeof({best_name}) / sizeof(std::int64_t)}},\n"
+            f"        T2SelectionIndexRef{{{min_name}, sizeof({min_name}) / sizeof(std::int64_t)}}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_component_coefficients(fixture_ids: Sequence[str],
                                     fixture_dir: Path,
                                     out: Path,
@@ -2766,6 +2885,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "bve-selection":
         generate_bve_selection(fixture_ids, args.fixture_dir, out, args.family,
                                str(spec["struct"]), str(spec["array"]))
+    elif args.family == "t2-selection":
+        generate_t2_selection(fixture_ids, args.fixture_dir, out, args.family,
+                              str(spec["struct"]), str(spec["array"]))
     elif args.family == "component-coefficients":
         generate_component_coefficients(fixture_ids, args.fixture_dir, out, args.family,
                                         str(spec["struct"]), str(spec["array"]))

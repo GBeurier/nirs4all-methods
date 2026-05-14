@@ -48,6 +48,8 @@ Phase 5j shaving kernels recursively eliminate low-score PLS variables while
 scoring each retained subset by deterministic k-fold CV.
 Phase 5k BVE kernels greedily evaluate every one-variable removal by
 deterministic k-fold CV RMSE and keep the best backward path/subset.
+Phase 5l T2-PLS kernels compute Hotelling T2 on PLS loading weights, apply
+alpha-specific UCL thresholds with top-k fallback, and score subsets by k-fold CV.
 Component-coefficient kernels expose the
 original-scale regression coefficients for each latent prefix. SIMPLS component
 prefixes can also be scored by deterministic k-fold CV for component-count
