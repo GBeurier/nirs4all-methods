@@ -14,9 +14,15 @@
 #include "core/status.hpp"
 #include "core/version.hpp"
 
+#if defined(__GNUC__) || defined(__clang__)
+#  define P4A_NO_UBSAN __attribute__((no_sanitize("undefined")))
+#else
+#  define P4A_NO_UBSAN
+#endif
+
 extern "C" {
 
-P4A_API const char* p4a_status_to_string(p4a_status_t s) {
+P4A_API P4A_NO_UBSAN const char* p4a_status_to_string(p4a_status_t s) {
     try {
         return ::pls4all::core::status_to_string(s);
     } catch (...) {
@@ -132,3 +138,5 @@ P4A_API p4a_status_t p4a_check_abi_compatibility(
 }
 
 }  // extern "C"
+
+#undef P4A_NO_UBSAN

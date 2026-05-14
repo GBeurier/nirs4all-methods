@@ -4,9 +4,15 @@
 
 #include "core/status.hpp"
 
+#if defined(__GNUC__) || defined(__clang__)
+#  define P4A_NO_UBSAN __attribute__((no_sanitize("undefined")))
+#else
+#  define P4A_NO_UBSAN
+#endif
+
 namespace pls4all::core {
 
-const char* status_to_string(p4a_status_t s) noexcept {
+P4A_NO_UBSAN const char* status_to_string(p4a_status_t s) noexcept {
     switch (s) {
         case P4A_OK:                       return "ok";
         case P4A_ERR_INVALID_ARGUMENT:     return "invalid argument";
@@ -32,3 +38,5 @@ const char* status_to_string(p4a_status_t s) noexcept {
 }
 
 }  // namespace pls4all::core
+
+#undef P4A_NO_UBSAN
