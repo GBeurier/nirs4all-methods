@@ -73,6 +73,9 @@ scores on PLS score spaces. The internal MB-PLS kernel fits block-autoscaled,
 block-weighted PLS models and maps coefficients back to original feature space.
 The internal LW-PLS kernel performs stable k-nearest-neighbor local-window
 refits and records the neighbor plan for every prediction.
+Phase 6a adds an internal AOM preprocessing-bank primitive with soft equal
+weights and hard first-operator gating; full AOM-PLS parity is explicitly
+anchored on `nirs4all/bench/AOM_v0/aompls`.
 The supported fitted-model path is now live for NIPALS,
 orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and
 randomized-SVD PLS regression

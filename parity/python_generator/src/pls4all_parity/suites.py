@@ -683,6 +683,69 @@ def _pipeline_expected(X: np.ndarray, operators: list[str], Y: np.ndarray | None
     }
 
 
+_AOM_OPERATOR_KIND_IDS = {
+    "identity": 0,
+    "center": 1,
+    "autoscale": 2,
+    "pareto": 3,
+    "snv": 4,
+    "msc": 5,
+}
+
+
+def _aom_preprocessing_expected(
+    X: np.ndarray,
+    operators: Sequence[str],
+    gating_mode: str,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    operator_outputs = [
+        _pipeline_apply(X, [str(operator)])
+        for operator in operators
+    ]
+    n_ops = len(operator_outputs)
+    if gating_mode == "soft":
+        weights = np.full(n_ops, 1.0 / float(n_ops), dtype=np.float64)
+        mode_id = 1
+    elif gating_mode == "hard":
+        weights = np.zeros(n_ops, dtype=np.float64)
+        weights[0] = 1.0
+        mode_id = 0
+    else:
+        raise ValueError(f"unsupported AOM gating mode fixture: {gating_mode}")
+    transformed = np.zeros_like(X, dtype=np.float64)
+    for weight, output in zip(weights, operator_outputs):
+        transformed += float(weight) * output
+    stacked = np.vstack([output.reshape(1, -1, order="C") for output in operator_outputs])
+    return {
+        "gating_mode": int(mode_id),
+        "operator_kinds": {
+            "shape": [1, int(n_ops)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(_AOM_OPERATOR_KIND_IDS[str(operator)]) for operator in operators],
+        },
+        "weights": {
+            "shape": [1, int(n_ops)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": weights.astype(np.float64).tolist(),
+        },
+        "operator_outputs": {
+            "shape": [int(n_ops), int(X.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": stacked.reshape(-1, order="C").astype(np.float64).tolist(),
+        },
+        "transformed": {
+            "shape": list(X.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(transformed),
+        },
+    }
+
+
 def _percentile_linear(values: np.ndarray, probability: float) -> float:
     values = np.sort(np.asarray(values, dtype=np.float64).reshape(-1))
     if values.size == 0:
@@ -4648,6 +4711,39 @@ def _pipeline_fixture(
     }
 
 
+def _aom_preprocessing_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    operators: list[str],
+    gating_mode: str,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._aom_preprocessing_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "operators":    operators,
+                "gating_mode":  gating_mode,
+                "reference":    "NumPy AOM preprocessing bank",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+        },
+        "expected": _aom_preprocessing_expected(X, operators, gating_mode),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "pls4all-numpy-aom-preprocessing",
+        },
+    }
+
+
 def _metrics_fixture(
     fixture_id: str,
     seed: int,
@@ -6790,6 +6886,38 @@ def synthetic_pipeline_snv_v1() -> dict[str, Any]:
     ], dtype=np.float64)
     return _pipeline_fixture("synthetic_pipeline_snv_v1", seed=44,
                              X=X, operators=["snv"])
+
+
+def synthetic_aom_soft_preprocessing_v1() -> dict[str, Any]:
+    """5 samples, 4 features for equal-weight soft AOM preprocessing parity."""
+    X = np.array([
+        [1.0, 2.0, 3.0, 5.0],
+        [2.0, 3.5, 5.5, 8.0],
+        [3.0, 5.0, 7.0, 10.0],
+        [4.0, 6.5, 8.5, 11.5],
+        [5.0, 8.0, 11.0, 14.0],
+    ], dtype=np.float64)
+    return _aom_preprocessing_fixture("synthetic_aom_soft_preprocessing_v1",
+                                      seed=47,
+                                      X=X,
+                                      operators=["identity", "autoscale", "snv"],
+                                      gating_mode="soft")
+
+
+def synthetic_aom_hard_preprocessing_v1() -> dict[str, Any]:
+    """5 samples, 4 features for hard first-operator AOM preprocessing parity."""
+    X = np.array([
+        [1.0, 2.0, 3.0, 5.0],
+        [2.0, 3.5, 5.5, 8.0],
+        [3.0, 5.0, 7.0, 10.0],
+        [4.0, 6.5, 8.5, 11.5],
+        [5.0, 8.0, 11.0, 14.0],
+    ], dtype=np.float64)
+    return _aom_preprocessing_fixture("synthetic_aom_hard_preprocessing_v1",
+                                      seed=48,
+                                      X=X,
+                                      operators=["center", "identity", "snv"],
+                                      gating_mode="hard")
 
 
 def synthetic_pipeline_msc_v1() -> dict[str, Any]:

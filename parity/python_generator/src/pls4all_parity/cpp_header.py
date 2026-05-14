@@ -61,6 +61,15 @@ HEADER_SPECS = {
         "struct": "PipelineFixture",
         "array": "kPipelineFixtures",
     },
+    "aom-preprocessing": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "aom_preprocessing_fixtures.hpp",
+        "fixtures": (
+            "synthetic_aom_soft_preprocessing_v1",
+            "synthetic_aom_hard_preprocessing_v1",
+        ),
+        "struct": "AomPreprocessingFixture",
+        "array": "kAomPreprocessingFixtures",
+    },
     "metrics": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "metrics_fixtures.hpp",
         "fixtures": (
@@ -732,6 +741,81 @@ def generate_pipeline(fixture_ids: Sequence[str],
             f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
             f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
             f"        {_matrix_ref(transformed_name, fixture['expected']['transform_train'])}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
+def generate_aom_preprocessing(fixture_ids: Sequence[str],
+                               fixture_dir: Path,
+                               out: Path,
+                               family: str,
+                               struct_name: str,
+                               array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct AomPreprocessingIndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t gating_mode;",
+        "    std::int32_t n_operators;",
+        "    MatrixRef X;",
+        "    MatrixRef weights;",
+        "    MatrixRef operator_outputs;",
+        "    MatrixRef transformed;",
+        "    AomPreprocessingIndexRef operator_kinds;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        weights_name = f"{prefix}_weights"
+        outputs_name = f"{prefix}_operator_outputs"
+        transformed_name = f"{prefix}_transformed"
+        kinds_name = f"{prefix}_operator_kinds"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, weights_name, expected["weights"]["values"])
+        _emit_array(lines, outputs_name, expected["operator_outputs"]["values"])
+        _emit_array(lines, transformed_name, expected["transformed"]["values"])
+        _emit_int_array(lines, kinds_name, expected["operator_kinds"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(expected['gating_mode'])},\n"
+            f"        {int(expected['operator_kinds']['shape'][1])},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(weights_name, expected['weights'])},\n"
+            f"        {_matrix_ref(outputs_name, expected['operator_outputs'])},\n"
+            f"        {_matrix_ref(transformed_name, expected['transformed'])},\n"
+            f"        AomPreprocessingIndexRef{{{kinds_name}, sizeof({kinds_name}) / sizeof(std::int64_t)}}\n"
             "    }"
         )
 
@@ -3736,6 +3820,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.family == "pipeline":
         generate_pipeline(fixture_ids, args.fixture_dir, out, args.family,
                           str(spec["struct"]), str(spec["array"]))
+    elif args.family == "aom-preprocessing":
+        generate_aom_preprocessing(fixture_ids, args.fixture_dir, out, args.family,
+                                   str(spec["struct"]), str(spec["array"]))
     elif args.family == "metrics":
         generate_metrics(fixture_ids, args.fixture_dir, out, args.family,
                          str(spec["struct"]), str(spec["array"]))

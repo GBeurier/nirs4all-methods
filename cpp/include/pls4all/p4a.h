@@ -617,7 +617,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.60.0+abi.1.0.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.61.0+abi.1.0.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 

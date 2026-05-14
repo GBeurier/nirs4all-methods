@@ -1,5 +1,15 @@
 {
   "fixtures": {
+    "synthetic_aom_hard_preprocessing_v1": {
+      "bytes": 3240,
+      "path": "synthetic_aom_hard_preprocessing_v1.json",
+      "sha256": "0fe9fbf6af4e01ff22186cfab9c555a22a768e8d746d173da0a5c9efbbaa54d8"
+    },
+    "synthetic_aom_soft_preprocessing_v1": {
+      "bytes": 3685,
+      "path": "synthetic_aom_soft_preprocessing_v1.json",
+      "sha256": "2eb85d95a7a44c8d96f674c787560e0bc85284855411359875b4c895cd77e80c"
+    },
     "synthetic_bipls_backward_intervals_v1": {
       "bytes": 12145,
       "path": "synthetic_bipls_backward_intervals_v1.json",
