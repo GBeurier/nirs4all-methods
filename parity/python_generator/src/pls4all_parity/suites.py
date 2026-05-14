@@ -1788,6 +1788,200 @@ def _cars_selection_expected(
     }
 
 
+def _selection_membership(p: int, selected: Sequence[int]) -> list[bool]:
+    membership = [False] * int(p)
+    for feature in selected:
+        membership[int(feature)] = True
+    return membership
+
+
+def _random_frog_add_features(
+    selected: list[int],
+    p: int,
+    global_scores: np.ndarray,
+    count: int,
+    state: int,
+) -> tuple[int, list[int]]:
+    candidate = list(selected)
+    membership = _selection_membership(p, candidate)
+    available = [feature for feature in range(int(p)) if not membership[feature]]
+    available.sort(key=lambda feature: (-float(global_scores[feature]), int(feature)))
+    for remaining in range(int(count), 0, -1):
+        if not available:
+            break
+        window = max(int(remaining), (len(available) + 1) // 2)
+        state, pos = _random_bounded(state, window)
+        candidate.append(int(available.pop(pos)))
+    return state, sorted(candidate)
+
+
+def _random_frog_remove_features(
+    selected: list[int],
+    current_scores: np.ndarray,
+    count: int,
+    state: int,
+) -> tuple[int, list[int]]:
+    candidate = list(selected)
+    order = sorted(candidate, key=lambda feature: (float(current_scores[int(feature)]), -int(feature)))
+    for remaining in range(int(count), 0, -1):
+        if not order:
+            break
+        window = max(int(remaining), (len(order) + 1) // 2)
+        state, pos = _random_bounded(state, window)
+        feature = int(order.pop(pos))
+        candidate.remove(feature)
+    return state, sorted(candidate)
+
+
+def _random_frog_swap_feature(
+    selected: list[int],
+    p: int,
+    global_scores: np.ndarray,
+    current_scores: np.ndarray,
+    state: int,
+) -> tuple[int, list[int]]:
+    membership = _selection_membership(p, selected)
+    if len(selected) == 0 or all(membership):
+        return state, sorted(selected)
+    state, reduced = _random_frog_remove_features(selected, current_scores, 1, state)
+    membership = _selection_membership(p, selected)
+    available = [feature for feature in range(int(p)) if not membership[feature]]
+    available.sort(key=lambda feature: (-float(global_scores[feature]), int(feature)))
+    if not available:
+        return state, sorted(selected)
+    window = max(1, (len(available) + 1) // 2)
+    state, pos = _random_bounded(state, window)
+    reduced.append(int(available[pos]))
+    return state, sorted(reduced)
+
+
+def _random_frog_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    n_iterations: int,
+    initial_size: int,
+    min_size: int,
+    max_size: int,
+    top_k: int,
+    seed: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    p = int(X.shape[1])
+    global_scores = _pls_coefficient_scores(X, Y, n_components)
+    ranked = sorted(range(p), key=lambda feature: (-float(global_scores[feature]), int(feature)))
+    current = sorted(ranked[:int(initial_size)])
+    current_rmse = _kfold_pls_rmse(_copy_columns(X, current), Y, n_components, n_splits)
+
+    inclusion_counts = np.zeros(p, dtype=np.float64)
+    rmse_values: list[float] = []
+    subset_sizes: list[int] = []
+    best_rmse = float(current_rmse)
+    best_indices = list(current)
+    state = int(seed) & _MASK64
+
+    for _iteration in range(int(n_iterations)):
+        active_x = _copy_columns(X, current)
+        active_scores = _pls_coefficient_scores(active_x, Y, n_components)
+        current_scores = np.zeros(p, dtype=np.float64)
+        for local_idx, feature in enumerate(current):
+            current_scores[int(feature)] = float(active_scores[local_idx])
+
+        state, move_raw = _random_bounded(state, 3)
+        proposed_size = len(current) + int(move_raw) - 1
+        proposed_size = max(int(min_size), min(int(max_size), proposed_size))
+        if proposed_size > len(current):
+            state, candidate = _random_frog_add_features(current,
+                                                         p,
+                                                         global_scores,
+                                                         proposed_size - len(current),
+                                                         state)
+        elif proposed_size < len(current):
+            state, candidate = _random_frog_remove_features(current,
+                                                            current_scores,
+                                                            len(current) - proposed_size,
+                                                            state)
+        else:
+            state, candidate = _random_frog_swap_feature(current,
+                                                         p,
+                                                         global_scores,
+                                                         current_scores,
+                                                         state)
+
+        if len(candidate) < int(min_size):
+            candidate = list(current)
+        candidate_rmse = _kfold_pls_rmse(_copy_columns(X, candidate), Y, n_components, n_splits)
+        accept = candidate_rmse <= current_rmse
+        if not accept:
+            temperature = max(abs(float(current_rmse)) * 0.05, 1e-12)
+            probability = math.exp((float(current_rmse) - float(candidate_rmse)) / temperature)
+            state, unit = _uniform01_from_state(state)
+            accept = unit < probability
+        if accept:
+            current = list(candidate)
+            current_rmse = float(candidate_rmse)
+
+        for feature in current:
+            inclusion_counts[int(feature)] += 1.0
+        rmse_values.append(float(current_rmse))
+        subset_sizes.append(int(len(current)))
+        if current_rmse < best_rmse:
+            best_rmse = float(current_rmse)
+            best_indices = list(current)
+
+    inclusion_frequencies = inclusion_counts / float(n_iterations)
+    selected = sorted(
+        range(p),
+        key=lambda feature: (-float(inclusion_frequencies[feature]),
+                             -float(global_scores[feature]),
+                             int(feature)),
+    )[:int(top_k)]
+    selected = sorted(int(feature) for feature in selected)
+    return {
+        "global_scores": {
+            "shape": [1, p],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": global_scores.tolist(),
+        },
+        "inclusion_frequencies": {
+            "shape": [1, p],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": inclusion_frequencies.tolist(),
+        },
+        "rmse_by_iteration": {
+            "shape": [1, int(n_iterations)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": rmse_values,
+        },
+        "subset_sizes": {
+            "shape": [1, int(n_iterations)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": subset_sizes,
+        },
+        "selected_indices": {
+            "shape": [1, int(len(selected))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected,
+        },
+        "best_indices": {
+            "shape": [1, int(len(best_indices))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": best_indices,
+        },
+        "best_rmse": float(best_rmse),
+    }
+
+
 def _component_coefficients_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -1857,6 +2051,11 @@ def _validation_folds(kind: str,
 def _random_bounded(state: int, bound: int) -> tuple[int, int]:
     state, bits = _splitmix64_next(state)
     return state, int(bits % int(bound))
+
+
+def _uniform01_from_state(state: int) -> tuple[int, float]:
+    state, bits = _splitmix64_next(state)
+    return state, float(bits >> 11) * (1.0 / float(1 << 53))
 
 
 def _shuffle_indices(indices: list[int], state: int) -> tuple[int, list[int]]:
@@ -3621,6 +3820,67 @@ def _cars_selection_fixture(
     }
 
 
+def _random_frog_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    n_iterations: int,
+    initial_size: int,
+    min_size: int,
+    max_size: int,
+    top_k: int,
+    frog_seed: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._random_frog_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":    "pls_regression",
+                "solver":       "nipals",
+                "n_components": int(n_components),
+                "n_splits":     int(n_splits),
+                "n_iterations": int(n_iterations),
+                "initial_size": int(initial_size),
+                "min_size":     int(min_size),
+                "max_size":     int(max_size),
+                "top_k":        int(top_k),
+                "seed":         int(frog_seed),
+                "reference":    "sklearn PLSRegression deterministic Random Frog PLS",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _random_frog_selection_expected(X,
+                                                    Y,
+                                                    n_components,
+                                                    n_splits,
+                                                    n_iterations,
+                                                    initial_size,
+                                                    min_size,
+                                                    max_size,
+                                                    top_k,
+                                                    frog_seed),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-RandomFrog-selection",
+        },
+    }
+
+
 def _component_coefficients_fixture(
     fixture_id: str,
     seed: int,
@@ -4954,6 +5214,43 @@ def synthetic_cars_pls_competitive_v1() -> dict[str, Any]:
                                    n_splits=4,
                                    n_iterations=6,
                                    min_features=3)
+
+
+def synthetic_random_frog_pls_v1() -> dict[str, Any]:
+    """30 samples, 11 features, 2 targets for deterministic Random Frog PLS."""
+    seed = 67
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(30, 5))
+    wave = np.linspace(0.0, 2.0 * np.pi, 30)
+    X = np.column_stack([
+        0.88 * latent[:, 0] + 0.10 * latent[:, 1] + 0.04 * rng.standard_normal(size=30),
+        -0.47 * latent[:, 0] + 0.50 * latent[:, 2] + 0.05 * rng.standard_normal(size=30),
+        0.70 * latent[:, 1] - 0.20 * latent[:, 3] + 0.05 * rng.standard_normal(size=30),
+        0.18 * latent[:, 0] + 0.81 * latent[:, 3] + 0.04 * rng.standard_normal(size=30),
+        -0.55 * latent[:, 2] + 0.34 * latent[:, 3] + 0.05 * rng.standard_normal(size=30),
+        0.39 * latent[:, 4] + 0.14 * latent[:, 0] + 0.06 * rng.standard_normal(size=30),
+        0.23 * latent[:, 1] - 0.24 * latent[:, 4] + 0.07 * rng.standard_normal(size=30),
+        np.sin(1.5 * wave) + 0.05 * rng.standard_normal(size=30),
+        np.cos(1.2 * wave) + 0.05 * rng.standard_normal(size=30),
+        0.26 * np.linspace(-1.0, 1.0, 30) + 0.10 * rng.standard_normal(size=30),
+        rng.standard_normal(size=30) * 0.14,
+    ])
+    Y = np.column_stack([
+        1.08 * latent[:, 0] - 0.44 * latent[:, 2] + 0.31 * latent[:, 4] + 0.05 * rng.standard_normal(size=30),
+        -0.40 * latent[:, 1] + 0.69 * latent[:, 3] - 0.22 * latent[:, 4] + 0.05 * rng.standard_normal(size=30),
+    ])
+    return _random_frog_selection_fixture("synthetic_random_frog_pls_v1",
+                                          seed=seed,
+                                          X=X,
+                                          Y=Y,
+                                          n_components=2,
+                                          n_splits=5,
+                                          n_iterations=9,
+                                          initial_size=5,
+                                          min_size=3,
+                                          max_size=8,
+                                          top_k=5,
+                                          frog_seed=6801)
 
 
 def synthetic_component_coefficients_pls2_v1() -> dict[str, Any]:

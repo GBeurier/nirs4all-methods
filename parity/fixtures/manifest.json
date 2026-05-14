@@ -255,6 +255,11 @@
       "path": "synthetic_power_tiny_pls1_v1.json",
       "sha256": "6154449cf1c35ab83c7caa5511051a138b1f3a12b8e201ccc4eab4893b3a7040"
     },
+    "synthetic_random_frog_pls_v1": {
+      "bytes": 14308,
+      "path": "synthetic_random_frog_pls_v1.json",
+      "sha256": "25730f7ecb76beabf641b8904fe00af1f46a6051e3747279c497e5327288dbe7"
+    },
     "synthetic_randomized_svd_small_pls2_v1": {
       "bytes": 12498,
       "path": "synthetic_randomized_svd_small_pls2_v1.json",

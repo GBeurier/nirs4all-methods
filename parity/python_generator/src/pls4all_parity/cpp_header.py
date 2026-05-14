@@ -174,6 +174,14 @@ HEADER_SPECS = {
         "struct": "CarsSelectionFixture",
         "array": "kCarsSelectionFixtures",
     },
+    "random-frog-selection": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "random_frog_selection_fixtures.hpp",
+        "fixtures": (
+            "synthetic_random_frog_pls_v1",
+        ),
+        "struct": "RandomFrogSelectionFixture",
+        "array": "kRandomFrogSelectionFixtures",
+    },
     "component-coefficients": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "component_coefficients_fixtures.hpp",
         "fixtures": (
@@ -1966,6 +1974,108 @@ def generate_cars_selection(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_random_frog_selection(fixture_ids: Sequence[str],
+                                   fixture_dir: Path,
+                                   out: Path,
+                                   family: str,
+                                   struct_name: str,
+                                   array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct RandomFrogSelectionIndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_components;",
+        "    std::int32_t n_splits;",
+        "    std::int32_t n_iterations;",
+        "    std::int32_t initial_size;",
+        "    std::int32_t min_size;",
+        "    std::int32_t max_size;",
+        "    std::int32_t top_k;",
+        "    std::uint64_t seed;",
+        "    double best_rmse;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    MatrixRef global_scores;",
+        "    MatrixRef inclusion_frequencies;",
+        "    MatrixRef rmse_by_iteration;",
+        "    RandomFrogSelectionIndexRef subset_sizes;",
+        "    RandomFrogSelectionIndexRef selected_indices;",
+        "    RandomFrogSelectionIndexRef best_indices;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        y_name = f"{prefix}_Y"
+        global_name = f"{prefix}_global_scores"
+        inclusion_name = f"{prefix}_inclusion_frequencies"
+        rmse_name = f"{prefix}_rmse_by_iteration"
+        sizes_name = f"{prefix}_subset_sizes"
+        selected_name = f"{prefix}_selected_indices"
+        best_name = f"{prefix}_best_indices"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
+        _emit_array(lines, global_name, expected["global_scores"]["values"])
+        _emit_array(lines, inclusion_name, expected["inclusion_frequencies"]["values"])
+        _emit_array(lines, rmse_name, expected["rmse_by_iteration"]["values"])
+        _emit_int_array(lines, sizes_name, expected["subset_sizes"]["values"])
+        _emit_int_array(lines, selected_name, expected["selected_indices"]["values"])
+        _emit_int_array(lines, best_name, expected["best_indices"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['n_components'])},\n"
+            f"        {int(params['n_splits'])},\n"
+            f"        {int(params['n_iterations'])},\n"
+            f"        {int(params['initial_size'])},\n"
+            f"        {int(params['min_size'])},\n"
+            f"        {int(params['max_size'])},\n"
+            f"        {int(params['top_k'])},\n"
+            f"        UINT64_C({int(params['seed'])}),\n"
+            f"        {_format_double(float(expected['best_rmse']))},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
+            f"        {_matrix_ref(global_name, expected['global_scores'])},\n"
+            f"        {_matrix_ref(inclusion_name, expected['inclusion_frequencies'])},\n"
+            f"        {_matrix_ref(rmse_name, expected['rmse_by_iteration'])},\n"
+            f"        RandomFrogSelectionIndexRef{{{sizes_name}, sizeof({sizes_name}) / sizeof(std::int64_t)}},\n"
+            f"        RandomFrogSelectionIndexRef{{{selected_name}, sizeof({selected_name}) / sizeof(std::int64_t)}},\n"
+            f"        RandomFrogSelectionIndexRef{{{best_name}, sizeof({best_name}) / sizeof(std::int64_t)}}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_component_coefficients(fixture_ids: Sequence[str],
                                     fixture_dir: Path,
                                     out: Path,
@@ -2227,6 +2337,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "cars-selection":
         generate_cars_selection(fixture_ids, args.fixture_dir, out, args.family,
                                 str(spec["struct"]), str(spec["array"]))
+    elif args.family == "random-frog-selection":
+        generate_random_frog_selection(fixture_ids, args.fixture_dir, out, args.family,
+                                       str(spec["struct"]), str(spec["array"]))
     elif args.family == "component-coefficients":
         generate_component_coefficients(fixture_ids, args.fixture_dir, out, args.family,
                                         str(spec["struct"]), str(spec["array"]))
