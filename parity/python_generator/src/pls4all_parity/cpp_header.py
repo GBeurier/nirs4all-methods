@@ -57,6 +57,15 @@ HEADER_SPECS = {
         "struct": "WideKernelFixture",
         "array": "kWideKernelFixtures",
     },
+    "orthogonal-scores": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "orthogonal_scores_fixtures.hpp",
+        "fixtures": (
+            "synthetic_oscores_tiny_pls1_v1",
+            "synthetic_oscores_small_pls2_v1",
+        ),
+        "struct": "OrthogonalScoresFixture",
+        "array": "kOrthogonalScoresFixtures",
+    },
 }
 
 

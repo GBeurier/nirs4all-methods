@@ -10,6 +10,16 @@
       "path": "synthetic_kernel_wide_pls2_v1.json",
       "sha256": "c16a2deb57be64e48d15dc89e70f725589d89dfef7a29d64d04e1dcf2ca72e31"
     },
+    "synthetic_oscores_small_pls2_v1": {
+      "bytes": 11599,
+      "path": "synthetic_oscores_small_pls2_v1.json",
+      "sha256": "07497caf3e5c42785d7757e8d83e8fcade9eaca1cd4b8f0f202d4a5d420151f4"
+    },
+    "synthetic_oscores_tiny_pls1_v1": {
+      "bytes": 6518,
+      "path": "synthetic_oscores_tiny_pls1_v1.json",
+      "sha256": "d9d20ed8d73dc654a42d9ed4880f866489e0a7cc1ca51a468dfe3bb231b906d2"
+    },
     "synthetic_pcr_small_pls2_v1": {
       "bytes": 12072,
       "path": "synthetic_pcr_small_pls2_v1.json",

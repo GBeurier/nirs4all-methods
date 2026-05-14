@@ -142,6 +142,18 @@ int cmd_selfcheck() {
     CHECK(export_size > 64);
     p4a_model_destroy(model);
 
+    CHECK(p4a_config_set_solver(cfg, P4A_SOLVER_ORTHOGONAL_SCORES) == P4A_OK);
+    p4a_model_t* oscores_model = nullptr;
+    CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &oscores_model) == P4A_OK);
+    CHECK(oscores_model != nullptr);
+    p4a_array_t* oscores_pred = nullptr;
+    CHECK(p4a_model_predict_alloc(ctx, oscores_model, &X, &oscores_pred) == P4A_OK);
+    CHECK(p4a_array_shape(oscores_pred, &rows, &cols) == P4A_OK);
+    CHECK(rows == 4);
+    CHECK(cols == 1);
+    p4a_array_free(oscores_pred);
+    p4a_model_destroy(oscores_model);
+
     CHECK(p4a_config_set_solver(cfg, P4A_SOLVER_SIMPLS) == P4A_OK);
     p4a_model_t* simpls_model = nullptr;
     CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &simpls_model) == P4A_OK);

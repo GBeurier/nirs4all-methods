@@ -378,6 +378,7 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
     const bool supported_pls =
         algorithm == static_cast<std::uint32_t>(P4A_ALGO_PLS_REGRESSION) &&
         (solver == static_cast<std::uint32_t>(P4A_SOLVER_NIPALS) ||
+         solver == static_cast<std::uint32_t>(P4A_SOLVER_ORTHOGONAL_SCORES) ||
          solver == static_cast<std::uint32_t>(P4A_SOLVER_SIMPLS) ||
          solver == static_cast<std::uint32_t>(P4A_SOLVER_KERNEL_ALGORITHM) ||
          solver == static_cast<std::uint32_t>(P4A_SOLVER_WIDE_KERNEL) ||
@@ -482,6 +483,9 @@ P4A_API p4a_status_t p4a_model_fit(
                 *as_core(ctx), *cfg, *X, *Y, fitted);
         } else if (cfg->solver == P4A_SOLVER_SIMPLS) {
             status = ::pls4all::core::fit_pls_regression_simpls(
+                *as_core(ctx), *cfg, *X, *Y, fitted);
+        } else if (cfg->solver == P4A_SOLVER_ORTHOGONAL_SCORES) {
+            status = ::pls4all::core::fit_pls_regression_orthogonal_scores(
                 *as_core(ctx), *cfg, *X, *Y, fitted);
         } else if (cfg->solver == P4A_SOLVER_SVD) {
             status = ::pls4all::core::fit_pls_regression_svd(

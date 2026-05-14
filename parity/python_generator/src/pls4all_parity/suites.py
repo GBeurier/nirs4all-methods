@@ -299,6 +299,115 @@ def _kernel_pls_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dic
     }
 
 
+def _orthogonal_scores_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+
+    Xk, x_mean, x_scale = _center_scale(X)
+    Yk, y_mean, y_scale = _center_scale(Y)
+    n, p = Xk.shape
+    q = Yk.shape[1]
+    K = int(n_components)
+
+    W = np.zeros((p, K), dtype=np.float64)
+    P = np.zeros((p, K), dtype=np.float64)
+    Q = np.zeros((q, K), dtype=np.float64)
+    T = np.zeros((n, K), dtype=np.float64)
+    U_scores = np.zeros((n, K), dtype=np.float64)
+    eps = np.finfo(np.float64).eps
+
+    for comp in range(K):
+        if q == 1:
+            y_score = Yk[:, 0].copy()
+            old_t = np.zeros(n, dtype=np.float64)
+        else:
+            col_ss = np.sum(Yk * Yk, axis=0)
+            best = int(np.argmax(col_ss))
+            if col_ss[best] <= eps:
+                raise RuntimeError(f"orthogonal-scores Y residual collapsed at component {comp}")
+            y_score = Yk[:, best].copy()
+            old_t = np.zeros(n, dtype=np.float64)
+
+        x_weights = np.zeros(p, dtype=np.float64)
+        x_score = np.zeros(n, dtype=np.float64)
+        y_load = np.zeros(q, dtype=np.float64)
+        converged = False
+        for iteration in range(500):
+            x_weights = Xk.T @ y_score
+            w_norm = np.linalg.norm(x_weights)
+            if w_norm <= eps:
+                raise RuntimeError(f"orthogonal-scores X weights collapsed at component {comp}")
+            x_weights = x_weights / w_norm
+            x_score = Xk @ x_weights
+            t_ss = float(x_score @ x_score)
+            if t_ss <= eps:
+                raise RuntimeError(f"orthogonal-scores X score collapsed at component {comp}")
+            y_load = Yk.T @ (x_score / t_ss)
+
+            if q == 1:
+                converged = True
+                break
+
+            with np.errstate(divide="ignore", invalid="ignore"):
+                ratio = (x_score - old_t) / x_score
+            ratio = ratio[~np.isnan(ratio)]
+            if float(np.sum(np.abs(ratio))) < 1e-6:
+                converged = True
+                break
+
+            q_ss = float(y_load @ y_load)
+            if q_ss <= eps:
+                raise RuntimeError(f"orthogonal-scores Y loadings collapsed at component {comp}")
+            y_score = (Yk @ y_load) / q_ss
+            old_t = x_score.copy()
+            if iteration + 1 >= 500:
+                raise RuntimeError(f"orthogonal-scores iteration failed at component {comp}")
+
+        if not converged:
+            raise RuntimeError(f"orthogonal-scores iteration failed at component {comp}")
+
+        t_ss = float(x_score @ x_score)
+        p_load = Xk.T @ (x_score / t_ss)
+
+        sign_idx = int(np.argmax(np.abs(x_weights)))
+        if x_weights[sign_idx] < 0.0:
+            x_weights = -x_weights
+            x_score = -x_score
+            p_load = -p_load
+            y_load = -y_load
+            y_score = -y_score
+
+        Xk = Xk - np.outer(x_score, p_load)
+        Yk = Yk - np.outer(x_score, y_load)
+
+        W[:, comp] = x_weights
+        P[:, comp] = p_load
+        Q[:, comp] = y_load
+        T[:, comp] = x_score
+        U_scores[:, comp] = y_score
+
+    rotations = W @ np.linalg.inv(P.T @ W)
+    coef_std = rotations @ Q.T
+    coef = coef_std * (y_scale.reshape(1, -1) / x_scale.reshape(-1, 1))
+    preds = y_mean.reshape(1, -1) + (X - x_mean.reshape(1, -1)) @ coef
+    return {
+        "coefficients":  {"shape": list(coef.shape),       "values": _flatten_rowmajor(coef)},
+        "intercept":     {"shape": [q],                    "values": y_mean.astype(np.float64).tolist()},
+        "x_mean":        {"shape": [p],                    "values": x_mean.astype(np.float64).tolist()},
+        "x_scale":       {"shape": [p],                    "values": x_scale.astype(np.float64).tolist()},
+        "y_mean":        {"shape": [q],                    "values": y_mean.astype(np.float64).tolist()},
+        "y_scale":       {"shape": [q],                    "values": y_scale.astype(np.float64).tolist()},
+        "weights_W":     {"shape": list(W.shape),          "values": _flatten_rowmajor(W), "sign_invariant": True},
+        "loadings_P":    {"shape": list(P.shape),          "values": _flatten_rowmajor(P), "sign_invariant": True},
+        "y_loadings_Q":  {"shape": list(Q.shape),          "values": _flatten_rowmajor(Q), "sign_invariant": True},
+        "rotations_R":   {"shape": list(rotations.shape),  "values": _flatten_rowmajor(rotations), "sign_invariant": True},
+        "scores_T":      {"shape": list(T.shape),          "values": _flatten_rowmajor(T), "sign_invariant": True},
+        "predict_train": {"shape": list(preds.shape),      "values": _flatten_rowmajor(preds)},
+    }
+
+
 def _pcr_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, Any]:
     X = np.asarray(X, dtype=np.float64)
     Y = np.asarray(Y, dtype=np.float64)
@@ -545,6 +654,41 @@ def _wide_kernel_fixture(
     }
 
 
+def _orthogonal_scores_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._orthogonal_scores_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "n_components":   n_components,
+                "scale":          True,
+                "deflation_mode": "regression",
+                "algorithm":      "oscorespls",
+                "reference":      "NumPy port of R pls oscorespls.fit recurrence",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _orthogonal_scores_expected(X, Y, n_components),
+        "comparison_policy": {
+            "components_alignment": "first-k-prefix",
+            "sign_resolver":        "max_abs_element_positive",
+            "tolerance_table_row":  "pls-r-oscorespls",
+        },
+    }
+
+
 def _pcr_fixture(
     fixture_id: str,
     seed: int,
@@ -704,6 +848,34 @@ def synthetic_wide_kernel_pls2_v1() -> dict[str, Any]:
     Y = X @ W + rng.standard_normal(size=(9, 3)) * 0.025
     return _wide_kernel_fixture("synthetic_wide_kernel_pls2_v1", seed=61,
                                 X=X, Y=Y, n_components=4)
+
+
+def synthetic_oscores_tiny_pls1_v1() -> dict[str, Any]:
+    """11 samples, 5 features, 1 target, n_components=2."""
+    rng = np.random.default_rng(seed=70)
+    X = rng.standard_normal(size=(11, 5))
+    true_w = np.array([0.42, -0.35, 0.18, 0.50, -0.22])
+    Y = (X @ true_w + rng.standard_normal(size=11) * 0.025).reshape(-1, 1)
+    return _orthogonal_scores_fixture("synthetic_oscores_tiny_pls1_v1", seed=70,
+                                      X=X, Y=Y, n_components=2)
+
+
+def synthetic_oscores_small_pls2_v1() -> dict[str, Any]:
+    """13 samples, 7 features, 3 targets, n_components=3."""
+    rng = np.random.default_rng(seed=71)
+    X = rng.standard_normal(size=(13, 7))
+    W = np.array([
+        [0.25, -0.35, 0.18],
+        [-0.45, 0.20, -0.15],
+        [0.32, 0.28, 0.40],
+        [0.10, -0.42, 0.08],
+        [0.38, 0.16, -0.30],
+        [-0.18, 0.46, 0.22],
+        [0.27, -0.05, 0.35],
+    ])
+    Y = X @ W + rng.standard_normal(size=(13, 3)) * 0.035
+    return _orthogonal_scores_fixture("synthetic_oscores_small_pls2_v1", seed=71,
+                                      X=X, Y=Y, n_components=3)
 
 
 def synthetic_pcr_tiny_pls1_v1() -> dict[str, Any]:

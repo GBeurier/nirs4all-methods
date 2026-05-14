@@ -52,8 +52,8 @@ Goal: useful for real spectroscopy.
 - PCR baseline shipped as `phase-4c-pcr`.
 - Linear kernel-algorithm PLS shipped as `phase-4d-kernel`.
 - Wide-kernel PLS shipped as `phase-4e-wide-kernel`.
+- Orthogonal-scores PLS shipped as `phase-4f-orthogonal-scores`.
 - SIMPLS with materialised auto-prefix CV scoring (à la `aompls`).
-- Kernel-algorithm PLS for wide matrices (`p >> n`).
 - OPLS, OPLS-DA.
 - PLS-DA, PLS-LDA, PLS-logistic.
 - MB-PLS with `Block` API; per-block weighting.

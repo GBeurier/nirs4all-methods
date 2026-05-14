@@ -695,6 +695,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     const bool supported_pls =
         cfg.algorithm == P4A_ALGO_PLS_REGRESSION &&
         (cfg.solver == P4A_SOLVER_NIPALS ||
+         cfg.solver == P4A_SOLVER_ORTHOGONAL_SCORES ||
          cfg.solver == P4A_SOLVER_SIMPLS ||
          cfg.solver == P4A_SOLVER_KERNEL_ALGORITHM ||
          cfg.solver == P4A_SOLVER_WIDE_KERNEL ||
@@ -704,9 +705,9 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     if (!supported_pls && !supported_pcr) {
         ctx.set_error(
             "this release supports P4A_ALGO_PLS_REGRESSION with P4A_SOLVER_NIPALS, "
-            "P4A_SOLVER_SIMPLS, P4A_SOLVER_KERNEL_ALGORITHM, "
-            "P4A_SOLVER_WIDE_KERNEL or P4A_SOLVER_SVD, plus P4A_ALGO_PCR "
-            "with P4A_SOLVER_SVD");
+            "P4A_SOLVER_ORTHOGONAL_SCORES, P4A_SOLVER_SIMPLS, "
+            "P4A_SOLVER_KERNEL_ALGORITHM, P4A_SOLVER_WIDE_KERNEL or "
+            "P4A_SOLVER_SVD, plus P4A_ALGO_PCR with P4A_SOLVER_SVD");
         return P4A_ERR_UNSUPPORTED;
     }
     if (cfg.deflation != P4A_DEFLATION_REGRESSION) {
@@ -1104,6 +1105,270 @@ p4a_status_t fit_pls_regression_nipals(
         for (std::size_t row = 0; row < n; ++row) {
             scores_t[idx(row, a, comp)] = x_score[row];
             y_scores_u[idx(row, a, comp)] = y_scores[row];
+        }
+    }
+
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    if (cfg.store_scores != 0) {
+        model->scores_t = std::move(scores_t);
+        model->y_scores_u = std::move(y_scores_u);
+    }
+
+    out_model = std::move(model);
+    ctx.clear_error();
+    return P4A_OK;
+}
+
+p4a_status_t fit_pls_regression_orthogonal_scores(
+    Context& ctx,
+    const Config& cfg,
+    const p4a_matrix_view_t& X,
+    const p4a_matrix_view_t& Y,
+    std::unique_ptr<Model>& out_model) {
+    out_model.reset();
+
+    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    std::vector<double> x_original;
+    std::vector<double> y_original;
+    status = copy_matrix_checked(ctx, X, "X", x_original);
+    if (status != P4A_OK) {
+        return status;
+    }
+    status = copy_matrix_checked(ctx, Y, "Y", y_original);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    const std::size_t n = static_cast<std::size_t>(X.rows);
+    const std::size_t p = static_cast<std::size_t>(X.cols);
+    const std::size_t q = static_cast<std::size_t>(Y.cols);
+    const std::size_t a = static_cast<std::size_t>(cfg.n_components);
+
+    auto model = std::make_unique<Model>();
+    model->algorithm = cfg.algorithm;
+    model->solver = cfg.solver;
+    model->deflation = cfg.deflation;
+    model->n_samples = X.rows;
+    model->n_features = static_cast<std::int32_t>(X.cols);
+    model->n_targets = static_cast<std::int32_t>(Y.cols);
+    model->n_components = cfg.n_components;
+    model->center_x = cfg.center_x;
+    model->scale_x = cfg.scale_x;
+    model->center_y = cfg.center_y;
+    model->scale_y = cfg.scale_y;
+    model->store_scores = cfg.store_scores;
+    model->tol = cfg.tol;
+    model->max_iter = cfg.max_iter;
+
+    std::vector<double> xk;
+    std::vector<double> yk;
+    center_scale_in_place(x_original, n, p, cfg.center_x != 0, cfg.scale_x != 0,
+                          model->x_mean, model->x_scale, xk);
+    center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
+                          model->y_mean, model->y_scale, yk);
+
+    resize_fill(model->weights_w, p * a, 0.0);
+    resize_fill(model->loadings_p, p * a, 0.0);
+    resize_fill(model->y_loadings_q, q * a, 0.0);
+    std::vector<double> scores_t;
+    std::vector<double> y_scores_u;
+    resize_fill(scores_t, n * a, 0.0);
+    resize_fill(y_scores_u, n * a, 0.0);
+
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        std::vector<double> y_score;
+        resize_fill(y_score, n, 0.0);
+        if (q == 1U) {
+            for (std::size_t row = 0; row < n; ++row) {
+                y_score[row] = yk[idx(row, q, 0)];
+            }
+        } else {
+            std::size_t initial_target = 0;
+            double best_ss = -1.0;
+            for (std::size_t target = 0; target < q; ++target) {
+                double sumsq = 0.0;
+                for (std::size_t row = 0; row < n; ++row) {
+                    const double value = yk[idx(row, q, target)];
+                    sumsq += value * value;
+                }
+                if (sumsq > best_ss) {
+                    best_ss = sumsq;
+                    initial_target = target;
+                }
+            }
+            if (best_ss <= std::numeric_limits<double>::epsilon()) {
+                ctx.set_errorf("orthogonal-scores Y residual became constant at component %llu",
+                               ull(comp));
+                return P4A_ERR_NUMERICAL_FAILURE;
+            }
+            for (std::size_t row = 0; row < n; ++row) {
+                y_score[row] = yk[idx(row, q, initial_target)];
+            }
+        }
+
+        std::vector<double> x_weights;
+        std::vector<double> x_score;
+        std::vector<double> x_score_old;
+        std::vector<double> y_loadings;
+        resize_fill(x_weights, p, 0.0);
+        resize_fill(x_score, n, 0.0);
+        resize_fill(x_score_old, n, 0.0);
+        resize_fill(y_loadings, q, 0.0);
+        bool converged = false;
+
+        for (std::int32_t iter = 0; iter < cfg.max_iter; ++iter) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                double sum = 0.0;
+                for (std::size_t row = 0; row < n; ++row) {
+                    sum += xk[idx(row, p, feature)] * y_score[row];
+                }
+                x_weights[feature] = sum;
+            }
+
+            const double x_weight_norm = std::sqrt(squared_norm(x_weights));
+            if (x_weight_norm <= std::numeric_limits<double>::epsilon()) {
+                ctx.set_errorf("orthogonal-scores X weights vanished at component %llu",
+                               ull(comp));
+                return P4A_ERR_NUMERICAL_FAILURE;
+            }
+            for (double& value : x_weights) {
+                value /= x_weight_norm;
+            }
+
+            matrix_vector_product(xk, n, p, x_weights, x_score);
+            const double x_score_ss = squared_norm(x_score);
+            if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+                ctx.set_errorf("orthogonal-scores X score vanished at component %llu",
+                               ull(comp));
+                return P4A_ERR_NUMERICAL_FAILURE;
+            }
+
+            for (std::size_t target = 0; target < q; ++target) {
+                double sum = 0.0;
+                for (std::size_t row = 0; row < n; ++row) {
+                    sum += yk[idx(row, q, target)] * (x_score[row] / x_score_ss);
+                }
+                y_loadings[target] = sum;
+            }
+
+            if (q == 1U) {
+                converged = true;
+                break;
+            }
+
+            double score_delta = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                const double delta = x_score[row] - x_score_old[row];
+                if (x_score[row] == 0.0) {
+                    if (delta != 0.0) {
+                        score_delta = std::numeric_limits<double>::infinity();
+                        break;
+                    }
+                    continue;
+                }
+                const double ratio = delta / x_score[row];
+                if (!std::isnan(ratio)) {
+                    score_delta += std::fabs(ratio);
+                }
+            }
+            if (score_delta < cfg.tol) {
+                converged = true;
+                break;
+            }
+
+            const double y_loading_ss = squared_norm(y_loadings);
+            if (y_loading_ss <= std::numeric_limits<double>::epsilon()) {
+                ctx.set_errorf("orthogonal-scores Y loadings vanished at component %llu",
+                               ull(comp));
+                return P4A_ERR_NUMERICAL_FAILURE;
+            }
+            for (std::size_t row = 0; row < n; ++row) {
+                double sum = 0.0;
+                for (std::size_t target = 0; target < q; ++target) {
+                    sum += yk[idx(row, q, target)] * y_loadings[target];
+                }
+                y_score[row] = sum / y_loading_ss;
+            }
+            x_score_old = x_score;
+        }
+
+        if (!converged) {
+            ctx.set_errorf("orthogonal-scores iteration failed to converge at component %llu",
+                           ull(comp));
+            return P4A_ERR_CONVERGENCE_FAILED;
+        }
+
+        const double x_score_ss = squared_norm(x_score);
+        if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("orthogonal-scores X score vanished after convergence at component %llu",
+                           ull(comp));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+
+        std::vector<double> x_loadings;
+        resize_fill(x_loadings, p, 0.0);
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += xk[idx(row, p, feature)] * (x_score[row] / x_score_ss);
+            }
+            x_loadings[feature] = sum;
+        }
+
+        std::size_t sign_idx = 0;
+        double sign_abs = std::fabs(x_weights[0]);
+        for (std::size_t feature = 1; feature < p; ++feature) {
+            const double candidate = std::fabs(x_weights[feature]);
+            if (candidate > sign_abs) {
+                sign_idx = feature;
+                sign_abs = candidate;
+            }
+        }
+        if (x_weights[sign_idx] < 0.0) {
+            for (double& value : x_weights) {
+                value = -value;
+            }
+            for (double& value : x_score) {
+                value = -value;
+            }
+            for (double& value : x_loadings) {
+                value = -value;
+            }
+            for (double& value : y_loadings) {
+                value = -value;
+            }
+            for (double& value : y_score) {
+                value = -value;
+            }
+        }
+
+        for (std::size_t row = 0; row < n; ++row) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
+            }
+            for (std::size_t target = 0; target < q; ++target) {
+                yk[idx(row, q, target)] -= x_score[row] * y_loadings[target];
+            }
+        }
+
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            model->weights_w[idx(feature, a, comp)] = x_weights[feature];
+            model->loadings_p[idx(feature, a, comp)] = x_loadings[feature];
+        }
+        for (std::size_t target = 0; target < q; ++target) {
+            model->y_loadings_q[idx(target, a, comp)] = y_loadings[target];
+        }
+        for (std::size_t row = 0; row < n; ++row) {
+            scores_t[idx(row, a, comp)] = x_score[row];
+            y_scores_u[idx(row, a, comp)] = y_score[row];
         }
     }
 
