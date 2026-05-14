@@ -16,6 +16,7 @@ add_executable(pls4all_tests
     abi/test_oom_paths.cpp
     abi/test_metrics.cpp
     abi/test_pipeline.cpp
+    abi/test_validation.cpp
     abi/test_model_stubs.cpp)
 target_link_libraries(pls4all_tests PRIVATE pls4all_c pls4all_core)
 target_include_directories(pls4all_tests

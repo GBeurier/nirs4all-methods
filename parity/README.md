@@ -57,6 +57,9 @@ parity/
 │   ├── synthetic_pipeline_osc_v1.json
 │   ├── synthetic_pipeline_epo_v1.json
 │   ├── synthetic_metrics_regression_v1.json
+│   ├── synthetic_validation_kfold_balanced_v1.json
+│   ├── synthetic_validation_leave_one_out_v1.json
+│   ├── synthetic_validation_holdout_v1.json
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.
@@ -107,5 +110,7 @@ NumPy identity, center, autoscale, Pareto, SNV, MSC, EMSC, polynomial detrending
 Savitzky-Golay, ASLS, Norris-Williams, Haar wavelet, supervised OSC and EPO transforms.
 Regression metric fixtures are generated from deterministic NumPy formulas for
 RMSE, MAE, bias, R2/Q2, observed-vs-predicted slope/intercept, RPD and RPIQ.
+Validation split fixtures are generated from deterministic Python references
+for balanced contiguous k-fold, leave-one-out and holdout plans.
 C++ parity tests assert predictions, coefficients, preprocessing statistics,
 transforms, metrics and latent arrays within `tolerances.md`.

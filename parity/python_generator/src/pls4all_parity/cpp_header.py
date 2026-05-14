@@ -69,6 +69,16 @@ HEADER_SPECS = {
         "struct": "MetricsFixture",
         "array": "kMetricsFixtures",
     },
+    "validation": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "validation_fixtures.hpp",
+        "fixtures": (
+            "synthetic_validation_kfold_balanced_v1",
+            "synthetic_validation_leave_one_out_v1",
+            "synthetic_validation_holdout_v1",
+        ),
+        "struct": "ValidationFixture",
+        "array": "kValidationFixtures",
+    },
     "power": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "power_fixtures.hpp",
         "fixtures": (
@@ -527,6 +537,100 @@ def generate_metrics(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def _emit_int_array(lines: list[str], name: str, values: list[int]) -> None:
+    lines.append(f"inline const std::int64_t {name}[] = {{")
+    row: list[str] = []
+    for value in values:
+        row.append(str(int(value)))
+        if len(row) == 8:
+            lines.append(f"    {', '.join(row)},")
+            row.clear()
+    if row:
+        lines.append(f"    {', '.join(row)},")
+    lines.append("};")
+    lines.append("")
+
+
+def _index_ref(array_name: str) -> str:
+    return f"IndexRef{{{array_name}, sizeof({array_name}) / sizeof(std::int64_t)}}"
+
+
+def generate_validation(fixture_ids: Sequence[str],
+                        fixture_dir: Path,
+                        out: Path,
+                        family: str,
+                        struct_name: str,
+                        array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct IndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    const char* kind;",
+        "    std::int64_t n_samples;",
+        "    std::int32_t n_splits;",
+        "    std::int64_t holdout_start;",
+        "    std::int64_t holdout_count;",
+        "    IndexRef train_offsets;",
+        "    IndexRef train_indices;",
+        "    IndexRef test_offsets;",
+        "    IndexRef test_indices;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        expected = fixture["expected"]
+        names = {
+            "train_offsets": f"{prefix}_train_offsets",
+            "train_indices": f"{prefix}_train_indices",
+            "test_offsets": f"{prefix}_test_offsets",
+            "test_indices": f"{prefix}_test_indices",
+        }
+        for field, name in names.items():
+            _emit_int_array(lines, name, expected[field]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f'        "{params["kind"]}",\n'
+            f"        {int(params['n_samples'])},\n"
+            f"        {int(params['n_splits'])},\n"
+            f"        {int(params['holdout_start'])},\n"
+            f"        {int(params['holdout_count'])},\n"
+            f"        {_index_ref(names['train_offsets'])},\n"
+            f"        {_index_ref(names['train_indices'])},\n"
+            f"        {_index_ref(names['test_offsets'])},\n"
+            f"        {_index_ref(names['test_indices'])}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--family", choices=sorted(HEADER_SPECS), default="simpls",
@@ -544,6 +648,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "metrics":
         generate_metrics(fixture_ids, args.fixture_dir, out, args.family,
                          str(spec["struct"]), str(spec["array"]))
+    elif args.family == "validation":
+        generate_validation(fixture_ids, args.fixture_dir, out, args.family,
+                            str(spec["struct"]), str(spec["array"]))
     else:
         generate(fixture_ids, args.fixture_dir, out, args.family,
                  str(spec["struct"]), str(spec["array"]))

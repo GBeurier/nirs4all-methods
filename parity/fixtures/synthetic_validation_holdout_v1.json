@@ -1,0 +1,72 @@
+{
+  "comparison_policy": {
+    "components_alignment": "exact",
+    "sign_resolver": "none",
+    "tolerance_table_row": "pls4all-python-validation-splits"
+  },
+  "data": {
+    "sample_indices": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        8
+      ],
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    }
+  },
+  "expected": {
+    "n_folds": 1,
+    "test_indices": {
+      "values": [
+        2,
+        3,
+        4
+      ]
+    },
+    "test_offsets": {
+      "values": [
+        0,
+        3
+      ]
+    },
+    "train_indices": {
+      "values": [
+        0,
+        1,
+        5,
+        6,
+        7
+      ]
+    },
+    "train_offsets": {
+      "values": [
+        0,
+        5
+      ]
+    }
+  },
+  "fixture_id": "synthetic_validation_holdout_v1",
+  "generator": {
+    "git_revision_sha": "unknown",
+    "name": "pls4all_parity.suites._validation_expected",
+    "params": {
+      "holdout_count": 3,
+      "holdout_start": 2,
+      "kind": "holdout",
+      "n_samples": 8,
+      "n_splits": 0,
+      "reference": "NumPy/Python deterministic validation splitters"
+    },
+    "version": "1"
+  },
+  "schema_version": 1
+}

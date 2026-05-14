@@ -31,7 +31,8 @@ add_library(pls4all_core OBJECT
     core/model.cpp
     core/operator_bank.cpp
     core/gating_strategy.cpp
-    core/pipeline.cpp)
+    core/pipeline.cpp
+    core/validation.cpp)
 target_include_directories(pls4all_core
     PUBLIC  ${PROJECT_SOURCE_DIR}/cpp/include
             ${PROJECT_BINARY_DIR}/generated

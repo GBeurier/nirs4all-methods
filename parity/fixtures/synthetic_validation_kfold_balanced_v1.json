@@ -1,0 +1,100 @@
+{
+  "comparison_policy": {
+    "components_alignment": "exact",
+    "sign_resolver": "none",
+    "tolerance_table_row": "pls4all-python-validation-splits"
+  },
+  "data": {
+    "sample_indices": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        10
+      ],
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    }
+  },
+  "expected": {
+    "n_folds": 3,
+    "test_indices": {
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    "test_offsets": {
+      "values": [
+        0,
+        4,
+        7,
+        10
+      ]
+    },
+    "train_indices": {
+      "values": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        0,
+        1,
+        2,
+        3,
+        7,
+        8,
+        9,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    "train_offsets": {
+      "values": [
+        0,
+        6,
+        13,
+        20
+      ]
+    }
+  },
+  "fixture_id": "synthetic_validation_kfold_balanced_v1",
+  "generator": {
+    "git_revision_sha": "unknown",
+    "name": "pls4all_parity.suites._validation_expected",
+    "params": {
+      "holdout_count": 0,
+      "holdout_start": 0,
+      "kind": "kfold",
+      "n_samples": 10,
+      "n_splits": 3,
+      "reference": "NumPy/Python deterministic validation splitters"
+    },
+    "version": "1"
+  },
+  "schema_version": 1
+}

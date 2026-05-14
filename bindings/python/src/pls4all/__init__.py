@@ -15,7 +15,7 @@ from ._config import Config
 
 
 def version() -> str:
-    """Return the runtime library version string, e.g. '0.27.0+abi.1.0.0'."""
+    """Return the runtime library version string, e.g. '0.28.0+abi.1.0.0'."""
     return lib.p4a_get_version_string().decode("utf-8")
 
 
@@ -45,4 +45,4 @@ __all__ = [
     "abi_version",
     "build_info",
 ]
-__version__ = "0.27.0"
+__version__ = "0.28.0"

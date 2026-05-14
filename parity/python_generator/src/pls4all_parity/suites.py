@@ -737,6 +737,59 @@ def _regression_metrics_expected(Y_true: np.ndarray, Y_pred: np.ndarray) -> dict
     }
 
 
+def _validation_folds(kind: str,
+                      n_samples: int,
+                      n_splits: int = 0,
+                      holdout_start: int = 0,
+                      holdout_count: int = 0) -> list[tuple[list[int], list[int]]]:
+    indices = list(range(int(n_samples)))
+    folds: list[tuple[list[int], list[int]]] = []
+    if kind == "kfold":
+        base = n_samples // n_splits
+        remainder = n_samples % n_splits
+        start = 0
+        for fold in range(n_splits):
+            size = base + (1 if fold < remainder else 0)
+            stop = start + size
+            test = indices[start:stop]
+            train = indices[:start] + indices[stop:]
+            folds.append((train, test))
+            start = stop
+    elif kind == "leave_one_out":
+        for sample in indices:
+            folds.append(([idx for idx in indices if idx != sample], [sample]))
+    elif kind == "holdout":
+        stop = holdout_start + holdout_count
+        folds.append((indices[:holdout_start] + indices[stop:], indices[holdout_start:stop]))
+    else:
+        raise ValueError(f"unsupported validation fixture kind: {kind}")
+    return folds
+
+
+def _validation_expected(kind: str,
+                         n_samples: int,
+                         n_splits: int = 0,
+                         holdout_start: int = 0,
+                         holdout_count: int = 0) -> dict[str, Any]:
+    folds = _validation_folds(kind, n_samples, n_splits, holdout_start, holdout_count)
+    train_offsets = [0]
+    test_offsets = [0]
+    train_indices: list[int] = []
+    test_indices: list[int] = []
+    for train, test in folds:
+        train_indices.extend(train)
+        test_indices.extend(test)
+        train_offsets.append(len(train_indices))
+        test_offsets.append(len(test_indices))
+    return {
+        "n_folds": len(folds),
+        "train_offsets": {"values": train_offsets},
+        "train_indices": {"values": train_indices},
+        "test_offsets":  {"values": test_offsets},
+        "test_indices":  {"values": test_indices},
+    }
+
+
 def _power_pls_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, Any]:
     X = np.asarray(X, dtype=np.float64)
     Y = np.asarray(Y, dtype=np.float64)
@@ -1616,6 +1669,47 @@ def _metrics_fixture(
     }
 
 
+def _validation_fixture(
+    fixture_id: str,
+    kind: str,
+    n_samples: int,
+    n_splits: int = 0,
+    holdout_start: int = 0,
+    holdout_count: int = 0,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._validation_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "kind":          kind,
+                "n_samples":     int(n_samples),
+                "n_splits":      int(n_splits),
+                "holdout_start": int(holdout_start),
+                "holdout_count": int(holdout_count),
+                "reference":     "NumPy/Python deterministic validation splitters",
+            },
+        },
+        "data": {
+            "sample_indices": {
+                "shape": [int(n_samples)],
+                "layout": "row_major",
+                "dtype": "i64",
+                "values": list(range(int(n_samples))),
+            },
+        },
+        "expected": _validation_expected(kind, n_samples, n_splits, holdout_start, holdout_count),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "pls4all-python-validation-splits",
+        },
+    }
+
+
 def _power_fixture(
     fixture_id: str,
     seed: int,
@@ -2320,6 +2414,30 @@ def synthetic_metrics_regression_v1() -> dict[str, Any]:
     ], dtype=np.float64)
     return _metrics_fixture("synthetic_metrics_regression_v1", seed=55,
                             Y_true=Y_true, Y_pred=Y_true + residual)
+
+
+def synthetic_validation_kfold_balanced_v1() -> dict[str, Any]:
+    """10 samples split into 3 contiguous balanced folds."""
+    return _validation_fixture("synthetic_validation_kfold_balanced_v1",
+                               kind="kfold",
+                               n_samples=10,
+                               n_splits=3)
+
+
+def synthetic_validation_leave_one_out_v1() -> dict[str, Any]:
+    """5 samples split into deterministic leave-one-out folds."""
+    return _validation_fixture("synthetic_validation_leave_one_out_v1",
+                               kind="leave_one_out",
+                               n_samples=5)
+
+
+def synthetic_validation_holdout_v1() -> dict[str, Any]:
+    """8 samples with a contiguous holdout window."""
+    return _validation_fixture("synthetic_validation_holdout_v1",
+                               kind="holdout",
+                               n_samples=8,
+                               holdout_start=2,
+                               holdout_count=3)
 
 
 def synthetic_power_tiny_pls1_v1() -> dict[str, Any]:

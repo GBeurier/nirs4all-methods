@@ -1,0 +1,94 @@
+{
+  "comparison_policy": {
+    "components_alignment": "exact",
+    "sign_resolver": "none",
+    "tolerance_table_row": "pls4all-python-validation-splits"
+  },
+  "data": {
+    "sample_indices": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        5
+      ],
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    }
+  },
+  "expected": {
+    "n_folds": 5,
+    "test_indices": {
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "test_offsets": {
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    "train_indices": {
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        0,
+        2,
+        3,
+        4,
+        0,
+        1,
+        3,
+        4,
+        0,
+        1,
+        2,
+        4,
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "train_offsets": {
+      "values": [
+        0,
+        4,
+        8,
+        12,
+        16,
+        20
+      ]
+    }
+  },
+  "fixture_id": "synthetic_validation_leave_one_out_v1",
+  "generator": {
+    "git_revision_sha": "unknown",
+    "name": "pls4all_parity.suites._validation_expected",
+    "params": {
+      "holdout_count": 0,
+      "holdout_start": 0,
+      "kind": "leave_one_out",
+      "n_samples": 5,
+      "n_splits": 0,
+      "reference": "NumPy/Python deterministic validation splitters"
+    },
+    "version": "1"
+  },
+  "schema_version": 1
+}

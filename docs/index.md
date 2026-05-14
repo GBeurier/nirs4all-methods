@@ -21,7 +21,8 @@ autoscale, Pareto scaling, SNV, MSC, EMSC, polynomial detrending and
 Savitzky-Golay smoothing/derivatives, Norris-Williams gap-segment derivatives,
 ASLS baseline correction, Haar wavelet denoising and supervised one-component
 OSC / EPO. Internal regression metric kernels cover RMSE, MAE, bias, R2/Q2,
-observed-vs-predicted slope/intercept, RPD and RPIQ. The supported fitted-model path is now live for NIPALS,
+observed-vs-predicted slope/intercept, RPD and RPIQ, and validation splitters
+cover deterministic k-fold, leave-one-out and holdout plans. The supported fitted-model path is now live for NIPALS,
 orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and
 randomized-SVD PLS regression
 (PLS1 / PLS2), PLSCanonical with NIPALS/SVD, PLSSVD direct cross-covariance

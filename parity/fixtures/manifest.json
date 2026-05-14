@@ -230,6 +230,21 @@
       "path": "synthetic_tiny_centered_v1.json",
       "sha256": "0ebdedcdbfd29927b14677ac2cb5f35ef55774a9806bbe9f44e0d899555f6d58"
     },
+    "synthetic_validation_holdout_v1": {
+      "bytes": 1216,
+      "path": "synthetic_validation_holdout_v1.json",
+      "sha256": "6be2d299db6bad5e4a8649f3199f7cee806f6780b7a2ffef017ce09b573a6be0"
+    },
+    "synthetic_validation_kfold_balanced_v1": {
+      "bytes": 1534,
+      "path": "synthetic_validation_kfold_balanced_v1.json",
+      "sha256": "ed5dce942598eb2223e2fec11c8ef94dde2e37daede860ecba48da290336c339"
+    },
+    "synthetic_validation_leave_one_out_v1": {
+      "bytes": 1473,
+      "path": "synthetic_validation_leave_one_out_v1.json",
+      "sha256": "3c13b9297f36c88b17e14d2cc02fd11907756bfcc37d962e33bafab961d22710"
+    },
     "synthetic_wide_kernel_pls1_v1": {
       "bytes": 13338,
       "path": "synthetic_wide_kernel_pls1_v1.json",
