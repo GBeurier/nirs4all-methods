@@ -44,6 +44,8 @@ deterministic subset walks and rank variables by inclusion frequency. Phase 5h
 SCARS kernels run deterministic calibration subsampling with stability-weighted
 CARS retention. Phase 5i GA-PLS kernels use deterministic population search
 with elitism, crossover, mutation and k-fold CV fitness.
+Phase 5j shaving kernels recursively eliminate low-score PLS variables while
+scoring each retained subset by deterministic k-fold CV.
 Component-coefficient kernels expose the
 original-scale regression coefficients for each latent prefix. SIMPLS component
 prefixes can also be scored by deterministic k-fold CV for component-count

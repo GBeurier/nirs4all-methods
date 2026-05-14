@@ -2321,6 +2321,84 @@ def _ga_population_expected(
     }
 
 
+def _shaving_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    n_steps: int,
+    min_features: int,
+    shave_fraction: float,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    p = int(X.shape[1])
+    active = list(range(p))
+    coefficient_rows: list[float] = []
+    rmse_values: list[float] = []
+    retained_counts: list[int] = []
+    candidates: list[list[int]] = []
+    best_step = -1
+    best_rmse = math.inf
+
+    for step in range(int(n_steps)):
+        active_x = _copy_columns(X, active)
+        active_scores = _pls_coefficient_scores(active_x, Y, n_components)
+        full_scores = np.zeros(p, dtype=np.float64)
+        for local_idx, feature in enumerate(active):
+            full_scores[int(feature)] = float(active_scores[local_idx])
+        coefficient_rows.extend(full_scores.tolist())
+
+        rmse = _kfold_pls_rmse(active_x, Y, n_components, n_splits)
+        retained_counts.append(int(len(active)))
+        rmse_values.append(float(rmse))
+        candidates.append(list(active))
+        if rmse < best_rmse:
+            best_rmse = float(rmse)
+            best_step = int(step)
+
+        if step == int(n_steps) - 1 or len(active) <= int(min_features):
+            continue
+        remove_count = int(math.ceil(float(len(active)) * float(shave_fraction)))
+        remove_count = max(1, remove_count)
+        remove_count = min(remove_count, len(active) - int(min_features))
+        order = sorted(active, key=lambda feature: (float(full_scores[int(feature)]), -int(feature)))
+        removed = set(int(feature) for feature in order[:remove_count])
+        active = sorted(int(feature) for feature in active if int(feature) not in removed)
+
+    selected = candidates[best_step]
+    return {
+        "coefficient_scores": {
+            "shape": [int(n_steps), p],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": coefficient_rows,
+        },
+        "rmse_by_step": {
+            "shape": [1, int(n_steps)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": rmse_values,
+        },
+        "retained_counts": {
+            "shape": [1, int(n_steps)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": retained_counts,
+        },
+        "selected_indices": {
+            "shape": [1, int(len(selected))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected,
+        },
+        "best_step": int(best_step),
+        "best_rmse": float(best_rmse),
+    }
+
+
 def _component_coefficients_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -4336,6 +4414,58 @@ def _ga_selection_fixture(
     }
 
 
+def _shaving_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    n_steps: int,
+    min_features: int,
+    shave_fraction: float,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._shaving_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":      "pls_regression",
+                "solver":         "nipals",
+                "n_components":   int(n_components),
+                "n_splits":       int(n_splits),
+                "n_steps":        int(n_steps),
+                "min_features":   int(min_features),
+                "shave_fraction": float(shave_fraction),
+                "reference":      "sklearn PLSRegression deterministic shaving PLS",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _shaving_selection_expected(X,
+                                                Y,
+                                                n_components,
+                                                n_splits,
+                                                n_steps,
+                                                min_features,
+                                                shave_fraction),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-Shaving-selection",
+        },
+    }
+
+
 def _component_coefficients_fixture(
     fixture_id: str,
     seed: int,
@@ -5781,6 +5911,41 @@ def synthetic_ga_pls_wrapper_v1() -> dict[str, Any]:
                                  max_features=8,
                                  mutation_rate=0.35,
                                  ga_seed=9101)
+
+
+def synthetic_shaving_pls_recursive_v1() -> dict[str, Any]:
+    """28 samples, 12 features, 2 targets for deterministic shaving PLS."""
+    seed = 73
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(28, 5))
+    wave = np.linspace(0.0, 2.3 * np.pi, 28)
+    X = np.column_stack([
+        0.89 * latent[:, 0] + 0.12 * latent[:, 1] + 0.04 * rng.standard_normal(size=28),
+        -0.46 * latent[:, 0] + 0.55 * latent[:, 2] + 0.05 * rng.standard_normal(size=28),
+        0.64 * latent[:, 1] - 0.25 * latent[:, 3] + 0.05 * rng.standard_normal(size=28),
+        0.21 * latent[:, 0] + 0.78 * latent[:, 3] + 0.04 * rng.standard_normal(size=28),
+        -0.50 * latent[:, 2] + 0.33 * latent[:, 3] + 0.05 * rng.standard_normal(size=28),
+        0.42 * latent[:, 4] + 0.16 * latent[:, 0] + 0.06 * rng.standard_normal(size=28),
+        0.25 * latent[:, 1] - 0.23 * latent[:, 4] + 0.07 * rng.standard_normal(size=28),
+        np.sin(1.2 * wave) + 0.05 * rng.standard_normal(size=28),
+        np.cos(1.5 * wave) + 0.05 * rng.standard_normal(size=28),
+        0.27 * np.linspace(-1.0, 1.0, 28) + 0.10 * rng.standard_normal(size=28),
+        0.31 * latent[:, 2] - 0.18 * latent[:, 4] + 0.08 * rng.standard_normal(size=28),
+        rng.standard_normal(size=28) * 0.15,
+    ])
+    Y = np.column_stack([
+        1.13 * latent[:, 0] - 0.43 * latent[:, 2] + 0.35 * latent[:, 4] + 0.05 * rng.standard_normal(size=28),
+        -0.39 * latent[:, 1] + 0.73 * latent[:, 3] - 0.22 * latent[:, 4] + 0.05 * rng.standard_normal(size=28),
+    ])
+    return _shaving_selection_fixture("synthetic_shaving_pls_recursive_v1",
+                                      seed=seed,
+                                      X=X,
+                                      Y=Y,
+                                      n_components=2,
+                                      n_splits=4,
+                                      n_steps=5,
+                                      min_features=3,
+                                      shave_fraction=0.25)
 
 
 def synthetic_component_coefficients_pls2_v1() -> dict[str, Any]:

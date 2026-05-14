@@ -280,6 +280,11 @@
       "path": "synthetic_scars_pls_stability_v1.json",
       "sha256": "c51e08f8cab9aca77020f020ca7145c16e92bfd454df09f49154e968bc27ab5b"
     },
+    "synthetic_shaving_pls_recursive_v1": {
+      "bytes": 14606,
+      "path": "synthetic_shaving_pls_recursive_v1.json",
+      "sha256": "9a4627cb0b2361b148dbfb4ede4381db5ac44e4399f3c7bdabcfcb1806d1e7b0"
+    },
     "synthetic_simpls_small_pls2_v1": {
       "bytes": 7755,
       "path": "synthetic_simpls_small_pls2_v1.json",
