@@ -199,6 +199,74 @@ def _svd_pls_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[s
     }
 
 
+def _pcr_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+
+    Xk, x_mean, x_scale = _center_scale(X)
+    Ys, y_mean, y_scale = _center_scale(Y)
+    n, p = Xk.shape
+    q = Ys.shape[1]
+    K = int(n_components)
+
+    W = np.zeros((p, K), dtype=np.float64)
+    P = np.zeros((p, K), dtype=np.float64)
+    Q = np.zeros((q, K), dtype=np.float64)
+    T = np.zeros((n, K), dtype=np.float64)
+    U_scores = np.zeros((n, K), dtype=np.float64)
+    eps = np.finfo(np.float64).eps
+
+    for comp in range(K):
+        eigenvalues, eigenvectors = np.linalg.eigh(Xk.T @ Xk)
+        best = int(np.argmax(eigenvalues))
+        if eigenvalues[best] <= eps:
+            raise RuntimeError(f"PCR X covariance collapsed at component {comp}")
+        direction = eigenvectors[:, best].astype(np.float64, copy=True)
+        sign_idx = int(np.argmax(np.abs(direction)))
+        if direction[sign_idx] < 0.0:
+            direction = -direction
+
+        t = Xk @ direction
+        t_ss = float(t @ t)
+        if t_ss <= eps:
+            raise RuntimeError(f"PCR score collapsed at component {comp}")
+        p_load = (Xk.T @ t) / t_ss
+        q_load = (Ys.T @ t) / t_ss
+        q_ss = float(q_load @ q_load)
+        if q_ss > eps:
+            u = (Ys @ q_load) / q_ss
+        else:
+            u = np.zeros(n, dtype=np.float64)
+        Xk = Xk - np.outer(t, p_load)
+
+        W[:, comp] = direction
+        P[:, comp] = p_load
+        Q[:, comp] = q_load
+        T[:, comp] = t
+        U_scores[:, comp] = u
+
+    rotations = W @ np.linalg.inv(P.T @ W)
+    coef_std = rotations @ Q.T
+    coef = coef_std * (y_scale.reshape(1, -1) / x_scale.reshape(-1, 1))
+    preds = y_mean.reshape(1, -1) + (X - x_mean.reshape(1, -1)) @ coef
+    return {
+        "coefficients":  {"shape": list(coef.shape),       "values": _flatten_rowmajor(coef)},
+        "intercept":     {"shape": [q],                    "values": y_mean.astype(np.float64).tolist()},
+        "x_mean":        {"shape": [p],                    "values": x_mean.astype(np.float64).tolist()},
+        "x_scale":       {"shape": [p],                    "values": x_scale.astype(np.float64).tolist()},
+        "y_mean":        {"shape": [q],                    "values": y_mean.astype(np.float64).tolist()},
+        "y_scale":       {"shape": [q],                    "values": y_scale.astype(np.float64).tolist()},
+        "weights_W":     {"shape": list(W.shape),          "values": _flatten_rowmajor(W), "sign_invariant": True},
+        "loadings_P":    {"shape": list(P.shape),          "values": _flatten_rowmajor(P), "sign_invariant": True},
+        "y_loadings_Q":  {"shape": list(Q.shape),          "values": _flatten_rowmajor(Q), "sign_invariant": True},
+        "rotations_R":   {"shape": list(rotations.shape),  "values": _flatten_rowmajor(rotations), "sign_invariant": True},
+        "scores_T":      {"shape": list(T.shape),          "values": _flatten_rowmajor(T), "sign_invariant": True},
+        "predict_train": {"shape": list(preds.shape),      "values": _flatten_rowmajor(preds)},
+    }
+
+
 def _fixture(
     fixture_id: str,
     seed: int,
@@ -307,6 +375,41 @@ def _svd_fixture(
     }
 
 
+def _pcr_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._pcr_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "n_components":   n_components,
+                "scale":          True,
+                "deflation_mode": "x-only",
+                "algorithm":      "pcr",
+                "reference":      "NumPy PCA/SVD with score-space least squares",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _pcr_expected(X, Y, n_components),
+        "comparison_policy": {
+            "components_alignment": "first-k-prefix",
+            "sign_resolver":        "max_abs_element_positive",
+            "tolerance_table_row":  "pls4all-numpy-pcr",
+        },
+    }
+
+
 def synthetic_small_pls1_v1() -> dict[str, Any]:
     """50 samples, 20 features, 1 target, n_components=3."""
     rng = np.random.default_rng(seed=0)
@@ -390,4 +493,31 @@ def synthetic_svd_small_pls2_v1() -> dict[str, Any]:
     ])
     Y = X @ W + rng.standard_normal(size=(14, 3)) * 0.035
     return _svd_fixture("synthetic_svd_small_pls2_v1", seed=31,
+                        X=X, Y=Y, n_components=3)
+
+
+def synthetic_pcr_tiny_pls1_v1() -> dict[str, Any]:
+    """10 samples, 4 features, 1 target, n_components=2."""
+    rng = np.random.default_rng(seed=40)
+    X = rng.standard_normal(size=(10, 4))
+    true_w = np.array([0.30, -0.60, 0.15, 0.50])
+    Y = (X @ true_w + rng.standard_normal(size=10) * 0.03).reshape(-1, 1)
+    return _pcr_fixture("synthetic_pcr_tiny_pls1_v1", seed=40,
+                        X=X, Y=Y, n_components=2)
+
+
+def synthetic_pcr_small_pls2_v1() -> dict[str, Any]:
+    """16 samples, 6 features, 3 targets, n_components=3."""
+    rng = np.random.default_rng(seed=41)
+    X = rng.standard_normal(size=(16, 6))
+    W = np.array([
+        [0.35, -0.20, 0.10],
+        [-0.15, 0.50, -0.25],
+        [0.40, 0.05, 0.30],
+        [-0.45, -0.10, 0.20],
+        [0.25, 0.35, -0.40],
+        [0.10, -0.30, 0.45],
+    ])
+    Y = X @ W + rng.standard_normal(size=(16, 3)) * 0.04
+    return _pcr_fixture("synthetic_pcr_small_pls2_v1", seed=41,
                         X=X, Y=Y, n_components=3)

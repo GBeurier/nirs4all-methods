@@ -46,6 +46,20 @@ class Dtype(IntEnum):
     I64     = 4
 
 
+class Algorithm(IntEnum):
+    PLS_REGRESSION = 0
+    PLS_CANONICAL  = 1
+    PLS_SVD        = 2
+    PLS_DA         = 3
+    OPLS           = 4
+    OPLS_DA        = 5
+    SPARSE_PLS     = 6
+    MB_PLS         = 7
+    LW_PLS         = 8
+    AOM_PLS        = 9
+    PCR            = 10
+
+
 class Solver(IntEnum):
     NIPALS            = 0
     SIMPLS            = 1

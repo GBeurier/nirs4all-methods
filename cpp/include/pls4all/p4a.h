@@ -34,7 +34,8 @@
  *   - p4a_model_fit implements dependency-free NIPALS, SIMPLS and SVD PLS
  *     regression (PLS1 / PLS2) for P4A_ALGO_PLS_REGRESSION +
  *     P4A_SOLVER_NIPALS, P4A_SOLVER_SIMPLS or P4A_SOLVER_SVD +
- *     P4A_DEFLATION_REGRESSION.
+ *     P4A_DEFLATION_REGRESSION, plus PCR for P4A_ALGO_PCR +
+ *     P4A_SOLVER_SVD + P4A_DEFLATION_REGRESSION.
  *   - Predict / transform / model-array accessors and binary serialization
  *     are implemented for fitted core PLS models.
  *
@@ -481,7 +482,8 @@ P4A_API p4a_status_t p4a_pipeline_transform_alloc(p4a_context_t* ctx,
  * ==========================================================================
  *
  * The current core implements P4A_ALGO_PLS_REGRESSION with P4A_SOLVER_NIPALS,
- * P4A_SOLVER_SIMPLS or P4A_SOLVER_SVD and P4A_DEFLATION_REGRESSION. Unsupported algorithms /
+ * P4A_SOLVER_SIMPLS or P4A_SOLVER_SVD, and P4A_ALGO_PCR with
+ * P4A_SOLVER_SVD. Both use P4A_DEFLATION_REGRESSION. Unsupported algorithms /
  * solvers / deflation modes return P4A_ERR_UNSUPPORTED. Later Phase 4
  * increments add kernel PLS / OPLS / PLS-DA; Phase 6 adds AOM-PLS through the
  * operator_bank + gating_strategy hooks set on the config.
@@ -580,7 +582,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.4.0+abi.1.0.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.5.0+abi.1.0.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 

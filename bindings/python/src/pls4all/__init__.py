@@ -2,18 +2,18 @@
 
 Current scope is small: version / status / dtype / backend introspection,
 a Context and a Config wrapper. Full Python model wrappers land in Phase 2
-on top of the live NIPALS, SIMPLS and SVD C ABI.
+on top of the live NIPALS, SIMPLS, SVD and PCR C ABI.
 """
 
 from ._ffi import lib  # noqa: F401  — eagerly loads libp4a
 from ._errors import Pls4allError
-from ._types import Backend, Dtype, Solver, Status
+from ._types import Algorithm, Backend, Dtype, Solver, Status
 from ._context import Context
 from ._config import Config
 
 
 def version() -> str:
-    """Return the runtime library version string, e.g. '0.4.0+abi.1.0.0'."""
+    """Return the runtime library version string, e.g. '0.5.0+abi.1.0.0'."""
     return lib.p4a_get_version_string().decode("utf-8")
 
 
@@ -33,6 +33,7 @@ __all__ = [
     "Pls4allError",
     "Backend",
     "Dtype",
+    "Algorithm",
     "Status",
     "Solver",
     "Context",
@@ -41,4 +42,4 @@ __all__ = [
     "abi_version",
     "build_info",
 ]
-__version__ = "0.4.0"
+__version__ = "0.5.0"

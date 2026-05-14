@@ -1,5 +1,15 @@
 {
   "fixtures": {
+    "synthetic_pcr_small_pls2_v1": {
+      "bytes": 12072,
+      "path": "synthetic_pcr_small_pls2_v1.json",
+      "sha256": "8973a78e57551e6758c9407046f3a8d7a6fd17acd0214c72d5115693eff85db9"
+    },
+    "synthetic_pcr_tiny_pls1_v1": {
+      "bytes": 5659,
+      "path": "synthetic_pcr_tiny_pls1_v1.json",
+      "sha256": "f8c7e3d9e0cc0e22dae2d569fb43cc1ac639cd50ce5942fc9f51bb1a2641a952"
+    },
     "synthetic_simpls_small_pls2_v1": {
       "bytes": 7755,
       "path": "synthetic_simpls_small_pls2_v1.json",

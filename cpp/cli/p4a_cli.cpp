@@ -166,6 +166,19 @@ int cmd_selfcheck() {
     p4a_array_free(svd_pred);
     p4a_model_destroy(svd_model);
 
+    CHECK(p4a_config_set_algorithm(cfg, P4A_ALGO_PCR) == P4A_OK);
+    CHECK(p4a_config_set_solver(cfg, P4A_SOLVER_SVD) == P4A_OK);
+    p4a_model_t* pcr_model = nullptr;
+    CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &pcr_model) == P4A_OK);
+    CHECK(pcr_model != nullptr);
+    p4a_array_t* pcr_pred = nullptr;
+    CHECK(p4a_model_predict_alloc(ctx, pcr_model, &X, &pcr_pred) == P4A_OK);
+    CHECK(p4a_array_shape(pcr_pred, &rows, &cols) == P4A_OK);
+    CHECK(rows == 4);
+    CHECK(cols == 1);
+    p4a_array_free(pcr_pred);
+    p4a_model_destroy(pcr_model);
+
     p4a_config_destroy(cfg);
     p4a_context_destroy(ctx);
 #undef CHECK

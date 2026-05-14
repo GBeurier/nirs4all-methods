@@ -28,7 +28,7 @@ def _candidate_paths() -> list[Path]:
     # Developer convenience: repo-root build directory.
     if _REPO_ROOT is not None:
         for preset in ("dev-release", "dev-debug"):
-            for name in ("libp4a.so", "libp4a.dylib", "libp4a.so.0.4.0", "libp4a.so.0.3.0", "libp4a.so.0.2.0", "libp4a.so.0.1.0", "p4a.dll"):
+            for name in ("libp4a.so", "libp4a.dylib", "libp4a.so.0.5.0", "libp4a.so.0.4.0", "libp4a.so.0.3.0", "libp4a.so.0.2.0", "libp4a.so.0.1.0", "p4a.dll"):
                 p = _REPO_ROOT / "build" / preset / "cpp" / "src" / name
                 if p.exists():
                     paths.append(p)

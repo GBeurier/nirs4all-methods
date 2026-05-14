@@ -76,6 +76,13 @@ class Model {
     const p4a_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
+[[nodiscard]] p4a_status_t fit_pcr_svd(
+    Context& ctx,
+    const Config& cfg,
+    const p4a_matrix_view_t& X,
+    const p4a_matrix_view_t& Y,
+    std::unique_ptr<Model>& out_model);
+
 [[nodiscard]] p4a_status_t predict_into(
     Context& ctx,
     const Model& model,

@@ -22,7 +22,7 @@ Goal: a callable `libp4a.{so,dll,dylib}` with no algorithm — only ABI plumbing
 - Documentation skeleton (architecture, ABI reference, binding guides, parity methodology).
 - Final commit tagged `phase-0`.
 
-## Phase 1 — PLS CPU Reference · **in progress**
+## Phase 1 — PLS CPU Reference · **shipped**
 
 Goal: a reliable, serialisable, portable PLS engine.
 
@@ -47,6 +47,9 @@ Goal: useful for real spectroscopy.
 
 ## Phase 4 — Advanced PLS variants
 
+- SIMPLS core solver shipped as `phase-4a-simpls`.
+- SVD PLS core solver shipped as `phase-4b-svd`.
+- PCR baseline shipped as `phase-4c-pcr`.
 - SIMPLS with materialised auto-prefix CV scoring (à la `aompls`).
 - Kernel-algorithm PLS for wide matrices (`p >> n`).
 - OPLS, OPLS-DA.

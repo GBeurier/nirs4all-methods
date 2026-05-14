@@ -10,7 +10,7 @@ import ctypes
 
 from ._errors import Pls4allError
 from ._ffi import lib
-from ._types import Solver, Status
+from ._types import Algorithm, Solver, Status
 
 
 def _check(status: int) -> None:
@@ -58,6 +58,16 @@ class Config:
     @n_components.setter
     def n_components(self, value: int) -> None:
         _check(lib.p4a_config_set_n_components(self._h, ctypes.c_int32(int(value))))
+
+    @property
+    def algorithm(self) -> Algorithm:
+        out = ctypes.c_int(0)
+        _check(lib.p4a_config_get_algorithm(self._h, ctypes.byref(out)))
+        return Algorithm(int(out.value))
+
+    @algorithm.setter
+    def algorithm(self, value: Algorithm | int) -> None:
+        _check(lib.p4a_config_set_algorithm(self._h, ctypes.c_int(int(value))))
 
     @property
     def solver(self) -> Solver:

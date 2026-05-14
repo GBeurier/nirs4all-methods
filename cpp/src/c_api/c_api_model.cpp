@@ -375,10 +375,15 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
         !r.f64(tol) || !r.u32(max_iter)) {
         return false;
     }
-    if (algorithm != static_cast<std::uint32_t>(P4A_ALGO_PLS_REGRESSION) ||
-        (solver != static_cast<std::uint32_t>(P4A_SOLVER_NIPALS) &&
-         solver != static_cast<std::uint32_t>(P4A_SOLVER_SIMPLS) &&
-         solver != static_cast<std::uint32_t>(P4A_SOLVER_SVD)) ||
+    const bool supported_pls =
+        algorithm == static_cast<std::uint32_t>(P4A_ALGO_PLS_REGRESSION) &&
+        (solver == static_cast<std::uint32_t>(P4A_SOLVER_NIPALS) ||
+         solver == static_cast<std::uint32_t>(P4A_SOLVER_SIMPLS) ||
+         solver == static_cast<std::uint32_t>(P4A_SOLVER_SVD));
+    const bool supported_pcr =
+        algorithm == static_cast<std::uint32_t>(P4A_ALGO_PCR) &&
+        solver == static_cast<std::uint32_t>(P4A_SOLVER_SVD);
+    if ((!supported_pls && !supported_pcr) ||
         deflation != static_cast<std::uint32_t>(P4A_DEFLATION_REGRESSION)) {
         return false;
     }
@@ -406,7 +411,7 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
     }
 
     auto model = std::make_unique<p4a_model_s>();
-    model->algorithm = P4A_ALGO_PLS_REGRESSION;
+    model->algorithm = static_cast<p4a_algorithm_t>(algorithm);
     model->solver = static_cast<p4a_solver_t>(solver);
     model->deflation = P4A_DEFLATION_REGRESSION;
     model->n_samples = static_cast<std::int64_t>(n_samples);
@@ -466,7 +471,10 @@ P4A_API p4a_status_t p4a_model_fit(
     try {
         std::unique_ptr<::pls4all::core::Model> fitted;
         p4a_status_t status = P4A_ERR_UNSUPPORTED;
-        if (cfg->solver == P4A_SOLVER_SIMPLS) {
+        if (cfg->algorithm == P4A_ALGO_PCR) {
+            status = ::pls4all::core::fit_pcr_svd(
+                *as_core(ctx), *cfg, *X, *Y, fitted);
+        } else if (cfg->solver == P4A_SOLVER_SIMPLS) {
             status = ::pls4all::core::fit_pls_regression_simpls(
                 *as_core(ctx), *cfg, *X, *Y, fitted);
         } else if (cfg->solver == P4A_SOLVER_SVD) {
