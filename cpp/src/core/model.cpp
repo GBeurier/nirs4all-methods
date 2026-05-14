@@ -1015,8 +1015,10 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     const bool supported_pls_canonical =
         cfg.algorithm == P4A_ALGO_PLS_CANONICAL &&
         (cfg.solver == P4A_SOLVER_NIPALS || cfg.solver == P4A_SOLVER_SVD);
+    const bool opls_chassis_algorithm =
+        cfg.algorithm == P4A_ALGO_OPLS || cfg.algorithm == P4A_ALGO_OPLS_DA;
     const bool supported_opls =
-        cfg.algorithm == P4A_ALGO_OPLS && cfg.solver == P4A_SOLVER_NIPALS;
+        opls_chassis_algorithm && cfg.solver == P4A_SOLVER_NIPALS;
     const bool supported_pcr =
         cfg.algorithm == P4A_ALGO_PCR && cfg.solver == P4A_SOLVER_SVD;
     if (!supported_pls_regression && !supported_pls_canonical && !supported_opls &&
@@ -1028,7 +1030,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
             "P4A_SOLVER_SVD, P4A_SOLVER_POWER or P4A_SOLVER_RANDOMIZED_SVD, "
             "P4A_ALGO_PLS_CANONICAL with P4A_SOLVER_NIPALS or P4A_SOLVER_SVD, "
             "P4A_ALGO_PLS_DA with the PLS regression solver set, "
-            "P4A_ALGO_OPLS with P4A_SOLVER_NIPALS, "
+            "P4A_ALGO_OPLS/P4A_ALGO_OPLS_DA with P4A_SOLVER_NIPALS, "
             "plus P4A_ALGO_PCR with P4A_SOLVER_SVD");
         return P4A_ERR_UNSUPPORTED;
     }
@@ -1045,7 +1047,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         return P4A_ERR_UNSUPPORTED;
     }
     if (supported_opls && Y.cols != 1) {
-        ctx.set_error("P4A_ALGO_OPLS currently supports exactly one Y target");
+        ctx.set_error("P4A_ALGO_OPLS/P4A_ALGO_OPLS_DA currently support exactly one Y target");
         return P4A_ERR_SHAPE_MISMATCH;
     }
     if (cfg.pipeline != nullptr || cfg.operator_bank != nullptr || cfg.gating_strategy != nullptr) {

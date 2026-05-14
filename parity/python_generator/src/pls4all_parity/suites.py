@@ -1420,6 +1420,41 @@ def _opls_fixture(
     }
 
 
+def _opls_da_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._opls_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "n_components":   n_components,
+                "scale":          True,
+                "deflation_mode": "orthogonal",
+                "algorithm":      "opls-da-binary",
+                "reference":      "NumPy OPLS1 NIPALS recurrence on one-column dummy Y",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _opls_expected(X, Y, n_components),
+        "comparison_policy": {
+            "components_alignment": "first-k-prefix",
+            "sign_resolver":        "max_abs_element_positive",
+            "tolerance_table_row":  "pls4all-numpy-opls-da-binary",
+        },
+    }
+
+
 def _pcr_fixture(
     fixture_id: str,
     seed: int,
@@ -1738,6 +1773,30 @@ def synthetic_opls_small_pls1_v1() -> dict[str, Any]:
     Y = (1.10 * predictive[:, 0] + rng.standard_normal(size=18) * 0.035).reshape(-1, 1)
     return _opls_fixture("synthetic_opls_small_pls1_v1",
                          seed=121, X=X, Y=Y, n_components=3)
+
+
+def synthetic_opls_da_binary_v1() -> dict[str, Any]:
+    """20 samples, 7 features, one binary dummy target, 1 predictive + 2 orthogonal components."""
+    rng = np.random.default_rng(seed=122)
+    predictive = rng.standard_normal(size=(20, 1))
+    orthogonal = rng.standard_normal(size=(20, 3))
+    X = np.hstack([
+        0.52 * predictive + 0.31 * orthogonal[:, [0]],
+        -0.46 * predictive + 0.36 * orthogonal[:, [1]],
+        0.25 * predictive - 0.41 * orthogonal[:, [2]],
+        0.42 * predictive + 0.18 * orthogonal[:, [0]],
+        -0.20 * predictive - 0.46 * orthogonal[:, [1]],
+        0.33 * predictive + 0.25 * orthogonal[:, [2]],
+        0.28 * predictive - 0.22 * orthogonal[:, [0]],
+    ])
+    X += rng.standard_normal(size=X.shape) * 0.03
+    logits = predictive[:, 0] + rng.standard_normal(size=20) * 0.10
+    labels = (logits > np.median(logits)).astype(np.float64)
+    labels[0] = 0.0
+    labels[1] = 1.0
+    Y = labels.reshape(-1, 1)
+    return _opls_da_fixture("synthetic_opls_da_binary_v1",
+                            seed=122, X=X, Y=Y, n_components=3)
 
 
 def synthetic_kernel_tiny_pls1_v1() -> dict[str, Any]:

@@ -255,6 +255,21 @@ int cmd_selfcheck() {
     p4a_array_free(opls_scores);
     p4a_model_destroy(opls_model);
 
+    CHECK(p4a_config_set_algorithm(cfg, P4A_ALGO_OPLS_DA) == P4A_OK);
+    CHECK(p4a_config_set_deflation(cfg, P4A_DEFLATION_ORTHOGONAL) == P4A_OK);
+    CHECK(p4a_config_set_n_components(cfg, 2) == P4A_OK);
+    CHECK(p4a_config_set_solver(cfg, P4A_SOLVER_NIPALS) == P4A_OK);
+    p4a_model_t* opls_da_model = nullptr;
+    CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &opls_da_model) == P4A_OK);
+    CHECK(opls_da_model != nullptr);
+    p4a_array_t* opls_da_pred = nullptr;
+    CHECK(p4a_model_predict_alloc(ctx, opls_da_model, &X, &opls_da_pred) == P4A_OK);
+    CHECK(p4a_array_shape(opls_da_pred, &rows, &cols) == P4A_OK);
+    CHECK(rows == 4);
+    CHECK(cols == 1);
+    p4a_array_free(opls_da_pred);
+    p4a_model_destroy(opls_da_model);
+
     CHECK(p4a_config_set_algorithm(cfg, P4A_ALGO_PLS_CANONICAL) == P4A_OK);
     CHECK(p4a_config_set_deflation(cfg, P4A_DEFLATION_CANONICAL) == P4A_OK);
     CHECK(p4a_config_set_n_components(cfg, 1) == P4A_OK);

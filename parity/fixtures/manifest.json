@@ -30,6 +30,11 @@
       "path": "synthetic_kernel_wide_pls2_v1.json",
       "sha256": "c16a2deb57be64e48d15dc89e70f725589d89dfef7a29d64d04e1dcf2ca72e31"
     },
+    "synthetic_opls_da_binary_v1": {
+      "bytes": 11376,
+      "path": "synthetic_opls_da_binary_v1.json",
+      "sha256": "2527cbbc35da9172dff4af3ce5e5504effbfb37c5bacc70ba80a76c10c3b7f90"
+    },
     "synthetic_opls_small_pls1_v1": {
       "bytes": 11891,
       "path": "synthetic_opls_small_pls1_v1.json",

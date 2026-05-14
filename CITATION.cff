@@ -16,13 +16,14 @@ authors:
 repository-code: "https://github.com/GBeurier/pls4all"
 url: "https://github.com/GBeurier/pls4all"
 license: "CECILL-2.1"
-version: 0.13.0-opls
+version: 0.14.0-opls-da
 date-released: "2026-05-14"
 keywords:
   - partial-least-squares
   - PLS
   - PLS-DA
   - OPLS
+  - OPLS-DA
   - SIMPLS
   - NIPALS
   - chemometrics

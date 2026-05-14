@@ -392,9 +392,11 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
         algorithm == static_cast<std::uint32_t>(P4A_ALGO_PLS_CANONICAL) &&
         (solver == static_cast<std::uint32_t>(P4A_SOLVER_NIPALS) ||
          solver == static_cast<std::uint32_t>(P4A_SOLVER_SVD));
+    const bool opls_chassis_algorithm =
+        algorithm == static_cast<std::uint32_t>(P4A_ALGO_OPLS) ||
+        algorithm == static_cast<std::uint32_t>(P4A_ALGO_OPLS_DA);
     const bool supported_opls =
-        algorithm == static_cast<std::uint32_t>(P4A_ALGO_OPLS) &&
-        solver == static_cast<std::uint32_t>(P4A_SOLVER_NIPALS);
+        opls_chassis_algorithm && solver == static_cast<std::uint32_t>(P4A_SOLVER_NIPALS);
     const bool supported_pcr =
         algorithm == static_cast<std::uint32_t>(P4A_ALGO_PCR) &&
         solver == static_cast<std::uint32_t>(P4A_SOLVER_SVD);
@@ -508,7 +510,8 @@ P4A_API p4a_status_t p4a_model_fit(
                 status = ::pls4all::core::fit_pls_canonical_nipals(
                     *as_core(ctx), *cfg, *X, *Y, fitted);
             }
-        } else if (cfg->algorithm == P4A_ALGO_OPLS) {
+        } else if (cfg->algorithm == P4A_ALGO_OPLS ||
+                   cfg->algorithm == P4A_ALGO_OPLS_DA) {
             status = ::pls4all::core::fit_opls_nipals(
                 *as_core(ctx), *cfg, *X, *Y, fitted);
         } else if (cfg->solver == P4A_SOLVER_KERNEL_ALGORITHM ||

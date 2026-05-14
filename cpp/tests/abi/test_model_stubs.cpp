@@ -13,6 +13,7 @@
 #include "fixtures/canonical_fixtures.hpp"
 #include "fixtures/canonical_svd_fixtures.hpp"
 #include "fixtures/kernel_fixtures.hpp"
+#include "fixtures/opls_da_fixtures.hpp"
 #include "fixtures/opls_fixtures.hpp"
 #include "fixtures/orthogonal_scores_fixtures.hpp"
 #include "fixtures/phase1_fixtures.hpp"
@@ -464,6 +465,38 @@ void fit_opls_fixture(int& failures,
     CHECK_EQ(p4a_config_create(&h.cfg), P4A_OK);
     CHECK_EQ(p4a_config_set_n_components(h.cfg, fixture.n_components), P4A_OK);
     CHECK_EQ(p4a_config_set_algorithm(h.cfg, P4A_ALGO_OPLS), P4A_OK);
+    CHECK_EQ(p4a_config_set_solver(h.cfg, P4A_SOLVER_NIPALS), P4A_OK);
+    CHECK_EQ(p4a_config_set_deflation(h.cfg, P4A_DEFLATION_ORTHOGONAL), P4A_OK);
+    if (store_scores) {
+        CHECK_EQ(p4a_config_set_store_scores(h.cfg, 1), P4A_OK);
+    }
+
+    p4a_matrix_view_t X{};
+    p4a_matrix_view_t Y{};
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X,
+                                           const_cast<double*>(fixture.X.values),
+                                           fixture.X.rows,
+                                           fixture.X.cols,
+                                           P4A_DTYPE_F64),
+             P4A_OK);
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&Y,
+                                           const_cast<double*>(fixture.Y.values),
+                                           fixture.Y.rows,
+                                           fixture.Y.cols,
+                                           P4A_DTYPE_F64),
+             P4A_OK);
+    CHECK_EQ(p4a_model_fit(h.ctx, h.cfg, &X, &Y, &h.model), P4A_OK);
+    CHECK_NE(h.model, nullptr);
+}
+
+void fit_opls_da_fixture(int& failures,
+                         const ::pls4all::test::fixtures::OplsDaFixture& fixture,
+                         Handles& h,
+                         bool store_scores = false) {
+    CHECK_EQ(p4a_context_create(&h.ctx), P4A_OK);
+    CHECK_EQ(p4a_config_create(&h.cfg), P4A_OK);
+    CHECK_EQ(p4a_config_set_n_components(h.cfg, fixture.n_components), P4A_OK);
+    CHECK_EQ(p4a_config_set_algorithm(h.cfg, P4A_ALGO_OPLS_DA), P4A_OK);
     CHECK_EQ(p4a_config_set_solver(h.cfg, P4A_SOLVER_NIPALS), P4A_OK);
     CHECK_EQ(p4a_config_set_deflation(h.cfg, P4A_DEFLATION_ORTHOGONAL), P4A_OK);
     if (store_scores) {
@@ -976,6 +1009,58 @@ TEST(model_phase1, opls_fixture_parity_for_pls1) {
     }
 }
 
+TEST(model_phase1, opls_da_fixture_parity_for_binary_dummy_target) {
+    for (const auto& fixture : ::pls4all::test::fixtures::kOplsDaFixtures) {
+        Handles h;
+        fit_opls_da_fixture(failures, fixture, h);
+
+        std::int32_t n_components = 0;
+        std::int32_t n_features = 0;
+        std::int32_t n_targets = 0;
+        CHECK_EQ(p4a_model_get_n_components(h.model, &n_components), P4A_OK);
+        CHECK_EQ(p4a_model_get_n_features(h.model, &n_features), P4A_OK);
+        CHECK_EQ(p4a_model_get_n_targets(h.model, &n_targets), P4A_OK);
+        CHECK_EQ(n_components, fixture.n_components);
+        CHECK_EQ(n_features, static_cast<std::int32_t>(fixture.X.cols));
+        CHECK_EQ(n_targets, 1);
+
+        p4a_matrix_view_t X{};
+        CHECK_EQ(p4a_matrix_view_init_rowmajor(&X,
+                                               const_cast<double*>(fixture.X.values),
+                                               fixture.X.rows,
+                                               fixture.X.cols,
+                                               P4A_DTYPE_F64),
+                 P4A_OK);
+        p4a_array_t* pred = nullptr;
+        CHECK_EQ(p4a_model_predict_alloc(h.ctx, h.model, &X, &pred), P4A_OK);
+        CHECK_NE(pred, nullptr);
+        std::vector<double> pred_values = copy_values(pred);
+        check_close_values(failures, fixture.id, pred_values.data(), fixture.predict_train);
+        p4a_array_free(pred);
+
+        check_array(failures, h.ctx, h.model, P4A_MODEL_COEFFICIENTS,
+                    "opls-da coefficients", fixture.coefficients);
+        check_array(failures, h.ctx, h.model, P4A_MODEL_INTERCEPT,
+                    "opls-da intercept", fixture.intercept);
+        check_array(failures, h.ctx, h.model, P4A_MODEL_X_MEAN,
+                    "opls-da x_mean", fixture.x_mean);
+        check_array(failures, h.ctx, h.model, P4A_MODEL_X_SCALE,
+                    "opls-da x_scale", fixture.x_scale);
+        check_array(failures, h.ctx, h.model, P4A_MODEL_Y_MEAN,
+                    "opls-da y_mean", fixture.y_mean);
+        check_array(failures, h.ctx, h.model, P4A_MODEL_Y_SCALE,
+                    "opls-da y_scale", fixture.y_scale);
+        check_array(failures, h.ctx, h.model, P4A_MODEL_WEIGHTS_W,
+                    "opls-da weights_w", fixture.weights_w);
+        check_array(failures, h.ctx, h.model, P4A_MODEL_LOADINGS_P,
+                    "opls-da loadings_p", fixture.loadings_p);
+        check_array(failures, h.ctx, h.model, P4A_MODEL_Y_LOADINGS_Q,
+                    "opls-da y_loadings_q", fixture.y_loadings_q);
+        check_array(failures, h.ctx, h.model, P4A_MODEL_ROTATIONS_R,
+                    "opls-da rotations_r", fixture.rotations_r);
+    }
+}
+
 TEST(model_phase1, kernel_fixture_parity_for_pls1_and_pls2) {
     for (const auto& fixture : ::pls4all::test::fixtures::kKernelFixtures) {
         Handles h;
@@ -1456,6 +1541,36 @@ TEST(model_phase1, opls_transform_matches_reference_scores) {
     p4a_array_free(transformed);
 }
 
+TEST(model_phase1, opls_da_transform_matches_reference_scores) {
+    const auto& fixture = ::pls4all::test::fixtures::kOplsDaFixtures[0];
+    Handles h;
+    fit_opls_da_fixture(failures, fixture, h, true);
+
+    p4a_matrix_view_t X{};
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X,
+                                           const_cast<double*>(fixture.X.values),
+                                           fixture.X.rows,
+                                           fixture.X.cols,
+                                           P4A_DTYPE_F64),
+             P4A_OK);
+
+    p4a_array_t* transformed = nullptr;
+    CHECK_EQ(p4a_model_transform_alloc(h.ctx, h.model, &X, &transformed), P4A_OK);
+    CHECK_NE(transformed, nullptr);
+    std::vector<double> transform_values = copy_values(transformed);
+    check_close_values(failures, "opls-da transform",
+                       transform_values.data(), fixture.scores_t);
+
+    p4a_array_t* stored_scores = nullptr;
+    CHECK_EQ(p4a_model_get_array(h.ctx, h.model, P4A_MODEL_SCORES_T, &stored_scores), P4A_OK);
+    CHECK_NE(stored_scores, nullptr);
+    std::vector<double> stored_values = copy_values(stored_scores);
+    check_close_values(failures, "opls-da stored scores",
+                       stored_values.data(), fixture.scores_t);
+    p4a_array_free(stored_scores);
+    p4a_array_free(transformed);
+}
+
 TEST(model_phase1, kernel_transform_matches_reference_scores) {
     const auto& fixture = ::pls4all::test::fixtures::kKernelFixtures[0];
     Handles h;
@@ -1915,6 +2030,42 @@ TEST(model_phase1, opls_serialization_roundtrip_preserves_predictions) {
     p4a_model_destroy(imported);
 }
 
+TEST(model_phase1, opls_da_serialization_roundtrip_preserves_predictions) {
+    const auto& fixture = ::pls4all::test::fixtures::kOplsDaFixtures[0];
+    Handles h;
+    fit_opls_da_fixture(failures, fixture, h);
+
+    std::size_t size = 0;
+    CHECK_EQ(p4a_model_export_size(h.model, &size), P4A_OK);
+    CHECK(size > 64U);
+
+    std::vector<unsigned char> buffer(size, 0U);
+    std::size_t written = 0;
+    CHECK_EQ(p4a_model_export_to_buffer(h.model, buffer.data(), buffer.size(), &written),
+             P4A_OK);
+    CHECK_EQ(written, size);
+
+    p4a_model_t* imported = nullptr;
+    CHECK_EQ(p4a_model_import_from_buffer(h.ctx, buffer.data(), buffer.size(), &imported),
+             P4A_OK);
+    CHECK_NE(imported, nullptr);
+
+    p4a_matrix_view_t X{};
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X,
+                                           const_cast<double*>(fixture.X.values),
+                                           fixture.X.rows,
+                                           fixture.X.cols,
+                                           P4A_DTYPE_F64),
+             P4A_OK);
+    p4a_array_t* pred = nullptr;
+    CHECK_EQ(p4a_model_predict_alloc(h.ctx, imported, &X, &pred), P4A_OK);
+    std::vector<double> pred_values = copy_values(pred);
+    check_close_values(failures, "imported_opls_da_predict", pred_values.data(),
+                       fixture.predict_train);
+    p4a_array_free(pred);
+    p4a_model_destroy(imported);
+}
+
 TEST(model_phase1, kernel_serialization_roundtrip_preserves_predictions) {
     const auto& fixture = ::pls4all::test::fixtures::kKernelFixtures[1];
     Handles h;
@@ -2065,7 +2216,7 @@ TEST(model_phase1, validation_errors_are_deterministic) {
     CHECK_EQ(p4a_context_create(&h.ctx), P4A_OK);
     CHECK_EQ(p4a_config_create(&h.cfg), P4A_OK);
     CHECK_EQ(p4a_config_set_n_components(h.cfg, fixture.n_components), P4A_OK);
-    CHECK_EQ(p4a_config_set_algorithm(h.cfg, P4A_ALGO_OPLS_DA), P4A_OK);
+    CHECK_EQ(p4a_config_set_algorithm(h.cfg, P4A_ALGO_SPARSE_PLS), P4A_OK);
 
     p4a_matrix_view_t X{};
     p4a_matrix_view_t Y{};
