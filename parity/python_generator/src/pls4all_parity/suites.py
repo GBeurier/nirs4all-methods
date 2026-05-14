@@ -2596,6 +2596,103 @@ def _t2_selection_expected(
     }
 
 
+def _wvc_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    top_k: int,
+    normalize: bool,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    if Y.shape[1] != 1:
+        raise RuntimeError("WVC parity fixture currently targets numeric single-response regression")
+
+    Xwork, _x_mean, _x_scale = _center_scale(X)
+    Ywork = Y.astype(np.float64, copy=True)
+    p = int(Xwork.shape[1])
+    q = int(Ywork.shape[1])
+    n_components = int(n_components)
+    W = np.zeros((p, n_components), dtype=np.float64)
+    P = np.zeros((p, n_components), dtype=np.float64)
+    Q = np.zeros((q, n_components), dtype=np.float64)
+    WVC = np.zeros((p, n_components), dtype=np.float64)
+    ee = np.zeros(n_components, dtype=np.float64)
+    ss = np.zeros(n_components, dtype=np.float64)
+
+    eps = np.finfo(np.float64).eps
+    for comp in range(n_components):
+        w, _right = _dominant_svd_pair(Xwork.T @ Ywork)
+        s = Xwork @ w
+        denom = float(s @ s)
+        if denom <= eps:
+            raise RuntimeError("WVC score vector collapsed")
+        pvec = (Xwork.T @ s) / denom
+        qvec = (Ywork.T @ s) / denom
+        ss_value = float((s.reshape(1, -1) @ Ywork @ qvec.reshape(-1, 1))[0, 0])
+        ee_value = ss_value / denom
+        W[:, comp] = w
+        P[:, comp] = pvec
+        Q[:, comp] = qvec
+        ee[comp] = ee_value
+        ss[comp] = ss_value
+        denom_wvc = float(ee[:comp + 1] @ ss[:comp + 1])
+        if abs(denom_wvc) <= eps:
+            raise RuntimeError("WVC denominator collapsed")
+        for feature in range(p):
+            numerator = float(p) * float((ee[:comp + 1] * (W[feature, :comp + 1] ** 2)) @ ss[:comp + 1])
+            WVC[feature, comp] = math.sqrt(max(numerator / denom_wvc, 0.0))
+        if normalize:
+            max_wvc = float(np.max(WVC[:, comp]))
+            if max_wvc > eps:
+                WVC[:, comp] /= max_wvc
+        Xwork = Xwork - np.outer(s, pvec)
+        Ywork = Ywork - np.outer(s, qvec)
+
+    final_scores = WVC[:, n_components - 1]
+    selected = sorted(range(p), key=lambda feature: (-float(final_scores[feature]), int(feature)))[:int(top_k)]
+    return {
+        "weights_W": {
+            "shape": list(W.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(W),
+        },
+        "loadings_P": {
+            "shape": list(P.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(P),
+        },
+        "y_loadings_Q": {
+            "shape": list(Q.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(Q),
+        },
+        "wvc_scores": {
+            "shape": list(WVC.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(WVC),
+        },
+        "final_scores": {
+            "shape": [1, p],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": final_scores.astype(np.float64, copy=False).tolist(),
+        },
+        "selected_indices": {
+            "shape": [1, int(len(selected))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(feature) for feature in selected],
+        },
+    }
+
+
 def _component_coefficients_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -4762,6 +4859,52 @@ def _t2_selection_fixture(
     }
 
 
+def _wvc_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    top_k: int,
+    normalize: bool,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._wvc_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":    "pls_regression",
+                "solver":       "wvc2_svd",
+                "n_components": int(n_components),
+                "top_k":        int(top_k),
+                "normalize":    bool(normalize),
+                "reference":    "NumPy mirror of plsVarSel WVC_pls numeric-regression WVC2",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _wvc_selection_expected(X,
+                                            Y,
+                                            n_components,
+                                            top_k,
+                                            normalize),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "numpy/WVC-PLS-selection",
+        },
+    }
+
+
 def _component_coefficients_fixture(
     fixture_id: str,
     seed: int,
@@ -6306,6 +6449,39 @@ def synthetic_t2_pls_hotelling_v1() -> dict[str, Any]:
                                  n_splits=5,
                                  alpha=[0.8, 0.6, 0.4, 0.2, 0.05],
                                  min_selected=5)
+
+
+def synthetic_wvc_pls_numeric_v1() -> dict[str, Any]:
+    """24 samples, 10 features, 1 target for deterministic WVC-PLS selection."""
+    seed = 83
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(24, 4))
+    wave = np.linspace(0.0, 2.1 * np.pi, 24)
+    X = np.column_stack([
+        0.90 * latent[:, 0] + 0.10 * latent[:, 1] + 0.04 * rng.standard_normal(size=24),
+        -0.42 * latent[:, 0] + 0.56 * latent[:, 2] + 0.04 * rng.standard_normal(size=24),
+        0.65 * latent[:, 1] - 0.26 * latent[:, 3] + 0.05 * rng.standard_normal(size=24),
+        0.24 * latent[:, 0] + 0.75 * latent[:, 3] + 0.04 * rng.standard_normal(size=24),
+        -0.48 * latent[:, 2] + 0.35 * latent[:, 3] + 0.05 * rng.standard_normal(size=24),
+        0.36 * latent[:, 0] - 0.22 * latent[:, 1] + 0.06 * rng.standard_normal(size=24),
+        np.sin(1.3 * wave) + 0.05 * rng.standard_normal(size=24),
+        np.cos(1.4 * wave) + 0.05 * rng.standard_normal(size=24),
+        0.28 * np.linspace(-1.0, 1.0, 24) + 0.09 * rng.standard_normal(size=24),
+        rng.standard_normal(size=24) * 0.14,
+    ])
+    Y = (
+        1.12 * latent[:, 0]
+        - 0.42 * latent[:, 2]
+        + 0.31 * latent[:, 3]
+        + 0.05 * rng.standard_normal(size=24)
+    ).reshape(-1, 1)
+    return _wvc_selection_fixture("synthetic_wvc_pls_numeric_v1",
+                                  seed=seed,
+                                  X=X,
+                                  Y=Y,
+                                  n_components=3,
+                                  top_k=5,
+                                  normalize=True)
 
 
 def synthetic_component_coefficients_pls2_v1() -> dict[str, Any]:

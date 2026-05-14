@@ -50,6 +50,8 @@ Phase 5k BVE kernels greedily evaluate every one-variable removal by
 deterministic k-fold CV RMSE and keep the best backward path/subset.
 Phase 5l T2-PLS kernels compute Hotelling T2 on PLS loading weights, apply
 alpha-specific UCL thresholds with top-k fallback, and score subsets by k-fold CV.
+Phase 5m WVC-PLS kernels compute normalized weighted-variable-contribution
+scores from SVD PLS components and expose deterministic top-k selection.
 Component-coefficient kernels expose the
 original-scale regression coefficients for each latent prefix. SIMPLS component
 prefixes can also be scored by deterministic k-fold CV for component-count

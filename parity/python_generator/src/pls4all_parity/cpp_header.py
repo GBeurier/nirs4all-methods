@@ -222,6 +222,14 @@ HEADER_SPECS = {
         "struct": "T2SelectionFixture",
         "array": "kT2SelectionFixtures",
     },
+    "wvc-selection": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "wvc_selection_fixtures.hpp",
+        "fixtures": (
+            "synthetic_wvc_pls_numeric_v1",
+        ),
+        "struct": "WvcSelectionFixture",
+        "array": "kWvcSelectionFixtures",
+    },
     "component-coefficients": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "component_coefficients_fixtures.hpp",
         "fixtures": (
@@ -2609,6 +2617,96 @@ def generate_t2_selection(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_wvc_selection(fixture_ids: Sequence[str],
+                           fixture_dir: Path,
+                           out: Path,
+                           family: str,
+                           struct_name: str,
+                           array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct WvcSelectionIndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_components;",
+        "    std::int32_t top_k;",
+        "    bool normalize;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    MatrixRef weights_w;",
+        "    MatrixRef loadings_p;",
+        "    MatrixRef y_loadings_q;",
+        "    MatrixRef wvc_scores;",
+        "    MatrixRef final_scores;",
+        "    WvcSelectionIndexRef selected_indices;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        y_name = f"{prefix}_Y"
+        w_name = f"{prefix}_weights_w"
+        p_name = f"{prefix}_loadings_p"
+        q_name = f"{prefix}_y_loadings_q"
+        wvc_name = f"{prefix}_wvc_scores"
+        final_name = f"{prefix}_final_scores"
+        selected_name = f"{prefix}_selected_indices"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
+        _emit_array(lines, w_name, expected["weights_W"]["values"])
+        _emit_array(lines, p_name, expected["loadings_P"]["values"])
+        _emit_array(lines, q_name, expected["y_loadings_Q"]["values"])
+        _emit_array(lines, wvc_name, expected["wvc_scores"]["values"])
+        _emit_array(lines, final_name, expected["final_scores"]["values"])
+        _emit_int_array(lines, selected_name, expected["selected_indices"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['n_components'])},\n"
+            f"        {int(params['top_k'])},\n"
+            f"        {str(bool(params['normalize'])).lower()},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
+            f"        {_matrix_ref(w_name, expected['weights_W'])},\n"
+            f"        {_matrix_ref(p_name, expected['loadings_P'])},\n"
+            f"        {_matrix_ref(q_name, expected['y_loadings_Q'])},\n"
+            f"        {_matrix_ref(wvc_name, expected['wvc_scores'])},\n"
+            f"        {_matrix_ref(final_name, expected['final_scores'])},\n"
+            f"        WvcSelectionIndexRef{{{selected_name}, sizeof({selected_name}) / sizeof(std::int64_t)}}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_component_coefficients(fixture_ids: Sequence[str],
                                     fixture_dir: Path,
                                     out: Path,
@@ -2888,6 +2986,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "t2-selection":
         generate_t2_selection(fixture_ids, args.fixture_dir, out, args.family,
                               str(spec["struct"]), str(spec["array"]))
+    elif args.family == "wvc-selection":
+        generate_wvc_selection(fixture_ids, args.fixture_dir, out, args.family,
+                               str(spec["struct"]), str(spec["array"]))
     elif args.family == "component-coefficients":
         generate_component_coefficients(fixture_ids, args.fixture_dir, out, args.family,
                                         str(spec["struct"]), str(spec["array"]))

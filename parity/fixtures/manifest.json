@@ -399,6 +399,11 @@
       "bytes": 23604,
       "path": "synthetic_wide_kernel_pls2_v1.json",
       "sha256": "9e2dfa81dbe0bc20b542e07f5cf439c5a54505c7f295e3004c8283165cc6d66a"
+    },
+    "synthetic_wvc_pls_numeric_v1": {
+      "bytes": 12453,
+      "path": "synthetic_wvc_pls_numeric_v1.json",
+      "sha256": "3fd0bb8315653604dcb2d697f443c1bfd2f0ddc4f4e7d051b83bac8641d37d3d"
     }
   },
   "schema_version": 1
