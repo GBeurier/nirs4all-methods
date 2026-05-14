@@ -75,6 +75,31 @@
       "path": "synthetic_pcr_tiny_pls1_v1.json",
       "sha256": "f8c7e3d9e0cc0e22dae2d569fb43cc1ac639cd50ce5942fc9f51bb1a2641a952"
     },
+    "synthetic_pipeline_autoscale_v1": {
+      "bytes": 1439,
+      "path": "synthetic_pipeline_autoscale_v1.json",
+      "sha256": "b86b61cef860d6e88665726a08623c980a87475d6338e5fdb1df9c7b81fc057a"
+    },
+    "synthetic_pipeline_center_v1": {
+      "bytes": 1319,
+      "path": "synthetic_pipeline_center_v1.json",
+      "sha256": "b23a5a4fa1dc2f480c988a0ee28d73308820dc186b453cba8e8123dbd362b3a0"
+    },
+    "synthetic_pipeline_identity_v1": {
+      "bytes": 1313,
+      "path": "synthetic_pipeline_identity_v1.json",
+      "sha256": "deb06f4dc11d0abe5a25bb03f2cd50f3caa9ab72c588c9a1d9d34c362115e600"
+    },
+    "synthetic_pipeline_pareto_v1": {
+      "bytes": 1498,
+      "path": "synthetic_pipeline_pareto_v1.json",
+      "sha256": "eb4f63de0413ab2db00f145d3854b702ecdcc4e9fa5d9658cc1f076eb029b8c8"
+    },
+    "synthetic_pipeline_snv_v1": {
+      "bytes": 1214,
+      "path": "synthetic_pipeline_snv_v1.json",
+      "sha256": "3225963b49229753f4a831636c3771551d91a85424580b1a1359b46012ce81e3"
+    },
     "synthetic_pls_da_binary_v1": {
       "bytes": 9888,
       "path": "synthetic_pls_da_binary_v1.json",

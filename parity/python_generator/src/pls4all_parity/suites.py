@@ -420,6 +420,43 @@ def _pls_svd_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[s
     }
 
 
+def _pipeline_apply(X: np.ndarray, operators: list[str]) -> np.ndarray:
+    out = np.asarray(X, dtype=np.float64).copy()
+    for op in operators:
+        if op == "identity":
+            out = out.copy()
+        elif op == "center":
+            out = out - out.mean(axis=0, keepdims=True)
+        elif op == "autoscale":
+            mean = out.mean(axis=0, keepdims=True)
+            scale = out.std(axis=0, ddof=1, keepdims=True)
+            scale = np.where((scale == 0.0) | ~np.isfinite(scale), 1.0, scale)
+            out = (out - mean) / scale
+        elif op == "pareto":
+            mean = out.mean(axis=0, keepdims=True)
+            scale = np.sqrt(out.std(axis=0, ddof=1, keepdims=True))
+            scale = np.where((scale == 0.0) | ~np.isfinite(scale), 1.0, scale)
+            out = (out - mean) / scale
+        elif op == "snv":
+            mean = out.mean(axis=1, keepdims=True)
+            scale = out.std(axis=1, ddof=1, keepdims=True)
+            scale = np.where((scale == 0.0) | ~np.isfinite(scale), 1.0, scale)
+            out = (out - mean) / scale
+        else:
+            raise ValueError(f"unsupported pipeline operator fixture: {op}")
+    return out.astype(np.float64, copy=False)
+
+
+def _pipeline_expected(X: np.ndarray, operators: list[str]) -> dict[str, Any]:
+    transformed = _pipeline_apply(X, operators)
+    return {
+        "transform_train": {
+            "shape": list(transformed.shape),
+            "values": _flatten_rowmajor(transformed),
+        },
+    }
+
+
 def _power_pls_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, Any]:
     X = np.asarray(X, dtype=np.float64)
     Y = np.asarray(Y, dtype=np.float64)
@@ -1233,6 +1270,39 @@ def _pls_svd_fixture(
     }
 
 
+def _pipeline_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    operators: list[str],
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.zeros((X.shape[0], 1), dtype=np.float64)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._pipeline_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "operators":      operators,
+                "reference":      "NumPy preprocessing pipeline",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _pipeline_expected(X, operators),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "pls4all-numpy-preprocessing",
+        },
+    }
+
+
 def _power_fixture(
     fixture_id: str,
     seed: int,
@@ -1709,6 +1779,65 @@ def synthetic_pls_svd_small_v1() -> dict[str, Any]:
     Y = X @ W + rng.standard_normal(size=(15, 3)) * 0.035
     return _pls_svd_fixture("synthetic_pls_svd_small_v1", seed=33,
                             X=X, Y=Y, n_components=3)
+
+
+def synthetic_pipeline_identity_v1() -> dict[str, Any]:
+    """4 samples, 3 features for identity preprocessing parity."""
+    X = np.array([
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0],
+        [2.0, 4.0, 8.0],
+    ], dtype=np.float64)
+    return _pipeline_fixture("synthetic_pipeline_identity_v1", seed=40,
+                             X=X, operators=["identity"])
+
+
+def synthetic_pipeline_center_v1() -> dict[str, Any]:
+    """4 samples, 3 features for column centering preprocessing parity."""
+    X = np.array([
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0],
+        [2.0, 4.0, 8.0],
+    ], dtype=np.float64)
+    return _pipeline_fixture("synthetic_pipeline_center_v1", seed=41,
+                             X=X, operators=["center"])
+
+
+def synthetic_pipeline_autoscale_v1() -> dict[str, Any]:
+    """4 samples, 3 features for autoscale preprocessing parity."""
+    X = np.array([
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0],
+        [2.0, 4.0, 8.0],
+    ], dtype=np.float64)
+    return _pipeline_fixture("synthetic_pipeline_autoscale_v1", seed=42,
+                             X=X, operators=["autoscale"])
+
+
+def synthetic_pipeline_pareto_v1() -> dict[str, Any]:
+    """4 samples, 3 features for Pareto scaling preprocessing parity."""
+    X = np.array([
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0],
+        [2.0, 4.0, 8.0],
+    ], dtype=np.float64)
+    return _pipeline_fixture("synthetic_pipeline_pareto_v1", seed=43,
+                             X=X, operators=["pareto"])
+
+
+def synthetic_pipeline_snv_v1() -> dict[str, Any]:
+    """3 samples, 3 features for row-wise SNV preprocessing parity."""
+    X = np.array([
+        [1.0, 2.0, 3.0],
+        [2.0, 2.0, 2.0],
+        [3.0, 5.0, 7.0],
+    ], dtype=np.float64)
+    return _pipeline_fixture("synthetic_pipeline_snv_v1", seed=44,
+                             X=X, operators=["snv"])
 
 
 def synthetic_power_tiny_pls1_v1() -> dict[str, Any]:

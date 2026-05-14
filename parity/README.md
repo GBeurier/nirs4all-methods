@@ -41,10 +41,15 @@ parity/
 │   ├── synthetic_opls_da_multiclass_v1.json
 │   ├── synthetic_pls_svd_tiny_v1.json
 │   ├── synthetic_pls_svd_small_v1.json
+│   ├── synthetic_pipeline_identity_v1.json
+│   ├── synthetic_pipeline_center_v1.json
+│   ├── synthetic_pipeline_autoscale_v1.json
+│   ├── synthetic_pipeline_pareto_v1.json
+│   ├── synthetic_pipeline_snv_v1.json
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.
-├── python_generator/              Pinned scikit-learn + NumPy SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/OPLS/OPLS-DA/SVD/PCR adapters.
+├── python_generator/              Pinned scikit-learn + NumPy preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/OPLS/OPLS-DA/SVD/PCR adapters.
 └── r_generator/                   Pinned pls / ropls / mixOmics adapters.
 ```
 
@@ -86,5 +91,7 @@ targets fitted through scikit-learn `PLSRegression`. OPLS and
 OPLS-DA fixtures are generated from a deterministic NumPy OPLS NIPALS recurrence
 with one shared predictive score for multi-response targets.
 PCR fixtures are generated from NumPy PCA/SVD with score-space
-least squares. C++ parity tests assert predictions, coefficients,
-preprocessing statistics and latent arrays within `tolerances.md`.
+least squares. Preprocessing pipeline fixtures are generated from deterministic
+NumPy identity, center, autoscale, Pareto and SNV transforms. C++ parity tests
+assert predictions, coefficients, preprocessing statistics, transforms and
+latent arrays within `tolerances.md`.

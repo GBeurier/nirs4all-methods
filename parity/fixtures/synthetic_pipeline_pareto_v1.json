@@ -1,0 +1,82 @@
+{
+  "comparison_policy": {
+    "components_alignment": "exact",
+    "sign_resolver": "none",
+    "tolerance_table_row": "pls4all-numpy-preprocessing"
+  },
+  "data": {
+    "X": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "rng_seed": 43,
+      "shape": [
+        4,
+        3
+      ],
+      "values": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0,
+        9.0,
+        2.0,
+        4.0,
+        8.0
+      ]
+    },
+    "Y": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "rng_seed": 43,
+      "shape": [
+        4,
+        1
+      ],
+      "values": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "expected": {
+    "transform_train": {
+      "shape": [
+        4,
+        3
+      ],
+      "values": [
+        -1.5369703823781609,
+        -1.7392527130926085,
+        -2.1517585353294253,
+        0.30739407647563216,
+        0.15811388300841897,
+        -0.30739407647563216,
+        2.1517585353294253,
+        2.0554804791094465,
+        1.5369703823781609,
+        -0.9221822294268964,
+        -0.4743416490252569,
+        0.9221822294268964
+      ]
+    }
+  },
+  "fixture_id": "synthetic_pipeline_pareto_v1",
+  "generator": {
+    "git_revision_sha": "unknown",
+    "name": "pls4all_parity.suites._pipeline_expected",
+    "params": {
+      "operators": [
+        "pareto"
+      ],
+      "reference": "NumPy preprocessing pipeline"
+    },
+    "version": "1"
+  },
+  "schema_version": 1
+}

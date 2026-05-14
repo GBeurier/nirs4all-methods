@@ -126,6 +126,22 @@ int cmd_selfcheck() {
     CHECK(p4a_matrix_view_validate(&Y) == P4A_OK);
     CHECK(p4a_matrix_view_validate(&Y_multi) == P4A_OK);
 
+    // Pipeline smoke: fit/transform for the Phase 3a preprocessing subset.
+    p4a_pipeline_t* pipe = nullptr;
+    CHECK(p4a_pipeline_create(&pipe) == P4A_OK);
+    CHECK(p4a_pipeline_add_operator(pipe, P4A_OP_CENTER, nullptr, 0) == P4A_OK);
+    CHECK(p4a_pipeline_add_operator(pipe, P4A_OP_AUTOSCALE, nullptr, 0) == P4A_OK);
+    CHECK(p4a_pipeline_fit(ctx, pipe, &X, nullptr) == P4A_OK);
+    p4a_array_t* x_preprocessed = nullptr;
+    CHECK(p4a_pipeline_transform_alloc(ctx, pipe, &X, &x_preprocessed) == P4A_OK);
+    int64_t pipe_rows = 0;
+    int64_t pipe_cols = 0;
+    CHECK(p4a_array_shape(x_preprocessed, &pipe_rows, &pipe_cols) == P4A_OK);
+    CHECK(pipe_rows == 4);
+    CHECK(pipe_cols == 3);
+    p4a_array_free(x_preprocessed);
+    p4a_pipeline_destroy(pipe);
+
     // Model smoke: NIPALS fit, predict, transform and export.
     p4a_model_t* model = nullptr;
     CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &model) == P4A_OK);

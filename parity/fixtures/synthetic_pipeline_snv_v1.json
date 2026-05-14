@@ -1,0 +1,75 @@
+{
+  "comparison_policy": {
+    "components_alignment": "exact",
+    "sign_resolver": "none",
+    "tolerance_table_row": "pls4all-numpy-preprocessing"
+  },
+  "data": {
+    "X": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "rng_seed": 44,
+      "shape": [
+        3,
+        3
+      ],
+      "values": [
+        1.0,
+        2.0,
+        3.0,
+        2.0,
+        2.0,
+        2.0,
+        3.0,
+        5.0,
+        7.0
+      ]
+    },
+    "Y": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "rng_seed": 44,
+      "shape": [
+        3,
+        1
+      ],
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "expected": {
+    "transform_train": {
+      "shape": [
+        3,
+        3
+      ],
+      "values": [
+        -1.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        1.0
+      ]
+    }
+  },
+  "fixture_id": "synthetic_pipeline_snv_v1",
+  "generator": {
+    "git_revision_sha": "unknown",
+    "name": "pls4all_parity.suites._pipeline_expected",
+    "params": {
+      "operators": [
+        "snv"
+      ],
+      "reference": "NumPy preprocessing pipeline"
+    },
+    "version": "1"
+  },
+  "schema_version": 1
+}

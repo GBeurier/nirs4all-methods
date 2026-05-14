@@ -39,6 +39,18 @@ HEADER_SPECS = {
         "struct": "PlsSvdFixture",
         "array": "kPlsSvdFixtures",
     },
+    "pipeline": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "pipeline_fixtures.hpp",
+        "fixtures": (
+            "synthetic_pipeline_identity_v1",
+            "synthetic_pipeline_center_v1",
+            "synthetic_pipeline_autoscale_v1",
+            "synthetic_pipeline_pareto_v1",
+            "synthetic_pipeline_snv_v1",
+        ),
+        "struct": "PipelineFixture",
+        "array": "kPipelineFixtures",
+    },
     "power": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "power_fixtures.hpp",
         "fixtures": (
@@ -287,6 +299,84 @@ def generate(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def _pipeline_operator_symbol(name: str) -> str:
+    mapping = {
+        "identity": "P4A_OP_IDENTITY",
+        "center": "P4A_OP_CENTER",
+        "autoscale": "P4A_OP_AUTOSCALE",
+        "pareto": "P4A_OP_PARETO_SCALE",
+        "snv": "P4A_OP_SNV",
+    }
+    return mapping[name]
+
+
+def generate_pipeline(fixture_ids: Sequence[str],
+                      fixture_dir: Path,
+                      out: Path,
+                      family: str,
+                      struct_name: str,
+                      array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "pls4all/p4a.h"',
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    const p4a_operator_kind_t* operators;",
+        "    std::size_t n_operators;",
+        "    MatrixRef X;",
+        "    MatrixRef transform_train;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        x_name = f"{prefix}_x"
+        transformed_name = f"{prefix}_transform_train"
+        ops_name = f"{prefix}_operators"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, transformed_name, fixture["expected"]["transform_train"]["values"])
+        operators = [
+            _pipeline_operator_symbol(op)
+            for op in fixture["generator"]["params"]["operators"]
+        ]
+        lines.append(f"inline const p4a_operator_kind_t {ops_name}[] = {{")
+        lines.append(f"    {', '.join(operators)},")
+        lines.append("};")
+        lines.append("")
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {ops_name},\n"
+            f"        sizeof({ops_name}) / sizeof(p4a_operator_kind_t),\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(transformed_name, fixture['expected']['transform_train'])}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--family", choices=sorted(HEADER_SPECS), default="simpls",
@@ -298,8 +388,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     spec = HEADER_SPECS[args.family]
     out = args.out or spec["out"]
     fixture_ids = args.fixture_ids or list(spec["fixtures"])
-    generate(fixture_ids, args.fixture_dir, out, args.family,
-             str(spec["struct"]), str(spec["array"]))
+    if args.family == "pipeline":
+        generate_pipeline(fixture_ids, args.fixture_dir, out, args.family,
+                          str(spec["struct"]), str(spec["array"]))
+    else:
+        generate(fixture_ids, args.fixture_dir, out, args.family,
+                 str(spec["struct"]), str(spec["array"]))
     print(f"Wrote {out}")
     return 0
 

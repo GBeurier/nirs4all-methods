@@ -30,7 +30,10 @@
  * Current implementation status (rev 1.0.0 of this header — May 2026):
  *   - Lifecycle / config / version / matrix-view are fully implemented.
  *   - Pipeline / operator-bank / gating-strategy lifecycle is implemented.
- *     Pipeline `_fit` / `_transform` operations remain deferred to Phase 3.
+ *     Pipeline `_fit` / `_transform` are live for P4A_OP_IDENTITY,
+ *     P4A_OP_CENTER, P4A_OP_AUTOSCALE, P4A_OP_PARETO_SCALE and P4A_OP_SNV.
+ *     Remaining preprocessing operators return P4A_ERR_NOT_IMPLEMENTED until
+ *     their dedicated Phase 3 follow-ups.
  *   - p4a_model_fit implements dependency-free NIPALS, orthogonal-scores,
  *     SIMPLS, kernel, wide-kernel, SVD, power-iteration and randomized-SVD PLS
  *     regression (PLS1 / PLS2) for P4A_ALGO_PLS_REGRESSION +
@@ -458,8 +461,11 @@ P4A_API p4a_status_t p4a_gating_strategy_create(p4a_gating_strategy_t** out,
 P4A_API void         p4a_gating_strategy_destroy(p4a_gating_strategy_t* gs);
 
 /* ---- Preprocessing pipeline ----
- * Pipeline = ordered list of operators that share fit/transform. Phase 3
- * makes this leakage-safe by fitting on the training fold only.
+ * Pipeline = ordered list of operators that share fit/transform.
+ * Phase 3a implements identity, center, autoscale, Pareto scaling and SNV
+ * with leakage-safe training statistics. Unsupported operators are accepted
+ * by add_operator so pipelines remain serialisable later, but fit returns
+ * P4A_ERR_NOT_IMPLEMENTED until the operator body lands.
  */
 P4A_API p4a_status_t p4a_pipeline_create        (p4a_pipeline_t** out);
 P4A_API void         p4a_pipeline_destroy       (p4a_pipeline_t* pipe);
@@ -474,7 +480,8 @@ P4A_API p4a_status_t p4a_pipeline_add_operator  (p4a_pipeline_t* pipe,
 P4A_API p4a_status_t p4a_pipeline_size          (const p4a_pipeline_t* pipe,
                                                   int32_t* out_size);
 
-/* Pipeline fit / transform are deferred to Phase 3. Their signatures are final. */
+/* `Y` is optional for unsupervised preprocessing operators and may be NULL.
+ * Future supervised operators such as OSC may require it. */
 P4A_API p4a_status_t p4a_pipeline_fit            (p4a_context_t* ctx,
                                                    p4a_pipeline_t* pipe,
                                                    const p4a_matrix_view_t* X,
@@ -604,7 +611,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.16.0+abi.1.0.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.17.0+abi.1.0.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
