@@ -24,7 +24,7 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/llvm-16.list
       - run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang-16 ninja-build cmake
+          sudo apt-get install -y --no-install-recommends clang-16 libclang-rt-16-dev ninja-build cmake
       - run: cmake --preset ci-${{ matrix.san }}
       - run: cmake --build --preset ci-${{ matrix.san }} --parallel
       - run: ctest --preset ci-${{ matrix.san }} --output-on-failure

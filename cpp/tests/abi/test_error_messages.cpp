@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: CeCILL-2.1
 
 #include <cstring>
+#include <cstdio>
 
 #include "pls4all/p4a.h"
 #include "harness.hpp"
@@ -32,8 +33,7 @@ TEST(error_messages, overwrite_not_append) {
     p4a_context_set_backend(ctx, P4A_BACKEND_CUDA);   // sets one message
     const char* first = p4a_context_last_error(ctx);
     char first_copy[256];
-    std::strncpy(first_copy, first, sizeof(first_copy) - 1);
-    first_copy[sizeof(first_copy) - 1] = '\0';
+    std::snprintf(first_copy, sizeof(first_copy), "%s", first);
 
     p4a_context_set_backend(ctx, P4A_BACKEND_BLAS);   // sets another
     const char* second = p4a_context_last_error(ctx);

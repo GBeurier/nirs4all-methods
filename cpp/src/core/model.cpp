@@ -21,6 +21,10 @@ constexpr double kZeroTolerance = 10.0 * std::numeric_limits<double>::epsilon();
     return row * cols + col;
 }
 
+[[nodiscard]] unsigned long long ull(std::size_t value) noexcept {
+    return static_cast<unsigned long long>(value);
+}
+
 [[nodiscard]] double dot(const std::vector<double>& a,
                          const std::vector<double>& b) noexcept {
     double out = 0.0;
@@ -101,7 +105,10 @@ void write_value(p4a_matrix_view_t& v,
         for (std::size_t j = 0; j < cols; ++j) {
             const double value = read_value(src, i, j);
             if (!std::isfinite(value)) {
-                ctx.set_errorf("%s contains NaN or Inf at row %zu col %zu", name, i, j);
+                ctx.set_errorf("%s contains NaN or Inf at row %llu col %llu",
+                               name,
+                               ull(i),
+                               ull(j));
                 return P4A_ERR_INVALID_ARGUMENT;
             }
             out[idx(i, cols, j)] = value;
@@ -257,7 +264,7 @@ void canonicalize_direction_sign(std::vector<double>& direction) noexcept {
             out[feature] = covariance[idx(feature, targets, 0)];
         }
         if (squared_norm(out) <= std::numeric_limits<double>::epsilon()) {
-            ctx.set_errorf("SIMPLS covariance vanished at component %zu", component);
+            ctx.set_errorf("SIMPLS covariance vanished at component %llu", ull(component));
             return P4A_ERR_NUMERICAL_FAILURE;
         }
         canonicalize_direction_sign(out);
@@ -278,7 +285,7 @@ void canonicalize_direction_sign(std::vector<double>& direction) noexcept {
         }
     }
     if (best_norm <= std::numeric_limits<double>::epsilon()) {
-        ctx.set_errorf("SIMPLS covariance vanished at component %zu", component);
+        ctx.set_errorf("SIMPLS covariance vanished at component %llu", ull(component));
         return P4A_ERR_NUMERICAL_FAILURE;
     }
     const double initial_norm = std::sqrt(best_norm);
@@ -302,7 +309,8 @@ void canonicalize_direction_sign(std::vector<double>& direction) noexcept {
         }
         const double right_norm = std::sqrt(squared_norm(right));
         if (right_norm <= std::numeric_limits<double>::epsilon()) {
-            ctx.set_errorf("SIMPLS right singular direction vanished at component %zu", component);
+            ctx.set_errorf("SIMPLS right singular direction vanished at component %llu",
+                           ull(component));
             return P4A_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : right) {
@@ -318,7 +326,8 @@ void canonicalize_direction_sign(std::vector<double>& direction) noexcept {
         }
         const double left_norm = std::sqrt(squared_norm(next_left));
         if (left_norm <= std::numeric_limits<double>::epsilon()) {
-            ctx.set_errorf("SIMPLS left singular direction vanished at component %zu", component);
+            ctx.set_errorf("SIMPLS left singular direction vanished at component %llu",
+                           ull(component));
             return P4A_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : next_left) {
@@ -342,8 +351,9 @@ void canonicalize_direction_sign(std::vector<double>& direction) noexcept {
         }
     }
     if (!converged) {
-        ctx.set_errorf("SIMPLS singular-vector iteration failed to converge at component %zu",
-                       component);
+        ctx.set_errorf(
+            "SIMPLS singular-vector iteration failed to converge at component %llu",
+            ull(component));
         return P4A_ERR_CONVERGENCE_FAILED;
     }
     canonicalize_direction_sign(out);
@@ -634,7 +644,7 @@ p4a_status_t fit_pls_regression_nipals(
             }
         }
         if (initial_target == q) {
-            ctx.set_errorf("Y residual became constant at component %zu", comp);
+            ctx.set_errorf("Y residual became constant at component %llu", ull(comp));
             return P4A_ERR_NUMERICAL_FAILURE;
         }
 
@@ -657,7 +667,7 @@ p4a_status_t fit_pls_regression_nipals(
         for (std::int32_t iter = 0; iter < cfg.max_iter; ++iter) {
             const double y_score_ss = squared_norm(y_score);
             if (y_score_ss <= std::numeric_limits<double>::epsilon()) {
-                ctx.set_errorf("Y score vanished at component %zu", comp);
+                ctx.set_errorf("Y score vanished at component %llu", ull(comp));
                 return P4A_ERR_NUMERICAL_FAILURE;
             }
 
@@ -671,7 +681,7 @@ p4a_status_t fit_pls_regression_nipals(
 
             const double x_weight_norm = std::sqrt(squared_norm(x_weights));
             if (x_weight_norm <= std::numeric_limits<double>::epsilon()) {
-                ctx.set_errorf("X weights vanished at component %zu", comp);
+                ctx.set_errorf("X weights vanished at component %llu", ull(comp));
                 return P4A_ERR_NUMERICAL_FAILURE;
             }
             const double x_weight_denom = x_weight_norm + std::numeric_limits<double>::epsilon();
@@ -682,7 +692,7 @@ p4a_status_t fit_pls_regression_nipals(
             matrix_vector_product(xk, n, p, x_weights, x_score);
             const double x_score_ss = squared_norm(x_score);
             if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
-                ctx.set_errorf("X score vanished at component %zu", comp);
+                ctx.set_errorf("X score vanished at component %llu", ull(comp));
                 return P4A_ERR_NUMERICAL_FAILURE;
             }
 
@@ -696,7 +706,7 @@ p4a_status_t fit_pls_regression_nipals(
 
             const double y_weight_ss = squared_norm(y_weights);
             if (y_weight_ss <= std::numeric_limits<double>::epsilon()) {
-                ctx.set_errorf("Y weights vanished at component %zu", comp);
+                ctx.set_errorf("Y weights vanished at component %llu", ull(comp));
                 return P4A_ERR_NUMERICAL_FAILURE;
             }
             const double y_score_denom = y_weight_ss + std::numeric_limits<double>::epsilon();
@@ -721,7 +731,8 @@ p4a_status_t fit_pls_regression_nipals(
         }
 
         if (!converged) {
-            ctx.set_errorf("NIPALS power iteration failed to converge at component %zu", comp);
+            ctx.set_errorf("NIPALS power iteration failed to converge at component %llu",
+                           ull(comp));
             return P4A_ERR_CONVERGENCE_FAILED;
         }
 
@@ -746,12 +757,14 @@ p4a_status_t fit_pls_regression_nipals(
         matrix_vector_product(xk, n, p, x_weights, x_score);
         const double x_score_ss = squared_norm(x_score);
         if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
-            ctx.set_errorf("X score vanished after sign normalization at component %zu", comp);
+            ctx.set_errorf("X score vanished after sign normalization at component %llu",
+                           ull(comp));
             return P4A_ERR_NUMERICAL_FAILURE;
         }
         const double y_weight_ss = squared_norm(y_weights);
         if (y_weight_ss <= std::numeric_limits<double>::epsilon()) {
-            ctx.set_errorf("Y weights vanished after sign normalization at component %zu", comp);
+            ctx.set_errorf("Y weights vanished after sign normalization at component %llu",
+                           ull(comp));
             return P4A_ERR_NUMERICAL_FAILURE;
         }
 
@@ -911,7 +924,7 @@ p4a_status_t fit_pls_regression_simpls(
         matrix_vector_product(xk, n, p, direction, x_score);
         const double x_score_norm = std::sqrt(squared_norm(x_score));
         if (x_score_norm <= std::numeric_limits<double>::epsilon()) {
-            ctx.set_errorf("SIMPLS X score vanished at component %zu", comp);
+            ctx.set_errorf("SIMPLS X score vanished at component %llu", ull(comp));
             return P4A_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : x_score) {
@@ -955,7 +968,7 @@ p4a_status_t fit_pls_regression_simpls(
         }
         const double v_norm = std::sqrt(squared_norm(v));
         if (v_norm <= std::numeric_limits<double>::epsilon()) {
-            ctx.set_errorf("SIMPLS deflation basis vanished at component %zu", comp);
+            ctx.set_errorf("SIMPLS deflation basis vanished at component %llu", ull(comp));
             return P4A_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : v) {

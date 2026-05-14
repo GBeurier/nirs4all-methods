@@ -86,10 +86,21 @@ jobs:
         run: |
           $dll = Get-ChildItem build -Recurse -Filter "p4a.dll" | Select-Object -First 1
           if (-not $dll) { Write-Error "p4a.dll not built"; exit 1 }
-          $vcvars = "${env:VCINSTALLDIR}Tools\MSVC"
-          $dumpbin = Get-ChildItem -Path $vcvars -Filter dumpbin.exe -Recurse | Where-Object { $_.FullName -like '*Hostx64*x64*' } | Select-Object -First 1
-          if (-not $dumpbin) { Write-Error "dumpbin not found"; exit 1 }
-          & $dumpbin.FullName /EXPORTS $dll.FullName |
+          $dumpbinPath = $null
+          $cmd = Get-Command dumpbin.exe -ErrorAction SilentlyContinue
+          if ($cmd) { $dumpbinPath = $cmd.Source }
+          if (-not $dumpbinPath) {
+            $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+            $vsRoot = & $vswhere -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath -latest
+            if ($vsRoot) {
+              $dumpbin = Get-ChildItem -Path (Join-Path $vsRoot "VC\Tools\MSVC") -Filter dumpbin.exe -Recurse |
+                Where-Object { $_.FullName -like '*Hostx64*x64*' } |
+                Select-Object -First 1
+              if ($dumpbin) { $dumpbinPath = $dumpbin.FullName }
+            }
+          }
+          if (-not $dumpbinPath) { Write-Error "dumpbin not found"; exit 1 }
+          & $dumpbinPath /EXPORTS $dll.FullName |
             Select-String -Pattern '^\s+\d+\s+\w+\s+\w+\s+(p4a_\w+)' |
             ForEach-Object { $_.Matches[0].Groups[1].Value } |
             Sort-Object -Unique | Out-File -Encoding ascii exported.txt

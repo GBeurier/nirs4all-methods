@@ -54,8 +54,8 @@ int cmd_abi_info() {
         P4A_DTYPE_F64, P4A_DTYPE_F32, P4A_DTYPE_I32, P4A_DTYPE_I64,
     };
     for (size_t i = 0; i < sizeof(dtypes) / sizeof(dtypes[0]); ++i) {
-        printf("  %s: %zu bytes\n", p4a_dtype_to_string(dtypes[i]),
-               p4a_dtype_size(dtypes[i]));
+        printf("  %s: %llu bytes\n", p4a_dtype_to_string(dtypes[i]),
+               static_cast<unsigned long long>(p4a_dtype_size(dtypes[i])));
     }
     return 0;
 }
@@ -84,9 +84,9 @@ int cmd_selfcheck() {
     CHECK(p4a_dtype_size(P4A_DTYPE_F32) == 4);
 
     // Context lifecycle
-    p4a_context_t* ctx = NULL;
+    p4a_context_t* ctx = nullptr;
     CHECK(p4a_context_create(&ctx) == P4A_OK);
-    CHECK(ctx != NULL);
+    CHECK(ctx != nullptr);
     CHECK(p4a_context_set_seed(ctx, 42) == P4A_OK);
     uint64_t seed = 0;
     CHECK(p4a_context_get_seed(ctx, &seed) == P4A_OK);
@@ -94,7 +94,7 @@ int cmd_selfcheck() {
     CHECK(p4a_context_set_backend(ctx, P4A_BACKEND_CUDA) == P4A_ERR_BACKEND_UNAVAILABLE);
 
     // Config lifecycle + setters
-    p4a_config_t* cfg = NULL;
+    p4a_config_t* cfg = nullptr;
     CHECK(p4a_config_create(&cfg) == P4A_OK);
     CHECK(p4a_config_set_n_components(cfg, 2) == P4A_OK);
     CHECK(p4a_config_set_n_components(cfg, -1) == P4A_ERR_INVALID_ARGUMENT);
@@ -118,10 +118,10 @@ int cmd_selfcheck() {
     CHECK(p4a_matrix_view_validate(&Y) == P4A_OK);
 
     // Model smoke: NIPALS fit, predict, transform and export.
-    p4a_model_t* model = NULL;
+    p4a_model_t* model = nullptr;
     CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &model) == P4A_OK);
-    CHECK(model != NULL);
-    p4a_array_t* pred = NULL;
+    CHECK(model != nullptr);
+    p4a_array_t* pred = nullptr;
     CHECK(p4a_model_predict_alloc(ctx, model, &X, &pred) == P4A_OK);
     int64_t rows = 0;
     int64_t cols = 0;
@@ -130,7 +130,7 @@ int cmd_selfcheck() {
     CHECK(cols == 1);
     p4a_array_free(pred);
 
-    p4a_array_t* scores = NULL;
+    p4a_array_t* scores = nullptr;
     CHECK(p4a_model_transform_alloc(ctx, model, &X, &scores) == P4A_OK);
     CHECK(p4a_array_shape(scores, &rows, &cols) == P4A_OK);
     CHECK(rows == 4);
@@ -143,10 +143,10 @@ int cmd_selfcheck() {
     p4a_model_destroy(model);
 
     CHECK(p4a_config_set_solver(cfg, P4A_SOLVER_SIMPLS) == P4A_OK);
-    p4a_model_t* simpls_model = NULL;
+    p4a_model_t* simpls_model = nullptr;
     CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &simpls_model) == P4A_OK);
-    CHECK(simpls_model != NULL);
-    p4a_array_t* simpls_pred = NULL;
+    CHECK(simpls_model != nullptr);
+    p4a_array_t* simpls_pred = nullptr;
     CHECK(p4a_model_predict_alloc(ctx, simpls_model, &X, &simpls_pred) == P4A_OK);
     CHECK(p4a_array_shape(simpls_pred, &rows, &cols) == P4A_OK);
     CHECK(rows == 4);

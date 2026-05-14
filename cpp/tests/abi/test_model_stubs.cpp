@@ -53,8 +53,12 @@ void check_close_values(int& failures,
         if (diff > kAbsTol && diff > kRelTol * scale) {
             ++failures;
             std::fprintf(stderr,
-                         "  FAIL %s[%zu]: actual %.17g expected %.17g diff %.3g\n",
-                         label, i, actual[i], expected.values[i], diff);
+                         "  FAIL %s[%llu]: actual %.17g expected %.17g diff %.3g\n",
+                         label,
+                         static_cast<unsigned long long>(i),
+                         actual[i],
+                         expected.values[i],
+                         diff);
             return;
         }
     }
@@ -294,7 +298,10 @@ TEST(model_phase1, transform_and_stored_scores_agree) {
         const double diff = std::fabs(transform_values[i] - stored_values[i]);
         if (diff > kAbsTol) {
             ++failures;
-            std::fprintf(stderr, "  FAIL transform/scores[%zu] diff %.3g\n", i, diff);
+            std::fprintf(stderr,
+                         "  FAIL transform/scores[%llu] diff %.3g\n",
+                         static_cast<unsigned long long>(i),
+                         diff);
             break;
         }
     }
