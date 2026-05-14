@@ -32,6 +32,8 @@ binary calibration curves use fixed probability bins. Variable-importance
 kernels compute VIP scores and selectivity ratio from fitted models with stored
 scores, and Phase 5a variable-selection rankers expose deterministic top-k
 ordering for VIP, original-scale coefficient magnitude and selectivity ratio.
+Phase 5b interval-selection kernels scan contiguous feature windows with
+deterministic k-fold PLS CV for moving-window / iPLS-style selection.
 Component-coefficient kernels expose the
 original-scale regression coefficients for each latent prefix. SIMPLS component
 prefixes can also be scored by deterministic k-fold CV for component-count

@@ -5,7 +5,8 @@ a Context and a Config wrapper. Full Python model wrappers land in Phase 2
 on top of the live NIPALS, orthogonal-scores, SIMPLS, kernel, wide-kernel,
 SVD, power, randomized-SVD, PLSCanonical, PLSSVD, PLS-DA, OPLS / OPLS-DA,
 PCR and internal validation / cross-validation / classification-metric /
-variable-importance / variable-selection / component-coefficient C++ core.
+variable-importance / variable-selection / interval-selection /
+component-coefficient C++ core.
 """
 
 from ._ffi import lib  # noqa: F401  — eagerly loads libp4a
@@ -16,7 +17,7 @@ from ._config import Config
 
 
 def version() -> str:
-    """Return the runtime library version string, e.g. '0.40.0+abi.1.0.0'."""
+    """Return the runtime library version string, e.g. '0.41.0+abi.1.0.0'."""
     return lib.p4a_get_version_string().decode("utf-8")
 
 
@@ -46,4 +47,4 @@ __all__ = [
     "abi_version",
     "build_info",
 ]
-__version__ = "0.40.0"
+__version__ = "0.41.0"

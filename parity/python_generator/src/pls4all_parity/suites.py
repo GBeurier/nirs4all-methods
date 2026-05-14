@@ -1371,6 +1371,75 @@ def _variable_selection_expected(
     }
 
 
+def _interval_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    interval_width: int,
+    step: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    folds = _validation_folds("kfold", X.shape[0], n_splits)
+
+    intervals: list[int] = []
+    metrics_rows: list[float] = []
+    rmse_values: list[float] = []
+    for start in range(0, X.shape[1] - int(interval_width) + 1, int(step)):
+        stop = start + int(interval_width)
+        predictions = np.zeros_like(Y, dtype=np.float64)
+        for train, test in folds:
+            train_index = np.asarray(train, dtype=np.int64)
+            test_index = np.asarray(test, dtype=np.int64)
+            model = PLSRegression(n_components=n_components, scale=True, max_iter=500, tol=1e-6)
+            model.fit(X[train_index, start:stop], Y[train_index])
+            fold_predictions = model.predict(X[test_index, start:stop]).astype(np.float64, copy=False)
+            if fold_predictions.ndim == 1:
+                fold_predictions = fold_predictions.reshape(-1, 1)
+            predictions[test_index, :] = fold_predictions
+        metrics = _regression_metrics_expected(Y, predictions)["metrics"]["values"]
+        intervals.extend([int(start), int(interval_width)])
+        metrics_rows.extend(float(value) for value in metrics)
+        rmse_values.append(float(metrics[0]))
+
+    best_index = int(np.argmin(np.asarray(rmse_values, dtype=np.float64)))
+    return {
+        "intervals": {
+            "shape": [int(len(rmse_values)), 2],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": intervals,
+        },
+        "rmse": {
+            "shape": [1, int(len(rmse_values))],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": rmse_values,
+        },
+        "metrics_by_interval": {
+            "shape": [int(len(rmse_values)), 9],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": metrics_rows,
+        },
+        "best_index": {
+            "shape": [1],
+            "layout": "row_major",
+            "dtype": "i32",
+            "values": [best_index],
+        },
+        "best_interval": {
+            "shape": [1, 2],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": intervals[2 * best_index: 2 * best_index + 2],
+        },
+    }
+
+
 def _component_coefficients_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -2971,6 +3040,50 @@ def _variable_selection_fixture(
     }
 
 
+def _interval_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    interval_width: int,
+    step: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._interval_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":      "pls_regression",
+                "solver":         "nipals",
+                "n_components":   int(n_components),
+                "n_splits":       int(n_splits),
+                "interval_width": int(interval_width),
+                "step":           int(step),
+                "reference":      "sklearn PLSRegression deterministic k-fold interval scan",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _interval_selection_expected(X, Y, n_components, n_splits, interval_width, step),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-interval-selection-cv",
+        },
+    }
+
+
 def _component_coefficients_fixture(
     fixture_id: str,
     seed: int,
@@ -4149,6 +4262,37 @@ def synthetic_variable_selection_rankers_v1() -> dict[str, Any]:
                                        Y=Y,
                                        n_components=2,
                                        top_k=3)
+
+
+def synthetic_interval_selection_moving_window_v1() -> dict[str, Any]:
+    """20 samples, 10 features, 2 targets for moving-window interval CV parity."""
+    seed = 60
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(20, 4))
+    X = np.column_stack([
+        0.15 * latent[:, 0] + 0.07 * rng.standard_normal(size=20),
+        0.34 * latent[:, 1] - 0.10 * latent[:, 2] + 0.04 * rng.standard_normal(size=20),
+        0.88 * latent[:, 0] + 0.21 * latent[:, 2] + 0.03 * rng.standard_normal(size=20),
+        -0.46 * latent[:, 0] + 0.63 * latent[:, 1] + 0.04 * rng.standard_normal(size=20),
+        0.51 * latent[:, 1] - 0.38 * latent[:, 2] + 0.05 * rng.standard_normal(size=20),
+        -0.29 * latent[:, 2] + 0.44 * latent[:, 3] + 0.06 * rng.standard_normal(size=20),
+        0.12 * latent[:, 0] + 0.80 * latent[:, 3] + 0.05 * rng.standard_normal(size=20),
+        -0.58 * latent[:, 1] + 0.25 * latent[:, 3] + 0.06 * rng.standard_normal(size=20),
+        np.sin(np.linspace(0.0, 2.0 * np.pi, 20)),
+        rng.standard_normal(size=20) * 0.08,
+    ])
+    Y = np.column_stack([
+        0.92 * latent[:, 0] - 0.36 * latent[:, 2] + 0.06 * rng.standard_normal(size=20),
+        -0.55 * latent[:, 1] + 0.48 * latent[:, 3] + 0.06 * rng.standard_normal(size=20),
+    ])
+    return _interval_selection_fixture("synthetic_interval_selection_moving_window_v1",
+                                       seed=seed,
+                                       X=X,
+                                       Y=Y,
+                                       n_components=2,
+                                       n_splits=5,
+                                       interval_width=3,
+                                       step=1)
 
 
 def synthetic_component_coefficients_pls2_v1() -> dict[str, Any]:

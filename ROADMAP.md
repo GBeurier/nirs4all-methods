@@ -8,14 +8,15 @@ The canonical technical spec is [`Direction_Technique.md`](Direction_Technique.m
 
 ## Current checkpoint — 2026-05-14
 
-Latest shipped tag: `phase-5a-variable-selection-rankers` (`0.40.0+abi.1.0.0`).
+Latest shipped tag: `phase-5b-interval-selection` (`0.41.0+abi.1.0.0`).
 
-- Local reference gate is green: 69 deterministic parity fixtures, 153 C++ ABI/core tests, CLI selfcheck, Python smoke, ABI symbol diff, dependency audit, UBSAN and ASAN+UBSAN.
+- Local reference gate is green: 70 deterministic parity fixtures, 155 C++ ABI/core tests, CLI selfcheck, Python smoke, ABI symbol diff, dependency audit, UBSAN and ASAN+UBSAN.
 - GitHub Actions are currently failing before runner allocation (`runner_id=0`, no steps), so the actionable gate is the local parity/sanitizer run until CI infrastructure is fixed.
 - Phase 4 has shipped the main advanced CPU kernels currently targeted before variable selection: SIMPLS, SVD, PCR, kernel/wide-kernel, orthogonal-scores, power/randomized-SVD, PLSCanonical, PLSSVD, PLS-DA, OPLS/OPLS-DA, component-count CV, PLS-LDA, PLS-logistic, MB-PLS and LW-PLS.
 - Phase 5a has shipped deterministic variable-selection rankers over existing fitted-model scores: VIP, original-scale coefficient magnitude and selectivity ratio, with sklearn parity.
+- Phase 5b has shipped deterministic contiguous interval / moving-window CV scans over NIPALS PLS regression, with sklearn parity.
 - Phase 2 bindings are still mostly skeletons: Python has a minimal ctypes lifecycle/config binding, while R/MATLAB/JS/Android remain README-level placeholders.
-- Active implementation track: Phase 5 variable selection, next moving from simple score rankers to interval methods and stability/wrapper selectors.
+- Active implementation track: Phase 5 variable selection, next moving from interval scans to Monte-Carlo stability and wrapper/metaheuristic selectors.
 
 ## Phase 0 — ABI & Build Foundation · **shipped**
 
@@ -106,7 +107,8 @@ Each binding ships a parity-test suite that loads the JSON fixtures and asserts 
 ## Phase 5 — Variable selection
 
 - VIP selector, regression-coefficient selector, selectivity-ratio selector shipped as `phase-5a-variable-selection-rankers`.
-- Interval methods: iPLS, biPLS, siPLS, moving-window PLS.
+- Contiguous interval / moving-window CV scan shipped as `phase-5b-interval-selection`.
+- Remaining interval methods: biPLS, siPLS and interval-combination search.
 - Monte-Carlo / stability: UVE-PLS, MCUVE-PLS, EMCUVE-PLS, randomisation tests.
 - Wrappers / metaheuristics: CARS, SCARS, SPA, Random Frog, GA-PLS, Shaving, BVE-PLS, T2-PLS, WVC-PLS.
 
