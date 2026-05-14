@@ -22,7 +22,10 @@ configure_file(
 # right.
 # ---------------------------------------------------------------------------
 add_library(pls4all_core OBJECT
-    core/placeholder.cpp)
+    core/status.cpp
+    core/version.cpp
+    core/context.cpp
+    core/config.cpp)
 target_include_directories(pls4all_core
     PUBLIC  ${PROJECT_SOURCE_DIR}/cpp/include
             ${PROJECT_BINARY_DIR}/generated
@@ -46,7 +49,9 @@ pls4all_add_warnings(pls4all_core)
 # pls4all_c_static is the same surface, statically linked.
 # ---------------------------------------------------------------------------
 set(_pls4all_c_sources
-    c_api/placeholder.cpp)
+    c_api/c_api_version.cpp
+    c_api/c_api_context.cpp
+    c_api/c_api_config.cpp)
 
 function(pls4all_apply_c_target target)
     # Embed all pls4all_core objects directly into the C-API target so that
@@ -56,7 +61,8 @@ function(pls4all_apply_c_target target)
     target_include_directories(${target}
         PUBLIC  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/cpp/include>
                 $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/generated>
-                $<INSTALL_INTERFACE:include>)
+                $<INSTALL_INTERFACE:include>
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})  # for core/*.hpp internal headers
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
         target_compile_options(${target} PRIVATE
             $<$<NOT:$<CONFIG:Debug>>:-ffunction-sections>

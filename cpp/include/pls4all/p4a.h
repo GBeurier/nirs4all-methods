@@ -253,6 +253,10 @@ P4A_API p4a_status_t p4a_context_set_backend(p4a_context_t* ctx,
 P4A_API p4a_status_t p4a_context_get_backend(const p4a_context_t* ctx,
                                              p4a_backend_t* out_backend);
 
+/* `n_threads`: any int32_t is accepted. Values <= 0 are documented as
+ * "library picks the default" (read by parallel backends later); positive
+ * values pin the worker count. The setter does NOT validate the upper
+ * bound — the caller is responsible for choosing a sensible cap. */
 P4A_API p4a_status_t p4a_context_set_num_threads(p4a_context_t* ctx,
                                                  int32_t n_threads);
 P4A_API p4a_status_t p4a_context_get_num_threads(const p4a_context_t* ctx,
@@ -271,7 +275,9 @@ P4A_API const char*  p4a_context_last_error(const p4a_context_t* ctx);
 P4A_API void         p4a_context_clear_error(p4a_context_t* ctx);
 
 /* Optional binding-side annotation. The library never reads or writes the
- * pointer's referent. */
+ * pointer's referent. `p4a_context_get_user_data(NULL)` returns NULL — this
+ * is indistinguishable from a context that has had NULL stored explicitly;
+ * if you need to distinguish, store a sentinel value. */
 P4A_API p4a_status_t p4a_context_set_user_data(p4a_context_t* ctx, void* user);
 P4A_API void*        p4a_context_get_user_data(const p4a_context_t* ctx);
 
@@ -340,12 +346,16 @@ P4A_API p4a_status_t p4a_config_clone(const p4a_config_t* src,
 P4A_API p4a_status_t p4a_config_set_algorithm        (p4a_config_t*, p4a_algorithm_t);
 P4A_API p4a_status_t p4a_config_set_solver           (p4a_config_t*, p4a_solver_t);
 P4A_API p4a_status_t p4a_config_set_deflation        (p4a_config_t*, p4a_deflation_t);
+/* `n_components` must be >= 1. There is no upper cap at the ABI level; if
+ * the value exceeds rank(X) at fit time, Phase 1+ returns
+ * P4A_ERR_INVALID_ARGUMENT from p4a_model_fit with a descriptive message. */
 P4A_API p4a_status_t p4a_config_set_n_components     (p4a_config_t*, int32_t n);
 P4A_API p4a_status_t p4a_config_set_center_x         (p4a_config_t*, int32_t enabled);
 P4A_API p4a_status_t p4a_config_set_scale_x          (p4a_config_t*, int32_t enabled);
 P4A_API p4a_status_t p4a_config_set_center_y         (p4a_config_t*, int32_t enabled);
 P4A_API p4a_status_t p4a_config_set_scale_y          (p4a_config_t*, int32_t enabled);
 P4A_API p4a_status_t p4a_config_set_tol              (p4a_config_t*, double tol);
+/* `max_iter` must be >= 1. There is no upper cap at the ABI level. */
 P4A_API p4a_status_t p4a_config_set_max_iter         (p4a_config_t*, int32_t max_iter);
 P4A_API p4a_status_t p4a_config_set_store_scores     (p4a_config_t*, int32_t enabled);
 P4A_API p4a_status_t p4a_config_set_store_diagnostics(p4a_config_t*, int32_t enabled);
