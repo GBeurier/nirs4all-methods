@@ -10,7 +10,7 @@ import ctypes
 
 from ._errors import Pls4allError
 from ._ffi import lib
-from ._types import Algorithm, Solver, Status
+from ._types import Algorithm, Deflation, Solver, Status
 
 
 def _check(status: int) -> None:
@@ -78,6 +78,16 @@ class Config:
     @solver.setter
     def solver(self, value: Solver | int) -> None:
         _check(lib.p4a_config_set_solver(self._h, ctypes.c_int(int(value))))
+
+    @property
+    def deflation(self) -> Deflation:
+        out = ctypes.c_int(0)
+        _check(lib.p4a_config_get_deflation(self._h, ctypes.byref(out)))
+        return Deflation(int(out.value))
+
+    @deflation.setter
+    def deflation(self, value: Deflation | int) -> None:
+        _check(lib.p4a_config_set_deflation(self._h, ctypes.c_int(int(value))))
 
     @property
     def tol(self) -> float:

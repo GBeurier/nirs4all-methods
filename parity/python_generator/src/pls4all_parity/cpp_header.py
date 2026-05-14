@@ -48,6 +48,24 @@ HEADER_SPECS = {
         "struct": "RandomizedSvdFixture",
         "array": "kRandomizedSvdFixtures",
     },
+    "canonical": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "canonical_fixtures.hpp",
+        "fixtures": (
+            "synthetic_canonical_tiny_pls1_v1",
+            "synthetic_canonical_small_pls2_v1",
+        ),
+        "struct": "CanonicalFixture",
+        "array": "kCanonicalFixtures",
+    },
+    "canonical-svd": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "canonical_svd_fixtures.hpp",
+        "fixtures": (
+            "synthetic_canonical_svd_tiny_pls1_v1",
+            "synthetic_canonical_svd_small_pls2_v1",
+        ),
+        "struct": "CanonicalSvdFixture",
+        "array": "kCanonicalSvdFixtures",
+    },
     "pcr": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "pcr_fixtures.hpp",
         "fixtures": (

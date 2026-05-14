@@ -470,6 +470,144 @@ def _randomized_svd_pls_expected(
     }
 
 
+def _canonical_nipals_pair(
+    Xk: np.ndarray,
+    Yk: np.ndarray,
+    component: int,
+    max_iter: int = 500,
+    tol: float = 1e-6,
+) -> tuple[np.ndarray, np.ndarray]:
+    n, p = Xk.shape
+    q = Yk.shape[1]
+    eps = np.finfo(np.float64).eps
+    y_eps = np.finfo(Yk.dtype).eps
+
+    mask = np.all(np.abs(Yk) < 10.0 * y_eps, axis=0)
+    Yk[:, mask] = 0.0
+
+    initial = None
+    for target in range(q):
+        if np.any(np.abs(Yk[:, target]) > eps):
+            initial = target
+            break
+    if initial is None:
+        raise RuntimeError(f"canonical Y residual collapsed at component {component}")
+
+    y_score = Yk[:, initial].copy()
+    x_weights_old = np.full(p, 100.0, dtype=np.float64)
+    x_weights = np.zeros(p, dtype=np.float64)
+    y_weights = np.zeros(q, dtype=np.float64)
+    converged = False
+
+    for _iteration in range(max_iter):
+        y_score_ss = float(y_score @ y_score)
+        if y_score_ss <= eps:
+            raise RuntimeError(f"canonical Y score collapsed at component {component}")
+        x_weights = (Xk.T @ y_score) / y_score_ss
+        x_norm = np.linalg.norm(x_weights)
+        if x_norm <= eps:
+            raise RuntimeError(f"canonical X weights collapsed at component {component}")
+        x_weights = x_weights / (x_norm + eps)
+
+        x_score = Xk @ x_weights
+        x_score_ss = float(x_score @ x_score)
+        if x_score_ss <= eps:
+            raise RuntimeError(f"canonical X score collapsed at component {component}")
+        y_weights = (Yk.T @ x_score) / x_score_ss
+        y_norm = np.linalg.norm(y_weights)
+        if y_norm <= eps:
+            raise RuntimeError(f"canonical Y weights collapsed at component {component}")
+        y_weights = y_weights / (y_norm + eps)
+        y_score = (Yk @ y_weights) / (float(y_weights @ y_weights) + eps)
+
+        diff = float((x_weights - x_weights_old) @ (x_weights - x_weights_old))
+        if diff < tol or q == 1:
+            converged = True
+            break
+        x_weights_old = x_weights.copy()
+
+    if not converged:
+        raise RuntimeError(f"canonical NIPALS failed to converge at component {component}")
+
+    sign_idx = int(np.argmax(np.abs(x_weights)))
+    if x_weights[sign_idx] < 0.0:
+        x_weights = -x_weights
+        y_weights = -y_weights
+    return x_weights, y_weights
+
+
+def _canonical_pls_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    solver: str,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+
+    Xk, x_mean, x_scale = _center_scale(X)
+    Yk, y_mean, y_scale = _center_scale(Y)
+    n, p = Xk.shape
+    q = Yk.shape[1]
+    K = int(n_components)
+
+    W = np.zeros((p, K), dtype=np.float64)
+    P = np.zeros((p, K), dtype=np.float64)
+    Q = np.zeros((q, K), dtype=np.float64)
+    T = np.zeros((n, K), dtype=np.float64)
+    U_scores = np.zeros((n, K), dtype=np.float64)
+    eps = np.finfo(np.float64).eps
+
+    for comp in range(K):
+        if solver == "nipals":
+            x_weights, y_weights = _canonical_nipals_pair(Xk, Yk, comp)
+        elif solver == "svd":
+            x_weights, y_weights = _dominant_svd_pair(Xk.T @ Yk)
+        else:
+            raise ValueError(f"unsupported canonical solver: {solver}")
+
+        t = Xk @ x_weights
+        t_ss = float(t @ t)
+        if t_ss <= eps:
+            raise RuntimeError(f"canonical X score collapsed at component {comp}")
+        u = Yk @ y_weights
+        u_ss = float(u @ u)
+        if u_ss <= eps:
+            raise RuntimeError(f"canonical Y score collapsed at component {comp}")
+
+        p_load = (Xk.T @ t) / t_ss
+        Xk = Xk - np.outer(t, p_load)
+        q_load = (Yk.T @ u) / u_ss
+        Yk = Yk - np.outer(u, q_load)
+
+        W[:, comp] = x_weights
+        P[:, comp] = p_load
+        Q[:, comp] = q_load
+        T[:, comp] = t
+        U_scores[:, comp] = u
+
+    rotations = W @ np.linalg.inv(P.T @ W)
+    coef_std = rotations @ Q.T
+    coef = coef_std * (y_scale.reshape(1, -1) / x_scale.reshape(-1, 1))
+    preds = y_mean.reshape(1, -1) + (X - x_mean.reshape(1, -1)) @ coef
+    return {
+        "coefficients":  {"shape": list(coef.shape),       "values": _flatten_rowmajor(coef)},
+        "intercept":     {"shape": [q],                    "values": y_mean.astype(np.float64).tolist()},
+        "x_mean":        {"shape": [p],                    "values": x_mean.astype(np.float64).tolist()},
+        "x_scale":       {"shape": [p],                    "values": x_scale.astype(np.float64).tolist()},
+        "y_mean":        {"shape": [q],                    "values": y_mean.astype(np.float64).tolist()},
+        "y_scale":       {"shape": [q],                    "values": y_scale.astype(np.float64).tolist()},
+        "weights_W":     {"shape": list(W.shape),          "values": _flatten_rowmajor(W), "sign_invariant": True},
+        "loadings_P":    {"shape": list(P.shape),          "values": _flatten_rowmajor(P), "sign_invariant": True},
+        "y_loadings_Q":  {"shape": list(Q.shape),          "values": _flatten_rowmajor(Q), "sign_invariant": True},
+        "rotations_R":   {"shape": list(rotations.shape),  "values": _flatten_rowmajor(rotations), "sign_invariant": True},
+        "scores_T":      {"shape": list(T.shape),          "values": _flatten_rowmajor(T), "sign_invariant": True},
+        "predict_train": {"shape": list(preds.shape),      "values": _flatten_rowmajor(preds)},
+    }
+
+
 def _kernel_pls_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, Any]:
     X = np.asarray(X, dtype=np.float64)
     Y = np.asarray(Y, dtype=np.float64)
@@ -927,6 +1065,42 @@ def _randomized_svd_fixture(
     }
 
 
+def _canonical_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    solver: str,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._canonical_pls_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "n_components":   n_components,
+                "scale":          True,
+                "deflation_mode": "canonical",
+                "algorithm":      solver,
+                "reference":      f"NumPy mirror of sklearn PLSCanonical({solver})",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _canonical_pls_expected(X, Y, n_components, solver),
+        "comparison_policy": {
+            "components_alignment": "first-k-prefix",
+            "sign_resolver":        "max_abs_element_positive",
+            "tolerance_table_row":  f"sklearn/PLSCanonical/{solver}",
+        },
+    }
+
+
 def _kernel_fixture(
     fixture_id: str,
     seed: int,
@@ -1207,6 +1381,65 @@ def synthetic_randomized_svd_small_pls2_v1() -> dict[str, Any]:
     Y = X @ W + rng.standard_normal(size=(15, 3)) * 0.03
     return _randomized_svd_fixture("synthetic_randomized_svd_small_pls2_v1",
                                    seed=91, X=X, Y=Y, n_components=3)
+
+
+def synthetic_canonical_tiny_pls1_v1() -> dict[str, Any]:
+    """9 samples, 4 features, 1 target, n_components=1."""
+    rng = np.random.default_rng(seed=100)
+    X = rng.standard_normal(size=(9, 4))
+    true_w = np.array([0.42, -0.30, 0.25, 0.36])
+    Y = (X @ true_w + rng.standard_normal(size=9) * 0.025).reshape(-1, 1)
+    return _canonical_fixture("synthetic_canonical_tiny_pls1_v1",
+                              seed=100, X=X, Y=Y, n_components=1,
+                              solver="nipals")
+
+
+def synthetic_canonical_small_pls2_v1() -> dict[str, Any]:
+    """14 samples, 6 features, 3 targets, n_components=2."""
+    rng = np.random.default_rng(seed=101)
+    X = rng.standard_normal(size=(14, 6))
+    W = np.array([
+        [0.36, -0.20, 0.18],
+        [-0.28, 0.44, -0.15],
+        [0.18, 0.24, 0.38],
+        [0.08, -0.34, 0.16],
+        [0.42, 0.10, -0.32],
+        [-0.20, 0.36, 0.26],
+    ])
+    Y = X @ W + rng.standard_normal(size=(14, 3)) * 0.035
+    return _canonical_fixture("synthetic_canonical_small_pls2_v1",
+                              seed=101, X=X, Y=Y, n_components=2,
+                              solver="nipals")
+
+
+def synthetic_canonical_svd_tiny_pls1_v1() -> dict[str, Any]:
+    """9 samples, 4 features, 1 target, n_components=1."""
+    rng = np.random.default_rng(seed=102)
+    X = rng.standard_normal(size=(9, 4))
+    true_w = np.array([0.35, -0.45, 0.28, 0.22])
+    Y = (X @ true_w + rng.standard_normal(size=9) * 0.025).reshape(-1, 1)
+    return _canonical_fixture("synthetic_canonical_svd_tiny_pls1_v1",
+                              seed=102, X=X, Y=Y, n_components=1,
+                              solver="svd")
+
+
+def synthetic_canonical_svd_small_pls2_v1() -> dict[str, Any]:
+    """15 samples, 7 features, 3 targets, n_components=3."""
+    rng = np.random.default_rng(seed=103)
+    X = rng.standard_normal(size=(15, 7))
+    W = np.array([
+        [0.32, -0.18, 0.16],
+        [-0.30, 0.42, -0.18],
+        [0.14, 0.26, 0.40],
+        [0.46, -0.16, 0.10],
+        [-0.28, 0.32, -0.34],
+        [0.18, 0.34, 0.28],
+        [0.36, -0.12, 0.30],
+    ])
+    Y = X @ W + rng.standard_normal(size=(15, 3)) * 0.03
+    return _canonical_fixture("synthetic_canonical_svd_small_pls2_v1",
+                              seed=103, X=X, Y=Y, n_components=3,
+                              solver="svd")
 
 
 def synthetic_kernel_tiny_pls1_v1() -> dict[str, Any]:

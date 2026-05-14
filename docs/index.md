@@ -19,7 +19,7 @@ context / config / matrix-view / operator-bank / gating-strategy / pipeline
 is implemented. The supported fitted-model path is now live for NIPALS,
 orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and
 randomized-SVD PLS regression
-(PLS1 / PLS2), plus PCR: fit, predict,
+(PLS1 / PLS2), PLSCanonical with NIPALS/SVD, plus PCR: fit, predict,
 transform, fitted-array accessors and binary import/export.
 
 Build matrix: Linux × {gcc-12, gcc-13, clang-16}, macOS × clang

@@ -55,6 +55,7 @@ Goal: useful for real spectroscopy.
 - Orthogonal-scores PLS shipped as `phase-4f-orthogonal-scores`.
 - Power-iteration PLS shipped as `phase-4g-power`.
 - Randomized-SVD PLS shipped as `phase-4h-randomized-svd`.
+- PLSCanonical with NIPALS/SVD and canonical deflation shipped as `phase-4i-canonical`.
 - SIMPLS with materialised auto-prefix CV scoring (à la `aompls`).
 - OPLS, OPLS-DA.
 - PLS-DA, PLS-LDA, PLS-logistic.

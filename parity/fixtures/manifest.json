@@ -1,5 +1,25 @@
 {
   "fixtures": {
+    "synthetic_canonical_small_pls2_v1": {
+      "bytes": 10175,
+      "path": "synthetic_canonical_small_pls2_v1.json",
+      "sha256": "cfed9f1ffc229af0bc6c41a10efef8677356e4291e500785668b6638886953b9"
+    },
+    "synthetic_canonical_svd_small_pls2_v1": {
+      "bytes": 12466,
+      "path": "synthetic_canonical_svd_small_pls2_v1.json",
+      "sha256": "a8e5bad21555fbf2e38c59430b140ee4fc2a9ab836c4aa0af7c1bf6c326933b5"
+    },
+    "synthetic_canonical_svd_tiny_pls1_v1": {
+      "bytes": 4814,
+      "path": "synthetic_canonical_svd_tiny_pls1_v1.json",
+      "sha256": "27cac14eef43dd9339ff95861bff3a709e64885e44bf89cfb6768df8d917237a"
+    },
+    "synthetic_canonical_tiny_pls1_v1": {
+      "bytes": 4837,
+      "path": "synthetic_canonical_tiny_pls1_v1.json",
+      "sha256": "487ba62f2e9f5390e4737bf332f8503ce73d7ca3ebde93274eac52d5f195e222"
+    },
     "synthetic_kernel_tiny_pls1_v1": {
       "bytes": 6003,
       "path": "synthetic_kernel_tiny_pls1_v1.json",

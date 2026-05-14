@@ -69,3 +69,11 @@ class Solver(IntEnum):
     SVD               = 5
     POWER             = 6
     RANDOMIZED_SVD    = 7
+
+
+class Deflation(IntEnum):
+    REGRESSION  = 0
+    CANONICAL   = 1
+    X_ONLY      = 2
+    XY          = 3
+    ORTHOGONAL  = 4

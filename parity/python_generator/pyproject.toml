@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pls4all-parity-generator"
-version = "0.10.0"
+version = "0.11.0"
 description = "Generate pls4all parity fixtures from pinned reference PLS implementations."
 authors = [{ name = "Grégory Beurier and contributors" }]
 license = "CECILL-2.1"
@@ -17,7 +17,7 @@ dependencies = [
 ]
 # Cross-implementation nirs4all/R adapters will get their own locked dependency
 # rows when they become active. The current SIMPLS, kernel, wide-kernel,
-# orthogonal-scores, power, randomized-SVD, SVD and PCR fixtures use
+# orthogonal-scores, power, randomized-SVD, canonical, SVD and PCR fixtures use
 # deterministic NumPy ports.
 
 [project.scripts]

@@ -2,7 +2,7 @@
 
 > A portable PLS / NIRS engine with a stable C ABI and thin first-class bindings for Python, R, MATLAB, JavaScript / WebAssembly and Android.
 
-**Status — Phase 1 shipped, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power, randomized-SVD and PCR core live · API unstable until v1.0 · Not yet on PyPI / CRAN / npm.**
+**Status — Phase 1 shipped, PLSCanonical, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power, randomized-SVD and PCR core live · API unstable until v1.0 · Not yet on PyPI / CRAN / npm.**
 
 `pls4all` reimplements the full Partial Least Squares family in C++17 behind a small, stable C ABI. The same numerical core powers every binding, so a model trained in Python predicts byte-for-byte the same way in R, MATLAB, a browser or on Android.
 
@@ -47,13 +47,14 @@ ctest --preset dev-release --output-on-failure
 ./build/dev-release/cpp/cli/pls4all_cli --abi-info
 ```
 
-The core currently implements NIPALS, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and randomized-SVD PLS regression plus PCR
+The core currently implements NIPALS, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and randomized-SVD PLS regression, PLSCanonical and PCR
 behind the stable C ABI: `p4a_model_fit`, `predict`, `transform`, fitted-array
 accessors and binary import/export are live for `P4A_ALGO_PLS_REGRESSION` with
 `P4A_SOLVER_NIPALS`, `P4A_SOLVER_ORTHOGONAL_SCORES`, `P4A_SOLVER_SIMPLS`,
 `P4A_SOLVER_KERNEL_ALGORITHM`, `P4A_SOLVER_WIDE_KERNEL`, `P4A_SOLVER_SVD`,
-`P4A_SOLVER_POWER` or `P4A_SOLVER_RANDOMIZED_SVD`, and for `P4A_ALGO_PCR` with
-`P4A_SOLVER_SVD`.
+`P4A_SOLVER_POWER` or `P4A_SOLVER_RANDOMIZED_SVD`, for
+`P4A_ALGO_PLS_CANONICAL` with `P4A_SOLVER_NIPALS` or `P4A_SOLVER_SVD` and
+`P4A_DEFLATION_CANONICAL`, and for `P4A_ALGO_PCR` with `P4A_SOLVER_SVD`.
 
 ## Project layout
 
@@ -79,7 +80,7 @@ If you use `pls4all` in academic work, please cite:
   title   = {pls4all: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/pls4all},
-  version = {0.10.0}
+  version = {0.11.0}
 }
 ```
 
