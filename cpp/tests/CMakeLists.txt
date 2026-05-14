@@ -28,6 +28,7 @@ add_executable(pls4all_tests
     abi/test_pipeline.cpp
     abi/test_pls_lda.cpp
     abi/test_pls_logistic.cpp
+    abi/test_spa_selection.cpp
     abi/test_stability_selection.cpp
     abi/test_uve_selection.cpp
     abi/test_validation.cpp

@@ -158,6 +158,14 @@ HEADER_SPECS = {
         "struct": "UveSelectionFixture",
         "array": "kUveSelectionFixtures",
     },
+    "spa-selection": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "spa_selection_fixtures.hpp",
+        "fixtures": (
+            "synthetic_spa_pls_projection_v1",
+        ),
+        "struct": "SpaSelectionFixture",
+        "array": "kSpaSelectionFixtures",
+    },
     "component-coefficients": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "component_coefficients_fixtures.hpp",
         "fixtures": (
@@ -1786,6 +1794,82 @@ def generate_uve_selection(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_spa_selection(fixture_ids: Sequence[str],
+                           fixture_dir: Path,
+                           out: Path,
+                           family: str,
+                           struct_name: str,
+                           array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct SpaSelectionIndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_components;",
+        "    std::int32_t top_k;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    MatrixRef coefficient_scores;",
+        "    MatrixRef selection_scores;",
+        "    SpaSelectionIndexRef selected_indices;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        y_name = f"{prefix}_Y"
+        coefficient_name = f"{prefix}_coefficient_scores"
+        selection_name = f"{prefix}_selection_scores"
+        selected_name = f"{prefix}_selected_indices"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
+        _emit_array(lines, coefficient_name, expected["coefficient_scores"]["values"])
+        _emit_array(lines, selection_name, expected["selection_scores"]["values"])
+        _emit_int_array(lines, selected_name, expected["selected_indices"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['n_components'])},\n"
+            f"        {int(params['top_k'])},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
+            f"        {_matrix_ref(coefficient_name, expected['coefficient_scores'])},\n"
+            f"        {_matrix_ref(selection_name, expected['selection_scores'])},\n"
+            f"        SpaSelectionIndexRef{{{selected_name}, sizeof({selected_name}) / sizeof(std::int64_t)}}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_component_coefficients(fixture_ids: Sequence[str],
                                     fixture_dir: Path,
                                     out: Path,
@@ -2040,6 +2124,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                                      str(spec["struct"]), str(spec["array"]))
     elif args.family == "uve-selection":
         generate_uve_selection(fixture_ids, args.fixture_dir, out, args.family,
+                               str(spec["struct"]), str(spec["array"]))
+    elif args.family == "spa-selection":
+        generate_spa_selection(fixture_ids, args.fixture_dir, out, args.family,
                                str(spec["struct"]), str(spec["array"]))
     elif args.family == "component-coefficients":
         generate_component_coefficients(fixture_ids, args.fixture_dir, out, args.family,

@@ -1580,6 +1580,88 @@ def _uve_expected(
     }
 
 
+def _standardized_columns(X: np.ndarray) -> np.ndarray:
+    X = np.asarray(X, dtype=np.float64)
+    mean = np.mean(X, axis=0)
+    centered = X - mean.reshape(1, -1)
+    scale = np.std(centered, axis=0, ddof=1)
+    scale = np.where(np.isfinite(scale) & (scale > np.finfo(np.float64).eps), scale, 1.0)
+    return centered / scale.reshape(1, -1)
+
+
+def _spa_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    top_k: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+
+    model = PLSRegression(n_components=n_components, scale=True, max_iter=500, tol=1e-6)
+    model.fit(X, Y)
+    coefficients = _pls_original_scale_coefficients(model)
+    coefficient_scores = np.max(np.abs(coefficients), axis=1)
+
+    Xs = _standardized_columns(X)
+    selected: list[int] = []
+    selection_scores: list[float] = []
+    start = int(_rank_descending(coefficient_scores, 1)[0])
+    selected.append(start)
+    selection_scores.append(float(coefficient_scores[start]))
+
+    while len(selected) < int(top_k):
+        basis: list[np.ndarray] = []
+        for feature in selected:
+            vector = Xs[:, int(feature)].astype(np.float64, copy=True)
+            for basis_vector in basis:
+                vector = vector - float(vector @ basis_vector) * basis_vector
+            norm = float(np.linalg.norm(vector))
+            if norm > np.finfo(np.float64).eps:
+                basis.append(vector / norm)
+
+        best_feature = -1
+        best_score = -np.inf
+        selected_set = set(selected)
+        for feature in range(Xs.shape[1]):
+            if feature in selected_set:
+                continue
+            residual = Xs[:, feature].astype(np.float64, copy=True)
+            for basis_vector in basis:
+                residual = residual - float(residual @ basis_vector) * basis_vector
+            score = float(np.linalg.norm(residual))
+            if score > best_score or (score == best_score and feature < best_feature):
+                best_feature = feature
+                best_score = score
+        if best_feature < 0:
+            raise RuntimeError("SPA selection failed to find a candidate")
+        selected.append(int(best_feature))
+        selection_scores.append(float(best_score))
+
+    return {
+        "coefficient_scores": {
+            "shape": [1, int(coefficient_scores.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": coefficient_scores.astype(np.float64).tolist(),
+        },
+        "selection_scores": {
+            "shape": [1, int(len(selection_scores))],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": [float(value) for value in selection_scores],
+        },
+        "selected_indices": {
+            "shape": [1, int(len(selected))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected,
+        },
+    }
+
+
 def _component_coefficients_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -3324,6 +3406,46 @@ def _uve_fixture(
     }
 
 
+def _spa_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    top_k: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._spa_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":    "pls_regression",
+                "solver":       "nipals",
+                "n_components": int(n_components),
+                "top_k":        int(top_k),
+                "reference":    "sklearn PLSRegression coefficient seed plus NumPy SPA projection",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _spa_selection_expected(X, Y, n_components, top_k),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-SPA-selection",
+        },
+    }
+
+
 def _component_coefficients_fixture(
     fixture_id: str,
     seed: int,
@@ -4594,6 +4716,36 @@ def synthetic_uve_artificial_variables_v1() -> dict[str, Any]:
                         validation_seed=63,
                         noise_features=5,
                         noise_seed=64)
+
+
+def synthetic_spa_pls_projection_v1() -> dict[str, Any]:
+    """24 samples, 10 features, 2 targets for deterministic SPA-PLS selection."""
+    seed = 65
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(24, 4))
+    trend = np.linspace(-1.0, 1.0, 24)
+    X = np.column_stack([
+        0.84 * latent[:, 0] + 0.08 * latent[:, 1] + 0.04 * rng.standard_normal(size=24),
+        -0.44 * latent[:, 0] + 0.52 * latent[:, 2] + 0.05 * rng.standard_normal(size=24),
+        0.64 * latent[:, 1] - 0.26 * latent[:, 3] + 0.05 * rng.standard_normal(size=24),
+        0.22 * latent[:, 0] + 0.79 * latent[:, 3] + 0.04 * rng.standard_normal(size=24),
+        -0.58 * latent[:, 2] + 0.36 * latent[:, 3] + 0.05 * rng.standard_normal(size=24),
+        0.28 * latent[:, 0] - 0.22 * latent[:, 1] + 0.06 * rng.standard_normal(size=24),
+        np.sin(np.linspace(0.0, 3.0 * np.pi, 24)) + 0.04 * rng.standard_normal(size=24),
+        np.cos(np.linspace(0.0, 2.0 * np.pi, 24)) + 0.04 * rng.standard_normal(size=24),
+        0.35 * trend + 0.12 * rng.standard_normal(size=24),
+        rng.standard_normal(size=24) * 0.14,
+    ])
+    Y = np.column_stack([
+        1.12 * latent[:, 0] - 0.50 * latent[:, 2] + 0.05 * rng.standard_normal(size=24),
+        -0.39 * latent[:, 1] + 0.68 * latent[:, 3] + 0.05 * rng.standard_normal(size=24),
+    ])
+    return _spa_selection_fixture("synthetic_spa_pls_projection_v1",
+                                  seed=seed,
+                                  X=X,
+                                  Y=Y,
+                                  n_components=2,
+                                  top_k=5)
 
 
 def synthetic_component_coefficients_pls2_v1() -> dict[str, Any]:

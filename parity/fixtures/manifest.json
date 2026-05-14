@@ -280,6 +280,11 @@
       "path": "synthetic_small_pls2_v1.json",
       "sha256": "66e8201b19ca6a9a10c4f45a25dfeca87efdfced1bd3b8c90773f8bd8a7266e7"
     },
+    "synthetic_spa_pls_projection_v1": {
+      "bytes": 10202,
+      "path": "synthetic_spa_pls_projection_v1.json",
+      "sha256": "460d5fc1dbcbf7bf8d4a93961f6e8e77149abcca90172c718627340d5e076fd7"
+    },
     "synthetic_svd_small_pls2_v1": {
       "bytes": 11167,
       "path": "synthetic_svd_small_pls2_v1.json",

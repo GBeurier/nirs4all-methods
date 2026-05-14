@@ -16,7 +16,7 @@ authors:
 repository-code: "https://github.com/GBeurier/pls4all"
 url: "https://github.com/GBeurier/pls4all"
 license: "CECILL-2.1"
-version: 0.43.0-uve-selection
+version: 0.44.0-spa-selection
 date-released: "2026-05-14"
 keywords:
   - partial-least-squares
