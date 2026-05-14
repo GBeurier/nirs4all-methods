@@ -55,7 +55,8 @@ Goal: useful for real spectroscopy.
 - Cross-validation split extensions: Kennard-Stone, SPXY, external folds, repeated k-fold, Monte-Carlo CV.
 - Phase 3n shipped as `phase-3n-classification-metrics`: internal binary classification metrics for sensitivity, specificity, balanced accuracy, precision/F1, MCC and AUC.
 - Classification extensions: multi-class macro/micro averaging and calibration curves.
-- VIP, selectivity ratio, regression coefficients per component.
+- Phase 3o shipped as `phase-3o-variable-importance`: internal VIP and selectivity-ratio kernels for fitted PLS models with stored scores.
+- Regression coefficients per component.
 
 (Phase 3 ships before Phase 2 — bindings benefit from having real algorithms to expose.)
 

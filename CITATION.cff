@@ -16,7 +16,7 @@ authors:
 repository-code: "https://github.com/GBeurier/pls4all"
 url: "https://github.com/GBeurier/pls4all"
 license: "CECILL-2.1"
-version: 0.30.0-classification-metrics
+version: 0.31.0-variable-importance
 date-released: "2026-05-14"
 keywords:
   - partial-least-squares

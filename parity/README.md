@@ -58,6 +58,7 @@ parity/
 │   ├── synthetic_pipeline_epo_v1.json
 │   ├── synthetic_metrics_regression_v1.json
 │   ├── synthetic_classification_binary_metrics_v1.json
+│   ├── synthetic_variable_importance_pls2_v1.json
 │   ├── synthetic_validation_kfold_balanced_v1.json
 │   ├── synthetic_validation_leave_one_out_v1.json
 │   ├── synthetic_validation_holdout_v1.json
@@ -116,10 +117,12 @@ RMSE, MAE, bias, R2/Q2, observed-vs-predicted slope/intercept, RPD and RPIQ.
 Binary classification metric fixtures are generated from deterministic NumPy
 formulas for sensitivity, specificity, balanced accuracy, precision/F1, MCC and
 average-rank AUC.
+Variable-importance fixtures are generated from sklearn `PLSRegression` scores,
+weights and loadings for VIP and selectivity-ratio parity.
 Validation split fixtures are generated from deterministic Python references
 for balanced contiguous k-fold, leave-one-out and holdout plans. Cross-validation
 fixtures use scikit-learn `PLSRegression` over the same deterministic k-fold
 plans and gate out-of-sample predictions plus aggregate metrics.
 C++ parity tests assert predictions, coefficients, preprocessing statistics,
-transforms, CV predictions, regression/classification metrics and latent arrays
-within `tolerances.md`.
+transforms, CV predictions, regression/classification metrics, variable
+importance and latent arrays within `tolerances.md`.

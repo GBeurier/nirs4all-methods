@@ -260,6 +260,11 @@
       "path": "synthetic_validation_leave_one_out_v1.json",
       "sha256": "3c13b9297f36c88b17e14d2cc02fd11907756bfcc37d962e33bafab961d22710"
     },
+    "synthetic_variable_importance_pls2_v1": {
+      "bytes": 6258,
+      "path": "synthetic_variable_importance_pls2_v1.json",
+      "sha256": "e0843ccc9ae65581be3f7815d12416975b5543e6ab5a73e7d27842dc69ee33e9"
+    },
     "synthetic_wide_kernel_pls1_v1": {
       "bytes": 13338,
       "path": "synthetic_wide_kernel_pls1_v1.json",

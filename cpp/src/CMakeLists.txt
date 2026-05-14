@@ -26,6 +26,7 @@ add_library(pls4all_core OBJECT
     core/version.cpp
     core/classification_metrics.cpp
     core/context.cpp
+    core/variable_importance.cpp
     core/config.cpp
     core/cross_validation.cpp
     core/matrix_view.cpp

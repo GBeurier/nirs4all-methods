@@ -809,6 +809,47 @@ def _binary_classification_metrics_expected(
     }
 
 
+def _variable_importance_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    model = PLSRegression(n_components=n_components, scale=True, max_iter=500, tol=1e-6)
+    model.fit(X, Y)
+
+    T = model._x_scores.astype(np.float64, copy=False)
+    W = model.x_weights_.astype(np.float64, copy=False)
+    P = model.x_loadings_.astype(np.float64, copy=False)
+    Q = model.y_loadings_.astype(np.float64, copy=False)
+    p = X.shape[1]
+    component_ssy = np.sum(T * T, axis=0) * np.sum(Q * Q, axis=0)
+    vip = np.sqrt(float(p) * ((W * W) @ component_ssy) / float(np.sum(component_ssy)))
+
+    Xs = (X - model._x_mean.astype(np.float64)) / model._x_std.astype(np.float64)
+    Xhat = T @ P.T
+    explained = np.sum(Xhat * Xhat, axis=0)
+    residual = np.sum((Xs - Xhat) * (Xs - Xhat), axis=0)
+    selectivity_ratio = explained / np.maximum(residual, np.finfo(np.float64).eps)
+    return {
+        "vip": {
+            "shape": [1, int(vip.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": vip.astype(np.float64).tolist(),
+        },
+        "selectivity_ratio": {
+            "shape": [1, int(selectivity_ratio.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": selectivity_ratio.astype(np.float64).tolist(),
+        },
+    }
+
+
 def _validation_folds(kind: str,
                       n_samples: int,
                       n_splits: int = 0,
@@ -1815,6 +1856,42 @@ def _classification_metrics_fixture(
     }
 
 
+def _variable_importance_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._variable_importance_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "n_components": int(n_components),
+                "reference":    "sklearn.cross_decomposition.PLSRegression VIP and selectivity-ratio formulas",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _variable_importance_expected(X, Y, n_components),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression/variable-importance",
+        },
+    }
+
+
 def _validation_fixture(
     fixture_id: str,
     kind: str,
@@ -2617,6 +2694,31 @@ def synthetic_classification_binary_metrics_v1() -> dict[str, Any]:
                                            labels=labels,
                                            scores=scores,
                                            threshold=0.5)
+
+
+def synthetic_variable_importance_pls2_v1() -> dict[str, Any]:
+    """18 samples, 7 features, 2 targets for VIP and selectivity-ratio parity."""
+    seed = 59
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(18, 3))
+    X = np.column_stack([
+        0.88 * latent[:, 0] + 0.15 * latent[:, 1],
+        -0.52 * latent[:, 0] + 0.31 * latent[:, 2],
+        0.42 * latent[:, 1] - 0.28 * latent[:, 2],
+        0.26 * latent[:, 0] + 0.64 * latent[:, 1],
+        -0.18 * latent[:, 1] + 0.59 * latent[:, 2],
+        np.cos(np.linspace(0.0, 2.5 * np.pi, 18)),
+        rng.standard_normal(size=18) * 0.05,
+    ])
+    Y = np.column_stack([
+        1.12 * latent[:, 0] - 0.44 * latent[:, 2] + rng.standard_normal(size=18) * 0.035,
+        -0.61 * latent[:, 1] + 0.36 * latent[:, 2] + rng.standard_normal(size=18) * 0.035,
+    ])
+    return _variable_importance_fixture("synthetic_variable_importance_pls2_v1",
+                                        seed=seed,
+                                        X=X,
+                                        Y=Y,
+                                        n_components=2)
 
 
 def synthetic_validation_kfold_balanced_v1() -> dict[str, Any]:
