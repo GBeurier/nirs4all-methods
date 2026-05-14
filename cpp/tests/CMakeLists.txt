@@ -8,6 +8,7 @@
 add_executable(pls4all_tests
     main.cpp
     abi/test_lifecycle.cpp
+    abi/test_classification_metrics.cpp
     abi/test_config_setters.cpp
     abi/test_cross_validation.cpp
     abi/test_status_codes.cpp

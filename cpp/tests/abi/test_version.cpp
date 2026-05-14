@@ -15,7 +15,7 @@ TEST(version, runtime_matches_compile_time) {
 TEST(version, version_string_contains_project_and_abi) {
     const char* v = p4a_get_version_string();
     CHECK_NE(v, nullptr);
-    CHECK_STR_CONTAINS(v, "0.29.0");
+    CHECK_STR_CONTAINS(v, "0.30.0");
     CHECK_STR_CONTAINS(v, "abi.1.0.0");
 }
 

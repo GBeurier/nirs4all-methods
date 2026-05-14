@@ -737,6 +737,78 @@ def _regression_metrics_expected(Y_true: np.ndarray, Y_pred: np.ndarray) -> dict
     }
 
 
+def _auc_average_ranks(labels: np.ndarray, scores: np.ndarray) -> float:
+    labels = np.asarray(labels, dtype=np.int32).reshape(-1)
+    scores = np.asarray(scores, dtype=np.float64).reshape(-1)
+    order = np.argsort(scores, kind="mergesort")
+    sorted_scores = scores[order]
+    sorted_labels = labels[order]
+    rank_sum = 0.0
+    start = 0
+    while start < sorted_scores.size:
+        stop = start + 1
+        while stop < sorted_scores.size and sorted_scores[stop] == sorted_scores[start]:
+            stop += 1
+        average_rank = (float(start + 1) + float(stop)) * 0.5
+        rank_sum += average_rank * float(np.sum(sorted_labels[start:stop] == 1))
+        start = stop
+    positives = float(np.sum(labels == 1))
+    negatives = float(np.sum(labels == 0))
+    return (rank_sum - positives * (positives + 1.0) * 0.5) / (positives * negatives)
+
+
+def _binary_classification_metrics_expected(
+    labels: np.ndarray,
+    scores: np.ndarray,
+    threshold: float,
+) -> dict[str, Any]:
+    y_true = np.asarray(labels, dtype=np.int32).reshape(-1)
+    y_score = np.asarray(scores, dtype=np.float64).reshape(-1)
+    y_pred = y_score >= float(threshold)
+    actual = y_true == 1
+    tp = int(np.sum(actual & y_pred))
+    tn = int(np.sum((~actual) & (~y_pred)))
+    fp = int(np.sum((~actual) & y_pred))
+    fn = int(np.sum(actual & (~y_pred)))
+    positives = int(np.sum(actual))
+    negatives = int(y_true.size - positives)
+    sensitivity = float(tp / positives)
+    specificity = float(tn / negatives)
+    precision = 0.0 if (tp + fp) == 0 else float(tp / (tp + fp))
+    f1 = 0.0 if (precision + sensitivity) == 0.0 else float(2.0 * precision * sensitivity / (precision + sensitivity))
+    denom = math.sqrt(float((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)))
+    mcc = 0.0 if denom == 0.0 else float(((tp * tn) - (fp * fn)) / denom)
+    values = [
+        float(y_true.size),
+        float(positives),
+        float(negatives),
+        float(tp),
+        float(tn),
+        float(fp),
+        float(fn),
+        float(threshold),
+        sensitivity,
+        specificity,
+        0.5 * (sensitivity + specificity),
+        float((tp + tn) / y_true.size),
+        precision,
+        f1,
+        mcc,
+        _auc_average_ranks(y_true, y_score),
+    ]
+    return {
+        "metrics": {
+            "shape": [1, len(values)],
+            "names": [
+                "count", "positives", "negatives", "tp", "tn", "fp", "fn",
+                "threshold", "sensitivity", "specificity", "balanced_accuracy",
+                "accuracy", "precision", "f1", "mcc", "auc",
+            ],
+            "values": values,
+        },
+    }
+
+
 def _validation_folds(kind: str,
                       n_samples: int,
                       n_splits: int = 0,
@@ -1709,6 +1781,40 @@ def _metrics_fixture(
     }
 
 
+def _classification_metrics_fixture(
+    fixture_id: str,
+    seed: int,
+    labels: np.ndarray,
+    scores: np.ndarray,
+    threshold: float,
+) -> dict[str, Any]:
+    labels = np.asarray(labels, dtype=np.int32)
+    scores = np.asarray(scores, dtype=np.float64)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._binary_classification_metrics_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "threshold":      float(threshold),
+                "reference":      "NumPy binary classification metrics with average-rank AUC",
+            },
+        },
+        "data": {
+            "labels": {"shape": list(labels.shape), "layout": "row_major", "dtype": "i32", "rng_seed": seed, "values": labels.reshape(-1, order="C").astype(int).tolist()},
+            "scores": {"shape": list(scores.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(scores)},
+        },
+        "expected": _binary_classification_metrics_expected(labels, scores, threshold),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "pls4all-numpy-binary-classification-metrics",
+        },
+    }
+
+
 def _validation_fixture(
     fixture_id: str,
     kind: str,
@@ -2494,6 +2600,23 @@ def synthetic_metrics_regression_v1() -> dict[str, Any]:
     ], dtype=np.float64)
     return _metrics_fixture("synthetic_metrics_regression_v1", seed=55,
                             Y_true=Y_true, Y_pred=Y_true + residual)
+
+
+def synthetic_classification_binary_metrics_v1() -> dict[str, Any]:
+    """14 binary labels and continuous scores for classification metric parity."""
+    labels = np.array([
+        0, 1, 0, 1, 1, 0, 0,
+        1, 0, 1, 1, 0, 1, 0,
+    ], dtype=np.int32).reshape(-1, 1)
+    scores = np.array([
+        0.05, 0.81, 0.34, 0.62, 0.49, 0.57, 0.24,
+        0.91, 0.45, 0.72, 0.57, 0.12, 0.66, 0.39,
+    ], dtype=np.float64).reshape(-1, 1)
+    return _classification_metrics_fixture("synthetic_classification_binary_metrics_v1",
+                                           seed=58,
+                                           labels=labels,
+                                           scores=scores,
+                                           threshold=0.5)
 
 
 def synthetic_validation_kfold_balanced_v1() -> dict[str, Any]:

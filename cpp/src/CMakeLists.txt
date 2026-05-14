@@ -24,6 +24,7 @@ configure_file(
 add_library(pls4all_core OBJECT
     core/status.cpp
     core/version.cpp
+    core/classification_metrics.cpp
     core/context.cpp
     core/config.cpp
     core/cross_validation.cpp

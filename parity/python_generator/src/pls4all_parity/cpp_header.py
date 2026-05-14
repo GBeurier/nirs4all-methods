@@ -69,6 +69,14 @@ HEADER_SPECS = {
         "struct": "MetricsFixture",
         "array": "kMetricsFixtures",
     },
+    "classification-metrics": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "classification_metrics_fixtures.hpp",
+        "fixtures": (
+            "synthetic_classification_binary_metrics_v1",
+        ),
+        "struct": "ClassificationMetricsFixture",
+        "array": "kClassificationMetricsFixtures",
+    },
     "validation": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "validation_fixtures.hpp",
         "fixtures": (
@@ -560,12 +568,34 @@ def _emit_int_array(lines: list[str], name: str, values: list[int]) -> None:
     lines.append("")
 
 
+def _emit_i32_array(lines: list[str], name: str, values: list[int]) -> None:
+    lines.append(f"inline const std::int32_t {name}[] = {{")
+    row: list[str] = []
+    for value in values:
+        row.append(str(int(value)))
+        if len(row) == 8:
+            lines.append(f"    {', '.join(row)},")
+            row.clear()
+    if row:
+        lines.append(f"    {', '.join(row)},")
+    lines.append("};")
+    lines.append("")
+
+
 def _index_ref(array_name: str) -> str:
     return f"IndexRef{{{array_name}, sizeof({array_name}) / sizeof(std::int64_t)}}"
 
 
 def _cv_index_ref(array_name: str) -> str:
     return f"CvIndexRef{{{array_name}, sizeof({array_name}) / sizeof(std::int64_t)}}"
+
+
+def _class_label_ref(array_name: str, payload: dict[str, Any]) -> str:
+    rows, cols = _shape(payload["shape"])
+    return (
+        f"ClassLabelRef{{{rows}, {cols}, {array_name}, "
+        f"sizeof({array_name}) / sizeof(std::int32_t)}}"
+    )
 
 
 def generate_validation(fixture_ids: Sequence[str],
@@ -631,6 +661,73 @@ def generate_validation(fixture_ids: Sequence[str],
             f"        {_index_ref(names['train_indices'])},\n"
             f"        {_index_ref(names['test_offsets'])},\n"
             f"        {_index_ref(names['test_indices'])}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
+def generate_classification_metrics(fixture_ids: Sequence[str],
+                                    fixture_dir: Path,
+                                    out: Path,
+                                    family: str,
+                                    struct_name: str,
+                                    array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct ClassLabelRef {",
+        "    std::int64_t rows;",
+        "    std::int64_t cols;",
+        "    const std::int32_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    double threshold;",
+        "    ClassLabelRef labels;",
+        "    MatrixRef scores;",
+        "    MatrixRef expected;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        labels_name = f"{prefix}_labels"
+        scores_name = f"{prefix}_scores"
+        expected_name = f"{prefix}_expected"
+        params = fixture["generator"]["params"]
+        _emit_i32_array(lines, labels_name, fixture["data"]["labels"]["values"])
+        _emit_array(lines, scores_name, fixture["data"]["scores"]["values"])
+        _emit_array(lines, expected_name, fixture["expected"]["metrics"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {_format_double(params['threshold'])},\n"
+            f"        {_class_label_ref(labels_name, fixture['data']['labels'])},\n"
+            f"        {_matrix_ref(scores_name, fixture['data']['scores'])},\n"
+            f"        {_matrix_ref(expected_name, fixture['expected']['metrics'])}\n"
             "    }"
         )
 
@@ -741,6 +838,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "metrics":
         generate_metrics(fixture_ids, args.fixture_dir, out, args.family,
                          str(spec["struct"]), str(spec["array"]))
+    elif args.family == "classification-metrics":
+        generate_classification_metrics(fixture_ids, args.fixture_dir, out, args.family,
+                                        str(spec["struct"]), str(spec["array"]))
     elif args.family == "validation":
         generate_validation(fixture_ids, args.fixture_dir, out, args.family,
                             str(spec["struct"]), str(spec["array"]))

@@ -20,6 +20,11 @@
       "path": "synthetic_canonical_tiny_pls1_v1.json",
       "sha256": "487ba62f2e9f5390e4737bf332f8503ce73d7ca3ebde93274eac52d5f195e222"
     },
+    "synthetic_classification_binary_metrics_v1": {
+      "bytes": 2007,
+      "path": "synthetic_classification_binary_metrics_v1.json",
+      "sha256": "86b0060dad377ef1aa03dc97e7516919e2a7cc76bb371f243659dcffb846a34f"
+    },
     "synthetic_cv_kfold_nipals_pls1_v1": {
       "bytes": 4307,
       "path": "synthetic_cv_kfold_nipals_pls1_v1.json",

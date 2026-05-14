@@ -24,7 +24,9 @@ OSC / EPO. Internal regression metric kernels cover RMSE, MAE, bias, R2/Q2,
 observed-vs-predicted slope/intercept, RPD and RPIQ, validation splitters cover
 deterministic k-fold, leave-one-out and holdout plans, and the internal CV
 engine refits fold-local regression models to produce out-of-sample predictions
-and aggregate metrics. The supported fitted-model path is now live for NIPALS,
+and aggregate metrics. Binary classification metrics cover sensitivity,
+specificity, balanced accuracy, precision/F1, MCC and average-rank AUC. The
+supported fitted-model path is now live for NIPALS,
 orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and
 randomized-SVD PLS regression
 (PLS1 / PLS2), PLSCanonical with NIPALS/SVD, PLSSVD direct cross-covariance
