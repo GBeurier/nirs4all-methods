@@ -345,6 +345,11 @@
       "path": "synthetic_spa_pls_projection_v1.json",
       "sha256": "460d5fc1dbcbf7bf8d4a93961f6e8e77149abcca90172c718627340d5e076fd7"
     },
+    "synthetic_st_pls_threshold_v1": {
+      "bytes": 15441,
+      "path": "synthetic_st_pls_threshold_v1.json",
+      "sha256": "8fbbd052adbfe840a3d58e4f4b45bcc457c6283242b3bc33148679f35465f9df"
+    },
     "synthetic_svd_small_pls2_v1": {
       "bytes": 11167,
       "path": "synthetic_svd_small_pls2_v1.json",

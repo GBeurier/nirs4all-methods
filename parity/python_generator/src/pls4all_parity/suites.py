@@ -2953,6 +2953,100 @@ def _ipw_selection_expected(
     }
 
 
+def _st_selection_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    thresholds: Sequence[float],
+    min_selected: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    p = int(X.shape[1])
+    scores = _pls_coefficient_scores(X, Y, n_components)
+    max_score = float(np.max(scores))
+    if not math.isfinite(max_score) or max_score <= np.finfo(np.float64).eps:
+        raise RuntimeError("ST-PLS coefficient scores collapsed")
+    scores = scores / max_score
+    ranking = sorted(range(p), key=lambda feature: (-float(scores[int(feature)]), int(feature)))
+
+    rmse_values: list[float] = []
+    selected_counts: list[int] = []
+    selected_masks: list[int] = []
+    candidates: list[list[int]] = []
+    best_index = -1
+    best_rmse = math.inf
+
+    for threshold_index, threshold in enumerate(thresholds):
+        selected = [int(feature) for feature in range(p) if float(scores[int(feature)]) >= float(threshold)]
+        if len(selected) < int(min_selected):
+            selected = sorted(int(feature) for feature in ranking[:int(min_selected)])
+        else:
+            selected = sorted(selected)
+        selected_set = set(selected)
+        selected_masks.extend(1 if feature in selected_set else 0 for feature in range(p))
+        rmse = _kfold_pls_rmse(_copy_columns(X, selected), Y, n_components, n_splits)
+        rmse_values.append(float(rmse))
+        selected_counts.append(int(len(selected)))
+        candidates.append(selected)
+        if rmse < best_rmse:
+            best_rmse = float(rmse)
+            best_index = int(threshold_index)
+
+    selected = candidates[best_index]
+    threshold_values = [float(value) for value in thresholds]
+    return {
+        "coefficient_scores": {
+            "shape": [1, p],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": scores.astype(np.float64).tolist(),
+        },
+        "thresholds": {
+            "shape": [1, int(len(threshold_values))],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": threshold_values,
+        },
+        "rmse_by_threshold": {
+            "shape": [1, int(len(threshold_values))],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": rmse_values,
+        },
+        "selected_counts": {
+            "shape": [1, int(len(threshold_values))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected_counts,
+        },
+        "selected_masks": {
+            "shape": [int(len(threshold_values)), p],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected_masks,
+        },
+        "ranking_indices": {
+            "shape": [1, p],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(feature) for feature in ranking],
+        },
+        "selected_indices": {
+            "shape": [1, int(len(selected))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected,
+        },
+        "best_threshold_index": int(best_index),
+        "best_threshold": float(threshold_values[best_index]),
+        "best_rmse": float(best_rmse),
+    }
+
+
 def _bve_selection_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -5675,6 +5769,56 @@ def _ipw_selection_fixture(
     }
 
 
+def _st_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    thresholds: Sequence[float],
+    min_selected: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    threshold_values = [float(value) for value in thresholds]
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._st_selection_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":     "pls_regression",
+                "solver":        "nipals",
+                "n_components":  int(n_components),
+                "n_splits":      int(n_splits),
+                "thresholds":    threshold_values,
+                "min_selected":  int(min_selected),
+                "reference":     "sklearn PLSRegression deterministic ST-PLS",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _st_selection_expected(X,
+                                           Y,
+                                           n_components,
+                                           n_splits,
+                                           threshold_values,
+                                           min_selected),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-ST-selection",
+        },
+    }
+
+
 def _bve_selection_fixture(
     fixture_id: str,
     seed: int,
@@ -7560,6 +7704,40 @@ def synthetic_ipw_pls_reweighted_v1() -> dict[str, Any]:
                                   top_k=5,
                                   damping=0.45,
                                   weight_floor=0.05)
+
+
+def synthetic_st_pls_threshold_v1() -> dict[str, Any]:
+    """29 samples, 12 features, 2 targets for deterministic ST-PLS selection."""
+    seed = 82
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(29, 5))
+    wave = np.linspace(0.0, 2.4 * np.pi, 29)
+    X = np.column_stack([
+        0.90 * latent[:, 0] + 0.12 * latent[:, 1] + 0.04 * rng.standard_normal(size=29),
+        -0.43 * latent[:, 0] + 0.60 * latent[:, 2] + 0.05 * rng.standard_normal(size=29),
+        0.66 * latent[:, 1] - 0.26 * latent[:, 3] + 0.05 * rng.standard_normal(size=29),
+        0.24 * latent[:, 0] + 0.78 * latent[:, 3] + 0.04 * rng.standard_normal(size=29),
+        -0.53 * latent[:, 2] + 0.31 * latent[:, 3] + 0.05 * rng.standard_normal(size=29),
+        0.45 * latent[:, 4] + 0.15 * latent[:, 0] + 0.06 * rng.standard_normal(size=29),
+        0.29 * latent[:, 1] - 0.18 * latent[:, 4] + 0.07 * rng.standard_normal(size=29),
+        0.26 * latent[:, 2] - 0.14 * latent[:, 4] + 0.08 * rng.standard_normal(size=29),
+        np.sin(1.15 * wave) + 0.05 * rng.standard_normal(size=29),
+        np.cos(1.50 * wave) + 0.05 * rng.standard_normal(size=29),
+        0.24 * np.linspace(-1.0, 1.0, 29) + 0.09 * rng.standard_normal(size=29),
+        rng.standard_normal(size=29) * 0.14,
+    ])
+    Y = np.column_stack([
+        1.07 * latent[:, 0] - 0.41 * latent[:, 2] + 0.28 * latent[:, 4] + 0.05 * rng.standard_normal(size=29),
+        -0.41 * latent[:, 1] + 0.72 * latent[:, 3] - 0.20 * latent[:, 4] + 0.05 * rng.standard_normal(size=29),
+    ])
+    return _st_selection_fixture("synthetic_st_pls_threshold_v1",
+                                 seed=seed,
+                                 X=X,
+                                 Y=Y,
+                                 n_components=2,
+                                 n_splits=5,
+                                 thresholds=[0.85, 0.70, 0.55, 0.40, 0.25],
+                                 min_selected=4)
 
 
 def synthetic_bve_pls_backward_v1() -> dict[str, Any]:

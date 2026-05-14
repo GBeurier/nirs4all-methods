@@ -81,6 +81,7 @@ def _generate_all() -> dict[str, bytes]:
         "synthetic_shaving_pls_recursive_v1": _serialize(suites.synthetic_shaving_pls_recursive_v1()),
         "synthetic_rep_pls_recursive_v1": _serialize(suites.synthetic_rep_pls_recursive_v1()),
         "synthetic_ipw_pls_reweighted_v1": _serialize(suites.synthetic_ipw_pls_reweighted_v1()),
+        "synthetic_st_pls_threshold_v1": _serialize(suites.synthetic_st_pls_threshold_v1()),
         "synthetic_bve_pls_backward_v1": _serialize(suites.synthetic_bve_pls_backward_v1()),
         "synthetic_t2_pls_hotelling_v1": _serialize(suites.synthetic_t2_pls_hotelling_v1()),
         "synthetic_wvc_pls_numeric_v1": _serialize(suites.synthetic_wvc_pls_numeric_v1()),

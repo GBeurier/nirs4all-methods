@@ -55,6 +55,8 @@ Phase 5s REP kernels remove a fixed number of weak coefficient-score variables
 per recursive step and keep the lowest-CV-error retained subset.
 Phase 5t IPW kernels iteratively reweight coefficient scores, expose score and
 weight paths, and keep the lowest-CV-error top-k subset.
+Phase 5u ST-PLS kernels apply deterministic score thresholds with min-selected
+fallbacks and keep the lowest-CV-error threshold subset.
 Phase 5k BVE kernels greedily evaluate every one-variable removal by
 deterministic k-fold CV RMSE and keep the best backward path/subset.
 Phase 5l T2-PLS kernels compute Hotelling T2 on PLS loading weights, apply

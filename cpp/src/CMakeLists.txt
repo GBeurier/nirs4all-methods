@@ -59,6 +59,7 @@ add_library(pls4all_core OBJECT
     core/shaving_selection.cpp
     core/spa_selection.cpp
     core/stability_selection.cpp
+    core/st_selection.cpp
     core/uve_selection.cpp
     core/validation.cpp)
 target_include_directories(pls4all_core

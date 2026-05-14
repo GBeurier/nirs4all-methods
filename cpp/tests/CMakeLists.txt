@@ -44,6 +44,7 @@ add_executable(pls4all_tests
     abi/test_sipls_selection.cpp
     abi/test_spa_selection.cpp
     abi/test_stability_selection.cpp
+    abi/test_st_selection.cpp
     abi/test_uve_selection.cpp
     abi/test_validation.cpp
     abi/test_validation_advanced.cpp
