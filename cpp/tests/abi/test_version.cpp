@@ -6,16 +6,16 @@
 #include "harness.hpp"
 
 TEST(version, runtime_matches_compile_time) {
-    CHECK_EQ(p4a_get_abi_version_major(), (uint32_t)P4A_ABI_VERSION_MAJOR);
-    CHECK_EQ(p4a_get_abi_version_minor(), (uint32_t)P4A_ABI_VERSION_MINOR);
-    CHECK_EQ(p4a_get_abi_version_patch(), (uint32_t)P4A_ABI_VERSION_PATCH);
-    CHECK_EQ(p4a_get_abi_version_int(),   (uint32_t)P4A_ABI_VERSION_INT);
+    CHECK_EQ(p4a_get_abi_version_major(), static_cast<uint32_t>(P4A_ABI_VERSION_MAJOR));
+    CHECK_EQ(p4a_get_abi_version_minor(), static_cast<uint32_t>(P4A_ABI_VERSION_MINOR));
+    CHECK_EQ(p4a_get_abi_version_patch(), static_cast<uint32_t>(P4A_ABI_VERSION_PATCH));
+    CHECK_EQ(p4a_get_abi_version_int(),   static_cast<uint32_t>(P4A_ABI_VERSION_INT));
 }
 
 TEST(version, version_string_contains_project_and_abi) {
     const char* v = p4a_get_version_string();
     CHECK_NE(v, nullptr);
-    CHECK_STR_CONTAINS(v, "0.1.0");
+    CHECK_STR_CONTAINS(v, "0.2.0");
     CHECK_STR_CONTAINS(v, "abi.1.0.0");
 }
 

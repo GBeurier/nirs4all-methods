@@ -1,0 +1,6 @@
+{
+    global:
+        p4a_*;
+    local:
+        *;
+};

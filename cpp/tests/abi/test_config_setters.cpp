@@ -70,7 +70,8 @@ TEST(config_setters, algorithm_round_trip) {
 TEST(config_setters, algorithm_rejects_out_of_range) {
     auto* cfg = fresh_cfg();
     CHECK_EQ(p4a_config_set_algorithm(cfg, P4A_ALGO_OPLS), P4A_OK);
-    CHECK_EQ(p4a_config_set_algorithm(cfg, (p4a_algorithm_t)999),
+    const auto invalid_algorithm = static_cast<p4a_algorithm_t>(P4A_ALGO_PCR + 1);
+    CHECK_EQ(p4a_config_set_algorithm(cfg, invalid_algorithm),
               P4A_ERR_INVALID_ARGUMENT);
     // State unchanged on rejection
     p4a_algorithm_t a;

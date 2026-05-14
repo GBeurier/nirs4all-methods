@@ -12,12 +12,13 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
 - **Reviews** — Codex transcripts under [`reviews/`](reviews/)
 - **Roadmap** — [`ROADMAP.md`](../ROADMAP.md), per-phase plans under [`roadmap/`](../roadmap/)
 
-## Status at Phase 0
+## Status at Phase 1
 
 The C ABI surface is feature-complete (96 `p4a_*` symbols). Lifecycle for
 context / config / matrix-view / operator-bank / gating-strategy / pipeline
-is fully implemented; everything that requires a fitted model returns
-`P4A_ERR_NOT_IMPLEMENTED` until Phase 1 plugs in NIPALS.
+is implemented. The supported fitted-model path is now live for NIPALS PLS
+regression (PLS1 / PLS2): fit, predict, transform, fitted-array accessors and
+binary import/export.
 
 Build matrix: Linux × {gcc-12, gcc-13, clang-16}, macOS × clang
 (arm64 + universal2), Windows × {MSVC, MinGW}. ASAN / UBSAN / TSAN green.

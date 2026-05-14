@@ -27,14 +27,15 @@
  *     `p4a_array_t*` and the opaque handles below; both have explicit
  *     `p4a_*_destroy` / `p4a_array_free` functions.
  *
- * Phase 0 status (rev 1.0.0 of this header — May 2026):
+ * Phase 1 status (rev 1.0.0 of this header — May 2026):
  *   - Lifecycle / config / version / matrix-view are fully implemented.
- *   - Pipeline / operator-bank / gating-strategy lifecycle is implemented;
- *     their `_fit` / `_transform` operations return P4A_ERR_NOT_IMPLEMENTED.
- *   - p4a_model_fit and every fitted-model accessor that needs a real model
- *     return P4A_ERR_NOT_IMPLEMENTED until Phase 1 plugs in NIPALS.
- *     (p4a_model_destroy is void and is a no-op on NULL — see §10.)
- *   - Serialization functions return P4A_ERR_NOT_IMPLEMENTED until Phase 1.
+ *   - Pipeline / operator-bank / gating-strategy lifecycle is implemented.
+ *     Pipeline `_fit` / `_transform` operations remain deferred to Phase 3.
+ *   - p4a_model_fit implements dependency-free NIPALS PLS regression
+ *     (PLS1 / PLS2) for P4A_ALGO_PLS_REGRESSION + P4A_SOLVER_NIPALS +
+ *     P4A_DEFLATION_REGRESSION.
+ *   - Predict / transform / model-array accessors and binary serialization
+ *     are implemented for fitted Phase 1 models.
  *
  * Status-code contracts (apply uniformly unless overridden in a function's
  * own doc comment):
@@ -85,7 +86,7 @@ typedef enum p4a_status_t {
     P4A_ERR_CONVERGENCE_FAILED    =   8,
     P4A_ERR_OUT_OF_MEMORY         =   9,
     P4A_ERR_UNSUPPORTED           =  10,
-    P4A_ERR_NOT_IMPLEMENTED       =  11,   /* Phase 0 stubs return this */
+    P4A_ERR_NOT_IMPLEMENTED       =  11,   /* deferred public surface */
     P4A_ERR_ABI_MISMATCH          =  12,
     P4A_ERR_IO                    =  13,
     P4A_ERR_CORRUPT_BUFFER        =  14,
@@ -460,8 +461,7 @@ P4A_API p4a_status_t p4a_pipeline_add_operator  (p4a_pipeline_t* pipe,
 P4A_API p4a_status_t p4a_pipeline_size          (const p4a_pipeline_t* pipe,
                                                   int32_t* out_size);
 
-/* The Phase 0 implementation of fit / transform returns
- * P4A_ERR_NOT_IMPLEMENTED. The signatures are final. */
+/* Pipeline fit / transform are deferred to Phase 3. Their signatures are final. */
 P4A_API p4a_status_t p4a_pipeline_fit            (p4a_context_t* ctx,
                                                    p4a_pipeline_t* pipe,
                                                    const p4a_matrix_view_t* X,
@@ -479,9 +479,9 @@ P4A_API p4a_status_t p4a_pipeline_transform_alloc(p4a_context_t* ctx,
  * 10. Model lifecycle
  * ==========================================================================
  *
- * At Phase 0 every status-returning function in this section returns
- * P4A_ERR_NOT_IMPLEMENTED, and `p4a_model_destroy` is a void no-op (also on
- * NULL). Phase 1 plugs in NIPALS; Phase 4 adds SIMPLS / OPLS / PLS-DA;
+ * Phase 1 implements P4A_ALGO_PLS_REGRESSION with P4A_SOLVER_NIPALS and
+ * P4A_DEFLATION_REGRESSION. Unsupported algorithms / solvers / deflation
+ * modes return P4A_ERR_UNSUPPORTED. Phase 4 adds SIMPLS / OPLS / PLS-DA;
  * Phase 6 adds AOM-PLS through the operator_bank + gating_strategy hooks set
  * on the config.
  */
@@ -537,7 +537,7 @@ P4A_API p4a_status_t p4a_model_get_n_features  (const p4a_model_t*, int32_t* out
 P4A_API p4a_status_t p4a_model_get_n_targets   (const p4a_model_t*, int32_t* out);
 
 /* ============================================================================
- * 11. Serialization (Phase 0 declares; Phase 1 implements)
+ * 11. Serialization
  * ==========================================================================
  *
  * The binary format starts with the four-byte magic "P4AM" (the first 4

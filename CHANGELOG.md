@@ -4,6 +4,32 @@ All notable changes to `pls4all` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Next phase: broaden the algorithm family beyond NIPALS PLS regression, with
+reference parity and benchmarks for every added method.
+
+## [0.2.0-phase1] — 2026-05-14
+
+Phase 1 — PLS CPU reference. Roadmap at [`roadmap/phase-1.md`](roadmap/phase-1.md).
+
+### Added
+
+- Dependency-free reference CPU NIPALS implementation for PLS regression
+  (PLS1 / PLS2) behind the existing Phase 0 C ABI.
+- Live `p4a_model_predict`, `p4a_model_transform`, allocated output arrays,
+  fitted-model array accessors and model dimension getters.
+- Binary `P4AM` serialization v1 with little-endian fields and checksum
+  validation for export/import round-trips.
+- Phase 1 C++ parity tests generated from the three checked-in synthetic
+  scikit-learn fixtures.
+
+### Changed
+
+- Unsupported model modes now return `P4A_ERR_UNSUPPORTED`; fitted-model
+  functions no longer return `P4A_ERR_NOT_IMPLEMENTED` for the supported
+  NIPALS regression path.
+
 ## [0.1.0-phase0] — 2026-05-14
 
 First milestone: the public C ABI is feature-complete, exercised by a 60-test suite, and reachable from a Python binding. No PLS algorithm is implemented yet — every function that needs a fitted model returns `P4A_ERR_NOT_IMPLEMENTED`. Phase 1 plugs in NIPALS without changing a single public symbol.
@@ -30,7 +56,3 @@ First milestone: the public C ABI is feature-complete, exercised by a 60-test su
 - The R-side parity generator is stubbed — only the Python side produces fixtures at Phase 0.
 - Bindings beyond Python ship only README placeholders. Full bindings land in Phase 2 once Phase 1 / 3 / 4 supply real algorithms.
 - Concurrency / fuzz tests are deferred to a follow-up PR.
-
-## [Unreleased]
-
-Phase 1 — PLS CPU reference. Roadmap at [`roadmap/phase-1.md`](roadmap/phase-1.md) (drafted once Phase 0 tag is published).

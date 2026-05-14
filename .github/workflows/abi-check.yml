@@ -21,7 +21,7 @@ jobs:
         run: |
           LIB=$(find build -name 'libp4a.so.*' | head -n 1)
           echo "Inspecting $LIB"
-          nm -D --defined-only "$LIB" | grep -E '^[0-9a-f]+ T ' | awk '{print $3}' | sort -u > /tmp/exported.txt
+          nm -D --defined-only "$LIB" | awk '{print $3}' | sort -u > /tmp/exported.txt
           echo "----- exported -----"
           cat /tmp/exported.txt
           echo "----- expected -----"

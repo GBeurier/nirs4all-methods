@@ -2,7 +2,7 @@
 
 > A portable PLS / NIRS engine with a stable C ABI and thin first-class bindings for Python, R, MATLAB, JavaScript / WebAssembly and Android.
 
-**Status — Phase 0 in progress · API unstable until v1.0 · Not yet on PyPI / CRAN / npm.**
+**Status — Phase 1 in progress · API unstable until v1.0 · Not yet on PyPI / CRAN / npm.**
 
 `pls4all` reimplements the full Partial Least Squares family in C++17 behind a small, stable C ABI. The same numerical core powers every binding, so a model trained in Python predicts byte-for-byte the same way in R, MATLAB, a browser or on Android.
 
@@ -22,8 +22,8 @@ See [`Overview.md`](Overview.md) for the full taxonomy of targeted PLS variants,
 
 | Phase | Status | Goal |
 | --- | --- | --- |
-| 0 — ABI & build foundation | in progress | Callable `libp4a` with stable C ABI, full CI matrix, parity scaffolding |
-| 1 — PLS CPU reference | planned | NIPALS PLS1 / PLS2, predict, transform, binary export/import |
+| 0 — ABI & build foundation | shipped (`phase-0`) | Callable `libp4a` with stable C ABI, full CI matrix, parity scaffolding |
+| 1 — PLS CPU reference | in progress | NIPALS PLS1 / PLS2, predict, transform, binary export/import |
 | 3 — NIRS preprocessing & validation | planned | SNV / MSC / SG / Detrend / ASLS · leakage-safe CV · VIP · RMSEC/RMSEP/Q²/RPD/RPIQ |
 | 4 — Advanced PLS variants | planned | SIMPLS · kernel PLS · OPLS · PLS-DA · MB-PLS · LW-PLS |
 | 2 — Language bindings (real wheels / CRAN / AAR) | planned | ctypes (Python) · `.Call` (R) · MEX (MATLAB) · WASM (JS) · JNI (Android) |
@@ -33,7 +33,7 @@ See [`Overview.md`](Overview.md) for the full taxonomy of targeted PLS variants,
 
 Full roadmap: [`ROADMAP.md`](ROADMAP.md). Architecture rationale: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-## Quick build (Phase 0)
+## Quick Build
 
 ```bash
 git clone https://github.com/GBeurier/pls4all.git
@@ -47,7 +47,9 @@ ctest --preset dev-release --output-on-failure
 ./build/dev-release/cpp/cli/pls4all_cli --abi-info
 ```
 
-At Phase 0 the library exports the ABI surface but `p4a_model_fit` returns `P4A_ERR_NOT_IMPLEMENTED`. Phase 1 plugs NIPALS into the chassis without ABI changes.
+Phase 1 implements NIPALS PLS regression behind the Phase 0 ABI: `p4a_model_fit`,
+`predict`, `transform`, fitted-array accessors and binary import/export are live
+for `P4A_ALGO_PLS_REGRESSION` + `P4A_SOLVER_NIPALS`.
 
 ## Project layout
 
@@ -73,7 +75,7 @@ If you use `pls4all` in academic work, please cite:
   title   = {pls4all: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/pls4all},
-  version = {0.1.0}
+  version = {0.2.0}
 }
 ```
 

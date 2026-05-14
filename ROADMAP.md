@@ -6,7 +6,7 @@ The phase order is **depth-first on the core** (C ABI → algorithms → preproc
 
 The canonical technical spec is [`Direction_Technique.md`](Direction_Technique.md). The full algorithm taxonomy is in [`Overview.md`](Overview.md).
 
-## Phase 0 — ABI & Build Foundation · **in progress**
+## Phase 0 — ABI & Build Foundation · **shipped**
 
 Goal: a callable `libp4a.{so,dll,dylib}` with no algorithm — only ABI plumbing, build matrix, parity scaffolding, docs.
 
@@ -22,7 +22,7 @@ Goal: a callable `libp4a.{so,dll,dylib}` with no algorithm — only ABI plumbing
 - Documentation skeleton (architecture, ABI reference, binding guides, parity methodology).
 - Final commit tagged `phase-0`.
 
-## Phase 1 — PLS CPU Reference
+## Phase 1 — PLS CPU Reference · **in progress**
 
 Goal: a reliable, serialisable, portable PLS engine.
 

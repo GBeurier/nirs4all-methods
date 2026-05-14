@@ -4,9 +4,9 @@
 //   --version      print "pls4all <project> (ABI <abi> · git <rev>)"
 //   --abi-info     print all ABI / backend / dtype metadata
 //   --selfcheck    exercise context + config + matrix_view lifecycle and
-//                   exit non-zero on the first failure
+//                   exit non-zero on failed ABI / model smoke checks
 //
-// No third-party CLI parser is used — Phase 0 keeps the executable's
+// No third-party CLI parser is used — keep the executable's
 // runtime dependencies aligned with libp4a's zero-mandatory-deps promise.
 
 #include <stdio.h>
@@ -96,22 +96,51 @@ int cmd_selfcheck() {
     // Config lifecycle + setters
     p4a_config_t* cfg = NULL;
     CHECK(p4a_config_create(&cfg) == P4A_OK);
-    CHECK(p4a_config_set_n_components(cfg, 5) == P4A_OK);
+    CHECK(p4a_config_set_n_components(cfg, 2) == P4A_OK);
     CHECK(p4a_config_set_n_components(cfg, -1) == P4A_ERR_INVALID_ARGUMENT);
     int32_t nc = 0;
     CHECK(p4a_config_get_n_components(cfg, &nc) == P4A_OK);
-    CHECK(nc == 5);
+    CHECK(nc == 2);
 
     // Matrix view + validate
-    double buf[12];
-    p4a_matrix_view_t mv;
-    CHECK(p4a_matrix_view_init_rowmajor(&mv, buf, 3, 4, P4A_DTYPE_F64) == P4A_OK);
-    CHECK(p4a_matrix_view_validate(&mv) == P4A_OK);
+    double xbuf[12] = {
+        0.0, 0.0, 1.0,
+        1.0, 0.0, 0.0,
+        2.0, 2.0, 2.0,
+        3.0, 5.0, 4.0,
+    };
+    double ybuf[4] = {0.1, 0.9, 6.2, 11.9};
+    p4a_matrix_view_t X;
+    p4a_matrix_view_t Y;
+    CHECK(p4a_matrix_view_init_rowmajor(&X, xbuf, 4, 3, P4A_DTYPE_F64) == P4A_OK);
+    CHECK(p4a_matrix_view_init_rowmajor(&Y, ybuf, 4, 1, P4A_DTYPE_F64) == P4A_OK);
+    CHECK(p4a_matrix_view_validate(&X) == P4A_OK);
+    CHECK(p4a_matrix_view_validate(&Y) == P4A_OK);
 
-    // Model fit must return NOT_IMPLEMENTED at Phase 0
+    // Phase 1 model smoke: fit, predict, transform and export.
     p4a_model_t* model = NULL;
-    CHECK(p4a_model_fit(ctx, cfg, &mv, &mv, &model) == P4A_ERR_NOT_IMPLEMENTED);
-    CHECK(model == NULL);
+    CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &model) == P4A_OK);
+    CHECK(model != NULL);
+    p4a_array_t* pred = NULL;
+    CHECK(p4a_model_predict_alloc(ctx, model, &X, &pred) == P4A_OK);
+    int64_t rows = 0;
+    int64_t cols = 0;
+    CHECK(p4a_array_shape(pred, &rows, &cols) == P4A_OK);
+    CHECK(rows == 4);
+    CHECK(cols == 1);
+    p4a_array_free(pred);
+
+    p4a_array_t* scores = NULL;
+    CHECK(p4a_model_transform_alloc(ctx, model, &X, &scores) == P4A_OK);
+    CHECK(p4a_array_shape(scores, &rows, &cols) == P4A_OK);
+    CHECK(rows == 4);
+    CHECK(cols == 2);
+    p4a_array_free(scores);
+
+    size_t export_size = 0;
+    CHECK(p4a_model_export_size(model, &export_size) == P4A_OK);
+    CHECK(export_size > 64);
+    p4a_model_destroy(model);
 
     p4a_config_destroy(cfg);
     p4a_context_destroy(ctx);

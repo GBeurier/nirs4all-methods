@@ -27,6 +27,7 @@ add_library(pls4all_core OBJECT
     core/context.cpp
     core/config.cpp
     core/matrix_view.cpp
+    core/model.cpp
     core/operator_bank.cpp
     core/gating_strategy.cpp
     core/pipeline.cpp)
@@ -60,7 +61,7 @@ set(_pls4all_c_sources
     c_api/c_api_operator_bank.cpp
     c_api/c_api_gating_strategy.cpp
     c_api/c_api_pipeline.cpp
-    c_api/c_api_model_stub.cpp)
+    c_api/c_api_model.cpp)
 
 function(pls4all_apply_c_target target)
     # Embed all pls4all_core objects directly into the C-API target so that
@@ -93,6 +94,7 @@ if(PLS4ALL_BUILD_SHARED)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         target_link_options(pls4all_c PRIVATE
             -Wl,--no-undefined
+            -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/c_api/p4a_linux.map
             $<$<NOT:$<CONFIG:Debug>>:-Wl,--gc-sections>)
     elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         target_link_options(pls4all_c PRIVATE
