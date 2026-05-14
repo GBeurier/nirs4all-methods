@@ -60,8 +60,8 @@ accessors and binary import/export are live for `P4A_ALGO_PLS_REGRESSION` with
 with one or more response columns, `P4A_SOLVER_NIPALS` and
 `P4A_DEFLATION_ORTHOGONAL`, and for `P4A_ALGO_PCR` with `P4A_SOLVER_SVD`.
 The preprocessing pipeline ABI is live for `P4A_OP_IDENTITY`, `P4A_OP_CENTER`,
-`P4A_OP_AUTOSCALE`, `P4A_OP_PARETO_SCALE`, `P4A_OP_SNV`, `P4A_OP_MSC` and
-`P4A_OP_DETREND_POLY`, `P4A_OP_SAVGOL_SMOOTH` and
+`P4A_OP_AUTOSCALE`, `P4A_OP_PARETO_SCALE`, `P4A_OP_SNV`, `P4A_OP_MSC`,
+`P4A_OP_EMSC`, `P4A_OP_DETREND_POLY`, `P4A_OP_SAVGOL_SMOOTH` and
 `P4A_OP_SAVGOL_DERIVATIVE`, with explicit fit/transform separation for
 leakage-safe downstream CV. For PLSSVD,
 `transform` returns direct cross-covariance SVD X scores and
@@ -92,7 +92,7 @@ If you use `pls4all` in academic work, please cite:
   title   = {pls4all: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/pls4all},
-  version = {0.20.0}
+  version = {0.21.0}
 }
 ```
 

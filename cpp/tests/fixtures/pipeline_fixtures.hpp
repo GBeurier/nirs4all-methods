@@ -168,6 +168,40 @@ inline const std::int32_t synthetic_pipeline_msc_v1_n_params[] = {
     0,
 };
 
+inline const double synthetic_pipeline_emsc_v1_x[] = {
+    1.1800000000000002, 2.6620408163265301, 4.4010204081632649, 6.0269387755102048,
+    8.4497959183673501, 9.0595918367346968, 12.21632653061225, 14.350000000000001,
+    0.53499999999999992, 1.542938775510204, 2.7094693877551013, 3.8085918367346938,
+    5.6183061224489785, 6.0186122448979589, 8.4465102040816333, 10.028999999999996,
+    2.1425000000000001, 3.9275510204081634, 5.9902040816326529, 7.9154591836734705,
+    10.898316326530614, 11.598775510204083, 15.514336734693879, 18.097499999999997,
+    0.97000000000000008, 1.830938775510204, 2.7860408163265307, 3.6713061224489802,
+    5.1787346938775523, 5.4683265306122468, 7.4780816326530637, 8.7260000000000026,
+};
+
+inline const double synthetic_pipeline_emsc_v1_transform_train[] = {
+    1.2155523279016054, 2.4688727264769503, 3.9712808187552042, 5.3806460299620085,
+    7.5384246385964619, 8.0312090766556512, 10.890592063102297, 12.815475889978387,
+    1.2022168885781221, 2.5026743679427939, 3.9718999315348604, 5.3421149510149046,
+    7.5351414301354387, 8.0390736517302273, 10.926279516695665, 12.792652833796559,
+    1.2090438768856053, 2.4853698453497794, 3.9715829809188969, 5.3618406772595062,
+    7.5368222465848032, 8.0350474355122952, 10.908009565290561, 12.804336943627119,
+    1.1951760744460946, 2.5205208797183296, 3.9722268092553903, 5.3217714018754787,
+    7.5334079693944727, 8.0432259717239116, 10.945121695157217, 12.780602769857673,
+};
+
+inline const p4a_operator_kind_t synthetic_pipeline_emsc_v1_operators[] = {
+    P4A_OP_EMSC,
+};
+
+inline const double synthetic_pipeline_emsc_v1_params[] = {
+    2,
+};
+
+inline const std::int32_t synthetic_pipeline_emsc_v1_n_params[] = {
+    1,
+};
+
 inline const double synthetic_pipeline_detrend_poly_v1_x[] = {
     1.52, 1.0680000000000001, 1.002, 1.0720000000000001,
     1.478, 2.1000000000000001, -1.3100000000000001, -0.86199999999999999,
@@ -314,6 +348,15 @@ inline const PipelineFixture kPipelineFixtures[] = {
         synthetic_pipeline_msc_v1_n_params,
         MatrixRef{4, 5, synthetic_pipeline_msc_v1_x, sizeof(synthetic_pipeline_msc_v1_x) / sizeof(double), false},
         MatrixRef{4, 5, synthetic_pipeline_msc_v1_transform_train, sizeof(synthetic_pipeline_msc_v1_transform_train) / sizeof(double), false}
+    },
+    {
+        "synthetic_pipeline_emsc_v1",
+        synthetic_pipeline_emsc_v1_operators,
+        sizeof(synthetic_pipeline_emsc_v1_operators) / sizeof(p4a_operator_kind_t),
+        synthetic_pipeline_emsc_v1_params,
+        synthetic_pipeline_emsc_v1_n_params,
+        MatrixRef{4, 8, synthetic_pipeline_emsc_v1_x, sizeof(synthetic_pipeline_emsc_v1_x) / sizeof(double), false},
+        MatrixRef{4, 8, synthetic_pipeline_emsc_v1_transform_train, sizeof(synthetic_pipeline_emsc_v1_transform_train) / sizeof(double), false}
     },
     {
         "synthetic_pipeline_detrend_poly_v1",

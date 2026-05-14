@@ -454,6 +454,18 @@ def _pipeline_apply(X: np.ndarray, operators: list[str]) -> np.ndarray:
                 intercept = row_mean - slope * ref_mean
                 corrected[row_idx, :] = (row - intercept) / slope
             out = corrected
+        elif op.startswith("emsc_"):
+            degree = int(op.rsplit("_", 1)[1])
+            reference = out.mean(axis=0)
+            x = np.linspace(-1.0, 1.0, out.shape[1], dtype=np.float64)
+            polynomial = np.vander(x, N=degree + 1, increasing=True)
+            design = np.column_stack([reference, polynomial])
+            corrected = np.zeros_like(out)
+            for row_idx, row in enumerate(out):
+                coeffs, *_ = np.linalg.lstsq(design, row, rcond=None)
+                baseline = design[:, 1:] @ coeffs[1:]
+                corrected[row_idx, :] = (row - baseline) / coeffs[0]
+            out = corrected
         elif op.startswith("detrend_poly_"):
             degree = int(op.rsplit("_", 1)[1])
             x = np.linspace(-1.0, 1.0, out.shape[1], dtype=np.float64)
@@ -1890,6 +1902,21 @@ def synthetic_pipeline_msc_v1() -> dict[str, Any]:
     ])
     return _pipeline_fixture("synthetic_pipeline_msc_v1", seed=45,
                              X=X, operators=["msc"])
+
+
+def synthetic_pipeline_emsc_v1() -> dict[str, Any]:
+    """4 samples, 8 wavelengths for extended multiplicative scatter correction."""
+    x = np.linspace(-1.0, 1.0, 8, dtype=np.float64)
+    reference = np.array([1.0, 2.3, 3.8, 5.2, 7.4, 7.9, 10.8, 12.7], dtype=np.float64)
+    residual = np.array([0.01, -0.02, 0.00, 0.03, -0.01, 0.02, -0.03, 0.01])
+    X = np.vstack([
+        0.30 + 1.10 * reference + 0.15 * x - 0.08 * x * x + residual,
+        -0.45 + 0.82 * reference - 0.05 * x + 0.12 * x * x - 0.5 * residual,
+        0.90 + 1.35 * reference + 0.08 * x - 0.03 * x * x + 0.25 * residual,
+        0.15 + 0.68 * reference - 0.10 * x + 0.05 * x * x - residual,
+    ])
+    return _pipeline_fixture("synthetic_pipeline_emsc_v1", seed=49,
+                             X=X, operators=["emsc_2"])
 
 
 def synthetic_pipeline_detrend_poly_v1() -> dict[str, Any]:

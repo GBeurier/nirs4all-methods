@@ -458,6 +458,86 @@ struct SavGolParams {
     return P4A_OK;
 }
 
+[[nodiscard]] p4a_status_t apply_emsc(::pls4all::core::Context& ctx,
+                                      const std::vector<double>& values,
+                                      const std::vector<double>& reference,
+                                      std::size_t rows,
+                                      std::size_t cols,
+                                      std::int32_t degree,
+                                      std::vector<double>& out) {
+    if (degree < 0) {
+        ctx.set_error("EMSC polynomial degree must be non-negative");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    const std::size_t poly_terms = static_cast<std::size_t>(degree) + 1U;
+    const std::size_t terms = poly_terms + 1U;
+    if (terms > cols) {
+        ctx.set_error("EMSC design requires at least degree + 2 columns");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+
+    std::vector<double> x(cols, 0.0);
+    for (std::size_t col = 0; col < cols; ++col) {
+        x[col] = cols > 1U
+            ? -1.0 + 2.0 * static_cast<double>(col) / static_cast<double>(cols - 1U)
+            : 0.0;
+    }
+
+    std::vector<double> design(cols * terms, 1.0);
+    for (std::size_t col = 0; col < cols; ++col) {
+        design[idx(col, terms, 0)] = reference[col];
+        design[idx(col, terms, 1)] = 1.0;
+        for (std::size_t term = 2; term < terms; ++term) {
+            design[idx(col, terms, term)] =
+                design[idx(col, terms, term - 1U)] * x[col];
+        }
+    }
+
+    std::vector<double> gram(terms * terms, 0.0);
+    for (std::size_t row_term = 0; row_term < terms; ++row_term) {
+        for (std::size_t col_term = 0; col_term < terms; ++col_term) {
+            double sum = 0.0;
+            for (std::size_t col = 0; col < cols; ++col) {
+                sum += design[idx(col, terms, row_term)] *
+                       design[idx(col, terms, col_term)];
+            }
+            gram[idx(row_term, terms, col_term)] = sum;
+        }
+    }
+
+    out.assign(rows * cols, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        std::vector<double> rhs(terms, 0.0);
+        for (std::size_t term = 0; term < terms; ++term) {
+            double sum = 0.0;
+            for (std::size_t col = 0; col < cols; ++col) {
+                sum += values[idx(row, cols, col)] * design[idx(col, terms, term)];
+            }
+            rhs[term] = sum;
+        }
+        std::vector<double> coeffs;
+        if (!solve_linear_system(gram, rhs, terms, coeffs)) {
+            ctx.set_error("failed to solve EMSC normal equations");
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        const double slope = coeffs[0];
+        if (std::fabs(slope) <= std::numeric_limits<double>::epsilon() ||
+            !std::isfinite(slope)) {
+            ctx.set_errorf("EMSC multiplicative coefficient vanished at row %llu",
+                           ull(row));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (std::size_t col = 0; col < cols; ++col) {
+            double baseline = 0.0;
+            for (std::size_t term = 1; term < terms; ++term) {
+                baseline += coeffs[term] * design[idx(col, terms, term)];
+            }
+            out[idx(row, cols, col)] = (values[idx(row, cols, col)] - baseline) / slope;
+        }
+    }
+    return P4A_OK;
+}
+
 [[nodiscard]] p4a_status_t require_no_params(::pls4all::core::Context& ctx,
                                              const ::pls4all::core::OperatorEntry& entry,
                                              const char* name) {
@@ -484,6 +564,28 @@ struct SavGolParams {
     if (!std::isfinite(raw) || std::fabs(raw - rounded) > 1e-12 ||
         rounded < 0.0 || rounded > 5.0) {
         ctx.set_error("detrend polynomial degree must be an integer in [0, 5]");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    degree = static_cast<std::int32_t>(rounded);
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t parse_emsc_degree(::pls4all::core::Context& ctx,
+                                             const ::pls4all::core::OperatorEntry& entry,
+                                             std::int32_t& degree) {
+    degree = 2;
+    if (entry.params.empty()) {
+        return P4A_OK;
+    }
+    if (entry.params.size() != 1U) {
+        ctx.set_error("EMSC expects zero params or one polynomial degree param");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    const double raw = entry.params[0];
+    const double rounded = std::round(raw);
+    if (!std::isfinite(raw) || std::fabs(raw - rounded) > 1e-12 ||
+        rounded < 0.0 || rounded > 5.0) {
+        ctx.set_error("EMSC polynomial degree must be an integer in [0, 5]");
         return P4A_ERR_INVALID_ARGUMENT;
     }
     degree = static_cast<std::int32_t>(rounded);
@@ -691,6 +793,22 @@ p4a_status_t Pipeline::fit(Context& ctx, const p4a_matrix_view_t& X) {
                     return status;
                 }
                 break;
+            case P4A_OP_EMSC: {
+                std::int32_t degree = 2;
+                status = parse_emsc_degree(ctx, entry, degree);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                fit_column_center(current, rows, cols, state.location);
+                state.scale.assign(1U, static_cast<double>(degree));
+                status = apply_emsc(ctx, current, state.location, rows, cols, degree, next);
+                if (status != P4A_OK) {
+                    states_.clear();
+                    return status;
+                }
+                break;
+            }
             case P4A_OP_DETREND_POLY: {
                 std::int32_t degree = 1;
                 status = parse_degree(ctx, entry, degree);
@@ -814,6 +932,17 @@ p4a_status_t Pipeline::transform(Context& ctx,
                 break;
             case P4A_OP_MSC:
                 status = apply_msc(ctx, current, state.location, rows, cols, next);
+                if (status != P4A_OK) {
+                    return status;
+                }
+                break;
+            case P4A_OP_EMSC:
+                if (state.scale.empty()) {
+                    ctx.set_error("fitted EMSC operator is missing its degree");
+                    return P4A_ERR_INTERNAL;
+                }
+                status = apply_emsc(ctx, current, state.location, rows, cols,
+                                    static_cast<std::int32_t>(state.scale[0]), next);
                 if (status != P4A_OK) {
                     return status;
                 }

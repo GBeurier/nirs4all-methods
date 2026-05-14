@@ -39,7 +39,8 @@ preprocessing pipeline while keeping the C ABI unchanged.
 
 ## Deferred
 
-- EMSC with polynomial and interferent terms.
+- External interferent spectra for EMSC; fitted-reference polynomial EMSC
+  shipped in Phase 3e.
 - ASLS baseline correction.
 - OSC / EPO supervised preprocessing, which require `Y` and model-level
   serialization semantics.

@@ -90,6 +90,11 @@
       "path": "synthetic_pipeline_detrend_poly_v1.json",
       "sha256": "67acfa198f65737a4f6cc5e7db5ca321ff6ce877fc32b4891734b4fbec819cc3"
     },
+    "synthetic_pipeline_emsc_v1": {
+      "bytes": 2747,
+      "path": "synthetic_pipeline_emsc_v1.json",
+      "sha256": "3ddc25425036c77dd9315bba12d8947554201d4c3adc577e6e79b37919b9a3b6"
+    },
     "synthetic_pipeline_identity_v1": {
       "bytes": 1319,
       "path": "synthetic_pipeline_identity_v1.json",

@@ -47,6 +47,7 @@ parity/
 │   ├── synthetic_pipeline_pareto_v1.json
 │   ├── synthetic_pipeline_snv_v1.json
 │   ├── synthetic_pipeline_msc_v1.json
+│   ├── synthetic_pipeline_emsc_v1.json
 │   ├── synthetic_pipeline_detrend_poly_v1.json
 │   ├── synthetic_pipeline_savgol_smooth_v1.json
 │   ├── synthetic_pipeline_savgol_derivative_v1.json

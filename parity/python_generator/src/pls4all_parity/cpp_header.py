@@ -48,6 +48,7 @@ HEADER_SPECS = {
             "synthetic_pipeline_pareto_v1",
             "synthetic_pipeline_snv_v1",
             "synthetic_pipeline_msc_v1",
+            "synthetic_pipeline_emsc_v1",
             "synthetic_pipeline_detrend_poly_v1",
             "synthetic_pipeline_savgol_smooth_v1",
             "synthetic_pipeline_savgol_derivative_v1",
@@ -315,6 +316,9 @@ def _pipeline_operator(name: str) -> tuple[str, list[float]]:
     if name.startswith("detrend_poly_"):
         degree = float(int(name.rsplit("_", 1)[1]))
         return "P4A_OP_DETREND_POLY", [degree]
+    if name.startswith("emsc_"):
+        degree = float(int(name.rsplit("_", 1)[1]))
+        return "P4A_OP_EMSC", [degree]
     if name.startswith("savgol_smooth_"):
         _prefix, _kind, window, poly_degree = name.split("_")
         return "P4A_OP_SAVGOL_SMOOTH", [float(window), float(poly_degree)]

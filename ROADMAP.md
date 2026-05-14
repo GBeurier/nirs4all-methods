@@ -43,6 +43,7 @@ Goal: useful for real spectroscopy.
 - Phase 3b shipped as `phase-3b-msc-preprocessing`: multiplicative scatter correction in the same fitted pipeline contract.
 - Phase 3c shipped as `phase-3c-detrend-preprocessing`: row-wise polynomial detrending with degree parameter.
 - Phase 3d shipped as `phase-3d-savgol-preprocessing`: Savitzky-Golay smoothing plus 1st/2nd derivative operator support.
+- Phase 3e shipped as `phase-3e-emsc-preprocessing`: EMSC with fitted mean reference and polynomial baseline terms.
 - Cross-validation engine: k-fold, LOO, Kennard-Stone, SPXY, holdout, external folds, repeated k-fold, Monte-Carlo CV.
 - Metrics: RMSEC, RMSECV, RMSEP, R², Q², bias, RPD, RPIQ, MAE, slope/intercept obs-vs-pred, sensitivity, specificity, balanced accuracy, AUC, MCC.
 - VIP, selectivity ratio, regression coefficients per component.
