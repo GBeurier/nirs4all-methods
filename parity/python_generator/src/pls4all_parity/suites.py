@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np
 from scipy.signal import savgol_filter
@@ -916,6 +916,139 @@ def _validation_folds(kind: str,
     return folds
 
 
+def _random_bounded(state: int, bound: int) -> tuple[int, int]:
+    state, bits = _splitmix64_next(state)
+    return state, int(bits % int(bound))
+
+
+def _shuffle_indices(indices: list[int], state: int) -> tuple[int, list[int]]:
+    shuffled = list(indices)
+    for i in range(len(shuffled), 1, -1):
+        state, j = _random_bounded(state, i)
+        shuffled[i - 1], shuffled[j] = shuffled[j], shuffled[i - 1]
+    return state, shuffled
+
+
+def _fold_from_test_indices(n_samples: int,
+                            test_indices: list[int]) -> tuple[list[int], list[int]]:
+    test_set = set(test_indices)
+    train = [idx for idx in range(int(n_samples)) if idx not in test_set]
+    return train, list(test_indices)
+
+
+def _fold_from_train_indices(n_samples: int,
+                             train_indices: list[int]) -> tuple[list[int], list[int]]:
+    train_set = set(train_indices)
+    test = [idx for idx in range(int(n_samples)) if idx not in train_set]
+    return list(train_indices), test
+
+
+def _pairwise_squared_distances(values: np.ndarray) -> np.ndarray:
+    values = np.asarray(values, dtype=np.float64)
+    n_samples = values.shape[0]
+    distances = np.zeros((n_samples, n_samples), dtype=np.float64)
+    for i in range(n_samples):
+        for j in range(i + 1, n_samples):
+            delta = values[i] - values[j]
+            dist = float(np.dot(delta, delta))
+            distances[i, j] = dist
+            distances[j, i] = dist
+    return distances
+
+
+def _representative_indices(distances: np.ndarray,
+                            train_count: int) -> list[int]:
+    distances = np.asarray(distances, dtype=np.float64)
+    n_samples = int(distances.shape[0])
+    first = 0
+    second = 1
+    best_pair = float(distances[0, 1])
+    for i in range(n_samples):
+        for j in range(i + 1, n_samples):
+            dist = float(distances[i, j])
+            if dist > best_pair:
+                best_pair = dist
+                first = i
+                second = j
+
+    selected = [first, second]
+    selected_set = {first, second}
+    while len(selected) < int(train_count):
+        best_sample = -1
+        best_nearest = -1.0
+        for sample in range(n_samples):
+            if sample in selected_set:
+                continue
+            nearest = min(float(distances[sample, chosen]) for chosen in selected)
+            if nearest > best_nearest:
+                best_nearest = nearest
+                best_sample = sample
+        if best_sample < 0:
+            raise RuntimeError("representative sample selection failed")
+        selected.append(best_sample)
+        selected_set.add(best_sample)
+    return selected
+
+
+def _advanced_validation_folds(kind: str,
+                               n_samples: int,
+                               n_splits: int = 0,
+                               n_repeats: int = 0,
+                               test_count: int = 0,
+                               train_count: int = 0,
+                               seed: int = 0,
+                               fold_ids: Sequence[int] | None = None,
+                               X: np.ndarray | None = None,
+                               Y: np.ndarray | None = None) -> list[tuple[list[int], list[int]]]:
+    indices = list(range(int(n_samples)))
+    folds: list[tuple[list[int], list[int]]] = []
+    if kind == "external":
+        if fold_ids is None:
+            raise ValueError("external validation fixture requires fold_ids")
+        fold_ids = [int(value) for value in fold_ids]
+        for fold in range(int(n_splits)):
+            test = [idx for idx, fold_id in enumerate(fold_ids) if fold_id == fold]
+            train = [idx for idx, fold_id in enumerate(fold_ids) if fold_id != fold]
+            folds.append((train, test))
+    elif kind == "repeated_kfold":
+        state = int(seed) & _MASK64
+        for _repeat in range(int(n_repeats)):
+            state, shuffled = _shuffle_indices(indices, state)
+            base = int(n_samples) // int(n_splits)
+            remainder = int(n_samples) % int(n_splits)
+            start = 0
+            for fold in range(int(n_splits)):
+                size = base + (1 if fold < remainder else 0)
+                stop = start + size
+                folds.append(_fold_from_test_indices(int(n_samples), shuffled[start:stop]))
+                start = stop
+    elif kind == "monte_carlo":
+        state = int(seed) & _MASK64
+        for _repeat in range(int(n_repeats)):
+            state, shuffled = _shuffle_indices(indices, state)
+            folds.append(_fold_from_test_indices(int(n_samples), shuffled[:int(test_count)]))
+    elif kind == "kennard_stone":
+        if X is None:
+            raise ValueError("Kennard-Stone fixture requires X")
+        distances = _pairwise_squared_distances(np.asarray(X, dtype=np.float64))
+        folds.append(_fold_from_train_indices(int(n_samples),
+                                             _representative_indices(distances, int(train_count))))
+    elif kind == "spxy":
+        if X is None or Y is None:
+            raise ValueError("SPXY fixture requires X and Y")
+        x_distances = _pairwise_squared_distances(np.asarray(X, dtype=np.float64))
+        y_distances = _pairwise_squared_distances(np.asarray(Y, dtype=np.float64))
+        max_x = float(np.max(x_distances))
+        max_y = float(np.max(y_distances))
+        combined = (x_distances / max_x if max_x > 0.0 else np.zeros_like(x_distances))
+        combined = combined + (y_distances / max_y if max_y > 0.0 else np.zeros_like(y_distances))
+        folds.append(_fold_from_train_indices(int(n_samples),
+                                             _representative_indices(combined, int(train_count))))
+    else:
+        raise ValueError(f"unsupported advanced validation fixture kind: {kind}")
+    return folds
+
+
 def _validation_expected(kind: str,
                          n_samples: int,
                          n_splits: int = 0,
@@ -938,6 +1071,48 @@ def _validation_expected(kind: str,
         "test_offsets":  {"values": test_offsets},
         "test_indices":  {"values": test_indices},
     }
+
+
+def _folds_to_validation_expected(folds: list[tuple[list[int], list[int]]]) -> dict[str, Any]:
+    train_offsets = [0]
+    test_offsets = [0]
+    train_indices: list[int] = []
+    test_indices: list[int] = []
+    for train, test in folds:
+        train_indices.extend(train)
+        test_indices.extend(test)
+        train_offsets.append(len(train_indices))
+        test_offsets.append(len(test_indices))
+    return {
+        "n_folds": len(folds),
+        "train_offsets": {"values": train_offsets},
+        "train_indices": {"values": train_indices},
+        "test_offsets":  {"values": test_offsets},
+        "test_indices":  {"values": test_indices},
+    }
+
+
+def _advanced_validation_expected(kind: str,
+                                  n_samples: int,
+                                  n_splits: int = 0,
+                                  n_repeats: int = 0,
+                                  test_count: int = 0,
+                                  train_count: int = 0,
+                                  seed: int = 0,
+                                  fold_ids: Sequence[int] | None = None,
+                                  X: np.ndarray | None = None,
+                                  Y: np.ndarray | None = None) -> dict[str, Any]:
+    folds = _advanced_validation_folds(kind,
+                                       n_samples,
+                                       n_splits,
+                                       n_repeats,
+                                       test_count,
+                                       train_count,
+                                       seed,
+                                       fold_ids,
+                                       X,
+                                       Y)
+    return _folds_to_validation_expected(folds)
 
 
 def _cross_validation_expected(
@@ -2006,6 +2181,87 @@ def _validation_fixture(
     }
 
 
+def _advanced_validation_fixture(
+    fixture_id: str,
+    kind: str,
+    n_samples: int,
+    n_splits: int = 0,
+    n_repeats: int = 0,
+    test_count: int = 0,
+    train_count: int = 0,
+    seed: int = 0,
+    fold_ids: Sequence[int] | None = None,
+    X: np.ndarray | None = None,
+    Y: np.ndarray | None = None,
+) -> dict[str, Any]:
+    data: dict[str, Any] = {
+        "sample_indices": {
+            "shape": [int(n_samples)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": list(range(int(n_samples))),
+        },
+    }
+    if fold_ids is not None:
+        data["fold_ids"] = {
+            "shape": [int(n_samples)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(value) for value in fold_ids],
+        }
+    if X is not None:
+        X = np.asarray(X, dtype=np.float64)
+        data["X"] = {
+            "shape": list(X.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(X),
+        }
+    if Y is not None:
+        Y = np.asarray(Y, dtype=np.float64)
+        data["Y"] = {
+            "shape": list(Y.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(Y),
+        }
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._advanced_validation_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "kind":        kind,
+                "n_samples":   int(n_samples),
+                "n_splits":    int(n_splits),
+                "n_repeats":   int(n_repeats),
+                "test_count":  int(test_count),
+                "train_count": int(train_count),
+                "seed":        int(seed),
+                "reference":   "NumPy/Python deterministic advanced validation splitters",
+            },
+        },
+        "data": data,
+        "expected": _advanced_validation_expected(kind,
+                                                  n_samples,
+                                                  n_splits,
+                                                  n_repeats,
+                                                  test_count,
+                                                  train_count,
+                                                  seed,
+                                                  fold_ids,
+                                                  X,
+                                                  Y),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "pls4all-python-advanced-validation-splits",
+        },
+    }
+
+
 def _cross_validation_fixture(
     fixture_id: str,
     seed: int,
@@ -2840,6 +3096,79 @@ def synthetic_validation_holdout_v1() -> dict[str, Any]:
                                n_samples=8,
                                holdout_start=2,
                                holdout_count=3)
+
+
+def synthetic_validation_external_folds_v1() -> dict[str, Any]:
+    """9 samples assigned to three externally supplied folds."""
+    fold_ids = [0, 1, 2, 0, 1, 2, 0, 1, 2]
+    return _advanced_validation_fixture("synthetic_validation_external_folds_v1",
+                                        kind="external",
+                                        n_samples=9,
+                                        n_splits=3,
+                                        fold_ids=fold_ids)
+
+
+def synthetic_validation_repeated_kfold_v1() -> dict[str, Any]:
+    """11 samples split into two deterministic shuffled 4-fold repeats."""
+    return _advanced_validation_fixture("synthetic_validation_repeated_kfold_v1",
+                                        kind="repeated_kfold",
+                                        n_samples=11,
+                                        n_splits=4,
+                                        n_repeats=2,
+                                        seed=91)
+
+
+def synthetic_validation_monte_carlo_v1() -> dict[str, Any]:
+    """12 samples with four deterministic Monte-Carlo validation holdouts."""
+    return _advanced_validation_fixture("synthetic_validation_monte_carlo_v1",
+                                        kind="monte_carlo",
+                                        n_samples=12,
+                                        test_count=3,
+                                        n_repeats=4,
+                                        seed=92)
+
+
+def synthetic_validation_kennard_stone_v1() -> dict[str, Any]:
+    """10 samples selected by deterministic Kennard-Stone X-space coverage."""
+    seed = 93
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(10, 2))
+    X = np.column_stack([
+        0.86 * latent[:, 0] + 0.24 * latent[:, 1],
+        -0.42 * latent[:, 0] + 0.51 * latent[:, 1],
+        np.linspace(-1.0, 1.0, 10),
+        rng.standard_normal(size=10) * 0.05,
+    ])
+    return _advanced_validation_fixture("synthetic_validation_kennard_stone_v1",
+                                        kind="kennard_stone",
+                                        n_samples=10,
+                                        train_count=6,
+                                        seed=seed,
+                                        X=X)
+
+
+def synthetic_validation_spxy_v1() -> dict[str, Any]:
+    """12 samples selected by deterministic SPXY joint X/Y coverage."""
+    seed = 94
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(12, 3))
+    X = np.column_stack([
+        0.73 * latent[:, 0] + 0.28 * latent[:, 1],
+        -0.39 * latent[:, 0] + 0.62 * latent[:, 2],
+        0.44 * latent[:, 1] - 0.31 * latent[:, 2],
+        np.cos(np.linspace(0.0, np.pi, 12)),
+    ])
+    Y = np.column_stack([
+        0.92 * latent[:, 0] - 0.33 * latent[:, 2],
+        -0.57 * latent[:, 1] + 0.48 * latent[:, 2],
+    ])
+    return _advanced_validation_fixture("synthetic_validation_spxy_v1",
+                                        kind="spxy",
+                                        n_samples=12,
+                                        train_count=7,
+                                        seed=seed,
+                                        X=X,
+                                        Y=Y)
 
 
 def synthetic_cv_kfold_nipals_pls1_v1() -> dict[str, Any]:

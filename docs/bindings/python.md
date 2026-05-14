@@ -8,7 +8,7 @@ context / config lifecycles. See [`bindings/python/README.md`](../../bindings/py
 ```python
 import pls4all
 
-print(pls4all.version())          # "0.32.0+abi.1.0.0"
+print(pls4all.version())          # "0.33.0+abi.1.0.0"
 print(pls4all.abi_version())      # (1, 0, 0)
 print(pls4all.build_info())       # ""
 

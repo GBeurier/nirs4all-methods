@@ -1,0 +1,128 @@
+{
+  "comparison_policy": {
+    "components_alignment": "exact",
+    "sign_resolver": "none",
+    "tolerance_table_row": "pls4all-python-advanced-validation-splits"
+  },
+  "data": {
+    "X": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "shape": [
+        10,
+        4
+      ],
+      "values": [
+        0.7572565923449998,
+        -0.8793857917356993,
+        -1.0,
+        0.005335350625687858,
+        1.1652779879630932,
+        -0.17283653939443672,
+        -0.7777777777777778,
+        -0.02185118726560248,
+        0.3218838285803036,
+        -0.6158989699397575,
+        -0.5555555555555556,
+        0.0717804107228986,
+        -0.8008272096430775,
+        0.917960502904797,
+        -0.33333333333333337,
+        -0.0893461045578161,
+        0.432095634052152,
+        0.43176856986818435,
+        -0.11111111111111116,
+        0.030021478689198296,
+        1.6622959419905048,
+        -0.36369500397678717,
+        0.11111111111111116,
+        -0.014478874789290533,
+        -0.9656963797996679,
+        0.13341579102966028,
+        0.33333333333333326,
+        -0.008914059920334009,
+        1.2821688253349417,
+        0.23109846042492643,
+        0.5555555555555554,
+        -0.026934503027655578,
+        1.098611286915982,
+        -0.3180416391249218,
+        0.7777777777777777,
+        0.07236751058383199,
+        -0.8815009833695422,
+        -0.07905225922706022,
+        1.0,
+        -0.0328346466699649
+      ]
+    },
+    "sample_indices": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        10
+      ],
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    }
+  },
+  "expected": {
+    "n_folds": 1,
+    "test_indices": {
+      "values": [
+        1,
+        2,
+        6,
+        7
+      ]
+    },
+    "test_offsets": {
+      "values": [
+        0,
+        4
+      ]
+    },
+    "train_indices": {
+      "values": [
+        3,
+        5,
+        9,
+        0,
+        4,
+        8
+      ]
+    },
+    "train_offsets": {
+      "values": [
+        0,
+        6
+      ]
+    }
+  },
+  "fixture_id": "synthetic_validation_kennard_stone_v1",
+  "generator": {
+    "git_revision_sha": "unknown",
+    "name": "pls4all_parity.suites._advanced_validation_expected",
+    "params": {
+      "kind": "kennard_stone",
+      "n_repeats": 0,
+      "n_samples": 10,
+      "n_splits": 0,
+      "reference": "NumPy/Python deterministic advanced validation splitters",
+      "seed": 93,
+      "test_count": 0,
+      "train_count": 6
+    },
+    "version": "1"
+  },
+  "schema_version": 1
+}

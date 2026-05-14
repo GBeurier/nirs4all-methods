@@ -103,6 +103,18 @@ HEADER_SPECS = {
         "struct": "ValidationFixture",
         "array": "kValidationFixtures",
     },
+    "advanced-validation": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "advanced_validation_fixtures.hpp",
+        "fixtures": (
+            "synthetic_validation_external_folds_v1",
+            "synthetic_validation_repeated_kfold_v1",
+            "synthetic_validation_monte_carlo_v1",
+            "synthetic_validation_kennard_stone_v1",
+            "synthetic_validation_spxy_v1",
+        ),
+        "struct": "AdvancedValidationFixture",
+        "array": "kAdvancedValidationFixtures",
+    },
     "cross-validation": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "cross_validation_fixtures.hpp",
         "fixtures": (
@@ -690,6 +702,119 @@ def generate_validation(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_advanced_validation(fixture_ids: Sequence[str],
+                                 fixture_dir: Path,
+                                 out: Path,
+                                 family: str,
+                                 struct_name: str,
+                                 array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct IndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        "struct MatrixRef {",
+        "    std::int64_t rows;",
+        "    std::int64_t cols;",
+        "    const double* values;",
+        "    std::size_t size;",
+        "    bool sign_invariant;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    const char* kind;",
+        "    std::int64_t n_samples;",
+        "    std::int32_t n_splits;",
+        "    std::int32_t n_repeats;",
+        "    std::int64_t test_count;",
+        "    std::int64_t train_count;",
+        "    std::uint64_t seed;",
+        "    IndexRef fold_ids;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    IndexRef train_offsets;",
+        "    IndexRef train_indices;",
+        "    IndexRef test_offsets;",
+        "    IndexRef test_indices;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    empty_index_ref = "IndexRef{nullptr, 0}"
+    empty_matrix_ref = "MatrixRef{0, 0, nullptr, 0, false}"
+
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        data = fixture["data"]
+        expected = fixture["expected"]
+        names = {
+            "fold_ids": f"{prefix}_fold_ids",
+            "X": f"{prefix}_X",
+            "Y": f"{prefix}_Y",
+            "train_offsets": f"{prefix}_train_offsets",
+            "train_indices": f"{prefix}_train_indices",
+            "test_offsets": f"{prefix}_test_offsets",
+            "test_indices": f"{prefix}_test_indices",
+        }
+        fold_ref = empty_index_ref
+        x_ref = empty_matrix_ref
+        y_ref = empty_matrix_ref
+        if "fold_ids" in data:
+            _emit_int_array(lines, names["fold_ids"], data["fold_ids"]["values"])
+            fold_ref = _index_ref(names["fold_ids"])
+        if "X" in data:
+            _emit_array(lines, names["X"], data["X"]["values"])
+            x_ref = _matrix_ref(names["X"], data["X"])
+        if "Y" in data:
+            _emit_array(lines, names["Y"], data["Y"]["values"])
+            y_ref = _matrix_ref(names["Y"], data["Y"])
+        for field in ("train_offsets", "train_indices", "test_offsets", "test_indices"):
+            _emit_int_array(lines, names[field], expected[field]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f'        "{params["kind"]}",\n'
+            f"        {int(params['n_samples'])},\n"
+            f"        {int(params['n_splits'])},\n"
+            f"        {int(params['n_repeats'])},\n"
+            f"        {int(params['test_count'])},\n"
+            f"        {int(params['train_count'])},\n"
+            f"        {int(params['seed'])}ULL,\n"
+            f"        {fold_ref},\n"
+            f"        {x_ref},\n"
+            f"        {y_ref},\n"
+            f"        {_index_ref(names['train_offsets'])},\n"
+            f"        {_index_ref(names['train_indices'])},\n"
+            f"        {_index_ref(names['test_offsets'])},\n"
+            f"        {_index_ref(names['test_indices'])}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_classification_metrics(fixture_ids: Sequence[str],
                                     fixture_dir: Path,
                                     out: Path,
@@ -988,6 +1113,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "validation":
         generate_validation(fixture_ids, args.fixture_dir, out, args.family,
                             str(spec["struct"]), str(spec["array"]))
+    elif args.family == "advanced-validation":
+        generate_advanced_validation(fixture_ids, args.fixture_dir, out, args.family,
+                                     str(spec["struct"]), str(spec["array"]))
     elif args.family == "cross-validation":
         generate_cross_validation(fixture_ids, args.fixture_dir, out, args.family,
                                   str(spec["struct"]), str(spec["array"]))

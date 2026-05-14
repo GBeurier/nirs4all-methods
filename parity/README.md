@@ -63,12 +63,17 @@ parity/
 │   ├── synthetic_validation_kfold_balanced_v1.json
 │   ├── synthetic_validation_leave_one_out_v1.json
 │   ├── synthetic_validation_holdout_v1.json
+│   ├── synthetic_validation_external_folds_v1.json
+│   ├── synthetic_validation_repeated_kfold_v1.json
+│   ├── synthetic_validation_monte_carlo_v1.json
+│   ├── synthetic_validation_kennard_stone_v1.json
+│   ├── synthetic_validation_spxy_v1.json
 │   ├── synthetic_cv_kfold_nipals_pls1_v1.json
 │   ├── synthetic_cv_kfold_nipals_pls2_v1.json
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.
-├── python_generator/              Pinned scikit-learn + NumPy/SciPy preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/OPLS/OPLS-DA/SVD/PCR/CV adapters.
+├── python_generator/              Pinned scikit-learn + NumPy/SciPy preprocessing/SIMPLS/kernel/wide/oscores/power/randomized/canonical/PLSSVD/PLS-DA/OPLS/OPLS-DA/SVD/PCR/validation/CV adapters.
 └── r_generator/                   Pinned pls / ropls / mixOmics adapters.
 ```
 

@@ -250,10 +250,20 @@
       "path": "synthetic_tiny_centered_v1.json",
       "sha256": "0ebdedcdbfd29927b14677ac2cb5f35ef55774a9806bbe9f44e0d899555f6d58"
     },
+    "synthetic_validation_external_folds_v1": {
+      "bytes": 1787,
+      "path": "synthetic_validation_external_folds_v1.json",
+      "sha256": "e4ced0cc84d4f94e1dd811b6b8c73f0bb79c6e87bb8c3d5f8bf6d131695bdc36"
+    },
     "synthetic_validation_holdout_v1": {
       "bytes": 1216,
       "path": "synthetic_validation_holdout_v1.json",
       "sha256": "6be2d299db6bad5e4a8649f3199f7cee806f6780b7a2ffef017ce09b573a6be0"
+    },
+    "synthetic_validation_kennard_stone_v1": {
+      "bytes": 2607,
+      "path": "synthetic_validation_kennard_stone_v1.json",
+      "sha256": "14bc82603c268b257c3667ee915b1539eedf5c377efdf0639d82dabe02e0a4ac"
     },
     "synthetic_validation_kfold_balanced_v1": {
       "bytes": 1534,
@@ -264,6 +274,21 @@
       "bytes": 1473,
       "path": "synthetic_validation_leave_one_out_v1.json",
       "sha256": "3c13b9297f36c88b17e14d2cc02fd11907756bfcc37d962e33bafab961d22710"
+    },
+    "synthetic_validation_monte_carlo_v1": {
+      "bytes": 1852,
+      "path": "synthetic_validation_monte_carlo_v1.json",
+      "sha256": "5d336e4735809a65d3d55d0a361f74cf907fefc90f88b7ef61ddf7464832f279"
+    },
+    "synthetic_validation_repeated_kfold_v1": {
+      "bytes": 2382,
+      "path": "synthetic_validation_repeated_kfold_v1.json",
+      "sha256": "0c320648ed94264f939982a0bdf22b6ef7ad4aef8d57e8ea0678a8b1ebdee1b3"
+    },
+    "synthetic_validation_spxy_v1": {
+      "bytes": 3694,
+      "path": "synthetic_validation_spxy_v1.json",
+      "sha256": "e7a500c1a3b9cb22559bc72ad43f7c120878b2d5eac93514e8d53ed31b179c83"
     },
     "synthetic_variable_importance_pls2_v1": {
       "bytes": 6258,

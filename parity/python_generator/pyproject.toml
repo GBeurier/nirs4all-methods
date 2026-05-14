@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pls4all-parity-generator"
-version = "0.32.0"
+version = "0.33.0"
 description = "Generate pls4all parity fixtures from pinned reference PLS implementations."
 authors = [{ name = "Grégory Beurier and contributors" }]
 license = "CECILL-2.1"

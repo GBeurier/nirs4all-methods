@@ -1,0 +1,116 @@
+{
+  "comparison_policy": {
+    "components_alignment": "exact",
+    "sign_resolver": "none",
+    "tolerance_table_row": "pls4all-python-advanced-validation-splits"
+  },
+  "data": {
+    "fold_ids": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        9
+      ],
+      "values": [
+        0,
+        1,
+        2,
+        0,
+        1,
+        2,
+        0,
+        1,
+        2
+      ]
+    },
+    "sample_indices": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        9
+      ],
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
+    }
+  },
+  "expected": {
+    "n_folds": 3,
+    "test_indices": {
+      "values": [
+        0,
+        3,
+        6,
+        1,
+        4,
+        7,
+        2,
+        5,
+        8
+      ]
+    },
+    "test_offsets": {
+      "values": [
+        0,
+        3,
+        6,
+        9
+      ]
+    },
+    "train_indices": {
+      "values": [
+        1,
+        2,
+        4,
+        5,
+        7,
+        8,
+        0,
+        2,
+        3,
+        5,
+        6,
+        8,
+        0,
+        1,
+        3,
+        4,
+        6,
+        7
+      ]
+    },
+    "train_offsets": {
+      "values": [
+        0,
+        6,
+        12,
+        18
+      ]
+    }
+  },
+  "fixture_id": "synthetic_validation_external_folds_v1",
+  "generator": {
+    "git_revision_sha": "unknown",
+    "name": "pls4all_parity.suites._advanced_validation_expected",
+    "params": {
+      "kind": "external",
+      "n_repeats": 0,
+      "n_samples": 9,
+      "n_splits": 3,
+      "reference": "NumPy/Python deterministic advanced validation splitters",
+      "seed": 0,
+      "test_count": 0,
+      "train_count": 0
+    },
+    "version": "1"
+  },
+  "schema_version": 1
+}
