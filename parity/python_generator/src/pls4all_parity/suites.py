@@ -1440,6 +1440,75 @@ def _interval_selection_expected(
     }
 
 
+def _pls_original_scale_coefficients(model: PLSRegression) -> np.ndarray:
+    W = model.x_weights_.astype(np.float64, copy=False)
+    P = model.x_loadings_.astype(np.float64, copy=False)
+    Q = model.y_loadings_.astype(np.float64, copy=False)
+    x_scale = model._x_std.astype(np.float64)
+    y_scale = np.atleast_1d(model._y_std).astype(np.float64)
+    rotations = W @ np.linalg.inv(P.T @ W)
+    coefficients = rotations @ Q.T
+    return coefficients * y_scale.reshape(1, -1) / x_scale.reshape(-1, 1)
+
+
+def _coefficient_stability_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_repeats: int,
+    test_count: int,
+    seed: int,
+    top_k: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    folds = _advanced_validation_folds("monte_carlo",
+                                       X.shape[0],
+                                       test_count=test_count,
+                                       n_repeats=n_repeats,
+                                       seed=seed)
+    coefficients: list[np.ndarray] = []
+    for train, _test in folds:
+        train_index = np.asarray(train, dtype=np.int64)
+        model = PLSRegression(n_components=n_components, scale=True, max_iter=500, tol=1e-6)
+        model.fit(X[train_index], Y[train_index])
+        coefficients.append(_pls_original_scale_coefficients(model))
+    coef_stack = np.stack(coefficients, axis=0)
+    mean = np.mean(coef_stack, axis=0)
+    std = np.std(coef_stack, axis=0, ddof=1)
+    stability = np.abs(mean) / np.maximum(std, np.finfo(np.float64).eps)
+    scores = np.max(stability, axis=1)
+    selected = _rank_descending(scores, top_k)
+    return {
+        "stability_scores": {
+            "shape": [1, int(scores.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": scores.astype(np.float64).tolist(),
+        },
+        "selected_indices": {
+            "shape": [1, int(top_k)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected.astype(int).tolist(),
+        },
+        "mean_coefficients": {
+            "shape": list(mean.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(mean),
+        },
+        "std_coefficients": {
+            "shape": list(std.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(std),
+        },
+    }
+
+
 def _component_coefficients_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -3084,6 +3153,51 @@ def _interval_selection_fixture(
     }
 
 
+def _coefficient_stability_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_repeats: int,
+    test_count: int,
+    top_k: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._coefficient_stability_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":    "pls_regression",
+                "solver":       "nipals",
+                "n_components": int(n_components),
+                "n_repeats":    int(n_repeats),
+                "test_count":   int(test_count),
+                "top_k":        int(top_k),
+                "seed":         int(seed),
+                "reference":    "sklearn PLSRegression Monte-Carlo coefficient stability",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _coefficient_stability_expected(X, Y, n_components, n_repeats, test_count, seed, top_k),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-coefficient-stability",
+        },
+    }
+
+
 def _component_coefficients_fixture(
     fixture_id: str,
     seed: int,
@@ -4293,6 +4407,35 @@ def synthetic_interval_selection_moving_window_v1() -> dict[str, Any]:
                                        n_splits=5,
                                        interval_width=3,
                                        step=1)
+
+
+def synthetic_coefficient_stability_mcuve_v1() -> dict[str, Any]:
+    """24 samples, 8 features, 2 targets for Monte-Carlo coefficient stability."""
+    seed = 61
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(24, 4))
+    X = np.column_stack([
+        0.82 * latent[:, 0] + 0.12 * latent[:, 1] + 0.05 * rng.standard_normal(size=24),
+        -0.35 * latent[:, 0] + 0.61 * latent[:, 2] + 0.05 * rng.standard_normal(size=24),
+        0.49 * latent[:, 1] - 0.22 * latent[:, 3] + 0.04 * rng.standard_normal(size=24),
+        0.18 * latent[:, 0] + 0.77 * latent[:, 3] + 0.05 * rng.standard_normal(size=24),
+        -0.57 * latent[:, 2] + 0.38 * latent[:, 3] + 0.05 * rng.standard_normal(size=24),
+        0.28 * latent[:, 0] - 0.19 * latent[:, 1] + 0.08 * rng.standard_normal(size=24),
+        np.cos(np.linspace(0.0, 3.0 * np.pi, 24)) + 0.03 * rng.standard_normal(size=24),
+        rng.standard_normal(size=24) * 0.10,
+    ])
+    Y = np.column_stack([
+        1.03 * latent[:, 0] - 0.48 * latent[:, 2] + 0.05 * rng.standard_normal(size=24),
+        -0.42 * latent[:, 1] + 0.58 * latent[:, 3] + 0.05 * rng.standard_normal(size=24),
+    ])
+    return _coefficient_stability_fixture("synthetic_coefficient_stability_mcuve_v1",
+                                          seed=seed,
+                                          X=X,
+                                          Y=Y,
+                                          n_components=2,
+                                          n_repeats=8,
+                                          test_count=6,
+                                          top_k=3)
 
 
 def synthetic_component_coefficients_pls2_v1() -> dict[str, Any]:

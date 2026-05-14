@@ -43,6 +43,7 @@ add_library(pls4all_core OBJECT
     core/pls_lda.cpp
     core/pls_logistic.cpp
     core/pipeline.cpp
+    core/stability_selection.cpp
     core/validation.cpp)
 target_include_directories(pls4all_core
     PUBLIC  ${PROJECT_SOURCE_DIR}/cpp/include

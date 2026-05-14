@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pls4all-parity-generator"
-version = "0.41.0"
+version = "0.42.0"
 description = "Generate pls4all parity fixtures from pinned reference PLS implementations."
 authors = [{ name = "Grégory Beurier and contributors" }]
 license = "CECILL-2.1"
@@ -18,7 +18,7 @@ dependencies = [
 # Cross-implementation nirs4all/R adapters will get their own locked dependency
 # rows when they become active. The current preprocessing, SIMPLS, kernel,
 # wide-kernel, orthogonal-scores, power, randomized-SVD, canonical, PLSSVD,
-# PLS-DA, PLS-LDA, PLS-logistic, MB-PLS, LW-PLS, OPLS, OPLS-DA, SVD, PCR, regression/classification metric, variable-importance, variable-selection, interval-selection, component-coefficient, validation-split and CV fixtures use deterministic NumPy ports or sklearn;
+# PLS-DA, PLS-LDA, PLS-logistic, MB-PLS, LW-PLS, OPLS, OPLS-DA, SVD, PCR, regression/classification metric, variable-importance, variable-selection, interval-selection, stability-selection, component-coefficient, validation-split and CV fixtures use deterministic NumPy ports or sklearn;
 # Savitzky-Golay preprocessing fixtures use pinned SciPy signal reference code;
 # Haar wavelet denoising, OSC and EPO use deterministic NumPy references.
 

@@ -8,15 +8,16 @@ The canonical technical spec is [`Direction_Technique.md`](Direction_Technique.m
 
 ## Current checkpoint — 2026-05-14
 
-Latest shipped tag: `phase-5b-interval-selection` (`0.41.0+abi.1.0.0`).
+Latest shipped tag: `phase-5c-stability-selection` (`0.42.0+abi.1.0.0`).
 
-- Local reference gate is green: 70 deterministic parity fixtures, 155 C++ ABI/core tests, CLI selfcheck, Python smoke, ABI symbol diff, dependency audit, UBSAN and ASAN+UBSAN.
+- Local reference gate is green: 71 deterministic parity fixtures, 157 C++ ABI/core tests, CLI selfcheck, Python smoke, ABI symbol diff, dependency audit, UBSAN and ASAN+UBSAN.
 - GitHub Actions are currently failing before runner allocation (`runner_id=0`, no steps), so the actionable gate is the local parity/sanitizer run until CI infrastructure is fixed.
 - Phase 4 has shipped the main advanced CPU kernels currently targeted before variable selection: SIMPLS, SVD, PCR, kernel/wide-kernel, orthogonal-scores, power/randomized-SVD, PLSCanonical, PLSSVD, PLS-DA, OPLS/OPLS-DA, component-count CV, PLS-LDA, PLS-logistic, MB-PLS and LW-PLS.
 - Phase 5a has shipped deterministic variable-selection rankers over existing fitted-model scores: VIP, original-scale coefficient magnitude and selectivity ratio, with sklearn parity.
 - Phase 5b has shipped deterministic contiguous interval / moving-window CV scans over NIPALS PLS regression, with sklearn parity.
+- Phase 5c has shipped deterministic Monte-Carlo coefficient-stability ranking, with sklearn parity.
 - Phase 2 bindings are still mostly skeletons: Python has a minimal ctypes lifecycle/config binding, while R/MATLAB/JS/Android remain README-level placeholders.
-- Active implementation track: Phase 5 variable selection, next moving from interval scans to Monte-Carlo stability and wrapper/metaheuristic selectors.
+- Active implementation track: Phase 5 variable selection, next moving from stability ranking to CARS/SPA/random-frog style wrappers.
 
 ## Phase 0 — ABI & Build Foundation · **shipped**
 
@@ -109,7 +110,8 @@ Each binding ships a parity-test suite that loads the JSON fixtures and asserts 
 - VIP selector, regression-coefficient selector, selectivity-ratio selector shipped as `phase-5a-variable-selection-rankers`.
 - Contiguous interval / moving-window CV scan shipped as `phase-5b-interval-selection`.
 - Remaining interval methods: biPLS, siPLS and interval-combination search.
-- Monte-Carlo / stability: UVE-PLS, MCUVE-PLS, EMCUVE-PLS, randomisation tests.
+- Monte-Carlo coefficient stability shipped as `phase-5c-stability-selection`.
+- Remaining stability methods: UVE-PLS, EMCUVE-PLS, randomisation tests.
 - Wrappers / metaheuristics: CARS, SCARS, SPA, Random Frog, GA-PLS, Shaving, BVE-PLS, T2-PLS, WVC-PLS.
 
 ## Phase 6 — AOM-PLS & POP-PLS · the scientific differentiator

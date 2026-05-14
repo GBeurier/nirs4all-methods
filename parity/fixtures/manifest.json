@@ -35,6 +35,11 @@
       "path": "synthetic_classification_multiclass_metrics_v1.json",
       "sha256": "1cfad8180602990c5a3bd0b21446053610bab018fec9ae0a2a0928dc0e8c9ce0"
     },
+    "synthetic_coefficient_stability_mcuve_v1": {
+      "bytes": 9762,
+      "path": "synthetic_coefficient_stability_mcuve_v1.json",
+      "sha256": "4248772b66ac7e2cd173369c86163ec9114414fb1646ecae241327a2dd0b97cb"
+    },
     "synthetic_component_coefficients_pls2_v1": {
       "bytes": 5750,
       "path": "synthetic_component_coefficients_pls2_v1.json",
