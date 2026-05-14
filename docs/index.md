@@ -42,7 +42,8 @@ variables, and Phase 5f CARS kernels run deterministic exponential-retention
 subset elimination with k-fold CV scoring. Phase 5g Random Frog kernels run
 deterministic subset walks and rank variables by inclusion frequency. Phase 5h
 SCARS kernels run deterministic calibration subsampling with stability-weighted
-CARS retention.
+CARS retention. Phase 5i GA-PLS kernels use deterministic population search
+with elitism, crossover, mutation and k-fold CV fitness.
 Component-coefficient kernels expose the
 original-scale regression coefficients for each latent prefix. SIMPLS component
 prefixes can also be scored by deterministic k-fold CV for component-count

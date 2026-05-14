@@ -28,6 +28,7 @@ add_library(pls4all_core OBJECT
     core/classification_metrics.cpp
     core/component_coefficients.cpp
     core/context.cpp
+    core/ga_selection.cpp
     core/variable_importance.cpp
     core/variable_selection.cpp
     core/config.cpp

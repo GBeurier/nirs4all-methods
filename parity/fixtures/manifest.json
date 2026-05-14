@@ -65,6 +65,11 @@
       "path": "synthetic_cv_kfold_nipals_pls2_v1.json",
       "sha256": "16ad168459f44db4818a1e07ffc30f39c81f83357b905cbca25db06cd2d607b1"
     },
+    "synthetic_ga_pls_wrapper_v1": {
+      "bytes": 15310,
+      "path": "synthetic_ga_pls_wrapper_v1.json",
+      "sha256": "04843b1307a273e894588a9e3595f9d54da9e63d8cfb342d17c8662a56f5d05d"
+    },
     "synthetic_interval_selection_moving_window_v1": {
       "bytes": 11183,
       "path": "synthetic_interval_selection_moving_window_v1.json",

@@ -2097,6 +2097,230 @@ def _scars_selection_expected(
     }
 
 
+def _ga_choose_ranked_features(
+    p: int,
+    global_scores: np.ndarray,
+    target_size: int,
+    state: int,
+) -> tuple[int, list[int]]:
+    available = list(range(int(p)))
+    available.sort(key=lambda feature: (-float(global_scores[int(feature)]), int(feature)))
+    selected: list[int] = []
+    for remaining in range(int(target_size), 0, -1):
+        if not available:
+            break
+        window = max(int(remaining), (len(available) + 1) // 2)
+        state, pos = _random_bounded(state, window)
+        selected.append(int(available.pop(pos)))
+    return state, sorted(selected)
+
+
+def _ga_remove_feature(
+    selected: list[int],
+    global_scores: np.ndarray,
+    state: int,
+) -> tuple[int, list[int]]:
+    candidate = list(selected)
+    order = sorted(candidate, key=lambda feature: (float(global_scores[int(feature)]), -int(feature)))
+    window = max(1, (len(order) + 1) // 2)
+    state, pos = _random_bounded(state, window)
+    feature = int(order[pos])
+    candidate.remove(feature)
+    return state, sorted(candidate)
+
+
+def _ga_add_feature(
+    selected: list[int],
+    p: int,
+    global_scores: np.ndarray,
+    state: int,
+) -> tuple[int, list[int]]:
+    candidate = list(selected)
+    membership = _selection_membership(p, candidate)
+    available = [feature for feature in range(int(p)) if not membership[feature]]
+    available.sort(key=lambda feature: (-float(global_scores[int(feature)]), int(feature)))
+    if not available:
+        return state, sorted(candidate)
+    window = max(1, (len(available) + 1) // 2)
+    state, pos = _random_bounded(state, window)
+    candidate.append(int(available[pos]))
+    return state, sorted(candidate)
+
+
+def _ga_crossover(
+    parent_a: list[int],
+    parent_b: list[int],
+    p: int,
+    global_scores: np.ndarray,
+    min_features: int,
+    max_features: int,
+    state: int,
+) -> tuple[int, list[int]]:
+    state, move_raw = _random_bounded(state, 3)
+    target_size = (len(parent_a) + len(parent_b)) // 2 + int(move_raw) - 1
+    target_size = max(int(min_features), min(int(max_features), int(target_size)))
+    child = sorted(set(parent_a).intersection(parent_b))
+    if len(child) > target_size:
+        order = sorted(child, key=lambda feature: (float(global_scores[int(feature)]), -int(feature)))
+        child = sorted(feature for feature in child if feature not in set(order[:len(child) - target_size]))
+    union = sorted(set(parent_a).union(parent_b),
+                   key=lambda feature: (-float(global_scores[int(feature)]), int(feature)))
+    while len(child) < target_size:
+        membership = _selection_membership(p, child)
+        available = [feature for feature in union if not membership[int(feature)]]
+        if not available:
+            available = [feature for feature in range(int(p)) if not membership[int(feature)]]
+            available.sort(key=lambda feature: (-float(global_scores[int(feature)]), int(feature)))
+        if not available:
+            break
+        window = max(1, (len(available) + 1) // 2)
+        state, pos = _random_bounded(state, window)
+        child.append(int(available[pos]))
+        child = sorted(child)
+    return state, sorted(child)
+
+
+def _ga_mutate(
+    selected: list[int],
+    p: int,
+    global_scores: np.ndarray,
+    min_features: int,
+    max_features: int,
+    mutation_rate: float,
+    state: int,
+) -> tuple[int, list[int]]:
+    state, unit = _uniform01_from_state(state)
+    if unit >= float(mutation_rate):
+        return state, sorted(selected)
+    state, move_raw = _random_bounded(state, 3)
+    if int(move_raw) == 0 and len(selected) > int(min_features):
+        return _ga_remove_feature(selected, global_scores, state)
+    if int(move_raw) == 1 and len(selected) < int(max_features):
+        return _ga_add_feature(selected, p, global_scores, state)
+    if len(selected) > int(min_features) and len(selected) < int(p):
+        state, reduced = _ga_remove_feature(selected, global_scores, state)
+        return _ga_add_feature(reduced, p, global_scores, state)
+    return state, sorted(selected)
+
+
+def _ga_population_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    n_generations: int,
+    population_size: int,
+    min_features: int,
+    max_features: int,
+    mutation_rate: float,
+    seed: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    p = int(X.shape[1])
+    global_scores = _pls_coefficient_scores(X, Y, n_components)
+    ranked = sorted(range(p), key=lambda feature: (-float(global_scores[int(feature)]), int(feature)))
+    span = int(max_features) - int(min_features) + 1
+    state = int(seed) & _MASK64
+    population: list[list[int]] = [sorted(ranked[:int(max_features)])]
+    for individual in range(1, int(population_size)):
+        target_size = int(min_features) + (individual % span)
+        state, selected = _ga_choose_ranked_features(p, global_scores, target_size, state)
+        population.append(selected)
+
+    best_rmse = math.inf
+    best_indices: list[int] = []
+    best_rmse_by_generation: list[float] = []
+    mean_rmse_by_generation: list[float] = []
+    best_subset_sizes: list[int] = []
+    inclusion_counts = np.zeros(p, dtype=np.float64)
+
+    for generation in range(int(n_generations)):
+        evaluated: list[tuple[float, int, list[int]]] = []
+        for individual in population:
+            rmse = _kfold_pls_rmse(_copy_columns(X, individual), Y, n_components, n_splits)
+            evaluated.append((float(rmse), len(individual), list(individual)))
+            for feature in individual:
+                inclusion_counts[int(feature)] += 1.0
+        evaluated.sort(key=lambda item: (item[0], item[1], item[2]))
+        generation_best = evaluated[0]
+        best_rmse_by_generation.append(float(generation_best[0]))
+        mean_rmse_by_generation.append(float(sum(item[0] for item in evaluated) / len(evaluated)))
+        best_subset_sizes.append(int(generation_best[1]))
+        if generation_best[0] < best_rmse:
+            best_rmse = float(generation_best[0])
+            best_indices = list(generation_best[2])
+
+        if generation == int(n_generations) - 1:
+            break
+        elite_count = min(2, int(population_size))
+        parent_pool_size = max(elite_count, int(population_size) // 2)
+        parent_pool = [item[2] for item in evaluated[:parent_pool_size]]
+        next_population = [list(item[2]) for item in evaluated[:elite_count]]
+        while len(next_population) < int(population_size):
+            state, parent_a_idx = _random_bounded(state, len(parent_pool))
+            state, parent_b_idx = _random_bounded(state, len(parent_pool))
+            state, child = _ga_crossover(parent_pool[parent_a_idx],
+                                         parent_pool[parent_b_idx],
+                                         p,
+                                         global_scores,
+                                         min_features,
+                                         max_features,
+                                         state)
+            state, child = _ga_mutate(child,
+                                      p,
+                                      global_scores,
+                                      min_features,
+                                      max_features,
+                                      mutation_rate,
+                                      state)
+            next_population.append(child)
+        population = next_population
+
+    inclusion_frequencies = inclusion_counts / float(int(n_generations) * int(population_size))
+    return {
+        "global_scores": {
+            "shape": [1, p],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": global_scores.tolist(),
+        },
+        "inclusion_frequencies": {
+            "shape": [1, p],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": inclusion_frequencies.tolist(),
+        },
+        "best_rmse_by_generation": {
+            "shape": [1, int(n_generations)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": best_rmse_by_generation,
+        },
+        "mean_rmse_by_generation": {
+            "shape": [1, int(n_generations)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": mean_rmse_by_generation,
+        },
+        "best_subset_sizes": {
+            "shape": [1, int(n_generations)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": best_subset_sizes,
+        },
+        "selected_indices": {
+            "shape": [1, int(len(best_indices))],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": best_indices,
+        },
+        "best_rmse": float(best_rmse),
+    }
+
+
 def _component_coefficients_expected(
     X: np.ndarray,
     Y: np.ndarray,
@@ -4051,6 +4275,67 @@ def _scars_selection_fixture(
     }
 
 
+def _ga_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    n_splits: int,
+    n_generations: int,
+    population_size: int,
+    min_features: int,
+    max_features: int,
+    mutation_rate: float,
+    ga_seed: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._ga_population_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "algorithm":       "pls_regression",
+                "solver":          "nipals",
+                "n_components":    int(n_components),
+                "n_splits":        int(n_splits),
+                "n_generations":   int(n_generations),
+                "population_size": int(population_size),
+                "min_features":    int(min_features),
+                "max_features":    int(max_features),
+                "mutation_rate":   float(mutation_rate),
+                "seed":            int(ga_seed),
+                "reference":       "sklearn PLSRegression deterministic GA-PLS",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _ga_population_expected(X,
+                                            Y,
+                                            n_components,
+                                            n_splits,
+                                            n_generations,
+                                            population_size,
+                                            min_features,
+                                            max_features,
+                                            mutation_rate,
+                                            ga_seed),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression-GA-selection",
+        },
+    }
+
+
 def _component_coefficients_fixture(
     fixture_id: str,
     seed: int,
@@ -5458,6 +5743,44 @@ def synthetic_scars_pls_stability_v1() -> dict[str, Any]:
                                     min_features=4,
                                     sample_fraction=0.75,
                                     scars_seed=7201)
+
+
+def synthetic_ga_pls_wrapper_v1() -> dict[str, Any]:
+    """30 samples, 12 features, 2 targets for deterministic GA-PLS selection."""
+    seed = 71
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(30, 5))
+    wave = np.linspace(0.0, 2.1 * np.pi, 30)
+    X = np.column_stack([
+        0.86 * latent[:, 0] + 0.16 * latent[:, 1] + 0.04 * rng.standard_normal(size=30),
+        -0.49 * latent[:, 0] + 0.52 * latent[:, 2] + 0.05 * rng.standard_normal(size=30),
+        0.66 * latent[:, 1] - 0.24 * latent[:, 3] + 0.05 * rng.standard_normal(size=30),
+        0.22 * latent[:, 0] + 0.82 * latent[:, 3] + 0.04 * rng.standard_normal(size=30),
+        -0.51 * latent[:, 2] + 0.31 * latent[:, 3] + 0.05 * rng.standard_normal(size=30),
+        0.44 * latent[:, 4] + 0.15 * latent[:, 0] + 0.06 * rng.standard_normal(size=30),
+        0.28 * latent[:, 1] - 0.20 * latent[:, 4] + 0.07 * rng.standard_normal(size=30),
+        np.sin(1.4 * wave) + 0.05 * rng.standard_normal(size=30),
+        np.cos(1.1 * wave) + 0.05 * rng.standard_normal(size=30),
+        0.23 * np.linspace(-1.0, 1.0, 30) + 0.10 * rng.standard_normal(size=30),
+        0.34 * latent[:, 2] - 0.16 * latent[:, 4] + 0.08 * rng.standard_normal(size=30),
+        rng.standard_normal(size=30) * 0.15,
+    ])
+    Y = np.column_stack([
+        1.10 * latent[:, 0] - 0.45 * latent[:, 2] + 0.32 * latent[:, 4] + 0.05 * rng.standard_normal(size=30),
+        -0.41 * latent[:, 1] + 0.70 * latent[:, 3] - 0.21 * latent[:, 4] + 0.05 * rng.standard_normal(size=30),
+    ])
+    return _ga_selection_fixture("synthetic_ga_pls_wrapper_v1",
+                                 seed=seed,
+                                 X=X,
+                                 Y=Y,
+                                 n_components=2,
+                                 n_splits=5,
+                                 n_generations=6,
+                                 population_size=8,
+                                 min_features=3,
+                                 max_features=8,
+                                 mutation_rate=0.35,
+                                 ga_seed=9101)
 
 
 def synthetic_component_coefficients_pls2_v1() -> dict[str, Any]:

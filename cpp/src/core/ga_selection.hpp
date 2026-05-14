@@ -1,0 +1,51 @@
+// SPDX-License-Identifier: CeCILL-2.1
+//
+// Internal deterministic GA-PLS variable-selection primitive.
+
+#pragma once
+
+#include <cstdint>
+#include <vector>
+
+#include "pls4all/p4a.h"
+
+#include "core/config.hpp"
+#include "core/context.hpp"
+#include "core/validation.hpp"
+
+namespace pls4all::core {
+
+struct GaSelectionResult {
+    std::int32_t n_features{0};
+    std::int32_t n_targets{0};
+    std::int32_t n_components{0};
+    std::int32_t n_generations{0};
+    std::int32_t population_size{0};
+    std::int32_t min_features{0};
+    std::int32_t max_features{0};
+    double mutation_rate{0.0};
+    std::uint64_t seed{0};
+    double best_rmse{0.0};
+
+    std::vector<double> global_scores;
+    std::vector<double> inclusion_frequencies;
+    std::vector<double> best_rmse_by_generation;
+    std::vector<double> mean_rmse_by_generation;
+    std::vector<std::int64_t> best_subset_sizes;
+    std::vector<std::int64_t> selected_indices;
+};
+
+[[nodiscard]] p4a_status_t select_by_ga(Context& ctx,
+                                        const Config& cfg,
+                                        const p4a_matrix_view_t& X,
+                                        const p4a_matrix_view_t& Y,
+                                        const ValidationPlan& plan,
+                                        std::int32_t n_generations,
+                                        std::int32_t population_size,
+                                        std::int32_t min_features,
+                                        std::int32_t max_features,
+                                        double mutation_rate,
+                                        std::uint64_t seed,
+                                        GaSelectionResult& out);
+
+}  // namespace pls4all::core

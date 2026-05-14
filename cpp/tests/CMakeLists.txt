@@ -15,6 +15,7 @@ add_executable(pls4all_tests
     abi/test_component_coefficients.cpp
     abi/test_config_setters.cpp
     abi/test_cross_validation.cpp
+    abi/test_ga_selection.cpp
     abi/test_interval_selection.cpp
     abi/test_status_codes.cpp
     abi/test_variable_importance.cpp
