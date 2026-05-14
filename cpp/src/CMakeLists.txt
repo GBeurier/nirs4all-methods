@@ -26,7 +26,10 @@ add_library(pls4all_core OBJECT
     core/version.cpp
     core/context.cpp
     core/config.cpp
-    core/matrix_view.cpp)
+    core/matrix_view.cpp
+    core/operator_bank.cpp
+    core/gating_strategy.cpp
+    core/pipeline.cpp)
 target_include_directories(pls4all_core
     PUBLIC  ${PROJECT_SOURCE_DIR}/cpp/include
             ${PROJECT_BINARY_DIR}/generated
@@ -53,7 +56,10 @@ set(_pls4all_c_sources
     c_api/c_api_version.cpp
     c_api/c_api_context.cpp
     c_api/c_api_config.cpp
-    c_api/c_api_matrix.cpp)
+    c_api/c_api_matrix.cpp
+    c_api/c_api_operator_bank.cpp
+    c_api/c_api_gating_strategy.cpp
+    c_api/c_api_pipeline.cpp)
 
 function(pls4all_apply_c_target target)
     # Embed all pls4all_core objects directly into the C-API target so that
