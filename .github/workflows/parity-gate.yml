@@ -10,6 +10,12 @@ on:
 jobs:
   fixture-determinism:
     runs-on: ubuntu-22.04
+    env:
+      OPENBLAS_CORETYPE: HASWELL
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      PYTHONHASHSEED: "0"
     steps:
       - uses: actions/checkout@v4
 
