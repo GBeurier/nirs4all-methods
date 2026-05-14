@@ -25,6 +25,11 @@
       "path": "synthetic_classification_binary_metrics_v1.json",
       "sha256": "86b0060dad377ef1aa03dc97e7516919e2a7cc76bb371f243659dcffb846a34f"
     },
+    "synthetic_component_coefficients_pls2_v1": {
+      "bytes": 5750,
+      "path": "synthetic_component_coefficients_pls2_v1.json",
+      "sha256": "7221d40505ac885cf2902cddb4a2f5ae760f24cf429d046ad4a735f60c2d5348"
+    },
     "synthetic_cv_kfold_nipals_pls1_v1": {
       "bytes": 4307,
       "path": "synthetic_cv_kfold_nipals_pls1_v1.json",

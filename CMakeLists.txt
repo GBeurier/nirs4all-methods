@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.21)
 # (the header file is the canonical version for ABI / runtime queries — this
 # CMake project version is used only for installation / find_package).
 project(pls4all
-    VERSION 0.31.0
+    VERSION 0.32.0
     DESCRIPTION "Portable PLS/NIRS engine with stable C ABI"
     HOMEPAGE_URL "https://github.com/GBeurier/pls4all"
     LANGUAGES C CXX)

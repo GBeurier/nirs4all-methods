@@ -47,13 +47,13 @@ jobs:
 
       - name: Run pls4all Python binding smoke test
         env:
-          PLS4ALL_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libp4a.so.0.31.0
+          PLS4ALL_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libp4a.so.0.32.0
         run: |
           pip install -e bindings/python
           python - <<'PY'
           import pls4all
 
-          assert pls4all.version().startswith("0.31.0")
+          assert pls4all.version().startswith("0.32.0")
           with pls4all.Context() as ctx, pls4all.Config() as cfg:
               cfg.n_components = 3
               cfg.algorithm = pls4all.Algorithm.PCR

@@ -850,6 +850,43 @@ def _variable_importance_expected(
     }
 
 
+def _component_coefficients_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    model = PLSRegression(n_components=n_components, scale=True, max_iter=500, tol=1e-6)
+    model.fit(X, Y)
+
+    W = model.x_weights_.astype(np.float64, copy=False)
+    P = model.x_loadings_.astype(np.float64, copy=False)
+    Q = model.y_loadings_.astype(np.float64, copy=False)
+    x_scale = model._x_std.astype(np.float64)
+    y_scale = np.atleast_1d(model._y_std).astype(np.float64)
+    blocks: list[np.ndarray] = []
+    for prefix in range(1, int(n_components) + 1):
+        Wk = W[:, :prefix]
+        Pk = P[:, :prefix]
+        Qk = Q[:, :prefix]
+        rotations = Wk @ np.linalg.inv(Pk.T @ Wk)
+        coefficients = rotations @ Qk.T
+        coefficients = coefficients * y_scale.reshape(1, -1) / x_scale.reshape(-1, 1)
+        blocks.append(coefficients.astype(np.float64, copy=False))
+    stacked = np.stack(blocks, axis=0)
+    return {
+        "coefficients_by_component": {
+            "shape": [int(n_components), int(X.shape[1] * Y.shape[1])],
+            "layout": "component_major_row_major",
+            "dtype": "f64",
+            "values": stacked.reshape(-1, order="C").tolist(),
+        },
+    }
+
+
 def _validation_folds(kind: str,
                       n_samples: int,
                       n_splits: int = 0,
@@ -1892,6 +1929,42 @@ def _variable_importance_fixture(
     }
 
 
+def _component_coefficients_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "pls4all_parity.suites._component_coefficients_expected",
+            "version":          "1",
+            "git_revision_sha": "unknown",
+            "params": {
+                "n_components": int(n_components),
+                "reference":    "sklearn.cross_decomposition.PLSRegression prefix coefficient formulas",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _component_coefficients_expected(X, Y, n_components),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "sklearn/PLSRegression/component-coefficients",
+        },
+    }
+
+
 def _validation_fixture(
     fixture_id: str,
     kind: str,
@@ -2719,6 +2792,30 @@ def synthetic_variable_importance_pls2_v1() -> dict[str, Any]:
                                         X=X,
                                         Y=Y,
                                         n_components=2)
+
+
+def synthetic_component_coefficients_pls2_v1() -> dict[str, Any]:
+    """16 samples, 6 features, 2 targets for per-component coefficient parity."""
+    seed = 60
+    rng = np.random.default_rng(seed)
+    latent = rng.standard_normal(size=(16, 3))
+    X = np.column_stack([
+        0.71 * latent[:, 0] + 0.33 * latent[:, 1],
+        -0.46 * latent[:, 0] + 0.55 * latent[:, 2],
+        0.63 * latent[:, 1] - 0.22 * latent[:, 2],
+        0.31 * latent[:, 0] + 0.44 * latent[:, 1] - 0.18 * latent[:, 2],
+        np.linspace(-0.8, 0.9, 16),
+        rng.standard_normal(size=16) * 0.04,
+    ])
+    Y = np.column_stack([
+        0.96 * latent[:, 0] - 0.52 * latent[:, 1] + rng.standard_normal(size=16) * 0.03,
+        -0.43 * latent[:, 0] + 0.78 * latent[:, 2] + rng.standard_normal(size=16) * 0.03,
+    ])
+    return _component_coefficients_fixture("synthetic_component_coefficients_pls2_v1",
+                                           seed=seed,
+                                           X=X,
+                                           Y=Y,
+                                           n_components=3)
 
 
 def synthetic_validation_kfold_balanced_v1() -> dict[str, Any]:

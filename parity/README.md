@@ -59,6 +59,7 @@ parity/
 │   ├── synthetic_metrics_regression_v1.json
 │   ├── synthetic_classification_binary_metrics_v1.json
 │   ├── synthetic_variable_importance_pls2_v1.json
+│   ├── synthetic_component_coefficients_pls2_v1.json
 │   ├── synthetic_validation_kfold_balanced_v1.json
 │   ├── synthetic_validation_leave_one_out_v1.json
 │   ├── synthetic_validation_holdout_v1.json
@@ -119,10 +120,13 @@ formulas for sensitivity, specificity, balanced accuracy, precision/F1, MCC and
 average-rank AUC.
 Variable-importance fixtures are generated from sklearn `PLSRegression` scores,
 weights and loadings for VIP and selectivity-ratio parity.
+Component-coefficient fixtures are generated from sklearn `PLSRegression`
+weights/loadings and gate original-scale coefficient blocks for every latent
+prefix.
 Validation split fixtures are generated from deterministic Python references
 for balanced contiguous k-fold, leave-one-out and holdout plans. Cross-validation
 fixtures use scikit-learn `PLSRegression` over the same deterministic k-fold
 plans and gate out-of-sample predictions plus aggregate metrics.
 C++ parity tests assert predictions, coefficients, preprocessing statistics,
 transforms, CV predictions, regression/classification metrics, variable
-importance and latent arrays within `tolerances.md`.
+importance, component coefficients and latent arrays within `tolerances.md`.

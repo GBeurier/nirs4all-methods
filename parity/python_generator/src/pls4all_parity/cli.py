@@ -59,6 +59,7 @@ def _generate_all() -> dict[str, bytes]:
         "synthetic_metrics_regression_v1": _serialize(suites.synthetic_metrics_regression_v1()),
         "synthetic_classification_binary_metrics_v1": _serialize(suites.synthetic_classification_binary_metrics_v1()),
         "synthetic_variable_importance_pls2_v1": _serialize(suites.synthetic_variable_importance_pls2_v1()),
+        "synthetic_component_coefficients_pls2_v1": _serialize(suites.synthetic_component_coefficients_pls2_v1()),
         "synthetic_validation_kfold_balanced_v1": _serialize(suites.synthetic_validation_kfold_balanced_v1()),
         "synthetic_validation_leave_one_out_v1": _serialize(suites.synthetic_validation_leave_one_out_v1()),
         "synthetic_validation_holdout_v1": _serialize(suites.synthetic_validation_holdout_v1()),

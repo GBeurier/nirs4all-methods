@@ -85,6 +85,14 @@ HEADER_SPECS = {
         "struct": "VariableImportanceFixture",
         "array": "kVariableImportanceFixtures",
     },
+    "component-coefficients": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "component_coefficients_fixtures.hpp",
+        "fixtures": (
+            "synthetic_component_coefficients_pls2_v1",
+        ),
+        "struct": "ComponentCoefficientsFixture",
+        "array": "kComponentCoefficientsFixtures",
+    },
     "validation": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "validation_fixtures.hpp",
         "fixtures": (
@@ -812,6 +820,65 @@ def generate_variable_importance(fixture_ids: Sequence[str],
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
+def generate_component_coefficients(fixture_ids: Sequence[str],
+                                    fixture_dir: Path,
+                                    out: Path,
+                                    family: str,
+                                    struct_name: str,
+                                    array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_components;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    MatrixRef coefficients_by_component;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        x_name = f"{prefix}_X"
+        y_name = f"{prefix}_Y"
+        coef_name = f"{prefix}_coefficients_by_component"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
+        _emit_array(lines, coef_name, fixture["expected"]["coefficients_by_component"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['n_components'])},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
+            f"        {_matrix_ref(coef_name, fixture['expected']['coefficients_by_component'])}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
 def generate_cross_validation(fixture_ids: Sequence[str],
                               fixture_dir: Path,
                               out: Path,
@@ -915,6 +982,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "variable-importance":
         generate_variable_importance(fixture_ids, args.fixture_dir, out, args.family,
                                      str(spec["struct"]), str(spec["array"]))
+    elif args.family == "component-coefficients":
+        generate_component_coefficients(fixture_ids, args.fixture_dir, out, args.family,
+                                        str(spec["struct"]), str(spec["array"]))
     elif args.family == "validation":
         generate_validation(fixture_ids, args.fixture_dir, out, args.family,
                             str(spec["struct"]), str(spec["array"]))
