@@ -30,6 +30,15 @@ HEADER_SPECS = {
         "struct": "SvdFixture",
         "array": "kSvdFixtures",
     },
+    "power": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "power_fixtures.hpp",
+        "fixtures": (
+            "synthetic_power_tiny_pls1_v1",
+            "synthetic_power_small_pls2_v1",
+        ),
+        "struct": "PowerFixture",
+        "array": "kPowerFixtures",
+    },
     "pcr": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "pcr_fixtures.hpp",
         "fixtures": (

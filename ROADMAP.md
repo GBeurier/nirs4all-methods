@@ -53,6 +53,7 @@ Goal: useful for real spectroscopy.
 - Linear kernel-algorithm PLS shipped as `phase-4d-kernel`.
 - Wide-kernel PLS shipped as `phase-4e-wide-kernel`.
 - Orthogonal-scores PLS shipped as `phase-4f-orthogonal-scores`.
+- Power-iteration PLS shipped as `phase-4g-power`.
 - SIMPLS with materialised auto-prefix CV scoring (à la `aompls`).
 - OPLS, OPLS-DA.
 - PLS-DA, PLS-LDA, PLS-logistic.

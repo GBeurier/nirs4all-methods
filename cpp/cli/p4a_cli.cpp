@@ -202,6 +202,18 @@ int cmd_selfcheck() {
     p4a_array_free(svd_pred);
     p4a_model_destroy(svd_model);
 
+    CHECK(p4a_config_set_solver(cfg, P4A_SOLVER_POWER) == P4A_OK);
+    p4a_model_t* power_model = nullptr;
+    CHECK(p4a_model_fit(ctx, cfg, &X, &Y, &power_model) == P4A_OK);
+    CHECK(power_model != nullptr);
+    p4a_array_t* power_pred = nullptr;
+    CHECK(p4a_model_predict_alloc(ctx, power_model, &X, &power_pred) == P4A_OK);
+    CHECK(p4a_array_shape(power_pred, &rows, &cols) == P4A_OK);
+    CHECK(rows == 4);
+    CHECK(cols == 1);
+    p4a_array_free(power_pred);
+    p4a_model_destroy(power_model);
+
     CHECK(p4a_config_set_algorithm(cfg, P4A_ALGO_PCR) == P4A_OK);
     CHECK(p4a_config_set_solver(cfg, P4A_SOLVER_SVD) == P4A_OK);
     p4a_model_t* pcr_model = nullptr;
