@@ -36,7 +36,9 @@ parity/
 │   ├── synthetic_pls_da_multiclass_v1.json
 │   ├── synthetic_opls_tiny_pls1_v1.json
 │   ├── synthetic_opls_small_pls1_v1.json
+│   ├── synthetic_opls_small_pls2_v1.json
 │   ├── synthetic_opls_da_binary_v1.json
+│   ├── synthetic_opls_da_multiclass_v1.json
 │   ├── synthetic_pcr_tiny_pls1_v1.json
 │   └── synthetic_pcr_small_pls2_v1.json
 ├── tolerances.md                  Pair-wise abs / rel tolerance table.
@@ -77,7 +79,8 @@ singular-pair power iteration. Randomized-SVD fixtures mirror the C++
 SplitMix64-seeded singular-vector iteration. PLSCanonical fixtures mirror
 scikit-learn canonical deflation for NIPALS and SVD. PLS-DA fixtures use
 dummy-coded class targets fitted through scikit-learn `PLSRegression`. OPLS and
-binary OPLS-DA fixtures are generated from a deterministic NumPy OPLS1 NIPALS recurrence.
+OPLS-DA fixtures are generated from a deterministic NumPy OPLS NIPALS recurrence
+with one shared predictive score for multi-response targets.
 PCR fixtures are generated from NumPy PCA/SVD with score-space
 least squares. C++ parity tests assert predictions, coefficients,
 preprocessing statistics and latent arrays within `tolerances.md`.

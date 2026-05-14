@@ -957,7 +957,7 @@ TEST(model_phase1, pls_da_fixture_parity_for_dummy_targets) {
     }
 }
 
-TEST(model_phase1, opls_fixture_parity_for_pls1) {
+TEST(model_phase1, opls_fixture_parity_for_pls1_and_pls2) {
     for (const auto& fixture : ::pls4all::test::fixtures::kOplsFixtures) {
         Handles h;
         fit_opls_fixture(failures, fixture, h);
@@ -970,7 +970,7 @@ TEST(model_phase1, opls_fixture_parity_for_pls1) {
         CHECK_EQ(p4a_model_get_n_targets(h.model, &n_targets), P4A_OK);
         CHECK_EQ(n_components, fixture.n_components);
         CHECK_EQ(n_features, static_cast<std::int32_t>(fixture.X.cols));
-        CHECK_EQ(n_targets, 1);
+        CHECK_EQ(n_targets, static_cast<std::int32_t>(fixture.Y.cols));
 
         p4a_matrix_view_t X{};
         CHECK_EQ(p4a_matrix_view_init_rowmajor(&X,
@@ -1009,7 +1009,7 @@ TEST(model_phase1, opls_fixture_parity_for_pls1) {
     }
 }
 
-TEST(model_phase1, opls_da_fixture_parity_for_binary_dummy_target) {
+TEST(model_phase1, opls_da_fixture_parity_for_binary_and_multiclass_dummy_targets) {
     for (const auto& fixture : ::pls4all::test::fixtures::kOplsDaFixtures) {
         Handles h;
         fit_opls_da_fixture(failures, fixture, h);
@@ -1022,7 +1022,7 @@ TEST(model_phase1, opls_da_fixture_parity_for_binary_dummy_target) {
         CHECK_EQ(p4a_model_get_n_targets(h.model, &n_targets), P4A_OK);
         CHECK_EQ(n_components, fixture.n_components);
         CHECK_EQ(n_features, static_cast<std::int32_t>(fixture.X.cols));
-        CHECK_EQ(n_targets, 1);
+        CHECK_EQ(n_targets, static_cast<std::int32_t>(fixture.Y.cols));
 
         p4a_matrix_view_t X{};
         CHECK_EQ(p4a_matrix_view_init_rowmajor(&X,
@@ -1512,7 +1512,7 @@ TEST(model_phase1, pls_da_transform_matches_reference_scores) {
 }
 
 TEST(model_phase1, opls_transform_matches_reference_scores) {
-    const auto& fixture = ::pls4all::test::fixtures::kOplsFixtures[1];
+    const auto& fixture = ::pls4all::test::fixtures::kOplsFixtures[2];
     Handles h;
     fit_opls_fixture(failures, fixture, h, true);
 
@@ -1542,7 +1542,7 @@ TEST(model_phase1, opls_transform_matches_reference_scores) {
 }
 
 TEST(model_phase1, opls_da_transform_matches_reference_scores) {
-    const auto& fixture = ::pls4all::test::fixtures::kOplsDaFixtures[0];
+    const auto& fixture = ::pls4all::test::fixtures::kOplsDaFixtures[1];
     Handles h;
     fit_opls_da_fixture(failures, fixture, h, true);
 
@@ -1995,7 +1995,7 @@ TEST(model_phase1, pls_da_serialization_roundtrip_preserves_predictions) {
 }
 
 TEST(model_phase1, opls_serialization_roundtrip_preserves_predictions) {
-    const auto& fixture = ::pls4all::test::fixtures::kOplsFixtures[0];
+    const auto& fixture = ::pls4all::test::fixtures::kOplsFixtures[2];
     Handles h;
     fit_opls_fixture(failures, fixture, h);
 
@@ -2031,7 +2031,7 @@ TEST(model_phase1, opls_serialization_roundtrip_preserves_predictions) {
 }
 
 TEST(model_phase1, opls_da_serialization_roundtrip_preserves_predictions) {
-    const auto& fixture = ::pls4all::test::fixtures::kOplsDaFixtures[0];
+    const auto& fixture = ::pls4all::test::fixtures::kOplsDaFixtures[1];
     Handles h;
     fit_opls_da_fixture(failures, fixture, h);
 

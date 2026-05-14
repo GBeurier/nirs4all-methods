@@ -847,64 +847,74 @@ def _opls_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str,
     Y = np.asarray(Y, dtype=np.float64)
     if Y.ndim == 1:
         Y = Y.reshape(-1, 1)
-    if Y.shape[1] != 1:
-        raise ValueError("OPLS reference currently supports exactly one target")
 
     Xk, x_mean, x_scale = _center_scale(X)
     Ys, y_mean, y_scale = _center_scale(Y)
-    y = Ys[:, 0].copy()
     n, p = Xk.shape
+    q = Ys.shape[1]
     K = int(n_components)
     eps = np.finfo(np.float64).eps
 
     W = np.zeros((p, K), dtype=np.float64)
     P = np.zeros((p, K), dtype=np.float64)
-    Q = np.zeros((1, K), dtype=np.float64)
+    Q = np.zeros((q, K), dtype=np.float64)
     R = np.zeros((p, K), dtype=np.float64)
     T = np.zeros((n, K), dtype=np.float64)
+    U_scores = np.zeros((n, K), dtype=np.float64)
     projection = np.eye(p, dtype=np.float64)
 
     def sign_normalize(
         weights: np.ndarray,
         scores: np.ndarray | None = None,
         loadings: np.ndarray | None = None,
-        y_loading: float | None = None,
-    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None, float | None]:
+        y_loadings: np.ndarray | None = None,
+    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None, np.ndarray | None]:
         sign_idx = int(np.argmax(np.abs(weights)))
         if weights[sign_idx] >= 0.0:
-            return weights, scores, loadings, y_loading
+            return weights, scores, loadings, y_loadings
         weights = -weights
         if scores is not None:
             scores = -scores
         if loadings is not None:
             loadings = -loadings
-        if y_loading is not None:
-            y_loading = -y_loading
-        return weights, scores, loadings, y_loading
+        if y_loadings is not None:
+            y_loadings = -y_loadings
+        return weights, scores, loadings, y_loadings
 
     def predictive_component(
         Xwork: np.ndarray,
         component: int,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
-        weights = Xwork.T @ y
-        w_norm = np.linalg.norm(weights)
-        if w_norm <= eps:
-            raise RuntimeError(f"OPLS predictive weights collapsed at component {component}")
-        weights = weights / w_norm
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        if q == 1:
+            weights = Xwork.T @ Ys[:, 0]
+            w_norm = np.linalg.norm(weights)
+            if w_norm <= eps:
+                raise RuntimeError(f"OPLS predictive weights collapsed at component {component}")
+            weights = weights / w_norm
+            y_weights = np.array([1.0], dtype=np.float64)
+        else:
+            weights, y_weights = _dominant_svd_pair(Xwork.T @ Ys)
+
         scores = Xwork @ weights
         t_ss = float(scores @ scores)
         if t_ss <= eps:
             raise RuntimeError(f"OPLS predictive score collapsed at component {component}")
         loadings = (Xwork.T @ scores) / t_ss
-        y_loading = float((y @ scores) / t_ss)
-        weights, scores, loadings, y_loading = sign_normalize(
-            weights, scores, loadings, y_loading
+        y_loadings = (Ys.T @ scores) / t_ss
+        y_weight_ss = float(y_weights @ y_weights)
+        if y_weight_ss <= eps:
+            raise RuntimeError(f"OPLS predictive Y weights collapsed at component {component}")
+        y_scores = (Ys @ y_weights) / (y_weight_ss + eps)
+        weights, scores, loadings, y_loadings = sign_normalize(
+            weights, scores, loadings, y_loadings
         )
-        assert scores is not None and loadings is not None and y_loading is not None
-        return weights, scores, loadings, y_loading
+        assert scores is not None and loadings is not None and y_loadings is not None
+        if q == 1:
+            y_scores = Ys[:, 0] * y_loadings[0] / (float(y_loadings @ y_loadings) + eps)
+        return weights, scores, loadings, y_loadings, y_scores
 
     for orth in range(max(K - 1, 0)):
-        pred_w, _pred_t, pred_p, _pred_q = predictive_component(Xk, orth + 1)
+        pred_w, _pred_t, pred_p, _pred_q, _pred_u = predictive_component(Xk, orth + 1)
         alignment = float((pred_w @ pred_p) / (pred_w @ pred_w))
         orth_w = pred_p - pred_w * alignment
         orth_norm = np.linalg.norm(orth_w)
@@ -928,28 +938,29 @@ def _opls_expected(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str,
         Xk = Xk - np.outer(orth_t, orth_p)
         projection = projection - np.outer(raw_rotation, orth_p)
 
-    pred_w, pred_t, pred_p, pred_q = predictive_component(Xk, 0)
+    pred_w, pred_t, pred_p, pred_q, pred_u = predictive_component(Xk, 0)
     raw_pred = projection @ pred_w
     denom = float(pred_p @ pred_w)
     if abs(denom) <= eps:
         raise RuntimeError("OPLS predictive denominator collapsed")
-    coef_std = (raw_pred.reshape(-1, 1) * pred_q) / denom
+    coef_std = np.outer(raw_pred, pred_q) / denom
     coef = coef_std * (y_scale.reshape(1, -1) / x_scale.reshape(-1, 1))
     preds = y_mean.reshape(1, -1) + (X - x_mean.reshape(1, -1)) @ coef
 
     W[:, 0] = pred_w
     P[:, 0] = pred_p
-    Q[0, 0] = pred_q
+    Q[:, 0] = pred_q
     R[:, 0] = raw_pred
     T[:, 0] = pred_t
+    U_scores[:, 0] = pred_u
 
     return {
         "coefficients":  {"shape": list(coef.shape),       "values": _flatten_rowmajor(coef)},
-        "intercept":     {"shape": [1],                    "values": y_mean.astype(np.float64).tolist()},
+        "intercept":     {"shape": [q],                    "values": y_mean.astype(np.float64).tolist()},
         "x_mean":        {"shape": [p],                    "values": x_mean.astype(np.float64).tolist()},
         "x_scale":       {"shape": [p],                    "values": x_scale.astype(np.float64).tolist()},
-        "y_mean":        {"shape": [1],                    "values": y_mean.astype(np.float64).tolist()},
-        "y_scale":       {"shape": [1],                    "values": y_scale.astype(np.float64).tolist()},
+        "y_mean":        {"shape": [q],                    "values": y_mean.astype(np.float64).tolist()},
+        "y_scale":       {"shape": [q],                    "values": y_scale.astype(np.float64).tolist()},
         "weights_W":     {"shape": list(W.shape),          "values": _flatten_rowmajor(W), "sign_invariant": True},
         "loadings_P":    {"shape": list(P.shape),          "values": _flatten_rowmajor(P), "sign_invariant": True},
         "y_loadings_Q":  {"shape": list(Q.shape),          "values": _flatten_rowmajor(Q), "sign_invariant": True},
@@ -1426,6 +1437,9 @@ def _opls_da_fixture(
     X: np.ndarray,
     Y: np.ndarray,
     n_components: int,
+    algorithm: str = "opls-da-binary",
+    reference: str = "NumPy OPLS1 NIPALS recurrence on one-column dummy Y",
+    tolerance_table_row: str = "pls4all-numpy-opls-da-binary",
 ) -> dict[str, Any]:
     return {
         "schema_version": 1,
@@ -1438,8 +1452,8 @@ def _opls_da_fixture(
                 "n_components":   n_components,
                 "scale":          True,
                 "deflation_mode": "orthogonal",
-                "algorithm":      "opls-da-binary",
-                "reference":      "NumPy OPLS1 NIPALS recurrence on one-column dummy Y",
+                "algorithm":      algorithm,
+                "reference":      reference,
             },
         },
         "data": {
@@ -1450,7 +1464,7 @@ def _opls_da_fixture(
         "comparison_policy": {
             "components_alignment": "first-k-prefix",
             "sign_resolver":        "max_abs_element_positive",
-            "tolerance_table_row":  "pls4all-numpy-opls-da-binary",
+            "tolerance_table_row":  tolerance_table_row,
         },
     }
 
@@ -1775,6 +1789,30 @@ def synthetic_opls_small_pls1_v1() -> dict[str, Any]:
                          seed=121, X=X, Y=Y, n_components=3)
 
 
+def synthetic_opls_small_pls2_v1() -> dict[str, Any]:
+    """20 samples, 8 features, 2 targets, one common predictive + 2 orthogonal components."""
+    rng = np.random.default_rng(seed=123)
+    predictive = rng.standard_normal(size=(20, 1))
+    orthogonal = rng.standard_normal(size=(20, 3))
+    X = np.hstack([
+        0.57 * predictive + 0.28 * orthogonal[:, [0]],
+        -0.37 * predictive + 0.41 * orthogonal[:, [1]],
+        0.32 * predictive - 0.36 * orthogonal[:, [2]],
+        0.48 * predictive + 0.17 * orthogonal[:, [0]],
+        -0.25 * predictive - 0.43 * orthogonal[:, [1]],
+        0.22 * predictive + 0.39 * orthogonal[:, [2]],
+        0.40 * predictive - 0.24 * orthogonal[:, [0]],
+        -0.33 * predictive + 0.21 * orthogonal[:, [1]],
+    ])
+    X += rng.standard_normal(size=X.shape) * 0.025
+    Y = np.hstack([
+        1.18 * predictive + rng.standard_normal(size=(20, 1)) * 0.035,
+        -0.74 * predictive + rng.standard_normal(size=(20, 1)) * 0.035,
+    ])
+    return _opls_fixture("synthetic_opls_small_pls2_v1",
+                         seed=123, X=X, Y=Y, n_components=3)
+
+
 def synthetic_opls_da_binary_v1() -> dict[str, Any]:
     """20 samples, 7 features, one binary dummy target, 1 predictive + 2 orthogonal components."""
     rng = np.random.default_rng(seed=122)
@@ -1797,6 +1835,36 @@ def synthetic_opls_da_binary_v1() -> dict[str, Any]:
     Y = labels.reshape(-1, 1)
     return _opls_da_fixture("synthetic_opls_da_binary_v1",
                             seed=122, X=X, Y=Y, n_components=3)
+
+
+def synthetic_opls_da_multiclass_v1() -> dict[str, Any]:
+    """24 samples, 8 features, 3 dummy targets, one common predictive + 2 orthogonal components."""
+    rng = np.random.default_rng(seed=124)
+    predictive = rng.standard_normal(size=(24, 1))
+    orthogonal = rng.standard_normal(size=(24, 3))
+    X = np.hstack([
+        0.55 * predictive + 0.34 * orthogonal[:, [0]],
+        -0.43 * predictive + 0.30 * orthogonal[:, [1]],
+        0.29 * predictive - 0.40 * orthogonal[:, [2]],
+        0.47 * predictive + 0.19 * orthogonal[:, [0]],
+        -0.24 * predictive - 0.45 * orthogonal[:, [1]],
+        0.35 * predictive + 0.23 * orthogonal[:, [2]],
+        0.31 * predictive - 0.26 * orthogonal[:, [0]],
+        -0.38 * predictive + 0.20 * orthogonal[:, [1]],
+    ])
+    X += rng.standard_normal(size=X.shape) * 0.03
+    noisy_axis = predictive[:, 0] + rng.standard_normal(size=24) * 0.08
+    cuts = np.quantile(noisy_axis, [1.0 / 3.0, 2.0 / 3.0])
+    labels = np.digitize(noisy_axis, cuts).astype(np.int64)
+    labels[0] = 0
+    labels[1] = 1
+    labels[2] = 2
+    Y = np.eye(3, dtype=np.float64)[labels]
+    return _opls_da_fixture("synthetic_opls_da_multiclass_v1",
+                            seed=124, X=X, Y=Y, n_components=3,
+                            algorithm="opls-da-multiclass",
+                            reference="NumPy multivariate OPLS NIPALS recurrence on one-hot Y",
+                            tolerance_table_row="pls4all-numpy-opls-da-multiclass")
 
 
 def synthetic_kernel_tiny_pls1_v1() -> dict[str, Any]:

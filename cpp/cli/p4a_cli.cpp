@@ -110,12 +110,21 @@ int cmd_selfcheck() {
         3.0, 5.0, 4.0,
     };
     double ybuf[4] = {0.1, 0.9, 6.2, 11.9};
+    double y_multi_buf[12] = {
+        1.0, 0.0, 0.0,
+        0.0, 1.0, 0.0,
+        0.0, 0.0, 1.0,
+        1.0, 0.0, 0.0,
+    };
     p4a_matrix_view_t X;
     p4a_matrix_view_t Y;
+    p4a_matrix_view_t Y_multi;
     CHECK(p4a_matrix_view_init_rowmajor(&X, xbuf, 4, 3, P4A_DTYPE_F64) == P4A_OK);
     CHECK(p4a_matrix_view_init_rowmajor(&Y, ybuf, 4, 1, P4A_DTYPE_F64) == P4A_OK);
+    CHECK(p4a_matrix_view_init_rowmajor(&Y_multi, y_multi_buf, 4, 3, P4A_DTYPE_F64) == P4A_OK);
     CHECK(p4a_matrix_view_validate(&X) == P4A_OK);
     CHECK(p4a_matrix_view_validate(&Y) == P4A_OK);
+    CHECK(p4a_matrix_view_validate(&Y_multi) == P4A_OK);
 
     // Model smoke: NIPALS fit, predict, transform and export.
     p4a_model_t* model = nullptr;
@@ -269,6 +278,17 @@ int cmd_selfcheck() {
     CHECK(cols == 1);
     p4a_array_free(opls_da_pred);
     p4a_model_destroy(opls_da_model);
+
+    p4a_model_t* opls_da_multi_model = nullptr;
+    CHECK(p4a_model_fit(ctx, cfg, &X, &Y_multi, &opls_da_multi_model) == P4A_OK);
+    CHECK(opls_da_multi_model != nullptr);
+    p4a_array_t* opls_da_multi_pred = nullptr;
+    CHECK(p4a_model_predict_alloc(ctx, opls_da_multi_model, &X, &opls_da_multi_pred) == P4A_OK);
+    CHECK(p4a_array_shape(opls_da_multi_pred, &rows, &cols) == P4A_OK);
+    CHECK(rows == 4);
+    CHECK(cols == 3);
+    p4a_array_free(opls_da_multi_pred);
+    p4a_model_destroy(opls_da_multi_model);
 
     CHECK(p4a_config_set_algorithm(cfg, P4A_ALGO_PLS_CANONICAL) == P4A_OK);
     CHECK(p4a_config_set_deflation(cfg, P4A_DEFLATION_CANONICAL) == P4A_OK);

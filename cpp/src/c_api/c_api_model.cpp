@@ -423,10 +423,6 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
         !valid_flag(store_scores) || !(tol > 0.0) || max_iter == 0U) {
         return false;
     }
-    if (supported_opls && n_targets != 1U) {
-        return false;
-    }
-
     std::uint64_t p_times_q = 0;
     std::uint64_t p_times_a = 0;
     std::uint64_t q_times_a = 0;

@@ -80,6 +80,7 @@ HEADER_SPECS = {
         "fixtures": (
             "synthetic_opls_tiny_pls1_v1",
             "synthetic_opls_small_pls1_v1",
+            "synthetic_opls_small_pls2_v1",
         ),
         "struct": "OplsFixture",
         "array": "kOplsFixtures",
@@ -88,6 +89,7 @@ HEADER_SPECS = {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "opls_da_fixtures.hpp",
         "fixtures": (
             "synthetic_opls_da_binary_v1",
+            "synthetic_opls_da_multiclass_v1",
         ),
         "struct": "OplsDaFixture",
         "array": "kOplsDaFixtures",

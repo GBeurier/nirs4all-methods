@@ -55,8 +55,8 @@ accessors and binary import/export are live for `P4A_ALGO_PLS_REGRESSION` with
 `P4A_SOLVER_POWER` or `P4A_SOLVER_RANDOMIZED_SVD`, for
 `P4A_ALGO_PLS_CANONICAL` with `P4A_SOLVER_NIPALS` or `P4A_SOLVER_SVD` and
 `P4A_DEFLATION_CANONICAL`, for `P4A_ALGO_PLS_DA` with dummy-coded `Y` and
-`P4A_DEFLATION_REGRESSION`, for `P4A_ALGO_OPLS` and binary
-`P4A_ALGO_OPLS_DA` with one predictive target, `P4A_SOLVER_NIPALS` and
+`P4A_DEFLATION_REGRESSION`, for `P4A_ALGO_OPLS` and `P4A_ALGO_OPLS_DA`
+with one or more response columns, `P4A_SOLVER_NIPALS` and
 `P4A_DEFLATION_ORTHOGONAL`, and for `P4A_ALGO_PCR` with `P4A_SOLVER_SVD`.
 
 ## Project layout
@@ -83,7 +83,7 @@ If you use `pls4all` in academic work, please cite:
   title   = {pls4all: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/pls4all},
-  version = {0.14.0}
+  version = {0.15.0}
 }
 ```
 

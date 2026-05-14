@@ -35,10 +35,20 @@
       "path": "synthetic_opls_da_binary_v1.json",
       "sha256": "2527cbbc35da9172dff4af3ce5e5504effbfb37c5bacc70ba80a76c10c3b7f90"
     },
+    "synthetic_opls_da_multiclass_v1": {
+      "bytes": 16537,
+      "path": "synthetic_opls_da_multiclass_v1.json",
+      "sha256": "e7b8f2db764df3a472cd71171a002ac5ca1fc84aa1e8ad657c9e88da168283d1"
+    },
     "synthetic_opls_small_pls1_v1": {
       "bytes": 11891,
       "path": "synthetic_opls_small_pls1_v1.json",
       "sha256": "01c2d5b09c33debddd769c4ca43adfefc35674c2b891ee22a2cf5edbd03d52c3"
+    },
+    "synthetic_opls_small_pls2_v1": {
+      "bytes": 14156,
+      "path": "synthetic_opls_small_pls2_v1.json",
+      "sha256": "74dee905b16e62c7a4a7b8f12805957671311d5d8272951724c331cb86ccd208"
     },
     "synthetic_opls_tiny_pls1_v1": {
       "bytes": 7921,
