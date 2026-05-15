@@ -79,6 +79,9 @@ Runtime / speed-up benchmarks are tracked separately by
 | `bagging_pls` | paper-only | paper-only | — / — | paper-only (Breiman 1996) |
 | `boosting_pls` | paper-only | paper-only | — / — | paper-only (Friedman 2001) |
 | `random_subspace_pls` | paper-only | paper-only | — / — | paper-only (Ho 1998) |
+| `so_pls` | paper-only | paper-only | — / — | paper-only (Næs et al. 2011) |
+| `on_pls` | paper-only | paper-only | — / — | paper-only (Löfstedt & Trygg 2011) |
+| `rosa` | paper-only | paper-only | — / — | paper-only (Liland et al. 2016) |
 
 Re-run the gate locally:
 

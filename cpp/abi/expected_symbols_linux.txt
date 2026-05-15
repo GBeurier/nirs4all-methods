@@ -120,6 +120,7 @@ p4a_model_transform
 p4a_model_transform_alloc
 p4a_n_pls_fit
 p4a_o2pls_fit
+p4a_on_pls_fit
 p4a_operator_bank_add
 p4a_operator_bank_create
 p4a_operator_bank_destroy
@@ -141,7 +142,9 @@ p4a_random_subspace_pls_fit
 p4a_recursive_pls_run
 p4a_ridge_pls_fit
 p4a_robust_pls_fit
+p4a_rosa_fit
 p4a_serialization_inspect
+p4a_so_pls_fit
 p4a_sparse_pls_da_fit
 p4a_sparse_simpls_fit
 p4a_status_to_string

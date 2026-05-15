@@ -224,6 +224,32 @@ lib.p4a_bagging_pls_fit.argtypes = [
     ctypes.POINTER(ctypes.c_void_p),
 ]
 
+lib.p4a_so_pls_fit.restype = ctypes.c_int
+lib.p4a_so_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.c_int32,
+    ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_int32), ctypes.c_int64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_on_pls_fit.restype = ctypes.c_int
+lib.p4a_on_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.c_int32,
+    ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_int32), ctypes.c_int64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_rosa_fit.restype = ctypes.c_int
+lib.p4a_rosa_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.c_int32,
+    ctypes.POINTER(MatrixView), ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
 lib.p4a_boosting_pls_fit.restype = ctypes.c_int
 lib.p4a_boosting_pls_fit.argtypes = [
     ctypes.c_void_p, ctypes.c_void_p,
@@ -630,6 +656,77 @@ def fused_sparse_pls_fit(ctx: Context, cfg: Config,
     return _resolve_handle(out, ctx, "p4a_fused_sparse_pls_fit")
 
 
+def _blocks_to_views(blocks):
+    views = (MatrixView * len(blocks))()
+    refs = []
+    for i, b in enumerate(blocks):
+        arr = _as_float64_contiguous(b)
+        refs.append(arr)
+        v = _matrix_view(arr)
+        views[i] = v
+    return views, refs
+
+
+def so_pls_fit(ctx: Context, cfg: Config,
+                X_blocks: list,
+                Y: Any,
+                n_components_per_block: Any) -> MethodResult:
+    views, _refs = _blocks_to_views(X_blocks)
+    Y_arr = _as_float64_contiguous(Y)
+    y_view = _matrix_view(Y_arr)
+    comps = np.ascontiguousarray(n_components_per_block,
+                                  dtype=np.int32).reshape(-1)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_so_pls_fit(
+        ctx.handle, cfg.handle,
+        views, ctypes.c_int32(len(X_blocks)),
+        ctypes.byref(y_view),
+        comps.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+        ctypes.c_int64(int(comps.size)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_so_pls_fit")
+
+
+def on_pls_fit(ctx: Context, cfg: Config,
+                X_blocks: list,
+                n_joint: int,
+                n_unique_per_block: Any) -> MethodResult:
+    views, _refs = _blocks_to_views(X_blocks)
+    uniques = np.ascontiguousarray(n_unique_per_block,
+                                    dtype=np.int32).reshape(-1)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_on_pls_fit(
+        ctx.handle, cfg.handle,
+        views, ctypes.c_int32(len(X_blocks)),
+        ctypes.c_int32(int(n_joint)),
+        uniques.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+        ctypes.c_int64(int(uniques.size)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_on_pls_fit")
+
+
+def rosa_fit(ctx: Context, cfg: Config,
+              X_blocks: list,
+              Y: Any,
+              n_components: int) -> MethodResult:
+    views, _refs = _blocks_to_views(X_blocks)
+    Y_arr = _as_float64_contiguous(Y)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_rosa_fit(
+        ctx.handle, cfg.handle,
+        views, ctypes.c_int32(len(X_blocks)),
+        ctypes.byref(y_view), ctypes.c_int32(int(n_components)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_rosa_fit")
+
+
 def bagging_pls_fit(ctx: Context, cfg: Config,
                      X: Any, Y: Any,
                      n_estimators: int,
@@ -866,4 +963,7 @@ __all__ = [
     "bagging_pls_fit",
     "boosting_pls_fit",
     "random_subspace_pls_fit",
+    "so_pls_fit",
+    "on_pls_fit",
+    "rosa_fit",
 ]

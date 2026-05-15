@@ -935,6 +935,198 @@ void pack_ensemble_result(p4a_method_result_s& handle,
 
 }  // namespace
 
+P4A_API p4a_status_t p4a_so_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X_blocks,
+    int32_t n_blocks,
+    const p4a_matrix_view_t* Y,
+    const int32_t* n_components_per_block,
+    int64_t n_components_per_block_size,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X_blocks == nullptr ||
+        Y == nullptr || n_components_per_block == nullptr) {
+        set_error(ctx, "null pointer in p4a_so_pls_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (n_blocks < 1) {
+        set_error(ctx, "n_blocks must be >= 1");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    if (n_components_per_block_size !=
+        static_cast<std::int64_t>(n_blocks)) {
+        set_error(ctx,
+                   "n_components_per_block_size must equal n_blocks");
+        return P4A_ERR_SHAPE_MISMATCH;
+    }
+    try {
+        std::vector<p4a_matrix_view_t> blocks(
+            X_blocks, X_blocks + static_cast<std::size_t>(n_blocks));
+        std::vector<std::int32_t> components(
+            n_components_per_block,
+            n_components_per_block +
+                static_cast<std::size_t>(n_components_per_block_size));
+        ::pls4all::core::SoPlsResult res;
+        const p4a_status_t status = ::pls4all::core::fit_so_pls(
+            *as_core(ctx), *as_core(cfg), blocks, *Y, components, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto n = static_cast<std::int64_t>(Y->rows);
+        const auto q = static_cast<std::int64_t>(Y->cols);
+        handle->set_double_matrix("predictions", res.predictions, n, q);
+        handle->set_double_matrix("y_mean", res.y_mean, 1, q);
+        for (std::int32_t b = 0; b < res.n_blocks; ++b) {
+            const auto bi = static_cast<std::size_t>(b);
+            const auto pb = static_cast<std::int64_t>(
+                X_blocks[bi].cols);
+            std::string name = "block_coefficients_" + std::to_string(b);
+            handle->set_double_matrix(name, res.block_coefficients[bi],
+                                       pb, q);
+        }
+        handle->set_scalar("n_blocks",
+                            static_cast<double>(res.n_blocks));
+        const double rmse = in_sample_rmse(res.predictions, *Y);
+        handle->set_scalar("rmse", rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_so_pls_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_so_pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_on_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X_blocks,
+    int32_t n_blocks,
+    int32_t n_joint,
+    const int32_t* n_unique_per_block,
+    int64_t n_unique_per_block_size,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X_blocks == nullptr ||
+        n_unique_per_block == nullptr) {
+        set_error(ctx, "null pointer in p4a_on_pls_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (n_unique_per_block_size != static_cast<std::int64_t>(n_blocks)) {
+        set_error(ctx,
+                   "n_unique_per_block_size must equal n_blocks");
+        return P4A_ERR_SHAPE_MISMATCH;
+    }
+    try {
+        std::vector<p4a_matrix_view_t> blocks(
+            X_blocks, X_blocks + static_cast<std::size_t>(n_blocks));
+        std::vector<std::int32_t> unique_counts(
+            n_unique_per_block,
+            n_unique_per_block +
+                static_cast<std::size_t>(n_unique_per_block_size));
+        ::pls4all::core::OnPlsResult res;
+        const p4a_status_t status = ::pls4all::core::fit_on_pls(
+            *as_core(ctx), *as_core(cfg), blocks, n_joint,
+            unique_counts, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        for (std::int32_t b = 0; b < res.n_blocks; ++b) {
+            const auto bi = static_cast<std::size_t>(b);
+            const auto pb = static_cast<std::int64_t>(
+                X_blocks[bi].cols);
+            const auto nb_unique = static_cast<std::int64_t>(
+                res.n_unique_per_block[bi]);
+            const auto n = static_cast<std::int64_t>(X_blocks[0].rows);
+            handle->set_double_matrix(
+                "joint_loadings_" + std::to_string(b),
+                res.joint_loadings_per_block[bi], pb, res.n_joint);
+            handle->set_double_matrix(
+                "unique_loadings_" + std::to_string(b),
+                res.unique_loadings_per_block[bi], pb, nb_unique);
+            handle->set_double_matrix(
+                "joint_scores_" + std::to_string(b),
+                res.joint_scores_per_block[bi], n, res.n_joint);
+        }
+        handle->set_scalar("n_blocks",
+                            static_cast<double>(res.n_blocks));
+        handle->set_scalar("n_joint",
+                            static_cast<double>(res.n_joint));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_on_pls_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_on_pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_rosa_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X_blocks,
+    int32_t n_blocks,
+    const p4a_matrix_view_t* Y,
+    int32_t n_components,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X_blocks == nullptr ||
+        Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_rosa_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        std::vector<p4a_matrix_view_t> blocks(
+            X_blocks, X_blocks + static_cast<std::size_t>(n_blocks));
+        ::pls4all::core::RosaResult res;
+        const p4a_status_t status = ::pls4all::core::fit_rosa(
+            *as_core(ctx), *as_core(cfg), blocks, *Y, n_components,
+            res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto n = static_cast<std::int64_t>(Y->rows);
+        const auto q = static_cast<std::int64_t>(Y->cols);
+        handle->set_double_matrix("predictions", res.predictions, n, q);
+        handle->set_double_matrix("y_mean", res.y_mean, 1, q);
+        handle->set_int_vector("selected_block_per_component",
+                                std::move(res.selected_block_per_component));
+        for (std::int32_t b = 0;
+             b < static_cast<std::int32_t>(res.block_coefficients.size());
+             ++b) {
+            const auto bi = static_cast<std::size_t>(b);
+            const auto pb = static_cast<std::int64_t>(
+                X_blocks[bi].cols);
+            handle->set_double_matrix(
+                "block_coefficients_" + std::to_string(b),
+                res.block_coefficients[bi], pb, q);
+        }
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        const double rmse = in_sample_rmse(res.predictions, *Y);
+        handle->set_scalar("rmse", rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_rosa_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_rosa_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
 P4A_API p4a_status_t p4a_bagging_pls_fit(
     p4a_context_t* ctx,
     const p4a_config_t* cfg,

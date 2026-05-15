@@ -53,6 +53,9 @@ from ._methods import (
     bagging_pls_fit,
     boosting_pls_fit,
     random_subspace_pls_fit,
+    so_pls_fit,
+    on_pls_fit,
+    rosa_fit,
 )
 
 
@@ -119,8 +122,11 @@ __all__ = [
     "bagging_pls_fit",
     "boosting_pls_fit",
     "random_subspace_pls_fit",
+    "so_pls_fit",
+    "on_pls_fit",
+    "rosa_fit",
     "version",
     "abi_version",
     "build_info",
 ]
-__version__ = "0.80.0"
+__version__ = "0.81.0"

@@ -630,7 +630,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.80.0+abi.1.10.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.81.0+abi.1.11.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
@@ -1103,6 +1103,61 @@ P4A_API p4a_status_t p4a_fused_sparse_pls_fit(
     const p4a_matrix_view_t* Y,
     double l1_lambda,
     double fusion_lambda,
+    p4a_method_result_t** out_result);
+
+/* SO-PLS (§17). Sequential and Orthogonalized PLS for B X-blocks
+ * predicting one Y. `X_blocks` is an array of `n_blocks`
+ * p4a_matrix_view_t structs (all sharing X.rows = Y.rows).
+ * `n_components_per_block` is a length-n_blocks int32 array.
+ * The result contains:
+ *   "predictions" (n_samples x n_targets)
+ *   "y_mean"      (1 x n_targets)
+ *   For each block b: "block_coefficients_<b>" of shape (p_b x n_targets)
+ *   scalar "n_blocks"
+ */
+P4A_API p4a_status_t p4a_so_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X_blocks,
+    int32_t n_blocks,
+    const p4a_matrix_view_t* Y,
+    const int32_t* n_components_per_block,
+    int64_t n_components_per_block_size,
+    p4a_method_result_t** out_result);
+
+/* OnPLS (§18). Generalized orthogonal projection for multi-block PLS.
+ * Removes joint and per-block unique components.
+ * Result contains scalars `n_blocks` and `n_joint`, plus per-block
+ * loading matrices "joint_loadings_<b>", "unique_loadings_<b>" and
+ * "joint_scores_<b>".
+ */
+P4A_API p4a_status_t p4a_on_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X_blocks,
+    int32_t n_blocks,
+    int32_t n_joint,
+    const int32_t* n_unique_per_block,
+    int64_t n_unique_per_block_size,
+    p4a_method_result_t** out_result);
+
+/* ROSA (§19). Response-Oriented Sequential Alternation: at each
+ * component, picks the block whose latent direction yields the highest
+ * correlation with the current Y residual.
+ * Result contains:
+ *   "predictions"                  (n_samples x n_targets)
+ *   "y_mean"
+ *   "selected_block_per_component" int vector
+ *   For each block b: "block_coefficients_<b>"
+ *   scalar "n_components"
+ */
+P4A_API p4a_status_t p4a_rosa_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X_blocks,
+    int32_t n_blocks,
+    const p4a_matrix_view_t* Y,
+    int32_t n_components,
     p4a_method_result_t** out_result);
 
 /* Bagging PLS (§20). Bootstrap aggregation of `n_estimators` PLS

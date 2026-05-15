@@ -6,9 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-Next: 1-SE rule (§10), monitoring (§11), multi-block remainder (§17-19
-SO-PLS / OnPLS / ROSA) — each gated by external Python / R references
-when available, otherwise `paper-only` with citation.
+Remaining algorithm-taxonomy work: 1-SE rule (§10), monitoring (§11) —
+internal kernels are minimal at this point; expose them only when a
+clear external reference exists.
+
+## [0.81.0-batch-11-multiblock] — 2026-05-15
+
+Public C ABI exposure for the §17-19 multi-block remainder. All three
+are paper-only because R `multiblock`'s `HDANOVA` transitive dep
+cascades-fails to build on this minimal R env. The C ABI accepts an
+array of `p4a_matrix_view_t` blocks plus per-block counts.
+
+### Added
+
+- `p4a_so_pls_fit(ctx, cfg, X_blocks, n_blocks, Y,
+  n_components_per_block, n, **out)` — Sequential & Orthogonalized
+  multi-block PLS (Næs et al. 2011).
+- `p4a_on_pls_fit(ctx, cfg, X_blocks, n_blocks, n_joint,
+  n_unique_per_block, n, **out)` — Orthogonal multi-block decomposition
+  (Löfstedt & Trygg 2011). Result exposes per-block joint loadings /
+  scores and unique loadings via name-suffix `_<b>`.
+- `p4a_rosa_fit(ctx, cfg, X_blocks, n_blocks, Y, n_components, **out)`
+  — Response-Oriented Sequential Alternation (Liland et al. 2016).
+- Python bindings: `so_pls_fit`, `on_pls_fit`, `rosa_fit` accept a
+  Python list of NumPy arrays as `X_blocks`.
+
+### Verified
+
+- 256 internal C++ tests pass.
+- ABI symbol diff: 157 symbols (+3, clean).
+- Parity gate: 13 external PASS, 22 paper-only smoke PASS, 0 numpy.
+
+### Changed
+
+- Project version `0.81.0+abi.1.11.0`. C ABI minor 10 → 11.
 
 ## [0.80.0-batch-10-ensembles] — 2026-05-15
 

@@ -575,6 +575,57 @@ def _approximate_press_pls4all(ctx, cfg, X, Y, *, max_components, **_):
                                               max_components=max_components)
 
 
+def _split_into_blocks(X, n_blocks):
+    """Split a single X matrix into approximately equal-width blocks
+    along the feature axis. Used by multi-block paper-only smoke tests."""
+    import numpy as np
+    X = np.asarray(X)
+    cols_per_block = X.shape[1] // n_blocks
+    blocks = []
+    for b in range(n_blocks):
+        start = b * cols_per_block
+        end = (b + 1) * cols_per_block if b < n_blocks - 1 else X.shape[1]
+        blocks.append(np.ascontiguousarray(X[:, start:end]))
+    return blocks
+
+
+def _so_pls_pls4all(ctx, cfg, X, Y, *, n_blocks, n_components_per_block,
+                     **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.NIPALS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.center_x = True
+    cfg.center_y = True
+    blocks = _split_into_blocks(X, n_blocks)
+    return pls4all.so_pls_fit(ctx, cfg, blocks, Y,
+                               n_components_per_block)
+
+
+def _on_pls_pls4all(ctx, cfg, X, Y, *, n_blocks, n_joint,
+                     n_unique_per_block, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.NIPALS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.center_x = True
+    cfg.center_y = True
+    blocks = _split_into_blocks(X, n_blocks)
+    return pls4all.on_pls_fit(ctx, cfg, blocks, n_joint,
+                               n_unique_per_block)
+
+
+def _rosa_pls4all(ctx, cfg, X, Y, *, n_blocks, n_components, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.NIPALS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.center_x = True
+    cfg.center_y = True
+    blocks = _split_into_blocks(X, n_blocks)
+    return pls4all.rosa_fit(ctx, cfg, blocks, Y, n_components)
+
+
 def _bagging_pls_pls4all(ctx, cfg, X, Y, *, n_components, n_estimators,
                           seed, **_):
     import pls4all
@@ -995,6 +1046,53 @@ METHODS: list[MethodSpec] = [
         notes=("R `mdatools::pls$xdecomp$Q`. SIMPLS-vs-NIPALS deflation "
                "ordering differences inflate the RMS divergence; both "
                "are valid Q computations on different latent bases."),
+    ),
+    MethodSpec(
+        name="so_pls",
+        description="SO-PLS — Sequential & Orthogonalized multi-block PLS (§17)",
+        pls4all_fn=_so_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 30, "n_targets": 2,
+                      "n_blocks": 3,
+                      "n_components_per_block": np.array([2, 2, 2],
+                                                          dtype=np.int32)},
+        python_reference=None,
+        r_reference=None,
+        paper_only=("Næs, T., Tomic, O., Mevik, B.-H., Martens, H. "
+                    "(2011). Path modelling by sequential PLS regression. "
+                    "Journal of Chemometrics 25(1), 28-40. (R `multiblock` "
+                    "ships sopls but its transitive deps (`HDANOVA`) fail "
+                    "to install in this env.)"),
+    ),
+    MethodSpec(
+        name="on_pls",
+        description="OnPLS — Orthogonal multi-block decomposition (§18)",
+        pls4all_fn=_on_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 30, "n_targets": 2,
+                      "n_blocks": 3, "n_joint": 2,
+                      "n_unique_per_block": np.array([1, 1, 1],
+                                                       dtype=np.int32)},
+        python_reference=None,
+        r_reference=None,
+        prediction_key="joint_loadings_0",  # use a stable per-block output
+        paper_only=("Löfstedt, T. & Trygg, J. (2011). OnPLS — a novel "
+                    "multiblock method for the modelling of predictive "
+                    "and orthogonal variation. Journal of Chemometrics "
+                    "25(8), 441-455. (R `multiblock::onpls` has the same "
+                    "HDANOVA dep cascade.)"),
+    ),
+    MethodSpec(
+        name="rosa",
+        description="ROSA — Response-Oriented Sequential Alternation (§19)",
+        pls4all_fn=_rosa_pls4all,
+        cell_params={"n_samples": 200, "n_features": 30, "n_targets": 2,
+                      "n_blocks": 3, "n_components": 4},
+        python_reference=None,
+        r_reference=None,
+        paper_only=("Liland, K. H., Næs, T. & Indahl, U. G. (2016). "
+                    "ROSA — a fast extension of partial least squares "
+                    "regression for multiblock data analysis. Journal of "
+                    "Chemometrics 30(11), 651-662. (R `multiblock` "
+                    "ships rosa with the same dep cascade.)"),
     ),
     MethodSpec(
         name="bagging_pls",
