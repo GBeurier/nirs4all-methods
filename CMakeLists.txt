@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.21)
 # (the header file is the canonical version for ABI / runtime queries — this
 # CMake project version is used only for installation / find_package).
 project(pls4all
-    VERSION 0.82.0
+    VERSION 0.83.0
     DESCRIPTION "Portable PLS/NIRS engine with stable C ABI"
     HOMEPAGE_URL "https://github.com/GBeurier/pls4all"
     LANGUAGES C CXX)
@@ -77,6 +77,9 @@ if(PLS4ALL_BUILD_BENCH AND EXISTS "${PROJECT_SOURCE_DIR}/bench/cpp/CMakeLists.tx
 endif()
 if(PLS4ALL_BUILD_BINDINGS_R AND EXISTS "${PROJECT_SOURCE_DIR}/bindings/r/pls4all/CMakeLists.txt")
     add_subdirectory(bindings/r/pls4all)
+endif()
+if(PLS4ALL_BUILD_BINDINGS_JS AND EXISTS "${PROJECT_SOURCE_DIR}/bindings/js/CMakeLists.txt")
+    add_subdirectory(bindings/js)
 endif()
 
 # ============================================================================

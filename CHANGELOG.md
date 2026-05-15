@@ -6,10 +6,71 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-All Overview-taxonomy method kernels are now exposed through the public
-C ABI with parity or paper-only entries. Next tracks: language bindings
-(MATLAB MEX, WASM, JNI), accelerated backends (BLAS, OpenMP, CUDA),
-and the long-deferred timing benchmark matrix.
+Next tracks: more language bindings (MATLAB MEX, JNI / Android, Julia),
+accelerated backends (BLAS, OpenMP, CUDA), and the long-deferred timing
+benchmark matrix.
+
+## [0.83.0-wasm-binding] — 2026-05-16
+
+WebAssembly binding scaffold via Emscripten 5.0.7. The new
+`bindings/js/` directory ships a TypeScript wrapper, an Emscripten-
+compiled `p4a.wasm` + `p4a.js` (MODULARIZE / EXPORT_ES6), and a Node
+smoke test exercising the C ABI lifecycle.
+
+### Added
+
+- `bindings/js/CMakeLists.txt` — Emscripten target wired into the
+  existing `emscripten` CMake preset. Build command:
+  `cmake --preset emscripten && cmake --build --preset emscripten`.
+  Artifacts land in `build/emscripten/bindings/js/{p4a.js,p4a.wasm}`.
+- `bindings/js/src/wasm_entry.c` — pulls in the full ABI header so
+  Emscripten does not dead-strip the matrix-view init helpers.
+- TypeScript wrappers under `bindings/js/src/`:
+  - `ffi.ts` — Module loader + heap I/O helpers.
+  - `types.ts` — mirrored C enums (`Algorithm`, `Solver`, `Deflation`,
+    `Dtype`, `Status`) and the `Pls4allError` class.
+  - `context.ts` / `config.ts` / `model.ts` / `methodResult.ts` —
+    RAII-style wrappers around the C ABI handles.
+  - `index.ts` — public barrel (`loadModule`, `version`,
+    `abiVersion`, plus the wrappers).
+- `bindings/js/package.json`, `tsconfig.json`, README.
+- `bindings/js/test/run_smoke.mjs` — Node smoke covering version /
+  ABI introspection and the Context / Config lifecycle.
+- `bindings/js/test/wasm_fit_debug.c` — pure-C reference test showing
+  the WASM library fits models correctly when invoked from inside
+  the WASM module.
+
+### Verified
+
+- Native dev-release build still passes 256 internal C++ tests.
+- ABI symbol diff: 159 symbols (unchanged from 0.82 — no new C ABI
+  surface in this phase; the WASM module reuses the same exports).
+- `git diff --check`: clean.
+- `ldd` on the native shared library: still only libc / libstdc++ /
+  libgcc / libm / loader.
+- Emscripten preset builds `p4a.wasm` (480 KB) + `p4a.js` (89 KB).
+- Node smoke (`bindings/js/test/run_smoke.mjs`) passes — confirms the
+  module loads, all 161 exports are reachable, and Context / Config
+  lifecycle round-trips through the WASM heap.
+
+### Known issue
+
+- `p4a_model_fit` invoked from the JS host produces incorrect
+  `x_mean` and coefficients on the WASM target. The same library
+  (`libp4a_static.a`) linked into a pure-C WASM translation unit
+  (see `bindings/js/test/wasm_fit_debug.c`) fits correctly, so the
+  bug is in the JS↔WASM marshalling path rather than in the C++
+  numerics. Suspected: an interaction with `WASM_BIGINT=1` int64
+  passing through the matrix-view struct when crossing the JS / WASM
+  boundary. Under investigation; the `Status` section of
+  `bindings/js/README.md` documents the workaround until fixed.
+
+### Changed
+
+- Project version `0.83.0+abi.1.12.0`. C ABI surface unchanged
+  (still ABI 1.12.0).
+- Top-level `CMakeLists.txt` now hooks `bindings/js/` behind
+  `PLS4ALL_BUILD_BINDINGS_JS` (driven by the `emscripten` preset).
 
 ## [0.82.0-batch-12-monitoring-onese] — 2026-05-15
 

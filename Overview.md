@@ -4,8 +4,8 @@ L’existant confirme cette structuration : scikit-learn expose déjà `PLSRegre
 
 ## Statut courant (mai 2026)
 
-Snapshot de ce qui est livré dans le tag `phase-31l-batch-12-monitoring-onese`
-(`0.82.0+abi.1.12.0`). La feuille de route détaillée est dans
+Snapshot de ce qui est livré dans le tag `phase-32-wasm-binding`
+(`0.83.0+abi.1.12.0`). La feuille de route détaillée est dans
 [`ROADMAP.md`](ROADMAP.md) ; les notes par phase sont dans `roadmap/phase-*.md`.
 Le détail des parity gates par méthode est dans `benchmarks/results/parity_gate/`.
 

@@ -1,7 +1,7 @@
 # Parity gate report
 
 Host: `Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.35`
-pls4all: `0.82.0+abi.1.12.0`
+pls4all: `0.83.0+abi.1.12.0`
 Python: `3.11.14`
 NumPy: `1.26.4`
 
