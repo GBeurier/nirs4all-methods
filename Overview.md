@@ -15,11 +15,11 @@ Snapshot de ce qui est livré dans le tag `phase-7a-benchmark-foundation`
 | §3 Modes de déflection (regression, canonical, orthogonal) | livré pour les modèles déjà actifs | déflection X-only / Y-only / symmetric repoussée. |
 | §4–§5 PLS-DA / PLS-LDA / PLS-logistic | livré | dummy-coding PLS-DA, têtes LDA/logistic déterministes en NumPy. |
 | §6 OPLS / OPLS-DA / multi-réponses prédictives partagées | livré | déflection orthogonale, scores prédictifs partagés. |
-| §7 Sparse / pénalisée | livré (interne) | Sparse SIMPLS via soft-thresholding, `P4A_ALGO_SPARSE_PLS` dispatché. |
-| §8 Multi-blocs | partiel | MB-PLS livré ; sPLS / SO-PLS / O2PLS / OnPLS / ROSA non livrés. |
-| §9 Multiway / tensor PLS | non livré | reporté. |
+| §7 Sparse / pénalisée | livré (interne) | Sparse SIMPLS via soft-thresholding (`P4A_ALGO_SPARSE_PLS`), `fit_sparse_pls_da`, `fit_group_sparse_pls`, `fit_fused_sparse_pls`. |
+| §8 Multi-blocs | livré (interne) | MB-PLS livré ; `fit_o2pls`, `fit_so_pls`, `fit_on_pls`, `fit_rosa` ajoutés. sPLS-DA dans §7. |
+| §9 Multiway / tensor PLS | livré (interne) | `fit_n_pls` + `predict_n_pls` (Bro 3-way). PARAFAC-PLS / Tucker-PLS comme variantes futures. |
 | §10.1 Kernel algorithm linéaire / wide-kernel | livré | solveurs `KERNEL_ALGORITHM` et `WIDE_KERNEL`. |
-| §10.2 Kernel non-linéaire RBF/polynomial | non livré | dual Gram et stockage des paramètres kernel sur le modèle, reportés. |
+| §10.2 Kernel non-linéaire RBF/polynomial | livré (interne) | `fit_kernel_pls` / `predict_kernel_pls` pour RBF, polynomial, sigmoid via Gram dual. |
 | §11 LW-PLS / local PLS | livré (interne) | LW-PLS livré (uniform-weight) — couvre JIT-PLS. Adaptive PLS / weighted kernel reportés. |
 | §12 Dynamic / recursive PLS | livré (interne) | Recursive PLS moving-window via `fit_predict_recursive_pls`. Mise à jour incrémentale stricte reportée. |
 | §13 Domain adaptation (DI-PLS, PDS, EPO/OSC supervisés) | partiel | OSC, EPO et DI-PLS livrés (DI-PLS interne) ; PDS et DS reportés. |
@@ -27,8 +27,9 @@ Snapshot de ce qui est livré dans le tag `phase-7a-benchmark-foundation`
 | §15 AOM-PLS / POP-PLS | livré 6a–6f | strict-linear AOM operators (identity, detrend, SG, fd, NW, Whittaker, FCK), AOM-SIMPLS global selection, POP-SIMPLS covariance per-component selection, surface C ABI publique. |
 | §16 Preprocessing NIRS | livré | identity/center/autoscale/Pareto/SNV/MSC/EMSC/Detrend/SG/SG-derivative/Norris-Williams/ASLS/Wavelet(Haar)/OSC/EPO. |
 | §17 Diagnostics PLS / chimiométrie | livré (interne) | VIP, selectivity ratio, métriques régression/classification, T² Hotelling, Q-residuals, DModX (`cpp/src/core/pls_diagnostics.{hpp,cpp}`). Approximate-PRESS encore à porter. |
-| §18 Validation et choix de composantes | livré | splitters, CV engines, sélection de composantes SIMPLS, règle one-SE (`select_one_se_components`). Approximate-PRESS et règles bayésiennes encore à porter. |
+| §18 Validation et choix de composantes | livré | splitters, CV engines, sélection de composantes SIMPLS, règle one-SE (`select_one_se_components`), `approximate_press` (PRESS + sélection). Règles bayésiennes encore à porter. |
 | §19 Monitoring / process control | livré (interne) | Seuils empiriques T² / Q à α configurable + flags d'alarme (`pls_monitoring_fit` / `pls_monitoring_evaluate`). |
+| §20 Ensembles de PLS | livré (interne) | `fit_bagging_pls`, `fit_boosting_pls`, `fit_random_subspace_pls`. |
 | §20 Ensembles de PLS | non livré | reporté. |
 | §21 Variantes GPU/batch | non livré | Acceleration Roadmap (BLAS, OpenMP, CUDA) reste optionnelle, jamais sur le chemin critique de l'ABI. |
 | §22 Modèles à exclure | n/a | rien à livrer. |

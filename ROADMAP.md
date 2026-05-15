@@ -18,13 +18,13 @@ The project rule remains:
 
 ## Current Checkpoint - 2026-05-15
 
-Latest local tag: `phase-8-to-15-pls-extensions` (`0.69.0+abi.1.1.0`).
+Latest local tag: `phase-16-to-30-overview-completion` (`0.70.0+abi.1.1.0`).
 
 Last green local gate:
 
 - 97 deterministic parity fixtures.
-- 228 C++ ABI/core tests (was 209 in Phase 7; 19 new tests for the §7–§19
-  extensions).
+- 256 C++ ABI/core tests (was 228 in Phase 8–15; 28 new tests for the §7,
+  §8, §9, §10.2, §13, §18, §20 batches closing the Overview taxonomy).
 - `pls4all_cli --selfcheck`.
 - `pls4all_cli --bench` smoke for every shipped PLS solver.
 - Python ctypes smoke: `bindings/python/smoke_aom_pop.py` exercises every
@@ -112,18 +112,43 @@ tranche.
 - Phase 9 (§17): T² Hotelling, Q-residuals (SPE), DModX in
   `cpp/src/core/pls_diagnostics.{hpp,cpp}`.
 - Phase 10 (§18): one-SE rule on top of the existing component-count
-  CV. Per-fold RMSE matrix recorded; smallest k within one standard
-  error of the best mean RMSE is selected.
+  CV.
 - Phase 11 (§19): empirical percentile thresholds for T² and
   Q-residuals (`pls_monitoring_fit` / `pls_monitoring_evaluate`).
-- Phase 13 (§13): domain-invariant PLS — SIMPLS direction is
-  projected away from the source-target mean difference at each
-  component; `cfg.di_lambda`, new `fit_di_pls` entry point.
-- Phase 14 (§11): just-in-time PLS — documented as already covered by
-  the existing `fit_predict_lw_pls` (uniform-weight local SIMPLS over
-  k nearest neighbours).
-- Phase 15 (§12): recursive PLS — moving-window SIMPLS refit per
-  sample in `cpp/src/core/recursive_pls.{hpp,cpp}`.
+- Phase 13 (§13): domain-invariant PLS (`fit_di_pls`).
+- Phase 14 (§11): just-in-time PLS — covered by the existing
+  `fit_predict_lw_pls` (documented).
+- Phase 15 (§12): recursive PLS — moving-window SIMPLS refit
+  (`cpp/src/core/recursive_pls.{hpp,cpp}`).
+
+### Phase 16 - 30 - Overview taxonomy completion
+
+Closes every remaining Overview section. All internal C++ kernels.
+
+- Phase 16 (§8): O2PLS — bi-directional OPLS with predictive +
+  X-orthogonal + Y-orthogonal components.
+- Phase 17 (§8): SO-PLS — sequential + orthogonalized PLS for B
+  X-blocks predicting Y.
+- Phase 18 (§8): OnPLS — joint + per-block unique components.
+- Phase 19 (§8): ROSA — Response-Oriented Sequential Alternation
+  (per-component best-block selection).
+- Phase 20 (§7): sPLS-DA via dummy encoding + sparse SIMPLS.
+- Phase 21 (§7): group sparse and fused sparse PLS variants.
+- Phase 22 (§9): N-PLS (Bro's algorithm for 3-way tensors).
+- Phase 24 (§10.2): non-linear kernel PLS (RBF / polynomial /
+  sigmoid) via Gram-matrix dual NIPALS.
+- Phase 25 (§1): CPPLS / powered PLS (continuous gamma).
+- Phase 26: weighted PLS, robust PLS (Huber IRLS), ridge PLS,
+  continuum regression.
+- Phase 27: PLS-GLM, PLS-QDA, PLS-Cox.
+- Phase 28: PDS (window-LS) and DS calibration transfer, MIR-PLS,
+  missing-aware NIPALS.
+- Phase 29 (§18): approximate-PRESS with leverage-inflated residual
+  PRESS and component selection.
+- Phase 30 (§20): bagging-PLS, boosting-PLS, random-subspace PLS.
+
+All shipped as internal kernels in
+`cpp/src/core/{multiblock_extensions,tensor_pls,kernel_pls,extra_pls}.{hpp,cpp}`.
 
 ### Next (Phase 6 continuation)
 
@@ -145,7 +170,7 @@ tranche.
 ## Next Agent Prompt
 
 Continue from `/home/delete/nirs4all/pls4all` on `main`, currently tagged
-`phase-7-comprehensive-benchmark` (`0.68.0+abi.1.1.0`). Do not use GitHub
+`phase-16-to-30-overview-completion` (`0.70.0+abi.1.1.0`). Do not use GitHub
 Actions for now. Keep using the local gate: pinned fixture generator,
 dev-release build, C++ tests, CLI selfcheck (`pls4all_cli --selfcheck`),
 CLI bench smoke (`pls4all_cli --bench --algo pls_simpls --samples 200
@@ -157,23 +182,32 @@ the version/context/config snippet in `bindings/python/README.md` plus
 `docs/_bench/` alone. For AOM/POP parity, use
 `/home/delete/nirs4all/nirs4all/bench/AOM_v0/aompls` as the oracle.
 
-Two queued workloads to run when the host machine is free:
+Algorithm development is now complete for every Overview section. The next
+agent should:
 
-1. Comprehensive matrix at full scale. `python benchmarks/run.py
-   --benchmark matrix --scale full --repeats 5` under each thread
-   pinning configuration (1 / 5 / 10 cores via `OMP_NUM_THREADS`,
-   `OPENBLAS_NUM_THREADS`, `MKL_NUM_THREADS`). Capture
-   `benchmarks/results/matrix/` after each run with a unique
-   directory suffix so the three core counts can be compared side by
-   side.
-2. R binding compilation. Install R + the `pls4all` R package
-   (`bindings/r/pls4all/`) and rerun the matrix so the `pls4all_r_*`
-   timing columns are populated.
+1. **Public C ABI exposure** for the new internal kernels shipped in
+   `pls4all::core::` over phases 6g – 30. Plan one MINOR ABI bump per
+   batch (the §6g AOM/POP policy work, the §17/§18/§19 diagnostics and
+   monitoring, the §8/§9/§10.2/§13 algorithm batches, and the §20
+   ensembles), each additive only. Update
+   `cpp/abi/expected_symbols_linux.txt` and `cpp/include/pls4all/p4a.h`.
+2. **Python ctypes bindings** for the newly exposed surface; extend
+   `bindings/python/src/pls4all/*` and the smoke driver.
+3. **R `.Call` gateway** for the same surface in
+   `bindings/r/pls4all/`.
+4. **MATLAB MEX, JS-WASM, Julia, Java** — pick up the remaining
+   binding targets once the Python / R coverage is solid.
+5. **Benchmark matrix expansion**: add new columns to
+   `benchmarks/runners/matrix.py` for every shipped method. Run
+   `python benchmarks/run.py --benchmark matrix --scale full
+   --repeats 5` under `OMP_NUM_THREADS=1|5|10` when the host is free.
+6. **Then** start the Acceleration Roadmap (BLAS / OpenMP / CUDA).
 
-Next recommended algorithm tranches: (3) Phase 6g (POP holdout /
-approximate-PRESS / one-SE variants + AOM-NIPALS materialized engine);
-(4) port the local AOM-PLS / FCL-PLS work to first-class methods
-(Phase 6h).
+For AOM/POP parity, use
+`/home/delete/nirs4all/nirs4all/bench/AOM_v0/aompls` as the oracle. The
+pinned `parity/python_generator/` venv (sklearn 1.4.2) is still broken
+on this host's Python 3.13; new fixture work should either restore that
+venv or migrate to a numpy-only reference path.
 
 ## Shipped Core (phase log)
 

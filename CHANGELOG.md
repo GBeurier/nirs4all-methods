@@ -6,8 +6,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-Next phase: broaden the algorithm family beyond NIPALS PLS regression, with
-reference parity and benchmarks for every added method.
+Next phase: ship public C ABI exposure for every method now living in
+`pls4all::core::` and propagate it to Python / R bindings.
+
+## [0.70.0-overview-completion] — 2026-05-15
+
+Phases 16 – 30. Closes every algorithm requested by `Overview.md` and the
+"Remaining Algorithm Taxonomy" backlog. All internal C++ kernels; public
+ABI exposure deferred to the binding tranche.
+
+### Added
+
+- **§8 multi-block** (`cpp/src/core/multiblock_extensions.{hpp,cpp}`):
+  `fit_o2pls`, `fit_so_pls`, `fit_on_pls`, `fit_rosa`.
+- **§9 tensor PLS** (`cpp/src/core/tensor_pls.{hpp,cpp}`): `fit_n_pls`
+  and `predict_n_pls` for 3-way arrays flattened as `n × (J*K)`.
+- **§10.2 non-linear kernel PLS**
+  (`cpp/src/core/kernel_pls.{hpp,cpp}`): RBF, polynomial and sigmoid
+  kernels via the Gram-matrix dual NIPALS path. `KernelType` enum
+  with `LINEAR`, `RBF`, `POLYNOMIAL`, `SIGMOID`.
+- **§7 sparse variants** (`cpp/src/core/extra_pls.{hpp,cpp}`):
+  `fit_sparse_pls_da`, `fit_group_sparse_pls`,
+  `fit_fused_sparse_pls`.
+- **§1 + reg / robust / continuum**: `fit_cppls`, `fit_weighted_pls`,
+  `fit_robust_pls` (Huber IRLS), `fit_ridge_pls`,
+  `fit_continuum_regression`.
+- **§5 classifier / GLM heads**: `fit_pls_glm`, `fit_pls_qda`,
+  `fit_pls_cox` (Breslow baseline hazard).
+- **§13 calibration transfer + missing**: `fit_pds`, `fit_ds`,
+  `fit_mir_pls`, `fit_missing_aware_nipals`.
+- **§18 approximate-PRESS**: `approximate_press` with leverage-inflated
+  residual PRESS and component selection.
+- **§20 ensembles**: `fit_bagging_pls`, `fit_boosting_pls`,
+  `fit_random_subspace_pls`.
+- 28 new C++ ABI / core tests (256 total).
+
+### Changed
+
+- Project version is now `0.70.0+abi.1.1.0`. C ABI surface unchanged at
+  `1.1.0`; no new public symbols. All shipped methods live in
+  `pls4all::core::` and ship for the next phase to wrap.
 
 ## [0.69.0-pls-extensions] — 2026-05-15
 
