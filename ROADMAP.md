@@ -18,18 +18,20 @@ The project rule remains:
 
 ## Current Checkpoint - 2026-05-15
 
-Latest local tag: `phase-7-comprehensive-benchmark` (`0.68.0+abi.1.1.0`).
+Latest local tag: `phase-8-to-15-pls-extensions` (`0.69.0+abi.1.1.0`).
 
 Last green local gate:
 
 - 97 deterministic parity fixtures.
-- 209 C++ ABI/core tests.
+- 228 C++ ABI/core tests (was 209 in Phase 7; 19 new tests for the §7–§19
+  extensions).
 - `pls4all_cli --selfcheck`.
 - `pls4all_cli --bench` smoke for every shipped PLS solver.
 - Python ctypes smoke: `bindings/python/smoke_aom_pop.py` exercises every
   AOM/POP fixture through the public C ABI.
 - Python model smoke: `pls4all.Model.fit / predict / get_array` succeeds.
-- ABI symbol diff against `cpp/abi/expected_symbols_linux.txt`.
+- ABI symbol diff against `cpp/abi/expected_symbols_linux.txt` (unchanged
+  — the §7–§19 work is internal-only; public ABI is still `1.1.0`).
 - `ldd` dependency audit: only libc/libstdc++/libgcc/libm/loader.
 - UBSAN.
 - ASAN+UBSAN.
@@ -99,6 +101,29 @@ Current git notes:
   Smoke set is committed; full matrix (9 algos × 5 n × 3 p = 135
   cells) is parameterized — re-run under varying CPU pinning when the
   host is free.
+
+### Phase 8 - 15 - PLS extensions (§7, §11, §12, §13, §17, §18, §19)
+
+Internal C++ kernels. Public C ABI exposure deferred to the binding
+tranche.
+
+- Phase 8 (§7): Sparse SIMPLS via soft-thresholding;
+  `cfg.sparsity_lambda`, `P4A_ALGO_SPARSE_PLS` dispatch.
+- Phase 9 (§17): T² Hotelling, Q-residuals (SPE), DModX in
+  `cpp/src/core/pls_diagnostics.{hpp,cpp}`.
+- Phase 10 (§18): one-SE rule on top of the existing component-count
+  CV. Per-fold RMSE matrix recorded; smallest k within one standard
+  error of the best mean RMSE is selected.
+- Phase 11 (§19): empirical percentile thresholds for T² and
+  Q-residuals (`pls_monitoring_fit` / `pls_monitoring_evaluate`).
+- Phase 13 (§13): domain-invariant PLS — SIMPLS direction is
+  projected away from the source-target mean difference at each
+  component; `cfg.di_lambda`, new `fit_di_pls` entry point.
+- Phase 14 (§11): just-in-time PLS — documented as already covered by
+  the existing `fit_predict_lw_pls` (uniform-weight local SIMPLS over
+  k nearest neighbours).
+- Phase 15 (§12): recursive PLS — moving-window SIMPLS refit per
+  sample in `cpp/src/core/recursive_pls.{hpp,cpp}`.
 
 ### Next (Phase 6 continuation)
 

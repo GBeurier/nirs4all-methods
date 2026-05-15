@@ -1023,8 +1023,11 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         opls_chassis_algorithm && cfg.solver == P4A_SOLVER_NIPALS;
     const bool supported_pcr =
         cfg.algorithm == P4A_ALGO_PCR && cfg.solver == P4A_SOLVER_SVD;
+    const bool supported_sparse_pls =
+        cfg.algorithm == P4A_ALGO_SPARSE_PLS &&
+        cfg.solver == P4A_SOLVER_SIMPLS;
     if (!supported_pls_regression && !supported_pls_canonical && !supported_pls_svd &&
-        !supported_opls && !supported_pcr) {
+        !supported_opls && !supported_pcr && !supported_sparse_pls) {
         ctx.set_error(
             "this release supports P4A_ALGO_PLS_REGRESSION with P4A_SOLVER_NIPALS, "
             "P4A_SOLVER_ORTHOGONAL_SCORES, P4A_SOLVER_SIMPLS, "
@@ -1038,7 +1041,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         return P4A_ERR_UNSUPPORTED;
     }
     const bool supported_deflation =
-        ((supported_pls_regression || supported_pcr) &&
+        ((supported_pls_regression || supported_pcr || supported_sparse_pls) &&
          cfg.deflation == P4A_DEFLATION_REGRESSION) ||
         ((supported_pls_canonical || supported_pls_svd) &&
          cfg.deflation == P4A_DEFLATION_CANONICAL) ||
@@ -3758,11 +3761,481 @@ p4a_status_t predict_into(Context& ctx,
     return P4A_OK;
 }
 
+p4a_status_t fit_di_pls(Context& ctx,
+                         const Config& cfg,
+                         const p4a_matrix_view_t& X_source,
+                         const p4a_matrix_view_t& Y_source,
+                         const p4a_matrix_view_t& X_target,
+                         std::unique_ptr<Model>& out_model) {
+    out_model.reset();
+    if (cfg.solver != P4A_SOLVER_SIMPLS) {
+        ctx.set_error("DI-PLS currently requires the SIMPLS solver");
+        return P4A_ERR_UNSUPPORTED;
+    }
+    if (cfg.deflation != P4A_DEFLATION_REGRESSION) {
+        ctx.set_error("DI-PLS requires regression deflation");
+        return P4A_ERR_UNSUPPORTED;
+    }
+    if (!(cfg.di_lambda >= 0.0) || !std::isfinite(cfg.di_lambda)) {
+        ctx.set_error("di_lambda must be >= 0 and finite");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    if (X_source.cols != X_target.cols) {
+        ctx.set_error("X_source and X_target must have the same number of columns");
+        return P4A_ERR_SHAPE_MISMATCH;
+    }
+
+    // Build a temporary regression Config so validate_fit_request accepts
+    // the source dataset using the regression chassis.
+    Config local = cfg;
+    local.algorithm = P4A_ALGO_PLS_REGRESSION;
+
+    p4a_status_t status = validate_fit_request(ctx, local, X_source, Y_source);
+    if (status != P4A_OK) return status;
+
+    std::vector<double> x_source_buf;
+    std::vector<double> y_source_buf;
+    std::vector<double> x_target_buf;
+    status = copy_matrix_checked(ctx, X_source, "X_source", x_source_buf);
+    if (status != P4A_OK) return status;
+    status = copy_matrix_checked(ctx, Y_source, "Y_source", y_source_buf);
+    if (status != P4A_OK) return status;
+    status = copy_matrix_checked(ctx, X_target, "X_target", x_target_buf);
+    if (status != P4A_OK) return status;
+
+    const std::size_t n = static_cast<std::size_t>(X_source.rows);
+    const std::size_t n_target = static_cast<std::size_t>(X_target.rows);
+    const std::size_t p = static_cast<std::size_t>(X_source.cols);
+    const std::size_t q = static_cast<std::size_t>(Y_source.cols);
+    const std::size_t a = static_cast<std::size_t>(cfg.n_components);
+    const double lambda = cfg.di_lambda;
+
+    auto model = std::make_unique<Model>();
+    model->algorithm = cfg.algorithm;
+    model->solver = cfg.solver;
+    model->deflation = cfg.deflation;
+    model->n_samples = X_source.rows;
+    model->n_features = static_cast<std::int32_t>(X_source.cols);
+    model->n_targets = static_cast<std::int32_t>(Y_source.cols);
+    model->n_components = cfg.n_components;
+    model->center_x = cfg.center_x;
+    model->scale_x = cfg.scale_x;
+    model->center_y = cfg.center_y;
+    model->scale_y = cfg.scale_y;
+    model->store_scores = cfg.store_scores;
+    model->tol = cfg.tol;
+    model->max_iter = cfg.max_iter;
+
+    std::vector<double> xk;
+    std::vector<double> yk;
+    center_scale_in_place(x_source_buf, n, p, cfg.center_x != 0, cfg.scale_x != 0,
+                          model->x_mean, model->x_scale, xk);
+    center_scale_in_place(y_source_buf, n, q, cfg.center_y != 0, cfg.scale_y != 0,
+                          model->y_mean, model->y_scale, yk);
+
+    // Compute target mean and the source-vs-target difference vector d
+    // (in centered source space).
+    std::vector<double> target_mean(p, 0.0);
+    for (std::size_t row = 0; row < n_target; ++row) {
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            target_mean[feature] += x_target_buf[idx(row, p, feature)];
+        }
+    }
+    const double n_target_inv = (n_target > 0)
+        ? 1.0 / static_cast<double>(n_target) : 0.0;
+    for (double& value : target_mean) value *= n_target_inv;
+    std::vector<double> diff(p, 0.0);
+    for (std::size_t feature = 0; feature < p; ++feature) {
+        diff[feature] = model->x_mean[feature] - target_mean[feature];
+    }
+    double diff_ss = squared_norm(diff);
+
+    resize_fill(model->weights_w, p * a, 0.0);
+    resize_fill(model->loadings_p, p * a, 0.0);
+    resize_fill(model->y_loadings_q, q * a, 0.0);
+    std::vector<double> scores_t;
+    std::vector<double> y_scores_u;
+    resize_fill(scores_t, n * a, 0.0);
+    resize_fill(y_scores_u, n * a, 0.0);
+
+    std::vector<double> covariance;
+    resize_fill(covariance, p * q, 0.0);
+    for (std::size_t feature = 0; feature < p; ++feature) {
+        for (std::size_t target = 0; target < q; ++target) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += xk[idx(row, p, feature)] * yk[idx(row, q, target)];
+            }
+            covariance[idx(feature, q, target)] = sum;
+        }
+    }
+
+    std::vector<double> basis_v;
+    resize_fill(basis_v, p * a, 0.0);
+
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        std::vector<double> direction;
+        status = dominant_left_singular_direction(ctx, covariance, p, q,
+                                                  cfg.max_iter, cfg.tol,
+                                                  comp, direction);
+        if (status != P4A_OK) return status;
+
+        // DI step: remove a fraction of the direction's component along
+        // the source-target difference. The fraction is bounded in
+        // [0, 1] and equals lambda / (1 + lambda) so lambda=0 leaves the
+        // direction unchanged and lambda → ∞ projects it onto the
+        // orthogonal complement of `diff`.
+        if (lambda > 0.0 && diff_ss >
+            std::numeric_limits<double>::epsilon()) {
+            double projection = 0.0;
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                projection += direction[feature] * diff[feature];
+            }
+            const double frac = lambda / (1.0 + lambda);
+            const double scale = frac * (projection / diff_ss);
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                direction[feature] -= scale * diff[feature];
+            }
+            const double norm = std::sqrt(squared_norm(direction));
+            if (norm <= std::numeric_limits<double>::epsilon()) {
+                ctx.set_errorf(
+                    "DI-PLS direction collapsed at component %llu", ull(comp));
+                return P4A_ERR_NUMERICAL_FAILURE;
+            }
+            for (double& value : direction) value /= norm;
+        }
+
+        std::vector<double> x_score;
+        matrix_vector_product(xk, n, p, direction, x_score);
+        const double x_score_norm = std::sqrt(squared_norm(x_score));
+        if (x_score_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("DI-PLS X score vanished at component %llu",
+                           ull(comp));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : x_score) value /= x_score_norm;
+        for (double& value : direction) value /= x_score_norm;
+
+        std::vector<double> x_loadings(p, 0.0);
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += xk[idx(row, p, feature)] * x_score[row];
+            }
+            x_loadings[feature] = sum;
+        }
+        std::vector<double> y_loadings(q, 0.0);
+        for (std::size_t target = 0; target < q; ++target) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += yk[idx(row, q, target)] * x_score[row];
+            }
+            y_loadings[target] = sum;
+        }
+
+        std::vector<double> v = x_loadings;
+        if (comp > 0U) {
+            for (std::size_t prev = 0; prev < comp; ++prev) {
+                double projection = 0.0;
+                for (std::size_t feature = 0; feature < p; ++feature) {
+                    projection += basis_v[idx(feature, a, prev)] * v[feature];
+                }
+                for (std::size_t feature = 0; feature < p; ++feature) {
+                    v[feature] -= basis_v[idx(feature, a, prev)] * projection;
+                }
+            }
+        }
+        const double v_norm = std::sqrt(squared_norm(v));
+        if (v_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("DI-PLS deflation basis vanished at component %llu",
+                           ull(comp));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : v) value /= v_norm;
+
+        std::vector<double> y_scores(n, 0.0);
+        const double y_loading_ss = squared_norm(y_loadings);
+        if (y_loading_ss > std::numeric_limits<double>::epsilon()) {
+            for (std::size_t row = 0; row < n; ++row) {
+                double sum = 0.0;
+                for (std::size_t target = 0; target < q; ++target) {
+                    sum += yk[idx(row, q, target)] * y_loadings[target];
+                }
+                y_scores[row] = sum / y_loading_ss;
+            }
+        }
+
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            model->weights_w[idx(feature, a, comp)] = direction[feature];
+            model->loadings_p[idx(feature, a, comp)] = x_loadings[feature];
+            basis_v[idx(feature, a, comp)] = v[feature];
+        }
+        for (std::size_t target = 0; target < q; ++target) {
+            model->y_loadings_q[idx(target, a, comp)] = y_loadings[target];
+        }
+        for (std::size_t row = 0; row < n; ++row) {
+            scores_t[idx(row, a, comp)] = x_score[row];
+            y_scores_u[idx(row, a, comp)] = y_scores[row];
+        }
+
+        std::vector<double> v_transpose_s(q, 0.0);
+        for (std::size_t target = 0; target < q; ++target) {
+            double sum = 0.0;
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                sum += v[feature] * covariance[idx(feature, q, target)];
+            }
+            v_transpose_s[target] = sum;
+        }
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            for (std::size_t target = 0; target < q; ++target) {
+                covariance[idx(feature, q, target)] -=
+                    v[feature] * v_transpose_s[target];
+            }
+        }
+    }
+
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    if (status != P4A_OK) return status;
+
+    if (cfg.store_scores != 0) {
+        model->scores_t = std::move(scores_t);
+        model->y_scores_u = std::move(y_scores_u);
+    }
+
+    out_model = std::move(model);
+    ctx.clear_error();
+    return P4A_OK;
+}
+
+p4a_status_t fit_pls_sparse_simpls(Context& ctx,
+                                    const Config& cfg,
+                                    const p4a_matrix_view_t& X,
+                                    const p4a_matrix_view_t& Y,
+                                    std::unique_ptr<Model>& out_model) {
+    out_model.reset();
+    if (cfg.solver != P4A_SOLVER_SIMPLS) {
+        ctx.set_error("sparse PLS currently requires the SIMPLS solver");
+        return P4A_ERR_UNSUPPORTED;
+    }
+    if (cfg.deflation != P4A_DEFLATION_REGRESSION) {
+        ctx.set_error("sparse PLS requires regression deflation");
+        return P4A_ERR_UNSUPPORTED;
+    }
+    if (!(cfg.sparsity_lambda >= 0.0) || !std::isfinite(cfg.sparsity_lambda)) {
+        ctx.set_error("sparsity_lambda must be >= 0 and finite");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+
+    // When lambda == 0 the sparse path is identical to plain SIMPLS — call
+    // the existing solver to avoid behavioural drift and reuse its test
+    // coverage.
+    if (cfg.sparsity_lambda == 0.0) {
+        Config relaxed = cfg;
+        relaxed.algorithm = P4A_ALGO_PLS_REGRESSION;
+        return fit_pls_regression_simpls(ctx, relaxed, X, Y, out_model);
+    }
+
+    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    std::vector<double> x_original;
+    std::vector<double> y_original;
+    status = copy_matrix_checked(ctx, X, "X", x_original);
+    if (status != P4A_OK) return status;
+    status = copy_matrix_checked(ctx, Y, "Y", y_original);
+    if (status != P4A_OK) return status;
+
+    const std::size_t n = static_cast<std::size_t>(X.rows);
+    const std::size_t p = static_cast<std::size_t>(X.cols);
+    const std::size_t q = static_cast<std::size_t>(Y.cols);
+    const std::size_t a = static_cast<std::size_t>(cfg.n_components);
+    const double lambda = cfg.sparsity_lambda;
+
+    auto model = std::make_unique<Model>();
+    model->algorithm = cfg.algorithm;
+    model->solver = cfg.solver;
+    model->deflation = cfg.deflation;
+    model->n_samples = X.rows;
+    model->n_features = static_cast<std::int32_t>(X.cols);
+    model->n_targets = static_cast<std::int32_t>(Y.cols);
+    model->n_components = cfg.n_components;
+    model->center_x = cfg.center_x;
+    model->scale_x = cfg.scale_x;
+    model->center_y = cfg.center_y;
+    model->scale_y = cfg.scale_y;
+    model->store_scores = cfg.store_scores;
+    model->tol = cfg.tol;
+    model->max_iter = cfg.max_iter;
+
+    std::vector<double> xk;
+    std::vector<double> yk;
+    center_scale_in_place(x_original, n, p, cfg.center_x != 0, cfg.scale_x != 0,
+                          model->x_mean, model->x_scale, xk);
+    center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
+                          model->y_mean, model->y_scale, yk);
+
+    resize_fill(model->weights_w, p * a, 0.0);
+    resize_fill(model->loadings_p, p * a, 0.0);
+    resize_fill(model->y_loadings_q, q * a, 0.0);
+    std::vector<double> scores_t;
+    std::vector<double> y_scores_u;
+    resize_fill(scores_t, n * a, 0.0);
+    resize_fill(y_scores_u, n * a, 0.0);
+
+    std::vector<double> covariance;
+    resize_fill(covariance, p * q, 0.0);
+    for (std::size_t feature = 0; feature < p; ++feature) {
+        for (std::size_t target = 0; target < q; ++target) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += xk[idx(row, p, feature)] * yk[idx(row, q, target)];
+            }
+            covariance[idx(feature, q, target)] = sum;
+        }
+    }
+
+    std::vector<double> basis_v;
+    resize_fill(basis_v, p * a, 0.0);
+
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        std::vector<double> direction;
+        status = dominant_left_singular_direction(ctx, covariance, p, q,
+                                                  cfg.max_iter, cfg.tol,
+                                                  comp, direction);
+        if (status != P4A_OK) return status;
+
+        // Sparse step: soft-threshold direction with lambda, renormalize.
+        for (double& value : direction) {
+            const double abs_v = std::fabs(value);
+            value = (abs_v > lambda) ? std::copysign(abs_v - lambda, value) : 0.0;
+        }
+        double dir_norm = std::sqrt(squared_norm(direction));
+        if (dir_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf(
+                "sparse SIMPLS direction collapsed to zero at component %llu "
+                "(lambda %.3e too large for this dataset)",
+                ull(comp), lambda);
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : direction) value /= dir_norm;
+
+        std::vector<double> x_score;
+        matrix_vector_product(xk, n, p, direction, x_score);
+        const double x_score_norm = std::sqrt(squared_norm(x_score));
+        if (x_score_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("sparse SIMPLS X score vanished at component %llu",
+                           ull(comp));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : x_score) value /= x_score_norm;
+        for (double& value : direction) value /= x_score_norm;
+
+        std::vector<double> x_loadings;
+        resize_fill(x_loadings, p, 0.0);
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += xk[idx(row, p, feature)] * x_score[row];
+            }
+            x_loadings[feature] = sum;
+        }
+
+        std::vector<double> y_loadings;
+        resize_fill(y_loadings, q, 0.0);
+        for (std::size_t target = 0; target < q; ++target) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += yk[idx(row, q, target)] * x_score[row];
+            }
+            y_loadings[target] = sum;
+        }
+
+        std::vector<double> v = x_loadings;
+        if (comp > 0U) {
+            for (std::size_t prev = 0; prev < comp; ++prev) {
+                double projection = 0.0;
+                for (std::size_t feature = 0; feature < p; ++feature) {
+                    projection += basis_v[idx(feature, a, prev)] * v[feature];
+                }
+                for (std::size_t feature = 0; feature < p; ++feature) {
+                    v[feature] -= basis_v[idx(feature, a, prev)] * projection;
+                }
+            }
+        }
+        const double v_norm = std::sqrt(squared_norm(v));
+        if (v_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("sparse SIMPLS deflation basis vanished at "
+                           "component %llu", ull(comp));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : v) value /= v_norm;
+
+        std::vector<double> y_scores;
+        resize_fill(y_scores, n, 0.0);
+        const double y_loading_ss = squared_norm(y_loadings);
+        if (y_loading_ss > std::numeric_limits<double>::epsilon()) {
+            for (std::size_t row = 0; row < n; ++row) {
+                double sum = 0.0;
+                for (std::size_t target = 0; target < q; ++target) {
+                    sum += yk[idx(row, q, target)] * y_loadings[target];
+                }
+                y_scores[row] = sum / y_loading_ss;
+            }
+        }
+
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            model->weights_w[idx(feature, a, comp)] = direction[feature];
+            model->loadings_p[idx(feature, a, comp)] = x_loadings[feature];
+            basis_v[idx(feature, a, comp)] = v[feature];
+        }
+        for (std::size_t target = 0; target < q; ++target) {
+            model->y_loadings_q[idx(target, a, comp)] = y_loadings[target];
+        }
+        for (std::size_t row = 0; row < n; ++row) {
+            scores_t[idx(row, a, comp)] = x_score[row];
+            y_scores_u[idx(row, a, comp)] = y_scores[row];
+        }
+
+        std::vector<double> v_transpose_s;
+        resize_fill(v_transpose_s, q, 0.0);
+        for (std::size_t target = 0; target < q; ++target) {
+            double sum = 0.0;
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                sum += v[feature] * covariance[idx(feature, q, target)];
+            }
+            v_transpose_s[target] = sum;
+        }
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            for (std::size_t target = 0; target < q; ++target) {
+                covariance[idx(feature, q, target)] -=
+                    v[feature] * v_transpose_s[target];
+            }
+        }
+    }
+
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    if (status != P4A_OK) return status;
+
+    if (cfg.store_scores != 0) {
+        model->scores_t = std::move(scores_t);
+        model->y_scores_u = std::move(y_scores_u);
+    }
+
+    out_model = std::move(model);
+    ctx.clear_error();
+    return P4A_OK;
+}
+
 p4a_status_t fit_model(Context& ctx,
                        const Config& cfg,
                        const p4a_matrix_view_t& X,
                        const p4a_matrix_view_t& Y,
                        std::unique_ptr<Model>& out_model) {
+    if (cfg.algorithm == P4A_ALGO_SPARSE_PLS) {
+        return fit_pls_sparse_simpls(ctx, cfg, X, Y, out_model);
+    }
     if (cfg.algorithm == P4A_ALGO_PCR) {
         return fit_pcr_svd(ctx, cfg, X, Y, out_model);
     }

@@ -38,6 +38,27 @@ class Config {
     std::int32_t store_diagnostics{0};
     p4a_dtype_t  dtype{P4A_DTYPE_F64};
 
+    // Sparse PLS soft-threshold lambda. 0.0 means no sparsity; only
+    // consumed by `fit_pls_sparse_simpls` (P4A_ALGO_SPARSE_PLS). Each
+    // weight w[i] is replaced with sign(w[i]) * max(|w[i]| - lambda, 0)
+    // before renormalization.
+    double sparsity_lambda{0.0};
+
+    // RBF / polynomial kernel parameters consumed by the kernel-algorithm
+    // PLS solver when kernel_type != P4A_KERNEL_LINEAR.
+    std::int32_t kernel_type{0};      // 0=linear (default), 1=RBF, 2=polynomial
+    double       kernel_gamma{0.0};   // RBF: kernel(x,y) = exp(-gamma * |x-y|^2); 0 means 1/n_features.
+    double       kernel_coef0{1.0};   // polynomial: (gamma * x.y + coef0)^degree.
+    std::int32_t kernel_degree{3};    // polynomial degree.
+
+    // Domain-invariant PLS (di-PLS) regularization weight. Penalizes the
+    // squared norm of (W * (mean_source_X - mean_target_X)) at each
+    // direction. 0.0 = no DI penalty.
+    double di_lambda{0.0};
+
+    // Recursive PLS forgetting factor in (0, 1]; 1.0 = full memory.
+    double recursive_forgetting{1.0};
+
     // Composability hooks (non-owning).
     const p4a_pipeline_t*        pipeline{nullptr};
     const p4a_operator_bank_t*   operator_bank{nullptr};

@@ -2367,7 +2367,11 @@ TEST(model_phase1, validation_errors_are_deterministic) {
     CHECK_EQ(p4a_context_create(&h.ctx), P4A_OK);
     CHECK_EQ(p4a_config_create(&h.cfg), P4A_OK);
     CHECK_EQ(p4a_config_set_n_components(h.cfg, fixture.n_components), P4A_OK);
-    CHECK_EQ(p4a_config_set_algorithm(h.cfg, P4A_ALGO_SPARSE_PLS), P4A_OK);
+    // Pick an algorithm that the public ABI does not yet dispatch through
+    // p4a_model_fit. P4A_ALGO_MB_PLS (multi-block) is implemented as an
+    // internal kernel but is not yet exposed through the public model
+    // fit/predict surface.
+    CHECK_EQ(p4a_config_set_algorithm(h.cfg, P4A_ALGO_MB_PLS), P4A_OK);
 
     p4a_matrix_view_t X{};
     p4a_matrix_view_t Y{};

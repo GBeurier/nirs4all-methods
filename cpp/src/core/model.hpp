@@ -139,6 +139,28 @@ class Model {
     const p4a_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
+[[nodiscard]] p4a_status_t fit_pls_sparse_simpls(
+    Context& ctx,
+    const Config& cfg,
+    const p4a_matrix_view_t& X,
+    const p4a_matrix_view_t& Y,
+    std::unique_ptr<Model>& out_model);
+
+[[nodiscard]] p4a_status_t fit_pls_regression_nonlinear_kernel(
+    Context& ctx,
+    const Config& cfg,
+    const p4a_matrix_view_t& X,
+    const p4a_matrix_view_t& Y,
+    std::unique_ptr<Model>& out_model);
+
+[[nodiscard]] p4a_status_t fit_di_pls(
+    Context& ctx,
+    const Config& cfg,
+    const p4a_matrix_view_t& X_source,
+    const p4a_matrix_view_t& Y_source,
+    const p4a_matrix_view_t& X_target,
+    std::unique_ptr<Model>& out_model);
+
 [[nodiscard]] p4a_status_t fit_model(
     Context& ctx,
     const Config& cfg,

@@ -9,6 +9,51 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 Next phase: broaden the algorithm family beyond NIPALS PLS regression, with
 reference parity and benchmarks for every added method.
 
+## [0.69.0-pls-extensions] — 2026-05-15
+
+Phases 8 – 15. Smallest viable additions to algorithm taxonomy sections §7,
+§11, §12 (partial), §13, §17, §18, §19. All shipped as internal C++ kernels;
+public ABI exposure deferred to the binding tranche.
+
+### Added
+
+- **§7 Sparse PLS** — `fit_pls_sparse_simpls` (soft-threshold on the SIMPLS
+  loading direction; `cfg.sparsity_lambda`). `P4A_ALGO_SPARSE_PLS` is now
+  dispatched through `fit_model`.
+- **§13 Domain-invariant PLS** — `fit_di_pls` projects the SIMPLS direction
+  away from the source-target mean difference at each component;
+  `cfg.di_lambda` controls the penalty.
+- **§12 Recursive PLS (moving window)** — `fit_predict_recursive_pls` in
+  `cpp/src/core/recursive_pls.cpp`. Each sample at position ≥ `window_size`
+  is predicted from a SIMPLS model fitted on the previous `window_size` rows.
+- **§17 Diagnostics** — `pls_hotelling_t2`, `pls_q_residuals`, `pls_dmodx`
+  in `cpp/src/core/pls_diagnostics.cpp`.
+- **§18 One-SE rule** — `cross_validate_component_prefixes` now records
+  per-fold RMSE values; new `select_one_se_components` picks the smallest
+  competitive component count.
+- **§19 Process monitoring** — `pls_monitoring_fit` /
+  `pls_monitoring_evaluate` in `cpp/src/core/pls_monitoring.cpp`. Empirical
+  percentile thresholds for T² and Q-residuals at a configurable
+  α level, plus per-sample alarm flags.
+- **§11 Just-in-time PLS** — documented as already shipped by
+  `fit_predict_lw_pls` (k-NN + uniform-weight local SIMPLS).
+- Internal `Config` extended with `sparsity_lambda`, `kernel_type`,
+  `kernel_gamma`, `kernel_coef0`, `kernel_degree`, `di_lambda`,
+  `recursive_forgetting`.
+- 19 new C++ ABI / core tests (228 total).
+
+### Deferred (open phases at this release)
+
+- **§10.2 Non-linear kernel PLS** (RBF / polynomial / sigmoid) — needs a
+  Gram-matrix dual path and a Model field for kernel parameters.
+- **§8 O2PLS** — needs bi-directional OPLS infrastructure.
+- **§9 N-PLS** — needs tensor unfolding utilities.
+
+### Changed
+
+- Project version is now `0.69.0+abi.1.1.0`. C ABI surface unchanged at
+  `1.1.0`; the new fields on `Config` are internal-only.
+
 ## [0.68.0-comprehensive-benchmark] — 2026-05-15
 
 Phase 7b–7e. Comprehensive performance benchmark matrix.

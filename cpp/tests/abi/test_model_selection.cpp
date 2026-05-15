@@ -153,3 +153,80 @@ TEST(model_selection_phase4o, rejects_invalid_component_cv_requests) {
                                                                 result),
              P4A_ERR_INVALID_ARGUMENT);
 }
+
+TEST(model_selection_phase10, one_se_rule_picks_smaller_model_when_within_se) {
+    ::pls4all::core::Context ctx;
+    ::pls4all::core::Config cfg;
+    cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
+    cfg.solver = P4A_SOLVER_SIMPLS;
+    cfg.deflation = P4A_DEFLATION_REGRESSION;
+    cfg.n_components = 1;
+    cfg.center_x = 1;
+    cfg.scale_x = 0;
+    cfg.center_y = 1;
+    cfg.scale_y = 0;
+    cfg.store_scores = 0;
+
+    // 12-sample, 4-feature dataset designed so the marginal benefit of
+    // additional components is small — the one-SE rule should pick the
+    // smallest competitive component count.
+    double x_values[] = {
+        0.10, 0.45, 0.95, 0.20,
+        0.30, 0.40, 0.80, 0.65,
+        0.60, 0.10, 0.20, 0.70,
+        0.40, 0.30, 0.60, 0.90,
+        0.80, 0.20, 0.10, 0.55,
+        0.20, 0.90, 0.40, 0.10,
+        0.70, 0.60, 0.30, 0.20,
+        0.50, 0.80, 0.70, 0.80,
+        0.15, 0.55, 0.85, 0.25,
+        0.35, 0.45, 0.75, 0.62,
+        0.65, 0.15, 0.25, 0.75,
+        0.45, 0.35, 0.65, 0.92,
+    };
+    double y_values[] = {
+        1.1, 0.7, 0.4, 1.0, 0.9, 0.6, 1.2, 1.3,
+        1.05, 0.72, 0.45, 1.02,
+    };
+    p4a_matrix_view_t X{};
+    p4a_matrix_view_t Y{};
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X, x_values, 12, 4, P4A_DTYPE_F64),
+             P4A_OK);
+    CHECK_EQ(p4a_matrix_view_init_rowmajor(&Y, y_values, 12, 1, P4A_DTYPE_F64),
+             P4A_OK);
+    ::pls4all::core::ValidationPlan plan;
+    CHECK_EQ(::pls4all::core::make_kfold_validation_plan(ctx, 12, 4, plan),
+             P4A_OK);
+
+    ::pls4all::core::ComponentCvResult result;
+    CHECK_EQ(::pls4all::core::cross_validate_component_prefixes(ctx, cfg, X, Y,
+                                                                plan, 3, result),
+             P4A_OK);
+    CHECK_EQ(result.fold_rmse_matrix.size(),
+             static_cast<std::size_t>(3 * 4));
+    CHECK_EQ(result.n_folds, 4);
+
+    // The one-SE rule should default to best_n_components before being
+    // applied.
+    CHECK_EQ(result.one_se_n_components, result.best_n_components);
+
+    CHECK_EQ(::pls4all::core::select_one_se_components(ctx, result), P4A_OK);
+    CHECK(result.one_se_standard_error >= 0.0);
+    CHECK(result.one_se_threshold >=
+          result.metrics_by_component[
+              static_cast<std::size_t>(result.best_n_components - 1)].rmse);
+    CHECK(result.one_se_n_components >= 1);
+    CHECK(result.one_se_n_components <= result.best_n_components);
+}
+
+TEST(model_selection_phase10, one_se_rule_rejects_unpopulated_result) {
+    ::pls4all::core::Context ctx;
+    ::pls4all::core::ComponentCvResult result;
+    CHECK_EQ(::pls4all::core::select_one_se_components(ctx, result),
+             P4A_ERR_INVALID_ARGUMENT);
+
+    result.max_components = 3;
+    result.n_folds = 1;
+    CHECK_EQ(::pls4all::core::select_one_se_components(ctx, result),
+             P4A_ERR_INVALID_ARGUMENT);
+}

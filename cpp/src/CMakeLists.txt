@@ -50,6 +50,9 @@ add_library(pls4all_core OBJECT
     core/model_selection.cpp
     core/operator_bank.cpp
     core/gating_strategy.cpp
+    core/pls_diagnostics.cpp
+    core/pls_monitoring.cpp
+    core/recursive_pls.cpp
     core/interval_selection.cpp
     core/lw_pls.cpp
     core/pls_lda.cpp
