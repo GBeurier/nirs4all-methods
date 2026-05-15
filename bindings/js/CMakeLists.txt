@@ -28,7 +28,10 @@ foreach(sym IN LISTS _exported_symbols)
         list(APPEND _js_export_list "_${sym}")
     endif()
 endforeach()
-list(APPEND _js_export_list "_malloc" "_free")
+list(APPEND _js_export_list
+    "_malloc" "_free"
+    "_p4a_wasm_pls_fit"
+    "_p4a_wasm_pls_predict_from_coeffs")
 string(REPLACE ";" "," _js_export_flag "${_js_export_list}")
 
 add_executable(pls4all_wasm
@@ -45,6 +48,7 @@ target_link_options(pls4all_wasm PRIVATE
     "SHELL:-s ALLOW_MEMORY_GROWTH=1"
     "SHELL:-s INITIAL_MEMORY=64MB"
     "SHELL:-s MAXIMUM_MEMORY=2GB"
+    "SHELL:-s STACK_SIZE=8MB"
     "SHELL:-s WASM_BIGINT=1"
     "SHELL:-s EXPORTED_RUNTIME_METHODS=['ccall','cwrap','HEAPF64','HEAP32','HEAPU8','UTF8ToString','stringToUTF8','lengthBytesUTF8','getValue','setValue']"
     "SHELL:-s EXPORTED_FUNCTIONS=${_js_export_flag}"

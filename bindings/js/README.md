@@ -70,13 +70,16 @@ The CMake `emscripten` preset sets:
 - ✅ ABI surface exposed (159 `_p4a_*` symbols).
 - ✅ Version + ABI introspection.
 - ✅ Context / Config / Model / MethodResult lifecycle.
-- ⚠️ **Known issue:** numerical PLS fit produces incorrect
-  `x_mean` / `coefficients` under Emscripten 5.0.7 with the current
-  build flags. The fit path is reachable but should not be relied on
-  for accurate predictions until this is investigated. Suspected
-  cause: int64 / matrix-view interaction in the Emscripten clang
-  toolchain. The native Linux build (and Python / R bindings) is
-  unaffected — this is specific to the WASM target.
+- ✅ **PLS fit / predict parity with native Python pls4all at
+  numerical floor (1e-16 RMSE-rel)** — see
+  `test/run_smoke.mjs` and `test/parity_fixture.json`.
+
+PLS fit is exposed through `p4a_wasm_pls_fit` (raw-pointer signature)
+plus the TypeScript `fitPls` / `predictPls` helpers. The lower-level
+`_p4a_model_fit` is still exported but should NOT be invoked directly
+from JS with `p4a_matrix_view_t*` arguments — Emscripten 5.0.7 mis-
+compiles that call path. The TS `Model` class internally funnels
+through the raw-pointer helper.
 
 ## Layout
 

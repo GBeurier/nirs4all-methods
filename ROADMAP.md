@@ -18,7 +18,7 @@ The project rule remains:
 
 ## Current Checkpoint - 2026-05-15
 
-Latest local tag: `phase-32-wasm-binding` (`0.83.0+abi.1.12.0`).
+Latest local tag: `phase-32a-wasm-parity` (`0.84.0+abi.1.12.0`).
 
 Last green local gate:
 
@@ -172,7 +172,7 @@ All shipped as internal kernels in
 ## Next Agent Prompt
 
 Continue from `/home/delete/nirs4all/pls4all` on `main`, currently tagged
-`phase-32-wasm-binding` (`0.83.0+abi.1.12.0`). Do not use
+`phase-32a-wasm-parity` (`0.84.0+abi.1.12.0`). Do not use
 GitHub Actions for now. Keep using the local gate: pinned fixture generator,
 dev-release build, C++ tests, CLI selfcheck (`pls4all_cli --selfcheck`),
 CLI bench smoke (`pls4all_cli --bench --algo pls_simpls --samples 200

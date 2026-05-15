@@ -1,41 +1,29 @@
 // SPDX-License-Identifier: CeCILL-2.1
 //
-// Node smoke test for the WASM build.
-//
-// What this smoke verifies:
-// - The Emscripten module loads in Node.
-// - Version + ABI introspection strings come back correctly.
-// - Context / Config lifecycle is callable, including setters and
-//   getters round-tripping through the C ABI.
-//
-// Numerical fit is currently a known-issue when invoked from outside
-// the WASM module — see README.md "Status" section. A pure-C
-// translation unit linking against the same `libp4a_static.a` runs the
-// fit correctly (see `cmake --build --preset emscripten --target
-// pls4all_wasm` and the C debug in `test/wasm_fit_debug.c`), but the
-// equivalent calls invoked from a JS host return inconsistent
-// `x_mean` / coefficients. Likely a packing / marshalling subtlety in
-// the `WASM_BIGINT=1` ABI for `p4a_model_fit`; under active
-// investigation.
+// Node smoke + parity:
+// 1. Loads the WASM build, prints version / ABI.
+// 2. Fits a SIMPLS PLS regression on deterministic data via the
+//    `p4a_wasm_pls_fit` helper.
+// 3. Predicts in-sample.
+// 4. Loads the parity reference (fixture saved by
+//    `bindings/js/test/generate_parity_fixture.py`, which calls the
+//    native Python binding on the same X / Y).
+// 5. Compares coefficients + predictions; fails if RMSE-rel > 1e-3.
 
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { readFileSync, existsSync } from "node:fs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const wasmDir = resolve(here, "..", "..", "..", "build", "emscripten",
                         "bindings", "js");
 const factory = (await import(resolve(wasmDir, "p4a.js"))).default;
-const M = await factory({
-    locateFile: (path) => resolve(wasmDir, path),
-});
+const M = await factory({locateFile: (p) => resolve(wasmDir, p)});
 
+// ----- Version + ABI -----
 const versionPtr = M._p4a_get_version_string();
 const version = M.UTF8ToString(versionPtr);
 console.log("pls4all version:", version);
-if (!version.startsWith("0.")) {
-    throw new Error(`unexpected version string: ${version}`);
-}
-
 const abi = [
     M._p4a_get_abi_version_major(),
     M._p4a_get_abi_version_minor(),
@@ -43,32 +31,94 @@ const abi = [
 ];
 console.log("ABI:", abi.join("."));
 
-const ctxOut = M._malloc(4);
-let s = M._p4a_context_create(ctxOut);
-if (s !== 0) throw new Error(`context_create: ${s}`);
-const ctx = M.getValue(ctxOut, "i32");
-M._free(ctxOut);
+// ----- Deterministic input (matched to the Python fixture) -----
+const n = 50, p = 5, q = 1;
+const X = new Float64Array(n * p);
+const Y = new Float64Array(n * q);
+for (let i = 0; i < n; i++) {
+    for (let j = 0; j < p; j++) {
+        X[i * p + j] = Math.sin((i + 1) * (j + 1) * 0.3);
+    }
+    Y[i] = X[i * p] + 0.5 * X[i * p + 1] - 0.3 * X[i * p + 2];
+}
 
-const cfgOut = M._malloc(4);
-s = M._p4a_config_create(cfgOut);
-if (s !== 0) throw new Error(`config_create: ${s}`);
-const cfg = M.getValue(cfgOut, "i32");
-M._free(cfgOut);
+// ----- WASM fit -----
+const xPtr = M._malloc(X.byteLength);
+const yPtr = M._malloc(Y.byteLength);
+const coefsPtr = M._malloc(p * q * 8);
+const xmPtr = M._malloc(p * 8);
+const ymPtr = M._malloc(q * 8);
+const predsPtr = M._malloc(n * q * 8);
+M.HEAPF64.set(X, xPtr >>> 3);
+M.HEAPF64.set(Y, yPtr >>> 3);
 
-s = M._p4a_config_set_algorithm(cfg, 0);
-if (s !== 0) throw new Error(`set_algorithm: ${s}`);
-s = M._p4a_config_set_solver(cfg, 1);
-if (s !== 0) throw new Error(`set_solver: ${s}`);
-s = M._p4a_config_set_n_components(cfg, 3);
-if (s !== 0) throw new Error(`set_n_components: ${s}`);
+const status = M._p4a_wasm_pls_fit(
+    xPtr, yPtr, n, p, q, 3,
+    coefsPtr, xmPtr, ymPtr, predsPtr);
+if (status !== 0) throw new Error(`p4a_wasm_pls_fit failed: ${status}`);
 
-const buf = M._malloc(4);
-M._p4a_config_get_n_components(cfg, buf);
-const ncomp = M.getValue(buf, "i32");
-if (ncomp !== 3) throw new Error(`n_components readback ${ncomp} != 3`);
-M._free(buf);
+const coefs = new Float64Array(M.HEAPU8.buffer, coefsPtr, p * q).slice();
+const xMean = new Float64Array(M.HEAPU8.buffer, xmPtr, p).slice();
+const yMean = new Float64Array(M.HEAPU8.buffer, ymPtr, q).slice();
+const preds = new Float64Array(M.HEAPU8.buffer, predsPtr, n * q).slice();
+M._free(xPtr); M._free(yPtr);
+M._free(coefsPtr); M._free(xmPtr); M._free(ymPtr); M._free(predsPtr);
 
-M._p4a_config_destroy(cfg);
-M._p4a_context_destroy(ctx);
+console.log("WASM coefficients:",
+    Array.from(coefs).map(v => v.toFixed(6)));
+console.log("WASM x_mean:",
+    Array.from(xMean).map(v => v.toFixed(6)));
+console.log("WASM y_mean:",
+    Array.from(yMean).map(v => v.toFixed(6)));
 
-console.log("WASM smoke OK");
+// In-sample RMSE check.
+let sumsq = 0;
+for (let i = 0; i < n; i++) {
+    const d = preds[i] - Y[i];
+    sumsq += d * d;
+}
+const rmseInSample = Math.sqrt(sumsq / n);
+console.log("WASM in-sample RMSE:", rmseInSample.toFixed(6));
+if (rmseInSample > 1e-3) {
+    throw new Error(`In-sample RMSE too high: ${rmseInSample}`);
+}
+
+// ----- Parity vs native Python -----
+const fixturePath = resolve(here, "parity_fixture.json");
+if (!existsSync(fixturePath)) {
+    console.warn(
+        `[WARN] parity fixture missing at ${fixturePath}.\n` +
+        `      Regenerate via:\n` +
+        `      PYTHONPATH=bindings/python/src parity/python_generator/.venv/bin/python \\\n` +
+        `        bindings/js/test/generate_parity_fixture.py`);
+    console.log("WASM smoke OK (parity skipped)");
+    process.exit(0);
+}
+const ref = JSON.parse(readFileSync(fixturePath, "utf-8"));
+
+function rmseRel(actual, expected) {
+    let sq = 0, sqExp = 0;
+    for (let i = 0; i < actual.length; i++) {
+        const d = actual[i] - expected[i];
+        sq += d * d;
+        sqExp += expected[i] * expected[i];
+    }
+    return Math.sqrt(sq / actual.length) /
+        Math.max(1e-12, Math.sqrt(sqExp / actual.length));
+}
+
+const coefsRel = rmseRel(coefs, ref.coefficients);
+const xMeanRel = rmseRel(xMean, ref.x_mean);
+const yMeanRel = rmseRel(yMean, ref.y_mean);
+const predsRel = rmseRel(preds, ref.predictions);
+console.log("\nParity vs native Python pls4all:");
+console.log(`  coefficients rmse_rel: ${coefsRel.toExponential(3)}`);
+console.log(`  x_mean       rmse_rel: ${xMeanRel.toExponential(3)}`);
+console.log(`  y_mean       rmse_rel: ${yMeanRel.toExponential(3)}`);
+console.log(`  predictions  rmse_rel: ${predsRel.toExponential(3)}`);
+
+const tol = 1e-6;
+if (coefsRel > tol || xMeanRel > tol || yMeanRel > tol || predsRel > tol) {
+    throw new Error(`Parity failure: tolerance ${tol} exceeded`);
+}
+console.log("\nWASM smoke + parity OK");

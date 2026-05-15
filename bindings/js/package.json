@@ -1,6 +1,6 @@
 {
   "name": "@pls4all/wasm",
-  "version": "0.82.0",
+  "version": "0.84.0",
   "description": "WebAssembly bindings for pls4all — portable PLS / NIRS engine.",
   "type": "module",
   "main": "dist/index.js",

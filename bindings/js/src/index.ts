@@ -21,7 +21,7 @@ import { getModule } from "./ffi.js";
 export { loadModule, getModule } from "./ffi.js";
 export { Context } from "./context.js";
 export { Config } from "./config.js";
-export { Model } from "./model.js";
+export { Model, fitPls, predictPls, type PlsModel } from "./model.js";
 export { MethodResult } from "./methodResult.js";
 export {
     Status,
