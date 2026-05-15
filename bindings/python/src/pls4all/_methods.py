@@ -150,6 +150,13 @@ lib.p4a_approximate_press_compute.argtypes = [
     ctypes.c_int32, ctypes.POINTER(ctypes.c_void_p),
 ]
 
+lib.p4a_pls_diagnostics_compute.restype = ctypes.c_int
+lib.p4a_pls_diagnostics_compute.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
 
 class MethodResult:
     """Owning wrapper around `p4a_method_result_t`."""
@@ -464,6 +471,31 @@ def approximate_press_compute(ctx: Context, cfg: Config,
     return _resolve_handle(out, ctx, "p4a_approximate_press_compute")
 
 
+def pls_diagnostics_compute(ctx: Context,
+                              model: Any,
+                              X: Any,
+                              X_reference: Any | None = None,
+                              ) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    x_view = _matrix_view(X_arr)
+    ref_view_ptr = None
+    if X_reference is not None:
+        Xr_arr = _as_float64_contiguous(X_reference)
+        ref_view = _matrix_view(Xr_arr)
+        ref_view_ptr = ctypes.byref(ref_view)
+    out = ctypes.c_void_p(0)
+    # model is a pls4all.Model wrapper exposing .handle.
+    model_handle = getattr(model, "handle", model)
+    status = lib.p4a_pls_diagnostics_compute(
+        ctx.handle, model_handle,
+        ctypes.byref(x_view),
+        ref_view_ptr if ref_view_ptr is not None else None,
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_pls_diagnostics_compute")
+
+
 __all__ = [
     "MethodResult",
     "sparse_simpls_fit",
@@ -478,4 +510,5 @@ __all__ = [
     "kernel_pls_fit",
     "o2pls_fit",
     "approximate_press_compute",
+    "pls_diagnostics_compute",
 ]

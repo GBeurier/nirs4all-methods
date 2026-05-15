@@ -61,6 +61,9 @@ not run alongside the parity gate (CPU-load budget).
 | `kernel_pls_rbf` | `numpy-mirror` (Rosipal & Trejo 2001) | none (R `pls` linear only) | 2.32e-15 / — | Py PASS · R none |
 | `o2pls` | `numpy-mirror` (peel-then-PLS) | `OmicsPLS` 2.1.0 (joint iter) | 7.97e-02 / 4.54e-01 | Py PASS · R qualitative (different variant) |
 | `approximate_press` | `numpy-mirror` (leverage-inflated PRESS) | none (≠ LOO-PRESS) | 1.63e-03 / — | Py PASS · R none |
+| `pls_diagnostic_t2` | none (no widely installable Python T²) | `mdatools` 0.15.0 | — / 3.84e+00 | R qualitative (SIMPLS convention drift) |
+| `pls_diagnostic_q` | none | `mdatools` 0.15.0 | — / 2.19e+00 | R qualitative |
+| `pls_diagnostic_dmodx` | none | `mdatools` 0.15.0 (derived from Q) | — / 1.22e+00 | R qualitative |
 
 Re-run the gate locally:
 

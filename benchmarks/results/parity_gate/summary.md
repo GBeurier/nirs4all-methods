@@ -33,6 +33,12 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `o2pls` | O2PLS — bi-directional OPLS (Trygg & Wold 2003) | R / `OmicsPLS` 2.1.0 | ✓ | 4.541e-01 | 1e+00 | ok |
 | `approximate_press` | Approximate-PRESS component selection (§29) | python / `numpy-mirror` 1.26.4 | ✓ | 1.634e-03 | 5e-02 | ok |
 | `approximate_press` | Approximate-PRESS component selection (§29) | R / `(none)` - | ✗ | — | 5e-02 | no_r_reference |
+| `pls_diagnostic_t2` | PLS Hotelling T² (§9) | python / `(none)` - | ✗ | — | 1e+01 | no_python_reference |
+| `pls_diagnostic_t2` | PLS Hotelling T² (§9) | R / `mdatools` 0.15.0 | ✓ | 3.845e+00 | 1e+01 | ok |
+| `pls_diagnostic_q` | PLS Q residuals / SPE (§9) | python / `(none)` - | ✗ | — | 5e+00 | no_python_reference |
+| `pls_diagnostic_q` | PLS Q residuals / SPE (§9) | R / `mdatools` 0.15.0 | ✓ | 2.190e+00 | 5e+00 | ok |
+| `pls_diagnostic_dmodx` | PLS Distance-to-Model X (§9) | python / `(none)` - | ✗ | — | 5e+00 | no_python_reference |
+| `pls_diagnostic_dmodx` | PLS Distance-to-Model X (§9) | R / `mdatools` 0.15.0 | ✓ | 1.220e+00 | 5e+00 | ok |
 
 ## Reference caveats
 

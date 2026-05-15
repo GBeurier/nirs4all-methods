@@ -11,15 +11,15 @@ TEST(version, runtime_matches_compile_time) {
     CHECK_EQ(p4a_get_abi_version_patch(), static_cast<uint32_t>(P4A_ABI_VERSION_PATCH));
     CHECK_EQ(p4a_get_abi_version_int(),   static_cast<uint32_t>(P4A_ABI_VERSION_INT));
     CHECK_EQ(P4A_PROJECT_VERSION_MAJOR, 0);
-    CHECK_EQ(P4A_PROJECT_VERSION_MINOR, 74);
+    CHECK_EQ(P4A_PROJECT_VERSION_MINOR, 75);
     CHECK_EQ(P4A_PROJECT_VERSION_PATCH, 0);
 }
 
 TEST(version, version_string_contains_project_and_abi) {
     const char* v = p4a_get_version_string();
     CHECK_NE(v, nullptr);
-    CHECK_STR_CONTAINS(v, "0.74.0");
-    CHECK_STR_CONTAINS(v, "abi.1.5.0");
+    CHECK_STR_CONTAINS(v, "0.75.0");
+    CHECK_STR_CONTAINS(v, "abi.1.6.0");
 }
 
 TEST(version, abi_compat_same_major_minor_returns_ok) {

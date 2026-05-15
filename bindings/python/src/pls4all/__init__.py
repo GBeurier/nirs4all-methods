@@ -39,6 +39,7 @@ from ._methods import (
     kernel_pls_fit,
     o2pls_fit,
     approximate_press_compute,
+    pls_diagnostics_compute,
 )
 
 
@@ -91,8 +92,9 @@ __all__ = [
     "kernel_pls_fit",
     "o2pls_fit",
     "approximate_press_compute",
+    "pls_diagnostics_compute",
     "version",
     "abi_version",
     "build_info",
 ]
-__version__ = "0.74.0"
+__version__ = "0.75.0"

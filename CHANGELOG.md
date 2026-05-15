@@ -6,10 +6,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-Continue rolling Overview methods through public C ABI + parity gate batches:
-diagnostics (§9), 1-SE rule (§10), monitoring (§11), multi-block remainder
-(§17-19 SO-PLS / OnPLS / ROSA), sparse / group / fused (§20-21),
-GLM/QDA/Cox heads (§27), PDS/DS/MIR/missing (§28), ensembles (§30).
+**Reference policy change** — incoming batch 6 will replace the
+numpy-mirror references shipped in batches 2/3/4 (cppls, weighted,
+robust, ridge, continuum, n_pls, kernel_pls_rbf, approximate_press)
+with external Python or R libraries when available, or mark them
+`paper-only` with the canonical paper citation when no widely
+installable library exists. Numpy mirrors written by us are no longer
+the primary parity reference per project policy.
+
+Then: 1-SE rule (§10), monitoring (§11), multi-block remainder (§17-19
+SO-PLS / OnPLS / ROSA), sparse / group / fused (§20-21), GLM/QDA/Cox
+heads (§27), PDS/DS/MIR/missing (§28), ensembles (§30).
+
+## [0.75.0-batch-5-pls-diagnostics] — 2026-05-15
+
+Public C ABI exposure for §9 PLS diagnostics: Hotelling T², Q residuals
+(SPE) and DModX. Single entry point applied to a fitted `p4a_model_t`.
+
+### Added
+
+- `p4a_pls_diagnostics_compute(ctx, model, X, X_reference_or_NULL,
+  **out)` — computes T², Q and DModX in one call. Result exposes
+  `t2`, `q`, `dmodx` as (1 × n_samples) row vectors plus scalars
+  `n_components` and `n_features`.
+- Python binding: `pls4all.pls_diagnostics_compute(ctx, model, X,
+  X_reference=None)`.
+- Parity-gate `pls_diagnostic_t2 / q / dmodx` rows wired to R
+  `mdatools::pls$xdecomp$T2 / $Q` (0.15.0). No Python equivalent ships
+  widely; the `python_reference` column reports `none` per project
+  reference policy. Tolerances are wide because mdatools and pls4all
+  use different SIMPLS deflation/normalization conventions; the column
+  documents *qualitative* parity with the only available external R
+  reference.
+
+### Verified
+
+- 256 internal C++ tests pass (dev-release, local-asan-ubsan-gcc,
+  local-ubsan-gcc).
+- ABI symbol diff vs expected list: 141 symbols (clean).
+- `ldd` audit: only libc/libstdc++/libgcc/libm/loader.
+- `git diff --check`: clean.
+- Parity gate: 18 PASS, 9 `no_r_reference`, 3 `no_python_reference`
+  (documented per-method).
+
+### Changed
+
+- Project version `0.75.0+abi.1.6.0`. C ABI minor 5 → 6 (additive — 1
+  new symbol).
 
 ## [0.74.0-batch-4-o2pls-press] — 2026-05-15
 

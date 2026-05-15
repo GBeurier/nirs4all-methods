@@ -630,7 +630,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.74.0+abi.1.5.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.75.0+abi.1.6.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
@@ -1057,6 +1057,26 @@ P4A_API p4a_status_t p4a_approximate_press_compute(
     const p4a_matrix_view_t* X,
     const p4a_matrix_view_t* Y,
     int32_t max_components,
+    p4a_method_result_t** out_result);
+
+/* PLS diagnostics (§9). Computes Hotelling T², Q residuals (SPE) and
+ * DModX from a fitted model and a design matrix X. When `X_reference`
+ * is NULL, score variances and sigma_train fall back to the model's
+ * stored training scores — this requires `cfg.store_scores = 1` at fit
+ * time. When `X_reference` is non-NULL, its rows define the reference
+ * score distribution.
+ *
+ * The result contains:
+ *   "t2"     (1 x n_samples) — Hotelling T² statistic per row
+ *   "q"      (1 x n_samples) — squared reconstruction residual per row
+ *   "dmodx"  (1 x n_samples) — distance-to-model X per row
+ *   scalar "n_components", scalar "n_features"
+ */
+P4A_API p4a_status_t p4a_pls_diagnostics_compute(
+    p4a_context_t* ctx,
+    const p4a_model_t* model,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* X_reference,
     p4a_method_result_t** out_result);
 
 #ifdef __cplusplus

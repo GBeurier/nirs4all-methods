@@ -24,6 +24,7 @@
 #include "core/method_result.hpp"
 #include "core/model.hpp"
 #include "core/multiblock_extensions.hpp"
+#include "core/pls_diagnostics.hpp"
 #include "core/recursive_pls.hpp"
 #include "core/tensor_pls.hpp"
 
@@ -34,6 +35,9 @@ inline ::pls4all::core::Context* as_core(p4a_context_t* ctx) noexcept {
 }
 inline const ::pls4all::core::Config* as_core(const p4a_config_t* cfg) noexcept {
     return static_cast<const ::pls4all::core::Config*>(cfg);
+}
+inline const ::pls4all::core::Model* as_core(const p4a_model_t* model) noexcept {
+    return static_cast<const ::pls4all::core::Model*>(model);
 }
 
 void set_error(p4a_context_t* ctx, const char* msg) noexcept {
@@ -718,6 +722,53 @@ P4A_API p4a_status_t p4a_o2pls_fit(
         return P4A_ERR_OUT_OF_MEMORY;
     } catch (...) {
         set_error(ctx, "internal error in p4a_o2pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_pls_diagnostics_compute(
+    p4a_context_t* ctx,
+    const p4a_model_t* model,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* X_reference,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || model == nullptr || X == nullptr) {
+        set_error(ctx, "null pointer in p4a_pls_diagnostics_compute");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        const auto& m = *as_core(model);
+        std::vector<double> t2;
+        p4a_status_t s = ::pls4all::core::pls_hotelling_t2(
+            *as_core(ctx), m, *X, X_reference, t2);
+        if (s != P4A_OK) return s;
+        std::vector<double> q;
+        s = ::pls4all::core::pls_q_residuals(
+            *as_core(ctx), m, *X, q);
+        if (s != P4A_OK) return s;
+        std::vector<double> dmodx;
+        s = ::pls4all::core::pls_dmodx(
+            *as_core(ctx), m, *X, X_reference, dmodx);
+        if (s != P4A_OK) return s;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto n = static_cast<std::int64_t>(t2.size());
+        handle->set_double_matrix("t2", std::move(t2), 1, n);
+        handle->set_double_matrix("q", std::move(q), 1, n);
+        handle->set_double_matrix("dmodx", std::move(dmodx), 1, n);
+        handle->set_scalar("n_components",
+                            static_cast<double>(m.n_components));
+        handle->set_scalar("n_features",
+                            static_cast<double>(m.n_features));
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_pls_diagnostics_compute");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_pls_diagnostics_compute");
         return P4A_ERR_INTERNAL;
     }
 }
