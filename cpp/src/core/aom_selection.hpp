@@ -62,4 +62,27 @@ struct AomPerComponentSelectionResult {
     std::int32_t max_components,
     AomPerComponentSelectionResult& out);
 
+// Public-ABI-side wrappers. These hold the row/col shape of `predictions`
+// alongside the internal selection result and expose typed buffer slices so
+// the C ABI does not need to leak `std::vector` to consumers.
+struct PublicAomGlobalResult {
+    AomGlobalSelectionResult inner;
+    std::int64_t predictions_rows{0};
+    std::int64_t predictions_cols{0};
+    std::vector<p4a_operator_kind_t> operator_kinds_typed;
+};
+
+struct PublicAomPerComponentResult {
+    AomPerComponentSelectionResult inner;
+    std::int64_t predictions_rows{0};
+    std::int64_t predictions_cols{0};
+    std::vector<p4a_operator_kind_t> operator_kinds_typed;
+    std::vector<std::int32_t> selected_operator_indices_i32;
+};
+
 }  // namespace pls4all::core
+
+struct p4a_aom_global_result_s
+    : public ::pls4all::core::PublicAomGlobalResult {};
+struct p4a_aom_per_component_result_s
+    : public ::pls4all::core::PublicAomPerComponentResult {};

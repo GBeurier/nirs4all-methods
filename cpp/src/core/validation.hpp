@@ -78,3 +78,5 @@ struct ValidationPlan {
     ValidationPlan& out);
 
 }  // namespace pls4all::core
+
+struct p4a_validation_plan_s : public ::pls4all::core::ValidationPlan {};

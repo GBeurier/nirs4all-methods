@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: CeCILL-2.1 */
 /*
- * pls4all — public C ABI v1.0.0.
+ * pls4all — public C ABI v1.1.0.
  *
  * Stability: experimental until v1.0.0. Every breaking change before that
  * version bumps the ABI MAJOR (see p4a_version.h). After v1.0.0 the ABI
@@ -27,9 +27,12 @@
  *     `p4a_array_t*` and the opaque handles below; both have explicit
  *     `p4a_*_destroy` / `p4a_array_free` functions.
  *
- * Current implementation status (rev 1.0.0 of this header — May 2026):
+ * Current implementation status (rev 1.1.0 of this header — May 2026):
  *   - Lifecycle / config / version / matrix-view are fully implemented.
- *   - Pipeline / operator-bank / gating-strategy lifecycle is implemented.
+ *   - Pipeline / operator-bank / gating-strategy / validation-plan
+ *     lifecycle is implemented; AOM global and POP per-component
+ *     selection are exposed by `p4a_aom_global_select` and
+ *     `p4a_aom_per_component_select` (see §15).
  *     Pipeline `_fit` / `_transform` are live for P4A_OP_IDENTITY,
  *     P4A_OP_CENTER, P4A_OP_AUTOSCALE, P4A_OP_PARETO_SCALE, P4A_OP_SNV,
  *     P4A_OP_MSC, P4A_OP_EMSC, P4A_OP_DETREND_POLY, P4A_OP_SAVGOL_SMOOTH,
@@ -236,13 +239,16 @@ P4A_API p4a_status_t p4a_matrix_view_validate(const p4a_matrix_view_t* v);
  * 5. Opaque handles
  * ========================================================================== */
 
-typedef struct p4a_context_s         p4a_context_t;
-typedef struct p4a_config_s          p4a_config_t;
-typedef struct p4a_operator_bank_s   p4a_operator_bank_t;
-typedef struct p4a_gating_strategy_s p4a_gating_strategy_t;
-typedef struct p4a_pipeline_s        p4a_pipeline_t;
-typedef struct p4a_model_s           p4a_model_t;
-typedef struct p4a_array_s           p4a_array_t;
+typedef struct p4a_context_s                    p4a_context_t;
+typedef struct p4a_config_s                     p4a_config_t;
+typedef struct p4a_operator_bank_s              p4a_operator_bank_t;
+typedef struct p4a_gating_strategy_s            p4a_gating_strategy_t;
+typedef struct p4a_pipeline_s                   p4a_pipeline_t;
+typedef struct p4a_model_s                      p4a_model_t;
+typedef struct p4a_array_s                      p4a_array_t;
+typedef struct p4a_validation_plan_s            p4a_validation_plan_t;
+typedef struct p4a_aom_global_result_s          p4a_aom_global_result_t;
+typedef struct p4a_aom_per_component_result_s   p4a_aom_per_component_result_t;
 
 /* ============================================================================
  * 6. Context lifecycle
@@ -623,7 +629,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.65.0+abi.1.0.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.66.0+abi.1.1.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
@@ -639,8 +645,11 @@ P4A_API p4a_status_t p4a_check_abi_compatibility(
  * ==========================================================================
  *
  * p4a_array_t is a non-opaque concept (you read its dtype/shape and obtain a
- * view), but the only ways to construct one are through library functions.
- * Callers must release it with p4a_array_free.
+ * view), but the only ways to construct one are through library functions
+ * such as `p4a_model_predict_alloc` and `p4a_pipeline_transform_alloc`.
+ * Callers must release it with p4a_array_free. AOM/POP selection (§15)
+ * exposes its arrays through result-handle accessors that point into
+ * result-owned storage instead.
  */
 P4A_API p4a_status_t p4a_array_dtype(const p4a_array_t* arr, p4a_dtype_t* out);
 P4A_API p4a_status_t p4a_array_shape(const p4a_array_t* arr,
@@ -649,12 +658,176 @@ P4A_API p4a_status_t p4a_array_view (const p4a_array_t* arr,
                                       p4a_matrix_view_t* out);
 P4A_API void         p4a_array_free (p4a_array_t* arr);
 
+/* ============================================================================
+ * 14. Validation plan — caller-built train/test fold list for selection
+ * ==========================================================================
+ *
+ * A p4a_validation_plan_t carries the per-fold train and test sample indices
+ * used by selection / cross-validation kernels. It is built by the caller via
+ * `_set_n_samples` and one `_add_fold` per fold; index buffers are COPIED
+ * into the plan (the caller may release their buffers immediately after each
+ * call). Failed setters and failed `_add_fold` calls leave the plan
+ * UNCHANGED — there is no partial mutation.
+ *
+ * Lifetime: the plan is heap-allocated by `_create` and must be released with
+ * `_destroy`. A const plan pointer may be reused across multiple selection
+ * calls.
+ */
+P4A_API p4a_status_t p4a_validation_plan_create(p4a_validation_plan_t** out);
+P4A_API void         p4a_validation_plan_destroy(p4a_validation_plan_t* plan);
+
+/* Sets the sample count the plan refers to. `n_samples` must be >= 0; a
+ * non-positive value is allowed at construction (treated as "unset") so
+ * bindings may set folds before learning the sample count, but selection
+ * callers must set a value of at least 2 before invoking selection. Returns
+ * P4A_ERR_NULL_POINTER if `plan` is NULL, P4A_ERR_INVALID_ARGUMENT if
+ * `n_samples < 0`. */
+P4A_API p4a_status_t p4a_validation_plan_set_n_samples(
+    p4a_validation_plan_t* plan, int64_t n_samples);
+
+/* Appends one fold. `n_train` and `n_test` must both be >= 1. Index buffers
+ * must be non-NULL. Indices are not validated here against `n_samples`;
+ * semantic checks (range, duplicates, train/test overlap) are run when a
+ * selection kernel consumes the plan. The plan is left UNCHANGED on failure.
+ * Returns P4A_ERR_NULL_POINTER for NULL plan or NULL index buffer, and
+ * P4A_ERR_INVALID_ARGUMENT when n_train or n_test is zero or negative. */
+P4A_API p4a_status_t p4a_validation_plan_add_fold(
+    p4a_validation_plan_t* plan,
+    const int64_t* train_indices, int64_t n_train,
+    const int64_t* test_indices,  int64_t n_test);
+
+P4A_API p4a_status_t p4a_validation_plan_get_n_samples(
+    const p4a_validation_plan_t* plan, int64_t* out_n_samples);
+P4A_API p4a_status_t p4a_validation_plan_get_n_folds(
+    const p4a_validation_plan_t* plan, int32_t* out_n_folds);
+
+/* ============================================================================
+ * 15. AOM / POP selection -- public C ABI for the internal AOM-SIMPLS selector
+ * ==========================================================================
+ *
+ * AOM-PLS picks one operator (global) or one operator per latent component
+ * (POP) from a p4a_operator_bank_t, scored under a caller-provided
+ * p4a_validation_plan_t. Phase 6 ships strict-linear AOM operators with the
+ * SIMPLS solver in P4A_DEFLATION_REGRESSION; other algorithm/solver/
+ * deflation combinations return P4A_ERR_UNSUPPORTED. Both kernels require
+ * a non-empty bank of strict-linear operators (see P4A_OP_IDENTITY,
+ * P4A_OP_DETREND_POLY, P4A_OP_SAVGOL_SMOOTH, P4A_OP_SAVGOL_DERIVATIVE,
+ * P4A_OP_NORRIS_WILLIAMS, P4A_OP_FINITE_DIFFERENCE, P4A_OP_WHITTAKER,
+ * P4A_OP_FCK). Non-strict operators (e.g. P4A_OP_SNV) return
+ * P4A_ERR_UNSUPPORTED.
+ *
+ * On entry to *_select, *out_result is set to NULL. On success the out
+ * pointer is a newly heap-allocated result handle that the caller MUST
+ * release with the matching *_destroy. All getter buffer pointers point
+ * into the result's owned storage and are invalidated when the result is
+ * destroyed; bindings must copy if they need to retain the values past the
+ * handle lifetime.
+ *
+ * Layout conventions (all row-major, contiguous, IEEE 754 binary64):
+ *   - rmse_curves[op*max_components + k]: prefix-RMSE of operator `op`
+ *     using the first (k+1) latent components.
+ *   - component_scores[k*n_operators + op] (POP): per-component CV score
+ *     of operator `op` at latent component k.
+ *   - prefix_scores[k] (POP): cumulative best score using k+1 components.
+ *   - operator_scores[op]: best prefix score for operator `op`.
+ *   - operator_kinds[op]: bank-order operator kind of operator `op`.
+ *   - selected_operator_indices[k] (POP, int32): bank index of the
+ *     operator picked at component k for the selected prefix.
+ *   - predictions: full-fit predictions, shape (X.rows, Y.cols).
+ *
+ * Errors: the universal status-code contract in the header prelude
+ * applies. Additional cases:
+ *   - Empty operator bank or empty plan -> P4A_ERR_INVALID_ARGUMENT.
+ *   - Plan sample count not matching X.rows -> P4A_ERR_SHAPE_MISMATCH.
+ *   - Duplicate, out-of-range, or train/test-overlapping fold indices
+ *     -> P4A_ERR_INVALID_ARGUMENT.
+ *   - max_components < 1, max_components > X.cols, or max_components >= X.rows
+ *     -> P4A_ERR_INVALID_ARGUMENT.
+ *   - Unsupported solver/algorithm/deflation -> P4A_ERR_UNSUPPORTED.
+ *   - Non-strict operator in the bank -> P4A_ERR_UNSUPPORTED.
+ *   - X.rows != Y.rows -> P4A_ERR_SHAPE_MISMATCH.
+ */
+
+P4A_API p4a_status_t p4a_aom_global_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_operator_bank_t* bank,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t max_components,
+    p4a_aom_global_result_t** out_result);
+
+P4A_API void p4a_aom_global_result_destroy(p4a_aom_global_result_t* result);
+
+P4A_API p4a_status_t p4a_aom_global_result_get_n_operators(
+    const p4a_aom_global_result_t* result, int32_t* out);
+P4A_API p4a_status_t p4a_aom_global_result_get_max_components(
+    const p4a_aom_global_result_t* result, int32_t* out);
+P4A_API p4a_status_t p4a_aom_global_result_get_selected_operator_index(
+    const p4a_aom_global_result_t* result, int32_t* out);
+P4A_API p4a_status_t p4a_aom_global_result_get_selected_n_components(
+    const p4a_aom_global_result_t* result, int32_t* out);
+P4A_API p4a_status_t p4a_aom_global_result_get_best_score(
+    const p4a_aom_global_result_t* result, double* out);
+
+P4A_API p4a_status_t p4a_aom_global_result_get_operator_kinds(
+    const p4a_aom_global_result_t* result,
+    const p4a_operator_kind_t** out_data, int32_t* out_size);
+P4A_API p4a_status_t p4a_aom_global_result_get_operator_scores(
+    const p4a_aom_global_result_t* result,
+    const double** out_data, int32_t* out_size);
+P4A_API p4a_status_t p4a_aom_global_result_get_rmse_curves(
+    const p4a_aom_global_result_t* result,
+    const double** out_data, int32_t* out_rows, int32_t* out_cols);
+P4A_API p4a_status_t p4a_aom_global_result_get_predictions(
+    const p4a_aom_global_result_t* result,
+    const double** out_data, int64_t* out_rows, int64_t* out_cols);
+
+P4A_API p4a_status_t p4a_aom_per_component_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_operator_bank_t* bank,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t max_components,
+    p4a_aom_per_component_result_t** out_result);
+
+P4A_API void p4a_aom_per_component_result_destroy(
+    p4a_aom_per_component_result_t* result);
+
+P4A_API p4a_status_t p4a_aom_per_component_result_get_n_operators(
+    const p4a_aom_per_component_result_t* result, int32_t* out);
+P4A_API p4a_status_t p4a_aom_per_component_result_get_max_components(
+    const p4a_aom_per_component_result_t* result, int32_t* out);
+P4A_API p4a_status_t p4a_aom_per_component_result_get_selected_n_components(
+    const p4a_aom_per_component_result_t* result, int32_t* out);
+P4A_API p4a_status_t p4a_aom_per_component_result_get_best_score(
+    const p4a_aom_per_component_result_t* result, double* out);
+
+P4A_API p4a_status_t p4a_aom_per_component_result_get_operator_kinds(
+    const p4a_aom_per_component_result_t* result,
+    const p4a_operator_kind_t** out_data, int32_t* out_size);
+P4A_API p4a_status_t p4a_aom_per_component_result_get_selected_operator_indices(
+    const p4a_aom_per_component_result_t* result,
+    const int32_t** out_data, int32_t* out_size);
+P4A_API p4a_status_t p4a_aom_per_component_result_get_component_scores(
+    const p4a_aom_per_component_result_t* result,
+    const double** out_data, int32_t* out_rows, int32_t* out_cols);
+P4A_API p4a_status_t p4a_aom_per_component_result_get_prefix_scores(
+    const p4a_aom_per_component_result_t* result,
+    const double** out_data, int32_t* out_size);
+P4A_API p4a_status_t p4a_aom_per_component_result_get_predictions(
+    const p4a_aom_per_component_result_t* result,
+    const double** out_data, int64_t* out_rows, int64_t* out_cols);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
 
 /* ============================================================================
- * 14. ABI guard rails — fixed-size assertions on the C ABI shape
+ * 16. ABI guard rails — fixed-size assertions on the C ABI shape
  * ==========================================================================
  *
  * Compilers may shrink enums under non-default flags (e.g. -fshort-enums on

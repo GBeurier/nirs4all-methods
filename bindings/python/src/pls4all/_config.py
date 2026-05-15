@@ -98,3 +98,57 @@ class Config:
     @tol.setter
     def tol(self, value: float) -> None:
         _check(lib.p4a_config_set_tol(self._h, ctypes.c_double(float(value))))
+
+    # ---- center / scale / store_scores ----
+    def _set_int32(self, setter, value: int | bool) -> None:
+        _check(setter(self._h, ctypes.c_int32(int(bool(value)))))
+
+    @property
+    def center_x(self) -> int:
+        out = ctypes.c_int32(0)
+        _check(lib.p4a_config_get_center_x(self._h, ctypes.byref(out)))
+        return int(out.value)
+
+    @center_x.setter
+    def center_x(self, value: int | bool) -> None:
+        self._set_int32(lib.p4a_config_set_center_x, value)
+
+    @property
+    def scale_x(self) -> int:
+        out = ctypes.c_int32(0)
+        _check(lib.p4a_config_get_scale_x(self._h, ctypes.byref(out)))
+        return int(out.value)
+
+    @scale_x.setter
+    def scale_x(self, value: int | bool) -> None:
+        self._set_int32(lib.p4a_config_set_scale_x, value)
+
+    @property
+    def center_y(self) -> int:
+        out = ctypes.c_int32(0)
+        _check(lib.p4a_config_get_center_y(self._h, ctypes.byref(out)))
+        return int(out.value)
+
+    @center_y.setter
+    def center_y(self, value: int | bool) -> None:
+        self._set_int32(lib.p4a_config_set_center_y, value)
+
+    @property
+    def scale_y(self) -> int:
+        out = ctypes.c_int32(0)
+        _check(lib.p4a_config_get_scale_y(self._h, ctypes.byref(out)))
+        return int(out.value)
+
+    @scale_y.setter
+    def scale_y(self, value: int | bool) -> None:
+        self._set_int32(lib.p4a_config_set_scale_y, value)
+
+    @property
+    def store_scores(self) -> int:
+        out = ctypes.c_int32(0)
+        _check(lib.p4a_config_get_store_scores(self._h, ctypes.byref(out)))
+        return int(out.value)
+
+    @store_scores.setter
+    def store_scores(self, value: int | bool) -> None:
+        self._set_int32(lib.p4a_config_set_store_scores, value)

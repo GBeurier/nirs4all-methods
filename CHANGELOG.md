@@ -9,6 +9,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 Next phase: broaden the algorithm family beyond NIPALS PLS regression, with
 reference parity and benchmarks for every added method.
 
+## [0.66.0-public-aom-pop-abi] — 2026-05-15
+
+Phase 6f. Public C ABI for AOM/POP selection.
+
+### Added
+
+- Opaque handle `p4a_validation_plan_t` with create / destroy /
+  `set_n_samples` / `add_fold` / `get_n_samples` / `get_n_folds`.
+- Opaque handle `p4a_aom_global_result_t` plus entry point
+  `p4a_aom_global_select` and typed accessors for `n_operators`,
+  `max_components`, `selected_operator_index`, `selected_n_components`,
+  `best_score`, `operator_kinds` (`p4a_operator_kind_t*`),
+  `operator_scores`, `rmse_curves` and `predictions`.
+- Opaque handle `p4a_aom_per_component_result_t` plus entry point
+  `p4a_aom_per_component_select` and typed accessors for `n_operators`,
+  `max_components`, `selected_n_components`, `best_score`,
+  `operator_kinds` (`p4a_operator_kind_t*`), `selected_operator_indices`
+  (`int32_t*`), `component_scores`, `prefix_scores` and `predictions`.
+- Python ctypes wrappers `OperatorBank`, `OperatorKind`,
+  `ValidationPlan`, `AomGlobalResult`, `AomPerComponentResult`,
+  `aom_global_select`, `aom_per_component_select`. Result wrappers are
+  non-copyable and copy the C-owned buffers into Python `list`s.
+- Python `Config` properties for `center_x`, `scale_x`, `center_y`,
+  `scale_y`, `store_scores` (already exposed by the C ABI).
+- Driver script `bindings/python/smoke_aom_pop.py` that drives every
+  shipped AOM/POP fixture through the public C ABI.
+- ABI / parity tests in `cpp/tests/abi/test_validation_plan_abi.cpp`,
+  `cpp/tests/abi/test_aom_global_public_abi.cpp`,
+  `cpp/tests/abi/test_aom_pop_public_abi.cpp`.
+
+### Changed
+
+- Project version is now `0.66.0+abi.1.1.0`; the C ABI bumps to
+  `1.1.0` (additive only, 28 new `p4a_*` symbols).
+- Internal `validate_plan` in `cpp/src/core/aom_selection.cpp` now
+  rejects out-of-range, duplicated or train/test-overlapping fold
+  indices with `P4A_ERR_INVALID_ARGUMENT`. Plan/X row mismatch now
+  returns `P4A_ERR_SHAPE_MISMATCH`, documented in the public header.
+
 ## [0.4.0-svd] — 2026-05-14
 
 SVD solver increment.

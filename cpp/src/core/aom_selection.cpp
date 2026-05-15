@@ -129,7 +129,7 @@ namespace {
                                          const ::pls4all::core::ValidationPlan& plan,
                                          std::int64_t n_samples) {
     if (plan.folds.empty()) {
-        ctx.set_error("AOM global selection requires at least one validation fold");
+        ctx.set_error("AOM selection requires at least one validation fold");
         return P4A_ERR_INVALID_ARGUMENT;
     }
     if (plan.n_samples != 0 && plan.n_samples != n_samples) {
@@ -137,6 +137,67 @@ namespace {
                        static_cast<long long>(plan.n_samples),
                        static_cast<long long>(n_samples));
         return P4A_ERR_SHAPE_MISMATCH;
+    }
+    if (n_samples <= 0) {
+        ctx.set_error("AOM selection requires a positive sample count");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    std::vector<std::uint8_t> mask;
+    try {
+        mask.assign(static_cast<std::size_t>(n_samples), 0U);
+    } catch (const std::bad_alloc&) {
+        ctx.set_error("out of memory validating AOM selection plan");
+        return P4A_ERR_OUT_OF_MEMORY;
+    }
+    for (std::size_t fold_idx = 0; fold_idx < plan.folds.size(); ++fold_idx) {
+        const auto& fold = plan.folds[fold_idx];
+        if (fold.train_indices.empty() || fold.test_indices.empty()) {
+            ctx.set_errorf("AOM selection fold %lu has empty train or test split",
+                           static_cast<unsigned long>(fold_idx));
+            return P4A_ERR_INVALID_ARGUMENT;
+        }
+        std::fill(mask.begin(), mask.end(), static_cast<std::uint8_t>(0));
+        for (const auto sample : fold.train_indices) {
+            if (sample < 0 || sample >= n_samples) {
+                ctx.set_errorf("AOM selection fold %lu train index %lld out of [0, %lld)",
+                               static_cast<unsigned long>(fold_idx),
+                               static_cast<long long>(sample),
+                               static_cast<long long>(n_samples));
+                return P4A_ERR_INVALID_ARGUMENT;
+            }
+            auto& slot = mask[static_cast<std::size_t>(sample)];
+            if (slot != 0U) {
+                ctx.set_errorf("AOM selection fold %lu train index %lld is duplicated",
+                               static_cast<unsigned long>(fold_idx),
+                               static_cast<long long>(sample));
+                return P4A_ERR_INVALID_ARGUMENT;
+            }
+            slot = 1U;
+        }
+        for (const auto sample : fold.test_indices) {
+            if (sample < 0 || sample >= n_samples) {
+                ctx.set_errorf("AOM selection fold %lu test index %lld out of [0, %lld)",
+                               static_cast<unsigned long>(fold_idx),
+                               static_cast<long long>(sample),
+                               static_cast<long long>(n_samples));
+                return P4A_ERR_INVALID_ARGUMENT;
+            }
+            auto& slot = mask[static_cast<std::size_t>(sample)];
+            if (slot == 1U) {
+                ctx.set_errorf(
+                    "AOM selection fold %lu has test index %lld overlapping train set",
+                    static_cast<unsigned long>(fold_idx),
+                    static_cast<long long>(sample));
+                return P4A_ERR_INVALID_ARGUMENT;
+            }
+            if (slot == 2U) {
+                ctx.set_errorf("AOM selection fold %lu test index %lld is duplicated",
+                               static_cast<unsigned long>(fold_idx),
+                               static_cast<long long>(sample));
+                return P4A_ERR_INVALID_ARGUMENT;
+            }
+            slot = 2U;
+        }
     }
     return P4A_OK;
 }
@@ -161,12 +222,12 @@ namespace {
         return P4A_ERR_SHAPE_MISMATCH;
     }
     if (bank.entries().empty()) {
-        ctx.set_error("AOM global selection requires at least one operator");
+        ctx.set_error("AOM selection requires at least one operator");
         return P4A_ERR_INVALID_ARGUMENT;
     }
     if (bank.entries().size() >
         static_cast<std::size_t>(std::numeric_limits<std::int32_t>::max())) {
-        ctx.set_error("AOM global operator count is too large");
+        ctx.set_error("AOM operator count is too large");
         return P4A_ERR_INVALID_ARGUMENT;
     }
     if (max_components < 1) {
@@ -180,7 +241,7 @@ namespace {
     if (cfg.algorithm != P4A_ALGO_PLS_REGRESSION ||
         cfg.solver != P4A_SOLVER_SIMPLS ||
         cfg.deflation != P4A_DEFLATION_REGRESSION) {
-        ctx.set_error("AOM global selection currently supports SIMPLS regression only");
+        ctx.set_error("AOM selection currently supports SIMPLS regression only");
         return P4A_ERR_UNSUPPORTED;
     }
     return validate_plan(ctx, plan, X.rows);

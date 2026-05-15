@@ -18,22 +18,24 @@ The project rule remains:
 
 ## Current Checkpoint - 2026-05-15
 
-Latest local tag: `phase-6e-aom-pop-selection` (`0.65.0+abi.1.0.0`).
+Latest local tag: `phase-6f-public-aom-pop-abi` (`0.66.0+abi.1.1.0`).
 
 Last green local gate:
 
 - 97 deterministic parity fixtures.
-- 201 C++ ABI/core tests.
+- 209 C++ ABI/core tests.
 - `pls4all_cli --selfcheck`.
-- Python ctypes smoke.
-- ABI symbol diff against `cpp/abi/expected_symbols_linux.txt`.
+- Python ctypes smoke: `bindings/python/smoke_aom_pop.py` exercises every
+  AOM/POP fixture through the public C ABI.
+- ABI symbol diff against `cpp/abi/expected_symbols_linux.txt` (additive
+  only: 28 new `p4a_*` symbols for AOM/POP/validation-plan).
 - `ldd` dependency audit: only libc/libstdc++/libgcc/libm/loader.
 - UBSAN.
 - ASAN+UBSAN.
 
 Current git notes:
 
-- `main` is ahead of `origin/main` by 22 local commits.
+- `main` is ahead of `origin/main` by ~24 local commits.
 - Untracked files intentionally left out of commits: `Backlog.md`,
   `docs/_bench/`.
 - AOM-PLS parity oracle is `nirs4all/bench/AOM_v0/aompls`, not the packaged
@@ -42,14 +44,16 @@ Current git notes:
 ## Next Agent Prompt
 
 Continue from `/home/delete/nirs4all/pls4all` on `main`, currently tagged
-`phase-6e-aom-pop-selection` (`0.65.0+abi.1.0.0`). Do not use GitHub Actions
+`phase-6f-public-aom-pop-abi` (`0.66.0+abi.1.1.0`). Do not use GitHub Actions
 for now. Keep using the local gate: pinned fixture generator, dev-release
-build, C++ tests, CLI selfcheck, Python smoke, ABI symbol diff, `ldd`,
-`git diff --check`, UBSAN and ASAN+UBSAN. Leave untracked `Backlog.md` and
-`docs/_bench/` alone. For AOM/POP parity, use
-`/home/delete/nirs4all/nirs4all/bench/AOM_v0/aompls` as the oracle. Next
-recommended tranche: expose internal AOM/POP selection through the public C ABI
-result-buffer lifecycle, then add Python parity smoke for those calls.
+build, C++ tests, CLI selfcheck, Python smoke (`bindings/python/smoke_aom_pop.py`
+plus the legacy version/context/config snippet in
+`bindings/python/README.md`), ABI symbol diff, `ldd`, `git diff --check`,
+UBSAN and ASAN+UBSAN. Leave untracked `Backlog.md` and `docs/_bench/` alone.
+For AOM/POP parity, use `/home/delete/nirs4all/nirs4all/bench/AOM_v0/aompls`
+as the oracle. Next recommended tranche: start Phase 6g (POP holdout /
+approximate-PRESS / one-SE variants + AOM-NIPALS materialized engine) and
+land the first batch of `benchmarks/` against shipped methods.
 
 ## Shipped Core
 
@@ -138,7 +142,7 @@ result-buffer lifecycle, then add Python parity smoke for those calls.
 - EMCUVE.
 - PLS randomization-test selection.
 
-### Phase 6 - AOM-PLS and POP-PLS - shipped through 6e
+### Phase 6 - AOM-PLS and POP-PLS - shipped through 6f
 
 - Phase 6a: internal soft/hard AOM preprocessing-bank transform primitive.
 - Phase 6b: internal global AOM-SIMPLS CV selection against
@@ -150,29 +154,12 @@ result-buffer lifecycle, then add Python parity smoke for those calls.
 - Phase 6e: internal POP-PLS per-component SIMPLS covariance selector, with
   selected operator sequence, component candidate scores, prefix scores,
   full-fit predictions and bench-compatible CV scoring semantics.
+- Phase 6f: public C ABI for validation plans, AOM global and POP per-
+  component selection (opaque result handles, typed accessors, hardened
+  fold validation). Python ctypes smoke that drives every shipped AOM/POP
+  fixture through the new surface.
 
 ## Active Track
-
-### Phase 6f - Public AOM/POP ABI
-
-Goal: expose the already-green internal AOM/POP selection kernels through the
-stable C ABI without leaking C++ containers.
-
-Deliverables:
-
-- Opaque result handles for AOM global and POP per-component selection.
-- C functions to run selection from `p4a_context_t`, `p4a_config_t`,
-  `p4a_operator_bank_t`, `p4a_matrix_view_t` and validation-plan inputs.
-- Accessors for selected operator index/sequence, component count, best score,
-  score tables and prediction buffers.
-- Python ctypes wrappers and smoke parity for the new result handles.
-- ABI snapshot unchanged except additive `p4a_*` symbols.
-
-Gate:
-
-- Existing 97 fixtures remain stable.
-- New AOM/POP ABI fixture or smoke test added.
-- Local build/test/sanitizer/dependency/ABI gates green.
 
 ### Phase 6g - POP/AOM Policy Expansion
 

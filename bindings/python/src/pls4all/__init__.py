@@ -1,12 +1,13 @@
 """pls4all — Python binding for the pls4all C ABI.
 
-Current scope is small: version / status / dtype / backend introspection,
-a Context and a Config wrapper. Full Python model wrappers land in Phase 2
-on top of the live NIPALS, orthogonal-scores, SIMPLS, kernel, wide-kernel,
-SVD, power, randomized-SVD, PLSCanonical, PLSSVD, PLS-DA, OPLS / OPLS-DA,
-PCR and internal validation / cross-validation / classification-metric /
-variable-importance / variable-selection / interval-selection / biPLS / siPLS / stability-selection / UVE / EMCUVE / randomization / SPA / CARS / Random Frog / SCARS / GA / Shaving / REP / BVE / T2 / WVC / WVC-threshold /
-component-coefficient C++ core.
+Current scope: version / status / dtype / backend introspection, a Context
+and a Config wrapper, an OperatorBank wrapper, a ValidationPlan wrapper, and
+the AOM global / POP per-component selection result handles
+(`aom_global_select`, `aom_per_component_select`). Full Python model
+wrappers (NIPALS, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD,
+power, randomized-SVD, PLSCanonical, PLSSVD, PLS-DA, OPLS/OPLS-DA, PCR and
+the cross-validation / metrics / variable-selection surface) land in
+Phase 2 on top of the live C core.
 """
 
 from ._ffi import lib  # noqa: F401  — eagerly loads libp4a
@@ -14,6 +15,15 @@ from ._errors import Pls4allError
 from ._types import Algorithm, Backend, Deflation, Dtype, Solver, Status
 from ._context import Context
 from ._config import Config
+from ._aom import (
+    AomGlobalResult,
+    AomPerComponentResult,
+    OperatorBank,
+    OperatorKind,
+    ValidationPlan,
+    aom_global_select,
+    aom_per_component_select,
+)
 
 
 def version() -> str:
@@ -43,8 +53,15 @@ __all__ = [
     "Solver",
     "Context",
     "Config",
+    "OperatorKind",
+    "OperatorBank",
+    "ValidationPlan",
+    "AomGlobalResult",
+    "AomPerComponentResult",
+    "aom_global_select",
+    "aom_per_component_select",
     "version",
     "abi_version",
     "build_info",
 ]
-__version__ = "0.58.0"
+__version__ = "0.66.0"
