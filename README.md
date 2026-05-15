@@ -69,6 +69,10 @@ Runtime / speed-up benchmarks are tracked separately by
 | `sparse_pls_da` | — | `spls::splsda` 2.3.2 | — / 9.25e-01 | R qualitative (soft vs hard scoring) |
 | `group_sparse_pls` | paper-only | paper-only | — / — | paper-only (Liland & Indahl 2009) |
 | `fused_sparse_pls` | paper-only | paper-only | — / — | paper-only (Yengo et al. 2016) |
+| `pds` | paper-only | paper-only | — / — | paper-only (Wang et al. 1991, PDS) |
+| `ds` | paper-only | paper-only | — / — | paper-only (Wang et al. 1991, DS) |
+| `mir_pls` | paper-only | paper-only | — / — | paper-only (Sjöblom et al. 1998) |
+| `missing_aware_nipals` | paper-only | paper-only | — / — | paper-only (Nelson et al. 1996) |
 
 Re-run the gate locally:
 

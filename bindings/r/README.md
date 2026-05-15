@@ -34,10 +34,10 @@ on the system path or export `LD_LIBRARY_PATH` (Linux) /
 library(pls4all)
 
 pls4all_version()
-# "0.77.0+abi.1.7.0"
+# "0.78.0+abi.1.8.0"
 
 pls4all_abi_version()
-# c(1, 7, 0)
+# c(1, 8, 0)
 
 set.seed(42)
 X <- matrix(rnorm(2000), nrow = 200)

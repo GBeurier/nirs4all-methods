@@ -7,9 +7,47 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ## [Unreleased]
 
 Next: 1-SE rule (§10), monitoring (§11), multi-block remainder (§17-19
-SO-PLS / OnPLS / ROSA), GLM/QDA/Cox heads (§27), PDS/DS/MIR/missing
-(§28), ensembles (§30) — each gated by external Python / R references
-when available, otherwise `paper-only` with citation.
+SO-PLS / OnPLS / ROSA), GLM/QDA/Cox heads (§27), ensembles (§30) —
+each gated by external Python / R references when available, otherwise
+`paper-only` with citation.
+
+## [0.78.0-batch-8-calibration-transfer] — 2026-05-15
+
+Public C ABI exposure for §13 calibration transfer + missing-aware
+NIPALS. All four methods are documented as `paper-only` — no widely
+installable Python or R port exists for PDS, DS, MIR-PLS or the
+iterative missing-aware NIPALS variant used here. (R `prospectr`
+ships SNV / MSC / Shenk-West but not Wang et al. PDS/DS; R `pls`
+handles NA via row deletion rather than iterative imputation.)
+
+### Added
+
+- `p4a_pds_fit(ctx, X_source, X_target, window_half_width, **out)` —
+  exposes the (pt × ps) PDS transformation, in-sample predicted
+  X_target, RMSE and window_half_width.
+- `p4a_ds_fit(ctx, X_source, X_target, **out)` — full (ps × pt) DS
+  transformation + bias + predictions + RMSE.
+- `p4a_mir_pls_fit(ctx, cfg, X, Y, **out)` — inverse-regression PLS
+  variant (Sjöblom et al. 1998).
+- `p4a_missing_aware_nipals_fit(ctx, cfg, X, Y, **out)` — NaN-tolerant
+  NIPALS that imputes missing entries with the latent-space iterate
+  (Nelson et al. 1996).
+- Python bindings: `pds_fit`, `ds_fit`, `mir_pls_fit`,
+  `missing_aware_nipals_fit`.
+
+### Verified
+
+- 256 internal C++ tests pass (dev-release, local-asan-ubsan-gcc,
+  local-ubsan-gcc).
+- ABI symbol diff vs expected list: 148 symbols (+4, clean).
+- `ldd` audit: only libc/libstdc++/libgcc/libm/loader.
+- `git diff --check`: clean.
+- Parity gate: 13 external PASS, 13 paper-only smoke PASS, 0 numpy.
+
+### Changed
+
+- Project version `0.78.0+abi.1.8.0`. C ABI minor 7 → 8 (additive — 4
+  new symbols).
 
 ## [0.77.0-batch-7-sparse-variants] — 2026-05-15
 

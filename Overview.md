@@ -4,8 +4,8 @@ L’existant confirme cette structuration : scikit-learn expose déjà `PLSRegre
 
 ## Statut courant (mai 2026)
 
-Snapshot de ce qui est livré dans le tag `phase-31g-batch-7-sparse-variants`
-(`0.77.0+abi.1.7.0`). La feuille de route détaillée est dans
+Snapshot de ce qui est livré dans le tag `phase-31h-batch-8-calibration-transfer`
+(`0.78.0+abi.1.8.0`). La feuille de route détaillée est dans
 [`ROADMAP.md`](ROADMAP.md) ; les notes par phase sont dans `roadmap/phase-*.md`.
 Le détail des parity gates par méthode est dans `benchmarks/results/parity_gate/`.
 

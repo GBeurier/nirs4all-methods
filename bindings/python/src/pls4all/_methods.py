@@ -181,6 +181,34 @@ lib.p4a_fused_sparse_pls_fit.argtypes = [
     ctypes.POINTER(ctypes.c_void_p),
 ]
 
+lib.p4a_pds_fit.restype = ctypes.c_int
+lib.p4a_pds_fit.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_int32, ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_ds_fit.restype = ctypes.c_int
+lib.p4a_ds_fit.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_mir_pls_fit.restype = ctypes.c_int
+lib.p4a_mir_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_missing_aware_nipals_fit.restype = ctypes.c_int
+lib.p4a_missing_aware_nipals_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
 
 class MethodResult:
     """Owning wrapper around `p4a_method_result_t`."""
@@ -554,6 +582,70 @@ def fused_sparse_pls_fit(ctx: Context, cfg: Config,
     return _resolve_handle(out, ctx, "p4a_fused_sparse_pls_fit")
 
 
+def pds_fit(ctx: Context, X_source: Any, X_target: Any,
+              window_half_width: int) -> MethodResult:
+    Xs = _as_float64_contiguous(X_source)
+    Xt = _as_float64_contiguous(X_target)
+    xs_view = _matrix_view(Xs)
+    xt_view = _matrix_view(Xt)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_pds_fit(
+        ctx.handle,
+        ctypes.byref(xs_view), ctypes.byref(xt_view),
+        ctypes.c_int32(int(window_half_width)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_pds_fit")
+
+
+def ds_fit(ctx: Context, X_source: Any, X_target: Any) -> MethodResult:
+    Xs = _as_float64_contiguous(X_source)
+    Xt = _as_float64_contiguous(X_target)
+    xs_view = _matrix_view(Xs)
+    xt_view = _matrix_view(Xt)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_ds_fit(
+        ctx.handle,
+        ctypes.byref(xs_view), ctypes.byref(xt_view),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_ds_fit")
+
+
+def mir_pls_fit(ctx: Context, cfg: Config,
+                 X: Any, Y: Any) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_mir_pls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_mir_pls_fit")
+
+
+def missing_aware_nipals_fit(ctx: Context, cfg: Config,
+                               X: Any, Y: Any) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_missing_aware_nipals_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_missing_aware_nipals_fit")
+
+
 def pls_diagnostics_compute(ctx: Context,
                               model: Any,
                               X: Any,
@@ -597,4 +689,8 @@ __all__ = [
     "sparse_pls_da_fit",
     "group_sparse_pls_fit",
     "fused_sparse_pls_fit",
+    "pds_fit",
+    "ds_fit",
+    "mir_pls_fit",
+    "missing_aware_nipals_fit",
 ]

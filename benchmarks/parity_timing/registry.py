@@ -575,6 +575,45 @@ def _approximate_press_pls4all(ctx, cfg, X, Y, *, max_components, **_):
                                               max_components=max_components)
 
 
+def _pds_pls4all(ctx, cfg, X, Y, *, window_half_width, **kwargs):
+    import pls4all
+    X_target = kwargs.get("X_target")
+    if X_target is None:
+        raise ValueError("pds needs X_target via needs_x_target=True")
+    return pls4all.pds_fit(ctx, X, X_target,
+                            window_half_width=window_half_width)
+
+
+def _ds_pls4all(ctx, cfg, X, Y, **kwargs):
+    import pls4all
+    X_target = kwargs.get("X_target")
+    if X_target is None:
+        raise ValueError("ds needs X_target via needs_x_target=True")
+    return pls4all.ds_fit(ctx, X, X_target)
+
+
+def _mir_pls_pls4all(ctx, cfg, X, Y, *, n_components, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    return pls4all.mir_pls_fit(ctx, cfg, X, Y)
+
+
+def _missing_aware_nipals_pls4all(ctx, cfg, X, Y, *, n_components, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.NIPALS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    return pls4all.missing_aware_nipals_fit(ctx, cfg, X, Y)
+
+
 def _sparse_pls_da_pls4all(ctx, cfg, X, Y, *, n_components,
                             sparsity_lambda, n_classes, **kwargs):
     import pls4all
@@ -871,6 +910,65 @@ METHODS: list[MethodSpec] = [
         notes=("R `mdatools::pls$xdecomp$Q`. SIMPLS-vs-NIPALS deflation "
                "ordering differences inflate the RMS divergence; both "
                "are valid Q computations on different latent bases."),
+    ),
+    MethodSpec(
+        name="pds",
+        description="PDS — Piecewise Direct Standardization (§13)",
+        pls4all_fn=_pds_pls4all,
+        cell_params={"n_samples": 200, "n_features": 30,
+                      "window_half_width": 2},
+        python_reference=None,
+        r_reference=None,
+        needs_x_target=True,
+        paper_only=("Wang, Y., Veltkamp, D. J. & Kowalski, B. R. (1991). "
+                    "Multivariate instrument standardization. Analytical "
+                    "Chemistry 63(23), 2750-2756. (Piecewise Direct "
+                    "Standardization; no widely installable R / Python "
+                    "port.)"),
+    ),
+    MethodSpec(
+        name="ds",
+        description="DS — Direct Standardization (§13)",
+        pls4all_fn=_ds_pls4all,
+        cell_params={"n_samples": 200, "n_features": 30},
+        python_reference=None,
+        r_reference=None,
+        needs_x_target=True,
+        paper_only=("Wang, Y., Veltkamp, D. J. & Kowalski, B. R. (1991). "
+                    "Multivariate instrument standardization. Analytical "
+                    "Chemistry 63(23), 2750-2756. (Direct Standardization; "
+                    "no widely installable R / Python port — prospectr "
+                    "ships SNV/MSC/Shenk-West but not DS.)"),
+    ),
+    MethodSpec(
+        name="mir_pls",
+        description="MIR-PLS — Inverse-regression PLS (§13)",
+        pls4all_fn=_mir_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 30,
+                      "n_components": 4},
+        python_reference=None,
+        r_reference=None,
+        paper_only=("Sjöblom, J., Svensson, O., Josefson, M., Kullberg, "
+                    "H. & Wold, S. (1998). An evaluation of orthogonal "
+                    "signal correction applied to calibration transfer "
+                    "of near infrared spectra. Chemom. Intell. Lab. Syst. "
+                    "44(1-2), 229-244. (Inverse-regression PLS variant; "
+                    "no widely installable port.)"),
+    ),
+    MethodSpec(
+        name="missing_aware_nipals",
+        description="Missing-aware NIPALS PLS (§13)",
+        pls4all_fn=_missing_aware_nipals_pls4all,
+        cell_params={"n_samples": 200, "n_features": 30,
+                      "n_components": 4},
+        python_reference=None,
+        r_reference=None,
+        paper_only=("Nelson, P. R. C., Taylor, P. A. & MacGregor, J. F. "
+                    "(1996). Missing data methods in PCA and PLS: score "
+                    "calculations with incomplete observations. Chemom. "
+                    "Intell. Lab. Syst. 35(1), 45-65. (Missing-aware "
+                    "NIPALS; pls package handles NA via row deletion, "
+                    "not iterative imputation.)"),
     ),
     MethodSpec(
         name="sparse_pls_da",

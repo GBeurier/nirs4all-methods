@@ -30,6 +30,10 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `pls_diagnostic_t2` | PLS Hotelling T² (§9) | R / `mdatools` 0.15.0 | ✓ | 3.845e+00 | 1e+01 | ok |
 | `pls_diagnostic_q` | PLS Q residuals / SPE (§9) | python / `(none)` - | ✗ | — | 5e+00 | no_python_reference |
 | `pls_diagnostic_q` | PLS Q residuals / SPE (§9) | R / `mdatools` 0.15.0 | ✓ | 2.190e+00 | 5e+00 | ok |
+| `pds` | PDS — Piecewise Direct Standardization (§13) | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |
+| `ds` | DS — Direct Standardization (§13) | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |
+| `mir_pls` | MIR-PLS — Inverse-regression PLS (§13) | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |
+| `missing_aware_nipals` | Missing-aware NIPALS PLS (§13) | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |
 | `sparse_pls_da` | Sparse PLS-DA (§7) | python / `(none)` - | ✗ | — | 2e+00 | no_python_reference |
 | `sparse_pls_da` | Sparse PLS-DA (§7) | R / `spls` 2.3.2 | ✓ | 9.249e-01 | 2e+00 | ok |
 | `group_sparse_pls` | Group sparse PLS (§7) | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |

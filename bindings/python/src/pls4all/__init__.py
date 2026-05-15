@@ -43,6 +43,10 @@ from ._methods import (
     sparse_pls_da_fit,
     group_sparse_pls_fit,
     fused_sparse_pls_fit,
+    pds_fit,
+    ds_fit,
+    mir_pls_fit,
+    missing_aware_nipals_fit,
 )
 
 
@@ -99,8 +103,12 @@ __all__ = [
     "sparse_pls_da_fit",
     "group_sparse_pls_fit",
     "fused_sparse_pls_fit",
+    "pds_fit",
+    "ds_fit",
+    "mir_pls_fit",
+    "missing_aware_nipals_fit",
     "version",
     "abi_version",
     "build_info",
 ]
-__version__ = "0.77.0"
+__version__ = "0.78.0"

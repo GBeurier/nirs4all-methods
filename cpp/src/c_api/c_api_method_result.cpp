@@ -906,6 +906,210 @@ P4A_API p4a_status_t p4a_fused_sparse_pls_fit(
     }
 }
 
+P4A_API p4a_status_t p4a_pds_fit(
+    p4a_context_t* ctx,
+    const p4a_matrix_view_t* X_source,
+    const p4a_matrix_view_t* X_target,
+    int32_t window_half_width,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || X_source == nullptr || X_target == nullptr) {
+        set_error(ctx, "null pointer in p4a_pds_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::PdsResult res;
+        const p4a_status_t status = ::pls4all::core::fit_pds(
+            *as_core(ctx), *X_source, *X_target, window_half_width, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto ps = static_cast<std::int64_t>(X_source->cols);
+        const auto pt = static_cast<std::int64_t>(X_target->cols);
+        handle->set_double_matrix("transformation", res.transformation,
+                                   pt, ps);
+        // Predicted target = X_source @ transformation.T.
+        const std::size_t n = static_cast<std::size_t>(X_source->rows);
+        std::vector<double> preds(n * static_cast<std::size_t>(pt), 0.0);
+        const auto* xs = static_cast<const double*>(X_source->data);
+        const std::size_t xs_rs = static_cast<std::size_t>(
+            X_source->row_stride);
+        const std::size_t xs_cs = static_cast<std::size_t>(
+            X_source->col_stride);
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t j = 0;
+                 j < static_cast<std::size_t>(pt); ++j) {
+                double s = 0.0;
+                for (std::size_t k = 0;
+                     k < static_cast<std::size_t>(ps); ++k) {
+                    s += xs[i * xs_rs + k * xs_cs] *
+                          res.transformation[j *
+                            static_cast<std::size_t>(ps) + k];
+                }
+                preds[i * static_cast<std::size_t>(pt) + j] = s;
+            }
+        }
+        const double rmse = in_sample_rmse(preds, *X_target);
+        handle->set_double_matrix("predictions", std::move(preds),
+                                   static_cast<std::int64_t>(n), pt);
+        handle->set_scalar("rmse", rmse);
+        handle->set_scalar("window_half_width",
+                            static_cast<double>(window_half_width));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_pds_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_pds_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_ds_fit(
+    p4a_context_t* ctx,
+    const p4a_matrix_view_t* X_source,
+    const p4a_matrix_view_t* X_target,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || X_source == nullptr || X_target == nullptr) {
+        set_error(ctx, "null pointer in p4a_ds_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::DsResult res;
+        const p4a_status_t status = ::pls4all::core::fit_ds(
+            *as_core(ctx), *X_source, *X_target, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto ps = static_cast<std::int64_t>(X_source->cols);
+        const auto pt = static_cast<std::int64_t>(X_target->cols);
+        handle->set_double_matrix("transformation", res.transformation,
+                                   ps, pt);
+        handle->set_double_matrix("bias", res.bias, 1, pt);
+        // Predicted target = X_source @ transformation + bias.
+        const std::size_t n = static_cast<std::size_t>(X_source->rows);
+        std::vector<double> preds(n * static_cast<std::size_t>(pt), 0.0);
+        const auto* xs = static_cast<const double*>(X_source->data);
+        const std::size_t xs_rs = static_cast<std::size_t>(
+            X_source->row_stride);
+        const std::size_t xs_cs = static_cast<std::size_t>(
+            X_source->col_stride);
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t j = 0;
+                 j < static_cast<std::size_t>(pt); ++j) {
+                double s = res.bias[j];
+                for (std::size_t k = 0;
+                     k < static_cast<std::size_t>(ps); ++k) {
+                    s += xs[i * xs_rs + k * xs_cs] *
+                          res.transformation[k *
+                            static_cast<std::size_t>(pt) + j];
+                }
+                preds[i * static_cast<std::size_t>(pt) + j] = s;
+            }
+        }
+        const double rmse = in_sample_rmse(preds, *X_target);
+        handle->set_double_matrix("predictions", std::move(preds),
+                                   static_cast<std::int64_t>(n), pt);
+        handle->set_scalar("rmse", rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_ds_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_ds_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_mir_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_mir_pls_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::MirPlsResult res;
+        const p4a_status_t status = ::pls4all::core::fit_mir_pls(
+            *as_core(ctx), *as_core(cfg), *X, *Y, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(X->cols);
+        const auto q = static_cast<std::int64_t>(Y->cols);
+        handle->set_double_matrix("coefficients", res.coefficients, p, q);
+        handle->set_double_matrix("x_mean", res.x_mean, 1, p);
+        handle->set_double_matrix("y_mean", res.y_mean, 1, q);
+
+        std::vector<double> predictions;
+        std::int64_t pred_rows = 0;
+        std::int64_t pred_cols = 0;
+        predict_from_coefficients(*X, res.coefficients, res.x_mean,
+                                    res.y_mean, p, q, predictions,
+                                    pred_rows, pred_cols);
+        const double rmse = in_sample_rmse(predictions, *Y);
+        handle->set_double_matrix("predictions", std::move(predictions),
+                                   pred_rows, pred_cols);
+        handle->set_scalar("rmse", rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_mir_pls_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_mir_pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_missing_aware_nipals_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_missing_aware_nipals_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::WeightedPlsResult res;
+        const p4a_status_t status =
+            ::pls4all::core::fit_missing_aware_nipals(
+                *as_core(ctx), *as_core(cfg), *X, *Y, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        pack_weighted_result(*handle, res, *X, *Y);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx,
+                   "out of memory in p4a_missing_aware_nipals_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx,
+                   "internal error in p4a_missing_aware_nipals_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
 P4A_API p4a_status_t p4a_pls_diagnostics_compute(
     p4a_context_t* ctx,
     const p4a_model_t* model,

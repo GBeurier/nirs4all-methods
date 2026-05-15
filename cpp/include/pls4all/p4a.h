@@ -630,7 +630,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.77.0+abi.1.7.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.78.0+abi.1.8.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
@@ -1103,6 +1103,64 @@ P4A_API p4a_status_t p4a_fused_sparse_pls_fit(
     const p4a_matrix_view_t* Y,
     double l1_lambda,
     double fusion_lambda,
+    p4a_method_result_t** out_result);
+
+/* PDS — Piecewise Direct Standardization (§13). Fits per-target-column
+ * windowed least-squares maps from source instrument X_source to target
+ * X_target. The result contains:
+ *   "transformation"  (n_features_target x n_features_source)
+ *   "predictions"     (n_samples x n_features_target) — X_source @ T^T
+ *   scalar "rmse" — frobenius error vs X_target
+ *   scalar "window_half_width"
+ */
+P4A_API p4a_status_t p4a_pds_fit(
+    p4a_context_t* ctx,
+    const p4a_matrix_view_t* X_source,
+    const p4a_matrix_view_t* X_target,
+    int32_t window_half_width,
+    p4a_method_result_t** out_result);
+
+/* DS — Direct Standardization (§13). Fits a full pt × ps least-squares
+ * map from centered source X to centered target X plus a bias. The
+ * result contains:
+ *   "transformation" (n_features_source x n_features_target)
+ *   "bias"           (1 x n_features_target)
+ *   "predictions"    (n_samples x n_features_target)
+ *   scalar "rmse"
+ */
+P4A_API p4a_status_t p4a_ds_fit(
+    p4a_context_t* ctx,
+    const p4a_matrix_view_t* X_source,
+    const p4a_matrix_view_t* X_target,
+    p4a_method_result_t** out_result);
+
+/* MIR-PLS — Multiple Inverse Regression PLS (§13). Inverts the X→Y
+ * relationship by running SIMPLS on (Y, X) and pseudoinverting the
+ * resulting Y→X coefficients to obtain X→Y prediction coefficients.
+ * The result contains:
+ *   "coefficients"  (n_features x n_targets)
+ *   "predictions"   (n_samples x n_targets)
+ *   "x_mean", "y_mean"
+ *   scalar "rmse"
+ */
+P4A_API p4a_status_t p4a_mir_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    p4a_method_result_t** out_result);
+
+/* Missing-aware NIPALS (§13). Same shape as a regular PLS regression
+ * model but tolerates NaN entries in X (replaced with the current
+ * latent-space iterate during NIPALS). The result contains:
+ *   "coefficients", "predictions", "x_mean", "y_mean"
+ *   scalar "rmse"
+ */
+P4A_API p4a_status_t p4a_missing_aware_nipals_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
     p4a_method_result_t** out_result);
 
 /* PLS diagnostics (§9). Computes Hotelling T², Q residuals (SPE) and
