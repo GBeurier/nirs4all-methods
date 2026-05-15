@@ -135,6 +135,21 @@ lib.p4a_kernel_pls_fit.argtypes = [
     ctypes.POINTER(ctypes.c_void_p),
 ]
 
+lib.p4a_o2pls_fit.restype = ctypes.c_int
+lib.p4a_o2pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_int32, ctypes.c_int32, ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_approximate_press_compute.restype = ctypes.c_int
+lib.p4a_approximate_press_compute.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_int32, ctypes.POINTER(ctypes.c_void_p),
+]
+
 
 class MethodResult:
     """Owning wrapper around `p4a_method_result_t`."""
@@ -409,6 +424,46 @@ def kernel_pls_fit(ctx: Context, cfg: Config,
     return _resolve_handle(out, ctx, "p4a_kernel_pls_fit")
 
 
+def o2pls_fit(ctx: Context, cfg: Config,
+               X: Any, Y: Any,
+               n_predictive: int,
+               n_x_orthogonal: int = 0,
+               n_y_orthogonal: int = 0) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_o2pls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_int32(int(n_predictive)),
+        ctypes.c_int32(int(n_x_orthogonal)),
+        ctypes.c_int32(int(n_y_orthogonal)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_o2pls_fit")
+
+
+def approximate_press_compute(ctx: Context, cfg: Config,
+                                X: Any, Y: Any,
+                                max_components: int) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_approximate_press_compute(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_int32(int(max_components)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_approximate_press_compute")
+
+
 __all__ = [
     "MethodResult",
     "sparse_simpls_fit",
@@ -421,4 +476,6 @@ __all__ = [
     "continuum_regression_fit",
     "n_pls_fit",
     "kernel_pls_fit",
+    "o2pls_fit",
+    "approximate_press_compute",
 ]

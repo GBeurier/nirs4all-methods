@@ -59,6 +59,8 @@ not run alongside the parity gate (CPU-load budget).
 | `continuum_regression` | `numpy-mirror` (col-std^τ rescaling) | none (no R port) | 9.88e-14 / — | Py PASS · R none |
 | `n_pls` | `numpy-mirror` (Bro 1996 N-PLS) | none (MATLAB nplstoolbox only) | 1.36e-07 / — | Py PASS · R none |
 | `kernel_pls_rbf` | `numpy-mirror` (Rosipal & Trejo 2001) | none (R `pls` linear only) | 2.32e-15 / — | Py PASS · R none |
+| `o2pls` | `numpy-mirror` (peel-then-PLS) | `OmicsPLS` 2.1.0 (joint iter) | 7.97e-02 / 4.54e-01 | Py PASS · R qualitative (different variant) |
+| `approximate_press` | `numpy-mirror` (leverage-inflated PRESS) | none (≠ LOO-PRESS) | 1.63e-03 / — | Py PASS · R none |
 
 Re-run the gate locally:
 

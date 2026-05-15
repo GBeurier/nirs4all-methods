@@ -37,6 +37,8 @@ from ._methods import (
     continuum_regression_fit,
     n_pls_fit,
     kernel_pls_fit,
+    o2pls_fit,
+    approximate_press_compute,
 )
 
 
@@ -87,8 +89,10 @@ __all__ = [
     "continuum_regression_fit",
     "n_pls_fit",
     "kernel_pls_fit",
+    "o2pls_fit",
+    "approximate_press_compute",
     "version",
     "abi_version",
     "build_info",
 ]
-__version__ = "0.73.0"
+__version__ = "0.74.0"

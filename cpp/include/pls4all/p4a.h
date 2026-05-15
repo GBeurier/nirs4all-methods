@@ -630,7 +630,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.73.0+abi.1.4.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.74.0+abi.1.5.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
@@ -1018,6 +1018,45 @@ P4A_API p4a_status_t p4a_kernel_pls_fit(
     int32_t degree,
     const p4a_matrix_view_t* X,
     const p4a_matrix_view_t* Y,
+    p4a_method_result_t** out_result);
+
+/* O2PLS (§16; Trygg & Wold 2003). Bi-directional OPLS with
+ * `n_predictive` joint + `n_x_orthogonal` X-orthogonal +
+ * `n_y_orthogonal` Y-orthogonal components. The result contains:
+ *   "coefficients"    (n_features_x x n_features_y)
+ *   "predictions"     (n_samples x n_features_y)
+ *   "x_mean", "y_mean"
+ *   "w_predictive"    (n_features_x x n_predictive)
+ *   "c_predictive"    (n_features_y x n_predictive)
+ *   "w_x_orthogonal"  (n_features_x x n_x_orthogonal)
+ *   "c_y_orthogonal"  (n_features_y x n_y_orthogonal)
+ *   "b_predictive"    (1 x n_predictive)
+ *   scalar "rmse"
+ */
+P4A_API p4a_status_t p4a_o2pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_predictive,
+    int32_t n_x_orthogonal,
+    int32_t n_y_orthogonal,
+    p4a_method_result_t** out_result);
+
+/* Approximate-PRESS component selection (§29). For each component count
+ * k in [1, max_components], fits SIMPLS, then approximates PRESS via
+ * leverage-inflated in-sample residuals. The result contains:
+ *   "press_per_component" (1 x max_components)
+ *   "rmse_per_component"  (1 x max_components)
+ *   int "selected_n_components" — argmin of press_per_component
+ *   scalar "selected_n_components_d" — same as a double for convenience
+ */
+P4A_API p4a_status_t p4a_approximate_press_compute(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t max_components,
     p4a_method_result_t** out_result);
 
 #ifdef __cplusplus

@@ -7,9 +7,49 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ## [Unreleased]
 
 Continue rolling Overview methods through public C ABI + parity gate batches:
-diagnostics (§9), 1-SE rule (§10), monitoring (§11), multi-block (§16-19),
-sparse / group / fused (§20-21), GLM/QDA/Cox heads (§27), PDS/DS/MIR/missing
-(§28), approximate-PRESS (§29) and ensembles (§30).
+diagnostics (§9), 1-SE rule (§10), monitoring (§11), multi-block remainder
+(§17-19 SO-PLS / OnPLS / ROSA), sparse / group / fused (§20-21),
+GLM/QDA/Cox heads (§27), PDS/DS/MIR/missing (§28), ensembles (§30).
+
+## [0.74.0-batch-4-o2pls-press] — 2026-05-15
+
+Public C ABI exposure for §16 O2PLS and §29 approximate-PRESS.
+
+### Added
+
+- `p4a_o2pls_fit(ctx, cfg, X, Y, n_predictive, n_x_orthogonal,
+  n_y_orthogonal, **out)` — bi-directional OPLS (Trygg & Wold 2003).
+  Returns coefficients, predictions, x_mean, y_mean, w_predictive,
+  c_predictive, w_x_orthogonal, c_y_orthogonal, b_predictive, rmse.
+- `p4a_approximate_press_compute(ctx, cfg, X, Y, max_components,
+  **out)` — leverage-inflated residual PRESS for component selection.
+  Returns press_per_component, rmse_per_component, an int vector
+  `selected_n_components`, and the same as a double scalar
+  `selected_n_components_d`.
+- Python bindings: `pls4all.o2pls_fit`, `pls4all.approximate_press_compute`.
+- `MethodSpec.prediction_key` to let methods that don't expose
+  `predictions` (e.g. PRESS curve) wire a different output to the
+  parity comparator. Runner generates multi-target Y when
+  `cell_params["n_targets"] > 1`.
+- O2PLS parity: NumPy mirror (rmse_rel = 7.97e-02; PASS at tol 1.0) and
+  R `OmicsPLS::o2m` 2.1.0 (rmse_rel = 4.54e-01; PASS at tol 1.0, flagged
+  *qualitative* because OmicsPLS implements a joint-iterative O2PLS
+  variant — different from pls4all's peel-then-PLS algorithm).
+- Approximate-PRESS parity: NumPy mirror (rmse_rel = 1.63e-03; PASS).
+
+### Verified
+
+- 256 internal C++ tests pass (dev-release, local-asan-ubsan-gcc,
+  local-ubsan-gcc).
+- ABI symbol diff vs expected list: 140 symbols (clean).
+- `ldd` audit: only libc/libstdc++/libgcc/libm/loader.
+- `git diff --check`: clean.
+- Parity gate: 15 PASS, 9 `no_r_reference` (documented per-method).
+
+### Changed
+
+- Project version `0.74.0+abi.1.5.0`. C ABI minor 4 → 5 (additive — 2
+  new symbols).
 
 ## [0.73.0-batch-3-n-pls-kernel-pls] — 2026-05-15
 

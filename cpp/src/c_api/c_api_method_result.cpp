@@ -23,6 +23,7 @@
 #include "core/kernel_pls.hpp"
 #include "core/method_result.hpp"
 #include "core/model.hpp"
+#include "core/multiblock_extensions.hpp"
 #include "core/recursive_pls.hpp"
 #include "core/tensor_pls.hpp"
 
@@ -656,6 +657,109 @@ P4A_API p4a_status_t p4a_n_pls_fit(
         return P4A_ERR_OUT_OF_MEMORY;
     } catch (...) {
         set_error(ctx, "internal error in p4a_n_pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_o2pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_predictive,
+    int32_t n_x_orthogonal,
+    int32_t n_y_orthogonal,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_o2pls_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::O2PlsResult res;
+        const p4a_status_t status = ::pls4all::core::fit_o2pls(
+            *as_core(ctx), *as_core(cfg), *X, *Y,
+            n_predictive, n_x_orthogonal, n_y_orthogonal, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features_x);
+        const auto q = static_cast<std::int64_t>(res.n_features_y);
+        const auto kp = static_cast<std::int64_t>(res.n_predictive);
+        const auto kx = static_cast<std::int64_t>(res.n_x_orthogonal);
+        const auto ky = static_cast<std::int64_t>(res.n_y_orthogonal);
+        handle->set_double_matrix("coefficients", res.coefficients, p, q);
+        handle->set_double_matrix("x_mean", res.x_mean, 1, p);
+        handle->set_double_matrix("y_mean", res.y_mean, 1, q);
+        handle->set_double_matrix("w_predictive", res.w_predictive, p, kp);
+        handle->set_double_matrix("c_predictive", res.c_predictive, q, kp);
+        handle->set_double_matrix("w_x_orthogonal", res.w_x_orthogonal,
+                                   p, kx);
+        handle->set_double_matrix("c_y_orthogonal", res.c_y_orthogonal,
+                                   q, ky);
+        handle->set_double_matrix("b_predictive", res.b_predictive, 1, kp);
+
+        std::vector<double> predictions;
+        std::int64_t pred_rows = 0;
+        std::int64_t pred_cols = 0;
+        predict_from_coefficients(*X, res.coefficients, res.x_mean,
+                                    res.y_mean, p, q, predictions,
+                                    pred_rows, pred_cols);
+        const double rmse = in_sample_rmse(predictions, *Y);
+        handle->set_double_matrix("predictions", std::move(predictions),
+                                   pred_rows, pred_cols);
+        handle->set_scalar("rmse", rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_o2pls_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_o2pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_approximate_press_compute(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t max_components,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_approximate_press_compute");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::ApproximatePressResult res;
+        const p4a_status_t status = ::pls4all::core::approximate_press(
+            *as_core(ctx), *as_core(cfg), *X, *Y, max_components, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto k = static_cast<std::int64_t>(res.n_components);
+        handle->set_double_matrix("press_per_component",
+                                   res.press_per_component, 1, k);
+        handle->set_double_matrix("rmse_per_component",
+                                   res.rmse_per_component, 1, k);
+        std::vector<std::int32_t> selected{res.selected_n_components};
+        handle->set_int_vector("selected_n_components",
+                                std::move(selected));
+        handle->set_scalar("selected_n_components_d",
+                            static_cast<double>(res.selected_n_components));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_approximate_press_compute");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_approximate_press_compute");
         return P4A_ERR_INTERNAL;
     }
 }

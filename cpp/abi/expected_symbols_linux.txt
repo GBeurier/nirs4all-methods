@@ -20,6 +20,7 @@ p4a_aom_per_component_result_get_prefix_scores
 p4a_aom_per_component_result_get_selected_n_components
 p4a_aom_per_component_result_get_selected_operator_indices
 p4a_aom_per_component_select
+p4a_approximate_press_compute
 p4a_array_dtype
 p4a_array_free
 p4a_array_shape
@@ -111,6 +112,7 @@ p4a_model_predict_alloc
 p4a_model_transform
 p4a_model_transform_alloc
 p4a_n_pls_fit
+p4a_o2pls_fit
 p4a_operator_bank_add
 p4a_operator_bank_create
 p4a_operator_bank_destroy

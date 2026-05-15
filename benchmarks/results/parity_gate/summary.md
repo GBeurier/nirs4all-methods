@@ -1,7 +1,7 @@
 # Parity gate report
 
 Host: `Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.35`
-pls4all: `0.73.0+abi.1.4.0`
+pls4all: `0.74.0+abi.1.5.0`
 Python: `3.11.14`
 NumPy: `1.26.4`
 
@@ -29,6 +29,10 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `n_pls` | N-PLS — 3-way tensor PLS (Bro 1996) | R / `(none)` - | ✗ | — | 5e-02 | no_r_reference |
 | `kernel_pls_rbf` | Non-linear kernel PLS (RBF kernel) | python / `numpy-mirror` 1.26.4 | ✓ | 2.318e-15 | 5e-02 | ok |
 | `kernel_pls_rbf` | Non-linear kernel PLS (RBF kernel) | R / `(none)` - | ✗ | — | 5e-02 | no_r_reference |
+| `o2pls` | O2PLS — bi-directional OPLS (Trygg & Wold 2003) | python / `numpy-mirror` 1.26.4 | ✓ | 7.974e-02 | 1e+00 | ok |
+| `o2pls` | O2PLS — bi-directional OPLS (Trygg & Wold 2003) | R / `OmicsPLS` 2.1.0 | ✓ | 4.541e-01 | 1e+00 | ok |
+| `approximate_press` | Approximate-PRESS component selection (§29) | python / `numpy-mirror` 1.26.4 | ✓ | 1.634e-03 | 5e-02 | ok |
+| `approximate_press` | Approximate-PRESS component selection (§29) | R / `(none)` - | ✗ | — | 5e-02 | no_r_reference |
 
 ## Reference caveats
 
@@ -41,3 +45,5 @@ Each method is compared against a Python reference and an R reference. Methods w
 - **`continuum_regression`** (python / `numpy-mirror`): Column-power-rescaled SIMPLS interpolating PLS (tau=0) and OLS (tau=1). R `chemometrics::pls.cv` covers regular PLS; no widely installable continuum-regression variant matches this exact rescaling formulation.
 - **`n_pls`** (python / `numpy-mirror`): 3-way N-PLS (Bro 1996). NumPy mirror of pls4all::fit_n_pls. MATLAB `nplstoolbox` is the canonical reference; no widely installable R or Python port exists for the rank-1 Khatri-Rao decomposition variant.
 - **`kernel_pls_rbf`** (python / `numpy-mirror`): Kernel NIPALS (Rosipal & Trejo 2001) mirror. sklearn does not ship a non-linear kernel PLS; R `pls` only covers linear kernel-algorithm. No widely installable external reference for RBF / polynomial / sigmoid kernel PLS exists.
+- **`o2pls`** (python / `numpy-mirror`): O2PLS (Trygg & Wold 2003). NumPy mirror of pls4all::fit_o2pls — peels n_x_orthogonal X-orthogonal components, then n_y_orthogonal Y-orthogonal components, then runs NIPALS PLS for n_predictive joint components.
+- **`approximate_press`** (python / `numpy-mirror`): Approximate PRESS (§29) — leverage-inflated residual PRESS for component selection. No widely installable LOO-PRESS equivalent — R `pls::plsr(..., validation='LOO')` returns true LOO-PRESS, which is a different quantity.

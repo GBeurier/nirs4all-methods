@@ -55,16 +55,17 @@ class ParityRow:
     status: str
 
 
-def _make_dataset(n: int, p: int, seed: int = 11
+def _make_dataset(n: int, p: int, seed: int = 11, n_targets: int = 1
                    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     rng = np.random.default_rng(seed)
     k = min(5, n - 1, p)
     T = rng.standard_normal((n, k))
     W = rng.standard_normal((p, k))
     X = T @ W.T + 0.05 * rng.standard_normal((n, p))
-    b = rng.standard_normal(k)
-    y = T @ b + 0.02 * rng.standard_normal(n)
-    Y = y.reshape(-1, 1)
+    B = rng.standard_normal((k, n_targets))
+    Y = T @ B + 0.02 * rng.standard_normal((n, n_targets))
+    if n_targets == 1:
+        Y = Y.reshape(-1, 1)
     X_target = X.copy()
     X_target[:, 0] *= 1.1
     X_target[:, 1] += 0.05
@@ -165,7 +166,8 @@ def _run_one_reference(method: MethodSpec, factory, X, Y, X_target,
 def _run_method(method: MethodSpec) -> list[ParityRow]:
     n = method.cell_params["n_samples"]
     p = method.cell_params["n_features"]
-    X, Y, X_target, sample_weights = _make_dataset(n, p)
+    n_targets = int(method.cell_params.get("n_targets", 1))
+    X, Y, X_target, sample_weights = _make_dataset(n, p, n_targets=n_targets)
     extras = _resolve_extras(method, X_target, sample_weights)
 
     pls4all_pred: np.ndarray | None = None
@@ -173,7 +175,7 @@ def _run_method(method: MethodSpec) -> list[ParityRow]:
         with pls4all.Context() as ctx, pls4all.Config() as cfg:
             result = method.pls4all_fn(ctx, cfg, X, Y, **method.cell_params,
                                         **extras)
-            pls4all_pred = result.matrix("predictions")
+            pls4all_pred = result.matrix(method.prediction_key)
             result.close()
     except Exception as exc:
         print(f"  [{method.name}] pls4all_error: {exc}", file=sys.stderr)
