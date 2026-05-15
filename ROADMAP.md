@@ -1,185 +1,326 @@
 # Roadmap
 
-`pls4all` is built in deliberate phases. Each phase has a self-contained roadmap under [`roadmap/`](roadmap/) that is reviewed by Codex *before* implementation begins, and again *before* the phase is tagged.
+`pls4all` is built in deliberate phases. Each delivered phase has a
+self-contained note under [`roadmap/`](roadmap/). The canonical technical
+spec is [`Direction_Technique.md`](Direction_Technique.md). The full algorithm
+taxonomy is in [`Overview.md`](Overview.md).
 
-The phase order is **depth-first on the core** (C ABI → algorithms → preprocessing → advanced variants) and **breadth-second on bindings**. This reflects a deliberate choice: we'd rather have a small, correct, idiomatic Python/R/etc API once the core is mature than a wide multi-language surface that thrashes for the first six months.
+The project rule remains:
 
-The canonical technical spec is [`Direction_Technique.md`](Direction_Technique.md). The full algorithm taxonomy is in [`Overview.md`](Overview.md).
+- C++17 internal core.
+- Public stable C ABI only.
+- No mandatory runtime dependency beyond libc/libstdc++/libgcc.
+- Thin bindings over the C ABI.
+- Every numerical method must have a deterministic parity gate against the
+  best available R or Python reference.
+- GitHub Actions are parked for now to save runner quota; the authoritative
+  gate is the local parity/build/test/sanitizer run.
 
-## Current checkpoint — 2026-05-14
+## Current Checkpoint - 2026-05-15
 
 Latest local tag: `phase-6e-aom-pop-selection` (`0.65.0+abi.1.0.0`).
 
-- Local reference gate is green: 97 deterministic parity fixtures, 201 C++ ABI/core tests, CLI selfcheck, Python smoke, ABI symbol diff, dependency audit, UBSAN and ASAN+UBSAN.
-- GitHub Actions are intentionally parked for now to avoid spending runner quota; the actionable gate is the local parity/sanitizer run.
-- Phase 4 has shipped the main advanced CPU kernels currently targeted before variable selection: SIMPLS, SVD, PCR, kernel/wide-kernel, orthogonal-scores, power/randomized-SVD, PLSCanonical, PLSSVD, PLS-DA, OPLS/OPLS-DA, component-count CV, PLS-LDA, PLS-logistic, MB-PLS and LW-PLS.
-- Phase 5a has shipped deterministic variable-selection rankers over existing fitted-model scores: VIP, original-scale coefficient magnitude and selectivity ratio, with sklearn parity.
-- Phase 5b has shipped deterministic contiguous interval / moving-window CV scans over NIPALS PLS regression, with sklearn parity.
-- Phase 5c has shipped deterministic Monte-Carlo coefficient-stability ranking, with sklearn parity.
-- Phase 5d has shipped deterministic UVE artificial-variable thresholding, with sklearn parity.
-- Phase 5p has shipped deterministic biPLS backward interval elimination, with Python/sklearn parity.
-- Phase 5q has shipped deterministic siPLS interval-combination search, with Python/sklearn parity.
-- Phase 5e has shipped deterministic SPA-PLS projection selection, with Python/sklearn parity.
-- Phase 5f has shipped deterministic CARS-PLS competitive adaptive reweighted sampling, with Python/sklearn parity.
-- Phase 5g has shipped deterministic Random Frog PLS subset sampling, with Python/sklearn parity.
-- Phase 5h has shipped deterministic SCARS-PLS stability-weighted adaptive reweighted sampling, with Python/sklearn parity.
-- Phase 5i has shipped deterministic GA-PLS population search, with Python/sklearn parity.
-- Phase 5j has shipped deterministic shaving-PLS recursive elimination, with Python/sklearn parity.
-- Phase 5s has shipped deterministic REP-PLS fixed-count recursive elimination, with Python/sklearn parity.
-- Phase 5t has shipped deterministic IPW-PLS iterative coefficient reweighting, with Python/sklearn parity.
-- Phase 5u has shipped deterministic ST-PLS score-threshold selection, with Python/sklearn parity.
-- Phase 6a has shipped an internal soft/hard AOM preprocessing-bank transform primitive, with NumPy parity.
-- Phase 6b has shipped internal global AOM-SIMPLS CV selection against `nirs4all/bench/AOM_v0/aompls` for the identity/detrend strict-linear tranche.
-- Phase 6c has shipped bench-parity strict-linear AOM operators for zero-padded Savitzky-Golay smoothing/derivatives, finite differences and Norris-Williams, plus a wider global-selection fixture.
-- Phase 6d has shipped bench-parity strict-linear Whittaker and FCK AOM operators, plus global-selection parity over the Whittaker/FCK tranche.
-- Phase 6e has shipped internal POP-PLS per-component SIMPLS covariance selection against `nirs4all/bench/AOM_v0/aompls`, including bench-compatible CV scoring semantics.
-- Phase 5k has shipped deterministic BVE-PLS backward elimination, with Python/sklearn parity.
-- Phase 5l has shipped deterministic T2-PLS loading-weight selection, with Python/sklearn parity.
-- Phase 5m has shipped deterministic WVC-PLS numeric-regression selection, with NumPy/plsVarSel parity.
-- Phase 5r has shipped deterministic thresholded/factor WVC selection, with NumPy parity.
-- Phase 5n has shipped deterministic EMCUVE ensemble MC-UVE voting, with Python/sklearn parity.
-- Phase 5o has shipped deterministic PLS randomization-test selection, with Python/sklearn parity.
-- Phase 2 bindings are still mostly skeletons: Python has a minimal ctypes lifecycle/config binding, while R/MATLAB/JS/Android remain README-level placeholders.
-- Active implementation track: Phase 6 AOM-PLS / POP-PLS. The AOM-PLS parity oracle is `nirs4all/bench/AOM_v0/aompls`, not the packaged `nirs4all` model surface.
+Last green local gate:
 
-## Phase 0 — ABI & Build Foundation · **shipped**
+- 97 deterministic parity fixtures.
+- 201 C++ ABI/core tests.
+- `pls4all_cli --selfcheck`.
+- Python ctypes smoke.
+- ABI symbol diff against `cpp/abi/expected_symbols_linux.txt`.
+- `ldd` dependency audit: only libc/libstdc++/libgcc/libm/loader.
+- UBSAN.
+- ASAN+UBSAN.
 
-Goal: a callable `libp4a.{so,dll,dylib}` with no algorithm — only ABI plumbing, build matrix, parity scaffolding, docs.
+Current git notes:
 
-- CMake project structure, options module, presets.
-- `cpp/include/pls4all/p4a.h` — every enum, struct, lifecycle and config setter Phase 1 will need.
-- Status codes / error messages / version functions / ABI compatibility checks.
-- Stride-aware matrix views with `_validate`.
-- `pls4all_c` shared library exports only `p4a_*` (verified by `nm` / `dumpbin` against checked-in golden lists).
-- doctest-based ABI / lifecycle / OOM / exception-safety / fixture-loader tests.
-- CI: Linux × {gcc-12, gcc-13, clang-16} × {Release, Debug}, macOS × clang × {Release, Debug}, Windows × {MSVC 2022, MinGW UCRT64} × {Release, Debug}, ASAN + UBSAN, ABI surface gate, coverage.
-- Parity fixture schema v1, three synthetic fixtures, Python + R generator skeletons, initial tolerances table.
-- Binding skeletons for Python (ctypes), R (`.Call`), MATLAB (MEX), JS (Emscripten), Android (JNI) — each shipping a hello-version smoke test.
-- Documentation skeleton (architecture, ABI reference, binding guides, parity methodology).
-- Final commit tagged `phase-0`.
+- `main` is ahead of `origin/main` by 22 local commits.
+- Untracked files intentionally left out of commits: `Backlog.md`,
+  `docs/_bench/`.
+- AOM-PLS parity oracle is `nirs4all/bench/AOM_v0/aompls`, not the packaged
+  `nirs4all` library surface.
 
-## Phase 1 — PLS CPU Reference · **shipped**
+## Next Agent Prompt
 
-Goal: a reliable, serialisable, portable PLS engine.
+Continue from `/home/delete/nirs4all/pls4all` on `main`, currently tagged
+`phase-6e-aom-pop-selection` (`0.65.0+abi.1.0.0`). Do not use GitHub Actions
+for now. Keep using the local gate: pinned fixture generator, dev-release
+build, C++ tests, CLI selfcheck, Python smoke, ABI symbol diff, `ldd`,
+`git diff --check`, UBSAN and ASAN+UBSAN. Leave untracked `Backlog.md` and
+`docs/_bench/` alone. For AOM/POP parity, use
+`/home/delete/nirs4all/nirs4all/bench/AOM_v0/aompls` as the oracle. Next
+recommended tranche: expose internal AOM/POP selection through the public C ABI
+result-buffer lifecycle, then add Python parity smoke for those calls.
 
-- Minimal linalg in `cpp/src/core/linalg/` (dot, axpy, scal, norm2, gemv, gemm-small, transpose-view, QR, power iteration).
-- NIPALS PLS1 and PLS2 with regression deflation.
-- Center / scale fit on training only; transform applied to validation (leakage-safe).
-- `predict`, `transform`, coefficient extraction per number of components.
-- Binary export / import with versioning, endianness, checksum.
-- The three Phase 0 fixtures flip from `P4A_ERR_NOT_IMPLEMENTED` to green; tolerances per `parity/tolerances.md` (`< 1e-9` vs sklearn for PLS1 / PLS2 in well-conditioned cases).
+## Shipped Core
 
-## Phase 3 — Chemometrics / NIRS preprocessing & validation
+### Phase 0 - ABI and Build Foundation - shipped
 
-Goal: useful for real spectroscopy.
+- CMake project, presets, warning/sanitizer options.
+- Public `p4a.h` ABI with opaque handles, matrix views, enums, status codes
+  and version/ABI compatibility functions.
+- Context/config/matrix/operator-bank/gating/pipeline/model/array lifecycle.
+- Shared and static `libp4a`; symbol snapshot gate.
+- CLI selfcheck.
+- Fixture schema and parity infrastructure.
+- Minimal ctypes Python lifecycle/config binding.
+- README skeletons for R, MATLAB, JS/WASM and Android.
 
-- SNV, MSC, EMSC, Detrend, Savitzky-Golay smoothing + 1st/2nd derivatives, ASLS baseline, Norris-Williams derivatives, Haar wavelet denoising, OSC, EPO.
-- Stateful `Preprocessor` C++ interface; pipeline-of-preprocessors with explicit `fit` / `transform`.
-- Phase 3a shipped as `phase-3a-preprocessing-pipeline`: pipeline fit/transform plus identity, center, autoscale, Pareto scale and SNV.
-- Phase 3b shipped as `phase-3b-msc-preprocessing`: multiplicative scatter correction in the same fitted pipeline contract.
-- Phase 3c shipped as `phase-3c-detrend-preprocessing`: row-wise polynomial detrending with degree parameter.
-- Phase 3d shipped as `phase-3d-savgol-preprocessing`: Savitzky-Golay smoothing plus 1st/2nd derivative operator support.
-- Phase 3e shipped as `phase-3e-emsc-preprocessing`: EMSC with fitted mean reference and polynomial baseline terms.
-- Phase 3f shipped as `phase-3f-asls-preprocessing`: asymmetric least-squares baseline correction.
-- Phase 3g shipped as `phase-3g-norris-williams-preprocessing`: Norris-Williams gap-segment derivatives.
-- Phase 3h shipped as `phase-3h-wavelet-preprocessing`: Haar wavelet denoising with soft-thresholded detail coefficients.
-- Phase 3i shipped as `phase-3i-osc-preprocessing`: supervised one-component orthogonal signal correction.
-- Phase 3j shipped as `phase-3j-epo-preprocessing`: supervised one-component external parameter orthogonalization.
-- Phase 3k shipped as `phase-3k-regression-metrics`: internal regression metric kernels for RMSE, MAE, bias, R2/Q2, observed-vs-predicted slope/intercept, RPD and RPIQ.
-- Phase 3l shipped as `phase-3l-validation-splits`: deterministic internal k-fold, LOO and holdout split generators.
-- Phase 3m shipped as `phase-3m-cross-validation-engine`: internal k-fold regression CV orchestration with out-of-sample predictions and aggregate regression metrics.
-- Phase 3n shipped as `phase-3n-classification-metrics`: internal binary classification metrics for sensitivity, specificity, balanced accuracy, precision/F1, MCC and AUC.
-- Phase 3o shipped as `phase-3o-variable-importance`: internal VIP and selectivity-ratio kernels for fitted PLS models with stored scores.
-- Phase 3p shipped as `phase-3p-component-coefficients`: original-scale regression coefficient blocks for each latent-component prefix.
-- Phase 3q shipped as `phase-3q-advanced-validation-splits`: deterministic external folds, repeated k-fold, Monte-Carlo, Kennard-Stone and SPXY split generators.
-- Phase 3r shipped as `phase-3r-classification-extensions`: multiclass macro/micro metrics with one-vs-rest AUC and binary fixed-bin calibration curves.
+### Phase 1 - PLS CPU Reference - shipped
 
-(Phase 3 ships before Phase 2 — bindings benefit from having real algorithms to expose.)
+- Dependency-free NIPALS PLS1/PLS2 regression.
+- Fit/predict/transform.
+- Center/scale learned on train and applied leak-free.
+- Fitted-array accessors.
+- Component-prefix coefficients.
+- Binary export/import with versioned serialization.
 
-## Phase 4 — Advanced PLS variants
+### Phase 3 - Preprocessing, Validation and Metrics - shipped through 3r
 
-- SIMPLS core solver shipped as `phase-4a-simpls`.
-- SVD PLS core solver shipped as `phase-4b-svd`.
-- PCR baseline shipped as `phase-4c-pcr`.
-- Linear kernel-algorithm PLS shipped as `phase-4d-kernel`.
-- Wide-kernel PLS shipped as `phase-4e-wide-kernel`.
-- Orthogonal-scores PLS shipped as `phase-4f-orthogonal-scores`.
-- Power-iteration PLS shipped as `phase-4g-power`.
-- Randomized-SVD PLS shipped as `phase-4h-randomized-svd`.
-- PLSCanonical with NIPALS/SVD and canonical deflation shipped as `phase-4i-canonical`.
-- PLS-DA dummy-response score model shipped as `phase-4j-pls-da`.
-- OPLS1 with one predictive component and orthogonal corrections shipped as `phase-4k-opls`.
-- Binary OPLS-DA dummy-response score model shipped as `phase-4l-opls-da`.
-- Multi-response OPLS and multi-class OPLS-DA common predictive score model shipped as `phase-4m-multiclass-opls-da`.
-- PLSSVD cross-covariance score model shipped as `phase-4n-pls-svd`.
-- SIMPLS component-count CV scoring shipped as `phase-4o-simpls-component-cv`.
-- PLS-LDA score-space classifier shipped as `phase-4p-pls-lda`.
-- PLS-logistic score-space classifier shipped as `phase-4q-pls-logistic`.
-- MB-PLS block-weighted kernel shipped as `phase-4r-mb-pls`.
-- LW-PLS local-window kernel shipped as `phase-4s-lw-pls`.
+- Pipeline fit/transform.
+- Identity, center, autoscale, Pareto, SNV.
+- MSC, EMSC.
+- Polynomial detrend.
+- Savitzky-Golay smoothing and first/second derivatives.
+- ASLS baseline.
+- Norris-Williams derivatives.
+- Haar wavelet denoising.
+- OSC and EPO.
+- Regression metrics: RMSE, MAE, bias, R2/Q2, slope/intercept, RPD, RPIQ.
+- Splitters: k-fold, LOO, holdout, external folds, repeated k-fold,
+  Monte-Carlo, Kennard-Stone, SPXY.
+- Cross-validation engine.
+- Binary and multiclass classification metrics plus calibration bins.
+- VIP and selectivity ratio.
+- Original-scale component-prefix coefficients.
 
-## Phase 2 — Language bindings (now with real algorithms behind them)
+### Phase 4 - Advanced PLS Variants - shipped through 4s
 
-- Python wheel: `pip install pls4all`. ctypes loader + NumPy zero-copy views.
-- R package: CRAN-ready `DESCRIPTION` + `NAMESPACE` + `.Call` gateway.
-- MATLAB toolbox: MEX gateway + class wrapper + model import/export.
-- JS / WASM npm package: predict-first, `model.load(buffer)` / `model.predict(X)`.
-- Android AAR: JNI gateway, Kotlin API, predict-first.
+- SIMPLS.
+- SVD PLS.
+- PCR.
+- Linear kernel-algorithm PLS.
+- Wide-kernel PLS.
+- Orthogonal-scores PLS.
+- Power-method PLS.
+- Randomized-SVD PLS.
+- PLSCanonical with NIPALS/SVD.
+- PLSSVD direct cross-covariance scores.
+- PLS-DA.
+- OPLS and OPLS-DA.
+- Multiclass OPLS-DA/common predictive score model.
+- SIMPLS component-count CV.
+- PLS-LDA.
+- PLS-logistic.
+- MB-PLS.
+- LW-PLS.
 
-Each binding ships a parity-test suite that loads the JSON fixtures and asserts the documented tolerances.
+### Phase 5 - Variable Selection - shipped through 5u
 
-## Phase 5 — Variable selection
+- VIP, coefficient-magnitude and selectivity-ratio rankers.
+- Moving-window / contiguous interval CV.
+- biPLS backward interval selection.
+- siPLS interval-combination search.
+- Monte-Carlo coefficient stability.
+- UVE with artificial variables.
+- SPA-PLS.
+- CARS-PLS.
+- Random Frog PLS.
+- SCARS-PLS.
+- GA-PLS.
+- Shaving-PLS.
+- REP-PLS.
+- IPW-PLS.
+- ST-PLS.
+- BVE-PLS.
+- T2-PLS.
+- WVC-PLS numeric selection.
+- WVC threshold/factor rules.
+- EMCUVE.
+- PLS randomization-test selection.
 
-- VIP selector, regression-coefficient selector, selectivity-ratio selector shipped as `phase-5a-variable-selection-rankers`.
-- Contiguous interval / moving-window CV scan shipped as `phase-5b-interval-selection`.
-- Backward interval PLS selector shipped as `phase-5p-bipls-selection`.
-- Synergy interval PLS selector shipped as `phase-5q-sipls-selection`.
-- Monte-Carlo coefficient stability shipped as `phase-5c-stability-selection`.
-- UVE artificial-variable thresholding shipped as `phase-5d-uve-selection`.
-- SPA-PLS projection selector shipped as `phase-5e-spa-selection`.
-- CARS-PLS deterministic competitive-adaptive selector shipped as `phase-5f-cars-selection`.
-- Random Frog PLS deterministic subset sampler shipped as `phase-5g-random-frog-selection`.
-- SCARS-PLS deterministic stability-weighted competitive-adaptive selector shipped as `phase-5h-scars-selection`.
-- GA-PLS deterministic population-search selector shipped as `phase-5i-ga-selection`.
-- Shaving-PLS deterministic recursive-elimination selector shipped as `phase-5j-shaving-selection`.
-- REP-PLS deterministic fixed-count recursive-elimination selector shipped as `phase-5s-rep-selection`.
-- IPW-PLS deterministic iterative coefficient-reweighting selector shipped as `phase-5t-ipw-selection`.
-- ST-PLS deterministic score-threshold selector shipped as `phase-5u-st-selection`.
-- BVE-PLS deterministic backward-elimination selector shipped as `phase-5k-bve-selection`.
-- T2-PLS deterministic loading-weight selector shipped as `phase-5l-t2-selection`.
-- WVC-PLS deterministic weighted-variable-contribution selector shipped as `phase-5m-wvc-selection`.
-- Thresholded/factor WVC selector shipped as `phase-5r-wvc-threshold-selection`.
-- EMCUVE deterministic ensemble MC-UVE vote-rule selector shipped as `phase-5n-emcuve-selection`.
-- PLS randomization-test selector shipped as `phase-5o-randomization-selection`.
-- Remaining wrappers / metaheuristics: none currently listed before Phase 6.
+### Phase 6 - AOM-PLS and POP-PLS - shipped through 6e
 
-## Phase 6 — AOM-PLS & POP-PLS · the scientific differentiator
+- Phase 6a: internal soft/hard AOM preprocessing-bank transform primitive.
+- Phase 6b: internal global AOM-SIMPLS CV selection against
+  `nirs4all/bench/AOM_v0/aompls` for identity/detrend.
+- Phase 6c: strict-linear AOM kernels for zero-padded Savitzky-Golay,
+  finite difference and Norris-Williams, plus wider global-selection parity.
+- Phase 6d: strict-linear Whittaker and FCK AOM operators, with direct
+  transform parity and global-selection parity.
+- Phase 6e: internal POP-PLS per-component SIMPLS covariance selector, with
+  selected operator sequence, component candidate scores, prefix scores,
+  full-fit predictions and bench-compatible CV scoring semantics.
 
-- Operator bank as composable, stateful `Preprocessor` objects (Identity, SNV, MSC, SG-deriv-1/2, finite differences, Polynomial Detrend, ASLS, Norris-Williams, Haar Wavelet, OSC, EPO).
-- AOM preprocessing-bank soft/hard gating primitive shipped as `phase-6a-aom-preprocessing`.
-- Global AOM-SIMPLS CV selector with selected operator/component count, per-operator RMSE curves and full-fit predictions shipped as `phase-6b-aom-global-selection`.
-- Strict-linear bench operators for zero-padded SG, finite difference and Norris-Williams shipped as `phase-6c-aom-strict-operators`; AOM selection now uses those strict kernels instead of the general preprocessing pipeline semantics.
-- Strict-linear bench operators for Whittaker smoothing and fractional convolutional kernels shipped as `phase-6d-aom-whittaker-fck`, with both direct transform parity and global AOM-SIMPLS selection parity.
-- POP-PLS per-component SIMPLS covariance selector shipped as `phase-6e-aom-pop-selection`, with selected operator sequence, component candidate scores, prefix scores and full-fit predictions.
-- AOM-PLS parity source: `nirs4all/bench/AOM_v0/aompls`, especially selection curves, global operator choice, component prefix selection and predictions.
-- Soft gating (weighted mixture), hard gating (discrete pick), sparse gating (penalised mixture).
-- Per-component / per-block / per-target AOM.
-- AOM-NIPALS, AOM-SIMPLS, AOM-OPLS, AOM-MB-PLS.
-- POP-PLS PRESS / holdout / one-SE variants on top of the shipped CV selector.
+## Active Track
 
-## Phase 7 — Accelerated backends
+### Phase 6f - Public AOM/POP ABI
 
-- Optional BLAS backend (cblas, Accelerate, MKL) — selected at runtime via `p4a_context_set_backend`.
-- Optional OpenMP for embarrassingly parallel paths (CV folds, bootstrap).
-- Batch APIs (`p4a_fit_batch`) for massive workloads: nested CV, bootstrap, MCUVE / CARS permutations, iPLS / moving-window sweeps, AOM operator scans.
-- Optional CUDA backend in a separate shared library `libp4a_cuda.so` — same ABI, different `p4a_backend_t` selector. Self-parity: ≤ 1e-9 abs / ≤ 1e-8 rel for fp64 GPU vs reference CPU.
+Goal: expose the already-green internal AOM/POP selection kernels through the
+stable C ABI without leaking C++ containers.
 
-## Beyond v1.0 — under consideration
+Deliverables:
 
-- Multiway / tensor PLS (N-PLS, Tri-PLS, PARAFAC-PLS, Tucker-PLS).
-- Domain adaptation / calibration transfer (di-PLS, EPO-PLS, PDS).
-- Dynamic / recursive / online PLS for process monitoring.
-- Ensemble methods (bagging-PLS, boosting-PLS, random-subspace-PLS).
-- Distribution to vcpkg, conda-forge, Homebrew, Debian.
+- Opaque result handles for AOM global and POP per-component selection.
+- C functions to run selection from `p4a_context_t`, `p4a_config_t`,
+  `p4a_operator_bank_t`, `p4a_matrix_view_t` and validation-plan inputs.
+- Accessors for selected operator index/sequence, component count, best score,
+  score tables and prediction buffers.
+- Python ctypes wrappers and smoke parity for the new result handles.
+- ABI snapshot unchanged except additive `p4a_*` symbols.
 
-Anything listed beyond v1.0 is opt-in via separate roadmap proposals.
+Gate:
+
+- Existing 97 fixtures remain stable.
+- New AOM/POP ABI fixture or smoke test added.
+- Local build/test/sanitizer/dependency/ABI gates green.
+
+### Phase 6g - POP/AOM Policy Expansion
+
+Goal: complete the policy variants already present in the bench oracle.
+
+Deliverables:
+
+- POP holdout / approximate-PRESS / one-SE variants.
+- AOM-NIPALS materialized path.
+- AOM/POP covariance and adjoint fast paths where the strict-linear operator
+  contract permits it.
+- Soft, sparse and superblock AOM selection fixtures.
+- Per-block and per-target AOM plans.
+
+Reference:
+
+- `nirs4all/bench/AOM_v0/aompls/selection.py`
+- `nirs4all/bench/AOM_v0/aompls/simpls.py`
+- `nirs4all/bench/AOM_v0/aompls/nipals.py`
+- `nirs4all/bench/AOM_v0/aompls/banks.py`
+
+### Phase 6h - Local AOM/FCL Integration
+
+Goal: integrate the locally developed AOM-PLS and FCL-PLS work as first-class
+pls4all methods.
+
+Deliverables:
+
+- Identify the local source-of-truth implementations and freeze parity
+  fixtures before porting.
+- Port FCL-PLS kernels behind internal C++ APIs.
+- Add fixtures for AOM/FCL edge cases, not only synthetic happy paths.
+- Document numerical conventions and deviations from the local prototypes.
+
+## Binding Roadmap
+
+Phase 2 is intentionally delayed until the core stabilizes. It now needs to
+become active in parallel with Phase 6f.
+
+### Python
+
+- Expand ctypes binding beyond lifecycle/config.
+- NumPy zero-copy matrix views.
+- Fit/predict/transform wrappers for shipped solvers.
+- sklearn-compatible `BaseEstimator` / `RegressorMixin` /
+  `TransformerMixin` classes.
+- AOM/POP wrapper surface after Phase 6f.
+- Fixture-driven Python parity tests.
+
+### R
+
+- `.Call` gateway over the C ABI.
+- R matrices to `p4a_matrix_view_t` without unnecessary copies when possible.
+- Parity against R `pls`, `ropls`, `mixOmics`, `plsVarSel` where applicable.
+- CRAN-compatible package skeleton and smoke tests.
+
+### MATLAB
+
+- MEX gateway.
+- Class wrapper for model handles.
+- Model import/export.
+- Prediction-first examples.
+
+### JavaScript / WebAssembly
+
+- Emscripten build of the C ABI.
+- Predict-first npm package.
+- TypedArray matrix views.
+- Model load/predict smoke tests.
+
+### Julia
+
+- Thin `ccall` wrapper.
+- Matrix view helpers.
+- Parity fixture runner.
+
+### Java / Android
+
+- JNI bridge and Kotlin API.
+- Android AAR.
+- Predict-first model loading.
+- On-device smoke tests.
+
+Other bindings to consider after these are stable: C#, Rust, Go and Swift.
+
+## Benchmark Roadmap
+
+Benchmarks should start once AOM/POP has a public ABI and Python wrappers.
+
+- NIPALS/SIMPLS/SVD/kernel/wide-kernel vs sklearn, R `pls` and NumPy ports.
+- AOM/POP vs `nirs4all/bench/AOM_v0/aompls`.
+- Preprocessing throughput vs NumPy/SciPy references.
+- Variable-selection runtime vs Python/R references.
+- LW-PLS and MB-PLS scaling.
+- Batch CV, bootstrap, CARS/MCUVE/AOM sweeps.
+- Memory footprint and dependency audit per build.
+
+Benchmark outputs should live under `benchmarks/` or `docs/_bench/`, but only
+commit curated summaries and reproducible scripts.
+
+## Acceleration Roadmap
+
+Acceleration remains optional and must not change the C ABI.
+
+- BLAS backend.
+- OpenMP for fold/bootstrap/operator scans.
+- Batch APIs for large validation and selection workloads.
+- CUDA backend in a separate optional shared library.
+- Later: WebGPU/WASM SIMD if the JS target needs it.
+
+Every accelerated backend needs self-parity against reference CPU.
+
+## Remaining Algorithm Taxonomy
+
+These are not yet first-class shipped methods and should be split into small
+reviewed phases with parity references:
+
+- CPPLS / powered PLS.
+- Weighted and sample-weighted PLS.
+- Robust PLS.
+- Ridge/regularized/penalized PLS.
+- Continuum regression.
+- MIR-PLS.
+- Sparse PLS and sparse PLS-DA.
+- PLS-QDA, PLS-GLM, PLS-Cox and survival PLS.
+- O2PLS, DOSC-PLS, OnPLS.
+- Missing-aware NIPALS.
+- Calibration transfer and domain adaptation: PDS, DS, di-PLS and related
+  methods.
+- Multiway/tensor PLS: N-PLS, Tri-PLS, PARAFAC-PLS, Tucker-PLS.
+- Dynamic, recursive and online PLS.
+- Ensemble PLS methods: bagging, boosting and random-subspace PLS.
+
+## Release Discipline
+
+For every phase:
+
+1. Add or update a focused `roadmap/phase-*.md`.
+2. Implement the smallest coherent tranche.
+3. Generate parity fixtures with the pinned generator venv.
+4. Build with `/home/delete/.venv/bin/cmake --build --preset dev-release --parallel`.
+5. Run `/home/delete/.venv/bin/ctest --preset dev-release --output-on-failure`.
+6. Run `build/dev-release/cpp/tests/pls4all_tests`.
+7. Run CLI selfcheck and Python smoke.
+8. Run ABI symbol diff and `ldd` dependency audit.
+9. Run `git diff --check`.
+10. Run UBSAN and ASAN+UBSAN local builds.
+11. Commit as `release(phase-X): version-topic`.
+12. Tag as `phase-X-topic`.
+
+Do not push unless explicitly asked.
