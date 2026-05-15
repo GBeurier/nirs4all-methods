@@ -1,7 +1,7 @@
 # Parity gate report
 
 Host: `Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.35`
-pls4all: `0.79.0+abi.1.9.0`
+pls4all: `0.80.0+abi.1.10.0`
 Python: `3.11.14`
 NumPy: `1.26.4`
 
@@ -30,6 +30,9 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `pls_diagnostic_t2` | PLS Hotelling T² (§9) | R / `mdatools` 0.15.0 | ✓ | 3.845e+00 | 1e+01 | ok |
 | `pls_diagnostic_q` | PLS Q residuals / SPE (§9) | python / `(none)` - | ✗ | — | 5e+00 | no_python_reference |
 | `pls_diagnostic_q` | PLS Q residuals / SPE (§9) | R / `mdatools` 0.15.0 | ✓ | 2.190e+00 | 5e+00 | ok |
+| `bagging_pls` | Bagging PLS (§20) | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |
+| `boosting_pls` | Boosting PLS (§20) | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |
+| `random_subspace_pls` | Random-subspace PLS (§20) | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |
 | `pls_glm` | PLS-GLM (§5) — softmax/Poisson IRLS on PLS scores | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |
 | `pls_qda` | PLS-QDA (§5) — quadratic discriminant on PLS scores | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |
 | `pls_cox` | PLS-Cox (§5) — Cox PH on PLS scores | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |

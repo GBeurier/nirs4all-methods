@@ -630,7 +630,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.79.0+abi.1.9.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.80.0+abi.1.10.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
@@ -1103,6 +1103,52 @@ P4A_API p4a_status_t p4a_fused_sparse_pls_fit(
     const p4a_matrix_view_t* Y,
     double l1_lambda,
     double fusion_lambda,
+    p4a_method_result_t** out_result);
+
+/* Bagging PLS (§20). Bootstrap aggregation of `n_estimators` PLS
+ * regressors with the configured seed. Returns the average regression
+ * coefficient matrix:
+ *   "coefficients"   (n_features x n_targets)
+ *   "predictions"    (n_samples x n_targets)
+ *   "x_mean", "y_mean"
+ *   scalar "rmse", scalar "n_estimators"
+ */
+P4A_API p4a_status_t p4a_bagging_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_estimators,
+    uint64_t seed,
+    p4a_method_result_t** out_result);
+
+/* Boosting PLS (§20). Gradient-boosting style stage-wise refit of
+ * `n_estimators` PLS regressors with a per-stage `learning_rate`.
+ * Output shape identical to bagging_pls_fit.
+ */
+P4A_API p4a_status_t p4a_boosting_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_estimators,
+    double learning_rate,
+    p4a_method_result_t** out_result);
+
+/* Random-subspace PLS (§20). Each of `n_estimators` PLS regressors is
+ * fit on a random subset of `features_per_subspace` columns. The
+ * result averages predictions over the missing columns by zero-padding
+ * coefficients; output shape identical to bagging_pls_fit plus a
+ * scalar `features_per_subspace`.
+ */
+P4A_API p4a_status_t p4a_random_subspace_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_estimators,
+    int32_t features_per_subspace,
+    uint64_t seed,
     p4a_method_result_t** out_result);
 
 /* PLS-GLM (§5). PLS-reduced design feeding a softmax / Poisson IRLS.

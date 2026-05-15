@@ -575,6 +575,49 @@ def _approximate_press_pls4all(ctx, cfg, X, Y, *, max_components, **_):
                                               max_components=max_components)
 
 
+def _bagging_pls_pls4all(ctx, cfg, X, Y, *, n_components, n_estimators,
+                          seed, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    return pls4all.bagging_pls_fit(ctx, cfg, X, Y,
+                                    n_estimators=n_estimators, seed=seed)
+
+
+def _boosting_pls_pls4all(ctx, cfg, X, Y, *, n_components, n_estimators,
+                           learning_rate, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    return pls4all.boosting_pls_fit(ctx, cfg, X, Y,
+                                     n_estimators=n_estimators,
+                                     learning_rate=learning_rate)
+
+
+def _random_subspace_pls_pls4all(ctx, cfg, X, Y, *, n_components,
+                                  n_estimators, features_per_subspace,
+                                  seed, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    return pls4all.random_subspace_pls_fit(ctx, cfg, X, Y,
+                                            n_estimators=n_estimators,
+                                            features_per_subspace=features_per_subspace,
+                                            seed=seed)
+
+
 def _pls_glm_pls4all(ctx, cfg, X, Y, *, n_components, poisson, **_):
     import pls4all
     cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
@@ -952,6 +995,53 @@ METHODS: list[MethodSpec] = [
         notes=("R `mdatools::pls$xdecomp$Q`. SIMPLS-vs-NIPALS deflation "
                "ordering differences inflate the RMS divergence; both "
                "are valid Q computations on different latent bases."),
+    ),
+    MethodSpec(
+        name="bagging_pls",
+        description="Bagging PLS (§20)",
+        pls4all_fn=_bagging_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 30,
+                      "n_components": 4, "n_estimators": 10,
+                      "seed": 42},
+        python_reference=None,
+        r_reference=None,
+        paper_only=("Breiman, L. (1996). Bagging predictors. Machine "
+                    "Learning 24(2), 123-140. (sklearn ships "
+                    "`BaggingRegressor(PLSRegression())` but RNG / "
+                    "bootstrap-index conventions differ between "
+                    "sklearn and pls4all — numerical parity is "
+                    "impossible without sharing the exact RNG.)"),
+    ),
+    MethodSpec(
+        name="boosting_pls",
+        description="Boosting PLS (§20)",
+        pls4all_fn=_boosting_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 30,
+                      "n_components": 4, "n_estimators": 10,
+                      "learning_rate": 0.1},
+        python_reference=None,
+        r_reference=None,
+        paper_only=("Friedman, J. H. (2001). Greedy function "
+                    "approximation: a gradient boosting machine. "
+                    "Annals of Statistics 29(5), 1189-1232. (sklearn "
+                    "`GradientBoostingRegressor` uses decision-tree "
+                    "weak learners, not PLS; no widely-installable "
+                    "PLS-boosting port exists.)"),
+    ),
+    MethodSpec(
+        name="random_subspace_pls",
+        description="Random-subspace PLS (§20)",
+        pls4all_fn=_random_subspace_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 30,
+                      "n_components": 4, "n_estimators": 10,
+                      "features_per_subspace": 20, "seed": 42},
+        python_reference=None,
+        r_reference=None,
+        paper_only=("Ho, T. K. (1998). The random subspace method for "
+                    "constructing decision forests. IEEE TPAMI 20(8), "
+                    "832-844. (Random-feature-subsample bagging with "
+                    "PLS as the weak learner; same RNG-divergence "
+                    "issue as bagging.)"),
     ),
     MethodSpec(
         name="pls_glm",

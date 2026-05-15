@@ -50,6 +50,9 @@ from ._methods import (
     pls_glm_fit,
     pls_qda_fit,
     pls_cox_fit,
+    bagging_pls_fit,
+    boosting_pls_fit,
+    random_subspace_pls_fit,
 )
 
 
@@ -113,8 +116,11 @@ __all__ = [
     "pls_glm_fit",
     "pls_qda_fit",
     "pls_cox_fit",
+    "bagging_pls_fit",
+    "boosting_pls_fit",
+    "random_subspace_pls_fit",
     "version",
     "abi_version",
     "build_info",
 ]
-__version__ = "0.79.0"
+__version__ = "0.80.0"

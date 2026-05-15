@@ -7,9 +7,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ## [Unreleased]
 
 Next: 1-SE rule (§10), monitoring (§11), multi-block remainder (§17-19
-SO-PLS / OnPLS / ROSA), ensembles (§30) — each gated by external
-Python / R references when available, otherwise `paper-only` with
-citation.
+SO-PLS / OnPLS / ROSA) — each gated by external Python / R references
+when available, otherwise `paper-only` with citation.
+
+## [0.80.0-batch-10-ensembles] — 2026-05-15
+
+Public C ABI exposure for §20 PLS ensembles. All three are paper-only
+because RNG / bootstrap-index conventions differ between languages, so
+numerical parity is impossible without sharing the exact RNG.
+
+### Added
+
+- `p4a_bagging_pls_fit(ctx, cfg, X, Y, n_estimators, seed, **out)` —
+  bootstrap aggregation of PLS regressors (Breiman 1996).
+- `p4a_boosting_pls_fit(ctx, cfg, X, Y, n_estimators, learning_rate,
+  **out)` — gradient-boosting style stage-wise PLS (Friedman 2001).
+- `p4a_random_subspace_pls_fit(ctx, cfg, X, Y, n_estimators,
+  features_per_subspace, seed, **out)` — random-feature-subspace
+  bagging (Ho 1998).
+- Python bindings: `bagging_pls_fit`, `boosting_pls_fit`,
+  `random_subspace_pls_fit`.
+
+### Verified
+
+- 256 internal C++ tests pass.
+- ABI symbol diff: 154 symbols (+3, clean).
+- `ldd` audit: clean.
+- Parity gate: 13 external PASS, 19 paper-only smoke PASS, 0 numpy.
+
+### Changed
+
+- Project version `0.80.0+abi.1.10.0`. C ABI minor 9 → 10 (additive —
+  3 new symbols).
 
 ## [0.79.0-batch-9-pls-heads] — 2026-05-15
 

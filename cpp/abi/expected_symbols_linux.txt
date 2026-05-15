@@ -27,6 +27,8 @@ p4a_array_shape
 p4a_array_view
 p4a_backend_is_available
 p4a_backend_to_string
+p4a_bagging_pls_fit
+p4a_boosting_pls_fit
 p4a_check_abi_compatibility
 p4a_config_clone
 p4a_config_create
@@ -135,6 +137,7 @@ p4a_pls_cox_fit
 p4a_pls_diagnostics_compute
 p4a_pls_glm_fit
 p4a_pls_qda_fit
+p4a_random_subspace_pls_fit
 p4a_recursive_pls_run
 p4a_ridge_pls_fit
 p4a_robust_pls_fit

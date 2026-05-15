@@ -216,6 +216,30 @@ lib.p4a_pls_glm_fit.argtypes = [
     ctypes.c_int32, ctypes.POINTER(ctypes.c_void_p),
 ]
 
+lib.p4a_bagging_pls_fit.restype = ctypes.c_int
+lib.p4a_bagging_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_int32, ctypes.c_uint64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_boosting_pls_fit.restype = ctypes.c_int
+lib.p4a_boosting_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_int32, ctypes.c_double,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_random_subspace_pls_fit.restype = ctypes.c_int
+lib.p4a_random_subspace_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_int32, ctypes.c_int32, ctypes.c_uint64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
 lib.p4a_pls_qda_fit.restype = ctypes.c_int
 lib.p4a_pls_qda_fit.argtypes = [
     ctypes.c_void_p, ctypes.c_void_p,
@@ -606,6 +630,68 @@ def fused_sparse_pls_fit(ctx: Context, cfg: Config,
     return _resolve_handle(out, ctx, "p4a_fused_sparse_pls_fit")
 
 
+def bagging_pls_fit(ctx: Context, cfg: Config,
+                     X: Any, Y: Any,
+                     n_estimators: int,
+                     seed: int = 0) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_bagging_pls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_int32(int(n_estimators)),
+        ctypes.c_uint64(int(seed)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_bagging_pls_fit")
+
+
+def boosting_pls_fit(ctx: Context, cfg: Config,
+                      X: Any, Y: Any,
+                      n_estimators: int,
+                      learning_rate: float = 0.1) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_boosting_pls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_int32(int(n_estimators)),
+        ctypes.c_double(float(learning_rate)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_boosting_pls_fit")
+
+
+def random_subspace_pls_fit(ctx: Context, cfg: Config,
+                              X: Any, Y: Any,
+                              n_estimators: int,
+                              features_per_subspace: int,
+                              seed: int = 0) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_random_subspace_pls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_int32(int(n_estimators)),
+        ctypes.c_int32(int(features_per_subspace)),
+        ctypes.c_uint64(int(seed)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_random_subspace_pls_fit")
+
+
 def pls_glm_fit(ctx: Context, cfg: Config,
                  X: Any, Y: Any,
                  poisson: bool = False) -> MethodResult:
@@ -777,4 +863,7 @@ __all__ = [
     "pls_glm_fit",
     "pls_qda_fit",
     "pls_cox_fit",
+    "bagging_pls_fit",
+    "boosting_pls_fit",
+    "random_subspace_pls_fit",
 ]

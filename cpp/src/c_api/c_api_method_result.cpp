@@ -906,6 +906,143 @@ P4A_API p4a_status_t p4a_fused_sparse_pls_fit(
     }
 }
 
+namespace {
+
+void pack_ensemble_result(p4a_method_result_s& handle,
+                            const ::pls4all::core::EnsemblePlsResult& res,
+                            const p4a_matrix_view_t& X,
+                            const p4a_matrix_view_t& Y) {
+    const auto p = static_cast<std::int64_t>(res.n_features);
+    const auto q = static_cast<std::int64_t>(res.n_targets);
+    handle.set_double_matrix("coefficients", res.coefficients, p, q);
+    handle.set_double_matrix("x_mean", res.x_mean, 1, p);
+    handle.set_double_matrix("y_mean", res.y_mean, 1, q);
+
+    std::vector<double> predictions;
+    std::int64_t pred_rows = 0;
+    std::int64_t pred_cols = 0;
+    predict_from_coefficients(X, res.coefficients, res.x_mean, res.y_mean,
+                                p, q, predictions, pred_rows, pred_cols);
+    const double rmse = in_sample_rmse(predictions, Y);
+    handle.set_double_matrix("predictions", std::move(predictions),
+                              pred_rows, pred_cols);
+    handle.set_scalar("rmse", rmse);
+    handle.set_scalar("n_estimators",
+                       static_cast<double>(res.n_estimators));
+    handle.set_scalar("n_components",
+                       static_cast<double>(res.n_components));
+}
+
+}  // namespace
+
+P4A_API p4a_status_t p4a_bagging_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_estimators,
+    uint64_t seed,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_bagging_pls_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::EnsemblePlsResult res;
+        const p4a_status_t status = ::pls4all::core::fit_bagging_pls(
+            *as_core(ctx), *as_core(cfg), *X, *Y, n_estimators, seed,
+            res);
+        if (status != P4A_OK) return status;
+        auto handle = std::make_unique<p4a_method_result_s>();
+        pack_ensemble_result(*handle, res, *X, *Y);
+        handle->set_scalar("seed", static_cast<double>(seed));
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_bagging_pls_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_bagging_pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_boosting_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_estimators,
+    double learning_rate,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_boosting_pls_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::EnsemblePlsResult res;
+        const p4a_status_t status = ::pls4all::core::fit_boosting_pls(
+            *as_core(ctx), *as_core(cfg), *X, *Y, n_estimators,
+            learning_rate, res);
+        if (status != P4A_OK) return status;
+        auto handle = std::make_unique<p4a_method_result_s>();
+        pack_ensemble_result(*handle, res, *X, *Y);
+        handle->set_scalar("learning_rate", learning_rate);
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_boosting_pls_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_boosting_pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_random_subspace_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_estimators,
+    int32_t features_per_subspace,
+    uint64_t seed,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_random_subspace_pls_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::EnsemblePlsResult res;
+        const p4a_status_t status =
+            ::pls4all::core::fit_random_subspace_pls(
+                *as_core(ctx), *as_core(cfg), *X, *Y, n_estimators,
+                features_per_subspace, seed, res);
+        if (status != P4A_OK) return status;
+        auto handle = std::make_unique<p4a_method_result_s>();
+        pack_ensemble_result(*handle, res, *X, *Y);
+        handle->set_scalar("features_per_subspace",
+                            static_cast<double>(features_per_subspace));
+        handle->set_scalar("seed", static_cast<double>(seed));
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx,
+                   "out of memory in p4a_random_subspace_pls_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx,
+                   "internal error in p4a_random_subspace_pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
 P4A_API p4a_status_t p4a_pls_glm_fit(
     p4a_context_t* ctx,
     const p4a_config_t* cfg,
