@@ -6,17 +6,60 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-**Reference policy change** — incoming batch 6 will replace the
-numpy-mirror references shipped in batches 2/3/4 (cppls, weighted,
-robust, ridge, continuum, n_pls, kernel_pls_rbf, approximate_press)
-with external Python or R libraries when available, or mark them
-`paper-only` with the canonical paper citation when no widely
-installable library exists. Numpy mirrors written by us are no longer
-the primary parity reference per project policy.
-
-Then: 1-SE rule (§10), monitoring (§11), multi-block remainder (§17-19
+Next: 1-SE rule (§10), monitoring (§11), multi-block remainder (§17-19
 SO-PLS / OnPLS / ROSA), sparse / group / fused (§20-21), GLM/QDA/Cox
-heads (§27), PDS/DS/MIR/missing (§28), ensembles (§30).
+heads (§27), PDS/DS/MIR/missing (§28), ensembles (§30) — each gated
+by external Python / R references when available, otherwise
+`paper-only` with citation per the project reference policy.
+
+## [0.76.0-external-refs-only] — 2026-05-15
+
+**Reference-policy refactor.** Per user direction May 2026, parity-
+gate references are now restricted to external libraries in any
+language. Hand-written NumPy mirrors are removed. Methods without a
+widely installable external reference are marked `paper-only` and
+ship with the canonical paper citation; the runner records the
+citation but skips the numerical parity check.
+
+### Changed
+
+- `benchmarks/parity_timing/registry.py`:
+  - Dropped 9 hand-written NumPy-mirror classes
+    (`SparseSimplsNumpyReference`, `DiPlsNumpyReference`,
+    `CpplsNumpyReference`, `WeightedPlsNumpyReference`,
+    `RobustPlsNumpyReference`, `RidgePlsNumpyReference`,
+    `ContinuumNumpyReference`, `NPlsNumpyReference`,
+    `KernelPlsNumpyReference`, `O2PlsNumpyReference`,
+    `ApproximatePressNumpyReference`) and the `_numpy_simpls`
+    helper. ~600 lines removed.
+  - Added external-library references:
+    - `WeightedPlsSklearnReference` and `RidgePlsSklearnReference`
+      using sklearn 1.4.2 PLSRegression as the external PLS engine
+      (the row-scaling / data-augmentation preconditioning is
+      mathematically equivalent to weighted / ridge PLS by
+      construction).
+  - Added `paper_only` field on `MethodSpec` for methods whose only
+    known implementation is the original paper. Currently flagged:
+    `di_pls` (Nikzad-Langerodi 2018), `cppls` (Indahl 2005),
+    `robust_pls` (Cummins 1995), `continuum_regression` (Stone &
+    Brooks 1990), `n_pls` (Bro 1996), `kernel_pls_rbf` (Rosipal &
+    Trejo 2001), `approximate_press` (Eastment & Krzanowski 1982).
+  - `Stripped` is retained for OmicsPLS adapter.
+- `benchmarks/parity_timing/runner.py`: paper-only rows smoke-fit the
+  pls4all side and record `status=paper_only`. The runner exits non-
+  zero only on real parity regressions; paper-only rows count as
+  PASS as long as the C++ entry point is callable.
+- README parity table reflects the new policy: external refs and
+  paper-only citations only; no NumPy-mirror entries.
+
+### Verified
+
+- 256 internal C++ tests pass (dev-release, local-asan-ubsan-gcc,
+  local-ubsan-gcc) — no C++ changes in this commit.
+- ABI symbol diff vs expected list: 141 symbols (unchanged from 0.75).
+- `ldd` audit: only libc/libstdc++/libgcc/libm/loader.
+- `git diff --check`: clean.
+- Parity gate: 12 PASS (external), 7 paper-only (smoke), 0 numpy.
 
 ## [0.75.0-batch-5-pls-diagnostics] — 2026-05-15
 

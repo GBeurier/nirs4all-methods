@@ -33,7 +33,7 @@ In order:
 
 ```python
 import pls4all
-print(pls4all.version())       # "0.75.0+abi.1.6.0"
+print(pls4all.version())       # "0.76.0+abi.1.6.0"
 print(pls4all.abi_version())   # (1, 6, 0)
 
 with pls4all.Context() as ctx:

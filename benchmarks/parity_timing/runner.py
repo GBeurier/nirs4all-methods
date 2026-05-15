@@ -166,6 +166,38 @@ def _run_one_reference(method: MethodSpec, factory, X, Y, X_target,
 def _run_method(method: MethodSpec) -> list[ParityRow]:
     n = method.cell_params["n_samples"]
     p = method.cell_params["n_features"]
+
+    # Paper-only methods have no widely installable external reference and
+    # are documented with their canonical citation. We still smoke-fit the
+    # pls4all side to confirm the entry point is callable.
+    if method.paper_only:
+        n_targets = int(method.cell_params.get("n_targets", 1))
+        X, Y, X_target, sample_weights = _make_dataset(n, p,
+                                                        n_targets=n_targets)
+        extras = _resolve_extras(method, X_target, sample_weights)
+        pls4all_ok = True
+        try:
+            with pls4all.Context() as ctx, pls4all.Config() as cfg:
+                result = method.pls4all_fn(
+                    ctx, cfg, X, Y, **method.cell_params, **extras)
+                result.matrix(method.prediction_key)
+                result.close()
+        except Exception as exc:
+            print(f"  [{method.name}] pls4all_error: {exc}",
+                  file=sys.stderr)
+            pls4all_ok = False
+        return [ParityRow(
+            method=method.name, description=method.description,
+            reference_lang="paper", reference_lib="paper-only",
+            reference_version="-",
+            reference_notes=method.paper_only,
+            n_samples=n, n_features=p, params=method.cell_params,
+            parity_pass=pls4all_ok,
+            rmse_abs=float("nan"), rmse_rel=float("nan"),
+            tolerance=method.rmse_rel_tol,
+            status="paper_only" if pls4all_ok else "pls4all_failed",
+        )]
+
     n_targets = int(method.cell_params.get("n_targets", 1))
     X, Y, X_target, sample_weights = _make_dataset(n, p, n_targets=n_targets)
     extras = _resolve_extras(method, X_target, sample_weights)
@@ -328,7 +360,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\nWrote {args.output_dir / 'parity.csv'} ({len(rows)} rows)")
     print(f"Wrote {args.output_dir / 'summary.md'}")
     failures = [r for r in rows if not r.parity_pass and
-                r.status not in {"no_r_reference", "no_python_reference"}]
+                r.status not in {"no_r_reference", "no_python_reference",
+                                  "paper_only"}]
     if failures:
         print(f"\n{len(failures)} parity failure(s):", file=sys.stderr)
         for f in failures:

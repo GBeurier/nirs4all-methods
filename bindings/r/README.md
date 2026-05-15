@@ -34,7 +34,7 @@ on the system path or export `LD_LIBRARY_PATH` (Linux) /
 library(pls4all)
 
 pls4all_version()
-# "0.75.0+abi.1.6.0"
+# "0.76.0+abi.1.6.0"
 
 pls4all_abi_version()
 # c(1, 6, 0)
