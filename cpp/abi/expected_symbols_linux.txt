@@ -74,6 +74,7 @@ p4a_context_set_backend
 p4a_context_set_num_threads
 p4a_context_set_seed
 p4a_context_set_user_data
+p4a_di_pls_fit
 p4a_dtype_size
 p4a_dtype_to_string
 p4a_gating_strategy_create
@@ -89,6 +90,10 @@ p4a_matrix_view_init_colmajor
 p4a_matrix_view_init_rowmajor
 p4a_matrix_view_init_strided
 p4a_matrix_view_validate
+p4a_method_result_destroy
+p4a_method_result_get_double_matrix
+p4a_method_result_get_int_vector
+p4a_method_result_get_scalar
 p4a_model_destroy
 p4a_model_export_size
 p4a_model_export_to_buffer
@@ -114,7 +119,9 @@ p4a_pipeline_fit
 p4a_pipeline_size
 p4a_pipeline_transform
 p4a_pipeline_transform_alloc
+p4a_recursive_pls_run
 p4a_serialization_inspect
+p4a_sparse_simpls_fit
 p4a_status_to_string
 p4a_validation_plan_add_fold
 p4a_validation_plan_create

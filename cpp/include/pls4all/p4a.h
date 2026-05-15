@@ -249,6 +249,7 @@ typedef struct p4a_array_s                      p4a_array_t;
 typedef struct p4a_validation_plan_s            p4a_validation_plan_t;
 typedef struct p4a_aom_global_result_s          p4a_aom_global_result_t;
 typedef struct p4a_aom_per_component_result_s   p4a_aom_per_component_result_t;
+typedef struct p4a_method_result_s              p4a_method_result_t;
 
 /* ============================================================================
  * 6. Context lifecycle
@@ -629,7 +630,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.70.0+abi.1.1.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.71.0+abi.1.2.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
@@ -821,6 +822,90 @@ P4A_API p4a_status_t p4a_aom_per_component_result_get_prefix_scores(
 P4A_API p4a_status_t p4a_aom_per_component_result_get_predictions(
     const p4a_aom_per_component_result_t* result,
     const double** out_data, int64_t* out_rows, int64_t* out_cols);
+
+/* ============================================================================
+ * 16. Method-result handle — universal output container for the extra
+ *     PLS / monitoring / diagnostics / ensemble fit functions
+ * ==========================================================================
+ *
+ * p4a_method_result_t holds named double matrices, named int32 vectors and
+ * named scalars. The fit functions below build one of these per call and
+ * return it to the caller. Accessor functions look up outputs by name; the
+ * caller must NOT free returned buffer pointers (they point into the
+ * result-owned storage and are invalidated when the result is destroyed).
+ */
+
+P4A_API void p4a_method_result_destroy(p4a_method_result_t* result);
+
+/* Read a named double matrix. Returns P4A_ERR_INVALID_ARGUMENT when the name is
+ * absent. */
+P4A_API p4a_status_t p4a_method_result_get_double_matrix(
+    const p4a_method_result_t* result,
+    const char* name,
+    const double** out_data, int64_t* out_rows, int64_t* out_cols);
+
+/* Read a named int32 vector. Returns P4A_ERR_INVALID_ARGUMENT when the name is
+ * absent. */
+P4A_API p4a_status_t p4a_method_result_get_int_vector(
+    const p4a_method_result_t* result,
+    const char* name,
+    const int32_t** out_data, int32_t* out_size);
+
+/* Read a named scalar. Returns P4A_ERR_INVALID_ARGUMENT when the name is absent. */
+P4A_API p4a_status_t p4a_method_result_get_scalar(
+    const p4a_method_result_t* result,
+    const char* name,
+    double* out_value);
+
+/* ---- Fit entry points ---- */
+
+/* Sparse SIMPLS (§7). Soft-thresholds the SIMPLS direction by
+ * `sparsity_lambda` at each component. The result contains:
+ *   "coefficients" (n_features x n_targets, row-major)
+ *   "predictions"  (n_samples  x n_targets, row-major)
+ *   "x_mean"       (1 x n_features)
+ *   "y_mean"       (1 x n_targets)
+ *   "weights_w"    (n_features x n_components)
+ *   scalar "rmse"  in-sample RMSE
+ */
+P4A_API p4a_status_t p4a_sparse_simpls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    double sparsity_lambda,
+    p4a_method_result_t** out_result);
+
+/* Domain-invariant PLS (§13). Penalizes the SIMPLS direction's alignment
+ * with the source-vs-target mean difference. The result contains:
+ *   "coefficients"        (n_features x n_targets)
+ *   "predictions"         (n_samples  x n_targets)
+ *   "x_mean", "y_mean"
+ *   scalar "rmse_source"  in-sample RMSE on source data
+ */
+P4A_API p4a_status_t p4a_di_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X_source,
+    const p4a_matrix_view_t* Y_source,
+    const p4a_matrix_view_t* X_target,
+    double di_lambda,
+    p4a_method_result_t** out_result);
+
+/* Recursive (moving-window) PLS (§12). Predicts each sample at index >=
+ * window_size from a SIMPLS model fitted on the previous window_size rows.
+ * The result contains:
+ *   "predictions" (n_samples x n_targets) — zeros for warmup samples
+ *   int "in_window" (n_samples)           — 1 when predicted, 0 warmup
+ *   scalar "rmse_predictable" on samples i >= window_size
+ */
+P4A_API p4a_status_t p4a_recursive_pls_run(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t window_size,
+    p4a_method_result_t** out_result);
 
 #ifdef __cplusplus
 }  /* extern "C" */

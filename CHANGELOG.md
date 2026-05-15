@@ -6,8 +6,66 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-Next phase: ship public C ABI exposure for every method now living in
-`pls4all::core::` and propagate it to Python / R bindings.
+Continue rolling Overview methods through public C ABI + parity gate batches:
+diagnostics (§9), 1-SE rule (§10), monitoring (§11), multi-block (§16-19),
+sparse / group / fused (§20-21), N-PLS (§22), non-linear kernel (§24),
+CPPLS (§25), weighted/robust/ridge/continuum (§26), GLM/QDA/Cox heads (§27),
+PDS/DS/MIR/missing (§28), approximate-PRESS (§29) and ensembles (§30).
+
+## [0.71.0-batch-1-sparse-di-recursive] — 2026-05-15
+
+Public C ABI exposure for the first batch of remaining-algorithm-taxonomy
+methods, gated by an external-reference parity runner (Python + R when
+available).
+
+### Added
+
+- **Universal method-result handle** (`p4a_method_result_t`,
+  `cpp/src/core/method_result.hpp`,
+  `cpp/src/c_api/c_api_method_result.cpp`). Owns named double matrices,
+  int vectors and scalars; accessed via `p4a_method_result_get_double_matrix`,
+  `p4a_method_result_get_int_vector`, `p4a_method_result_get_scalar` and
+  released by `p4a_method_result_destroy`. Eliminates per-method ABI bloat
+  for the upcoming batches.
+- Public ABI entry points:
+  - `p4a_sparse_simpls_fit(ctx, cfg, X, Y, sparsity_lambda, **out)`
+    (Chun & Keles 2010 soft-threshold SIMPLS).
+  - `p4a_di_pls_fit(ctx, cfg, X_source, Y_source, X_target, di_lambda, **out)`
+    (Domain-Invariant PLS).
+  - `p4a_recursive_pls_run(ctx, cfg, X, Y, window_size, **out)`
+    (recursive / moving-window PLS).
+- Python bindings under `pls4all._methods`:
+  `MethodResult`, `sparse_simpls_fit`, `di_pls_fit`, `recursive_pls_run`.
+- Parity-gate runner `benchmarks/parity_timing/runner.py` + reference
+  adapters in `benchmarks/parity_timing/registry.py`.
+  - Sparse SIMPLS vs `numpy-mirror` (5.67e-3) and R `spls` 2.3.2 (2.51e-5).
+  - DI-PLS vs `numpy-mirror` (4.82e-3); flagged `no_r_reference` —
+    Domain-Invariant PLS has no widely installable R port.
+  - Recursive PLS vs `scikit-learn` 1.4.2 (1.23e-2) and R `pls` 2.8.5
+    (1.23e-2).
+- Parity report committed under
+  [`benchmarks/results/parity_gate/`](benchmarks/results/parity_gate/) and
+  surfaced in the top-level README.
+
+### Changed
+
+- Project version is now `0.71.0+abi.1.2.0`. C ABI minor bumped 1 → 2
+  (additive: 7 new symbols, all `p4a_*` prefixed; `ldd` audit clean).
+- `cpp/abi/expected_symbols_linux.txt` now lists 131 exported symbols
+  (sorted).
+- Python wheel loader (`bindings/python/src/pls4all/_ffi.py`) accepts the
+  new `libp4a.so.0.71.0` filename.
+
+### Verified
+
+- 256 internal C++ tests pass (dev-release, local-asan-ubsan-gcc,
+  local-ubsan-gcc).
+- ABI symbol diff vs expected list: clean.
+- `ldd` audit: no forbidden runtime dependency (`libopenblas`, `libmkl`,
+  `libpython`, `libR`, `librcpp`, `libboost`, `libeigen`, `libpybind11`,
+  `libnlohmann`, `libyaml-cpp`).
+- `git diff --check`: clean.
+- Parity gate: 5 PASS, 1 `no_r_reference` (documented).
 
 ## [0.70.0-overview-completion] — 2026-05-15
 

@@ -18,25 +18,27 @@ The project rule remains:
 
 ## Current Checkpoint - 2026-05-15
 
-Latest local tag: `phase-16-to-30-overview-completion` (`0.70.0+abi.1.1.0`).
+Latest local tag: `phase-31a-batch-1-sparse-di-recursive` (`0.71.0+abi.1.2.0`).
 
 Last green local gate:
 
 - 97 deterministic parity fixtures.
-- 256 C++ ABI/core tests (was 228 in Phase 8–15; 28 new tests for the §7,
-  §8, §9, §10.2, §13, §18, §20 batches closing the Overview taxonomy).
+- 256 C++ ABI/core tests (unchanged at 256; Batch 1 promotes existing
+  internal kernels to public ABI rather than adding new ones).
 - `pls4all_cli --selfcheck`.
 - `pls4all_cli --bench` smoke for every shipped PLS solver.
 - Python ctypes smoke: `bindings/python/smoke_aom_pop.py` exercises every
   AOM/POP fixture through the public C ABI.
 - Python model smoke: `pls4all.Model.fit / predict / get_array` succeeds.
-- ABI symbol diff against `cpp/abi/expected_symbols_linux.txt` (unchanged
-  — the §7–§19 work is internal-only; public ABI is still `1.1.0`).
+- ABI symbol diff against `cpp/abi/expected_symbols_linux.txt`: 131
+  symbols, all `p4a_*` prefixed.
 - `ldd` dependency audit: only libc/libstdc++/libgcc/libm/loader.
 - UBSAN.
 - ASAN+UBSAN.
 - Benchmarks: `python benchmarks/run.py --check` passes for every
   shipped suite (aom_global, pls_regression, matrix).
+- Parity gate (`benchmarks/parity_timing/runner.py`): 5 PASS, 1
+  `no_r_reference` (DI-PLS — documented).
 
 Current git notes:
 
@@ -170,16 +172,19 @@ All shipped as internal kernels in
 ## Next Agent Prompt
 
 Continue from `/home/delete/nirs4all/pls4all` on `main`, currently tagged
-`phase-16-to-30-overview-completion` (`0.70.0+abi.1.1.0`). Do not use GitHub
-Actions for now. Keep using the local gate: pinned fixture generator,
+`phase-31a-batch-1-sparse-di-recursive` (`0.71.0+abi.1.2.0`). Do not use
+GitHub Actions for now. Keep using the local gate: pinned fixture generator,
 dev-release build, C++ tests, CLI selfcheck (`pls4all_cli --selfcheck`),
 CLI bench smoke (`pls4all_cli --bench --algo pls_simpls --samples 200
 --features 100`), Python smoke (`bindings/python/smoke_aom_pop.py` plus
 the version/context/config snippet in `bindings/python/README.md` plus
 `pls4all.Model.fit/predict` round-trip), ABI symbol diff, `ldd`,
 `git diff --check`, UBSAN and ASAN+UBSAN, and `python benchmarks/run.py
---check` for the benchmark gate. Leave untracked `Backlog.md` and
-`docs/_bench/` alone. For AOM/POP parity, use
+--check` for the benchmark gate. Also run the new external-reference
+parity gate `PYTHONPATH=bindings/python/src \
+parity/python_generator/.venv/bin/python -m benchmarks.parity_timing.runner`
+and re-commit `benchmarks/results/parity_gate/`. Leave untracked
+`Backlog.md` and `docs/_bench/` alone. For AOM/POP parity, use
 `/home/delete/nirs4all/nirs4all/bench/AOM_v0/aompls` as the oracle.
 
 Algorithm development is now complete for every Overview section. The next

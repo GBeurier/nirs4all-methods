@@ -108,7 +108,8 @@ set(_pls4all_c_sources
     c_api/c_api_pipeline.cpp
     c_api/c_api_model.cpp
     c_api/c_api_validation_plan.cpp
-    c_api/c_api_aom_selection.cpp)
+    c_api/c_api_aom_selection.cpp
+    c_api/c_api_method_result.cpp)
 
 function(pls4all_apply_c_target target)
     # Embed all pls4all_core objects directly into the C-API target so that

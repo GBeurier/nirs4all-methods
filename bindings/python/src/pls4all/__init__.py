@@ -25,6 +25,12 @@ from ._aom import (
     aom_per_component_select,
 )
 from ._model import Model, ModelArrayKind
+from ._methods import (
+    MethodResult,
+    sparse_simpls_fit,
+    di_pls_fit,
+    recursive_pls_run,
+)
 
 
 def version() -> str:
@@ -63,8 +69,12 @@ __all__ = [
     "aom_per_component_select",
     "Model",
     "ModelArrayKind",
+    "MethodResult",
+    "sparse_simpls_fit",
+    "di_pls_fit",
+    "recursive_pls_run",
     "version",
     "abi_version",
     "build_info",
 ]
-__version__ = "0.68.0"
+__version__ = "0.71.0"
