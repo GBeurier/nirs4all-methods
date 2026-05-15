@@ -70,6 +70,14 @@ HEADER_SPECS = {
         "struct": "AomPreprocessingFixture",
         "array": "kAomPreprocessingFixtures",
     },
+    "aom-selection": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "aom_selection_fixtures.hpp",
+        "fixtures": (
+            "synthetic_aom_global_simpls_cv_v1",
+        ),
+        "struct": "AomSelectionFixture",
+        "array": "kAomSelectionFixtures",
+    },
     "metrics": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "metrics_fixtures.hpp",
         "fixtures": (
@@ -816,6 +824,118 @@ def generate_aom_preprocessing(fixture_ids: Sequence[str],
             f"        {_matrix_ref(outputs_name, expected['operator_outputs'])},\n"
             f"        {_matrix_ref(transformed_name, expected['transformed'])},\n"
             f"        AomPreprocessingIndexRef{{{kinds_name}, sizeof({kinds_name}) / sizeof(std::int64_t)}}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
+def generate_aom_selection(fixture_ids: Sequence[str],
+                           fixture_dir: Path,
+                           out: Path,
+                           family: str,
+                           struct_name: str,
+                           array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct AomSelectionIndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t max_components;",
+        "    std::int32_t n_operators;",
+        "    std::int32_t n_folds;",
+        "    std::int32_t selected_operator_index;",
+        "    std::int32_t selected_n_components;",
+        "    double best_score;",
+        "    MatrixRef X;",
+        "    MatrixRef Y;",
+        "    MatrixRef operator_params;",
+        "    MatrixRef operator_scores;",
+        "    MatrixRef rmse_curves;",
+        "    MatrixRef predictions;",
+        "    AomSelectionIndexRef operator_kinds;",
+        "    AomSelectionIndexRef operator_param_offsets;",
+        "    AomSelectionIndexRef fold_train_offsets;",
+        "    AomSelectionIndexRef fold_train_indices;",
+        "    AomSelectionIndexRef fold_test_offsets;",
+        "    AomSelectionIndexRef fold_test_indices;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        params = fixture["generator"]["params"]
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        y_name = f"{prefix}_Y"
+        op_params_name = f"{prefix}_operator_params"
+        op_scores_name = f"{prefix}_operator_scores"
+        curves_name = f"{prefix}_rmse_curves"
+        predictions_name = f"{prefix}_predictions"
+        kinds_name = f"{prefix}_operator_kinds"
+        param_offsets_name = f"{prefix}_operator_param_offsets"
+        train_offsets_name = f"{prefix}_fold_train_offsets"
+        train_indices_name = f"{prefix}_fold_train_indices"
+        test_offsets_name = f"{prefix}_fold_test_offsets"
+        test_indices_name = f"{prefix}_fold_test_indices"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, y_name, fixture["data"]["Y"]["values"])
+        _emit_array(lines, op_params_name, expected["operator_params"]["values"])
+        _emit_array(lines, op_scores_name, expected["operator_scores"]["values"])
+        _emit_array(lines, curves_name, expected["rmse_curves"]["values"])
+        _emit_array(lines, predictions_name, expected["predictions"]["values"])
+        _emit_int_array(lines, kinds_name, expected["operator_kinds"]["values"])
+        _emit_int_array(lines, param_offsets_name, expected["operator_param_offsets"]["values"])
+        _emit_int_array(lines, train_offsets_name, expected["fold_train_offsets"]["values"])
+        _emit_int_array(lines, train_indices_name, expected["fold_train_indices"]["values"])
+        _emit_int_array(lines, test_offsets_name, expected["fold_test_offsets"]["values"])
+        _emit_int_array(lines, test_indices_name, expected["fold_test_indices"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(params['max_components'])},\n"
+            f"        {int(expected['operator_kinds']['shape'][1])},\n"
+            f"        {int(params['cv'])},\n"
+            f"        {int(expected['selected_operator_index'])},\n"
+            f"        {int(expected['selected_n_components'])},\n"
+            f"        {_format_double(float(expected['best_score']))},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(y_name, fixture['data']['Y'])},\n"
+            f"        {_matrix_ref(op_params_name, expected['operator_params'])},\n"
+            f"        {_matrix_ref(op_scores_name, expected['operator_scores'])},\n"
+            f"        {_matrix_ref(curves_name, expected['rmse_curves'])},\n"
+            f"        {_matrix_ref(predictions_name, expected['predictions'])},\n"
+            f"        AomSelectionIndexRef{{{kinds_name}, sizeof({kinds_name}) / sizeof(std::int64_t)}},\n"
+            f"        AomSelectionIndexRef{{{param_offsets_name}, sizeof({param_offsets_name}) / sizeof(std::int64_t)}},\n"
+            f"        AomSelectionIndexRef{{{train_offsets_name}, sizeof({train_offsets_name}) / sizeof(std::int64_t)}},\n"
+            f"        AomSelectionIndexRef{{{train_indices_name}, sizeof({train_indices_name}) / sizeof(std::int64_t)}},\n"
+            f"        AomSelectionIndexRef{{{test_offsets_name}, sizeof({test_offsets_name}) / sizeof(std::int64_t)}},\n"
+            f"        AomSelectionIndexRef{{{test_indices_name}, sizeof({test_indices_name}) / sizeof(std::int64_t)}}\n"
             "    }"
         )
 
@@ -3823,6 +3943,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "aom-preprocessing":
         generate_aom_preprocessing(fixture_ids, args.fixture_dir, out, args.family,
                                    str(spec["struct"]), str(spec["array"]))
+    elif args.family == "aom-selection":
+        generate_aom_selection(fixture_ids, args.fixture_dir, out, args.family,
+                               str(spec["struct"]), str(spec["array"]))
     elif args.family == "metrics":
         generate_metrics(fixture_ids, args.fixture_dir, out, args.family,
                          str(spec["struct"]), str(spec["array"]))

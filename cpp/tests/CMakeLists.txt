@@ -8,6 +8,7 @@
 add_executable(pls4all_tests
     main.cpp
     abi/test_aom_preprocessing.cpp
+    abi/test_aom_selection.cpp
     abi/test_bipls_selection.cpp
     abi/test_bve_selection.cpp
     abi/test_emcuve_selection.cpp

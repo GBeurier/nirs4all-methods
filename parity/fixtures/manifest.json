@@ -1,5 +1,10 @@
 {
   "fixtures": {
+    "synthetic_aom_global_simpls_cv_v1": {
+      "bytes": 4438,
+      "path": "synthetic_aom_global_simpls_cv_v1.json",
+      "sha256": "4073bbfffb57bb5f4aa30cfcf84e13fc4b8846a78aea515e9d401c2c319a155b"
+    },
     "synthetic_aom_hard_preprocessing_v1": {
       "bytes": 3240,
       "path": "synthetic_aom_hard_preprocessing_v1.json",

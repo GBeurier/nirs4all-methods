@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import itertools
 import math
+import os
+import sys
+from pathlib import Path
 from typing import Any, Sequence
 
 import numpy as np
@@ -4744,6 +4747,243 @@ def _aom_preprocessing_fixture(
     }
 
 
+_AOM_BENCH_OPERATOR_KIND_IDS = {
+    "identity": 0,
+    "detrend_d1": 7,
+}
+
+
+_AOM_BENCH_OPERATOR_PARAMS = {
+    "identity": [],
+    "detrend_d1": [1.0],
+}
+
+
+def _aom_bench_root() -> Path:
+    env = os.environ.get("PLS4ALL_AOM_BENCH_DIR")
+    candidates: list[Path] = []
+    if env:
+        candidates.append(Path(env))
+    here = Path(__file__).resolve()
+    repo_root = here.parents[4]
+    workspace_root = here.parents[5]
+    candidates.extend([
+        workspace_root / "nirs4all" / "bench" / "AOM_v0",
+        workspace_root / "bench" / "AOM_v0",
+        repo_root / ".." / "nirs4all" / "bench" / "AOM_v0",
+    ])
+    for candidate in candidates:
+        root = candidate.resolve()
+        if (root / "aompls" / "selection.py").exists():
+            return root
+    searched = ", ".join(str(path) for path in candidates)
+    raise FileNotFoundError(f"nirs4all bench AOM_v0 reference not found; searched: {searched}")
+
+
+def _aom_bench_reference_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    max_components: int,
+    cv: int,
+    random_state: int,
+) -> dict[str, Any]:
+    root = _aom_bench_root()
+    root_str = str(root)
+    if root_str not in sys.path:
+        sys.path.insert(0, root_str)
+
+    from sklearn.model_selection import KFold
+
+    from aompls.estimators import AOMPLSRegressor
+    from aompls.operators import DetrendProjectionOperator, IdentityOperator
+    from aompls.scorers import CriterionConfig
+    from aompls.selection import _auto_prefix_score
+
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    y1 = Y.ravel() if Y.shape[1] == 1 else Y
+    p = X.shape[1]
+    operators = [
+        IdentityOperator(p=p),
+        DetrendProjectionOperator(degree=1, p=p),
+    ]
+    operator_names = [op.name for op in operators]
+
+    model = AOMPLSRegressor(
+        n_components="auto",
+        max_components=int(max_components),
+        engine="simpls_materialized",
+        selection="global",
+        criterion="cv",
+        operator_bank=operators,
+        orthogonalization="transformed",
+        center=True,
+        scale=False,
+        cv=int(cv),
+        random_state=int(random_state),
+        one_se_rule=False,
+    ).fit(X, y1)
+
+    Xc = X - X.mean(axis=0)
+    yc = Y - Y.mean(axis=0)
+    criterion = CriterionConfig(
+        kind="cv",
+        cv=int(cv),
+        random_state=int(random_state),
+        task="regression",
+        repeats=1,
+        one_se_rule=False,
+    )
+    curves: list[list[float]] = []
+    operator_scores: list[float] = []
+    for op_index in range(len(operators)):
+        _best_k, score, curve = _auto_prefix_score(
+            "simpls_materialized",
+            operators,
+            [op_index] * int(max_components),
+            Xc,
+            yc,
+            int(max_components),
+            criterion,
+            "transformed",
+        )
+        curves.append(np.asarray(curve, dtype=np.float64).tolist())
+        operator_scores.append(float(score))
+
+    folds = list(KFold(n_splits=int(cv), shuffle=True, random_state=int(random_state)).split(Xc, yc))
+    train_indices: list[int] = []
+    test_indices: list[int] = []
+    train_offsets = [0]
+    test_offsets = [0]
+    for train, test in folds:
+        train_indices.extend(int(v) for v in train.tolist())
+        test_indices.extend(int(v) for v in test.tolist())
+        train_offsets.append(len(train_indices))
+        test_offsets.append(len(test_indices))
+
+    param_offsets = [0]
+    params: list[float] = []
+    for name in operator_names:
+        params.extend(_AOM_BENCH_OPERATOR_PARAMS[name])
+        param_offsets.append(len(params))
+
+    predictions = np.asarray(model.predict(X), dtype=np.float64)
+    if predictions.ndim == 1:
+        predictions = predictions.reshape(-1, 1)
+    selected_operator_index = int(model.selected_operator_indices_[0])
+    selected_n_components = int(model.n_components_)
+    best_score = float(model.diagnostics_.extras["best_score"])
+    return {
+        "operator_names": operator_names,
+        "operator_kinds": {
+            "shape": [1, len(operator_names)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(_AOM_BENCH_OPERATOR_KIND_IDS[name]) for name in operator_names],
+        },
+        "operator_param_offsets": {
+            "shape": [1, len(param_offsets)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(v) for v in param_offsets],
+        },
+        "operator_params": {
+            "shape": [1, len(params)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": [float(v) for v in params],
+        },
+        "fold_train_offsets": {
+            "shape": [1, len(train_offsets)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(v) for v in train_offsets],
+        },
+        "fold_train_indices": {
+            "shape": [1, len(train_indices)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(v) for v in train_indices],
+        },
+        "fold_test_offsets": {
+            "shape": [1, len(test_offsets)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(v) for v in test_offsets],
+        },
+        "fold_test_indices": {
+            "shape": [1, len(test_indices)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(v) for v in test_indices],
+        },
+        "operator_scores": {
+            "shape": [1, len(operator_scores)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": operator_scores,
+        },
+        "rmse_curves": {
+            "shape": [len(operator_names), int(max_components)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": np.asarray(curves, dtype=np.float64).reshape(-1, order="C").tolist(),
+        },
+        "predictions": {
+            "shape": list(predictions.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(predictions),
+        },
+        "selected_operator_index": selected_operator_index,
+        "selected_n_components": selected_n_components,
+        "best_score": best_score,
+    }
+
+
+def _aom_global_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    max_components: int,
+    cv: int,
+    random_state: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64).reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "nirs4all.bench.AOM_v0.aompls",
+            "version":          "AOM_v0",
+            "git_revision_sha": "unknown",
+            "params": {
+                "engine":         "simpls_materialized",
+                "selection":      "global",
+                "criterion":      "cv",
+                "max_components": int(max_components),
+                "cv":             int(cv),
+                "random_state":   int(random_state),
+                "reference":      "nirs4all/bench/AOM_v0/aompls",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed + 1, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _aom_bench_reference_expected(X, Y, max_components, cv, random_state),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "bench-AOM_v0-aom-selection",
+        },
+    }
+
+
 def _metrics_fixture(
     fixture_id: str,
     seed: int,
@@ -6918,6 +7158,29 @@ def synthetic_aom_hard_preprocessing_v1() -> dict[str, Any]:
                                       X=X,
                                       operators=["center", "identity", "snv"],
                                       gating_mode="hard")
+
+
+def synthetic_aom_global_simpls_cv_v1() -> dict[str, Any]:
+    """9 samples, 6 features for bench AOM_v0 global SIMPLS CV parity."""
+    X = np.array([
+        [1.0, 2.0, 3.0, 4.5, 5.5, 7.0],
+        [1.2, 2.1, 3.4, 4.8, 5.8, 7.5],
+        [0.9, 1.8, 2.8, 4.2, 5.2, 6.6],
+        [1.5, 2.5, 3.8, 5.0, 6.1, 7.8],
+        [1.8, 2.8, 4.1, 5.4, 6.4, 8.1],
+        [2.1, 3.0, 4.5, 5.9, 6.9, 8.6],
+        [2.3, 3.4, 4.9, 6.2, 7.3, 9.0],
+        [2.6, 3.7, 5.2, 6.6, 7.8, 9.4],
+        [2.9, 4.0, 5.6, 7.1, 8.2, 9.9],
+    ], dtype=np.float64)
+    Y = np.array([1.1, 1.4, 0.9, 1.8, 2.1, 2.5, 2.8, 3.2, 3.6], dtype=np.float64)
+    return _aom_global_selection_fixture("synthetic_aom_global_simpls_cv_v1",
+                                         seed=49,
+                                         X=X,
+                                         Y=Y,
+                                         max_components=3,
+                                         cv=3,
+                                         random_state=7)
 
 
 def synthetic_pipeline_msc_v1() -> dict[str, Any]:

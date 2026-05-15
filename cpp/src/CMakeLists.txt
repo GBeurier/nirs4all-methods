@@ -23,6 +23,7 @@ configure_file(
 # ---------------------------------------------------------------------------
 add_library(pls4all_core OBJECT
     core/aom_preprocessing.cpp
+    core/aom_selection.cpp
     core/bipls_selection.cpp
     core/bve_selection.cpp
     core/emcuve_selection.cpp
