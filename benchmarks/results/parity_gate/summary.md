@@ -1,7 +1,7 @@
 # Parity gate report
 
 Host: `Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.35`
-pls4all: `0.81.0+abi.1.11.0`
+pls4all: `0.82.0+abi.1.12.0`
 Python: `3.11.14`
 NumPy: `1.26.4`
 
@@ -30,6 +30,8 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `pls_diagnostic_t2` | PLS Hotelling T² (§9) | R / `mdatools` 0.15.0 | ✓ | 3.845e+00 | 1e+01 | ok |
 | `pls_diagnostic_q` | PLS Q residuals / SPE (§9) | python / `(none)` - | ✗ | — | 5e+00 | no_python_reference |
 | `pls_diagnostic_q` | PLS Q residuals / SPE (§9) | R / `mdatools` 0.15.0 | ✓ | 2.190e+00 | 5e+00 | ok |
+| `pls_monitoring` | PLS process monitoring (T²/Q thresholds + alarms) (§19) | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |
+| `one_se_rule` | One-SE component selection rule (§10) | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |
 | `so_pls` | SO-PLS — Sequential & Orthogonalized multi-block PLS (§17) | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |
 | `on_pls` | OnPLS — Orthogonal multi-block decomposition (§18) | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |
 | `rosa` | ROSA — Response-Oriented Sequential Alternation (§19) | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |

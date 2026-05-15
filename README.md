@@ -82,6 +82,8 @@ Runtime / speed-up benchmarks are tracked separately by
 | `so_pls` | paper-only | paper-only | — / — | paper-only (Næs et al. 2011) |
 | `on_pls` | paper-only | paper-only | — / — | paper-only (Löfstedt & Trygg 2011) |
 | `rosa` | paper-only | paper-only | — / — | paper-only (Liland et al. 2016) |
+| `pls_monitoring` | paper-only | paper-only | — / — | paper-only (Kourti & MacGregor 1995) |
+| `one_se_rule` | paper-only | paper-only | — / — | paper-only (Breiman et al. 1984) |
 
 Re-run the gate locally:
 

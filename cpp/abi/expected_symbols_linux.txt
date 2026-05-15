@@ -121,6 +121,7 @@ p4a_model_transform_alloc
 p4a_n_pls_fit
 p4a_o2pls_fit
 p4a_on_pls_fit
+p4a_one_se_rule_compute
 p4a_operator_bank_add
 p4a_operator_bank_create
 p4a_operator_bank_destroy
@@ -137,6 +138,7 @@ p4a_pipeline_transform_alloc
 p4a_pls_cox_fit
 p4a_pls_diagnostics_compute
 p4a_pls_glm_fit
+p4a_pls_monitoring_run
 p4a_pls_qda_fit
 p4a_random_subspace_pls_fit
 p4a_recursive_pls_run

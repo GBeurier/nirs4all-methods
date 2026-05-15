@@ -224,6 +224,21 @@ lib.p4a_bagging_pls_fit.argtypes = [
     ctypes.POINTER(ctypes.c_void_p),
 ]
 
+lib.p4a_pls_monitoring_run.restype = ctypes.c_int
+lib.p4a_pls_monitoring_run.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_double, ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_one_se_rule_compute.restype = ctypes.c_int
+lib.p4a_one_se_rule_compute.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_double),
+    ctypes.c_int32, ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
 lib.p4a_so_pls_fit.restype = ctypes.c_int
 lib.p4a_so_pls_fit.argtypes = [
     ctypes.c_void_p, ctypes.c_void_p,
@@ -656,6 +671,50 @@ def fused_sparse_pls_fit(ctx: Context, cfg: Config,
     return _resolve_handle(out, ctx, "p4a_fused_sparse_pls_fit")
 
 
+def pls_monitoring_run(ctx: Context,
+                         model: Any,
+                         X_reference: Any,
+                         X_monitor: Any,
+                         alpha: float = 0.05) -> MethodResult:
+    Xr = _as_float64_contiguous(X_reference)
+    Xm = _as_float64_contiguous(X_monitor)
+    xr_view = _matrix_view(Xr)
+    xm_view = _matrix_view(Xm)
+    model_handle = getattr(model, "handle", model)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_pls_monitoring_run(
+        ctx.handle, model_handle,
+        ctypes.byref(xr_view), ctypes.byref(xm_view),
+        ctypes.c_double(float(alpha)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_pls_monitoring_run")
+
+
+def one_se_rule_compute(ctx: Context,
+                          fold_rmse_matrix: Any,
+                          max_components: int | None = None,
+                          n_folds: int | None = None) -> MethodResult:
+    arr = np.ascontiguousarray(fold_rmse_matrix, dtype=np.float64)
+    if arr.ndim != 2:
+        raise ValueError("fold_rmse_matrix must be 2-D")
+    if max_components is None:
+        max_components = int(arr.shape[0])
+    if n_folds is None:
+        n_folds = int(arr.shape[1])
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_one_se_rule_compute(
+        ctx.handle,
+        arr.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        ctypes.c_int32(int(max_components)),
+        ctypes.c_int32(int(n_folds)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_one_se_rule_compute")
+
+
 def _blocks_to_views(blocks):
     views = (MatrixView * len(blocks))()
     refs = []
@@ -966,4 +1025,6 @@ __all__ = [
     "so_pls_fit",
     "on_pls_fit",
     "rosa_fit",
+    "pls_monitoring_run",
+    "one_se_rule_compute",
 ]

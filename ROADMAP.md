@@ -18,7 +18,7 @@ The project rule remains:
 
 ## Current Checkpoint - 2026-05-15
 
-Latest local tag: `phase-31k-batch-11-multiblock` (`0.81.0+abi.1.11.0`).
+Latest local tag: `phase-31l-batch-12-monitoring-onese` (`0.82.0+abi.1.12.0`).
 
 Last green local gate:
 
@@ -30,7 +30,7 @@ Last green local gate:
 - Python ctypes smoke: `bindings/python/smoke_aom_pop.py` exercises every
   AOM/POP fixture through the public C ABI.
 - Python model smoke: `pls4all.Model.fit / predict / get_array` succeeds.
-- ABI symbol diff against `cpp/abi/expected_symbols_linux.txt`: 157
+- ABI symbol diff against `cpp/abi/expected_symbols_linux.txt`: 159
   symbols, all `p4a_*` prefixed.
 - `ldd` dependency audit: only libc/libstdc++/libgcc/libm/loader.
 - UBSAN.
@@ -38,7 +38,7 @@ Last green local gate:
 - Benchmarks: `python benchmarks/run.py --check` passes for every
   shipped suite (aom_global, pls_regression, matrix).
 - Parity gate (`benchmarks/parity_timing/runner.py`): 13 PASS (all
-  external refs), 22 paper-only (smoke-only), 0 numpy-mirror.
+  external refs), 24 paper-only (smoke-only), 0 numpy-mirror.
 
 Current git notes:
 
@@ -172,7 +172,7 @@ All shipped as internal kernels in
 ## Next Agent Prompt
 
 Continue from `/home/delete/nirs4all/pls4all` on `main`, currently tagged
-`phase-31k-batch-11-multiblock` (`0.81.0+abi.1.11.0`). Do not use
+`phase-31l-batch-12-monitoring-onese` (`0.82.0+abi.1.12.0`). Do not use
 GitHub Actions for now. Keep using the local gate: pinned fixture generator,
 dev-release build, C++ tests, CLI selfcheck (`pls4all_cli --selfcheck`),
 CLI bench smoke (`pls4all_cli --bench --algo pls_simpls --samples 200

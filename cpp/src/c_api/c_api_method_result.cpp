@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <new>
 #include <string>
@@ -23,8 +24,10 @@
 #include "core/kernel_pls.hpp"
 #include "core/method_result.hpp"
 #include "core/model.hpp"
+#include "core/model_selection.hpp"
 #include "core/multiblock_extensions.hpp"
 #include "core/pls_diagnostics.hpp"
+#include "core/pls_monitoring.hpp"
 #include "core/recursive_pls.hpp"
 #include "core/tensor_pls.hpp"
 
@@ -934,6 +937,137 @@ void pack_ensemble_result(p4a_method_result_s& handle,
 }
 
 }  // namespace
+
+P4A_API p4a_status_t p4a_pls_monitoring_run(
+    p4a_context_t* ctx,
+    const p4a_model_t* model,
+    const p4a_matrix_view_t* X_reference,
+    const p4a_matrix_view_t* X_monitor,
+    double alpha,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || model == nullptr || X_reference == nullptr ||
+        X_monitor == nullptr) {
+        set_error(ctx, "null pointer in p4a_pls_monitoring_run");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        const auto& m = *as_core(model);
+        ::pls4all::core::MonitoringThresholds thresholds;
+        p4a_status_t status = ::pls4all::core::pls_monitoring_fit(
+            *as_core(ctx), m, *X_reference, alpha, thresholds);
+        if (status != P4A_OK) return status;
+        ::pls4all::core::MonitoringResult mon;
+        status = ::pls4all::core::pls_monitoring_evaluate(
+            *as_core(ctx), m, thresholds, *X_monitor, mon);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto n_ref =
+            static_cast<std::int64_t>(thresholds.n_reference);
+        const auto n_mon =
+            static_cast<std::int64_t>(mon.t2.size());
+        handle->set_double_matrix("t2", std::move(mon.t2), 1, n_mon);
+        handle->set_double_matrix("q", std::move(mon.q), 1, n_mon);
+        handle->set_double_matrix("t2_reference",
+                                   std::move(thresholds.t2_reference),
+                                   1, n_ref);
+        handle->set_double_matrix("q_reference",
+                                   std::move(thresholds.q_reference),
+                                   1, n_ref);
+        handle->set_int_vector("t2_alarms", std::move(mon.t2_alarms));
+        handle->set_int_vector("q_alarms", std::move(mon.q_alarms));
+        handle->set_int_vector("any_alarms", std::move(mon.any_alarms));
+        handle->set_scalar("t2_threshold", thresholds.t2_threshold);
+        handle->set_scalar("q_threshold", thresholds.q_threshold);
+        handle->set_scalar("alpha", thresholds.alpha);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_pls_monitoring_run");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_pls_monitoring_run");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_one_se_rule_compute(
+    p4a_context_t* ctx,
+    const double* fold_rmse_matrix,
+    int32_t max_components,
+    int32_t n_folds,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || fold_rmse_matrix == nullptr) {
+        set_error(ctx, "null pointer in p4a_one_se_rule_compute");
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (max_components < 1 || n_folds < 2) {
+        set_error(ctx,
+                   "one-SE rule needs max_components>=1 and n_folds>=2");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        ::pls4all::core::ComponentCvResult res;
+        res.max_components = max_components;
+        res.n_folds = n_folds;
+        const std::size_t total =
+            static_cast<std::size_t>(max_components) *
+            static_cast<std::size_t>(n_folds);
+        res.fold_rmse_matrix.assign(
+            fold_rmse_matrix, fold_rmse_matrix + total);
+        // Determine best_n_components by mean RMSE.
+        std::int32_t best_k = 1;
+        double best_mean = std::numeric_limits<double>::infinity();
+        std::vector<double> mean_rmse(
+            static_cast<std::size_t>(max_components), 0.0);
+        for (std::int32_t k = 0; k < max_components; ++k) {
+            double s = 0.0;
+            for (std::int32_t f = 0; f < n_folds; ++f) {
+                s += fold_rmse_matrix[
+                    static_cast<std::size_t>(k) *
+                    static_cast<std::size_t>(n_folds) +
+                    static_cast<std::size_t>(f)];
+            }
+            const double m = s / static_cast<double>(n_folds);
+            mean_rmse[static_cast<std::size_t>(k)] = m;
+            if (m < best_mean) {
+                best_mean = m;
+                best_k = k + 1;
+            }
+        }
+        res.best_n_components = best_k;
+
+        const p4a_status_t status = ::pls4all::core::select_one_se_components(
+            *as_core(ctx), res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        handle->set_double_matrix("mean_rmse_per_component",
+                                   std::move(mean_rmse),
+                                   1, max_components);
+        handle->set_int_vector("best_n_components",
+                                {res.best_n_components});
+        handle->set_int_vector("one_se_n_components",
+                                {res.one_se_n_components});
+        handle->set_scalar("one_se_standard_error",
+                            res.one_se_standard_error);
+        handle->set_scalar("one_se_threshold", res.one_se_threshold);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_one_se_rule_compute");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_one_se_rule_compute");
+        return P4A_ERR_INTERNAL;
+    }
+}
 
 P4A_API p4a_status_t p4a_so_pls_fit(
     p4a_context_t* ctx,

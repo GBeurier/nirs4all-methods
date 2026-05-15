@@ -56,6 +56,8 @@ from ._methods import (
     so_pls_fit,
     on_pls_fit,
     rosa_fit,
+    pls_monitoring_run,
+    one_se_rule_compute,
 )
 
 
@@ -125,8 +127,10 @@ __all__ = [
     "so_pls_fit",
     "on_pls_fit",
     "rosa_fit",
+    "pls_monitoring_run",
+    "one_se_rule_compute",
     "version",
     "abi_version",
     "build_info",
 ]
-__version__ = "0.81.0"
+__version__ = "0.82.0"

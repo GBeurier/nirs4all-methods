@@ -575,6 +575,39 @@ def _approximate_press_pls4all(ctx, cfg, X, Y, *, max_components, **_):
                                               max_components=max_components)
 
 
+def _pls_monitoring_pls4all(ctx, cfg, X, Y, *, n_components,
+                             alpha, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    cfg.store_scores = True
+    n = X.shape[0]
+    split = n // 2
+    Xref = X[:split]
+    Xmon = X[split:]
+    Yref = Y[:split]
+    m = pls4all.Model.fit(ctx, cfg, Xref, Yref)
+    try:
+        return pls4all.pls_monitoring_run(ctx, m, Xref, Xmon, alpha=alpha)
+    finally:
+        m.close()
+
+
+def _one_se_rule_pls4all(ctx, cfg, X, Y, *, max_components, n_folds, **_):
+    import pls4all
+    # Generate a deterministic fold-RMSE matrix shape consistent with the
+    # 1-SE rule: max_components x n_folds.
+    rng = np.random.default_rng(11)
+    fold_rmse = rng.uniform(0.5, 1.0, size=(max_components, n_folds))
+    return pls4all.one_se_rule_compute(ctx, fold_rmse,
+                                        max_components=max_components,
+                                        n_folds=n_folds)
+
+
 def _split_into_blocks(X, n_blocks):
     """Split a single X matrix into approximately equal-width blocks
     along the feature axis. Used by multi-block paper-only smoke tests."""
@@ -1046,6 +1079,37 @@ METHODS: list[MethodSpec] = [
         notes=("R `mdatools::pls$xdecomp$Q`. SIMPLS-vs-NIPALS deflation "
                "ordering differences inflate the RMS divergence; both "
                "are valid Q computations on different latent bases."),
+    ),
+    MethodSpec(
+        name="pls_monitoring",
+        description="PLS process monitoring (T²/Q thresholds + alarms) (§19)",
+        pls4all_fn=_pls_monitoring_pls4all,
+        cell_params={"n_samples": 200, "n_features": 30,
+                      "n_components": 4, "alpha": 0.05},
+        python_reference=None,
+        r_reference=None,
+        prediction_key="t2",  # the runner just smoke-checks pls4all
+        paper_only=("Kourti, T. & MacGregor, J. F. (1995). Process "
+                    "analysis, monitoring and diagnosis, using "
+                    "multivariate projection methods. Chemom. Intell. "
+                    "Lab. Syst. 28(1), 3-21. (R `mvprocess` and similar "
+                    "industrial monitoring tools are proprietary; no "
+                    "widely installable port exists.)"),
+    ),
+    MethodSpec(
+        name="one_se_rule",
+        description="One-SE component selection rule (§10)",
+        pls4all_fn=_one_se_rule_pls4all,
+        cell_params={"n_samples": 200, "n_features": 30,
+                      "max_components": 8, "n_folds": 5},
+        python_reference=None,
+        r_reference=None,
+        prediction_key="mean_rmse_per_component",
+        paper_only=("Breiman, L., Friedman, J. H., Olshen, R. A. & "
+                    "Stone, C. J. (1984). Classification and Regression "
+                    "Trees. (One-SE rule from CART §3.4; R `pls` has "
+                    "selectNcomp but uses a different RMSE shape — we "
+                    "expose the rule as a standalone helper.)"),
     ),
     MethodSpec(
         name="so_pls",

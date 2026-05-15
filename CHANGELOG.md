@@ -6,9 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-Remaining algorithm-taxonomy work: 1-SE rule (§10), monitoring (§11) —
-internal kernels are minimal at this point; expose them only when a
-clear external reference exists.
+All Overview-taxonomy method kernels are now exposed through the public
+C ABI with parity or paper-only entries. Next tracks: language bindings
+(MATLAB MEX, WASM, JNI), accelerated backends (BLAS, OpenMP, CUDA),
+and the long-deferred timing benchmark matrix.
+
+## [0.82.0-batch-12-monitoring-onese] — 2026-05-15
+
+Public C ABI exposure for §19 PLS process monitoring and §10 one-SE
+component-selection rule. Both paper-only — industrial monitoring
+packages are mostly proprietary, and the one-SE rule is a numerical
+helper that lacks a unified external reference.
+
+### Added
+
+- `p4a_pls_monitoring_run(ctx, model, X_reference, X_monitor, alpha,
+  **out)` — fits T²/Q thresholds from phase-1 data and evaluates
+  phase-2 with alarms.
+- `p4a_one_se_rule_compute(ctx, fold_rmse_matrix, max_components,
+  n_folds, **out)` — standalone helper: given a (max_components ×
+  n_folds) fold-RMSE matrix, returns best_n_components,
+  one_se_n_components, threshold and standard error.
+- Python bindings: `pls_monitoring_run`, `one_se_rule_compute`.
+
+### Verified
+
+- 256 internal C++ tests pass.
+- ABI symbol diff: 159 symbols (+2, clean).
+- Parity gate: 13 external PASS, 24 paper-only smoke PASS, 0 numpy.
+
+### Changed
+
+- Project version `0.82.0+abi.1.12.0`. C ABI minor 11 → 12.
 
 ## [0.81.0-batch-11-multiblock] — 2026-05-15
 

@@ -630,7 +630,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.81.0+abi.1.11.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.82.0+abi.1.12.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
@@ -1103,6 +1103,43 @@ P4A_API p4a_status_t p4a_fused_sparse_pls_fit(
     const p4a_matrix_view_t* Y,
     double l1_lambda,
     double fusion_lambda,
+    p4a_method_result_t** out_result);
+
+/* PLS process monitoring (§19). Computes Hotelling T² and Q-residual
+ * thresholds from `X_reference` (phase-1) at confidence level
+ * (1 - alpha), then evaluates `X_monitor` (phase-2) and flags rows
+ * exceeding the thresholds. Result contains:
+ *   "t2"            (1 x n_monitor)
+ *   "q"             (1 x n_monitor)
+ *   "t2_reference"  (1 x n_reference)
+ *   "q_reference"   (1 x n_reference)
+ *   int "t2_alarms"  (length n_monitor)
+ *   int "q_alarms"   (length n_monitor)
+ *   int "any_alarms" (length n_monitor)
+ *   scalar "t2_threshold", scalar "q_threshold", scalar "alpha"
+ */
+P4A_API p4a_status_t p4a_pls_monitoring_run(
+    p4a_context_t* ctx,
+    const p4a_model_t* model,
+    const p4a_matrix_view_t* X_reference,
+    const p4a_matrix_view_t* X_monitor,
+    double alpha,
+    p4a_method_result_t** out_result);
+
+/* One-SE rule for PLS component selection (§10). Given a (max_components
+ * x n_folds) row-major matrix of fold RMSE values, returns the smallest
+ * k whose mean fold RMSE is within one standard error of the best mean
+ * fold RMSE. Result contains:
+ *   "mean_rmse_per_component" (1 x max_components)
+ *   int "best_n_components"       (length 1)
+ *   int "one_se_n_components"     (length 1)
+ *   scalar "one_se_standard_error", scalar "one_se_threshold"
+ */
+P4A_API p4a_status_t p4a_one_se_rule_compute(
+    p4a_context_t* ctx,
+    const double* fold_rmse_matrix,
+    int32_t max_components,
+    int32_t n_folds,
     p4a_method_result_t** out_result);
 
 /* SO-PLS (§17). Sequential and Orthogonalized PLS for B X-blocks
