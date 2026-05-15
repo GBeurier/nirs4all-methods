@@ -104,6 +104,62 @@ class RAdapter(ReferenceAdapter):
         return np.asarray(preds, dtype=np.float64)
 
 
+# ---- Shared NumPy SIMPLS helper -----------------------------------------
+#
+# All §26 / §1 numpy-mirrors compose SIMPLS with a per-column or per-row
+# rescaling step. Factor SIMPLS out once so the mirrors stay readable and
+# their results match the C++ kernels (which use the same algorithm
+# internally).
+
+def _numpy_simpls(Xc: np.ndarray, Yc: np.ndarray, n_components: int
+                   ) -> np.ndarray:
+    """Return the SIMPLS regression coefficient matrix B (p x q) for the
+    centered (Xc, Yc) such that Yhat = Xc @ B. Mirrors the loop in
+    `cpp/src/core/extra_pls.cpp::simple_simpls`."""
+    n, p = Xc.shape
+    q = Yc.shape[1]
+    k = max(1, min(n_components, min(n - 1, p)))
+    eps = 1e-12
+    cov = Xc.T @ Yc
+    W = np.zeros((p, k))
+    P = np.zeros((p, k))
+    Q = np.zeros((q, k))
+    V = np.zeros((p, k))
+    B_scalars = np.zeros(k)
+    for comp in range(k):
+        U, _, _ = np.linalg.svd(cov, full_matrices=False)
+        direction = U[:, 0]
+        t = Xc @ direction
+        t_norm = np.linalg.norm(t)
+        if t_norm < eps:
+            break
+        t /= t_norm
+        direction /= t_norm
+        p_load = Xc.T @ t
+        q_load = Yc.T @ t
+        v = p_load.copy()
+        for prev in range(comp):
+            v -= float(np.dot(V[:, prev], v)) * V[:, prev]
+        v_norm = np.linalg.norm(v)
+        if v_norm < eps:
+            break
+        v /= v_norm
+        y_ss = float(np.dot(q_load, q_load))
+        b = 0.0
+        if y_ss > eps:
+            u = (Yc @ q_load) / y_ss
+            b = float(np.dot(u, t))
+        W[:, comp] = direction
+        P[:, comp] = p_load
+        Q[:, comp] = q_load
+        V[:, comp] = v
+        B_scalars[comp] = b
+        cov -= np.outer(v, V[:, comp] @ cov)
+    inv_pw = np.linalg.pinv(P.T @ W)
+    R = W @ inv_pw
+    return R @ (B_scalars[:, None] * Q.T)
+
+
 # ---- Python adapters -----------------------------------------------------
 
 class SparseSimplsNumpyReference(ReferenceAdapter):
@@ -293,6 +349,178 @@ class RecursivePlsSklearnReference(ReferenceAdapter):
         return out
 
 
+class CpplsNumpyReference(ReferenceAdapter):
+    library_name = "numpy-mirror"
+    library_version = np.__version__
+    language = "python"
+    notes = ("Column-power-rescaled SIMPLS — pls4all CPPLS scales each X "
+             "column by std^gamma before SIMPLS then unscales coefficients. "
+             "R `pls::cppls` is named similarly but implements Liland 2009 "
+             "Canonical Powered PLS, a different algorithm.")
+
+    def __init__(self, n_components: int, gamma: float) -> None:
+        self._k = n_components
+        self._gamma = gamma
+
+    def fit(self, X, Y, **kwargs):
+        X = np.asarray(X, dtype=np.float64)
+        Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        self._x_mean = X.mean(axis=0)
+        self._y_mean = Y.mean(axis=0)
+        Xc = X - self._x_mean
+        Yc = Y - self._y_mean
+        n = X.shape[0]
+        col_std = np.sqrt((Xc * Xc).mean(axis=0))
+        eps = 1e-12
+        scale = np.where(col_std > eps, col_std ** self._gamma, 1.0)
+        Xs = Xc / scale
+        B = _numpy_simpls(Xs, Yc, self._k)
+        # Unscale coefficients back to original X space.
+        self._coefficients = B / scale[:, None]
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=np.float64)
+        return self._y_mean + (X - self._x_mean) @ self._coefficients
+
+
+class WeightedPlsNumpyReference(ReferenceAdapter):
+    library_name = "numpy-mirror"
+    library_version = np.__version__
+    language = "python"
+    notes = ("Sample-weighted SIMPLS — pre-multiplies centered rows by "
+             "sqrt(w) and runs SIMPLS. R `pls::plsr` does not accept a "
+             "`weights` argument and no widely installable Python or R port "
+             "for this exact algorithm exists.")
+
+    def __init__(self, n_components: int) -> None:
+        self._k = n_components
+
+    def fit(self, X, Y, *, sample_weights, **kwargs):
+        X = np.asarray(X, dtype=np.float64)
+        Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        w = np.asarray(sample_weights, dtype=np.float64).reshape(-1)
+        total_w = w.sum()
+        self._x_mean = (w[:, None] * X).sum(axis=0) / total_w
+        self._y_mean = (w[:, None] * Y).sum(axis=0) / total_w
+        sw = np.sqrt(w)
+        Xc = (X - self._x_mean) * sw[:, None]
+        Yc = (Y - self._y_mean) * sw[:, None]
+        self._coefficients = _numpy_simpls(Xc, Yc, self._k)
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=np.float64)
+        return self._y_mean + (X - self._x_mean) @ self._coefficients
+
+
+class RobustPlsNumpyReference(ReferenceAdapter):
+    library_name = "numpy-mirror"
+    library_version = np.__version__
+    language = "python"
+    notes = ("Huber IRLS wrapped around weighted SIMPLS. Mirrors "
+             "pls4all::fit_robust_pls. R `chemometrics` ships robust PCR "
+             "but no widely installable robust-PLS C / R port of this "
+             "specific IRLS+SIMPLS variant.")
+
+    def __init__(self, n_components: int, huber_k: float,
+                 max_irls_iter: int) -> None:
+        self._k = n_components
+        self._huber_k = huber_k
+        self._max_iter = max_irls_iter
+
+    def fit(self, X, Y, **kwargs):
+        X = np.asarray(X, dtype=np.float64)
+        Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        n = X.shape[0]
+        w = np.ones(n, dtype=np.float64)
+        eps = 1e-12
+        for _ in range(self._max_iter):
+            total_w = w.sum()
+            x_mean = (w[:, None] * X).sum(axis=0) / total_w
+            y_mean = (w[:, None] * Y).sum(axis=0) / total_w
+            sw = np.sqrt(w)
+            Xc = (X - x_mean) * sw[:, None]
+            Yc = (Y - y_mean) * sw[:, None]
+            coefs = _numpy_simpls(Xc, Yc, self._k)
+            pred = y_mean + (X - x_mean) @ coefs
+            resid = np.linalg.norm(Y - pred, axis=1)
+            mad = np.median(resid)
+            if mad < eps:
+                mad = 1.0
+            scale = 1.4826 * mad
+            u = resid / (scale * self._huber_k)
+            w = np.where(u <= 1.0, 1.0, 1.0 / np.maximum(u, eps))
+        self._x_mean = x_mean
+        self._y_mean = y_mean
+        self._coefficients = coefs
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=np.float64)
+        return self._y_mean + (X - self._x_mean) @ self._coefficients
+
+
+class RidgePlsNumpyReference(ReferenceAdapter):
+    library_name = "numpy-mirror"
+    library_version = np.__version__
+    language = "python"
+    notes = ("Ridge-augmented SIMPLS — augments (X, Y) with sqrt(lambda)*I "
+             "and zero blocks then runs SIMPLS. No widely installable R / "
+             "Python port for this specific variant.")
+
+    def __init__(self, n_components: int, ridge_lambda: float) -> None:
+        self._k = n_components
+        self._lambda = ridge_lambda
+
+    def fit(self, X, Y, **kwargs):
+        X = np.asarray(X, dtype=np.float64)
+        Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        self._x_mean = X.mean(axis=0)
+        self._y_mean = Y.mean(axis=0)
+        Xc = X - self._x_mean
+        Yc = Y - self._y_mean
+        if self._lambda > 0.0:
+            aug = np.sqrt(self._lambda)
+            p = Xc.shape[1]
+            Xc = np.vstack([Xc, aug * np.eye(p)])
+            Yc = np.vstack([Yc, np.zeros((p, Yc.shape[1]))])
+        self._coefficients = _numpy_simpls(Xc, Yc, self._k)
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=np.float64)
+        return self._y_mean + (X - self._x_mean) @ self._coefficients
+
+
+class ContinuumNumpyReference(ReferenceAdapter):
+    library_name = "numpy-mirror"
+    library_version = np.__version__
+    language = "python"
+    notes = ("Column-power-rescaled SIMPLS interpolating PLS (tau=0) and "
+             "OLS (tau=1). R `chemometrics::pls.cv` covers regular PLS; "
+             "no widely installable continuum-regression variant matches "
+             "this exact rescaling formulation.")
+
+    def __init__(self, n_components: int, tau: float) -> None:
+        self._k = n_components
+        self._tau = tau
+
+    def fit(self, X, Y, **kwargs):
+        X = np.asarray(X, dtype=np.float64)
+        Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        self._x_mean = X.mean(axis=0)
+        self._y_mean = Y.mean(axis=0)
+        Xc = X - self._x_mean
+        Yc = Y - self._y_mean
+        col_std = np.sqrt((Xc * Xc).mean(axis=0))
+        eps = 1e-12
+        scale = np.where(col_std > eps, col_std ** self._tau, 1.0)
+        Xs = Xc / scale
+        B = _numpy_simpls(Xs, Yc, self._k)
+        self._coefficients = B / scale[:, None]
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=np.float64)
+        return self._y_mean + (X - self._x_mean) @ self._coefficients
+
+
 # ---- R adapters ----------------------------------------------------------
 
 class SparseSimplsRReference(RAdapter):
@@ -396,6 +624,64 @@ def _recursive_pls_pls4all(ctx, cfg, X, Y, *, n_components, window_size,
                                       window_size=window_size)
 
 
+def _cppls_pls4all(ctx, cfg, X, Y, *, n_components, gamma, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    return pls4all.cppls_fit(ctx, cfg, X, Y, gamma=gamma)
+
+
+def _weighted_pls_pls4all(ctx, cfg, X, Y, *, n_components, **kwargs):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    weights = kwargs["sample_weights"]
+    return pls4all.weighted_pls_fit(ctx, cfg, X, Y, weights)
+
+
+def _robust_pls_pls4all(ctx, cfg, X, Y, *, n_components, huber_k,
+                         max_irls_iter, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    return pls4all.robust_pls_fit(ctx, cfg, X, Y, huber_k=huber_k,
+                                   max_irls_iter=max_irls_iter)
+
+
+def _ridge_pls_pls4all(ctx, cfg, X, Y, *, n_components, ridge_lambda, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    return pls4all.ridge_pls_fit(ctx, cfg, X, Y, ridge_lambda=ridge_lambda)
+
+
+def _continuum_pls4all(ctx, cfg, X, Y, *, n_components, tau, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    return pls4all.continuum_regression_fit(ctx, cfg, X, Y, tau=tau)
+
+
 # ---- Method registry -----------------------------------------------------
 
 @dataclass(frozen=True)
@@ -408,6 +694,7 @@ class MethodSpec:
     r_reference: Callable[..., ReferenceAdapter] | None = None
     rmse_rel_tol: float = 5e-2
     needs_x_target: bool = False
+    needs_sample_weights: bool = False
     notes: str = ""
 
 
@@ -455,5 +742,77 @@ METHODS: list[MethodSpec] = [
         r_reference=lambda **kw: RecursivePlsRReference(
             n_components=kw["n_components"], window_size=kw["window_size"]),
         rmse_rel_tol=1e-1,
+    ),
+    MethodSpec(
+        name="cppls",
+        description="CPPLS (column-power-rescaled SIMPLS)",
+        pls4all_fn=_cppls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 50,
+                      "n_components": 4, "gamma": 0.5},
+        python_reference=lambda **kw: CpplsNumpyReference(
+            n_components=kw["n_components"], gamma=kw["gamma"]),
+        r_reference=None,
+        rmse_rel_tol=5e-2,
+        notes=("pls4all CPPLS uses col-std^gamma rescaling. R `pls::cppls` "
+               "implements Liland 2009 Canonical Powered PLS (different "
+               "algorithm); no widely installable R port of this rescaling "
+               "variant exists."),
+    ),
+    MethodSpec(
+        name="weighted_pls",
+        description="Sample-weighted PLS (sqrt(w)-prescaled SIMPLS)",
+        pls4all_fn=_weighted_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 50,
+                      "n_components": 4},
+        python_reference=lambda **kw: WeightedPlsNumpyReference(
+            n_components=kw["n_components"]),
+        r_reference=None,
+        needs_sample_weights=True,
+        rmse_rel_tol=5e-2,
+        notes=("R `pls::plsr` does not accept a `weights` argument; no "
+               "widely installable Python or R port of weighted SIMPLS "
+               "with this exact formulation exists."),
+    ),
+    MethodSpec(
+        name="robust_pls",
+        description="Robust PLS (Huber IRLS over weighted SIMPLS)",
+        pls4all_fn=_robust_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 50,
+                      "n_components": 4, "huber_k": 1.345,
+                      "max_irls_iter": 5},
+        python_reference=lambda **kw: RobustPlsNumpyReference(
+            n_components=kw["n_components"], huber_k=kw["huber_k"],
+            max_irls_iter=kw["max_irls_iter"]),
+        r_reference=None,
+        rmse_rel_tol=5e-2,
+        notes=("R `chemometrics` ships robust PCR but no widely installable "
+               "robust-PLS port of this specific Huber-IRLS+SIMPLS variant."),
+    ),
+    MethodSpec(
+        name="ridge_pls",
+        description="Ridge-augmented PLS",
+        pls4all_fn=_ridge_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 50,
+                      "n_components": 4, "ridge_lambda": 0.5},
+        python_reference=lambda **kw: RidgePlsNumpyReference(
+            n_components=kw["n_components"],
+            ridge_lambda=kw["ridge_lambda"]),
+        r_reference=None,
+        rmse_rel_tol=5e-2,
+        notes=("No widely installable R / Python port for sqrt(lambda)*I-"
+               "augmented PLS exists."),
+    ),
+    MethodSpec(
+        name="continuum_regression",
+        description="Continuum regression (interpolates PLS / OLS)",
+        pls4all_fn=_continuum_pls4all,
+        cell_params={"n_samples": 200, "n_features": 50,
+                      "n_components": 4, "tau": 0.5},
+        python_reference=lambda **kw: ContinuumNumpyReference(
+            n_components=kw["n_components"], tau=kw["tau"]),
+        r_reference=None,
+        rmse_rel_tol=5e-2,
+        notes=("No widely installable R / Python port for this col-std^tau-"
+               "rescaled continuum regression formulation exists."),
     ),
 ]

@@ -4,8 +4,8 @@ L’existant confirme cette structuration : scikit-learn expose déjà `PLSRegre
 
 ## Statut courant (mai 2026)
 
-Snapshot de ce qui est livré dans le tag `phase-31a-batch-1-sparse-di-recursive`
-(`0.71.0+abi.1.2.0`). La feuille de route détaillée est dans
+Snapshot de ce qui est livré dans le tag `phase-31b-batch-2-cppls-weighted-robust-ridge-continuum`
+(`0.72.0+abi.1.3.0`). La feuille de route détaillée est dans
 [`ROADMAP.md`](ROADMAP.md) ; les notes par phase sont dans `roadmap/phase-*.md`.
 Le détail des parity gates par méthode est dans `benchmarks/results/parity_gate/`.
 

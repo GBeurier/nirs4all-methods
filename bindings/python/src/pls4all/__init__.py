@@ -30,6 +30,11 @@ from ._methods import (
     sparse_simpls_fit,
     di_pls_fit,
     recursive_pls_run,
+    cppls_fit,
+    weighted_pls_fit,
+    robust_pls_fit,
+    ridge_pls_fit,
+    continuum_regression_fit,
 )
 
 
@@ -73,8 +78,13 @@ __all__ = [
     "sparse_simpls_fit",
     "di_pls_fit",
     "recursive_pls_run",
+    "cppls_fit",
+    "weighted_pls_fit",
+    "robust_pls_fit",
+    "ridge_pls_fit",
+    "continuum_regression_fit",
     "version",
     "abi_version",
     "build_info",
 ]
-__version__ = "0.71.0"
+__version__ = "0.72.0"

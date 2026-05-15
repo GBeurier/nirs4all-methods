@@ -74,6 +74,8 @@ p4a_context_set_backend
 p4a_context_set_num_threads
 p4a_context_set_seed
 p4a_context_set_user_data
+p4a_continuum_regression_fit
+p4a_cppls_fit
 p4a_di_pls_fit
 p4a_dtype_size
 p4a_dtype_to_string
@@ -120,6 +122,8 @@ p4a_pipeline_size
 p4a_pipeline_transform
 p4a_pipeline_transform_alloc
 p4a_recursive_pls_run
+p4a_ridge_pls_fit
+p4a_robust_pls_fit
 p4a_serialization_inspect
 p4a_sparse_simpls_fit
 p4a_status_to_string
@@ -129,3 +133,4 @@ p4a_validation_plan_destroy
 p4a_validation_plan_get_n_folds
 p4a_validation_plan_get_n_samples
 p4a_validation_plan_set_n_samples
+p4a_weighted_pls_fit

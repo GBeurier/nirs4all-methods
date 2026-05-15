@@ -9,8 +9,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 Continue rolling Overview methods through public C ABI + parity gate batches:
 diagnostics (§9), 1-SE rule (§10), monitoring (§11), multi-block (§16-19),
 sparse / group / fused (§20-21), N-PLS (§22), non-linear kernel (§24),
-CPPLS (§25), weighted/robust/ridge/continuum (§26), GLM/QDA/Cox heads (§27),
-PDS/DS/MIR/missing (§28), approximate-PRESS (§29) and ensembles (§30).
+GLM/QDA/Cox heads (§27), PDS/DS/MIR/missing (§28), approximate-PRESS (§29)
+and ensembles (§30).
+
+## [0.72.0-batch-2-cppls-weighted-robust-ridge-continuum] — 2026-05-15
+
+Public C ABI exposure for §1 CPPLS and §26 weighted / robust / ridge /
+continuum-regression variants, gated by parity vs NumPy mirrors that
+exactly reproduce the C++ kernels.
+
+### Added
+
+- Public ABI entry points:
+  - `p4a_cppls_fit(ctx, cfg, X, Y, gamma, **out)`
+  - `p4a_weighted_pls_fit(ctx, cfg, X, Y, sample_weights, n, **out)`
+  - `p4a_robust_pls_fit(ctx, cfg, X, Y, huber_k, max_irls_iter, **out)`
+  - `p4a_ridge_pls_fit(ctx, cfg, X, Y, ridge_lambda, **out)`
+  - `p4a_continuum_regression_fit(ctx, cfg, X, Y, tau, **out)`
+- Python bindings under `pls4all._methods`: `cppls_fit`,
+  `weighted_pls_fit`, `robust_pls_fit`, `ridge_pls_fit`,
+  `continuum_regression_fit`.
+- Parity gate adds NumPy-mirror references for all 5 methods. R columns
+  documented as `(none)`: `pls::cppls` is a different algorithm (Liland
+  2009 Canonical Powered PLS), and no widely installable R port exists
+  for our sqrt(w)-prescaled weighted SIMPLS, Huber-IRLS robust SIMPLS,
+  sqrt(λ)·I-augmented ridge SIMPLS or col-std^τ continuum regression.
+
+### Verified
+
+- All Batch 2 numpy-mirror parities pass at effective numerical zero
+  (9.9e-14 to 5.7e-6).
+- 256 internal C++ tests pass (dev-release, local-asan-ubsan-gcc,
+  local-ubsan-gcc).
+- ABI symbol diff vs expected list: 136 symbols (clean).
+- `ldd` audit: only libc/libstdc++/libgcc/libm/loader.
+- `git diff --check`: clean.
+
+### Changed
+
+- Project version `0.72.0+abi.1.3.0`. C ABI minor 2 → 3 (additive — 5 new
+  symbols, all `p4a_*` prefixed).
 
 ## [0.71.0-batch-1-sparse-di-recursive] — 2026-05-15
 

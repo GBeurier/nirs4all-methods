@@ -81,6 +81,43 @@ lib.p4a_recursive_pls_run.argtypes = [
     ctypes.c_int32, ctypes.POINTER(ctypes.c_void_p),
 ]
 
+lib.p4a_cppls_fit.restype = ctypes.c_int
+lib.p4a_cppls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_double, ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_weighted_pls_fit.restype = ctypes.c_int
+lib.p4a_weighted_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_double), ctypes.c_int64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_robust_pls_fit.restype = ctypes.c_int
+lib.p4a_robust_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_double, ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_ridge_pls_fit.restype = ctypes.c_int
+lib.p4a_ridge_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_double, ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_continuum_regression_fit.restype = ctypes.c_int
+lib.p4a_continuum_regression_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_double, ctypes.POINTER(ctypes.c_void_p),
+]
+
 
 class MethodResult:
     """Owning wrapper around `p4a_method_result_t`."""
@@ -219,9 +256,108 @@ def recursive_pls_run(ctx: Context, cfg: Config,
     return _resolve_handle(out, ctx, "p4a_recursive_pls_run")
 
 
+def cppls_fit(ctx: Context, cfg: Config,
+               X: Any, Y: Any,
+               gamma: float) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_cppls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_double(float(gamma)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_cppls_fit")
+
+
+def weighted_pls_fit(ctx: Context, cfg: Config,
+                      X: Any, Y: Any,
+                      sample_weights: Any) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    w_arr = np.ascontiguousarray(sample_weights, dtype=np.float64).reshape(-1)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_weighted_pls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        w_arr.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        ctypes.c_int64(int(w_arr.size)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_weighted_pls_fit")
+
+
+def robust_pls_fit(ctx: Context, cfg: Config,
+                    X: Any, Y: Any,
+                    huber_k: float,
+                    max_irls_iter: int = 5) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_robust_pls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_double(float(huber_k)),
+        ctypes.c_int32(int(max_irls_iter)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_robust_pls_fit")
+
+
+def ridge_pls_fit(ctx: Context, cfg: Config,
+                   X: Any, Y: Any,
+                   ridge_lambda: float) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_ridge_pls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_double(float(ridge_lambda)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_ridge_pls_fit")
+
+
+def continuum_regression_fit(ctx: Context, cfg: Config,
+                              X: Any, Y: Any,
+                              tau: float) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_continuum_regression_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_double(float(tau)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_continuum_regression_fit")
+
+
 __all__ = [
     "MethodResult",
     "sparse_simpls_fit",
     "di_pls_fit",
     "recursive_pls_run",
+    "cppls_fit",
+    "weighted_pls_fit",
+    "robust_pls_fit",
+    "ridge_pls_fit",
+    "continuum_regression_fit",
 ]

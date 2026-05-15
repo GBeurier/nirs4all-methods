@@ -52,6 +52,11 @@ not run alongside the parity gate (CPU-load budget).
 | `sparse_simpls` | `numpy-mirror` (Chun & Keles 2010) | `spls` 2.3.2 | 5.67e-03 / 2.51e-05 | both PASS |
 | `di_pls` | `numpy-mirror` (no installable ref) | none | 4.82e-03 / — | Py PASS · R none |
 | `recursive_pls` | `scikit-learn` 1.4.2 | `pls` 2.8.5 | 1.23e-02 / 1.23e-02 | both PASS |
+| `cppls` | `numpy-mirror` (col-std^γ rescaling) | none (pls::cppls is different algo) | 9.88e-14 / — | Py PASS · R none |
+| `weighted_pls` | `numpy-mirror` (sqrt(w)-row scaling) | none (no R port) | 3.46e-13 / — | Py PASS · R none |
+| `robust_pls` | `numpy-mirror` (Huber IRLS + weighted) | none (no R port) | 5.74e-06 / — | Py PASS · R none |
+| `ridge_pls` | `numpy-mirror` (sqrt(λ)·I augmentation) | none (no R port) | 7.22e-13 / — | Py PASS · R none |
+| `continuum_regression` | `numpy-mirror` (col-std^τ rescaling) | none (no R port) | 9.88e-14 / — | Py PASS · R none |
 
 Re-run the gate locally:
 

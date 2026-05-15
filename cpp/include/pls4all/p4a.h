@@ -630,7 +630,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.71.0+abi.1.2.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.72.0+abi.1.3.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
@@ -905,6 +905,79 @@ P4A_API p4a_status_t p4a_recursive_pls_run(
     const p4a_matrix_view_t* X,
     const p4a_matrix_view_t* Y,
     int32_t window_size,
+    p4a_method_result_t** out_result);
+
+/* CPPLS — Canonical Powered PLS (§1). Each X column is rescaled by its
+ * std^gamma before SIMPLS, then coefficients are unscaled. gamma in [0, 1]
+ * interpolates between PLS (gamma=0) and a power-rescaled flavour
+ * (gamma=1). The result contains:
+ *   "coefficients" (n_features x n_targets, row-major)
+ *   "predictions"  (n_samples  x n_targets)
+ *   "x_mean", "y_mean"
+ *   scalar "rmse", scalar "gamma"
+ */
+P4A_API p4a_status_t p4a_cppls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    double gamma,
+    p4a_method_result_t** out_result);
+
+/* Weighted PLS (§26). Pre-multiplies the centered (X, Y) rows by
+ * sqrt(sample_weights[i]) before SIMPLS. `weights` must point to
+ * `n_samples` strictly positive finite doubles. The result contains:
+ *   "coefficients", "predictions", "x_mean", "y_mean"
+ *   scalar "rmse"
+ */
+P4A_API p4a_status_t p4a_weighted_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const double* sample_weights,
+    int64_t sample_weights_size,
+    p4a_method_result_t** out_result);
+
+/* Robust PLS via IRLS with Huber weights (§26). max_irls_iter <= 0 falls
+ * back to 5. The result contains:
+ *   "coefficients", "predictions", "x_mean", "y_mean"
+ *   "final_weights" (1 x n_samples) — Huber weights at convergence
+ *   scalar "rmse", scalar "huber_k"
+ */
+P4A_API p4a_status_t p4a_robust_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    double huber_k,
+    int32_t max_irls_iter,
+    p4a_method_result_t** out_result);
+
+/* Ridge-augmented PLS (§26). Augments (X, Y) with sqrt(ridge_lambda)*I and
+ * 0 rows, then runs SIMPLS. ridge_lambda must be >= 0. The result contains:
+ *   "coefficients", "predictions", "x_mean", "y_mean"
+ *   scalar "rmse", scalar "ridge_lambda"
+ */
+P4A_API p4a_status_t p4a_ridge_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    double ridge_lambda,
+    p4a_method_result_t** out_result);
+
+/* Continuum regression (§26). tau in [0, 1] interpolates between PLS
+ * (tau=0) and a whitened-X / OLS-like flavour (tau=1). The result contains:
+ *   "coefficients", "predictions", "x_mean", "y_mean"
+ *   scalar "rmse", scalar "tau"
+ */
+P4A_API p4a_status_t p4a_continuum_regression_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    double tau,
     p4a_method_result_t** out_result);
 
 #ifdef __cplusplus

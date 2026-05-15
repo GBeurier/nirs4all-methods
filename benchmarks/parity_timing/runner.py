@@ -56,7 +56,7 @@ class ParityRow:
 
 
 def _make_dataset(n: int, p: int, seed: int = 11
-                   ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+                   ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     rng = np.random.default_rng(seed)
     k = min(5, n - 1, p)
     T = rng.standard_normal((n, k))
@@ -68,7 +68,9 @@ def _make_dataset(n: int, p: int, seed: int = 11
     X_target = X.copy()
     X_target[:, 0] *= 1.1
     X_target[:, 1] += 0.05
-    return X, Y, X_target
+    # Deterministic positive sample weights for §26 weighted-PLS variants.
+    sample_weights = rng.uniform(0.5, 2.0, size=n)
+    return X, Y, X_target, sample_weights
 
 
 def _rmse(a: np.ndarray, b: np.ndarray) -> float:
@@ -76,13 +78,20 @@ def _rmse(a: np.ndarray, b: np.ndarray) -> float:
     return float(math.sqrt(float(np.mean(diff * diff))))
 
 
-def _resolve_extras(method: MethodSpec, X_target: np.ndarray) -> dict:
-    return {"X_target": X_target} if method.needs_x_target else {}
+def _resolve_extras(method: MethodSpec, X_target: np.ndarray,
+                    sample_weights: np.ndarray) -> dict:
+    extras: dict = {}
+    if method.needs_x_target:
+        extras["X_target"] = X_target
+    if method.needs_sample_weights:
+        extras["sample_weights"] = sample_weights
+    return extras
 
 
 def _run_one_reference(method: MethodSpec, factory, X, Y, X_target,
-                        pls4all_pred: np.ndarray | None) -> ParityRow:
-    extras = _resolve_extras(method, X_target)
+                        sample_weights, pls4all_pred: np.ndarray | None
+                        ) -> ParityRow:
+    extras = _resolve_extras(method, X_target, sample_weights)
     n_samples = method.cell_params["n_samples"]
     n_features = method.cell_params["n_features"]
     try:
@@ -156,8 +165,8 @@ def _run_one_reference(method: MethodSpec, factory, X, Y, X_target,
 def _run_method(method: MethodSpec) -> list[ParityRow]:
     n = method.cell_params["n_samples"]
     p = method.cell_params["n_features"]
-    X, Y, X_target = _make_dataset(n, p)
-    extras = _resolve_extras(method, X_target)
+    X, Y, X_target, sample_weights = _make_dataset(n, p)
+    extras = _resolve_extras(method, X_target, sample_weights)
 
     pls4all_pred: np.ndarray | None = None
     try:
@@ -183,7 +192,8 @@ def _run_method(method: MethodSpec) -> list[ParityRow]:
         ))
     else:
         rows.append(_run_one_reference(method, method.python_reference,
-                                        X, Y, X_target, pls4all_pred))
+                                        X, Y, X_target, sample_weights,
+                                        pls4all_pred))
 
     if method.r_reference is None:
         rows.append(ParityRow(
@@ -199,7 +209,8 @@ def _run_method(method: MethodSpec) -> list[ParityRow]:
         ))
     else:
         rows.append(_run_one_reference(method, method.r_reference,
-                                        X, Y, X_target, pls4all_pred))
+                                        X, Y, X_target, sample_weights,
+                                        pls4all_pred))
 
     return rows
 
