@@ -489,6 +489,185 @@ class RidgePlsNumpyReference(ReferenceAdapter):
         return self._y_mean + (X - self._x_mean) @ self._coefficients
 
 
+class NPlsNumpyReference(ReferenceAdapter):
+    library_name = "numpy-mirror"
+    library_version = np.__version__
+    language = "python"
+    notes = ("3-way N-PLS (Bro 1996). NumPy mirror of pls4all::fit_n_pls. "
+             "MATLAB `nplstoolbox` is the canonical reference; no widely "
+             "installable R or Python port exists for the rank-1 Khatri-"
+             "Rao decomposition variant.")
+
+    def __init__(self, n_components: int, mode_j: int, mode_k: int) -> None:
+        self._k = n_components
+        self._J = mode_j
+        self._K = mode_k
+
+    def fit(self, X, Y, **kwargs):
+        X = np.asarray(X, dtype=np.float64)
+        Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        n = X.shape[0]
+        J, K, a = self._J, self._K, self._k
+        JK = J * K
+        q = Y.shape[1]
+        x_mean = X.mean(axis=0)
+        y_mean = Y.mean(axis=0)
+        Xc = X - x_mean
+        Yc = Y - y_mean
+        Xr = Xc.copy()
+        Yr = Yc.copy()
+        w_j_all = np.zeros((J, a))
+        w_k_all = np.zeros((K, a))
+        T = np.zeros((n, a))
+        Q_load = np.zeros((q, a))
+        B = np.zeros(a)
+        P_load = np.zeros((JK, a))
+        eps = 1e-12
+        for comp in range(a):
+            Z = Xr.T @ Yr   # JK x q
+            if np.linalg.norm(Z) < eps:
+                break
+            U, _, _ = np.linalg.svd(Z, full_matrices=False)
+            w_full = U[:, 0]
+            W_mat = w_full.reshape(J, K)
+            Uw, _, Vw = np.linalg.svd(W_mat, full_matrices=False)
+            w_j = Uw[:, 0]
+            w_k = Vw[0, :]
+            if (np.linalg.norm(w_j) < eps or np.linalg.norm(w_k) < eps):
+                break
+            t = (Xr.reshape(n, J, K) * np.outer(w_j, w_k)[None]).sum(
+                axis=(1, 2))
+            tt = float(t @ t)
+            if tt < eps:
+                break
+            q_load = (Yr.T @ t) / tt
+            cc = float(q_load @ q_load)
+            b = 0.0
+            if cc > eps:
+                u = (Yr @ q_load) / cc
+                b = float(u @ t) / tt
+            p_load = (Xr.T @ t) / tt
+            w_j_all[:, comp] = w_j
+            w_k_all[:, comp] = w_k
+            T[:, comp] = t
+            Q_load[:, comp] = q_load
+            B[comp] = b
+            P_load[:, comp] = p_load
+            Xr = Xr - np.outer(t, p_load)
+            Yr = Yr - b * np.outer(t, q_load)
+        W = np.zeros((JK, a))
+        for comp in range(a):
+            W[:, comp] = np.outer(w_j_all[:, comp],
+                                   w_k_all[:, comp]).reshape(JK)
+        inv_pw = np.linalg.pinv(P_load.T @ W)
+        coefs = W @ inv_pw @ (B[:, None] * Q_load.T)
+        self._x_mean = x_mean
+        self._y_mean = y_mean
+        self._coefficients = coefs
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=np.float64)
+        return self._y_mean + (X - self._x_mean) @ self._coefficients
+
+
+class KernelPlsNumpyReference(ReferenceAdapter):
+    library_name = "numpy-mirror"
+    library_version = np.__version__
+    language = "python"
+    notes = ("Kernel NIPALS (Rosipal & Trejo 2001) mirror. sklearn does "
+             "not ship a non-linear kernel PLS; R `pls` only covers linear "
+             "kernel-algorithm. No widely installable external reference "
+             "for RBF / polynomial / sigmoid kernel PLS exists.")
+
+    KERNELS = {0: "linear", 1: "rbf", 2: "polynomial", 3: "sigmoid"}
+
+    def __init__(self, n_components: int, kernel_type: int,
+                 gamma: float, coef0: float, degree: int) -> None:
+        self._k = n_components
+        self._kt = kernel_type
+        self._gamma = gamma
+        self._coef0 = coef0
+        self._degree = degree
+
+    def _kernel(self, A: np.ndarray, B: np.ndarray) -> np.ndarray:
+        if self._kt == 0:
+            return A @ B.T
+        if self._kt == 1:
+            sq_norms_a = (A * A).sum(axis=1)[:, None]
+            sq_norms_b = (B * B).sum(axis=1)[None, :]
+            d2 = sq_norms_a + sq_norms_b - 2.0 * (A @ B.T)
+            return np.exp(-self._gamma * d2)
+        if self._kt == 2:
+            return (self._gamma * (A @ B.T) + self._coef0) ** self._degree
+        return np.tanh(self._gamma * (A @ B.T) + self._coef0)
+
+    def fit(self, X, Y, **kwargs):
+        X = np.asarray(X, dtype=np.float64)
+        Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        n, p = X.shape
+        q = Y.shape[1]
+        # pls4all clamps gamma <= 0 to 1/p before the fit; mirror that here.
+        if self._gamma <= 0.0:
+            self._gamma = 1.0 / p
+        y_mean = Y.mean(axis=0)
+        Yc = Y - y_mean
+        K = self._kernel(X, X)
+        row_means = K.mean(axis=1)
+        global_mean = float(K.mean())
+        Kc = K - row_means[:, None] - row_means[None, :] + global_mean
+        a = self._k
+        Yr = Yc.copy()
+        Kr = Kc.copy()
+        alpha = np.zeros((n, q))
+        eps = 1e-12
+        for _ in range(a):
+            u = Yr[:, 0].copy()
+            t = np.zeros(n)
+            c = np.zeros(q)
+            for _ in range(100):
+                t = Kr @ u
+                t_norm = float(np.linalg.norm(t))
+                if t_norm < eps:
+                    break
+                t /= t_norm
+                c = Yr.T @ t
+                cc = float(c @ c)
+                if cc < eps:
+                    break
+                u_new = (Yr @ c) / cc
+                if np.linalg.norm(u_new - u) < 1e-7:
+                    u = u_new
+                    break
+                u = u_new
+            tt = float(t @ t)
+            if tt < eps:
+                break
+            denom = float(t @ (Kr @ t))
+            if abs(denom) < eps:
+                break
+            alpha += np.outer(u, c) / denom
+            Yr = Yr - np.outer(t, c)
+            Kt = Kr @ t
+            tKt = denom
+            Kr = Kr - np.outer(t, Kt) - np.outer(Kt, t) + tKt * np.outer(t, t)
+        self._X_train = X
+        self._row_means = row_means
+        self._global_mean = global_mean
+        self._y_mean = y_mean
+        self._alpha = alpha
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=np.float64)
+        K_test = self._kernel(X, self._X_train)
+        col_means = K_test.mean(axis=1)
+        # Match pls4all centering: K_c[i,j] = K_test[i,j] - row_mean_test[i]
+        # - col_mean_train[j] + global_mean_train, where col_mean_train is
+        # the saved row_means.
+        K_c = K_test - col_means[:, None] - self._row_means[None, :] + \
+            self._global_mean
+        return self._y_mean + K_c @ self._alpha
+
+
 class ContinuumNumpyReference(ReferenceAdapter):
     library_name = "numpy-mirror"
     library_version = np.__version__
@@ -682,6 +861,31 @@ def _continuum_pls4all(ctx, cfg, X, Y, *, n_components, tau, **_):
     return pls4all.continuum_regression_fit(ctx, cfg, X, Y, tau=tau)
 
 
+def _n_pls_pls4all(ctx, cfg, X, Y, *, n_components, mode_j, mode_k, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    return pls4all.n_pls_fit(ctx, cfg, X, mode_j, mode_k, Y)
+
+
+def _kernel_pls_pls4all(ctx, cfg, X, Y, *, n_components, kernel_type,
+                         gamma, coef0, degree, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    return pls4all.kernel_pls_fit(ctx, cfg, X, Y,
+                                   kernel_type=kernel_type,
+                                   gamma=gamma, coef0=coef0, degree=degree)
+
+
 # ---- Method registry -----------------------------------------------------
 
 @dataclass(frozen=True)
@@ -814,5 +1018,36 @@ METHODS: list[MethodSpec] = [
         rmse_rel_tol=5e-2,
         notes=("No widely installable R / Python port for this col-std^tau-"
                "rescaled continuum regression formulation exists."),
+    ),
+    MethodSpec(
+        name="n_pls",
+        description="N-PLS — 3-way tensor PLS (Bro 1996)",
+        pls4all_fn=_n_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 48,
+                      "n_components": 4, "mode_j": 8, "mode_k": 6},
+        python_reference=lambda **kw: NPlsNumpyReference(
+            n_components=kw["n_components"],
+            mode_j=kw["mode_j"], mode_k=kw["mode_k"]),
+        r_reference=None,
+        rmse_rel_tol=5e-2,
+        notes=("MATLAB `nplstoolbox` (Bro) is the canonical N-PLS "
+               "reference. No widely installable R / Python port exists "
+               "for the exact rank-1 Khatri-Rao deflation used here."),
+    ),
+    MethodSpec(
+        name="kernel_pls_rbf",
+        description="Non-linear kernel PLS (RBF kernel)",
+        pls4all_fn=_kernel_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 50,
+                      "n_components": 4, "kernel_type": 1,
+                      "gamma": 0.02, "coef0": 1.0, "degree": 3},
+        python_reference=lambda **kw: KernelPlsNumpyReference(
+            n_components=kw["n_components"], kernel_type=kw["kernel_type"],
+            gamma=kw["gamma"], coef0=kw["coef0"], degree=kw["degree"]),
+        r_reference=None,
+        rmse_rel_tol=5e-2,
+        notes=("sklearn does not ship non-linear kernel PLS. R `pls` only "
+               "implements the linear `kernel-algorithm` solver. No widely "
+               "installable RBF / poly / sigmoid kernel PLS reference."),
     ),
 ]

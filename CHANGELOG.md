@@ -8,9 +8,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Continue rolling Overview methods through public C ABI + parity gate batches:
 diagnostics (§9), 1-SE rule (§10), monitoring (§11), multi-block (§16-19),
-sparse / group / fused (§20-21), N-PLS (§22), non-linear kernel (§24),
-GLM/QDA/Cox heads (§27), PDS/DS/MIR/missing (§28), approximate-PRESS (§29)
-and ensembles (§30).
+sparse / group / fused (§20-21), GLM/QDA/Cox heads (§27), PDS/DS/MIR/missing
+(§28), approximate-PRESS (§29) and ensembles (§30).
+
+## [0.73.0-batch-3-n-pls-kernel-pls] — 2026-05-15
+
+Third batch of public C ABI exposure. Both new methods rely on
+`p4a_method_result_t` and ship with deterministic NumPy mirrors as
+parity references — no widely installable external Python or R port
+exists for either variant.
+
+### Added
+
+- `p4a_n_pls_fit(ctx, cfg, X_flat, mode_j, mode_k, Y, **out)` — 3-way
+  N-PLS (Bro 1996) on `(n_samples x mode_j x mode_k)` tensors flattened
+  as `(n_samples x (mode_j*mode_k))`. Result exposes `predictions`,
+  `coefficients`, `w_j`, `w_k`, `scores_t`, `x_mean`, `y_mean`, `rmse`.
+- `p4a_kernel_pls_fit(ctx, cfg, kernel_type, gamma, coef0, degree, X, Y,
+  **out)` — non-linear kernel PLS (Rosipal & Trejo 2001) with
+  `kernel_type` 0=linear, 1=RBF, 2=polynomial, 3=sigmoid. Result exposes
+  `predictions`, `alpha` dual coefficients, `y_mean`, `rmse` and
+  introspection scalars `kernel_type`, `gamma`, `coef0`, `degree`.
+- Python bindings: `pls4all.n_pls_fit`, `pls4all.kernel_pls_fit`.
+- Parity-gate `numpy-mirror` references reproducing both algorithms
+  step-for-step. RMSE-rel < 5e-2 tolerance is met at numerical floor:
+  N-PLS 1.36e-07, kernel PLS RBF 2.32e-15.
+
+### Verified
+
+- 256 internal C++ tests pass (dev-release, local-asan-ubsan-gcc,
+  local-ubsan-gcc).
+- ABI symbol diff vs expected list: 138 symbols (clean).
+- `ldd` audit: only libc/libstdc++/libgcc/libm/loader.
+- `git diff --check`: clean.
+- Parity gate: 12 PASS, 8 `no_r_reference` (documented per-method).
+
+### Changed
+
+- Project version `0.73.0+abi.1.4.0`. C ABI minor 3 → 4 (additive — 2
+  new symbols).
 
 ## [0.72.0-batch-2-cppls-weighted-robust-ridge-continuum] — 2026-05-15
 

@@ -20,9 +20,11 @@
 #include "core/config.hpp"
 #include "core/context.hpp"
 #include "core/extra_pls.hpp"
+#include "core/kernel_pls.hpp"
 #include "core/method_result.hpp"
 #include "core/model.hpp"
 #include "core/recursive_pls.hpp"
+#include "core/tensor_pls.hpp"
 
 namespace {
 
@@ -599,6 +601,121 @@ P4A_API p4a_status_t p4a_continuum_regression_fit(
         return P4A_ERR_OUT_OF_MEMORY;
     } catch (...) {
         set_error(ctx, "internal error in p4a_continuum_regression_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_n_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X_flat,
+    int32_t mode_j,
+    int32_t mode_k,
+    const p4a_matrix_view_t* Y,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X_flat == nullptr ||
+        Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_n_pls_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::NPlsResult res;
+        const p4a_status_t status = ::pls4all::core::fit_n_pls(
+            *as_core(ctx), *as_core(cfg), *X_flat, mode_j, mode_k, *Y, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto J = static_cast<std::int64_t>(res.mode_j);
+        const auto K = static_cast<std::int64_t>(res.mode_k);
+        const auto jk = J * K;
+        const auto q = static_cast<std::int64_t>(res.n_targets);
+        const auto k = static_cast<std::int64_t>(res.n_components);
+        const auto n = static_cast<std::int64_t>(res.n_samples);
+        handle->set_double_matrix("coefficients", res.coefficients, jk, q);
+        handle->set_double_matrix("w_j", res.w_j_per_component, J, k);
+        handle->set_double_matrix("w_k", res.w_k_per_component, K, k);
+        handle->set_double_matrix("scores_t", res.scores_t, n, k);
+        handle->set_double_matrix("x_mean", res.x_mean, 1, jk);
+        handle->set_double_matrix("y_mean", res.y_mean, 1, q);
+
+        std::vector<double> predictions;
+        const p4a_status_t pred_status = ::pls4all::core::predict_n_pls(
+            *as_core(ctx), res, *X_flat, predictions);
+        (void)pred_status;
+        const double rmse = in_sample_rmse(predictions, *Y);
+        handle->set_double_matrix("predictions", std::move(predictions),
+                                   n, q);
+        handle->set_scalar("rmse", rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_n_pls_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_n_pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_kernel_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    int32_t kernel_type,
+    double gamma,
+    double coef0,
+    int32_t degree,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_kernel_pls_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (kernel_type < 0 || kernel_type > 3) {
+        set_error(ctx, "kernel_type must be in {0,1,2,3}");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        const auto kernel_enum =
+            static_cast<::pls4all::core::KernelType>(kernel_type);
+        ::pls4all::core::KernelPlsResult res;
+        const p4a_status_t status = ::pls4all::core::fit_kernel_pls(
+            *as_core(ctx), *as_core(cfg), kernel_enum, gamma, coef0,
+            degree, *X, *Y, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto n = static_cast<std::int64_t>(res.n_train);
+        const auto q = static_cast<std::int64_t>(res.n_targets);
+        handle->set_double_matrix("alpha", res.alpha, n, q);
+        handle->set_double_matrix("y_mean", res.y_mean, 1, q);
+
+        std::vector<double> predictions;
+        const p4a_status_t pred_status = ::pls4all::core::predict_kernel_pls(
+            *as_core(ctx), res, *X, predictions);
+        (void)pred_status;
+        const double rmse = in_sample_rmse(predictions, *Y);
+        handle->set_double_matrix("predictions", std::move(predictions),
+                                   n, q);
+        handle->set_scalar("rmse", rmse);
+        handle->set_scalar("kernel_type",
+                            static_cast<double>(kernel_type));
+        handle->set_scalar("gamma", gamma);
+        handle->set_scalar("coef0", coef0);
+        handle->set_scalar("degree", static_cast<double>(degree));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_kernel_pls_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_kernel_pls_fit");
         return P4A_ERR_INTERNAL;
     }
 }

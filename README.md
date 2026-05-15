@@ -57,6 +57,8 @@ not run alongside the parity gate (CPU-load budget).
 | `robust_pls` | `numpy-mirror` (Huber IRLS + weighted) | none (no R port) | 5.74e-06 / — | Py PASS · R none |
 | `ridge_pls` | `numpy-mirror` (sqrt(λ)·I augmentation) | none (no R port) | 7.22e-13 / — | Py PASS · R none |
 | `continuum_regression` | `numpy-mirror` (col-std^τ rescaling) | none (no R port) | 9.88e-14 / — | Py PASS · R none |
+| `n_pls` | `numpy-mirror` (Bro 1996 N-PLS) | none (MATLAB nplstoolbox only) | 1.36e-07 / — | Py PASS · R none |
+| `kernel_pls_rbf` | `numpy-mirror` (Rosipal & Trejo 2001) | none (R `pls` linear only) | 2.32e-15 / — | Py PASS · R none |
 
 Re-run the gate locally:
 

@@ -88,6 +88,7 @@ p4a_get_abi_version_patch
 p4a_get_build_info
 p4a_get_git_revision
 p4a_get_version_string
+p4a_kernel_pls_fit
 p4a_matrix_view_init_colmajor
 p4a_matrix_view_init_rowmajor
 p4a_matrix_view_init_strided
@@ -109,6 +110,7 @@ p4a_model_predict
 p4a_model_predict_alloc
 p4a_model_transform
 p4a_model_transform_alloc
+p4a_n_pls_fit
 p4a_operator_bank_add
 p4a_operator_bank_create
 p4a_operator_bank_destroy

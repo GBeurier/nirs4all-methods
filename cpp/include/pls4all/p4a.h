@@ -630,7 +630,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.72.0+abi.1.3.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.73.0+abi.1.4.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
@@ -978,6 +978,46 @@ P4A_API p4a_status_t p4a_continuum_regression_fit(
     const p4a_matrix_view_t* X,
     const p4a_matrix_view_t* Y,
     double tau,
+    p4a_method_result_t** out_result);
+
+/* N-PLS (§22). 3-way tensor regression via Bro's algorithm. X must be a
+ * row-major (n_samples x (mode_j * mode_k)) flat view of the (n x J x K)
+ * tensor. The result contains:
+ *   "predictions"   (n_samples x n_targets)
+ *   "coefficients"  ((mode_j*mode_k) x n_targets)
+ *   "w_j"           (mode_j x n_components)
+ *   "w_k"           (mode_k x n_components)
+ *   "scores_t"      (n_samples x n_components)
+ *   "x_mean", "y_mean"
+ *   scalar "rmse"
+ */
+P4A_API p4a_status_t p4a_n_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X_flat,
+    int32_t mode_j,
+    int32_t mode_k,
+    const p4a_matrix_view_t* Y,
+    p4a_method_result_t** out_result);
+
+/* Non-linear kernel PLS (§24). `kernel_type`:
+ *   0 = linear, 1 = RBF, 2 = polynomial, 3 = sigmoid
+ * `gamma`, `coef0`, `degree` are kernel parameters; ignored when not
+ * applicable to the selected kernel. The result contains:
+ *   "predictions"   (n_samples x n_targets)  in-sample predictions
+ *   "alpha"         (n_samples x n_targets)  dual coefficients
+ *   "y_mean"        (1 x n_targets)
+ *   scalar "rmse", scalar "kernel_type" (as double)
+ */
+P4A_API p4a_status_t p4a_kernel_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    int32_t kernel_type,
+    double gamma,
+    double coef0,
+    int32_t degree,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
     p4a_method_result_t** out_result);
 
 #ifdef __cplusplus

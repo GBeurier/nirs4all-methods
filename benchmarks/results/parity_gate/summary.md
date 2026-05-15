@@ -1,7 +1,7 @@
 # Parity gate report
 
 Host: `Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.35`
-pls4all: `0.72.0+abi.1.3.0`
+pls4all: `0.73.0+abi.1.4.0`
 Python: `3.11.14`
 NumPy: `1.26.4`
 
@@ -25,6 +25,10 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `ridge_pls` | Ridge-augmented PLS | R / `(none)` - | ✗ | — | 5e-02 | no_r_reference |
 | `continuum_regression` | Continuum regression (interpolates PLS / OLS) | python / `numpy-mirror` 1.26.4 | ✓ | 9.884e-14 | 5e-02 | ok |
 | `continuum_regression` | Continuum regression (interpolates PLS / OLS) | R / `(none)` - | ✗ | — | 5e-02 | no_r_reference |
+| `n_pls` | N-PLS — 3-way tensor PLS (Bro 1996) | python / `numpy-mirror` 1.26.4 | ✓ | 1.360e-07 | 5e-02 | ok |
+| `n_pls` | N-PLS — 3-way tensor PLS (Bro 1996) | R / `(none)` - | ✗ | — | 5e-02 | no_r_reference |
+| `kernel_pls_rbf` | Non-linear kernel PLS (RBF kernel) | python / `numpy-mirror` 1.26.4 | ✓ | 2.318e-15 | 5e-02 | ok |
+| `kernel_pls_rbf` | Non-linear kernel PLS (RBF kernel) | R / `(none)` - | ✗ | — | 5e-02 | no_r_reference |
 
 ## Reference caveats
 
@@ -35,3 +39,5 @@ Each method is compared against a Python reference and an R reference. Methods w
 - **`robust_pls`** (python / `numpy-mirror`): Huber IRLS wrapped around weighted SIMPLS. Mirrors pls4all::fit_robust_pls. R `chemometrics` ships robust PCR but no widely installable robust-PLS C / R port of this specific IRLS+SIMPLS variant.
 - **`ridge_pls`** (python / `numpy-mirror`): Ridge-augmented SIMPLS — augments (X, Y) with sqrt(lambda)*I and zero blocks then runs SIMPLS. No widely installable R / Python port for this specific variant.
 - **`continuum_regression`** (python / `numpy-mirror`): Column-power-rescaled SIMPLS interpolating PLS (tau=0) and OLS (tau=1). R `chemometrics::pls.cv` covers regular PLS; no widely installable continuum-regression variant matches this exact rescaling formulation.
+- **`n_pls`** (python / `numpy-mirror`): 3-way N-PLS (Bro 1996). NumPy mirror of pls4all::fit_n_pls. MATLAB `nplstoolbox` is the canonical reference; no widely installable R or Python port exists for the rank-1 Khatri-Rao decomposition variant.
+- **`kernel_pls_rbf`** (python / `numpy-mirror`): Kernel NIPALS (Rosipal & Trejo 2001) mirror. sklearn does not ship a non-linear kernel PLS; R `pls` only covers linear kernel-algorithm. No widely installable external reference for RBF / polynomial / sigmoid kernel PLS exists.

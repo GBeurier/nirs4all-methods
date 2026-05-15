@@ -118,6 +118,23 @@ lib.p4a_continuum_regression_fit.argtypes = [
     ctypes.c_double, ctypes.POINTER(ctypes.c_void_p),
 ]
 
+lib.p4a_n_pls_fit.restype = ctypes.c_int
+lib.p4a_n_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView),
+    ctypes.c_int32, ctypes.c_int32,
+    ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_kernel_pls_fit.restype = ctypes.c_int
+lib.p4a_kernel_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_double, ctypes.c_double, ctypes.c_int32,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
 
 class MethodResult:
     """Owning wrapper around `p4a_method_result_t`."""
@@ -350,6 +367,48 @@ def continuum_regression_fit(ctx: Context, cfg: Config,
     return _resolve_handle(out, ctx, "p4a_continuum_regression_fit")
 
 
+def n_pls_fit(ctx: Context, cfg: Config,
+               X_flat: Any, mode_j: int, mode_k: int,
+               Y: Any) -> MethodResult:
+    X_arr = _as_float64_contiguous(X_flat)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_n_pls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view),
+        ctypes.c_int32(int(mode_j)), ctypes.c_int32(int(mode_k)),
+        ctypes.byref(y_view),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_n_pls_fit")
+
+
+def kernel_pls_fit(ctx: Context, cfg: Config,
+                    X: Any, Y: Any,
+                    kernel_type: int,
+                    gamma: float = 0.0,
+                    coef0: float = 1.0,
+                    degree: int = 3) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_kernel_pls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.c_int32(int(kernel_type)),
+        ctypes.c_double(float(gamma)), ctypes.c_double(float(coef0)),
+        ctypes.c_int32(int(degree)),
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_kernel_pls_fit")
+
+
 __all__ = [
     "MethodResult",
     "sparse_simpls_fit",
@@ -360,4 +419,6 @@ __all__ = [
     "robust_pls_fit",
     "ridge_pls_fit",
     "continuum_regression_fit",
+    "n_pls_fit",
+    "kernel_pls_fit",
 ]

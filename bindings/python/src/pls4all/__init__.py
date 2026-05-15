@@ -35,6 +35,8 @@ from ._methods import (
     robust_pls_fit,
     ridge_pls_fit,
     continuum_regression_fit,
+    n_pls_fit,
+    kernel_pls_fit,
 )
 
 
@@ -83,8 +85,10 @@ __all__ = [
     "robust_pls_fit",
     "ridge_pls_fit",
     "continuum_regression_fit",
+    "n_pls_fit",
+    "kernel_pls_fit",
     "version",
     "abi_version",
     "build_info",
 ]
-__version__ = "0.72.0"
+__version__ = "0.73.0"
