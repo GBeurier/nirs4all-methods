@@ -157,6 +157,30 @@ lib.p4a_pls_diagnostics_compute.argtypes = [
     ctypes.POINTER(ctypes.c_void_p),
 ]
 
+lib.p4a_sparse_pls_da_fit.restype = ctypes.c_int
+lib.p4a_sparse_pls_da_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_int32), ctypes.c_int64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_group_sparse_pls_fit.restype = ctypes.c_int
+lib.p4a_group_sparse_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_int32), ctypes.c_int64,
+    ctypes.c_double, ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_fused_sparse_pls_fit.restype = ctypes.c_int
+lib.p4a_fused_sparse_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_double, ctypes.c_double,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
 
 class MethodResult:
     """Owning wrapper around `p4a_method_result_t`."""
@@ -471,6 +495,65 @@ def approximate_press_compute(ctx: Context, cfg: Config,
     return _resolve_handle(out, ctx, "p4a_approximate_press_compute")
 
 
+def sparse_pls_da_fit(ctx: Context, cfg: Config,
+                        X: Any, y_labels: Any) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    labels = np.ascontiguousarray(y_labels, dtype=np.int32).reshape(-1)
+    x_view = _matrix_view(X_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_sparse_pls_da_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view),
+        labels.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+        ctypes.c_int64(int(labels.size)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_sparse_pls_da_fit")
+
+
+def group_sparse_pls_fit(ctx: Context, cfg: Config,
+                          X: Any, Y: Any,
+                          group_assignment: Any,
+                          group_lambda: float) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    groups = np.ascontiguousarray(group_assignment, dtype=np.int32).reshape(-1)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_group_sparse_pls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        groups.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+        ctypes.c_int64(int(groups.size)),
+        ctypes.c_double(float(group_lambda)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_group_sparse_pls_fit")
+
+
+def fused_sparse_pls_fit(ctx: Context, cfg: Config,
+                          X: Any, Y: Any,
+                          l1_lambda: float,
+                          fusion_lambda: float) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_fused_sparse_pls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_double(float(l1_lambda)),
+        ctypes.c_double(float(fusion_lambda)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_fused_sparse_pls_fit")
+
+
 def pls_diagnostics_compute(ctx: Context,
                               model: Any,
                               X: Any,
@@ -511,4 +594,7 @@ __all__ = [
     "o2pls_fit",
     "approximate_press_compute",
     "pls_diagnostics_compute",
+    "sparse_pls_da_fit",
+    "group_sparse_pls_fit",
+    "fused_sparse_pls_fit",
 ]

@@ -66,6 +66,9 @@ Runtime / speed-up benchmarks are tracked separately by
 | `pls_diagnostic_t2` | — | `mdatools` 0.15.0 | — / 3.84e+00 | R qualitative (SIMPLS convention drift) |
 | `pls_diagnostic_q` | — | `mdatools` 0.15.0 | — / 2.19e+00 | R qualitative |
 | `pls_diagnostic_dmodx` | — | `mdatools` 0.15.0 (derived from Q) | — / 1.22e+00 | R qualitative |
+| `sparse_pls_da` | — | `spls::splsda` 2.3.2 | — / 9.25e-01 | R qualitative (soft vs hard scoring) |
+| `group_sparse_pls` | paper-only | paper-only | — / — | paper-only (Liland & Indahl 2009) |
+| `fused_sparse_pls` | paper-only | paper-only | — / — | paper-only (Yengo et al. 2016) |
 
 Re-run the gate locally:
 

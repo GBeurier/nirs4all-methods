@@ -726,6 +726,186 @@ P4A_API p4a_status_t p4a_o2pls_fit(
     }
 }
 
+P4A_API p4a_status_t p4a_sparse_pls_da_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const int32_t* y_labels,
+    int64_t y_labels_size,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr ||
+        y_labels == nullptr) {
+        set_error(ctx, "null pointer in p4a_sparse_pls_da_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (y_labels_size != X->rows) {
+        set_error(ctx, "y_labels_size must equal X.rows");
+        return P4A_ERR_SHAPE_MISMATCH;
+    }
+    try {
+        std::vector<std::int32_t> labels(
+            y_labels, y_labels + static_cast<std::size_t>(y_labels_size));
+        ::pls4all::core::SparsePlsDaResult res;
+        const p4a_status_t status = ::pls4all::core::fit_sparse_pls_da(
+            *as_core(ctx), *as_core(cfg), *X, labels, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(X->cols);
+        const auto q = static_cast<std::int64_t>(res.n_classes);
+        handle->set_double_matrix("coefficients", res.coefficients, p, q);
+        handle->set_double_matrix("x_mean", res.x_mean, 1, p);
+        handle->set_double_matrix("y_mean", res.y_mean, 1, q);
+        handle->set_double_matrix("class_priors", res.class_priors, 1, q);
+
+        // Soft-assignment predictions: rebuild dummy-encoded Y for RMSE.
+        std::vector<double> predictions;
+        std::int64_t pred_rows = 0;
+        std::int64_t pred_cols = 0;
+        predict_from_coefficients(*X, res.coefficients, res.x_mean,
+                                    res.y_mean, p, q, predictions,
+                                    pred_rows, pred_cols);
+        const auto n = static_cast<std::size_t>(X->rows);
+        std::vector<double> y_dummy(n * static_cast<std::size_t>(q), 0.0);
+        for (std::size_t i = 0; i < n; ++i) {
+            const std::size_t lbl =
+                static_cast<std::size_t>(labels[i]);
+            y_dummy[i * static_cast<std::size_t>(q) + lbl] = 1.0;
+        }
+        // Compute RMSE manually since `Y` is the dummy matrix.
+        double sumsq = 0.0;
+        for (std::size_t i = 0; i < n * static_cast<std::size_t>(q); ++i) {
+            const double d = y_dummy[i] - predictions[i];
+            sumsq += d * d;
+        }
+        const double rmse = std::sqrt(sumsq /
+            static_cast<double>(n * static_cast<std::size_t>(q)));
+        handle->set_double_matrix("predictions", std::move(predictions),
+                                   pred_rows, pred_cols);
+        handle->set_scalar("rmse", rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_sparse_pls_da_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_sparse_pls_da_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+namespace {
+
+void pack_group_sparse_result(
+    p4a_method_result_s& handle,
+    const ::pls4all::core::GroupSparsePlsResult& res,
+    const p4a_matrix_view_t& X,
+    const p4a_matrix_view_t& Y) {
+    const auto p = static_cast<std::int64_t>(res.n_features);
+    const auto q = static_cast<std::int64_t>(res.n_targets);
+    handle.set_double_matrix("coefficients", res.coefficients, p, q);
+    handle.set_double_matrix("x_mean", res.x_mean, 1, p);
+    handle.set_double_matrix("y_mean", res.y_mean, 1, q);
+
+    std::vector<double> predictions;
+    std::int64_t pred_rows = 0;
+    std::int64_t pred_cols = 0;
+    predict_from_coefficients(X, res.coefficients, res.x_mean, res.y_mean,
+                                p, q, predictions, pred_rows, pred_cols);
+    const double rmse = in_sample_rmse(predictions, Y);
+    handle.set_double_matrix("predictions", std::move(predictions),
+                              pred_rows, pred_cols);
+    handle.set_scalar("rmse", rmse);
+    handle.set_scalar("n_groups", static_cast<double>(res.n_groups));
+}
+
+}  // namespace
+
+P4A_API p4a_status_t p4a_group_sparse_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const int32_t* group_assignment,
+    int64_t group_assignment_size,
+    double group_lambda,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        group_assignment == nullptr) {
+        set_error(ctx, "null pointer in p4a_group_sparse_pls_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (group_assignment_size != X->cols) {
+        set_error(ctx, "group_assignment_size must equal X.cols");
+        return P4A_ERR_SHAPE_MISMATCH;
+    }
+    try {
+        std::vector<std::int32_t> groups(
+            group_assignment,
+            group_assignment + static_cast<std::size_t>(group_assignment_size));
+        ::pls4all::core::GroupSparsePlsResult res;
+        const p4a_status_t status = ::pls4all::core::fit_group_sparse_pls(
+            *as_core(ctx), *as_core(cfg), *X, *Y, groups, group_lambda,
+            res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        pack_group_sparse_result(*handle, res, *X, *Y);
+        handle->set_scalar("group_lambda", group_lambda);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_group_sparse_pls_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_group_sparse_pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_fused_sparse_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    double l1_lambda,
+    double fusion_lambda,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_fused_sparse_pls_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::GroupSparsePlsResult res;
+        const p4a_status_t status = ::pls4all::core::fit_fused_sparse_pls(
+            *as_core(ctx), *as_core(cfg), *X, *Y, l1_lambda, fusion_lambda,
+            res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        pack_group_sparse_result(*handle, res, *X, *Y);
+        handle->set_scalar("l1_lambda", l1_lambda);
+        handle->set_scalar("fusion_lambda", fusion_lambda);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_fused_sparse_pls_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_fused_sparse_pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
 P4A_API p4a_status_t p4a_pls_diagnostics_compute(
     p4a_context_t* ctx,
     const p4a_model_t* model,

@@ -630,7 +630,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.76.0+abi.1.6.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.77.0+abi.1.7.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
@@ -1057,6 +1057,52 @@ P4A_API p4a_status_t p4a_approximate_press_compute(
     const p4a_matrix_view_t* X,
     const p4a_matrix_view_t* Y,
     int32_t max_components,
+    p4a_method_result_t** out_result);
+
+/* Sparse PLS-DA (§7). Dummy-encodes integer class labels then runs
+ * sparse SIMPLS with the configured `sparsity_lambda` from `cfg`.
+ * `y_labels` must be a length-n_samples buffer of non-negative class
+ * IDs (max value implies n_classes). The result contains:
+ *   "coefficients"  (n_features x n_classes)
+ *   "predictions"   (n_samples x n_classes) — soft assignments
+ *   "x_mean", "y_mean"
+ *   "class_priors"  (1 x n_classes)
+ *   scalar "rmse"
+ */
+P4A_API p4a_status_t p4a_sparse_pls_da_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const int32_t* y_labels,
+    int64_t y_labels_size,
+    p4a_method_result_t** out_result);
+
+/* Group sparse PLS (§7). Soft-thresholds groups of features together.
+ * `group_assignment` is a length-n_features buffer of 0-based group IDs.
+ * Result contains coefficients, predictions, x_mean, y_mean, rmse, and
+ * scalar `n_groups`.
+ */
+P4A_API p4a_status_t p4a_group_sparse_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const int32_t* group_assignment,
+    int64_t group_assignment_size,
+    double group_lambda,
+    p4a_method_result_t** out_result);
+
+/* Fused sparse PLS (§7). Combines L1 sparsity with fusion of
+ * consecutive feature pairs. Result identical to group_sparse_pls_fit
+ * plus scalars `l1_lambda` and `fusion_lambda`.
+ */
+P4A_API p4a_status_t p4a_fused_sparse_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    double l1_lambda,
+    double fusion_lambda,
     p4a_method_result_t** out_result);
 
 /* PLS diagnostics (§9). Computes Hotelling T², Q residuals (SPE) and

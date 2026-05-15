@@ -1,7 +1,7 @@
 # Parity gate report
 
 Host: `Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.35`
-pls4all: `0.76.0+abi.1.6.0`
+pls4all: `0.77.0+abi.1.7.0`
 Python: `3.11.14`
 NumPy: `1.26.4`
 
@@ -30,5 +30,9 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `pls_diagnostic_t2` | PLS Hotelling T² (§9) | R / `mdatools` 0.15.0 | ✓ | 3.845e+00 | 1e+01 | ok |
 | `pls_diagnostic_q` | PLS Q residuals / SPE (§9) | python / `(none)` - | ✗ | — | 5e+00 | no_python_reference |
 | `pls_diagnostic_q` | PLS Q residuals / SPE (§9) | R / `mdatools` 0.15.0 | ✓ | 2.190e+00 | 5e+00 | ok |
+| `sparse_pls_da` | Sparse PLS-DA (§7) | python / `(none)` - | ✗ | — | 2e+00 | no_python_reference |
+| `sparse_pls_da` | Sparse PLS-DA (§7) | R / `spls` 2.3.2 | ✓ | 9.249e-01 | 2e+00 | ok |
+| `group_sparse_pls` | Group sparse PLS (§7) | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |
+| `fused_sparse_pls` | Fused sparse PLS (§7) | paper / `paper-only` - | ✓ | — | 5e-02 | paper_only |
 | `pls_diagnostic_dmodx` | PLS Distance-to-Model X (§9) | python / `(none)` - | ✗ | — | 5e+00 | no_python_reference |
 | `pls_diagnostic_dmodx` | PLS Distance-to-Model X (§9) | R / `mdatools` 0.15.0 | ✓ | 1.220e+00 | 5e+00 | ok |

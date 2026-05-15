@@ -55,8 +55,10 @@ class ParityRow:
     status: str
 
 
-def _make_dataset(n: int, p: int, seed: int = 11, n_targets: int = 1
-                   ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def _make_dataset(n: int, p: int, seed: int = 11, n_targets: int = 1,
+                  n_classes: int = 0
+                   ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray,
+                              np.ndarray, np.ndarray]:
     rng = np.random.default_rng(seed)
     k = min(5, n - 1, p)
     T = rng.standard_normal((n, k))
@@ -71,7 +73,17 @@ def _make_dataset(n: int, p: int, seed: int = 11, n_targets: int = 1
     X_target[:, 1] += 0.05
     # Deterministic positive sample weights for §26 weighted-PLS variants.
     sample_weights = rng.uniform(0.5, 2.0, size=n)
-    return X, Y, X_target, sample_weights
+    # Deterministic class labels for §7 sparse PLS-DA.
+    if n_classes >= 2:
+        labels = rng.integers(0, n_classes, size=n).astype(np.int32)
+    else:
+        labels = np.zeros(n, dtype=np.int32)
+    # Deterministic group assignment for §7 group / fused sparse PLS.
+    # Group features into n_groups consecutive blocks.
+    n_groups = max(1, min(5, p // 3))
+    group_assignment = (np.arange(p) // max(1, p // n_groups)).astype(np.int32)
+    group_assignment = np.minimum(group_assignment, n_groups - 1)
+    return X, Y, X_target, sample_weights, labels, group_assignment
 
 
 def _rmse(a: np.ndarray, b: np.ndarray) -> float:
@@ -80,19 +92,26 @@ def _rmse(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def _resolve_extras(method: MethodSpec, X_target: np.ndarray,
-                    sample_weights: np.ndarray) -> dict:
+                    sample_weights: np.ndarray,
+                    labels: np.ndarray,
+                    group_assignment: np.ndarray) -> dict:
     extras: dict = {}
     if method.needs_x_target:
         extras["X_target"] = X_target
     if method.needs_sample_weights:
         extras["sample_weights"] = sample_weights
+    if method.needs_labels:
+        extras["y_labels"] = labels
+    if method.needs_group_assignment:
+        extras["group_assignment"] = group_assignment
     return extras
 
 
 def _run_one_reference(method: MethodSpec, factory, X, Y, X_target,
-                        sample_weights, pls4all_pred: np.ndarray | None
-                        ) -> ParityRow:
-    extras = _resolve_extras(method, X_target, sample_weights)
+                        sample_weights, labels, group_assignment,
+                        pls4all_pred: np.ndarray | None) -> ParityRow:
+    extras = _resolve_extras(method, X_target, sample_weights, labels,
+                              group_assignment)
     n_samples = method.cell_params["n_samples"]
     n_features = method.cell_params["n_features"]
     try:
@@ -172,9 +191,11 @@ def _run_method(method: MethodSpec) -> list[ParityRow]:
     # pls4all side to confirm the entry point is callable.
     if method.paper_only:
         n_targets = int(method.cell_params.get("n_targets", 1))
-        X, Y, X_target, sample_weights = _make_dataset(n, p,
-                                                        n_targets=n_targets)
-        extras = _resolve_extras(method, X_target, sample_weights)
+        n_classes = int(method.cell_params.get("n_classes", 0))
+        X, Y, X_target, sample_weights, labels, groups = _make_dataset(
+            n, p, n_targets=n_targets, n_classes=n_classes)
+        extras = _resolve_extras(method, X_target, sample_weights, labels,
+                                  groups)
         pls4all_ok = True
         try:
             with pls4all.Context() as ctx, pls4all.Config() as cfg:
@@ -199,8 +220,11 @@ def _run_method(method: MethodSpec) -> list[ParityRow]:
         )]
 
     n_targets = int(method.cell_params.get("n_targets", 1))
-    X, Y, X_target, sample_weights = _make_dataset(n, p, n_targets=n_targets)
-    extras = _resolve_extras(method, X_target, sample_weights)
+    n_classes = int(method.cell_params.get("n_classes", 0))
+    X, Y, X_target, sample_weights, labels, groups = _make_dataset(
+        n, p, n_targets=n_targets, n_classes=n_classes)
+    extras = _resolve_extras(method, X_target, sample_weights, labels,
+                              groups)
 
     pls4all_pred: np.ndarray | None = None
     try:
@@ -227,7 +251,7 @@ def _run_method(method: MethodSpec) -> list[ParityRow]:
     else:
         rows.append(_run_one_reference(method, method.python_reference,
                                         X, Y, X_target, sample_weights,
-                                        pls4all_pred))
+                                        labels, groups, pls4all_pred))
 
     if method.r_reference is None:
         rows.append(ParityRow(
@@ -244,7 +268,7 @@ def _run_method(method: MethodSpec) -> list[ParityRow]:
     else:
         rows.append(_run_one_reference(method, method.r_reference,
                                         X, Y, X_target, sample_weights,
-                                        pls4all_pred))
+                                        labels, groups, pls4all_pred))
 
     return rows
 

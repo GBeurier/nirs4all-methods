@@ -80,6 +80,7 @@ p4a_cppls_fit
 p4a_di_pls_fit
 p4a_dtype_size
 p4a_dtype_to_string
+p4a_fused_sparse_pls_fit
 p4a_gating_strategy_create
 p4a_gating_strategy_destroy
 p4a_get_abi_version_int
@@ -89,6 +90,7 @@ p4a_get_abi_version_patch
 p4a_get_build_info
 p4a_get_git_revision
 p4a_get_version_string
+p4a_group_sparse_pls_fit
 p4a_kernel_pls_fit
 p4a_matrix_view_init_colmajor
 p4a_matrix_view_init_rowmajor
@@ -130,6 +132,7 @@ p4a_recursive_pls_run
 p4a_ridge_pls_fit
 p4a_robust_pls_fit
 p4a_serialization_inspect
+p4a_sparse_pls_da_fit
 p4a_sparse_simpls_fit
 p4a_status_to_string
 p4a_validation_plan_add_fold

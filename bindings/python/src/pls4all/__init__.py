@@ -40,6 +40,9 @@ from ._methods import (
     o2pls_fit,
     approximate_press_compute,
     pls_diagnostics_compute,
+    sparse_pls_da_fit,
+    group_sparse_pls_fit,
+    fused_sparse_pls_fit,
 )
 
 
@@ -93,8 +96,11 @@ __all__ = [
     "o2pls_fit",
     "approximate_press_compute",
     "pls_diagnostics_compute",
+    "sparse_pls_da_fit",
+    "group_sparse_pls_fit",
+    "fused_sparse_pls_fit",
     "version",
     "abi_version",
     "build_info",
 ]
-__version__ = "0.76.0"
+__version__ = "0.77.0"

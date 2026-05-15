@@ -322,6 +322,70 @@ write.table(yhat, file='{pred_path}', sep=',', row.names=FALSE,
 """
 
 
+class SparsePlsDaRReference(RAdapter):
+    """R `spls::splsda` — sparse PLS for discriminant analysis.
+
+    Predicts soft assignments (dummy-encoded class scores) for the test
+    set. pls4all returns dummy-encoded predictions (n × n_classes), so
+    we transform the splsda label predictions to one-hot encoding.
+    """
+
+    library_name = "spls"
+    library_version = "2.3.2"
+    notes = ("R `spls::splsda` (Chun & Keles). Predictions returned as "
+             "hard class labels by the package; we one-hot encode them "
+             "to match pls4all's soft-assignment prediction shape, so "
+             "the parity check is on the classification *boundary* "
+             "rather than continuous score values.")
+
+    def __init__(self, n_components: int, sparsity_lambda: float,
+                 n_classes: int) -> None:
+        super().__init__()
+        self._k = n_components
+        self._eta = sparsity_lambda
+        self._n_classes = n_classes
+
+    def fit(self, X, Y, *, y_labels, **kwargs):
+        # Stash labels for the R script.
+        self._labels = np.asarray(y_labels, dtype=np.int32).reshape(-1)
+        self._X = np.asarray(X, dtype=np.float64)
+        # Build a one-hot Y so the base RAdapter writes it for the R
+        # script (some scripts ignore Y, but the runner still expects
+        # Y to be saved).
+        n = self._X.shape[0]
+        y_oh = np.zeros((n, self._n_classes), dtype=np.float64)
+        for i in range(n):
+            y_oh[i, int(self._labels[i])] = 1.0
+        self._Y = y_oh
+        self._extras = kwargs
+
+    def _r_script(self, x_path, y_path, pred_path, x_predict_path, n, p, q):
+        # splsda needs the integer labels; pass via a separate file.
+        labels_path = Path(x_path).parent / "labels.csv"
+        np.savetxt(labels_path, self._labels, fmt="%d")
+        return f"""
+suppressPackageStartupMessages(library(spls))
+X <- as.matrix(read.csv('{x_path}', header=FALSE))
+labels <- as.integer(scan('{labels_path}', quiet=TRUE))
+Xn <- as.matrix(read.csv('{x_predict_path}', header=FALSE))
+fit <- splsda(X, labels, K={self._k}, eta={self._eta}, kappa=0.5,
+              classifier='lda', scale.x=TRUE)
+pred <- predict(fit, Xn)
+# pred is a vector of class labels (1-based). Convert to one-hot.
+n_classes <- {self._n_classes}
+n_test <- length(pred)
+oh <- matrix(0, nrow=n_test, ncol=n_classes)
+for (i in seq_len(n_test)) {{
+  cl <- as.integer(pred[i])
+  if (cl >= 0 && cl < n_classes) {{
+    oh[i, cl + 1] <- 1.0
+  }}
+}}
+write.table(oh, file='{pred_path}', sep=',', row.names=FALSE,
+            col.names=FALSE)
+"""
+
+
 class PlsDiagnosticsMdatoolsRReference(_DiagnosticRAdapter):
     library_name = "mdatools"
     library_version = "0.15.0"
@@ -511,6 +575,48 @@ def _approximate_press_pls4all(ctx, cfg, X, Y, *, max_components, **_):
                                               max_components=max_components)
 
 
+def _sparse_pls_da_pls4all(ctx, cfg, X, Y, *, n_components,
+                            sparsity_lambda, n_classes, **kwargs):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.SPARSE_PLS
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.sparsity_lambda = sparsity_lambda
+    cfg.center_x = True
+    cfg.center_y = True
+    labels = kwargs["y_labels"]
+    return pls4all.sparse_pls_da_fit(ctx, cfg, X, labels)
+
+
+def _group_sparse_pls_pls4all(ctx, cfg, X, Y, *, n_components,
+                               group_lambda, **kwargs):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    groups = kwargs["group_assignment"]
+    return pls4all.group_sparse_pls_fit(ctx, cfg, X, Y, groups,
+                                         group_lambda=group_lambda)
+
+
+def _fused_sparse_pls_pls4all(ctx, cfg, X, Y, *, n_components,
+                               l1_lambda, fusion_lambda, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    return pls4all.fused_sparse_pls_fit(ctx, cfg, X, Y,
+                                         l1_lambda=l1_lambda,
+                                         fusion_lambda=fusion_lambda)
+
+
 def _pls_diagnostics_pls4all(ctx, cfg, X, Y, *, n_components, **_):
     import pls4all
     cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
@@ -540,6 +646,8 @@ class MethodSpec:
     rmse_rel_tol: float = 5e-2
     needs_x_target: bool = False
     needs_sample_weights: bool = False
+    needs_labels: bool = False
+    needs_group_assignment: bool = False
     prediction_key: str = "predictions"
     notes: str = ""
     # When non-empty, the method has no widely installable external
@@ -763,6 +871,54 @@ METHODS: list[MethodSpec] = [
         notes=("R `mdatools::pls$xdecomp$Q`. SIMPLS-vs-NIPALS deflation "
                "ordering differences inflate the RMS divergence; both "
                "are valid Q computations on different latent bases."),
+    ),
+    MethodSpec(
+        name="sparse_pls_da",
+        description="Sparse PLS-DA (§7)",
+        pls4all_fn=_sparse_pls_da_pls4all,
+        cell_params={"n_samples": 200, "n_features": 50,
+                      "n_components": 4, "sparsity_lambda": 0.05,
+                      "n_classes": 3},
+        python_reference=None,
+        r_reference=lambda **kw: SparsePlsDaRReference(
+            n_components=kw["n_components"],
+            sparsity_lambda=kw["sparsity_lambda"],
+            n_classes=kw["n_classes"]),
+        rmse_rel_tol=2.0,  # spls returns hard labels (0/1) vs soft scores
+        needs_labels=True,
+        notes=("R `spls::splsda` returns hard class labels; pls4all "
+               "returns soft dummy-encoded scores. Tolerance widened to "
+               "admit the soft-vs-hard scoring difference."),
+    ),
+    MethodSpec(
+        name="group_sparse_pls",
+        description="Group sparse PLS (§7)",
+        pls4all_fn=_group_sparse_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 50,
+                      "n_components": 4, "group_lambda": 0.1},
+        python_reference=None,
+        r_reference=None,
+        needs_group_assignment=True,
+        paper_only=("Liland, K. H. & Indahl, U. G. (2009). Powered partial "
+                    "least squares discriminant analysis. Journal of "
+                    "Chemometrics 23(1), 7-18. (Group-sparse PLS variants "
+                    "have no widely installable R / Python port; R "
+                    "`sgpls` is for generalized PLS, not group-sparse.)"),
+    ),
+    MethodSpec(
+        name="fused_sparse_pls",
+        description="Fused sparse PLS (§7)",
+        pls4all_fn=_fused_sparse_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 50,
+                      "n_components": 4, "l1_lambda": 0.05,
+                      "fusion_lambda": 0.1},
+        python_reference=None,
+        r_reference=None,
+        paper_only=("Yengo, L., Jacques, J., Biernacki, C. & Canouil, M. "
+                    "(2016). Variable clustering in high-dimensional "
+                    "linear regression: The R package `clere`. R Journal "
+                    "8(1), 92-106. (Fused-sparse PLS variants have no "
+                    "widely installable R / Python port.)"),
     ),
     MethodSpec(
         name="pls_diagnostic_dmodx",
