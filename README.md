@@ -73,6 +73,9 @@ Runtime / speed-up benchmarks are tracked separately by
 | `ds` | paper-only | paper-only | — / — | paper-only (Wang et al. 1991, DS) |
 | `mir_pls` | paper-only | paper-only | — / — | paper-only (Sjöblom et al. 1998) |
 | `missing_aware_nipals` | paper-only | paper-only | — / — | paper-only (Nelson et al. 1996) |
+| `pls_glm` | paper-only | paper-only | — / — | paper-only (Bastien et al. 2005) |
+| `pls_qda` | paper-only | paper-only | — / — | paper-only (Barker & Rayens 2003) |
+| `pls_cox` | paper-only | paper-only | — / — | paper-only (Bastien 2008) |
 
 Re-run the gate locally:
 

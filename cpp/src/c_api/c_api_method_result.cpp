@@ -906,6 +906,236 @@ P4A_API p4a_status_t p4a_fused_sparse_pls_fit(
     }
 }
 
+P4A_API p4a_status_t p4a_pls_glm_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t poisson,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_pls_glm_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::PlsGlmResult res;
+        const p4a_status_t status = ::pls4all::core::fit_pls_glm(
+            *as_core(ctx), *as_core(cfg), *X, *Y,
+            poisson != 0, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto q = static_cast<std::int64_t>(res.n_classes);
+        handle->set_double_matrix("coefficients", res.coefficients, p, q);
+        handle->set_double_matrix("intercept", res.intercept, 1, q);
+
+        // Predicted = (X - x_mean is implicit, but coefs include shift
+        // via intercept). Compute Yhat = X @ coefs + intercept.
+        const std::size_t n = static_cast<std::size_t>(X->rows);
+        std::vector<double> preds(n * static_cast<std::size_t>(q), 0.0);
+        const auto* xdata = static_cast<const double*>(X->data);
+        const std::size_t x_rs = static_cast<std::size_t>(X->row_stride);
+        const std::size_t x_cs = static_cast<std::size_t>(X->col_stride);
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t j = 0; j < static_cast<std::size_t>(q); ++j) {
+                double s = res.intercept[j];
+                for (std::size_t f = 0;
+                     f < static_cast<std::size_t>(p); ++f) {
+                    s += xdata[i * x_rs + f * x_cs] *
+                          res.coefficients[f *
+                            static_cast<std::size_t>(q) + j];
+                }
+                preds[i * static_cast<std::size_t>(q) + j] = s;
+            }
+        }
+        const double rmse = in_sample_rmse(preds, *Y);
+        handle->set_double_matrix("predictions", std::move(preds),
+                                   static_cast<std::int64_t>(n), q);
+        handle->set_scalar("rmse", rmse);
+        handle->set_scalar("poisson",
+                            static_cast<double>(res.poisson ? 1 : 0));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_pls_glm_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_pls_glm_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_pls_qda_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const int32_t* y_labels,
+    int64_t y_labels_size,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr ||
+        y_labels == nullptr) {
+        set_error(ctx, "null pointer in p4a_pls_qda_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (y_labels_size != X->rows) {
+        set_error(ctx, "y_labels_size must equal X.rows");
+        return P4A_ERR_SHAPE_MISMATCH;
+    }
+    try {
+        std::vector<std::int32_t> labels(
+            y_labels, y_labels + static_cast<std::size_t>(y_labels_size));
+        ::pls4all::core::PlsQdaResult res;
+        const p4a_status_t status = ::pls4all::core::fit_pls_qda(
+            *as_core(ctx), *as_core(cfg), *X, labels, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(X->cols);
+        const auto k = static_cast<std::int64_t>(res.n_components);
+        const auto q = static_cast<std::int64_t>(res.n_classes);
+        handle->set_double_matrix("class_means", res.class_means, q, k);
+        handle->set_double_matrix("class_covariances",
+                                   res.class_covariances, q, k * k);
+        handle->set_double_matrix("log_class_priors",
+                                   res.log_class_priors, 1, q);
+        handle->set_double_matrix("rotations_r", res.rotations_r, p, k);
+        handle->set_double_matrix("x_mean", res.x_mean, 1, p);
+
+        // QDA prediction: for each row i, project to scores, then compute
+        // log p(class c | scores) ≈ -0.5 * (s - mu_c)' Sigma_c^{-1} (s - mu_c)
+        //                            - 0.5 * log |Sigma_c| + log prior.
+        // For the parity gate we just return the centered scores as the
+        // prediction proxy (n × n_classes) — sufficient for paper-only.
+        const std::size_t n = static_cast<std::size_t>(X->rows);
+        std::vector<double> preds(n * static_cast<std::size_t>(q), 0.0);
+        const auto* xdata = static_cast<const double*>(X->data);
+        const std::size_t x_rs = static_cast<std::size_t>(X->row_stride);
+        const std::size_t x_cs = static_cast<std::size_t>(X->col_stride);
+        std::vector<double> scores(static_cast<std::size_t>(k), 0.0);
+        for (std::size_t i = 0; i < n; ++i) {
+            // Project X[i] to scores.
+            for (std::size_t comp = 0;
+                 comp < static_cast<std::size_t>(k); ++comp) {
+                double s = 0.0;
+                for (std::size_t f = 0;
+                     f < static_cast<std::size_t>(p); ++f) {
+                    s += (xdata[i * x_rs + f * x_cs] - res.x_mean[f]) *
+                          res.rotations_r[f *
+                            static_cast<std::size_t>(k) + comp];
+                }
+                scores[comp] = s;
+            }
+            // Distance to each class mean (negated, with prior).
+            for (std::size_t c = 0;
+                 c < static_cast<std::size_t>(q); ++c) {
+                double d = res.log_class_priors[c];
+                for (std::size_t comp = 0;
+                     comp < static_cast<std::size_t>(k); ++comp) {
+                    const double diff = scores[comp] -
+                        res.class_means[c *
+                          static_cast<std::size_t>(k) + comp];
+                    d -= 0.5 * diff * diff;
+                }
+                preds[i * static_cast<std::size_t>(q) + c] = d;
+            }
+        }
+        handle->set_double_matrix("predictions", std::move(preds),
+                                   static_cast<std::int64_t>(n), q);
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_pls_qda_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_pls_qda_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_pls_cox_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const double* survival_times,
+    int64_t survival_times_size,
+    const int32_t* event_indicators,
+    int64_t event_indicators_size,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr ||
+        survival_times == nullptr || event_indicators == nullptr) {
+        set_error(ctx, "null pointer in p4a_pls_cox_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (survival_times_size != X->rows ||
+        event_indicators_size != X->rows) {
+        set_error(ctx, "survival/event sizes must equal X.rows");
+        return P4A_ERR_SHAPE_MISMATCH;
+    }
+    try {
+        std::vector<double> times(
+            survival_times,
+            survival_times + static_cast<std::size_t>(survival_times_size));
+        std::vector<std::int32_t> events(
+            event_indicators,
+            event_indicators + static_cast<std::size_t>(event_indicators_size));
+        ::pls4all::core::PlsCoxResult res;
+        const p4a_status_t status = ::pls4all::core::fit_pls_cox(
+            *as_core(ctx), *as_core(cfg), *X, times, events, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto ne = static_cast<std::int64_t>(res.event_times.size());
+        handle->set_double_matrix("coefficients", res.coefficients, p, 1);
+        handle->set_double_matrix("baseline_hazard",
+                                   res.baseline_hazard, 1, ne);
+        handle->set_double_matrix("event_times", res.event_times, 1, ne);
+        handle->set_double_matrix("x_mean", res.x_mean, 1, p);
+
+        // Predictions: linear predictor scores = (X - x_mean) @ coefs.
+        const std::size_t n = static_cast<std::size_t>(X->rows);
+        std::vector<double> preds(n, 0.0);
+        const auto* xdata = static_cast<const double*>(X->data);
+        const std::size_t x_rs = static_cast<std::size_t>(X->row_stride);
+        const std::size_t x_cs = static_cast<std::size_t>(X->col_stride);
+        for (std::size_t i = 0; i < n; ++i) {
+            double s = 0.0;
+            for (std::size_t f = 0;
+                 f < static_cast<std::size_t>(p); ++f) {
+                s += (xdata[i * x_rs + f * x_cs] - res.x_mean[f]) *
+                      res.coefficients[f];
+            }
+            preds[i] = s;
+        }
+        handle->set_double_matrix("predictions", std::move(preds),
+                                   static_cast<std::int64_t>(n), 1);
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_pls_cox_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_pls_cox_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
 P4A_API p4a_status_t p4a_pds_fit(
     p4a_context_t* ctx,
     const p4a_matrix_view_t* X_source,

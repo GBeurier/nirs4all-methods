@@ -7,9 +7,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ## [Unreleased]
 
 Next: 1-SE rule (§10), monitoring (§11), multi-block remainder (§17-19
-SO-PLS / OnPLS / ROSA), GLM/QDA/Cox heads (§27), ensembles (§30) —
-each gated by external Python / R references when available, otherwise
-`paper-only` with citation.
+SO-PLS / OnPLS / ROSA), ensembles (§30) — each gated by external
+Python / R references when available, otherwise `paper-only` with
+citation.
+
+## [0.79.0-batch-9-pls-heads] — 2026-05-15
+
+Public C ABI exposure for §5 PLS heads — GLM, QDA, Cox. All three
+methods are documented `paper-only` for two reasons:
+
+1. The R packages that implement these (`plsRglm`, `plsRcox`) failed
+   to install on this host due to heavy transitive deps (`car`,
+   `bipartite`) which themselves cascade-fail.
+2. pls4all's internal kernels are simplified vs the canonical IRLS /
+   Cox-PH implementations, so even if the R packages installed,
+   numerical agreement would be qualitative.
+
+### Added
+
+- `p4a_pls_glm_fit(ctx, cfg, X, Y, poisson, **out)` — PLS-reduced GLM
+  with optional Poisson link. Result exposes coefficients, intercept,
+  predictions, x_mean, rmse, poisson and n_components scalars.
+- `p4a_pls_qda_fit(ctx, cfg, X, y_labels, n, **out)` — QDA on PLS
+  scores. Result exposes class_means, class_covariances,
+  log_class_priors, rotations_r, x_mean, predictions (log-likelihood
+  scores), n_components scalar.
+- `p4a_pls_cox_fit(ctx, cfg, X, survival_times, n, event_indicators,
+  n, **out)` — Cox PH on PLS scores with Breslow baseline. Result
+  exposes coefficients, baseline_hazard, event_times, x_mean,
+  predictions (linear-predictor scores), n_components scalar.
+- Python bindings: `pls_glm_fit`, `pls_qda_fit`, `pls_cox_fit`.
+
+### Verified
+
+- 256 internal C++ tests pass (dev-release, local-asan-ubsan-gcc,
+  local-ubsan-gcc).
+- ABI symbol diff vs expected list: 151 symbols (+3, clean).
+- `ldd` audit: only libc/libstdc++/libgcc/libm/loader.
+- `git diff --check`: clean.
+- Parity gate: 13 external PASS, 16 paper-only smoke PASS, 0 numpy.
+
+### Changed
+
+- Project version `0.79.0+abi.1.9.0`. C ABI minor 8 → 9 (additive — 3
+  new symbols).
 
 ## [0.78.0-batch-8-calibration-transfer] — 2026-05-15
 

@@ -630,7 +630,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.78.0+abi.1.8.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.79.0+abi.1.9.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
@@ -1103,6 +1103,62 @@ P4A_API p4a_status_t p4a_fused_sparse_pls_fit(
     const p4a_matrix_view_t* Y,
     double l1_lambda,
     double fusion_lambda,
+    p4a_method_result_t** out_result);
+
+/* PLS-GLM (§5). PLS-reduced design feeding a softmax / Poisson IRLS.
+ * `poisson` selects the Poisson-link path; otherwise a one-vs-rest
+ * softmax-like fit on a continuous PLS regression on Y. The result
+ * contains:
+ *   "coefficients"  (n_features x n_classes)
+ *   "intercept"     (1 x n_classes)
+ *   "predictions"   (n_samples x n_classes)
+ *   "x_mean"
+ *   scalar "rmse", scalar "poisson" (0 or 1)
+ */
+P4A_API p4a_status_t p4a_pls_glm_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t poisson,
+    p4a_method_result_t** out_result);
+
+/* PLS-QDA (§5). Quadratic discriminant analysis on PLS scores.
+ * `y_labels` is a length-n_samples buffer of non-negative class IDs.
+ * The result contains:
+ *   "class_means"        (n_classes x n_components)
+ *   "class_covariances"  (n_classes x (n_components * n_components))
+ *   "log_class_priors"   (1 x n_classes)
+ *   "rotations_r"        (n_features x n_components)
+ *   "x_mean"
+ *   "predictions"        (n_samples x n_classes)  log-likelihood scores
+ *   scalar "rmse"
+ */
+P4A_API p4a_status_t p4a_pls_qda_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const int32_t* y_labels,
+    int64_t y_labels_size,
+    p4a_method_result_t** out_result);
+
+/* PLS-Cox (§5). PLS-reduced Cox proportional hazards with Breslow
+ * baseline hazard. `survival_times` is the observed time, and
+ * `event_indicators` is 1 (event) or 0 (censored). The result contains:
+ *   "coefficients"     (n_features x 1)  linear predictor coefficients
+ *   "baseline_hazard"  (1 x n_unique_event_times)
+ *   "event_times"      (1 x n_unique_event_times)
+ *   "x_mean"
+ *   "predictions"      (n_samples x 1)  linear-predictor scores
+ */
+P4A_API p4a_status_t p4a_pls_cox_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const double* survival_times,
+    int64_t survival_times_size,
+    const int32_t* event_indicators,
+    int64_t event_indicators_size,
     p4a_method_result_t** out_result);
 
 /* PDS — Piecewise Direct Standardization (§13). Fits per-target-column

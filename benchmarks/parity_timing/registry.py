@@ -575,6 +575,48 @@ def _approximate_press_pls4all(ctx, cfg, X, Y, *, max_components, **_):
                                               max_components=max_components)
 
 
+def _pls_glm_pls4all(ctx, cfg, X, Y, *, n_components, poisson, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    return pls4all.pls_glm_fit(ctx, cfg, X, Y, poisson=bool(poisson))
+
+
+def _pls_qda_pls4all(ctx, cfg, X, Y, *, n_components, n_classes,
+                      **kwargs):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    labels = kwargs["y_labels"]
+    return pls4all.pls_qda_fit(ctx, cfg, X, labels)
+
+
+def _pls_cox_pls4all(ctx, cfg, X, Y, *, n_components, **kwargs):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    # Reuse the sample_weights vector as survival_times (positive doubles)
+    # and labels (0/1) as event indicators — keeps the runner contract
+    # simple while still producing a deterministic cell.
+    times = kwargs.get("sample_weights")
+    events = kwargs.get("y_labels")
+    if times is None or events is None:
+        raise ValueError("pls_cox needs sample_weights + y_labels")
+    # Force events to 0/1.
+    events_binary = (events.astype(np.int32) > 0).astype(np.int32)
+    return pls4all.pls_cox_fit(ctx, cfg, X, times, events_binary)
+
+
 def _pds_pls4all(ctx, cfg, X, Y, *, window_half_width, **kwargs):
     import pls4all
     X_target = kwargs.get("X_target")
@@ -910,6 +952,58 @@ METHODS: list[MethodSpec] = [
         notes=("R `mdatools::pls$xdecomp$Q`. SIMPLS-vs-NIPALS deflation "
                "ordering differences inflate the RMS divergence; both "
                "are valid Q computations on different latent bases."),
+    ),
+    MethodSpec(
+        name="pls_glm",
+        description="PLS-GLM (§5) — softmax/Poisson IRLS on PLS scores",
+        pls4all_fn=_pls_glm_pls4all,
+        cell_params={"n_samples": 200, "n_features": 30,
+                      "n_components": 4, "n_targets": 3,
+                      "poisson": 0},
+        python_reference=None,
+        r_reference=None,
+        paper_only=("Bastien, P., Vinzi, V. E. & Tenenhaus, M. (2005). "
+                    "PLS generalised linear regression. Comput. Stat. "
+                    "Data Anal. 48(1), 17-46. (R `plsRglm` ships the "
+                    "Bastien IRLS variant but has heavy transitive deps "
+                    "(car, bipartite) that fail to build in this env. "
+                    "pls4all's implementation is a simplified "
+                    "PLS-then-link variant; algorithmic agreement with "
+                    "plsRglm would be partial at best.)"),
+    ),
+    MethodSpec(
+        name="pls_qda",
+        description="PLS-QDA (§5) — quadratic discriminant on PLS scores",
+        pls4all_fn=_pls_qda_pls4all,
+        cell_params={"n_samples": 200, "n_features": 30,
+                      "n_components": 4, "n_classes": 3},
+        python_reference=None,
+        r_reference=None,
+        needs_labels=True,
+        paper_only=("Barker, M. & Rayens, W. (2003). Partial least "
+                    "squares for discrimination. Journal of Chemometrics "
+                    "17(3), 166-173. (PLS-DA / QDA on PLS scores; "
+                    "sklearn ships `QuadraticDiscriminantAnalysis` but "
+                    "not a PLS+QDA pipeline; the parity would be on the "
+                    "specific scaling of class covariances, where "
+                    "implementations diverge.)"),
+    ),
+    MethodSpec(
+        name="pls_cox",
+        description="PLS-Cox (§5) — Cox PH on PLS scores",
+        pls4all_fn=_pls_cox_pls4all,
+        cell_params={"n_samples": 200, "n_features": 30,
+                      "n_components": 4, "n_classes": 2},
+        python_reference=None,
+        r_reference=None,
+        needs_labels=True,
+        needs_sample_weights=True,
+        paper_only=("Bastien, P. (2008). Deviance residuals based PLS "
+                    "regression for censored data in high dimensional "
+                    "setting. Chemom. Intell. Lab. Syst. 91(1), 78-86. "
+                    "(R `plsRcox` ships this but failed to install in "
+                    "this env via plsRglm/car deps; Python `lifelines` "
+                    "provides Cox PH but not a PLS-reduced variant.)"),
     ),
     MethodSpec(
         name="pds",

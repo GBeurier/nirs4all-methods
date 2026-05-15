@@ -47,6 +47,9 @@ from ._methods import (
     ds_fit,
     mir_pls_fit,
     missing_aware_nipals_fit,
+    pls_glm_fit,
+    pls_qda_fit,
+    pls_cox_fit,
 )
 
 
@@ -107,8 +110,11 @@ __all__ = [
     "ds_fit",
     "mir_pls_fit",
     "missing_aware_nipals_fit",
+    "pls_glm_fit",
+    "pls_qda_fit",
+    "pls_cox_fit",
     "version",
     "abi_version",
     "build_info",
 ]
-__version__ = "0.78.0"
+__version__ = "0.79.0"

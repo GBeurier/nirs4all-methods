@@ -209,6 +209,30 @@ lib.p4a_missing_aware_nipals_fit.argtypes = [
     ctypes.POINTER(ctypes.c_void_p),
 ]
 
+lib.p4a_pls_glm_fit.restype = ctypes.c_int
+lib.p4a_pls_glm_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_int32, ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_pls_qda_fit.restype = ctypes.c_int
+lib.p4a_pls_qda_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_int32), ctypes.c_int64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_pls_cox_fit.restype = ctypes.c_int
+lib.p4a_pls_cox_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_double), ctypes.c_int64,
+    ctypes.POINTER(ctypes.c_int32), ctypes.c_int64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
 
 class MethodResult:
     """Owning wrapper around `p4a_method_result_t`."""
@@ -582,6 +606,63 @@ def fused_sparse_pls_fit(ctx: Context, cfg: Config,
     return _resolve_handle(out, ctx, "p4a_fused_sparse_pls_fit")
 
 
+def pls_glm_fit(ctx: Context, cfg: Config,
+                 X: Any, Y: Any,
+                 poisson: bool = False) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_pls_glm_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_int32(1 if poisson else 0),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_pls_glm_fit")
+
+
+def pls_qda_fit(ctx: Context, cfg: Config,
+                 X: Any, y_labels: Any) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    labels = np.ascontiguousarray(y_labels, dtype=np.int32).reshape(-1)
+    x_view = _matrix_view(X_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_pls_qda_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view),
+        labels.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+        ctypes.c_int64(int(labels.size)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_pls_qda_fit")
+
+
+def pls_cox_fit(ctx: Context, cfg: Config,
+                 X: Any,
+                 survival_times: Any,
+                 event_indicators: Any) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    times = np.ascontiguousarray(survival_times, dtype=np.float64).reshape(-1)
+    events = np.ascontiguousarray(event_indicators, dtype=np.int32).reshape(-1)
+    x_view = _matrix_view(X_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_pls_cox_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view),
+        times.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        ctypes.c_int64(int(times.size)),
+        events.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+        ctypes.c_int64(int(events.size)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_pls_cox_fit")
+
+
 def pds_fit(ctx: Context, X_source: Any, X_target: Any,
               window_half_width: int) -> MethodResult:
     Xs = _as_float64_contiguous(X_source)
@@ -693,4 +774,7 @@ __all__ = [
     "ds_fit",
     "mir_pls_fit",
     "missing_aware_nipals_fit",
+    "pls_glm_fit",
+    "pls_qda_fit",
+    "pls_cox_fit",
 ]
