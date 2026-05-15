@@ -1,0 +1,22 @@
+Package: pls4all
+Type: Package
+Title: R Binding for the pls4all C ABI
+Version: 0.68.0
+Date: 2026-05-15
+Authors@R: c(person("Gregory", "Beurier", role = c("aut", "cre"),
+                    email = "gregory.beurier@cirad.fr"))
+Description: Thin R binding over the pls4all libp4a C ABI. Provides
+    fit/predict wrappers for the shipped PLS regression solvers (NIPALS,
+    SIMPLS, SVD, kernel, wide-kernel, orthogonal-scores, power, randomized
+    SVD, PCR). The native shared library libp4a must be installed and
+    locatable via the PLS4ALL_LIB_PATH environment variable or the
+    system search path before loading this package.
+License: CeCILL-2.1
+URL: https://github.com/GBeurier/pls4all
+SystemRequirements: GNU make, libp4a (>= 0.68)
+NeedsCompilation: yes
+Imports:
+    methods
+Suggests:
+    testthat (>= 3.0.0)
+RoxygenNote: 7.3.1

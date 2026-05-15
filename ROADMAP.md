@@ -18,21 +18,23 @@ The project rule remains:
 
 ## Current Checkpoint - 2026-05-15
 
-Latest local tag: `phase-7a-benchmark-foundation` (`0.67.0+abi.1.1.0`).
+Latest local tag: `phase-7-comprehensive-benchmark` (`0.68.0+abi.1.1.0`).
 
 Last green local gate:
 
 - 97 deterministic parity fixtures.
 - 209 C++ ABI/core tests.
 - `pls4all_cli --selfcheck`.
+- `pls4all_cli --bench` smoke for every shipped PLS solver.
 - Python ctypes smoke: `bindings/python/smoke_aom_pop.py` exercises every
   AOM/POP fixture through the public C ABI.
+- Python model smoke: `pls4all.Model.fit / predict / get_array` succeeds.
 - ABI symbol diff against `cpp/abi/expected_symbols_linux.txt`.
 - `ldd` dependency audit: only libc/libstdc++/libgcc/libm/loader.
 - UBSAN.
 - ASAN+UBSAN.
-- Benchmarks: `python benchmarks/run.py --check` passes for the AOM-PLS
-  global runner (4 cases, all 0.0 abs RMSE delta vs the bench oracle).
+- Benchmarks: `python benchmarks/run.py --check` passes for every
+  shipped suite (aom_global, pls_regression, matrix).
 
 Current git notes:
 
@@ -42,24 +44,113 @@ Current git notes:
 - AOM-PLS parity oracle is `nirs4all/bench/AOM_v0/aompls`, not the packaged
   `nirs4all` library surface.
 
+## Status Summary
+
+### Done
+
+- **Phase 0** — ABI / build foundation, fixture schema, CLI selfcheck.
+- **Phase 1** — Dependency-free NIPALS PLS regression with fit / predict /
+  transform, fitted-array accessors, serialization.
+- **Phase 3 (a–r)** — Preprocessing pipeline (identity, center, autoscale,
+  Pareto, SNV, MSC, EMSC, Detrend, Savitzky-Golay, Norris-Williams,
+  ASLS, Haar wavelet, OSC, EPO), regression + classification metrics +
+  calibration, splitters (k-fold, LOO, holdout, external, repeated,
+  Monte-Carlo, Kennard-Stone, SPXY), cross-validation engine, VIP and
+  selectivity ratio, component-prefix coefficients.
+- **Phase 4 (a–s)** — SIMPLS / SVD / PCR / linear kernel / wide-kernel /
+  orthogonal-scores / power / randomized-SVD solvers; PLSCanonical
+  (NIPALS + SVD); PLSSVD; PLS-DA; OPLS / OPLS-DA / multi-response shared
+  predictive score; SIMPLS component-count CV; PLS-LDA; PLS-logistic;
+  MB-PLS; LW-PLS.
+- **Phase 5 (a–u)** — Variable-selection family: rangers (VIP,
+  coefficient, selectivity ratio), interval (moving-window, biPLS,
+  siPLS), stability (Monte-Carlo, UVE, EMCUVE, randomization), wrappers
+  (SPA, CARS, Random Frog, SCARS, GA, Shaving, REP, IPW, ST, BVE, T²,
+  WVC, WVC threshold).
+- **Phase 6 (a–f)** — AOM-PLS / POP-PLS: strict-linear operator family
+  (identity, polynomial detrend, zero-padded Savitzky-Golay, finite
+  difference, Norris-Williams, Whittaker, FCK); global AOM-SIMPLS CV
+  selection; POP-PLS per-component covariance selection; public C ABI
+  for AOM/POP including the `p4a_validation_plan_t` opaque handle.
+- **Phase 7a** — Benchmark foundation: `benchmarks/` directory, Python
+  ctypes driver, AOM-PLS global benchmark vs `nirs4all/bench/AOM_v0/aompls`
+  oracle, gated accuracy CSV + informational timing CSV.
+
+### Phase 7 - Benchmark Foundation - shipped through 7e
+
+- Phase 7b: Python ctypes `Model` wrapper + NumPy zero-copy
+  `MatrixView` constructor. `Model.fit/predict/transform/get_array`
+  cover all 9 shipped PLS regression solvers. New
+  `benchmarks/runners/pls_regression.py` runner (smoke gated; full
+  matrix on demand).
+- Phase 7c: minimum-viable R package at `bindings/r/pls4all/` with
+  `.Call` gateway and fit/predict wrappers for the same solver list.
+  No Rcpp dependency. Documentation for build / install / smoke. R
+  toolchain not installed on this host — package builds against the
+  C ABI on a future host; matrix runner skips R rows gracefully when
+  `Rscript` is absent.
+- Phase 7d: `pls4all_cli --bench` subcommand that times native C++
+  fit + predict per algo on a deterministic synthetic dataset and
+  prints a CSV-parseable row.
+- Phase 7e: `benchmarks/runners/matrix.py` orchestrator. For each
+  (algo, n_samples, n_features) cell it times native C++ / pls4all-
+  Python / pls4all-R / sklearn reference, writes a gated accuracy CSV
+  and an informational timing CSV + summary markdown + metadata JSON.
+  Smoke set is committed; full matrix (9 algos × 5 n × 3 p = 135
+  cells) is parameterized — re-run under varying CPU pinning when the
+  host is free.
+
+### Next (Phase 6 continuation)
+
+- **Phase 6g** — POP holdout / approximate-PRESS / one-SE variants;
+  AOM-NIPALS materialized engine; AOM/POP covariance and adjoint fast
+  paths; soft / sparse / superblock AOM selection fixtures; per-block
+  and per-target AOM plans.
+- **Phase 6h** — Integrate the locally developed AOM-PLS and FCL-PLS work
+  as first-class pls4all methods.
+
+### Later (binding + algorithm tracks)
+
+- **Binding roadmap** (after Phase 7c): MATLAB MEX, JS / WebAssembly,
+  Julia, Java / Android, plus secondary targets (C#, Rust, Go, Swift).
+- **Algorithm taxonomy backlog** — see the
+  [Remaining Algorithm Taxonomy](#remaining-algorithm-taxonomy) section
+  below.
+
 ## Next Agent Prompt
 
 Continue from `/home/delete/nirs4all/pls4all` on `main`, currently tagged
-`phase-7a-benchmark-foundation` (`0.67.0+abi.1.1.0`). Do not use GitHub
+`phase-7-comprehensive-benchmark` (`0.68.0+abi.1.1.0`). Do not use GitHub
 Actions for now. Keep using the local gate: pinned fixture generator,
-dev-release build, C++ tests, CLI selfcheck, Python smoke
-(`bindings/python/smoke_aom_pop.py` plus the legacy version/context/config
-snippet in `bindings/python/README.md`), ABI symbol diff, `ldd`,
+dev-release build, C++ tests, CLI selfcheck (`pls4all_cli --selfcheck`),
+CLI bench smoke (`pls4all_cli --bench --algo pls_simpls --samples 200
+--features 100`), Python smoke (`bindings/python/smoke_aom_pop.py` plus
+the version/context/config snippet in `bindings/python/README.md` plus
+`pls4all.Model.fit/predict` round-trip), ABI symbol diff, `ldd`,
 `git diff --check`, UBSAN and ASAN+UBSAN, and `python benchmarks/run.py
 --check` for the benchmark gate. Leave untracked `Backlog.md` and
 `docs/_bench/` alone. For AOM/POP parity, use
-`/home/delete/nirs4all/nirs4all/bench/AOM_v0/aompls` as the oracle. Next
-recommended tranches: (1) Phase 6g (POP holdout / approximate-PRESS / one-SE
-variants + AOM-NIPALS materialized engine); (2) Phase 2 binding work
-(NumPy zero-copy matrix views + ctypes model fit/predict wrappers), which
-unblocks the PLS-regression and POP-per-component benchmark runners.
+`/home/delete/nirs4all/nirs4all/bench/AOM_v0/aompls` as the oracle.
 
-## Shipped Core
+Two queued workloads to run when the host machine is free:
+
+1. Comprehensive matrix at full scale. `python benchmarks/run.py
+   --benchmark matrix --scale full --repeats 5` under each thread
+   pinning configuration (1 / 5 / 10 cores via `OMP_NUM_THREADS`,
+   `OPENBLAS_NUM_THREADS`, `MKL_NUM_THREADS`). Capture
+   `benchmarks/results/matrix/` after each run with a unique
+   directory suffix so the three core counts can be compared side by
+   side.
+2. R binding compilation. Install R + the `pls4all` R package
+   (`bindings/r/pls4all/`) and rerun the matrix so the `pls4all_r_*`
+   timing columns are populated.
+
+Next recommended algorithm tranches: (3) Phase 6g (POP holdout /
+approximate-PRESS / one-SE variants + AOM-NIPALS materialized engine);
+(4) port the local AOM-PLS / FCL-PLS work to first-class methods
+(Phase 6h).
+
+## Shipped Core (phase log)
 
 ### Phase 0 - ABI and Build Foundation - shipped
 
@@ -163,7 +254,7 @@ unblocks the PLS-regression and POP-per-component benchmark runners.
   fold validation). Python ctypes smoke that drives every shipped AOM/POP
   fixture through the new surface.
 
-### Phase 7 - Benchmark foundation - shipped through 7a
+### Phase 7 - Benchmark Foundation - shipped through 7a
 
 - Phase 7a: `benchmarks/` directory with a deterministic Python driver.
   First runner compares the public C ABI `p4a_aom_global_select` against
@@ -209,24 +300,29 @@ Deliverables:
 
 ## Binding Roadmap
 
-Phase 2 is intentionally delayed until the core stabilizes. It now needs to
-become active in parallel with Phase 6f.
+Phase 2 is intentionally delayed until the core stabilizes. It is now active
+in parallel with Phase 7 because the benchmark matrix needs every shipped
+language binding.
 
-### Python
+### Python (Phase 7b — in progress)
 
-- Expand ctypes binding beyond lifecycle/config.
-- NumPy zero-copy matrix views.
-- Fit/predict/transform wrappers for shipped solvers.
+- Expand ctypes binding beyond lifecycle/config and AOM/POP.
+- NumPy zero-copy matrix views (`p4a_matrix_view_t` from
+  `numpy.ndarray.ctypes.data`, ascontiguousarray fallback).
+- Fit/predict/transform wrappers for every shipped solver (NIPALS,
+  orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power,
+  randomized-SVD, plus PCR).
 - sklearn-compatible `BaseEstimator` / `RegressorMixin` /
-  `TransformerMixin` classes.
-- AOM/POP wrapper surface after Phase 6f.
+  `TransformerMixin` classes (deferred to a later Python tranche).
 - Fixture-driven Python parity tests.
 
-### R
+### R (Phase 7c — in progress)
 
 - `.Call` gateway over the C ABI.
-- R matrices to `p4a_matrix_view_t` without unnecessary copies when possible.
-- Parity against R `pls`, `ropls`, `mixOmics`, `plsVarSel` where applicable.
+- R matrices to `p4a_matrix_view_t` without unnecessary copies when
+  possible (via `REAL()` on a contiguous matrix).
+- Parity against R `pls`, `ropls`, `mixOmics`, `plsVarSel` where
+  applicable.
 - CRAN-compatible package skeleton and smoke tests.
 
 ### MATLAB
@@ -260,18 +356,53 @@ Other bindings to consider after these are stable: C#, Rust, Go and Swift.
 
 ## Benchmark Roadmap
 
-Benchmarks should start once AOM/POP has a public ABI and Python wrappers.
+Benchmarks ship under `benchmarks/` and follow a strict split:
 
-- NIPALS/SIMPLS/SVD/kernel/wide-kernel vs sklearn, R `pls` and NumPy ports.
-- AOM/POP vs `nirs4all/bench/AOM_v0/aompls`.
-- Preprocessing throughput vs NumPy/SciPy references.
-- Variable-selection runtime vs Python/R references.
+- **Accuracy CSVs** are committed and gated by `python benchmarks/run.py
+  --check`. They contain only deterministic numerical deltas (operator
+  match, component-count match, RMSE / coefficient deltas).
+- **Timing CSVs** are committed for traceability but NOT gated. They are
+  platform-dependent, recorded with explicit host info (Python version,
+  platform, processor, logical cores, environment variables such as
+  `OMP_NUM_THREADS` / `OPENBLAS_NUM_THREADS`).
+- **Summary markdown** is regenerated on every run with a status table.
+
+### Shipped
+
+- **7a** — AOM-PLS global selection vs `nirs4all/bench/AOM_v0/aompls`,
+  4 cases (9x6, 12x8, 16x10, 14x9), Python ctypes path.
+
+### Active
+
+- **7b** — PLS regression benchmark matrix: 9 solvers
+  (NIPALS / orthogonal-scores / SIMPLS / kernel-algorithm / wide-kernel /
+  SVD / power / randomized-SVD / PCR) × 5 sample sizes
+  (200, 500, 1000, 2000, 10000) × 3 feature counts
+  (100, 1000, 10000), pls4all-Python vs scikit-learn `PLSRegression`.
+  CPU-count parameterization through environment variables (run later
+  under 1 / 5 / 10 cores when the host machine is free).
+- **7c** — R-side numbers added to the same matrix via the minimum
+  R binding shipped in the binding roadmap.
+- **7d** — Native C++ baseline column via `pls4all_cli --bench`.
+- **7e** — Orchestrator that runs the full matrix end-to-end, splits
+  outputs per language and per core count, regenerates the summary
+  markdown.
+
+### Later
+
+- POP per-component benchmark column.
+- AOM-PLS benchmark expanded to the wider operator bank (SG, Norris-
+  Williams, Whittaker, FCK).
+- Preprocessing throughput vs NumPy / SciPy references.
+- Variable-selection runtime vs Python / R references.
 - LW-PLS and MB-PLS scaling.
-- Batch CV, bootstrap, CARS/MCUVE/AOM sweeps.
+- Batch CV, bootstrap, CARS / MCUVE / AOM sweeps.
 - Memory footprint and dependency audit per build.
+- GPU / OpenMP / BLAS backend self-parity once the Acceleration Roadmap
+  starts.
 
-Benchmark outputs should live under `benchmarks/` or `docs/_bench/`, but only
-commit curated summaries and reproducible scripts.
+Benchmark outputs live under `benchmarks/results/`; only curated CSVs and
+summaries are committed.
 
 ## Acceleration Roadmap
 
@@ -320,7 +451,8 @@ For every phase:
 8. Run ABI symbol diff and `ldd` dependency audit.
 9. Run `git diff --check`.
 10. Run UBSAN and ASAN+UBSAN local builds.
-11. Commit as `release(phase-X): version-topic`.
-12. Tag as `phase-X-topic`.
+11. For benchmark phases, run `python benchmarks/run.py --check`.
+12. Commit as `release(phase-X): version-topic`.
+13. Tag as `phase-X-topic`.
 
 Do not push unless explicitly asked.

@@ -1,0 +1,5 @@
+case,algo,n_samples,n_features,n_components,reference,pls4all_python_rmse_abs,pls4all_python_rmse_rel,pls4all_python_status,pls4all_python_pass,pls4all_r_rmse_abs,pls4all_r_rmse_rel,pls4all_r_status,pls4all_r_pass,accuracy_pass
+matrix-200x100,pls_simpls,200,100,10,sklearn,0.0,0.0,ok,True,nan,nan,r_not_available,,True
+matrix-200x100,pls_svd,200,100,10,sklearn,0.0,0.0,ok,True,nan,nan,r_not_available,,True
+matrix-500x100,pls_simpls,500,100,10,sklearn,0.0,0.0,ok,True,nan,nan,r_not_available,,True
+matrix-500x100,pls_svd,500,100,10,sklearn,0.0,0.0,ok,True,nan,nan,r_not_available,,True

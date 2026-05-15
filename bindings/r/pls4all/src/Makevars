@@ -1,0 +1,26 @@
+# Compile / link flags for the pls4all R package.
+#
+# Override PLS4ALL_INCLUDE_DIR and PLS4ALL_LIB_DIR to point at your
+# checkout of pls4all, e.g.:
+#
+#   R CMD INSTALL --configure-vars="\
+#     PLS4ALL_INCLUDE_DIR=$REPO/cpp/include \
+#     PLS4ALL_LIB_DIR=$REPO/build/dev-release/cpp/src" bindings/r/pls4all
+#
+# At runtime, libp4a must be findable via LD_LIBRARY_PATH (Linux),
+# DYLD_LIBRARY_PATH (macOS) or PATH (Windows MSVC/MinGW).
+
+PLS4ALL_INCLUDE_DIR ?=
+PLS4ALL_LIB_DIR ?=
+
+ifeq ($(strip $(PLS4ALL_INCLUDE_DIR)),)
+PKG_CPPFLAGS = -I$(R_PACKAGE_DIR)/../../cpp/include
+else
+PKG_CPPFLAGS = -I$(PLS4ALL_INCLUDE_DIR)
+endif
+
+ifeq ($(strip $(PLS4ALL_LIB_DIR)),)
+PKG_LIBS = -lp4a
+else
+PKG_LIBS = -L$(PLS4ALL_LIB_DIR) -Wl,-rpath,$(PLS4ALL_LIB_DIR) -lp4a
+endif

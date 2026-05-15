@@ -1,0 +1,14 @@
+PLS4ALL_INCLUDE_DIR ?=
+PLS4ALL_LIB_DIR ?=
+
+ifeq ($(strip $(PLS4ALL_INCLUDE_DIR)),)
+PKG_CPPFLAGS = -I$(R_PACKAGE_DIR)/../../cpp/include
+else
+PKG_CPPFLAGS = -I$(PLS4ALL_INCLUDE_DIR)
+endif
+
+ifeq ($(strip $(PLS4ALL_LIB_DIR)),)
+PKG_LIBS = -lp4a
+else
+PKG_LIBS = -L$(PLS4ALL_LIB_DIR) -lp4a
+endif

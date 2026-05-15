@@ -2,6 +2,44 @@ Pour une librairie C++ PLS/NIRS sérieuse, je ne ferais pas une classe par acron
 
 L’existant confirme cette structuration : scikit-learn expose déjà `PLSRegression`, `PLSCanonical`, `CCA` et `PLSSVD`, avec une logique autour de la covariance croisée et de NIPALS/SVD ; le package R `pls` expose PLSR, PCR, CPPLS, NIPALS/orthogonal scores, SIMPLS, kernel PLS et wide-kernel PLS ; `ropls` couvre PLS(-DA)/OPLS(-DA) avec diagnostics ; `mixOmics` couvre sPLS et MB-sPLS ; et `plsVarSel` / `auswahl` montrent l’importance énorme des wrappers de sélection de variables autour de la PLS. ([Scikit-learn][1])
 
+## Statut courant (mai 2026)
+
+Snapshot de ce qui est livré dans le tag `phase-7a-benchmark-foundation`
+(`0.67.0+abi.1.1.0`). La feuille de route détaillée est dans
+[`ROADMAP.md`](ROADMAP.md) ; les notes par phase sont dans `roadmap/phase-*.md`.
+
+| Section de l'Overview | Statut | Détail |
+|----------------------|--------|---------|
+| §1 Famille cœur (PLS1/PLS2/PLSRegression/PLSSVD/PCR/CPPLS) | livré sauf CPPLS | PLS1/PLS2, PLSRegression, PLSCanonical, PLSSVD, PCR — CPPLS reporté. |
+| §2 Solveurs numériques (NIPALS, OrthScores, SIMPLS, Kernel, WideKernel, SVD, Power, Randomized-SVD) | livré | les 8 solveurs sont actifs dans `p4a_model_fit`. |
+| §3 Modes de déflection (regression, canonical, orthogonal) | livré pour les modèles déjà actifs | déflection X-only / Y-only / symmetric repoussée. |
+| §4–§5 PLS-DA / PLS-LDA / PLS-logistic | livré | dummy-coding PLS-DA, têtes LDA/logistic déterministes en NumPy. |
+| §6 OPLS / OPLS-DA / multi-réponses prédictives partagées | livré | déflection orthogonale, scores prédictifs partagés. |
+| §7 Sparse / pénalisée | non livré | enums réservées dans l'ABI, pas de solveur. |
+| §8 Multi-blocs | partiel | MB-PLS livré, sPLS / SO-PLS / O2PLS / OnPLS / ROSA non livrés. |
+| §9 Multiway / tensor PLS | non livré | reporté. |
+| §10.1 Kernel algorithm linéaire / wide-kernel | livré | solveurs `KERNEL_ALGORITHM` et `WIDE_KERNEL`. |
+| §10.2 Kernel non-linéaire RBF/polynomial | non livré | ABI volontairement non gelée, voir §10.2. |
+| §11 LW-PLS / local PLS | partiel | LW-PLS livré ; just-in-time PLS et adaptive PLS reportés. |
+| §12 Dynamic / recursive PLS | non livré | reporté Phase 8+. |
+| §13 Domain adaptation (DI-PLS, PDS, EPO/OSC supervisés) | partiel | OSC et EPO supervisés livrés ; DI-PLS et PDS reportés. |
+| §14 Sélection de variables | livré pour 5a–5u | rangers, intervalles, biPLS, siPLS, stabilité, UVE, EMCUVE, randomization, SPA, CARS, Random Frog, SCARS, GA, Shaving, REP, IPW, ST, BVE, T2, WVC, WVC-threshold. |
+| §15 AOM-PLS / POP-PLS | livré 6a–6f | strict-linear AOM operators (identity, detrend, SG, fd, NW, Whittaker, FCK), AOM-SIMPLS global selection, POP-SIMPLS covariance per-component selection, surface C ABI publique. |
+| §16 Preprocessing NIRS | livré | identity/center/autoscale/Pareto/SNV/MSC/EMSC/Detrend/SG/SG-derivative/Norris-Williams/ASLS/Wavelet(Haar)/OSC/EPO. |
+| §17 Diagnostics PLS / chimiométrie | partiel | VIP, selectivity ratio, RMSE/MAE/bias/R²/Q²/slope/intercept/RPD/RPIQ, classification metrics + calibration bins ; T² et Q-residuals diagnostics restent à exposer publiquement. |
+| §18 Validation et choix de composantes | partiel | splitters et CV engines livrés, sélection de composantes SIMPLS livrée ; one-SE, approximate-PRESS, et règles bayésiennes restent à porter. |
+| §19 Monitoring / process control | non livré | reporté. |
+| §20 Ensembles de PLS | non livré | reporté. |
+| §21 Variantes GPU/batch | non livré | Acceleration Roadmap (BLAS, OpenMP, CUDA) reste optionnelle, jamais sur le chemin critique de l'ABI. |
+| §22 Modèles à exclure | n/a | rien à livrer. |
+| §23 Priorisation réaliste v0.1–v0.7 | v0.1–v0.6 essentiellement couvert | v0.7 batch/GPU reporté. |
+
+Les benchmarks de performance (multi-langage : C++ natif, Python, R, etc.,
+multi-taille : 200/500/1000/2000/10000 échantillons × 100/1000/10000
+variables) sont en cours d'instrumentation sous `benchmarks/` — voir
+[`ROADMAP.md`](ROADMAP.md) section "Benchmark Roadmap" pour le détail des
+phases 7a (livré), 7b, 7c, 7d, 7e (en préparation).
+
 ## 1. Famille cœur : les modèles PLS de base
 
 À proposer dès le socle.

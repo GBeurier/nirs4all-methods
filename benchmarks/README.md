@@ -1,103 +1,162 @@
 # pls4all benchmarks
 
-Phase 7a — first benchmark suite.
+The benchmark suite times every shipped PLS solver across language paths
+(native C++, pls4all-Python via ctypes, pls4all-R via `.Call`, reference
+scikit-learn) and dataset sizes, then writes per-benchmark CSV + a
+summary markdown.
 
-## Scope
+## Suites
 
-Compares the **public C ABI** (`libp4a` via the ctypes Python wrapper) with
-reference implementations. The first benchmark targets AOM-PLS global
-selection against the local `nirs4all/bench/AOM_v0/aompls` oracle.
+| Suite             | What it measures                                                                 | Reference                              |
+|-------------------|----------------------------------------------------------------------------------|----------------------------------------|
+| `aom_global`      | AOM-PLS global selection via `p4a_aom_global_select`                             | `nirs4all/bench/AOM_v0/aompls`         |
+| `pls_regression`  | NIPALS / SIMPLS / SVD / kernel / wide-kernel / orth-scores / power / rand-SVD / PCR via `Model.fit/predict` | `sklearn.cross_decomposition.PLSRegression` (and `Pipeline([PCA, LinearRegression])` for PCR) |
+| `matrix`          | Same algos across `(n_samples, n_features)` cells, all language paths            | sklearn (per-language accuracy gate)  |
 
-| Benchmark    | pls4all surface            | Reference                                |
-|--------------|----------------------------|------------------------------------------|
-| `aom_global` | `p4a_aom_global_select`    | `nirs4all/bench/AOM_v0/aompls`           |
+## Build prerequisites
 
-The AOM-PLS benchmark drives selection from the public C ABI: it builds an
-`OperatorBank` and a `ValidationPlan`, feeds row-major X / Y through the
-`p4a_matrix_view_t` boundary, and compares results against the oracle on the
-same data with identical fold indices.
-
-## Run
-
-Build `libp4a` first:
+`libp4a` and `pls4all_cli` must be built (the matrix benchmark spawns
+the CLI for the native C++ timing column):
 
 ```bash
 cmake --build --preset dev-release --parallel
 ```
 
-Then run:
+Python: `numpy` and (for `pls_regression` / `matrix`) `scikit-learn`.
+
+R (optional): `Rscript` on PATH and the `pls4all` R package installed
+from `bindings/r/pls4all/`. See [`../bindings/r/README.md`](../bindings/r/README.md).
+If R or the package is missing, the matrix runner records
+`r_not_available` in the timing CSV and skips R-side accuracy.
+
+## Run
 
 ```bash
-# Writes results/aom_global_accuracy.csv (gated),
-#        results/aom_global_timing.csv (informational),
-#        results/aom_global_summary.md.
+# Default: run aom_global + pls_regression + matrix at the smoke scale,
+# write live CSV + summary, exit non-zero on any accuracy gate failure.
 PLS4ALL_LIB_PATH=$(pwd)/build/dev-release/cpp/src/libp4a.so \
   python benchmarks/run.py
 
-# Assert the committed accuracy CSV matches a fresh run.
-PLS4ALL_LIB_PATH=$(pwd)/build/dev-release/cpp/src/libp4a.so \
-  python benchmarks/run.py --check
+# Explicit subset.
+python benchmarks/run.py --benchmark aom_global
+python benchmarks/run.py --benchmark pls_regression --scale smoke
+python benchmarks/run.py --benchmark matrix --scale smoke
+
+# Assert committed accuracy CSVs match a fresh run (drift gate).
+python benchmarks/run.py --check
 ```
 
-If the bench oracle is not in the default layout (`pls4all/` and `nirs4all/`
-as sibling directories), point at its parent:
+The `--scale full` flag enables the published target matrix for the
+`pls_regression` and `matrix` suites:
+
+```
+algos      : 9 (NIPALS, OScores, SIMPLS, Kernel, WideKernel, SVD, Power,
+              RandomizedSVD, PCR)
+n_samples  : 200, 500, 1000, 2000, 10000
+n_features : 100, 1000, 10000
+```
+
+The full grid is 9 × 5 × 3 = 135 cells. It is **not** run by default —
+launch it when the host machine is free. Memory and runtime grow quickly
+on the (10000, 10000) cell; expect several GB of RAM per side.
+
+If the bench oracle is not in the default layout (`pls4all/` and
+`nirs4all/` as sibling directories), point at its parent:
 
 ```bash
-# Expects ${PLS4ALL_AOM_BENCH_DIR}/nirs4all/bench/AOM_v0/aompls/ to exist.
 PLS4ALL_AOM_BENCH_DIR=/parent/of/nirs4all-checkout \
   python benchmarks/run.py
 ```
+
+## CPU pinning
+
+The runner records `OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS`,
+`MKL_NUM_THREADS` and `PLS4ALL_BENCH_THREADS` per row. Pin the thread
+count externally:
+
+```bash
+# Single-core baseline.
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  python benchmarks/run.py --benchmark matrix --scale full --repeats 5
+
+# Five-core run.
+OMP_NUM_THREADS=5 OPENBLAS_NUM_THREADS=5 MKL_NUM_THREADS=5 \
+  python benchmarks/run.py --benchmark matrix --scale full --repeats 5
+
+# Ten-core run.
+OMP_NUM_THREADS=10 OPENBLAS_NUM_THREADS=10 MKL_NUM_THREADS=10 \
+  python benchmarks/run.py --benchmark matrix --scale full --repeats 5
+```
+
+`pls4all` is currently single-threaded internally (the parallel backend is
+in the Acceleration Roadmap), so the core-pinning variables only affect
+the reference implementations and any BLAS used by the kernel-algorithm
+PLS variants.
 
 ## Layout
 
 ```
 benchmarks/
-├── README.md                              this file
-├── run.py                                 driver (writes CSV + markdown)
+├── README.md                                  this file
+├── run.py                                     unified driver
 ├── runners/
-│   ├── _harness.py                        timing + table helpers
-│   └── aom_global.py                      AOM-PLS global benchmark
+│   ├── _harness.py                            AccuracyRecord, TimingRecord, helpers
+│   ├── aom_global.py                          AOM-PLS global vs nirs4all/bench
+│   ├── pls_regression.py                      PLS regression matrix (Python)
+│   └── matrix.py                              cross-language matrix
 └── results/
-    ├── aom_global_accuracy.csv            COMMITTED — gated by --check
-    ├── aom_global_timing.csv              COMMITTED, informational
-    └── aom_global_summary.md              COMMITTED, informational
+    ├── aom_global/                            committed CSVs + summary
+    │   ├── accuracy.csv                       gated by --check
+    │   ├── timing.csv                         informational
+    │   └── summary.md                         informational
+    ├── pls_regression/
+    │   ├── accuracy.csv                       gated
+    │   ├── timing.csv                         informational
+    │   └── summary.md                         informational
+    └── matrix/
+        ├── accuracy.csv                       gated
+        ├── timing.csv                         informational
+        ├── summary.md                         informational
+        └── metadata.json                      versions + host info + env
 ```
 
 ## What is gated, what is not
 
-- **Gated** (`--check` will fail on drift): `aom_global_accuracy.csv`. The
-  columns `selected_operator_index_match`, `selected_n_components_match`,
-  `best_score_abs_delta`, `prediction_rmse_abs_delta`,
-  `prediction_rmse_rel_delta` are the canonical regression signal.
-- **Not gated**: `aom_global_timing.csv` and `aom_global_summary.md`. Wall
-  times are platform-dependent. The runner still writes them on every
-  invocation so trends are visible, but `--check` ignores them.
+- **Gated** (drift fails `--check`): every `accuracy.csv`. Columns track
+  numerical equivalence between pls4all and the reference (operator
+  match, component-count match, prediction RMSE delta, best-score delta).
+- **Not gated**: every `timing.csv`, `summary.md`, `metadata.json`. Wall
+  times are platform-dependent.
 
-The runner exits non-zero if any case's `accuracy_pass` is `False`, even
-without `--check`.
+The runner exits non-zero on any case where `accuracy_pass` is `False`,
+with or without `--check`.
 
 ## What the timing numbers do and do not show
 
-- `pls4all_end_to_end_ms_*` is the wall time of one full `fit + predict`
-  call through the public C ABI, **including Python list <-> ctypes
-  marshalling overhead** (Python lists are copied into / out of
-  `ctypes.c_double` arrays on every call).
-- `bench_end_to_end_ms_*` is the wall time of one full `fit + predict`
-  through the NumPy bench oracle.
-- Speedup is the ratio of the medians. It reflects the combined effect of
-  the C++ kernel, ctypes marshalling, and the bench oracle's NumPy
-  implementation overhead — it is **not** a pure kernel comparison.
-- Datasets are intentionally small (≤ 16 samples × 10 features). Larger
-  shapes will exercise binding overhead more heavily; that benchmark
-  variant is deferred until the Python binding gains NumPy zero-copy
-  matrix views (Phase 2 of the binding roadmap).
+- `pls4all_python_ms_*`: full `fit + predict` time including Python ↔
+  ctypes marshalling. With the NumPy zero-copy `MatrixView` constructor
+  shipped in Phase 7b, large matrices avoid the per-call list copy and
+  the overhead is near-zero — but R-side wrappers still pay a row-major
+  conversion cost (R is column-major).
+- `native_cpp_ms_*`: pure C++ fit + predict from `pls4all_cli --bench`.
+  Comes closest to the kernel cost.
+- `pls4all_r_ms_*`: full `fit + predict` from R, including the column ↔
+  row conversion in the `.Call` gateway. Will be similar to or slightly
+  slower than Python for the same size.
+- `sklearn_ms_*`: reference implementation, includes its own Python
+  overhead.
+
+Comparing pls4all vs sklearn at small (n, p) tends to under-show pls4all
+because Python overhead dominates both sides. The native C++ column is
+the right column to read for pure kernel performance.
 
 ## Adding a new benchmark
 
 1. Add a runner module under `benchmarks/runners/`.
-2. Expose a `run(*, repeats: int = 5) -> tuple[list[AccuracyRecord],
-   list[TimingRecord]]` function.
-3. Wire it into `benchmarks/run.py`.
+2. Either expose `run(*, repeats: int = 5) -> tuple[list[AccuracyRecord],
+   list[TimingRecord], dict]` (for record-style benchmarks) or return a
+   `dict` with `timing`, `accuracy`, `metadata` keys (for matrix-style).
+3. Wire it into `benchmarks/run.py`'s `_BENCHMARKS` table.
 4. Commit the resulting deterministic CSV + summary markdown.
 
 Numerical regressions should fail loudly via `accuracy_pass`. Timing

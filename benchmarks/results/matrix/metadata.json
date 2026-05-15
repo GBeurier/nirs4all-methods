@@ -1,0 +1,34 @@
+{
+  "algos": [
+    "pls_simpls",
+    "pls_svd"
+  ],
+  "cli_available": true,
+  "env": {
+    "MKL_NUM_THREADS": "",
+    "OMP_NUM_THREADS": "",
+    "OPENBLAS_NUM_THREADS": "",
+    "PLS4ALL_BENCH_THREADS": ""
+  },
+  "grid": [
+    {
+      "n_features": 100,
+      "n_samples": 200
+    },
+    {
+      "n_features": 100,
+      "n_samples": 500
+    }
+  ],
+  "host": {
+    "cores_logical": "24",
+    "machine": "x86_64",
+    "platform": "Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+    "processor": "x86_64",
+    "python": "3.13.11"
+  },
+  "pls4all_version": "0.67.0+abi.1.1.0",
+  "r_available": false,
+  "repeats": 1,
+  "scale": "smoke"
+}

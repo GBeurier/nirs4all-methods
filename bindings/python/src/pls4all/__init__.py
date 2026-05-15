@@ -24,6 +24,7 @@ from ._aom import (
     aom_global_select,
     aom_per_component_select,
 )
+from ._model import Model, ModelArrayKind
 
 
 def version() -> str:
@@ -60,8 +61,10 @@ __all__ = [
     "AomPerComponentResult",
     "aom_global_select",
     "aom_per_component_select",
+    "Model",
+    "ModelArrayKind",
     "version",
     "abi_version",
     "build_info",
 ]
-__version__ = "0.67.0"
+__version__ = "0.68.0"

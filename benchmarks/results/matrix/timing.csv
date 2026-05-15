@@ -1,0 +1,5 @@
+case,algo,n_samples,n_features,n_components,repeats,native_cpp_ms_median,native_cpp_ms_min,native_cpp_status,pls4all_python_ms_median,pls4all_python_ms_min,pls4all_python_status,pls4all_r_ms_median,pls4all_r_ms_min,pls4all_r_status,sklearn_ms_median,sklearn_ms_min,sklearn_status
+matrix-200x100,pls_simpls,200,100,10,1,0.444,0.444,ok,0.774,0.774,ok,nan,nan,r_not_available,7.453,7.453,ok
+matrix-200x100,pls_svd,200,100,10,1,0.641,0.641,ok,0.848,0.848,ok,nan,nan,r_not_available,7.534,7.534,ok
+matrix-500x100,pls_simpls,500,100,10,1,1.312,1.312,ok,0.8,0.8,ok,nan,nan,r_not_available,10.809,10.809,ok
+matrix-500x100,pls_svd,500,100,10,1,3.541,3.541,ok,1.123,1.123,ok,nan,nan,r_not_available,6.625,6.625,ok

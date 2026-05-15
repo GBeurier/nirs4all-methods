@@ -9,6 +9,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 Next phase: broaden the algorithm family beyond NIPALS PLS regression, with
 reference parity and benchmarks for every added method.
 
+## [0.68.0-comprehensive-benchmark] — 2026-05-15
+
+Phase 7b–7e. Comprehensive performance benchmark matrix.
+
+### Added
+
+- Python ctypes wrappers `pls4all.Model` / `pls4all.ModelArrayKind` with
+  NumPy zero-copy `p4a_matrix_view_t` constructors. Fit / predict /
+  transform / get_array. Non-copyable owning handles.
+- `pls4all_cli --bench` subcommand: deterministic synthetic dataset,
+  fit + predict timing per algorithm, CSV-parseable output. Recognized
+  algos: pls_nipals, pls_orthogonal_scores, pls_simpls,
+  pls_kernel_algorithm, pls_wide_kernel, pls_svd, pls_power,
+  pls_randomized_svd, pcr_svd.
+- `bindings/r/pls4all/` minimum viable R package: `.Call` gateway,
+  fit/predict for the 9 shipped PLS regression solvers, R-level
+  wrappers, version queries, `R_registerRoutines` init, Makevars +
+  Makevars.win. No Rcpp dependency.
+- `benchmarks/runners/pls_regression.py` PLS regression benchmark
+  runner with 9 algos × `(n_samples, n_features)` cells. Smoke gated
+  at 200x100 and 500x100; full matrix on demand via `--scale full`.
+- `benchmarks/runners/matrix.py` cross-language performance matrix
+  driver: native C++ (CLI) / pls4all-Python / pls4all-R / sklearn
+  reference. Records median + min wall times per row, language status
+  per column, CPU pinning environment variables. Smoke at
+  200x100/500x100 × 2 algos; full matrix is 9 × 5 × 3 = 135 cells.
+- `benchmarks/results/{pls_regression,matrix}/accuracy.csv` committed
+  and gated by `python benchmarks/run.py --check`. Timing CSVs +
+  summaries written but not gated.
+- Updated `benchmarks/README.md` with the run / pinning commands.
+- Phase notes in `roadmap/phase-7b-…md`, `phase-7c-…md`,
+  `phase-7d-…md`, `phase-7e-…md`.
+- Overview status snapshot at the top of `Overview.md` mapping each
+  taxonomy section to the current pls4all delivery state.
+
+### Changed
+
+- `bindings/python/src/pls4all/_config.py` exposes `center_x`,
+  `scale_x`, `center_y`, `scale_y`, `store_scores` as Python
+  properties (the corresponding ctypes prototypes were also added in
+  Phase 6f and are reused).
+- Benchmark output reorganized under `benchmarks/results/<benchmark>/`
+  per-suite subdirectories.
+- Project version is now `0.68.0+abi.1.1.0`. C ABI unchanged from
+  `1.1.0`; no new public symbols. Only Python / CLI / R bindings and
+  the benchmark suite changed.
+
 ## [0.67.0-benchmark-foundation] — 2026-05-15
 
 Phase 7a. Benchmark foundation.

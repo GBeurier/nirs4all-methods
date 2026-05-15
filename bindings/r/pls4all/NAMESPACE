@@ -1,0 +1,6 @@
+useDynLib(pls4all, .registration = TRUE)
+
+export(pls4all_version)
+export(pls4all_abi_version)
+export(pls4all_fit)
+export(pls4all_predict)
