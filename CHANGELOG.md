@@ -9,6 +9,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 Next phase: broaden the algorithm family beyond NIPALS PLS regression, with
 reference parity and benchmarks for every added method.
 
+## [0.67.0-benchmark-foundation] — 2026-05-15
+
+Phase 7a. Benchmark foundation.
+
+### Added
+
+- `benchmarks/` directory with the deterministic Python driver
+  `benchmarks/run.py` (`--check` mode + `--repeats N`).
+- `benchmarks/runners/_harness.py` exposing `AccuracyRecord`,
+  `TimingRecord`, `median_time_ms`, and the summary-table formatter.
+- `benchmarks/runners/aom_global.py`: AOM-PLS global selection runner that
+  drives `p4a_aom_global_select` through the Python ctypes wrapper and
+  mirrors the dataset + folds into `nirs4all/bench/AOM_v0/aompls`.
+- Four committed test cases (smooth-monotonic 9x6, 12x8, 16x10 plus a
+  detrend-favoured 14x9). The committed accuracy CSV is gated by
+  `--check`; current run reports 0.0 absolute RMSE delta against the
+  oracle across all four cases.
+- Committed `benchmarks/results/aom_global_accuracy.csv` (gated),
+  `aom_global_timing.csv` and `aom_global_summary.md` (informational).
+- `benchmarks/README.md` describing run command, gated vs informational
+  split, and the contract for adding a new runner.
+
+### Changed
+
+- Project version is now `0.67.0+abi.1.1.0`. The C ABI surface is
+  unchanged from `1.1.0`; benchmarks consume the existing public AOM/POP
+  ABI only.
+
 ## [0.66.0-public-aom-pop-abi] — 2026-05-15
 
 Phase 6f. Public C ABI for AOM/POP selection.

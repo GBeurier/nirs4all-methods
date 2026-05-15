@@ -1,0 +1,5 @@
+benchmark,case,n_samples,n_features,n_operators,max_components,n_folds,selected_operator_index,selected_operator_index_match,selected_n_components,selected_n_components_match,best_score_abs_delta,prediction_rmse_abs_delta,prediction_rmse_rel_delta,accuracy_pass
+aom_global,aom-global-9x6-ncomp3-cv3,9,6,2,3,3,0,True,2,True,0.0,0.0,0.0,True
+aom_global,aom-global-12x8-ncomp4-cv3,12,8,2,4,3,0,True,1,True,0.0,0.0,0.0,True
+aom_global,aom-global-16x10-ncomp4-cv4,16,10,2,4,4,0,True,1,True,0.0,0.0,0.0,True
+aom_global,aom-global-detrend-favoured-14x9,14,9,2,4,4,1,True,1,True,0.0,0.0,0.0,True

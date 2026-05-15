@@ -1,0 +1,5 @@
+benchmark,case,n_samples,n_features,n_operators,max_components,repeats,pls4all_end_to_end_ms_median,pls4all_end_to_end_ms_min,bench_end_to_end_ms_median,bench_end_to_end_ms_min,speedup_median
+aom_global,aom-global-9x6-ncomp3-cv3,9,6,2,3,3,0.07,0.058,1.009,0.971,14.316
+aom_global,aom-global-12x8-ncomp4-cv3,12,8,2,4,3,0.13,0.114,2.198,1.28,16.951
+aom_global,aom-global-16x10-ncomp4-cv4,16,10,2,4,3,0.197,0.146,1.545,1.465,7.836
+aom_global,aom-global-detrend-favoured-14x9,14,9,2,4,3,0.085,0.077,1.584,1.488,18.642

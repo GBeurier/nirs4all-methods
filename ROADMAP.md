@@ -18,7 +18,7 @@ The project rule remains:
 
 ## Current Checkpoint - 2026-05-15
 
-Latest local tag: `phase-6f-public-aom-pop-abi` (`0.66.0+abi.1.1.0`).
+Latest local tag: `phase-7a-benchmark-foundation` (`0.67.0+abi.1.1.0`).
 
 Last green local gate:
 
@@ -27,15 +27,16 @@ Last green local gate:
 - `pls4all_cli --selfcheck`.
 - Python ctypes smoke: `bindings/python/smoke_aom_pop.py` exercises every
   AOM/POP fixture through the public C ABI.
-- ABI symbol diff against `cpp/abi/expected_symbols_linux.txt` (additive
-  only: 28 new `p4a_*` symbols for AOM/POP/validation-plan).
+- ABI symbol diff against `cpp/abi/expected_symbols_linux.txt`.
 - `ldd` dependency audit: only libc/libstdc++/libgcc/libm/loader.
 - UBSAN.
 - ASAN+UBSAN.
+- Benchmarks: `python benchmarks/run.py --check` passes for the AOM-PLS
+  global runner (4 cases, all 0.0 abs RMSE delta vs the bench oracle).
 
 Current git notes:
 
-- `main` is ahead of `origin/main` by ~24 local commits.
+- `main` is ahead of `origin/main` by ~25 local commits.
 - Untracked files intentionally left out of commits: `Backlog.md`,
   `docs/_bench/`.
 - AOM-PLS parity oracle is `nirs4all/bench/AOM_v0/aompls`, not the packaged
@@ -44,16 +45,19 @@ Current git notes:
 ## Next Agent Prompt
 
 Continue from `/home/delete/nirs4all/pls4all` on `main`, currently tagged
-`phase-6f-public-aom-pop-abi` (`0.66.0+abi.1.1.0`). Do not use GitHub Actions
-for now. Keep using the local gate: pinned fixture generator, dev-release
-build, C++ tests, CLI selfcheck, Python smoke (`bindings/python/smoke_aom_pop.py`
-plus the legacy version/context/config snippet in
-`bindings/python/README.md`), ABI symbol diff, `ldd`, `git diff --check`,
-UBSAN and ASAN+UBSAN. Leave untracked `Backlog.md` and `docs/_bench/` alone.
-For AOM/POP parity, use `/home/delete/nirs4all/nirs4all/bench/AOM_v0/aompls`
-as the oracle. Next recommended tranche: start Phase 6g (POP holdout /
-approximate-PRESS / one-SE variants + AOM-NIPALS materialized engine) and
-land the first batch of `benchmarks/` against shipped methods.
+`phase-7a-benchmark-foundation` (`0.67.0+abi.1.1.0`). Do not use GitHub
+Actions for now. Keep using the local gate: pinned fixture generator,
+dev-release build, C++ tests, CLI selfcheck, Python smoke
+(`bindings/python/smoke_aom_pop.py` plus the legacy version/context/config
+snippet in `bindings/python/README.md`), ABI symbol diff, `ldd`,
+`git diff --check`, UBSAN and ASAN+UBSAN, and `python benchmarks/run.py
+--check` for the benchmark gate. Leave untracked `Backlog.md` and
+`docs/_bench/` alone. For AOM/POP parity, use
+`/home/delete/nirs4all/nirs4all/bench/AOM_v0/aompls` as the oracle. Next
+recommended tranches: (1) Phase 6g (POP holdout / approximate-PRESS / one-SE
+variants + AOM-NIPALS materialized engine); (2) Phase 2 binding work
+(NumPy zero-copy matrix views + ctypes model fit/predict wrappers), which
+unblocks the PLS-regression and POP-per-component benchmark runners.
 
 ## Shipped Core
 
@@ -158,6 +162,15 @@ land the first batch of `benchmarks/` against shipped methods.
   component selection (opaque result handles, typed accessors, hardened
   fold validation). Python ctypes smoke that drives every shipped AOM/POP
   fixture through the new surface.
+
+### Phase 7 - Benchmark foundation - shipped through 7a
+
+- Phase 7a: `benchmarks/` directory with a deterministic Python driver.
+  First runner compares the public C ABI `p4a_aom_global_select` against
+  `nirs4all/bench/AOM_v0/aompls` on 4 cases (identity-favoured and
+  detrend-favoured). Numerical deltas are gated by
+  `python benchmarks/run.py --check`; wall-clock timings are recorded
+  separately and informational.
 
 ## Active Track
 
