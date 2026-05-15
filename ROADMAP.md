@@ -8,9 +8,9 @@ The canonical technical spec is [`Direction_Technique.md`](Direction_Technique.m
 
 ## Current checkpoint — 2026-05-14
 
-Latest local tag: `phase-6b-aom-global-selection` (`0.62.0+abi.1.0.0`).
+Latest local tag: `phase-6c-aom-strict-operators` (`0.63.0+abi.1.0.0`).
 
-- Local reference gate is green: 92 deterministic parity fixtures, 197 C++ ABI/core tests, CLI selfcheck, Python smoke, ABI symbol diff, dependency audit, UBSAN and ASAN+UBSAN.
+- Local reference gate is green: 94 deterministic parity fixtures, 199 C++ ABI/core tests, CLI selfcheck, Python smoke, ABI symbol diff, dependency audit, UBSAN and ASAN+UBSAN.
 - GitHub Actions are intentionally parked for now to avoid spending runner quota; the actionable gate is the local parity/sanitizer run.
 - Phase 4 has shipped the main advanced CPU kernels currently targeted before variable selection: SIMPLS, SVD, PCR, kernel/wide-kernel, orthogonal-scores, power/randomized-SVD, PLSCanonical, PLSSVD, PLS-DA, OPLS/OPLS-DA, component-count CV, PLS-LDA, PLS-logistic, MB-PLS and LW-PLS.
 - Phase 5a has shipped deterministic variable-selection rankers over existing fitted-model scores: VIP, original-scale coefficient magnitude and selectivity ratio, with sklearn parity.
@@ -30,6 +30,7 @@ Latest local tag: `phase-6b-aom-global-selection` (`0.62.0+abi.1.0.0`).
 - Phase 5u has shipped deterministic ST-PLS score-threshold selection, with Python/sklearn parity.
 - Phase 6a has shipped an internal soft/hard AOM preprocessing-bank transform primitive, with NumPy parity.
 - Phase 6b has shipped internal global AOM-SIMPLS CV selection against `nirs4all/bench/AOM_v0/aompls` for the identity/detrend strict-linear tranche.
+- Phase 6c has shipped bench-parity strict-linear AOM operators for zero-padded Savitzky-Golay smoothing/derivatives, finite differences and Norris-Williams, plus a wider global-selection fixture.
 - Phase 5k has shipped deterministic BVE-PLS backward elimination, with Python/sklearn parity.
 - Phase 5l has shipped deterministic T2-PLS loading-weight selection, with Python/sklearn parity.
 - Phase 5m has shipped deterministic WVC-PLS numeric-regression selection, with NumPy/plsVarSel parity.
@@ -152,9 +153,10 @@ Each binding ships a parity-test suite that loads the JSON fixtures and asserts 
 
 ## Phase 6 — AOM-PLS & POP-PLS · the scientific differentiator
 
-- Operator bank as composable, stateful `Preprocessor` objects (Identity, SNV, MSC, SG-deriv-1/2, Polynomial Detrend, ASLS, Norris-Williams, Haar Wavelet, OSC, EPO).
+- Operator bank as composable, stateful `Preprocessor` objects (Identity, SNV, MSC, SG-deriv-1/2, finite differences, Polynomial Detrend, ASLS, Norris-Williams, Haar Wavelet, OSC, EPO).
 - AOM preprocessing-bank soft/hard gating primitive shipped as `phase-6a-aom-preprocessing`.
 - Global AOM-SIMPLS CV selector with selected operator/component count, per-operator RMSE curves and full-fit predictions shipped as `phase-6b-aom-global-selection`.
+- Strict-linear bench operators for zero-padded SG, finite difference and Norris-Williams shipped as `phase-6c-aom-strict-operators`; AOM selection now uses those strict kernels instead of the general preprocessing pipeline semantics.
 - AOM-PLS parity source: `nirs4all/bench/AOM_v0/aompls`, especially selection curves, global operator choice, component prefix selection and predictions.
 - Soft gating (weighted mixture), hard gating (discrete pick), sparse gating (penalised mixture).
 - Per-component / per-block / per-target AOM.

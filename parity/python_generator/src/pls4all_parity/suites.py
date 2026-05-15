@@ -4750,12 +4750,20 @@ def _aom_preprocessing_fixture(
 _AOM_BENCH_OPERATOR_KIND_IDS = {
     "identity": 0,
     "detrend_d1": 7,
+    "sg_smooth_w5_p2": 8,
+    "sg_d1_w5_p2": 9,
+    "nw_g3_s1_d1": 10,
+    "fd_d1": 15,
 }
 
 
 _AOM_BENCH_OPERATOR_PARAMS = {
     "identity": [],
     "detrend_d1": [1.0],
+    "sg_smooth_w5_p2": [5.0, 2.0],
+    "sg_d1_w5_p2": [5.0, 2.0, 1.0],
+    "nw_g3_s1_d1": [1.0, 3.0, 1.0],
+    "fd_d1": [1.0],
 }
 
 
@@ -4780,9 +4788,54 @@ def _aom_bench_root() -> Path:
     raise FileNotFoundError(f"nirs4all bench AOM_v0 reference not found; searched: {searched}")
 
 
+def _aom_bench_imports() -> Any:
+    root = _aom_bench_root()
+    root_str = str(root)
+    if root_str not in sys.path:
+        sys.path.insert(0, root_str)
+
+    from aompls.operators import (  # type: ignore
+        DetrendProjectionOperator,
+        FiniteDifferenceOperator,
+        IdentityOperator,
+        NorrisWilliamsOperator,
+        SavitzkyGolayOperator,
+    )
+
+    return {
+        "DetrendProjectionOperator": DetrendProjectionOperator,
+        "FiniteDifferenceOperator":  FiniteDifferenceOperator,
+        "IdentityOperator":          IdentityOperator,
+        "NorrisWilliamsOperator":    NorrisWilliamsOperator,
+        "SavitzkyGolayOperator":     SavitzkyGolayOperator,
+    }
+
+
+def _aom_bench_operator(name: str, p: int) -> Any:
+    classes = _aom_bench_imports()
+    if name == "identity":
+        return classes["IdentityOperator"](p=p)
+    if name == "detrend_d1":
+        return classes["DetrendProjectionOperator"](degree=1, p=p)
+    if name == "sg_smooth_w5_p2":
+        return classes["SavitzkyGolayOperator"](window_length=5, polyorder=2, deriv=0, p=p)
+    if name == "sg_d1_w5_p2":
+        return classes["SavitzkyGolayOperator"](window_length=5, polyorder=2, deriv=1, p=p)
+    if name == "nw_g3_s1_d1":
+        return classes["NorrisWilliamsOperator"](gap=3, smoothing=1, order=1, p=p)
+    if name == "fd_d1":
+        return classes["FiniteDifferenceOperator"](order=1, p=p)
+    raise ValueError(f"unsupported bench AOM operator fixture: {name}")
+
+
+def _aom_bench_operators(names: Sequence[str], p: int) -> list[Any]:
+    return [_aom_bench_operator(name, p) for name in names]
+
+
 def _aom_bench_reference_expected(
     X: np.ndarray,
     Y: np.ndarray,
+    operator_names: Sequence[str],
     max_components: int,
     cv: int,
     random_state: int,
@@ -4795,7 +4848,6 @@ def _aom_bench_reference_expected(
     from sklearn.model_selection import KFold
 
     from aompls.estimators import AOMPLSRegressor
-    from aompls.operators import DetrendProjectionOperator, IdentityOperator
     from aompls.scorers import CriterionConfig
     from aompls.selection import _auto_prefix_score
 
@@ -4805,10 +4857,7 @@ def _aom_bench_reference_expected(
         Y = Y.reshape(-1, 1)
     y1 = Y.ravel() if Y.shape[1] == 1 else Y
     p = X.shape[1]
-    operators = [
-        IdentityOperator(p=p),
-        DetrendProjectionOperator(degree=1, p=p),
-    ]
+    operators = _aom_bench_operators(operator_names, p)
     operator_names = [op.name for op in operators]
 
     model = AOMPLSRegressor(
@@ -4948,6 +4997,7 @@ def _aom_global_selection_fixture(
     seed: int,
     X: np.ndarray,
     Y: np.ndarray,
+    operator_names: Sequence[str],
     max_components: int,
     cv: int,
     random_state: int,
@@ -4965,6 +5015,7 @@ def _aom_global_selection_fixture(
                 "engine":         "simpls_materialized",
                 "selection":      "global",
                 "criterion":      "cv",
+                "operator_names":  [str(name) for name in operator_names],
                 "max_components": int(max_components),
                 "cv":             int(cv),
                 "random_state":   int(random_state),
@@ -4975,11 +5026,89 @@ def _aom_global_selection_fixture(
             "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
             "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed + 1, "values": _flatten_rowmajor(Y)},
         },
-        "expected": _aom_bench_reference_expected(X, Y, max_components, cv, random_state),
+        "expected": _aom_bench_reference_expected(X, Y, operator_names, max_components, cv, random_state),
         "comparison_policy": {
             "components_alignment": "exact",
             "sign_resolver":        "none",
             "tolerance_table_row":  "bench-AOM_v0-aom-selection",
+        },
+    }
+
+
+def _aom_bench_operator_expected(
+    X: np.ndarray,
+    operator_names: Sequence[str],
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    operators = _aom_bench_operators(operator_names, X.shape[1])
+    operator_names = [op.name for op in operators]
+    outputs = []
+    for op in operators:
+        op.fit(X)
+        outputs.append(np.asarray(op.transform(X), dtype=np.float64).reshape(-1, order="C"))
+
+    param_offsets = [0]
+    params: list[float] = []
+    for name in operator_names:
+        params.extend(_AOM_BENCH_OPERATOR_PARAMS[name])
+        param_offsets.append(len(params))
+
+    return {
+        "operator_names": operator_names,
+        "operator_kinds": {
+            "shape": [1, len(operator_names)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(_AOM_BENCH_OPERATOR_KIND_IDS[name]) for name in operator_names],
+        },
+        "operator_param_offsets": {
+            "shape": [1, len(param_offsets)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(v) for v in param_offsets],
+        },
+        "operator_params": {
+            "shape": [1, len(params)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": [float(v) for v in params],
+        },
+        "operator_outputs": {
+            "shape": [len(operator_names), int(X.size)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": np.asarray(outputs, dtype=np.float64).reshape(-1, order="C").tolist(),
+        },
+    }
+
+
+def _aom_operator_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    operator_names: Sequence[str],
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "nirs4all.bench.AOM_v0.aompls.operators",
+            "version":          "AOM_v0",
+            "git_revision_sha": "unknown",
+            "params": {
+                "operator_names": [str(name) for name in operator_names],
+                "reference":      "nirs4all/bench/AOM_v0/aompls",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+        },
+        "expected": _aom_bench_operator_expected(X, operator_names),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "bench-AOM_v0-aom-operators",
         },
     }
 
@@ -7178,9 +7307,65 @@ def synthetic_aom_global_simpls_cv_v1() -> dict[str, Any]:
                                          seed=49,
                                          X=X,
                                          Y=Y,
+                                         operator_names=["identity", "detrend_d1"],
                                          max_components=3,
                                          cv=3,
                                          random_state=7)
+
+
+def synthetic_aom_strict_operators_v1() -> dict[str, Any]:
+    """4 samples, 7 features for bench AOM_v0 strict-linear operator parity."""
+    X = np.array([
+        [0.20, 0.55, 1.10, 1.75, 2.35, 2.70, 3.10],
+        [1.00, 0.85, 0.65, 0.72, 1.05, 1.62, 2.40],
+        [2.50, 2.20, 1.80, 1.42, 1.15, 1.02, 0.90],
+        [0.10, 0.40, 0.95, 1.35, 1.80, 2.55, 3.45],
+    ], dtype=np.float64)
+    return _aom_operator_fixture(
+        "synthetic_aom_strict_operators_v1",
+        seed=50,
+        X=X,
+        operator_names=[
+            "identity",
+            "detrend_d1",
+            "sg_smooth_w5_p2",
+            "sg_d1_w5_p2",
+            "fd_d1",
+            "nw_g3_s1_d1",
+        ],
+    )
+
+
+def synthetic_aom_global_simpls_sg_cv_v1() -> dict[str, Any]:
+    """10 samples, 7 features for bench AOM_v0 global SIMPLS CV with SG operators."""
+    X = np.array([
+        [0.20, 0.55, 1.10, 1.75, 2.35, 2.70, 3.10],
+        [0.30, 0.70, 1.20, 1.85, 2.55, 2.95, 3.45],
+        [0.18, 0.48, 0.95, 1.55, 2.10, 2.52, 2.95],
+        [0.45, 0.88, 1.42, 2.05, 2.72, 3.18, 3.70],
+        [0.62, 1.05, 1.65, 2.32, 3.00, 3.45, 4.02],
+        [0.78, 1.24, 1.88, 2.58, 3.32, 3.82, 4.38],
+        [0.92, 1.45, 2.12, 2.86, 3.62, 4.18, 4.78],
+        [1.08, 1.68, 2.38, 3.18, 3.98, 4.58, 5.22],
+        [1.22, 1.86, 2.66, 3.52, 4.34, 5.02, 5.70],
+        [1.38, 2.08, 2.95, 3.88, 4.76, 5.48, 6.20],
+    ], dtype=np.float64)
+    Y = np.array([0.45, 0.62, 0.38, 0.78, 0.96, 1.18, 1.42, 1.70, 1.98, 2.30], dtype=np.float64)
+    return _aom_global_selection_fixture("synthetic_aom_global_simpls_sg_cv_v1",
+                                         seed=51,
+                                         X=X,
+                                         Y=Y,
+                                         operator_names=[
+                                             "identity",
+                                             "sg_smooth_w5_p2",
+                                             "sg_d1_w5_p2",
+                                             "fd_d1",
+                                             "nw_g3_s1_d1",
+                                             "detrend_d1",
+                                         ],
+                                         max_components=3,
+                                         cv=5,
+                                         random_state=11)
 
 
 def synthetic_pipeline_msc_v1() -> dict[str, Any]:

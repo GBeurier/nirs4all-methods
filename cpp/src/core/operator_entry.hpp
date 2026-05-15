@@ -24,7 +24,7 @@ struct OperatorEntry {
 };
 
 [[nodiscard]] inline bool operator_kind_is_valid(p4a_operator_kind_t k) noexcept {
-    return k >= P4A_OP_IDENTITY && k <= P4A_OP_WAVELET_DENOISE;
+    return k >= P4A_OP_IDENTITY && k <= P4A_OP_FINITE_DIFFERENCE;
 }
 
 }  // namespace pls4all::core

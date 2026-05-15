@@ -78,6 +78,9 @@ weights and hard first-operator gating; full AOM-PLS parity is explicitly
 anchored on `nirs4all/bench/AOM_v0/aompls`.
 Phase 6b adds internal global AOM-SIMPLS CV selection against that bench oracle
 for the identity/detrend strict-linear tranche.
+Phase 6c adds bench-parity strict-linear zero-padded Savitzky-Golay,
+finite-difference and Norris-Williams AOM operators and runs them through the
+global selector.
 The supported fitted-model path is now live for NIPALS,
 orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and
 randomized-SVD PLS regression

@@ -1,9 +1,14 @@
 {
   "fixtures": {
     "synthetic_aom_global_simpls_cv_v1": {
-      "bytes": 4438,
+      "bytes": 4514,
       "path": "synthetic_aom_global_simpls_cv_v1.json",
-      "sha256": "4073bbfffb57bb5f4aa30cfcf84e13fc4b8846a78aea515e9d401c2c319a155b"
+      "sha256": "32d7bd43dcb78451dd7a92a4f580289d4a50b99a5711f5f8968dc22c9f554790"
+    },
+    "synthetic_aom_global_simpls_sg_cv_v1": {
+      "bytes": 5994,
+      "path": "synthetic_aom_global_simpls_sg_cv_v1.json",
+      "sha256": "5c23a70f19cfac6f702d70ebfe5705c0b1444344d7b897348b45d5acc0b44912"
     },
     "synthetic_aom_hard_preprocessing_v1": {
       "bytes": 3240,
@@ -14,6 +19,11 @@
       "bytes": 3685,
       "path": "synthetic_aom_soft_preprocessing_v1.json",
       "sha256": "2eb85d95a7a44c8d96f674c787560e0bc85284855411359875b4c895cd77e80c"
+    },
+    "synthetic_aom_strict_operators_v1": {
+      "bytes": 6303,
+      "path": "synthetic_aom_strict_operators_v1.json",
+      "sha256": "5507b1886093234f9940b66e3e8af9618e1e654dbfe3c3b6ba967b712deb14d6"
     },
     "synthetic_bipls_backward_intervals_v1": {
       "bytes": 12145,

@@ -1,0 +1,367 @@
+{
+  "comparison_policy": {
+    "components_alignment": "exact",
+    "sign_resolver": "none",
+    "tolerance_table_row": "bench-AOM_v0-aom-selection"
+  },
+  "data": {
+    "X": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "rng_seed": 51,
+      "shape": [
+        10,
+        7
+      ],
+      "values": [
+        0.2,
+        0.55,
+        1.1,
+        1.75,
+        2.35,
+        2.7,
+        3.1,
+        0.3,
+        0.7,
+        1.2,
+        1.85,
+        2.55,
+        2.95,
+        3.45,
+        0.18,
+        0.48,
+        0.95,
+        1.55,
+        2.1,
+        2.52,
+        2.95,
+        0.45,
+        0.88,
+        1.42,
+        2.05,
+        2.72,
+        3.18,
+        3.7,
+        0.62,
+        1.05,
+        1.65,
+        2.32,
+        3.0,
+        3.45,
+        4.02,
+        0.78,
+        1.24,
+        1.88,
+        2.58,
+        3.32,
+        3.82,
+        4.38,
+        0.92,
+        1.45,
+        2.12,
+        2.86,
+        3.62,
+        4.18,
+        4.78,
+        1.08,
+        1.68,
+        2.38,
+        3.18,
+        3.98,
+        4.58,
+        5.22,
+        1.22,
+        1.86,
+        2.66,
+        3.52,
+        4.34,
+        5.02,
+        5.7,
+        1.38,
+        2.08,
+        2.95,
+        3.88,
+        4.76,
+        5.48,
+        6.2
+      ]
+    },
+    "Y": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "rng_seed": 52,
+      "shape": [
+        10,
+        1
+      ],
+      "values": [
+        0.45,
+        0.62,
+        0.38,
+        0.78,
+        0.96,
+        1.18,
+        1.42,
+        1.7,
+        1.98,
+        2.3
+      ]
+    }
+  },
+  "expected": {
+    "best_score": 0.018059541712523237,
+    "fold_test_indices": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        10
+      ],
+      "values": [
+        7,
+        8,
+        2,
+        6,
+        4,
+        5,
+        1,
+        3,
+        0,
+        9
+      ]
+    },
+    "fold_test_offsets": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        6
+      ],
+      "values": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10
+      ]
+    },
+    "fold_train_indices": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        40
+      ],
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        9,
+        0,
+        1,
+        3,
+        4,
+        5,
+        7,
+        8,
+        9,
+        0,
+        1,
+        2,
+        3,
+        6,
+        7,
+        8,
+        9,
+        0,
+        2,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
+    },
+    "fold_train_offsets": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        6
+      ],
+      "values": [
+        0,
+        8,
+        16,
+        24,
+        32,
+        40
+      ]
+    },
+    "operator_kinds": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        6
+      ],
+      "values": [
+        0,
+        8,
+        9,
+        15,
+        10,
+        7
+      ]
+    },
+    "operator_names": [
+      "identity",
+      "sg_smooth_w5_p2",
+      "sg_d1_w5_p2",
+      "fd_d1",
+      "nw_g3_s1_d1",
+      "detrend_d1"
+    ],
+    "operator_param_offsets": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        7
+      ],
+      "values": [
+        0,
+        0,
+        2,
+        5,
+        6,
+        9,
+        10
+      ]
+    },
+    "operator_params": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        10
+      ],
+      "values": [
+        5.0,
+        2.0,
+        5.0,
+        2.0,
+        1.0,
+        1.0,
+        1.0,
+        3.0,
+        1.0,
+        1.0
+      ]
+    },
+    "operator_scores": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        6
+      ],
+      "values": [
+        0.02184790249607329,
+        0.02561128052030196,
+        0.027507269093284614,
+        0.018059541712523237,
+        0.023486840590688753,
+        0.5066361326388347
+      ]
+    },
+    "predictions": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "shape": [
+        10,
+        1
+      ],
+      "values": [
+        0.45950995413342555,
+        0.630263085955045,
+        0.34380578274632034,
+        0.7839116063232601,
+        0.9607518031186332,
+        1.1956943033702951,
+        1.4345528421352123,
+        1.6983264904137996,
+        1.9820899245994084,
+        2.2810942072045957
+      ]
+    },
+    "rmse_curves": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "shape": [
+        6,
+        3
+      ],
+      "values": [
+        0.024528164527235802,
+        0.02184790249607329,
+        0.025182965969335218,
+        0.02561128052030196,
+        0.025715409293449544,
+        0.02948869472794937,
+        0.027507269093284614,
+        0.03195009797875791,
+        0.03353322117219111,
+        0.018059541712523237,
+        0.02220158830890783,
+        0.020355484127993154,
+        0.023486840590688753,
+        0.02438289413014419,
+        0.029427451030387807,
+        0.5066361326388347,
+        0.5740704856800394,
+        0.5503179507220268
+      ]
+    },
+    "selected_n_components": 1,
+    "selected_operator_index": 3
+  },
+  "fixture_id": "synthetic_aom_global_simpls_sg_cv_v1",
+  "generator": {
+    "git_revision_sha": "unknown",
+    "name": "nirs4all.bench.AOM_v0.aompls",
+    "params": {
+      "criterion": "cv",
+      "cv": 5,
+      "engine": "simpls_materialized",
+      "max_components": 3,
+      "operator_names": [
+        "identity",
+        "sg_smooth_w5_p2",
+        "sg_d1_w5_p2",
+        "fd_d1",
+        "nw_g3_s1_d1",
+        "detrend_d1"
+      ],
+      "random_state": 11,
+      "reference": "nirs4all/bench/AOM_v0/aompls",
+      "selection": "global"
+    },
+    "version": "AOM_v0"
+  },
+  "schema_version": 1
+}

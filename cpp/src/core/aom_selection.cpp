@@ -11,11 +11,11 @@
 #include <new>
 #include <vector>
 
+#include "core/aom_operators.hpp"
 #include "core/component_coefficients.hpp"
 #include "core/matrix_view.hpp"
 #include "core/model.hpp"
 #include "core/operator_entry.hpp"
-#include "core/pipeline.hpp"
 #include "core/status.hpp"
 
 namespace {
@@ -188,27 +188,9 @@ namespace {
 
 [[nodiscard]] p4a_status_t transform_with_operator(::pls4all::core::Context& ctx,
                                                    const ::pls4all::core::OperatorEntry& entry,
-                                                   const p4a_matrix_view_t& fit_x,
-                                                   const p4a_matrix_view_t* fit_y,
                                                    const p4a_matrix_view_t& apply_x,
                                                    std::vector<double>& transformed) {
-    std::size_t n_values = 0;
-    if (!checked_matrix_size(apply_x.rows, apply_x.cols, n_values)) {
-        ctx.set_error("AOM transformed matrix shape is too large");
-        return P4A_ERR_INVALID_ARGUMENT;
-    }
-    ::pls4all::core::Pipeline pipeline;
-    const double* params = entry.params.empty() ? nullptr : entry.params.data();
-    pipeline.add_operator(entry.kind,
-                          params,
-                          static_cast<std::int32_t>(entry.params.size()));
-    p4a_status_t status = pipeline.fit(ctx, fit_x, fit_y);
-    if (status != P4A_OK) {
-        return status;
-    }
-    transformed.assign(n_values, 0.0);
-    p4a_matrix_view_t out = rowmajor_f64_view(transformed, apply_x.rows, apply_x.cols);
-    return pipeline.transform(ctx, apply_x, out);
+    return ::pls4all::core::transform_aom_strict_operator(ctx, entry, apply_x, transformed);
 }
 
 [[nodiscard]] double prefix_rmse(const ::pls4all::core::Model& model,
@@ -288,11 +270,11 @@ namespace {
 
         std::vector<double> train_xt;
         std::vector<double> test_xt;
-        status = transform_with_operator(ctx, entry, train_x_view, &train_y_view, train_x_view, train_xt);
+        status = transform_with_operator(ctx, entry, train_x_view, train_xt);
         if (status != P4A_OK) {
             return status;
         }
-        status = transform_with_operator(ctx, entry, train_x_view, &train_y_view, test_x_view, test_xt);
+        status = transform_with_operator(ctx, entry, test_x_view, test_xt);
         if (status != P4A_OK) {
             return status;
         }
@@ -364,7 +346,7 @@ namespace {
                                                     std::int32_t n_components,
                                                     std::vector<double>& predictions) {
     std::vector<double> xt;
-    p4a_status_t status = transform_with_operator(ctx, entry, X, &Y, X, xt);
+    p4a_status_t status = transform_with_operator(ctx, entry, X, xt);
     if (status != P4A_OK) {
         return status;
     }

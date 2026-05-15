@@ -192,4 +192,16 @@ TEST(aom_selection_phase6b, rejects_invalid_requests) {
                                                 fixture.max_components,
                                                 result),
              P4A_ERR_INVALID_ARGUMENT);
+
+    ::pls4all::core::OperatorBank non_strict_bank;
+    non_strict_bank.add(P4A_OP_SNV, nullptr, 0);
+    CHECK_EQ(::pls4all::core::select_aom_global(ctx,
+                                                simpls_config(),
+                                                non_strict_bank,
+                                                X,
+                                                Y,
+                                                plan,
+                                                fixture.max_components,
+                                                result),
+             P4A_ERR_UNSUPPORTED);
 }

@@ -267,6 +267,10 @@
       "cv": 3,
       "engine": "simpls_materialized",
       "max_components": 3,
+      "operator_names": [
+        "identity",
+        "detrend_d1"
+      ],
       "random_state": 7,
       "reference": "nirs4all/bench/AOM_v0/aompls",
       "selection": "global"

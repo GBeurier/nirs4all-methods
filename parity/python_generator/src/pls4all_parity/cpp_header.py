@@ -74,9 +74,18 @@ HEADER_SPECS = {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "aom_selection_fixtures.hpp",
         "fixtures": (
             "synthetic_aom_global_simpls_cv_v1",
+            "synthetic_aom_global_simpls_sg_cv_v1",
         ),
         "struct": "AomSelectionFixture",
         "array": "kAomSelectionFixtures",
+    },
+    "aom-operators": {
+        "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "aom_operator_fixtures.hpp",
+        "fixtures": (
+            "synthetic_aom_strict_operators_v1",
+        ),
+        "struct": "AomOperatorFixture",
+        "array": "kAomOperatorFixtures",
     },
     "metrics": {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "metrics_fixtures.hpp",
@@ -824,6 +833,79 @@ def generate_aom_preprocessing(fixture_ids: Sequence[str],
             f"        {_matrix_ref(outputs_name, expected['operator_outputs'])},\n"
             f"        {_matrix_ref(transformed_name, expected['transformed'])},\n"
             f"        AomPreprocessingIndexRef{{{kinds_name}, sizeof({kinds_name}) / sizeof(std::int64_t)}}\n"
+            "    }"
+        )
+
+    lines.append(f"inline const {struct_name} {array_name}[] = {{")
+    lines.append(",\n".join(entries))
+    lines.append("};")
+    lines.append("")
+    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+
+def generate_aom_operators(fixture_ids: Sequence[str],
+                           fixture_dir: Path,
+                           out: Path,
+                           family: str,
+                           struct_name: str,
+                           array_name: str) -> None:
+    fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
+    lines = [
+        "// SPDX-License-Identifier: CeCILL-2.1",
+        f"// Generated mechanically from parity/fixtures/*{family}*.json.",
+        "#pragma once",
+        "",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "",
+        '#include "phase1_fixtures.hpp"',
+        "",
+        "namespace pls4all::test::fixtures {",
+        "",
+        "struct AomOperatorIndexRef {",
+        "    const std::int64_t* values;",
+        "    std::size_t size;",
+        "};",
+        "",
+        f"struct {struct_name} {{",
+        "    const char* id;",
+        "    std::int32_t n_operators;",
+        "    MatrixRef X;",
+        "    MatrixRef operator_params;",
+        "    MatrixRef operator_outputs;",
+        "    AomOperatorIndexRef operator_kinds;",
+        "    AomOperatorIndexRef operator_param_offsets;",
+        "};",
+        "",
+    ]
+
+    entries: list[str] = []
+    for fixture in fixtures:
+        fid = fixture["fixture_id"]
+        prefix = _symbol(fid)
+        expected = fixture["expected"]
+        x_name = f"{prefix}_X"
+        op_params_name = f"{prefix}_operator_params"
+        outputs_name = f"{prefix}_operator_outputs"
+        kinds_name = f"{prefix}_operator_kinds"
+        param_offsets_name = f"{prefix}_operator_param_offsets"
+        _emit_array(lines, x_name, fixture["data"]["X"]["values"])
+        _emit_array(lines, op_params_name, expected["operator_params"]["values"])
+        _emit_array(lines, outputs_name, expected["operator_outputs"]["values"])
+        _emit_int_array(lines, kinds_name, expected["operator_kinds"]["values"])
+        _emit_int_array(lines, param_offsets_name, expected["operator_param_offsets"]["values"])
+        entries.append(
+            "    {\n"
+            f'        "{fid}",\n'
+            f"        {int(expected['operator_kinds']['shape'][1])},\n"
+            f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
+            f"        {_matrix_ref(op_params_name, expected['operator_params'])},\n"
+            f"        {_matrix_ref(outputs_name, expected['operator_outputs'])},\n"
+            f"        AomOperatorIndexRef{{{kinds_name}, sizeof({kinds_name}) / sizeof(std::int64_t)}},\n"
+            f"        AomOperatorIndexRef{{{param_offsets_name}, sizeof({param_offsets_name}) / sizeof(std::int64_t)}}\n"
             "    }"
         )
 
@@ -3943,6 +4025,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.family == "aom-preprocessing":
         generate_aom_preprocessing(fixture_ids, args.fixture_dir, out, args.family,
                                    str(spec["struct"]), str(spec["array"]))
+    elif args.family == "aom-operators":
+        generate_aom_operators(fixture_ids, args.fixture_dir, out, args.family,
+                               str(spec["struct"]), str(spec["array"]))
     elif args.family == "aom-selection":
         generate_aom_selection(fixture_ids, args.fixture_dir, out, args.family,
                                str(spec["struct"]), str(spec["array"]))
