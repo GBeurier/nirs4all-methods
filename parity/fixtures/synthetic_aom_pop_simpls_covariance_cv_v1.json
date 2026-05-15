@@ -1,0 +1,398 @@
+{
+  "comparison_policy": {
+    "components_alignment": "exact",
+    "sign_resolver": "none",
+    "tolerance_table_row": "bench-AOM_v0-pop-selection"
+  },
+  "data": {
+    "X": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "rng_seed": 54,
+      "shape": [
+        12,
+        9
+      ],
+      "values": [
+        0.1,
+        0.32,
+        0.7,
+        1.18,
+        1.72,
+        2.18,
+        2.52,
+        2.82,
+        3.08,
+        0.22,
+        0.48,
+        0.86,
+        1.34,
+        1.92,
+        2.42,
+        2.82,
+        3.14,
+        3.45,
+        0.18,
+        0.38,
+        0.76,
+        1.22,
+        1.78,
+        2.26,
+        2.58,
+        2.88,
+        3.16,
+        0.38,
+        0.72,
+        1.18,
+        1.72,
+        2.34,
+        2.9,
+        3.32,
+        3.7,
+        4.08,
+        0.52,
+        0.94,
+        1.48,
+        2.06,
+        2.72,
+        3.28,
+        3.78,
+        4.18,
+        4.62,
+        0.7,
+        1.18,
+        1.78,
+        2.42,
+        3.1,
+        3.74,
+        4.28,
+        4.76,
+        5.2,
+        0.88,
+        1.44,
+        2.1,
+        2.82,
+        3.56,
+        4.24,
+        4.84,
+        5.36,
+        5.86,
+        1.08,
+        1.72,
+        2.44,
+        3.22,
+        4.02,
+        4.78,
+        5.46,
+        6.04,
+        6.6,
+        1.3,
+        2.02,
+        2.82,
+        3.66,
+        4.54,
+        5.34,
+        6.1,
+        6.76,
+        7.38,
+        1.54,
+        2.34,
+        3.22,
+        4.14,
+        5.1,
+        6.0,
+        6.82,
+        7.56,
+        8.22,
+        1.82,
+        2.7,
+        3.66,
+        4.66,
+        5.7,
+        6.68,
+        7.58,
+        8.4,
+        9.16,
+        2.08,
+        3.04,
+        4.08,
+        5.16,
+        6.28,
+        7.34,
+        8.32,
+        9.22,
+        10.05
+      ]
+    },
+    "Y": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "rng_seed": 55,
+      "shape": [
+        12,
+        1
+      ],
+      "values": [
+        0.3,
+        0.48,
+        0.36,
+        0.72,
+        0.94,
+        1.22,
+        1.52,
+        1.84,
+        2.2,
+        2.58,
+        3.02,
+        3.44
+      ]
+    }
+  },
+  "expected": {
+    "best_score": 1.3426873041494416,
+    "component_scores": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "shape": [
+        3,
+        6
+      ],
+      "values": [
+        1.3847272978822802,
+        1.3426873041494416,
+        1.3847460579442241,
+        1.384946630791107,
+        1.384731435172058,
+        1.38494533030675,
+        1.40188651485263,
+        1.490318919034827,
+        1.380373807379091,
+        1.3828863942795075,
+        1.4015321999831543,
+        1.3710607849434868,
+        1.376850099125093,
+        1.3909724906529632,
+        1.3751022615785675,
+        1.3864739254301413,
+        1.4018764037430531,
+        1.3876081609829434
+      ]
+    },
+    "fold_test_indices": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        12
+      ],
+      "values": [
+        2,
+        3,
+        8,
+        11,
+        4,
+        5,
+        7,
+        9,
+        0,
+        1,
+        6,
+        10
+      ]
+    },
+    "fold_test_offsets": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        4
+      ],
+      "values": [
+        0,
+        4,
+        8,
+        12
+      ]
+    },
+    "fold_train_indices": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        24
+      ],
+      "values": [
+        0,
+        1,
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        0,
+        1,
+        2,
+        3,
+        6,
+        8,
+        10,
+        11,
+        2,
+        3,
+        4,
+        5,
+        7,
+        8,
+        9,
+        11
+      ]
+    },
+    "fold_train_offsets": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        4
+      ],
+      "values": [
+        0,
+        8,
+        16,
+        24
+      ]
+    },
+    "operator_kinds": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        6
+      ],
+      "values": [
+        0,
+        7,
+        8,
+        15,
+        16,
+        17
+      ]
+    },
+    "operator_names": [
+      "identity",
+      "detrend_d1",
+      "sg_smooth_w5_p2",
+      "fd_d1",
+      "whittaker_l10",
+      "fck_a1.00_s1.00_k7"
+    ],
+    "operator_param_offsets": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        7
+      ],
+      "values": [
+        0,
+        0,
+        1,
+        3,
+        4,
+        5,
+        9
+      ]
+    },
+    "operator_params": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        9
+      ],
+      "values": [
+        1.0,
+        5.0,
+        2.0,
+        1.0,
+        10.0,
+        1.0,
+        1.0,
+        7.0,
+        3.0
+      ]
+    },
+    "predictions": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "shape": [
+        12,
+        1
+      ],
+      "values": [
+        0.5778943080108717,
+        0.07597649434078435,
+        0.14273234593901174,
+        0.5889012336233571,
+        1.3409813078387034,
+        1.6655686236394378,
+        2.1167845621931676,
+        2.1486849492486195,
+        2.372374540584939,
+        2.5866299471090475,
+        2.473437809278359,
+        2.5300338781936995
+      ]
+    },
+    "prefix_scores": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        3
+      ],
+      "values": [
+        1.3426873041494416,
+        1.3710607849434868,
+        1.3751022615785675
+      ]
+    },
+    "selected_n_components": 1,
+    "selected_operator_indices": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        1
+      ],
+      "values": [
+        1
+      ]
+    }
+  },
+  "fixture_id": "synthetic_aom_pop_simpls_covariance_cv_v1",
+  "generator": {
+    "git_revision_sha": "unknown",
+    "name": "nirs4all.bench.AOM_v0.aompls",
+    "params": {
+      "criterion": "cv",
+      "cv": 3,
+      "engine": "simpls_covariance",
+      "max_components": 3,
+      "operator_names": [
+        "identity",
+        "detrend_d1",
+        "sg_smooth_w5_p2",
+        "fd_d1",
+        "whittaker_l10",
+        "fck_a1.00_s1.00_k7"
+      ],
+      "orthogonalization": "original",
+      "random_state": 17,
+      "reference": "nirs4all/bench/AOM_v0/aompls",
+      "selection": "per_component"
+    },
+    "version": "AOM_v0"
+  },
+  "schema_version": 1
+}

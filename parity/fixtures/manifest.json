@@ -25,6 +25,11 @@
       "path": "synthetic_aom_hard_preprocessing_v1.json",
       "sha256": "0fe9fbf6af4e01ff22186cfab9c555a22a768e8d746d173da0a5c9efbbaa54d8"
     },
+    "synthetic_aom_pop_simpls_covariance_cv_v1": {
+      "bytes": 6485,
+      "path": "synthetic_aom_pop_simpls_covariance_cv_v1.json",
+      "sha256": "b2baa5d2d02ffdf3b13d26cc97a98a1708042495fa3cf575c189af8e5b8119c1"
+    },
     "synthetic_aom_soft_preprocessing_v1": {
       "bytes": 3685,
       "path": "synthetic_aom_soft_preprocessing_v1.json",

@@ -58,6 +58,7 @@ def _generate_all() -> dict[str, bytes]:
         "synthetic_aom_global_simpls_cv_v1": _serialize(suites.synthetic_aom_global_simpls_cv_v1()),
         "synthetic_aom_global_simpls_sg_cv_v1": _serialize(suites.synthetic_aom_global_simpls_sg_cv_v1()),
         "synthetic_aom_global_simpls_fck_whittaker_cv_v1": _serialize(suites.synthetic_aom_global_simpls_fck_whittaker_cv_v1()),
+        "synthetic_aom_pop_simpls_covariance_cv_v1": _serialize(suites.synthetic_aom_pop_simpls_covariance_cv_v1()),
         "synthetic_pipeline_asls_v1": _serialize(suites.synthetic_pipeline_asls_v1()),
         "synthetic_pipeline_norris_williams_v1": _serialize(suites.synthetic_pipeline_norris_williams_v1()),
         "synthetic_pipeline_wavelet_haar_v1": _serialize(suites.synthetic_pipeline_wavelet_haar_v1()),

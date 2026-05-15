@@ -5047,6 +5047,234 @@ def _aom_global_selection_fixture(
     }
 
 
+def _aom_bench_pop_reference_expected(
+    X: np.ndarray,
+    Y: np.ndarray,
+    operator_names: Sequence[str],
+    max_components: int,
+    cv: int,
+    random_state: int,
+) -> dict[str, Any]:
+    root = _aom_bench_root()
+    root_str = str(root)
+    if root_str not in sys.path:
+        sys.path.insert(0, root_str)
+
+    from sklearn.model_selection import KFold
+
+    from aompls.estimators import POPPLSRegressor
+    from aompls.scorers import CriterionConfig
+    from aompls.selection import _criterion_score_at_indices
+
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+    if Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+    y1 = Y.ravel() if Y.shape[1] == 1 else Y
+    p = X.shape[1]
+    operators = _aom_bench_operators(operator_names, p)
+    operator_names = [op.name for op in operators]
+
+    model = POPPLSRegressor(
+        n_components="auto",
+        max_components=int(max_components),
+        engine="simpls_covariance",
+        selection="per_component",
+        criterion="cv",
+        operator_bank=operators,
+        orthogonalization="original",
+        center=True,
+        scale=False,
+        cv=int(cv),
+        random_state=int(random_state),
+        one_se_rule=False,
+    ).fit(X, y1)
+
+    Xc = X - X.mean(axis=0)
+    yc = Y - Y.mean(axis=0)
+    criterion = CriterionConfig(
+        kind="cv",
+        cv=int(cv),
+        random_state=int(random_state),
+        task="regression",
+        repeats=1,
+        one_se_rule=False,
+    )
+
+    selected_full: list[int] = []
+    component_scores: list[list[float]] = []
+    for _component in range(int(max_components)):
+        row: list[float] = []
+        for op_index in range(len(operators)):
+            score, _ = _criterion_score_at_indices(
+                Xc,
+                yc,
+                operators,
+                "simpls_covariance",
+                selected_full + [op_index],
+                criterion,
+                "original",
+            )
+            row.append(float(score))
+        selected_full.append(int(np.argmin(np.asarray(row, dtype=np.float64))))
+        component_scores.append(row)
+
+    prefix_scores: list[float] = []
+    for k in range(1, int(max_components) + 1):
+        score, _ = _criterion_score_at_indices(
+            Xc,
+            yc,
+            operators,
+            "simpls_covariance",
+            selected_full[:k],
+            criterion,
+            "original",
+        )
+        prefix_scores.append(float(score))
+
+    selected_operator_indices = [int(v) for v in model.selected_operator_indices_]
+    selected_n_components = int(model.n_components_)
+    if selected_operator_indices != selected_full[:selected_n_components]:
+        raise RuntimeError("POP bench fixture manual selection does not match POPPLSRegressor")
+
+    folds = list(KFold(n_splits=int(cv), shuffle=True, random_state=int(random_state)).split(Xc, yc))
+    train_indices: list[int] = []
+    test_indices: list[int] = []
+    train_offsets = [0]
+    test_offsets = [0]
+    for train, test in folds:
+        train_indices.extend(int(v) for v in train.tolist())
+        test_indices.extend(int(v) for v in test.tolist())
+        train_offsets.append(len(train_indices))
+        test_offsets.append(len(test_indices))
+
+    param_offsets = [0]
+    params: list[float] = []
+    for name in operator_names:
+        params.extend(_AOM_BENCH_OPERATOR_PARAMS[name])
+        param_offsets.append(len(params))
+
+    predictions = np.asarray(model.predict(X), dtype=np.float64)
+    if predictions.ndim == 1:
+        predictions = predictions.reshape(-1, 1)
+    best_score = float(prefix_scores[selected_n_components - 1])
+    return {
+        "operator_names": operator_names,
+        "operator_kinds": {
+            "shape": [1, len(operator_names)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(_AOM_BENCH_OPERATOR_KIND_IDS[name]) for name in operator_names],
+        },
+        "operator_param_offsets": {
+            "shape": [1, len(param_offsets)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(v) for v in param_offsets],
+        },
+        "operator_params": {
+            "shape": [1, len(params)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": [float(v) for v in params],
+        },
+        "fold_train_offsets": {
+            "shape": [1, len(train_offsets)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(v) for v in train_offsets],
+        },
+        "fold_train_indices": {
+            "shape": [1, len(train_indices)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(v) for v in train_indices],
+        },
+        "fold_test_offsets": {
+            "shape": [1, len(test_offsets)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(v) for v in test_offsets],
+        },
+        "fold_test_indices": {
+            "shape": [1, len(test_indices)],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": [int(v) for v in test_indices],
+        },
+        "component_scores": {
+            "shape": [int(max_components), len(operator_names)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": np.asarray(component_scores, dtype=np.float64).reshape(-1, order="C").tolist(),
+        },
+        "prefix_scores": {
+            "shape": [1, int(max_components)],
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": [float(v) for v in prefix_scores],
+        },
+        "predictions": {
+            "shape": list(predictions.shape),
+            "layout": "row_major",
+            "dtype": "f64",
+            "values": _flatten_rowmajor(predictions),
+        },
+        "selected_operator_indices": {
+            "shape": [1, selected_n_components],
+            "layout": "row_major",
+            "dtype": "i64",
+            "values": selected_operator_indices,
+        },
+        "selected_n_components": selected_n_components,
+        "best_score": best_score,
+    }
+
+
+def _aom_pop_selection_fixture(
+    fixture_id: str,
+    seed: int,
+    X: np.ndarray,
+    Y: np.ndarray,
+    operator_names: Sequence[str],
+    max_components: int,
+    cv: int,
+    random_state: int,
+) -> dict[str, Any]:
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64).reshape(-1, 1)
+    return {
+        "schema_version": 1,
+        "fixture_id":     fixture_id,
+        "generator": {
+            "name":             "nirs4all.bench.AOM_v0.aompls",
+            "version":          "AOM_v0",
+            "git_revision_sha": "unknown",
+            "params": {
+                "engine":         "simpls_covariance",
+                "selection":      "per_component",
+                "criterion":      "cv",
+                "orthogonalization": "original",
+                "operator_names":  [str(name) for name in operator_names],
+                "max_components": int(max_components),
+                "cv":             int(cv),
+                "random_state":   int(random_state),
+                "reference":      "nirs4all/bench/AOM_v0/aompls",
+            },
+        },
+        "data": {
+            "X": {"shape": list(X.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed, "values": _flatten_rowmajor(X)},
+            "Y": {"shape": list(Y.shape), "layout": "row_major", "dtype": "f64", "rng_seed": seed + 1, "values": _flatten_rowmajor(Y)},
+        },
+        "expected": _aom_bench_pop_reference_expected(X, Y, operator_names, max_components, cv, random_state),
+        "comparison_policy": {
+            "components_alignment": "exact",
+            "sign_resolver":        "none",
+            "tolerance_table_row":  "bench-AOM_v0-pop-selection",
+        },
+    }
+
+
 def _aom_bench_operator_expected(
     X: np.ndarray,
     operator_names: Sequence[str],
@@ -7429,6 +7657,41 @@ def synthetic_aom_global_simpls_fck_whittaker_cv_v1() -> dict[str, Any]:
                                          max_components=3,
                                          cv=3,
                                          random_state=13)
+
+
+def synthetic_aom_pop_simpls_covariance_cv_v1() -> dict[str, Any]:
+    """12 samples, 9 features for bench AOM_v0 POP-SIMPLS per-component CV."""
+    X = np.array([
+        [0.10, 0.32, 0.70, 1.18, 1.72, 2.18, 2.52, 2.82, 3.08],
+        [0.22, 0.48, 0.86, 1.34, 1.92, 2.42, 2.82, 3.14, 3.45],
+        [0.18, 0.38, 0.76, 1.22, 1.78, 2.26, 2.58, 2.88, 3.16],
+        [0.38, 0.72, 1.18, 1.72, 2.34, 2.90, 3.32, 3.70, 4.08],
+        [0.52, 0.94, 1.48, 2.06, 2.72, 3.28, 3.78, 4.18, 4.62],
+        [0.70, 1.18, 1.78, 2.42, 3.10, 3.74, 4.28, 4.76, 5.20],
+        [0.88, 1.44, 2.10, 2.82, 3.56, 4.24, 4.84, 5.36, 5.86],
+        [1.08, 1.72, 2.44, 3.22, 4.02, 4.78, 5.46, 6.04, 6.60],
+        [1.30, 2.02, 2.82, 3.66, 4.54, 5.34, 6.10, 6.76, 7.38],
+        [1.54, 2.34, 3.22, 4.14, 5.10, 6.00, 6.82, 7.56, 8.22],
+        [1.82, 2.70, 3.66, 4.66, 5.70, 6.68, 7.58, 8.40, 9.16],
+        [2.08, 3.04, 4.08, 5.16, 6.28, 7.34, 8.32, 9.22, 10.05],
+    ], dtype=np.float64)
+    Y = np.array([0.30, 0.48, 0.36, 0.72, 0.94, 1.22, 1.52, 1.84, 2.20, 2.58, 3.02, 3.44],
+                 dtype=np.float64)
+    return _aom_pop_selection_fixture("synthetic_aom_pop_simpls_covariance_cv_v1",
+                                      seed=54,
+                                      X=X,
+                                      Y=Y,
+                                      operator_names=[
+                                          "identity",
+                                          "detrend_d1",
+                                          "sg_smooth_w5_p2",
+                                          "fd_d1",
+                                          "whittaker_l10",
+                                          "fck_a1.00_s1.00_k7",
+                                      ],
+                                      max_components=3,
+                                      cv=3,
+                                      random_state=17)
 
 
 def synthetic_pipeline_msc_v1() -> dict[str, Any]:

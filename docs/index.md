@@ -84,6 +84,9 @@ global selector.
 Phase 6d extends the strict-linear AOM tranche to Whittaker smoothing and FCK
 operators, with direct transform parity and global AOM-SIMPLS selection parity
 against the bench oracle.
+Phase 6e adds internal POP-PLS per-component SIMPLS covariance selection,
+including bench-compatible CV scoring semantics, selected operator sequences
+and full-fit prediction parity.
 The supported fitted-model path is now live for NIPALS,
 orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and
 randomized-SVD PLS regression

@@ -8,6 +8,7 @@
 add_executable(pls4all_tests
     main.cpp
     abi/test_aom_operators.cpp
+    abi/test_aom_pop_selection.cpp
     abi/test_aom_preprocessing.cpp
     abi/test_aom_selection.cpp
     abi/test_bipls_selection.cpp

@@ -370,6 +370,570 @@ namespace {
     return ::pls4all::core::predict_into(ctx, *model, xt_view, pred_view);
 }
 
+struct StrictOperatorMatrix {
+    std::vector<double> adjoint;  // row-major A^T
+};
+
+struct PopFit {
+    std::int32_t n_components{0};
+    std::vector<double> weights_z;   // p x n_components
+    std::vector<double> loadings_p;  // p x n_components
+    std::vector<double> loadings_q;  // q x n_components
+};
+
+[[nodiscard]] p4a_status_t copy_all_rows(::pls4all::core::Context& ctx,
+                                         const p4a_matrix_view_t& view,
+                                         const char* name,
+                                         std::vector<double>& out) {
+    std::vector<std::int64_t> rows(static_cast<std::size_t>(view.rows), 0);
+    for (std::int64_t row = 0; row < view.rows; ++row) {
+        rows[static_cast<std::size_t>(row)] = row;
+    }
+    return copy_rows(ctx, view, rows, name, out);
+}
+
+void column_means(const std::vector<double>& values,
+                  std::size_t rows,
+                  std::size_t cols,
+                  std::vector<double>& means) {
+    means.assign(cols, 0.0);
+    if (rows == 0U) {
+        return;
+    }
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t col = 0; col < cols; ++col) {
+            means[col] += values[idx(row, cols, col)];
+        }
+    }
+    const double denom = static_cast<double>(rows);
+    for (double& value : means) {
+        value /= denom;
+    }
+}
+
+void center_by_means(const std::vector<double>& values,
+                     std::size_t rows,
+                     std::size_t cols,
+                     const std::vector<double>& means,
+                     std::vector<double>& centered) {
+    centered.assign(rows * cols, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t col = 0; col < cols; ++col) {
+            centered[idx(row, cols, col)] = values[idx(row, cols, col)] - means[col];
+        }
+    }
+}
+
+[[nodiscard]] double squared_norm(const std::vector<double>& values) noexcept {
+    double out = 0.0;
+    for (double value : values) {
+        out += value * value;
+    }
+    return out;
+}
+
+[[nodiscard]] bool invert_square_matrix(std::vector<double> a,
+                                        std::size_t n,
+                                        std::vector<double>& inverse) {
+    inverse.assign(n * n, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        inverse[idx(i, n, i)] = 1.0;
+    }
+    for (std::size_t col = 0; col < n; ++col) {
+        std::size_t pivot = col;
+        double pivot_abs = std::fabs(a[idx(col, n, col)]);
+        for (std::size_t row = col + 1U; row < n; ++row) {
+            const double candidate = std::fabs(a[idx(row, n, col)]);
+            if (candidate > pivot_abs) {
+                pivot = row;
+                pivot_abs = candidate;
+            }
+        }
+        if (pivot_abs <= std::numeric_limits<double>::epsilon()) {
+            return false;
+        }
+        if (pivot != col) {
+            for (std::size_t j = 0; j < n; ++j) {
+                std::swap(a[idx(col, n, j)], a[idx(pivot, n, j)]);
+                std::swap(inverse[idx(col, n, j)], inverse[idx(pivot, n, j)]);
+            }
+        }
+        const double diag = a[idx(col, n, col)];
+        for (std::size_t j = 0; j < n; ++j) {
+            a[idx(col, n, j)] /= diag;
+            inverse[idx(col, n, j)] /= diag;
+        }
+        for (std::size_t row = 0; row < n; ++row) {
+            if (row == col) {
+                continue;
+            }
+            const double factor = a[idx(row, n, col)];
+            if (factor == 0.0) {
+                continue;
+            }
+            for (std::size_t j = 0; j < n; ++j) {
+                a[idx(row, n, j)] -= factor * a[idx(col, n, j)];
+                inverse[idx(row, n, j)] -= factor * inverse[idx(col, n, j)];
+            }
+        }
+    }
+    return true;
+}
+
+[[nodiscard]] p4a_status_t build_operator_matrices(
+    ::pls4all::core::Context& ctx,
+    const ::pls4all::core::OperatorBank& bank,
+    std::int64_t cols,
+    std::vector<StrictOperatorMatrix>& matrices) {
+    const auto p = static_cast<std::size_t>(cols);
+    std::vector<double> identity(p * p, 0.0);
+    for (std::size_t i = 0; i < p; ++i) {
+        identity[idx(i, p, i)] = 1.0;
+    }
+    p4a_matrix_view_t identity_view = rowmajor_f64_view(identity, cols, cols);
+    matrices.clear();
+    matrices.reserve(bank.entries().size());
+    for (const auto& entry : bank.entries()) {
+        StrictOperatorMatrix matrix;
+        p4a_status_t status =
+            ::pls4all::core::transform_aom_strict_operator(ctx, entry, identity_view, matrix.adjoint);
+        if (status != P4A_OK) {
+            matrices.clear();
+            return status;
+        }
+        matrices.push_back(std::move(matrix));
+    }
+    return P4A_OK;
+}
+
+void cross_covariance(const std::vector<double>& X,
+                      const std::vector<double>& Y,
+                      std::size_t rows,
+                      std::size_t p,
+                      std::size_t q,
+                      std::vector<double>& covariance) {
+    covariance.assign(p * q, 0.0);
+    for (std::size_t feature = 0; feature < p; ++feature) {
+        for (std::size_t target = 0; target < q; ++target) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < rows; ++row) {
+                sum += X[idx(row, p, feature)] * Y[idx(row, q, target)];
+            }
+            covariance[idx(feature, q, target)] = sum;
+        }
+    }
+}
+
+void apply_covariance(const StrictOperatorMatrix& matrix,
+                      const std::vector<double>& covariance,
+                      std::size_t p,
+                      std::size_t q,
+                      std::vector<double>& out) {
+    out.assign(p * q, 0.0);
+    for (std::size_t row = 0; row < p; ++row) {
+        for (std::size_t target = 0; target < q; ++target) {
+            double sum = 0.0;
+            for (std::size_t inner = 0; inner < p; ++inner) {
+                sum += matrix.adjoint[idx(inner, p, row)] * covariance[idx(inner, q, target)];
+            }
+            out[idx(row, q, target)] = sum;
+        }
+    }
+}
+
+void apply_adjoint(const StrictOperatorMatrix& matrix,
+                   const std::vector<double>& direction,
+                   std::size_t p,
+                   std::vector<double>& out) {
+    out.assign(p, 0.0);
+    for (std::size_t row = 0; row < p; ++row) {
+        double sum = 0.0;
+        for (std::size_t col = 0; col < p; ++col) {
+            sum += matrix.adjoint[idx(row, p, col)] * direction[col];
+        }
+        out[row] = sum;
+    }
+}
+
+void dominant_left_direction(const std::vector<double>& covariance,
+                             std::size_t p,
+                             std::size_t q,
+                             std::vector<double>& direction) {
+    direction.assign(p, 0.0);
+    if (q == 1U) {
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            direction[feature] = covariance[idx(feature, q, 0)];
+        }
+        return;
+    }
+
+    std::vector<double> gram(p * p, 0.0);
+    for (std::size_t row = 0; row < p; ++row) {
+        for (std::size_t col = 0; col < p; ++col) {
+            double sum = 0.0;
+            for (std::size_t target = 0; target < q; ++target) {
+                sum += covariance[idx(row, q, target)] * covariance[idx(col, q, target)];
+            }
+            gram[idx(row, p, col)] = sum;
+        }
+    }
+    direction[0] = 1.0;
+    std::vector<double> next(p, 0.0);
+    for (int iter = 0; iter < 200; ++iter) {
+        std::fill(next.begin(), next.end(), 0.0);
+        for (std::size_t row = 0; row < p; ++row) {
+            for (std::size_t col = 0; col < p; ++col) {
+                next[row] += gram[idx(row, p, col)] * direction[col];
+            }
+        }
+        const double norm = std::sqrt(squared_norm(next));
+        if (norm <= std::numeric_limits<double>::epsilon()) {
+            return;
+        }
+        for (double& value : next) {
+            value /= norm;
+        }
+        double delta = 0.0;
+        for (std::size_t i = 0; i < p; ++i) {
+            const double diff = next[i] - direction[i];
+            delta += diff * diff;
+        }
+        direction = next;
+        if (delta < 1e-24) {
+            break;
+        }
+    }
+}
+
+[[nodiscard]] p4a_status_t fit_pop_sequence(::pls4all::core::Context& ctx,
+                                            const std::vector<StrictOperatorMatrix>& matrices,
+                                            const std::vector<std::int32_t>& op_indices,
+                                            const std::vector<double>& X,
+                                            const std::vector<double>& Y,
+                                            std::size_t rows,
+                                            std::size_t p,
+                                            std::size_t q,
+                                            PopFit& fit) {
+    const auto components = static_cast<std::size_t>(op_indices.size());
+    fit = PopFit{};
+    fit.n_components = static_cast<std::int32_t>(components);
+    fit.weights_z.assign(p * components, 0.0);
+    fit.loadings_p.assign(p * components, 0.0);
+    fit.loadings_q.assign(q * components, 0.0);
+    std::vector<double> basis_v(p * components, 0.0);
+    std::vector<double> covariance;
+    cross_covariance(X, Y, rows, p, q, covariance);
+
+    constexpr double kEps = 1e-14;
+    for (std::size_t comp = 0; comp < components; ++comp) {
+        const auto op_index = static_cast<std::size_t>(op_indices[comp]);
+        if (op_index >= matrices.size()) {
+            ctx.set_error("POP operator index is out of range");
+            return P4A_ERR_INVALID_ARGUMENT;
+        }
+
+        std::vector<double> transformed_covariance;
+        apply_covariance(matrices[op_index], covariance, p, q, transformed_covariance);
+        std::vector<double> direction;
+        dominant_left_direction(transformed_covariance, p, q, direction);
+        const double direction_norm = std::sqrt(squared_norm(direction));
+        if (direction_norm < kEps) {
+            continue;
+        }
+        for (double& value : direction) {
+            value /= direction_norm;
+        }
+
+        std::vector<double> z;
+        apply_adjoint(matrices[op_index], direction, p, z);
+        std::vector<double> score(rows, 0.0);
+        for (std::size_t row = 0; row < rows; ++row) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                score[row] += X[idx(row, p, feature)] * z[feature];
+            }
+        }
+        const double score_norm = std::sqrt(squared_norm(score));
+        if (score_norm < kEps) {
+            continue;
+        }
+        for (double& value : score) {
+            value /= score_norm;
+        }
+        for (double& value : z) {
+            value /= score_norm;
+        }
+
+        std::vector<double> p_load(p, 0.0);
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            for (std::size_t row = 0; row < rows; ++row) {
+                p_load[feature] += X[idx(row, p, feature)] * score[row];
+            }
+        }
+        std::vector<double> q_load(q, 0.0);
+        for (std::size_t target = 0; target < q; ++target) {
+            for (std::size_t row = 0; row < rows; ++row) {
+                q_load[target] += Y[idx(row, q, target)] * score[row];
+            }
+        }
+
+        std::vector<double> v = p_load;
+        if (comp > 0U) {
+            for (std::size_t prev = 0; prev < comp; ++prev) {
+                double projection = 0.0;
+                for (std::size_t feature = 0; feature < p; ++feature) {
+                    projection += basis_v[idx(feature, components, prev)] * v[feature];
+                }
+                for (std::size_t feature = 0; feature < p; ++feature) {
+                    v[feature] -= projection * basis_v[idx(feature, components, prev)];
+                }
+            }
+        }
+        const double v_norm = std::sqrt(squared_norm(v));
+        if (v_norm < kEps) {
+            continue;
+        }
+        for (double& value : v) {
+            value /= v_norm;
+        }
+
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            basis_v[idx(feature, components, comp)] = v[feature];
+            fit.weights_z[idx(feature, components, comp)] = z[feature];
+            fit.loadings_p[idx(feature, components, comp)] = p_load[feature];
+        }
+        for (std::size_t target = 0; target < q; ++target) {
+            fit.loadings_q[idx(target, components, comp)] = q_load[target];
+        }
+
+        std::vector<double> v_cov(q, 0.0);
+        for (std::size_t target = 0; target < q; ++target) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                v_cov[target] += v[feature] * covariance[idx(feature, q, target)];
+            }
+        }
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            for (std::size_t target = 0; target < q; ++target) {
+                covariance[idx(feature, q, target)] -= v[feature] * v_cov[target];
+            }
+        }
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t coefficients_for_prefix(::pls4all::core::Context& ctx,
+                                                   const PopFit& fit,
+                                                   std::size_t p,
+                                                   std::size_t q,
+                                                   std::size_t prefix,
+                                                   std::vector<double>& coefficients) {
+    coefficients.assign(p * q, 0.0);
+    if (prefix == 0U || prefix > static_cast<std::size_t>(fit.n_components)) {
+        ctx.set_error("POP coefficient prefix is out of range");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    const auto components = static_cast<std::size_t>(fit.n_components);
+    std::vector<double> ptz(prefix * prefix, 0.0);
+    for (std::size_t row_comp = 0; row_comp < prefix; ++row_comp) {
+        for (std::size_t col_comp = 0; col_comp < prefix; ++col_comp) {
+            double sum = 0.0;
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                sum += fit.loadings_p[idx(feature, components, row_comp)] *
+                       fit.weights_z[idx(feature, components, col_comp)];
+            }
+            ptz[idx(row_comp, prefix, col_comp)] = sum;
+        }
+    }
+    std::vector<double> ptz_inv;
+    if (!invert_square_matrix(ptz, prefix, ptz_inv)) {
+        coefficients.clear();
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+    for (std::size_t feature = 0; feature < p; ++feature) {
+        for (std::size_t target = 0; target < q; ++target) {
+            double coefficient = 0.0;
+            for (std::size_t comp = 0; comp < prefix; ++comp) {
+                double rotation = 0.0;
+                for (std::size_t inner = 0; inner < prefix; ++inner) {
+                    rotation += fit.weights_z[idx(feature, components, inner)] *
+                                ptz_inv[idx(inner, prefix, comp)];
+                }
+                coefficient += rotation * fit.loadings_q[idx(target, components, comp)];
+            }
+            coefficients[idx(feature, q, target)] = coefficient;
+        }
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t score_pop_sequence_cv(::pls4all::core::Context& ctx,
+                                                 const std::vector<StrictOperatorMatrix>& matrices,
+                                                 const std::vector<std::int32_t>& op_indices,
+                                                 const p4a_matrix_view_t& X,
+                                                 const p4a_matrix_view_t& Y,
+                                                 const ::pls4all::core::ValidationPlan& plan,
+                                                 double& score) {
+    score = std::numeric_limits<double>::infinity();
+    if (op_indices.empty()) {
+        return P4A_OK;
+    }
+    const auto p = static_cast<std::size_t>(X.cols);
+    const auto q = static_cast<std::size_t>(Y.cols);
+    double total_rmse = 0.0;
+    std::int32_t valid_folds = 0;
+    for (const auto& fold : plan.folds) {
+        if (fold.train_indices.empty() || fold.test_indices.empty()) {
+            ctx.set_error("POP selection received an empty validation fold");
+            return P4A_ERR_INVALID_ARGUMENT;
+        }
+
+        std::vector<double> train_x;
+        std::vector<double> train_y;
+        std::vector<double> test_x;
+        std::vector<double> test_y;
+        p4a_status_t status = copy_rows(ctx, X, fold.train_indices, "X train", train_x);
+        if (status != P4A_OK) {
+            return status;
+        }
+        status = copy_rows(ctx, Y, fold.train_indices, "Y train", train_y);
+        if (status != P4A_OK) {
+            return status;
+        }
+        status = copy_rows(ctx, X, fold.test_indices, "X test", test_x);
+        if (status != P4A_OK) {
+            return status;
+        }
+        status = copy_rows(ctx, Y, fold.test_indices, "Y test", test_y);
+        if (status != P4A_OK) {
+            return status;
+        }
+
+        const std::size_t train_rows = fold.train_indices.size();
+        const std::size_t test_rows = fold.test_indices.size();
+        std::vector<double> x_mean;
+        std::vector<double> y_mean;
+        std::vector<double> train_x_centered;
+        std::vector<double> train_y_centered;
+        column_means(train_x, train_rows, p, x_mean);
+        column_means(train_y, train_rows, q, y_mean);
+        center_by_means(train_x, train_rows, p, x_mean, train_x_centered);
+        center_by_means(train_y, train_rows, q, y_mean, train_y_centered);
+
+        PopFit fit;
+        status = fit_pop_sequence(ctx,
+                                  matrices,
+                                  op_indices,
+                                  train_x_centered,
+                                  train_y_centered,
+                                  train_rows,
+                                  p,
+                                  q,
+                                  fit);
+        if (status != P4A_OK) {
+            return status;
+        }
+        std::vector<double> coefficients;
+        status = coefficients_for_prefix(ctx, fit, p, q, op_indices.size(), coefficients);
+        if (status != P4A_OK) {
+            continue;
+        }
+
+        std::vector<double> fold_predictions(test_rows * q, 0.0);
+        for (std::size_t row = 0; row < test_rows; ++row) {
+            for (std::size_t target = 0; target < q; ++target) {
+                double prediction = y_mean[target];
+                for (std::size_t feature = 0; feature < p; ++feature) {
+                    prediction += (test_x[idx(row, p, feature)] - x_mean[feature]) *
+                                  coefficients[idx(feature, q, target)];
+                }
+                fold_predictions[idx(row, q, target)] = prediction;
+            }
+        }
+        double sumsq = 0.0;
+        std::size_t residual_count = test_rows * q;
+        if (q == 1U) {
+            // Match bench AOM_v0 POP's cv_score_regression helper exactly:
+            // y_val is (n, 1) while PLS1 predictions are 1D, so NumPy
+            // broadcasts to an n x n residual matrix before RMSE.
+            residual_count = test_rows * test_rows;
+            for (std::size_t actual_row = 0; actual_row < test_rows; ++actual_row) {
+                for (std::size_t pred_row = 0; pred_row < test_rows; ++pred_row) {
+                    const double residual = test_y[idx(actual_row, q, 0)] -
+                                            fold_predictions[idx(pred_row, q, 0)];
+                    sumsq += residual * residual;
+                }
+            }
+        } else {
+            for (std::size_t row = 0; row < test_rows; ++row) {
+                for (std::size_t target = 0; target < q; ++target) {
+                    const double residual = test_y[idx(row, q, target)] -
+                                            fold_predictions[idx(row, q, target)];
+                    sumsq += residual * residual;
+                }
+            }
+        }
+        total_rmse += std::sqrt(sumsq / static_cast<double>(residual_count));
+        valid_folds += 1;
+    }
+    if (valid_folds == static_cast<std::int32_t>(plan.folds.size())) {
+        score = total_rmse / static_cast<double>(valid_folds);
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t fit_pop_predictions(::pls4all::core::Context& ctx,
+                                               const std::vector<StrictOperatorMatrix>& matrices,
+                                               const std::vector<std::int32_t>& op_indices,
+                                               const p4a_matrix_view_t& X,
+                                               const p4a_matrix_view_t& Y,
+                                               std::vector<double>& predictions) {
+    const auto rows = static_cast<std::size_t>(X.rows);
+    const auto p = static_cast<std::size_t>(X.cols);
+    const auto q = static_cast<std::size_t>(Y.cols);
+    std::vector<double> x_values;
+    std::vector<double> y_values;
+    p4a_status_t status = copy_all_rows(ctx, X, "X", x_values);
+    if (status != P4A_OK) {
+        return status;
+    }
+    status = copy_all_rows(ctx, Y, "Y", y_values);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    std::vector<double> x_mean;
+    std::vector<double> y_mean;
+    std::vector<double> x_centered;
+    std::vector<double> y_centered;
+    column_means(x_values, rows, p, x_mean);
+    column_means(y_values, rows, q, y_mean);
+    center_by_means(x_values, rows, p, x_mean, x_centered);
+    center_by_means(y_values, rows, q, y_mean, y_centered);
+
+    PopFit fit;
+    status = fit_pop_sequence(ctx, matrices, op_indices, x_centered, y_centered, rows, p, q, fit);
+    if (status != P4A_OK) {
+        return status;
+    }
+    std::vector<double> coefficients;
+    status = coefficients_for_prefix(ctx, fit, p, q, op_indices.size(), coefficients);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    predictions.assign(rows * q, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t target = 0; target < q; ++target) {
+            double prediction = y_mean[target];
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                prediction += (x_values[idx(row, p, feature)] - x_mean[feature]) *
+                              coefficients[idx(feature, q, target)];
+            }
+            predictions[idx(row, q, target)] = prediction;
+        }
+    }
+    return P4A_OK;
+}
+
 }  // namespace
 
 namespace pls4all::core {
@@ -457,6 +1021,119 @@ p4a_status_t select_aom_global(Context& ctx,
     } catch (...) {
         ctx.set_error("unexpected exception while running AOM global selection");
         out = AomGlobalSelectionResult{};
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+p4a_status_t select_aom_per_component(Context& ctx,
+                                      const Config& cfg,
+                                      const OperatorBank& bank,
+                                      const p4a_matrix_view_t& X,
+                                      const p4a_matrix_view_t& Y,
+                                      const ValidationPlan& plan,
+                                      std::int32_t max_components,
+                                      AomPerComponentSelectionResult& out) {
+    try {
+        out = AomPerComponentSelectionResult{};
+        p4a_status_t status = validate_request(ctx, cfg, bank, X, Y, plan, max_components);
+        if (status != P4A_OK) {
+            return status;
+        }
+
+        std::vector<StrictOperatorMatrix> matrices;
+        status = build_operator_matrices(ctx, bank, X.cols, matrices);
+        if (status != P4A_OK) {
+            out = AomPerComponentSelectionResult{};
+            return status;
+        }
+
+        const auto n_ops = bank.entries().size();
+        out.n_operators = static_cast<std::int32_t>(n_ops);
+        out.max_components = max_components;
+        out.operator_kinds.reserve(n_ops);
+        for (const OperatorEntry& entry : bank.entries()) {
+            out.operator_kinds.push_back(static_cast<std::int64_t>(entry.kind));
+        }
+        out.component_scores.assign(static_cast<std::size_t>(max_components) * n_ops,
+                                    std::numeric_limits<double>::infinity());
+        out.prefix_scores.assign(static_cast<std::size_t>(max_components),
+                                 std::numeric_limits<double>::infinity());
+
+        std::vector<std::int32_t> selected;
+        selected.reserve(static_cast<std::size_t>(max_components));
+        for (std::int32_t component = 0; component < max_components; ++component) {
+            double best_score = std::numeric_limits<double>::infinity();
+            std::int32_t best_op = 0;
+            for (std::size_t op = 0; op < n_ops; ++op) {
+                std::vector<std::int32_t> candidate = selected;
+                candidate.push_back(static_cast<std::int32_t>(op));
+                double score = std::numeric_limits<double>::infinity();
+                status = score_pop_sequence_cv(ctx, matrices, candidate, X, Y, plan, score);
+                if (status != P4A_OK) {
+                    out = AomPerComponentSelectionResult{};
+                    return status;
+                }
+                out.component_scores[idx(static_cast<std::size_t>(component), n_ops, op)] = score;
+                if (score < best_score) {
+                    best_score = score;
+                    best_op = static_cast<std::int32_t>(op);
+                }
+            }
+            if (!std::isfinite(best_score)) {
+                ctx.set_error("POP selection found no finite candidate score");
+                out = AomPerComponentSelectionResult{};
+                return P4A_ERR_NUMERICAL_FAILURE;
+            }
+            selected.push_back(best_op);
+        }
+
+        double best_prefix_score = std::numeric_limits<double>::infinity();
+        std::int32_t best_k = 1;
+        for (std::int32_t k = 1; k <= max_components; ++k) {
+            std::vector<std::int32_t> prefix(selected.begin(), selected.begin() + k);
+            double score = std::numeric_limits<double>::infinity();
+            status = score_pop_sequence_cv(ctx, matrices, prefix, X, Y, plan, score);
+            if (status != P4A_OK) {
+                out = AomPerComponentSelectionResult{};
+                return status;
+            }
+            out.prefix_scores[static_cast<std::size_t>(k - 1)] = score;
+            if (score < best_prefix_score) {
+                best_prefix_score = score;
+                best_k = k;
+            }
+        }
+        if (!std::isfinite(best_prefix_score)) {
+            ctx.set_error("POP selection found no finite prefix score");
+            out = AomPerComponentSelectionResult{};
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+
+        out.selected_n_components = best_k;
+        out.best_score = best_prefix_score;
+        std::vector<std::int32_t> final_selected(selected.begin(), selected.begin() + best_k);
+        out.selected_operator_indices.assign(final_selected.begin(), final_selected.end());
+
+        status = fit_pop_predictions(ctx,
+                                     matrices,
+                                     final_selected,
+                                     X,
+                                     Y,
+                                     out.predictions);
+        if (status != P4A_OK) {
+            out = AomPerComponentSelectionResult{};
+            return status;
+        }
+
+        ctx.clear_error();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        ctx.set_error("out of memory while running POP selection");
+        out = AomPerComponentSelectionResult{};
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        ctx.set_error("unexpected exception while running POP selection");
+        out = AomPerComponentSelectionResult{};
         return P4A_ERR_INTERNAL;
     }
 }
