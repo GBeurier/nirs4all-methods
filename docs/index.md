@@ -81,6 +81,9 @@ for the identity/detrend strict-linear tranche.
 Phase 6c adds bench-parity strict-linear zero-padded Savitzky-Golay,
 finite-difference and Norris-Williams AOM operators and runs them through the
 global selector.
+Phase 6d extends the strict-linear AOM tranche to Whittaker smoothing and FCK
+operators, with direct transform parity and global AOM-SIMPLS selection parity
+against the bench oracle.
 The supported fitted-model path is now live for NIPALS,
 orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and
 randomized-SVD PLS regression

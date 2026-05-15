@@ -1,0 +1,357 @@
+{
+  "comparison_policy": {
+    "components_alignment": "exact",
+    "sign_resolver": "none",
+    "tolerance_table_row": "bench-AOM_v0-aom-selection"
+  },
+  "data": {
+    "X": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "rng_seed": 53,
+      "shape": [
+        11,
+        9
+      ],
+      "values": [
+        0.1,
+        0.32,
+        0.7,
+        1.18,
+        1.72,
+        2.18,
+        2.52,
+        2.82,
+        3.08,
+        0.22,
+        0.48,
+        0.86,
+        1.34,
+        1.92,
+        2.42,
+        2.82,
+        3.14,
+        3.45,
+        0.18,
+        0.38,
+        0.76,
+        1.22,
+        1.78,
+        2.26,
+        2.58,
+        2.88,
+        3.16,
+        0.38,
+        0.72,
+        1.18,
+        1.72,
+        2.34,
+        2.9,
+        3.32,
+        3.7,
+        4.08,
+        0.52,
+        0.94,
+        1.48,
+        2.06,
+        2.72,
+        3.28,
+        3.78,
+        4.18,
+        4.62,
+        0.7,
+        1.18,
+        1.78,
+        2.42,
+        3.1,
+        3.74,
+        4.28,
+        4.76,
+        5.2,
+        0.88,
+        1.44,
+        2.1,
+        2.82,
+        3.56,
+        4.24,
+        4.84,
+        5.36,
+        5.86,
+        1.08,
+        1.72,
+        2.44,
+        3.22,
+        4.02,
+        4.78,
+        5.46,
+        6.04,
+        6.6,
+        1.3,
+        2.02,
+        2.82,
+        3.66,
+        4.54,
+        5.34,
+        6.1,
+        6.76,
+        7.38,
+        1.54,
+        2.34,
+        3.22,
+        4.14,
+        5.1,
+        6.0,
+        6.82,
+        7.56,
+        8.22,
+        1.82,
+        2.7,
+        3.66,
+        4.66,
+        5.7,
+        6.68,
+        7.58,
+        8.4,
+        9.16
+      ]
+    },
+    "Y": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "rng_seed": 54,
+      "shape": [
+        11,
+        1
+      ],
+      "values": [
+        0.3,
+        0.48,
+        0.36,
+        0.72,
+        0.94,
+        1.22,
+        1.52,
+        1.84,
+        2.2,
+        2.58,
+        3.02
+      ]
+    }
+  },
+  "expected": {
+    "best_score": 0.014704524576819429,
+    "fold_test_indices": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        11
+      ],
+      "values": [
+        3,
+        5,
+        7,
+        8,
+        1,
+        4,
+        6,
+        10,
+        0,
+        2,
+        9
+      ]
+    },
+    "fold_test_offsets": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        4
+      ],
+      "values": [
+        0,
+        4,
+        8,
+        11
+      ]
+    },
+    "fold_train_indices": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        22
+      ],
+      "values": [
+        0,
+        1,
+        2,
+        4,
+        6,
+        9,
+        10,
+        0,
+        2,
+        3,
+        5,
+        7,
+        8,
+        9,
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        10
+      ]
+    },
+    "fold_train_offsets": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        4
+      ],
+      "values": [
+        0,
+        7,
+        14,
+        22
+      ]
+    },
+    "operator_kinds": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        4
+      ],
+      "values": [
+        0,
+        16,
+        17,
+        7
+      ]
+    },
+    "operator_names": [
+      "identity",
+      "whittaker_l10",
+      "fck_a1.00_s1.00_k7",
+      "detrend_d1"
+    ],
+    "operator_param_offsets": {
+      "dtype": "i64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        5
+      ],
+      "values": [
+        0,
+        0,
+        1,
+        5,
+        6
+      ]
+    },
+    "operator_params": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        6
+      ],
+      "values": [
+        10.0,
+        1.0,
+        1.0,
+        7.0,
+        3.0,
+        1.0
+      ]
+    },
+    "operator_scores": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "shape": [
+        1,
+        4
+      ],
+      "values": [
+        0.014704524576819429,
+        0.020702022574690223,
+        0.015418624816780737,
+        0.3399921140744869
+      ]
+    },
+    "predictions": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "shape": [
+        11,
+        1
+      ],
+      "values": [
+        0.29667987551082775,
+        0.47057449883229663,
+        0.36388397405242867,
+        0.7298986925824329,
+        0.9421442346931694,
+        1.2214997327879136,
+        1.5127067399929068,
+        1.8451482803273778,
+        2.191880980387987,
+        2.5907837928005266,
+        3.0147991980321365
+      ]
+    },
+    "rmse_curves": {
+      "dtype": "f64",
+      "layout": "row_major",
+      "shape": [
+        4,
+        3
+      ],
+      "values": [
+        0.02395574907904452,
+        0.016339263884604265,
+        0.014704524576819429,
+        0.02389749775522528,
+        0.028746857475013366,
+        0.020702022574690223,
+        0.02291817115458779,
+        0.01988715678305337,
+        0.015418624816780737,
+        0.3399921140744869,
+        0.3665259902869102,
+        0.4020021336617304
+      ]
+    },
+    "selected_n_components": 3,
+    "selected_operator_index": 0
+  },
+  "fixture_id": "synthetic_aom_global_simpls_fck_whittaker_cv_v1",
+  "generator": {
+    "git_revision_sha": "unknown",
+    "name": "nirs4all.bench.AOM_v0.aompls",
+    "params": {
+      "criterion": "cv",
+      "cv": 3,
+      "engine": "simpls_materialized",
+      "max_components": 3,
+      "operator_names": [
+        "identity",
+        "whittaker_l10",
+        "fck_a1.00_s1.00_k7",
+        "detrend_d1"
+      ],
+      "random_state": 13,
+      "reference": "nirs4all/bench/AOM_v0/aompls",
+      "selection": "global"
+    },
+    "version": "AOM_v0"
+  },
+  "schema_version": 1
+}

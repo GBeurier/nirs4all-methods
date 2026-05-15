@@ -186,6 +186,88 @@ inline const std::int64_t synthetic_aom_global_simpls_sg_cv_v1_fold_test_indices
     0, 9,
 };
 
+inline const double synthetic_aom_global_simpls_fck_whittaker_cv_v1_X[] = {
+    0.10000000000000001, 0.32000000000000001, 0.69999999999999996, 1.1799999999999999,
+    1.72, 2.1800000000000002, 2.52, 2.8199999999999998,
+    3.0800000000000001, 0.22, 0.47999999999999998, 0.85999999999999999,
+    1.3400000000000001, 1.9199999999999999, 2.4199999999999999, 2.8199999999999998,
+    3.1400000000000001, 3.4500000000000002, 0.17999999999999999, 0.38,
+    0.76000000000000001, 1.22, 1.78, 2.2599999999999998,
+    2.5800000000000001, 2.8799999999999999, 3.1600000000000001, 0.38,
+    0.71999999999999997, 1.1799999999999999, 1.72, 2.3399999999999999,
+    2.8999999999999999, 3.3199999999999998, 3.7000000000000002, 4.0800000000000001,
+    0.52000000000000002, 0.93999999999999995, 1.48, 2.0600000000000001,
+    2.7200000000000002, 3.2799999999999998, 3.7799999999999998, 4.1799999999999997,
+    4.6200000000000001, 0.69999999999999996, 1.1799999999999999, 1.78,
+    2.4199999999999999, 3.1000000000000001, 3.7400000000000002, 4.2800000000000002,
+    4.7599999999999998, 5.2000000000000002, 0.88, 1.4399999999999999,
+    2.1000000000000001, 2.8199999999999998, 3.5600000000000001, 4.2400000000000002,
+    4.8399999999999999, 5.3600000000000003, 5.8600000000000003, 1.0800000000000001,
+    1.72, 2.4399999999999999, 3.2200000000000002, 4.0199999999999996,
+    4.7800000000000002, 5.46, 6.04, 6.5999999999999996,
+    1.3, 2.02, 2.8199999999999998, 3.6600000000000001,
+    4.54, 5.3399999999999999, 6.0999999999999996, 6.7599999999999998,
+    7.3799999999999999, 1.54, 2.3399999999999999, 3.2200000000000002,
+    4.1399999999999997, 5.0999999999999996, 6, 6.8200000000000003,
+    7.5599999999999996, 8.2200000000000006, 1.8200000000000001, 2.7000000000000002,
+    3.6600000000000001, 4.6600000000000001, 5.7000000000000002, 6.6799999999999997,
+    7.5800000000000001, 8.4000000000000004, 9.1600000000000001,
+};
+
+inline const double synthetic_aom_global_simpls_fck_whittaker_cv_v1_Y[] = {
+    0.29999999999999999, 0.47999999999999998, 0.35999999999999999, 0.71999999999999997,
+    0.93999999999999995, 1.22, 1.52, 1.8400000000000001,
+    2.2000000000000002, 2.5800000000000001, 3.02,
+};
+
+inline const double synthetic_aom_global_simpls_fck_whittaker_cv_v1_operator_params[] = {
+    10, 1, 1, 7,
+    3, 1,
+};
+
+inline const double synthetic_aom_global_simpls_fck_whittaker_cv_v1_operator_scores[] = {
+    0.014704524576819429, 0.020702022574690223, 0.015418624816780737, 0.33999211407448687,
+};
+
+inline const double synthetic_aom_global_simpls_fck_whittaker_cv_v1_rmse_curves[] = {
+    0.023955749079044519, 0.016339263884604265, 0.014704524576819429, 0.023897497755225278,
+    0.028746857475013366, 0.020702022574690223, 0.022918171154587792, 0.019887156783053372,
+    0.015418624816780737, 0.33999211407448687, 0.36652599028691019, 0.40200213366173038,
+};
+
+inline const double synthetic_aom_global_simpls_fck_whittaker_cv_v1_predictions[] = {
+    0.29667987551082775, 0.47057449883229663, 0.36388397405242867, 0.7298986925824329,
+    0.94214423469316944, 1.2214997327879136, 1.5127067399929068, 1.8451482803273778,
+    2.1918809803879871, 2.5907837928005266, 3.0147991980321365,
+};
+
+inline const std::int64_t synthetic_aom_global_simpls_fck_whittaker_cv_v1_operator_kinds[] = {
+    0, 16, 17, 7,
+};
+
+inline const std::int64_t synthetic_aom_global_simpls_fck_whittaker_cv_v1_operator_param_offsets[] = {
+    0, 0, 1, 5, 6,
+};
+
+inline const std::int64_t synthetic_aom_global_simpls_fck_whittaker_cv_v1_fold_train_offsets[] = {
+    0, 7, 14, 22,
+};
+
+inline const std::int64_t synthetic_aom_global_simpls_fck_whittaker_cv_v1_fold_train_indices[] = {
+    0, 1, 2, 4, 6, 9, 10, 0,
+    2, 3, 5, 7, 8, 9, 1, 3,
+    4, 5, 6, 7, 8, 10,
+};
+
+inline const std::int64_t synthetic_aom_global_simpls_fck_whittaker_cv_v1_fold_test_offsets[] = {
+    0, 4, 8, 11,
+};
+
+inline const std::int64_t synthetic_aom_global_simpls_fck_whittaker_cv_v1_fold_test_indices[] = {
+    3, 5, 7, 8, 1, 4, 6, 10,
+    0, 2, 9,
+};
+
 inline const AomSelectionFixture kAomSelectionFixtures[] = {
     {
         "synthetic_aom_global_simpls_cv_v1",
@@ -228,6 +310,27 @@ inline const AomSelectionFixture kAomSelectionFixtures[] = {
         AomSelectionIndexRef{synthetic_aom_global_simpls_sg_cv_v1_fold_train_indices, sizeof(synthetic_aom_global_simpls_sg_cv_v1_fold_train_indices) / sizeof(std::int64_t)},
         AomSelectionIndexRef{synthetic_aom_global_simpls_sg_cv_v1_fold_test_offsets, sizeof(synthetic_aom_global_simpls_sg_cv_v1_fold_test_offsets) / sizeof(std::int64_t)},
         AomSelectionIndexRef{synthetic_aom_global_simpls_sg_cv_v1_fold_test_indices, sizeof(synthetic_aom_global_simpls_sg_cv_v1_fold_test_indices) / sizeof(std::int64_t)}
+    },
+    {
+        "synthetic_aom_global_simpls_fck_whittaker_cv_v1",
+        3,
+        4,
+        3,
+        0,
+        3,
+        0.014704524576819429,
+        MatrixRef{11, 9, synthetic_aom_global_simpls_fck_whittaker_cv_v1_X, sizeof(synthetic_aom_global_simpls_fck_whittaker_cv_v1_X) / sizeof(double), false},
+        MatrixRef{11, 1, synthetic_aom_global_simpls_fck_whittaker_cv_v1_Y, sizeof(synthetic_aom_global_simpls_fck_whittaker_cv_v1_Y) / sizeof(double), false},
+        MatrixRef{1, 6, synthetic_aom_global_simpls_fck_whittaker_cv_v1_operator_params, sizeof(synthetic_aom_global_simpls_fck_whittaker_cv_v1_operator_params) / sizeof(double), false},
+        MatrixRef{1, 4, synthetic_aom_global_simpls_fck_whittaker_cv_v1_operator_scores, sizeof(synthetic_aom_global_simpls_fck_whittaker_cv_v1_operator_scores) / sizeof(double), false},
+        MatrixRef{4, 3, synthetic_aom_global_simpls_fck_whittaker_cv_v1_rmse_curves, sizeof(synthetic_aom_global_simpls_fck_whittaker_cv_v1_rmse_curves) / sizeof(double), false},
+        MatrixRef{11, 1, synthetic_aom_global_simpls_fck_whittaker_cv_v1_predictions, sizeof(synthetic_aom_global_simpls_fck_whittaker_cv_v1_predictions) / sizeof(double), false},
+        AomSelectionIndexRef{synthetic_aom_global_simpls_fck_whittaker_cv_v1_operator_kinds, sizeof(synthetic_aom_global_simpls_fck_whittaker_cv_v1_operator_kinds) / sizeof(std::int64_t)},
+        AomSelectionIndexRef{synthetic_aom_global_simpls_fck_whittaker_cv_v1_operator_param_offsets, sizeof(synthetic_aom_global_simpls_fck_whittaker_cv_v1_operator_param_offsets) / sizeof(std::int64_t)},
+        AomSelectionIndexRef{synthetic_aom_global_simpls_fck_whittaker_cv_v1_fold_train_offsets, sizeof(synthetic_aom_global_simpls_fck_whittaker_cv_v1_fold_train_offsets) / sizeof(std::int64_t)},
+        AomSelectionIndexRef{synthetic_aom_global_simpls_fck_whittaker_cv_v1_fold_train_indices, sizeof(synthetic_aom_global_simpls_fck_whittaker_cv_v1_fold_train_indices) / sizeof(std::int64_t)},
+        AomSelectionIndexRef{synthetic_aom_global_simpls_fck_whittaker_cv_v1_fold_test_offsets, sizeof(synthetic_aom_global_simpls_fck_whittaker_cv_v1_fold_test_offsets) / sizeof(std::int64_t)},
+        AomSelectionIndexRef{synthetic_aom_global_simpls_fck_whittaker_cv_v1_fold_test_indices, sizeof(synthetic_aom_global_simpls_fck_whittaker_cv_v1_fold_test_indices) / sizeof(std::int64_t)}
     }
 };
 

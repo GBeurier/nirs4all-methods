@@ -123,4 +123,28 @@ TEST(aom_operators_phase6c, rejects_invalid_or_non_strict_requests) {
                                                             X,
                                                             out),
              P4A_ERR_INVALID_ARGUMENT);
+
+    const double bad_lambda[] = {-1.0};
+    ::pls4all::core::OperatorEntry whittaker{
+        P4A_OP_WHITTAKER,
+        bad_lambda,
+        1,
+    };
+    CHECK_EQ(::pls4all::core::transform_aom_strict_operator(ctx,
+                                                            whittaker,
+                                                            X,
+                                                            out),
+             P4A_ERR_INVALID_ARGUMENT);
+
+    const double even_kernel[] = {1.0, 1.0, 6.0, 3.0};
+    ::pls4all::core::OperatorEntry fck{
+        P4A_OP_FCK,
+        even_kernel,
+        4,
+    };
+    CHECK_EQ(::pls4all::core::transform_aom_strict_operator(ctx,
+                                                            fck,
+                                                            X,
+                                                            out),
+             P4A_ERR_INVALID_ARGUMENT);
 }

@@ -36,8 +36,9 @@
  *     P4A_OP_SAVGOL_DERIVATIVE, P4A_OP_NORRIS_WILLIAMS,
  *     P4A_OP_ASLS_BASELINE, P4A_OP_WAVELET_DENOISE, P4A_OP_OSC and
  *     P4A_OP_EPO.
- *     P4A_OP_FINITE_DIFFERENCE is currently implemented by the internal
- *     strict-linear AOM operator kernels.
+ *     P4A_OP_FINITE_DIFFERENCE, P4A_OP_WHITTAKER and P4A_OP_FCK are
+ *     currently implemented by the internal strict-linear AOM operator
+ *     kernels.
  *   - p4a_model_fit implements dependency-free NIPALS, orthogonal-scores,
  *     SIMPLS, kernel, wide-kernel, SVD, power-iteration and randomized-SVD PLS
  *     regression (PLS1 / PLS2) for P4A_ALGO_PLS_REGRESSION +
@@ -433,7 +434,9 @@ typedef enum p4a_operator_kind_t {
     P4A_OP_OSC                 = 12,
     P4A_OP_EPO                 = 13,
     P4A_OP_WAVELET_DENOISE     = 14,
-    P4A_OP_FINITE_DIFFERENCE   = 15
+    P4A_OP_FINITE_DIFFERENCE   = 15,
+    P4A_OP_WHITTAKER           = 16,
+    P4A_OP_FCK                 = 17
 } p4a_operator_kind_t;
 
 /* Operator-bank lifecycle. An operator bank is an unordered collection of
@@ -620,7 +623,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.63.0+abi.1.0.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.64.0+abi.1.0.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 

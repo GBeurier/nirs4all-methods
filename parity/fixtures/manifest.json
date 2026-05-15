@@ -1,9 +1,19 @@
 {
   "fixtures": {
+    "synthetic_aom_extended_strict_operators_v1": {
+      "bytes": 4719,
+      "path": "synthetic_aom_extended_strict_operators_v1.json",
+      "sha256": "b394c08a053700de2b089730c68a6e2fbdc6314dc7607475660ed4bee66eff8a"
+    },
     "synthetic_aom_global_simpls_cv_v1": {
       "bytes": 4514,
       "path": "synthetic_aom_global_simpls_cv_v1.json",
       "sha256": "32d7bd43dcb78451dd7a92a4f580289d4a50b99a5711f5f8968dc22c9f554790"
+    },
+    "synthetic_aom_global_simpls_fck_whittaker_cv_v1": {
+      "bytes": 5822,
+      "path": "synthetic_aom_global_simpls_fck_whittaker_cv_v1.json",
+      "sha256": "49ed0bb0c268d168922e4049f4cd477adabe228981d2d25d80aa1c1a8bfe7493"
     },
     "synthetic_aom_global_simpls_sg_cv_v1": {
       "bytes": 5994,

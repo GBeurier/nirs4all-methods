@@ -569,6 +569,161 @@ struct NorrisWilliamsParams {
     return apply_xcorr_zero_pad(values, rows, cols, kernel, out);
 }
 
+[[nodiscard]] p4a_status_t apply_whittaker(::pls4all::core::Context& ctx,
+                                           const ::pls4all::core::OperatorEntry& entry,
+                                           const std::vector<double>& values,
+                                           std::size_t rows,
+                                           std::size_t cols,
+                                           std::vector<double>& out) {
+    double lambda = 1000.0;
+    if (!entry.params.empty()) {
+        if (entry.params.size() != 1U) {
+            ctx.set_error("AOM Whittaker expects zero params or one lambda param");
+            return P4A_ERR_INVALID_ARGUMENT;
+        }
+        lambda = entry.params[0];
+    }
+    if (!std::isfinite(lambda) || lambda <= 0.0) {
+        ctx.set_error("AOM Whittaker lambda must be finite and positive");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+
+    std::vector<double> system(cols * cols, 0.0);
+    for (std::size_t col = 0; col < cols; ++col) {
+        system[idx(col, cols, col)] = 1.0;
+    }
+    if (cols >= 3U) {
+        for (std::size_t diff = 0; diff + 2U < cols; ++diff) {
+            const std::size_t i0 = diff;
+            const std::size_t i1 = diff + 1U;
+            const std::size_t i2 = diff + 2U;
+            system[idx(i0, cols, i0)] += lambda;
+            system[idx(i0, cols, i1)] -= 2.0 * lambda;
+            system[idx(i0, cols, i2)] += lambda;
+            system[idx(i1, cols, i0)] -= 2.0 * lambda;
+            system[idx(i1, cols, i1)] += 4.0 * lambda;
+            system[idx(i1, cols, i2)] -= 2.0 * lambda;
+            system[idx(i2, cols, i0)] += lambda;
+            system[idx(i2, cols, i1)] -= 2.0 * lambda;
+            system[idx(i2, cols, i2)] += lambda;
+        }
+    }
+
+    out.assign(rows * cols, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        std::vector<double> rhs(cols, 0.0);
+        for (std::size_t col = 0; col < cols; ++col) {
+            rhs[col] = values[idx(row, cols, col)];
+        }
+        std::vector<double> solution;
+        if (!solve_linear_system(system, rhs, cols, solution)) {
+            ctx.set_error("failed to solve AOM Whittaker system");
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (std::size_t col = 0; col < cols; ++col) {
+            out[idx(row, cols, col)] = solution[col];
+        }
+    }
+    return P4A_OK;
+}
+
+struct FckParams {
+    double alpha{1.0};
+    double scale{1.0};
+    std::int32_t kernel_size{31};
+    double sigma{3.0};
+};
+
+[[nodiscard]] p4a_status_t parse_fck(::pls4all::core::Context& ctx,
+                                     const ::pls4all::core::OperatorEntry& entry,
+                                     FckParams& params) {
+    params = FckParams{};
+    if (entry.params.empty()) {
+        return P4A_OK;
+    }
+    if (entry.params.size() != 1U && entry.params.size() != 4U) {
+        ctx.set_error("AOM FCK expects zero params, alpha, or alpha/scale/kernel_size/sigma");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    params.alpha = entry.params[0];
+    if (entry.params.size() == 4U) {
+        params.scale = entry.params[1];
+        p4a_status_t status = parse_integer_param(ctx,
+                                                  entry.params[2],
+                                                  3,
+                                                  501,
+                                                  "AOM FCK kernel size",
+                                                  params.kernel_size);
+        if (status != P4A_OK) {
+            return status;
+        }
+        params.sigma = entry.params[3];
+    }
+    if (!std::isfinite(params.alpha) || params.alpha < 0.0) {
+        ctx.set_error("AOM FCK alpha must be finite and non-negative");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    if (!std::isfinite(params.scale) || params.scale <= 0.0) {
+        ctx.set_error("AOM FCK scale must be finite and positive");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    if ((params.kernel_size % 2) == 0) {
+        ctx.set_error("AOM FCK kernel size must be odd");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    if (!std::isfinite(params.sigma) || params.sigma <= 0.0) {
+        ctx.set_error("AOM FCK sigma must be finite and positive");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] p4a_status_t apply_fck(::pls4all::core::Context& ctx,
+                                     const ::pls4all::core::OperatorEntry& entry,
+                                     const std::vector<double>& values,
+                                     std::size_t rows,
+                                     std::size_t cols,
+                                     std::vector<double>& out) {
+    FckParams params;
+    p4a_status_t status = parse_fck(ctx, entry, params);
+    if (status != P4A_OK) {
+        return status;
+    }
+
+    const std::int32_t half = params.kernel_size / 2;
+    std::vector<double> kernel(static_cast<std::size_t>(params.kernel_size), 0.0);
+    for (std::int32_t i = 0; i < params.kernel_size; ++i) {
+        const double x = static_cast<double>(i - half) * params.scale;
+        const double gauss = std::exp(-0.5 * (x / params.sigma) * (x / params.sigma));
+        if (params.alpha < 0.1) {
+            kernel[static_cast<std::size_t>(i)] = gauss;
+        } else {
+            constexpr double kEps = 1e-8;
+            const double sign = (x > 0.0) ? 1.0 : ((x < 0.0) ? -1.0 : 0.0);
+            const double frac = sign * std::pow(std::fabs(x) + kEps, params.alpha);
+            kernel[static_cast<std::size_t>(i)] = gauss * frac;
+        }
+    }
+    if (params.alpha >= 0.1) {
+        double mean = 0.0;
+        for (double value : kernel) {
+            mean += value;
+        }
+        mean /= static_cast<double>(kernel.size());
+        for (double& value : kernel) {
+            value -= mean;
+        }
+    }
+    double norm = 1e-8;
+    for (double value : kernel) {
+        norm += std::fabs(value);
+    }
+    for (double& value : kernel) {
+        value /= norm;
+    }
+    return apply_xcorr_zero_pad(values, rows, cols, kernel, out);
+}
+
 }  // namespace
 
 namespace pls4all::core {
@@ -628,6 +783,12 @@ p4a_status_t transform_aom_strict_operator(Context& ctx,
             break;
         case P4A_OP_FINITE_DIFFERENCE:
             status = apply_finite_difference(ctx, entry, values, rows, cols, out);
+            break;
+        case P4A_OP_WHITTAKER:
+            status = apply_whittaker(ctx, entry, values, rows, cols, out);
+            break;
+        case P4A_OP_FCK:
+            status = apply_fck(ctx, entry, values, rows, cols, out);
             break;
         default:
             ctx.set_errorf("operator %d is not a supported strict-linear AOM operator",

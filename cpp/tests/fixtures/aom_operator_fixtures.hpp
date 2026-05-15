@@ -93,6 +93,60 @@ inline const std::int64_t synthetic_aom_strict_operators_v1_operator_param_offse
     0, 0, 1, 3, 6, 7, 10,
 };
 
+inline const double synthetic_aom_extended_strict_operators_v1_X[] = {
+    0.10000000000000001, 0.32000000000000001, 0.69999999999999996, 1.1799999999999999,
+    1.72, 2.1800000000000002, 2.52, 2.8199999999999998,
+    3.0800000000000001, 1.3999999999999999, 1.1799999999999999, 0.95999999999999996,
+    0.88, 1.02, 1.3600000000000001, 1.8200000000000001,
+    2.2400000000000002, 2.6000000000000001, 2.7999999999999998, 2.4199999999999999,
+    2.0600000000000001, 1.74, 1.48, 1.3,
+    1.1799999999999999, 1.0600000000000001, 0.93999999999999995, 0.17999999999999999,
+    0.5, 0.92000000000000004, 1.3799999999999999, 1.8600000000000001,
+    2.4399999999999999, 3.1000000000000001, 3.6800000000000002, 4.1799999999999997,
+    1.02, 1.3400000000000001, 1.8200000000000001, 2.2400000000000002,
+    2.52, 2.7200000000000002, 2.8599999999999999, 2.96,
+    3.02,
+};
+
+inline const double synthetic_aom_extended_strict_operators_v1_operator_params[] = {
+    10, 1, 1, 7,
+    3,
+};
+
+inline const double synthetic_aom_extended_strict_operators_v1_operator_outputs[] = {
+    0.0024601095852029077, 0.40250982290526321, 0.81231352526680201, 1.2333742234207712,
+    1.6559635715914434, 2.0650158016610143, 2.4518687883525381, 2.8193588262229663,
+    3.1771353309939956, 1.1300614851695374, 1.0849586871900856, 1.0668497406936801,
+    1.1122326284443589, 1.2469203591367912, 1.4735026786212104, 1.7718772968341732,
+    2.1105916558501145, 2.4630054680600511, 2.7004406579376572, 2.389784234274237,
+    2.0890837448170489, 1.8113167003449024, 1.5665522371549019, 1.3577278215096624,
+    1.1791256959563097, 1.0192553208910029, 0.86671358711426927, 0.063494333892711377,
+    0.50758906005159798, 0.96333435282121282, 1.4416218728071244, 1.9490098453327798,
+    2.4858943084409137, 3.0437703156409848, 3.6095434895983587, 4.1757424214143031,
+    1.0938348617829887, 1.4516427647632384, 1.8020671815651861, 2.1265603495342056,
+    2.4083677878591532, 2.6420789807754659, 2.8334466337326636, 2.99601555410272,
+    3.1459858858843424, 0.40884319378708112, 0.63968176747698902, 0.84435315941008504,
+    0.95568859517628157, 0.96285470463472289, 0.88318854791938528, 0.072852924311598288,
+    -0.69740546620610688, -1.2216588700864954, 0.48716090510792837, 0.32620132171880245,
+    0.18116410627983037, 0.12700309057521986, 0.43050993406879234, 0.67768131017325994,
+    0.20168571081738373, -0.37738966581005073, -0.85965574822040125, 1.002323954824047,
+    0.54723191379039449, -0.044850842823280557, -0.60568072675572893, -0.49234477061172865,
+    -0.39050987099471723, -0.48750756844372717, -0.57269447759551073, -0.60200312159130775,
+    0.51034425021102547, 0.72068336008446698, 0.91168749134659821, 1.0658593563777035,
+    1.1770291714976016, 1.2351942716973989, 0.27219602401759169, -0.7179259977058241,
+    -1.4753182616613909, 0.94551250381967977, 1.0223711046089718, 0.93918211393452244,
+    0.71218441663435494, 0.58018123138505084, 0.41884319377563162, -0.34899244566078369,
+    -1.0064090769530405, -1.411664073669896,
+};
+
+inline const std::int64_t synthetic_aom_extended_strict_operators_v1_operator_kinds[] = {
+    16, 17,
+};
+
+inline const std::int64_t synthetic_aom_extended_strict_operators_v1_operator_param_offsets[] = {
+    0, 1, 5,
+};
+
 inline const AomOperatorFixture kAomOperatorFixtures[] = {
     {
         "synthetic_aom_strict_operators_v1",
@@ -102,6 +156,15 @@ inline const AomOperatorFixture kAomOperatorFixtures[] = {
         MatrixRef{6, 28, synthetic_aom_strict_operators_v1_operator_outputs, sizeof(synthetic_aom_strict_operators_v1_operator_outputs) / sizeof(double), false},
         AomOperatorIndexRef{synthetic_aom_strict_operators_v1_operator_kinds, sizeof(synthetic_aom_strict_operators_v1_operator_kinds) / sizeof(std::int64_t)},
         AomOperatorIndexRef{synthetic_aom_strict_operators_v1_operator_param_offsets, sizeof(synthetic_aom_strict_operators_v1_operator_param_offsets) / sizeof(std::int64_t)}
+    },
+    {
+        "synthetic_aom_extended_strict_operators_v1",
+        2,
+        MatrixRef{5, 9, synthetic_aom_extended_strict_operators_v1_X, sizeof(synthetic_aom_extended_strict_operators_v1_X) / sizeof(double), false},
+        MatrixRef{1, 5, synthetic_aom_extended_strict_operators_v1_operator_params, sizeof(synthetic_aom_extended_strict_operators_v1_operator_params) / sizeof(double), false},
+        MatrixRef{2, 45, synthetic_aom_extended_strict_operators_v1_operator_outputs, sizeof(synthetic_aom_extended_strict_operators_v1_operator_outputs) / sizeof(double), false},
+        AomOperatorIndexRef{synthetic_aom_extended_strict_operators_v1_operator_kinds, sizeof(synthetic_aom_extended_strict_operators_v1_operator_kinds) / sizeof(std::int64_t)},
+        AomOperatorIndexRef{synthetic_aom_extended_strict_operators_v1_operator_param_offsets, sizeof(synthetic_aom_extended_strict_operators_v1_operator_param_offsets) / sizeof(std::int64_t)}
     }
 };
 

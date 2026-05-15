@@ -2,7 +2,7 @@
 
 > A portable PLS / NIRS engine with a stable C ABI and thin first-class bindings for Python, R, MATLAB, JavaScript / WebAssembly and Android.
 
-**Status — Phase 1 shipped, Phase 3r preprocessing / validation core live, PLSCanonical, PLSSVD, PLS-DA, PLS-LDA, PLS-logistic, MB-PLS, LW-PLS, OPLS / OPLS-DA, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power, randomized-SVD, PCR, Phase 5u variable-selection core and Phase 6c AOM strict-operator/global-selection core live · API unstable until v1.0 · Not yet on PyPI / CRAN / npm.**
+**Status — Phase 1 shipped, Phase 3r preprocessing / validation core live, PLSCanonical, PLSSVD, PLS-DA, PLS-LDA, PLS-logistic, MB-PLS, LW-PLS, OPLS / OPLS-DA, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power, randomized-SVD, PCR, Phase 5u variable-selection core and Phase 6d AOM strict-operator/global-selection core live · API unstable until v1.0 · Not yet on PyPI / CRAN / npm.**
 
 `pls4all` reimplements the full Partial Least Squares family in C++17 behind a small, stable C ABI. The same numerical core powers every binding, so a model trained in Python predicts byte-for-byte the same way in R, MATLAB, a browser or on Android.
 
@@ -137,6 +137,9 @@ operator/component count and full-fit predictions.
 Phase 6c adds bench-parity strict-linear AOM operator kernels for zero-padded
 Savitzky-Golay smoothing/derivatives, finite differences and Norris-Williams,
 then exercises them through the global AOM selector.
+Phase 6d extends the strict-linear AOM tranche to Whittaker smoothing and FCK
+operators, with direct transform parity and global AOM-SIMPLS selection parity
+against the bench oracle.
 
 ## Project layout
 
@@ -162,7 +165,7 @@ If you use `pls4all` in academic work, please cite:
   title   = {pls4all: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/pls4all},
-  version = {0.63.0}
+  version = {0.64.0}
 }
 ```
 

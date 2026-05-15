@@ -75,6 +75,7 @@ HEADER_SPECS = {
         "fixtures": (
             "synthetic_aom_global_simpls_cv_v1",
             "synthetic_aom_global_simpls_sg_cv_v1",
+            "synthetic_aom_global_simpls_fck_whittaker_cv_v1",
         ),
         "struct": "AomSelectionFixture",
         "array": "kAomSelectionFixtures",
@@ -83,6 +84,7 @@ HEADER_SPECS = {
         "out": REPO_ROOT / "cpp" / "tests" / "fixtures" / "aom_operator_fixtures.hpp",
         "fixtures": (
             "synthetic_aom_strict_operators_v1",
+            "synthetic_aom_extended_strict_operators_v1",
         ),
         "struct": "AomOperatorFixture",
         "array": "kAomOperatorFixtures",

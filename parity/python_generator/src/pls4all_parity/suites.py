@@ -4754,6 +4754,8 @@ _AOM_BENCH_OPERATOR_KIND_IDS = {
     "sg_d1_w5_p2": 9,
     "nw_g3_s1_d1": 10,
     "fd_d1": 15,
+    "whittaker_l10": 16,
+    "fck_a1.00_s1.00_k7": 17,
 }
 
 
@@ -4764,6 +4766,8 @@ _AOM_BENCH_OPERATOR_PARAMS = {
     "sg_d1_w5_p2": [5.0, 2.0, 1.0],
     "nw_g3_s1_d1": [1.0, 3.0, 1.0],
     "fd_d1": [1.0],
+    "whittaker_l10": [10.0],
+    "fck_a1.00_s1.00_k7": [1.0, 1.0, 7.0, 3.0],
 }
 
 
@@ -4797,17 +4801,21 @@ def _aom_bench_imports() -> Any:
     from aompls.operators import (  # type: ignore
         DetrendProjectionOperator,
         FiniteDifferenceOperator,
+        FCKOperator,
         IdentityOperator,
         NorrisWilliamsOperator,
         SavitzkyGolayOperator,
+        WhittakerOperator,
     )
 
     return {
         "DetrendProjectionOperator": DetrendProjectionOperator,
         "FiniteDifferenceOperator":  FiniteDifferenceOperator,
+        "FCKOperator":               FCKOperator,
         "IdentityOperator":          IdentityOperator,
         "NorrisWilliamsOperator":    NorrisWilliamsOperator,
         "SavitzkyGolayOperator":     SavitzkyGolayOperator,
+        "WhittakerOperator":         WhittakerOperator,
     }
 
 
@@ -4825,6 +4833,10 @@ def _aom_bench_operator(name: str, p: int) -> Any:
         return classes["NorrisWilliamsOperator"](gap=3, smoothing=1, order=1, p=p)
     if name == "fd_d1":
         return classes["FiniteDifferenceOperator"](order=1, p=p)
+    if name == "whittaker_l10":
+        return classes["WhittakerOperator"](lam=10.0, p=p)
+    if name == "fck_a1.00_s1.00_k7":
+        return classes["FCKOperator"](alpha=1.0, scale=1.0, kernel_size=7, sigma=3.0, p=p)
     raise ValueError(f"unsupported bench AOM operator fixture: {name}")
 
 
@@ -7366,6 +7378,57 @@ def synthetic_aom_global_simpls_sg_cv_v1() -> dict[str, Any]:
                                          max_components=3,
                                          cv=5,
                                          random_state=11)
+
+
+def synthetic_aom_extended_strict_operators_v1() -> dict[str, Any]:
+    """5 samples, 9 features for bench AOM_v0 Whittaker and FCK operator parity."""
+    X = np.array([
+        [0.10, 0.32, 0.70, 1.18, 1.72, 2.18, 2.52, 2.82, 3.08],
+        [1.40, 1.18, 0.96, 0.88, 1.02, 1.36, 1.82, 2.24, 2.60],
+        [2.80, 2.42, 2.06, 1.74, 1.48, 1.30, 1.18, 1.06, 0.94],
+        [0.18, 0.50, 0.92, 1.38, 1.86, 2.44, 3.10, 3.68, 4.18],
+        [1.02, 1.34, 1.82, 2.24, 2.52, 2.72, 2.86, 2.96, 3.02],
+    ], dtype=np.float64)
+    return _aom_operator_fixture(
+        "synthetic_aom_extended_strict_operators_v1",
+        seed=52,
+        X=X,
+        operator_names=[
+            "whittaker_l10",
+            "fck_a1.00_s1.00_k7",
+        ],
+    )
+
+
+def synthetic_aom_global_simpls_fck_whittaker_cv_v1() -> dict[str, Any]:
+    """11 samples, 9 features for bench AOM_v0 global SIMPLS CV with Whittaker/FCK."""
+    X = np.array([
+        [0.10, 0.32, 0.70, 1.18, 1.72, 2.18, 2.52, 2.82, 3.08],
+        [0.22, 0.48, 0.86, 1.34, 1.92, 2.42, 2.82, 3.14, 3.45],
+        [0.18, 0.38, 0.76, 1.22, 1.78, 2.26, 2.58, 2.88, 3.16],
+        [0.38, 0.72, 1.18, 1.72, 2.34, 2.90, 3.32, 3.70, 4.08],
+        [0.52, 0.94, 1.48, 2.06, 2.72, 3.28, 3.78, 4.18, 4.62],
+        [0.70, 1.18, 1.78, 2.42, 3.10, 3.74, 4.28, 4.76, 5.20],
+        [0.88, 1.44, 2.10, 2.82, 3.56, 4.24, 4.84, 5.36, 5.86],
+        [1.08, 1.72, 2.44, 3.22, 4.02, 4.78, 5.46, 6.04, 6.60],
+        [1.30, 2.02, 2.82, 3.66, 4.54, 5.34, 6.10, 6.76, 7.38],
+        [1.54, 2.34, 3.22, 4.14, 5.10, 6.00, 6.82, 7.56, 8.22],
+        [1.82, 2.70, 3.66, 4.66, 5.70, 6.68, 7.58, 8.40, 9.16],
+    ], dtype=np.float64)
+    Y = np.array([0.30, 0.48, 0.36, 0.72, 0.94, 1.22, 1.52, 1.84, 2.20, 2.58, 3.02], dtype=np.float64)
+    return _aom_global_selection_fixture("synthetic_aom_global_simpls_fck_whittaker_cv_v1",
+                                         seed=53,
+                                         X=X,
+                                         Y=Y,
+                                         operator_names=[
+                                             "identity",
+                                             "whittaker_l10",
+                                             "fck_a1.00_s1.00_k7",
+                                             "detrend_d1",
+                                         ],
+                                         max_components=3,
+                                         cv=3,
+                                         random_state=13)
 
 
 def synthetic_pipeline_msc_v1() -> dict[str, Any]:
