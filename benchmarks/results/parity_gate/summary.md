@@ -11,7 +11,7 @@ NumPy: `2.4.5`
 |---------|------:|------------|
 | tight    | 33 | `rmse_rel < 30% of tolerance` — high-confidence parity. |
 | moderate | 10 | 30-60% of tolerance — real agreement. |
-| loose    | 3 | 60-90% of tolerance — algorithmic divergence likely; passes with margin. |
+| loose    | 4 | 60-90% of tolerance — algorithmic divergence likely; passes with margin. |
 | **weak** | **11** | **>= 90% of tolerance** — passes barely; tolerance widened to accept stochastic-RNG or algorithmic-convention divergence. **Treat as smoke check, not bit parity.** |
 
 ### Weak-parity passes (read with caution)
@@ -68,7 +68,7 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `pls_monitoring` | PLS process monitoring (T²/Q thresholds + alarms) (§19) | python / `(none)` - | ✗ | — | — | 1e+01 | no_python_reference |
 | `pls_monitoring` | PLS process monitoring (T²/Q thresholds + alarms) (§19) | R / `mdatools` 0.15.0 | ✓ | moderate | 3.298e+00 | 1e+01 | ok |
 | `one_se_rule` | One-SE component selection rule (§10) | python / `(none)` - | ✗ | — | — | 1e+01 | no_python_reference |
-| `one_se_rule` | One-SE component selection rule (§10) | R / `pls` 2.8.5 | ✓ | tight | 2.580e+00 | 1e+01 | ok |
+| `one_se_rule` | One-SE component selection rule (§10) | R / `pls` 2.8.5 | ✓ | tight | 2.582e+00 | 1e+01 | ok |
 | `so_pls` | SO-PLS — Sequential & Orthogonalized multi-block PLS (§17) | python / `(none)` - | ✗ | — | — | 1e+00 | no_python_reference |
 | `so_pls` | SO-PLS — Sequential & Orthogonalized multi-block PLS (§17) | R / `multiblock` 0.8.10 | ✓ | tight | 9.529e-03 | 1e+00 | ok |
 | `on_pls` | OnPLS — Orthogonal multi-block decomposition (§18) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
@@ -134,7 +134,8 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `spa_select` | SPA Successive Projections (§18 Phase 5e) | R / `plsVarSel` 0.10.0 | ✓ | loose | 1.057e+00 | 1e+00 | ok |
 | `cars_select` | CARS competitive adaptive reweighted sampling | python / `(none)` - | ✗ | — | — | 1e+00 | no_python_reference |
 | `cars_select` | CARS competitive adaptive reweighted sampling | R / `enpls` 6.1 | ✓ | weak | 1.291e+00 | 1e+00 | ok |
-| `random_frog_select` | Random Frog selection (§18 Phase 5g) | paper / `paper-only` - | ✓ | — | — | 1e+00 | paper_only |
+| `random_frog_select` | Random Frog selection (§18 Phase 5g) | matlab / `libPLS` 1.95 | ✓ | loose | 1.000e+00 | 1e+00 | ok |
+| `random_frog_select` | Random Frog selection (§18 Phase 5g) | R / `(none)` - | ✗ | — | — | 1e+00 | no_r_reference |
 | `scars_select` | SCARS stability + CARS (§18 Phase 5h) | paper / `paper-only` - | ✓ | — | — | 1e+00 | paper_only |
 | `ga_select` | GA-PLS genetic algorithm selection | python / `(none)` - | ✗ | — | — | 1e+00 | no_python_reference |
 | `ga_select` | GA-PLS genetic algorithm selection | R / `plsVarSel` 0.10.0 | ✓ | weak | 1.195e+00 | 1e+00 | ok |

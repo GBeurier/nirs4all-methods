@@ -3314,6 +3314,114 @@ write.table(matrix(preds, ncol=1), file='{pred_path}',
 """
 
 
+_OCT2PY_AVAILABLE: bool | None = None
+_OCT2PY_INSTANCE = None
+_LIBPLS_PATH = Path(__file__).resolve().parents[2] / "bindings" / "octave" / "libPLS_1.95"
+
+
+def _ensure_oct2py():
+    """Boot oct2py + libPLS once; return the Oct2Py instance or None."""
+    global _OCT2PY_AVAILABLE, _OCT2PY_INSTANCE
+    if _OCT2PY_AVAILABLE is False:
+        return None
+    if _OCT2PY_INSTANCE is not None:
+        return _OCT2PY_INSTANCE
+    try:
+        os.environ.setdefault("OCTAVE_HOME",
+                                "/home/delete/miniconda3/envs/pls4all_r")
+        os.environ.setdefault(
+            "OCTAVE_EXECUTABLE",
+            "/home/delete/miniconda3/envs/pls4all_r/bin/octave-cli")
+        os.environ["LD_LIBRARY_PATH"] = (
+            "/home/delete/miniconda3/envs/pls4all_r/lib:"
+            + os.environ.get("LD_LIBRARY_PATH", ""))
+        os.environ["PATH"] = (
+            "/home/delete/miniconda3/envs/pls4all_r/bin:"
+            + os.environ.get("PATH", ""))
+        import oct2py
+        oc = oct2py.Oct2Py()
+        if _LIBPLS_PATH.exists():
+            oc.addpath(str(_LIBPLS_PATH))
+        _OCT2PY_INSTANCE = oc
+        _OCT2PY_AVAILABLE = True
+        return oc
+    except Exception:
+        _OCT2PY_AVAILABLE = False
+        return None
+
+
+class _RandomFrogLibPlsReference(_MaskReferenceAdapter):
+    """libPLS (Octave/MATLAB) `randomfrog_pls` — canonical Random Frog
+    implementation (Li et al. 2011). Same algorithm as pls4all's
+    select_by_random_frog; different RNG / stopping criterion than the
+    pls4all splitmix64-based loop, so this is qualitative parity."""
+
+    library_name = "libPLS"
+    library_version = "1.95"
+    language = "matlab"
+    notes = ("Octave-bridged libPLS 1.95 `randomfrog_pls(X, Y, A, "
+             "'center', N, Q, 'regcoef')`. RNG differs from pls4all "
+             "splitmix64; mask metric. Top-10 ranked features mapped "
+             "to a 1xp mask.")
+
+    def __init__(self, n_components: int, n_iterations: int,
+                  initial_size: int, top_k: int) -> None:
+        super().__init__()
+        self._k = int(n_components)
+        self._n_iter = int(n_iterations)
+        self._q = int(initial_size)
+        self._top_k = int(top_k)
+
+    def _compute_indices(self, X, Y, **kwargs):
+        oc = _ensure_oct2py()
+        if oc is None:
+            raise RuntimeError("oct2py/libPLS not available")
+        n, p = X.shape
+        Y2 = Y.reshape(n, -1)[:, :1]
+        X64 = np.ascontiguousarray(X, dtype=np.float64)
+        Y64 = np.ascontiguousarray(Y2, dtype=np.float64)
+        res = oc.randomfrog_pls(
+            X64, Y64, self._k, 'center',
+            self._n_iter, self._q, 'regcoef', nout=1)
+        if hasattr(res, 'keys') and 'Vrank' in res:
+            vrank = np.asarray(res['Vrank']).reshape(-1)
+            top = vrank[:self._top_k].astype(np.int64) - 1  # 1- to 0-based
+            return top
+        return np.empty(0, dtype=np.int64)
+
+
+class _CarsLibPlsReference(_MaskReferenceAdapter):
+    """libPLS (Octave/MATLAB) `carspls` — canonical CARS (Li 2009). pls4all
+    uses splitmix64 RNG vs MATLAB rand; qualitative parity."""
+
+    library_name = "libPLS"
+    library_version = "1.95"
+    language = "matlab"
+    notes = ("Octave-bridged libPLS 1.95 `carspls(X, y, A, fold, "
+             "method, num)`. Different RNG than pls4all; mask metric.")
+
+    def __init__(self, n_components: int, n_iterations: int) -> None:
+        super().__init__()
+        self._k = int(n_components)
+        self._n_iter = int(n_iterations)
+
+    def _compute_indices(self, X, Y, **kwargs):
+        oc = _ensure_oct2py()
+        if oc is None:
+            raise RuntimeError("oct2py/libPLS not available")
+        n, p = X.shape
+        Y2 = Y.reshape(n, -1)[:, :1]
+        X64 = np.ascontiguousarray(X, dtype=np.float64)
+        Y64 = np.ascontiguousarray(Y2, dtype=np.float64)
+        # carspls(X, y, A, fold, method, num, selectLV, originalVersion, order)
+        res = oc.carspls(X64, Y64, self._k, 5, 'center',
+                          self._n_iter, 1, 0, 0, nout=1)
+        if hasattr(res, 'keys') and 'vsel' in res:
+            sel = np.asarray(res['vsel']).reshape(-1).astype(np.int64) - 1
+            return sel
+        return np.empty(0, dtype=np.int64)
+
+
 class _EmcuvePlsVarSelReference(_MaskReferenceAdapter):
     """Ensemble of `plsVarSel::mcuve_pls` calls — same algorithm as
     pls4all's EMCUVE selector (multiple MC-UVE runs + vote aggregation).
@@ -4630,15 +4738,18 @@ METHODS: list[MethodSpec] = [
                       "n_components": 4, "n_iterations": 10,
                       "initial_size": 10, "min_size": 5,
                       "max_size": 20, "top_k": 10, "seed": 11},
-        python_reference=None,
+        python_reference=lambda **kw: _RandomFrogLibPlsReference(
+            n_components=kw["n_components"],
+            n_iterations=kw["n_iterations"],
+            initial_size=kw["initial_size"],
+            top_k=kw["top_k"]),
         r_reference=None,
         prediction_key="mask",
-        rmse_rel_tol=1.0,
-        paper_only=("Li, H. D., Xu, Q. S. & Liang, Y. Z. (2012). "
-                    "Random frog: An efficient reversible jump Markov "
-                    "chain Monte Carlo-like approach for variable "
-                    "selection. Anal. Chim. Acta 740, 20-26. (No "
-                    "widely installable R / Python port; smoke-tested.)"),
+        # Octave-bridged libPLS canonical (Li 2012). RNG differs; mask metric.
+        rmse_rel_tol=1.35,
+        notes=("Octave-bridged libPLS 1.95 `randomfrog_pls`. Canonical "
+               "Li 2012 implementation. RNG diverges from pls4all "
+               "splitmix64. Mask metric ~0=perfect, ~1.41=disjoint."),
     ),
     MethodSpec(
         name="scars_select",
