@@ -2,16 +2,16 @@
 
 Host: `Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.35`
 pls4all: `0.97.0+abi.1.14.0`
-Python: `3.11.14`
+Python: `3.11.15`
 NumPy: `2.4.5`
 
 ## Pass quality breakdown
 
 | Quality | Count | Definition |
 |---------|------:|------------|
-| tight    | 19 | `rmse_rel < 30% of tolerance` — high-confidence parity. |
-| moderate | 9 | 30-60% of tolerance — real agreement. |
-| loose    | 2 | 60-90% of tolerance — algorithmic divergence likely; passes with margin. |
+| tight    | 33 | `rmse_rel < 30% of tolerance` — high-confidence parity. |
+| moderate | 10 | 30-60% of tolerance — real agreement. |
+| loose    | 3 | 60-90% of tolerance — algorithmic divergence likely; passes with margin. |
 | **weak** | **11** | **>= 90% of tolerance** — passes barely; tolerance widened to accept stochastic-RNG or algorithmic-convention divergence. **Treat as smoke check, not bit parity.** |
 
 ### Weak-parity passes (read with caution)
@@ -43,26 +43,32 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `di_pls` | Domain-invariant PLS | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
 | `recursive_pls` | Recursive (moving-window) PLS | python / `scikit-learn` 1.4.2 | ✓ | tight | 1.226e-02 | 1e-01 | ok |
 | `recursive_pls` | Recursive (moving-window) PLS | R / `pls` 2.8.5 | ✓ | tight | 1.226e-02 | 1e-01 | ok |
-| `cppls` | CPPLS (column-power-rescaled SIMPLS) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
+| `cppls` | CPPLS (column-power-rescaled SIMPLS) | python / `(none)` - | ✗ | — | — | 1e+01 | no_python_reference |
+| `cppls` | CPPLS (column-power-rescaled SIMPLS) | R / `pls` 2.8.5 | ✓ | tight | 2.018e-03 | 1e+01 | ok |
 | `weighted_pls` | Sample-weighted PLS (sqrt(w)-prescaled SIMPLS) | python / `scikit-learn` 1.4.2 | ✓ | tight | 9.275e-07 | 1e-01 | ok |
 | `weighted_pls` | Sample-weighted PLS (sqrt(w)-prescaled SIMPLS) | R / `(none)` - | ✗ | — | — | 1e-01 | no_r_reference |
-| `robust_pls` | Robust PLS (Huber IRLS over weighted SIMPLS) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
+| `robust_pls` | Robust PLS (Huber IRLS over weighted SIMPLS) | python / `(none)` - | ✗ | — | — | 2e+00 | no_python_reference |
+| `robust_pls` | Robust PLS (Huber IRLS over weighted SIMPLS) | R / `chemometrics` 0.7.x | ✓ | tight | 4.489e-02 | 2e+00 | ok |
 | `ridge_pls` | Ridge-augmented PLS | python / `scikit-learn` 1.4.2 | ✓ | tight | 1.020e-07 | 1e-01 | ok |
 | `ridge_pls` | Ridge-augmented PLS | R / `(none)` - | ✗ | — | — | 1e-01 | no_r_reference |
 | `continuum_regression` | Continuum regression (interpolates PLS / OLS) | python / `(none)` - | ✗ | — | — | 2e+01 | no_python_reference |
 | `continuum_regression` | Continuum regression (interpolates PLS / OLS) | R / `JICO` 0.0 | ✓ | moderate | 1.090e+01 | 2e+01 | ok |
-| `n_pls` | N-PLS — 3-way tensor PLS (Bro 1996) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
+| `n_pls` | N-PLS — 3-way tensor PLS (Bro 1996) | python / `tensorly` 0.9.0 | ✓ | tight | 1.621e+00 | 1e+01 | ok |
+| `n_pls` | N-PLS — 3-way tensor PLS (Bro 1996) | R / `(none)` - | ✗ | — | — | 1e+01 | no_r_reference |
 | `kernel_pls_rbf` | Non-linear kernel PLS (RBF kernel) | python / `(none)` - | ✗ | — | — | 2e+00 | no_python_reference |
 | `kernel_pls_rbf` | Non-linear kernel PLS (RBF kernel) | R / `kernlab+pls` 0.9.33+2.8.5 | ✓ | tight | 4.213e-01 | 2e+00 | ok |
 | `o2pls` | O2PLS — bi-directional OPLS (Trygg & Wold 2003) | python / `(none)` - | ✗ | — | — | 1e+00 | no_python_reference |
 | `o2pls` | O2PLS — bi-directional OPLS (Trygg & Wold 2003) | R / `OmicsPLS` 2.1.0 | ✓ | moderate | 4.541e-01 | 1e+00 | ok |
-| `approximate_press` | Approximate-PRESS component selection (§29) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
+| `approximate_press` | Approximate-PRESS component selection (§29) | python / `(none)` - | ✗ | — | — | 1e+01 | no_python_reference |
+| `approximate_press` | Approximate-PRESS component selection (§29) | R / `pls` 2.8.5 | ✓ | tight | 3.673e-02 | 1e+01 | ok |
 | `pls_diagnostic_t2` | PLS Hotelling T² (§9) | python / `(none)` - | ✗ | — | — | 1e+01 | no_python_reference |
 | `pls_diagnostic_t2` | PLS Hotelling T² (§9) | R / `mdatools` 0.15.0 | ✓ | moderate | 3.845e+00 | 1e+01 | ok |
 | `pls_diagnostic_q` | PLS Q residuals / SPE (§9) | python / `(none)` - | ✗ | — | — | 5e+00 | no_python_reference |
 | `pls_diagnostic_q` | PLS Q residuals / SPE (§9) | R / `mdatools` 0.15.0 | ✓ | moderate | 2.190e+00 | 5e+00 | ok |
-| `pls_monitoring` | PLS process monitoring (T²/Q thresholds + alarms) (§19) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
-| `one_se_rule` | One-SE component selection rule (§10) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
+| `pls_monitoring` | PLS process monitoring (T²/Q thresholds + alarms) (§19) | python / `(none)` - | ✗ | — | — | 1e+01 | no_python_reference |
+| `pls_monitoring` | PLS process monitoring (T²/Q thresholds + alarms) (§19) | R / `mdatools` 0.15.0 | ✓ | moderate | 3.298e+00 | 1e+01 | ok |
+| `one_se_rule` | One-SE component selection rule (§10) | python / `(none)` - | ✗ | — | — | 1e+01 | no_python_reference |
+| `one_se_rule` | One-SE component selection rule (§10) | R / `pls` 2.8.5 | ✓ | tight | 2.580e+00 | 1e+01 | ok |
 | `so_pls` | SO-PLS — Sequential & Orthogonalized multi-block PLS (§17) | python / `(none)` - | ✗ | — | — | 1e+00 | no_python_reference |
 | `so_pls` | SO-PLS — Sequential & Orthogonalized multi-block PLS (§17) | R / `multiblock` 0.8.10 | ✓ | tight | 9.529e-03 | 1e+00 | ok |
 | `on_pls` | OnPLS — Orthogonal multi-block decomposition (§18) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
@@ -73,21 +79,29 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `pso_select` | PSO-PLS — Binary Particle Swarm variable selection (§48) | R / `(none)` - | ✗ | — | — | 1e+00 | no_r_reference |
 | `gpr_pls` | GPR-on-PLS — RBF Gaussian Process on PLS scores (§47) | python / `scikit-learn` 1.4.2 | ✓ | tight | 2.259e-10 | 1e-08 | ok |
 | `gpr_pls` | GPR-on-PLS — RBF Gaussian Process on PLS scores (§47) | R / `(none)` - | ✗ | — | — | 1e-08 | no_r_reference |
-| `bagging_pls` | Bagging PLS (§20) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
-| `boosting_pls` | Boosting PLS (§20) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
-| `random_subspace_pls` | Random-subspace PLS (§20) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
+| `bagging_pls` | Bagging PLS (§20) | python / `scikit-learn` 1.8.0 | ✓ | tight | 3.508e-03 | 2e+00 | ok |
+| `bagging_pls` | Bagging PLS (§20) | R / `(none)` - | ✗ | — | — | 2e+00 | no_r_reference |
+| `boosting_pls` | Boosting PLS (§20) | python / `(none)` - | ✗ | — | — | 1e+01 | no_python_reference |
+| `boosting_pls` | Boosting PLS (§20) | R / `mboost` 2.9-11 | ✓ | tight | 3.864e-01 | 1e+01 | ok |
+| `random_subspace_pls` | Random-subspace PLS (§20) | python / `scikit-learn` 1.8.0 | ✓ | tight | 4.548e-03 | 2e+00 | ok |
+| `random_subspace_pls` | Random-subspace PLS (§20) | R / `(none)` - | ✗ | — | — | 2e+00 | no_r_reference |
 | `pls_glm` | PLS-GLM (§5) — softmax/Poisson IRLS on PLS scores | python / `(none)` - | ✗ | — | — | 5e-01 | no_python_reference |
 | `pls_glm` | PLS-GLM (§5) — softmax/Poisson IRLS on PLS scores | R / `plsRglm` 1.5.1 | ✓ | tight | 9.620e-02 | 5e-01 | ok |
 | `pls_qda` | PLS-QDA (§5) — quadratic discriminant on PLS scores | python / `scikit-learn` 1.8.0 | ✓ | moderate | 3.952e+00 | 1e+01 | ok |
 | `pls_qda` | PLS-QDA (§5) — quadratic discriminant on PLS scores | R / `(none)` - | ✗ | — | — | 1e+01 | no_r_reference |
-| `pls_cox` | PLS-Cox (§5) — Cox PH on PLS scores | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
-| `pds` | PDS — Piecewise Direct Standardization (§13) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
-| `ds` | DS — Direct Standardization (§13) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
+| `pls_cox` | PLS-Cox (§5) — Cox PH on PLS scores | python / `(none)` - | ✗ | — | — | 5e+00 | no_python_reference |
+| `pls_cox` | PLS-Cox (§5) — Cox PH on PLS scores | R / `plsRcox` 1.8.2 | ✓ | tight | 9.047e-01 | 5e+00 | ok |
+| `pds` | PDS — Piecewise Direct Standardization (§13) | python / `(none)` - | ✗ | — | — | 5e-01 | no_python_reference |
+| `pds` | PDS — Piecewise Direct Standardization (§13) | R / `base` R 4.3.3 | ✓ | tight | 3.980e-03 | 5e-01 | ok |
+| `ds` | DS — Direct Standardization (§13) | python / `(none)` - | ✗ | — | — | 5e-01 | no_python_reference |
+| `ds` | DS — Direct Standardization (§13) | R / `base` R 4.3.3 | ✓ | tight | 4.340e-08 | 5e-01 | ok |
 | `mir_pls` | MIR-PLS — Inverse-regression PLS (§13) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
-| `missing_aware_nipals` | Missing-aware NIPALS PLS (§13) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
+| `missing_aware_nipals` | Missing-aware NIPALS PLS (§13) | python / `(none)` - | ✗ | — | — | 1e+01 | no_python_reference |
+| `missing_aware_nipals` | Missing-aware NIPALS PLS (§13) | R / `softImpute` 1.4-1 | ✓ | tight | 1.588e-15 | 1e+01 | ok |
 | `sparse_pls_da` | Sparse PLS-DA (§7) | python / `(none)` - | ✗ | — | — | 2e+00 | no_python_reference |
 | `sparse_pls_da` | Sparse PLS-DA (§7) | R / `spls` 2.3.2 | ✓ | moderate | 9.249e-01 | 2e+00 | ok |
-| `group_sparse_pls` | Group sparse PLS (§7) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
+| `group_sparse_pls` | Group sparse PLS (§7) | python / `(none)` - | ✗ | — | — | 1e+01 | no_python_reference |
+| `group_sparse_pls` | Group sparse PLS (§7) | R / `sgPLS` 1.8.1 | ✓ | tight | 6.886e-03 | 1e+01 | ok |
 | `fused_sparse_pls` | Fused sparse PLS (§7) | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
 | `pls_diagnostic_dmodx` | PLS Distance-to-Model X (§9) | python / `(none)` - | ✗ | — | — | 5e+00 | no_python_reference |
 | `pls_diagnostic_dmodx` | PLS Distance-to-Model X (§9) | R / `mdatools` 0.15.0 | ✓ | tight | 1.220e+00 | 5e+00 | ok |
@@ -134,8 +148,10 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `wvc_select` | WVC weighted-variable-component top-k | R / `plsVarSel` 0.10.0 | ✓ | tight | 0.000e+00 | 7e-01 | ok |
 | `wvc_threshold_select` | WVC threshold-based selection (§18 Phase 5r) | python / `(none)` - | ✗ | — | — | 7e-01 | no_python_reference |
 | `wvc_threshold_select` | WVC threshold-based selection (§18 Phase 5r) | R / `plsVarSel` 0.10.0 | ✓ | tight | 1.925e-01 | 7e-01 | ok |
-| `emcuve_select` | EMCUVE ensemble MC-UVE (§18 Phase 5n) | paper / `paper-only` - | ✓ | — | — | 1e+00 | paper_only |
-| `randomization_select` | Randomization-test selector (§18 Phase 5o) | paper / `paper-only` - | ✓ | — | — | 1e+00 | paper_only |
+| `emcuve_select` | EMCUVE ensemble MC-UVE (§18 Phase 5n) | python / `(none)` - | ✗ | — | — | 1e+00 | no_python_reference |
+| `emcuve_select` | EMCUVE ensemble MC-UVE (§18 Phase 5n) | R / `plsVarSel` 0.10.0 | ✓ | tight | 2.810e-01 | 1e+00 | ok |
+| `randomization_select` | Randomization-test selector (§18 Phase 5o) | python / `(none)` - | ✗ | — | — | 1e+00 | no_python_reference |
+| `randomization_select` | Randomization-test selector (§18 Phase 5o) | R / `pls+stats` R 4.3.3 | ✓ | loose | 9.759e-01 | 1e+00 | ok |
 | `rep_select` | REP-PLS repeated VIP selection (§18 Phase 5s) | python / `(none)` - | ✗ | — | — | 2e+00 | no_python_reference |
 | `rep_select` | REP-PLS repeated VIP selection (§18 Phase 5s) | R / `plsVarSel` 0.10.0 | ✓ | weak | 1.700e+00 | 2e+00 | ok |
 | `ipw_select` | IPW-PLS iterative predictor weighting (§18 Phase 5t) | python / `(none)` - | ✗ | — | — | 1e+00 | no_python_reference |

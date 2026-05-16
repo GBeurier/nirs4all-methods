@@ -479,13 +479,27 @@ def _measure_wall_ms(fn, repeats: int) -> tuple[float, float, str]:
 
 
 def time_methods(methods: list[str] | None = None,
-                  repeats: int = 3) -> list[TimingRow]:
+                  repeats: int = 3,
+                  *, inproc_r: bool = True) -> list[TimingRow]:
     """For each MethodSpec, time three modes:
       1. pls4all binding call (`pls4all_fn`)
       2. Python reference fit+predict
       3. R reference fit+predict
     Returns one row per method. Skips paper_only methods (no external timing).
+
+    `inproc_r`: when True, routes R adapters through rpy2 in-process via
+    `RAdapter.use_inproc(True)` so the per-call Rscript subprocess
+    startup (~1 s on this host) does not dominate the wall-clock. Falls
+    back to subprocess automatically if rpy2 isn't importable.
     """
+    from .registry import RAdapter, _ensure_inproc_r
+    if inproc_r:
+        if _ensure_inproc_r() is not None:
+            RAdapter.use_inproc(True)
+            print("[timing] R adapters running INPROC via rpy2")
+        else:
+            print("[timing] rpy2 unavailable — R adapters stay on Rscript subprocess",
+                  file=sys.stderr)
     selected = [m for m in METHODS if methods is None or m.name in methods]
     rows: list[TimingRow] = []
     for method in selected:
@@ -617,13 +631,20 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--timing-repeats", type=int, default=3,
                         help="Per-mode repeat count for --with-timings "
                              "(median of N runs).")
+    parser.add_argument("--r-subprocess", action="store_true",
+                        help="Force Rscript subprocess for timings even "
+                             "when rpy2 is available. Default: inproc R "
+                             "via rpy2 (fairer; avoids the per-call "
+                             "Rscript startup overhead).")
     args = parser.parse_args(argv)
     rows = run(methods=args.methods)
     _write_csv(args.output_dir / "parity.csv", rows)
     _write_summary(args.output_dir / "summary.md", rows)
     if args.with_timings:
         print("\n--- timing pass ---")
-        trows = time_methods(methods=args.methods, repeats=args.timing_repeats)
+        trows = time_methods(methods=args.methods,
+                              repeats=args.timing_repeats,
+                              inproc_r=not args.r_subprocess)
         _write_timings_csv(args.output_dir / "timings.csv", trows)
         print(f"\nWrote {args.output_dir / 'timings.csv'} ({len(trows)} rows)")
     print(f"\nWrote {args.output_dir / 'parity.csv'} ({len(rows)} rows)")

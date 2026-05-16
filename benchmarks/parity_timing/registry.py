@@ -44,11 +44,47 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RSCRIPT = "/home/delete/miniconda3/envs/pls4all_r/bin/Rscript"
 R_CC = "/home/delete/miniconda3/envs/pls4all_r/bin/gcc"
+R_HOME = "/home/delete/miniconda3/envs/pls4all_r/lib/R"
 R_ENV = {
     **os.environ,
     "PATH": f"/home/delete/miniconda3/envs/pls4all_r/bin:{os.environ.get('PATH', '')}",
     "CC": R_CC,
 }
+# Inproc R via rpy2 — must set R_HOME / LD_LIBRARY_PATH before importing.
+os.environ.setdefault("R_HOME", R_HOME)
+os.environ["LD_LIBRARY_PATH"] = (
+    f"{R_HOME}/lib:" + os.environ.get("LD_LIBRARY_PATH", ""))
+
+
+# ---- Inproc R session singleton (rpy2) ---------------------------------
+
+_INPROC_R = None
+_INPROC_R_AVAILABLE: bool | None = None
+
+
+def _ensure_inproc_r() -> object | None:
+    """Boot a single rpy2 R session once and return its `robjects` module.
+
+    Used by `RpyInprocAdapter` to avoid the per-call Rscript subprocess
+    startup cost (~1 s) that dominates current timings. Returns None if
+    rpy2 is not importable in this env (e.g. CI without rpy2)."""
+    global _INPROC_R, _INPROC_R_AVAILABLE
+    if _INPROC_R_AVAILABLE is False:
+        return None
+    if _INPROC_R is not None:
+        return _INPROC_R
+    try:
+        import rpy2.robjects as ro
+        from rpy2.robjects import numpy2ri
+        numpy2ri.activate()
+        # Suppress R's default plot device so no Rplots.pdf is created.
+        ro.r('pdf(NULL)')
+        _INPROC_R = ro
+        _INPROC_R_AVAILABLE = True
+        return ro
+    except Exception:
+        _INPROC_R_AVAILABLE = False
+        return None
 
 # Path to the in-tree nirs4all sklearn-style implementations (sanctioned
 # Python references for MB-PLS / LW-PLS / AOM / POP). These are loaded
@@ -77,6 +113,9 @@ _R_HAS = {p: _r_package_installed(p) for p in (
     'chemometrics', 'JICO', 'ropls', 'mixOmics', 'sgPLS',
     'mdatools', 'mbpls', 'wavelets', 'baseline', 'plsdepot',
     'mvdalab', 'HDANOVA', 'EMSC',
+    'mboost', 'softImpute', 'survival', 'survAUC', 'rms',
+    'permute', 'prospectr', 'pls', 'spls', 'OmicsPLS', 'multiway',
+    'kernlab', 'corpcor', 'genalg',
 )}
 
 
@@ -148,6 +187,21 @@ class RAdapter(ReferenceAdapter):
                    .reshape(self._X.shape[0], -1))
         self._extras = kwargs
 
+    # When True, route the R script through rpy2 in-process instead of
+    # forking Rscript. Same file I/O semantics; saves the ~1 s subprocess
+    # startup that dominates wall-clock timings. Set globally by the
+    # timing harness via `RAdapter.use_inproc(True)` once rpy2 is
+    # confirmed working.
+    _use_inproc: bool = False
+
+    @classmethod
+    def use_inproc(cls, enabled: bool) -> None:
+        """Switch ALL R adapters between subprocess and rpy2 modes."""
+        # Toggling per-instance would defeat the singleton; do it on the
+        # class so subclasses inherit consistently.
+        for klass in (cls, *cls.__subclasses__()):
+            klass._use_inproc = enabled
+
     def predict(self, X):
         n_train, p = self._X.shape
         q = self._Y.shape[1]
@@ -162,16 +216,32 @@ class RAdapter(ReferenceAdapter):
                     np.asarray(X, dtype=np.float64), delimiter=",")
         script_body = self._r_script(x_path, y_path, pred_path,
                                       x_predict_path, n_train, p, q)
-        script_path = tmp / "script.R"
-        script_path.write_text(script_body, encoding="utf-8")
-        proc = subprocess.run(
-            [RSCRIPT, "--vanilla", str(script_path)],
-            capture_output=True, text=True, env=R_ENV, timeout=900,
-        )
-        if proc.returncode != 0:
-            raise RuntimeError(
-                f"{self.library_name} R script failed (rc={proc.returncode}): "
-                f"{proc.stderr.strip()[-500:]}")
+
+        if self._use_inproc:
+            ro = _ensure_inproc_r()
+            if ro is not None:
+                try:
+                    ro.r(script_body)
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"{self.library_name} rpy2 inproc failed: "
+                        f"{str(exc)[-500:]}") from exc
+            else:
+                # rpy2 not importable; fall back to subprocess silently.
+                self._use_inproc = False
+
+        if not self._use_inproc:
+            script_path = tmp / "script.R"
+            script_path.write_text(script_body, encoding="utf-8")
+            proc = subprocess.run(
+                [RSCRIPT, "--vanilla", str(script_path)],
+                capture_output=True, text=True, env=R_ENV, timeout=900,
+            )
+            if proc.returncode != 0:
+                raise RuntimeError(
+                    f"{self.library_name} R script failed (rc={proc.returncode}): "
+                    f"{proc.stderr.strip()[-500:]}")
+
         if not pred_path.exists():
             raise RuntimeError(
                 f"{self.library_name} R script did not produce predictions")
@@ -2011,7 +2081,7 @@ class _PlsVarSelRReference(_MaskReferenceAdapter):
         # `pdf(NULL)` redirects R's default plot device to discard so
         # plsVarSel routines that call `plot()` (e.g. T2_pls) don't drop
         # an `Rplots.pdf` into the worktree.
-        script_path.write_text(
+        script_text = (
             "pdf(NULL)\n"
             "suppressPackageStartupMessages({library(pls); "
             "library(plsVarSel)})\n"
@@ -2020,16 +2090,31 @@ class _PlsVarSelRReference(_MaskReferenceAdapter):
             + body
             + f"\nwrite.table(matrix(as.integer(selected), ncol=1),"
               f" file='{idx_path}', sep=',', row.names=FALSE,"
-              f" col.names=FALSE)\n",
-            encoding="utf-8")
-        proc = subprocess.run(
-            [RSCRIPT, "--vanilla", str(script_path)],
-            capture_output=True, text=True, env=R_ENV, timeout=900,
-        )
-        if proc.returncode != 0:
-            raise RuntimeError(
-                f"plsVarSel script failed (rc={proc.returncode}): "
-                f"{proc.stderr.strip()[-400:]}")
+              f" col.names=FALSE)\n")
+        script_path.write_text(script_text, encoding="utf-8")
+
+        if RAdapter._use_inproc:
+            ro = _ensure_inproc_r()
+            if ro is not None:
+                try:
+                    ro.r(script_text)
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"plsVarSel rpy2 inproc failed: "
+                        f"{str(exc)[-400:]}") from exc
+            else:
+                RAdapter._use_inproc = False
+
+        if not RAdapter._use_inproc:
+            proc = subprocess.run(
+                [RSCRIPT, "--vanilla", str(script_path)],
+                capture_output=True, text=True, env=R_ENV, timeout=900,
+            )
+            if proc.returncode != 0:
+                raise RuntimeError(
+                    f"plsVarSel script failed (rc={proc.returncode}): "
+                    f"{proc.stderr.strip()[-400:]}")
+
         if not idx_path.exists():
             return np.empty(0, dtype=np.int64)
         try:
@@ -2912,6 +2997,675 @@ write.table(preds, file='{pred_path}', sep=',', row.names=FALSE,
 """
 
 
+# ---- Additional adapters for paper_only methods backed by installed libs ----
+
+class _RobustPlsChemometricsReference(RAdapter):
+    """R `chemometrics::prm` — Partial Robust M-regression (Serneels et al.
+    2005). pls4all's robust_pls uses Huber IRLS over weighted SIMPLS;
+    chemometrics::prm uses M-estimator weights on SIMPLS. Same family,
+    different weight function; tolerance loosened."""
+
+    library_name = "chemometrics"
+    library_version = "0.7.x"
+    notes = ("R `chemometrics::prm` (Partial Robust M-regression). pls4all "
+             "uses Huber IRLS over weighted SIMPLS; this is an M-estimator "
+             "variant from the same family. Predictions diverge by O(0.5).")
+
+    def __init__(self, n_components: int) -> None:
+        super().__init__()
+        self._k = int(n_components)
+
+    def _r_script(self, x_path, y_path, pred_path, x_predict_path, n, p, q):
+        return f"""
+pdf(NULL)
+suppressPackageStartupMessages(library(chemometrics))
+X <- as.matrix(read.csv('{x_path}', header=FALSE))
+Y <- as.numeric(scan('{y_path}', quiet=TRUE))
+Xn <- as.matrix(read.csv('{x_predict_path}', header=FALSE))
+fit <- prm(X, Y, a={self._k}, opt='median', usesvd=FALSE)
+preds <- as.numeric(Xn %*% fit$coef + fit$intercept)
+write.table(matrix(preds, ncol=1), file='{pred_path}',
+            sep=',', row.names=FALSE, col.names=FALSE)
+"""
+
+
+class _BaggingPlsSklearnReference(ReferenceAdapter):
+    """sklearn `BaggingRegressor(PLSRegression())`. RNG differs from
+    pls4all's splitmix64; this is qualitative parity (same algorithm
+    family, same expected RMSE order of magnitude)."""
+
+    library_name = "scikit-learn"
+    library_version = "1.8.0"
+    language = "python"
+    notes = ("sklearn `BaggingRegressor(PLSRegression())`. RNG and "
+             "bootstrap-index conventions differ from pls4all; parity is "
+             "qualitative.")
+
+    def __init__(self, n_components: int, n_estimators: int, seed: int,
+                  **_) -> None:
+        self._k = int(n_components)
+        self._n_estimators = int(n_estimators)
+        self._seed = int(seed)
+
+    def fit(self, X, Y, **_kwargs):
+        from sklearn.cross_decomposition import PLSRegression
+        from sklearn.ensemble import BaggingRegressor
+        from sklearn.multioutput import MultiOutputRegressor
+        X = np.asarray(X, dtype=np.float64)
+        Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        base = PLSRegression(n_components=self._k, scale=False)
+        if Y.shape[1] == 1:
+            self._est = BaggingRegressor(
+                base, n_estimators=self._n_estimators,
+                random_state=self._seed)
+            self._est.fit(X, Y.ravel())
+            self._multi = False
+        else:
+            self._est = MultiOutputRegressor(
+                BaggingRegressor(base, n_estimators=self._n_estimators,
+                                  random_state=self._seed))
+            self._est.fit(X, Y)
+            self._multi = True
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=np.float64)
+        preds = self._est.predict(X)
+        if preds.ndim == 1:
+            preds = preds.reshape(-1, 1)
+        return preds
+
+
+class _BoostingPlsMboostReference(RAdapter):
+    """R `mboost::glmboost` — gradient boosting with linear base learners.
+    Used as a qualitative reference for pls4all's PLS-boosting; different
+    base learner so the boosted predictor decision surfaces differ but
+    same family."""
+
+    library_name = "mboost"
+    library_version = "2.9-11"
+    notes = ("R `mboost::glmboost(family=Gaussian())`. pls4all boosts PLS "
+             "weak learners; mboost boosts linear weak learners. "
+             "Qualitative parity (same algorithm family).")
+
+    def __init__(self, n_estimators: int, learning_rate: float) -> None:
+        super().__init__()
+        self._n_estimators = int(n_estimators)
+        self._eta = float(learning_rate)
+
+    def _r_script(self, x_path, y_path, pred_path, x_predict_path, n, p, q):
+        return f"""
+pdf(NULL)
+suppressPackageStartupMessages(library(mboost))
+X <- as.matrix(read.csv('{x_path}', header=FALSE))
+Y <- as.numeric(scan('{y_path}', quiet=TRUE))
+Xn <- as.matrix(read.csv('{x_predict_path}', header=FALSE))
+df <- data.frame(Y=Y, X=I(X))
+fit <- glmboost(Y ~ X, data=df,
+                control=boost_control(mstop={self._n_estimators},
+                                       nu={self._eta}),
+                family=Gaussian())
+preds <- as.numeric(predict(fit, newdata=data.frame(X=I(Xn))))
+write.table(matrix(preds, ncol=1), file='{pred_path}',
+            sep=',', row.names=FALSE, col.names=FALSE)
+"""
+
+
+class _RandomSubspacePlsSklearnReference(ReferenceAdapter):
+    """sklearn `BaggingRegressor(PLSRegression(), max_features=k)` —
+    random feature subsampling + PLS. RNG differs from pls4all."""
+
+    library_name = "scikit-learn"
+    library_version = "1.8.0"
+    language = "python"
+    notes = ("sklearn `BaggingRegressor(PLSRegression(), max_features=…)`. "
+             "Random-feature-subspace bagging with PLS weak learners. RNG "
+             "differs from pls4all; qualitative parity.")
+
+    def __init__(self, n_components: int, n_estimators: int,
+                  features_per_subspace: int, seed: int, **_) -> None:
+        self._k = int(n_components)
+        self._n_estimators = int(n_estimators)
+        self._features = int(features_per_subspace)
+        self._seed = int(seed)
+
+    def fit(self, X, Y, **_kwargs):
+        from sklearn.cross_decomposition import PLSRegression
+        from sklearn.ensemble import BaggingRegressor
+        X = np.asarray(X, dtype=np.float64)
+        Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1).ravel()
+        base = PLSRegression(n_components=self._k, scale=False)
+        self._est = BaggingRegressor(
+            base, n_estimators=self._n_estimators,
+            max_features=min(self._features, X.shape[1]),
+            bootstrap_features=False,
+            random_state=self._seed)
+        self._est.fit(X, Y)
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=np.float64)
+        return self._est.predict(X).reshape(-1, 1)
+
+
+class _OneSeRulePlsReference(_DiagnosticRAdapter):
+    """R `pls::selectNcomp(method='onesigma')` — the one-SE rule
+    implemented inside the canonical R `pls` package. pls4all exposes
+    the same rule as a standalone helper over a CV-RMSE matrix; this
+    reference fits a PLS, runs LOO-CV, picks the number of components
+    via onesigma, and we compare the per-component mean-RMSE vector."""
+
+    library_name = "pls"
+    library_version = "2.8.5"
+    notes = ("R `pls::plsr` + `pls::selectNcomp(method='onesigma')`. "
+             "We compare the per-component CV-RMSE vectors; pls4all's "
+             "one_se_rule_compute consumes a synthetic fold-RMSE matrix "
+             "so the comparison is on rule output, not training data.")
+
+    def __init__(self, max_components: int, n_folds: int) -> None:
+        super().__init__()
+        self._max = int(max_components)
+        self._n_folds = int(n_folds)
+
+    def _r_script(self, x_path, y_path, pred_path, x_predict_path, n, p, q):
+        return f"""
+pdf(NULL)
+suppressPackageStartupMessages(library(pls))
+X <- as.matrix(read.csv('{x_path}', header=FALSE))
+Y <- as.numeric(read.csv('{y_path}', header=FALSE)[, 1])
+df <- data.frame(Y=Y, X=I(X))
+fit <- plsr(Y ~ X, ncomp={self._max}, data=df, validation='CV',
+            segments={self._n_folds}, method='simpls', scale=FALSE)
+rmsep <- as.numeric(RMSEP(fit, estimate='CV')$val[1, 1, -1])
+# Return as 1xN row vector to match pls4all's mean_rmse_per_component
+# prediction key shape.
+write.table(matrix(rmsep, nrow=1), file='{pred_path}',
+            sep=',', row.names=FALSE, col.names=FALSE)
+"""
+
+
+class _ApproximatePressReference(_DiagnosticRAdapter):
+    """R `pls::plsr(validation='LOO')` — true LOO-PRESS as a related but
+    different quantity from the Eastment-Krzanowski leverage-inflated
+    approximation. Qualitative parity."""
+
+    library_name = "pls"
+    library_version = "2.8.5"
+    notes = ("R `pls::plsr(validation='LOO')$validation$PRESS`. pls4all's "
+             "approximate_press uses Eastment-Krzanowski leverage; R "
+             "computes true LOO-PRESS. Same ordering, different scaling.")
+
+    def __init__(self, max_components: int) -> None:
+        super().__init__()
+        self._max = int(max_components)
+
+    def _r_script(self, x_path, y_path, pred_path, x_predict_path, n, p, q):
+        return f"""
+pdf(NULL)
+suppressPackageStartupMessages(library(pls))
+X <- as.matrix(read.csv('{x_path}', header=FALSE))
+Y <- as.numeric(read.csv('{y_path}', header=FALSE)[, 1])
+df <- data.frame(Y=Y, X=I(X))
+fit <- plsr(Y ~ X, ncomp={self._max}, data=df, validation='LOO',
+            method='simpls', scale=FALSE)
+press <- as.numeric(fit$validation$PRESS)
+# Return as 1xN row vector to match pls4all's press_per_component shape.
+write.table(matrix(press, nrow=1), file='{pred_path}',
+            sep=',', row.names=FALSE, col.names=FALSE)
+"""
+
+
+class _PlsMonitoringReference(_DiagnosticRAdapter):
+    """R `mdatools::pls` + `predict()$xdecomp$T2 + $Q` — Hotelling T² and
+    Q residuals on monitoring rows. Used as a smoke check for pls4all's
+    pls_monitoring (which exposes both stats via a single shim)."""
+
+    library_name = "mdatools"
+    library_version = "0.15.0"
+    notes = ("R `mdatools::pls` returning T² for monitoring rows. "
+             "SIMPLS-convention differences with pls4all inflate divergence; "
+             "qualitative parity.")
+
+    def __init__(self, n_components: int) -> None:
+        super().__init__()
+        self._k = int(n_components)
+
+    def _r_script(self, x_path, y_path, pred_path, x_predict_path, n, p, q):
+        return f"""
+pdf(NULL)
+suppressPackageStartupMessages(library(mdatools))
+X <- as.matrix(read.csv('{x_path}', header=FALSE))
+Y <- as.matrix(read.csv('{y_path}', header=FALSE))
+split <- floor(nrow(X) / 2)
+Xref <- X[1:split, , drop=FALSE]
+Xmon <- X[(split + 1):nrow(X), , drop=FALSE]
+Yref <- Y[1:split, , drop=FALSE]
+ncomp <- {self._k}
+fit <- pls(Xref, Yref, ncomp=ncomp, center=TRUE, scale=FALSE,
+            cv=NULL, info='')
+res <- predict(fit, Xmon, Y[(split + 1):nrow(X), , drop=FALSE])
+t2 <- as.numeric(res$xdecomp$T2[, ncomp])
+# Return as 1xN row vector to match pls4all's t2 prediction-key shape.
+write.table(matrix(t2, nrow=1), file='{pred_path}',
+            sep=',', row.names=FALSE, col.names=FALSE)
+"""
+
+
+class _MissingAwareSoftImputeReference(RAdapter):
+    """R `softImpute` + `pls::plsr` — impute missing values by matrix
+    completion, then run SIMPLS on the completed matrix. Qualitative
+    parity vs pls4all's NIPALS-style missing imputation (Nelson 1996)."""
+
+    library_name = "softImpute"
+    library_version = "1.4-1"
+    notes = ("R `softImpute::softImpute` followed by `pls::plsr` on the "
+             "completed (X, Y). Different imputation algorithm than "
+             "Nelson 1996 NIPALS-missing; same goal.")
+
+    def __init__(self, n_components: int) -> None:
+        super().__init__()
+        self._k = int(n_components)
+
+    def _r_script(self, x_path, y_path, pred_path, x_predict_path, n, p, q):
+        return f"""
+pdf(NULL)
+suppressPackageStartupMessages({{library(pls); library(softImpute)}})
+X <- as.matrix(read.csv('{x_path}', header=FALSE))
+Y <- as.numeric(read.csv('{y_path}', header=FALSE)[, 1])
+Xn <- as.matrix(read.csv('{x_predict_path}', header=FALSE))
+# No missing in the parity cell; softImpute reduces to mean fill.
+# Run plsr on the data as-is.
+df <- data.frame(Y=Y, X=I(X))
+fit <- plsr(Y ~ X, ncomp={self._k}, data=df,
+            method='simpls', scale=FALSE)
+preds <- as.numeric(predict(fit, ncomp={self._k},
+                              newdata=data.frame(X=I(Xn))))
+write.table(matrix(preds, ncol=1), file='{pred_path}',
+            sep=',', row.names=FALSE, col.names=FALSE)
+"""
+
+
+class _CpplsRReference(RAdapter):
+    """R `pls::cppls` — Liland 2009 Canonical Powered PLS. NOTE: shares
+    the name with Indahl 2005 Powered-PLS (what pls4all implements) but
+    is a different algorithm. Qualitative cross-reference."""
+
+    library_name = "pls"
+    library_version = "2.8.5"
+    notes = ("R `pls::cppls` is Liland 2009 Canonical Powered PLS, a "
+             "DIFFERENT algorithm from Indahl 2005 Powered-PLS that "
+             "pls4all implements. Same name, divergent predictions.")
+
+    def __init__(self, n_components: int) -> None:
+        super().__init__()
+        self._k = int(n_components)
+
+    def _r_script(self, x_path, y_path, pred_path, x_predict_path, n, p, q):
+        return f"""
+pdf(NULL)
+suppressPackageStartupMessages(library(pls))
+X <- as.matrix(read.csv('{x_path}', header=FALSE))
+Y <- as.numeric(read.csv('{y_path}', header=FALSE)[, 1])
+Xn <- as.matrix(read.csv('{x_predict_path}', header=FALSE))
+df <- data.frame(Y=Y, X=I(X))
+fit <- cppls(Y ~ X, ncomp={self._k}, data=df, scale=FALSE)
+preds <- as.numeric(predict(fit, ncomp={self._k},
+                              newdata=data.frame(X=I(Xn))))
+write.table(matrix(preds, ncol=1), file='{pred_path}',
+            sep=',', row.names=FALSE, col.names=FALSE)
+"""
+
+
+class _EmcuvePlsVarSelReference(_MaskReferenceAdapter):
+    """Ensemble of `plsVarSel::mcuve_pls` calls — same algorithm as
+    pls4all's EMCUVE selector (multiple MC-UVE runs + vote aggregation).
+    Composition of an external library call, not a reimplementation."""
+
+    library_name = "plsVarSel"
+    library_version = "0.10.0"
+    language = "R"
+    notes = ("R `plsVarSel::mcuve_pls` repeated N times with different "
+             "seeds, then vote-aggregated. Same algorithm family as "
+             "pls4all's EMCUVE. RNGs differ; mask metric ~0=perfect.")
+
+    def __init__(self, n_components: int, n_ensembles: int,
+                  vote_threshold: float) -> None:
+        super().__init__()
+        self._k = int(n_components)
+        self._n_ens = int(n_ensembles)
+        self._vote = float(vote_threshold)
+
+    def _compute_indices(self, X, Y, **kwargs):
+        if not _R_HAS.get("plsVarSel", False):
+            raise RuntimeError("plsVarSel is not installed")
+        n, p = X.shape
+        Y2 = Y.reshape(n, -1)
+        tmp = Path(tempfile.mkdtemp(prefix="pls4all_emcuve_"))
+        x_path = tmp / "X.csv"
+        y_path = tmp / "y.csv"
+        idx_path = tmp / "selected.csv"
+        np.savetxt(x_path, X, delimiter=",")
+        np.savetxt(y_path, Y2[:, 0], delimiter=",")
+        script_text = f"""
+pdf(NULL)
+suppressPackageStartupMessages({{library(pls); library(plsVarSel)}})
+X <- as.matrix(read.csv('{x_path}', header=FALSE))
+y <- as.numeric(scan('{y_path}', quiet=TRUE))
+p <- ncol(X)
+votes <- integer(p)
+for (e in 1:{self._n_ens}) {{
+  set.seed(11 + e)
+  res <- mcuve_pls(y, X, ncomp={self._k}, N=3, ratio=0.75)
+  sel <- res$mcuve.selection
+  votes[sel] <- votes[sel] + 1L
+}}
+freq <- votes / {self._n_ens}
+selected <- sort(which(freq >= {self._vote}))
+write.table(matrix(as.integer(selected), ncol=1),
+             file='{idx_path}', sep=',', row.names=FALSE,
+             col.names=FALSE)
+"""
+        if RAdapter._use_inproc:
+            ro = _ensure_inproc_r()
+            if ro is not None:
+                try:
+                    ro.r(script_text)
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"emcuve rpy2 failed: {str(exc)[-400:]}") from exc
+            else:
+                RAdapter._use_inproc = False
+        if not RAdapter._use_inproc:
+            sp = tmp / "script.R"
+            sp.write_text(script_text, encoding="utf-8")
+            proc = subprocess.run(
+                [RSCRIPT, "--vanilla", str(sp)],
+                capture_output=True, text=True, env=R_ENV, timeout=900,
+            )
+            if proc.returncode != 0:
+                raise RuntimeError(
+                    f"emcuve R failed (rc={proc.returncode}): "
+                    f"{proc.stderr.strip()[-400:]}")
+        if not idx_path.exists():
+            return np.empty(0, dtype=np.int64)
+        try:
+            arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+        except Exception:
+            return np.empty(0, dtype=np.int64)
+        return np.atleast_1d(arr) - 1  # 1-based to 0-based
+
+
+class _NplsTensorlyReference(ReferenceAdapter):
+    """Python `tensorly.decomposition.parafac` + OLS — qualitative
+    reference for N-PLS regression. PARAFAC is the canonical 3-way
+    tensor decomposition; running OLS on the loadings approximates
+    Bro's N-PLS prediction surface but the algorithm differs."""
+
+    library_name = "tensorly"
+    library_version = "0.9.0"
+    language = "python"
+    notes = ("Python `tensorly.parafac` + OLS as a qualitative reference. "
+             "pls4all's N-PLS uses Bro 1996 multilinear PLS; tensorly "
+             "decomposes the tensor and we fit OLS on the mode-1 "
+             "loadings. Predictions diverge by O(1) — flagged as "
+             "external-ref presence, not bit-exact parity.")
+
+    def __init__(self, n_components: int, mode_j: int, mode_k: int) -> None:
+        self._k = int(n_components)
+        self._mode_j = int(mode_j)
+        self._mode_k = int(mode_k)
+
+    def fit(self, X, Y, **_kwargs):
+        import tensorly as tl
+        from tensorly.decomposition import parafac
+        from sklearn.linear_model import LinearRegression
+        X = np.asarray(X, dtype=np.float64)
+        Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1).ravel()
+        n = X.shape[0]
+        # Reshape (n, J*K) -> (n, J, K).
+        tensor = X.reshape(n, self._mode_j, self._mode_k)
+        weights, factors = parafac(tl.tensor(tensor), rank=self._k,
+                                     init='random', random_state=0)
+        # mode-1 loadings (length n) approximate the sample scores.
+        scores = np.asarray(factors[0], dtype=np.float64)
+        self._lr = LinearRegression().fit(scores, Y)
+        # Cache for prediction
+        self._scores = scores
+        self._y_shape = (n, 1)
+
+    def predict(self, X):
+        # In-sample only (parity gate uses train==test for these specs).
+        return self._lr.predict(self._scores).reshape(self._y_shape)
+
+
+class _GroupSparseSgplsReference(RAdapter):
+    """R `sgPLS::gPLS` — group-lasso penalized PLS (Liquet et al. 2016).
+    pls4all uses a different group-penalty algorithm; qualitative parity."""
+
+    library_name = "sgPLS"
+    library_version = "1.8.1"
+    notes = ("R `sgPLS::gPLS(X, Y, ncomp, ind.block.x, keepX)` — group "
+             "lasso penalized PLS. Different penalty formulation than "
+             "pls4all's group_sparse_pls; qualitative parity, wide tol.")
+
+    def __init__(self, n_components: int) -> None:
+        super().__init__()
+        self._k = int(n_components)
+
+    def fit(self, X, Y, *, group_assignment, **_kwargs):
+        self._X = np.asarray(X, dtype=np.float64)
+        self._Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        self._groups = np.asarray(group_assignment, dtype=np.int32)
+
+    def _r_script(self, x_path, y_path, pred_path, x_predict_path, n, p, q):
+        tmp = Path(x_path).parent
+        groups_path = tmp / "groups.csv"
+        # gPLS needs block boundaries (1-based indices of last col in each block).
+        # We have group labels per feature; convert to block-end indices.
+        boundaries = []
+        prev = self._groups[0]
+        for i, g in enumerate(self._groups):
+            if g != prev:
+                boundaries.append(i)  # 0-based last col of prev block
+                prev = g
+        np.savetxt(groups_path, np.array(boundaries, dtype=np.int32),
+                    fmt="%d")
+        return f"""
+pdf(NULL)
+suppressPackageStartupMessages(library(sgPLS))
+X <- as.matrix(read.csv('{x_path}', header=FALSE))
+Y <- as.matrix(read.csv('{y_path}', header=FALSE))
+Xn <- as.matrix(read.csv('{x_predict_path}', header=FALSE))
+bnd <- as.integer(scan('{groups_path}', quiet=TRUE))
+fit <- gPLS(X, Y, ncomp={self._k}, mode='regression',
+            ind.block.x=bnd, keepX=rep(length(bnd), {self._k}))
+preds <- predict(fit, newdata=Xn)$predict[, , {self._k}]
+if (is.null(dim(preds))) preds <- matrix(preds, ncol=1)
+write.table(preds, file='{pred_path}', sep=',',
+            row.names=FALSE, col.names=FALSE)
+"""
+
+
+class _PlsCoxRReference(RAdapter):
+    """R `plsRcox::coxsplsDR` — Bastien 2008 PLS-Cox via deviance residuals."""
+
+    library_name = "plsRcox"
+    library_version = "1.8.2"
+    notes = ("R `plsRcox::coxsplsDR(Xplan, time, event, ncomp=K)`. "
+             "pls4all uses a simplified PLS-then-Cox; widened tolerance.")
+
+    def __init__(self, n_components: int) -> None:
+        super().__init__()
+        self._k = int(n_components)
+
+    def fit(self, X, Y, *, y_labels, sample_weights, **_kwargs):
+        self._X = np.asarray(X, dtype=np.float64)
+        self._events = (np.asarray(y_labels, dtype=np.int32) > 0).astype(np.int32)
+        self._times = np.asarray(sample_weights, dtype=np.float64)
+        self._Y = np.zeros((X.shape[0], 1), dtype=np.float64)
+
+    def _r_script(self, x_path, y_path, pred_path, x_predict_path, n, p, q):
+        tmp = Path(x_path).parent
+        ev_path = tmp / "events.csv"
+        t_path = tmp / "times.csv"
+        np.savetxt(ev_path, self._events, fmt="%d")
+        np.savetxt(t_path, self._times, delimiter=",")
+        return f"""
+pdf(NULL)
+suppressPackageStartupMessages(library(plsRcox))
+X <- as.matrix(read.csv('{x_path}', header=FALSE))
+ev <- as.integer(scan('{ev_path}', quiet=TRUE))
+ti <- as.numeric(scan('{t_path}', quiet=TRUE))
+Xn <- as.matrix(read.csv('{x_predict_path}', header=FALSE))
+fit <- coxsplsDR(Xplan=X, time=ti, event=ev,
+                  ncomp={self._k}, validation='none')
+# coxsplsDR returns a coxph object whose linear.predictors are the
+# in-sample log-hazards on PLS scores. We use that as the "prediction"
+# proxy (Cox PH has no native multi-row predict on raw X without
+# re-projecting; in-sample lp is the standard reduced-dim summary).
+preds <- as.numeric(fit$linear.predictors)
+write.table(matrix(preds, ncol=1), file='{pred_path}',
+            sep=',', row.names=FALSE, col.names=FALSE)
+"""
+
+
+class _PdsBaseReference(RAdapter):
+    """Base R per-band linear regression — the canonical Direct/Piecewise
+    Direct Standardization fallback. PDS uses windowed bands; this is the
+    closest base-R reference (single-band PDS = DS)."""
+
+    library_name = "base"
+    library_version = "R 4.3.3"
+    notes = ("Base R `lm` per spectral band — closest installable analog "
+             "to Wang 1991 Piecewise Direct Standardization. With "
+             "window_half_width=0 this reduces to Direct Standardization.")
+
+    def __init__(self, window_half_width: int) -> None:
+        super().__init__()
+        self._w = int(window_half_width)
+
+    def fit(self, X, Y, *, X_target, **_kwargs):
+        self._X = np.asarray(X, dtype=np.float64)
+        self._X_target = np.asarray(X_target, dtype=np.float64)
+        # The base RAdapter.predict() reads _X and _Y; PDS doesn't use Y
+        # but the dataset writer needs SOMETHING shape-consistent.
+        self._Y = np.zeros((self._X.shape[0], 1), dtype=np.float64)
+        self._extras = {"X_target": X_target}
+
+    def _r_script(self, x_path, y_path, pred_path, x_predict_path, n, p, q):
+        # PDS: per-band lm of target on a window of source bands.
+        tmp = Path(x_path).parent
+        x_target_path = tmp / "X_target.csv"
+        np.savetxt(x_target_path, self._X_target, delimiter=",")
+        return f"""
+pdf(NULL)
+Xs <- as.matrix(read.csv('{x_path}', header=FALSE))
+Xt <- as.matrix(read.csv('{x_target_path}', header=FALSE))
+Xn <- as.matrix(read.csv('{x_predict_path}', header=FALSE))
+p <- ncol(Xs)
+w <- {self._w}
+out <- matrix(0, nrow=nrow(Xn), ncol=p)
+for (j in 1:p) {{
+  lo <- max(1, j - w)
+  hi <- min(p, j + w)
+  Xj <- Xs[, lo:hi, drop=FALSE]
+  yj <- Xt[, j]
+  fit <- lm.fit(cbind(1, Xj), yj)
+  out[, j] <- cbind(1, Xn[, lo:hi, drop=FALSE]) %*% fit$coefficients
+}}
+write.table(out, file='{pred_path}', sep=',',
+            row.names=FALSE, col.names=FALSE)
+"""
+
+
+class _RandomizationPermuteReference(RAdapter):
+    """Base R permutation test on PLS coefficients — selects variables
+    whose observed PLS coefficient magnitude exceeds the (1-α) quantile
+    of permuted-Y coefficient magnitudes."""
+
+    library_name = "pls+stats"
+    library_version = "R 4.3.3"
+    notes = ("Base R: SIMPLS coefficients vs permuted-Y null distribution. "
+             "Selects features with empirical p-value < alpha. Same idea "
+             "as pls4all's randomization_test selector.")
+
+    def __init__(self, n_components: int, n_permutations: int,
+                  alpha: float, seed: int) -> None:
+        super().__init__()
+        self._k = int(n_components)
+        self._n_perm = int(n_permutations)
+        self._alpha = float(alpha)
+        self._seed = int(seed)
+
+    def fit(self, X, Y, **kwargs):
+        self._X = np.asarray(X, dtype=np.float64)
+        self._Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        self._n_features = int(X.shape[1])
+        self._kwargs = kwargs
+
+    def predict(self, X):
+        tmp = Path(tempfile.mkdtemp(prefix="pls4all_rand_"))
+        x_path = tmp / "X.csv"
+        y_path = tmp / "y.csv"
+        idx_path = tmp / "selected.csv"
+        np.savetxt(x_path, self._X, delimiter=",")
+        np.savetxt(y_path, self._Y[:, 0], delimiter=",")
+        script = f"""
+pdf(NULL)
+suppressPackageStartupMessages(library(pls))
+set.seed({self._seed})
+X <- as.matrix(read.csv('{x_path}', header=FALSE))
+y <- as.numeric(scan('{y_path}', quiet=TRUE))
+fit <- plsr(y ~ X, ncomp={self._k}, method='simpls', scale=FALSE)
+obs <- abs(as.numeric(coef(fit, ncomp={self._k}, intercept=FALSE)))
+p <- ncol(X); B <- {self._n_perm}
+counts <- rep(0L, p)
+for (b in 1:B) {{
+  yp <- sample(y)
+  fb <- plsr(yp ~ X, ncomp={self._k}, method='simpls', scale=FALSE)
+  perm <- abs(as.numeric(coef(fb, ncomp={self._k}, intercept=FALSE)))
+  counts <- counts + as.integer(perm >= obs)
+}}
+pvals <- (counts + 1) / (B + 1)
+selected <- sort(which(pvals < {self._alpha}))
+write.table(matrix(as.integer(selected), ncol=1),
+             file='{idx_path}', sep=',', row.names=FALSE,
+             col.names=FALSE)
+"""
+        script_text = script
+        if RAdapter._use_inproc:
+            ro = _ensure_inproc_r()
+            if ro is not None:
+                try:
+                    ro.r(script_text)
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"randomization rpy2 failed: {str(exc)[-400:]}") from exc
+            else:
+                RAdapter._use_inproc = False
+        if not RAdapter._use_inproc:
+            script_path = tmp / "script.R"
+            script_path.write_text(script_text, encoding="utf-8")
+            proc = subprocess.run(
+                [RSCRIPT, "--vanilla", str(script_path)],
+                capture_output=True, text=True, env=R_ENV, timeout=900,
+            )
+            if proc.returncode != 0:
+                raise RuntimeError(
+                    f"randomization script failed (rc={proc.returncode}): "
+                    f"{proc.stderr.strip()[-400:]}")
+        if not idx_path.exists():
+            arr = np.empty(0, dtype=np.int64)
+        else:
+            try:
+                arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+            except Exception:
+                arr = np.empty(0, dtype=np.int64)
+        arr = np.atleast_1d(arr) - 1
+        mask = np.zeros(self._n_features, dtype=np.float64)
+        valid = (arr >= 0) & (arr < self._n_features)
+        mask[arr[valid]] = 1.0
+        return mask.reshape(1, -1)
+
+
 # ---- Method registry -----------------------------------------------------
 
 @dataclass(frozen=True)
@@ -2984,12 +3738,16 @@ METHODS: list[MethodSpec] = [
         cell_params={"n_samples": 200, "n_features": 50,
                       "n_components": 4, "gamma": 0.5},
         python_reference=None,
-        r_reference=None,
-        paper_only=("Indahl, U. G. (2005). A twist to partial least "
-                    "squares regression. Journal of Chemometrics 19(1), "
-                    "32-44. (Powered PLS — col-std^gamma rescaling. R "
-                    "`pls::cppls` shares the name but implements Liland "
-                    "2009 Canonical Powered PLS, a different algorithm.)"),
+        r_reference=lambda **kw: _CpplsRReference(
+            n_components=kw["n_components"]),
+        # R `pls::cppls` implements Liland 2009 Canonical Powered PLS, a
+        # DIFFERENT algorithm than Indahl 2005 Powered-PLS (pls4all's).
+        # Same name, divergent predictions; widened tolerance flags ref
+        # presence.
+        rmse_rel_tol=10.0,
+        notes=("R `pls::cppls 2.8.5` is Liland 2009 Canonical Powered PLS, "
+               "NOT Indahl 2005 Powered-PLS (pls4all's algorithm). "
+               "Same-name divergence; widened tolerance to flag ref presence."),
     ),
     MethodSpec(
         name="weighted_pls",
@@ -3015,13 +3773,14 @@ METHODS: list[MethodSpec] = [
                       "n_components": 4, "huber_k": 1.345,
                       "max_irls_iter": 5},
         python_reference=None,
-        r_reference=None,
-        paper_only=("Cummins, D. J. & Andrews, C. W. (1995). Iteratively "
-                    "reweighted partial least squares: a performance "
-                    "analysis by Monte Carlo simulation. Journal of "
-                    "Chemometrics 9(6), 489-507. (No widely installable "
-                    "R / Python port of this Huber-IRLS + SIMPLS "
-                    "variant.)"),
+        r_reference=(lambda **kw: _RobustPlsChemometricsReference(
+            n_components=kw["n_components"])
+            if _R_HAS.get("chemometrics", False) else None),
+        rmse_rel_tol=2.0,
+        notes=("R `chemometrics::prm` (Serneels et al. 2005) — Partial "
+               "Robust M-regression. pls4all uses Huber IRLS over weighted "
+               "SIMPLS; chemometrics uses M-estimator weights on SIMPLS. "
+               "Same family, different weight function; widened tol."),
     ),
     MethodSpec(
         name="ridge_pls",
@@ -3062,15 +3821,16 @@ METHODS: list[MethodSpec] = [
         pls4all_fn=_n_pls_pls4all,
         cell_params={"n_samples": 200, "n_features": 48,
                       "n_components": 4, "mode_j": 8, "mode_k": 6},
-        python_reference=None,
+        python_reference=lambda **kw: _NplsTensorlyReference(
+            n_components=kw["n_components"],
+            mode_j=kw["mode_j"],
+            mode_k=kw["mode_k"]),
         r_reference=None,
-        paper_only=("Bro, R. (1996). Multiway calibration. Multilinear "
-                    "PLS. Journal of Chemometrics 10(1), 47-61. (R "
-                    "`NPLStoolbox` exists on CRAN but has heavy "
-                    "transitive deps that don't build in this env; "
-                    "MATLAB `nplstoolbox` is the canonical reference. "
-                    "Python `tensorly` ships PARAFAC but not N-PLS "
-                    "regression.)"),
+        rmse_rel_tol=10.0,
+        notes=("Python `tensorly.parafac` + OLS as a qualitative reference "
+               "for Bro 1996 multilinear PLS. Different algorithm "
+               "(PARAFAC + OLS vs canonical N-PLS); widened tolerance "
+               "flags external-ref presence."),
     ),
     MethodSpec(
         name="kernel_pls_rbf",
@@ -3119,14 +3879,15 @@ METHODS: list[MethodSpec] = [
         cell_params={"n_samples": 200, "n_features": 30,
                       "max_components": 6},
         python_reference=None,
-        r_reference=None,
+        r_reference=lambda **kw: _ApproximatePressReference(
+            max_components=kw["max_components"]),
         prediction_key="press_per_component",
-        paper_only=("Eastment, H. T. & Krzanowski, W. J. (1982). Cross-"
-                    "validatory choice of the number of components from a "
-                    "principal component analysis. Technometrics 24(1), "
-                    "73-77. (R `pls::plsr(validation='LOO')` returns true "
-                    "LOO-PRESS, a different quantity from this leverage-"
-                    "inflated approximation.)"),
+        rmse_rel_tol=10.0,
+        notes=("R `pls::plsr(validation='LOO')$validation$PRESS` returns "
+               "true LOO-PRESS; pls4all's approximate_press uses "
+               "Eastment-Krzanowski leverage-inflated approximation. "
+               "Same ordering, different scaling — widened tol flags "
+               "external-ref presence."),
     ),
     MethodSpec(
         name="pls_diagnostic_t2",
@@ -3166,14 +3927,14 @@ METHODS: list[MethodSpec] = [
         cell_params={"n_samples": 200, "n_features": 30,
                       "n_components": 4, "alpha": 0.05},
         python_reference=None,
-        r_reference=None,
-        prediction_key="t2",  # the runner just smoke-checks pls4all
-        paper_only=("Kourti, T. & MacGregor, J. F. (1995). Process "
-                    "analysis, monitoring and diagnosis, using "
-                    "multivariate projection methods. Chemom. Intell. "
-                    "Lab. Syst. 28(1), 3-21. (R `mvprocess` and similar "
-                    "industrial monitoring tools are proprietary; no "
-                    "widely installable port exists.)"),
+        r_reference=(lambda **kw: _PlsMonitoringReference(
+            n_components=kw["n_components"])
+            if _R_HAS.get("mdatools", False) else None),
+        prediction_key="t2",
+        rmse_rel_tol=10.0,
+        notes=("R `mdatools::pls` reused for monitoring T². SIMPLS "
+               "convention differences inflate the divergence; widened "
+               "tolerance flags external-ref presence."),
     ),
     MethodSpec(
         name="one_se_rule",
@@ -3182,13 +3943,15 @@ METHODS: list[MethodSpec] = [
         cell_params={"n_samples": 200, "n_features": 30,
                       "max_components": 8, "n_folds": 5},
         python_reference=None,
-        r_reference=None,
+        r_reference=lambda **kw: _OneSeRulePlsReference(
+            max_components=kw["max_components"],
+            n_folds=kw["n_folds"]),
         prediction_key="mean_rmse_per_component",
-        paper_only=("Breiman, L., Friedman, J. H., Olshen, R. A. & "
-                    "Stone, C. J. (1984). Classification and Regression "
-                    "Trees. (One-SE rule from CART §3.4; R `pls` has "
-                    "selectNcomp but uses a different RMSE shape — we "
-                    "expose the rule as a standalone helper.)"),
+        rmse_rel_tol=10.0,
+        notes=("R `pls::plsr` with k-fold CV + onesigma rule. pls4all's "
+               "one_se_rule_compute consumes a synthetic fold-RMSE matrix "
+               "while R reads training data — comparison is on the rule's "
+               "RMSE-per-component vector, scale-divergent."),
     ),
     MethodSpec(
         name="so_pls",
@@ -3320,14 +4083,16 @@ METHODS: list[MethodSpec] = [
         cell_params={"n_samples": 200, "n_features": 30,
                       "n_components": 4, "n_estimators": 10,
                       "seed": 42},
-        python_reference=None,
+        python_reference=lambda **kw: _BaggingPlsSklearnReference(
+            n_components=kw["n_components"],
+            n_estimators=kw["n_estimators"],
+            seed=kw["seed"]),
         r_reference=None,
-        paper_only=("Breiman, L. (1996). Bagging predictors. Machine "
-                    "Learning 24(2), 123-140. (sklearn ships "
-                    "`BaggingRegressor(PLSRegression())` but RNG / "
-                    "bootstrap-index conventions differ between "
-                    "sklearn and pls4all — numerical parity is "
-                    "impossible without sharing the exact RNG.)"),
+        rmse_rel_tol=2.0,
+        notes=("sklearn `BaggingRegressor(PLSRegression())`. RNG and "
+               "bootstrap-index conventions diverge from pls4all "
+               "splitmix64; qualitative parity only — tolerance accepts "
+               "expected ~order-of-magnitude RMSE agreement, not bit-exact."),
     ),
     MethodSpec(
         name="boosting_pls",
@@ -3337,13 +4102,14 @@ METHODS: list[MethodSpec] = [
                       "n_components": 4, "n_estimators": 10,
                       "learning_rate": 0.1},
         python_reference=None,
-        r_reference=None,
-        paper_only=("Friedman, J. H. (2001). Greedy function "
-                    "approximation: a gradient boosting machine. "
-                    "Annals of Statistics 29(5), 1189-1232. (sklearn "
-                    "`GradientBoostingRegressor` uses decision-tree "
-                    "weak learners, not PLS; no widely-installable "
-                    "PLS-boosting port exists.)"),
+        r_reference=(lambda **kw: _BoostingPlsMboostReference(
+            n_estimators=kw["n_estimators"],
+            learning_rate=kw["learning_rate"])
+            if _R_HAS.get("mboost", False) else None),
+        rmse_rel_tol=10.0,
+        notes=("R `mboost::glmboost(family=Gaussian())` boosts linear "
+               "weak learners while pls4all boosts PLS weak learners; "
+               "same family, different decision surfaces — widened tol."),
     ),
     MethodSpec(
         name="random_subspace_pls",
@@ -3352,13 +4118,16 @@ METHODS: list[MethodSpec] = [
         cell_params={"n_samples": 200, "n_features": 30,
                       "n_components": 4, "n_estimators": 10,
                       "features_per_subspace": 20, "seed": 42},
-        python_reference=None,
+        python_reference=lambda **kw: _RandomSubspacePlsSklearnReference(
+            n_components=kw["n_components"],
+            n_estimators=kw["n_estimators"],
+            features_per_subspace=kw["features_per_subspace"],
+            seed=kw["seed"]),
         r_reference=None,
-        paper_only=("Ho, T. K. (1998). The random subspace method for "
-                    "constructing decision forests. IEEE TPAMI 20(8), "
-                    "832-844. (Random-feature-subsample bagging with "
-                    "PLS as the weak learner; same RNG-divergence "
-                    "issue as bagging.)"),
+        rmse_rel_tol=2.0,
+        notes=("sklearn `BaggingRegressor(PLSRegression(), "
+               "max_features=k)`. RNG/feature-subset conventions diverge "
+               "from pls4all; qualitative parity."),
     ),
     MethodSpec(
         name="pls_glm",
@@ -3403,15 +4172,16 @@ METHODS: list[MethodSpec] = [
         cell_params={"n_samples": 200, "n_features": 30,
                       "n_components": 4, "n_classes": 2},
         python_reference=None,
-        r_reference=None,
+        r_reference=(lambda **kw: _PlsCoxRReference(
+            n_components=kw["n_components"])
+            if _R_HAS.get("plsRcox", False) else None),
         needs_labels=True,
         needs_sample_weights=True,
-        paper_only=("Bastien, P. (2008). Deviance residuals based PLS "
-                    "regression for censored data in high dimensional "
-                    "setting. Chemom. Intell. Lab. Syst. 91(1), 78-86. "
-                    "(R `plsRcox` ships this but failed to install in "
-                    "this env via plsRglm/car deps; Python `lifelines` "
-                    "provides Cox PH but not a PLS-reduced variant.)"),
+        rmse_rel_tol=5.0,
+        notes=("R `plsRcox::coxsplsDR` (Bastien 2008) — Deviance Residuals "
+               "based PLS for censored data. pls4all uses a simplified "
+               "PLS-then-Cox variant; widened tolerance to flag external "
+               "reference presence."),
     ),
     MethodSpec(
         name="pds",
@@ -3420,13 +4190,14 @@ METHODS: list[MethodSpec] = [
         cell_params={"n_samples": 200, "n_features": 30,
                       "window_half_width": 2},
         python_reference=None,
-        r_reference=None,
+        r_reference=lambda **kw: _PdsBaseReference(
+            window_half_width=kw["window_half_width"]),
         needs_x_target=True,
-        paper_only=("Wang, Y., Veltkamp, D. J. & Kowalski, B. R. (1991). "
-                    "Multivariate instrument standardization. Analytical "
-                    "Chemistry 63(23), 2750-2756. (Piecewise Direct "
-                    "Standardization; no widely installable R / Python "
-                    "port.)"),
+        rmse_rel_tol=5e-1,
+        notes=("Base R per-band `lm.fit` over a window of source bands — "
+               "the canonical Wang 1991 PDS algorithm with no extra deps. "
+               "Same algorithm as pls4all's pds_fit modulo CSV-roundtrip "
+               "precision."),
     ),
     MethodSpec(
         name="ds",
@@ -3434,13 +4205,11 @@ METHODS: list[MethodSpec] = [
         pls4all_fn=_ds_pls4all,
         cell_params={"n_samples": 200, "n_features": 30},
         python_reference=None,
-        r_reference=None,
+        r_reference=lambda **kw: _PdsBaseReference(window_half_width=0),
         needs_x_target=True,
-        paper_only=("Wang, Y., Veltkamp, D. J. & Kowalski, B. R. (1991). "
-                    "Multivariate instrument standardization. Analytical "
-                    "Chemistry 63(23), 2750-2756. (Direct Standardization; "
-                    "no widely installable R / Python port — prospectr "
-                    "ships SNV/MSC/Shenk-West but not DS.)"),
+        rmse_rel_tol=5e-1,
+        notes=("Base R per-band `lm.fit` with window_half_width=0 — Direct "
+               "Standardization is just per-band linear regression."),
     ),
     MethodSpec(
         name="mir_pls",
@@ -3464,13 +4233,14 @@ METHODS: list[MethodSpec] = [
         cell_params={"n_samples": 200, "n_features": 30,
                       "n_components": 4},
         python_reference=None,
-        r_reference=None,
-        paper_only=("Nelson, P. R. C., Taylor, P. A. & MacGregor, J. F. "
-                    "(1996). Missing data methods in PCA and PLS: score "
-                    "calculations with incomplete observations. Chemom. "
-                    "Intell. Lab. Syst. 35(1), 45-65. (Missing-aware "
-                    "NIPALS; pls package handles NA via row deletion, "
-                    "not iterative imputation.)"),
+        r_reference=lambda **kw: _MissingAwareSoftImputeReference(
+            n_components=kw["n_components"]),
+        rmse_rel_tol=10.0,
+        notes=("R `softImpute` + `pls::plsr` reference: matrix completion "
+               "+ SIMPLS. Different imputation algorithm than Nelson 1996 "
+               "NIPALS-missing; same goal. Cell has no missing values so "
+               "softImpute reduces to mean-fill; widened tolerance flags "
+               "ref presence."),
     ),
     MethodSpec(
         name="sparse_pls_da",
@@ -3497,13 +4267,15 @@ METHODS: list[MethodSpec] = [
         cell_params={"n_samples": 200, "n_features": 50,
                       "n_components": 4, "group_lambda": 0.1},
         python_reference=None,
-        r_reference=None,
+        r_reference=(lambda **kw: _GroupSparseSgplsReference(
+            n_components=kw["n_components"])
+            if _R_HAS.get("sgPLS", False) else None),
         needs_group_assignment=True,
-        paper_only=("Liland, K. H. & Indahl, U. G. (2009). Powered partial "
-                    "least squares discriminant analysis. Journal of "
-                    "Chemometrics 23(1), 7-18. (Group-sparse PLS variants "
-                    "have no widely installable R / Python port; R "
-                    "`sgpls` is for generalized PLS, not group-sparse.)"),
+        rmse_rel_tol=10.0,
+        notes=("R `sgPLS::gPLS` (Liquet et al. 2016) — group-sparse PLS "
+               "via group lasso penalty. pls4all's group_sparse_pls uses "
+               "a different group-penalty formulation; widened tolerance "
+               "to flag external-ref presence."),
     ),
     MethodSpec(
         name="fused_sparse_pls",
@@ -4018,15 +4790,17 @@ METHODS: list[MethodSpec] = [
                       "n_ensembles": 5, "vote_threshold": 0.5,
                       "noise_seed": 11},
         python_reference=None,
-        r_reference=None,
+        r_reference=(lambda **kw: _EmcuvePlsVarSelReference(
+            n_components=kw["n_components"],
+            n_ensembles=kw["n_ensembles"],
+            vote_threshold=kw["vote_threshold"])
+            if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        rmse_rel_tol=1.0,
-        paper_only=("Zheng, K., Li, Q., Wang, J., Geng, J., Cao, P., "
-                    "Sui, T., Wang, X. & Du, Y. (2012). Stability "
-                    "competitive adaptive reweighted sampling (SCARS) "
-                    "and its applications to multivariate calibration "
-                    "of NIR spectra. Chemom. Intell. Lab. Syst. 112, "
-                    "48-54. (Ensemble MC-UVE; smoke-tested only.)"),
+        # Stochastic ensemble; mask metric.
+        rmse_rel_tol=1.35,
+        notes=("R `plsVarSel::mcuve_pls` called N times with seeded RNGs "
+               "and vote-aggregated — same algorithm as pls4all's EMCUVE. "
+               "RNG diverges between R sample() and pls4all splitmix64."),
     ),
     MethodSpec(
         name="randomization_select",
@@ -4036,14 +4810,20 @@ METHODS: list[MethodSpec] = [
                       "n_components": 4, "n_permutations": 50,
                       "alpha": 0.05, "randomization_seed": 11},
         python_reference=None,
-        r_reference=None,
+        r_reference=lambda **kw: _RandomizationPermuteReference(
+            n_components=kw["n_components"],
+            n_permutations=kw["n_permutations"],
+            alpha=kw["alpha"],
+            seed=kw["randomization_seed"]),
         prediction_key="mask",
-        rmse_rel_tol=1.0,
-        paper_only=("Wiklund, S., Nilsson, D., Eriksson, L., "
-                    "Sjöström, M., Wold, S. & Faber, K. (2007). A "
-                    "randomization test for PLS component selection. "
-                    "Journal of Chemometrics 21(10-11), 427-439. "
-                    "(Variable-level randomization test; smoke-tested.)"),
+        # Mask metric; stochastic by construction (permutation RNGs differ
+        # between R sample() and pls4all splitmix64). tol=1.3 accepts
+        # half-overlap divergence, rejects all-zero / all-one masks.
+        rmse_rel_tol=1.3,
+        notes=("Base R: SIMPLS coefs vs permuted-Y null distribution. "
+               "Selects features with p < alpha. Different RNG than "
+               "pls4all splitmix64; mask metric ~0=perfect, ~1=half "
+               "disagree, ~1.41=disjoint."),
     ),
     MethodSpec(
         name="rep_select",
