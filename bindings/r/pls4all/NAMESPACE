@@ -1,6 +1,17 @@
 useDynLib(pls4all, .registration = TRUE)
 
+importFrom(stats, model.frame, model.matrix, model.response, na.omit,
+           na.pass, terms, delete.response, .getXlevels)
+
 export(pls4all_version)
 export(pls4all_abi_version)
 export(pls4all_fit)
 export(pls4all_predict)
+
+# Tier 2 — idiomatic formula interface
+export(pls)
+S3method(predict, pls4all_fit)
+S3method(coef, pls4all_fit)
+S3method(print, pls4all_fit)
+S3method(summary, pls4all_fit)
+S3method(print, summary.pls4all_fit)

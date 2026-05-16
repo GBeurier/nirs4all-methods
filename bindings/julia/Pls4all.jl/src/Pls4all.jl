@@ -94,4 +94,6 @@ function pls_fit(X::AbstractMatrix{Float64},
               n_components=Int(n_components))
 end
 
+include("Sklearn.jl")
+
 end # module
