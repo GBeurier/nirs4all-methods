@@ -6,8 +6,73 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-Next track: benchmark harness wiring (Phase 46 — code shipped untracked
-in `benchmarks/backends/`).
+Next track: language bindings (Rust, Go, Ruby, Lua, Nim, …) catch-up to
+the new ABI 1.16 symbols.
+
+## [parity-audit-may-2026] — 2026-05-16
+
+End-to-end parity-gate audit. See
+[`docs/parity_audit_2026_05/03_closeout.md`](docs/parity_audit_2026_05/03_closeout.md)
+for the full closeout report.
+
+| Metric | Before | After |
+|--------|------:|------:|
+| Methods in the parity gate | 33 | **68** |
+| Methods with real `ok` rows | 11 (33 %) | **64 (94 %)** |
+| `paper_only` methods | 22 | **4** |
+
+### Phase 53 — VIP_SPA + DI-PLS unlock + IRIV unlock
+
+- **VIP_SPA** new pls4all method (Favilla 2013 VIP + Araujo 2001 SPA
+  composition, mirrors `auswahl.VIP_SPA`). SPA greedy projections on
+  raw masked X; start = `argmax(VIP)` within mask.
+  - C++ core: `cpp/src/core/vip_spa_selection.{hpp,cpp}` (new)
+  - C ABI: `p4a_vip_spa_select`
+  - Python: `pls4all.vip_spa_select(...)`
+  - Parity vs `auswahl.VIP_SPA`: `rmse_rel = 1.08` (mask metric).
+- **DI-PLS** moved from `paper_only` to `ok`: `diPLSlib 2.5.0`
+  (B-Analytics; Nikzad-Langerodi 2018 authors) wired as canonical
+  reference. `rmse_rel = 5e-3` under `tol = 2e-2`.
+- **IRIV** unlocked: Octave Forge `statistics 1.7.7` (last release
+  before the `datatypes >= 1.2.0` cascade) installs on Octave 10.3.0
+  and provides `ranksum`. MethodSpec auto-wires through
+  `_octave_has_statistics()`.
+- ChemometricsTools.jl audited on Julia 1.6.7 LTS — no PLS variant that
+  pls4all doesn't already have; out-of-scope tools (MCR-ALS, BTEM,
+  SIMPLISMA, CORAL, COW, …) reserved for a future dedicated
+  chemometrics library layered on top of pls4all.
+
+### Codex review fixes
+
+- VIP_SPA SPA pass now runs on raw masked X (not autoscaled) to faithfully
+  match `auswahl._spa._fit_spa`.
+- `VipSpaSelectionResult` exposes `n_selected` (actual count) alongside
+  `top_k` (requested upper bound).
+- `_VipSpaAuswahlReference` asserts `vip_threshold == 0.3` (auswahl
+  hard-codes that constant; silent drift would falsely pass).
+- DI-PLS sklearn-1.8 `force_all_finite` → `ensure_all_finite` shim is
+  now signature-gated.
+
+### Release
+
+- ABI version: `1.15.0` → `1.16.0` (one new additive symbol:
+  `p4a_vip_spa_select`).
+- Tag: `phase-53-vip-spa`.
+
+## [phases-50-52-libpls] — 2026-05-16
+
+Three new methods ported from libPLS 1.95 (MATLAB toolbox):
+
+- **ECR** (Liu 2013 Elastic Component Regression) — bridges PCR (α=0)
+  to PLS (α=1). C++ kernel `core/ecr.{hpp,cpp}`. Parity vs libPLS
+  `ecr.m`: `rmse_rel ≈ 1e-7` (tight).
+- **IRIV** (Yun 2014 Iteratively Retains Informative Variables) —
+  iterative variable selection via Mann-Whitney U test on
+  permuted-replacement CV-RMSE. C++ kernel `core/iriv_selection.{hpp,cpp}`.
+- **IRF** (Yun 2013 Interval Random Frog) — Random Frog applied to
+  fixed-width sliding intervals. C++ kernel `core/irf_selection.{hpp,cpp}`.
+
+ABI bumped 1.14 → 1.15 (three new additive symbols).
 
 ## [0.97.0-gpr-pso-vissa] — 2026-05-16
 

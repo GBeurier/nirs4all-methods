@@ -221,3 +221,25 @@ order:
 Step 4 wires the **66 directly reachable methods + 3 AOM-only via
 bench oracle = 69 MethodSpecs**; the remaining 28 (4+1+23) are tracked
 as ABI-blocked and will land in a follow-up phase.
+
+---
+
+## Audit-end update (2026-05-16)
+
+After Phases 47-53 the actual gate covers **68 methods, 132 reference
+rows, 64 `ok` methods, 4 `paper_only`** (`fused_sparse_pls`, `mir_pls`,
+`scars_select`, `sipls_select`). All 23 selector ABI shims listed above
+were delivered (Option A). Methods *added* during the audit that did
+not appear in the original 97-method inventory:
+
+| Phase | Method | Source |
+|------:|--------|--------|
+| 47 | `gpr_pls` | new pls4all kernel (GPR-on-PLS) |
+| 48 | `pso_select` | new pls4all kernel (Binary PSO) |
+| 49 | `vissa_select` | new pls4all kernel (Deng VISSA) |
+| 50 | `ecr` | new pls4all kernel ported from libPLS `ecr.m` |
+| 51 | `iriv_select` | new pls4all kernel ported from libPLS `iriv.m` |
+| 52 | `irf_select` | new pls4all kernel ported from libPLS `irf.m` |
+| 53 | `vip_spa_select` | new pls4all kernel mirroring `auswahl.VIP_SPA` |
+
+See [`03_closeout.md`](03_closeout.md) for the full progression.

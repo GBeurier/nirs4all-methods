@@ -129,7 +129,7 @@ These already have entries; library upgrades to consider:
 | # | Registry name | Current status | Library upgrade candidate |
 |---|----------------|----------------|----------------------------|
 | 21 | `sparse_simpls` | R `spls` | also Python `sklearn` + soft-thresh (only for cross-check) |
-| 22 | `di_pls` | paper-only | **Python `sklearn` + IRLS port from `nirs4all`?** Or just keep paper-only — Nikzad-Langerodi has no installable lib in any language we surveyed. |
+| 22 | `di_pls` | **Python `diPLSlib 2.5.0`** (Phase 53) | The original Nikzad-Langerodi authors publish `diPLSlib` on PyPI. Tight parity `rmse_rel ≈ 5e-3` with `tol = 2e-2`. Requires a signature-gated `force_all_finite` → `ensure_all_finite` shim for sklearn 1.8+. |
 | 23 | `recursive_pls` | sklearn + R pls | already covered. |
 | 24 | `cppls` | paper-only | R `pls::cppls` exists but implements *Liland 2009 Canonical Powered PLS*, a different algorithm than Indahl 2005's Powered-PLS. **Add R `pls::cppls` as a qualitative reference and document the divergence**. |
 | 25 | `weighted_pls` | sklearn | already covered. |
