@@ -7,7 +7,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ## [Unreleased]
 
 Next tracks: Android NDK packaging (Phase 36 — deferred, needs the
-~3.5 GB NDK), .NET binding, accelerated backends, timing benchmarks.
+~3.5 GB NDK), Swift / Apple-side bindings, accelerated backends,
+timing benchmarks.
+
+## [0.90.0-dotnet-binding] — 2026-05-16
+
+.NET 9 class library wrapping libp4a via P/Invoke
+(`[DllImport("p4a", ...)]`). Parity-gated against the shared
+cross-binding fixture; result is bit-exact (rmse_rel = 0.0 on all
+four output arrays, identical to JNI and Rust).
+
+### .NET binding
+
+- `bindings/dotnet/Pls4all/Pls4all.cs` — public API. Top-level
+  `Pls4all` static class with `Version()`, `AbiVersion()` and
+  `PlsFit(ReadOnlySpan<double> x, ReadOnlySpan<double> y, int n,
+  int p, int q, int nComponents)`. `Span<double>` inputs are pinned
+  via `fixed` for zero-copy hand-off into libp4a.
+- `bindings/dotnet/Pls4all/Pls4all.csproj` — net9.0 class library,
+  NuGet metadata in place.
+- `bindings/dotnet/TestParity/Program.cs` — top-level statement
+  console app for the parity gate.
+- `bindings/dotnet/README.md`, `bindings/dotnet/.gitignore`.
+
+No ABI change (uses `p4a_pls_fit_simple` from 1.13).
 
 ## [0.89.0-rust-binding] — 2026-05-16
 

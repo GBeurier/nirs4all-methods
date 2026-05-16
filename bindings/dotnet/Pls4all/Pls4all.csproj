@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Pls4all</RootNamespace>
+    <AssemblyName>Pls4all</AssemblyName>
+    <PackageId>Pls4all</PackageId>
+    <Version>0.90.0</Version>
+    <Authors>pls4all contributors</Authors>
+    <Description>.NET bindings for the pls4all PLS / NIRS engine (libp4a).</Description>
+    <PackageLicenseExpression>CECILL-2.1</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/GBeurier/pls4all</PackageProjectUrl>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+</Project>

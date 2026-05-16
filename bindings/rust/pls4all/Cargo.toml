@@ -1,6 +1,6 @@
 [package]
 name = "pls4all"
-version = "0.89.0"
+version = "0.90.0"
 edition = "2021"
 license = "CeCILL-2.1"
 description = "Rust bindings for the pls4all PLS / NIRS engine (libp4a)"
