@@ -24,6 +24,10 @@ export { Config } from "./config.js";
 export { Model, fitPls, predictPls, type PlsModel } from "./model.js";
 export { MethodResult } from "./methodResult.js";
 export {
+    PLSRegression,
+    type PLSRegressionParams,
+} from "./sklearn.js";
+export {
     Status,
     Dtype,
     Algorithm,
