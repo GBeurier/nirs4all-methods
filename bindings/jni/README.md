@@ -46,8 +46,8 @@ $JAVA_HOME/bin/java -Drepo.root=$(pwd) \
 Expected output:
 
 ```
-Pls4all.version()        = 0.87.0+abi.1.13.0
-fixture pls4all_version  = 0.87.0+abi.1.13.0
+Pls4all.version()        = 0.88.0+abi.1.13.0
+fixture pls4all_version  = 0.88.0+abi.1.13.0
 rmse_rel coefficients    = 0.000e+00
 rmse_rel x_mean          = 0.000e+00
 rmse_rel y_mean          = 0.000e+00

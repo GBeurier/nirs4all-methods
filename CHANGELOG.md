@@ -6,8 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-Next tracks: Android NDK packaging (Phase 36), accelerated backends,
-timing benchmarks.
+Next tracks: Android NDK packaging (Phase 36 — deferred, needs the
+~3.5 GB NDK), Rust binding (Phase 38), .NET binding, accelerated
+backends, timing benchmarks.
+
+## [0.88.0-go-binding] — 2026-05-16
+
+Go binding via cgo. Same `p4a_pls_fit_simple` C-ABI helper, gated
+against the shared cross-binding parity fixture at machine epsilon.
+
+### Go binding
+
+- `bindings/go/go.mod` — module
+  `github.com/GBeurier/pls4all/bindings/go`.
+- `bindings/go/pls4all/pls4all.go` — public Go API. `Version()`,
+  `AbiVersion()` and `Fit(x, y []float64, n, p, q, k int)
+  (*FitResult, error)`. Go `[]float64` is row-major like the C ABI,
+  so the slice pointer is handed straight through cgo — no copy,
+  no transpose.
+- `bindings/go/cmd/test_parity/main.go` — parity gate against the
+  shared `bindings/js/test/parity_fixture.json`. RMSE-rel ~ 2e-16
+  on all four output arrays.
+
+No ABI change (uses `p4a_pls_fit_simple` from 1.13).
+
+### Phase 36 deferred
+
+Android NDK packaging is on hold pending NDK availability. The
+Phase 35 JNI source is unchanged; only the build script needs to
+target the NDK toolchain.
 
 ## [0.87.0-jni-binding] — 2026-05-16
 
