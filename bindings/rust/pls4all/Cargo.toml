@@ -1,0 +1,25 @@
+[package]
+name = "pls4all"
+version = "0.89.0"
+edition = "2021"
+license = "CeCILL-2.1"
+description = "Rust bindings for the pls4all PLS / NIRS engine (libp4a)"
+repository = "https://github.com/GBeurier/pls4all"
+keywords = ["pls", "nirs", "chemometrics", "spectroscopy"]
+categories = ["api-bindings", "science"]
+
+[lib]
+name = "pls4all"
+crate-type = ["rlib"]
+
+# The C ABI surface is small, so we hand-roll the extern "C" block
+# rather than depending on bindgen. This keeps the dev dependencies
+# down to zero and avoids re-running bindgen on every build.
+
+[build-dependencies]
+
+[dependencies]
+
+[[example]]
+name = "test_parity"
+path = "examples/test_parity.rs"

@@ -7,8 +7,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ## [Unreleased]
 
 Next tracks: Android NDK packaging (Phase 36 — deferred, needs the
-~3.5 GB NDK), Rust binding (Phase 38), .NET binding, accelerated
-backends, timing benchmarks.
+~3.5 GB NDK), .NET binding, accelerated backends, timing benchmarks.
+
+## [0.89.0-rust-binding] — 2026-05-16
+
+Rust crate `pls4all`. Zero-dep, hand-rolled `extern "C"` block
+against `p4a_pls_fit_simple`. Parity-gated against the shared
+cross-binding fixture; result is bit-exact (rmse_rel = 0.0 on all
+four output arrays, identical to JNI's exact result).
+
+### Rust binding
+
+- `bindings/rust/pls4all/` — rlib crate. `Cargo.toml` declares no
+  dependencies; `FitError` implements `Display` and
+  `std::error::Error` by hand.
+- `src/lib.rs` — `pls4all::version()`, `pls4all::abi_version()`,
+  `pls4all::pls_fit(&[f64], &[f64], n, p, q, k) -> Result<FitResult,
+  FitError>`. Uses `#![deny(unsafe_op_in_unsafe_fn)]` so every
+  unsafe block carries a SAFETY comment.
+- `build.rs` — auto-detects libp4a's location by walking up from
+  the manifest dir; overridable via `PLS4ALL_LIB_DIR` and
+  `PLS4ALL_RUNTIME_RPATH`.
+- `examples/test_parity.rs` — parity gate (run via
+  `cargo run --example test_parity --release`).
+
+No ABI change (uses `p4a_pls_fit_simple` from 1.13).
 
 ## [0.88.0-go-binding] — 2026-05-16
 
