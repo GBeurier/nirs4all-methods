@@ -45,9 +45,9 @@ ruby bindings/ruby/test/test_parity.rb
 Expected output:
 
 ```
-Pls4all.version           = 0.95.0+abi.1.13.0
+Pls4all.version           = 0.96.0+abi.1.13.0
 Pls4all.abi_version       = 1.13.0
-fixture pls4all_version   = 0.95.0+abi.1.13.0
+fixture pls4all_version   = 0.96.0+abi.1.13.0
 rmse_rel coefficients    = 0.000e+00
 rmse_rel x_mean          = 0.000e+00
 rmse_rel y_mean          = 0.000e+00

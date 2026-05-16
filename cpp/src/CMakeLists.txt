@@ -72,6 +72,9 @@ add_library(pls4all_core OBJECT
     core/st_selection.cpp
     core/uve_selection.cpp
     core/validation.cpp)
+if(PLS4ALL_WITH_CUDA)
+    target_sources(pls4all_core PRIVATE core/cuda_dispatch.cpp)
+endif()
 target_include_directories(pls4all_core
     PUBLIC  ${PROJECT_SOURCE_DIR}/cpp/include
             ${PROJECT_BINARY_DIR}/generated
@@ -183,6 +186,34 @@ else()
 endif()
 
 # ---------------------------------------------------------------------------
+# Optional CUDA backend (Phase 45). Default OFF — when ON we route the
+# linalg dispatch through cuBLAS via cpp/src/core/cuda_dispatch.cpp.
+# Phase 45 uses host-side cuBLAS only, no custom CUDA kernels, so we do
+# not call enable_language(CUDA) — the .cpp file compiles with the host
+# C++ compiler and the CUDA include path. CUDA::cudart and CUDA::cublas
+# carry the link dependencies.
+#
+# Runtime safety: a build with PLS4ALL_WITH_CUDA=ON still loads cleanly
+# on a machine without a GPU. cuda_dispatch::cuda_runtime_available()
+# returns false in that case, and p4a_backend_is_available + set_backend
+# both report unavailability cleanly.
+# ---------------------------------------------------------------------------
+if(PLS4ALL_WITH_CUDA)
+    target_compile_definitions(pls4all_core PRIVATE P4A_USE_CUDA=1)
+    target_include_directories(pls4all_core PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
+    message(STATUS "  CUDA backend      : ON  (toolkit ${CUDAToolkit_VERSION})")
+    if(PLS4ALL_WITH_BLAS)
+        message(WARNING
+            "PLS4ALL_WITH_CUDA=ON together with PLS4ALL_WITH_BLAS=ON: "
+            "linalg dispatch prefers CUDA when both are present. The "
+            "BLAS link is kept but the BLAS code paths in linalg.hpp "
+            "are not compiled (guarded by #elif on P4A_USE_CUDA).")
+    endif()
+else()
+    message(STATUS "  CUDA backend      : OFF (no GPU dispatch)")
+endif()
+
+# ---------------------------------------------------------------------------
 # pls4all_c — public C ABI shared library (libp4a.{so,dll,dylib}).
 # pls4all_c_static is the same surface, statically linked.
 # ---------------------------------------------------------------------------
@@ -232,6 +263,14 @@ function(pls4all_apply_c_target target)
         # $<TARGET_OBJECTS:>, so the consuming target must link the
         # OpenMP runtime as well.
         target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
+    endif()
+    if(PLS4ALL_WITH_CUDA)
+        target_compile_definitions(${target} PRIVATE P4A_USE_CUDA=1)
+        target_include_directories(${target} PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
+        # OBJECT libraries do not propagate PRIVATE link deps through
+        # $<TARGET_OBJECTS:>, so the consuming target must link cudart
+        # and cuBLAS as well.
+        target_link_libraries(${target} PRIVATE CUDA::cudart CUDA::cublas)
     endif()
     pls4all_add_warnings(${target})
 endfunction()

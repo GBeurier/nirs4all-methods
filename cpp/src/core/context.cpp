@@ -5,6 +5,10 @@
 #include <cstdarg>
 #include <cstdio>
 
+#if defined(P4A_USE_CUDA)
+#  include "core/cuda_dispatch.hpp"
+#endif
+
 namespace pls4all::core {
 
 Context::Context() noexcept
@@ -22,10 +26,21 @@ p4a_status_t Context::set_backend(p4a_backend_t backend) noexcept {
         case P4A_BACKEND_REFERENCE_CPU:
             backend_ = backend;
             return P4A_OK;
+        case P4A_BACKEND_CUDA:
+#if defined(P4A_USE_CUDA)
+            if (!::pls4all::cuda_dispatch::cuda_runtime_available()) {
+                set_errorf("P4A_BACKEND_CUDA: no CUDA-capable GPU available at runtime");
+                return P4A_ERR_BACKEND_UNAVAILABLE;
+            }
+            backend_ = backend;
+            return P4A_OK;
+#else
+            set_errorf("backend %d is not compiled into this build of libp4a", static_cast<int>(backend));
+            return P4A_ERR_BACKEND_UNAVAILABLE;
+#endif
         case P4A_BACKEND_NATIVE_CPU:
         case P4A_BACKEND_BLAS:
         case P4A_BACKEND_OPENMP:
-        case P4A_BACKEND_CUDA:
         case P4A_BACKEND_OPENCL:
         case P4A_BACKEND_METAL:
             // Phase 0 ships REFERENCE_CPU only. Future backends fail

@@ -6,7 +6,62 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-Next tracks: CUDA backend (Phase 45), benchmark harness (Phase 46).
+Next track: benchmark harness (Phase 46).
+
+## [0.96.0-cuda-backend] — 2026-05-16
+
+Optional cuBLAS backend. Default OFF — the OFF build is bit-
+identical to pre-Phase-45 (no CUDA headers, no CUDA symbol
+references). When `PLS4ALL_WITH_CUDA=ON` AND a compatible GPU is
+present at runtime, `linalg::gemv/gemm/ger` route through
+`cublasDgemv_v2 / cublasDgemm_v2 / cublasDger_v2`. Public ABI
+unchanged at 1.13.0.
+
+### CUDA backend
+
+- `cpp/src/core/cuda_dispatch.hpp` + `.cpp` (new): Meyers-singleton
+  cuBLAS handle, `DevicePtr<T>` RAII for cudaMalloc/cudaFree, the
+  three dispatch entry points using the row-major → column-major
+  swap trick (`op_cm = op_row`, no flip; B passed first, A second,
+  with dimensions `m_cm=N, n_cm=M, k_cm=K`).
+- `cpp/src/core/linalg.hpp`: `Trans_t` uses plain int when CUDA is
+  on; each dispatch function tries CUDA first, then BLAS, then
+  scalar.
+- `cpp/src/c_api/c_api_version.cpp`: `p4a_backend_is_available
+  (P4A_BACKEND_CUDA)` is the first backend whose result is a
+  **runtime probe** (compile-time + GPU detection at first call,
+  memoised in the singleton).
+- `cpp/src/core/context.cpp`: `set_backend(CUDA)` accepts when
+  compile-time AND runtime checks both pass; clear error otherwise.
+- `cpp/cli/p4a_cli.cpp` + `cpp/cli/CMakeLists.txt`: selfcheck
+  accepts `P4A_OK` or `P4A_ERR_BACKEND_UNAVAILABLE` under CUDA-ON.
+- `cpp/tests/abi/test_cuda_backend.cpp` (new): fixture parity +
+  200×20×2 smoke; skips gracefully if no GPU at runtime.
+- `cpp/tests/abi/test_error_messages.cpp`: switched the "must be
+  unavailable" probe from CUDA to `P4A_BACKEND_OPENCL` (truly
+  never-implemented).
+- Top-level `CMakeLists.txt` + `cpp/src/CMakeLists.txt` +
+  `cpp/tests/CMakeLists.txt`: `find_package(CUDAToolkit REQUIRED)`
+  hoisted, `CUDA::cudart` + `CUDA::cublas` linked into
+  `pls4all_core`, `pls4all_c`, `pls4all_c_static`, and
+  `pls4all_tests` via the existing helper pattern.
+
+Ship gate (live on RTX 4090 + RTX 5090, CUDA 12.8):
+
+- OFF build: 265/265 tests, all 10 cross-binding parity gates green.
+- CUDA-ON build: 265/265 tests (3 CUDA tests run live on GPU 0),
+  all 10 cross-binding parity gates green against fixture
+  regenerated through the cuBLAS path.
+- ABI symbol count unchanged at 160.
+
+Codex review: all math correct, RAII covers leak paths, the
+P4A_BACKEND_OPENCL substitution is valid. One latent footgun
+documented in the header: cuda_dispatch assumes **contiguous**
+row-major buffers (`lda == cols`); all current call sites honour
+this. Phase 45b will extend to strided inputs.
+
+Phase 45b backlog: pinned host memory, async streams, strided
+buffers, persistent device-side model state.
 
 ## [0.95.0-openmp-backend] — 2026-05-16
 

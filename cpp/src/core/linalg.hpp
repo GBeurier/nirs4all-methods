@@ -32,6 +32,10 @@
 #  endif
 #endif
 
+#if defined(P4A_USE_CUDA)
+#  include "core/cuda_dispatch.hpp"
+#endif
+
 namespace pls4all {
 namespace linalg {
 
@@ -39,7 +43,12 @@ namespace linalg {
 // Transpose flag. Defined as a tiny enum on the reference path so the call
 // sites can stay #ifdef-free.
 // ---------------------------------------------------------------------------
-#if defined(P4A_USE_BLAS)
+// When P4A_USE_CUDA is defined the dispatch goes to cuda_dispatch which
+// uses plain ints (0 = NoTrans, 1 = Trans). The BLAS branch below is
+// only compiled when CUDA is OFF (it's gated by `#elif` in the body of
+// each dispatch function), so we use the plain enum whenever CUDA is on
+// to keep call-site types consistent.
+#if defined(P4A_USE_BLAS) && !defined(P4A_USE_CUDA)
 using Trans_t = CBLAS_TRANSPOSE;
 constexpr CBLAS_TRANSPOSE Trans_No  = CblasNoTrans;
 constexpr CBLAS_TRANSPOSE Trans_Yes = CblasTrans;
@@ -64,7 +73,11 @@ inline void gemv(Trans_t trans,
     if (rows == 0 || cols == 0) {
         return;
     }
-#if defined(P4A_USE_BLAS)
+#if defined(P4A_USE_CUDA)
+    pls4all::cuda_dispatch::gemv(
+        (trans == Trans_No) ? 0 : 1,
+        rows, cols, alpha, A, x, beta, y);
+#elif defined(P4A_USE_BLAS)
     cblas_dgemv(CblasRowMajor, trans,
                 static_cast<int>(rows), static_cast<int>(cols),
                 alpha,
@@ -125,7 +138,13 @@ inline void gemm(Trans_t trans_a,
     if (M == 0 || N == 0) {
         return;
     }
-#if defined(P4A_USE_BLAS)
+#if defined(P4A_USE_CUDA)
+    pls4all::cuda_dispatch::gemm(
+        (trans_a == Trans_No) ? 0 : 1,
+        (trans_b == Trans_No) ? 0 : 1,
+        M, N, K, alpha,
+        A, lda, B, ldb, beta, C, ldc);
+#elif defined(P4A_USE_BLAS)
     cblas_dgemm(CblasRowMajor, trans_a, trans_b,
                 static_cast<int>(M), static_cast<int>(N), static_cast<int>(K),
                 alpha,
@@ -171,7 +190,9 @@ inline void ger(std::size_t M, std::size_t N,
     if (M == 0 || N == 0 || alpha == 0.0) {
         return;
     }
-#if defined(P4A_USE_BLAS)
+#if defined(P4A_USE_CUDA)
+    pls4all::cuda_dispatch::ger(M, N, alpha, x, y, A, lda);
+#elif defined(P4A_USE_BLAS)
     cblas_dger(CblasRowMajor,
                static_cast<int>(M), static_cast<int>(N),
                alpha,

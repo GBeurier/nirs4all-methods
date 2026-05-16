@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.21)
 # (the header file is the canonical version for ABI / runtime queries — this
 # CMake project version is used only for installation / find_package).
 project(pls4all
-    VERSION 0.95.0
+    VERSION 0.96.0
     DESCRIPTION "Portable PLS/NIRS engine with stable C ABI"
     HOMEPAGE_URL "https://github.com/GBeurier/pls4all"
     LANGUAGES C CXX)
@@ -51,6 +51,14 @@ include(SanitizersToolchain)
 # When PLS4ALL_WITH_OPENMP=OFF this is a no-op.
 if(PLS4ALL_WITH_OPENMP)
     find_package(OpenMP REQUIRED COMPONENTS CXX)
+endif()
+
+# Same pattern for CUDA: hoist find_package(CUDAToolkit) so the
+# CUDA::cudart / CUDA::cublas imported targets are visible everywhere.
+# Phase 45 uses host-side cuBLAS only, no .cu compilation, so we do
+# NOT enable_language(CUDA).
+if(PLS4ALL_WITH_CUDA)
+    find_package(CUDAToolkit REQUIRED)
 endif()
 
 # pls4all needs at least one library output to be useful.

@@ -14,6 +14,10 @@
 #include "core/status.hpp"
 #include "core/version.hpp"
 
+#if defined(P4A_USE_CUDA)
+#  include "core/cuda_dispatch.hpp"
+#endif
+
 #if defined(__GNUC__) || defined(__clang__)
 #  define P4A_NO_UBSAN __attribute__((no_sanitize("undefined")))
 #else
@@ -48,8 +52,13 @@ P4A_API int p4a_backend_is_available(p4a_backend_t backend) {
 #else
                 return 0;
 #endif
-            case P4A_BACKEND_NATIVE_CPU:
             case P4A_BACKEND_CUDA:
+#if defined(P4A_USE_CUDA)
+                return ::pls4all::cuda_dispatch::cuda_runtime_available() ? 1 : 0;
+#else
+                return 0;
+#endif
+            case P4A_BACKEND_NATIVE_CPU:
             case P4A_BACKEND_OPENCL:
             case P4A_BACKEND_METAL:
             default:

@@ -7,7 +7,7 @@
     <RootNamespace>Pls4all</RootNamespace>
     <AssemblyName>Pls4all</AssemblyName>
     <PackageId>Pls4all</PackageId>
-    <Version>0.95.0</Version>
+    <Version>0.96.0</Version>
     <Authors>pls4all contributors</Authors>
     <Description>.NET bindings for the pls4all PLS / NIRS engine (libp4a).</Description>
     <PackageLicenseExpression>CECILL-2.1</PackageLicenseExpression>

@@ -95,7 +95,17 @@ int cmd_selfcheck() {
     uint64_t seed = 0;
     CHECK(p4a_context_get_seed(ctx, &seed) == P4A_OK);
     CHECK(seed == 42);
-    CHECK(p4a_context_set_backend(ctx, P4A_BACKEND_CUDA) == P4A_ERR_BACKEND_UNAVAILABLE);
+    {
+        const p4a_status_t cuda_status =
+            p4a_context_set_backend(ctx, P4A_BACKEND_CUDA);
+#if defined(P4A_USE_CUDA)
+        // CUDA may be compiled in but the runtime may have no GPU.
+        CHECK(cuda_status == P4A_OK ||
+              cuda_status == P4A_ERR_BACKEND_UNAVAILABLE);
+#else
+        CHECK(cuda_status == P4A_ERR_BACKEND_UNAVAILABLE);
+#endif
+    }
 
     // Config lifecycle + setters
     p4a_config_t* cfg = nullptr;

@@ -18,7 +18,7 @@ TEST(error_messages, fresh_context_has_empty_last_error) {
 TEST(error_messages, last_error_writes_after_failed_setter) {
     p4a_context_t* ctx = nullptr;
     p4a_context_create(&ctx);
-    CHECK_EQ(p4a_context_set_backend(ctx, P4A_BACKEND_CUDA),
+    CHECK_EQ(p4a_context_set_backend(ctx, P4A_BACKEND_OPENCL),
               P4A_ERR_BACKEND_UNAVAILABLE);
     const char* err = p4a_context_last_error(ctx);
     CHECK_NE(err, nullptr);
@@ -30,7 +30,7 @@ TEST(error_messages, last_error_writes_after_failed_setter) {
 TEST(error_messages, overwrite_not_append) {
     p4a_context_t* ctx = nullptr;
     p4a_context_create(&ctx);
-    p4a_context_set_backend(ctx, P4A_BACKEND_CUDA);   // sets one message
+    p4a_context_set_backend(ctx, P4A_BACKEND_OPENCL);   // sets one message
     const char* first = p4a_context_last_error(ctx);
     char first_copy[256];
     std::snprintf(first_copy, sizeof(first_copy), "%s", first);
@@ -50,7 +50,7 @@ TEST(error_messages, overwrite_not_append) {
 TEST(error_messages, clear_resets_to_empty_string) {
     p4a_context_t* ctx = nullptr;
     p4a_context_create(&ctx);
-    p4a_context_set_backend(ctx, P4A_BACKEND_CUDA);
+    p4a_context_set_backend(ctx, P4A_BACKEND_OPENCL);
     CHECK(p4a_context_last_error(ctx)[0] != '\0');
     p4a_context_clear_error(ctx);
     CHECK_STR_EQ(p4a_context_last_error(ctx), "");

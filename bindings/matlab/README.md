@@ -58,7 +58,7 @@ the CMake `dev-release` preset under the repo.
 
 ```matlab
 addpath('bindings/matlab');     % registers the +pls4all package
-v = pls4all.version();          % "0.95.0+abi.1.13.0"
+v = pls4all.version();          % "0.96.0+abi.1.13.0"
 
 X = randn(50, 5);
 Y = X(:, 1) + 0.5 * X(:, 2) - 0.3 * X(:, 3);
@@ -81,8 +81,8 @@ octave --quiet --eval "addpath('bindings/matlab/test'); test_parity"
 Expected output:
 
 ```
-pls4all.version()        = 0.95.0+abi.1.13.0
-fixture pls4all_version  = 0.95.0+abi.1.13.0
+pls4all.version()        = 0.96.0+abi.1.13.0
+fixture pls4all_version  = 0.96.0+abi.1.13.0
 rmse_rel coefficients    = 0.000e+00
 rmse_rel x_mean          = 2.708e-17
 rmse_rel y_mean          = 0.000e+00
