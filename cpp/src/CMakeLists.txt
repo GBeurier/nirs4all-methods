@@ -38,6 +38,7 @@ add_library(pls4all_core OBJECT
     core/component_coefficients.cpp
     core/context.cpp
     core/ga_selection.cpp
+    core/gpr_pls.cpp
     core/ipw_selection.cpp
     core/variable_importance.cpp
     core/variable_selection.cpp
@@ -62,6 +63,7 @@ add_library(pls4all_core OBJECT
     core/pls_lda.cpp
     core/pls_logistic.cpp
     core/pipeline.cpp
+    core/pso_selection.cpp
     core/randomization_selection.cpp
     core/random_frog_selection.cpp
     core/rep_selection.cpp
@@ -71,7 +73,8 @@ add_library(pls4all_core OBJECT
     core/stability_selection.cpp
     core/st_selection.cpp
     core/uve_selection.cpp
-    core/validation.cpp)
+    core/validation.cpp
+    core/vissa_selection.cpp)
 if(PLS4ALL_WITH_CUDA)
     target_sources(pls4all_core PRIVATE core/cuda_dispatch.cpp)
 endif()

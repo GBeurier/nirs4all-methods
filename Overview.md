@@ -4,8 +4,8 @@ L’existant confirme cette structuration : scikit-learn expose déjà `PLSRegre
 
 ## Statut courant (mai 2026)
 
-Snapshot de ce qui est livré dans le tag `phase-45-cuda-backend`
-(`0.96.0+abi.1.13.0`). La feuille de route détaillée est dans
+Snapshot de ce qui est livré dans le tag `phase-49-vissa-pls`
+(`0.97.0+abi.1.14.0`). La feuille de route détaillée est dans
 [`ROADMAP.md`](ROADMAP.md) ; les notes par phase sont dans `roadmap/phase-*.md`.
 Le détail des parity gates par méthode est dans `benchmarks/results/parity_gate/`.
 
@@ -904,10 +904,20 @@ PLS-SEM / Partial Least Squares Structural Equation Modeling
 PLS path modeling
 Neural PLS
 Deep PLS
-Gaussian-process PLS
 Highly specialized survival PLS
-All metaheuristics exotic by défaut
 ```
+
+Note Phase 47 (2026-05-16) : **Gaussian-process PLS** est désormais
+implémenté (`gpr_pls_fit`, parity sklearn rmse_rel ~ 2.3e-10). La
+tête GP est exposée comme primitive standalone
+(`fit_gp_on_scores`) pour permettre une future GPR-on-AOMPLS.
+
+Note Phase 48-49 (2026-05-16) : sur la liste §14.4 des
+métaheuristiques wrapper, **PSO-PLS** (`pso_select`, Kennedy &
+Eberhart 1997, paper-only) et **VISSA-PLS** (`vissa_select`, Deng
+et al. 2014, paper-only) sont désormais livrés. Les autres
+métaheuristiques exotiques (ACO, simulated annealing, IRIV, VCPA,
+BOSS, CARS-SPA) restent reportées.
 
 `PLS-SEM` est un autre monde : sociométrie, modèles à équations structurelles, graphes causaux/latents. Ça risque de polluer une librairie NIRS.
 

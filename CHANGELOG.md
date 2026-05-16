@@ -6,7 +6,73 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-Next track: benchmark harness (Phase 46).
+Next track: benchmark harness wiring (Phase 46 — code shipped untracked
+in `benchmarks/backends/`).
+
+## [0.97.0-gpr-pso-vissa] — 2026-05-16
+
+Three new methods previously deferred:
+
+### Phase 47 — GPR-on-PLS (Gaussian Process Regression on PLS scores)
+
+Two-stage regression: SIMPLS rotation to k latent components, then a
+Gaussian Process with RBF kernel + diagonal noise variance solved via
+Cholesky. The GP head (`fit_gp_on_scores`) is exposed as a standalone
+internal primitive so a future GPR-on-AOMPLS reuses it unchanged.
+Single-target only in Phase 47.
+
+- C++ core: `cpp/src/core/gpr_pls.{hpp,cpp}` (new)
+- C ABI: `p4a_gpr_pls_fit` (additive — ABI minor 1.13 → 1.14)
+- Python: `pls4all.gpr_pls_fit(...)`
+- Parity gate: sklearn `GaussianProcessRegressor(RBF + WhiteKernel,
+  optimizer=None)` on shared T_train. `rmse_rel = 2.3e-10` under
+  the `1e-8` tolerance. The adapter factors out the PLS rotation-
+  convention mismatch by re-running pls4all to get the same T.
+- `noise_level` is the diagonal noise **variance** (σ², not σ),
+  matching sklearn `WhiteKernel(noise_level=...)`. Documented in
+  both the C header and the Python docstring.
+
+### Phase 48 — PSO-PLS (Binary Particle Swarm Optimisation)
+
+Variable selection via Binary PSO (Kennedy & Eberhart 1997).
+Continuous velocity update + sigmoid stochastic binarisation, with a
+repair step that flips random zero bits to ensure
+`popcount(mask) ≥ n_components`. Defaults follow Clerc-Kennedy 2002
+constriction: `w=0.729, c1=c2=1.494, v_max=4.0`.
+
+- C++ core: `cpp/src/core/pso_selection.{hpp,cpp}` (new)
+- C ABI: `p4a_pso_select`
+- Python: `pls4all.pso_select(...)`
+- Parity: paper-only (Kennedy & Eberhart 1997). Deterministic via
+  splitmix64 seeded by the `seed` parameter.
+
+### Phase 49 — VISSA-PLS (Variable Iterative Space Shrinkage Approach)
+
+Weighted Binary Matrix Sampling iterative shrinkage (Deng et al.
+2014). Initial w_j=0.5; per iteration sample n_submodels via
+Bernoulli(w_j), keep top-K by CV-RMSE, average their masks to update
+w_j, clamp to `[floor, 1-floor]`. Final selection: w_j > threshold.
+
+- C++ core: `cpp/src/core/vissa_selection.{hpp,cpp}` (new)
+- C ABI: `p4a_vissa_select`
+- Python: `pls4all.vissa_select(...)`
+- Parity: paper-only (Deng et al. 2014).
+
+### Codex review findings
+
+- PSO `inclusion_frequencies` undercounted repair-added bits;
+  fixed by moving the increment into the post-repair sync loop.
+- GPR `noise_level` parameter convention (σ² vs σ) was ambiguous
+  in the API doc; clarified in both the C header and Python
+  docstring.
+
+### Release
+
+- Library version: `0.96.0` → `0.97.0`.
+- ABI version: `1.13.0` → `1.14.0` (three new additive symbols:
+  `p4a_gpr_pls_fit`, `p4a_pso_select`, `p4a_vissa_select`).
+- Tags: `phase-47-gpr-on-pls`, `phase-48-pso-pls`,
+  `phase-49-vissa-pls`.
 
 ## [0.96.0-cuda-backend] — 2026-05-16
 

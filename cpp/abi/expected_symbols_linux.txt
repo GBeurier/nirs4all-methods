@@ -93,6 +93,7 @@ p4a_get_abi_version_patch
 p4a_get_build_info
 p4a_get_git_revision
 p4a_get_version_string
+p4a_gpr_pls_fit
 p4a_group_sparse_pls_fit
 p4a_kernel_pls_fit
 p4a_matrix_view_init_colmajor
@@ -141,6 +142,7 @@ p4a_pls_fit_simple
 p4a_pls_glm_fit
 p4a_pls_monitoring_run
 p4a_pls_qda_fit
+p4a_pso_select
 p4a_random_subspace_pls_fit
 p4a_recursive_pls_run
 p4a_ridge_pls_fit
@@ -157,4 +159,5 @@ p4a_validation_plan_destroy
 p4a_validation_plan_get_n_folds
 p4a_validation_plan_get_n_samples
 p4a_validation_plan_set_n_samples
+p4a_vissa_select
 p4a_weighted_pls_fit

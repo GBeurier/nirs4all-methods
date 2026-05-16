@@ -19,18 +19,49 @@
 
 #include "pls4all/p4a.h"
 
+#include "core/aom_preprocessing.hpp"
+#include "core/bipls_selection.hpp"
+#include "core/bve_selection.hpp"
+#include "core/cars_selection.hpp"
 #include "core/config.hpp"
 #include "core/context.hpp"
+#include "core/emcuve_selection.hpp"
 #include "core/extra_pls.hpp"
+#include "core/ga_selection.hpp"
+#include "core/gpr_pls.hpp"
+#include "core/gating_strategy.hpp"
+#include "core/interval_selection.hpp"
+#include "core/ipw_selection.hpp"
 #include "core/kernel_pls.hpp"
+#include "core/lw_pls.hpp"
+#include "core/mb_pls.hpp"
 #include "core/method_result.hpp"
 #include "core/model.hpp"
 #include "core/model_selection.hpp"
 #include "core/multiblock_extensions.hpp"
+#include "core/operator_bank.hpp"
 #include "core/pls_diagnostics.hpp"
+#include "core/pls_lda.hpp"
+#include "core/pls_logistic.hpp"
 #include "core/pls_monitoring.hpp"
+#include "core/pso_selection.hpp"
+#include "core/random_frog_selection.hpp"
+#include "core/randomization_selection.hpp"
 #include "core/recursive_pls.hpp"
+#include "core/rep_selection.hpp"
+#include "core/scars_selection.hpp"
+#include "core/shaving_selection.hpp"
+#include "core/sipls_selection.hpp"
+#include "core/spa_selection.hpp"
+#include "core/st_selection.hpp"
+#include "core/stability_selection.hpp"
+#include "core/t2_selection.hpp"
 #include "core/tensor_pls.hpp"
+#include "core/uve_selection.hpp"
+#include "core/validation.hpp"
+#include "core/vissa_selection.hpp"
+#include "core/variable_selection.hpp"
+#include "core/wvc_selection.hpp"
 
 namespace {
 
@@ -42,6 +73,31 @@ inline const ::pls4all::core::Config* as_core(const p4a_config_t* cfg) noexcept 
 }
 inline const ::pls4all::core::Model* as_core(const p4a_model_t* model) noexcept {
     return static_cast<const ::pls4all::core::Model*>(model);
+}
+inline const ::pls4all::core::OperatorBank* as_core(
+    const p4a_operator_bank_t* bank) noexcept {
+    return static_cast<const ::pls4all::core::OperatorBank*>(bank);
+}
+inline const ::pls4all::core::GatingStrategy* as_core(
+    const p4a_gating_strategy_t* gate) noexcept {
+    return static_cast<const ::pls4all::core::GatingStrategy*>(gate);
+}
+inline const ::pls4all::core::ValidationPlan* as_core(
+    const p4a_validation_plan_t* plan) noexcept {
+    return static_cast<const ::pls4all::core::ValidationPlan*>(plan);
+}
+
+// Convert a vector of int64 indices to a row-major double matrix (1 x n) for
+// transit via the universal handle's int64_arrays bag. The handle owns the
+// vector after std::move.
+inline std::vector<double> i64_to_double_vector(
+    const std::vector<std::int64_t>& src) {
+    std::vector<double> out;
+    out.reserve(src.size());
+    for (const auto v : src) {
+        out.push_back(static_cast<double>(v));
+    }
+    return out;
 }
 
 void set_error(p4a_context_t* ctx, const char* msg) noexcept {
@@ -187,6 +243,28 @@ P4A_API p4a_status_t p4a_method_result_get_int_vector(
         const auto& values = iter->second;
         *out_data = values.empty() ? nullptr : values.data();
         *out_size = static_cast<int32_t>(values.size());
+        return P4A_OK;
+    } catch (...) {
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_method_result_get_int64_vector(
+    const p4a_method_result_t* result,
+    const char* name,
+    const int64_t** out_data, int64_t* out_size) {
+    if (result == nullptr || name == nullptr || out_data == nullptr ||
+        out_size == nullptr) {
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        const auto iter = result->int64_arrays.find(name);
+        if (iter == result->int64_arrays.end()) {
+            return P4A_ERR_INVALID_ARGUMENT;
+        }
+        const auto& values = iter->second;
+        *out_data = values.empty() ? nullptr : values.data();
+        *out_size = static_cast<int64_t>(values.size());
         return P4A_OK;
     } catch (...) {
         return P4A_ERR_INTERNAL;
@@ -1370,6 +1448,57 @@ P4A_API p4a_status_t p4a_random_subspace_pls_fit(
     }
 }
 
+P4A_API p4a_status_t p4a_gpr_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    double length_scale,
+    double noise_level,
+    uint64_t seed,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_gpr_pls_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::GprPlsResult res;
+        const p4a_status_t status = ::pls4all::core::fit_gpr_pls(
+            *as_core(ctx), *as_core(cfg), *X, *Y,
+            length_scale, noise_level, seed, res);
+        if (status != P4A_OK) return status;
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto n = static_cast<std::int64_t>(res.n_samples);
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto k = static_cast<std::int64_t>(res.n_components);
+        handle->set_double_matrix("rotation_r", res.rotation_r, p, k);
+        handle->set_double_matrix("x_mean", res.x_mean, 1, p);
+        handle->set_double_matrix("alpha", res.gp.alpha, n, 1);
+        handle->set_double_matrix("L_lower", res.gp.L_lower, n, n);
+        handle->set_double_matrix("training_scores", res.gp.T_train, n, k);
+        handle->set_double_matrix("predictions", res.predictions, n, 1);
+        handle->set_double_matrix("predictive_variance",
+                                   res.predictive_variance, n, 1);
+        handle->set_scalar("length_scale", res.length_scale);
+        handle->set_scalar("noise_level", res.noise_level);
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("y_mean", res.gp.y_mean_scalar);
+        handle->set_scalar("rmse", in_sample_rmse(res.predictions, *Y));
+        handle->set_scalar("seed", static_cast<double>(seed));
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_gpr_pls_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_gpr_pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
 P4A_API p4a_status_t p4a_pls_fit_simple(
     const double* x, const double* y,
     int32_t n, int32_t p, int32_t q, int32_t n_components,
@@ -2010,6 +2139,1805 @@ P4A_API p4a_status_t p4a_kernel_pls_fit(
         return P4A_ERR_OUT_OF_MEMORY;
     } catch (...) {
         set_error(ctx, "internal error in p4a_kernel_pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+/* ============================================================================
+ * §17 — ABI shims for internal-only core algos closing the parity-gate gap
+ * ==========================================================================*/
+
+P4A_API p4a_status_t p4a_mb_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const int64_t* block_sizes,
+    int64_t n_blocks,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        block_sizes == nullptr) {
+        set_error(ctx, "null pointer in p4a_mb_pls_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (n_blocks <= 0) {
+        set_error(ctx, "n_blocks must be >= 1");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        ::pls4all::core::MbPlsResult res;
+        const p4a_status_t status = ::pls4all::core::fit_predict_mb_pls(
+            *as_core(ctx), *as_core(cfg), *X, *Y,
+            block_sizes, static_cast<std::size_t>(n_blocks), res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto n = static_cast<std::int64_t>(res.n_samples);
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto q = static_cast<std::int64_t>(res.n_targets);
+        const auto nb = static_cast<std::int64_t>(res.n_blocks);
+        handle->set_double_matrix("predictions",
+                                   std::move(res.predictions), n, q);
+        handle->set_double_matrix("coefficients",
+                                   std::move(res.coefficients), p, q);
+        handle->set_double_matrix("intercept",
+                                   std::move(res.intercept), 1, q);
+        handle->set_double_matrix("x_mean",
+                                   std::move(res.x_mean), 1, p);
+        handle->set_double_matrix("x_scale",
+                                   std::move(res.x_scale), 1, p);
+        handle->set_double_matrix("block_weights",
+                                   std::move(res.block_weights), 1, nb);
+        handle->set_scalar("n_blocks", static_cast<double>(res.n_blocks));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("rmse",
+                            in_sample_rmse(
+                                handle->double_arrays.at("predictions"),
+                                *Y));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_mb_pls_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_mb_pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_lw_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_neighbors,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_lw_pls_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::LwPlsResult res;
+        const p4a_status_t status = ::pls4all::core::fit_predict_lw_pls(
+            *as_core(ctx), *as_core(cfg), *X, *Y, n_neighbors, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto n = static_cast<std::int64_t>(res.n_samples);
+        const auto q = static_cast<std::int64_t>(res.n_targets);
+        const auto k = static_cast<std::int64_t>(res.n_neighbors);
+        handle->set_double_matrix("predictions",
+                                   std::move(res.predictions), n, q);
+        // Expose neighbor indices both as int64 (preferred) and as a 1-D
+        // int vector view (legacy callers may use vector_int).
+        std::vector<std::int64_t> nbrs = res.neighbor_indices;
+        handle->set_double_matrix(
+            "neighbor_indices", i64_to_double_vector(nbrs), n, k);
+        handle->set_int64_vector("neighbor_indices_i64", std::move(nbrs));
+        handle->set_scalar("n_neighbors",
+                            static_cast<double>(res.n_neighbors));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("rmse",
+                            in_sample_rmse(
+                                handle->double_arrays.at("predictions"),
+                                *Y));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_lw_pls_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_lw_pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+namespace {
+
+// Build a row-major p4a_matrix_view_t over a contiguous int32 buffer of
+// length `size`. Used by p4a_pls_lda_fit / p4a_pls_logistic_fit to bridge
+// the raw label pointer signature to the matrix-view consumer.
+p4a_matrix_view_t make_labels_view(const std::int32_t* labels,
+                                    std::int64_t size) noexcept {
+    p4a_matrix_view_t view{};
+    view.data = const_cast<std::int32_t*>(labels);
+    view.rows = size;
+    view.cols = 1;
+    view.row_stride = 1;
+    view.col_stride = 1;
+    view.dtype = P4A_DTYPE_I32;
+    view.reserved0 = 0;
+    return view;
+}
+
+}  // namespace
+
+P4A_API p4a_status_t p4a_pls_lda_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const int32_t* y_labels,
+    int64_t y_labels_size,
+    int32_t n_classes,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr ||
+        y_labels == nullptr) {
+        set_error(ctx, "null pointer in p4a_pls_lda_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (y_labels_size != X->rows) {
+        set_error(ctx, "y_labels_size must equal X.rows");
+        return P4A_ERR_SHAPE_MISMATCH;
+    }
+    try {
+        const p4a_matrix_view_t labels_view =
+            make_labels_view(y_labels, y_labels_size);
+        ::pls4all::core::PlsLdaResult res;
+        const p4a_status_t status = ::pls4all::core::fit_predict_pls_lda(
+            *as_core(ctx), *as_core(cfg), *X, labels_view, n_classes, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto n = static_cast<std::int64_t>(res.n_samples);
+        const auto k = static_cast<std::int64_t>(res.n_classes);
+        handle->set_double_matrix("decision_scores",
+                                   std::move(res.decision_scores), n, k);
+        handle->set_int_vector("predictions", std::move(res.predictions));
+        handle->set_scalar("n_classes",
+                            static_cast<double>(res.n_classes));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("n_samples",
+                            static_cast<double>(res.n_samples));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_pls_lda_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_pls_lda_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_pls_logistic_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const int32_t* y_labels,
+    int64_t y_labels_size,
+    int32_t n_classes,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr ||
+        y_labels == nullptr) {
+        set_error(ctx, "null pointer in p4a_pls_logistic_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (y_labels_size != X->rows) {
+        set_error(ctx, "y_labels_size must equal X.rows");
+        return P4A_ERR_SHAPE_MISMATCH;
+    }
+    try {
+        const p4a_matrix_view_t labels_view =
+            make_labels_view(y_labels, y_labels_size);
+        ::pls4all::core::PlsLogisticResult res;
+        const p4a_status_t status = ::pls4all::core::fit_predict_pls_logistic(
+            *as_core(ctx), *as_core(cfg), *X, labels_view, n_classes, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto n = static_cast<std::int64_t>(res.n_samples);
+        const auto k = static_cast<std::int64_t>(res.n_classes);
+        const auto kc = static_cast<std::int64_t>(res.n_components);
+        const auto km1 = (k > 0) ? (k - 1) : 0;
+        handle->set_double_matrix("decision_scores",
+                                   std::move(res.decision_scores), n, k);
+        handle->set_double_matrix("probabilities",
+                                   std::move(res.probabilities), n, k);
+        handle->set_double_matrix("intercepts",
+                                   std::move(res.intercepts), 1, km1);
+        handle->set_double_matrix("coefficients",
+                                   std::move(res.coefficients), km1, kc);
+        handle->set_int_vector("predictions", std::move(res.predictions));
+        handle->set_scalar("n_classes",
+                            static_cast<double>(res.n_classes));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("n_samples",
+                            static_cast<double>(res.n_samples));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_pls_logistic_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_pls_logistic_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_aom_preprocess_fit(
+    p4a_context_t* ctx,
+    const p4a_operator_bank_t* bank,
+    const p4a_gating_strategy_t* gate,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || bank == nullptr || gate == nullptr || X == nullptr) {
+        set_error(ctx, "null pointer in p4a_aom_preprocess_fit");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::AomPreprocessingResult res;
+        const p4a_status_t status = ::pls4all::core::apply_aom_preprocessing(
+            *as_core(ctx), *as_core(bank), *as_core(gate), *X, Y, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto n = static_cast<std::int64_t>(res.n_samples);
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto nop = static_cast<std::int64_t>(res.n_operators);
+        handle->set_double_matrix("transformed",
+                                   std::move(res.transformed), n, p);
+        handle->set_double_matrix("operator_outputs",
+                                   std::move(res.operator_outputs), nop, n * p);
+        handle->set_double_matrix("weights",
+                                   std::move(res.weights), 1, nop);
+        handle->set_int64_vector("operator_kinds",
+                                  std::move(res.operator_kinds));
+        handle->set_scalar("n_operators",
+                            static_cast<double>(res.n_operators));
+        handle->set_scalar("n_samples",
+                            static_cast<double>(res.n_samples));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("mode", static_cast<double>(res.mode));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_aom_preprocess_fit");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_aom_preprocess_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+/* ============================================================================
+ * §18 — ABI shims for Phase 5 variable-selection methods
+ * ==========================================================================*/
+
+P4A_API p4a_status_t p4a_variable_select_rank(
+    p4a_context_t* ctx,
+    const p4a_model_t* model,
+    const p4a_matrix_view_t* X,
+    int32_t method,
+    int32_t top_k,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || model == nullptr || X == nullptr) {
+        set_error(ctx, "null pointer in p4a_variable_select_rank");
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (method < 0 || method > 2) {
+        set_error(ctx, "method must be 0 (VIP), 1 (CoefMag), or 2 (SR)");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        const auto m =
+            static_cast<::pls4all::core::VariableSelectionMethod>(method);
+        ::pls4all::core::VariableSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_variables(
+            *as_core(ctx), *as_core(model), *X, m, top_k, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        handle->set_double_matrix("scores", std::move(res.scores), 1, p);
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("top_k", static_cast<double>(res.top_k));
+        handle->set_scalar("method", static_cast<double>(method));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_variable_select_rank");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_variable_select_rank");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_interval_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t interval_width,
+    int32_t step,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_interval_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::IntervalSelectionResult res;
+        const p4a_status_t status =
+            ::pls4all::core::cross_validate_intervals(
+                *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+                interval_width, step, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto n_intervals =
+            static_cast<std::int64_t>(res.rmse.size());
+        // Record best RMSE before moving the vector.
+        double best_rmse_value = 0.0;
+        if (res.best_interval_index >= 0 &&
+            static_cast<std::size_t>(res.best_interval_index) <
+                res.rmse.size()) {
+            best_rmse_value =
+                res.rmse[static_cast<std::size_t>(res.best_interval_index)];
+        }
+        // Build selected_indices from best_start .. best_start+best_length-1.
+        std::vector<std::int64_t> selected_indices;
+        if (res.best_length > 0 && res.best_start >= 0) {
+            selected_indices.reserve(
+                static_cast<std::size_t>(res.best_length));
+            for (std::int64_t f = 0; f < res.best_length; ++f) {
+                selected_indices.push_back(res.best_start + f);
+            }
+        }
+        handle->set_int64_vector("selected_indices",
+                                  std::move(selected_indices));
+        handle->set_int64_vector("intervals", std::move(res.intervals));
+        handle->set_double_matrix("rmse",
+                                   std::move(res.rmse), 1, n_intervals);
+        handle->set_double_matrix("metrics_matrix",
+                                   std::move(res.metrics_matrix),
+                                   n_intervals, 9);
+        handle->set_scalar("n_intervals",
+                            static_cast<double>(n_intervals));
+        handle->set_scalar("interval_width",
+                            static_cast<double>(res.interval_width));
+        handle->set_scalar("step", static_cast<double>(res.step));
+        handle->set_scalar("best_interval_index",
+                            static_cast<double>(res.best_interval_index));
+        handle->set_scalar("best_start",
+                            static_cast<double>(res.best_start));
+        handle->set_scalar("best_length",
+                            static_cast<double>(res.best_length));
+        handle->set_scalar("best_rmse", best_rmse_value);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_interval_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_interval_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_stability_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t top_k,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_stability_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::StabilitySelectionResult res;
+        const p4a_status_t status =
+            ::pls4all::core::select_by_coefficient_stability(
+                *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+                top_k, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto q = static_cast<std::int64_t>(res.n_targets);
+        handle->set_double_matrix("mean_coefficients",
+                                   std::move(res.mean_coefficients), p, q);
+        handle->set_double_matrix("std_coefficients",
+                                   std::move(res.std_coefficients), p, q);
+        handle->set_double_matrix("stability_scores",
+                                   std::move(res.stability_scores), 1, p);
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_repeats",
+                            static_cast<double>(res.n_repeats));
+        handle->set_scalar("top_k", static_cast<double>(res.top_k));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_stability_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_stability_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_uve_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t noise_features,
+    uint64_t noise_seed,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_uve_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::UveSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_uve(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            noise_features, noise_seed, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto nn = static_cast<std::int64_t>(res.n_noise_features);
+        handle->set_double_matrix("real_stability_scores",
+                                   std::move(res.real_stability_scores),
+                                   1, p);
+        handle->set_double_matrix("noise_stability_scores",
+                                   std::move(res.noise_stability_scores),
+                                   1, nn);
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_repeats",
+                            static_cast<double>(res.n_repeats));
+        handle->set_scalar("n_noise_features",
+                            static_cast<double>(res.n_noise_features));
+        handle->set_scalar("selected_count",
+                            static_cast<double>(res.selected_count));
+        handle->set_scalar("noise_threshold", res.noise_threshold);
+        handle->set_scalar("noise_seed",
+                            static_cast<double>(res.noise_seed));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_uve_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_uve_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_spa_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t top_k,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_spa_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::SpaSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_spa(
+            *as_core(ctx), *as_core(cfg), *X, *Y, top_k, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto k = static_cast<std::int64_t>(res.top_k);
+        handle->set_double_matrix("coefficient_scores",
+                                   std::move(res.coefficient_scores), 1, p);
+        handle->set_double_matrix("selection_scores",
+                                   std::move(res.selection_scores), 1, k);
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("top_k", static_cast<double>(res.top_k));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_spa_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_spa_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_cars_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_iterations,
+    int32_t min_features,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_cars_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::CarsSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_cars(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            n_iterations, min_features, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto ni = static_cast<std::int64_t>(res.n_iterations);
+        handle->set_double_matrix("coefficient_scores",
+                                   std::move(res.coefficient_scores), ni, p);
+        handle->set_double_matrix("rmse_by_iteration",
+                                   std::move(res.rmse_by_iteration), 1, ni);
+        handle->set_double_matrix("retained_counts",
+                                   i64_to_double_vector(res.retained_counts),
+                                   1, ni);
+        handle->set_int64_vector("retained_counts_i64",
+                                  std::move(res.retained_counts));
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("n_iterations",
+                            static_cast<double>(res.n_iterations));
+        handle->set_scalar("min_features",
+                            static_cast<double>(res.min_features));
+        handle->set_scalar("best_iteration",
+                            static_cast<double>(res.best_iteration));
+        handle->set_scalar("best_rmse", res.best_rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_cars_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_cars_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_random_frog_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_iterations,
+    int32_t initial_size,
+    int32_t min_size,
+    int32_t max_size,
+    int32_t top_k,
+    uint64_t seed,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_random_frog_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::RandomFrogSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_random_frog(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            n_iterations, initial_size, min_size, max_size, top_k, seed,
+            res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto ni = static_cast<std::int64_t>(res.n_iterations);
+        handle->set_double_matrix("global_scores",
+                                   std::move(res.global_scores), 1, p);
+        handle->set_double_matrix("inclusion_frequencies",
+                                   std::move(res.inclusion_frequencies), 1, p);
+        handle->set_double_matrix("rmse_by_iteration",
+                                   std::move(res.rmse_by_iteration), 1, ni);
+        handle->set_double_matrix("subset_sizes",
+                                   i64_to_double_vector(res.subset_sizes),
+                                   1, ni);
+        handle->set_int64_vector("subset_sizes_i64",
+                                  std::move(res.subset_sizes));
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_int64_vector("best_indices",
+                                  std::move(res.best_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("n_iterations",
+                            static_cast<double>(res.n_iterations));
+        handle->set_scalar("initial_size",
+                            static_cast<double>(res.initial_size));
+        handle->set_scalar("min_size",
+                            static_cast<double>(res.min_size));
+        handle->set_scalar("max_size",
+                            static_cast<double>(res.max_size));
+        handle->set_scalar("top_k", static_cast<double>(res.top_k));
+        handle->set_scalar("seed", static_cast<double>(res.seed));
+        handle->set_scalar("best_rmse", res.best_rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_random_frog_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_random_frog_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_scars_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_iterations,
+    int32_t min_features,
+    double sample_fraction,
+    uint64_t seed,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_scars_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::ScarsSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_scars(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            n_iterations, min_features, sample_fraction, seed, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto ni = static_cast<std::int64_t>(res.n_iterations);
+        handle->set_double_matrix("coefficient_scores",
+                                   std::move(res.coefficient_scores), ni, p);
+        handle->set_double_matrix("stability_scores",
+                                   std::move(res.stability_scores), 1, p);
+        handle->set_double_matrix("rmse_by_iteration",
+                                   std::move(res.rmse_by_iteration), 1, ni);
+        handle->set_double_matrix("retained_counts",
+                                   i64_to_double_vector(res.retained_counts),
+                                   1, ni);
+        handle->set_int64_vector("retained_counts_i64",
+                                  std::move(res.retained_counts));
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("n_iterations",
+                            static_cast<double>(res.n_iterations));
+        handle->set_scalar("min_features",
+                            static_cast<double>(res.min_features));
+        handle->set_scalar("sample_count",
+                            static_cast<double>(res.sample_count));
+        handle->set_scalar("sample_fraction", res.sample_fraction);
+        handle->set_scalar("best_iteration",
+                            static_cast<double>(res.best_iteration));
+        handle->set_scalar("seed", static_cast<double>(res.seed));
+        handle->set_scalar("best_rmse", res.best_rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_scars_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_scars_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_ga_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_generations,
+    int32_t population_size,
+    int32_t min_features,
+    int32_t max_features,
+    double mutation_rate,
+    uint64_t seed,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_ga_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::GaSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_ga(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            n_generations, population_size, min_features, max_features,
+            mutation_rate, seed, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto ng = static_cast<std::int64_t>(res.n_generations);
+        handle->set_double_matrix("global_scores",
+                                   std::move(res.global_scores), 1, p);
+        handle->set_double_matrix("inclusion_frequencies",
+                                   std::move(res.inclusion_frequencies), 1, p);
+        handle->set_double_matrix("best_rmse_by_generation",
+                                   std::move(res.best_rmse_by_generation),
+                                   1, ng);
+        handle->set_double_matrix("mean_rmse_by_generation",
+                                   std::move(res.mean_rmse_by_generation),
+                                   1, ng);
+        handle->set_double_matrix("best_subset_sizes",
+                                   i64_to_double_vector(res.best_subset_sizes),
+                                   1, ng);
+        handle->set_int64_vector("best_subset_sizes_i64",
+                                  std::move(res.best_subset_sizes));
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("n_generations",
+                            static_cast<double>(res.n_generations));
+        handle->set_scalar("population_size",
+                            static_cast<double>(res.population_size));
+        handle->set_scalar("min_features",
+                            static_cast<double>(res.min_features));
+        handle->set_scalar("max_features",
+                            static_cast<double>(res.max_features));
+        handle->set_scalar("mutation_rate", res.mutation_rate);
+        handle->set_scalar("seed", static_cast<double>(res.seed));
+        handle->set_scalar("best_rmse", res.best_rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_ga_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_ga_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_pso_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_swarm,
+    int32_t n_iterations,
+    double w,
+    double c1,
+    double c2,
+    double v_max,
+    uint64_t seed,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_pso_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::PsoSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_pso(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            n_swarm, n_iterations, w, c1, c2, v_max, seed, res);
+        if (status != P4A_OK) return status;
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto ni = static_cast<std::int64_t>(res.n_iterations);
+        handle->set_double_matrix("inclusion_frequencies",
+                                   std::move(res.inclusion_frequencies),
+                                   1, p);
+        handle->set_double_matrix("best_rmse_by_iteration",
+                                   std::move(res.best_rmse_by_iteration),
+                                   1, ni);
+        handle->set_double_matrix("mean_rmse_by_iteration",
+                                   std::move(res.mean_rmse_by_iteration),
+                                   1, ni);
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("n_swarm",
+                            static_cast<double>(res.n_swarm));
+        handle->set_scalar("n_iterations",
+                            static_cast<double>(res.n_iterations));
+        handle->set_scalar("w", res.w);
+        handle->set_scalar("c1", res.c1);
+        handle->set_scalar("c2", res.c2);
+        handle->set_scalar("v_max", res.v_max);
+        handle->set_scalar("seed", static_cast<double>(res.seed));
+        handle->set_scalar("best_rmse", res.best_rmse);
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_pso_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_pso_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_vissa_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_iterations,
+    int32_t n_submodels,
+    double ratio_kept,
+    double threshold,
+    double floor_probability,
+    uint64_t seed,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_vissa_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::VissaSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_vissa(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            n_iterations, n_submodels, ratio_kept, threshold,
+            floor_probability, seed, res);
+        if (status != P4A_OK) return status;
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto ni = static_cast<std::int64_t>(res.n_iterations);
+        handle->set_double_matrix("final_probabilities",
+                                   std::move(res.final_probabilities), 1, p);
+        handle->set_double_matrix("inclusion_frequencies",
+                                   std::move(res.inclusion_frequencies),
+                                   1, p);
+        handle->set_double_matrix("best_rmse_by_iteration",
+                                   std::move(res.best_rmse_by_iteration),
+                                   1, ni);
+        handle->set_double_matrix("mean_rmse_by_iteration",
+                                   std::move(res.mean_rmse_by_iteration),
+                                   1, ni);
+        handle->set_double_matrix("top_k_per_iteration",
+                                   std::move(res.top_k_per_iteration),
+                                   ni, p);
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("n_iterations",
+                            static_cast<double>(res.n_iterations));
+        handle->set_scalar("n_submodels",
+                            static_cast<double>(res.n_submodels));
+        handle->set_scalar("ratio_kept", res.ratio_kept);
+        handle->set_scalar("threshold", res.threshold);
+        handle->set_scalar("floor_probability", res.floor_probability);
+        handle->set_scalar("seed", static_cast<double>(res.seed));
+        handle->set_scalar("best_rmse", res.best_rmse);
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_vissa_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_vissa_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_shaving_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_steps,
+    int32_t min_features,
+    double shave_fraction,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_shaving_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::ShavingSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_shaving(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            n_steps, min_features, shave_fraction, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto ns = static_cast<std::int64_t>(res.n_steps);
+        handle->set_double_matrix("coefficient_scores",
+                                   std::move(res.coefficient_scores), ns, p);
+        handle->set_double_matrix("rmse_by_step",
+                                   std::move(res.rmse_by_step), 1, ns);
+        handle->set_double_matrix("retained_counts",
+                                   i64_to_double_vector(res.retained_counts),
+                                   1, ns);
+        handle->set_int64_vector("retained_counts_i64",
+                                  std::move(res.retained_counts));
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("n_steps", static_cast<double>(res.n_steps));
+        handle->set_scalar("min_features",
+                            static_cast<double>(res.min_features));
+        handle->set_scalar("best_step",
+                            static_cast<double>(res.best_step));
+        handle->set_scalar("shave_fraction", res.shave_fraction);
+        handle->set_scalar("best_rmse", res.best_rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_shaving_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_shaving_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_bve_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_steps,
+    int32_t min_features,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_bve_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::BveSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_bve(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            n_steps, min_features, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto ns = static_cast<std::int64_t>(res.n_steps);
+        handle->set_double_matrix("candidate_rmse",
+                                   std::move(res.candidate_rmse), ns, p);
+        handle->set_double_matrix("rmse_by_step",
+                                   std::move(res.rmse_by_step), 1, ns);
+        handle->set_double_matrix("retained_counts",
+                                   i64_to_double_vector(res.retained_counts),
+                                   1, ns);
+        handle->set_int64_vector("retained_counts_i64",
+                                  std::move(res.retained_counts));
+        handle->set_int64_vector("removed_indices",
+                                  std::move(res.removed_indices));
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("n_steps", static_cast<double>(res.n_steps));
+        handle->set_scalar("min_features",
+                            static_cast<double>(res.min_features));
+        handle->set_scalar("best_step",
+                            static_cast<double>(res.best_step));
+        handle->set_scalar("best_rmse", res.best_rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_bve_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_bve_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_t2_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    const double* alpha_thresholds,
+    int64_t n_alphas,
+    int32_t min_selected,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr || alpha_thresholds == nullptr) {
+        set_error(ctx, "null pointer in p4a_t2_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (n_alphas <= 0) {
+        set_error(ctx, "n_alphas must be >= 1");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        std::vector<double> alpha(
+            alpha_thresholds,
+            alpha_thresholds + static_cast<std::size_t>(n_alphas));
+        ::pls4all::core::T2SelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_t2(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            alpha, min_selected, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto na = static_cast<std::int64_t>(res.n_alphas);
+        handle->set_double_matrix("t2_scores",
+                                   std::move(res.t2_scores), 1, p);
+        handle->set_double_matrix("ucl_by_alpha",
+                                   std::move(res.ucl_by_alpha), 1, na);
+        handle->set_double_matrix("rmse_by_alpha",
+                                   std::move(res.rmse_by_alpha), 1, na);
+        handle->set_double_matrix("selected_counts",
+                                   i64_to_double_vector(res.selected_counts),
+                                   1, na);
+        handle->set_int64_vector("selected_counts_i64",
+                                  std::move(res.selected_counts));
+        handle->set_int64_vector("selected_mask",
+                                  std::move(res.selected_mask));
+        handle->set_int64_vector("selected_indices_best_error",
+                                  std::move(res.selected_indices_best_error));
+        handle->set_int64_vector("selected_indices_min_set",
+                                  std::move(res.selected_indices_min_set));
+        // Convenience alias: parity-gate default key is selected_indices →
+        // use the "best_error" subset (lowest RMSE), matching the README.
+        handle->set_int64_vector("selected_indices",
+                                  handle->int64_arrays.at(
+                                      "selected_indices_best_error"));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("n_alphas",
+                            static_cast<double>(res.n_alphas));
+        handle->set_scalar("min_selected",
+                            static_cast<double>(res.min_selected));
+        handle->set_scalar("best_error_index",
+                            static_cast<double>(res.best_error_index));
+        handle->set_scalar("min_set_index",
+                            static_cast<double>(res.min_set_index));
+        handle->set_scalar("best_rmse", res.best_rmse);
+        handle->set_scalar("min_set_rmse", res.min_set_rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_t2_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_t2_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_wvc_select(
+    p4a_context_t* ctx,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_components,
+    int32_t top_k,
+    int32_t normalize,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_wvc_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::WvcSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_wvc(
+            *as_core(ctx), *X, *Y, n_components, top_k,
+            normalize != 0, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto q = static_cast<std::int64_t>(res.n_targets);
+        const auto k = static_cast<std::int64_t>(res.n_components);
+        handle->set_double_matrix("weights_w",
+                                   std::move(res.weights_w), p, k);
+        handle->set_double_matrix("loadings_p",
+                                   std::move(res.loadings_p), p, k);
+        handle->set_double_matrix("y_loadings_q",
+                                   std::move(res.y_loadings_q), q, k);
+        handle->set_double_matrix("wvc_scores",
+                                   std::move(res.wvc_scores), 1, p);
+        handle->set_double_matrix("final_scores",
+                                   std::move(res.final_scores), 1, p);
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("top_k", static_cast<double>(res.top_k));
+        handle->set_scalar("normalize",
+                            static_cast<double>(res.normalize));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_wvc_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_wvc_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_wvc_threshold_select(
+    p4a_context_t* ctx,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_components,
+    int32_t normalize,
+    double score_threshold,
+    double threshold_factor,
+    int32_t min_selected,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_wvc_threshold_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::WvcThresholdSelectionResult res;
+        const p4a_status_t status =
+            ::pls4all::core::select_by_wvc_threshold(
+                *as_core(ctx), *X, *Y, n_components, normalize != 0,
+                score_threshold, threshold_factor, min_selected, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        handle->set_double_matrix("final_scores",
+                                   std::move(res.final_scores), 1, p);
+        handle->set_int64_vector("ranked_indices",
+                                  std::move(res.ranked_indices));
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("min_selected",
+                            static_cast<double>(res.min_selected));
+        handle->set_scalar("normalize",
+                            static_cast<double>(res.normalize));
+        handle->set_scalar("score_threshold", res.score_threshold);
+        handle->set_scalar("threshold_factor", res.threshold_factor);
+        handle->set_scalar("mean_score", res.mean_score);
+        handle->set_scalar("effective_threshold", res.effective_threshold);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_wvc_threshold_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_wvc_threshold_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_emcuve_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t noise_features,
+    uint64_t noise_seed,
+    int32_t n_ensembles,
+    double vote_threshold,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_emcuve_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::EmcuveSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_emcuve(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            noise_features, noise_seed, n_ensembles, vote_threshold, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto ne = static_cast<std::int64_t>(res.n_ensembles);
+        handle->set_double_matrix("mean_real_stability_scores",
+                                   std::move(res.mean_real_stability_scores),
+                                   1, p);
+        handle->set_double_matrix("vote_frequencies",
+                                   std::move(res.vote_frequencies), 1, p);
+        handle->set_double_matrix("noise_thresholds",
+                                   std::move(res.noise_thresholds), 1, ne);
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_repeats",
+                            static_cast<double>(res.n_repeats));
+        handle->set_scalar("n_noise_features",
+                            static_cast<double>(res.n_noise_features));
+        handle->set_scalar("n_ensembles",
+                            static_cast<double>(res.n_ensembles));
+        handle->set_scalar("selected_count",
+                            static_cast<double>(res.selected_count));
+        handle->set_scalar("noise_seed",
+                            static_cast<double>(res.noise_seed));
+        handle->set_scalar("vote_threshold", res.vote_threshold);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_emcuve_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_emcuve_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_randomization_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_permutations,
+    uint64_t randomization_seed,
+    double alpha,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_randomization_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::RandomizationSelectionResult res;
+        const p4a_status_t status =
+            ::pls4all::core::select_by_randomization_test(
+                *as_core(ctx), *as_core(cfg), *X, *Y,
+                n_permutations, randomization_seed, alpha, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        handle->set_double_matrix("observed_scores",
+                                   std::move(res.observed_scores), 1, p);
+        handle->set_double_matrix("p_values",
+                                   std::move(res.p_values), 1, p);
+        handle->set_double_matrix("exceedance_counts",
+                                   i64_to_double_vector(res.exceedance_counts),
+                                   1, p);
+        handle->set_int64_vector("exceedance_counts_i64",
+                                  std::move(res.exceedance_counts));
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_permutations",
+                            static_cast<double>(res.n_permutations));
+        handle->set_scalar("selected_count",
+                            static_cast<double>(res.selected_count));
+        handle->set_scalar("randomization_seed",
+                            static_cast<double>(res.randomization_seed));
+        handle->set_scalar("alpha", res.alpha);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_randomization_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_randomization_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_bipls_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t interval_width,
+    int32_t min_intervals,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_bipls_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::BiplsSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_bipls(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            interval_width, min_intervals, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto path_len =
+            static_cast<std::int64_t>(res.rmse_path.size());
+        handle->set_int64_vector("intervals", std::move(res.intervals));
+        handle->set_int64_vector("removed_intervals",
+                                  std::move(res.removed_intervals));
+        handle->set_double_matrix("active_counts",
+                                   i64_to_double_vector(res.active_counts),
+                                   1, path_len);
+        handle->set_int64_vector("active_counts_i64",
+                                  std::move(res.active_counts));
+        handle->set_double_matrix("rmse_path",
+                                   std::move(res.rmse_path), 1, path_len);
+        handle->set_int64_vector("selected_interval_indices",
+                                  std::move(res.selected_interval_indices));
+        handle->set_int64_vector("selected_feature_indices",
+                                  std::move(res.selected_feature_indices));
+        // Alias for the parity-gate default key.
+        handle->set_int64_vector("selected_indices",
+                                  handle->int64_arrays.at(
+                                      "selected_feature_indices"));
+        handle->set_scalar("n_intervals",
+                            static_cast<double>(res.n_intervals));
+        handle->set_scalar("interval_width",
+                            static_cast<double>(res.interval_width));
+        handle->set_scalar("min_intervals",
+                            static_cast<double>(res.min_intervals));
+        handle->set_scalar("best_step",
+                            static_cast<double>(res.best_step));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_bipls_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_bipls_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_sipls_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t interval_width,
+    int32_t combination_size,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_sipls_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::SiplsSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_sipls(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            interval_width, combination_size, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto nc =
+            static_cast<std::int64_t>(res.rmse_by_combination.size());
+        handle->set_int64_vector("intervals", std::move(res.intervals));
+        handle->set_int64_vector("candidate_interval_indices",
+                                  std::move(res.candidate_interval_indices));
+        handle->set_double_matrix("rmse_by_combination",
+                                   std::move(res.rmse_by_combination), 1, nc);
+        handle->set_int64_vector("selected_interval_indices",
+                                  std::move(res.selected_interval_indices));
+        handle->set_int64_vector("selected_feature_indices",
+                                  std::move(res.selected_feature_indices));
+        handle->set_int64_vector("selected_indices",
+                                  handle->int64_arrays.at(
+                                      "selected_feature_indices"));
+        handle->set_scalar("n_intervals",
+                            static_cast<double>(res.n_intervals));
+        handle->set_scalar("interval_width",
+                            static_cast<double>(res.interval_width));
+        handle->set_scalar("combination_size",
+                            static_cast<double>(res.combination_size));
+        handle->set_scalar("n_combinations",
+                            static_cast<double>(res.n_combinations));
+        handle->set_scalar("best_combination_index",
+                            static_cast<double>(res.best_combination_index));
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_sipls_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_sipls_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_rep_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_steps,
+    int32_t min_features,
+    int32_t remove_count,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_rep_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::RepSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_rep(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            n_steps, min_features, remove_count, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto ns = static_cast<std::int64_t>(res.n_steps);
+        handle->set_double_matrix("coefficient_scores",
+                                   std::move(res.coefficient_scores), ns, p);
+        handle->set_double_matrix("rmse_by_step",
+                                   std::move(res.rmse_by_step), 1, ns);
+        handle->set_double_matrix("retained_counts",
+                                   i64_to_double_vector(res.retained_counts),
+                                   1, ns);
+        handle->set_double_matrix("removed_counts",
+                                   i64_to_double_vector(res.removed_counts),
+                                   1, ns);
+        handle->set_int64_vector("retained_counts_i64",
+                                  std::move(res.retained_counts));
+        handle->set_int64_vector("removed_counts_i64",
+                                  std::move(res.removed_counts));
+        handle->set_int64_vector("removed_indices",
+                                  std::move(res.removed_indices));
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("n_steps", static_cast<double>(res.n_steps));
+        handle->set_scalar("min_features",
+                            static_cast<double>(res.min_features));
+        handle->set_scalar("remove_count",
+                            static_cast<double>(res.remove_count));
+        handle->set_scalar("best_step",
+                            static_cast<double>(res.best_step));
+        handle->set_scalar("best_rmse", res.best_rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_rep_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_rep_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_ipw_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_iterations,
+    int32_t top_k,
+    double damping,
+    double weight_floor,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr) {
+        set_error(ctx, "null pointer in p4a_ipw_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::IpwSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_ipw(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            n_iterations, top_k, damping, weight_floor, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto ni = static_cast<std::int64_t>(res.n_iterations);
+        const auto k = static_cast<std::int64_t>(res.top_k);
+        handle->set_double_matrix("score_path",
+                                   std::move(res.score_path), ni, p);
+        handle->set_double_matrix("weight_path",
+                                   std::move(res.weight_path), ni, p);
+        handle->set_double_matrix("rmse_by_iteration",
+                                   std::move(res.rmse_by_iteration), 1, ni);
+        handle->set_int64_vector("selected_by_iteration",
+                                  std::move(res.selected_by_iteration));
+        handle->set_double_matrix(
+            "selected_by_iteration_d",
+            i64_to_double_vector(handle->int64_arrays.at(
+                "selected_by_iteration")),
+            ni, k);
+        handle->set_int64_vector("ranking_indices",
+                                  std::move(res.ranking_indices));
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("n_iterations",
+                            static_cast<double>(res.n_iterations));
+        handle->set_scalar("top_k", static_cast<double>(res.top_k));
+        handle->set_scalar("best_iteration",
+                            static_cast<double>(res.best_iteration));
+        handle->set_scalar("damping", res.damping);
+        handle->set_scalar("weight_floor", res.weight_floor);
+        handle->set_scalar("best_rmse", res.best_rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_ipw_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_ipw_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_st_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    const double* thresholds,
+    int64_t n_thresholds,
+    int32_t min_selected,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
+        plan == nullptr || thresholds == nullptr) {
+        set_error(ctx, "null pointer in p4a_st_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (n_thresholds <= 0) {
+        set_error(ctx, "n_thresholds must be >= 1");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        std::vector<double> thr(
+            thresholds,
+            thresholds + static_cast<std::size_t>(n_thresholds));
+        ::pls4all::core::StSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_st(
+            *as_core(ctx), *as_core(cfg), *X, *Y, *as_core(plan),
+            thr, min_selected, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto nt = static_cast<std::int64_t>(res.n_thresholds);
+        handle->set_double_matrix("coefficient_scores",
+                                   std::move(res.coefficient_scores), 1, p);
+        handle->set_double_matrix("thresholds",
+                                   std::move(res.thresholds), 1, nt);
+        handle->set_double_matrix("rmse_by_threshold",
+                                   std::move(res.rmse_by_threshold), 1, nt);
+        handle->set_double_matrix("selected_counts",
+                                   i64_to_double_vector(res.selected_counts),
+                                   1, nt);
+        handle->set_int64_vector("selected_counts_i64",
+                                  std::move(res.selected_counts));
+        handle->set_int64_vector("selected_masks",
+                                  std::move(res.selected_masks));
+        handle->set_int64_vector("ranking_indices",
+                                  std::move(res.ranking_indices));
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("n_thresholds",
+                            static_cast<double>(res.n_thresholds));
+        handle->set_scalar("min_selected",
+                            static_cast<double>(res.min_selected));
+        handle->set_scalar("best_threshold_index",
+                            static_cast<double>(res.best_threshold_index));
+        handle->set_scalar("best_threshold", res.best_threshold);
+        handle->set_scalar("best_rmse", res.best_rmse);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_st_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_st_select");
         return P4A_ERR_INTERNAL;
     }
 }

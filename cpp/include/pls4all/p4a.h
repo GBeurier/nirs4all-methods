@@ -630,7 +630,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.96.0+abi.1.13.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.97.0+abi.1.14.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
@@ -850,6 +850,14 @@ P4A_API p4a_status_t p4a_method_result_get_int_vector(
     const p4a_method_result_t* result,
     const char* name,
     const int32_t** out_data, int32_t* out_size);
+
+/* Read a named int64 vector. Returns P4A_ERR_INVALID_ARGUMENT when the name is
+ * absent. Used by the §5 / §6 selectors to expose `selected_indices`,
+ * `removed_indices`, etc. without losing precision for large feature counts. */
+P4A_API p4a_status_t p4a_method_result_get_int64_vector(
+    const p4a_method_result_t* result,
+    const char* name,
+    const int64_t** out_data, int64_t* out_size);
 
 /* Read a named scalar. Returns P4A_ERR_INVALID_ARGUMENT when the name is absent. */
 P4A_API p4a_status_t p4a_method_result_get_scalar(
@@ -1243,6 +1251,45 @@ P4A_API p4a_status_t p4a_random_subspace_pls_fit(
     uint64_t seed,
     p4a_method_result_t** out_result);
 
+/* GPR-on-PLS (§47): two-stage regression. First fits a SIMPLS PLS with
+ * cfg.n_components latent components and rotation R (p x k). Then fits a
+ * Gaussian Process with RBF kernel
+ *     K(t_i, t_j) = exp(-||t_i - t_j||^2 / (2 * length_scale^2))
+ * and diagonal noise sigma^2 (the `noise_level` parameter is interpreted
+ * as **variance**, matching sklearn `WhiteKernel(noise_level=...)`, not
+ * standard deviation). The GP solve uses Cholesky on (K + noise_level * I)
+ * on the training scores T = (X - x_mean) @ R and centred y.
+ * Y must be single-target (n x 1) in Phase 47.
+ *
+ * `seed` is reserved for ABI symmetry with the ensemble methods; the fit
+ * is fully deterministic.
+ *
+ * Result keys:
+ *   "rotation_r"           (n_features x n_components)
+ *   "x_mean"               (1 x n_features)
+ *   "alpha"                (n_samples x 1)            — GP dual weights
+ *   "L_lower"              (n_samples x n_samples)    — Cholesky factor
+ *   "training_scores"      (n_samples x n_components)
+ *   "predictions"          (n_samples x 1)
+ *   "predictive_variance"  (n_samples x 1)            — noise-free posterior
+ *   scalar "length_scale", "noise_level", "n_components", "y_mean", "rmse", "seed"
+ *
+ * Returns P4A_ERR_INVALID_ARGUMENT for non-positive length_scale or
+ * noise_level, or for n_components outside [1, min(n,p)].
+ * Returns P4A_ERR_SHAPE_MISMATCH if Y has more than one column.
+ * Returns P4A_ERR_NUMERICAL_FAILURE if the Cholesky of (K + noise*I)
+ * fails (typically at very low noise with redundant score directions).
+ */
+P4A_API p4a_status_t p4a_gpr_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    double length_scale,
+    double noise_level,
+    uint64_t seed,
+    p4a_method_result_t** out_result);
+
 /* Simplified SIMPLS PLS regression — raw-pointer signature for
  * language bindings whose FFI layer struggles with the
  * `p4a_matrix_view_t*` parameter pattern (notably Emscripten 5.0.7
@@ -1402,6 +1449,434 @@ P4A_API p4a_status_t p4a_pls_diagnostics_compute(
     const p4a_model_t* model,
     const p4a_matrix_view_t* X,
     const p4a_matrix_view_t* X_reference,
+    p4a_method_result_t** out_result);
+
+/* ============================================================================
+ * 17. ABI shims for §2 internal-only core algos (Phase 4r/4s/4p/4q)
+ *     and §4 AOM preprocessing (Phase 6a)
+ * ==========================================================================
+ * These four core algorithms have full C++ implementations in cpp/src/core
+ * but were not previously exposed via the public C ABI. Added 2026-05 to
+ * close the parity-gate gap identified in docs/parity_audit_2026_05/.
+ */
+
+/* MB-PLS — block-weighted multi-block PLS (Phase 4r). Predicts on the
+ * concatenated feature matrix X (n × Σ block_sizes). Result keys:
+ *   "predictions"    (n × n_targets)
+ *   "coefficients"   (Σ block_sizes × n_targets, original X scale)
+ *   "x_mean"         (1 × Σ block_sizes)
+ *   "x_scale"        (1 × Σ block_sizes)
+ *   "intercept"      (1 × n_targets)
+ *   "block_weights"  (1 × n_blocks)
+ *   scalar "n_blocks", scalar "rmse"
+ */
+P4A_API p4a_status_t p4a_mb_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const int64_t* block_sizes,
+    int64_t n_blocks,
+    p4a_method_result_t** out_result);
+
+/* LW-PLS — locally-weighted PLS with k-NN windows (Phase 4s). Predicts
+ * each test row from a per-row PLS refit on its `n_neighbors` nearest
+ * training rows. Currently the training set is X itself (in-sample). Result
+ * keys:
+ *   "predictions"            (n × n_targets) double matrix
+ *   "neighbor_indices"       (n × n_neighbors) double matrix (cast from
+ *                            int64 for unified matrix-shaped reads)
+ *   int64 "neighbor_indices_i64" — same data as a row-major int64 vector
+ *                            (preferred for index semantics)
+ *   scalar "n_neighbors", scalar "n_components", scalar "rmse"
+ */
+P4A_API p4a_status_t p4a_lw_pls_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_neighbors,
+    p4a_method_result_t** out_result);
+
+/* PLS-LDA — Linear Discriminant Analysis on PLS scores (Phase 4p). Result
+ * keys:
+ *   "decision_scores"   (n × n_classes)
+ *   int "predictions"   (n)
+ *   scalar "n_classes", scalar "n_components"
+ */
+P4A_API p4a_status_t p4a_pls_lda_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const int32_t* y_labels,
+    int64_t y_labels_size,
+    int32_t n_classes,
+    p4a_method_result_t** out_result);
+
+/* PLS-Logistic — multinomial logistic regression on PLS scores (Phase 4q).
+ * Result keys:
+ *   "decision_scores"  (n × n_classes)
+ *   "probabilities"    (n × n_classes)
+ *   "intercepts"       (1 × (n_classes - 1))
+ *   "coefficients"     ((n_classes - 1) × n_components)
+ *   int "predictions"  (n)
+ *   scalar "n_classes", scalar "n_components"
+ */
+P4A_API p4a_status_t p4a_pls_logistic_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const int32_t* y_labels,
+    int64_t y_labels_size,
+    int32_t n_classes,
+    p4a_method_result_t** out_result);
+
+/* AOM preprocessing fit/transform (Phase 6a). Applies an operator bank
+ * through the gating strategy and returns both the per-operator outputs
+ * and the gated/mixed transformed matrix. Y is optional (some operators
+ * use it, e.g. EPO; pass NULL when not needed). Result keys:
+ *   "transformed"        (n × n_features) — final gated transform
+ *   "operator_outputs"   (n_operators × (n × n_features), operator-major,
+ *                         stored as a (n_operators × (n*n_features)) matrix)
+ *   "weights"            (1 × n_operators) — gating weights at fit time
+ *   int64 "operator_kinds" (n_operators) — P4A_OP_* enum values
+ *   scalar "n_operators", scalar "mode" (gating mode integer)
+ */
+P4A_API p4a_status_t p4a_aom_preprocess_fit(
+    p4a_context_t* ctx,
+    const p4a_operator_bank_t* bank,
+    const p4a_gating_strategy_t* gate,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    p4a_method_result_t** out_result);
+
+/* ============================================================================
+ * 18. ABI shims for §6 Phase 5 variable-selection methods
+ * ==========================================================================
+ * Each selector returns a p4a_method_result_t with at minimum:
+ *   int64 "selected_indices"     — top-k (or final) selected feature indices
+ *   double "scores" or "rmse_*"  — algorithm-specific score/RMSE arrays
+ *   scalar "best_rmse" (when applicable)
+ *
+ * All selectors that take a ValidationPlan use the same plan API as
+ * `p4a_aom_global_select`. Selectors that take seeds expose them as
+ * `uint64_t` parameters.
+ */
+
+/* VIP / coefficient-magnitude / selectivity-ratio rankers (Phase 5a). Method
+ * enum: 0=VIP, 1=coefficient magnitude, 2=selectivity ratio. */
+P4A_API p4a_status_t p4a_variable_select_rank(
+    p4a_context_t* ctx,
+    const p4a_model_t* model,
+    const p4a_matrix_view_t* X,
+    int32_t method,
+    int32_t top_k,
+    p4a_method_result_t** out_result);
+
+/* Interval / iPLS / mwPLS scan (Phase 5b). */
+P4A_API p4a_status_t p4a_interval_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t interval_width,
+    int32_t step,
+    p4a_method_result_t** out_result);
+
+/* MCUVE / coefficient-stability selector (Phase 5c). */
+P4A_API p4a_status_t p4a_stability_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t top_k,
+    p4a_method_result_t** out_result);
+
+/* UVE — artificial-noise-thresholded selector (Phase 5d). */
+P4A_API p4a_status_t p4a_uve_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t noise_features,
+    uint64_t noise_seed,
+    p4a_method_result_t** out_result);
+
+/* SPA — Successive Projections Algorithm (Phase 5e). */
+P4A_API p4a_status_t p4a_spa_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t top_k,
+    p4a_method_result_t** out_result);
+
+/* CARS — Competitive Adaptive Reweighted Sampling (Phase 5f). */
+P4A_API p4a_status_t p4a_cars_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_iterations,
+    int32_t min_features,
+    p4a_method_result_t** out_result);
+
+/* Random Frog (Phase 5g). */
+P4A_API p4a_status_t p4a_random_frog_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_iterations,
+    int32_t initial_size,
+    int32_t min_size,
+    int32_t max_size,
+    int32_t top_k,
+    uint64_t seed,
+    p4a_method_result_t** out_result);
+
+/* SCARS — Stability + CARS (Phase 5h). */
+P4A_API p4a_status_t p4a_scars_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_iterations,
+    int32_t min_features,
+    double sample_fraction,
+    uint64_t seed,
+    p4a_method_result_t** out_result);
+
+/* GA-PLS (Phase 5i). */
+P4A_API p4a_status_t p4a_ga_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_generations,
+    int32_t population_size,
+    int32_t min_features,
+    int32_t max_features,
+    double mutation_rate,
+    uint64_t seed,
+    p4a_method_result_t** out_result);
+
+/* PSO-PLS (§48): Binary Particle Swarm Optimization variable selection
+ * (Kennedy & Eberhart 1997). Each particle is a binary mask over the
+ * p features; fitness is the CV-RMSE of a PLS regression on the
+ * selected subset. Position update uses sigmoid stochastic threshold
+ * on the continuous velocity.
+ *
+ * Defaults from Clerc & Kennedy (2002) convergence analysis:
+ *   w = 0.729 (inertia), c1 = c2 = 1.494, v_max = 4.0.
+ *
+ * Result keys:
+ *   "inclusion_frequencies"     (1 × n_features)
+ *   "best_rmse_by_iteration"    (1 × n_iterations)
+ *   "mean_rmse_by_iteration"    (1 × n_iterations)
+ *   int64 "selected_indices"
+ *   scalars: n_features, n_targets, n_components, n_swarm, n_iterations,
+ *            w, c1, c2, v_max, seed, best_rmse
+ */
+P4A_API p4a_status_t p4a_pso_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_swarm,
+    int32_t n_iterations,
+    double w,
+    double c1,
+    double c2,
+    double v_max,
+    uint64_t seed,
+    p4a_method_result_t** out_result);
+
+/* VISSA-PLS (§49): Variable Iterative Space Shrinkage Approach.
+ * Reference: Deng B., Yun Y., Liang Y. (2014) Anal. Chim. Acta 838:27-40.
+ * Paper-only — no widely installable port.
+ *
+ * Weighted Binary Matrix Sampling iteratively shrinks the per-feature
+ * inclusion probabilities by averaging the masks of the top-K best
+ * submodels per iteration. floor_probability clamps w_j to
+ * [floor, 1-floor] each iteration to preserve exploration.
+ *
+ * Defaults: n_iterations=20, n_submodels=100, ratio_kept=0.1,
+ * threshold=0.5, floor_probability=0.01.
+ *
+ * Result keys:
+ *   "final_probabilities"   (1 × p) — final w_j vector
+ *   "inclusion_frequencies" (1 × p) — alias for final_probabilities
+ *   "best_rmse_by_iteration"  (1 × n_iterations)
+ *   "mean_rmse_by_iteration"  (1 × n_iterations)
+ *   "top_k_per_iteration"   (n_iterations × p)
+ *   int64 "selected_indices" — {j : w_j > threshold}
+ *   scalars: n_features, n_targets, n_components, n_iterations,
+ *            n_submodels, ratio_kept, threshold, floor_probability,
+ *            seed, best_rmse
+ */
+P4A_API p4a_status_t p4a_vissa_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_iterations,
+    int32_t n_submodels,
+    double ratio_kept,
+    double threshold,
+    double floor_probability,
+    uint64_t seed,
+    p4a_method_result_t** out_result);
+
+/* Shaving (Phase 5j). */
+P4A_API p4a_status_t p4a_shaving_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_steps,
+    int32_t min_features,
+    double shave_fraction,
+    p4a_method_result_t** out_result);
+
+/* BVE-PLS (Phase 5k). */
+P4A_API p4a_status_t p4a_bve_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_steps,
+    int32_t min_features,
+    p4a_method_result_t** out_result);
+
+/* T2-PLS (Phase 5l). `alpha_thresholds` is an array of `n_alphas` α values
+ * in (0, 1). */
+P4A_API p4a_status_t p4a_t2_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    const double* alpha_thresholds,
+    int64_t n_alphas,
+    int32_t min_selected,
+    p4a_method_result_t** out_result);
+
+/* WVC-PLS (Phase 5m). */
+P4A_API p4a_status_t p4a_wvc_select(
+    p4a_context_t* ctx,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_components,
+    int32_t top_k,
+    int32_t normalize,
+    p4a_method_result_t** out_result);
+
+/* WVC-threshold (Phase 5r). */
+P4A_API p4a_status_t p4a_wvc_threshold_select(
+    p4a_context_t* ctx,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_components,
+    int32_t normalize,
+    double score_threshold,
+    double threshold_factor,
+    int32_t min_selected,
+    p4a_method_result_t** out_result);
+
+/* EMCUVE (Phase 5n). */
+P4A_API p4a_status_t p4a_emcuve_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t noise_features,
+    uint64_t noise_seed,
+    int32_t n_ensembles,
+    double vote_threshold,
+    p4a_method_result_t** out_result);
+
+/* Randomization-test selector (Phase 5o). */
+P4A_API p4a_status_t p4a_randomization_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    int32_t n_permutations,
+    uint64_t randomization_seed,
+    double alpha,
+    p4a_method_result_t** out_result);
+
+/* biPLS — backward iPLS (Phase 5p). */
+P4A_API p4a_status_t p4a_bipls_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t interval_width,
+    int32_t min_intervals,
+    p4a_method_result_t** out_result);
+
+/* siPLS — synergistic interval PLS (Phase 5q). */
+P4A_API p4a_status_t p4a_sipls_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t interval_width,
+    int32_t combination_size,
+    p4a_method_result_t** out_result);
+
+/* REP-PLS (Phase 5s). */
+P4A_API p4a_status_t p4a_rep_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_steps,
+    int32_t min_features,
+    int32_t remove_count,
+    p4a_method_result_t** out_result);
+
+/* IPW-PLS (Phase 5t). */
+P4A_API p4a_status_t p4a_ipw_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_iterations,
+    int32_t top_k,
+    double damping,
+    double weight_floor,
+    p4a_method_result_t** out_result);
+
+/* ST-PLS — score-threshold (Phase 5u). `thresholds` array of `n_thresholds`
+ * positive doubles. */
+P4A_API p4a_status_t p4a_st_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    const double* thresholds,
+    int64_t n_thresholds,
+    int32_t min_selected,
     p4a_method_result_t** out_result);
 
 #ifdef __cplusplus

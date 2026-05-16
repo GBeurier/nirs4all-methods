@@ -53,6 +53,13 @@ lib.p4a_method_result_get_int_vector.argtypes = [
     ctypes.POINTER(ctypes.c_int32),
 ]
 
+lib.p4a_method_result_get_int64_vector.restype = ctypes.c_int
+lib.p4a_method_result_get_int64_vector.argtypes = [
+    ctypes.c_void_p, ctypes.c_char_p,
+    ctypes.POINTER(ctypes.POINTER(ctypes.c_int64)),
+    ctypes.POINTER(ctypes.c_int64),
+]
+
 lib.p4a_method_result_get_scalar.restype = ctypes.c_int
 lib.p4a_method_result_get_scalar.argtypes = [
     ctypes.c_void_p, ctypes.c_char_p,
@@ -224,6 +231,14 @@ lib.p4a_bagging_pls_fit.argtypes = [
     ctypes.POINTER(ctypes.c_void_p),
 ]
 
+lib.p4a_gpr_pls_fit.restype = ctypes.c_int
+lib.p4a_gpr_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_double, ctypes.c_double, ctypes.c_uint64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
 lib.p4a_pls_monitoring_run.restype = ctypes.c_int
 lib.p4a_pls_monitoring_run.argtypes = [
     ctypes.c_void_p, ctypes.c_void_p,
@@ -298,6 +313,262 @@ lib.p4a_pls_cox_fit.argtypes = [
     ctypes.POINTER(ctypes.c_void_p),
 ]
 
+# ---- §17 fit shims (Phase 4r/4s/4p/4q/6a) -------------------------------
+
+lib.p4a_mb_pls_fit.restype = ctypes.c_int
+lib.p4a_mb_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_int64), ctypes.c_int64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_lw_pls_fit.restype = ctypes.c_int
+lib.p4a_lw_pls_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_int32, ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_pls_lda_fit.restype = ctypes.c_int
+lib.p4a_pls_lda_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_int32), ctypes.c_int64,
+    ctypes.c_int32, ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_pls_logistic_fit.restype = ctypes.c_int
+lib.p4a_pls_logistic_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_int32), ctypes.c_int64,
+    ctypes.c_int32, ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_aom_preprocess_fit.restype = ctypes.c_int
+lib.p4a_aom_preprocess_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+# ---- §18 selector shims (Phase 5 variable selection) --------------------
+
+lib.p4a_variable_select_rank.restype = ctypes.c_int
+lib.p4a_variable_select_rank.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView),
+    ctypes.c_int32, ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_interval_select.restype = ctypes.c_int
+lib.p4a_interval_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_stability_select.restype = ctypes.c_int
+lib.p4a_stability_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_uve_select.restype = ctypes.c_int
+lib.p4a_uve_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_uint64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_spa_select.restype = ctypes.c_int
+lib.p4a_spa_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_cars_select.restype = ctypes.c_int
+lib.p4a_cars_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_random_frog_select.restype = ctypes.c_int
+lib.p4a_random_frog_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_int32, ctypes.c_int32,
+    ctypes.c_int32, ctypes.c_int32, ctypes.c_uint64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_scars_select.restype = ctypes.c_int
+lib.p4a_scars_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_int32,
+    ctypes.c_double, ctypes.c_uint64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_ga_select.restype = ctypes.c_int
+lib.p4a_ga_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_int32, ctypes.c_int32, ctypes.c_int32,
+    ctypes.c_double, ctypes.c_uint64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_pso_select.restype = ctypes.c_int
+lib.p4a_pso_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_int32,
+    ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double,
+    ctypes.c_uint64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_vissa_select.restype = ctypes.c_int
+lib.p4a_vissa_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_int32,
+    ctypes.c_double, ctypes.c_double, ctypes.c_double,
+    ctypes.c_uint64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_shaving_select.restype = ctypes.c_int
+lib.p4a_shaving_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_int32, ctypes.c_double,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_bve_select.restype = ctypes.c_int
+lib.p4a_bve_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_t2_select.restype = ctypes.c_int
+lib.p4a_t2_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_double), ctypes.c_int64,
+    ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_wvc_select.restype = ctypes.c_int
+lib.p4a_wvc_select.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_int32, ctypes.c_int32, ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_wvc_threshold_select.restype = ctypes.c_int
+lib.p4a_wvc_threshold_select.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_int32, ctypes.c_int32,
+    ctypes.c_double, ctypes.c_double, ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_emcuve_select.restype = ctypes.c_int
+lib.p4a_emcuve_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_uint64,
+    ctypes.c_int32, ctypes.c_double,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_randomization_select.restype = ctypes.c_int
+lib.p4a_randomization_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_int32, ctypes.c_uint64, ctypes.c_double,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_bipls_select.restype = ctypes.c_int
+lib.p4a_bipls_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_sipls_select.restype = ctypes.c_int
+lib.p4a_sipls_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_rep_select.restype = ctypes.c_int
+lib.p4a_rep_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_int32, ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_ipw_select.restype = ctypes.c_int
+lib.p4a_ipw_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_int32,
+    ctypes.c_double, ctypes.c_double,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_st_select.restype = ctypes.c_int
+lib.p4a_st_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_double), ctypes.c_int64,
+    ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
 
 class MethodResult:
     """Owning wrapper around `p4a_method_result_t`."""
@@ -359,6 +630,21 @@ class MethodResult:
         buf_type = ctypes.c_int32 * n
         buffer = buf_type.from_address(ctypes.addressof(data_ptr.contents))
         arr = np.frombuffer(buffer, dtype=np.int32, count=n)
+        return np.array(arr, copy=True)
+
+    def vector_int64(self, name: str) -> np.ndarray:
+        data_ptr = ctypes.POINTER(ctypes.c_int64)()
+        size = ctypes.c_int64(0)
+        _check(lib.p4a_method_result_get_int64_vector(
+            self._h, name.encode("utf-8"),
+            ctypes.byref(data_ptr), ctypes.byref(size),
+        ))
+        n = int(size.value)
+        if n == 0:
+            return np.empty(0, dtype=np.int64)
+        buf_type = ctypes.c_int64 * n
+        buffer = buf_type.from_address(ctypes.addressof(data_ptr.contents))
+        arr = np.frombuffer(buffer, dtype=np.int64, count=n)
         return np.array(arr, copy=True)
 
     def scalar(self, name: str) -> float:
@@ -806,6 +1092,38 @@ def bagging_pls_fit(ctx: Context, cfg: Config,
     return _resolve_handle(out, ctx, "p4a_bagging_pls_fit")
 
 
+def gpr_pls_fit(ctx: Context, cfg: Config,
+                X: Any, Y: Any,
+                n_components: int,
+                length_scale: float,
+                noise_level: float,
+                seed: int = 0) -> MethodResult:
+    """GPR-on-PLS (§47).
+
+    Two-stage regression: SIMPLS to obtain `n_components` latent
+    components, then a Gaussian Process with RBF kernel on the training
+    scores. `noise_level` is the diagonal noise **variance** (sigma^2,
+    not sigma), matching sklearn `WhiteKernel(noise_level=...)`.
+    `seed` is reserved for ABI symmetry; the fit is fully deterministic.
+    """
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    cfg.n_components = int(n_components)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_gpr_pls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_double(float(length_scale)),
+        ctypes.c_double(float(noise_level)),
+        ctypes.c_uint64(int(seed)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_gpr_pls_fit")
+
+
 def boosting_pls_fit(ctx: Context, cfg: Config,
                       X: Any, Y: Any,
                       n_estimators: int,
@@ -994,6 +1312,702 @@ def pls_diagnostics_compute(ctx: Context,
     return _resolve_handle(out, ctx, "p4a_pls_diagnostics_compute")
 
 
+# ============================================================================
+#  §17 — Phase 4r/4s/4p/4q + 6a ABI shims (internal-only core algos)
+# ============================================================================
+
+def mb_pls_fit(ctx: Context, cfg: Config,
+                X: Any, Y: Any,
+                block_sizes: Any) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    sizes = np.ascontiguousarray(block_sizes, dtype=np.int64).reshape(-1)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_mb_pls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        sizes.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+        ctypes.c_int64(int(sizes.size)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_mb_pls_fit")
+
+
+def lw_pls_fit(ctx: Context, cfg: Config,
+                X: Any, Y: Any,
+                n_neighbors: int) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_lw_pls_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_int32(int(n_neighbors)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_lw_pls_fit")
+
+
+def pls_lda_fit(ctx: Context, cfg: Config,
+                 X: Any, y_labels: Any,
+                 n_classes: int) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    labels = np.ascontiguousarray(y_labels, dtype=np.int32).reshape(-1)
+    x_view = _matrix_view(X_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_pls_lda_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view),
+        labels.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+        ctypes.c_int64(int(labels.size)),
+        ctypes.c_int32(int(n_classes)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_pls_lda_fit")
+
+
+def pls_logistic_fit(ctx: Context, cfg: Config,
+                      X: Any, y_labels: Any,
+                      n_classes: int) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    labels = np.ascontiguousarray(y_labels, dtype=np.int32).reshape(-1)
+    x_view = _matrix_view(X_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_pls_logistic_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view),
+        labels.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+        ctypes.c_int64(int(labels.size)),
+        ctypes.c_int32(int(n_classes)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_pls_logistic_fit")
+
+
+def aom_preprocess_fit(ctx: Context,
+                        bank: Any,
+                        gate: Any,
+                        X: Any,
+                        Y: Any | None = None) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    x_view = _matrix_view(X_arr)
+    y_view_ptr = None
+    _y_arr = None
+    if Y is not None:
+        _y_arr = _as_float64_contiguous(Y)
+        y_view = _matrix_view(_y_arr)
+        y_view_ptr = ctypes.byref(y_view)
+    bank_handle = getattr(bank, "handle", bank)
+    gate_handle = getattr(gate, "handle", gate)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_aom_preprocess_fit(
+        ctx.handle, bank_handle, gate_handle,
+        ctypes.byref(x_view),
+        y_view_ptr,
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_aom_preprocess_fit")
+
+
+# ============================================================================
+#  §18 — Phase 5 variable-selection method shims
+# ============================================================================
+
+def variable_select_rank(ctx: Context,
+                          model: Any,
+                          X: Any,
+                          method: int,
+                          top_k: int) -> MethodResult:
+    """Rank features by VIP (0), coefficient magnitude (1), or selectivity ratio (2)."""
+    X_arr = _as_float64_contiguous(X)
+    x_view = _matrix_view(X_arr)
+    model_handle = getattr(model, "handle", model)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_variable_select_rank(
+        ctx.handle, model_handle,
+        ctypes.byref(x_view),
+        ctypes.c_int32(int(method)),
+        ctypes.c_int32(int(top_k)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_variable_select_rank")
+
+
+def interval_select(ctx: Context, cfg: Config,
+                     X: Any, Y: Any,
+                     plan: Any,
+                     interval_width: int,
+                     step: int) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_interval_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(interval_width)),
+        ctypes.c_int32(int(step)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_interval_select")
+
+
+def stability_select(ctx: Context, cfg: Config,
+                      X: Any, Y: Any,
+                      plan: Any,
+                      top_k: int) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_stability_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(top_k)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_stability_select")
+
+
+def uve_select(ctx: Context, cfg: Config,
+                X: Any, Y: Any,
+                plan: Any,
+                noise_features: int,
+                noise_seed: int = 0) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_uve_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(noise_features)),
+        ctypes.c_uint64(int(noise_seed)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_uve_select")
+
+
+def spa_select(ctx: Context, cfg: Config,
+                X: Any, Y: Any,
+                top_k: int) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_spa_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_int32(int(top_k)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_spa_select")
+
+
+def cars_select(ctx: Context, cfg: Config,
+                 X: Any, Y: Any,
+                 plan: Any,
+                 *, n_iterations: int,
+                 min_features: int) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_cars_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(n_iterations)),
+        ctypes.c_int32(int(min_features)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_cars_select")
+
+
+def random_frog_select(ctx: Context, cfg: Config,
+                        X: Any, Y: Any,
+                        plan: Any,
+                        *, n_iterations: int,
+                        initial_size: int,
+                        min_size: int,
+                        max_size: int,
+                        top_k: int,
+                        seed: int = 0) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_random_frog_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(n_iterations)),
+        ctypes.c_int32(int(initial_size)),
+        ctypes.c_int32(int(min_size)),
+        ctypes.c_int32(int(max_size)),
+        ctypes.c_int32(int(top_k)),
+        ctypes.c_uint64(int(seed)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_random_frog_select")
+
+
+def scars_select(ctx: Context, cfg: Config,
+                  X: Any, Y: Any,
+                  plan: Any,
+                  *, n_iterations: int,
+                  min_features: int,
+                  sample_fraction: float,
+                  seed: int = 0) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_scars_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(n_iterations)),
+        ctypes.c_int32(int(min_features)),
+        ctypes.c_double(float(sample_fraction)),
+        ctypes.c_uint64(int(seed)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_scars_select")
+
+
+def ga_select(ctx: Context, cfg: Config,
+               X: Any, Y: Any,
+               plan: Any,
+               *, n_generations: int,
+               population_size: int,
+               min_features: int,
+               max_features: int,
+               mutation_rate: float,
+               seed: int = 0) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_ga_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(n_generations)),
+        ctypes.c_int32(int(population_size)),
+        ctypes.c_int32(int(min_features)),
+        ctypes.c_int32(int(max_features)),
+        ctypes.c_double(float(mutation_rate)),
+        ctypes.c_uint64(int(seed)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_ga_select")
+
+
+def pso_select(ctx: Context, cfg: Config,
+                X: Any, Y: Any,
+                plan: Any,
+                *, n_swarm: int,
+                n_iterations: int,
+                w: float = 0.729,
+                c1: float = 1.494,
+                c2: float = 1.494,
+                v_max: float = 4.0,
+                seed: int = 0) -> MethodResult:
+    """PSO-PLS (§48): Binary Particle Swarm variable selection.
+
+    Reference: Kennedy & Eberhart (1997). Defaults follow the
+    Clerc-Kennedy constriction-coefficient analysis (2002).
+    """
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_pso_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(n_swarm)),
+        ctypes.c_int32(int(n_iterations)),
+        ctypes.c_double(float(w)),
+        ctypes.c_double(float(c1)),
+        ctypes.c_double(float(c2)),
+        ctypes.c_double(float(v_max)),
+        ctypes.c_uint64(int(seed)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_pso_select")
+
+
+def vissa_select(ctx: Context, cfg: Config,
+                  X: Any, Y: Any,
+                  plan: Any,
+                  *, n_iterations: int = 20,
+                  n_submodels: int = 100,
+                  ratio_kept: float = 0.1,
+                  threshold: float = 0.5,
+                  floor_probability: float = 0.01,
+                  seed: int = 0) -> MethodResult:
+    """VISSA-PLS (§49): Variable Iterative Space Shrinkage Approach.
+
+    Paper-only reference: Deng B. et al. (2014) Anal. Chim. Acta
+    838:27-40. WBMS-based iterative shrinkage of variable inclusion
+    probabilities.
+    """
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_vissa_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(n_iterations)),
+        ctypes.c_int32(int(n_submodels)),
+        ctypes.c_double(float(ratio_kept)),
+        ctypes.c_double(float(threshold)),
+        ctypes.c_double(float(floor_probability)),
+        ctypes.c_uint64(int(seed)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_vissa_select")
+
+
+def shaving_select(ctx: Context, cfg: Config,
+                    X: Any, Y: Any,
+                    plan: Any,
+                    *, n_steps: int,
+                    min_features: int,
+                    shave_fraction: float) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_shaving_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(n_steps)),
+        ctypes.c_int32(int(min_features)),
+        ctypes.c_double(float(shave_fraction)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_shaving_select")
+
+
+def bve_select(ctx: Context, cfg: Config,
+                X: Any, Y: Any,
+                plan: Any,
+                *, n_steps: int,
+                min_features: int) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_bve_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(n_steps)),
+        ctypes.c_int32(int(min_features)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_bve_select")
+
+
+def t2_select(ctx: Context, cfg: Config,
+               X: Any, Y: Any,
+               plan: Any,
+               *, alpha_thresholds: Any,
+               min_selected: int) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    alphas = np.ascontiguousarray(alpha_thresholds, dtype=np.float64).reshape(-1)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_t2_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        alphas.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        ctypes.c_int64(int(alphas.size)),
+        ctypes.c_int32(int(min_selected)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_t2_select")
+
+
+def wvc_select(ctx: Context,
+                X: Any, Y: Any,
+                *, n_components: int,
+                top_k: int,
+                normalize: bool = True) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_wvc_select(
+        ctx.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_int32(int(n_components)),
+        ctypes.c_int32(int(top_k)),
+        ctypes.c_int32(1 if normalize else 0),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_wvc_select")
+
+
+def wvc_threshold_select(ctx: Context,
+                          X: Any, Y: Any,
+                          *, n_components: int,
+                          normalize: bool = True,
+                          score_threshold: float = 0.0,
+                          threshold_factor: float = 1.0,
+                          min_selected: int = 1) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_wvc_threshold_select(
+        ctx.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_int32(int(n_components)),
+        ctypes.c_int32(1 if normalize else 0),
+        ctypes.c_double(float(score_threshold)),
+        ctypes.c_double(float(threshold_factor)),
+        ctypes.c_int32(int(min_selected)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_wvc_threshold_select")
+
+
+def emcuve_select(ctx: Context, cfg: Config,
+                   X: Any, Y: Any,
+                   plan: Any,
+                   *, noise_features: int,
+                   noise_seed: int = 0,
+                   n_ensembles: int,
+                   vote_threshold: float) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_emcuve_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(noise_features)),
+        ctypes.c_uint64(int(noise_seed)),
+        ctypes.c_int32(int(n_ensembles)),
+        ctypes.c_double(float(vote_threshold)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_emcuve_select")
+
+
+def randomization_select(ctx: Context, cfg: Config,
+                          X: Any, Y: Any,
+                          *, n_permutations: int,
+                          randomization_seed: int = 0,
+                          alpha: float = 0.05) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_randomization_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_int32(int(n_permutations)),
+        ctypes.c_uint64(int(randomization_seed)),
+        ctypes.c_double(float(alpha)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_randomization_select")
+
+
+def bipls_select(ctx: Context, cfg: Config,
+                  X: Any, Y: Any,
+                  plan: Any,
+                  *, interval_width: int,
+                  min_intervals: int) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_bipls_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(interval_width)),
+        ctypes.c_int32(int(min_intervals)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_bipls_select")
+
+
+def sipls_select(ctx: Context, cfg: Config,
+                  X: Any, Y: Any,
+                  plan: Any,
+                  *, interval_width: int,
+                  combination_size: int) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_sipls_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(interval_width)),
+        ctypes.c_int32(int(combination_size)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_sipls_select")
+
+
+def rep_select(ctx: Context, cfg: Config,
+                X: Any, Y: Any,
+                plan: Any,
+                *, n_steps: int,
+                min_features: int,
+                remove_count: int) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_rep_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(n_steps)),
+        ctypes.c_int32(int(min_features)),
+        ctypes.c_int32(int(remove_count)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_rep_select")
+
+
+def ipw_select(ctx: Context, cfg: Config,
+                X: Any, Y: Any,
+                plan: Any,
+                *, n_iterations: int,
+                top_k: int,
+                damping: float,
+                weight_floor: float) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_ipw_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(n_iterations)),
+        ctypes.c_int32(int(top_k)),
+        ctypes.c_double(float(damping)),
+        ctypes.c_double(float(weight_floor)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_ipw_select")
+
+
+def st_select(ctx: Context, cfg: Config,
+               X: Any, Y: Any,
+               plan: Any,
+               *, thresholds: Any,
+               min_selected: int) -> MethodResult:
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    thr = np.ascontiguousarray(thresholds, dtype=np.float64).reshape(-1)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_st_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        thr.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        ctypes.c_int64(int(thr.size)),
+        ctypes.c_int32(int(min_selected)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_st_select")
+
+
 __all__ = [
     "MethodResult",
     "sparse_simpls_fit",
@@ -1020,6 +2034,7 @@ __all__ = [
     "pls_qda_fit",
     "pls_cox_fit",
     "bagging_pls_fit",
+    "gpr_pls_fit",
     "boosting_pls_fit",
     "random_subspace_pls_fit",
     "so_pls_fit",
@@ -1027,4 +2042,34 @@ __all__ = [
     "rosa_fit",
     "pls_monitoring_run",
     "one_se_rule_compute",
+    # §17 ABI shims
+    "mb_pls_fit",
+    "lw_pls_fit",
+    "pls_lda_fit",
+    "pls_logistic_fit",
+    "aom_preprocess_fit",
+    # §18 selector shims
+    "variable_select_rank",
+    "interval_select",
+    "stability_select",
+    "uve_select",
+    "spa_select",
+    "cars_select",
+    "random_frog_select",
+    "scars_select",
+    "ga_select",
+    "pso_select",
+    "vissa_select",
+    "shaving_select",
+    "bve_select",
+    "t2_select",
+    "wvc_select",
+    "wvc_threshold_select",
+    "emcuve_select",
+    "randomization_select",
+    "bipls_select",
+    "sipls_select",
+    "rep_select",
+    "ipw_select",
+    "st_select",
 ]
