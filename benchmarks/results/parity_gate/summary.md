@@ -1,7 +1,7 @@
 # Parity gate report
 
 Host: `Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.35`
-pls4all: `0.97.0+abi.1.15.0`
+pls4all: `0.97.0+abi.1.16.0`
 Python: `3.11.15`
 NumPy: `2.4.5`
 
@@ -9,10 +9,10 @@ NumPy: `2.4.5`
 
 | Quality | Count | Definition |
 |---------|------:|------------|
-| tight    | 35 | `rmse_rel < 30% of tolerance` — high-confidence parity. |
-| moderate | 11 | 30-60% of tolerance — real agreement. |
-| loose    | 4 | 60-90% of tolerance — algorithmic divergence likely; passes with margin. |
-| **weak** | **12** | **>= 90% of tolerance** — passes barely; tolerance widened to accept stochastic-RNG or algorithmic-convention divergence. **Treat as smoke check, not bit parity.** |
+| tight    | 36 | `rmse_rel < 30% of tolerance` — high-confidence parity. |
+| moderate | 10 | 30-60% of tolerance — real agreement. |
+| loose    | 8 | 60-90% of tolerance — algorithmic divergence likely; passes with margin. |
+| **weak** | **11** | **>= 90% of tolerance** — passes barely; tolerance widened to accept stochastic-RNG or algorithmic-convention divergence. **Treat as smoke check, not bit parity.** |
 
 ### Weak-parity passes (read with caution)
 
@@ -26,7 +26,6 @@ These pass the gate but rely on widened tolerances. Their external reference and
 | `interval_select` | `mdatools` | 9.129e-01 | 1.00e+00 | 8.7% |
 | `stability_select` | `plsVarSel` | 1.265e+00 | 1.35e+00 | 6.3% |
 | `cars_select` | `enpls` | 1.291e+00 | 1.40e+00 | 7.8% |
-| `random_frog_select` | `libPLS` | 1.265e+00 | 1.35e+00 | 6.3% |
 | `ga_select` | `plsVarSel` | 1.195e+00 | 1.30e+00 | 8.1% |
 | `bve_select` | `plsVarSel` | 1.291e+00 | 1.40e+00 | 7.8% |
 | `t2_select` | `plsVarSel` | 1.155e+00 | 1.20e+00 | 3.8% |
@@ -41,7 +40,8 @@ Each method is compared against a Python reference and an R reference. Methods w
 |--------|-------------|----------------------------------|--------|---------|----------|-----------|--------|
 | `sparse_simpls` | Sparse SIMPLS with soft-threshold lambda | python / `(none)` - | ✗ | — | — | 1e+00 | no_python_reference |
 | `sparse_simpls` | Sparse SIMPLS with soft-threshold lambda | R / `spls` 2.3.2 | ✓ | tight | 2.512e-05 | 1e+00 | ok |
-| `di_pls` | Domain-invariant PLS | paper / `paper-only` - | ✓ | — | — | 5e-02 | paper_only |
+| `di_pls` | Domain-invariant PLS | python / `diPLSlib` 2.5.0 | ✓ | tight | 4.957e-03 | 2e-02 | ok |
+| `di_pls` | Domain-invariant PLS | R / `(none)` - | ✗ | — | — | 2e-02 | no_r_reference |
 | `recursive_pls` | Recursive (moving-window) PLS | python / `scikit-learn` 1.4.2 | ✓ | tight | 1.226e-02 | 1e-01 | ok |
 | `recursive_pls` | Recursive (moving-window) PLS | R / `pls` 2.8.5 | ✓ | tight | 1.226e-02 | 1e-01 | ok |
 | `cppls` | CPPLS (column-power-rescaled SIMPLS) | python / `(none)` - | ✗ | — | — | 1e+01 | no_python_reference |
@@ -69,7 +69,7 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `pls_monitoring` | PLS process monitoring (T²/Q thresholds + alarms) (§19) | python / `(none)` - | ✗ | — | — | 1e+01 | no_python_reference |
 | `pls_monitoring` | PLS process monitoring (T²/Q thresholds + alarms) (§19) | R / `mdatools` 0.15.0 | ✓ | moderate | 3.298e+00 | 1e+01 | ok |
 | `one_se_rule` | One-SE component selection rule (§10) | python / `(none)` - | ✗ | — | — | 1e+01 | no_python_reference |
-| `one_se_rule` | One-SE component selection rule (§10) | R / `pls` 2.8.5 | ✓ | tight | 2.637e+00 | 1e+01 | ok |
+| `one_se_rule` | One-SE component selection rule (§10) | R / `pls` 2.8.5 | ✓ | tight | 2.584e+00 | 1e+01 | ok |
 | `so_pls` | SO-PLS — Sequential & Orthogonalized multi-block PLS (§17) | python / `(none)` - | ✗ | — | — | 1e+00 | no_python_reference |
 | `so_pls` | SO-PLS — Sequential & Orthogonalized multi-block PLS (§17) | R / `multiblock` 0.8.10 | ✓ | tight | 9.529e-03 | 1e+00 | ok |
 | `on_pls` | OnPLS — Orthogonal multi-block decomposition (§18) | python / `OnPLS` github tomlof/OnPLS | ✓ | tight | 1.817e+00 | 1e+01 | ok |
@@ -137,7 +137,7 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `spa_select` | SPA Successive Projections (§18 Phase 5e) | R / `plsVarSel` 0.10.0 | ✓ | loose | 1.057e+00 | 1e+00 | ok |
 | `cars_select` | CARS competitive adaptive reweighted sampling | python / `(none)` - | ✗ | — | — | 1e+00 | no_python_reference |
 | `cars_select` | CARS competitive adaptive reweighted sampling | R / `enpls` 6.1 | ✓ | weak | 1.291e+00 | 1e+00 | ok |
-| `random_frog_select` | Random Frog selection (§18 Phase 5g) | matlab / `libPLS` 1.95 | ✓ | weak | 1.265e+00 | 1e+00 | ok |
+| `random_frog_select` | Random Frog selection (§18 Phase 5g) | matlab / `libPLS` 1.95 | ✓ | loose | 1.095e+00 | 1e+00 | ok |
 | `random_frog_select` | Random Frog selection (§18 Phase 5g) | R / `(none)` - | ✗ | — | — | 1e+00 | no_r_reference |
 | `scars_select` | SCARS stability + CARS (§18 Phase 5h) | paper / `paper-only` - | ✓ | — | — | 1e+00 | paper_only |
 | `ga_select` | GA-PLS genetic algorithm selection | python / `(none)` - | ✗ | — | — | 1e+00 | no_python_reference |
@@ -164,6 +164,9 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `st_select` | ST-PLS soft-thresholded sparse PLS (§18 Phase 5u) | R / `plsVarSel` 0.10.0 | ✓ | weak | 2.000e+00 | 2e+00 | ok |
 | `ecr` | Elastic Component Regression (Phase 50) | matlab / `libPLS` 1.95 | ✓ | tight | 1.066e-07 | 1e-03 | ok |
 | `ecr` | Elastic Component Regression (Phase 50) | R / `(none)` - | ✗ | — | — | 1e-03 | no_r_reference |
-| `iriv_select` | Iteratively Retains Informative Variables (Phase 51) | paper / `paper-only` - | ✓ | — | — | 1e+00 | paper_only |
-| `irf_select` | Interval Random Frog (Phase 52) | matlab / `libPLS` 1.95 | ✓ | moderate | 6.504e-01 | 1e+00 | ok |
+| `iriv_select` | Iteratively Retains Informative Variables (Phase 51) | matlab / `libPLS` 1.95 | ✓ | loose | 7.303e-01 | 1e+00 | ok |
+| `iriv_select` | Iteratively Retains Informative Variables (Phase 51) | R / `(none)` - | ✗ | — | — | 1e+00 | no_r_reference |
+| `irf_select` | Interval Random Frog (Phase 52) | matlab / `libPLS` 1.95 | ✓ | loose | 8.165e-01 | 1e+00 | ok |
 | `irf_select` | Interval Random Frog (Phase 52) | R / `(none)` - | ✗ | — | — | 1e+00 | no_r_reference |
+| `vip_spa_select` | VIP_SPA — VIP-mask then SPA greedy (Phase 53) | python / `auswahl` 0.9.0 | ✓ | loose | 1.080e+00 | 1e+00 | ok |
+| `vip_spa_select` | VIP_SPA — VIP-mask then SPA greedy (Phase 53) | R / `(none)` - | ✗ | — | — | 1e+00 | no_r_reference |

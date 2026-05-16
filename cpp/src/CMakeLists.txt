@@ -77,6 +77,7 @@ add_library(pls4all_core OBJECT
     core/st_selection.cpp
     core/uve_selection.cpp
     core/validation.cpp
+    core/vip_spa_selection.cpp
     core/vissa_selection.cpp)
 if(PLS4ALL_WITH_CUDA)
     target_sources(pls4all_core PRIVATE core/cuda_dispatch.cpp)

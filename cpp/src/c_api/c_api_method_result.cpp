@@ -62,6 +62,7 @@
 #include "core/tensor_pls.hpp"
 #include "core/uve_selection.hpp"
 #include "core/validation.hpp"
+#include "core/vip_spa_selection.hpp"
 #include "core/vissa_selection.hpp"
 #include "core/variable_selection.hpp"
 #include "core/wvc_selection.hpp"
@@ -4139,6 +4140,66 @@ P4A_API p4a_status_t p4a_irf_select(
         return P4A_ERR_OUT_OF_MEMORY;
     } catch (...) {
         set_error(ctx, "internal error in p4a_irf_select");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_vip_spa_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    double vip_threshold,
+    int32_t top_k,
+    p4a_method_result_t** out_result) {
+    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in p4a_vip_spa_select");
+        return P4A_ERR_NULL_POINTER;
+    }
+    try {
+        ::pls4all::core::VipSpaSelectionResult res;
+        const p4a_status_t status = ::pls4all::core::select_by_vip_spa(
+            *as_core(ctx), *as_core(cfg), *X, *Y, vip_threshold, top_k, res);
+        if (status != P4A_OK) return status;
+
+        auto handle = std::make_unique<p4a_method_result_s>();
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto k = static_cast<std::int64_t>(res.selected_indices.size());
+        std::vector<double> vip_mask_doubles;
+        vip_mask_doubles.reserve(res.vip_mask.size());
+        for (const auto bit : res.vip_mask) {
+            vip_mask_doubles.push_back(static_cast<double>(bit));
+        }
+        handle->set_double_matrix("vip_scores",
+                                   std::move(res.vip_scores), 1, p);
+        handle->set_double_matrix("vip_mask",
+                                   std::move(vip_mask_doubles), 1, p);
+        handle->set_double_matrix("selection_scores",
+                                   std::move(res.selection_scores), 1, k);
+        handle->set_int64_vector("selected_indices",
+                                  std::move(res.selected_indices));
+        handle->set_scalar("n_features",
+                            static_cast<double>(res.n_features));
+        handle->set_scalar("n_targets",
+                            static_cast<double>(res.n_targets));
+        handle->set_scalar("n_components",
+                            static_cast<double>(res.n_components));
+        handle->set_scalar("top_k", static_cast<double>(res.top_k));
+        handle->set_scalar("n_selected",
+                            static_cast<double>(res.n_selected));
+        handle->set_scalar("n_candidates",
+                            static_cast<double>(res.n_candidates));
+        handle->set_scalar("vip_threshold", res.vip_threshold);
+
+        *out_result = handle.release();
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in p4a_vip_spa_select");
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in p4a_vip_spa_select");
         return P4A_ERR_INTERNAL;
     }
 }

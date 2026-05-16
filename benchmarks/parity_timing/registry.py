@@ -1686,6 +1686,21 @@ def _irf_select_pls4all(ctx, cfg, X, Y, *, n_components, n_iterations,
     return _SelectorMaskResult(inner, n_features=X.shape[1])
 
 
+def _vip_spa_select_pls4all(ctx, cfg, X, Y, *, n_components, vip_threshold,
+                              top_k, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    inner = pls4all.vip_spa_select(ctx, cfg, X, Y,
+                                     vip_threshold=float(vip_threshold),
+                                     top_k=int(top_k))
+    return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+
 def _t2_select_pls4all(ctx, cfg, X, Y, *, n_components, alpha_thresholds,
                         min_selected, **_):
     import pls4all
@@ -3505,6 +3520,138 @@ class _VissaAuswahlReference(_MaskReferenceAdapter):
         return np.where(sel.support_)[0].astype(np.int64)
 
 
+class _VipSpaAuswahlReference(_MaskReferenceAdapter):
+    """Python `auswahl.VIP_SPA` (LSX-UniWue) — canonical VIP-then-SPA
+    hybrid composing Favilla 2013 VIP scoring with Araujo 2001 Successive
+    Projections greedy pick. Different SPA start (auswahl enumerates all
+    seeds with CV; pls4all picks argmax-VIP within mask deterministically)
+    so mask metric is the meaningful comparison."""
+
+    library_name = "auswahl"
+    library_version = "0.9.0"
+    language = "python"
+    notes = ("Python `auswahl.VIP_SPA` from LSX-UniWue. Same VIP scoring "
+             "and 0.3 threshold as pls4all; auswahl enumerates every "
+             "candidate SPA start and picks the CV-best, pls4all takes "
+             "argmax-VIP within the mask. Mask metric.")
+
+    def __init__(self, n_components: int, top_k: int,
+                  vip_threshold: float, seed: int) -> None:
+        super().__init__()
+        self._k = int(n_components)
+        self._top_k = int(top_k)
+        self._threshold = float(vip_threshold)
+        self._seed = int(seed)
+        # auswahl.VIP_SPA hard-codes `vip_score > 0.3`; if the parity cell
+        # ever drifts off that default, the reference would silently keep
+        # using 0.3 while pls4all honours the cell value, leading to a
+        # false-positive parity comparison. Reject early to flag drift.
+        if abs(self._threshold - 0.3) > 1e-12:
+            raise RuntimeError(
+                "auswahl.VIP_SPA hard-codes VIP > 0.3; the cell must use "
+                f"vip_threshold=0.3 to keep parity meaningful (got "
+                f"{self._threshold!r})")
+
+    def _compute_indices(self, X, Y, **kwargs):
+        _ensure_auswahl()
+        try:
+            from auswahl import VIP_SPA
+            from sklearn.cross_decomposition import PLSRegression
+        except Exception as exc:
+            raise RuntimeError(f"auswahl not importable: {exc}") from exc
+        X64 = np.ascontiguousarray(X, dtype=np.float64)
+        Y2 = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)[:, 0]
+        sel = VIP_SPA(
+            n_features_to_select=self._top_k,
+            n_cv_folds=3,
+            pls=PLSRegression(n_components=self._k, scale=False),
+            n_jobs=1,
+        )
+        sel.fit(X64, Y2)
+        return np.where(sel.support_)[0].astype(np.int64)
+
+
+def _patch_diplslib_sklearn_18():
+    """diPLSlib 2.5.0 calls sklearn.utils.validation with the deprecated
+    keyword `force_all_finite`. sklearn 1.6+ renamed it to
+    `ensure_all_finite`, and 1.8 removed the old name entirely. Wrap
+    `check_X_y` / `check_array` in the diPLSlib namespace so the kwarg
+    translates silently. Done once on first import.
+
+    No-op on older sklearn that still accepts `force_all_finite`, so the
+    shim is safe across the supported sklearn matrix."""
+    try:
+        from diPLSlib import models as _m  # noqa: PLC0415
+    except Exception:
+        return
+    if getattr(_m, "_p4a_force_all_finite_patched", False):
+        return
+    import inspect  # noqa: PLC0415
+    original_X_y = _m.check_X_y
+    original_arr = _m.check_array
+    try:
+        params = inspect.signature(original_X_y).parameters
+    except (TypeError, ValueError):
+        params = {}
+    # Older sklearn still exposes `force_all_finite` — nothing to translate.
+    if "force_all_finite" in params:
+        _m._p4a_force_all_finite_patched = True
+        return
+
+    def _translate_kwargs(kwargs):
+        if "force_all_finite" in kwargs:
+            kwargs["ensure_all_finite"] = kwargs.pop("force_all_finite")
+        return kwargs
+
+    def patched_X_y(X, y, **kwargs):
+        return original_X_y(X, y, **_translate_kwargs(kwargs))
+
+    def patched_arr(arr, **kwargs):
+        return original_arr(arr, **_translate_kwargs(kwargs))
+
+    _m.check_X_y = patched_X_y
+    _m.check_array = patched_arr
+    _m._p4a_force_all_finite_patched = True
+
+
+class _DiPlsLibReference(ReferenceAdapter):
+    """Python `diPLSlib.models.DIPLS` (B-Analytics) — canonical
+    Domain-invariant PLS implementation by the original authors
+    (Nikzad-Langerodi 2018). pls4all's di_pls_fit applies the same
+    di-PLS penalty during NIPALS deflation; numerical differences come
+    from the inner solver and centring strategy."""
+
+    library_name = "diPLSlib"
+    library_version = "2.5.0"
+    language = "python"
+    notes = ("Python `diPLSlib.models.DIPLS` (B-Analytics; Nikzad-"
+             "Langerodi 2018 authors). Same di-PLS penalty applied "
+             "during deflation; centering / target rescaling differ "
+             "slightly, so tolerance is widened.")
+
+    def __init__(self, n_components: int, di_lambda: float) -> None:
+        self._k = int(n_components)
+        self._l = float(di_lambda)
+        self._model = None
+
+    def fit(self, X, y, **kwargs):
+        _patch_diplslib_sklearn_18()
+        from diPLSlib.models import DIPLS
+        X64 = np.ascontiguousarray(X, dtype=np.float64)
+        y64 = np.ascontiguousarray(y, dtype=np.float64).reshape(X64.shape[0], -1)
+        X_target = kwargs.get("X_target")
+        if X_target is None:
+            raise RuntimeError("DI-PLS reference requires X_target extra")
+        Xt = np.ascontiguousarray(X_target, dtype=np.float64)
+        self._model = DIPLS(A=self._k, l=self._l, centering=True,
+                              rescale="Target")
+        self._model.fit(X64, y64, xs=X64, xt=Xt)
+
+    def predict(self, X):
+        X64 = np.ascontiguousarray(X, dtype=np.float64)
+        return np.asarray(self._model.predict(X64), dtype=np.float64).reshape(X64.shape[0], -1)
+
+
 _OCT2PY_AVAILABLE: bool | None = None
 _OCT2PY_INSTANCE = None
 _LIBPLS_PATH = Path(__file__).resolve().parents[2] / "bindings" / "octave" / "libPLS_1.95"
@@ -4158,13 +4305,18 @@ METHODS: list[MethodSpec] = [
         pls4all_fn=_di_pls_pls4all,
         cell_params={"n_samples": 200, "n_features": 50,
                       "n_components": 4, "di_lambda": 1.0},
-        python_reference=None,
+        python_reference=lambda **kw: _DiPlsLibReference(
+            n_components=kw["n_components"], di_lambda=kw["di_lambda"]),
         r_reference=None,
         needs_x_target=True,
-        paper_only=("Nikzad-Langerodi, R., Zellinger, W., Saminger-Platz, "
-                    "S., Moser, B. A. (2018). Domain-invariant partial "
-                    "least squares regression. Analytical Chemistry "
-                    "90(11), 6693-6701."),
+        # Empirically, diPLSlib and pls4all's di_pls_fit agree to within
+        # ~5e-3 RMSE-rel on the parity cell. Set a 2 % budget to absorb
+        # cross-platform FP noise while still flagging genuine drift.
+        rmse_rel_tol=2e-2,
+        notes=("Python `diPLSlib.models.DIPLS` (B-Analytics; original "
+               "Nikzad-Langerodi 2018 authors). Same di-PLS penalty "
+               "and Beer-Lambert geometry; rescale='Target' is the "
+               "default config matching pls4all's source-centered fit."),
     ),
     MethodSpec(
         name="recursive_pls",
@@ -5406,10 +5558,9 @@ METHODS: list[MethodSpec] = [
                     "variables for selecting optimal variable subset in "
                     "multivariate calibration. Anal. Chim. Acta 807, 36-43. "
                     "(libPLS `iriv.m` requires Octave Forge `statistics` "
-                    "for `ranksum`; current host Octave 10.3.0 can't "
-                    "install statistics (needs Octave >= 11.1). Adapter "
-                    "auto-activates once `_octave_has_statistics()` "
-                    "returns True.)") if not _octave_has_statistics() else "",
+                    "for `ranksum`; install statistics 1.7.7 — last "
+                    "release before the datatypes>=1.2.0 dep was added — "
+                    "to unlock on Octave 9.1+.)") if not _octave_has_statistics() else "",
         notes=("Octave-bridged libPLS 1.95 `iriv`. Mask metric; pls4all "
                "uses splitmix64 RNG vs MATLAB rand; libPLS's trailing "
                "BVE pass is omitted (expose BVE separately). "
@@ -5437,5 +5588,27 @@ METHODS: list[MethodSpec] = [
                "MATLAB rand, and a deterministic candidate-ranking step "
                "in the proposal generator. Mask metric ~0=perfect, "
                "~1=half disagree, ~1.41=disjoint."),
+    ),
+    MethodSpec(
+        name="vip_spa_select",
+        description="VIP_SPA — VIP-mask then SPA greedy (Phase 53)",
+        pls4all_fn=_vip_spa_select_pls4all,
+        cell_params={"n_samples": 80, "n_features": 40,
+                      "n_components": 4, "vip_threshold": 0.3,
+                      "top_k": 6, "seed": 7},
+        python_reference=lambda **kw: _VipSpaAuswahlReference(
+            n_components=kw["n_components"], top_k=kw["top_k"],
+            vip_threshold=kw["vip_threshold"], seed=kw["seed"]),
+        r_reference=None,
+        prediction_key="mask",
+        # pls4all takes argmax(VIP) as SPA start; auswahl does multi-seed
+        # CV. Same VIP scoring and same threshold, but different SPA
+        # exploration → mask overlap is meaningful but not tight.
+        rmse_rel_tol=1.3,
+        notes=("Python `auswahl.VIP_SPA` (LSX-UniWue). Same VIP scoring "
+               "and 0.3 threshold; auswahl enumerates every SPA start "
+               "and picks the CV-best, pls4all uses argmax-VIP within "
+               "mask. Mask metric ~0=perfect, ~1=half disagree, "
+               "~1.41=disjoint."),
     ),
 ]

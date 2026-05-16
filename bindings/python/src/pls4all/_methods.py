@@ -503,6 +503,14 @@ lib.p4a_irf_select.argtypes = [
     ctypes.POINTER(ctypes.c_void_p),
 ]
 
+lib.p4a_vip_spa_select.restype = ctypes.c_int
+lib.p4a_vip_spa_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_double, ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
 lib.p4a_t2_select.restype = ctypes.c_int
 lib.p4a_t2_select.argtypes = [
     ctypes.c_void_p, ctypes.c_void_p,
@@ -2126,6 +2134,35 @@ def irf_select(ctx: Context, cfg: Config,
     return _resolve_handle(out, ctx, "p4a_irf_select")
 
 
+def vip_spa_select(ctx: Context, cfg: Config,
+                    X: Any, Y: Any,
+                    *, vip_threshold: float = 0.3,
+                    top_k: int) -> MethodResult:
+    """VIP_SPA — VIP-then-SPA hybrid variable selection (Phase 53).
+
+    Composes Favilla 2013 VIP scoring with Araujo 2001 Successive
+    Projections greedy collinearity-minimising pick over features
+    surviving ``VIP > vip_threshold``. Mirrors auswahl.VIP_SPA
+    (LSX-UniWue). The SPA start is taken as argmax(VIP) within the
+    surviving subset (deterministic) rather than auswahl's per-seed
+    enumeration.
+    """
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_vip_spa_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_double(float(vip_threshold)),
+        ctypes.c_int32(int(top_k)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_vip_spa_select")
+
+
 __all__ = [
     "MethodResult",
     "sparse_simpls_fit",
@@ -2194,4 +2231,5 @@ __all__ = [
     "ecr_fit",
     "iriv_select",
     "irf_select",
+    "vip_spa_select",
 ]

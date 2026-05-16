@@ -93,6 +93,7 @@ from ._methods import (
     ecr_fit,
     iriv_select,
     irf_select,
+    vip_spa_select,
 )
 
 
@@ -199,6 +200,7 @@ __all__ = [
     "ecr_fit",
     "iriv_select",
     "irf_select",
+    "vip_spa_select",
     "version",
     "abi_version",
     "build_info",

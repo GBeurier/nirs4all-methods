@@ -1963,6 +1963,35 @@ P4A_API p4a_status_t p4a_irf_select(
     uint64_t seed,
     p4a_method_result_t** out_result);
 
+/* VIP_SPA — VIP-then-SPA hybrid variable selection (Phase 53).
+ * Composition of Favilla 2013 VIP scoring (mask features by VIP > threshold)
+ * and Araujo 2001 Successive Projections Algorithm (greedy collinearity-
+ * minimising pick over the surviving subset). Matches auswahl.VIP_SPA's
+ * LSX-UniWue algorithm; the SPA start is taken as argmax(VIP) within the
+ * surviving subset (deterministic) rather than auswahl's seed enumeration,
+ * and successive projections are computed on raw masked X to match
+ * auswahl._spa._fit_spa (which L2-normalizes only the current direction).
+ *   cfg.n_components — components used to fit PLS for VIP scoring
+ *   vip_threshold    — drop any feature with VIP <= threshold (auswahl default 0.3)
+ *   top_k            — upper bound on selected features; truncated to the
+ *                      surviving-candidate count when that is smaller.
+ * Result contains:
+ *   "vip_scores"        (1 x n_features)
+ *   "vip_mask"          (1 x n_features) as 0/1 doubles
+ *   "selection_scores"  (1 x n_selected)
+ *   int64 "selected_indices" (length n_selected)
+ *   scalars: n_features, n_targets, n_components, top_k (requested),
+ *            n_selected (actual count), n_candidates, vip_threshold
+ */
+P4A_API p4a_status_t p4a_vip_spa_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    double vip_threshold,
+    int32_t top_k,
+    p4a_method_result_t** out_result);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif

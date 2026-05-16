@@ -162,5 +162,6 @@ p4a_validation_plan_destroy
 p4a_validation_plan_get_n_folds
 p4a_validation_plan_get_n_samples
 p4a_validation_plan_set_n_samples
+p4a_vip_spa_select
 p4a_vissa_select
 p4a_weighted_pls_fit
