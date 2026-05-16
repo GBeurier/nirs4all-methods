@@ -146,6 +146,11 @@ class VIPSelector(_RankerSelector):
         Number of features to keep.
     n_components, solver, center_x, scale_x, tol, max_iter
         Underlying PLS hyperparameters used for VIP scoring.
+
+    Notes
+    -----
+    Exposes ``vip_scores_`` as an alias for the generic ``scores_``
+    attribute, for callers used to the chemometrics naming convention.
     """
     _rank_method = 0
 
@@ -160,6 +165,12 @@ class VIPSelector(_RankerSelector):
         self.scale_x = scale_x
         self.tol = tol
         self.max_iter = max_iter
+
+    def fit(self, X, y):
+        super().fit(X, y)
+        # Domain alias for chemometricians.
+        self.vip_scores_ = self.scores_
+        return self
 
 
 class CoefficientSelector(_RankerSelector):

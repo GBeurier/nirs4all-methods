@@ -28,8 +28,15 @@ except ImportError as exc:  # pragma: no cover - exercised manually
         "`pip install scikit-learn`."
     ) from exc
 
-from ._regression import OPLSRegression, PLSRegression
-from ._classification import PLSDAClassifier
+from ._regression import (
+    OPLSRegression,
+    PCR,
+    PLSCanonical,
+    PLSRegression,
+    PLSSVD,
+    SparsePLSRegression,
+)
+from ._classification import OPLSDAClassifier, PLSDAClassifier
 from ._selection import (
     BVESelector,
     BiPLSSelector,
@@ -65,7 +72,12 @@ __all__ = [
     # Model-based regressors / classifiers
     "PLSRegression",
     "OPLSRegression",
+    "PCR",
+    "SparsePLSRegression",
+    "PLSCanonical",
+    "PLSSVD",
     "PLSDAClassifier",
+    "OPLSDAClassifier",
     # 28 SelectorMixin variable-selection wrappers (Phase 54a)
     "BVESelector",
     "BiPLSSelector",

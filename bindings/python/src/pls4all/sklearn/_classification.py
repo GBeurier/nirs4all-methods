@@ -130,3 +130,20 @@ class PLSDAClassifier(_Pls4allModelEstimator, BaseEstimator, ClassifierMixin):
         else:
             int_pred = np.argmax(scores, axis=1)
         return self._label_encoder_.inverse_transform(int_pred)
+
+
+class OPLSDAClassifier(PLSDAClassifier):
+    """Orthogonal PLS Discriminant Analysis (Trygg & Wold 2002).
+
+    Same one-hot-Y + argmax-decode contract as :class:`PLSDAClassifier`,
+    but uses ``Algorithm.OPLS_DA + Deflation.ORTHOGONAL`` for the
+    underlying decomposition. Predictive vs orthogonal components are
+    separated; classification boundary lives in the predictive subspace.
+    """
+
+    _algorithm = Algorithm.OPLS_DA
+
+    def _make_config(self):
+        cfg = super()._make_config()
+        cfg.deflation = Deflation.ORTHOGONAL
+        return cfg

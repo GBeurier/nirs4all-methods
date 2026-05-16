@@ -185,3 +185,150 @@ class OPLSRegression(_PlsRegressorBase):
         self.tol = tol
         self.max_iter = max_iter
         self.store_scores = store_scores
+
+
+class PCR(_PlsRegressorBase):
+    """Principal Components Regression — fits a least-squares regression
+    on the SVD of X.
+
+    PCR ≡ ``Algorithm.PCR`` + ``Solver.SVD``. Functionally similar to
+    sklearn's ``Pipeline([PCA(k), LinearRegression()])`` but with the
+    advantage that pls4all centers / scales in lock-step with the
+    inverse transform, so coefficient inspection matches the original
+    feature space.
+    """
+
+    _algorithm = Algorithm.PCR
+    _default_solver = "svd"
+
+    def __init__(self,
+                  n_components: int = 2,
+                  *,
+                  center_x: bool = True,
+                  scale_x: bool = True,
+                  center_y: bool = True,
+                  scale_y: bool = False,
+                  tol: float = 1e-6,
+                  max_iter: int = 500,
+                  store_scores: bool = False) -> None:
+        self.n_components = n_components
+        # PCR is always SVD-solved — no other solver makes sense; we keep
+        # the attribute so the base class can pass it through unchanged.
+        self.solver = "svd"
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+        self.tol = tol
+        self.max_iter = max_iter
+        self.store_scores = store_scores
+
+
+class SparsePLSRegression(_PlsRegressorBase):
+    """Sparse PLS regression with soft-thresholded weights (Chun & Keles
+    2010-style L1 weight shrinkage during SIMPLS).
+
+    ``sparsity_lambda`` controls the soft-threshold magnitude applied to
+    each weight vector after the SIMPLS deflation; ``lambda=0`` recovers
+    standard SIMPLS. Backed by ``Algorithm.SPARSE_PLS``.
+    """
+
+    _algorithm = Algorithm.SPARSE_PLS
+    _default_solver = "simpls"
+
+    def __init__(self,
+                  n_components: int = 2,
+                  *,
+                  sparsity_lambda: float = 0.05,
+                  solver: str = "simpls",
+                  center_x: bool = True,
+                  scale_x: bool = True,
+                  center_y: bool = True,
+                  scale_y: bool = False,
+                  tol: float = 1e-6,
+                  max_iter: int = 500,
+                  store_scores: bool = False) -> None:
+        self.n_components = n_components
+        self.sparsity_lambda = sparsity_lambda
+        self.solver = solver
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+        self.tol = tol
+        self.max_iter = max_iter
+        self.store_scores = store_scores
+
+    def _make_config(self):
+        cfg = super()._make_config()
+        cfg.sparsity_lambda = float(self.sparsity_lambda)
+        return cfg
+
+
+class PLSCanonical(_PlsRegressorBase):
+    """PLS Canonical (NIPALS- or SVD-deflated) — symmetric two-block PLS
+    where the latent rotations of X and Y are extracted jointly.
+
+    Same surface as :class:`PLSRegression` but with
+    ``Deflation.CANONICAL``. Number of components is bounded above by
+    ``min(n_features, n_targets)``.
+    """
+
+    _algorithm = Algorithm.PLS_CANONICAL
+    _default_solver = "nipals"
+    _deflation = Deflation.CANONICAL
+
+    def __init__(self,
+                  n_components: int = 2,
+                  *,
+                  solver: str = "nipals",
+                  center_x: bool = True,
+                  scale_x: bool = True,
+                  center_y: bool = True,
+                  scale_y: bool = True,
+                  tol: float = 1e-6,
+                  max_iter: int = 500,
+                  store_scores: bool = False) -> None:
+        self.n_components = n_components
+        self.solver = solver
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+        self.tol = tol
+        self.max_iter = max_iter
+        self.store_scores = store_scores
+
+
+class PLSSVD(_PlsRegressorBase):
+    """PLS via direct SVD of the cross-covariance matrix
+    (``Algorithm.PLS_SVD``).
+
+    Same shape contract as :class:`PLSCanonical` (k ≤ min(p, q)) but
+    derives the latent rotations from a single SVD of ``X^T Y`` without
+    NIPALS-style deflation.
+    """
+
+    _algorithm = Algorithm.PLS_SVD
+    _default_solver = "svd"
+    _deflation = Deflation.CANONICAL
+
+    def __init__(self,
+                  n_components: int = 2,
+                  *,
+                  center_x: bool = True,
+                  scale_x: bool = True,
+                  center_y: bool = True,
+                  scale_y: bool = True,
+                  tol: float = 1e-6,
+                  max_iter: int = 500,
+                  store_scores: bool = False) -> None:
+        self.n_components = n_components
+        self.solver = "svd"
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+        self.tol = tol
+        self.max_iter = max_iter
+        self.store_scores = store_scores
