@@ -10,6 +10,26 @@ Next tracks: Android NDK packaging (Phase 36 — deferred, needs the
 ~3.5 GB NDK), Swift / Apple-side bindings, accelerated backends,
 timing benchmarks.
 
+## [0.91.0-ruby-binding] — 2026-05-16
+
+Zero-gem Ruby binding via the stdlib `Fiddle` library. Parity-gated
+against the shared cross-binding fixture; result is bit-exact
+(rmse_rel = 0.0 on all four output arrays, matching JNI / Rust /
+.NET).
+
+### Ruby binding
+
+- `bindings/ruby/lib/pls4all.rb` — public API
+  (`Pls4all.version`, `Pls4all.abi_version`, `Pls4all.pls_fit`).
+  Uses `Array#pack("E*")` / `String#unpack("E*")` to marshal Float
+  arrays to/from IEEE 754 little-endian double buffers — the exact
+  layout libp4a's row-major C ABI expects.
+- `bindings/ruby/test/test_parity.rb` — parity gate.
+- `bindings/ruby/README.md`.
+
+No gem install required: Fiddle has been in Ruby core since 1.9.
+No ABI change (uses `p4a_pls_fit_simple` from 1.13).
+
 ## [0.90.0-dotnet-binding] — 2026-05-16
 
 .NET 9 class library wrapping libp4a via P/Invoke

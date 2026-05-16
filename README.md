@@ -117,6 +117,7 @@ against R `pls` and `spls`). The test compares the four output arrays
 | Go (cgo) | 37 | 2.5e-16 / 2.8e-16 | PASS |
 | Rust (`extern "C"`) | 38 | 0.0 / 0.0 | PASS (bit-exact) |
 | .NET (P/Invoke) | 39 | 0.0 / 0.0 | PASS (bit-exact) |
+| Ruby (stdlib Fiddle) | 40 | 0.0 / 0.0 | PASS (bit-exact) |
 
 Run the cross-binding parity gates:
 
@@ -133,6 +134,7 @@ JAVA_HOME=$JDK bindings/jni/build.sh && \
 cargo run --manifest-path bindings/rust/pls4all/Cargo.toml \
           --example test_parity --release               # Rust
 dotnet run --project bindings/dotnet/TestParity          # .NET
+ruby bindings/ruby/test/test_parity.rb                   # Ruby
 ```
 
 ## Quick Build
