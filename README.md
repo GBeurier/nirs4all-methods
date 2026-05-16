@@ -118,6 +118,7 @@ against R `pls` and `spls`). The test compares the four output arrays
 | Rust (`extern "C"`) | 38 | 0.0 / 0.0 | PASS (bit-exact) |
 | .NET (P/Invoke) | 39 | 0.0 / 0.0 | PASS (bit-exact) |
 | Ruby (stdlib Fiddle) | 40 | 0.0 / 0.0 | PASS (bit-exact) |
+| Lua / LuaJIT (FFI) | 41 | 0.0 / 0.0 | PASS (bit-exact) |
 
 Run the cross-binding parity gates:
 
@@ -135,6 +136,7 @@ cargo run --manifest-path bindings/rust/pls4all/Cargo.toml \
           --example test_parity --release               # Rust
 dotnet run --project bindings/dotnet/TestParity          # .NET
 ruby bindings/ruby/test/test_parity.rb                   # Ruby
+luajit bindings/lua/test/test_parity.lua                 # LuaJIT
 ```
 
 ## Quick Build

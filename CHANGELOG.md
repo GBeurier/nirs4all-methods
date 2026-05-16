@@ -10,6 +10,28 @@ Next tracks: Android NDK packaging (Phase 36 — deferred, needs the
 ~3.5 GB NDK), Swift / Apple-side bindings, accelerated backends,
 timing benchmarks.
 
+## [0.92.0-lua-binding] — 2026-05-16
+
+Zero-rock Lua / LuaJIT binding via LuaJIT's built-in FFI module.
+Parity-gated against the shared cross-binding fixture; result is
+bit-exact (rmse_rel = 0.0 on all four output arrays, matching
+JNI / Rust / .NET / Ruby).
+
+### Lua binding
+
+- `bindings/lua/pls4all.lua` — public API (`pls4all.version`,
+  `pls4all.abi_version`, `pls4all.pls_fit`). Uses LuaJIT's
+  `ffi.new("double[?]", N, src_table)` to populate the C array
+  directly from a Lua sequence — the most direct FFI hand-off in
+  the binding set.
+- `bindings/lua/test/test_parity.lua` — parity gate (regex-based
+  fixture parser; no JSON-rock required).
+- `bindings/lua/README.md`.
+
+Requires LuaJIT (the `ffi` module is LuaJIT-specific). Plain Lua
+support is on the backlog. No ABI change (uses `p4a_pls_fit_simple`
+from 1.13).
+
 ## [0.91.0-ruby-binding] — 2026-05-16
 
 Zero-gem Ruby binding via the stdlib `Fiddle` library. Parity-gated
