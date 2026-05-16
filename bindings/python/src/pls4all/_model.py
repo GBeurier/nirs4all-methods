@@ -252,6 +252,44 @@ class Model:
         with Context() as ctx:
             return self.get_array(ctx, ModelArrayKind.COEFFICIENTS)
 
+    def to_bytes(self) -> bytes:
+        """Serialize the fitted model to a portable byte buffer (.n4a wire
+        format, P4A_SERIALIZATION_FORMAT_VERSION = 1). The buffer is
+        forward-compatible across pls4all minor versions; round-trip is
+        bit-exact for all model arrays."""
+        size = ctypes.c_size_t(0)
+        _check(lib.p4a_model_export_size(self._h, ctypes.byref(size)))
+        if size.value == 0:
+            raise Pls4allError(int(Status.ERR_INTERNAL),
+                                "p4a_model_export_size returned 0")
+        buf = (ctypes.c_uint8 * int(size.value))()
+        written = ctypes.c_size_t(0)
+        _check(lib.p4a_model_export_to_buffer(
+            self._h, buf, size, ctypes.byref(written)))
+        return bytes(bytearray(buf)[: int(written.value)])
+
+    @classmethod
+    def from_bytes(cls, ctx: Context, payload: bytes) -> "Model":
+        """Deserialize a model from a `.n4a` wire-format buffer produced
+        by `to_bytes()`. Raises Pls4allError on ABI MAJOR mismatch or
+        when the writer ABI MINOR exceeds the reader's."""
+        if not payload:
+            raise Pls4allError(int(Status.ERR_INVALID_ARGUMENT),
+                                "from_bytes: empty payload")
+        buf = (ctypes.c_uint8 * len(payload)).from_buffer_copy(payload)
+        out = ctypes.c_void_p(0)
+        _check(lib.p4a_model_import_from_buffer(
+            ctx.handle, buf, ctypes.c_size_t(len(payload)),
+            ctypes.byref(out)), ctx)
+        if not out:
+            raise Pls4allError(int(Status.ERR_INTERNAL),
+                                "p4a_model_import_from_buffer returned NULL")
+        try:
+            return cls(out)
+        except BaseException:
+            lib.p4a_model_destroy(out)
+            raise
+
 
 __all__ = [
     "Model",

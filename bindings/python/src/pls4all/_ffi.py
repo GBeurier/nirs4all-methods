@@ -309,6 +309,28 @@ lib.p4a_model_get_n_targets.argtypes = [
     ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
 ]
 
+# ---- p4a_model_* serialization (P4A_SERIALIZATION_FORMAT_VERSION = 1) ----
+lib.p4a_model_export_size.restype  = ctypes.c_int
+lib.p4a_model_export_size.argtypes = [
+    ctypes.c_void_p, ctypes.POINTER(ctypes.c_size_t),
+]
+lib.p4a_model_export_to_buffer.restype  = ctypes.c_int
+lib.p4a_model_export_to_buffer.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_size_t),
+]
+lib.p4a_model_import_from_buffer.restype  = ctypes.c_int
+lib.p4a_model_import_from_buffer.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+lib.p4a_serialization_inspect.restype  = ctypes.c_int
+lib.p4a_serialization_inspect.argtypes = [
+    ctypes.c_void_p, ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+    ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+]
+
 # ---- p4a_array_* ----
 lib.p4a_array_dtype.restype  = ctypes.c_int
 lib.p4a_array_dtype.argtypes = [
