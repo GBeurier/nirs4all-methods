@@ -32,11 +32,17 @@ function pls4all.PLSRegression(n_components)
 end
 
 function M:fit(x, y, n, p)
-    local q = math.floor(#y / n)
-    if q < 1 then
-        error("y too short for n samples")
+    if n <= 0 or p <= 0 then
+        error("n and p must be positive")
     end
-    local res = pls4all.fit(x, y, n, p, q, self.n_components)
+    if #x ~= n * p then
+        error(string.format("len(x)=%d must equal n*p=%d", #x, n * p))
+    end
+    if #y == 0 or #y % n ~= 0 then
+        error(string.format("len(y)=%d must be a positive multiple of n=%d", #y, n))
+    end
+    local q = math.floor(#y / n)
+    local res = pls4all.pls_fit(x, y, n, p, q, self.n_components)
     self.coefficients = res.coefficients
     self.x_mean = res.x_mean
     self.y_mean = res.y_mean

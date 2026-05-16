@@ -35,8 +35,10 @@ module Pls4all
     #   y    — flat Array<Float> of length n*q.
     #   n,p  — dimensions of X.
     def fit(x, y, n, p)
+      raise ArgumentError, "n and p must be positive" if n <= 0 || p <= 0
+      raise ArgumentError, "x.size (#{x.size}) must equal n*p (#{n * p})" if x.size != n * p
+      raise ArgumentError, "y.size (#{y.size}) must be a positive multiple of n (#{n})" if y.size == 0 || y.size % n != 0
       q = y.size / n
-      raise ArgumentError, "y too short" if q < 1
       res = Pls4all.pls_fit(x, y, n, p, q, @n_components)
       @coefficients = res[:coefficients].dup
       @x_mean = res[:x_mean].dup

@@ -15,6 +15,7 @@ package pls4all
 
 import (
 	"errors"
+	"fmt"
 	"math"
 )
 
@@ -44,10 +45,14 @@ func (m *PLSRegression) Fit(X, y []float64, n, p int) error {
 	if n <= 0 || p <= 0 {
 		return errors.New("Fit: n and p must be positive")
 	}
-	q := len(y) / n
-	if q < 1 {
-		return errors.New("Fit: y must have at least n entries")
+	if len(X) != n*p {
+		return fmt.Errorf("Fit: len(X)=%d must equal n*p=%d", len(X), n*p)
 	}
+	if len(y) == 0 || len(y)%n != 0 {
+		return fmt.Errorf("Fit: len(y)=%d must be a positive multiple of n=%d",
+			len(y), n)
+	}
+	q := len(y) / n
 	res, err := Fit(X, y, n, p, q, m.NComponents)
 	if err != nil {
 		return err

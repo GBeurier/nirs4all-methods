@@ -34,10 +34,16 @@ proc newPLSRegression*(nComponents: int = 2): PLSRegression =
 
 proc fit*(m: PLSRegression, x, y: openArray[float64],
            n, p: int): PLSRegression {.discardable.} =
+    if n <= 0 or p <= 0:
+        raise newException(ValueError, "n and p must be positive")
+    if x.len != n * p:
+        raise newException(ValueError,
+            "x.len (" & $x.len & ") must equal n*p (" & $(n * p) & ")")
+    if y.len == 0 or y.len mod n != 0:
+        raise newException(ValueError,
+            "y.len must be a positive multiple of n (" & $n & ")")
     let q = y.len div n
-    if q < 1:
-        raise newException(ValueError, "y too short")
-    let res = pls4all.fit(x, y, n, p, q, m.nComponents)
+    let res = pls4all.plsFit(x, y, n, p, q, m.nComponents)
     m.coefficients = res.coefficients
     m.xMean = res.xMean
     m.yMean = res.yMean

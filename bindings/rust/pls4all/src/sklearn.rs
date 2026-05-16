@@ -44,6 +44,15 @@ impl PLSRegression {
     /// row-major `(n, q)` or a length-`n` vector when `q == 1`.
     pub fn fit(mut self, x: &[f64], y: &[f64], n: usize,
                 p: usize) -> Result<Self, FitError> {
+        if n == 0 || p == 0 {
+            return Err(FitError::NComponents(0));
+        }
+        if x.len() != n * p {
+            return Err(FitError::XLength { got: x.len(), expected: n * p });
+        }
+        if y.is_empty() || y.len() % n != 0 {
+            return Err(FitError::YLength { got: y.len(), expected: n });
+        }
         let q = y.len() / n;
         let res = pls_fit(x, y, n, p, q, self.n_components)?;
         self.coefficients = Some(res.coefficients);

@@ -35,11 +35,19 @@ public sealed class PLSRegression
     /// </summary>
     public void Fit(double[] X, double[] y, int n, int p)
     {
+        if (n <= 0 || p <= 0)
+            throw new ArgumentException("n and p must be positive.");
+        if (X.Length != n * p)
+            throw new ArgumentException(
+                $"X.Length ({X.Length}) must equal n*p ({n * p}).");
+        if (y.Length == 0 || y.Length % n != 0)
+            throw new ArgumentException(
+                $"y.Length ({y.Length}) must be a positive multiple of n ({n}).");
         int q = y.Length / n;
-        var (coef, xMean, yMean, _) = Pls4all.Fit(X, y, n, p, q, NComponents);
-        Coefficients = (double[])coef.Clone();
-        XMean = (double[])xMean.Clone();
-        YMean = (double[])yMean.Clone();
+        var res = Pls4all.PlsFit(X, y, n, p, q, NComponents);
+        Coefficients = (double[])res.Coefficients.Clone();
+        XMean = (double[])res.XMean.Clone();
+        YMean = (double[])res.YMean.Clone();
         NFeaturesIn = p;
         NTargets = q;
     }
