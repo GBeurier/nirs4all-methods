@@ -162,3 +162,6 @@ pub fn pls_fit(
         coefficients, x_mean, y_mean, predictions,
     })
 }
+
+pub mod sklearn;
+pub use sklearn::PLSRegression;
