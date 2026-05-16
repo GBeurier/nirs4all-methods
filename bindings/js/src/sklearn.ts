@@ -145,33 +145,49 @@ export class PLSRegression {
     fit(X: number[][] | Matrix, y: number[] | number[][] | Matrix): this {
         const Xm = _to_matrix(X, "X");
         const { Y, yWas1D } = _to_y_matrix(y, Xm.rows);
-        // Tear down any prior fit so the WASM memory is freed before
-        // we create new handles.
+        // Tear down any prior fit (and its registry entry) so the WASM
+        // memory is freed before we create new handles.
         this.destroy();
+        // Build the C handles eagerly so failures here free intermediate
+        // resources before the exception propagates to the caller.
         const ctx = Context.create();
-        const cfg = Config.create();
+        let cfg: Config | null = null;
+        let model: Model | null = null;
         try {
+            cfg = Config.create();
             cfg.setAlgorithm(Algorithm.PLS_REGRESSION);
             cfg.setSolver(SOLVER_MAP[this.params.solver]);
             cfg.setDeflation(Deflation.REGRESSION);
             cfg.setNComponents(this.params.nComponents);
             cfg.setCenterX(this.params.centerX);
             cfg.setCenterY(this.params.centerY);
-            const model = Model.fit(ctx, cfg, Xm, Y);
-            this._ctx = ctx;
-            this._model = model;
-            this.n_features_in_ = Xm.cols;
-            this.n_targets_ = Y.cols;
-            this._y_was_1d = yWas1D;
+            // NOTE: the current `Model.fit` thin shim in model.ts ignores
+            // the Context/Config and reads n_components directly; we pass
+            // the explicit hyperparam here so the wrapped fit honours
+            // `params.nComponents`. The Config above is built so future
+            // versions of Model.fit that actually consume it stay
+            // bit-exact.
+            model = Model.fit(ctx, cfg, Xm, Y, this.params.nComponents);
+        } catch (e) {
+            try { model?.destroy(); } catch { /* swallow */ }
+            try { ctx.destroy(); } catch { /* swallow */ }
+            throw e;
         } finally {
-            cfg.destroy();
+            try { cfg?.destroy(); } catch { /* swallow */ }
         }
-        // Register WASM-handle finalizer as a safety net.
+        this._ctx = ctx;
+        this._model = model!;
+        this.n_features_in_ = Xm.cols;
+        this.n_targets_ = Y.cols;
+        this._y_was_1d = yWas1D;
+        // Register a finalizer as a safety net. The unregister token
+        // (`this`) lets us drop it on the next destroy() to avoid
+        // accumulating stale finalizers across repeated fits.
         const ctxRef = this._ctx;
         const modelRef = this._model;
         _registry.register(this, () => {
-            try { modelRef!.destroy(); } catch { /* swallow */ }
-            try { ctxRef!.destroy(); } catch { /* swallow */ }
+            try { modelRef.destroy(); } catch { /* swallow */ }
+            try { ctxRef.destroy(); } catch { /* swallow */ }
         }, this);
         return this;
     }
@@ -204,43 +220,73 @@ export class PLSRegression {
         return out;
     }
 
-    /** R² score on (X, y). */
+    /** R² coefficient of determination on (X, y).
+     *
+     * For single-target regression returns a scalar; for multi-target
+     * returns the *uniformly-averaged* R² across targets (matches
+     * sklearn's `multioutput="uniform_average"` default).
+     */
     score(X: number[][] | Matrix,
           y: number[] | number[][] | Matrix): number {
         const yhat = this.predict(X);
-        const flat: number[] = (yhat instanceof Float64Array)
-            ? Array.from(yhat)
-            : (yhat as number[][]).map(r => r[0] ?? 0);
-        let yVec: number[];
+        // Normalize both prediction and observed matrices to (n, q).
+        const yhatMat: number[][] = (yhat instanceof Float64Array)
+            ? Array.from(yhat).map(v => [v])
+            : (yhat as number[][]);
+        let yMat: number[][];
         if (y instanceof Float64Array) {
-            yVec = Array.from(y);
+            yMat = Array.from(y).map(v => [v]);
         } else if (Array.isArray(y) && typeof (y as number[])[0] === "number") {
-            yVec = y as number[];
+            yMat = (y as number[]).map(v => [v]);
         } else {
-            yVec = (y as number[][]).map(r => r[0] ?? 0);
+            yMat = y as number[][];
         }
-        if (flat.length !== yVec.length) {
+        if (yhatMat.length !== yMat.length) {
             throw new Error(
-                `predict length (${flat.length}) != y length (${yVec.length})`);
+                `predict rows (${yhatMat.length}) != y rows (${yMat.length})`);
         }
-        const n = yVec.length;
-        let mean = 0;
-        for (let i = 0; i < n; i++) mean += yVec[i] ?? 0;
-        mean /= n;
-        let ss_res = 0, ss_tot = 0;
-        for (let i = 0; i < n; i++) {
-            const yi = yVec[i] ?? 0;
-            const yhi = flat[i] ?? 0;
-            const d_res = yhi - yi;
-            const d_tot = yi - mean;
-            ss_res += d_res * d_res;
-            ss_tot += d_tot * d_tot;
+        const n = yMat.length;
+        if (n === 0) throw new Error("score: empty y");
+        const firstRow = yMat[0]!;
+        const q = firstRow.length;
+        if (q === 0) throw new Error("score: zero-width y");
+        // Per-target R², then mean.
+        let r2_sum = 0;
+        for (let t = 0; t < q; t++) {
+            let mean = 0;
+            for (let i = 0; i < n; i++) {
+                const v = yMat[i]?.[t];
+                if (v === undefined) {
+                    throw new Error(`score: y[${i}][${t}] is undefined`);
+                }
+                mean += v;
+            }
+            mean /= n;
+            let ss_res = 0, ss_tot = 0;
+            for (let i = 0; i < n; i++) {
+                const yi = yMat[i]?.[t];
+                const yhi = yhatMat[i]?.[t];
+                if (yi === undefined || yhi === undefined) {
+                    throw new Error(
+                        `score: shape mismatch at row ${i}, target ${t}`);
+                }
+                const d_res = yhi - yi;
+                const d_tot = yi - mean;
+                ss_res += d_res * d_res;
+                ss_tot += d_tot * d_tot;
+            }
+            r2_sum += 1 - ss_res / ss_tot;
         }
-        return 1 - ss_res / ss_tot;
+        return r2_sum / q;
     }
 
-    /** Release the underlying WASM handles. Idempotent. */
+    /** Release the underlying WASM handles. Idempotent.
+     *
+     * Also unregisters this instance from the `FinalizationRegistry`
+     * so subsequent fits do not accumulate stale finalizers.
+     */
     destroy(): void {
+        try { _registry.unregister(this); } catch { /* swallow */ }
         if (this._model) {
             try { this._model.destroy(); } catch { /* swallow */ }
             this._model = null;
