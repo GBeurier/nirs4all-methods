@@ -125,6 +125,13 @@ lib.p4a_continuum_regression_fit.argtypes = [
     ctypes.c_double, ctypes.POINTER(ctypes.c_void_p),
 ]
 
+lib.p4a_ecr_fit.restype = ctypes.c_int
+lib.p4a_ecr_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_double, ctypes.POINTER(ctypes.c_void_p),
+]
+
 lib.p4a_n_pls_fit.restype = ctypes.c_int
 lib.p4a_n_pls_fit.argtypes = [
     ctypes.c_void_p, ctypes.c_void_p,
@@ -474,6 +481,25 @@ lib.p4a_bve_select.argtypes = [
     ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
     ctypes.c_void_p,
     ctypes.c_int32, ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_iriv_select.restype = ctypes.c_int
+lib.p4a_iriv_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_uint64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
+lib.p4a_irf_select.restype = ctypes.c_int
+lib.p4a_irf_select.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32, ctypes.c_int32, ctypes.c_int32, ctypes.c_int32,
+    ctypes.c_uint64,
     ctypes.POINTER(ctypes.c_void_p),
 ]
 
@@ -2008,6 +2034,98 @@ def st_select(ctx: Context, cfg: Config,
     return _resolve_handle(out, ctx, "p4a_st_select")
 
 
+def ecr_fit(ctx: Context, cfg: Config,
+             X: Any, Y: Any,
+             alpha: float) -> MethodResult:
+    """ECR — Elastic Component Regression (Phase 50).
+
+    Bridge between PCR (alpha=0) and PLS (alpha=1) introduced by Liu et al.
+    (2009/2010). For each component the dominant eigenvector of
+    ``(1-alpha) * X'X + alpha * X' y y' X`` is extracted via power iteration,
+    scores deflated, and a regression coefficient matrix is reassembled
+    via the SIMPLS-style ``Wstar = W (P' W)^{-1}`` relation.
+    """
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_ecr_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.c_double(float(alpha)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_ecr_fit")
+
+
+def iriv_select(ctx: Context, cfg: Config,
+                 X: Any, Y: Any,
+                 plan: Any,
+                 *, max_rounds: int,
+                 seed: int = 0) -> MethodResult:
+    """IRIV — Iteratively Retains Informative Variables (Phase 51).
+
+    Yun et al. (2014). Each round samples a binary mask matrix, runs
+    PLS-CV on each row and on per-variable bit-flipped variants, then
+    drops variables flagged uninformative by a Mann-Whitney U test on
+    the include/exclude RMSECV populations. Iterates until no variable
+    is flagged or ``max_rounds`` is reached.
+    """
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_iriv_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(max_rounds)),
+        ctypes.c_uint64(int(seed)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_iriv_select")
+
+
+def irf_select(ctx: Context, cfg: Config,
+                X: Any, Y: Any,
+                plan: Any,
+                *, n_iterations: int,
+                window_size: int,
+                initial_intervals: int,
+                top_k: int,
+                seed: int = 0) -> MethodResult:
+    """IRF — Interval Random Frog (Phase 52).
+
+    Yun et al. (2013). Random Frog applied to fixed-width sliding
+    spectral intervals; the final feature selection is the union of the
+    features under the top-K inclusion-frequency intervals.
+    """
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    plan_handle = getattr(plan, "handle", plan)
+    out = ctypes.c_void_p(0)
+    status = lib.p4a_irf_select(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        plan_handle,
+        ctypes.c_int32(int(n_iterations)),
+        ctypes.c_int32(int(window_size)),
+        ctypes.c_int32(int(initial_intervals)),
+        ctypes.c_int32(int(top_k)),
+        ctypes.c_uint64(int(seed)),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "p4a_irf_select")
+
+
 __all__ = [
     "MethodResult",
     "sparse_simpls_fit",
@@ -2072,4 +2190,8 @@ __all__ = [
     "rep_select",
     "ipw_select",
     "st_select",
+    # §19 Phase 50+ numerical methods
+    "ecr_fit",
+    "iriv_select",
+    "irf_select",
 ]

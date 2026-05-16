@@ -1,7 +1,7 @@
 # Parity gate report
 
 Host: `Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.35`
-pls4all: `0.97.0+abi.1.14.0`
+pls4all: `0.97.0+abi.1.15.0`
 Python: `3.11.15`
 NumPy: `2.4.5`
 
@@ -9,8 +9,8 @@ NumPy: `2.4.5`
 
 | Quality | Count | Definition |
 |---------|------:|------------|
-| tight    | 34 | `rmse_rel < 30% of tolerance` — high-confidence parity. |
-| moderate | 10 | 30-60% of tolerance — real agreement. |
+| tight    | 35 | `rmse_rel < 30% of tolerance` — high-confidence parity. |
+| moderate | 11 | 30-60% of tolerance — real agreement. |
 | loose    | 4 | 60-90% of tolerance — algorithmic divergence likely; passes with margin. |
 | **weak** | **12** | **>= 90% of tolerance** — passes barely; tolerance widened to accept stochastic-RNG or algorithmic-convention divergence. **Treat as smoke check, not bit parity.** |
 
@@ -69,7 +69,7 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `pls_monitoring` | PLS process monitoring (T²/Q thresholds + alarms) (§19) | python / `(none)` - | ✗ | — | — | 1e+01 | no_python_reference |
 | `pls_monitoring` | PLS process monitoring (T²/Q thresholds + alarms) (§19) | R / `mdatools` 0.15.0 | ✓ | moderate | 3.298e+00 | 1e+01 | ok |
 | `one_se_rule` | One-SE component selection rule (§10) | python / `(none)` - | ✗ | — | — | 1e+01 | no_python_reference |
-| `one_se_rule` | One-SE component selection rule (§10) | R / `pls` 2.8.5 | ✓ | tight | 2.623e+00 | 1e+01 | ok |
+| `one_se_rule` | One-SE component selection rule (§10) | R / `pls` 2.8.5 | ✓ | tight | 2.637e+00 | 1e+01 | ok |
 | `so_pls` | SO-PLS — Sequential & Orthogonalized multi-block PLS (§17) | python / `(none)` - | ✗ | — | — | 1e+00 | no_python_reference |
 | `so_pls` | SO-PLS — Sequential & Orthogonalized multi-block PLS (§17) | R / `multiblock` 0.8.10 | ✓ | tight | 9.529e-03 | 1e+00 | ok |
 | `on_pls` | OnPLS — Orthogonal multi-block decomposition (§18) | python / `OnPLS` github tomlof/OnPLS | ✓ | tight | 1.817e+00 | 1e+01 | ok |
@@ -162,3 +162,8 @@ Each method is compared against a Python reference and an R reference. Methods w
 | `ipw_select` | IPW-PLS iterative predictor weighting (§18 Phase 5t) | R / `plsVarSel` 0.10.0 | ✓ | loose | 8.819e-01 | 1e+00 | ok |
 | `st_select` | ST-PLS soft-thresholded sparse PLS (§18 Phase 5u) | python / `(none)` - | ✗ | — | — | 2e+00 | no_python_reference |
 | `st_select` | ST-PLS soft-thresholded sparse PLS (§18 Phase 5u) | R / `plsVarSel` 0.10.0 | ✓ | weak | 2.000e+00 | 2e+00 | ok |
+| `ecr` | Elastic Component Regression (Phase 50) | matlab / `libPLS` 1.95 | ✓ | tight | 1.066e-07 | 1e-03 | ok |
+| `ecr` | Elastic Component Regression (Phase 50) | R / `(none)` - | ✗ | — | — | 1e-03 | no_r_reference |
+| `iriv_select` | Iteratively Retains Informative Variables (Phase 51) | paper / `paper-only` - | ✓ | — | — | 1e+00 | paper_only |
+| `irf_select` | Interval Random Frog (Phase 52) | matlab / `libPLS` 1.95 | ✓ | moderate | 6.504e-01 | 1e+00 | ok |
+| `irf_select` | Interval Random Frog (Phase 52) | R / `(none)` - | ✗ | — | — | 1e+00 | no_r_reference |

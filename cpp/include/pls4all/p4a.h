@@ -1879,6 +1879,90 @@ P4A_API p4a_status_t p4a_st_select(
     int32_t min_selected,
     p4a_method_result_t** out_result);
 
+/* ============================================================================
+ * 19. ABI shims for §6 Phase 50+ numerical methods (ECR / IRIV / IRF)
+ * ==========================================================================*/
+
+/* ECR — Elastic Component Regression (Phase 50). Liu 2009/2010.
+ * `alpha` in [0, 1]: 0 = PCR-like, 1 = PLS-like. Values outside the
+ * interval are silently clamped to [0, 1] (mirrors libPLS `ecr.m`).
+ * cfg.n_components selects how many ECR components to extract. The
+ * effective component count is clamped to min(n-1, p-1, cfg.n_components).
+ * The result is shaped like the other "fit" methods:
+ *   "coefficients"  (n_features x n_targets)
+ *   "predictions"   (n_samples x n_targets)
+ *   "x_mean", "y_mean", "x_scale", "y_scale"
+ *   "weights_w"     (n_features x n_components)
+ *   "loadings_p"    (n_features x n_components)
+ *   "y_loadings"    (n_targets  x n_components)
+ *   "wstar"         (n_features x n_components, so that X · wstar = T)
+ *   "r2x"           (1 x n_components, % X variance per component)
+ *   "r2y"           (1 x n_components, % Y variance per component)
+ *   scalars: n_samples, n_features, n_targets, n_components, alpha, rmse
+ */
+P4A_API p4a_status_t p4a_ecr_fit(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    double alpha,
+    p4a_method_result_t** out_result);
+
+/* IRIV — Iteratively Retains Informative Variables (Phase 51). Yun 2014.
+ * Iterative backward variable selection driven by a Mann-Whitney U test
+ * on permuted-replacement CV-RMSE values.
+ *   cfg.n_components — capped per round to surviving feature count.
+ *   max_rounds       — hard cap on IRIV iterations (the algorithm stops
+ *                      earlier if no variables are flagged uninformative).
+ *   seed             — splitmix64 seed driving the binary-mask generator.
+ * The result contains:
+ *   "remaining_per_round" (1 x (n_rounds+1)) — features alive after each round
+ *   "removed_per_round"   (1 x n_rounds)
+ *   int64 "selected_indices"
+ *   scalars: n_features, n_targets, n_components, n_rounds,
+ *            binary_matrix_rows, seed
+ */
+P4A_API p4a_status_t p4a_iriv_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t max_rounds,
+    uint64_t seed,
+    p4a_method_result_t** out_result);
+
+/* IRF — Interval Random Frog (Phase 52). Yun 2013. Random Frog applied to
+ * fixed-width sliding spectral intervals (window of `window_size` features
+ * each). Final selection is the union of features under the top-K
+ * inclusion-frequency intervals.
+ *   window_size       — interval width (1 <= w <= n_features)
+ *   initial_intervals — Q in the libPLS paper (initial subset size)
+ *   top_k             — number of best intervals to union into the
+ *                       returned feature set
+ *   seed              — splitmix64 seed
+ * Result contains:
+ *   "probability"        (1 x n_intervals)
+ *   "rmse_by_iteration"  (1 x n_iterations)
+ *   "subset_sizes"       (1 x n_iterations)
+ *   int64 "top_k_intervals"
+ *   int64 "selected_indices"  (union of top-K intervals)
+ *   scalars: n_features, n_targets, n_components, n_iterations, window_size,
+ *            initial_intervals, n_intervals, top_k, seed, best_rmse
+ */
+P4A_API p4a_status_t p4a_irf_select(
+    p4a_context_t* ctx,
+    const p4a_config_t* cfg,
+    const p4a_matrix_view_t* X,
+    const p4a_matrix_view_t* Y,
+    const p4a_validation_plan_t* plan,
+    int32_t n_iterations,
+    int32_t window_size,
+    int32_t initial_intervals,
+    int32_t top_k,
+    uint64_t seed,
+    p4a_method_result_t** out_result);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif

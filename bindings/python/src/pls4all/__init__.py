@@ -89,6 +89,10 @@ from ._methods import (
     rep_select,
     ipw_select,
     st_select,
+    # §19 Phase 50+ numerical methods
+    ecr_fit,
+    iriv_select,
+    irf_select,
 )
 
 
@@ -191,6 +195,10 @@ __all__ = [
     "rep_select",
     "ipw_select",
     "st_select",
+    # §19 Phase 50+ numerical methods
+    "ecr_fit",
+    "iriv_select",
+    "irf_select",
     "version",
     "abi_version",
     "build_info",

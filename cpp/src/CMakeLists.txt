@@ -37,9 +37,12 @@ add_library(pls4all_core OBJECT
     core/classification_metrics.cpp
     core/component_coefficients.cpp
     core/context.cpp
+    core/ecr.cpp
     core/ga_selection.cpp
     core/gpr_pls.cpp
     core/ipw_selection.cpp
+    core/irf_selection.cpp
+    core/iriv_selection.cpp
     core/variable_importance.cpp
     core/variable_selection.cpp
     core/config.cpp

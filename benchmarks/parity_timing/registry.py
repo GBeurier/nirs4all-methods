@@ -669,6 +669,17 @@ def _continuum_pls4all(ctx, cfg, X, Y, *, n_components, tau, **_):
     return pls4all.continuum_regression_fit(ctx, cfg, X, Y, tau=tau)
 
 
+def _ecr_pls4all(ctx, cfg, X, Y, *, n_components, alpha, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    return pls4all.ecr_fit(ctx, cfg, X, Y, alpha=float(alpha))
+
+
 def _n_pls_pls4all(ctx, cfg, X, Y, *, n_components, mode_j, mode_k, **_):
     import pls4all
     cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
@@ -1629,6 +1640,47 @@ def _bve_select_pls4all(ctx, cfg, X, Y, *, n_components, n_steps,
         inner = pls4all.bve_select(ctx, cfg, X, Y, plan,
                                     n_steps=int(n_steps),
                                     min_features=int(min_features))
+    finally:
+        plan.close()
+    return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+
+def _iriv_select_pls4all(ctx, cfg, X, Y, *, n_components, max_rounds,
+                          fold, seed=0, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    plan = _build_default_plan(X.shape[0], n_folds=int(fold))
+    try:
+        inner = pls4all.iriv_select(ctx, cfg, X, Y, plan,
+                                     max_rounds=int(max_rounds),
+                                     seed=int(seed))
+    finally:
+        plan.close()
+    return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+
+def _irf_select_pls4all(ctx, cfg, X, Y, *, n_components, n_iterations,
+                         window_size, initial_intervals, top_k, seed=0, **_):
+    import pls4all
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.center_y = True
+    plan = _build_default_plan(X.shape[0])
+    try:
+        inner = pls4all.irf_select(ctx, cfg, X, Y, plan,
+                                    n_iterations=int(n_iterations),
+                                    window_size=int(window_size),
+                                    initial_intervals=int(initial_intervals),
+                                    top_k=int(top_k),
+                                    seed=int(seed))
     finally:
         plan.close()
     return _SelectorMaskResult(inner, n_features=X.shape[1])
@@ -3489,6 +3541,24 @@ def _ensure_oct2py():
         return None
 
 
+def _octave_has_statistics() -> bool:
+    """Detect whether Octave's `statistics` package (needed for `ranksum`)
+    is loadable. Some libPLS routines (iriv) require it."""
+    oc = _ensure_oct2py()
+    if oc is None:
+        return False
+    try:
+        # Try calling `which ranksum` — returns empty if not present.
+        result = oc.eval("pkg load statistics; exist('ranksum', 'file')",
+                          verbose=False)
+        return bool(result and float(result) > 0)
+    except Exception:
+        return False
+
+
+_OCTAVE_HAS_STATS: bool | None = None
+
+
 class _RandomFrogLibPlsReference(_MaskReferenceAdapter):
     """libPLS (Octave/MATLAB) `randomfrog_pls` — canonical Random Frog
     implementation (Li et al. 2011). Same algorithm as pls4all's
@@ -3555,6 +3625,136 @@ class _CarsLibPlsReference(_MaskReferenceAdapter):
         # carspls(X, y, A, fold, method, num, selectLV, originalVersion, order)
         res = oc.carspls(X64, Y64, self._k, 5, 'center',
                           self._n_iter, 1, 0, 0, nout=1)
+        if hasattr(res, 'keys') and 'vsel' in res:
+            sel = np.asarray(res['vsel']).reshape(-1).astype(np.int64) - 1
+            return sel
+        return np.empty(0, dtype=np.int64)
+
+
+class _EcrLibPlsReference(ReferenceAdapter):
+    """libPLS (Octave/MATLAB) `ecr` — canonical Elastic Component
+    Regression (Liu 2009/2010). Centred fit, returns predictions on the
+    training matrix; for evaluation we recompute predictions on the
+    prediction matrix via the returned regression coefficients."""
+
+    library_name = "libPLS"
+    library_version = "1.95"
+    language = "matlab"
+    notes = ("Octave-bridged libPLS 1.95 `ecr(X, y, A, 'center', alpha)`. "
+             "Predictions computed as X_predict @ B + y_mean using the "
+             "fitted coefficient matrix and centring parameters.")
+
+    def __init__(self, n_components: int, alpha: float) -> None:
+        super().__init__()
+        self._k = int(n_components)
+        self._alpha = float(alpha)
+        self._B: np.ndarray | None = None
+        self._x_mean: np.ndarray | None = None
+        self._y_mean: np.ndarray | None = None
+
+    def fit(self, X, Y, **kwargs):
+        oc = _ensure_oct2py()
+        if oc is None:
+            raise RuntimeError("oct2py/libPLS not available")
+        X = np.asarray(X, dtype=np.float64)
+        Y2 = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)[:, :1]
+        res = oc.ecr(np.ascontiguousarray(X), np.ascontiguousarray(Y2),
+                      self._k, 'center', self._alpha, nout=1)
+        if hasattr(res, 'keys') and 'regcoef' in res:
+            B = np.asarray(res['regcoef'], dtype=np.float64)
+            # libPLS returns a (p × n_components) coefficient matrix; the
+            # final column is the n_components-component model used for
+            # prediction.
+            if B.ndim == 1:
+                B = B.reshape(-1, 1)
+            self._B = B[:, -1:].reshape(-1, 1)
+        else:
+            raise RuntimeError("ECR libPLS reference returned no 'regcoef'")
+        self._x_mean = X.mean(axis=0).reshape(1, -1)
+        self._y_mean = Y2.mean(axis=0).reshape(1, -1)
+
+    def predict(self, X):
+        if self._B is None or self._x_mean is None or self._y_mean is None:
+            raise RuntimeError("ECR libPLS reference not fitted")
+        X = np.asarray(X, dtype=np.float64)
+        return (X - self._x_mean) @ self._B + self._y_mean
+
+
+class _IrivLibPlsReference(_MaskReferenceAdapter):
+    """libPLS (Octave/MATLAB) `iriv` — canonical IRIV (Yun 2014). pls4all
+    uses splitmix64 vs MATLAB rand; the Mann-Whitney decision is shared
+    so qualitatively the surviving feature sets should overlap. Mask
+    metric — tolerance is loose because IRIV's iterative removal cascade
+    is very sensitive to fold seeds and binary-mask shuffles.
+
+    Note: libPLS `iriv.m` calls `ranksum` from Octave's `statistics`
+    package. On this host Octave is at 10.3.0 and the `statistics`
+    package requires Octave >= 11.1, so libPLS can't be evaluated
+    until Octave is upgraded. In that environment this reference
+    raises a clear error rather than silently falling back to a
+    hand-coded port (codex review policy: external libraries only,
+    no NumPy mirrors)."""
+
+    library_name = "libPLS"
+    library_version = "1.95"
+    language = "matlab"
+    notes = ("Octave-bridged libPLS 1.95 `iriv(X, y, A_max, fold, "
+             "'center')`. Requires Octave >= 11.1 + the `statistics` "
+             "package for `ranksum`. RNG differs from pls4all; mask "
+             "metric.")
+
+    def __init__(self, n_components: int, fold: int) -> None:
+        super().__init__()
+        self._k = int(n_components)
+        self._fold = int(fold)
+
+    def _compute_indices(self, X, Y, **kwargs):
+        oc = _ensure_oct2py()
+        if oc is None:
+            raise RuntimeError(
+                "oct2py / libPLS not available — install Octave >= 11.1 "
+                "with the `statistics` package to enable IRIV parity")
+        n, _ = X.shape
+        Y2 = Y.reshape(n, -1)[:, :1]
+        res = oc.iriv(np.ascontiguousarray(X, dtype=np.float64),
+                      np.ascontiguousarray(Y2, dtype=np.float64),
+                      self._k, self._fold, 'center', nout=1)
+        if not hasattr(res, 'keys') or 'SelectedVariables' not in res:
+            raise RuntimeError("libPLS iriv returned no SelectedVariables")
+        sel = np.asarray(res['SelectedVariables']).reshape(-1)
+        return sel.astype(np.int64) - 1
+
+
+class _IrfLibPlsReference(_MaskReferenceAdapter):
+    """libPLS (Octave/MATLAB) `irf` — canonical Interval Random Frog
+    (Yun 2013). Stochastic; mask metric. pls4all's deterministic
+    splitmix64 RNG diverges from MATLAB's rand. Returns the union of the
+    top-K probability-ranked intervals (libPLS's `vsel`)."""
+
+    library_name = "libPLS"
+    library_version = "1.95"
+    language = "matlab"
+    notes = ("Octave-bridged libPLS 1.95 `irf(X, y, N, w, Q, A, 'center')`. "
+             "RNG differs; mask metric.")
+
+    def __init__(self, n_iterations: int, window_size: int,
+                  initial_intervals: int, n_components: int) -> None:
+        super().__init__()
+        self._n_iter = int(n_iterations)
+        self._w = int(window_size)
+        self._q = int(initial_intervals)
+        self._k = int(n_components)
+
+    def _compute_indices(self, X, Y, **kwargs):
+        oc = _ensure_oct2py()
+        if oc is None:
+            raise RuntimeError("oct2py/libPLS not available")
+        n, _ = X.shape
+        Y2 = Y.reshape(n, -1)[:, :1]
+        res = oc.irf(np.ascontiguousarray(X, dtype=np.float64),
+                      np.ascontiguousarray(Y2, dtype=np.float64),
+                      self._n_iter, self._w, self._q, self._k,
+                      'center', nout=1)
         if hasattr(res, 'keys') and 'vsel' in res:
             sel = np.asarray(res['vsel']).reshape(-1).astype(np.int64) - 1
             return sel
@@ -5163,5 +5363,79 @@ METHODS: list[MethodSpec] = [
                "non-zero coefs. Mask RMSE-rel ~0=perfect, ~1=half "
                "disagree, ~1.41=disjoint; tolerance admits the known "
                "absolute-threshold versus relative-shrink divergence."),
+    ),
+    # ---- §19 Phase 50+ numerical methods (ECR / IRIV / IRF) ----
+    MethodSpec(
+        name="ecr",
+        description="Elastic Component Regression (Phase 50)",
+        pls4all_fn=_ecr_pls4all,
+        cell_params={"n_samples": 200, "n_features": 50,
+                      "n_components": 4, "alpha": 0.5},
+        python_reference=lambda **kw: _EcrLibPlsReference(
+            n_components=kw["n_components"], alpha=kw["alpha"]),
+        r_reference=None,
+        prediction_key="predictions",
+        # ECR is fully deterministic on both sides (centred fit, same
+        # power-method iteration, no RNG). Tight tolerance.
+        rmse_rel_tol=1e-3,
+        notes=("Octave-bridged libPLS 1.95 `ecr(X, y, A, 'center', "
+               "alpha)`. Deterministic algorithm; small numerical "
+               "differences arise only from the power-method tolerance "
+               "and FP accumulation order."),
+    ),
+    MethodSpec(
+        name="iriv_select",
+        description="Iteratively Retains Informative Variables (Phase 51)",
+        pls4all_fn=_iriv_select_pls4all,
+        cell_params={"n_samples": 80, "n_features": 25,
+                      "n_components": 4, "max_rounds": 3,
+                      "fold": 3, "seed": 11},
+        # Wire libPLS reference ONLY when Octave has the `statistics`
+        # package (where `ranksum` lives). Otherwise this entry stays
+        # paper_only — we refuse to use a hand-coded NumPy fallback
+        # (codex policy: external libs only, no NumPy mirrors).
+        python_reference=(lambda **kw: _IrivLibPlsReference(
+            n_components=kw["n_components"], fold=kw["fold"])
+            if _octave_has_statistics() else None),
+        r_reference=None,
+        prediction_key="mask",
+        rmse_rel_tol=1.0,
+        paper_only=("Yun, Y.-H., Wang, W.-T., Tan, M.-L., Liang, Y.-Z., "
+                    "Li, H.-D., Cao, D.-S., Lu, H.-M., Xu, Q.-S. (2014). "
+                    "A strategy that iteratively retains informative "
+                    "variables for selecting optimal variable subset in "
+                    "multivariate calibration. Anal. Chim. Acta 807, 36-43. "
+                    "(libPLS `iriv.m` requires Octave Forge `statistics` "
+                    "for `ranksum`; current host Octave 10.3.0 can't "
+                    "install statistics (needs Octave >= 11.1). Adapter "
+                    "auto-activates once `_octave_has_statistics()` "
+                    "returns True.)") if not _octave_has_statistics() else "",
+        notes=("Octave-bridged libPLS 1.95 `iriv`. Mask metric; pls4all "
+               "uses splitmix64 RNG vs MATLAB rand; libPLS's trailing "
+               "BVE pass is omitted (expose BVE separately). "
+               "Mask ~0=perfect, ~1=half disagree, ~1.41=disjoint."),
+    ),
+    MethodSpec(
+        name="irf_select",
+        description="Interval Random Frog (Phase 52)",
+        pls4all_fn=_irf_select_pls4all,
+        cell_params={"n_samples": 120, "n_features": 30,
+                      "n_components": 3, "n_iterations": 30,
+                      "window_size": 4, "initial_intervals": 5,
+                      "top_k": 5, "seed": 11},
+        python_reference=lambda **kw: _IrfLibPlsReference(
+            n_iterations=kw["n_iterations"], window_size=kw["window_size"],
+            initial_intervals=kw["initial_intervals"],
+            n_components=kw["n_components"]),
+        r_reference=None,
+        prediction_key="mask",
+        # Stochastic Metropolis-Hastings acceptance + different RNGs +
+        # different proposal heuristic ⇒ wide tolerance.
+        rmse_rel_tol=1.3,
+        notes=("Octave-bridged libPLS 1.95 `irf(X, y, N, w, Q, A, "
+               "'center')`. Stochastic chain; pls4all uses splitmix64 vs "
+               "MATLAB rand, and a deterministic candidate-ranking step "
+               "in the proposal generator. Mask metric ~0=perfect, "
+               "~1=half disagree, ~1.41=disjoint."),
     ),
 ]

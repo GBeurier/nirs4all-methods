@@ -83,6 +83,7 @@ p4a_di_pls_fit
 p4a_ds_fit
 p4a_dtype_size
 p4a_dtype_to_string
+p4a_ecr_fit
 p4a_fused_sparse_pls_fit
 p4a_gating_strategy_create
 p4a_gating_strategy_destroy
@@ -95,6 +96,8 @@ p4a_get_git_revision
 p4a_get_version_string
 p4a_gpr_pls_fit
 p4a_group_sparse_pls_fit
+p4a_irf_select
+p4a_iriv_select
 p4a_kernel_pls_fit
 p4a_matrix_view_init_colmajor
 p4a_matrix_view_init_rowmajor
