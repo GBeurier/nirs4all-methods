@@ -32,6 +32,7 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
+from sklearn.base import BaseEstimator, RegressorMixin
 
 from .. import _methods
 from .._context import Context
@@ -295,16 +296,24 @@ class O2PLSRegression(_MethodResultRegressor):
                 n_y_orthogonal=int(self.n_y_orthogonal))
 
 
-class KernelPLSRegression(_MethodResultRegressor):
+class KernelPLSRegression(BaseEstimator, RegressorMixin):
     """Non-linear kernel PLS (Rosipal & Trejo 2001).
 
-    Predicts via the kernel between new X and the training X:
+    **In-sample only**: the kernel-PLS C ABI exports ``alpha`` and
+    ``y_mean`` but NOT the training-row / global-mean kernel-centering
+    statistics needed to centre a fresh ``K(X_new, X_train)`` matrix
+    consistently with the fit. Without those means, Python-side
+    predict-on-new-X would be off. Until the C ABI is extended to
+    export the kernel-centering state, this wrapper:
 
-        Y_pred = K(X_new, X_train) @ alpha + y_mean
+    * fits via ``kernel_pls_fit`` and stores the in-sample
+      ``predictions`` matrix as ``predictions_``;
+    * ``predict(X)`` returns the stored predictions IFF the caller
+      passes the same training matrix (array content match);
+    * raises :class:`NotImplementedError` on any other X.
 
-    We must keep the training matrix around for the kernel. The
-    `kernel_type` enum follows the C ABI:
-    ``0=linear, 1=RBF, 2=polynomial, 3=sigmoid``.
+    Use tier-1 ``pls4all.kernel_pls_fit`` directly if you need
+    one-shot in-sample predictions only.
     """
 
     def __init__(self, n_components: int = 2,
@@ -329,51 +338,34 @@ class KernelPLSRegression(_MethodResultRegressor):
                 gamma=float(self.gamma),
                 coef0=float(self.coef0),
                 degree=int(self.degree))
-        self._extract_state_kernel(res)
+        self.alpha_ = np.asarray(res.matrix("alpha"), dtype=np.float64)
+        self.y_mean_ = np.asarray(
+            res.matrix("y_mean"), dtype=np.float64).ravel()
+        preds = np.asarray(res.matrix("predictions"), dtype=np.float64)
+        if preds.ndim == 1:
+            preds = preds.reshape(-1, 1)
+        if y_ndim == 1 and preds.shape[1] == 1:
+            preds = preds.ravel()
+        self.predictions_ = preds
         self._X_train_ = X_arr.copy()
         self.n_features_in_ = int(X_arr.shape[1])
         self._y_ndim_ = y_ndim
         return self
 
-    def _extract_state_kernel(self, result) -> None:
-        self.alpha_ = np.asarray(
-            result.matrix("alpha"), dtype=np.float64)
-        self.y_mean_ = np.asarray(
-            result.matrix("y_mean"), dtype=np.float64).ravel()
-        # Stub coef_ for sklearn introspection.
-        self.coef_ = np.zeros(1)
-
-    def _kernel(self, X1, X2):
-        if self.kernel_type == 0:  # linear
-            return X1 @ X2.T
-        if self.kernel_type == 1:  # RBF
-            gamma = self.gamma if self.gamma > 0 else 1.0 / X1.shape[1]
-            sq = (np.sum(X1**2, axis=1)[:, None]
-                    + np.sum(X2**2, axis=1)[None, :]
-                    - 2.0 * X1 @ X2.T)
-            return np.exp(-gamma * sq)
-        if self.kernel_type == 2:  # polynomial
-            gamma = self.gamma if self.gamma > 0 else 1.0 / X1.shape[1]
-            return (gamma * (X1 @ X2.T) + self.coef0) ** self.degree
-        if self.kernel_type == 3:  # sigmoid
-            gamma = self.gamma if self.gamma > 0 else 1.0 / X1.shape[1]
-            return np.tanh(gamma * (X1 @ X2.T) + self.coef0)
-        raise ValueError(f"unknown kernel_type {self.kernel_type}")
-
     def predict(self, X):
         from sklearn.utils.validation import check_is_fitted
-        from ._base import _check_X_p4a
-        check_is_fitted(self, ["alpha_", "_X_train_"])
-        X_arr = _check_X_p4a(self, X)
-        K = self._kernel(X_arr, self._X_train_)
-        if self.alpha_.ndim == 1:
-            preds = K @ self.alpha_ + self.y_mean_[0]
-        else:
-            preds = K @ self.alpha_ + self.y_mean_
-        if (getattr(self, "_y_ndim_", 2) == 1 and preds.ndim == 2
-                and preds.shape[1] == 1):
-            preds = preds.ravel()
-        return preds
+        check_is_fitted(self, ["predictions_", "_X_train_"])
+        X_arr = np.ascontiguousarray(X, dtype=np.float64)
+        if (X_arr.shape != self._X_train_.shape
+                or not np.array_equal(X_arr, self._X_train_)):
+            raise NotImplementedError(
+                "KernelPLSRegression.predict on a new X is not yet "
+                "implemented: the C ABI does not export the kernel-"
+                "centring state needed to compute K_test consistently "
+                "with the fit. Pass the same X used in fit() to "
+                "retrieve the stored in-sample predictions, or use "
+                "pls4all.kernel_pls_fit directly for one-shot use.")
+        return self.predictions_
 
 
 class PLSGLMRegressor(_MethodResultRegressor):

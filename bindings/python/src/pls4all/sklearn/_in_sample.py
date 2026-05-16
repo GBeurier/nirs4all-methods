@@ -50,10 +50,17 @@ class _InSampleOnlyRegressor(BaseEstimator, RegressorMixin):
     Subclasses override :meth:`_run_fit` to call the tier-1 fit function
     and return a :class:`MethodResult` whose ``predictions`` matrix
     holds the in-sample fit.
+
+    Predict-on-new-X is impossible for these methods because their C
+    MethodResult does not export regression coefficients (no global
+    coef matrix to multiply against). ``predict(X)`` therefore only
+    works when ``X`` matches the training X by **array content** —
+    not by Python object identity, which would reject copies/views and
+    silently fail across processes.
     """
 
     predictions_: np.ndarray | None = None
-    _X_train_ref: int = 0   # id() of the training X — for identity-check predict.
+    _X_train_: np.ndarray | None = None
 
     def _run_fit(self, ctx: Context, X: np.ndarray,
                   y: np.ndarray) -> Any:
@@ -72,21 +79,24 @@ class _InSampleOnlyRegressor(BaseEstimator, RegressorMixin):
         self.predictions_ = preds
         self.n_features_in_ = int(X_arr.shape[1])
         self._y_ndim_ = y_ndim_orig
-        # Track the identity of the training array so predict can verify.
-        self._X_train_ref = id(X)
+        # Snapshot training X content so predict(X) can verify by value
+        # rather than by id() (rejecting copies / views / pickled fits).
+        self._X_train_ = X_arr.copy()
         return self
 
     def predict(self, X):
-        check_is_fitted(self)
-        if id(X) != self._X_train_ref:
+        check_is_fitted(self, ["predictions_", "_X_train_"])
+        X_arr = np.ascontiguousarray(X, dtype=np.float64)
+        if (X_arr.shape != self._X_train_.shape
+                or not np.array_equal(X_arr, self._X_train_)):
             cls = type(self).__name__
             raise NotImplementedError(
                 f"{cls} is an in-sample-only estimator: its C kernel "
                 f"does not export regression coefficients, so predict-on-"
-                f"new-X requires refitting. Pass the same X used in "
-                f"fit() to retrieve the stored predictions, or call "
-                f"pls4all._methods directly to refit on the union of "
-                f"training and new X."
+                f"new-X is not possible without refitting. Pass the same "
+                f"X (by value, copies / views OK) used in fit() to "
+                f"retrieve the stored predictions, or call "
+                f"pls4all._methods directly to refit."
             )
         return self.predictions_
 

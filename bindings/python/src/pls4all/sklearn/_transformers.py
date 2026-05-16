@@ -61,10 +61,15 @@ class _CalibrationTransferBase(TransformerMixin, BaseEstimator):
     def transform(self, X):
         check_is_fitted(self)
         X_arr = _check_X_p4a(self, X)
-        X_corr = X_arr @ self.transformation_.T
+        # The two C ABI calibration kernels store `transformation` with
+        # opposite conventions; subclasses know which side to apply.
+        X_corr = self._apply_transform(X_arr)
         if self.bias_ is not None:
             X_corr = X_corr + self.bias_
         return X_corr
+
+    def _apply_transform(self, X_arr):
+        raise NotImplementedError
 
     def _call_fit(self, ctx, X_src, X_tgt):
         raise NotImplementedError
@@ -86,6 +91,10 @@ class PDSTransformer(_CalibrationTransferBase):
             ctx, X_src, X_tgt,
             window_half_width=int(self.window_half_width))
 
+    def _apply_transform(self, X_arr):
+        # PDS stores `transformation` as p_target × p_source; left-multiply.
+        return X_arr @ self.transformation_.T
+
 
 class DSTransformer(_CalibrationTransferBase):
     """Direct Standardization — full-band cross-instrument regression."""
@@ -95,6 +104,12 @@ class DSTransformer(_CalibrationTransferBase):
 
     def _call_fit(self, ctx, X_src, X_tgt):
         return _methods.ds_fit(ctx, X_src, X_tgt)
+
+    def _apply_transform(self, X_arr):
+        # DS stores `transformation` as p_source × p_target; no transpose.
+        # See c_api_method_result.cpp:1879 — predict is
+        # `X_source @ transformation + bias`.
+        return X_arr @ self.transformation_
 
 
 __all__ = ["PDSTransformer", "DSTransformer"]

@@ -76,20 +76,36 @@ def dmodx_score(model, X) -> np.ndarray:
 
 def pls_monitoring(model, X_reference, X_monitor, *, alpha: float = 0.95):
     """Run process monitoring on a fitted model: returns T²/Q time
-    series + alarm flags for X_monitor against the X_reference baseline."""
+    series + alarm flags for X_monitor against the X_reference baseline.
+
+    ``alpha`` follows the sklearn / chemometrics convention (0.95 ⇒
+    upper 5 % tail flagged as anomalous). Internally the C kernel uses
+    ``1 - alpha`` as the alarm threshold (see
+    ``cpp/src/core/pls_monitoring.cpp::pls_monitoring_run``), so the
+    conversion happens here.
+    """
     if not isinstance(model, Model):
         raise TypeError(
             f"pls_monitoring needs a pls4all.Model (got {type(model).__name__})")
     ctx = Context()
     Xr = np.ascontiguousarray(X_reference, dtype=np.float64)
     Xm = np.ascontiguousarray(X_monitor, dtype=np.float64)
+    # C-side expects the tail probability (1 - alpha).
     res = _methods.pls_monitoring_run(
-        ctx, model, X_reference=Xr, X_monitor=Xm, alpha=float(alpha))
+        ctx, model, X_reference=Xr, X_monitor=Xm,
+        alpha=float(1.0 - alpha))
+    # Result schema (see cpp/src/c_api/c_api_method_result.cpp:1062):
+    # double matrices: "t2", "q"
+    # int64 vectors: "t2_alarms", "q_alarms", "any_alarms"
     return {
         "t2": np.asarray(res.matrix("t2"), dtype=np.float64).ravel(),
         "q": np.asarray(res.matrix("q"), dtype=np.float64).ravel(),
-        "t2_alarm": np.asarray(res.matrix("t2_alarm"), dtype=np.float64).ravel(),
-        "q_alarm": np.asarray(res.matrix("q_alarm"), dtype=np.float64).ravel(),
+        "t2_alarms": np.asarray(
+            res.vector_int64("t2_alarms"), dtype=np.int64),
+        "q_alarms": np.asarray(
+            res.vector_int64("q_alarms"), dtype=np.int64),
+        "any_alarms": np.asarray(
+            res.vector_int64("any_alarms"), dtype=np.int64),
     }
 
 

@@ -99,7 +99,19 @@ class SparsePLSDAClassifier(BaseEstimator, ClassifierMixin):
 class PLSLogisticClassifier(BaseEstimator, ClassifierMixin):
     """PLS-Logistic: PLS scores fed into multinomial softmax IRLS.
 
-    Predicts on new X via the stored coefficients + intercepts.
+    **In-sample only**: the C kernel fits multinomial logistic on the
+    PLS scores (not the raw features), exports
+    ``(n_classes-1, n_components)`` coefficients with class 0 as the
+    implicit baseline, and returns the in-sample ``decision_scores`` /
+    ``probabilities`` directly. To predict on new X we would need both
+    the PLS transform (currently not exported) AND the baseline-zero
+    decoding convention. Until then this wrapper:
+
+    * fits via ``pls_logistic_fit`` and stores the in-sample
+      ``decision_scores`` / ``probabilities``;
+    * ``predict(X)`` and ``predict_proba(X)`` return the stored
+      values IFF ``X`` matches the training array content;
+    * raises :class:`NotImplementedError` otherwise.
     """
 
     def __init__(self, n_components: int = 2) -> None:
@@ -121,34 +133,55 @@ class PLSLogisticClassifier(BaseEstimator, ClassifierMixin):
                 ctx, cfg, X_arr,
                 y_labels=y_int.astype(np.int32),
                 n_classes=int(classes.size))
-            coef = np.asarray(res.matrix("coefficients"), dtype=np.float64)
-            intercepts = np.asarray(
-                res.matrix("intercepts"), dtype=np.float64).ravel()
+            scores = np.asarray(
+                res.matrix("decision_scores"), dtype=np.float64)
+            try:
+                probs = np.asarray(
+                    res.matrix("probabilities"), dtype=np.float64)
+            except Exception:
+                probs = None
         finally:
             cfg.close()
         self._label_encoder_ = encoder
         self.classes_ = classes
         self.n_features_in_ = int(X_arr.shape[1])
-        # coef stored as (p, n_classes) in result.
-        self.coef_ = coef.T  # (n_classes, p) for sklearn convention
-        self.intercept_ = intercepts
+        self._decision_scores_train = scores if scores.ndim == 2 \
+            else scores.reshape(-1, 1)
+        self._proba_train = probs
+        self._X_train_ = X_arr.copy()
         return self
+
+    def _check_X_match(self, X):
+        X_arr = np.ascontiguousarray(X, dtype=np.float64)
+        if (X_arr.shape != self._X_train_.shape
+                or not np.array_equal(X_arr, self._X_train_)):
+            raise NotImplementedError(
+                "PLSLogisticClassifier is in-sample only: the C ABI does "
+                "not export the PLS-score-space transform needed for "
+                "predict-on-new-X. Pass the same X used in fit() to "
+                "retrieve the stored decision scores.")
 
     def decision_function(self, X):
         check_is_fitted(self)
-        X_arr = _check_X_p4a(self, X)
-        return X_arr @ self.coef_.T + self.intercept_
+        self._check_X_match(X)
+        return self._decision_scores_train
 
     def predict_proba(self, X):
-        scores = self.decision_function(X)
-        # Softmax with numerical stability.
+        check_is_fitted(self)
+        self._check_X_match(X)
+        if self._proba_train is not None:
+            return self._proba_train
+        scores = self._decision_scores_train
         scores = scores - scores.max(axis=1, keepdims=True)
         exp = np.exp(scores)
         return exp / exp.sum(axis=1, keepdims=True)
 
     def predict(self, X):
         scores = self.decision_function(X)
-        int_pred = np.argmax(scores, axis=1)
+        if scores.ndim == 1 or scores.shape[1] == 1:
+            int_pred = (scores.ravel() >= 0.5).astype(np.int64)
+        else:
+            int_pred = np.argmax(scores, axis=1)
         return self._label_encoder_.inverse_transform(int_pred)
 
 
