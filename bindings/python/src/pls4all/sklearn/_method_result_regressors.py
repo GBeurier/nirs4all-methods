@@ -52,9 +52,10 @@ class SparseSimplsRegression(_MethodResultRegressor):
         self.sparsity_lambda = sparsity_lambda
 
     def _fit_method_result(self, ctx: Context, X, y):
-        return _methods.sparse_simpls_fit(
-            ctx, _make_basic_config(int(self.n_components)), X, y,
-            sparsity_lambda=float(self.sparsity_lambda))
+        with _ManagedConfig(int(self.n_components)) as cfg:
+            return _methods.sparse_simpls_fit(
+                ctx, cfg, X, y,
+                sparsity_lambda=float(self.sparsity_lambda))
 
 
 class CPPLSRegression(_MethodResultRegressor):
@@ -65,31 +66,23 @@ class CPPLSRegression(_MethodResultRegressor):
         self.gamma = gamma
 
     def _fit_method_result(self, ctx, X, y):
-        return _methods.cppls_fit(
-            ctx, _make_basic_config(int(self.n_components)), X, y,
-            gamma=float(self.gamma))
+        with _ManagedConfig(int(self.n_components)) as cfg:
+            return _methods.cppls_fit(
+                ctx, cfg, X, y, gamma=float(self.gamma))
 
 
 class ECRegression(_MethodResultRegressor):
     """Elastic Component Regression (Liu 2013) — interpolates PCR (α=0)
     and PLS (α=1)."""
 
-    _result_keys = {
-        "coef": "coefficients",
-        "x_mean": "x_mean",
-        "y_mean": "y_mean",
-        "x_scale": "x_scale",
-        "y_scale": "y_scale",
-    }
-
     def __init__(self, n_components: int = 2, *, alpha: float = 0.5) -> None:
         self.n_components = n_components
         self.alpha = alpha
 
     def _fit_method_result(self, ctx, X, y):
-        return _methods.ecr_fit(
-            ctx, _make_basic_config(int(self.n_components)), X, y,
-            alpha=float(self.alpha))
+        with _ManagedConfig(int(self.n_components)) as cfg:
+            return _methods.ecr_fit(
+                ctx, cfg, X, y, alpha=float(self.alpha))
 
 
 class DIPLSRegression(_MethodResultRegressor):
@@ -116,9 +109,10 @@ class DIPLSRegression(_MethodResultRegressor):
         return super().fit(X, y)
 
     def _fit_method_result(self, ctx, X, y):
-        return _methods.di_pls_fit(
-            ctx, _make_basic_config(int(self.n_components)),
-            X, y, self._X_target_, di_lambda=float(self.di_lambda))
+        with _ManagedConfig(int(self.n_components)) as cfg:
+            return _methods.di_pls_fit(
+                ctx, cfg, X, y, self._X_target_,
+                di_lambda=float(self.di_lambda))
 
 
 class MIRPLSRegression(_MethodResultRegressor):
@@ -133,8 +127,8 @@ class MIRPLSRegression(_MethodResultRegressor):
         self.n_components = n_components
 
     def _fit_method_result(self, ctx, X, y):
-        return _methods.mir_pls_fit(
-            ctx, _make_basic_config(int(self.n_components)), X, y)
+        with _ManagedConfig(int(self.n_components)) as cfg:
+            return _methods.mir_pls_fit(ctx, cfg, X, y)
 
 
 class MBPLSRegression(_MethodResultRegressor):
@@ -167,69 +161,90 @@ class MBPLSRegression(_MethodResultRegressor):
                 f"n_features ({X.shape[1]})"
             )
         from .._types import Solver
-        cfg = _make_basic_config(int(self.n_components))
-        cfg.solver = Solver.NIPALS  # mb_pls_fit expects NIPALS
-        return _methods.mb_pls_fit(ctx, cfg, X, y, block_sizes)
+        with _ManagedConfig(int(self.n_components)) as cfg:
+            cfg.solver = Solver.NIPALS  # mb_pls_fit expects NIPALS
+            return _methods.mb_pls_fit(ctx, cfg, X, y, block_sizes)
 
     def _extract_state(self, result) -> None:
         coef = np.asarray(result.matrix("coefficients"), dtype=np.float64)
-        self.coef_ = coef.T.copy()
-        if self.coef_.shape[0] == 1:
-            self.coef_ = self.coef_.reshape(self.coef_.shape[1])
-        self.x_mean_ = np.asarray(
+        coef_T = coef.T.copy()
+        if coef_T.shape[0] == 1:
+            coef_T = coef_T.reshape(coef_T.shape[1])
+        x_mean = np.asarray(
             result.matrix("x_mean"), dtype=np.float64).ravel()
-        self.x_scale_ = np.asarray(
+        x_scale = np.asarray(
             result.matrix("x_scale"), dtype=np.float64).ravel()
-        intercept = np.asarray(
+        intercept_arr = np.asarray(
             result.matrix("intercept"), dtype=np.float64).ravel()
-        self.intercept_ = float(intercept[0]) if intercept.size == 1 else intercept
-        # No y_mean / y_scale in mb_pls_fit; predict() needs them only when
-        # x_mean is subtracted, but intercept already folds y_mean in. So
-        # adapt our predict to use the explicit intercept.
-        self.y_mean_ = np.zeros(1, dtype=np.float64)
-        self.y_scale_ = None
-        self.block_weights_ = np.asarray(
+        block_weights = np.asarray(
             result.matrix("block_weights"), dtype=np.float64).ravel()
+        # Commit only after every read succeeded.
+        self.coef_ = coef_T
+        self.x_mean_ = x_mean
+        self.x_scale_ = x_scale
+        self.intercept_ = (
+            float(intercept_arr[0]) if intercept_arr.size == 1
+            else intercept_arr
+        )
+        self.block_weights_ = block_weights
 
     def predict(self, X):
         from sklearn.utils.validation import check_is_fitted
         from ._base import _check_X_p4a
         check_is_fitted(self)
         X_arr = _check_X_p4a(self, X)
-        if self.x_scale_ is not None:
-            Xc = (X_arr - self.x_mean_) / self.x_scale_
-        else:
-            Xc = X_arr - self.x_mean_
+        # MB-PLS stores coefficients in the ORIGINAL (un-centered,
+        # un-scaled) X space and a separate intercept that folds in
+        # y_mean - x_mean @ coef. So predict is X @ coef.T + intercept
+        # (no centering / scaling at predict time).
         if self.coef_.ndim == 1:
-            preds = Xc @ self.coef_ + self.intercept_
+            preds = X_arr @ self.coef_ + self.intercept_
         else:
-            preds = Xc @ self.coef_.T + self.intercept_
-        if getattr(self, "_y_ndim_", 2) == 1 and preds.ndim == 2 and preds.shape[1] == 1:
+            preds = X_arr @ self.coef_.T + self.intercept_
+        if (getattr(self, "_y_ndim_", 2) == 1 and preds.ndim == 2
+                and preds.shape[1] == 1):
             preds = preds.ravel()
         return preds
 
 
 # ---- helper ----------------------------------------------------------------
 
+class _ManagedConfig:
+    """Tiny context manager so subclasses can build a Config with the
+    standard pls4all-regression defaults and have it freed deterministically
+    when the `_fit_method_result` block exits."""
+
+    def __init__(self, n_components: int) -> None:
+        self._n_components = int(n_components)
+        self._cfg = None
+
+    def __enter__(self):
+        from .._config import Config
+        from .._types import Algorithm, Deflation, Solver
+        cfg = Config()
+        cfg.algorithm = Algorithm.PLS_REGRESSION
+        cfg.solver = Solver.SIMPLS
+        cfg.deflation = Deflation.REGRESSION
+        cfg.n_components = self._n_components
+        cfg.center_x = True
+        cfg.scale_x = False
+        cfg.center_y = True
+        cfg.scale_y = False
+        cfg.tol = 1e-6
+        cfg.max_iter = 500
+        self._cfg = cfg
+        return cfg
+
+    def __exit__(self, *exc):
+        if self._cfg is not None:
+            self._cfg.close()
+            self._cfg = None
+
+
 def _make_basic_config(n_components: int):
-    """Build a PLS regression Config with default knobs. Kept here
-    (rather than in ``_base``) because all MethodResult-based regressors
-    share the same cfg shape, and centralizing the lifetime makes ASAN
-    happy (the caller owns the Config and closes it via context-mgr)."""
-    from .._config import Config
-    from .._types import Algorithm, Deflation, Solver
-    cfg = Config()
-    cfg.algorithm = Algorithm.PLS_REGRESSION
-    cfg.solver = Solver.SIMPLS
-    cfg.deflation = Deflation.REGRESSION
-    cfg.n_components = int(n_components)
-    cfg.center_x = True
-    cfg.scale_x = False
-    cfg.center_y = True
-    cfg.scale_y = False
-    cfg.tol = 1e-6
-    cfg.max_iter = 500
-    return cfg
+    """Legacy direct-use helper. Prefer ``_ManagedConfig(n_components)``
+    inside a ``with`` block so the Config is freed deterministically."""
+    return _ManagedConfig(n_components).__enter__()
 
 
 __all__ = [

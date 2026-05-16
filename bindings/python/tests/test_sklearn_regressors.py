@@ -131,3 +131,117 @@ def test_regressor_get_params_roundtrip(cls, kwargs):
     params = m.get_params()
     m2 = cls(**{k: v for k, v in params.items()})
     assert m2.get_params() == params
+
+
+# -----------------------------------------------------------------
+# Bit-exact wrapper-vs-tier1 parity for MethodResult regressors
+# -----------------------------------------------------------------
+
+def _raw_method_result_predict(fn, n_components, X, y, **fn_kwargs):
+    """Run the tier-1 *_fit and replay the prediction math the wrapper
+    is supposed to use: ``(X - x_mean) @ coef + y_mean``."""
+    import pls4all
+    from pls4all import Algorithm, Solver, Deflation
+    ctx = pls4all.Context()
+    cfg = pls4all.Config()
+    cfg.algorithm = Algorithm.PLS_REGRESSION
+    cfg.solver = Solver.SIMPLS
+    cfg.deflation = Deflation.REGRESSION
+    cfg.n_components = int(n_components)
+    cfg.center_x = True
+    cfg.scale_x = False
+    cfg.center_y = True
+    cfg.scale_y = False
+    cfg.tol = 1e-6
+    cfg.max_iter = 500
+    try:
+        res = fn(ctx, cfg, X, y.reshape(-1, 1), **fn_kwargs)
+    finally:
+        cfg.close()
+    coef = np.asarray(res.matrix("coefficients"), dtype=np.float64)
+    x_mean = np.asarray(res.matrix("x_mean"), dtype=np.float64).ravel()
+    y_mean = np.asarray(res.matrix("y_mean"), dtype=np.float64).ravel()
+    preds = (X - x_mean) @ coef + y_mean
+    return preds.ravel()
+
+
+def test_sparse_simpls_wrapper_bitexact(regression_data):
+    """Wrapper.predict(X) must be bit-exact with the C predict math
+    applied to tier 1's MethodResult."""
+    import pls4all
+    X, y, _ = regression_data
+    wrapper = SparseSimplsRegression(n_components=5, sparsity_lambda=0.05)
+    wrapper.fit(X, y)
+    preds_wrapper = wrapper.predict(X)
+    preds_raw = _raw_method_result_predict(
+        pls4all.sparse_simpls_fit, 5, X, y, sparsity_lambda=0.05)
+    assert np.array_equal(preds_wrapper, preds_raw)
+
+
+def test_ec_regression_wrapper_bitexact(regression_data):
+    import pls4all
+    X, y, _ = regression_data
+    wrapper = ECRegression(n_components=5, alpha=0.5).fit(X, y)
+    preds_wrapper = wrapper.predict(X)
+    preds_raw = _raw_method_result_predict(
+        pls4all.ecr_fit, 5, X, y, alpha=0.5)
+    assert np.array_equal(preds_wrapper, preds_raw)
+
+
+def test_mir_pls_wrapper_bitexact(regression_data):
+    import pls4all
+    X, y, _ = regression_data
+    wrapper = MIRPLSRegression(n_components=5).fit(X, y)
+    preds_wrapper = wrapper.predict(X)
+    preds_raw = _raw_method_result_predict(
+        pls4all.mir_pls_fit, 5, X, y)
+    assert np.array_equal(preds_wrapper, preds_raw)
+
+
+def test_method_result_regressor_failed_refit_preserves_state(regression_data):
+    """Codex catch: a failed refit on a fitted MethodResult regressor
+    must leave the prior fitted state intact (n_features_in_, coef_,
+    predict path)."""
+    X, y, _ = regression_data
+    m = SparseSimplsRegression(n_components=5, sparsity_lambda=0.05).fit(X, y)
+    preds_orig = m.predict(X)
+    orig_coef = m.coef_.copy()
+    orig_n_features = m.n_features_in_
+    # Refit with a NaN — must raise without corrupting state.
+    bad_X = X.copy(); bad_X[0, 0] = np.nan
+    with pytest.raises(ValueError):
+        m.fit(bad_X, y)
+    # State preserved.
+    assert m.n_features_in_ == orig_n_features
+    assert np.array_equal(m.coef_, orig_coef)
+    assert np.array_equal(m.predict(X), preds_orig)
+
+
+def test_mb_pls_wrapper_predict_matches_in_sample(regression_data):
+    """MB-PLS stores its in-sample predictions directly. Wrapper.predict
+    on X_train must match res.matrix('predictions')."""
+    import pls4all
+    from pls4all import Algorithm, Solver, Deflation
+    X, y, _ = regression_data
+    block_sizes = np.array([15, 15], dtype=np.int64)
+    wrapper = MBPLSRegression(n_components=5,
+                                 block_sizes=block_sizes.tolist()).fit(X, y)
+    preds_wrapper = wrapper.predict(X)
+    ctx = pls4all.Context()
+    cfg = pls4all.Config()
+    cfg.algorithm = Algorithm.PLS_REGRESSION
+    cfg.solver = Solver.NIPALS
+    cfg.deflation = Deflation.REGRESSION
+    cfg.n_components = 5
+    cfg.center_x = True
+    cfg.center_y = True
+    try:
+        res = pls4all.mb_pls_fit(ctx, cfg, X, y.reshape(-1, 1), block_sizes)
+    finally:
+        cfg.close()
+    preds_raw = np.asarray(res.matrix("predictions"),
+                              dtype=np.float64).ravel()
+    # MB-PLS coef is in original space; intercept folds y_mean in. The
+    # Python predict must therefore agree bit-exactly with the in-sample
+    # C predictions.
+    assert np.allclose(preds_wrapper, preds_raw, atol=1e-10, rtol=1e-10)

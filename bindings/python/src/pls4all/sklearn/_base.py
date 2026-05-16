@@ -106,6 +106,32 @@ def _check_X_p4a(estimator: Any, X: Any) -> np.ndarray:
     return X_arr
 
 
+def _validate_X_y_no_mutate(X: Any, y: Any
+                              ) -> tuple[np.ndarray, np.ndarray, int]:
+    """sklearn-style X/y validation that does NOT mutate the caller's
+    fitted state. Returns ``(X_2d_f64, y_2d_f64, y_ndim_original)``.
+
+    Use this in ``fit()`` paths that want to keep the previous fitted
+    state intact when the *new* call validates badly — opposite of
+    :func:`_check_X_y_p4a` which immediately sets ``n_features_in_``.
+    """
+    y_ndim = int(np.asarray(y).ndim) if y is not None else 0
+    X_chk, y_chk = check_X_y(
+        X, y,
+        dtype=np.float64,
+        ensure_2d=True,
+        allow_nd=False,
+        ensure_all_finite=True,
+        multi_output=True,
+        y_numeric=False,
+    )
+    X_arr = np.ascontiguousarray(X_chk, dtype=np.float64)
+    y_arr = np.ascontiguousarray(y_chk, dtype=np.float64)
+    if y_arr.ndim == 1:
+        y_arr = y_arr.reshape(-1, 1)
+    return X_arr, y_arr, y_ndim
+
+
 def _config_from_params(*,
                           n_components: int,
                           algorithm: Algorithm,
