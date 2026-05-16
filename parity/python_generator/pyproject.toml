@@ -10,11 +10,14 @@ authors = [{ name = "Grégory Beurier and contributors" }]
 license = "CECILL-2.1"
 requires-python = ">=3.10"
 dependencies = [
-  "numpy==1.26.4",
-  "scikit-learn==1.4.2",
-  "scipy==1.11.4",
-  "joblib==1.4.0"
+  "numpy>=2.0,<3",
+  "scikit-learn>=1.5,<2",
+  "scipy>=1.13,<2",
+  "joblib>=1.4,<2"
 ]
+# Optional external-reference packages installed alongside (May 2026):
+# chemotools, pyopls, ikpls, hoggorm, mbpls, lifelines, pywavelets,
+# pybaselines, oct2py.
 # Cross-implementation nirs4all/R adapters will get their own locked dependency
 # rows when they become active. The current preprocessing, SIMPLS, kernel,
 # wide-kernel, orthogonal-scores, power, randomized-SVD, canonical, PLSSVD,

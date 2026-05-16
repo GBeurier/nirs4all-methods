@@ -319,11 +319,46 @@ def _write_csv(path: Path, rows: list[ParityRow]) -> None:
             })
 
 
+def _parity_quality(row: ParityRow) -> str:
+    """Classify the strength of a passing parity row:
+      - "tight"    : rmse_rel < 0.3 * tolerance (high confidence)
+      - "moderate" : 0.3-0.6 of tolerance (real agreement)
+      - "loose"    : 0.6-0.9 of tolerance (algorithmic divergence likely)
+      - "weak"     : >= 0.9 * tolerance (passes barely; widened tolerance —
+                     usually stochastic-RNG divergence or algorithmic
+                     convention mismatch; treat as smoke check, not bit
+                     parity)
+      - "—"        : non-passing / non-ok statuses
+    """
+    if row.status != "ok" or not row.parity_pass:
+        return "—"
+    if not (math.isfinite(row.rmse_rel) and math.isfinite(row.tolerance)
+            and row.tolerance > 0):
+        return "—"
+    ratio = row.rmse_rel / row.tolerance
+    if ratio < 0.3:
+        return "tight"
+    if ratio < 0.6:
+        return "moderate"
+    if ratio < 0.9:
+        return "loose"
+    return "weak"
+
+
 def _write_summary(path: Path, rows: list[ParityRow]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     by_method: dict[str, list[ParityRow]] = {}
     for row in rows:
         by_method.setdefault(row.method, []).append(row)
+    # Count parity-quality buckets across all `ok` rows.
+    qualities = [(r.method, r.reference_lib, _parity_quality(r),
+                  r.rmse_rel, r.tolerance)
+                 for r in rows if r.status == "ok"]
+    weak = [(m, lib, rr, tol) for (m, lib, q, rr, tol) in qualities
+            if q == "weak"]
+    by_quality: dict[str, int] = {}
+    for _, _, q, _, _ in qualities:
+        by_quality[q] = by_quality.get(q, 0) + 1
     lines = [
         "# Parity gate report",
         "",
@@ -332,14 +367,52 @@ def _write_summary(path: Path, rows: list[ParityRow]) -> None:
         f"Python: `{sys.version.split()[0]}`",
         f"NumPy: `{np.__version__}`",
         "",
+        "## Pass quality breakdown",
+        "",
+        ("| Quality | Count | Definition |"),
+        ("|---------|------:|------------|"),
+        (f"| tight    | {by_quality.get('tight', 0)} | "
+         "`rmse_rel < 30% of tolerance` — high-confidence parity. |"),
+        (f"| moderate | {by_quality.get('moderate', 0)} | "
+         "30-60% of tolerance — real agreement. |"),
+        (f"| loose    | {by_quality.get('loose', 0)} | "
+         "60-90% of tolerance — algorithmic divergence likely; passes with margin. |"),
+        (f"| **weak** | **{by_quality.get('weak', 0)}** | "
+         "**>= 90% of tolerance** — passes barely; tolerance widened to "
+         "accept stochastic-RNG or algorithmic-convention divergence. "
+         "**Treat as smoke check, not bit parity.** |"),
+        "",
+    ]
+    if weak:
+        lines += [
+            "### Weak-parity passes (read with caution)",
+            "",
+            ("These pass the gate but rely on widened tolerances. Their "
+             "external reference and the pls4all implementation use the "
+             "same algorithm family but differ in RNG, convention or "
+             "parameter mapping; do not read a green check as bit-exact "
+             "agreement."),
+            "",
+            ("| Method | Reference | rmse_rel | tolerance | margin |"),
+            ("|--------|-----------|---------:|----------:|-------:|"),
+        ]
+        for m, lib, rr, tol in weak:
+            margin = (1.0 - rr / tol) * 100.0 if tol > 0 else 0.0
+            lines.append(
+                f"| `{m}` | `{lib}` | {rr:.3e} | {tol:.2e} | {margin:.1f}% |"
+            )
+        lines.append("")
+    lines += [
+        "## All rows",
+        "",
         "Each method is compared against a Python reference and an R "
         "reference. Methods without a widely installable external "
-        "reference are flagged `numpy-mirror` in the lib column.",
+        "reference are flagged `paper-only` or `(none)` in the lib column.",
         "",
         ("| Method | Description | Reference (lang / lib / version) | "
-         "Parity | RMSE rel | Tolerance | Status |"),
+         "Parity | Quality | RMSE rel | Tolerance | Status |"),
         ("|--------|-------------|----------------------------------|"
-         "--------|----------|-----------|--------|"),
+         "--------|---------|----------|-----------|--------|"),
     ]
     for method_name, method_rows in by_method.items():
         for row in method_rows:
@@ -348,9 +421,11 @@ def _write_summary(path: Path, rows: list[ParityRow]) -> None:
                     if math.isfinite(row.rmse_rel) else "—")
             ref = (f"{row.reference_lang} / `{row.reference_lib}` "
                    f"{row.reference_version}")
+            quality = _parity_quality(row)
             lines.append(
                 f"| `{row.method}` | {row.description} | {ref} | "
-                f"{parity} | {rmse} | {row.tolerance:.0e} | {row.status} |"
+                f"{parity} | {quality} | {rmse} | {row.tolerance:.0e} | "
+                f"{row.status} |"
             )
     note_rows = [row for row in rows if row.reference_notes
                   and row.reference_lib == "numpy-mirror"]
@@ -369,6 +444,164 @@ def _write_summary(path: Path, rows: list[ParityRow]) -> None:
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+@dataclass
+class TimingRow:
+    method: str
+    n_samples: int
+    n_features: int
+    pls4all_ms: float  # binding wall-clock, median of `repeats` runs
+    pls4all_min_ms: float
+    python_ref_ms: float
+    python_ref_lib: str
+    r_ref_ms: float
+    r_ref_lib: str
+    repeats: int
+    status: str  # "ok" / "no_python_reference" / "no_r_reference" / "error:<...>"
+
+
+def _measure_wall_ms(fn, repeats: int) -> tuple[float, float, str]:
+    """Run `fn` `repeats` times; return (median_ms, min_ms, status).
+    A single exception is recorded once and returned as (nan, nan, 'error:...').
+    """
+    import time
+    samples_ms: list[float] = []
+    try:
+        for _ in range(repeats):
+            t0 = time.perf_counter()
+            fn()
+            samples_ms.append((time.perf_counter() - t0) * 1000.0)
+    except Exception as exc:
+        return (float("nan"), float("nan"),
+                f"error:{type(exc).__name__}:{str(exc)[:80]}")
+    s = sorted(samples_ms)
+    median = s[len(s) // 2]
+    return (median, s[0], "ok")
+
+
+def time_methods(methods: list[str] | None = None,
+                  repeats: int = 3) -> list[TimingRow]:
+    """For each MethodSpec, time three modes:
+      1. pls4all binding call (`pls4all_fn`)
+      2. Python reference fit+predict
+      3. R reference fit+predict
+    Returns one row per method. Skips paper_only methods (no external timing).
+    """
+    selected = [m for m in METHODS if methods is None or m.name in methods]
+    rows: list[TimingRow] = []
+    for method in selected:
+        if method.paper_only:
+            continue  # no external to compare against
+        n = method.cell_params["n_samples"]
+        p = method.cell_params["n_features"]
+        n_targets = int(method.cell_params.get("n_targets", 1))
+        n_classes = int(method.cell_params.get("n_classes", 0))
+        X, Y, X_target, sw, lbl, grp = _make_dataset(
+            n, p, n_targets=n_targets, n_classes=n_classes)
+        extras = _resolve_extras(method, X_target, sw, lbl, grp)
+
+        # --- 1. pls4all binding -----------------------------------------
+        def _run_pls4all():
+            with pls4all.Context() as ctx, pls4all.Config() as cfg:
+                result = method.pls4all_fn(
+                    ctx, cfg, X, Y, **method.cell_params, **extras)
+                result.matrix(method.prediction_key)
+                result.close()
+
+        p4a_median, p4a_min, p4a_status = _measure_wall_ms(_run_pls4all, repeats)
+
+        # --- 2. Python reference ----------------------------------------
+        py_ms, py_lib = float("nan"), "(none)"
+        if method.python_reference is not None:
+            try:
+                ref = method.python_reference(**method.cell_params)
+                py_lib = ref.library_name
+
+                def _run_py():
+                    ref.fit(X, Y, **extras)
+                    ref.predict(X)
+
+                py_ms, _, py_status = _measure_wall_ms(_run_py, repeats)
+                if py_status != "ok":
+                    py_ms = float("nan")
+            except Exception:
+                py_ms = float("nan")
+                py_lib = "(error)"
+
+        # --- 3. R reference ---------------------------------------------
+        r_ms, r_lib = float("nan"), "(none)"
+        if method.r_reference is not None:
+            try:
+                ref = method.r_reference(**method.cell_params)
+                r_lib = ref.library_name
+
+                def _run_r():
+                    ref.fit(X, Y, **extras)
+                    ref.predict(X)
+
+                r_ms, _, r_status = _measure_wall_ms(_run_r, repeats)
+                if r_status != "ok":
+                    r_ms = float("nan")
+            except Exception:
+                r_ms = float("nan")
+                r_lib = "(error)"
+
+        row = TimingRow(
+            method=method.name, n_samples=n, n_features=p,
+            pls4all_ms=p4a_median, pls4all_min_ms=p4a_min,
+            python_ref_ms=py_ms, python_ref_lib=py_lib,
+            r_ref_ms=r_ms, r_ref_lib=r_lib,
+            repeats=repeats, status=p4a_status,
+        )
+        rows.append(row)
+        print(f"=== {method.name}: pls4all={p4a_median:.1f}ms "
+              f"py[{py_lib}]={py_ms:.1f}ms r[{r_lib}]={r_ms:.1f}ms ===")
+    return rows
+
+
+def _write_timings_csv(path: Path, rows: list[TimingRow]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = ["method", "n_samples", "n_features",
+                  "pls4all_ms", "pls4all_min_ms",
+                  "python_ref_ms", "python_ref_lib",
+                  "r_ref_ms", "r_ref_lib",
+                  "binding_overhead_vs_py_pct",
+                  "binding_overhead_vs_r_pct",
+                  "repeats", "status"]
+    with path.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        writer.writeheader()
+        for r in rows:
+            py_pct = ((r.pls4all_ms / r.python_ref_ms - 1.0) * 100.0
+                       if math.isfinite(r.pls4all_ms)
+                       and math.isfinite(r.python_ref_ms)
+                       and r.python_ref_ms > 0 else float("nan"))
+            r_pct = ((r.pls4all_ms / r.r_ref_ms - 1.0) * 100.0
+                      if math.isfinite(r.pls4all_ms)
+                      and math.isfinite(r.r_ref_ms)
+                      and r.r_ref_ms > 0 else float("nan"))
+            writer.writerow({
+                "method": r.method,
+                "n_samples": r.n_samples,
+                "n_features": r.n_features,
+                "pls4all_ms": (f"{r.pls4all_ms:.3f}"
+                                if math.isfinite(r.pls4all_ms) else "nan"),
+                "pls4all_min_ms": (f"{r.pls4all_min_ms:.3f}"
+                                    if math.isfinite(r.pls4all_min_ms) else "nan"),
+                "python_ref_ms": (f"{r.python_ref_ms:.3f}"
+                                   if math.isfinite(r.python_ref_ms) else "nan"),
+                "python_ref_lib": r.python_ref_lib,
+                "r_ref_ms": (f"{r.r_ref_ms:.3f}"
+                              if math.isfinite(r.r_ref_ms) else "nan"),
+                "r_ref_lib": r.r_ref_lib,
+                "binding_overhead_vs_py_pct": (f"{py_pct:+.1f}"
+                                                if math.isfinite(py_pct) else "nan"),
+                "binding_overhead_vs_r_pct": (f"{r_pct:+.1f}"
+                                               if math.isfinite(r_pct) else "nan"),
+                "repeats": r.repeats,
+                "status": r.status,
+            })
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="parity-gate", description=__doc__)
     parser.add_argument("--methods", nargs="*", default=None,
@@ -377,10 +610,22 @@ def main(argv: list[str] | None = None) -> int:
                         default=REPO_ROOT / "benchmarks" / "results" /
                         "parity_gate",
                         help="Output directory for CSV + summary.")
+    parser.add_argument("--with-timings", action="store_true",
+                        help="Also collect wall-clock timings for "
+                             "pls4all binding, Python ref and R ref. "
+                             "Writes timings.csv to output-dir.")
+    parser.add_argument("--timing-repeats", type=int, default=3,
+                        help="Per-mode repeat count for --with-timings "
+                             "(median of N runs).")
     args = parser.parse_args(argv)
     rows = run(methods=args.methods)
     _write_csv(args.output_dir / "parity.csv", rows)
     _write_summary(args.output_dir / "summary.md", rows)
+    if args.with_timings:
+        print("\n--- timing pass ---")
+        trows = time_methods(methods=args.methods, repeats=args.timing_repeats)
+        _write_timings_csv(args.output_dir / "timings.csv", trows)
+        print(f"\nWrote {args.output_dir / 'timings.csv'} ({len(trows)} rows)")
     print(f"\nWrote {args.output_dir / 'parity.csv'} ({len(rows)} rows)")
     print(f"Wrote {args.output_dir / 'summary.md'}")
     failures = [r for r in rows if not r.parity_pass and

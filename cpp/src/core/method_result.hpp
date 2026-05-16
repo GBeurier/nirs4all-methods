@@ -26,6 +26,11 @@ struct MethodResult {
     // double array instead.
     std::unordered_map<std::string, std::vector<std::int32_t>> int_arrays;
 
+    // Named int64 arrays. 1-D buffers only; preferred for selector
+    // outputs (selected_indices, removed_indices, ...) so feature counts
+    // > 2^31 are not silently truncated.
+    std::unordered_map<std::string, std::vector<std::int64_t>> int64_arrays;
+
     // Named scalars (any double-valued metric / counter).
     std::unordered_map<std::string, double> scalars;
 
@@ -38,6 +43,10 @@ struct MethodResult {
     void set_int_vector(const std::string& name,
                         std::vector<std::int32_t> values) {
         int_arrays[name] = std::move(values);
+    }
+    void set_int64_vector(const std::string& name,
+                          std::vector<std::int64_t> values) {
+        int64_arrays[name] = std::move(values);
     }
     void set_scalar(const std::string& name, double value) {
         scalars[name] = value;
