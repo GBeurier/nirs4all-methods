@@ -65,7 +65,8 @@ add_executable(pls4all_tests
     abi/test_validation.cpp
     abi/test_validation_advanced.cpp
     abi/test_model_stubs.cpp
-    abi/test_blas_backend.cpp)
+    abi/test_blas_backend.cpp
+    abi/test_openmp_backend.cpp)
 target_link_libraries(pls4all_tests PRIVATE pls4all_c pls4all_core)
 target_include_directories(pls4all_tests
     PRIVATE
@@ -83,6 +84,12 @@ if(PLS4ALL_WITH_BLAS)
     if(BLAS_LINKER_FLAGS)
         target_link_options(pls4all_tests PRIVATE ${BLAS_LINKER_FLAGS})
     endif()
+endif()
+if(PLS4ALL_WITH_OPENMP)
+    target_compile_definitions(pls4all_tests PRIVATE P4A_USE_OPENMP=1)
+    # Same gotcha as BLAS: the test target embeds pls4all_core objects
+    # directly, so it must carry the OpenMP runtime link.
+    target_link_libraries(pls4all_tests PRIVATE OpenMP::OpenMP_CXX)
 endif()
 pls4all_add_warnings(pls4all_tests)
 

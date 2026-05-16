@@ -12,6 +12,7 @@
 
 #include "core/linalg.hpp"
 #include "core/matrix_view.hpp"
+#include "core/parallel.hpp"
 #include "core/status.hpp"
 
 namespace {
@@ -1130,6 +1131,7 @@ void fill_prediction(const ::pls4all::core::Model& model,
     const std::size_t p = static_cast<std::size_t>(model.n_features);
     const std::size_t q = static_cast<std::size_t>(model.n_targets);
     resize_fill(predictions, rows * q, 0.0);
+    P4A_PARALLEL_FOR_STATIC
     for (std::size_t i = 0; i < rows; ++i) {
         for (std::size_t t = 0; t < q; ++t) {
             double sum = model.y_mean[t];
@@ -1149,6 +1151,7 @@ void fill_transform(const ::pls4all::core::Model& model,
     const std::size_t p = static_cast<std::size_t>(model.n_features);
     const std::size_t a = static_cast<std::size_t>(model.n_components);
     resize_fill(scores, rows * a, 0.0);
+    P4A_PARALLEL_FOR_STATIC
     for (std::size_t i = 0; i < rows; ++i) {
         for (std::size_t comp = 0; comp < a; ++comp) {
             double sum = 0.0;
@@ -1464,6 +1467,7 @@ enum class CanonicalWeightSolver {
 
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t feature = 0; feature < p; ++feature) {
             double sum = 0.0;
             for (std::size_t row = 0; row < n; ++row) {
@@ -1471,6 +1475,7 @@ enum class CanonicalWeightSolver {
             }
             x_loadings[feature] = sum / x_score_ss;
         }
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
@@ -1486,6 +1491,7 @@ enum class CanonicalWeightSolver {
             }
             y_loadings[target] = sum / y_score_ss;
         }
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t target = 0; target < q; ++target) {
                 yk[idx(row, q, target)] -= y_scores[row] * y_loadings[target];
@@ -1753,6 +1759,7 @@ p4a_status_t fit_pls_regression_nipals(
 
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t feature = 0; feature < p; ++feature) {
             double sum = 0.0;
             for (std::size_t row = 0; row < n; ++row) {
@@ -1760,6 +1767,7 @@ p4a_status_t fit_pls_regression_nipals(
             }
             x_loadings[feature] = sum / x_score_ss;
         }
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
@@ -1775,6 +1783,7 @@ p4a_status_t fit_pls_regression_nipals(
             }
             y_loadings[target] = sum / x_score_ss;
         }
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t target = 0; target < q; ++target) {
                 yk[idx(row, q, target)] -= x_score[row] * y_loadings[target];
@@ -1938,6 +1947,7 @@ p4a_status_t fit_pls_svd(
 
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t feature = 0; feature < p; ++feature) {
             double sum = 0.0;
             for (std::size_t row = 0; row < n; ++row) {
@@ -2566,6 +2576,7 @@ p4a_status_t fit_pls_regression_orthogonal_scores(
             }
         }
 
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
@@ -2823,6 +2834,7 @@ p4a_status_t fit_pls_regression_kernel(
         const double x_score_ss = squared_norm(x_score);
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t feature = 0; feature < p; ++feature) {
             double sum = 0.0;
             for (std::size_t row = 0; row < n; ++row) {
@@ -2844,6 +2856,7 @@ p4a_status_t fit_pls_regression_kernel(
             }
         }
 
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
@@ -2988,6 +3001,7 @@ p4a_status_t fit_pls_regression_svd(
 
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t feature = 0; feature < p; ++feature) {
             double sum = 0.0;
             for (std::size_t row = 0; row < n; ++row) {
@@ -2995,6 +3009,7 @@ p4a_status_t fit_pls_regression_svd(
             }
             x_loadings[feature] = sum / x_score_ss;
         }
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
@@ -3010,6 +3025,7 @@ p4a_status_t fit_pls_regression_svd(
             }
             y_loadings[target] = sum / x_score_ss;
         }
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t target = 0; target < q; ++target) {
                 yk[idx(row, q, target)] -= x_score[row] * y_loadings[target];
@@ -3151,6 +3167,7 @@ p4a_status_t fit_pls_regression_power(
 
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t feature = 0; feature < p; ++feature) {
             double sum = 0.0;
             for (std::size_t row = 0; row < n; ++row) {
@@ -3158,6 +3175,7 @@ p4a_status_t fit_pls_regression_power(
             }
             x_loadings[feature] = sum / x_score_ss;
         }
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
@@ -3173,6 +3191,7 @@ p4a_status_t fit_pls_regression_power(
             }
             y_loadings[target] = sum / x_score_ss;
         }
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t target = 0; target < q; ++target) {
                 yk[idx(row, q, target)] -= x_score[row] * y_loadings[target];
@@ -3318,6 +3337,7 @@ p4a_status_t fit_pls_regression_randomized_svd(
 
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t feature = 0; feature < p; ++feature) {
             double sum = 0.0;
             for (std::size_t row = 0; row < n; ++row) {
@@ -3325,6 +3345,7 @@ p4a_status_t fit_pls_regression_randomized_svd(
             }
             x_loadings[feature] = sum / x_score_ss;
         }
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
@@ -3340,6 +3361,7 @@ p4a_status_t fit_pls_regression_randomized_svd(
             }
             y_loadings[target] = sum / x_score_ss;
         }
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t target = 0; target < q; ++target) {
                 yk[idx(row, q, target)] -= x_score[row] * y_loadings[target];
@@ -3468,6 +3490,7 @@ p4a_status_t fit_pcr_svd(
 
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t feature = 0; feature < p; ++feature) {
             double sum = 0.0;
             for (std::size_t row = 0; row < n; ++row) {
@@ -3499,6 +3522,7 @@ p4a_status_t fit_pcr_svd(
             }
         }
 
+        P4A_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];

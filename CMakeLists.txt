@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.21)
 # (the header file is the canonical version for ABI / runtime queries — this
 # CMake project version is used only for installation / find_package).
 project(pls4all
-    VERSION 0.94.0
+    VERSION 0.95.0
     DESCRIPTION "Portable PLS/NIRS engine with stable C ABI"
     HOMEPAGE_URL "https://github.com/GBeurier/pls4all"
     LANGUAGES C CXX)
@@ -45,6 +45,13 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(Pls4allOptions)
 include(CompilerWarnings)
 include(SanitizersToolchain)
+
+# OpenMP must be discovered at the top-level so its imported target
+# (OpenMP::OpenMP_CXX) is visible in both cpp/src/ and cpp/tests/.
+# When PLS4ALL_WITH_OPENMP=OFF this is a no-op.
+if(PLS4ALL_WITH_OPENMP)
+    find_package(OpenMP REQUIRED COMPONENTS CXX)
+endif()
 
 # pls4all needs at least one library output to be useful.
 if(NOT PLS4ALL_BUILD_SHARED AND NOT PLS4ALL_BUILD_STATIC)

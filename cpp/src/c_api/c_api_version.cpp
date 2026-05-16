@@ -42,8 +42,13 @@ P4A_API int p4a_backend_is_available(p4a_backend_t backend) {
 #else
                 return 0;
 #endif
-            case P4A_BACKEND_NATIVE_CPU:
             case P4A_BACKEND_OPENMP:
+#if defined(P4A_USE_OPENMP)
+                return 1;
+#else
+                return 0;
+#endif
+            case P4A_BACKEND_NATIVE_CPU:
             case P4A_BACKEND_CUDA:
             case P4A_BACKEND_OPENCL:
             case P4A_BACKEND_METAL:

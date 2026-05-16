@@ -6,9 +6,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-Next tracks: OpenMP backend (Phase 44), CUDA backend (Phase 45),
-final timing benchmark matrix across reference / BLAS / OpenMP / CUDA
-on the shipped solvers.
+Next tracks: CUDA backend (Phase 45), benchmark harness (Phase 46).
+
+## [0.95.0-openmp-backend] — 2026-05-16
+
+Optional OpenMP backend. Default OFF — the OFF build is bit-
+identical to pre-Phase-44 (no `<omp.h>` include, empty
+`P4A_PARALLEL_FOR_STATIC` macro). When `PLS4ALL_WITH_OPENMP=ON`
+the rank-1 deflations, dot-product loading kernels, and
+`fill_prediction`/`fill_transform` outer loops in `model.cpp`
+are annotated with `#pragma omp parallel for schedule(static)`.
+Public ABI unchanged at 1.13.0; symbol count stays at 160.
+
+### OpenMP backend
+
+- `cpp/src/core/parallel.hpp` (new): `P4A_PARALLEL_FOR_STATIC`
+  macro with GCC/Clang `_Pragma` and MSVC `__pragma` branches.
+- `cpp/src/core/model.cpp`: 21 pragma sites covering every solver's
+  deflation and loading kernels plus the two fill helpers. Every
+  site has thread-disjoint writes and zero `ctx` access inside the
+  parallel region (Codex review confirmed).
+- `cpp/src/c_api/c_api_version.cpp`: `p4a_backend_is_available`
+  reports OpenMP availability based on `P4A_USE_OPENMP`.
+- `cpp/src/CMakeLists.txt` + top-level `CMakeLists.txt`:
+  `find_package(OpenMP REQUIRED COMPONENTS CXX)` hoisted to the
+  top so `OpenMP::OpenMP_CXX` is visible in `cpp/src/` and
+  `cpp/tests/`. CMake `WARNING` when BLAS+OMP both on (OpenBLAS
+  USE_OPENMP coexistence) or OMP+TSAN (libgomp not TSAN-clean).
+- `cpp/tests/abi/test_openmp_backend.cpp` (new): fixture parity
+  + 200x20x2 smoke; passes whether OMP is compiled in or not.
+
+All 4 build configurations (OFF/OFF, BLAS-only, OMP-only,
+BLAS+OMP) pass 262/262 tests + 10/10 cross-binding parity gates.
+
+Phase 44b backlog: outer-loop parallelism (CV folds, EMCUVE
+ensembles, AOM operator sweeps), `Context::num_threads` plumbing
+into `omp_set_num_threads`, benchmark CLI knob.
 
 ## [0.94.0-blas-backend] — 2026-05-16
 

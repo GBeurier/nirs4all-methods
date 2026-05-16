@@ -147,6 +147,42 @@ else()
 endif()
 
 # ---------------------------------------------------------------------------
+# Optional OpenMP backend (Phase 44). Default OFF — when ON we annotate
+# the hot inner loops in model.cpp with #pragma omp parallel for via the
+# P4A_PARALLEL_FOR_STATIC macro in cpp/src/core/parallel.hpp. The OFF
+# build is bit-identical to pre-Phase-44.
+#
+# Coexistence note: when both PLS4ALL_WITH_BLAS=ON and
+# PLS4ALL_WITH_OPENMP=ON, OpenBLAS will spawn its own pthread pool
+# inside cblas_* calls AND OpenMP will fork threads for the annotated
+# outer loops. To avoid oversubscription, users should set
+# OPENBLAS_NUM_THREADS=1 (or the MKL equivalent) before running.
+# ---------------------------------------------------------------------------
+if(PLS4ALL_WITH_OPENMP)
+    # OpenMP::OpenMP_CXX is created by find_package(OpenMP) in the
+    # top-level CMakeLists.txt so both cpp/src/ and cpp/tests/ see it.
+    target_compile_definitions(pls4all_core PRIVATE P4A_USE_OPENMP=1)
+    target_link_libraries(pls4all_core PUBLIC OpenMP::OpenMP_CXX)
+    message(STATUS "  OpenMP backend    : ON  (${OpenMP_CXX_FLAGS})")
+    if(PLS4ALL_WITH_BLAS)
+        message(WARNING
+            "PLS4ALL_WITH_BLAS=ON together with PLS4ALL_WITH_OPENMP=ON: "
+            "OpenBLAS distributions built with USE_OPENMP=1 share the same "
+            "libgomp runtime as our pragmas, which can deadlock or "
+            "oversubscribe cores. Set OPENBLAS_NUM_THREADS=1 (or the MKL "
+            "equivalent) in the consumer environment before running.")
+    endif()
+    if(PLS4ALL_ENABLE_TSAN)
+        message(WARNING
+            "PLS4ALL_WITH_OPENMP=ON together with PLS4ALL_ENABLE_TSAN=ON: "
+            "libgomp is not TSAN-instrumented and will produce false "
+            "positives. Use a separate non-TSAN build for OpenMP testing.")
+    endif()
+else()
+    message(STATUS "  OpenMP backend    : OFF (serial inner loops)")
+endif()
+
+# ---------------------------------------------------------------------------
 # pls4all_c — public C ABI shared library (libp4a.{so,dll,dylib}).
 # pls4all_c_static is the same surface, statically linked.
 # ---------------------------------------------------------------------------
@@ -189,6 +225,13 @@ function(pls4all_apply_c_target target)
         if(BLAS_LINKER_FLAGS)
             target_link_options(${target} PRIVATE ${BLAS_LINKER_FLAGS})
         endif()
+    endif()
+    if(PLS4ALL_WITH_OPENMP)
+        target_compile_definitions(${target} PRIVATE P4A_USE_OPENMP=1)
+        # OBJECT libraries do not propagate PRIVATE link deps through
+        # $<TARGET_OBJECTS:>, so the consuming target must link the
+        # OpenMP runtime as well.
+        target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
     endif()
     pls4all_add_warnings(${target})
 endfunction()
