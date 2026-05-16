@@ -137,6 +137,7 @@ p4a_pipeline_transform
 p4a_pipeline_transform_alloc
 p4a_pls_cox_fit
 p4a_pls_diagnostics_compute
+p4a_pls_fit_simple
 p4a_pls_glm_fit
 p4a_pls_monitoring_run
 p4a_pls_qda_fit

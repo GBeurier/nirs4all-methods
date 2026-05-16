@@ -45,7 +45,7 @@ __attribute__((used)) static int p4a_wasm_keep_alive(void) {
  * funnels JS callers through the working raw-data-pointer path.
  */
 __attribute__((used))
-int p4a_wasm_pls_fit(const double *x, const double *y,
+int p4a_wasm_pls_fit_legacy(const double *x, const double *y,
                       int n, int p, int q, int n_components,
                       double *coefficients_out,
                       double *x_mean_out,

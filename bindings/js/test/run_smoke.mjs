@@ -52,10 +52,10 @@ const predsPtr = M._malloc(n * q * 8);
 M.HEAPF64.set(X, xPtr >>> 3);
 M.HEAPF64.set(Y, yPtr >>> 3);
 
-const status = M._p4a_wasm_pls_fit(
+const status = M._p4a_pls_fit_simple(
     xPtr, yPtr, n, p, q, 3,
     coefsPtr, xmPtr, ymPtr, predsPtr);
-if (status !== 0) throw new Error(`p4a_wasm_pls_fit failed: ${status}`);
+if (status !== 0) throw new Error(`p4a_pls_fit_simple failed: ${status}`);
 
 const coefs = new Float64Array(M.HEAPU8.buffer, coefsPtr, p * q).slice();
 const xMean = new Float64Array(M.HEAPU8.buffer, xmPtr, p).slice();

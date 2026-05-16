@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <new>
@@ -1365,6 +1366,67 @@ P4A_API p4a_status_t p4a_random_subspace_pls_fit(
     } catch (...) {
         set_error(ctx,
                    "internal error in p4a_random_subspace_pls_fit");
+        return P4A_ERR_INTERNAL;
+    }
+}
+
+P4A_API p4a_status_t p4a_pls_fit_simple(
+    const double* x, const double* y,
+    int32_t n, int32_t p, int32_t q, int32_t n_components,
+    double* coefficients_out,
+    double* x_mean_out,
+    double* y_mean_out,
+    double* predictions_out) {
+    if (x == nullptr || y == nullptr || coefficients_out == nullptr ||
+        x_mean_out == nullptr || y_mean_out == nullptr) {
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (n < 2 || p < 1 || q < 1 || n_components < 1) {
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        p4a_matrix_view_t xv{}, yv{};
+        p4a_matrix_view_init_rowmajor(&xv, const_cast<double*>(x), n, p,
+                                        P4A_DTYPE_F64);
+        p4a_matrix_view_init_rowmajor(&yv, const_cast<double*>(y), n, q,
+                                        P4A_DTYPE_F64);
+
+        ::pls4all::core::Context ctx;
+        ::pls4all::core::Config cfg;
+        cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
+        cfg.solver = P4A_SOLVER_SIMPLS;
+        cfg.deflation = P4A_DEFLATION_REGRESSION;
+        cfg.n_components = n_components;
+        cfg.center_x = 1;
+        cfg.center_y = 1;
+        cfg.scale_x = 1;
+        cfg.scale_y = 1;
+
+        std::unique_ptr<::pls4all::core::Model> model;
+        const p4a_status_t status = ::pls4all::core::fit_model(
+            ctx, cfg, xv, yv, model);
+        if (status != P4A_OK) return status;
+
+        std::memcpy(coefficients_out, model->coefficients.data(),
+                    static_cast<std::size_t>(p) *
+                    static_cast<std::size_t>(q) * sizeof(double));
+        std::memcpy(x_mean_out, model->x_mean.data(),
+                    static_cast<std::size_t>(p) * sizeof(double));
+        std::memcpy(y_mean_out, model->y_mean.data(),
+                    static_cast<std::size_t>(q) * sizeof(double));
+
+        if (predictions_out != nullptr) {
+            p4a_matrix_view_t pv{};
+            p4a_matrix_view_init_rowmajor(&pv, predictions_out, n, q,
+                                            P4A_DTYPE_F64);
+            const p4a_status_t pstatus =
+                ::pls4all::core::predict_into(ctx, *model, xv, pv);
+            (void)pstatus;
+        }
+        return P4A_OK;
+    } catch (const std::bad_alloc&) {
+        return P4A_ERR_OUT_OF_MEMORY;
+    } catch (...) {
         return P4A_ERR_INTERNAL;
     }
 }

@@ -178,10 +178,13 @@ SEXP r_pls4all_fit(SEXP X, SEXP Y, SEXP algo_sexp, SEXP n_components_sexp) {
     p4a_config_set_solver(cfg, solver);
     p4a_config_set_deflation(cfg, deflation);
     p4a_config_set_n_components(cfg, n_components);
+    /* Match the public C ABI Config defaults (scale_x = scale_y = 1)
+     * so the R binding produces byte-equivalent results to the Python
+     * binding under default settings. */
     p4a_config_set_center_x(cfg, 1);
-    p4a_config_set_scale_x(cfg, 0);
+    p4a_config_set_scale_x(cfg, 1);
     p4a_config_set_center_y(cfg, 1);
-    p4a_config_set_scale_y(cfg, 0);
+    p4a_config_set_scale_y(cfg, 1);
     p4a_config_set_store_scores(cfg, 0);
 
     p4a_matrix_view_t X_view;

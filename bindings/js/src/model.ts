@@ -56,8 +56,10 @@ export function fitPls(X: Matrix, Y: Matrix, n_components: number
     try {
         _copy_in(M, X.data, xBuf.ptr);
         _copy_in(M, Y.data, yBuf.ptr);
+        // Uses the public ABI helper (1.13+): raw double pointers
+        // + ints, no matrix-view structs in the JS↔WASM boundary.
         const status = M.ccall(
-            "p4a_wasm_pls_fit", "number",
+            "p4a_pls_fit_simple", "number",
             ["number", "number", "number", "number", "number",
              "number", "number", "number", "number", "number"],
             [xBuf.ptr, yBuf.ptr, n, p, q, n_components,

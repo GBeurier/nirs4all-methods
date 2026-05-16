@@ -630,7 +630,7 @@ P4A_API uint32_t     p4a_get_abi_version_major(void);
 P4A_API uint32_t     p4a_get_abi_version_minor(void);
 P4A_API uint32_t     p4a_get_abi_version_patch(void);
 P4A_API uint32_t     p4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.84.0+abi.1.12.0" */
+P4A_API const char*  p4a_get_version_string(void);    /* e.g. "0.85.0+abi.1.13.0" */
 P4A_API const char*  p4a_get_build_info(void);        /* compiler / flags / backends */
 P4A_API const char*  p4a_get_git_revision(void);      /* git rev at build time, or "" */
 
@@ -1242,6 +1242,33 @@ P4A_API p4a_status_t p4a_random_subspace_pls_fit(
     int32_t features_per_subspace,
     uint64_t seed,
     p4a_method_result_t** out_result);
+
+/* Simplified SIMPLS PLS regression — raw-pointer signature for
+ * language bindings whose FFI layer struggles with the
+ * `p4a_matrix_view_t*` parameter pattern (notably Emscripten 5.0.7
+ * and Julia 1.12 ccall with `Ref{MatrixView}`).
+ *
+ * X is row-major (n × p), Y is row-major (n × q). The function fits
+ * SIMPLS with `center_x = center_y = scale_x = scale_y = 1` and writes
+ * into caller-provided buffers:
+ *
+ *   coefficients_out: (p × q) row-major regression coefficients
+ *   x_mean_out:       (1 × p)
+ *   y_mean_out:       (1 × q)
+ *   predictions_out:  (n × q) row-major in-sample predictions; pass
+ *                     NULL to skip the in-sample predict step.
+ *
+ * Returns P4A_OK on success or a P4A_ERR_* status. This is a stable
+ * additive helper — implementations may grow new variants but the
+ * shape of this one is fixed at ABI minor 1.13.
+ */
+P4A_API p4a_status_t p4a_pls_fit_simple(
+    const double* x, const double* y,
+    int32_t n, int32_t p, int32_t q, int32_t n_components,
+    double* coefficients_out,
+    double* x_mean_out,
+    double* y_mean_out,
+    double* predictions_out);
 
 /* PLS-GLM (§5). PLS-reduced design feeding a softmax / Poisson IRLS.
  * `poisson` selects the Poisson-link path; otherwise a one-vs-rest

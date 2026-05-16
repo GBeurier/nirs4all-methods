@@ -18,7 +18,7 @@
 namespace pls4all::core {
 
 const char* version_string() noexcept {
-    return P4A_PROJECT_VERSION_STRING "+abi.1.12.0";   // ABI surface unchanged from 0.82
+    return P4A_PROJECT_VERSION_STRING "+abi.1.13.0";
 }
 
 const char* build_info() noexcept {

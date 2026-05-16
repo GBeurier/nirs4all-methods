@@ -18,16 +18,16 @@
 #define PLS4ALL_P4A_VERSION_H
 
 #define P4A_ABI_VERSION_MAJOR 1
-#define P4A_ABI_VERSION_MINOR 12
+#define P4A_ABI_VERSION_MINOR 13
 #define P4A_ABI_VERSION_PATCH 0
 #define P4A_ABI_VERSION_INT  (P4A_ABI_VERSION_MAJOR * 10000 + \
                               P4A_ABI_VERSION_MINOR * 100   + \
                               P4A_ABI_VERSION_PATCH)
 
 #define P4A_PROJECT_VERSION_MAJOR  0
-#define P4A_PROJECT_VERSION_MINOR  84
+#define P4A_PROJECT_VERSION_MINOR  85
 #define P4A_PROJECT_VERSION_PATCH  0
-#define P4A_PROJECT_VERSION_STRING "0.84.0"
+#define P4A_PROJECT_VERSION_STRING "0.85.0"
 
 /* Canonical error-buffer capacity for p4a_context_t. The 4 KiB figure is part
  * of the ABI contract — see docs/architecture/error_model.md. Bindings may
