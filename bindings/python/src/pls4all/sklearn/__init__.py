@@ -37,6 +37,14 @@ from ._regression import (
     SparsePLSRegression,
 )
 from ._classification import OPLSDAClassifier, PLSDAClassifier
+from ._method_result_regressors import (
+    CPPLSRegression,
+    DIPLSRegression,
+    ECRegression,
+    MBPLSRegression,
+    MIRPLSRegression,
+    SparseSimplsRegression,
+)
 from ._selection import (
     BVESelector,
     BiPLSSelector,
@@ -78,6 +86,13 @@ __all__ = [
     "PLSSVD",
     "PLSDAClassifier",
     "OPLSDAClassifier",
+    # MethodResult-based regressors (Python-side predict via coef + intercept)
+    "SparseSimplsRegression",
+    "CPPLSRegression",
+    "ECRegression",
+    "DIPLSRegression",
+    "MIRPLSRegression",
+    "MBPLSRegression",
     # 28 SelectorMixin variable-selection wrappers (Phase 54a)
     "BVESelector",
     "BiPLSSelector",
