@@ -62,9 +62,9 @@ func main() {
 ## Parity gate output
 
 ```
-pls4all.Version()        = 0.92.0+abi.1.13.0
+pls4all.Version()        = 0.93.0+abi.1.13.0
 pls4all.AbiVersion()     = 1.13.0
-fixture pls4all_version  = 0.92.0+abi.1.13.0
+fixture pls4all_version  = 0.93.0+abi.1.13.0
 rmse_rel coefficients    = 2.471e-16
 rmse_rel x_mean          = 1.208e-16
 rmse_rel y_mean          = 2.200e-16

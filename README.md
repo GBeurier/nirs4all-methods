@@ -119,6 +119,7 @@ against R `pls` and `spls`). The test compares the four output arrays
 | .NET (P/Invoke) | 39 | 0.0 / 0.0 | PASS (bit-exact) |
 | Ruby (stdlib Fiddle) | 40 | 0.0 / 0.0 | PASS (bit-exact) |
 | Lua / LuaJIT (FFI) | 41 | 0.0 / 0.0 | PASS (bit-exact) |
+| Nim (`{.dynlib.}`) | 42 | 0.0 / 0.0 | PASS (bit-exact) |
 
 Run the cross-binding parity gates:
 
@@ -137,6 +138,8 @@ cargo run --manifest-path bindings/rust/pls4all/Cargo.toml \
 dotnet run --project bindings/dotnet/TestParity          # .NET
 ruby bindings/ruby/test/test_parity.rb                   # Ruby
 luajit bindings/lua/test/test_parity.lua                 # LuaJIT
+nim c -r -d:libp4aName=... --path:bindings/nim \
+    bindings/nim/test/test_parity.nim                    # Nim
 ```
 
 ## Quick Build

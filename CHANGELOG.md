@@ -10,6 +10,26 @@ Next tracks: Android NDK packaging (Phase 36 — deferred, needs the
 ~3.5 GB NDK), Swift / Apple-side bindings, accelerated backends,
 timing benchmarks.
 
+## [0.93.0-nim-binding] — 2026-05-16
+
+Zero-nimble Nim binding via the language's built-in `{.importc,
+dynlib.}` pragmas. Parity-gated against the shared cross-binding
+fixture; result is bit-exact (rmse_rel = 0.0 on all four output
+arrays).
+
+### Nim binding
+
+- `bindings/nim/pls4all.nim` — public API (`pls4all.version`,
+  `pls4all.abiVersion`, `pls4all.plsFit`). Uses `openArray[float64]`
+  for input slices (contiguous, length-aware), and `seq[float64]`
+  for outputs.
+- `bindings/nim/test/test_parity.nim` — parity gate using the
+  stdlib `std/json` module (no extra package).
+- `bindings/nim/README.md`, `bindings/nim/.gitignore`.
+- Compile-time library override via `-d:libp4aName=...`.
+
+No ABI change (uses `p4a_pls_fit_simple` from 1.13).
+
 ## [0.92.0-lua-binding] — 2026-05-16
 
 Zero-rock Lua / LuaJIT binding via LuaJIT's built-in FFI module.

@@ -1,0 +1,3 @@
+# Nim build artifacts.
+test/test_parity
+nimcache/

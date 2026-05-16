@@ -4,8 +4,8 @@ L’existant confirme cette structuration : scikit-learn expose déjà `PLSRegre
 
 ## Statut courant (mai 2026)
 
-Snapshot de ce qui est livré dans le tag `phase-41-lua-binding`
-(`0.92.0+abi.1.13.0`). La feuille de route détaillée est dans
+Snapshot de ce qui est livré dans le tag `phase-42-nim-binding`
+(`0.93.0+abi.1.13.0`). La feuille de route détaillée est dans
 [`ROADMAP.md`](ROADMAP.md) ; les notes par phase sont dans `roadmap/phase-*.md`.
 Le détail des parity gates par méthode est dans `benchmarks/results/parity_gate/`.
 
