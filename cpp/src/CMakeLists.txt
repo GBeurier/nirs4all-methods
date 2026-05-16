@@ -95,6 +95,58 @@ endif()
 pls4all_add_warnings(pls4all_core)
 
 # ---------------------------------------------------------------------------
+# Optional BLAS backend (Phase 43). Default OFF — when ON we route the hot
+# linear-algebra kernels in cpp/src/core/model.cpp through CBLAS via the
+# pls4all::linalg dispatch layer in cpp/src/core/linalg.hpp. The reference
+# scalar loops stay as the !P4A_USE_BLAS path so the default build is
+# bit-identical to pre-Phase-43.
+# ---------------------------------------------------------------------------
+if(PLS4ALL_WITH_BLAS)
+    find_package(BLAS)
+    if(NOT BLAS_FOUND)
+        message(FATAL_ERROR
+            "PLS4ALL_WITH_BLAS=ON but no BLAS implementation was found.\n"
+            "Install OpenBLAS (libopenblas-dev), MKL, or Apple Accelerate, "
+            "then reconfigure.\n"
+            "Alternatively set PLS4ALL_WITH_BLAS=OFF to keep the reference "
+            "scalar loops.")
+    endif()
+    # Verify CBLAS header reachability. find_package(BLAS) locates the
+    # Fortran/C link libraries but does not always know where cblas.h
+    # lives; on Apple it's <Accelerate/cblas.h>, on conda-forge / Debian
+    # it's <cblas.h> under the BLAS include dir.
+    include(CheckIncludeFileCXX)
+    set(CMAKE_REQUIRED_INCLUDES_BACKUP ${CMAKE_REQUIRED_INCLUDES})
+    if(BLAS_INCLUDE_DIRS)
+        list(APPEND CMAKE_REQUIRED_INCLUDES ${BLAS_INCLUDE_DIRS})
+    endif()
+    check_include_file_cxx(cblas.h PLS4ALL_HAS_CBLAS_HEADER)
+    set(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES_BACKUP})
+    if(NOT PLS4ALL_HAS_CBLAS_HEADER)
+        message(FATAL_ERROR
+            "PLS4ALL_WITH_BLAS=ON but <cblas.h> was not found in the "
+            "compiler's include path. Install the CBLAS dev package "
+            "(e.g. libopenblas-dev on Debian/Ubuntu, "
+            "openblas-devel on RHEL/Fedora, or Apple Accelerate on macOS) "
+            "or pass -DBLAS_INCLUDE_DIRS=/path/to/include.")
+    endif()
+    target_compile_definitions(pls4all_core PRIVATE P4A_USE_BLAS=1)
+    if(BLAS_LINKER_FLAGS)
+        target_link_options(pls4all_core PRIVATE ${BLAS_LINKER_FLAGS})
+    endif()
+    if(BLAS_INCLUDE_DIRS)
+        target_include_directories(pls4all_core PRIVATE ${BLAS_INCLUDE_DIRS})
+    endif()
+    # The actual link to ${BLAS_LIBRARIES} happens inside
+    # pls4all_apply_c_target() for pls4all_c and pls4all_c_static.
+    # Linking it here on the OBJECT library is inert because PRIVATE
+    # link deps do not propagate through $<TARGET_OBJECTS:>.
+    message(STATUS "  BLAS backend      : ON  (${BLAS_LIBRARIES})")
+else()
+    message(STATUS "  BLAS backend      : OFF (reference scalar loops)")
+endif()
+
+# ---------------------------------------------------------------------------
 # pls4all_c — public C ABI shared library (libp4a.{so,dll,dylib}).
 # pls4all_c_static is the same surface, statically linked.
 # ---------------------------------------------------------------------------
@@ -125,6 +177,18 @@ function(pls4all_apply_c_target target)
         target_compile_options(${target} PRIVATE
             $<$<NOT:$<CONFIG:Debug>>:-ffunction-sections>
             $<$<NOT:$<CONFIG:Debug>>:-fdata-sections>)
+    endif()
+    if(PLS4ALL_WITH_BLAS)
+        # Mirrors the define applied to pls4all_core, so the C-API
+        # translation units (e.g. c_api_version.cpp) see the same BLAS
+        # availability flag.
+        target_compile_definitions(${target} PRIVATE P4A_USE_BLAS=1)
+        # OBJECT libraries do not propagate PRIVATE link deps through
+        # $<TARGET_OBJECTS:>, so the consuming target must link BLAS too.
+        target_link_libraries(${target} PRIVATE ${BLAS_LIBRARIES})
+        if(BLAS_LINKER_FLAGS)
+            target_link_options(${target} PRIVATE ${BLAS_LINKER_FLAGS})
+        endif()
     endif()
     pls4all_add_warnings(${target})
 endfunction()

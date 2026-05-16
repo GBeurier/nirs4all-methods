@@ -36,8 +36,13 @@ P4A_API int p4a_backend_is_available(p4a_backend_t backend) {
             case P4A_BACKEND_AUTO:
             case P4A_BACKEND_REFERENCE_CPU:
                 return 1;
-            case P4A_BACKEND_NATIVE_CPU:
             case P4A_BACKEND_BLAS:
+#if defined(P4A_USE_BLAS)
+                return 1;
+#else
+                return 0;
+#endif
+            case P4A_BACKEND_NATIVE_CPU:
             case P4A_BACKEND_OPENMP:
             case P4A_BACKEND_CUDA:
             case P4A_BACKEND_OPENCL:

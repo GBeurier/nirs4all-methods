@@ -6,9 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-Next tracks: Android NDK packaging (Phase 36 — deferred, needs the
-~3.5 GB NDK), Swift / Apple-side bindings, accelerated backends,
-timing benchmarks.
+Next tracks: OpenMP backend (Phase 44), CUDA backend (Phase 45),
+final timing benchmark matrix across reference / BLAS / OpenMP / CUDA
+on the shipped solvers.
+
+## [0.94.0-blas-backend] — 2026-05-16
+
+Optional CBLAS backend. Default is **OFF** — the OFF build is
+bit-identical to pre-Phase-43 with the same scalar loops and no new
+link dependency. When `PLS4ALL_WITH_BLAS=ON` libp4a routes the hot
+linear-algebra kernels (matrix-vector products in SIMPLS / NIPALS;
+cross-covariance `X^T Y` in SIMPLS / SVD / kernel-algo / power /
+randomized-SVD / canonical pair / OPLS / DI-PLS) through a system
+CBLAS implementation. Public C ABI is unchanged at 1.13.0; symbol
+count stays at 160; all 10 cross-binding parity gates pass with
+maximum drift `5.2e-16` rmse_rel.
+
+### BLAS backend
+
+- `cpp/src/core/linalg.hpp` — internal `pls4all::linalg` namespace
+  with `gemv`, `matvec`, `gemm` and `ger` entry points. Reference
+  scalar implementations under `!P4A_USE_BLAS`, CBLAS dispatch
+  under `P4A_USE_BLAS`. The macOS `<Accelerate/Accelerate.h>`
+  header is auto-selected when `<cblas.h>` is unavailable.
+- `cpp/src/core/model.cpp` — `matrix_vector_product` body forwards
+  to `linalg::matvec` (covers 14 callers). The two NIPALS
+  `X^T y_score / y_score_ss` inner-loop sites become `linalg::gemv`
+  with the alpha factor folded in. The 9 cross-covariance triple
+  loops become `linalg::gemm(Trans_Yes, Trans_No, ...)`.
+- `cpp/src/c_api/c_api_version.cpp` — `p4a_backend_is_available`
+  returns 1 for `P4A_BACKEND_BLAS` when compiled in.
+- `cpp/src/CMakeLists.txt` + `cpp/tests/CMakeLists.txt` —
+  `find_package(BLAS)` + `check_include_file_cxx(cblas.h)` gate
+  the option; both hard-fail with actionable diagnostics if the
+  toolchain is incomplete. `${BLAS_LIBRARIES}` linked into
+  `pls4all_c`, `pls4all_c_static` and `pls4all_tests`.
+- `cpp/tests/abi/test_blas_backend.cpp` — fixture parity + 200x20x2
+  smoke test; passes whether BLAS is compiled in or not.
+- Phase 43b backlog: rank-1 deflations via `linalg::ger`,
+  `compute_rotations_and_coefficients` GEMMs, BLAS-aware bench CLI.
 
 ## [0.93.0-nim-binding] — 2026-05-16
 

@@ -47,9 +47,9 @@ luajit bindings/lua/test/test_parity.lua
 Expected output:
 
 ```
-pls4all.version           = 0.93.0+abi.1.13.0
+pls4all.version           = 0.94.0+abi.1.13.0
 pls4all.abi_version       = 1.13.0
-fixture pls4all_version   = 0.93.0+abi.1.13.0
+fixture pls4all_version   = 0.94.0+abi.1.13.0
 rmse_rel coefficients    = 0.000e+00
 rmse_rel x_mean          = 0.000e+00
 rmse_rel y_mean          = 0.000e+00

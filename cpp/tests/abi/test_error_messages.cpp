@@ -35,7 +35,10 @@ TEST(error_messages, overwrite_not_append) {
     char first_copy[256];
     std::snprintf(first_copy, sizeof(first_copy), "%s", first);
 
-    p4a_context_set_backend(ctx, P4A_BACKEND_BLAS);   // sets another
+    // Pick a backend that is guaranteed unavailable regardless of build
+    // configuration. P4A_BACKEND_BLAS may be compiled in (Phase 43) and
+    // would silently succeed without populating an error.
+    p4a_context_set_backend(ctx, P4A_BACKEND_METAL);  // sets another
     const char* second = p4a_context_last_error(ctx);
     CHECK_STR_CONTAINS(second, "not compiled");
     // The two messages differ in the backend number, so they should not

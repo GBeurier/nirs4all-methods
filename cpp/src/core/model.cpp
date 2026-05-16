@@ -10,6 +10,7 @@
 #include <memory>
 #include <vector>
 
+#include "core/linalg.hpp"
 #include "core/matrix_view.hpp"
 #include "core/status.hpp"
 
@@ -220,14 +221,7 @@ void matrix_vector_product(const std::vector<double>& matrix,
                            std::size_t cols,
                            const std::vector<double>& vector,
                            std::vector<double>& out) {
-    resize_fill(out, rows, 0.0);
-    for (std::size_t i = 0; i < rows; ++i) {
-        double sum = 0.0;
-        for (std::size_t j = 0; j < cols; ++j) {
-            sum += matrix[idx(i, cols, j)] * vector[j];
-        }
-        out[i] = sum;
-    }
+    pls4all::linalg::matvec(matrix, rows, cols, vector, out);
 }
 
 void canonicalize_direction_sign(std::vector<double>& direction) noexcept {
@@ -1249,13 +1243,15 @@ enum class CanonicalWeightSolver {
             return P4A_ERR_NUMERICAL_FAILURE;
         }
 
-        for (std::size_t feature = 0; feature < features; ++feature) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < rows; ++row) {
-                sum += xk[idx(row, features, feature)] * y_score[row];
-            }
-            x_weights[feature] = sum / y_score_ss;
-        }
+        // x_weights = (1 / y_score_ss) * X^T * y_score   (NIPALS inner power step)
+        pls4all::linalg::gemv(
+            pls4all::linalg::Trans_Yes,
+            rows, features,
+            1.0 / y_score_ss,
+            xk.data(),
+            y_score.data(),
+            0.0,
+            x_weights.data());
 
         const double x_weight_norm = std::sqrt(squared_norm(x_weights));
         if (x_weight_norm <= std::numeric_limits<double>::epsilon()) {
@@ -1359,16 +1355,15 @@ enum class CanonicalWeightSolver {
     std::vector<double>& y_weights) {
     std::vector<double> covariance;
     resize_fill(covariance, features * targets, 0.0);
-    for (std::size_t feature = 0; feature < features; ++feature) {
-        for (std::size_t target = 0; target < targets; ++target) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < rows; ++row) {
-                sum += xk[idx(row, features, feature)] *
-                       yk[idx(row, targets, target)];
-            }
-            covariance[idx(feature, targets, target)] = sum;
-        }
-    }
+    // Cross-covariance: covariance = X^T * Y  (features x targets).
+    pls4all::linalg::gemm(
+        pls4all::linalg::Trans_Yes, pls4all::linalg::Trans_No,
+        features, targets, rows,
+        1.0,
+        xk.data(), features,
+        yk.data(), targets,
+        0.0,
+        covariance.data(), targets);
     return dominant_svd_pair(ctx, covariance, features, targets,
                              cfg.max_iter, cfg.tol,
                              component, x_weights, y_weights);
@@ -1646,13 +1641,15 @@ p4a_status_t fit_pls_regression_nipals(
                 return P4A_ERR_NUMERICAL_FAILURE;
             }
 
-            for (std::size_t feature = 0; feature < p; ++feature) {
-                double sum = 0.0;
-                for (std::size_t row = 0; row < n; ++row) {
-                    sum += xk[idx(row, p, feature)] * y_score[row];
-                }
-                x_weights[feature] = sum / y_score_ss;
-            }
+            // x_weights = (1 / y_score_ss) * X^T * y_score   (NIPALS inner power step)
+            pls4all::linalg::gemv(
+                pls4all::linalg::Trans_Yes,
+                n, p,
+                1.0 / y_score_ss,
+                xk.data(),
+                y_score.data(),
+                0.0,
+                x_weights.data());
 
             const double x_weight_norm = std::sqrt(squared_norm(x_weights));
             if (x_weight_norm <= std::numeric_limits<double>::epsilon()) {
@@ -1896,15 +1893,15 @@ p4a_status_t fit_pls_svd(
 
     std::vector<double> covariance;
     resize_fill(covariance, p * q, 0.0);
-    for (std::size_t feature = 0; feature < p; ++feature) {
-        for (std::size_t target = 0; target < q; ++target) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < n; ++row) {
-                sum += xs[idx(row, p, feature)] * ys[idx(row, q, target)];
-            }
-            covariance[idx(feature, q, target)] = sum;
-        }
-    }
+    // Cross-covariance: covariance = Xs^T * Ys  (p x q).
+    pls4all::linalg::gemm(
+        pls4all::linalg::Trans_Yes, pls4all::linalg::Trans_No,
+        p, q, n,
+        1.0,
+        xs.data(), p,
+        ys.data(), q,
+        0.0,
+        covariance.data(), q);
 
     for (std::size_t comp = 0; comp < a; ++comp) {
         std::vector<double> x_weights;
@@ -2141,16 +2138,15 @@ p4a_status_t fit_opls_nipals(
             } else {
                 std::vector<double> covariance;
                 resize_fill(covariance, p * q, 0.0);
-                for (std::size_t feature = 0; feature < p; ++feature) {
-                    for (std::size_t target = 0; target < q; ++target) {
-                        double sum = 0.0;
-                        for (std::size_t row = 0; row < n; ++row) {
-                            sum += x_work[idx(row, p, feature)] *
-                                   yk[idx(row, q, target)];
-                        }
-                        covariance[idx(feature, q, target)] = sum;
-                    }
-                }
+                // Cross-covariance: covariance = X_work^T * Yk  (p x q).
+                pls4all::linalg::gemm(
+                    pls4all::linalg::Trans_Yes, pls4all::linalg::Trans_No,
+                    p, q, n,
+                    1.0,
+                    x_work.data(), p,
+                    yk.data(), q,
+                    0.0,
+                    covariance.data(), q);
                 const p4a_status_t pair_status =
                     dominant_svd_pair(ctx, covariance, p, q, cfg.max_iter,
                                       cfg.tol, component, weights, y_weights);
@@ -3599,15 +3595,16 @@ p4a_status_t fit_pls_regression_simpls(
 
     std::vector<double> covariance;
     resize_fill(covariance, p * q, 0.0);
-    for (std::size_t feature = 0; feature < p; ++feature) {
-        for (std::size_t target = 0; target < q; ++target) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < n; ++row) {
-                sum += xk[idx(row, p, feature)] * yk[idx(row, q, target)];
-            }
-            covariance[idx(feature, q, target)] = sum;
-        }
-    }
+    // Cross-covariance: covariance = X^T * Y  (p x q).
+    // X is (n x p) row-major; Y is (n x q) row-major.
+    pls4all::linalg::gemm(
+        pls4all::linalg::Trans_Yes, pls4all::linalg::Trans_No,
+        p, q, n,
+        1.0,
+        xk.data(), p,
+        yk.data(), q,
+        0.0,
+        covariance.data(), q);
 
     std::vector<double> basis_v;
     resize_fill(basis_v, p * a, 0.0);
@@ -3860,15 +3857,16 @@ p4a_status_t fit_di_pls(Context& ctx,
 
     std::vector<double> covariance;
     resize_fill(covariance, p * q, 0.0);
-    for (std::size_t feature = 0; feature < p; ++feature) {
-        for (std::size_t target = 0; target < q; ++target) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < n; ++row) {
-                sum += xk[idx(row, p, feature)] * yk[idx(row, q, target)];
-            }
-            covariance[idx(feature, q, target)] = sum;
-        }
-    }
+    // Cross-covariance: covariance = X^T * Y  (p x q).
+    // X is (n x p) row-major; Y is (n x q) row-major.
+    pls4all::linalg::gemm(
+        pls4all::linalg::Trans_Yes, pls4all::linalg::Trans_No,
+        p, q, n,
+        1.0,
+        xk.data(), p,
+        yk.data(), q,
+        0.0,
+        covariance.data(), q);
 
     std::vector<double> basis_v;
     resize_fill(basis_v, p * a, 0.0);
@@ -4086,15 +4084,16 @@ p4a_status_t fit_pls_sparse_simpls(Context& ctx,
 
     std::vector<double> covariance;
     resize_fill(covariance, p * q, 0.0);
-    for (std::size_t feature = 0; feature < p; ++feature) {
-        for (std::size_t target = 0; target < q; ++target) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < n; ++row) {
-                sum += xk[idx(row, p, feature)] * yk[idx(row, q, target)];
-            }
-            covariance[idx(feature, q, target)] = sum;
-        }
-    }
+    // Cross-covariance: covariance = X^T * Y  (p x q).
+    // X is (n x p) row-major; Y is (n x q) row-major.
+    pls4all::linalg::gemm(
+        pls4all::linalg::Trans_Yes, pls4all::linalg::Trans_No,
+        p, q, n,
+        1.0,
+        xk.data(), p,
+        yk.data(), q,
+        0.0,
+        covariance.data(), q);
 
     std::vector<double> basis_v;
     resize_fill(basis_v, p * a, 0.0);
