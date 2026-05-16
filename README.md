@@ -148,19 +148,26 @@ validate the design pattern.
 
 | Binding | Tier 1 coverage | Tier 2 coverage | Tier 2 form |
 |---------|---|---|---|
-| Python (`pls4all.sklearn`) | **64 / 68** methods reachable | **42 / 68** (62 %) | `BaseEstimator` + `Regressor/Classifier/SelectorMixin`, `.n4a` pickling, GridSearchCV-ready |
-| R (`pls()` + S3) | **~9** PLS solvers via `pls4all_fit(algo=)` | **1** (PoC) | formula entry + `predict`/`coef`/`print`/`summary` generics |
-| MATLAB / Octave (`+pls4all`) | **1** (`pls_fit` SIMPLS) | **1** (PoC) | `Regression` classdef + `fitrpls` factory |
-| Julia (`Pls4all.Sklearn`) | **1** (`pls_fit` SIMPLS) | **1** (PoC) | mutable struct + `fit!`/`predict`/`score` |
-| JS / TS (`@pls4all/wasm/sklearn`) | basic SIMPLS via WASM | **1** (PoC) | async-init class + `FinalizationRegistry` cleanup |
-| Go / Rust / .NET / JNI / Ruby / Lua / Nim | tier-1 parity only | **0** | (tier 2 not yet started) |
+| Python (`pls4all.sklearn`) | **64 / 68** methods reachable | **67 classes + 6 fns** (~96 % via wrappers, ~4 % deferred for C-ABI extensions) | `BaseEstimator` + Regressor/Classifier/Selector/TransformerMixin, `.n4a` pickling, GridSearchCV-ready |
+| R (`pls()` + S3 + parsnip + mlr3) | **~9** PLS solvers via `pls4all_fit(algo=)` | **3 styles** (formula+S3, tidymodels engine, mlr3 R6 learner) for PLS regression | `pls(y ~ ., data, ncomp)` + S3 generics ; `pls_pls4all_reg() %>% set_engine("pls4all")` ; `lrn("regr.pls4all")` |
+| MATLAB / Octave (`+pls4all`) | **1** (`pls_fit` SIMPLS) | **1 class** (PoC) | `Regression` classdef + `fitrpls` factory |
+| Julia (`Pls4all.Sklearn`) | **1** (`pls_fit` SIMPLS) | **1 struct** (PoC) | mutable struct + `fit!`/`predict`/`score` |
+| JS / TS (`@pls4all/wasm/sklearn`) | basic SIMPLS via WASM | **1 class** (PoC) | async-init class + `FinalizationRegistry` cleanup |
+| Go (`pls4all.PLSRegression`) | basic SIMPLS via cgo | **1 struct** (PoC) | gonum/learn-style receiver struct |
+| Rust (`pls4all::PLSRegression`) | basic SIMPLS via extern "C" | **1 struct** (PoC) | linfa-compatible (no hard dep) |
+| Ruby (`Pls4all::PLSRegression`) | basic SIMPLS via Fiddle | **1 class** (PoC) | Rumale-style |
+| .NET (`Pls4all.PLSRegression`) | basic SIMPLS via P/Invoke | **1 class** (PoC) | ML.NET-style sealed class |
+| Lua / LuaJIT (`pls4all.PLSRegression`) | basic SIMPLS via FFI | **1 class** (PoC) | torch.nn-style metatable class |
+| Nim (`PLSRegression`) | basic SIMPLS via importc | **1 ref object** (PoC) | arraymancer-compatible openArray |
+| JNI / JVM desktop | basic SIMPLS via JNI | **0** | (deferred — needs JAR packaging) |
 
-The 4 non-Python tier-2 layers are intentionally **single-class
-proofs of design** — they exercise the formula / classdef / struct
-/ TS-class patterns end-to-end and confirm bit-exact agreement
-against the corresponding tier-1 fit (`max abs diff ≤ 2e-15` across
-all 4). Replicating the Python sklearn breadth (42 classes) to the
-other 4 bindings is tracked as a follow-up phase.
+Every tier-2 wrapper outside Python is a **single-class slice** by design:
+it exercises each language's idiomatic ML estimator contract end-to-end
+and ships bit-exact agreement against the corresponding tier-1 fit
+(`max abs diff ≤ 2e-15`). Extending each non-Python tier-2 to match
+Python's 67-class breadth requires first extending the underlying tier-1
+shim (more C entry points per binding), then replicating the wrapper
+pattern method-by-method — tracked as future per-binding sprints.
 
 The 26 Python-tier-2-missing entries split into:
 - **Wrappable** (have `coef` + `x_mean` + `y_mean` in the result):
