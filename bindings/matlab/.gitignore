@@ -1,0 +1,6 @@
+# MATLAB / Octave MEX artifacts — rebuilt by build_mex.m.
++pls4all/*.mex
++pls4all/*.mexa64
++pls4all/*.mexmaci64
++pls4all/*.mexw64
++pls4all/*.o

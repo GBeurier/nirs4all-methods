@@ -4,8 +4,8 @@ L’existant confirme cette structuration : scikit-learn expose déjà `PLSRegre
 
 ## Statut courant (mai 2026)
 
-Snapshot de ce qui est livré dans le tag `phase-33-julia-binding`
-(`0.85.0+abi.1.13.0`). La feuille de route détaillée est dans
+Snapshot de ce qui est livré dans le tag `phase-34-octave-matlab-binding`
+(`0.86.0+abi.1.13.0`). La feuille de route détaillée est dans
 [`ROADMAP.md`](ROADMAP.md) ; les notes par phase sont dans `roadmap/phase-*.md`.
 Le détail des parity gates par méthode est dans `benchmarks/results/parity_gate/`.
 
