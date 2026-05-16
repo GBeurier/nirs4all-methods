@@ -6,8 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-Next tracks: JNI / Android (needs NDK), accelerated backends,
+Next tracks: Android NDK packaging (Phase 36), accelerated backends,
 timing benchmarks.
+
+## [0.87.0-jni-binding] — 2026-05-16
+
+Desktop JNI binding for the JVM. Same `p4a_pls_fit_simple` C-ABI
+helper, gated against the shared cross-binding parity fixture.
+
+### JNI binding
+
+- `bindings/jni/java/io/github/pls4all/Pls4all.java` — public Java
+  API with `version()`, `abiVersion()` and
+  `plsFit(double[] x, double[] y, int n, int p, int q, int k)`
+  returning a `FitResult` record.
+- `bindings/jni/c/p4a_jni.c` — JNI implementation. Java arrays are
+  row-major like the C ABI, so `GetPrimitiveArrayCritical` pins them
+  without copying.
+- `bindings/jni/test/TestParity.java` — parity gate against the
+  shared `bindings/js/test/parity_fixture.json`. RMSE-rel = 0.0
+  bit-exact across all four output arrays.
+- `bindings/jni/build.sh` — one-shot build (javac → JNI header →
+  `libp4a_jni.so` → TestParity.class). Auto-detects the conda-forge
+  `<env>/lib/jvm` JDK layout.
+
+No ABI change (uses `p4a_pls_fit_simple` from 1.13).
 
 ## [0.86.0-octave-matlab-binding] — 2026-05-16
 

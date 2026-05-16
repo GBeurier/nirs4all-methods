@@ -1,0 +1,3 @@
+# JNI build artifacts — rebuilt by build.sh.
+build/
+c/io_github_pls4all_Pls4all.h
