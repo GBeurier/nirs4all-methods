@@ -137,6 +137,48 @@ as a fair head-to-head against pls4all. Top headline speedups
 | `rosa` | 8 026 × | `multiblock` (R, dominated by Rscript) |
 | `so_pls` | 5 407 × | `multiblock` (R, dominated by Rscript) |
 
+### Tier 2 idiomatic-wrapper coverage (Phase 54, May 2026)
+
+On top of the tier-1 ABI bindings (one-to-one ctypes / `.Call` / `ccall`
+/ MEX / WASM shims), each binding can ship a *tier 2* idiomatic-style
+wrapper that subclasses the host language's conventional ML estimator
+contract. Current status is **uneven**: Python is the only mostly-
+complete tier 2 layer; the others are deliberate PoC slices that
+validate the design pattern.
+
+| Binding | Tier 1 coverage | Tier 2 coverage | Tier 2 form |
+|---------|---|---|---|
+| Python (`pls4all.sklearn`) | **64 / 68** methods reachable | **42 / 68** (62 %) | `BaseEstimator` + `Regressor/Classifier/SelectorMixin`, `.n4a` pickling, GridSearchCV-ready |
+| R (`pls()` + S3) | **~9** PLS solvers via `pls4all_fit(algo=)` | **1** (PoC) | formula entry + `predict`/`coef`/`print`/`summary` generics |
+| MATLAB / Octave (`+pls4all`) | **1** (`pls_fit` SIMPLS) | **1** (PoC) | `Regression` classdef + `fitrpls` factory |
+| Julia (`Pls4all.Sklearn`) | **1** (`pls_fit` SIMPLS) | **1** (PoC) | mutable struct + `fit!`/`predict`/`score` |
+| JS / TS (`@pls4all/wasm/sklearn`) | basic SIMPLS via WASM | **1** (PoC) | async-init class + `FinalizationRegistry` cleanup |
+| Go / Rust / .NET / JNI / Ruby / Lua / Nim | tier-1 parity only | **0** | (tier 2 not yet started) |
+
+The 4 non-Python tier-2 layers are intentionally **single-class
+proofs of design** — they exercise the formula / classdef / struct
+/ TS-class patterns end-to-end and confirm bit-exact agreement
+against the corresponding tier-1 fit (`max abs diff ≤ 2e-15` across
+all 4). Replicating the Python sklearn breadth (42 classes) to the
+other 4 bindings is tracked as a follow-up phase.
+
+The 26 Python-tier-2-missing entries split into:
+- **Wrappable** (have `coef` + `x_mean` + `y_mean` in the result):
+  `kernel_pls`, `n_pls`, `pls_glm`, `pls_logistic`, `sparse_pls_da`,
+  `pds`, `ds`, the 3 AOM entry points.
+- **In-sample only** (`MethodResult` carries predictions but no
+  coefficients): `weighted_pls`, `robust_pls`, `ridge_pls`,
+  `continuum_regression`, `recursive_pls`, `so_pls`, `on_pls`,
+  `rosa`, `lw_pls`, `bagging_pls`, `boosting_pls`,
+  `random_subspace_pls`, `o2pls`, `group_sparse_pls`,
+  `fused_sparse_pls`, `missing_aware_nipals`, `pls_qda`, `pls_lda`,
+  `pls_cox`. These need either an ABI extension that exports
+  coefficients or a sklearn-side "fit-only" estimator contract.
+- **Diagnostics / utilities** (`pls_diagnostic_t2`,
+  `pls_diagnostic_q`, `pls_diagnostic_dmodx`, `pls_monitoring`,
+  `approximate_press`, `one_se_rule`) — wrappers will land as
+  module-level functions, not as `BaseEstimator` subclasses.
+
 ### Cross-binding parity gate
 
 Each language binding ships with a parity test that runs the same

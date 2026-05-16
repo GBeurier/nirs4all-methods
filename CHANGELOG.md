@@ -9,6 +9,67 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 Next track: language bindings (Rust, Go, Ruby, Lua, Nim, …) catch-up to
 the new ABI 1.16 symbols.
 
+## [phase-54-bindings-tier2] — 2026-05-16
+
+Two-tier binding sprint: every binding can now ship a *tier 1* raw FFI
+shim (one-to-one with the C ABI) AND a *tier 2* idiomatic wrapper
+honouring the host language's conventional ML estimator contract.
+
+**Honest coverage status** (matches the matrix in README §"Tier 2
+idiomatic-wrapper coverage"):
+
+| Binding | Tier 1 coverage | Tier 2 coverage |
+|---------|---|---|
+| Python (`pls4all.sklearn`) | 64 / 68 reachable | **42 / 68** sklearn classes (62 %) |
+| R / MATLAB / Julia / JS    | tier-1 SIMPLS only | **1 class each** (PoC validating design) |
+| Go / Rust / .NET / JNI / Ruby / Lua / Nim | tier-1 parity | 0 (tier 2 not started) |
+
+Python tier 2 is the only mostly-complete layer. The 4 other tier-2
+PoCs are deliberate single-class slices that prove the pattern (formula
++ S3 / classdef / mutable struct / async TS class) end-to-end with
+bit-exact tier1-vs-tier2 agreement (max abs diff ≤ 2e-15). Replicating
+the Python sklearn breadth to R / MATLAB / Julia / JS is tracked as a
+follow-up phase, as is wrapping the remaining 26 Python methods (17
+in-sample-only methods that need an ABI coefficient export, 3 AOM
+entries, 6 diagnostics).
+
+### Python sklearn — what shipped
+
+- 8 Model-based estimators (`PLSRegression`, `OPLSRegression`, `PCR`,
+  `SparsePLSRegression`, `PLSCanonical`, `PLSSVD`, `PLSDAClassifier`,
+  `OPLSDAClassifier`) backed by `Algorithm` enum + `Model.fit`, with
+  bit-exact `.n4a` bundle round-trip pickling via the new
+  `Model.to_bytes()` / `Model.from_bytes()` ABI shim.
+- 6 MethodResult regressors (`SparseSimplsRegression`, `CPPLSRegression`,
+  `ECRegression`, `DIPLSRegression`, `MIRPLSRegression`,
+  `MBPLSRegression`) with predict-on-new-X via the C predict math
+  `(X - x_mean) @ coef.T + y_mean`.
+- 28 SelectorMixin variable-selection wrappers (VIP, CARS, SPA,
+  RandomFrog, IRIV, IRF, VIPSPA, GA, PSO, VISSA, Shaving, BVE, REP,
+  IPW, ST, Stability, UVE, EMCUVE, Randomization, Interval, biPLS,
+  siPLS, T2, WVC, WVCThreshold, SCARS, CoefficientSelector,
+  SelectivityRatioSelector).
+- 209 sklearn tests pass: bit-exact wrapper-vs-tier1 parity, pickle /
+  deepcopy bit-exact, Pipeline + GridSearchCV smoke, edge-case
+  regressions for codex catches (NaN-in-X, wrong-feature-count,
+  failed-refit state hygiene, multi-target score average, etc.).
+- Codex MUST FIX (2 rounds) applied: predict math `(X - x_mean) @ coef`
+  instead of dividing by `x_scale`; MBPLS predict directly via the
+  C-side intercept; `_validate_X_y_no_mutate` for failed-fit state
+  hygiene; `_ManagedConfig` context manager for deterministic Config
+  lifecycle; JS `Model.fit` honouring n_components; JS multi-target
+  score now per-target then averaged.
+
+### Tier 1 prereqs landed this phase
+
+- `bindings/python/src/pls4all/_ffi.py`: added ctypes bindings for
+  `p4a_model_export_size / export_to_buffer / import_from_buffer /
+  p4a_serialization_inspect`.
+- `bindings/python/src/pls4all/_model.py`: new `Model.to_bytes()`
+  method and `Model.from_bytes(ctx, payload)` classmethod (bit-exact
+  round-trip on a 3128-byte bundle for a 50×20 PLS-5 model).
+- ABI unchanged (no new symbols).
+
 ## [parity-audit-may-2026] — 2026-05-16
 
 End-to-end parity-gate audit. See
