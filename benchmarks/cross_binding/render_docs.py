@@ -32,20 +32,25 @@ ICON_NA = "—"
 # (with the language as the prefix). The detailed definition for each
 # column lives at the bottom of the rendered doc (Backend definitions
 # section).
+# pls4all bindings keep the `pls4all.` prefix; external libraries get
+# their actual package name verbatim (no `R.` / `python.` prefix) so
+# the column header reads like the real import path you'd type.
 BACKEND_DISPLAY: dict[str, str] = {
+    # pls4all (us)
     "cpp":          "pls4all.cpp",
-    "python_tier1": "pls4all.py",
-    "python_tier2": "pls4all.py.sklearn",
-    "sklearn":      "python.sklearn",
-    "ikpls":        "python.ikpls",
+    "python_tier1": "pls4all.python",
+    "python_tier2": "pls4all.sklearn",
     "r_tier1":      "pls4all.R",
     "r_tier2":      "pls4all.R.formula",
-    "r_pls":        "R.pls",
-    "r_ropls":      "R.ropls",
-    "r_mixomics":   "R.mixomics",
     "matlab_tier1": "pls4all.matlab",
     "matlab_tier2": "pls4all.matlab.classdef",
-    "matlab_pls":   "matlab.plsregress",
+    # external libraries — their real package name
+    "sklearn":      "sklearn",
+    "ikpls":        "ikpls",
+    "r_pls":        "pls",         # CRAN `pls` package
+    "r_ropls":      "ropls",       # Bioconductor
+    "r_mixomics":   "mixOmics",    # Bioconductor
+    "matlab_pls":   "plsregress",  # Octave statistics
 }
 
 # Per-backend long description for the "Backend definitions" section.
@@ -219,15 +224,18 @@ def render(csv_path: Path, out_path: Path) -> None:
                 "are identical. See "
                 "[methodology.md](methodology.md) for full details.\n")
 
-    out.append("\nColumn names follow the `owner.language[.variant]` "
-                "convention — anything starting with `pls4all.` is us, "
-                "everything else is an external library. Per-algorithm "
-                "tables show **only the columns that actually implement "
-                "that algorithm**: a backend without coverage is removed "
-                "from the section's table entirely (rather than left as "
-                "an empty cell). Full per-column description: see "
-                "[Backend definitions](#backend-definitions) at the bottom "
-                "of this page.\n")
+    out.append("\nColumn names: anything starting with `pls4all.` is "
+                "one of this project's bindings; the others use their "
+                "real package name (`sklearn`, `ikpls`, `pls`, `ropls`, "
+                "`mixOmics`, `plsregress`). **Every algorithm table "
+                "keeps every column** — `—` cells are intentional and "
+                "show *where coverage is still missing*, either on "
+                "our side (an algorithm not yet wrapped in a tier-2 "
+                "class) or on the external side (e.g. `sklearn` doesn't "
+                "implement CPPLS / OPLS, `plsregress` only does plain "
+                "PLS, `ikpls` only does plain PLS). Full per-column "
+                "description: see [Backend definitions]"
+                "(#backend-definitions) at the bottom of this page.\n")
 
     # Group by (algorithm, threads).
     groups = defaultdict(list)  # (algo, threads) → list[row]
@@ -251,17 +259,13 @@ def render(csv_path: Path, out_path: Path) -> None:
                     "when the cell is OK and parity is ✓ or ⚠ — "
                     "comparing a divergent ✗ backend to a parity-correct "
                     "one would be meaningless)._\n")
-        # Pivot rows: sizes; columns: backends.
+        # Pivot rows: sizes; columns: ALL backends (whether they cover
+        # this algo or not). Empty `—` cells are intentional: they show
+        # the user where coverage is still missing (the "chemin à
+        # parcourir" — what we / external libs would need to add to
+        # make this matrix dense).
         sizes = sorted({(int(r["n"]), int(r["p"])) for r in grp})
-        # Keep only backends with at least one OK row for THIS algo —
-        # eliminate columns that would be 100% empty / N/A.
-        backends = [b for b in seen_backends
-                     if any(r["backend"] == b and _is_true(r.get("ok"))
-                            for r in grp)]
-        if not backends:
-            out.append("_No successful backend for this algorithm — "
-                        "see CSV for failure reasons._\n")
-            continue
+        backends = list(seen_backends)
         header = "| samples × features | " + " | ".join(disp(b) for b in backends) + " |"
         sep = "|---" + ("|---" * len(backends)) + "|"
         out.append(header)
