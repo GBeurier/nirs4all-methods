@@ -92,10 +92,14 @@ BACKENDS = [
     ("matlab_pls",   "bench_matlab_pls.m",    "MATLAB", "external", "external"),
 ]
 
-# libp4a build → libpath, header label.
+# libp4a build → libpath. Used for the cpp variant sweep: each build
+# corresponds to a distinct OpenMP / BLAS / CUDA tier of the C kernel.
 LIBP4A_BUILDS = {
-    "dev-release": str(REPO / "build/dev-release/cpp/src"),
-    "blas-omp":    str(REPO / "build/blas-omp/cpp/src"),
+    "dev-release": str(REPO / "build/dev-release/cpp/src"),  # ref, no BLAS, no OMP
+    "blas-on":     str(REPO / "build/blas-on/cpp/src"),       # BLAS only
+    "omp-on":      str(REPO / "build/omp-on/cpp/src"),        # OMP only
+    "blas-omp":    str(REPO / "build/blas-omp/cpp/src"),      # BLAS + OMP
+    "cuda-on":     str(REPO / "build/cuda-on/cpp/src"),       # BLAS + CUDA
 }
 
 # Conda env paths (R + Octave live here).
@@ -308,9 +312,12 @@ def main():
                          help="Dataset sizes 'NxP' (default: 11-size matrix)")
     parser.add_argument("--threads", nargs="+", type=int, default=[1, 3, 10],
                          help="Thread counts to sweep")
-    parser.add_argument("--libp4a-build", choices=["dev-release", "blas-omp", "both"],
+    parser.add_argument("--libp4a-build",
+                         choices=["dev-release", "blas-on", "omp-on", "blas-omp", "cuda-on", "both", "all"],
                          default="blas-omp",
-                         help="libp4a build for pls4all backends")
+                         help="libp4a build for pls4all backends. 'both' = "
+                              "dev-release + blas-omp; 'all' = the full 5-build "
+                              "sweep (ref + blas + omp + blasomp + cuda).")
     parser.add_argument("--n-runs", type=int, default=5,
                          help="Runs per cell (first discarded as warmup if >= 3)")
     parser.add_argument("--n-components", type=int, default=5)
@@ -331,8 +338,12 @@ def main():
 
     sizes = parse_sizes(args.sizes)
     threads = list(args.threads)
-    builds = (["dev-release", "blas-omp"] if args.libp4a_build == "both"
-              else [args.libp4a_build])
+    if args.libp4a_build == "both":
+        builds = ["dev-release", "blas-omp"]
+    elif args.libp4a_build == "all":
+        builds = ["dev-release", "blas-on", "omp-on", "blas-omp", "cuda-on"]
+    else:
+        builds = [args.libp4a_build]
 
     # Filter backends.
     backends = BACKENDS
@@ -373,12 +384,14 @@ def main():
             for thr in threads:
                 for backend in backends:
                     name, script, lang, tier, kind = backend
-                    runs_for_this = ([("dev-release",), ("blas-omp",)]
-                                     if (kind != "external"
-                                         and args.libp4a_build == "both")
-                                     else [(args.libp4a_build if kind != "external"
-                                             else "blas-omp",)])
-                    for (build,) in runs_for_this:
+                    # pls4all bindings sweep over `builds`; externals
+                    # always use blas-omp (most realistic config for
+                    # an external user on a modern install).
+                    if kind == "external":
+                        per_backend_builds = ["blas-omp"]
+                    else:
+                        per_backend_builds = list(builds)
+                    for build in per_backend_builds:
                         cell_count += 1
                         prefix = (f"[{cell_count}] {algo:<22s} "
                                   f"{n:>5d}×{p:<4d} t={thr:<2d} "

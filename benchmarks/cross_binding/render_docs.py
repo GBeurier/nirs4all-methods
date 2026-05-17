@@ -72,8 +72,37 @@ BACKEND_LONG: dict[str, tuple[str, str, str]] = {
 }
 
 
-def disp(b: str) -> str:
+def disp(b: str, build: str = "blas-omp") -> str:
+    """Display label for a (backend, libp4a_build) pair. For the cpp
+    backend the libp4a build is part of the column identity so we can
+    surface the BLAS / OpenMP / CUDA acceleration tiers side-by-side."""
+    if b == "cpp":
+        # Map libp4a build → suffix that says what's enabled.
+        suffix = {
+            "dev-release": "ref",       # no BLAS, no OMP
+            "blas-on":     "blas",
+            "omp-on":      "omp",
+            "blas-omp":    "blas+omp",
+            "cuda-on":     "cuda",
+        }.get(build, build)
+        return f"pls4all.cpp.{suffix}"
     return BACKEND_DISPLAY.get(b, b)
+
+
+def column_key(row: dict) -> str:
+    """Canonical column identity. cpp splits per-libp4a-build; everything
+    else collapses to the bare backend name."""
+    b = row.get("backend", "")
+    if b == "cpp":
+        return f"cpp::{row.get('libp4a_build', 'blas-omp')}"
+    return b
+
+
+def column_disp(key: str) -> str:
+    """Reverse of column_key for display."""
+    if key.startswith("cpp::"):
+        return disp("cpp", key[len("cpp::"):])
+    return disp(key)
 
 
 def host_cpu_info() -> dict:
@@ -175,17 +204,34 @@ def cell_ms_value(ms_str: str) -> float:
         return float("nan")
 
 
-def render(csv_path: Path, out_path: Path) -> None:
+def render(csv_path: Path, out_path: Path,
+            only_threads: list[int] | None = None,
+            page_title: str = "Cross-binding benchmark — parity + timing",
+            page_intro: str | None = None) -> None:
+    """Render the matrix as a Markdown page.
+
+    `only_threads`: when given, keep only rows whose `threads` value is
+    in this list. Used to split the main page (1 thread only) from a
+    secondary thread-sweep page (1, 3, 10 threads visible together).
+    """
     rows = list(csv.DictReader(open(csv_path)))
+    if only_threads is not None:
+        keep = set(only_threads)
+        rows = [r for r in rows if int(r.get("threads", "0")) in keep]
 
     # Header info.
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out = []
-    out.append("# Cross-binding benchmark — parity + timing\n")
-    out.append("For every (algorithm × backend × dataset size × thread count) "
-                "cell, we report the **median wall-clock time** and the "
-                "**parity verdict** vs a deterministic reference backend. "
-                "Same algorithm, same input bytes — different implementations.\n")
+    out.append(f"# {page_title}\n")
+    if page_intro is None:
+        page_intro = (
+            "For every (algorithm × backend × dataset size × thread "
+            "count) cell, we report the **median wall-clock time** "
+            "and the **parity verdict** vs a deterministic reference "
+            "backend. Same algorithm, same input bytes — different "
+            "implementations."
+        )
+    out.append(page_intro + "\n")
     info = host_cpu_info()
     out.append(f"_Generated: {dt.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC_  ")
     out.append(f"_CSV: `{csv_path.name}` ({len(rows)} cells)_\n")
@@ -203,26 +249,64 @@ def render(csv_path: Path, out_path: Path) -> None:
     out.append(f"| **Python**         | {info['python']} |\n")
 
     out.append("\n## How to read a cell\n")
-    out.append("Each cell shows `<median_ms> <icon>`. The icon is the "
-                "**parity verdict** vs the reference backend "
-                "(`cpp` at 1 thread):\n")
-    out.append(f"- {ICON_OK} bit-exact (max abs diff ≤ 1e-6) — "
-                "this backend produces the **same predictions** as the reference")
-    out.append(f"- {ICON_WARN} close (≤ 1e-3 but > 1e-6) — "
-                "algorithmic drift (different convergence path, but answer agrees)")
-    out.append(f"- {ICON_FAIL} divergent (> 1e-3) — "
-                "typically a different preprocessing convention "
-                "(e.g. scale=True vs scale=False); the backend works, "
-                "it just isn't equivalent under this cell's reference choice")
+    out.append("Each cell shows `<median_ms> <parity icon>`. The icon "
+                "is the parity verdict vs the reference backend "
+                "(`pls4all.cpp` at 1 thread, dev-release build):\n")
+    out.append(f"- {ICON_OK} **bit-exact** (max abs diff ≤ 1e-6 vs ref) — "
+                "this backend produces the *same* predictions as the reference")
+    out.append(f"- {ICON_WARN} **close** (≤ 1e-3 but > 1e-6) — "
+                "algorithmic drift (different convergence path), answer agrees in practice")
+    out.append(f"- {ICON_FAIL} **divergent** (> 1e-3) — "
+                "different preprocessing convention "
+                "(e.g. tier-2 wrappers default to `scale=True`, "
+                "tier-1 / externals default to `scale=False`); the backend works, "
+                "it just isn't an apples-to-apples comparison")
     out.append(f"- {ICON_TIMEOUT} cell timed out (300 s wall-clock)")
-    out.append(f"- {ICON_NA} backend doesn't implement this algorithm "
-                "(skipped) or hit a runtime error\n")
+    out.append(f"- `—` see *Why a cell is empty* below\n")
 
-    out.append("Timing is the **median of 5 runs**; the first is discarded "
-                "as warmup. All backends in a single cell read the SAME "
-                "orchestrator-generated CSV so cross-language input bytes "
-                "are identical. See "
-                "[methodology.md](methodology.md) for full details.\n")
+    out.append("**Bold** = fastest cell on the row, **counted only among "
+                f"{ICON_OK} cells**. ⚠ / ✗ / — cells never carry the bold "
+                "(comparing a non-bit-exact result against bit-exact ones "
+                "would be misleading).\n")
+
+    out.append("Timing is the **median of 5 runs**; the first run is "
+                "discarded as warmup. All backends in a single cell read "
+                "the SAME orchestrator-generated CSV so cross-language "
+                "input bytes are bit-identical. See "
+                "[methodology.md](methodology.md) for the full details.\n")
+
+    out.append("\n## Why a cell is empty (`—`)\n")
+    out.append("An empty cell means the backend **did not produce a "
+                "timing for that (algorithm, size) combination**. Four "
+                "distinct reasons, all reported as `—` in the matrix:")
+    out.append("")
+    out.append("1. **External library doesn't implement the algorithm.** "
+                "Example: `sklearn` has no native CPPLS or sparse SIMPLS; "
+                "`plsregress` (Octave) only does plain PLS; "
+                "`ikpls` is plain PLS only; "
+                "`ropls` only does OPLS; "
+                "`mixOmics` covers PLS / sparse PLS / PLS-DA. "
+                "Filling this column requires the external maintainer "
+                "to add the algorithm — out of our control.")
+    out.append("2. **pls4all wrapper missing for that algorithm.** "
+                "Example: `pls4all.sklearn` (tier 2) doesn't yet ship "
+                "a class for `continuum_regression` or `kernel_pls`; "
+                "`pls4all.R.formula` doesn't have a formula wrapper for "
+                "every algorithm yet. This is the *chemin à parcourir* "
+                "on our side — visible TODO.")
+    out.append("3. **Bench script missing the dispatch case.** "
+                "A handful of niveau C cells failed because the bench "
+                "script (e.g. `bench_matlab_tier1.m`) doesn't yet route "
+                "a specific algorithm to its underlying call. Pure "
+                "tooling gap, no library impact.")
+    out.append("4. **Run too slow / OOM / crashed.** The cell timed "
+                "out (`⏳`) or hit a runtime error. Rare in this "
+                "matrix (300 s timeout is generous for the included "
+                "sizes).")
+    out.append("")
+    out.append("Each `—` represents one of these four reasons. The CSV "
+                "(`results/full_matrix.csv`) carries a `reason` column "
+                "that tells you exactly which one for any given cell.\n")
 
     out.append("\nColumn names: anything starting with `pls4all.` is "
                 "one of this project's bindings; the others use their "
@@ -244,29 +328,23 @@ def render(csv_path: Path, out_path: Path) -> None:
             continue
         groups[(r["algorithm"], int(r["threads"]))].append(r)
 
-    # Backends present, in display order = first-seen order.
-    seen_backends: list[str] = []
+    # Column keys present, in display order = first-seen order.
+    # cpp splits per libp4a_build so the BLAS / OpenMP / CUDA tiers
+    # appear as separate columns.
+    seen_keys: list[str] = []
     for r in rows:
-        b = r.get("backend")
-        if b and b not in seen_backends:
-            seen_backends.append(b)
+        key = column_key(r)
+        if key and key not in seen_keys:
+            seen_keys.append(key)
 
     for (algo, threads), grp in sorted(groups.items()):
         out.append(f"\n## {algo}  —  {threads} thread{'s' if threads > 1 else ''}\n")
-        out.append("_Row label format: `n_samples × n_features`. "
-                    "Cell shows `median time + parity icon`. "
-                    "**Bold** = fastest backend in the row (only counted "
-                    "when the cell is OK and parity is ✓ or ⚠ — "
-                    "comparing a divergent ✗ backend to a parity-correct "
-                    "one would be meaningless)._\n")
-        # Pivot rows: sizes; columns: ALL backends (whether they cover
-        # this algo or not). Empty `—` cells are intentional: they show
-        # the user where coverage is still missing (the "chemin à
-        # parcourir" — what we / external libs would need to add to
-        # make this matrix dense).
+        # Pivot rows: sizes; columns: ALL backend column-keys (whether
+        # they cover this algo or not). Empty `—` cells are intentional
+        # — they show *where coverage is still missing*.
         sizes = sorted({(int(r["n"]), int(r["p"])) for r in grp})
-        backends = list(seen_backends)
-        header = "| samples × features | " + " | ".join(disp(b) for b in backends) + " |"
+        backends = list(seen_keys)
+        header = "| samples × features | " + " | ".join(column_disp(b) for b in backends) + " |"
         sep = "|---" + ("|---" * len(backends)) + "|"
         out.append(header)
         out.append(sep)
@@ -274,7 +352,7 @@ def render(csv_path: Path, out_path: Path) -> None:
             # First pass: collect (raw_ms, formatted, icon) per column.
             col_data = []
             for b in backends:
-                match = [r for r in grp if r["backend"] == b
+                match = [r for r in grp if column_key(r) == b
                           and int(r["n"]) == n and int(r["p"]) == p]
                 if not match:
                     col_data.append((float("nan"), ICON_NA, ""))
@@ -289,12 +367,14 @@ def render(csv_path: Path, out_path: Path) -> None:
                     col_data.append((raw,
                                        fmt_ms(r.get("median_ms", "")),
                                        parity_icon(r)))
-            # Find the min over OK cells with parity ≤ ⚠ (i.e. not ✗
-            # divergent — comparing a scale=True backend to a scale=False
-            # reference's timing is meaningless). Bold the winner.
+            # Bold the fastest backend in the row, BUT only among
+            # cells with strict parity ✓ (bit-exact vs reference). A
+            # ⚠ cell (algorithmic drift within 1e-3) isn't strictly
+            # producing the same predictions, so its timing isn't an
+            # apples-to-apples win — same reason ✗ cells are excluded.
             valid_for_min = [
                 (i, raw) for i, (raw, _, icon) in enumerate(col_data)
-                if raw == raw and icon in (ICON_OK, ICON_WARN)  # not NaN, not ✗/—/⏳
+                if raw == raw and icon == ICON_OK
             ]
             min_idx = min(valid_for_min, key=lambda x: x[1])[0] if valid_for_min else None
             cells = []
@@ -319,34 +399,53 @@ def render(csv_path: Path, out_path: Path) -> None:
                 "shipped by its own maintainers.\n")
     out.append("| Column | Language | Tier | What it actually runs |")
     out.append("|---|---|---|---|")
-    for b in seen_backends:
-        if b not in BACKEND_LONG:
-            continue
-        lang, tier, what = BACKEND_LONG[b]
-        out.append(f"| `{disp(b)}` | {lang} | {tier} | {what} |")
+    # Backend defs: distinguish the cpp libp4a tiers as separate rows.
+    CPP_TIER_DESC = {
+        "dev-release": ("C++", "pls4all reference (single-thread)",
+                          "libp4a built with `PLS4ALL_WITH_BLAS=OFF, OPENMP=OFF` — pure scalar reference loops, no acceleration. The parity baseline."),
+        "blas-on":     ("C++", "pls4all + BLAS",
+                          "libp4a built with `PLS4ALL_WITH_BLAS=ON` only — links system BLAS (OpenBLAS in this env), benefits from BLAS thread parallelism."),
+        "omp-on":      ("C++", "pls4all + OpenMP",
+                          "libp4a built with `PLS4ALL_WITH_OPENMP=ON` only — OpenMP parallelism in the C kernel loops, no BLAS."),
+        "blas-omp":    ("C++", "pls4all + BLAS + OpenMP",
+                          "libp4a built with both `PLS4ALL_WITH_BLAS=ON` and `PLS4ALL_WITH_OPENMP=ON` — the recommended production config."),
+        "cuda-on":     ("C++", "pls4all + CUDA",
+                          "libp4a built with `PLS4ALL_WITH_CUDA=ON` — GEMM kernels offloaded to GPU via cuBLAS. Overhead-dominated at small matrix sizes; wins at large ones."),
+    }
+    for key in seen_keys:
+        if key.startswith("cpp::"):
+            build = key[len("cpp::"):]
+            if build in CPP_TIER_DESC:
+                lang, tier, what = CPP_TIER_DESC[build]
+                out.append(f"| `{column_disp(key)}` | {lang} | {tier} | {what} |")
+        elif key in BACKEND_LONG:
+            lang, tier, what = BACKEND_LONG[key]
+            out.append(f"| `{column_disp(key)}` | {lang} | {tier} | {what} |")
     out.append("")
 
+    # Versions: collect by (backend, libp4a_build) so we can show the
+    # libp4a version per cpp tier.
     versions_seen = {}
     for r in rows:
-        b = r.get("backend")
-        if not b or b in versions_seen:
+        key = column_key(r)
+        if not key or key in versions_seen:
             continue
         try:
             v = json.loads(r.get("versions_json", "{}"))
         except Exception:
             v = {}
         if v:
-            versions_seen[b] = v
+            versions_seen[key] = v
     out.append("\n## Versions per backend\n")
     out.append("| Column | Versions |")
     out.append("|---|---|")
-    for b in seen_backends:
-        v = versions_seen.get(b, {})
+    for key in seen_keys:
+        v = versions_seen.get(key, {})
         if not v:
-            out.append(f"| `{disp(b)}` | — |")
+            out.append(f"| `{column_disp(key)}` | — |")
             continue
         items = "; ".join(f"`{k}={v[k]}`" for k in v if v[k])
-        out.append(f"| `{disp(b)}` | {items} |")
+        out.append(f"| `{column_disp(key)}` | {items} |")
 
     out.append("\n## Methodology\n")
     out.append("- Reference: `cpp` cell at 1 thread (libp4a via ctypes), "
