@@ -328,14 +328,44 @@ def render(csv_path: Path, out_path: Path,
             continue
         groups[(r["algorithm"], int(r["threads"]))].append(r)
 
-    # Column keys present, in display order = first-seen order.
-    # cpp splits per libp4a_build so the BLAS / OpenMP / CUDA tiers
-    # appear as separate columns.
-    seen_keys: list[str] = []
+    # Column keys present. Order them deterministically:
+    #   1. pls4all.cpp.* in libp4a-build order (ref → blas → omp →
+    #      blas+omp → cuda) — left-most, since they're the reference.
+    #   2. pls4all.python / pls4all.sklearn
+    #   3. pls4all.R / pls4all.R.formula
+    #   4. pls4all.matlab / pls4all.matlab.classdef
+    #   5. externals: sklearn / ikpls / pls / ropls / mixOmics / plsregress
+    #   6. anything else (future-proof fallback) in first-seen order
+    CANONICAL_BUILD_ORDER = ["dev-release", "blas-on", "omp-on",
+                              "blas-omp", "cuda-on"]
+    CANONICAL_BACKEND_ORDER = [
+        "python_tier1", "python_tier2",
+        "r_tier1", "r_tier2",
+        "matlab_tier1", "matlab_tier2",
+        "sklearn", "ikpls",
+        "r_pls", "r_ropls", "r_mixomics",
+        "matlab_pls",
+    ]
+    present_keys = set()
     for r in rows:
-        key = column_key(r)
-        if key and key not in seen_keys:
-            seen_keys.append(key)
+        k = column_key(r)
+        if k:
+            present_keys.add(k)
+    seen_keys: list[str] = []
+    # 1. cpp tiers in build order.
+    for build in CANONICAL_BUILD_ORDER:
+        k = f"cpp::{build}"
+        if k in present_keys:
+            seen_keys.append(k)
+    # 2-5. other backends in canonical order.
+    for b in CANONICAL_BACKEND_ORDER:
+        if b in present_keys:
+            seen_keys.append(b)
+    # 6. fallback for anything we didn't anticipate.
+    for r in rows:
+        k = column_key(r)
+        if k and k not in seen_keys:
+            seen_keys.append(k)
 
     for (algo, threads), grp in sorted(groups.items()):
         out.append(f"\n## {algo}  —  {threads} thread{'s' if threads > 1 else ''}\n")
