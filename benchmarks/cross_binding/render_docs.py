@@ -14,7 +14,10 @@ import argparse
 import csv
 import datetime as dt
 import json
+import os
 import platform
+import re
+import subprocess
 from collections import defaultdict
 from pathlib import Path
 
@@ -23,6 +26,102 @@ ICON_WARN = "⚠"
 ICON_FAIL = "✗"
 ICON_TIMEOUT = "⏳"
 ICON_NA = "—"
+
+# Map orchestrator backend names → "owner.language[.variant]" display
+# labels. `pls4all.*` are us, everything else is an external library
+# (with the language as the prefix). The detailed definition for each
+# column lives at the bottom of the rendered doc (Backend definitions
+# section).
+BACKEND_DISPLAY: dict[str, str] = {
+    "cpp":          "pls4all.cpp",
+    "python_tier1": "pls4all.py",
+    "python_tier2": "pls4all.py.sklearn",
+    "sklearn":      "python.sklearn",
+    "ikpls":        "python.ikpls",
+    "r_tier1":      "pls4all.R",
+    "r_tier2":      "pls4all.R.formula",
+    "r_pls":        "R.pls",
+    "r_ropls":      "R.ropls",
+    "r_mixomics":   "R.mixomics",
+    "matlab_tier1": "pls4all.matlab",
+    "matlab_tier2": "pls4all.matlab.classdef",
+    "matlab_pls":   "matlab.plsregress",
+}
+
+# Per-backend long description for the "Backend definitions" section.
+BACKEND_LONG: dict[str, tuple[str, str, str]] = {
+    # name → (Language, Tier, What it runs)
+    "cpp":          ("C++",          "pls4all reference", "libp4a called via ctypes — same C kernel as every pls4all binding, no high-level wrapper"),
+    "python_tier1": ("Python",       "pls4all raw",       "`pls4all._methods.<algo>_fit(ctx, cfg, X, y, …)` — direct FFI binding"),
+    "python_tier2": ("Python",       "pls4all idiomatic", "`pls4all.sklearn.<Class>` — sklearn-style BaseEstimator with `.fit() / .predict()`"),
+    "sklearn":      ("Python",       "external",          "`sklearn.cross_decomposition.PLSRegression`, `sklearn.decomposition.PCA + LinearRegression / Ridge / GaussianProcessRegressor` (proxies)"),
+    "ikpls":        ("Python",       "external",          "`ikpls.numpy_ikpls.PLS` — Improved Kernel PLS (covers plain PLS only)"),
+    "r_tier1":      ("R",            "pls4all raw",       "`pls4all_method(algo, X, y, ...)` — unified dispatcher (33 fits + 24 selectors + 4 diagnostics)"),
+    "r_tier2":      ("R",            "pls4all idiomatic", "`pls(y ~ ., data)`, `cppls(...)`, `sparse_pls(...)`, … — base R formula+S3 wrappers"),
+    "r_pls":        ("R",            "external",          "CRAN `pls` package — `pls::plsr / pls::cppls / pls::pcr`"),
+    "r_ropls":      ("R",            "external",          "Bioconductor `ropls` — `ropls::opls` (covers OPLS only)"),
+    "r_mixomics":   ("R",            "external",          "Bioconductor `mixOmics` — `pls / spls / plsda / splsda`"),
+    "matlab_tier1": ("MATLAB/Octave","pls4all raw",       "`pls4all.<algo>(X, y, ...)` — single dispatcher MEX"),
+    "matlab_tier2": ("MATLAB/Octave","pls4all idiomatic", "`pls4all.fit(algo, X, y, ...)` factory + per-algorithm classdefs"),
+    "matlab_pls":   ("MATLAB/Octave","external",          "Octave statistics `plsregress` (SIMPLS, plain PLS only)"),
+}
+
+
+def disp(b: str) -> str:
+    return BACKEND_DISPLAY.get(b, b)
+
+
+def host_cpu_info() -> dict:
+    """Best-effort CPU / OS info for the doc header. Reads /proc/cpuinfo
+    where available (Linux), falls back to platform.* otherwise."""
+    info = {
+        "os": f"{platform.system()} {platform.release()} ({platform.machine()})",
+        "python": platform.python_version(),
+        "cpu_model": platform.processor() or "unknown",
+        "cpu_count_logical": os.cpu_count() or "?",
+        "cpu_count_physical": "?",
+        "ram_gb": "?",
+    }
+    cpuinfo_path = Path("/proc/cpuinfo")
+    if cpuinfo_path.exists():
+        try:
+            text = cpuinfo_path.read_text()
+            # model name (first occurrence)
+            m = re.search(r"^model name\s*:\s*(.+)$", text, re.M)
+            if m:
+                info["cpu_model"] = m.group(1).strip()
+            # physical core count: unique (physical id, core id) pairs
+            pairs = set(re.findall(r"physical id\s*:\s*(\d+).*?core id\s*:\s*(\d+)",
+                                     text, re.S))
+            if pairs:
+                info["cpu_count_physical"] = len(pairs)
+            # CPU MHz (first)
+            mhz = re.search(r"^cpu MHz\s*:\s*([\d.]+)$", text, re.M)
+            if mhz:
+                info["cpu_mhz"] = f"{float(mhz.group(1)):.0f}"
+            # cache size (first)
+            cache = re.search(r"^cache size\s*:\s*(.+)$", text, re.M)
+            if cache:
+                info["cpu_cache"] = cache.group(1).strip()
+        except Exception:
+            pass
+    # /proc/meminfo for RAM
+    meminfo_path = Path("/proc/meminfo")
+    if meminfo_path.exists():
+        try:
+            m = re.search(r"^MemTotal:\s*(\d+)\s*kB",
+                            meminfo_path.read_text(), re.M)
+            if m:
+                info["ram_gb"] = f"{int(m.group(1)) / 1024 / 1024:.1f}"
+        except Exception:
+            pass
+    # uname -r for kernel
+    try:
+        info["kernel"] = subprocess.check_output(
+            ["uname", "-r"], timeout=2).decode().strip()
+    except Exception:
+        info["kernel"] = platform.release()
+    return info
 
 
 def parity_icon(row) -> str:
@@ -82,9 +181,21 @@ def render(csv_path: Path, out_path: Path) -> None:
                 "cell, we report the **median wall-clock time** and the "
                 "**parity verdict** vs a deterministic reference backend. "
                 "Same algorithm, same input bytes — different implementations.\n")
+    info = host_cpu_info()
     out.append(f"_Generated: {dt.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC_  ")
-    out.append(f"_Host: {platform.platform()}_  ")
     out.append(f"_CSV: `{csv_path.name}` ({len(rows)} cells)_\n")
+    out.append("\n## Host\n")
+    out.append("| | |")
+    out.append("|---|---|")
+    out.append(f"| **CPU**            | {info['cpu_model']} |")
+    out.append(f"| **Cores**          | {info['cpu_count_physical']} physical / {info['cpu_count_logical']} logical |")
+    if info.get("cpu_mhz"):
+        out.append(f"| **Frequency**  | {info['cpu_mhz']} MHz nominal |")
+    if info.get("cpu_cache"):
+        out.append(f"| **L3 cache**   | {info['cpu_cache']} |")
+    out.append(f"| **RAM**            | {info['ram_gb']} GB |")
+    out.append(f"| **OS / kernel**    | {info['os']} · kernel {info['kernel']} |")
+    out.append(f"| **Python**         | {info['python']} |\n")
 
     out.append("\n## How to read a cell\n")
     out.append("Each cell shows `<median_ms> <icon>`. The icon is the "
@@ -108,27 +219,15 @@ def render(csv_path: Path, out_path: Path) -> None:
                 "are identical. See "
                 "[methodology.md](methodology.md) for full details.\n")
 
-    out.append("\n## Backend columns\n")
-    out.append("| Column | Language | Tier | What it actually runs |")
-    out.append("|---|---|---|---|")
-    out.append("| `cpp` | C++ | reference | libp4a called via ctypes — same C kernel as every pls4all binding, no wrapper |")
-    out.append("| `python_tier1` | Python | pls4all | `pls4all._methods.<algo>_fit(ctx, cfg, X, y)` — raw FFI binding |")
-    out.append("| `python_tier2` | Python | pls4all | `pls4all.sklearn.<Class>` — sklearn-style `BaseEstimator`, `.fit() / .predict()` |")
-    out.append("| `sklearn` | Python | external | `sklearn.cross_decomposition.PLSRegression`, `sklearn.decomposition.PCA + LinearRegression` (PCR proxy), etc. |")
-    out.append("| `ikpls` | Python | external | `ikpls.numpy_ikpls.PLS` — Improved Kernel PLS (only implements plain PLS) |")
-    out.append("| `r_tier1` | R | pls4all | `pls4all_method(algo, X, y, ...)` — unified dispatcher (33 fits + 24 selectors + 4 diagnostics) |")
-    out.append("| `r_tier2` | R | pls4all | base R formula+S3 wrappers (`pls(y ~ ., data)`, `cppls(...)`, etc.) |")
-    out.append("| `r_pls` | R | external | `pls::plsr / pls::cppls / pls::pcr` — CRAN `pls` package |")
-    out.append("| `r_ropls` | R | external | `ropls::opls` — Bioconductor (covers OPLS only) |")
-    out.append("| `r_mixomics` | R | external | `mixOmics::pls / spls / plsda / splsda` |")
-    out.append("| `matlab_tier1` | MATLAB / Octave | pls4all | `pls4all.<algo>(X, y, ...)` — single dispatcher MEX |")
-    out.append("| `matlab_tier2` | MATLAB / Octave | pls4all | `pls4all.fit(algo, X, y, ...)` factory + classdefs |")
-    out.append("| `matlab_pls` | MATLAB / Octave | external | Octave statistics `plsregress` (SIMPLS, plain PLS only) |\n")
-
-    out.append("Empty cells (`—`) mean the backend doesn't implement that "
-                "algorithm — e.g. `sklearn` has no native CPPLS, `pls::plsr` "
-                "has no GPR-PLS, `plsregress` covers only plain PLS. This "
-                "is honest scope reporting, not a fail.\n")
+    out.append("\nColumn names follow the `owner.language[.variant]` "
+                "convention — anything starting with `pls4all.` is us, "
+                "everything else is an external library. Per-algorithm "
+                "tables show **only the columns that actually implement "
+                "that algorithm**: a backend without coverage is removed "
+                "from the section's table entirely (rather than left as "
+                "an empty cell). Full per-column description: see "
+                "[Backend definitions](#backend-definitions) at the bottom "
+                "of this page.\n")
 
     # Group by (algorithm, threads).
     groups = defaultdict(list)  # (algo, threads) → list[row]
@@ -154,8 +253,16 @@ def render(csv_path: Path, out_path: Path) -> None:
                     "one would be meaningless)._\n")
         # Pivot rows: sizes; columns: backends.
         sizes = sorted({(int(r["n"]), int(r["p"])) for r in grp})
-        backends = [b for b in seen_backends if any(r["backend"] == b for r in grp)]
-        header = "| samples × features | " + " | ".join(backends) + " |"
+        # Keep only backends with at least one OK row for THIS algo —
+        # eliminate columns that would be 100% empty / N/A.
+        backends = [b for b in seen_backends
+                     if any(r["backend"] == b and _is_true(r.get("ok"))
+                            for r in grp)]
+        if not backends:
+            out.append("_No successful backend for this algorithm — "
+                        "see CSV for failure reasons._\n")
+            continue
+        header = "| samples × features | " + " | ".join(disp(b) for b in backends) + " |"
         sep = "|---" + ("|---" * len(backends)) + "|"
         out.append(header)
         out.append(sep)
@@ -199,8 +306,22 @@ def render(csv_path: Path, out_path: Path) -> None:
             out.append(f"| {n}×{p} | " + " | ".join(cells) + " |")
         out.append("")
 
-    # Versions footnote.
-    out.append("\n## Backend versions\n")
+    # Backend definitions + versions footnote.
+    out.append("\n## Backend definitions\n")
+    out.append("Each column in the per-algorithm tables above is one of "
+                "the entries below. Columns are named `owner.language"
+                "[.variant]`: `pls4all.*` are this project's own "
+                "bindings; everything else is an external library "
+                "shipped by its own maintainers.\n")
+    out.append("| Column | Language | Tier | What it actually runs |")
+    out.append("|---|---|---|---|")
+    for b in seen_backends:
+        if b not in BACKEND_LONG:
+            continue
+        lang, tier, what = BACKEND_LONG[b]
+        out.append(f"| `{disp(b)}` | {lang} | {tier} | {what} |")
+    out.append("")
+
     versions_seen = {}
     for r in rows:
         b = r.get("backend")
@@ -212,15 +333,16 @@ def render(csv_path: Path, out_path: Path) -> None:
             v = {}
         if v:
             versions_seen[b] = v
-    out.append("| backend | versions |")
+    out.append("\n## Versions per backend\n")
+    out.append("| Column | Versions |")
     out.append("|---|---|")
     for b in seen_backends:
         v = versions_seen.get(b, {})
         if not v:
-            out.append(f"| {b} | — |")
+            out.append(f"| `{disp(b)}` | — |")
             continue
         items = "; ".join(f"`{k}={v[k]}`" for k in v if v[k])
-        out.append(f"| {b} | {items} |")
+        out.append(f"| `{disp(b)}` | {items} |")
 
     out.append("\n## Methodology\n")
     out.append("- Reference: `cpp` cell at 1 thread (libp4a via ctypes), "

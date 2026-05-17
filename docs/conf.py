@@ -99,5 +99,8 @@ html_sidebars = {
     ]
 }
 
-# Static assets dir — created empty so sphinx doesn't warn on missing.
+# Static assets dir.
 html_static_path = ["_static"]
+
+# Narrow technical font + tighter tables for the benchmark pages.
+html_css_files = ["custom.css"]

@@ -1,0 +1,78 @@
+/* Tighter technical font for the benchmark tables.
+ * Narrow monospace makes the wide 13-column tables fit better and
+ * makes ms / s units line up vertically. */
+
+:root {
+    --pls4all-mono: "JetBrains Mono", "Fira Code", "Cascadia Mono",
+                      "Source Code Pro", Consolas, Menlo,
+                      "DejaVu Sans Mono", monospace;
+    --pls4all-narrow: "Inter Tight", "IBM Plex Sans Condensed",
+                       "Roboto Condensed", "Helvetica Neue Condensed",
+                       "Arial Narrow", system-ui, sans-serif;
+}
+
+/* Body / sidebar — narrow sans for technical density. */
+body, .document, .sphinxsidebar {
+    font-family: var(--pls4all-narrow);
+    font-size: 14px;
+    line-height: 1.45;
+    font-feature-settings: "tnum" 1, "lnum" 1;  /* tabular figures */
+}
+
+/* Headings stay narrow but bolder. */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--pls4all-narrow);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+/* Tables — narrow + tabular numerals so columns align. */
+table.docutils {
+    font-family: var(--pls4all-narrow);
+    font-size: 12.5px;
+    font-feature-settings: "tnum" 1;
+    border-collapse: collapse;
+    width: auto;
+    max-width: 100%;
+}
+
+table.docutils th, table.docutils td {
+    padding: 4px 8px;
+    line-height: 1.35;
+    text-align: left;
+    border: 1px solid #e5e5e5;
+}
+
+table.docutils th {
+    background: #f5f5f5;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Right-align cells whose content looks like a number+unit. */
+table.docutils td {
+    white-space: nowrap;
+}
+
+/* Inline code — monospace. */
+code, code.docutils.literal.notranslate, .highlight {
+    font-family: var(--pls4all-mono);
+    font-size: 12.5px;
+}
+
+table.docutils code {
+    font-size: 12px;
+    background: #f9f9f9;
+    padding: 0 4px;
+}
+
+/* Wider page for the multi-column benchmark tables. */
+div.body {
+    max-width: 1400px;
+    padding: 24px 32px;
+}
+
+/* Parity icons should stand out. */
+.icon-ok    { color: #2e7d32; font-weight: 600; }
+.icon-warn  { color: #f57c00; font-weight: 600; }
+.icon-fail  { color: #c62828; font-weight: 600; }
