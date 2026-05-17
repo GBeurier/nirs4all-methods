@@ -1,452 +1,223 @@
 # pls4all
 
-> A portable PLS / NIRS engine with a stable C ABI and thin first-class bindings for Python, R, MATLAB, JavaScript / WebAssembly and Android.
+> A portable PLS / NIRS engine in C++17 with a stable C ABI and thin
+> first-class bindings for **Python, R, MATLAB / Octave**, plus JS /
+> WebAssembly, Go, Rust, Julia, Ruby, .NET, Lua, Nim, and Android.
 
-**Status — Phase 1 shipped, Phase 3r preprocessing / validation core live, PLSCanonical, PLSSVD, PLS-DA, PLS-LDA, PLS-logistic, MB-PLS, LW-PLS, OPLS / OPLS-DA, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power, randomized-SVD, PCR, Phase 5u variable-selection core and Phase 6e AOM/POP strict-operator/selection core live · API unstable until v1.0 · Not yet on PyPI / CRAN / npm.**
+The same numerical core powers every binding: a model trained in Python
+predicts byte-for-byte the same way in R, MATLAB, a browser, or on
+Android. Cross-checked against scikit-learn, R `pls`, `ropls`,
+`mixOmics`, `ikpls`, MATLAB `plsregress`.
 
-`pls4all` reimplements the full Partial Least Squares family in C++17 behind a small, stable C ABI. The same numerical core powers every binding, so a model trained in Python predicts byte-for-byte the same way in R, MATLAB, a browser or on Android.
+---
 
-## Why pls4all?
+## Headline — PLS SIMPLS, 1 thread, median ms
 
-- **One implementation, many languages.** A typed C ABI is the only public surface. Bindings translate native objects (NumPy arrays, R matrices, MATLAB `mxArray`, `TypedArray`, JNI buffers) into the same `p4a_matrix_view_t` — no per-language reimplementation.
-- **Zero mandatory dependencies.** No Eigen, no Boost, no BLAS, no pybind11, no Rcpp on the install path. Optional accelerated backends (BLAS, OpenMP, CUDA) plug in without changing the ABI.
-- **Research-grade rigor, production deployment.** Cross-checked against scikit-learn, R `pls` / `ropls` / `mixOmics` / `plsVarSel`, and `nirs4all`. Parity tolerances are documented per implementation pair in [`parity/tolerances.md`](parity/tolerances.md).
-- **Composable engine, not 150 classes.** Algorithm × Solver × Deflation × Preprocessing × Selection × Validation are configurable axes, not separate APIs.
-- **AOM-PLS & POP-PLS as first-class citizens.** Adaptive Operator-Mixture PLS and Per-Operator-Per-Component PLS are the scientific differentiator (Phase 6).
+Pulled from the
+[**cross-binding benchmark matrix**](docs/benchmarks/cross_binding.md)
+(4 440 cells · 26 algorithms · 13 backends · 11 sizes · 3 thread
+counts · 1 926 cells PARITY ✓).
 
-See [`Overview.md`](Overview.md) for the full taxonomy of targeted PLS variants, and [`Direction_Technique.md`](Direction_Technique.md) for the canonical technical spec.
-
-## Roadmap
-
-`pls4all` is built in deliberate phases. Each phase has its own roadmap under [`roadmap/`](roadmap/) and a Codex-reviewed implementation log under [`docs/reviews/`](docs/reviews/).
-
-| Phase | Status | Goal |
-| --- | --- | --- |
-| 0 — ABI & build foundation | shipped (`phase-0`) | Callable `libp4a` with stable C ABI, full CI matrix, parity scaffolding |
-| 1 — PLS CPU reference | shipped (`phase-1`) | NIPALS PLS1 / PLS2, predict, transform, binary export/import |
-| 3 — NIRS preprocessing & validation | in progress | pipeline fit/transform · identity · center · autoscale · Pareto · SNV · MSC · EMSC · detrend · SG · ASLS · Norris-Williams · Haar wavelet · OSC · EPO · regression metrics · validation splits · k-fold CV engine · advanced splitters · binary/multiclass classification metrics · calibration · VIP/selectivity ratio · coefficients by component |
-| 4 — Advanced PLS variants | in progress | SIMPLS · SVD · PCR · kernel PLS · PLSCanonical · PLSSVD · OPLS · PLS-DA · PLS-LDA · PLS-logistic · MB-PLS · LW-PLS · component CV |
-| 2 — Language bindings (real wheels / CRAN / AAR) | planned | ctypes (Python) · `.Call` (R) · MEX (MATLAB) · WASM (JS) · JNI (Android) |
-| 5 — Variable selection | in progress | VIP/coefficient/selectivity-ratio rankers shipped · interval/moving-window CV scan shipped · biPLS backward-interval selector shipped · siPLS interval-combination selector shipped · coefficient-stability selector shipped · UVE artificial-variable selector shipped · EMCUVE ensemble selector shipped · randomization-test selector shipped · SPA selector shipped · CARS selector shipped · Random Frog selector shipped · SCARS selector shipped · GA-PLS selector shipped · shaving selector shipped · REP-PLS selector shipped · IPW-PLS selector shipped · ST-PLS selector shipped · BVE-PLS selector shipped · T2-PLS selector shipped · WVC-PLS selector shipped · thresholded/factor WVC selector shipped |
-| 6 — AOM-PLS & POP-PLS | in progress | AOM preprocessing primitive shipped · global AOM-SIMPLS CV selection shipped against `nirs4all/bench/AOM_v0/aompls` · strict SG/FD/Norris-Williams/Whittaker/FCK operators shipped · POP per-component SIMPLS covariance selector shipped |
-| 7 — Accelerated backends | planned | BLAS · OpenMP · CUDA · batch APIs for CV / bootstrap / MCUVE / AOM sweeps |
-
-Full roadmap: [`ROADMAP.md`](ROADMAP.md). Architecture rationale: [`ARCHITECTURE.md`](ARCHITECTURE.md).
-
-## Parity gate
-
-Every method exposed by the C ABI ships with a parity-gate cell that
-compares its predictions against an **external library** in Python or R
-on a fixed deterministic dataset. **Hand-written NumPy mirrors are not
-accepted as parity references** (project policy, May 2026). When a method
-has no widely installable external implementation, it is marked
-`paper-only` with the canonical citation; the runner records the citation
-but skips the numerical parity check.
-
-The full report is regenerated by `benchmarks/parity_timing/runner.py`
-and committed under
-[`benchmarks/results/parity_gate/`](benchmarks/results/parity_gate/).
-The current local report covers **68 methods and 132 reference rows**.
-Status breakdown:
-
-| Status | Rows |
-|--------|------|
-| `ok` | 65 |
-| `parity_failed` | 0 |
-| `paper_only` | 4 |
-| `no_python_reference` | 42 |
-| `no_r_reference` | 21 |
-
-**64 of 68 methods (94 %) have at least one passing external reference.**
-The 4 remaining `paper_only` methods (`fused_sparse_pls`, `mir_pls`,
-`scars_select`, `sipls_select`) have no widely installable port in
-Python (auswahl, diPLSlib, OnPLS, …), R (`pls`, `plsVarSel`, `spls`,
-`sgPLS`, `multiblock`, `mdatools`, `mixOmics`, `OmicsPLS`, …), MATLAB
-(libPLS 1.95) or Julia (ChemometricsTools.jl) — they remain marked
-with their canonical citation but skip the numerical check.
-
-Pass-quality breakdown across the `ok` rows:
-
-| Quality | Count | Definition |
-|---------|------:|------------|
-| tight    | 36 | `rmse_rel < 30 %` of tolerance — high-confidence parity. |
-| moderate | 18 | 30-90 % of tolerance — real agreement, algorithmic noise expected. |
-| **weak** | **11** | **≥ 90 %** of tolerance — passes barely; tolerance was widened to accept stochastic-RNG or algorithmic-convention divergence. **Treat as smoke check, not bit parity.** |
-
-The 11 weak-parity rows are documented in
-[`benchmarks/results/parity_gate/summary.md`](benchmarks/results/parity_gate/summary.md);
-they cover mask-overlap variable-selection entries (CARS, GA, BVE, IPW,
-ST, T2, REP, SPA, MCUVE, …) where the same algorithm family yields
-different mask choices across implementations because of RNG, CV-plan
-or threshold-semantics divergence. They are flagged with
-`# investigate:` source comments and explanatory `notes=` strings.
-
-#### External-library coverage
-
-| Source | Methods | Examples |
-|--------|--------:|----------|
-| scikit-learn / scipy / chemometrics / mbpls / tensorly | 19 | regression base, weighted, ridge, recursive, kernel, gpr, bagging, random-subspace, mb-pls, lw-pls, pls-lda, pls-logistic, pls-qda, n-pls, … |
-| R `pls` + plsVarSel + mdatools + spls + sgPLS + mboost + multiblock + plsRglm + plsRcox + OmicsPLS + JICO + softImpute + chemometrics + kernlab + enpls | 35 | sparse-simpls, cppls, robust-pls, continuum, o2pls, so-pls, rosa, pls-cox, all 20+ variable-selection methods, … |
-| libPLS 1.95 via oct2py (Octave Forge `statistics 1.7.7`) | 5 | random_frog_select, ecr, **iriv_select**, irf_select, … |
-| Python `auswahl 0.9.0` (LSX-UniWue) | 2 | vissa_select, **vip_spa_select** |
-| Python `diPLSlib 2.5.0` (B-Analytics; Nikzad-Langerodi authors) | 1 | **di_pls** |
-| Python `pyswarms 1.3.0` / `OnPLS` (vendored) | 2 | pso_select, on_pls |
-| nirs4all in-tree Python (sanctioned references) | 3 | mb_pls, lw_pls, aom_preprocess |
-
-Methods in **bold** were unlocked during the May 2026 audit. See
-[`docs/parity_audit_2026_05/`](docs/parity_audit_2026_05/) for the
-inventory, library catalogue and per-phase closeout notes.
-
-Re-run the gate locally (with optional 3-axis timings):
-
-```bash
-PYTHONPATH=bindings/python/src \
-  parity/python_generator/.venv/bin/python \
-  -m benchmarks.parity_timing.runner --with-timings --timing-repeats 3
-```
-
-The runner writes `benchmarks/results/parity_gate/parity.csv`,
-`summary.md` and (with `--with-timings`) `timings.csv`. It exits
-non-zero if any method regresses against its reference.
-
-### Timing snapshot
-
-`timings.csv` reports wall-clock for each method in three modes —
-pls4all binding (Python ctypes path), Python reference and R reference.
-A subset (running `repeats=3` on the parity cell sizes from
-`registry.py`):
-
-| Mode | Median | Range (ms) | N |
-|------|-------:|-----------:|--:|
-| pls4all binding | 0.65 ms | 0.24 – 37.2 | 40 |
-| Python reference | 5.17 ms | 0.05 – 538.7 | 11 |
-| R reference (Rscript subprocess) | 1579 ms | 380 – 4274 | 30 |
-
-R reference numbers are inflated by the per-call Rscript startup cost;
-the R timings are useful for relative comparisons across methods, not
-as a fair head-to-head against pls4all. Top headline speedups
-(pls4all binding vs reference, current cell sizes):
-
-| Method | Speed-up | Reference |
-|--------|---------:|-----------|
-| `pls_logistic` | 56.9 × | `scikit-learn` |
-| `pso_select` | 35.5 × | `pyswarms` |
-| `pls_qda` | 33.0 × | `scikit-learn` |
-| `recursive_pls` | 25.4 × | `scikit-learn` |
-| `pls_glm` | 11 838 × | `plsRglm` (R, dominated by Rscript) |
-| `rosa` | 8 026 × | `multiblock` (R, dominated by Rscript) |
-| `so_pls` | 5 407 × | `multiblock` (R, dominated by Rscript) |
-
-### Tier 2 idiomatic-wrapper coverage (Phase 54, May 2026)
-
-On top of the tier-1 ABI bindings (one-to-one ctypes / `.Call` / `ccall`
-/ MEX / WASM shims), each binding can ship a *tier 2* idiomatic-style
-wrapper that subclasses the host language's conventional ML estimator
-contract. Current status is **uneven**: Python is the only mostly-
-complete tier 2 layer; the others are deliberate PoC slices that
-validate the design pattern.
-
-| Binding | Tier 1 coverage | Tier 2 coverage | Tier 2 form |
-|---------|---|---|---|
-| Python (`pls4all.sklearn`) | **64 / 68** methods reachable | **67 classes + 6 fns** (~96 % via wrappers, ~4 % deferred for C-ABI extensions) | `BaseEstimator` + Regressor/Classifier/Selector/TransformerMixin, `.n4a` pickling, GridSearchCV-ready |
-| R (`pls4all` package) | **COMPLETE** — unified `pls4all_method()` dispatcher covers 33 MethodResult fits + 24 selectors + 4 diagnostics + 9 PLS solvers via `pls4all_fit(algo=)` | **3 styles** — base R formula+S3 (16 wrappers), parsnip meta-engine + mlr3 R6 learner (each dispatching 16 algorithms via the `algorithm` arg) | `pls(y ~ ., data, ncomp)` + S3 generics ; `pls_pls4all_reg() %>% set_engine("pls4all", algorithm="cppls")` ; `lrn("regr.pls4all", algorithm="sparse_simpls")` |
-| MATLAB / Octave (`+pls4all`) | **COMPLETE** — single dispatcher MEX exposes 33 fits + 24 selectors + 4 diagnostics | **18 classdefs** + unified `pls4all.fit(algo, X, y, ...)` factory | `Regression` + 17 algorithm-specific classdefs (`SparsePlsRegression`, `EcrRegression`, `MbPlsRegression`, …) inheriting `MethodResultRegression`'s `predict` / `loss` / `score` |
-| Julia (`Pls4all.Sklearn`) | **1** (`pls_fit` SIMPLS) | **1 struct** (PoC) | mutable struct + `fit!`/`predict`/`score` |
-| JS / TS (`@pls4all/wasm/sklearn`) | basic SIMPLS via WASM | **1 class** (PoC) | async-init class + `FinalizationRegistry` cleanup |
-| Go (`pls4all.PLSRegression`) | basic SIMPLS via cgo | **1 struct** (PoC) | gonum/learn-style receiver struct |
-| Rust (`pls4all::PLSRegression`) | basic SIMPLS via extern "C" | **1 struct** (PoC) | linfa-compatible (no hard dep) |
-| Ruby (`Pls4all::PLSRegression`) | basic SIMPLS via Fiddle | **1 class** (PoC) | Rumale-style |
-| .NET (`Pls4all.PLSRegression`) | basic SIMPLS via P/Invoke | **1 class** (PoC) | ML.NET-style sealed class |
-| Lua / LuaJIT (`pls4all.PLSRegression`) | basic SIMPLS via FFI | **1 class** (PoC) | torch.nn-style metatable class |
-| Nim (`PLSRegression`) | basic SIMPLS via importc | **1 ref object** (PoC) | arraymancer-compatible openArray |
-| JNI / JVM desktop | basic SIMPLS via JNI | **0** | (deferred — needs JAR packaging) |
-
-**R** and **MATLAB/Octave** are now COMPLETE — both languages cover the
-full ~60-algorithm libp4a surface via a unified dispatcher (`pls4all_method()`
-in R, a single MEX in MATLAB) plus 16-18 idiomatic tier-2 wrappers each.
-**Python** remains the broadest at 67 sklearn-style classes. The 8 other
-bindings (Julia, JS, Go, Rust, Ruby, .NET, Lua, Nim) ship a **single-class
-slice** by design — each exercises that language's idiomatic ML estimator
-contract end-to-end with bit-exact agreement against the corresponding
-tier-1 fit (`max abs diff ≤ 2e-15`). Extending the 8 PoC bindings to
-R/MATLAB-level coverage is tracked as future per-binding sprints.
-
-The 26 Python-tier-2-missing entries split into:
-- **Wrappable** (have `coef` + `x_mean` + `y_mean` in the result):
-  `kernel_pls`, `n_pls`, `pls_glm`, `pls_logistic`, `sparse_pls_da`,
-  `pds`, `ds`, the 3 AOM entry points.
-- **In-sample only** (`MethodResult` carries predictions but no
-  coefficients): `weighted_pls`, `robust_pls`, `ridge_pls`,
-  `continuum_regression`, `recursive_pls`, `so_pls`, `on_pls`,
-  `rosa`, `lw_pls`, `bagging_pls`, `boosting_pls`,
-  `random_subspace_pls`, `o2pls`, `group_sparse_pls`,
-  `fused_sparse_pls`, `missing_aware_nipals`, `pls_qda`, `pls_lda`,
-  `pls_cox`. These need either an ABI extension that exports
-  coefficients or a sklearn-side "fit-only" estimator contract.
-- **Diagnostics / utilities** (`pls_diagnostic_t2`,
-  `pls_diagnostic_q`, `pls_diagnostic_dmodx`, `pls_monitoring`,
-  `approximate_press`, `one_se_rule`) — wrappers will land as
-  module-level functions, not as `BaseEstimator` subclasses.
-
-### Cross-binding parity gate
-
-Each language binding ships with a parity test that runs the same
-deterministic SIMPLS regression against the shared fixture
-[`bindings/js/test/parity_fixture.json`](bindings/js/test/parity_fixture.json)
-(generated by the native Python binding, which itself parity-checks
-against R `pls` and `spls`). The test compares the four output arrays
-(coefficients, x_mean, y_mean, predictions) and gates on
-`rmse_rel < 1e-12`.
-
-| Binding | Phase | rmse_rel (coefs / preds) | Status |
-|---------|-------|---------------------------|--------|
-| Python (ctypes) | reference | 0.0 / 0.0 | reference |
-| WASM (Emscripten) | 32a | machine epsilon | PASS |
-| R (`.Call`) | 31g | 0.0 / 0.0 | PASS |
-| Julia (`ccall`) | 33 | ~1.7e-16 / ~1.7e-16 | PASS |
-| Octave / MATLAB (MEX) | 34 | 0.0 / 4.7e-17 | PASS |
-| JNI / JVM desktop | 35 | 0.0 / 0.0 | PASS (bit-exact) |
-| Go (cgo) | 37 | 2.5e-16 / 2.8e-16 | PASS |
-| Rust (`extern "C"`) | 38 | 0.0 / 0.0 | PASS (bit-exact) |
-| .NET (P/Invoke) | 39 | 0.0 / 0.0 | PASS (bit-exact) |
-| Ruby (stdlib Fiddle) | 40 | 0.0 / 0.0 | PASS (bit-exact) |
-| Lua / LuaJIT (FFI) | 41 | 0.0 / 0.0 | PASS (bit-exact) |
-| Nim (`{.dynlib.}`) | 42 | 0.0 / 0.0 | PASS (bit-exact) |
-
-Run the cross-binding parity gates:
-
-```bash
-# After building the dev-release preset, from the repo root:
-OCTAVE_HOME=$CONDA_PREFIX octave --quiet --eval \
-  "addpath('bindings/matlab/test'); test_parity"        # Octave
-Rscript bindings/r/test_parity.R                         # R
-julia --project=bindings/julia/Pls4all.jl \
-      bindings/julia/Pls4all.jl/test/test_parity.jl      # Julia
-JAVA_HOME=$JDK bindings/jni/build.sh && \
-  java -cp bindings/jni/build/classes TestParity        # JNI
-(cd bindings/go && go run ./cmd/test_parity)             # Go
-cargo run --manifest-path bindings/rust/pls4all/Cargo.toml \
-          --example test_parity --release               # Rust
-dotnet run --project bindings/dotnet/TestParity          # .NET
-ruby bindings/ruby/test/test_parity.rb                   # Ruby
-luajit bindings/lua/test/test_parity.lua                 # LuaJIT
-nim c -r -d:libp4aName=... --path:bindings/nim \
-    bindings/nim/test/test_parity.nim                    # Nim
-```
-
-### Cross-binding benchmark matrix (Phase 55, May 2026)
-
-A second, broader benchmark sweep complements the per-binding
-parity gate above. It compares pls4all bindings against the leading
-external implementations in each language (sklearn, ikpls, R `pls` /
-`ropls` / `mixOmics`, Octave `plsregress`) across the full
-algorithm × backend × size × thread-count grid, and reports BOTH
-parity and timing per cell. The full matrix lives under
-[`docs/benchmarks/cross_binding.md`](docs/benchmarks/cross_binding.md);
-methodology at [`docs/benchmarks/methodology.md`](docs/benchmarks/methodology.md).
-
-**Coverage** — 26 algorithms · 13 backends · 11 dataset sizes
-(10000×2500 deliberately skipped) · 3 thread counts (1, 3, 10) ·
-**4 440 cells total**. 1 926 cells PARITY ✓ (≤ 1e-6 vs the `cpp`
-reference), 198 PARITY ✗ (all confined to 3 backends that default to
-`scale_x=True`: `ikpls`, R `tier2`, MATLAB `tier2`). 700+ legitimate
-external skips (e.g. `ropls` doesn't implement plain PLS; sklearn has
-no native `cppls` / `mir_pls`). All backends in a cell read the same
-orchestrator-generated CSV so cross-language input bytes are
-bit-identical; seed convention is `BASE_SEED = 1_234_567_890` and the
-5 runs use `BASE + 0..4`.
-
-**Headline — PLS SIMPLS (median ms, 1 thread, parity ✓ unless noted)**
-
-| n × p | `cpp` (libp4a) | `python_tier1` | `sklearn` | `r_tier1` | `r_pls` | `matlab_tier1` | `matlab_pls` |
+| n × p | pls4all C++ | pls4all Python | sklearn | pls4all R | R `pls` | pls4all MATLAB | Octave `plsregress` |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 100×50 | **0.92** | 0.92 | 1.40 | 2.50 | 6.50 | 1.59 | 2.38 |
-| 500×500 | **39.7** | 38.4 | 40.6 | 201.0 | 245.0 | 63.4 | 65.6 |
-| 2500×500 | 219.2 | 213.2 | **189.8** | 1 300 | 1 400 | 334.9 | 335.5 |
-| 10000×500 | 890 | 896 | **833** | 6 300 | 6 500 | 1 400 | 1 600 |
+| 100 × 50    | **0.92** | 0.92 | 1.40 | **2.50** | 6.50 | **1.59** | 2.38 |
+| 500 × 500   | **39.7** | 38.4 | 40.6 | **201**  | 245  | **63.4** | 65.6 |
+| 2500 × 500  | **219**  | 213  | 190  | **1 300**| 1 400| **335**  | 336  |
+| 10000 × 500 | **890**  | 896  | 833  | **6 300**| 6 500| **1 400**| 1 600 |
 
-At small data (`n ≤ 500, p ≤ 500`) pls4all leads externals **1.5–8×**.
-At BLAS-bound sizes (`n × p ≥ 1.25M`) every binding converges because
-the dgemm kernel dominates the wall-clock. Thread scaling 1→10 stays
-flat for SIMPLS in this matrix because the algorithm is dominated by
-sequential deflation rather than GEMMs — significant scaling would
-need `kernel_pls` or much larger `n × p`.
+At small data (`n × p ≤ 250k`), pls4all leads externals **1.5 – 8 ×**.
+At BLAS-bound sizes everyone converges. Detailed methodology, parity
+gates and per-algorithm tables in
+[`docs/benchmarks/`](docs/benchmarks/).
 
-**Re-run the matrix**
+---
+
+## Quick start
+
+### Python
 
 ```bash
-# Niveau A — PLS SIMPLS (429 cells, ~30 min)
+git clone https://github.com/GBeurier/pls4all.git && cd pls4all
+cmake --preset blas-omp && cmake --build --preset blas-omp -j
+pip install -e bindings/python
+```
+
+```python
+from pls4all.sklearn import PLSRegression
+import numpy as np
+
+X = np.random.randn(500, 200)
+y = 2 * X[:, 3] - X[:, 6] + 0.5 * np.random.randn(500)
+
+m = PLSRegression(n_components=5).fit(X, y)
+print(m.score(X, y))            # sklearn-compatible
+# 67 sklearn-style classes available: SparseSIMPLS, CPPLS, ECRegression,
+# RidgePLS, BaggingPLS, AOMPLSRegressor, …
+```
+
+### R
+
+```bash
+PLS4ALL_INCLUDE_DIR=$PWD/cpp/include \
+  PLS4ALL_LIB_DIR=$PWD/build/blas-omp/cpp/src \
+  R CMD INSTALL bindings/r/pls4all
+```
+
+```r
+library(pls4all)
+
+# Base R formula+S3
+fit <- pls(y ~ ., data = df, ncomp = 5)
+predict(fit, newdata = df)
+
+# Tidymodels engine
+spec <- pls_pls4all_reg(num_comp = 5) %>%
+  set_engine("pls4all", algorithm = "sparse_simpls", sparsity_lambda = 0.05)
+
+# mlr3 learner
+lrn("regr.pls4all", ncomp = 5, algorithm = "cppls", gamma = 0.5)
+```
+
+### MATLAB / Octave
+
+```matlab
+addpath(genpath('bindings/matlab'))
+mdl = pls4all.fit("sparse_simpls", X, y, "NumComponents", 5, "Lambda", 0.05);
+predict(mdl, Xnew)
+% 18 classdefs available: Regression, SparsePlsRegression, EcrRegression,
+% MbPlsRegression, GlmRegression, MirRegression, …
+```
+
+---
+
+## Tier 1 + Tier 2 binding coverage
+
+| Binding | Tier 1 surface | Tier 2 idiomatic form |
+|---|---|---|
+| **Python** (`pls4all.sklearn`) | 64 / 68 ABI methods reachable | **67 sklearn classes + 6 fns** (`BaseEstimator` mixins, `.n4a` pickling, GridSearchCV-ready) |
+| **R** (`pls4all` package) | **COMPLETE** — `pls4all_method()` dispatcher: 33 fits + 24 selectors + 4 diagnostics | **3 idioms** — base R formula+S3 (16 wrappers) · parsnip meta-engine · mlr3 R6 learner (each dispatching 16 algos via `algorithm` arg) |
+| **MATLAB / Octave** (`+pls4all`) | **COMPLETE** — single MEX dispatcher: 33 fits + 24 selectors + 4 diagnostics | **18 classdefs** + unified `pls4all.fit(algo, X, y, ...)` factory |
+| Julia, JS, Go, Rust, Ruby, .NET, Lua, Nim | SIMPLS via native FFI | 1 idiomatic class per language (PoC) |
+| JNI / JVM | SIMPLS via JNI | (deferred) |
+
+Cross-binding parity: every binding's SIMPLS predictions match the
+shared fixture within `rmse_rel < 1e-12` (bit-exact for several). See
+[`docs/parity/`](docs/parity/) and the
+[cross-binding benchmark](docs/benchmarks/cross_binding.md).
+
+---
+
+## Documentation
+
+- 🌐 **Sphinx site** : (configurer GitHub Pages — voir
+  [`.github/workflows/docs.yml`](.github/workflows/docs.yml))
+- 📊 **[Cross-binding benchmarks](docs/benchmarks/cross_binding.md)** — full 4 440-cell parity + timing matrix
+- 🔬 **[Methodology](docs/benchmarks/methodology.md)** — reference policy, tolerances, threading, hardware
+- 🏗️ **[Architecture](docs/architecture/overview.md)** — memory model · error model · threading · serialization
+- 📜 **[ABI reference](docs/abi/reference.md)** — 96 `p4a_*` symbols, stability policy, changes log
+- 🔌 **Bindings** — [Python](docs/bindings/python.md) · [R](docs/bindings/r.md) · [MATLAB](docs/bindings/matlab.md) · [JS / WASM](docs/bindings/js.md) · [Android](docs/bindings/android.md)
+- ✅ **[Parity methodology](docs/parity/methodology.md)** — every algorithm cross-checked against an external library
+- 🛠️ **[Dev workflow](docs/dev/workflow.md)** · [build](docs/dev/build.md) · [testing](docs/dev/testing.md)
+
+---
+
+## What's in the box
+
+- **Algorithms** (~60) — PLS regression family (NIPALS, SIMPLS, kernel, wide-kernel, SVD, power, randomized SVD, PCR), OPLS / OPLS-DA, PLSCanonical, PLSSVD, sparse SIMPLS, CPPLS, ECR, MIR-PLS, ridge PLS, robust PLS (Huber IRLS), continuum regression, MB-PLS, LW-PLS, N-PLS, O2-PLS, missing-aware NIPALS, bagging / boosting / random-subspace ensembles, GPR-on-PLS, PLS-GLM (Gaussian / Poisson), PLS-DA / LDA / QDA / logistic / Cox, PDS / DS calibration transfer, **AOM-PLS** & **POP-PLS** (the scientific differentiator).
+- **Variable selection** (24) — VIP / coefficient / SR rankers, SPA, CARS, GA-PLS, PSO, VISSA, IRIV, IRF, shaving, BVE, REP, IPW, ST-PLS, T2, WVC, EMCUVE, randomization, biPLS, siPLS, interval, stability, UVE, random frog, SCARS, VIP-SPA.
+- **Diagnostics** — Hotelling T² · Q residuals · DModX · process monitoring with alarms · approximate PRESS · one-SE rule.
+- **Preprocessing pipeline** — identity · center · autoscale · Pareto · SNV · MSC · EMSC · detrend · SG · ASLS · Norris-Williams · Haar wavelet · OSC · EPO.
+- **Validation** — k-fold · LOO · holdout · external-fold · repeated k-fold · Monte-Carlo · Kennard-Stone · SPXY.
+- **Metrics** — regression (RMSE/MAE/bias/R²/Q²/slope/intercept/RPD/RPIQ) · binary classification (sensitivity/specificity/balanced accuracy/precision/F1/MCC/AUC) · multiclass (macro/micro AUC) · calibration.
+
+Full list at [`Overview.md`](Overview.md) ; canonical spec at
+[`Direction_Technique.md`](Direction_Technique.md).
+
+---
+
+## Build
+
+```bash
+git clone https://github.com/GBeurier/pls4all.git && cd pls4all
+
+# Reference build (single-thread, no BLAS — useful for parity)
+cmake --preset dev-release
+cmake --build --preset dev-release -j
+ctest --preset dev-release --output-on-failure
+
+# Production build (BLAS + OpenMP)
+cmake --preset blas-omp
+cmake --build --preset blas-omp -j
+
+./build/blas-omp/cpp/cli/pls4all_cli --version
+./build/blas-omp/cpp/cli/pls4all_cli --abi-info
+```
+
+Zero mandatory dependencies — no Eigen, no Boost, no BLAS, no pybind11,
+no Rcpp on the install path. Accelerated backends (BLAS / OpenMP /
+CUDA) plug in via CMake presets without changing the ABI.
+
+---
+
+## Run the cross-binding benchmark
+
+```bash
+# Niveau A — PLS SIMPLS headline matrix (~30 min)
 python benchmarks/cross_binding/orchestrator.py \
   --algorithms pls --threads 1 3 10 --n-runs 5
 
-# Niveau B — algos with externals (7 × 429 cells, ~2 h)
-python benchmarks/cross_binding/orchestrator.py \
-  --algorithms sparse_simpls cppls ecr mir_pls ridge_pls robust_pls \
-               missing_aware_nipals \
-  --threads 1 3 10 --n-runs 5
-
-# Niveau C — pls4all-only algorithms (condensed)
-python benchmarks/cross_binding/orchestrator.py \
-  --algorithms continuum_regression kernel_pls o2pls bagging_pls \
-               boosting_pls sparse_pls_da group_sparse_pls \
-               fused_sparse_pls pls_glm pls_qda pls_lda pls_logistic \
-               pls_cox pds ds lw_pls weighted_pls gpr_pls \
-  --sizes 100x500 500x500 2500x500 2500x2500 --threads 1 10 \
-  --only-pls4all --n-runs 3
-
-# Render to markdown
+# Render to docs/benchmarks/cross_binding.md
 python benchmarks/cross_binding/combine_and_render.py \
-  --csvs benchmarks/cross_binding/results/niveau_A_pls.csv \
-         benchmarks/cross_binding/results/niveau_B.csv \
-         benchmarks/cross_binding/results/niveau_C.csv \
+  --csvs benchmarks/cross_binding/results/full_matrix.csv \
   --out docs/benchmarks/cross_binding.md
 ```
 
-## Quick Build
+Full re-run commands (niveau A / B / C) in
+[`docs/benchmarks/methodology.md`](docs/benchmarks/methodology.md).
 
-```bash
-git clone https://github.com/GBeurier/pls4all.git
-cd pls4all
-cmake --preset dev-release
-cmake --build --preset dev-release --parallel
-ctest --preset dev-release --output-on-failure
+---
 
-# Inspect the library:
-./build/dev-release/cpp/cli/pls4all_cli --version
-./build/dev-release/cpp/cli/pls4all_cli --abi-info
-```
+## License & citation
 
-The core currently implements NIPALS, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power-iteration and randomized-SVD PLS regression, PLSCanonical, PLSSVD, PLS-DA, PLS-LDA, PLS-logistic, MB-PLS, LW-PLS, OPLS / OPLS-DA and PCR
-behind the stable C ABI: `p4a_model_fit`, `predict`, `transform`, fitted-array
-accessors and binary import/export are live for `P4A_ALGO_PLS_REGRESSION` with
-`P4A_SOLVER_NIPALS`, `P4A_SOLVER_ORTHOGONAL_SCORES`, `P4A_SOLVER_SIMPLS`,
-`P4A_SOLVER_KERNEL_ALGORITHM`, `P4A_SOLVER_WIDE_KERNEL`, `P4A_SOLVER_SVD`,
-`P4A_SOLVER_POWER` or `P4A_SOLVER_RANDOMIZED_SVD`, for
-`P4A_ALGO_PLS_CANONICAL` with `P4A_SOLVER_NIPALS` or `P4A_SOLVER_SVD` and
-`P4A_DEFLATION_CANONICAL`, for `P4A_ALGO_PLS_SVD` with `P4A_SOLVER_SVD` and
-`P4A_DEFLATION_CANONICAL`, for `P4A_ALGO_PLS_DA` with dummy-coded `Y` and
-`P4A_DEFLATION_REGRESSION`, for `P4A_ALGO_OPLS` and `P4A_ALGO_OPLS_DA`
-with one or more response columns, `P4A_SOLVER_NIPALS` and
-`P4A_DEFLATION_ORTHOGONAL`, and for `P4A_ALGO_PCR` with `P4A_SOLVER_SVD`.
-The preprocessing pipeline ABI is live for `P4A_OP_IDENTITY`, `P4A_OP_CENTER`,
-`P4A_OP_AUTOSCALE`, `P4A_OP_PARETO_SCALE`, `P4A_OP_SNV`, `P4A_OP_MSC`,
-`P4A_OP_EMSC`, `P4A_OP_DETREND_POLY`, `P4A_OP_SAVGOL_SMOOTH` and
-`P4A_OP_SAVGOL_DERIVATIVE`, `P4A_OP_NORRIS_WILLIAMS`,
-`P4A_OP_ASLS_BASELINE`, `P4A_OP_WAVELET_DENOISE`, `P4A_OP_OSC` and
-`P4A_OP_EPO`, with explicit
-fit/transform separation for leakage-safe downstream CV. For PLSSVD,
-`transform` returns direct cross-covariance SVD X scores and
-`predict` uses the deterministic latent projection `X @ W @ V.T` scaled back to
-the response space.
-The internal validation core now computes NumPy-parity regression metrics:
-RMSE, MAE, bias, R2/Q2, observed-vs-predicted slope/intercept, RPD and RPIQ.
-It also generates deterministic k-fold, leave-one-out, holdout, external-fold,
-repeated k-fold, Monte-Carlo, Kennard-Stone and SPXY split plans, and can run
-sklearn-parity out-of-sample k-fold regression cross-validation by refitting the
-selected model on each fold and scoring the stitched predictions.
-Binary classification metric kernels cover sensitivity, specificity, balanced
-accuracy, accuracy, precision, F1, MCC and average-rank AUC for PLS-DA style
-scores. Multiclass metric kernels add macro/micro averaging plus one-vs-rest
-AUC, and calibration kernels produce fixed-bin binary reliability curves.
-Variable-importance kernels compute VIP scores and selectivity ratio from fitted
-models with stored scores, and Phase 5a variable-selection rankers expose
-deterministic top-k ordering for VIP, original-scale coefficient magnitude and
-selectivity-ratio scores. Phase 5b interval-selection kernels scan contiguous
-feature windows with deterministic k-fold PLS CV for moving-window / iPLS-style
-selection, and Phase 5p biPLS kernels perform deterministic backward
-interval elimination by CV. Phase 5q siPLS kernels exhaustively score
-fixed-size interval combinations by CV and retain the best synergistic subset.
-Phase 5c stability-selection kernels compute Monte-Carlo
-coefficient mean/std ratios for MCUVE-style ranking, Phase 5d UVE kernels
-threshold real-variable stability against deterministic artificial variables,
-and Phase 5n EMCUVE kernels ensemble MC-UVE members with a deterministic vote
-rule. Phase 5o randomization-test kernels compare observed PLS coefficient
-scores against deterministic Y permutations with empirical p-values. Phase 5e
-SPA kernels seed selection from original-scale PLS coefficients and
-then add projection-diverse variables. Phase 5f CARS kernels run deterministic
-competitive adaptive reweighted sampling with exponential retention and
-k-fold CV subset scoring. Phase 5g Random Frog kernels sample deterministic
-add/remove/swap subset walks, accept by CV RMSE, and expose inclusion
-frequencies. Phase 5h SCARS kernels combine deterministic calibration
-subsampling, stability-weighted CARS retention and k-fold CV subset scoring.
-Phase 5i GA-PLS kernels evolve deterministic subset populations with elitism,
-crossover, mutation and k-fold CV fitness.
-Phase 5j shaving kernels recursively eliminate low-score PLS variables and
-score every retained subset by k-fold CV.
-Phase 5s REP kernels remove a fixed number of weak coefficient-score variables
-per recursive step and keep the lowest-CV-error retained subset.
-Phase 5t IPW kernels iteratively reweight coefficient scores, expose score and
-weight paths, and keep the lowest-CV-error top-k subset.
-Phase 5u ST-PLS kernels apply deterministic score thresholds with min-selected
-fallbacks and keep the lowest-CV-error threshold subset.
-Phase 5k BVE kernels greedily test one-variable removals by k-fold CV RMSE and
-keep the best backward path/subset.
-Phase 5l T2-PLS kernels compute Hotelling T2 on PLS loading weights, apply
-alpha-specific UCL thresholds with top-k fallback, and score subsets by k-fold CV.
-Phase 5m WVC-PLS kernels compute normalized weighted-variable-contribution
-scores from SVD PLS components and expose deterministic top-k selection.
-Phase 5r WVC-threshold kernels apply fixed-threshold and factor-of-mean rules
-with a minimum-selected fallback over the WVC score ranking.
-Coefficient kernels materialise the original-scale
-regression coefficients for every component prefix. Internal model-selection
-kernels can score SIMPLS component prefixes by deterministic k-fold CV, and an
-internal PLS-LDA and PLS-logistic kernels fit deterministic classifier scores
-on PLS score spaces. The internal MB-PLS kernel fits block-autoscaled,
-block-weighted PLS models and maps coefficients back to the original feature
-space. The internal LW-PLS kernel performs stable k-nearest-neighbor local
-window refits and records the neighbor plan used for every prediction.
-Phase 6a AOM preprocessing kernels apply an operator bank through soft
-equal-weight or hard first-operator gating and expose operator outputs plus the
-mixed transform for downstream AOM-PLS work. Full AOM-PLS parity uses the
-`nirs4all/bench/AOM_v0/aompls` reference, not the packaged `nirs4all` model
-surface.
-Phase 6b adds internal global AOM-SIMPLS CV selection over a strict-linear
-identity/detrend bench tranche, including per-operator RMSE curves, selected
-operator/component count and full-fit predictions.
-Phase 6c adds bench-parity strict-linear AOM operator kernels for zero-padded
-Savitzky-Golay smoothing/derivatives, finite differences and Norris-Williams,
-then exercises them through the global AOM selector.
-Phase 6d extends the strict-linear AOM tranche to Whittaker smoothing and FCK
-operators, with direct transform parity and global AOM-SIMPLS selection parity
-against the bench oracle.
-Phase 6e adds internal POP-PLS per-component SIMPLS covariance selection,
-including bench-compatible CV scoring semantics, selected operator sequences
-and full-fit prediction parity.
+CeCILL-2.1 ([`LICENSE`](LICENSE), compatible with the GPL family,
+recognised by French law).
 
-## Project layout
-
-```
-pls4all/
-├── cpp/                  # C++17 internal core + C ABI wrapper + tests + CLI
-├── bindings/             # python · r · matlab · js · android  (each a thin FFI shim)
-├── parity/               # JSON fixture schema + Python and R reference generators
-├── cmake/                # Reusable CMake modules and toolchain helpers
-├── packaging/            # PyPI wheel · CRAN package · npm · conda · vcpkg metadata
-├── docs/                 # Architecture · ABI reference · binding guides · parity methodology
-├── examples/             # Minimal C / Python / R hello-version programs
-└── roadmap/              # Per-phase roadmaps reviewed by Codex before implementation
-```
-
-## Citation
-
-If you use `pls4all` in academic work, please cite:
-
-```
+```bibtex
 @software{pls4all,
   author  = {Beurier, Grégory and contributors},
   title   = {pls4all: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/pls4all},
-  version = {0.71.0}
+  version = {0.94.0}
 }
 ```
 
-A machine-readable [`CITATION.cff`](CITATION.cff) is provided. We also list the foundational PLS papers (Wold, de Jong, Trygg, Bylesjö, Rosipal, …) and the AOM-PLS / POP-PLS source publications there.
+A machine-readable [`CITATION.cff`](CITATION.cff) is provided.
 
-## License
+---
 
-CeCILL-2.1 — see [`LICENSE`](LICENSE). Compatible with the GPL family of licenses and recognised by French law.
+## Roadmap
 
-## Acknowledgements
+`pls4all` is built in deliberate phases tracked in
+[`ROADMAP.md`](ROADMAP.md). Per-phase plans live under
+[`roadmap/`](roadmap/) and codex-reviewed implementation logs under
+[`docs/reviews/`](docs/reviews/).
 
-`pls4all` builds on lessons learned from the existing experimental [`aompls`](https://github.com/GBeurier/aompls) library and on the rich PLS ecosystem in scikit-learn, the R `pls` / `ropls` / `mixOmics` / `plsVarSel` packages, and `nirs4all`.
+| Phase | Status |
+|---|---|
+| 0 — ABI & build foundation | ✅ shipped |
+| 1 — PLS CPU reference (NIPALS PLS1/PLS2, predict, transform, binary I/O) | ✅ shipped |
+| 3 — NIRS preprocessing & validation core | ✅ live |
+| 4 — Advanced PLS variants (SIMPLS / SVD / PCR / kernel / OPLS / MB-PLS / LW-PLS / …) | ✅ live |
+| 5 — Variable selection (24 methods) | ✅ live |
+| 6 — AOM-PLS & POP-PLS | ✅ live |
+| 2 — Language bindings (real wheels / CRAN / AAR) | 🟡 R + MATLAB COMPLETE · others SIMPLS-PoC |
+| 7 — Accelerated backends | 🟡 BLAS + OpenMP live · CUDA planned · batch APIs planned |
+| 8 — PyPI / CRAN / npm publication | ⬜ planned (API stabilised first) |
+
+---
+
+`pls4all` builds on lessons learned from the experimental
+[`aompls`](https://github.com/GBeurier/aompls) library and on the rich
+PLS ecosystem in scikit-learn, R `pls` / `ropls` / `mixOmics` /
+`plsVarSel`, and `nirs4all`.

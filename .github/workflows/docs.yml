@@ -1,0 +1,66 @@
+# Build Sphinx docs and deploy to GitHub Pages on every push to main.
+#
+# After the first successful run, enable Pages in
+#   Settings → Pages → Source: "GitHub Actions"
+# (or "Deploy from a branch: gh-pages" if you prefer a per-branch model).
+# The site URL will be https://gbeurier.github.io/pls4all/.
+
+name: docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+# Allow only ONE concurrent docs deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install sphinx + myst-parser
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r docs/requirements.txt
+
+      - name: Build sphinx html
+        run: |
+          sphinx-build -b html docs docs/_build/html -W --keep-going \
+            -D suppress_warnings=myst.xref_missing,myst.header
+
+      - name: Upload Pages artifact
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_build/html
+
+  deploy:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

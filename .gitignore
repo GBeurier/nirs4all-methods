@@ -123,3 +123,4 @@ todo.local.md
 benchmarks/cross_binding/data/*.csv
 benchmarks/cross_binding/data/.predictions/
 benchmarks/cross_binding/results/
+docs/_build/
