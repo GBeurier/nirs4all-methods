@@ -1,0 +1,353 @@
+# Tier-2 algorithm catalog — single source of truth for all language bindings.
+#
+# Each entry describes how to wrap one C ABI / _methods function as an
+# idiomatic per-language estimator. The fields:
+#
+#   name        — class / function name (PascalCase; per-language casing
+#                 applied at generation time)
+#   category    — model_regressor | model_classifier | method_result |
+#                 in_sample_only | selector | transformer | diagnostic
+#   c_function  — the `_methods.<name>` (or Model.fit) entry-point
+#   config      — base Config fields (algorithm/solver/deflation/...)
+#   params      — hyperparameters with (name, type, default)
+#   extras      — extra-positional / keyword arrays plumbed at fit time
+#                 (sample_weight, X_target, block_sizes, …)
+#   result_keys — names of MethodResult arrays to extract (defaults:
+#                 coefficients / x_mean / y_mean)
+#   notes       — non-obvious quirks (custom intercept handling,
+#                 in-sample-only contract, etc.)
+
+# ============================================================
+# 1. Model-based regressors (Model.fit + Model.predict path)
+# ============================================================
+
+model_regressors:
+  - name: PLSRegression
+    algorithm: PLS_REGRESSION
+    solver: NIPALS
+    deflation: REGRESSION
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: solver, type: enum, default: nipals}
+      - {name: center_x, type: bool, default: true}
+      - {name: scale_x, type: bool, default: true}
+      - {name: center_y, type: bool, default: true}
+      - {name: scale_y, type: bool, default: false}
+      - {name: tol, type: float, default: 1.0e-6}
+      - {name: max_iter, type: int, default: 500}
+      - {name: store_scores, type: bool, default: false}
+
+  - name: OPLSRegression
+    algorithm: OPLS
+    solver: NIPALS
+    deflation: ORTHOGONAL
+    params: *pls_regression_params  # same surface
+
+  - name: PCR
+    algorithm: PCR
+    solver: SVD
+    deflation: REGRESSION
+    params: *pls_regression_params
+
+  - name: SparsePLSRegression
+    algorithm: SPARSE_PLS
+    solver: SIMPLS
+    deflation: REGRESSION
+    params: *pls_regression_params
+    extras:
+      - {name: sparsity_lambda, type: float, default: 0.05, cfg_field: sparsity_lambda}
+
+  - name: PLSCanonical
+    algorithm: PLS_CANONICAL
+    solver: NIPALS
+    deflation: CANONICAL
+    params: *pls_regression_params
+
+  - name: PLSSVD
+    algorithm: PLS_SVD
+    solver: SVD
+    deflation: CANONICAL
+    params: *pls_regression_params
+
+# ============================================================
+# 2. Model-based classifiers
+# ============================================================
+
+model_classifiers:
+  - name: PLSDAClassifier
+    algorithm: PLS_REGRESSION
+    deflation: REGRESSION
+    params: *pls_regression_params
+    notes: |
+      Fits one-hot encoded labels (n, n_classes), predict_proba via
+      softmax over Model.predict, classes_ from numpy.unique(y).
+
+  - name: OPLSDAClassifier
+    algorithm: OPLS
+    deflation: ORTHOGONAL
+    params: *pls_regression_params
+    parent: PLSDAClassifier
+
+# ============================================================
+# 3. MethodResult regressors (extract coef + x_mean + y_mean)
+# ============================================================
+
+method_result_regressors:
+  - name: SparseSimplsRegression
+    c_function: sparse_simpls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: sparsity_lambda, type: float, default: 0.05}
+
+  - name: CPPLSRegression
+    c_function: cppls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: gamma, type: float, default: 0.5}
+
+  - name: ECRegression
+    c_function: ecr_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: alpha, type: float, default: 0.5}
+
+  - name: DIPLSRegression
+    c_function: di_pls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: di_lambda, type: float, default: 1.0}
+    extras:
+      - {name: X_target, type: matrix, required: true}
+
+  - name: MIRPLSRegression
+    c_function: mir_pls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+
+  - name: MBPLSRegression
+    c_function: mb_pls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+    extras:
+      - {name: block_sizes, type: int_array, required: true}
+    custom_extract: true   # intercept directly; no y_mean key
+    custom_predict: true   # X @ coef.T + intercept (no centering)
+
+  - name: NPLSRegression
+    c_function: n_pls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: mode_j, type: int, required: true}
+      - {name: mode_k, type: int, required: true}
+
+  - name: O2PLSRegression
+    c_function: o2pls_fit
+    params:
+      - {name: n_predictive, type: int, default: 2}
+      - {name: n_x_orthogonal, type: int, default: 1}
+      - {name: n_y_orthogonal, type: int, default: 1}
+
+  - name: PLSGLMRegressor
+    c_function: pls_glm_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: poisson, type: bool, default: false}
+    custom_extract: true   # intercept directly; no x_mean / y_mean
+    custom_predict: true   # X @ coef.T + intercept
+
+  - name: KernelPLSRegression
+    c_function: kernel_pls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: kernel_type, type: int, default: 1}
+      - {name: gamma, type: float, default: 0.0}
+      - {name: coef0, type: float, default: 1.0}
+      - {name: degree, type: int, default: 3}
+    in_sample_only: true   # ABI lacks kernel-centering export
+    notes: |
+      predict only on training X (content match), else raises
+      NotImplementedError. See codex round-3 MUST FIX.
+
+# ============================================================
+# 4. In-sample-only regressors (no global coef export)
+# ============================================================
+
+in_sample_regressors:
+  - name: WeightedPLSRegression
+    c_function: weighted_pls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+    extras:
+      - {name: sample_weight, type: vector, required: true, fit_arg: true}
+
+  - name: RobustPLSRegression
+    c_function: robust_pls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: huber_k, type: float, default: 1.345}
+      - {name: max_irls_iter, type: int, default: 20}
+
+  - name: RidgePLSRegression
+    c_function: ridge_pls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: ridge_lambda, type: float, default: 1.0}
+
+  - name: ContinuumRegression
+    c_function: continuum_regression_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: tau, type: float, default: 0.5}
+
+  - name: RecursivePLSRegression
+    c_function: recursive_pls_run
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: window_size, type: int, default: 50}
+
+  - name: LWPLSRegression
+    c_function: lw_pls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: n_neighbors, type: int, default: 30}
+
+  - name: MissingAwareNipalsRegression
+    c_function: missing_aware_nipals_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+
+  - name: GroupSparsePLSRegression
+    c_function: group_sparse_pls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: group_lambda, type: float, default: 0.05}
+    extras:
+      - {name: group_assignment, type: int_vector, required: true}
+
+  - name: FusedSparsePLSRegression
+    c_function: fused_sparse_pls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: l1_lambda, type: float, default: 0.05}
+      - {name: fusion_lambda, type: float, default: 0.05}
+
+  - name: BaggingPLSRegression
+    c_function: bagging_pls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: n_estimators, type: int, default: 50}
+      - {name: seed, type: int, default: 0}
+
+  - name: BoostingPLSRegression
+    c_function: boosting_pls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: n_estimators, type: int, default: 50}
+      - {name: learning_rate, type: float, default: 0.1}
+
+  - name: RandomSubspacePLSRegression
+    c_function: random_subspace_pls_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+      - {name: n_estimators, type: int, default: 50}
+      - {name: features_per_subspace, type: int, default: 10}
+      - {name: seed, type: int, default: 0}
+
+  - name: SOPLSRegression
+    c_function: so_pls_fit
+    params: []
+    extras:
+      - {name: n_components_per_block, type: int_vector, required: true}
+      - {name: block_sizes, type: int_vector, required: true}
+
+  - name: ROSARegression
+    c_function: rosa_fit
+    params:
+      - {name: n_components, type: int, default: 2}
+    extras:
+      - {name: block_sizes, type: int_vector, required: true}
+
+# ============================================================
+# 5. Selectors (return mask + scores via SelectorMixin)
+# ============================================================
+# All selectors call a _methods.*_select function returning a result
+# with at least "mask" and (typically) "scores" arrays. Per-selector
+# params documented in the Python wrapper; for non-Python languages
+# without SelectorMixin the natural surface is fit(X, y) → mask /
+# transform(X) → X[:, mask] / get_support() → mask.
+
+selectors:
+  - {name: VIPSelector,           c_function: variable_select_rank, params: [top_k, n_components, threshold]}
+  - {name: CoefficientSelector,   c_function: variable_select_rank, params: [top_k, n_components]}
+  - {name: SelectivityRatioSelector, c_function: variable_select_rank, params: [top_k, n_components]}
+  - {name: SPASelector,           c_function: spa_select,             params: [top_k, n_components]}
+  - {name: StabilitySelector,     c_function: stability_select,       params: [top_k, n_components, n_bootstraps, plan]}
+  - {name: UVESelector,           c_function: uve_select,             params: [n_components, uve_threshold, n_random_features]}
+  - {name: CARSSelector,          c_function: cars_select,            params: [n_components, n_iterations, n_subsets]}
+  - {name: RandomFrogSelector,    c_function: random_frog_select,     params: [top_k, n_components, n_iterations]}
+  - {name: SCARSSelector,         c_function: scars_select,           params: [n_components, n_iterations]}
+  - {name: GASelector,            c_function: ga_select,              params: [n_components, n_generations, population_size]}
+  - {name: PSOSelector,           c_function: pso_select,             params: [n_components, n_iterations, swarm_size]}
+  - {name: VISSASelector,         c_function: vissa_select,           params: [n_components, n_iterations]}
+  - {name: ShavingSelector,       c_function: shaving_select,         params: [n_components, n_steps, shave_fraction]}
+  - {name: BVESelector,           c_function: bve_select,             params: [n_components, threshold]}
+  - {name: REPSelector,           c_function: rep_select,             params: [n_components, n_iterations]}
+  - {name: IPWSelector,           c_function: ipw_select,             params: [top_k, n_components]}
+  - {name: STSelector,            c_function: st_select,              params: [thresholds, n_components]}
+  - {name: IntervalSelector,      c_function: interval_select,        params: [n_components, interval_width, n_intervals]}
+  - {name: BiPLSSelector,         c_function: bipls_select,           params: [n_components, interval_width]}
+  - {name: SiPLSSelector,         c_function: sipls_select,           params: [n_components, interval_width, max_intervals]}
+  - {name: T2Selector,            c_function: t2_select,              params: [alpha_thresholds, n_components]}
+  - {name: WVCSelector,           c_function: wvc_select,             params: [top_k, n_components, normalize]}
+  - {name: WVCThresholdSelector,  c_function: wvc_threshold_select,   params: [n_components, normalize, threshold]}
+  - {name: EMCUVESelector,        c_function: emcuve_select,          params: [n_components, n_iterations, threshold]}
+  - {name: RandomizationSelector, c_function: randomization_select,   params: [n_components, n_iterations, threshold]}
+  - {name: IRIVSelector,          c_function: iriv_select,            params: [n_components, n_iterations]}
+  - {name: IRFSelector,           c_function: irf_select,             params: [top_k, n_components, n_iterations]}
+  - {name: VIPSPASelector,        c_function: vip_spa_select,         params: [top_k, n_components]}
+
+# ============================================================
+# 6. Transformers (calibration transfer)
+# ============================================================
+
+transformers:
+  - name: PDSTransformer
+    c_function: pds_fit
+    params:
+      - {name: window_size, type: int, default: 5}
+    notes: Apply transpose (PDS transposes X before transform)
+
+  - name: DSTransformer
+    c_function: ds_fit
+    params: []
+    notes: No transpose (direct standardization)
+
+# ============================================================
+# 7. Classifier extras (mixed bag)
+# ============================================================
+
+classifier_extras:
+  - {name: SparsePLSDAClassifier, c_function: sparse_simpls_fit, params: [n_components, sparsity_lambda]}
+  - {name: PLSLogisticClassifier, c_function: pls_logistic_fit,  params: [n_components, max_iter], in_sample_only: true}
+  - {name: PLSLDAClassifier,      c_function: PLSRegression+LDA, params: [n_components], composite: true}
+  - {name: PLSQDAClassifier,      c_function: PLSRegression+QDA, params: [n_components], composite: true}
+  - {name: PLSCoxRegressor,       c_function: pls_cox_fit,       params: [n_components]}
+
+# ============================================================
+# 8. Diagnostic functions (module-level, not classes)
+# ============================================================
+
+diagnostics:
+  - {name: t2_score,           c_function: pls_diagnostics_compute, returns: vector}
+  - {name: q_score,            c_function: pls_diagnostics_compute, returns: vector}
+  - {name: dmodx_score,        c_function: pls_diagnostics_compute, returns: vector}
+  - {name: pls_monitoring,     c_function: pls_monitoring_run,      returns: dict_with_alarms}
+  - {name: approximate_press,  c_function: approximate_press_compute, returns: vector}
+  - {name: one_se_rule,        c_function: one_se_rule_compute,     returns: int}
+
+# ============================================================
+# Anchors (YAML reuse)
+# ============================================================
+# (real anchor only resolves in the parser; this is a documentation hint —
+# the duplicated `params: *pls_regression_params` lines above just refer
+# to the canonical PLSRegression parameter set documented in section 1.)

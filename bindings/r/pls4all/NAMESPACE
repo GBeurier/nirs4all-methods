@@ -8,6 +8,26 @@ export(pls4all_abi_version)
 export(pls4all_fit)
 export(pls4all_predict)
 
+# Tier 1 — MethodResult fits
+export(sparse_simpls_fit)
+export(cppls_fit)
+export(weighted_pls_fit)
+export(mb_pls_fit)
+export(pls_glm_fit)
+export(mir_pls_fit)
+
+# Tier 1 — selectors
+export(vip_select)
+export(coefficient_select)
+export(selectivity_ratio_select)
+export(spa_select)
+export(cars_select)
+
+# Tier 1 — diagnostics
+export(pls_diagnostics)
+export(approximate_press)
+export(pls_monitoring)
+
 # Tier 2 — base R formula interface (idiomatic style)
 export(pls)
 S3method(predict, pls4all_fit)

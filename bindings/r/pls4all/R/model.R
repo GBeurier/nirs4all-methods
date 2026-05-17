@@ -18,7 +18,7 @@
 #'   to [pls4all_predict()] to obtain predictions. The model is freed
 #'   automatically when the external pointer is garbage-collected.
 #' @export
-pls4all_fit <- function(X, Y, algo, n_components) {
+pls4all_fit <- function(X, Y, algo, n_components, store_scores = FALSE) {
   if (!is.numeric(X)) stop("X must be numeric")
   if (!is.matrix(X)) X <- as.matrix(X)
   if (is.null(dim(Y))) Y <- matrix(as.numeric(Y), ncol = 1L)
@@ -32,6 +32,7 @@ pls4all_fit <- function(X, Y, algo, n_components) {
         X, Y,
         as.character(algo),
         as.integer(n_components),
+        as.logical(store_scores),
         PACKAGE = "pls4all")
 }
 

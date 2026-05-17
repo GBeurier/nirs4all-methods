@@ -117,11 +117,17 @@ SEXP r_pls4all_abi_version(void) {
 
 /* ---- fit -------------------------------------------------------------- */
 
-SEXP r_pls4all_fit(SEXP X, SEXP Y, SEXP algo_sexp, SEXP n_components_sexp) {
+SEXP r_pls4all_fit(SEXP X, SEXP Y, SEXP algo_sexp, SEXP n_components_sexp,
+                    SEXP store_scores_sexp) {
     if (TYPEOF(X) != REALSXP) Rf_error("X must be a numeric matrix");
     if (TYPEOF(Y) != REALSXP) Rf_error("Y must be a numeric matrix");
     if (TYPEOF(algo_sexp) != STRSXP) Rf_error("algo must be character");
     if (TYPEOF(n_components_sexp) != INTSXP) Rf_error("n_components must be integer");
+    if (TYPEOF(store_scores_sexp) != LGLSXP && TYPEOF(store_scores_sexp) != INTSXP)
+        Rf_error("store_scores must be logical or integer");
+    const int store_scores = (TYPEOF(store_scores_sexp) == LGLSXP)
+        ? LOGICAL(store_scores_sexp)[0]
+        : INTEGER(store_scores_sexp)[0];
 
     SEXP X_dim = Rf_getAttrib(X, R_DimSymbol);
     SEXP Y_dim = Rf_getAttrib(Y, R_DimSymbol);
@@ -185,7 +191,7 @@ SEXP r_pls4all_fit(SEXP X, SEXP Y, SEXP algo_sexp, SEXP n_components_sexp) {
     p4a_config_set_scale_x(cfg, 1);
     p4a_config_set_center_y(cfg, 1);
     p4a_config_set_scale_y(cfg, 1);
-    p4a_config_set_store_scores(cfg, 0);
+    p4a_config_set_store_scores(cfg, store_scores ? 1 : 0);
 
     p4a_matrix_view_t X_view;
     p4a_matrix_view_t Y_view;
