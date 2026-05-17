@@ -12,8 +12,6 @@ end
 params = struct("top_k", int32(top_k));
 res = pls4all.p4a_method_fit_mex("spa_select", double(X), double(Y), ...
                                   int32(n_components), params);
-% C side returns 0-based; expose 1-based for MATLAB idiom.
-if isfield(res, "selected_indices")
-    res.selected_indices = res.selected_indices + 1;
-end
+% The MEX dispatcher converts *_indices fields to 1-based MATLAB
+% indices on the way out; no further adjustment needed here.
 end

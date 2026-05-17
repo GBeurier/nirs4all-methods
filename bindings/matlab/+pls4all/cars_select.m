@@ -10,7 +10,5 @@ params = struct("n_iterations", int32(n_iterations), ...
                 "min_features", int32(min_features));
 res = pls4all.p4a_method_fit_mex("cars_select", double(X), double(Y), ...
                                   int32(n_components), params);
-if isfield(res, "selected_indices")
-    res.selected_indices = res.selected_indices + 1;
-end
+% indices are already 1-based after the MEX dispatcher conversion.
 end
