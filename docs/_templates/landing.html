@@ -690,8 +690,8 @@
         <span class="brand-led"></span>
         <div>
           <div class="wordmark"><span class="accent">pls4all</span><span class="sep">/</span><span class="light">cross-binding benchmark</span></div>
-          <div class="tagline">
-            same algorithm <span class="dot">·</span> same input bytes <span class="dot">·</span> 17 implementations
+          <div class="tagline" id="tagline">
+            same algorithm <span class="dot">·</span> same input bytes <span class="dot">·</span> <span id="tagline-count">—</span> implementations
           </div>
         </div>
       </div>
@@ -1106,7 +1106,8 @@ function sortRows(rows, cols) {
 // ---------- render ----------
 function renderStatStrip() {
   const s = DATA.stats;
-  const okPct = Math.round(s.ok / s.cells * 100);
+  const okPct = s.cells ? Math.round(s.ok / s.cells * 100) : 0;
+  $('tagline-count').textContent = s.backends;
   $('stat-strip').innerHTML = `
     <div class="stat"><div class="stat-label">algorithms</div><div class="stat-value">${s.algos}</div></div>
     <div class="stat"><div class="stat-label">backends</div><div class="stat-value">${s.backends}</div></div>
