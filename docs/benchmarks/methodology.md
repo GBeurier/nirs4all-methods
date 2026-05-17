@@ -83,6 +83,9 @@ In addition:
 - Python pls4all calls `Context.num_threads = N` for belt-and-braces.
 - Octave bench scripts call `maxNumCompThreads(N)` at start.
 - Externals (sklearn, pls::plsr, plsregress) rely on the env vars only.
+- MATLAB/libPLS registry references run through `oct2py`; the
+  orchestrator prepends `$PLS4ALL_R_ENV/bin` and sets `OCTAVE_HOME` so
+  the conda-provided Octave is visible from Python.
 
 `OPENBLAS_NUM_THREADS == OMP_NUM_THREADS` (i.e. not OMP×BLAS) to avoid
 oversubscription.
@@ -120,9 +123,20 @@ this repo, the host is reproducible from the commit SHA + the
 # Existing cells in results/full_matrix.csv are skipped by default.
 benchmarks/cross_binding/run_overnight.sh
 
+# Exhaustive stress matrix: all pls4all bindings/tiers, all CPU libp4a
+# backend variants, the default 11-size dataset sweep, threads 1/3/10,
+# and all fixed + registry Python/R/MATLAB references.
+FULL_MATRIX=1 benchmarks/cross_binding/run_overnight.sh
+
+# Include the CUDA libp4a build too when CUDA is available.
+FULL_MATRIX=1 LIBP4A_BUILD=all benchmarks/cross_binding/run_overnight.sh
+
 # Same run on the Pages branch (main), then commit/push docs/_static +
 # benchmark markdown and trigger the GitHub Pages docs workflow.
 PUBLISH_WEB=1 benchmarks/cross_binding/run_overnight.sh
+
+# Exhaustive run, then publish the refreshed dashboard from main.
+FULL_MATRIX=1 PUBLISH_WEB=1 benchmarks/cross_binding/run_overnight.sh
 
 # From a work branch, commit/push the web sources but skip live Pages deploy.
 PUBLISH_WEB=1 DEPLOY_PAGES=0 benchmarks/cross_binding/run_overnight.sh

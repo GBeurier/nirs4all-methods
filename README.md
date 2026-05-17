@@ -168,8 +168,19 @@ CUDA) plug in via CMake presets without changing the ABI.
 # Env overrides: FORCE=1 RERUN_FAILED=1 THREADS="1 3 10" N_RUNS=5.
 benchmarks/cross_binding/run_overnight.sh
 
+# Exhaustive stress matrix: all pls4all bindings/tiers, all CPU libp4a
+# backend variants, the default 11-size dataset sweep, threads 1/3/10,
+# and all fixed + registry Python/R/MATLAB references.
+FULL_MATRIX=1 benchmarks/cross_binding/run_overnight.sh
+
+# Include the CUDA build too when CUDA is available.
+FULL_MATRIX=1 LIBP4A_BUILD=all benchmarks/cross_binding/run_overnight.sh
+
 # On the Pages branch (main), commit/push web data and trigger GitHub Pages.
 PUBLISH_WEB=1 benchmarks/cross_binding/run_overnight.sh
+
+# Exhaustive run, then publish the refreshed dashboard from main.
+FULL_MATRIX=1 PUBLISH_WEB=1 benchmarks/cross_binding/run_overnight.sh
 
 # From a work branch, publish the source files without deploying live Pages.
 PUBLISH_WEB=1 DEPLOY_PAGES=0 benchmarks/cross_binding/run_overnight.sh

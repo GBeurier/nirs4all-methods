@@ -176,6 +176,10 @@ def run_backend(name: str, script: str, language: str, tier: str,
         f"{PLS4ALL_R_ENV}/lib/octave/10.3.0",
         env.get("LD_LIBRARY_PATH", ""),
     ])
+    env["PATH"] = ":".join([
+        f"{PLS4ALL_R_ENV}/bin",
+        env.get("PATH", ""),
+    ])
     env.setdefault("OCTAVE_HOME", PLS4ALL_R_ENV)
     env["PYTHONPATH"] = ":".join([
         str(REPO),
@@ -423,11 +427,14 @@ def main():
     parser.add_argument("--threads", nargs="+", type=int, default=[1, 3, 10],
                          help="Thread counts to sweep")
     parser.add_argument("--libp4a-build",
-                         choices=["dev-release", "blas-on", "omp-on", "blas-omp", "cuda-on", "both", "all"],
+                         choices=["dev-release", "blas-on", "omp-on",
+                                  "blas-omp", "cuda-on", "both",
+                                  "all-cpu", "all"],
                          default="blas-omp",
                          help="libp4a build for pls4all backends. 'both' = "
-                              "dev-release + blas-omp; 'all' = the full 5-build "
-                              "sweep (ref + blas + omp + blasomp + cuda).")
+                              "dev-release + blas-omp; 'all-cpu' = ref + "
+                              "blas + omp + blasomp; 'all' = the full "
+                              "5-build sweep including cuda-on.")
     parser.add_argument("--n-runs", type=int, default=5,
                          help="Runs per cell (first discarded as warmup if >= 3)")
     parser.add_argument("--n-components", type=int, default=5)
@@ -479,6 +486,8 @@ def main():
     threads = list(args.threads)
     if args.libp4a_build == "both":
         builds = ["dev-release", "blas-omp"]
+    elif args.libp4a_build == "all-cpu":
+        builds = ["dev-release", "blas-on", "omp-on", "blas-omp"]
     elif args.libp4a_build == "all":
         builds = ["dev-release", "blas-on", "omp-on", "blas-omp", "cuda-on"]
     else:

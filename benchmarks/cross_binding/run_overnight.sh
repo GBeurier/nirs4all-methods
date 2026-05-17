@@ -5,17 +5,27 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
 cd "${REPO_ROOT}"
 
+FULL_MATRIX="${FULL_MATRIX:-0}"
 BUILD_PRESET="${BUILD_PRESET:-blas-omp}"
-LIBP4A_BUILD="${LIBP4A_BUILD:-${BUILD_PRESET}}"
+if [[ "${FULL_MATRIX}" == "1" ]]; then
+  LIBP4A_BUILD="${LIBP4A_BUILD:-all-cpu}"
+  CANONICAL_ONLY="${CANONICAL_ONLY:-0}"
+  REGISTRY_CELLS="${REGISTRY_CELLS:-0}"
+else
+  LIBP4A_BUILD="${LIBP4A_BUILD:-${BUILD_PRESET}}"
+  CANONICAL_ONLY="${CANONICAL_ONLY:-1}"
+  REGISTRY_CELLS="${REGISTRY_CELLS:-1}"
+fi
+BUILD_PRESETS="${BUILD_PRESETS:-auto}"
 CLEAN_BUILD="${CLEAN_BUILD:-1}"
 ALGORITHMS="${ALGORITHMS:-all}"
+SIZES="${SIZES:-}"
 THREADS="${THREADS:-1 3 10}"
 N_RUNS="${N_RUNS:-5}"
 TIMEOUT="${TIMEOUT:-300}"
 REFERENCE_BACKENDS="${REFERENCE_BACKENDS:-all}"
 OUT_CSV="${OUT_CSV:-benchmarks/cross_binding/results/full_matrix.csv}"
 LOG_DIR="${LOG_DIR:-benchmarks/cross_binding/results/logs}"
-CANONICAL_ONLY="${CANONICAL_ONLY:-1}"
 RENDER_DOCS="${RENDER_DOCS:-auto}"
 BUILD_SITE="${BUILD_SITE:-auto}"
 SITE_DIR="${SITE_DIR:-docs/_build/html}"
@@ -57,6 +67,32 @@ if [[ "${DEPLOY_PAGES}" == "1" && "${CURRENT_BRANCH}" != "${PAGES_BRANCH}" ]]; t
   exit 2
 fi
 
+required_build_presets=()
+case "${LIBP4A_BUILD}" in
+  both)
+    required_build_presets=(dev-release blas-omp)
+    ;;
+  all-cpu)
+    required_build_presets=(dev-release blas-on omp-on blas-omp)
+    ;;
+  all)
+    required_build_presets=(dev-release blas-on omp-on blas-omp cuda-on)
+    ;;
+  *)
+    required_build_presets=("${LIBP4A_BUILD}")
+    ;;
+esac
+
+if [[ "${BUILD_PRESETS}" == "auto" ]]; then
+  build_presets=("${required_build_presets[@]}")
+else
+  read -r -a build_presets <<< "${BUILD_PRESETS}"
+fi
+if [[ "${#build_presets[@]}" -eq 0 ]]; then
+  echo "ERROR: no CMake build presets selected." >&2
+  exit 2
+fi
+
 mkdir -p "${LOG_DIR}" "$(dirname -- "${OUT_CSV}")"
 LOG_FILE="${LOG_DIR}/overnight_$(date -u +%Y%m%dT%H%M%SZ).log"
 
@@ -73,7 +109,13 @@ if [[ "${DEPLOY_PAGES}" == "1" ]] && ! command -v gh >/dev/null 2>&1; then
   exit 2
 fi
 
-if [[ "${BUILD_PRESET}" == blas* ]]; then
+requires_openblas=0
+for preset in "${build_presets[@]}"; do
+  if [[ "${preset}" == "blas-on" || "${preset}" == "blas-omp" ]]; then
+    requires_openblas=1
+  fi
+done
+if [[ "${requires_openblas}" == "1" ]]; then
   : "${CONDA_PREFIX:?CONDA_PREFIX must point to the conda env that provides OpenBLAS}"
   if [[ ! -f "${CONDA_PREFIX}/include/cblas.h" ]]; then
     echo "ERROR: ${CONDA_PREFIX}/include/cblas.h is missing." >&2
@@ -92,6 +134,20 @@ if [[ "${CANONICAL_ONLY}" == "1" ]]; then
   canonical_flags+=(--canonical-pls4all-only)
 fi
 
+registry_flags=()
+if [[ "${REGISTRY_CELLS}" == "1" ]]; then
+  registry_flags+=(--registry-cells)
+fi
+
+size_flags=()
+if [[ -n "${SIZES}" ]]; then
+  read -r -a size_args <<< "${SIZES}"
+  size_flags+=(--sizes "${size_args[@]}")
+fi
+
+read -r -a algorithm_args <<< "${ALGORITHMS}"
+read -r -a thread_args <<< "${THREADS}"
+
 resume_flags=()
 if [[ "${RESUME}" == "1" ]]; then
   resume_flags+=(--resume-existing)
@@ -105,20 +161,23 @@ fi
 
 {
   echo "# $(date -u +%Y-%m-%dT%H:%M:%SZ) starting pls4all overnight benchmark"
-  echo "# build=${BUILD_PRESET} clean_build=${CLEAN_BUILD} libp4a=${LIBP4A_BUILD} algorithms=${ALGORITHMS} threads=${THREADS} n_runs=${N_RUNS}"
-  echo "# references=${REFERENCE_BACKENDS} canonical_only=${CANONICAL_ONLY} resume=${RESUME} force=${FORCE} rerun_failed=${RERUN_FAILED} render_docs=${RENDER_DOCS} build_site=${BUILD_SITE} publish_web=${PUBLISH_WEB} deploy_pages=${DEPLOY_PAGES} pages_branch=${PAGES_BRANCH} timeout=${TIMEOUT}"
+  echo "# build_presets=${build_presets[*]} clean_build=${CLEAN_BUILD} libp4a=${LIBP4A_BUILD} algorithms=${ALGORITHMS} registry_cells=${REGISTRY_CELLS} sizes=${SIZES:-default} threads=${THREADS} n_runs=${N_RUNS}"
+  echo "# references=${REFERENCE_BACKENDS} canonical_only=${CANONICAL_ONLY} full_matrix=${FULL_MATRIX} resume=${RESUME} force=${FORCE} rerun_failed=${RERUN_FAILED} render_docs=${RENDER_DOCS} build_site=${BUILD_SITE} publish_web=${PUBLISH_WEB} deploy_pages=${DEPLOY_PAGES} pages_branch=${PAGES_BRANCH} timeout=${TIMEOUT}"
 
-  if [[ "${CLEAN_BUILD}" == "1" ]]; then
-    rm -rf "build/${BUILD_PRESET}"
-  fi
-  cmake --preset "${BUILD_PRESET}"
-  cmake --build --preset "${BUILD_PRESET}" -j "${BUILD_JOBS:-$(nproc)}"
-  ctest --preset "${BUILD_PRESET}"
+  for preset in "${build_presets[@]}"; do
+    if [[ "${CLEAN_BUILD}" == "1" ]]; then
+      rm -rf "build/${preset}"
+    fi
+    cmake --preset "${preset}"
+    cmake --build --preset "${preset}" -j "${BUILD_JOBS:-$(nproc)}"
+    ctest --preset "${preset}"
+  done
 
   python benchmarks/cross_binding/orchestrator.py \
-    --algorithms ${ALGORITHMS} \
-    --registry-cells \
-    --threads ${THREADS} \
+    --algorithms "${algorithm_args[@]}" \
+    "${registry_flags[@]}" \
+    "${size_flags[@]}" \
+    --threads "${thread_args[@]}" \
     --n-runs "${N_RUNS}" \
     --timeout "${TIMEOUT}" \
     --libp4a-build "${LIBP4A_BUILD}" \

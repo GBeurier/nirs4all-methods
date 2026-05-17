@@ -29,8 +29,19 @@ pls4all is benchmarked across three axes:
 # Existing cells in results/full_matrix.csv are skipped by default.
 benchmarks/cross_binding/run_overnight.sh
 
+# Exhaustive stress matrix: all pls4all bindings/tiers, all CPU libp4a
+# backend variants, all default dataset sizes, threads 1/3/10, and all
+# fixed + registry Python/R/MATLAB references.
+FULL_MATRIX=1 benchmarks/cross_binding/run_overnight.sh
+
+# Include CUDA too when that preset is available.
+FULL_MATRIX=1 LIBP4A_BUILD=all benchmarks/cross_binding/run_overnight.sh
+
 # On the Pages branch (main), also publish the refreshed dashboard.
 PUBLISH_WEB=1 benchmarks/cross_binding/run_overnight.sh
+
+# Exhaustive run, then publish the refreshed dashboard from main.
+FULL_MATRIX=1 PUBLISH_WEB=1 benchmarks/cross_binding/run_overnight.sh
 
 # From a work branch, commit/push dashboard sources without live deploy.
 PUBLISH_WEB=1 DEPLOY_PAGES=0 benchmarks/cross_binding/run_overnight.sh
