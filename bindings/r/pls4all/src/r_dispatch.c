@@ -26,7 +26,42 @@
 
 #include "pls4all/p4a.h"
 
+#include <stdarg.h>
+#include <stdio.h>
+
 /* ---- shared helpers (file-local) ----------------------------------- */
+
+/* Destroy ctx + cfg and longjmp via Rf_error. Used by validation
+ * branches that need to bail out AFTER ctx/cfg have been allocated.
+ * SEXP PROTECTs are unwound by R itself on the longjmp. */
+static void cleanup_err(p4a_context_t* ctx, p4a_config_t* cfg,
+                         const char* fmt, ...) __attribute__((noreturn))
+                                                  __attribute__((format(printf, 3, 4)));
+
+static void cleanup_err(p4a_context_t* ctx, p4a_config_t* cfg,
+                         const char* fmt, ...) {
+    if (cfg) p4a_config_destroy(cfg);
+    if (ctx) p4a_context_destroy(ctx);
+    char buf[1024];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    Rf_error("%s", buf);
+}
+
+/* Validate that a SEXP is a 2D REAL matrix; cleanup_err on failure.
+ * Returns the dim vector. */
+static SEXP need_real_matrix(SEXP v, p4a_context_t* ctx, p4a_config_t* cfg,
+                              const char* what) {
+    if (TYPEOF(v) != REALSXP)
+        cleanup_err(ctx, cfg, "%s must be a numeric matrix", what);
+    SEXP dim = Rf_getAttrib(v, R_DimSymbol);
+    if (Rf_length(dim) != 2)
+        cleanup_err(ctx, cfg, "%s must be a 2D matrix (got length(dim)=%d)",
+                     what, (int)Rf_length(dim));
+    return dim;
+}
 
 static void r_throw(const char* fn, p4a_status_t status, p4a_context_t* ctx)
     __attribute__((noreturn));
@@ -322,10 +357,11 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
                          SEXP n_components_sexp, SEXP params,
                          SEXP center_x_sexp, SEXP scale_x_sexp,
                          SEXP center_y_sexp, SEXP scale_y_sexp) {
-    if (TYPEOF(algo_sexp) != STRSXP) Rf_error("algo must be character");
+    /* Early validation BEFORE ctx/cfg allocation: pass NULL for both. */
+    if (TYPEOF(algo_sexp) != STRSXP) cleanup_err(NULL, NULL, "algo must be character");
     const char* algo = CHAR(STRING_ELT(algo_sexp, 0));
     int n_components = INTEGER(n_components_sexp)[0];
-    if (n_components < 1) Rf_error("n_components must be >= 1");
+    if (n_components < 1) cleanup_err(NULL, NULL, "n_components must be >= 1");
 
     int center_x = INTEGER(center_x_sexp)[0];
     int scale_x  = INTEGER(scale_x_sexp)[0];
@@ -338,12 +374,12 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     int n = (int)n_rows, p = (int)n_cols, q = (int)y_cols;
 
     p4a_context_t* ctx = NULL;
+    p4a_config_t* cfg = NULL;
     if (p4a_context_create(&ctx) != P4A_OK) {
         UNPROTECT(2);
-        Rf_error("p4a_context_create failed");
+        cleanup_err(NULL, NULL, "p4a_context_create failed");
     }
-    p4a_config_t* cfg = build_cfg(n_components, center_x, scale_x,
-                                    center_y, scale_y);
+    cfg = build_cfg(n_components, center_x, scale_x, center_y, scale_y);
 
     p4a_matrix_view_t Xv, Yv;
     p4a_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n, p, P4A_DTYPE_F64);
@@ -407,10 +443,10 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "di_pls") == 0) {
         SEXP xt = get_list_element(params, "X_target");
         if (xt == R_NilValue || TYPEOF(xt) != REALSXP)
-            Rf_error("di_pls requires params$X_target (numeric matrix)");
+            cleanup_err(ctx, cfg, "di_pls requires params$X_target (numeric matrix)");
         SEXP xt_dim = Rf_getAttrib(xt, R_DimSymbol);
         int xt_n = INTEGER(xt_dim)[0], xt_p = INTEGER(xt_dim)[1];
-        if (xt_p != p) Rf_error("X_target ncol must equal X ncol");
+        if (xt_p != p) cleanup_err(ctx, cfg, "X_target ncol must equal X ncol");
         SEXP XT_rm = PROTECT(Rf_allocMatrix(REALSXP, xt_n, xt_p));
         colmajor_to_rowmajor(REAL(xt), REAL(XT_rm), xt_n, xt_p);
         double dl = get_double(params, "di_lambda", 1.0);
@@ -422,7 +458,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "weighted_pls") == 0) {
         SEXP w = get_list_element(params, "sample_weights");
         if (w == R_NilValue || TYPEOF(w) != REALSXP || Rf_length(w) != n)
-            Rf_error("weighted_pls requires numeric params$sample_weights of length n");
+            cleanup_err(ctx, cfg, "weighted_pls requires numeric params$sample_weights of length n");
         st = p4a_weighted_pls_fit(ctx, cfg, &Xv, &Yv,
                                    REAL(w), (int64_t)Rf_length(w), &mr);
         if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
@@ -452,7 +488,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int mj = get_int(params, "mode_j", 0);
         int mk = get_int(params, "mode_k", 0);
         if (mj <= 0 || mk <= 0 || mj * mk != p)
-            Rf_error("n_pls requires mode_j * mode_k == ncol(X)");
+            cleanup_err(ctx, cfg, "n_pls requires mode_j * mode_k == ncol(X)");
         st = p4a_n_pls_fit(ctx, cfg, &Xv, mj, mk, &Yv, &mr);
         if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "kernel_pls") == 0) {
@@ -481,10 +517,10 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         }
     } else if (strcmp(algo, "sparse_pls_da") == 0) {
         SEXP yl = get_list_element(params, "y_labels");
-        if (yl == R_NilValue) Rf_error("sparse_pls_da requires params$y_labels");
+        if (yl == R_NilValue) cleanup_err(ctx, cfg, "sparse_pls_da requires params$y_labels");
         int nl = 0;
         int32_t* labels = coerce_int32_vec(yl, &nl);
-        if (nl != n) Rf_error("y_labels must have length n");
+        if (nl != n) cleanup_err(ctx, cfg, "y_labels must have length n");
         st = p4a_sparse_pls_da_fit(ctx, cfg, &Xv, labels, nl, &mr);
         if (st == P4A_OK) {
             static const char* dm[] = {"coefficients", "predictions",
@@ -494,10 +530,10 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         }
     } else if (strcmp(algo, "group_sparse_pls") == 0) {
         SEXP g = get_list_element(params, "group_assignment");
-        if (g == R_NilValue) Rf_error("group_sparse_pls requires params$group_assignment");
+        if (g == R_NilValue) cleanup_err(ctx, cfg, "group_sparse_pls requires params$group_assignment");
         int gn = 0;
         int32_t* groups = coerce_int32_vec(g, &gn);
-        if (gn != p) Rf_error("group_assignment must have length ncol(X)");
+        if (gn != p) cleanup_err(ctx, cfg, "group_assignment must have length ncol(X)");
         double gl = get_double(params, "group_lambda", 0.05);
         st = p4a_group_sparse_pls_fit(ctx, cfg, &Xv, &Yv, groups, gn, gl, &mr);
         if (st == P4A_OK) {
@@ -516,13 +552,21 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
                 strcmp(algo, "rosa") == 0 ||
                 strcmp(algo, "on_pls") == 0) {
         SEXP bs = get_list_element(params, "block_sizes");
-        if (bs == R_NilValue) Rf_error("%s requires params$block_sizes", algo);
+        if (bs == R_NilValue) cleanup_err(ctx, cfg, "%s requires params$block_sizes", algo);
         int bsn = 0;
         int64_t* bsv = coerce_int64_vec(bs, &bsn);
         int64_t bsum = 0;
-        for (int i = 0; i < bsn; ++i) bsum += bsv[i];
+        for (int i = 0; i < bsn; ++i) {
+            if (bsv[i] <= 0)
+                cleanup_err(ctx, cfg,
+                             "block_sizes[%d] must be positive (got %lld)",
+                             i + 1, (long long)bsv[i]);
+            bsum += bsv[i];
+        }
         if (bsum != (int64_t)p)
-            Rf_error("sum(block_sizes) must equal ncol(X)");
+            cleanup_err(ctx, cfg,
+                         "sum(block_sizes)=%lld must equal ncol(X)=%d",
+                         (long long)bsum, p);
         /* Build per-block row-major copies. */
         p4a_matrix_view_t* blocks = (p4a_matrix_view_t*)
             R_alloc((size_t)bsn, sizeof(p4a_matrix_view_t));
@@ -539,10 +583,10 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         if (strcmp(algo, "so_pls") == 0) {
             SEXP ncpb_sexp = get_list_element(params, "n_components_per_block");
             if (ncpb_sexp == R_NilValue)
-                Rf_error("so_pls requires params$n_components_per_block");
+                cleanup_err(ctx, cfg, "so_pls requires params$n_components_per_block");
             int ncn = 0;
             int32_t* ncpb = coerce_int32_vec(ncpb_sexp, &ncn);
-            if (ncn != bsn) Rf_error("n_components_per_block must have length n_blocks");
+            if (ncn != bsn) cleanup_err(ctx, cfg, "n_components_per_block must have length n_blocks");
             st = p4a_so_pls_fit(ctx, cfg, blocks, bsn, &Yv, ncpb, ncn, &mr);
         } else if (strcmp(algo, "rosa") == 0) {
             st = p4a_rosa_fit(ctx, cfg, blocks, bsn, &Yv, n_components, &mr);
@@ -550,10 +594,10 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             int njoint = get_int(params, "n_joint", 1);
             SEXP upb_sexp = get_list_element(params, "n_unique_per_block");
             if (upb_sexp == R_NilValue)
-                Rf_error("on_pls requires params$n_unique_per_block");
+                cleanup_err(ctx, cfg, "on_pls requires params$n_unique_per_block");
             int upbn = 0;
             int32_t* upb = coerce_int32_vec(upb_sexp, &upbn);
-            if (upbn != bsn) Rf_error("n_unique_per_block must have length n_blocks");
+            if (upbn != bsn) cleanup_err(ctx, cfg, "n_unique_per_block must have length n_blocks");
             st = p4a_on_pls_fit(ctx, cfg, blocks, bsn, njoint, upb, upbn, &mr);
         }
         if (st == P4A_OK) {
@@ -610,10 +654,10 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         }
     } else if (strcmp(algo, "pls_qda") == 0) {
         SEXP yl = get_list_element(params, "y_labels");
-        if (yl == R_NilValue) Rf_error("pls_qda requires params$y_labels");
+        if (yl == R_NilValue) cleanup_err(ctx, cfg, "pls_qda requires params$y_labels");
         int nl = 0;
         int32_t* labels = coerce_int32_vec(yl, &nl);
-        if (nl != n) Rf_error("y_labels must have length n");
+        if (nl != n) cleanup_err(ctx, cfg, "y_labels must have length n");
         st = p4a_pls_qda_fit(ctx, cfg, &Xv, labels, nl, &mr);
         if (st == P4A_OK) {
             static const char* dm[] = {"class_means", "class_covariances",
@@ -626,13 +670,13 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         SEXP ev_sexp  = get_list_element(params, "event_indicators");
         if (sts_sexp == R_NilValue || TYPEOF(sts_sexp) != REALSXP ||
             ev_sexp == R_NilValue)
-            Rf_error("pls_cox requires params$survival_times (numeric) "
+            cleanup_err(ctx, cfg, "pls_cox requires params$survival_times (numeric) "
                       "and params$event_indicators (integer)");
         if (Rf_length(sts_sexp) != n)
-            Rf_error("survival_times must have length n");
+            cleanup_err(ctx, cfg, "survival_times must have length n");
         int en = 0;
         int32_t* ev = coerce_int32_vec(ev_sexp, &en);
-        if (en != n) Rf_error("event_indicators must have length n");
+        if (en != n) cleanup_err(ctx, cfg, "event_indicators must have length n");
         st = p4a_pls_cox_fit(ctx, cfg, &Xv, REAL(sts_sexp), Rf_length(sts_sexp),
                               ev, en, &mr);
         if (st == P4A_OK) {
@@ -644,7 +688,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "pds") == 0) {
         SEXP xt = get_list_element(params, "X_target");
         if (xt == R_NilValue || TYPEOF(xt) != REALSXP)
-            Rf_error("pds requires params$X_target (numeric matrix)");
+            cleanup_err(ctx, cfg, "pds requires params$X_target (numeric matrix)");
         SEXP xtd = Rf_getAttrib(xt, R_DimSymbol);
         int xtn = INTEGER(xtd)[0], xtp = INTEGER(xtd)[1];
         SEXP XT_rm = PROTECT(Rf_allocMatrix(REALSXP, xtn, xtp));
@@ -662,7 +706,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "ds") == 0) {
         SEXP xt = get_list_element(params, "X_target");
         if (xt == R_NilValue || TYPEOF(xt) != REALSXP)
-            Rf_error("ds requires params$X_target (numeric matrix)");
+            cleanup_err(ctx, cfg, "ds requires params$X_target (numeric matrix)");
         SEXP xtd = Rf_getAttrib(xt, R_DimSymbol);
         int xtn = INTEGER(xtd)[0], xtp = INTEGER(xtd)[1];
         SEXP XT_rm = PROTECT(Rf_allocMatrix(REALSXP, xtn, xtp));
@@ -684,13 +728,21 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "mb_pls") == 0) {
         SEXP bs = get_list_element(params, "block_sizes");
-        if (bs == R_NilValue) Rf_error("mb_pls requires params$block_sizes");
+        if (bs == R_NilValue) cleanup_err(ctx, cfg, "mb_pls requires params$block_sizes");
         int bsn = 0;
         int64_t* bsv = coerce_int64_vec(bs, &bsn);
         int64_t bsum = 0;
-        for (int i = 0; i < bsn; ++i) bsum += bsv[i];
+        for (int i = 0; i < bsn; ++i) {
+            if (bsv[i] <= 0)
+                cleanup_err(ctx, cfg,
+                             "block_sizes[%d] must be positive (got %lld)",
+                             i + 1, (long long)bsv[i]);
+            bsum += bsv[i];
+        }
         if (bsum != (int64_t)p)
-            Rf_error("sum(block_sizes) must equal ncol(X)");
+            cleanup_err(ctx, cfg,
+                         "sum(block_sizes)=%lld must equal ncol(X)=%d",
+                         (long long)bsum, p);
         p4a_config_set_solver(cfg, P4A_SOLVER_NIPALS);
         st = p4a_mb_pls_fit(ctx, cfg, &Xv, &Yv, bsv, bsn, &mr);
         if (st == P4A_OK) {
@@ -711,7 +763,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         }
     } else if (strcmp(algo, "pls_lda") == 0) {
         SEXP yl = get_list_element(params, "y_labels");
-        if (yl == R_NilValue) Rf_error("pls_lda requires params$y_labels");
+        if (yl == R_NilValue) cleanup_err(ctx, cfg, "pls_lda requires params$y_labels");
         int nl = 0;
         int32_t* labels = coerce_int32_vec(yl, &nl);
         int nc = get_int(params, "n_classes", 0);
@@ -727,7 +779,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         }
     } else if (strcmp(algo, "pls_logistic") == 0) {
         SEXP yl = get_list_element(params, "y_labels");
-        if (yl == R_NilValue) Rf_error("pls_logistic requires params$y_labels");
+        if (yl == R_NilValue) cleanup_err(ctx, cfg, "pls_logistic requires params$y_labels");
         int nl = 0;
         int32_t* labels = coerce_int32_vec(yl, &nl);
         int nc = get_int(params, "n_classes", 0);
@@ -798,7 +850,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
 #define DISPATCH_PLAN_SELECT(name, call_args, dmat_keys, iv_keys, i64_keys, sc_keys) \
     else if (strcmp(algo, name) == 0) { \
         p4a_validation_plan_t* _plan = make_default_plan(n, 5); \
-        if (!_plan) Rf_error(name " could not build a default validation plan"); \
+        if (!_plan) cleanup_err(ctx, cfg, name " could not build a default validation plan"); \
         st = call_args; \
         p4a_validation_plan_destroy(_plan); \
         if (st == P4A_OK) \
@@ -948,10 +1000,10 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     else if (strcmp(algo, "t2_select") == 0) {
         SEXP thr = get_list_element(params, "alpha_thresholds");
         if (thr == R_NilValue || TYPEOF(thr) != REALSXP)
-            Rf_error("t2_select requires numeric params$alpha_thresholds");
+            cleanup_err(ctx, cfg, "t2_select requires numeric params$alpha_thresholds");
         int ms = get_int(params, "min_selected", n_components);
         p4a_validation_plan_t* _plan = make_default_plan(n, 5);
-        if (!_plan) Rf_error("t2_select plan creation failed");
+        if (!_plan) cleanup_err(ctx, cfg, "t2_select plan creation failed");
         st = p4a_t2_select(ctx, cfg, &Xv, &Yv, _plan,
                             REAL(thr), Rf_length(thr), ms, &mr);
         p4a_validation_plan_destroy(_plan);
@@ -963,10 +1015,10 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "st_select") == 0) {
         SEXP thr = get_list_element(params, "thresholds");
         if (thr == R_NilValue || TYPEOF(thr) != REALSXP)
-            Rf_error("st_select requires numeric params$thresholds");
+            cleanup_err(ctx, cfg, "st_select requires numeric params$thresholds");
         int ms = get_int(params, "min_selected", n_components);
         p4a_validation_plan_t* _plan = make_default_plan(n, 5);
-        if (!_plan) Rf_error("st_select plan creation failed");
+        if (!_plan) cleanup_err(ctx, cfg, "st_select plan creation failed");
         st = p4a_st_select(ctx, cfg, &Xv, &Yv, _plan,
                             REAL(thr), Rf_length(thr), ms, &mr);
         p4a_validation_plan_destroy(_plan);
@@ -989,7 +1041,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "one_se_rule_compute") == 0) {
         SEXP fr = get_list_element(params, "fold_rmse_matrix");
         if (fr == R_NilValue || TYPEOF(fr) != REALSXP)
-            Rf_error("one_se_rule_compute requires numeric matrix params$fold_rmse_matrix");
+            cleanup_err(ctx, cfg, "one_se_rule_compute requires numeric matrix params$fold_rmse_matrix");
         SEXP fr_dim = Rf_getAttrib(fr, R_DimSymbol);
         int max_k = INTEGER(fr_dim)[0], n_folds = INTEGER(fr_dim)[1];
         double* fr_rm = (double*)R_alloc((size_t)max_k * n_folds, sizeof(double));
