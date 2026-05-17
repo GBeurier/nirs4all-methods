@@ -18,9 +18,9 @@ result as the established external implementation, often faster*.
 
 | Axis | Values |
 |---|---|
-| **Algorithms** | `pls` (Niveau A headline) + ~10 algos with externals (Niveau B) + ~50 pls4all-only algos (Niveau C) |
-| **Backends** | 13: `cpp`, `python_tier1`, `python_tier2`, `sklearn`, `ikpls`, `r_tier1`, `r_tier2`, `r_pls`, `r_ropls`, `r_mixomics`, `matlab_tier1`, `matlab_tier2`, `matlab_pls` |
-| **Sizes** | 11: 100×{50, 500, 2500}, 500×{50, 500, 2500}, 2500×{50, 500, 2500}, 10000×{50, 500} |
+| **Algorithms** | Canonical `benchmarks.parity_timing.registry.METHODS` catalog (`--algorithms all`) |
+| **Backends** | pls4all bindings + registry-driven external reference columns (`ref.<library>`) |
+| **Sizes** | Default 11-size sweep, or one canonical MethodSpec cell per method with `--registry-cells` |
 | **Thread counts** | 1, 3, 10 |
 | **libp4a build** | `blas-omp` by default (OpenBLAS + OpenMP); `dev-release` available for the single-thread reference column |
 
@@ -116,26 +116,22 @@ this repo, the host is reproducible from the commit SHA + the
 ## Re-running
 
 ```bash
-# Niveau A (headline) — ~30-60 min wall-clock
+# Complete canonical method/reference matrix.
+python benchmarks/cross_binding/orchestrator.py \
+  --algorithms all --registry-cells \
+  --threads 1 3 10 --n-runs 5 \
+  --libp4a-build blas-omp --canonical-pls4all-only \
+  --reference-backends all \
+  --out-csv benchmarks/cross_binding/results/full_matrix.csv
+
+# PLS headline sweep only.
 python benchmarks/cross_binding/orchestrator.py \
   --algorithms pls --threads 1 3 10 --n-runs 5 \
-  --libp4a-build blas-omp \
-  --out-csv benchmarks/cross_binding/results/niveau_A_pls.csv
-
-# Niveau B (algos with externals) — ~2-4 h
-python benchmarks/cross_binding/orchestrator.py \
-  --algorithms sparse_simpls cppls pcr opls n_pls mb_pls \
-               sparse_pls_da ridge_pls gpr_pls pls_da \
-  --threads 1 3 10 --n-runs 5
-
-# Niveau C (pls4all-only) — ~3-6 h
-python benchmarks/cross_binding/orchestrator.py \
-  --algorithms-file pls4all_only.txt \
-  --sizes 500x500 2500x500 2500x2500 --threads 1 10 \
-  --only-pls4all --n-runs 5
+  --libp4a-build blas-omp --reference-backends all \
+  --out-csv benchmarks/cross_binding/results/full_matrix.csv
 
 # Render
-python benchmarks/cross_binding/render_docs.py \
-  --csv benchmarks/cross_binding/results/<csv> \
+python benchmarks/cross_binding/combine_and_render.py \
+  --csvs benchmarks/cross_binding/results/full_matrix.csv \
   --out docs/benchmarks/cross_binding.md
 ```

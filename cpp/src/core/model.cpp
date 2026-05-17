@@ -104,6 +104,44 @@ void write_value(p4a_matrix_view_t& v,
     const std::size_t rows = static_cast<std::size_t>(src.rows);
     const std::size_t cols = static_cast<std::size_t>(src.cols);
     resize_fill(out, rows * cols, 0.0);
+    if ((src.dtype == P4A_DTYPE_F64 || src.dtype == P4A_DTYPE_F32) &&
+        src.row_stride == static_cast<std::int64_t>(cols) &&
+        src.col_stride == 1) {
+        if (src.dtype == P4A_DTYPE_F64) {
+            const auto* ptr = static_cast<const double*>(src.data);
+            const std::size_t total = rows * cols;
+            for (std::size_t offset = 0; offset < total; ++offset) {
+                const double value = ptr[offset];
+                if (!std::isfinite(value)) {
+                    const std::size_t i = offset / cols;
+                    const std::size_t j = offset - i * cols;
+                    ctx.set_errorf("%s contains NaN or Inf at row %llu col %llu",
+                                   name,
+                                   ull(i),
+                                   ull(j));
+                    return P4A_ERR_INVALID_ARGUMENT;
+                }
+                out[offset] = value;
+            }
+            return P4A_OK;
+        }
+        const auto* ptr = static_cast<const float*>(src.data);
+        const std::size_t total = rows * cols;
+        for (std::size_t offset = 0; offset < total; ++offset) {
+            const double value = static_cast<double>(ptr[offset]);
+            if (!std::isfinite(value)) {
+                const std::size_t i = offset / cols;
+                const std::size_t j = offset - i * cols;
+                ctx.set_errorf("%s contains NaN or Inf at row %llu col %llu",
+                               name,
+                               ull(i),
+                               ull(j));
+                return P4A_ERR_INVALID_ARGUMENT;
+            }
+            out[offset] = value;
+        }
+        return P4A_OK;
+    }
     for (std::size_t i = 0; i < rows; ++i) {
         for (std::size_t j = 0; j < cols; ++j) {
             const double value = read_value(src, i, j);
@@ -133,35 +171,43 @@ void center_scale_in_place(const std::vector<double>& original,
     standardized = original;
 
     if (center_enabled) {
-        for (std::size_t j = 0; j < cols; ++j) {
-            double sum = 0.0;
-            for (std::size_t i = 0; i < rows; ++i) {
-                sum += original[idx(i, cols, j)];
+        for (std::size_t i = 0; i < rows; ++i) {
+            const double* row = original.data() + i * cols;
+            for (std::size_t j = 0; j < cols; ++j) {
+                mean[j] += row[j];
             }
-            mean[j] = sum / static_cast<double>(rows);
+        }
+        const double inv_rows = 1.0 / static_cast<double>(rows);
+        for (std::size_t j = 0; j < cols; ++j) {
+            mean[j] *= inv_rows;
         }
     }
 
     for (std::size_t i = 0; i < rows; ++i) {
+        double* row = standardized.data() + i * cols;
         for (std::size_t j = 0; j < cols; ++j) {
-            standardized[idx(i, cols, j)] -= mean[j];
+            row[j] -= mean[j];
         }
     }
 
     if (scale_enabled) {
-        for (std::size_t j = 0; j < cols; ++j) {
-            double sumsq = 0.0;
-            for (std::size_t i = 0; i < rows; ++i) {
-                const double value = standardized[idx(i, cols, j)];
-                sumsq += value * value;
+        std::vector<double> sumsq(cols, 0.0);
+        for (std::size_t i = 0; i < rows; ++i) {
+            const double* row = standardized.data() + i * cols;
+            for (std::size_t j = 0; j < cols; ++j) {
+                const double value = row[j];
+                sumsq[j] += value * value;
             }
-            const double denom = static_cast<double>(rows - 1U);
-            const double stddev = std::sqrt(sumsq / denom);
+        }
+        const double denom = static_cast<double>(rows - 1U);
+        for (std::size_t j = 0; j < cols; ++j) {
+            const double stddev = std::sqrt(sumsq[j] / denom);
             scale[j] = (stddev == 0.0 || !std::isfinite(stddev)) ? 1.0 : stddev;
         }
         for (std::size_t i = 0; i < rows; ++i) {
+            double* row = standardized.data() + i * cols;
             for (std::size_t j = 0; j < cols; ++j) {
-                standardized[idx(i, cols, j)] /= scale[j];
+                row[j] /= scale[j];
             }
         }
     }
@@ -1124,57 +1170,6 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     return P4A_OK;
 }
 
-void fill_prediction(const ::pls4all::core::Model& model,
-                     const std::vector<double>& X,
-                     std::size_t rows,
-                     std::vector<double>& predictions) {
-    const std::size_t p = static_cast<std::size_t>(model.n_features);
-    const std::size_t q = static_cast<std::size_t>(model.n_targets);
-    resize_fill(predictions, rows * q, 0.0);
-    P4A_PARALLEL_FOR_STATIC
-    for (std::size_t i = 0; i < rows; ++i) {
-        for (std::size_t t = 0; t < q; ++t) {
-            double sum = model.y_mean[t];
-            for (std::size_t j = 0; j < p; ++j) {
-                const double centered = X[idx(i, p, j)] - model.x_mean[j];
-                sum += centered * model.coefficients[idx(j, q, t)];
-            }
-            predictions[idx(i, q, t)] = sum;
-        }
-    }
-}
-
-void fill_transform(const ::pls4all::core::Model& model,
-                    const std::vector<double>& X,
-                    std::size_t rows,
-                    std::vector<double>& scores) {
-    const std::size_t p = static_cast<std::size_t>(model.n_features);
-    const std::size_t a = static_cast<std::size_t>(model.n_components);
-    resize_fill(scores, rows * a, 0.0);
-    P4A_PARALLEL_FOR_STATIC
-    for (std::size_t i = 0; i < rows; ++i) {
-        for (std::size_t comp = 0; comp < a; ++comp) {
-            double sum = 0.0;
-            for (std::size_t j = 0; j < p; ++j) {
-                const double normalized = (X[idx(i, p, j)] - model.x_mean[j]) / model.x_scale[j];
-                sum += normalized * model.rotations_r[idx(j, a, comp)];
-            }
-            scores[idx(i, a, comp)] = sum;
-        }
-    }
-}
-
-void copy_to_output(const std::vector<double>& values,
-                    std::size_t rows,
-                    std::size_t cols,
-                    p4a_matrix_view_t& out) noexcept {
-    for (std::size_t i = 0; i < rows; ++i) {
-        for (std::size_t j = 0; j < cols; ++j) {
-            write_value(out, i, j, values[idx(i, cols, j)]);
-        }
-    }
-}
-
 enum class CanonicalWeightSolver {
     Nipals,
     Svd
@@ -1730,9 +1725,11 @@ p4a_status_t fit_pls_regression_nipals(
             for (double& value : y_weights) {
                 value = -value;
             }
+            for (double& value : x_score) {
+                value = -value;
+            }
         }
 
-        matrix_vector_product(xk, n, p, x_weights, x_score);
         const double x_score_ss = squared_norm(x_score);
         if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("X score vanished after sign normalization at component %llu",
@@ -1759,36 +1756,37 @@ p4a_status_t fit_pls_regression_nipals(
 
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
-        P4A_PARALLEL_FOR_STATIC
-        for (std::size_t feature = 0; feature < p; ++feature) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < n; ++row) {
-                sum += x_score[row] * xk[idx(row, p, feature)];
-            }
-            x_loadings[feature] = sum / x_score_ss;
-        }
-        P4A_PARALLEL_FOR_STATIC
-        for (std::size_t row = 0; row < n; ++row) {
-            for (std::size_t feature = 0; feature < p; ++feature) {
-                xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
-            }
-        }
+        pls4all::linalg::gemv(
+            pls4all::linalg::Trans_Yes,
+            n, p,
+            1.0 / x_score_ss,
+            xk.data(),
+            x_score.data(),
+            0.0,
+            x_loadings.data());
+        pls4all::linalg::ger(
+            n, p,
+            -1.0,
+            x_score.data(),
+            x_loadings.data(),
+            xk.data(), p);
 
         std::vector<double> y_loadings;
         resize_fill(y_loadings, q, 0.0);
-        for (std::size_t target = 0; target < q; ++target) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < n; ++row) {
-                sum += x_score[row] * yk[idx(row, q, target)];
-            }
-            y_loadings[target] = sum / x_score_ss;
-        }
-        P4A_PARALLEL_FOR_STATIC
-        for (std::size_t row = 0; row < n; ++row) {
-            for (std::size_t target = 0; target < q; ++target) {
-                yk[idx(row, q, target)] -= x_score[row] * y_loadings[target];
-            }
-        }
+        pls4all::linalg::gemv(
+            pls4all::linalg::Trans_Yes,
+            n, q,
+            1.0 / x_score_ss,
+            yk.data(),
+            x_score.data(),
+            0.0,
+            y_loadings.data());
+        pls4all::linalg::ger(
+            n, q,
+            -1.0,
+            x_score.data(),
+            y_loadings.data(),
+            yk.data(), q);
 
         for (std::size_t feature = 0; feature < p; ++feature) {
             model->weights_w[idx(feature, a, comp)] = x_weights[feature];
@@ -3769,18 +3767,26 @@ p4a_status_t predict_into(Context& ctx,
         return status;
     }
 
-    std::vector<double> x;
-    const p4a_status_t copy_status = copy_matrix_checked(ctx, X, "X", x);
-    if (copy_status != P4A_OK) {
-        return copy_status;
+    const std::size_t rows = static_cast<std::size_t>(X.rows);
+    const std::size_t p = static_cast<std::size_t>(model.n_features);
+    const std::size_t q = static_cast<std::size_t>(model.n_targets);
+    for (std::size_t i = 0; i < rows; ++i) {
+        for (std::size_t t = 0; t < q; ++t) {
+            double sum = model.y_mean[t];
+            for (std::size_t j = 0; j < p; ++j) {
+                const double x_value = read_value(X, i, j);
+                if (!std::isfinite(x_value)) {
+                    ctx.set_errorf("X contains NaN or Inf at row %llu col %llu",
+                                   ull(i),
+                                   ull(j));
+                    return P4A_ERR_INVALID_ARGUMENT;
+                }
+                sum += (x_value - model.x_mean[j]) *
+                       model.coefficients[idx(j, q, t)];
+            }
+            write_value(out, i, t, sum);
+        }
     }
-
-    std::vector<double> predictions;
-    fill_prediction(model, x, static_cast<std::size_t>(X.rows), predictions);
-    copy_to_output(predictions,
-                   static_cast<std::size_t>(X.rows),
-                   static_cast<std::size_t>(model.n_targets),
-                   out);
     ctx.clear_error();
     return P4A_OK;
 }
@@ -4310,18 +4316,26 @@ p4a_status_t transform_into(Context& ctx,
         return status;
     }
 
-    std::vector<double> x;
-    const p4a_status_t copy_status = copy_matrix_checked(ctx, X, "X", x);
-    if (copy_status != P4A_OK) {
-        return copy_status;
+    const std::size_t rows = static_cast<std::size_t>(X.rows);
+    const std::size_t p = static_cast<std::size_t>(model.n_features);
+    const std::size_t a = static_cast<std::size_t>(model.n_components);
+    for (std::size_t i = 0; i < rows; ++i) {
+        for (std::size_t comp = 0; comp < a; ++comp) {
+            double sum = 0.0;
+            for (std::size_t j = 0; j < p; ++j) {
+                const double x_value = read_value(X, i, j);
+                if (!std::isfinite(x_value)) {
+                    ctx.set_errorf("X contains NaN or Inf at row %llu col %llu",
+                                   ull(i),
+                                   ull(j));
+                    return P4A_ERR_INVALID_ARGUMENT;
+                }
+                const double normalized = (x_value - model.x_mean[j]) / model.x_scale[j];
+                sum += normalized * model.rotations_r[idx(j, a, comp)];
+            }
+            write_value(out_scores, i, comp, sum);
+        }
     }
-
-    std::vector<double> scores;
-    fill_transform(model, x, static_cast<std::size_t>(X.rows), scores);
-    copy_to_output(scores,
-                   static_cast<std::size_t>(X.rows),
-                   static_cast<std::size_t>(model.n_components),
-                   out_scores);
     ctx.clear_error();
     return P4A_OK;
 }

@@ -1,7 +1,7 @@
 # Python binding
 
 The current package ships a ctypes-only wrapper that exposes ABI introspection and the
-context / config lifecycles. See [`bindings/python/README.md`](../../bindings/python/README.md) for installation and loader rules.
+context / config lifecycles. See `bindings/python/README.md` for installation and loader rules.
 
 ## Hello-version
 

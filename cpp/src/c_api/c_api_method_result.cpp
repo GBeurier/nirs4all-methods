@@ -1549,12 +1549,21 @@ P4A_API p4a_status_t p4a_pls_fit_simple(
                     static_cast<std::size_t>(q) * sizeof(double));
 
         if (predictions_out != nullptr) {
-            p4a_matrix_view_t pv{};
-            p4a_matrix_view_init_rowmajor(&pv, predictions_out, n, q,
-                                            P4A_DTYPE_F64);
-            const p4a_status_t pstatus =
-                ::pls4all::core::predict_into(ctx, *model, xv, pv);
-            (void)pstatus;
+            const auto rows = static_cast<std::size_t>(n);
+            const auto features = static_cast<std::size_t>(p);
+            const auto targets = static_cast<std::size_t>(q);
+            for (std::size_t i = 0; i < rows; ++i) {
+                const double* x_row = x + i * features;
+                double* pred_row = predictions_out + i * targets;
+                for (std::size_t target = 0; target < targets; ++target) {
+                    double acc = model->y_mean[target];
+                    for (std::size_t feature = 0; feature < features; ++feature) {
+                        acc += (x_row[feature] - model->x_mean[feature]) *
+                               model->coefficients[feature * targets + target];
+                    }
+                    pred_row[target] = acc;
+                }
+            }
         }
         return P4A_OK;
     } catch (const std::bad_alloc&) {

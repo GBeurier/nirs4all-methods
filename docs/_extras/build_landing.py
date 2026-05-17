@@ -1,7 +1,7 @@
 """Build the JSON payload that powers the interactive landing dashboard.
 
-Reads `benchmarks/cross_binding/results/niveau_*.csv` (every cell of the
-4 440-cell matrix), normalises rows to a dashboard-friendly shape and
+Reads the canonical `benchmarks/cross_binding/results/full_matrix.csv`,
+normalises rows to a dashboard-friendly shape and
 emits a compact JSON blob. The blob is injected into
 `docs/_templates/landing.html` at sphinx-build time via the
 `bench_data_json` html_context variable populated by `conf.py:setup()`.
@@ -26,6 +26,7 @@ from typing import Any
 # Same canonical orderings & display labels as render_docs.py — kept in
 # sync deliberately so dashboard column ids match the markdown tables.
 BACKEND_DISPLAY: dict[str, str] = {
+    "registry_pls4all": "pls4all.registry",
     "cpp":          "pls4all.cpp",     # gets a build suffix
     "python_tier1": "pls4all.python",
     "python_tier2": "pls4all.sklearn",
@@ -64,6 +65,7 @@ CPP_TIER_DESC = {
 
 BACKEND_LONG: dict[str, tuple[str, str, str]] = {
     "python_tier1": ("Python",        "pls4all raw",        "`pls4all._methods.<algo>_fit(ctx, cfg, X, y, …)` — direct FFI binding"),
+    "registry_pls4all": ("Python",    "pls4all canonical",  "`benchmarks.parity_timing.registry.MethodSpec.pls4all_fn` — canonical per-method entry point"),
     "python_tier2": ("Python",        "pls4all idiomatic",  "`pls4all.sklearn.<Class>` — sklearn-style BaseEstimator with `.fit()/.predict()`"),
     "sklearn":      ("Python",        "external",           "`sklearn.cross_decomposition.PLSRegression`, `sklearn.decomposition.PCA` + LinearRegression / Ridge / GaussianProcessRegressor (proxies)"),
     "ikpls":        ("Python",        "external",           "`ikpls.numpy_ikpls.PLS` — Improved Kernel PLS (plain PLS only)"),
@@ -80,6 +82,7 @@ BACKEND_LONG: dict[str, tuple[str, str, str]] = {
 # Column ordering — matches render_docs.py canonical order.
 CPP_BUILD_ORDER = ["dev-release", "blas-on", "omp-on", "blas-omp", "cuda-on"]
 BACKEND_ORDER = [
+    "registry_pls4all",
     "python_tier1", "python_tier2",
     "r_tier1", "r_tier2",
     "matlab_tier1", "matlab_tier2",
@@ -100,11 +103,62 @@ GROUP_LABELS = {
 
 BACKEND_GROUP = {
     "python_tier1": "python", "python_tier2": "python",
+    "registry_pls4all": "python",
     "r_tier1": "r", "r_tier2": "r",
     "matlab_tier1": "matlab", "matlab_tier2": "matlab",
     "sklearn": "ext-py", "ikpls": "ext-py",
     "r_pls": "ext-r", "r_ropls": "ext-r", "r_mixomics": "ext-r",
     "matlab_pls": "ext-ml",
+}
+
+# Algorithm taxonomy — used by the dashboard for the "group" filter and
+# the per-algo group label. Order in ALGO_GROUPS_ORDER drives display
+# order in the dropdown.
+ALGO_GROUPS_ORDER = [
+    "core", "ensemble", "sparse", "robust", "nonlinear",
+    "multi-block", "calibration-transfer", "classification",
+    "missing", "regularized", "other",
+]
+ALGO_GROUP_LABELS = {
+    "core":                 "Core PLS",
+    "ensemble":             "Ensemble",
+    "sparse":               "Sparse",
+    "robust":               "Robust / weighted",
+    "nonlinear":            "Nonlinear / local",
+    "multi-block":          "Multi-block / cross-modal",
+    "calibration-transfer": "Calibration transfer",
+    "classification":       "Classification & GLM",
+    "missing":              "Missing data",
+    "regularized":          "Regularized",
+    "other":                "Other",
+}
+ALGO_GROUP = {
+    "pls":                  "core",
+    "cppls":                "core",
+    "sparse_simpls":        "sparse",
+    "fused_sparse_pls":     "sparse",
+    "sparse_pls_da":        "sparse",
+    "group_sparse_pls":     "sparse",
+    "bagging_pls":          "ensemble",
+    "boosting_pls":         "ensemble",
+    "robust_pls":           "robust",
+    "weighted_pls":         "robust",
+    "kernel_pls":           "nonlinear",
+    "lw_pls":               "nonlinear",
+    "gpr_pls":              "nonlinear",
+    "continuum_regression": "nonlinear",
+    "o2pls":                "multi-block",
+    "mir_pls":              "multi-block",
+    "ds":                   "calibration-transfer",
+    "pds":                  "calibration-transfer",
+    "ecr":                  "calibration-transfer",
+    "pls_lda":              "classification",
+    "pls_logistic":         "classification",
+    "pls_qda":              "classification",
+    "pls_glm":              "classification",
+    "pls_cox":              "classification",
+    "missing_aware_nipals": "missing",
+    "ridge_pls":            "regularized",
 }
 
 
@@ -114,6 +168,8 @@ def column_id(backend: str, build: str) -> str:
     if backend == "cpp":
         suffix = CPP_BUILD_SUFFIX.get(build, build)
         return f"pls4all.cpp.{suffix}"
+    if backend.startswith("ref_"):
+        return "ref." + backend[len("ref_"):]
     return BACKEND_DISPLAY.get(backend, backend)
 
 
@@ -199,14 +255,14 @@ def host_info() -> dict:
 
 
 def build_payload(results_dir: Path) -> dict:
-    """Read every niveau_*.csv, build the dashboard payload."""
+    """Read canonical cross-binding CSVs and build the dashboard payload."""
     rows_in: list[dict] = []
-    csv_paths = sorted(results_dir.glob("niveau_*.csv"))
+    full_matrix = results_dir / "full_matrix.csv"
+    csv_paths = [full_matrix] if full_matrix.exists() else []
     for p in csv_paths:
         rows_in.extend(csv.DictReader(p.open()))
 
-    # Dedupe: same (algo, backend, build, n, p, threads) — keep last seen
-    # (csvs are processed in name-sorted order; later files win on dupes).
+    # Dedupe: same (algo, backend, build, n, p, threads) — keep last seen.
     seen: dict[tuple, dict] = {}
     for r in rows_in:
         if not r.get("algorithm"):
@@ -252,6 +308,39 @@ def build_payload(results_dir: Path) -> dict:
                 "what": what,
                 "build": "",
             })
+    # Registry-declared external reference libraries. Infer the language
+    # from the slug prefix (`ref.python_*`, `ref.r_*`, `ref.matlab_*`,
+    # `ref.julia_*`, …) so the language band groups them correctly.
+    REF_LANG_PREFIX = {
+        "python":  ("Python",        "ext-py"),
+        "r":       ("R",             "ext-r"),
+        "matlab":  ("MATLAB/Octave", "ext-ml"),
+        "octave":  ("MATLAB/Octave", "ext-ml"),
+        "julia":   ("Julia",         "ext-jl"),
+        "rust":    ("Rust",          "ext-rs"),
+        "go":      ("Go",            "ext-go"),
+        "js":      ("JavaScript",    "ext-js"),
+        "java":    ("Java",          "ext-java"),
+        "cpp":     ("C++",           "ext-cpp"),
+    }
+    def _ref_lang(cid: str) -> tuple[str, str]:
+        rest = cid[len("ref."):]
+        for prefix, (lang, group) in REF_LANG_PREFIX.items():
+            if rest.startswith(prefix + "_") or rest == prefix:
+                return lang, group
+        return "external", "ext-py"
+
+    for cid in sorted(c for c in present if c.startswith("ref.")):
+        lang, group = _ref_lang(cid)
+        columns.append({
+            "id": cid,
+            "label": cid,
+            "group": group,
+            "tier": "registry reference",
+            "lang": lang,
+            "what": f"Registry-declared external reference library ({lang}).",
+            "build": "",
+        })
 
     # Build rows: one per (algo, n, p, threads). Cells keyed by column id.
     # We always emit a row for every (algo, size, threads) triple that
@@ -327,6 +416,25 @@ def build_payload(results_dir: Path) -> dict:
         "thread-sweep":{"label": "Thread sweep",  "cols": thread_sweep},
     }
 
+    # Algo → group mapping (only for algos actually present in the data).
+    present_algos = sorted({r["algo"] for r in rows_out})
+    algo_to_group = {a: ALGO_GROUP.get(a, "other") for a in present_algos}
+    # Groups actually present, in canonical order.
+    present_group_keys = [g for g in ALGO_GROUPS_ORDER
+                            if any(algo_to_group[a] == g for a in present_algos)]
+    algo_groups = [
+        {"key": g, "label": ALGO_GROUP_LABELS[g],
+         "algos": [a for a in present_algos if algo_to_group[a] == g]}
+        for g in present_group_keys
+    ]
+    # Languages actually present in the columns.
+    present_langs = []
+    seen_lang = set()
+    for c in columns:
+        if c.get("lang") and c["lang"] not in seen_lang:
+            seen_lang.add(c["lang"])
+            present_langs.append(c["lang"])
+
     payload = {
         "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "host":         host_info(),
@@ -334,9 +442,13 @@ def build_payload(results_dir: Path) -> dict:
         "presets":      presets,
         "rows":         rows_out,
         "versions":     versions,
+        "algo_to_group":algo_to_group,
+        "algo_groups":  algo_groups,
+        "languages":    present_langs,
         "stats": {
-            "algos":    len({r["algo"] for r in rows_out}),
+            "algos":    len(present_algos),
             "backends": len(columns),
+            "groups":   len(algo_groups),
             "sizes":    len({(r["n"], r["p"]) for r in rows_out}),
             "threads":  sorted({r["threads"] for r in rows_out}),
             "rows":     len(rows_out),
@@ -358,7 +470,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--results",
                      default="benchmarks/cross_binding/results",
-                     help="directory containing niveau_*.csv")
+                     help="directory containing full_matrix.csv")
     ap.add_argument("--out",
                      default="docs/_static/bench-data.json",
                      help="output path for the JSON payload")

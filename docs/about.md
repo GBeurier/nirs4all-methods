@@ -2,7 +2,7 @@
 
 A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
 
-→ **<a href="./">Interactive cross-binding benchmark dashboard</a>** — landing page · 26 algos × 17 backends × 4 400+ cells, filterable / sortable / column-toggleable.
+→ **<a href="./">Interactive cross-binding benchmark dashboard</a>** — landing page generated from the canonical benchmark registry, filterable / sortable / column-toggleable.
 
 ## Latest highlights (May 2026)
 
@@ -13,11 +13,9 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
 - **MATLAB / Octave binding COMPLETE** — single dispatcher MEX exposes
   the same surface ; 18 idiomatic `classdef` tier-2 wrappers + unified
   `pls4all.fit(algo, X, y, …)` factory.
-- **Cross-binding benchmark** — 4 440 cells (26 algos × 13 backends ×
-  11 sizes × 3 thread counts) comparing pls4all to sklearn / pls /
-  ropls / mixOmics / ikpls / plsregress. **1 926 cells PARITY ✓**
-  (≤ 1e-6 vs the `cpp` reference). At small data pls4all leads the
-  externals **1.5–8×** ; at large BLAS-bound sizes everyone converges.
+- **Cross-binding benchmark** — generated from the canonical
+  `benchmarks.parity_timing.registry` method catalog, with registry-driven
+  external reference columns in addition to the language bindings.
   → [`benchmarks/cross_binding.md`](benchmarks/cross_binding.md) ·
   [`methodology`](benchmarks/methodology.md)
 
@@ -26,11 +24,41 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
 - **Architecture** — [overview](architecture/overview.md) · [memory model](architecture/memory_model.md) · [error model](architecture/error_model.md) · [threading](architecture/threading.md) · [serialization](architecture/serialization.md)
 - **ABI** — [reference](abi/reference.md) · [stability policy](abi/stability_policy.md) · [changes log](abi/changes_log.md)
 - **Bindings** — [Python](bindings/python.md) · [R](bindings/r.md) · [MATLAB](bindings/matlab.md) · [JavaScript / WebAssembly](bindings/js.md) · [Android](bindings/android.md)
-- **Parity** — [methodology](parity/methodology.md) · [tolerances](parity/tolerances.md)
+- **Parity** — [methodology](parity/methodology.md) · {doc}`tolerances <parity/tolerances>`
 - **Benchmarks** — [index](benchmarks/index.md) · [cross-binding parity + timing](benchmarks/cross_binding.md) · [methodology](benchmarks/methodology.md)
 - **Development** — [workflow](dev/workflow.md) · [build](dev/build.md) · [testing](dev/testing.md) · [style](dev/style.md) · [release process](dev/release_process.md)
-- **Reviews** — Codex transcripts under [`reviews/`](reviews/)
-- **Roadmap** — [`ROADMAP.md`](../ROADMAP.md), per-phase plans under [`roadmap/`](../roadmap/)
+- **Reviews** — Codex transcripts under `docs/reviews/`
+- **Roadmap** — `ROADMAP.md`, per-phase plans under `roadmap/`
+
+```{toctree}
+:hidden:
+:maxdepth: 2
+
+abi/reference
+abi/stability_policy
+abi/changes_log
+architecture/overview
+architecture/memory_model
+architecture/error_model
+architecture/threading
+architecture/serialization
+benchmarks/index
+benchmarks/cross_binding
+benchmarks/cross_binding_threads
+benchmarks/methodology
+bindings/python
+bindings/r
+bindings/matlab
+bindings/js
+bindings/android
+parity/methodology
+parity/tolerances
+dev/workflow
+dev/build
+dev/testing
+dev/style
+dev/release_process
+```
 
 ## Current Status
 

@@ -25,15 +25,16 @@ pls4all is benchmarked across three axes:
 ## Reproducing the benchmarks
 
 ```bash
-# Niveau A — PLS SIMPLS, headline matrix (11 sizes × 3 threads)
+# Canonical method/reference matrix.
 python benchmarks/cross_binding/orchestrator.py \
-  --algorithms pls --threads 1 3 10 --n-runs 5 \
-  --libp4a-build blas-omp \
-  --out-csv benchmarks/cross_binding/results/niveau_A_pls.csv
+  --algorithms all --registry-cells --threads 1 --n-runs 3 \
+  --libp4a-build blas-omp --canonical-pls4all-only \
+  --reference-backends all \
+  --out-csv benchmarks/cross_binding/results/full_matrix.csv
 
 # Render to markdown
-python benchmarks/cross_binding/render_docs.py \
-  --csv benchmarks/cross_binding/results/niveau_A_pls.csv \
+python benchmarks/cross_binding/combine_and_render.py \
+  --csvs benchmarks/cross_binding/results/full_matrix.csv \
   --out docs/benchmarks/cross_binding.md
 ```
 

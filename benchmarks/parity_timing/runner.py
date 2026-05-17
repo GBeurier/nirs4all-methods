@@ -34,7 +34,7 @@ sys.path.insert(0, str(BINDING_SRC))
 
 import pls4all  # noqa: E402
 
-from .registry import METHODS, MethodSpec  # noqa: E402
+from .registry import METHODS, MethodSpec, iter_reference_factories  # noqa: E402
 
 
 @dataclass
@@ -116,6 +116,19 @@ def _run_one_reference(method: MethodSpec, factory, X, Y, X_target,
     n_features = method.cell_params["n_features"]
     try:
         reference = factory(**method.cell_params)
+        if reference is None:
+            return ParityRow(
+                method=method.name, description=method.description,
+                reference_lang="?", reference_lib="(unavailable)",
+                reference_version="-",
+                reference_notes=method.notes,
+                n_samples=n_samples, n_features=n_features,
+                params=method.cell_params,
+                parity_pass=False,
+                rmse_abs=float("nan"), rmse_rel=float("nan"),
+                tolerance=method.rmse_rel_tol,
+                status="reference_unavailable",
+            )
         reference.fit(X, Y, **extras)
         ref_pred = reference.predict(X)
     except Exception as exc:
@@ -237,7 +250,11 @@ def _run_method(method: MethodSpec) -> list[ParityRow]:
         print(f"  [{method.name}] pls4all_error: {exc}", file=sys.stderr)
 
     rows: list[ParityRow] = []
-    if method.python_reference is None:
+    factories = list(iter_reference_factories(method))
+    has_python = method.python_reference is not None
+    has_r = method.r_reference is not None
+
+    if not has_python:
         rows.append(ParityRow(
             method=method.name, description=method.description,
             reference_lang="python", reference_lib="(none)",
@@ -248,12 +265,12 @@ def _run_method(method: MethodSpec) -> list[ParityRow]:
             tolerance=method.rmse_rel_tol,
             status="no_python_reference",
         ))
-    else:
+    elif method.python_reference is not None:
         rows.append(_run_one_reference(method, method.python_reference,
                                         X, Y, X_target, sample_weights,
                                         labels, groups, pls4all_pred))
 
-    if method.r_reference is None:
+    if not has_r:
         rows.append(ParityRow(
             method=method.name, description=method.description,
             reference_lang="R", reference_lib="(none)",
@@ -265,8 +282,16 @@ def _run_method(method: MethodSpec) -> list[ParityRow]:
             tolerance=method.rmse_rel_tol,
             status="no_r_reference",
         ))
-    else:
+    elif method.r_reference is not None:
         rows.append(_run_one_reference(method, method.r_reference,
+                                        X, Y, X_target, sample_weights,
+                                        labels, groups, pls4all_pred))
+
+    for role, factory in factories:
+        if ((role == "python" and factory is method.python_reference) or
+                (role == "r" and factory is method.r_reference)):
+            continue
+        rows.append(_run_one_reference(method, factory,
                                         X, Y, X_target, sample_weights,
                                         labels, groups, pls4all_pred))
 
@@ -559,6 +584,9 @@ def time_methods(methods: list[str] | None = None,
                 r_ms = float("nan")
                 r_lib = "(error)"
 
+        # Extra references are reported through the parity CSV. The timing
+        # CSV intentionally preserves the legacy one-Python/one-R schema.
+
         row = TimingRow(
             method=method.name, n_samples=n, n_features=p,
             pls4all_ms=p4a_median, pls4all_min_ms=p4a_min,
@@ -651,7 +679,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Wrote {args.output_dir / 'summary.md'}")
     failures = [r for r in rows if not r.parity_pass and
                 r.status not in {"no_r_reference", "no_python_reference",
-                                  "paper_only"}]
+                                  "paper_only", "reference_unavailable"}]
     if failures:
         print(f"\n{len(failures)} parity failure(s):", file=sys.stderr)
         for f in failures:

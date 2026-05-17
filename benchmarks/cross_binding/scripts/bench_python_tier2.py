@@ -41,7 +41,8 @@ def main():
         if algo == "missing_aware_nipals":
             return MissingAwareNipalsRegression(nc)
         if algo == "pcr":
-            return PCR(nc)
+            return PCR(nc, center_x=True, scale_x=False,
+                       center_y=True, scale_y=False)
         if algo == "pls_canonical":
             return PLSCanonical(nc, center_x=True, scale_x=False,
                                  center_y=True, scale_y=False)

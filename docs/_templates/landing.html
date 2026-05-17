@@ -356,25 +356,18 @@
     table.bench tr.lang-band th.lang-r   { color: var(--lang-r);   border-bottom-color: var(--lang-r);   background: linear-gradient(180deg, var(--lang-r-soft)   0%, var(--ink-2) 100%); }
     table.bench tr.lang-band th.lang-m   { color: var(--lang-m);   border-bottom-color: var(--lang-m);   background: linear-gradient(180deg, var(--lang-m-soft)   0%, var(--ink-2) 100%); }
 
-    /* per-language best-cell marker */
-    .cell-lang-best {
-      position: relative;
-    }
-    .cell-lang-best::after {
-      content: ''; position: absolute; left: 4px; right: 4px; bottom: 2px;
-      height: 2px; border-radius: 1px;
-    }
-    .cell-lang-best.lang-cpp::after { background: var(--lang-cpp); box-shadow: 0 0 4px var(--lang-cpp); }
-    .cell-lang-best.lang-py::after  { background: var(--lang-py);  box-shadow: 0 0 4px var(--lang-py);  }
-    .cell-lang-best.lang-r::after   { background: var(--lang-r);   box-shadow: 0 0 4px var(--lang-r);   }
-    .cell-lang-best.lang-m::after   { background: var(--lang-m);   box-shadow: 0 0 4px var(--lang-m);   }
+    /* per-language best-cell marker — subtle text-tint only, no glow */
+    .cell-lang-best .cell-value { font-weight: 600; }
+    .cell-lang-best.lang-cpp .cell-value { color: var(--lang-cpp); }
+    .cell-lang-best.lang-py  .cell-value { color: var(--lang-py);  }
+    .cell-lang-best.lang-r   .cell-value { color: var(--lang-r);   }
+    .cell-lang-best.lang-m   .cell-value { color: var(--lang-m);   }
 
-    /* per-cell language-tinted left border (subtle column grouping) */
-    table.bench td.col-cpp, table.bench th.col-cpp { border-left: 1px solid rgba(109, 211, 214, 0.20); }
-    table.bench td.col-py,  table.bench th.col-py  { border-left: 1px solid rgba(242, 196, 107, 0.20); }
-    table.bench td.col-r,   table.bench th.col-r   { border-left: 1px solid rgba(156, 168, 250, 0.20); }
-    table.bench td.col-m,   table.bench th.col-m   { border-left: 1px solid rgba(224, 143, 207, 0.20); }
-    table.bench td.col-lang-first, table.bench th.col-lang-first { border-left-width: 2px; }
+    /* Language partitions: only show a thicker separator on the FIRST
+       column of each language group. No per-cell tinted borders. */
+    table.bench td.col-lang-first, table.bench th.col-lang-first {
+      border-left: 2px solid var(--line-2);
+    }
 
     table.bench th {
       background: var(--ink-2);
@@ -670,6 +663,10 @@
   </div>
   <div class="controls-row">
     <div class="control">
+      <span class="control-label">family</span>
+      <select id="filter-group"><option value="">all</option></select>
+    </div>
+    <div class="control">
       <span class="control-label">algo</span>
       <select id="filter-algo"><option value="">all</option></select>
     </div>
@@ -685,6 +682,10 @@
         <option value="3">3 t</option>
         <option value="10">10 t</option>
       </select>
+    </div>
+    <div class="control">
+      <span class="control-label">lang</span>
+      <select id="filter-lang"><option value="">all</option></select>
     </div>
     <div class="filter-chips" id="parity-chips" title="filter cells by parity verdict">
       <span class="chip active" data-parity="ok"><span class="ico p-ok">✓</span>ok</span>
@@ -814,7 +815,7 @@
 const DATA = JSON.parse(document.getElementById('bench-data').textContent);
 
 // ---------- state + url persistence ----------
-const URL_KEYS = ['algo','size','threads','parity','search','cols','sort','density','speedup','base'];
+const URL_KEYS = ['algo','group','lang','size','threads','parity','search','cols','sort','density','speedup','base'];
 const DENSITY_VALUES = ['comfortable', 'compact', 'ultra'];
 
 function loadState() {
@@ -822,6 +823,8 @@ function loadState() {
   const density = p.get('density') || '';
   return {
     algo:    p.get('algo')    || '',
+    group:   p.get('group')   || '',
+    lang:    p.get('lang')    || '',
     size:    p.get('size')    || '',
     threads: p.get('threads') || '',
     parity:  new Set((p.get('parity') || 'ok,warn,fail,timeout').split(',').filter(Boolean)),
@@ -841,6 +844,8 @@ function parseSort(s) {
 function saveState() {
   const p = new URLSearchParams();
   if (state.algo) p.set('algo', state.algo);
+  if (state.group) p.set('group', state.group);
+  if (state.lang) p.set('lang', state.lang);
   if (state.size) p.set('size', state.size);
   if (state.threads) p.set('threads', state.threads);
   const defaultParity = new Set(['ok','warn','fail','timeout']);
@@ -865,9 +870,16 @@ const state = loadState();
 if (state.cols.size === 0) {
   for (const c of DATA.columns) state.cols.add(c.id);
 }
-// fallback baseline = first cpp.blas+omp column if available
+// Default speedup baseline: pls4all.cpp.ref (the canonical parity
+// reference per the methodology) → fall back to .blas+omp → any cpp tier
+// → first available column.
 if (!state.base) {
-  const def = DATA.columns.find(c => c.id === 'pls4all.cpp.blas+omp') || DATA.columns[0];
+  const find = id => DATA.columns.find(c => c.id === id);
+  const def =
+    find('pls4all.cpp.ref') ||
+    find('pls4all.cpp.blas+omp') ||
+    DATA.columns.find(c => c.id.startsWith('pls4all.cpp.')) ||
+    DATA.columns[0];
   if (def) state.base = def.id;
 }
 
@@ -888,8 +900,10 @@ function fmtSpeedup(ratio) {
 
 function applyRowFilters() {
   const q = state.search.trim().toLowerCase();
+  const groupMap = DATA.algo_to_group || {};
   return DATA.rows.filter(row => {
     if (state.algo    && row.algo !== state.algo) return false;
+    if (state.group   && groupMap[row.algo] !== state.group) return false;
     if (state.size    && sizeKey(row.n, row.p) !== state.size) return false;
     if (state.threads && String(row.threads) !== state.threads) return false;
     if (q && !row.algo.toLowerCase().includes(q)) return false;
@@ -903,8 +917,12 @@ function cellPasses(cell) {
 }
 
 function visibleColIds() {
-  // honour DATA.columns order
-  return DATA.columns.map(c => c.id).filter(id => state.cols.has(id));
+  // honour DATA.columns order + language filter (when set, only show
+  // columns of the chosen language family)
+  return DATA.columns
+    .filter(c => !state.lang || c.lang === state.lang)
+    .map(c => c.id)
+    .filter(id => state.cols.has(id));
 }
 
 // Map raw `lang` strings to compact slug used for CSS classes.
@@ -1046,10 +1064,23 @@ function renderPresetRail() {
 
 function renderControls() {
   renderPresetRail();
-  // algo
-  const algos = [...new Set(DATA.rows.map(r => r.algo))].sort();
+  // group (family of algorithms)
+  const groups = DATA.algo_groups || [];
+  $('filter-group').innerHTML = '<option value="">all</option>' +
+    groups.map(g => `<option value="${g.key}"${state.group===g.key?' selected':''}>${g.label}</option>`).join('');
+
+  // algo (filtered by current group if set)
+  const groupMap = DATA.algo_to_group || {};
+  const algos = [...new Set(DATA.rows.map(r => r.algo))]
+    .filter(a => !state.group || groupMap[a] === state.group)
+    .sort();
   $('filter-algo').innerHTML = '<option value="">all</option>' +
     algos.map(a => `<option value="${a}"${state.algo===a?' selected':''}>${a}</option>`).join('');
+
+  // language (narrows the visible columns)
+  const langs = DATA.languages || [];
+  $('filter-lang').innerHTML = '<option value="">all</option>' +
+    langs.map(l => `<option value="${l}"${state.lang===l?' selected':''}>${l}</option>`).join('');
 
   // sizes
   const sizes = [...new Set(DATA.rows.map(r => sizeKey(r.n, r.p)))]
@@ -1142,7 +1173,10 @@ function densifyFmt(fmt) {
 
 function renderTable() {
   const cols = visibleColIds();
-  const colMetas = DATA.columns.filter(c => state.cols.has(c.id));
+  // colMetas must respect BOTH the col-picker selection AND the language
+  // filter so the band header and the body iterate the same set.
+  const colMetas = DATA.columns.filter(c =>
+    state.cols.has(c.id) && (!state.lang || c.lang === state.lang));
   const colsById = Object.fromEntries(colMetas.map(c => [c.id, c]));
 
   const rowsFiltered = applyRowFilters().filter(r => rowHasVisibleCell(r, cols));
@@ -1213,25 +1247,29 @@ function renderTable() {
           tr += `<td class="${lcls}"><span class="p-${c.parity}">${PARITY_ICON[c.parity] || '—'}</span></td>`;
           continue;
         }
-        // build value
+        // build value (wrapped in .cell-value so per-language tint can target text only)
         let display;
         if (baselineId && id !== baselineId && baseMs !== null) {
           const r = c.ms / baseMs;
           const cls = r < 0.97 ? 'speed-faster' : r > 1.03 ? 'speed-slower' : 'speed-equal';
-          display = `<span class="${cls}">${fmtSpeedup(r)}</span>`;
+          display = `<span class="cell-value ${cls}">${fmtSpeedup(r)}</span>`;
         } else if (baselineId && id === baselineId) {
-          display = `<span class="speed-equal">${densifyFmt(c.fmt)}</span>`;
+          display = `<span class="cell-value speed-equal">${densifyFmt(c.fmt)}</span>`;
         } else {
           const fastCls = (id === fastestId) ? 'cell-fastest' : '';
-          display = `<span class="${fastCls}">${densifyFmt(c.fmt)}</span>`;
+          display = `<span class="cell-value ${fastCls}">${densifyFmt(c.fmt)}</span>`;
         }
         const parityHtml = `<span class="parity p-${c.parity}">${PARITY_ICON[c.parity]}</span>`;
-        // assemble cell classes
+        // Assemble cell classes.
+        // - Row-overall fastest gets the phosphor glow background.
+        // - Per-language fastest gets a subtle text-color tint via
+        //   .cell-value styling. The two indicators stack cleanly: if a
+        //   cell wins its row AND its language, it shows the phosphor
+        //   glow (overall) AND its text leans toward the language hue.
         const tdCls = [lcls];
         if (id === fastestId && !baselineId) tdCls.push('cell-fastest-bg');
-        // per-language best (skip if it IS the row-fastest — no double mark)
         const langSlug = meta ? colLangSlug(meta) : '';
-        if (langSlug && langWinners[langSlug] === id && id !== fastestId && !baselineId) {
+        if (langSlug && langWinners[langSlug] === id && !baselineId) {
           tdCls.push('cell-lang-best', `lang-${langSlug}`);
         }
         tr += `<td class="${tdCls.join(' ')}">${display}${parityHtml}</td>`;
@@ -1289,6 +1327,15 @@ function render() {
 // ---------- events ----------
 function wire() {
   $('filter-algo').addEventListener('change', e => { state.algo = e.target.value; rerender(); });
+  $('filter-group').addEventListener('change', e => {
+    state.group = e.target.value;
+    // if current algo is outside the new group, clear it
+    if (state.algo && (DATA.algo_to_group || {})[state.algo] !== state.group && state.group) {
+      state.algo = '';
+    }
+    rerender();
+  });
+  $('filter-lang').addEventListener('change', e => { state.lang = e.target.value; rerender(); });
   $('filter-size').addEventListener('change', e => { state.size = e.target.value; rerender(); });
   $('filter-threads').addEventListener('change', e => { state.threads = e.target.value; rerender(); });
   $('filter-search').addEventListener('input', e => { state.search = e.target.value; rerender(); });
@@ -1306,7 +1353,8 @@ function wire() {
   $('speedup-toggle').addEventListener('change', e => { state.speedup = e.target.checked; rerender(); });
   $('speedup-baseline').addEventListener('change', e => { state.base = e.target.value; if (state.speedup) rerender(); else saveState(); });
   $('reset-btn').addEventListener('click', () => {
-    state.algo = ''; state.size = ''; state.threads = ''; state.search = '';
+    state.algo = ''; state.group = ''; state.lang = '';
+    state.size = ''; state.threads = ''; state.search = '';
     state.parity = new Set(['ok','warn','fail','timeout']);
     state.sort = null; state.speedup = false; state.density = 'comfortable';
     state.cols = new Set(DATA.columns.map(c => c.id));

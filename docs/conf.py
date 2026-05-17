@@ -125,7 +125,7 @@ def setup(app):
     """Inject the benchmark JSON payload into html_context.
 
     Strategy:
-      1. If `benchmarks/cross_binding/results/niveau_*.csv` are present
+      1. If `benchmarks/cross_binding/results/full_matrix.csv` is present
          (local dev environment after a benchmark run), regenerate the
          payload fresh and also write it to `docs/_static/bench-data.json`
          for downstream consumers.
@@ -142,7 +142,7 @@ def setup(app):
     results_dir = here.parent / "benchmarks" / "cross_binding" / "results"
     static_json = here / "_static" / "bench-data.json"
 
-    csvs_present = results_dir.exists() and any(results_dir.glob("niveau_*.csv"))
+    csvs_present = results_dir.exists() and (results_dir / "full_matrix.csv").exists()
 
     if csvs_present:
         payload = build_payload(results_dir)

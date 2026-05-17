@@ -23,6 +23,8 @@ fit_predict <- function(seed) {
         "ridge_pls"            = ridge_pls(y ~ ., df, a$nc, 1.0),
         "robust_pls"           = robust_pls(y ~ ., df, a$nc, 1.345, 20L),
         "missing_aware_nipals" = missing_aware_nipals(y ~ ., df, a$nc),
+        "pcr"                  = pls(y ~ ., df, ncomp = a$nc,
+                                      algo = "pcr_svd"),
         "continuum_regression" = continuum_regression(y ~ ., df, a$nc, 0.5),
         "bagging_pls"          = bagging_pls(y ~ ., df, a$nc, 50L, 0L),
         "boosting_pls"         = boosting_pls(y ~ ., df, a$nc, 50L, 0.1),

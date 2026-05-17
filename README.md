@@ -15,8 +15,9 @@ Android. Cross-checked against scikit-learn, R `pls`, `ropls`,
 
 Pulled from the
 [**cross-binding benchmark matrix**](docs/benchmarks/cross_binding.md)
-(4 440 cells · 26 algorithms · 13 backends · 11 sizes · 3 thread
-counts · 1 926 cells PARITY ✓).
+(generated from the canonical `benchmarks.parity_timing.registry`
+method catalog; committed timing snapshots are regenerated, not hand
+maintained).
 
 | n × p | pls4all C++ | pls4all Python | sklearn | pls4all R | R `pls` | pls4all MATLAB | Octave `plsregress` |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -111,7 +112,7 @@ shared fixture within `rmse_rel < 1e-12` (bit-exact for several). See
 
 - 🌐 **Sphinx site** : (configurer GitHub Pages — voir
   [`.github/workflows/docs.yml`](.github/workflows/docs.yml))
-- 📊 **[Cross-binding benchmarks](docs/benchmarks/cross_binding.md)** — full 4 440-cell parity + timing matrix
+- 📊 **[Cross-binding benchmarks](docs/benchmarks/cross_binding.md)** — parity + timing matrix generated from the canonical method registry
 - 🔬 **[Methodology](docs/benchmarks/methodology.md)** — reference policy, tolerances, threading, hardware
 - 🏗️ **[Architecture](docs/architecture/overview.md)** — memory model · error model · threading · serialization
 - 📜 **[ABI reference](docs/abi/reference.md)** — 96 `p4a_*` symbols, stability policy, changes log
@@ -162,9 +163,11 @@ CUDA) plug in via CMake presets without changing the ABI.
 ## Run the cross-binding benchmark
 
 ```bash
-# Niveau A — PLS SIMPLS headline matrix (~30 min)
+# Complete canonical method/reference smoke matrix
 python benchmarks/cross_binding/orchestrator.py \
-  --algorithms pls --threads 1 3 10 --n-runs 5
+  --algorithms all --registry-cells --threads 1 --n-runs 3 \
+  --canonical-pls4all-only --reference-backends all \
+  --out-csv benchmarks/cross_binding/results/full_matrix.csv
 
 # Render to docs/benchmarks/cross_binding.md
 python benchmarks/cross_binding/combine_and_render.py \
@@ -172,7 +175,7 @@ python benchmarks/cross_binding/combine_and_render.py \
   --out docs/benchmarks/cross_binding.md
 ```
 
-Full re-run commands (niveau A / B / C) in
+Full re-run commands in
 [`docs/benchmarks/methodology.md`](docs/benchmarks/methodology.md).
 
 ---

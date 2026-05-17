@@ -198,6 +198,33 @@ def dispatch_pls4all_fit(algo: str, ctx, cfg, X, y2d, n: int, p: int,
 
     if algo == "pls":
         return _methods.sparse_simpls_fit(ctx, cfg, X, y2d, sparsity_lambda=0.0)
+    if algo in ("pcr", "opls"):
+        import pls4all
+        from pls4all._model import Model
+
+        if algo == "pcr":
+            cfg.algorithm = pls4all.Algorithm.PCR
+            cfg.solver = pls4all.Solver.SVD
+            cfg.deflation = pls4all.Deflation.REGRESSION
+        else:
+            cfg.algorithm = pls4all.Algorithm.OPLS
+            cfg.solver = pls4all.Solver.NIPALS
+            cfg.deflation = pls4all.Deflation.ORTHOGONAL
+        model = Model.fit(ctx, cfg, X, y2d)
+
+        class _PredictionsOnly:
+            def __init__(self, predictions):
+                self._predictions = predictions
+
+            def matrix(self, key):
+                if key != "predictions":
+                    raise KeyError(key)
+                return self._predictions
+
+        try:
+            return _PredictionsOnly(model.predict(ctx, X))
+        finally:
+            model.close()
     if algo == "sparse_simpls":
         return _methods.sparse_simpls_fit(ctx, cfg, X, y2d, sparsity_lambda=0.05)
     if algo == "cppls":

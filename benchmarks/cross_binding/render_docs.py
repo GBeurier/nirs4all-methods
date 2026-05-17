@@ -37,6 +37,7 @@ ICON_NA = "—"
 # the column header reads like the real import path you'd type.
 BACKEND_DISPLAY: dict[str, str] = {
     # pls4all (us)
+    "registry_pls4all": "pls4all.registry",
     "cpp":          "pls4all.cpp",
     "python_tier1": "pls4all.python",
     "python_tier2": "pls4all.sklearn",
@@ -56,6 +57,7 @@ BACKEND_DISPLAY: dict[str, str] = {
 # Per-backend long description for the "Backend definitions" section.
 BACKEND_LONG: dict[str, tuple[str, str, str]] = {
     # name → (Language, Tier, What it runs)
+    "registry_pls4all": ("Python",       "pls4all canonical", "`benchmarks.parity_timing.registry.MethodSpec.pls4all_fn` — the canonical per-method pls4all entry point"),
     "cpp":          ("C++",          "pls4all reference", "libp4a called via ctypes — same C kernel as every pls4all binding, no high-level wrapper"),
     "python_tier1": ("Python",       "pls4all raw",       "`pls4all._methods.<algo>_fit(ctx, cfg, X, y, …)` — direct FFI binding"),
     "python_tier2": ("Python",       "pls4all idiomatic", "`pls4all.sklearn.<Class>` — sklearn-style BaseEstimator with `.fit() / .predict()`"),
@@ -86,6 +88,8 @@ def disp(b: str, build: str = "blas-omp") -> str:
             "cuda-on":     "cuda",
         }.get(build, build)
         return f"pls4all.cpp.{suffix}"
+    if b.startswith("ref_"):
+        return "ref." + b[len("ref_"):]
     return BACKEND_DISPLAY.get(b, b)
 
 
@@ -218,6 +222,10 @@ def render(csv_path: Path, out_path: Path,
     if only_threads is not None:
         keep = set(only_threads)
         rows = [r for r in rows if int(r.get("threads", "0")) in keep]
+    run_counts = sorted({int(float(r.get("n_runs", "0") or 0))
+                         for r in rows if r.get("n_runs")})
+    run_text = (", ".join(str(x) for x in run_counts)
+                if run_counts else "the recorded number of")
 
     # Header info.
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -233,7 +241,7 @@ def render(csv_path: Path, out_path: Path,
         )
     out.append(page_intro + "\n")
     info = host_cpu_info()
-    out.append(f"_Generated: {dt.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC_  ")
+    out.append(f"_Generated: {dt.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC_")
     out.append(f"_CSV: `{csv_path.name}` ({len(rows)} cells)_\n")
     out.append("\n## Host\n")
     out.append("| | |")
@@ -269,8 +277,9 @@ def render(csv_path: Path, out_path: Path,
                 "(comparing a non-bit-exact result against bit-exact ones "
                 "would be misleading).\n")
 
-    out.append("Timing is the **median of 5 runs**; the first run is "
-                "discarded as warmup. All backends in a single cell read "
+    out.append(f"Timing is the **median of {run_text} run(s)**; the first "
+                "run is discarded as warmup when `n_runs >= 3`. All "
+                "backends in a single cell read "
                 "the SAME orchestrator-generated CSV so cross-language "
                 "input bytes are bit-identical. See "
                 "[methodology.md](methodology.md) for the full details.\n")
@@ -295,10 +304,9 @@ def render(csv_path: Path, out_path: Path,
                 "every algorithm yet. This is the *chemin à parcourir* "
                 "on our side — visible TODO.")
     out.append("3. **Bench script missing the dispatch case.** "
-                "A handful of niveau C cells failed because the bench "
-                "script (e.g. `bench_matlab_tier1.m`) doesn't yet route "
-                "a specific algorithm to its underlying call. Pure "
-                "tooling gap, no library impact.")
+                "A few cells can fail because a binding bench script "
+                "doesn't yet route a specific algorithm to its underlying "
+                "call. Pure tooling gap, no library impact.")
     out.append("4. **Run too slow / OOM / crashed.** The cell timed "
                 "out (`⏳`) or hit a runtime error. Rare in this "
                 "matrix (300 s timeout is generous for the included "
@@ -339,6 +347,7 @@ def render(csv_path: Path, out_path: Path,
     CANONICAL_BUILD_ORDER = ["dev-release", "blas-on", "omp-on",
                               "blas-omp", "cuda-on"]
     CANONICAL_BACKEND_ORDER = [
+        "registry_pls4all",
         "python_tier1", "python_tier2",
         "r_tier1", "r_tier2",
         "matlab_tier1", "matlab_tier2",
@@ -451,6 +460,8 @@ def render(csv_path: Path, out_path: Path,
         elif key in BACKEND_LONG:
             lang, tier, what = BACKEND_LONG[key]
             out.append(f"| `{column_disp(key)}` | {lang} | {tier} | {what} |")
+        elif key.startswith("ref_"):
+            out.append(f"| `{column_disp(key)}` | external | reference | registry-declared external reference library |")
     out.append("")
 
     # Versions: collect by (backend, libp4a_build) so we can show the
@@ -484,7 +495,8 @@ def render(csv_path: Path, out_path: Path,
     out.append("- All backends read the **same** orchestrator-generated CSV "
                 "(`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`) "
                 "so input data is bit-identical across languages")
-    out.append("- 5 runs per cell, first discarded as warmup, median reported")
+    out.append(f"- {run_text} run(s) per cell, first discarded as warmup "
+                "when `n_runs >= 3`, median reported")
     out.append("- Per-cell timeout: 300 s")
     out.append("- Thread control via `OMP_NUM_THREADS = OPENBLAS_NUM_THREADS = "
                 "MKL_NUM_THREADS = BLIS_NUM_THREADS` set in the subprocess env, "

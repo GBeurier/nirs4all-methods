@@ -86,6 +86,38 @@ inline void gemv(Trans_t trans,
                 beta,
                 y, 1);
 #else
+    if (trans == Trans_Yes) {
+        if (beta == 0.0) {
+            for (std::size_t col = 0; col < cols; ++col) {
+                y[col] = 0.0;
+            }
+            for (std::size_t row = 0; row < rows; ++row) {
+                const double x_value = x[row];
+                const double* a_row = A + row * cols;
+                for (std::size_t col = 0; col < cols; ++col) {
+                    y[col] += a_row[col] * x_value;
+                }
+            }
+            if (alpha != 1.0) {
+                for (std::size_t col = 0; col < cols; ++col) {
+                    y[col] *= alpha;
+                }
+            }
+            return;
+        }
+        std::vector<double> sums(cols, 0.0);
+        for (std::size_t row = 0; row < rows; ++row) {
+            const double x_value = x[row];
+            const double* a_row = A + row * cols;
+            for (std::size_t col = 0; col < cols; ++col) {
+                sums[col] += a_row[col] * x_value;
+            }
+        }
+        for (std::size_t col = 0; col < cols; ++col) {
+            y[col] = beta * y[col] + alpha * sums[col];
+        }
+        return;
+    }
     const std::size_t out_len = (trans == Trans_No) ? rows : cols;
     const std::size_t in_len  = (trans == Trans_No) ? cols : rows;
     for (std::size_t i = 0; i < out_len; ++i) {
@@ -153,6 +185,56 @@ inline void gemm(Trans_t trans_a,
                 beta,
                 C, static_cast<int>(ldc));
 #else
+    if (trans_a == Trans_Yes && trans_b == Trans_No) {
+        if (beta == 0.0) {
+            for (std::size_t i = 0; i < M; ++i) {
+                for (std::size_t j = 0; j < N; ++j) {
+                    C[i * ldc + j] = 0.0;
+                }
+            }
+            for (std::size_t k = 0; k < K; ++k) {
+                const double* a_row = A + k * lda;
+                const double* b_row = B + k * ldb;
+                for (std::size_t i = 0; i < M; ++i) {
+                    const double aik = a_row[i];
+                    double* c_row = C + i * ldc;
+                    for (std::size_t j = 0; j < N; ++j) {
+                        c_row[j] += aik * b_row[j];
+                    }
+                }
+            }
+            if (alpha != 1.0) {
+                for (std::size_t i = 0; i < M; ++i) {
+                    double* c_row = C + i * ldc;
+                    for (std::size_t j = 0; j < N; ++j) {
+                        c_row[j] *= alpha;
+                    }
+                }
+            }
+            return;
+        }
+        std::vector<double> sums(M * N, 0.0);
+        for (std::size_t k = 0; k < K; ++k) {
+            const double* a_row = A + k * lda;
+            const double* b_row = B + k * ldb;
+            for (std::size_t i = 0; i < M; ++i) {
+                const double aik = a_row[i];
+                double* sums_row = sums.data() + i * N;
+                for (std::size_t j = 0; j < N; ++j) {
+                    sums_row[j] += aik * b_row[j];
+                }
+            }
+        }
+        for (std::size_t i = 0; i < M; ++i) {
+            double* c_row = C + i * ldc;
+            const double* sums_row = sums.data() + i * N;
+            for (std::size_t j = 0; j < N; ++j) {
+                c_row[j] = beta * c_row[j] + alpha * sums_row[j];
+            }
+        }
+        return;
+    }
+
     // Reference: scalar triple-loop, all four (op_a, op_b) combinations.
     for (std::size_t i = 0; i < M; ++i) {
         for (std::size_t j = 0; j < N; ++j) {

@@ -26,9 +26,17 @@ fit_predict <- function(seed) {
         "ridge_pls"            = pls4all::ridge_pls_fit(xy$X, xy$y, a$nc, 1.0),
         "robust_pls"           = pls4all::robust_pls_fit(xy$X, xy$y, a$nc, 1.345, 20L),
         "missing_aware_nipals" = pls4all::missing_aware_nipals_fit(xy$X, xy$y, a$nc),
+        "pcr"                  = pls4all::pls4all_fit(xy$X, xy$y,
+                                                       algo = "pcr_svd",
+                                                       n_components = a$nc,
+                                                       scale_x = FALSE,
+                                                       scale_y = FALSE),
         # Generic fallback via the unified dispatcher.
         pls4all::pls4all_method(a$algo, xy$X, xy$y, a$nc, params = list())
     )
+    if (a$algo == "pcr") {
+        return(as.numeric(pls4all::pls4all_predict(res, xy$X)))
+    }
     as.numeric(res$predictions)
 }
 

@@ -13,22 +13,12 @@ the per-language external. Result Markdown: pivot table per (algo, threads)
 with a parity icon next to each timing.
 
 Usage:
-  # smoke (PLS at 500×200, 1 thread, all backends, ~30s)
+  # smoke (PLS at 500×200, 1 thread)
   python orchestrator.py --algorithms pls --sizes 500x200 --threads 1 --n-runs 3
 
-  # niveau A (PLS full matrix, ~30-60 min)
-  python orchestrator.py --algorithms pls --threads 1 3 10 --n-runs 5
-
-  # niveau B (algos with externals, ~2-4h)
-  python orchestrator.py \
-    --algorithms sparse_simpls pcr cppls opls n_pls mb_pls sparse_pls_da \
-                 ridge_pls gpr_pls pls_da \
-    --threads 1 3 10 --n-runs 5
-
-  # niveau C (pls4all-only condensed)
-  python orchestrator.py --algorithms-file pls4all_only.txt \
-    --sizes 500x500 2500x500 2500x2500 --threads 1 10 \
-    --only-pls4all --n-runs 5
+  # complete canonical method/reference matrix
+  python orchestrator.py --algorithms all --registry-cells \
+    --threads 1 3 10 --n-runs 5 --reference-backends all
 """
 from __future__ import annotations
 
@@ -47,12 +37,20 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
 DATA_DIR = HERE / "data"
 PREDS_DIR = HERE / "data" / ".predictions"
 RESULTS_DIR = HERE / "results"
 SCRIPTS_DIR = HERE / "scripts"
 for d in (DATA_DIR, PREDS_DIR, RESULTS_DIR, SCRIPTS_DIR):
     d.mkdir(parents=True, exist_ok=True)
+
+from benchmarks.parity_timing.registry import (  # noqa: E402
+    get_method,
+    method_names,
+    resolved_references_for_method,
+)
 
 # Default base seed. uint32-safe so it round-trips losslessly through
 # R/Octave doubles and accepts as sklearn random_state. +1 per run
@@ -77,6 +75,7 @@ DEFAULT_TIMEOUT_S = 300
 #   For pls4all_core / pls4all_binding entries we sweep both libp4a builds
 #   when --libp4a-build=both; externals only get one row.
 BACKENDS = [
+    ("registry_pls4all", "bench_registry_pls4all.py", "Python", "canonical", "pls4all_binding"),
     ("cpp",          "bench_cpp.py",          "C++",    "direct",   "pls4all_core"),
     ("python_tier1", "bench_python_tier1.py", "Python", "tier 1",   "pls4all_binding"),
     ("python_tier2", "bench_python_tier2.py", "Python", "tier 2",   "pls4all_binding"),
@@ -91,6 +90,21 @@ BACKENDS = [
     ("matlab_tier2", "bench_matlab_tier2.m",  "MATLAB", "tier 2",   "pls4all_binding"),
     ("matlab_pls",   "bench_matlab_pls.m",    "MATLAB", "external", "external"),
 ]
+
+
+def registry_reference_backends_for(algo: str) -> list[tuple[str, str, str, str, str]]:
+    """External reference backends declared by the canonical MethodSpec."""
+    try:
+        method = get_method(algo)
+    except KeyError:
+        return []
+    out = []
+    for ref in resolved_references_for_method(method):
+        lang = ref["language"]
+        display_lang = "Python" if lang == "python" else lang
+        out.append((f"ref_{ref['id']}", "bench_registry_reference.py",
+                    display_lang, ref["library"], "external"))
+    return out
 
 # libp4a build → libpath. Used for the cpp variant sweep: each build
 # corresponds to a distinct OpenMP / BLAS / CUDA tier of the C kernel.
@@ -164,9 +178,12 @@ def run_backend(name: str, script: str, language: str, tier: str,
     ])
     env.setdefault("OCTAVE_HOME", PLS4ALL_R_ENV)
     env["PYTHONPATH"] = ":".join([
+        str(REPO),
         str(REPO / "bindings/python/src"),
         env.get("PYTHONPATH", ""),
     ])
+    if script == "bench_registry_reference.py" and name.startswith("ref_"):
+        env["BENCH_REFERENCE_ID"] = name[len("ref_"):]
 
     pred_path = predictions_path(algo, name, n, p, threads, libp4a_build)
     # Common 8-arg contract used by all scripts (Python + R via positional
@@ -305,7 +322,8 @@ def parse_sizes(args_sizes) -> list[tuple[int, int]]:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--algorithms", nargs="+", default=["pls"],
-                         help="Algorithm names (space-separated)")
+                         help="Algorithm names (space-separated), or 'all' "
+                              "for the canonical registry")
     parser.add_argument("--algorithms-file",
                          help="File with one algorithm per line")
     parser.add_argument("--sizes", nargs="*",
@@ -324,17 +342,36 @@ def main():
     parser.add_argument("--seed-base", type=int, default=DEFAULT_SEED_BASE)
     parser.add_argument("--only-pls4all", action="store_true",
                          help="Skip external backends entirely")
+    parser.add_argument("--canonical-pls4all-only", action="store_true",
+                         help="Run only the registry-driven pls4all backend "
+                              "plus whichever external references are selected. "
+                              "Useful for complete method-catalog sweeps.")
+    parser.add_argument("--registry-cells", action="store_true",
+                         help="Use each canonical MethodSpec's own "
+                              "(n_samples, n_features) cell instead of the "
+                              "global --sizes sweep. This is the complete "
+                              "method-catalog mode.")
+    parser.add_argument("--reference-backends",
+                         choices=["none", "fixed", "registry", "all"],
+                         default="all",
+                         help="External references to include: legacy fixed "
+                              "scripts, registry-driven references, both, or "
+                              "none.")
     parser.add_argument("--only", nargs="*",
                          help="Restrict to a subset of backends by name")
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_S)
     parser.add_argument("--out-csv", default=None,
                          help="Output CSV path (default: results/full_matrix.csv)")
     args = parser.parse_args()
+    if args.registry_cells:
+        os.environ["BENCH_REGISTRY_CELLS"] = "1"
 
     algos = list(args.algorithms)
     if args.algorithms_file:
         with open(args.algorithms_file) as f:
             algos.extend(l.strip() for l in f if l.strip())
+    if algos == ["all"]:
+        algos = method_names()
 
     sizes = parse_sizes(args.sizes)
     threads = list(args.threads)
@@ -345,30 +382,57 @@ def main():
     else:
         builds = [args.libp4a_build]
 
-    # Filter backends.
-    backends = BACKENDS
-    if args.only_pls4all:
-        backends = [b for b in backends if b[4] != "external"]
-    if args.only:
-        backends = [b for b in backends if b[0] in args.only]
+    if args.canonical_pls4all_only:
+        base_pls4all_backends = [b for b in BACKENDS if b[0] == "registry_pls4all"]
+    else:
+        base_pls4all_backends = [b for b in BACKENDS if b[4] != "external"]
+    fixed_external_backends = [b for b in BACKENDS if b[4] == "external"]
+
+    def backends_for_algo(algo: str):
+        backends = list(base_pls4all_backends)
+        if not args.only_pls4all and args.reference_backends in {"fixed", "all"}:
+            backends.extend(fixed_external_backends)
+        if not args.only_pls4all and args.reference_backends in {"registry", "all"}:
+            backends.extend(registry_reference_backends_for(algo))
+        if args.reference_backends == "none" or args.only_pls4all:
+            backends = [b for b in backends if b[4] != "external"]
+        if args.only:
+            wanted = set(args.only)
+            backends = [b for b in backends if b[0] in wanted]
+        return backends
+
+    def sizes_for_algo(algo: str):
+        if not args.registry_cells:
+            return sizes
+        try:
+            spec = get_method(algo)
+        except KeyError:
+            return sizes
+        return [(int(spec.cell_params["n_samples"]),
+                 int(spec.cell_params["n_features"]))]
 
     csv_out = Path(args.out_csv or RESULTS_DIR / "full_matrix.csv")
     records: list[dict] = []
 
-    total = (len(algos) * len(sizes) * len(threads) * len(backends)
-              * sum(2 if (kind != "external") else 1
-                    for _name, _s, _l, _t, kind in backends) // len(backends)
-              if args.libp4a_build == "both" else
-              len(algos) * len(sizes) * len(threads) * len(backends))
-    print(f"# {len(algos)} algorithms × {len(sizes)} sizes × "
-           f"{len(threads)} threads × {len(backends)} backends "
+    total = 0
+    for algo in algos:
+        for _n, _p in sizes_for_algo(algo):
+            for _thr in threads:
+                for _backend in backends_for_algo(algo):
+                    kind = _backend[4]
+                    total += len(builds) if kind != "external" else 1
+    size_mode = "registry-cells" if args.registry_cells else f"{len(sizes)} sizes"
+    print(f"# {len(algos)} algorithms × {size_mode} × "
+           f"{len(threads)} threads × dynamic backends "
            f"(builds={builds}) ≈ {total} cells")
     print(f"# seed_base={args.seed_base} timeout={args.timeout}s "
            f"n_runs={args.n_runs}")
 
     cell_count = 0
     for algo in algos:
-        for n, p in sizes:
+        algo_sizes = sizes_for_algo(algo)
+        algo_backends = backends_for_algo(algo)
+        for n, p in algo_sizes:
             # Pre-generate CSV cache for the first run's seed (other
             # runs regenerate inline in Python; R/MATLAB always read CSV
             # so they need it. Each run uses seed_base+i but for parity
@@ -382,7 +446,7 @@ def main():
                 gen_dataset_csv(n, p, args.seed_base + i)
 
             for thr in threads:
-                for backend in backends:
+                for backend in algo_backends:
                     name, script, lang, tier, kind = backend
                     # pls4all bindings sweep over `builds`; externals
                     # always use blas-omp (most realistic config for

@@ -21,12 +21,14 @@ External references installed on this host (May 2026):
            lwpls, …}, nirs4all.bench.AOM_v0.aompls (oracle).
 - R:       pls 2.8.5, spls 2.3.2, OmicsPLS 2.1.0, prospectr 0.2.8,
            mdatools 0.15.0, multiway 1.0.7, kernlab 0.9.33,
-           plsVarSel 0.10.0, enpls 6.1, mixOmics, plsdepot, mvdalab,
+           plsVarSel 0.10.0, enpls 6.1.1, mixOmics 6.26.0,
+           plsdepot, mvdalab,
            JICO, wavelets, baseline, ptw, HDANOVA, EMSC,
-           multiblock 0.8.10, plsRglm 1.5.1, plsdof.
-           Missing (paper_only fallback): plsRcox, chemometrics (R),
-           ropls (Bioconductor), sgPLS, mbpls (Python via PyPI — broken
-           against sklearn 1.8), OnPLS (CRAN-archived).
+           multiblock 0.8.10, plsRglm 1.7.0, plsRcox 1.8.2,
+           chemometrics 1.4.4, ropls 1.34.0, sgPLS 1.8.1,
+           mboost 2.9.11, softImpute 1.4.3, plsdof.
+           Missing / optional (paper_only fallback): mbpls (Python via PyPI —
+           broken against sklearn 1.8), OnPLS (CRAN-archived).
 """
 
 from __future__ import annotations
@@ -108,7 +110,33 @@ def _r_package_installed(pkg: str) -> bool:
         return False
 
 
-_R_HAS = {p: _r_package_installed(p) for p in (
+def _r_packages_installed(pkgs: tuple[str, ...]) -> dict[str, bool]:
+    """Probe R packages in one Rscript process.
+
+    The registry is imported by benchmark child processes; one Rscript per
+    package makes every cell pay seconds of startup overhead. A single probe
+    keeps the registry usable as the canonical source for timing scripts.
+    """
+    try:
+        expr = (
+            "pkgs <- c(" +
+            ",".join(repr(p) for p in pkgs) +
+            "); cat(paste(as.integer(pkgs %in% installed.packages()[,'Package']),"
+            " collapse=''))"
+        )
+        out = subprocess.run(
+            [RSCRIPT, "--vanilla", "-e", expr],
+            capture_output=True, text=True, env=R_ENV, timeout=60,
+        )
+        bits = out.stdout.strip()
+        if out.returncode == 0 and len(bits) >= len(pkgs):
+            return {pkg: bits[i] == "1" for i, pkg in enumerate(pkgs)}
+    except Exception:
+        pass
+    return {pkg: _r_package_installed(pkg) for pkg in pkgs}
+
+
+_R_PACKAGES = (
     'plsVarSel', 'enpls', 'multiblock', 'plsRglm', 'plsRcox',
     'chemometrics', 'JICO', 'ropls', 'mixOmics', 'sgPLS',
     'mdatools', 'mbpls', 'wavelets', 'baseline', 'plsdepot',
@@ -116,7 +144,9 @@ _R_HAS = {p: _r_package_installed(p) for p in (
     'mboost', 'softImpute', 'survival', 'survAUC', 'rms',
     'permute', 'prospectr', 'pls', 'spls', 'OmicsPLS', 'multiway',
     'kernlab', 'corpcor', 'genalg',
-)}
+)
+
+_R_HAS = _r_packages_installed(_R_PACKAGES)
 
 
 def _load_intree_module(name: str, path: Path):
@@ -265,6 +295,232 @@ class _DiagnosticRAdapter(RAdapter):
 
 
 # ---- Python (sklearn-based) external references --------------------------
+
+def _py_dist_version(dist_name: str) -> str:
+    """Best-effort installed Python distribution version."""
+    try:
+        from importlib.metadata import version
+        return version(dist_name)
+    except Exception:
+        return "MISSING"
+
+
+class _PredictionsOnlyResult:
+    """Small MethodResult-like wrapper for model API benchmark cells."""
+
+    def __init__(self, predictions: np.ndarray) -> None:
+        self._predictions = np.asarray(predictions, dtype=np.float64)
+
+    def matrix(self, key: str) -> np.ndarray:
+        if key != "predictions":
+            raise KeyError(key)
+        return self._predictions
+
+    def close(self) -> None:
+        return None
+
+
+def _model_fit_predict_pls4all(ctx, cfg, X, Y, *, n_components,
+                               algorithm, solver, deflation, **_) -> object:
+    """Use the canonical model API for methods that are not MethodResult
+    entry points (`pls`, `pcr`, `opls`)."""
+    import pls4all
+    from pls4all._model import Model
+
+    cfg.algorithm = algorithm
+    cfg.solver = solver
+    cfg.deflation = deflation
+    cfg.n_components = n_components
+    cfg.center_x = True
+    cfg.scale_x = False
+    cfg.center_y = True
+    cfg.scale_y = False
+    model = Model.fit(ctx, cfg, X, Y)
+    try:
+        return _PredictionsOnlyResult(model.predict(ctx, X))
+    finally:
+        model.close()
+
+
+def _pls_pls4all(ctx, cfg, X, Y, *, n_components, **kwargs):
+    import pls4all
+    return _model_fit_predict_pls4all(
+        ctx, cfg, X, Y, n_components=n_components,
+        algorithm=pls4all.Algorithm.PLS_REGRESSION,
+        solver=pls4all.Solver.SIMPLS,
+        deflation=pls4all.Deflation.REGRESSION,
+    )
+
+
+def _pcr_pls4all(ctx, cfg, X, Y, *, n_components, **kwargs):
+    import pls4all
+    return _model_fit_predict_pls4all(
+        ctx, cfg, X, Y, n_components=n_components,
+        algorithm=pls4all.Algorithm.PCR,
+        solver=pls4all.Solver.SVD,
+        deflation=pls4all.Deflation.REGRESSION,
+    )
+
+
+def _opls_pls4all(ctx, cfg, X, Y, *, n_components, **kwargs):
+    import pls4all
+    return _model_fit_predict_pls4all(
+        ctx, cfg, X, Y, n_components=n_components,
+        algorithm=pls4all.Algorithm.OPLS,
+        solver=pls4all.Solver.NIPALS,
+        deflation=pls4all.Deflation.ORTHOGONAL,
+    )
+
+
+class PlsSklearnReference(ReferenceAdapter):
+    library_name = "scikit-learn"
+    library_version = _py_dist_version("scikit-learn")
+    language = "python"
+    notes = "sklearn.cross_decomposition.PLSRegression(scale=False)."
+
+    def __init__(self, n_components: int) -> None:
+        self._k = n_components
+
+    def fit(self, X, Y, **kwargs):
+        from sklearn.cross_decomposition import PLSRegression
+        self._model = PLSRegression(n_components=self._k, scale=False)
+        self._model.fit(X, Y)
+
+    def predict(self, X):
+        return np.asarray(self._model.predict(X), dtype=np.float64)
+
+
+class PcrSklearnReference(ReferenceAdapter):
+    library_name = "scikit-learn"
+    library_version = _py_dist_version("scikit-learn")
+    language = "python"
+    notes = "sklearn Pipeline(PCA + LinearRegression)."
+
+    def __init__(self, n_components: int) -> None:
+        self._k = n_components
+
+    def fit(self, X, Y, **kwargs):
+        from sklearn.decomposition import PCA
+        from sklearn.linear_model import LinearRegression
+        from sklearn.pipeline import make_pipeline
+        self._model = make_pipeline(PCA(n_components=self._k),
+                                    LinearRegression())
+        self._model.fit(X, Y)
+
+    def predict(self, X):
+        return np.asarray(self._model.predict(X), dtype=np.float64)
+
+
+class PlsIkplsReference(ReferenceAdapter):
+    library_name = "ikpls"
+    library_version = _py_dist_version("ikpls")
+    language = "python"
+    notes = "ikpls.numpy_ikpls.PLS algorithm 1."
+
+    def __init__(self, n_components: int) -> None:
+        self._k = n_components
+
+    def fit(self, X, Y, **kwargs):
+        from ikpls.numpy_ikpls import PLS
+        self._models = []
+        Y2 = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        for j in range(Y2.shape[1]):
+            m = PLS(algorithm=1)
+            m.fit(X, Y2[:, j:j + 1], A=self._k)
+            self._models.append(m)
+
+    def predict(self, X):
+        cols = [np.asarray(m.predict(X))[self._k - 1].reshape(X.shape[0], -1)
+                for m in self._models]
+        return np.hstack(cols)
+
+
+class PlsRReference(RAdapter):
+    library_name = "pls"
+    library_version = "2.8.5"
+    notes = "R pls::plsr(method='simpls', scale=FALSE)."
+
+    def __init__(self, n_components: int) -> None:
+        super().__init__()
+        self._k = n_components
+
+    def _r_script(self, x_path, y_path, pred_path, x_predict_path, n, p, q):
+        return f"""
+suppressMessages(library(pls))
+X <- as.matrix(read.csv("{x_path}", header=FALSE))
+Y <- as.matrix(read.csv("{y_path}", header=FALSE))
+Xp <- as.matrix(read.csv("{x_predict_path}", header=FALSE))
+df <- as.data.frame(X)
+if ({q} == 1) {{
+  df$Y <- as.numeric(Y[, 1])
+  fit <- pls::plsr(Y ~ ., data=df, ncomp={self._k}, method="simpls",
+                   validation="none", scale=FALSE)
+  pred <- as.matrix(predict(fit, newdata=as.data.frame(Xp),
+                            ncomp={self._k})[, 1, 1])
+}} else {{
+  colnames(Y) <- paste0("Y", seq_len(ncol(Y)))
+  df <- cbind(df, as.data.frame(Y))
+  fit <- pls::plsr(as.matrix(Y) ~ ., data=df[, seq_len({p})],
+                   ncomp={self._k}, method="simpls",
+                   validation="none", scale=FALSE)
+  pred <- predict(fit, newdata=as.data.frame(Xp), ncomp={self._k})[, , 1]
+}}
+write.table(pred, "{pred_path}", sep=",", row.names=FALSE, col.names=FALSE)
+"""
+
+
+class PcrRReference(RAdapter):
+    library_name = "pls"
+    library_version = "2.8.5"
+    notes = "R pls::pcr(scale=FALSE)."
+
+    def __init__(self, n_components: int) -> None:
+        super().__init__()
+        self._k = n_components
+
+    def _r_script(self, x_path, y_path, pred_path, x_predict_path, n, p, q):
+        return f"""
+suppressMessages(library(pls))
+X <- as.matrix(read.csv("{x_path}", header=FALSE))
+Y <- as.matrix(read.csv("{y_path}", header=FALSE))
+Xp <- as.matrix(read.csv("{x_predict_path}", header=FALSE))
+df <- as.data.frame(X)
+if ({q} == 1) {{
+  df$Y <- as.numeric(Y[, 1])
+  fit <- pls::pcr(Y ~ ., data=df, ncomp={self._k},
+                  validation="none", scale=FALSE)
+  pred <- as.matrix(predict(fit, newdata=as.data.frame(Xp),
+                            ncomp={self._k})[, 1, 1])
+}} else {{
+  colnames(Y) <- paste0("Y", seq_len(ncol(Y)))
+  df <- cbind(df, as.data.frame(Y))
+  fit <- pls::pcr(as.matrix(Y) ~ ., data=df[, seq_len({p})],
+                  ncomp={self._k}, validation="none", scale=FALSE)
+  pred <- predict(fit, newdata=as.data.frame(Xp), ncomp={self._k})[, , 1]
+}}
+write.table(pred, "{pred_path}", sep=",", row.names=FALSE, col.names=FALSE)
+"""
+
+
+class PlsMixomicsReference(RAdapter):
+    library_name = "mixOmics"
+    library_version = "6.26.0"
+    notes = "Bioconductor mixOmics::pls(mode='regression', scale=FALSE)."
+
+    def __init__(self, n_components: int) -> None:
+        super().__init__()
+        self._k = n_components
+
+    def _r_script(self, x_path, y_path, pred_path, x_predict_path, n, p, q):
+        return f"""
+suppressMessages(library(mixOmics))
+X <- as.matrix(read.csv("{x_path}", header=FALSE))
+Y <- as.matrix(read.csv("{y_path}", header=FALSE))
+Xp <- as.matrix(read.csv("{x_predict_path}", header=FALSE))
+fit <- mixOmics::pls(X, Y, ncomp={self._k}, scale=FALSE, mode="regression")
+pred <- predict(fit, newdata=Xp)$predict[, , {self._k}]
+write.table(pred, "{pred_path}", sep=",", row.names=FALSE, col.names=FALSE)
+"""
 
 class RecursivePlsSklearnReference(ReferenceAdapter):
     """Moving-window refit using sklearn PLSRegression (NIPALS)."""
@@ -2865,8 +3121,13 @@ suppressPackageStartupMessages(library(ropls))
 X <- as.matrix(read.csv('{x_path}', header=FALSE))
 Y <- as.matrix(read.csv('{y_path}', header=FALSE))
 Xn <- as.matrix(read.csv('{x_predict_path}', header=FALSE))
-fit <- opls(X, Y[, 1], predI={self._k}, orthoI={self._n_ortho},
-            scaleC='none', crossvalI=0, printL=FALSE, plotL=FALSE)
+fit <- suppressMessages(suppressWarnings(
+  invisible(capture.output(
+    mod <- opls(X, Y[, 1], predI={self._k}, orthoI={self._n_ortho},
+                scaleC='center')
+  ))
+))
+fit <- mod
 pred <- predict(fit, Xn)
 if (is.null(dim(pred))) pred <- matrix(pred, ncol=1)
 write.table(pred, file='{pred_path}', sep=',', row.names=FALSE,
@@ -4270,6 +4531,7 @@ class MethodSpec:
     cell_params: dict
     python_reference: Callable[..., ReferenceAdapter] | None = None
     r_reference: Callable[..., ReferenceAdapter] | None = None
+    extra_references: tuple[tuple[str, Callable[..., ReferenceAdapter | None]], ...] = ()
     rmse_rel_tol: float = 5e-2
     needs_x_target: bool = False
     needs_sample_weights: bool = False
@@ -4284,6 +4546,57 @@ class MethodSpec:
 
 
 METHODS: list[MethodSpec] = [
+    MethodSpec(
+        name="pls",
+        description="SIMPLS PLS regression baseline",
+        pls4all_fn=_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 50,
+                      "n_components": 4},
+        python_reference=lambda **kw: PlsSklearnReference(
+            n_components=kw["n_components"]),
+        r_reference=lambda **kw: PlsRReference(
+            n_components=kw["n_components"]),
+        extra_references=(
+            ("ikpls", lambda **kw: PlsIkplsReference(
+                n_components=kw["n_components"])),
+            ("mixOmics", lambda **kw: PlsMixomicsReference(
+                n_components=kw["n_components"])
+                if _R_HAS.get("mixOmics", False) else None),
+        ),
+        rmse_rel_tol=1e-1,
+        notes=("Baseline SIMPLS cell. sklearn uses NIPALS and ikpls uses "
+               "improved-kernel PLS, so exact bit parity is not expected; "
+               "the row exists to anchor timing comparisons."),
+    ),
+    MethodSpec(
+        name="pcr",
+        description="Principal Components Regression",
+        pls4all_fn=_pcr_pls4all,
+        cell_params={"n_samples": 200, "n_features": 50,
+                      "n_components": 4},
+        python_reference=lambda **kw: PcrSklearnReference(
+            n_components=kw["n_components"]),
+        r_reference=lambda **kw: PcrRReference(
+            n_components=kw["n_components"]),
+        rmse_rel_tol=1e-6,
+        notes=("PCR via SVD on X then linear regression; references are "
+               "sklearn Pipeline(PCA + LinearRegression) and R `pls::pcr`."),
+    ),
+    MethodSpec(
+        name="opls",
+        description="Orthogonal PLS (Trygg & Wold 2002)",
+        pls4all_fn=_opls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 50,
+                      "n_components": 4},
+        python_reference=None,
+        r_reference=lambda **kw: _OplsRoplsReference(
+            n_components=1,
+            n_orthogonal=max(1, int(kw["n_components"]) - 1))
+            if _R_HAS.get("ropls", False) else None,
+        rmse_rel_tol=1e-3,
+        notes=("Bioconductor `ropls::opls` is the external OPLS reference; "
+               "convergence and orthogonal-component conventions may differ."),
+    ),
     MethodSpec(
         name="sparse_simpls",
         description="Sparse SIMPLS with soft-threshold lambda",
@@ -5612,3 +5925,79 @@ METHODS: list[MethodSpec] = [
                "~1.41=disjoint."),
     ),
 ]
+
+
+def method_names() -> list[str]:
+    """Canonical method order for every benchmark surface."""
+    return [m.name for m in METHODS]
+
+
+def get_method(name: str) -> MethodSpec:
+    """Return the canonical MethodSpec by name."""
+    for method in METHODS:
+        if method.name == name:
+            return method
+    raise KeyError(f"unknown method: {name}")
+
+
+def reference_id(library_name: str, language: str = "") -> str:
+    """Stable backend id used by cross-binding reference columns."""
+    import re
+    raw = f"{language}_{library_name}" if language else library_name
+    out = re.sub(r"[^A-Za-z0-9]+", "_", raw).strip("_").lower()
+    return out or "reference"
+
+
+def iter_reference_factories(method: MethodSpec):
+    """Yield all declared external reference factories for a MethodSpec.
+
+    Each item is `(role, factory)`, where `role` is an informational label
+    (`python`, `r`, or an extra package id). Factories may return `None`
+    when an optional package is unavailable on the current host.
+    """
+    if method.python_reference is not None:
+        yield "python", method.python_reference
+    if method.r_reference is not None:
+        yield "r", method.r_reference
+    yield from method.extra_references
+
+
+def resolved_references_for_method(method: MethodSpec) -> list[dict[str, str]]:
+    """Instantiate declared references and return display metadata.
+
+    This is the single source used by benchmark renderers to decide which
+    external reference columns exist. Failed optional references are omitted
+    here; the parity runner still reports factory failures when a declared
+    reference is selected explicitly.
+    """
+    refs: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for role, factory in iter_reference_factories(method):
+        try:
+            ref = factory(**method.cell_params)
+        except Exception:
+            continue
+        if ref is None:
+            continue
+        rid = reference_id(ref.library_name, ref.language)
+        if rid in seen:
+            continue
+        seen.add(rid)
+        refs.append({
+            "id": rid,
+            "role": role,
+            "language": ref.language,
+            "library": ref.library_name,
+            "version": ref.library_version,
+            "notes": ref.notes or method.notes,
+        })
+    return refs
+
+
+def resolved_reference_backends() -> list[dict[str, str]]:
+    """Union of all external reference backends declared by METHODS."""
+    by_id: dict[str, dict[str, str]] = {}
+    for method in METHODS:
+        for ref in resolved_references_for_method(method):
+            by_id.setdefault(ref["id"], ref)
+    return [by_id[k] for k in sorted(by_id)]
