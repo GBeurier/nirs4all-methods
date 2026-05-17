@@ -6,7 +6,8 @@ import os
 import numpy as np
 
 from _common import (parse_args, time_runs_seeded, emit_record,
-                       load_dataset, collect_versions, _safe_version)
+                       load_dataset, collect_versions, _safe_version,
+                       dispatch_pls4all_fit)
 
 from pls4all import _methods
 from pls4all._context import Context
@@ -45,36 +46,7 @@ def main():
         ctx = _make_ctx()
         cfg = _basic_cfg(nc)
         try:
-            if algo == "pls":
-                # plain SIMPLS via sparse_simpls @ lambda=0
-                res = _methods.sparse_simpls_fit(ctx, cfg, X, y2d,
-                                                   sparsity_lambda=0.0)
-            elif algo == "sparse_simpls":
-                res = _methods.sparse_simpls_fit(ctx, cfg, X, y2d,
-                                                   sparsity_lambda=0.05)
-            elif algo == "cppls":
-                res = _methods.cppls_fit(ctx, cfg, X, y2d, gamma=0.5)
-            elif algo == "ecr":
-                res = _methods.ecr_fit(ctx, cfg, X, y2d, alpha=0.5)
-            elif algo == "mir_pls":
-                res = _methods.mir_pls_fit(ctx, cfg, X, y2d)
-            elif algo == "ridge_pls":
-                res = _methods.ridge_pls_fit(ctx, cfg, X, y2d,
-                                              ridge_lambda=1.0)
-            elif algo == "robust_pls":
-                res = _methods.robust_pls_fit(ctx, cfg, X, y2d,
-                                                huber_k=1.345,
-                                                max_irls_iter=20)
-            elif algo == "missing_aware_nipals":
-                res = _methods.missing_aware_nipals_fit(ctx, cfg, X, y2d)
-            else:
-                # Generic fallback: try _methods.{algo}_fit(ctx, cfg, X, y)
-                fn = getattr(_methods, f"{algo}_fit", None)
-                if fn is None:
-                    raise RuntimeError(
-                        f"python_tier1: unsupported algo '{algo}' "
-                        f"(no _methods.{algo}_fit)")
-                res = fn(ctx, cfg, X, y2d)
+            res = dispatch_pls4all_fit(algo, ctx, cfg, X, y2d, n, p, seed)
             preds = np.asarray(res.matrix("predictions"))
         finally:
             cfg.close()

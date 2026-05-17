@@ -6,8 +6,8 @@ pls4all is benchmarked across three axes:
    pls4all vs the leading external implementation in each language
    (sklearn, pls::plsr, plsregress, ropls, mixOmics, ikpls). For each
    `(algo, n, p, threads)` cell we report the median wall-clock time
-   AND the max-abs-diff of predictions vs a reference backend.
-   This is the **"plaquette de pub"**: same result, often faster.
+   in milliseconds AND the max absolute difference of predictions
+   vs a reference backend.
 
 2. **Accelerated backend timing** — same SIMPLS, libp4a built five
    ways (`ref`, `blas`, `omp`, `blas_omp`, `cuda`). Shows the speedup

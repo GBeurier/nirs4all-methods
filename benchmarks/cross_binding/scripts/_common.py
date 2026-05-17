@@ -179,3 +179,105 @@ def emit_record(stats: dict, predictions, predictions_path: Path,
 
 def numpy_version() -> str:
     return _safe_version("numpy")
+
+
+# ----------------------------------------------------------------------
+# Shared pls4all dispatcher (used by bench_cpp + bench_python_tier1)
+# ----------------------------------------------------------------------
+
+def dispatch_pls4all_fit(algo: str, ctx, cfg, X, y2d, n: int, p: int,
+                          seed: int):
+    """Call the right _methods.<algo>_fit with algorithm-specific params.
+
+    Returns the MethodResult. Both bench_cpp.py and bench_python_tier1.py
+    route through here so their predictions stay bit-identical, which
+    keeps the `cpp` reference column meaningful across the entire matrix.
+    """
+    from pls4all import _methods  # local import: heavy
+    import numpy as np
+
+    if algo == "pls":
+        return _methods.sparse_simpls_fit(ctx, cfg, X, y2d, sparsity_lambda=0.0)
+    if algo == "sparse_simpls":
+        return _methods.sparse_simpls_fit(ctx, cfg, X, y2d, sparsity_lambda=0.05)
+    if algo == "cppls":
+        return _methods.cppls_fit(ctx, cfg, X, y2d, gamma=0.5)
+    if algo == "ecr":
+        return _methods.ecr_fit(ctx, cfg, X, y2d, alpha=0.5)
+    if algo == "mir_pls":
+        return _methods.mir_pls_fit(ctx, cfg, X, y2d)
+    if algo == "ridge_pls":
+        return _methods.ridge_pls_fit(ctx, cfg, X, y2d, ridge_lambda=1.0)
+    if algo == "robust_pls":
+        return _methods.robust_pls_fit(ctx, cfg, X, y2d, huber_k=1.345,
+                                         max_irls_iter=20)
+    if algo == "missing_aware_nipals":
+        return _methods.missing_aware_nipals_fit(ctx, cfg, X, y2d)
+    if algo == "continuum_regression":
+        return _methods.continuum_regression_fit(ctx, cfg, X, y2d, tau=0.5)
+    if algo == "kernel_pls":
+        return _methods.kernel_pls_fit(ctx, cfg, X, y2d, kernel_type=1,
+                                         gamma=0.0, coef0=1.0, degree=3)
+    if algo == "o2pls":
+        return _methods.o2pls_fit(ctx, cfg, X, y2d, n_predictive=cfg.n_components,
+                                    n_x_orthogonal=1, n_y_orthogonal=1)
+    if algo == "bagging_pls":
+        return _methods.bagging_pls_fit(ctx, cfg, X, y2d, n_estimators=50, seed=0)
+    if algo == "boosting_pls":
+        return _methods.boosting_pls_fit(ctx, cfg, X, y2d, n_estimators=50,
+                                           learning_rate=0.1)
+    if algo == "random_subspace_pls":
+        return _methods.random_subspace_pls_fit(ctx, cfg, X, y2d,
+                                                  n_estimators=50,
+                                                  features_per_subspace=10,
+                                                  seed=0)
+    if algo == "fused_sparse_pls":
+        return _methods.fused_sparse_pls_fit(ctx, cfg, X, y2d, l1_lambda=0.05,
+                                               fusion_lambda=0.05)
+    if algo == "group_sparse_pls":
+        ga = np.zeros(p, dtype=np.int32)
+        ga[::2] = 1
+        return _methods.group_sparse_pls_fit(ctx, cfg, X, y2d,
+                                                group_assignment=ga,
+                                                group_lambda=0.05)
+    if algo == "lw_pls":
+        return _methods.lw_pls_fit(ctx, cfg, X, y2d, n_neighbors=30)
+    if algo == "pls_glm":
+        return _methods.pls_glm_fit(ctx, cfg, X, y2d, poisson=False)
+    if algo == "weighted_pls":
+        w = np.ones(n, dtype=np.float64)
+        return _methods.weighted_pls_fit(ctx, cfg, X, y2d, sample_weights=w)
+    if algo in ("pls_qda", "pls_lda", "pls_logistic", "sparse_pls_da"):
+        labels = np.zeros(n, dtype=np.int32)
+        # Binary class from y > 0 (deterministic given seed-controlled data).
+        labels[(y2d.ravel() > 0)] = 1
+        if algo == "pls_qda":
+            return _methods.pls_qda_fit(ctx, cfg, X, y_labels=labels)
+        if algo == "pls_lda":
+            return _methods.pls_lda_fit(ctx, cfg, X, y_labels=labels, n_classes=2)
+        if algo == "pls_logistic":
+            return _methods.pls_logistic_fit(ctx, cfg, X, y_labels=labels, n_classes=2)
+        return _methods.sparse_pls_da_fit(ctx, cfg, X, y_labels=labels)
+    if algo == "pls_cox":
+        ev = np.ones(n, dtype=np.int32)
+        st = np.abs(y2d.ravel()) + 0.5
+        return _methods.pls_cox_fit(ctx, cfg, X, survival_times=st,
+                                      event_indicators=ev)
+    if algo == "pds":
+        rng = np.random.default_rng(seed)
+        Xt = X + 0.01 * rng.standard_normal(X.shape)
+        return _methods.pds_fit(ctx, X, Xt, window_half_width=2)
+    if algo == "ds":
+        rng = np.random.default_rng(seed)
+        Xt = X + 0.01 * rng.standard_normal(X.shape)
+        return _methods.ds_fit(ctx, X, Xt)
+    if algo == "gpr_pls":
+        return _methods.gpr_pls_fit(ctx, cfg, X, y2d, length_scale=1.0,
+                                      noise_level=1e-4, seed=0)
+    # Generic fallback (works only for algos whose C signature is exactly
+    # (ctx, cfg, X, y) — most don't, but if a new algo follows this
+    # convention it works without touching the dispatcher).
+    fit_fn = getattr(_methods, f"{algo}_fit", None)
+    if fit_fn is None:
+        raise RuntimeError(f"no _methods.{algo}_fit available")
+    return fit_fn(ctx, cfg, X, y2d)

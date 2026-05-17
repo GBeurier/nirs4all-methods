@@ -11,8 +11,8 @@ For each `(algorithm, backend, n, p, threads)` cell, report:
 3. **Versions metadata**: language, BLAS implementation, binding /
    external library versions.
 
-The combination justifies the "plaquette de pub" claim: *same result
-as the established external implementation, often faster*.
+The combination supports the project's core claim: *same numerical
+result as the established external implementation, often faster*.
 
 ## Cell composition
 

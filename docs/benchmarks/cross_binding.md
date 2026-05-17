@@ -1,789 +1,932 @@
 # Cross-binding benchmark — parity + timing
 
-> **Plaquette de pub** : pour chaque algorithme, on prouve que pls4all produit *exactement* le même résultat que la référence externe (parity), souvent plus vite (timing).
+For every (algorithm × backend × dataset size × thread count) cell, we report the **median wall-clock time** and the **parity verdict** vs a deterministic reference backend. Same algorithm, same input bytes — different implementations.
 
-_Generated: 2026-05-17 18:21:58 UTC_  
+_Generated: 2026-05-17 19:55:41 UTC_  
 _Host: Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.35_  
-_CSV: `tmp7hw8dzga.csv` (4440 cells)_
+_CSV: `tmpqa1emg26.csv` (4440 cells)_
 
 
-## Legend
+## How to read a cell
 
-- ✓  parity OK (max abs diff ≤ tolerance, default 1e-6)
-- ⚠  parity within 1e-3 but > tolerance (algorithmic drift)
-- ✗  parity mismatch (typically different preprocessing convention)
-- ⏳  cell timed out (300s wall-clock)
-- —  not implemented / skipped
+Each cell shows `<median_ms> <icon>`. The icon is the **parity verdict** vs the reference backend (`cpp` at 1 thread):
 
-Each cell: `<median_ms> <icon>`. Median is over 5 runs (warmup discarded).
+- ✓ bit-exact (max abs diff ≤ 1e-6) — this backend produces the **same predictions** as the reference
+- ⚠ close (≤ 1e-3 but > 1e-6) — algorithmic drift (different convergence path, but answer agrees)
+- ✗ divergent (> 1e-3) — typically a different preprocessing convention (e.g. scale=True vs scale=False); the backend works, it just isn't equivalent under this cell's reference choice
+- ⏳ cell timed out (300 s wall-clock)
+- — backend doesn't implement this algorithm (skipped) or hit a runtime error
+
+Timing is the **median of 5 runs**; the first is discarded as warmup. All backends in a single cell read the SAME orchestrator-generated CSV so cross-language input bytes are identical. See [methodology.md](methodology.md) for full details.
+
+
+## Backend columns
+
+| Column | Language | Tier | What it actually runs |
+|---|---|---|---|
+| `cpp` | C++ | reference | libp4a called via ctypes — same C kernel as every pls4all binding, no wrapper |
+| `python_tier1` | Python | pls4all | `pls4all._methods.<algo>_fit(ctx, cfg, X, y)` — raw FFI binding |
+| `python_tier2` | Python | pls4all | `pls4all.sklearn.<Class>` — sklearn-style `BaseEstimator`, `.fit() / .predict()` |
+| `sklearn` | Python | external | `sklearn.cross_decomposition.PLSRegression`, `sklearn.decomposition.PCA + LinearRegression` (PCR proxy), etc. |
+| `ikpls` | Python | external | `ikpls.numpy_ikpls.PLS` — Improved Kernel PLS (only implements plain PLS) |
+| `r_tier1` | R | pls4all | `pls4all_method(algo, X, y, ...)` — unified dispatcher (33 fits + 24 selectors + 4 diagnostics) |
+| `r_tier2` | R | pls4all | base R formula+S3 wrappers (`pls(y ~ ., data)`, `cppls(...)`, etc.) |
+| `r_pls` | R | external | `pls::plsr / pls::cppls / pls::pcr` — CRAN `pls` package |
+| `r_ropls` | R | external | `ropls::opls` — Bioconductor (covers OPLS only) |
+| `r_mixomics` | R | external | `mixOmics::pls / spls / plsda / splsda` |
+| `matlab_tier1` | MATLAB / Octave | pls4all | `pls4all.<algo>(X, y, ...)` — single dispatcher MEX |
+| `matlab_tier2` | MATLAB / Octave | pls4all | `pls4all.fit(algo, X, y, ...)` factory + classdefs |
+| `matlab_pls` | MATLAB / Octave | external | Octave statistics `plsregress` (SIMPLS, plain PLS only) |
+
+Empty cells (`—`) mean the backend doesn't implement that algorithm — e.g. `sklearn` has no native CPPLS, `pls::plsr` has no GPR-PLS, `plsregress` covers only plain PLS. This is honest scope reporting, not a fail.
 
 
 ## bagging_pls  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 42.5 ✓ | 74.5 ✓ | — — | 25.3 ✓ |
-| 500×500 | — — | — — | — — | 244.5 ✓ | 294.5 ✓ | — — | 130.6 ✓ |
-| 2500×500 | — — | — — | — — | 3.0s ✓ | 2.9s ✓ | — — | 2.5s ✓ |
-| 2500×2500 | — — | — — | — — | 16.6s ✓ | 17.6s ✓ | — — | 12.3s ✓ |
+| 100×500 | — | — | — | 42.5 ms ✓ | 74.5 ms ✓ | — | **25.3 ms ✓** |
+| 500×500 | — | — | — | 244.5 ms ✓ | 294.5 ms ✓ | — | **130.6 ms ✓** |
+| 2500×500 | — | — | — | 3.0 s ✓ | 2.9 s ✓ | — | **2.5 s ✓** |
+| 2500×2500 | — | — | — | 16.6 s ✓ | 17.6 s ✓ | — | **12.3 s ✓** |
 
 
 ## bagging_pls  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 43.5 ✓ | 74.0 ✓ | — — | 26.8 ✓ |
-| 500×500 | — — | — — | — — | 253.0 ✓ | 299.0 ✓ | — — | 134.3 ✓ |
-| 2500×500 | — — | — — | — — | 3.3s ✓ | 2.9s ✓ | — — | 2.1s ✓ |
-| 2500×2500 | — — | — — | — — | 16.5s ✓ | 17.9s ✓ | — — | 12.4s ✓ |
+| 100×500 | — | — | — | 43.5 ms ✓ | 74.0 ms ✓ | — | **26.8 ms ✓** |
+| 500×500 | — | — | — | 253.0 ms ✓ | 299.0 ms ✓ | — | **134.3 ms ✓** |
+| 2500×500 | — | — | — | 3.3 s ✓ | 2.9 s ✓ | — | **2.1 s ✓** |
+| 2500×2500 | — | — | — | 16.5 s ✓ | 17.9 s ✓ | — | **12.4 s ✓** |
 
 
 ## boosting_pls  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 45.5 ✓ | 74.5 ✓ | — — | 25.3 ✓ |
-| 500×500 | — — | — — | — — | 241.0 ✓ | 297.0 ✓ | — — | 128.1 ✓ |
-| 2500×500 | — — | — — | — — | 2.9s ✓ | 2.9s ✓ | — — | 2.1s ✓ |
-| 2500×2500 | — — | — — | — — | 16.6s ✓ | 18.0s ✓ | — — | 12.2s ✓ |
+| 100×500 | — | — | — | 45.5 ms ✓ | 74.5 ms ✓ | — | **25.3 ms ✓** |
+| 500×500 | — | — | — | 241.0 ms ✓ | 297.0 ms ✓ | — | **128.1 ms ✓** |
+| 2500×500 | — | — | — | 2.9 s ✓ | 2.9 s ✓ | — | **2.1 s ✓** |
+| 2500×2500 | — | — | — | 16.6 s ✓ | 18.0 s ✓ | — | **12.2 s ✓** |
 
 
 ## boosting_pls  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 44.0 ✓ | 76.0 ✓ | — — | 25.6 ✓ |
-| 500×500 | — — | — — | — — | 240.5 ✓ | 289.0 ✓ | — — | 127.6 ✓ |
-| 2500×500 | — — | — — | — — | 2.9s ✓ | 3.4s ✓ | — — | 2.2s ✓ |
-| 2500×2500 | — — | — — | — — | 16.6s ✓ | 18.2s ✓ | — — | 11.9s ✓ |
+| 100×500 | — | — | — | 44.0 ms ✓ | 76.0 ms ✓ | — | **25.6 ms ✓** |
+| 500×500 | — | — | — | 240.5 ms ✓ | 289.0 ms ✓ | — | **127.6 ms ✓** |
+| 2500×500 | — | — | — | 2.9 s ✓ | 3.4 s ✓ | — | **2.2 s ✓** |
+| 2500×2500 | — | — | — | 16.6 s ✓ | 18.2 s ✓ | — | **11.9 s ✓** |
 
 
 ## continuum_regression  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 36.0 ✓ | 63.0 ✓ | — — | 15.0 ✓ |
-| 500×500 | — — | — — | — — | 179.0 ✓ | 243.5 ✓ | — — | 63.6 ✓ |
-| 2500×500 | — — | — — | — — | 1.6s ✓ | 1.5s ✓ | — — | 362.3 ✓ |
-| 2500×2500 | — — | — — | — — | 8.1s ✓ | 9.2s ✓ | — — | 1.9s ✓ |
+| 100×500 | — | — | — | 36.0 ms ✓ | 63.0 ms ✓ | — | **15.0 ms ✓** |
+| 500×500 | — | — | — | 179.0 ms ✓ | 243.5 ms ✓ | — | **63.6 ms ✓** |
+| 2500×500 | — | — | — | 1.6 s ✓ | 1.5 s ✓ | — | **362.3 ms ✓** |
+| 2500×2500 | — | — | — | 8.1 s ✓ | 9.2 s ✓ | — | **1.9 s ✓** |
 
 
 ## continuum_regression  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 31.0 ✓ | 65.0 ✓ | — — | 14.4 ✓ |
-| 500×500 | — — | — — | — — | 188.0 ✓ | 244.5 ✓ | — — | 69.0 ✓ |
-| 2500×500 | — — | — — | — — | 1.5s ✓ | 1.4s ✓ | — — | 384.0 ✓ |
-| 2500×2500 | — — | — — | — — | 7.7s ✓ | 8.7s ✓ | — — | 1.9s ✓ |
+| 100×500 | — | — | — | 31.0 ms ✓ | 65.0 ms ✓ | — | **14.4 ms ✓** |
+| 500×500 | — | — | — | 188.0 ms ✓ | 244.5 ms ✓ | — | **69.0 ms ✓** |
+| 2500×500 | — | — | — | 1.5 s ✓ | 1.4 s ✓ | — | **384.0 ms ✓** |
+| 2500×2500 | — | — | — | 7.7 s ✓ | 8.7 s ✓ | — | **1.9 s ✓** |
 
 
 ## cppls  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | — — | 0.87 ✓ | 1.09 ✓ | — — | — — | 2.00 ✓ | 5.00 ✓ | 6.50 ✗ | — — | — — | 1.59 ✓ | 3.52 ✓ | — — |
-| 100×500 | — — | 7.51 ✓ | 7.36 ✓ | — — | — — | 34.0 ✓ | 61.0 ✓ | 69.5 ✗ | — — | — — | 11.9 ✓ | 13.7 ✓ | — — |
-| 100×2500 | — — | 38.7 ✓ | 39.1 ✓ | — — | — — | 305.5 ✓ | 589.5 ✓ | 606.5 ⚠ | — — | — — | 62.9 ✓ | 63.2 ✓ | — — |
-| 500×50 | — — | 4.06 ✓ | 4.14 ✓ | — — | — — | 11.5 ✓ | 15.0 ✓ | 18.5 ✗ | — — | — — | 6.39 ✓ | 8.50 ✓ | — — |
-| 500×500 | — — | 37.7 ✓ | 38.1 ✓ | — — | — — | 177.0 ✓ | 229.0 ✓ | 241.0 ✗ | — — | — — | 65.5 ✓ | 65.0 ✓ | — — |
-| 500×2500 | — — | 191.3 ✓ | 190.9 ✓ | — — | — — | 1.5s ✓ | 1.8s ✓ | 1.9s ✗ | — — | — — | 336.1 ✓ | 335.9 ✓ | — — |
-| 2500×50 | — — | 18.7 ✓ | 19.0 ✓ | — — | — — | 63.0 ✓ | 86.0 ✓ | 68.0 ⚠ | — — | — — | 30.0 ✓ | 33.1 ✓ | — — |
-| 2500×500 | — — | 226.3 ✓ | 225.1 ✓ | — — | — — | 1.3s ✓ | 1.4s ✓ | 1.4s ✗ | — — | — — | 343.9 ✓ | 356.3 ✓ | — — |
-| 2500×2500 | — — | 1.1s ✓ | 1.2s ✓ | — — | — — | 7.7s ✓ | 8.6s ✓ | 8.6s ✗ | — — | — — | 1.9s ✓ | 1.9s ✓ | — — |
-| 10000×50 | — — | 77.5 ✓ | 78.6 ✓ | — — | — — | 436.0 ✓ | 483.0 ✓ | 427.0 ⚠ | — — | — — | 117.7 ✓ | 128.9 ✓ | — — |
-| 10000×500 | — — | 947.1 ✓ | 921.4 ✓ | — — | — — | 6.5s ✓ | 6.8s ✓ | 6.9s ⚠ | — — | — — | 1.4s ✓ | 1.4s ✓ | — — |
+| 100×50 | — | **0.87 ms ✓** | 1.09 ms ✓ | — | — | 2.00 ms ✓ | 5.00 ms ✓ | 6.50 ms ✗ | — | — | 1.59 ms ✓ | 3.52 ms ✓ | — |
+| 100×500 | — | 7.51 ms ✓ | **7.36 ms ✓** | — | — | 34.0 ms ✓ | 61.0 ms ✓ | 69.5 ms ✗ | — | — | 11.9 ms ✓ | 13.7 ms ✓ | — |
+| 100×2500 | — | **38.7 ms ✓** | 39.1 ms ✓ | — | — | 305.5 ms ✓ | 589.5 ms ✓ | 606.5 ms ⚠ | — | — | 62.9 ms ✓ | 63.2 ms ✓ | — |
+| 500×50 | — | **4.06 ms ✓** | 4.14 ms ✓ | — | — | 11.5 ms ✓ | 15.0 ms ✓ | 18.5 ms ✗ | — | — | 6.39 ms ✓ | 8.50 ms ✓ | — |
+| 500×500 | — | **37.7 ms ✓** | 38.1 ms ✓ | — | — | 177.0 ms ✓ | 229.0 ms ✓ | 241.0 ms ✗ | — | — | 65.5 ms ✓ | 65.0 ms ✓ | — |
+| 500×2500 | — | 191.3 ms ✓ | **190.9 ms ✓** | — | — | 1.5 s ✓ | 1.8 s ✓ | 1.9 s ✗ | — | — | 336.1 ms ✓ | 335.9 ms ✓ | — |
+| 2500×50 | — | **18.7 ms ✓** | 19.0 ms ✓ | — | — | 63.0 ms ✓ | 86.0 ms ✓ | 68.0 ms ⚠ | — | — | 30.0 ms ✓ | 33.1 ms ✓ | — |
+| 2500×500 | — | 226.3 ms ✓ | **225.1 ms ✓** | — | — | 1.3 s ✓ | 1.4 s ✓ | 1.4 s ✗ | — | — | 343.9 ms ✓ | 356.3 ms ✓ | — |
+| 2500×2500 | — | **1.1 s ✓** | 1.2 s ✓ | — | — | 7.7 s ✓ | 8.6 s ✓ | 8.6 s ✗ | — | — | 1.9 s ✓ | 1.9 s ✓ | — |
+| 10000×50 | — | **77.5 ms ✓** | 78.6 ms ✓ | — | — | 436.0 ms ✓ | 483.0 ms ✓ | 427.0 ms ⚠ | — | — | 117.7 ms ✓ | 128.9 ms ✓ | — |
+| 10000×500 | — | 947.1 ms ✓ | **921.4 ms ✓** | — | — | 6.5 s ✓ | 6.8 s ✓ | 6.9 s ⚠ | — | — | 1.4 s ✓ | 1.4 s ✓ | — |
 
 
 ## cppls  —  3 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | — — | 0.84 ✓ | 1.01 ✓ | — — | — — | 2.50 ✓ | 5.50 ✓ | 6.50 ✗ | — — | — — | 1.58 ✓ | 3.59 ✓ | — — |
-| 100×500 | — — | 7.61 ✓ | 7.77 ✓ | — — | — — | 31.5 ✓ | 69.0 ✓ | 68.5 ✗ | — — | — — | 12.7 ✓ | 14.6 ✓ | — — |
-| 100×2500 | — — | 37.1 ✓ | 38.7 ✓ | — — | — — | 312.0 ✓ | 622.5 ✓ | 606.0 ⚠ | — — | — — | 60.8 ✓ | 64.5 ✓ | — — |
-| 500×50 | — — | 3.99 ✓ | 3.97 ✓ | — — | — — | 10.5 ✓ | 15.5 ✓ | 19.0 ✗ | — — | — — | 6.17 ✓ | 8.69 ✓ | — — |
-| 500×500 | — — | 41.3 ✓ | 38.8 ✓ | — — | — — | 172.5 ✓ | 232.0 ✓ | 241.0 ✗ | — — | — — | 61.7 ✓ | 62.7 ✓ | — — |
-| 500×2500 | — — | 196.7 ✓ | 202.3 ✓ | — — | — — | 1.4s ✓ | 1.8s ✓ | 1.9s ✗ | — — | — — | 323.1 ✓ | 330.0 ✓ | — — |
-| 2500×50 | — — | 18.9 ✓ | 19.7 ✓ | — — | — — | 68.0 ✓ | 74.5 ✓ | 70.5 ⚠ | — — | — — | 30.2 ✓ | 33.6 ✓ | — — |
-| 2500×500 | — — | 237.5 ✓ | 230.2 ✓ | — — | — — | 1.3s ✓ | 1.4s ✓ | 1.4s ✗ | — — | — — | 342.4 ✓ | 355.2 ✓ | — — |
-| 2500×2500 | — — | 1.2s ✓ | 1.2s ✓ | — — | — — | 7.8s ✓ | 8.6s ✓ | 8.9s ✗ | — — | — — | 1.9s ✓ | 1.9s ✓ | — — |
-| 10000×50 | — — | 78.9 ✓ | 81.8 ✓ | — — | — — | 440.0 ✓ | 498.5 ✓ | 432.0 ⚠ | — — | — — | 119.7 ✓ | 134.3 ✓ | — — |
-| 10000×500 | — — | 933.9 ✓ | 924.7 ✓ | — — | — — | 6.4s ✓ | 6.8s ✓ | 7.1s ⚠ | — — | — — | 1.4s ✓ | 1.5s ✓ | — — |
+| 100×50 | — | **0.84 ms ✓** | 1.01 ms ✓ | — | — | 2.50 ms ✓ | 5.50 ms ✓ | 6.50 ms ✗ | — | — | 1.58 ms ✓ | 3.59 ms ✓ | — |
+| 100×500 | — | **7.61 ms ✓** | 7.77 ms ✓ | — | — | 31.5 ms ✓ | 69.0 ms ✓ | 68.5 ms ✗ | — | — | 12.7 ms ✓ | 14.6 ms ✓ | — |
+| 100×2500 | — | **37.1 ms ✓** | 38.7 ms ✓ | — | — | 312.0 ms ✓ | 622.5 ms ✓ | 606.0 ms ⚠ | — | — | 60.8 ms ✓ | 64.5 ms ✓ | — |
+| 500×50 | — | 3.99 ms ✓ | **3.97 ms ✓** | — | — | 10.5 ms ✓ | 15.5 ms ✓ | 19.0 ms ✗ | — | — | 6.17 ms ✓ | 8.69 ms ✓ | — |
+| 500×500 | — | 41.3 ms ✓ | **38.8 ms ✓** | — | — | 172.5 ms ✓ | 232.0 ms ✓ | 241.0 ms ✗ | — | — | 61.7 ms ✓ | 62.7 ms ✓ | — |
+| 500×2500 | — | **196.7 ms ✓** | 202.3 ms ✓ | — | — | 1.4 s ✓ | 1.8 s ✓ | 1.9 s ✗ | — | — | 323.1 ms ✓ | 330.0 ms ✓ | — |
+| 2500×50 | — | **18.9 ms ✓** | 19.7 ms ✓ | — | — | 68.0 ms ✓ | 74.5 ms ✓ | 70.5 ms ⚠ | — | — | 30.2 ms ✓ | 33.6 ms ✓ | — |
+| 2500×500 | — | 237.5 ms ✓ | **230.2 ms ✓** | — | — | 1.3 s ✓ | 1.4 s ✓ | 1.4 s ✗ | — | — | 342.4 ms ✓ | 355.2 ms ✓ | — |
+| 2500×2500 | — | 1.2 s ✓ | **1.2 s ✓** | — | — | 7.8 s ✓ | 8.6 s ✓ | 8.9 s ✗ | — | — | 1.9 s ✓ | 1.9 s ✓ | — |
+| 10000×50 | — | **78.9 ms ✓** | 81.8 ms ✓ | — | — | 440.0 ms ✓ | 498.5 ms ✓ | 432.0 ms ⚠ | — | — | 119.7 ms ✓ | 134.3 ms ✓ | — |
+| 10000×500 | — | 933.9 ms ✓ | **924.7 ms ✓** | — | — | 6.4 s ✓ | 6.8 s ✓ | 7.1 s ⚠ | — | — | 1.4 s ✓ | 1.5 s ✓ | — |
 
 
 ## cppls  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | — — | 0.87 ✓ | 0.99 ✓ | — — | — — | 2.00 ✓ | 5.00 ✓ | 7.50 ✗ | — — | — — | 1.56 ✓ | 3.41 ✓ | — — |
-| 100×500 | — — | 7.96 ✓ | 7.61 ✓ | — — | — — | 32.5 ✓ | 66.0 ✓ | 70.0 ✗ | — — | — — | 12.3 ✓ | 14.4 ✓ | — — |
-| 100×2500 | — — | 37.5 ✓ | 37.4 ✓ | — — | — — | 304.5 ✓ | 596.0 ✓ | 601.0 ⚠ | — — | — — | 62.3 ✓ | 62.5 ✓ | — — |
-| 500×50 | — — | 4.16 ✓ | 4.09 ✓ | — — | — — | 10.5 ✓ | 14.0 ✓ | 17.0 ✗ | — — | — — | 6.19 ✓ | 8.86 ✓ | — — |
-| 500×500 | — — | 39.3 ✓ | 38.3 ✓ | — — | — — | 181.0 ✓ | 223.0 ✓ | 232.5 ✗ | — — | — — | 61.3 ✓ | 65.0 ✓ | — — |
-| 500×2500 | — — | 195.7 ✓ | 233.2 ✓ | — — | — — | 1.4s ✓ | 1.8s ✓ | 2.0s ✗ | — — | — — | 320.9 ✓ | 362.9 ✓ | — — |
-| 2500×50 | — — | 19.1 ✓ | 19.1 ✓ | — — | — — | 63.5 ✓ | 89.5 ✓ | 68.5 ⚠ | — — | — — | 31.7 ✓ | 34.6 ✓ | — — |
-| 2500×500 | — — | 233.5 ✓ | 262.4 ✓ | — — | — — | 1.3s ✓ | 1.4s ✓ | 1.5s ✗ | — — | — — | 343.7 ✓ | 389.2 ✓ | — — |
-| 2500×2500 | — — | 1.2s ✓ | 1.2s ✓ | — — | — — | 7.7s ✓ | 8.7s ✓ | 8.9s ✗ | — — | — — | 1.9s ✓ | 1.9s ✓ | — — |
-| 10000×50 | — — | 78.1 ✓ | 109.5 ✓ | — — | — — | 435.5 ✓ | 524.0 ✓ | 504.0 ⚠ | — — | — — | 126.3 ✓ | 159.2 ✓ | — — |
-| 10000×500 | — — | 947.2 ✓ | 966.4 ✓ | — — | — — | 6.5s ✓ | 6.8s ✓ | 7.1s ⚠ | — — | — — | 1.5s ✓ | 1.5s ✓ | — — |
+| 100×50 | — | **0.87 ms ✓** | 0.99 ms ✓ | — | — | 2.00 ms ✓ | 5.00 ms ✓ | 7.50 ms ✗ | — | — | 1.56 ms ✓ | 3.41 ms ✓ | — |
+| 100×500 | — | 7.96 ms ✓ | **7.61 ms ✓** | — | — | 32.5 ms ✓ | 66.0 ms ✓ | 70.0 ms ✗ | — | — | 12.3 ms ✓ | 14.4 ms ✓ | — |
+| 100×2500 | — | 37.5 ms ✓ | **37.4 ms ✓** | — | — | 304.5 ms ✓ | 596.0 ms ✓ | 601.0 ms ⚠ | — | — | 62.3 ms ✓ | 62.5 ms ✓ | — |
+| 500×50 | — | 4.16 ms ✓ | **4.09 ms ✓** | — | — | 10.5 ms ✓ | 14.0 ms ✓ | 17.0 ms ✗ | — | — | 6.19 ms ✓ | 8.86 ms ✓ | — |
+| 500×500 | — | 39.3 ms ✓ | **38.3 ms ✓** | — | — | 181.0 ms ✓ | 223.0 ms ✓ | 232.5 ms ✗ | — | — | 61.3 ms ✓ | 65.0 ms ✓ | — |
+| 500×2500 | — | **195.7 ms ✓** | 233.2 ms ✓ | — | — | 1.4 s ✓ | 1.8 s ✓ | 2.0 s ✗ | — | — | 320.9 ms ✓ | 362.9 ms ✓ | — |
+| 2500×50 | — | **19.1 ms ✓** | 19.1 ms ✓ | — | — | 63.5 ms ✓ | 89.5 ms ✓ | 68.5 ms ⚠ | — | — | 31.7 ms ✓ | 34.6 ms ✓ | — |
+| 2500×500 | — | **233.5 ms ✓** | 262.4 ms ✓ | — | — | 1.3 s ✓ | 1.4 s ✓ | 1.5 s ✗ | — | — | 343.7 ms ✓ | 389.2 ms ✓ | — |
+| 2500×2500 | — | **1.2 s ✓** | 1.2 s ✓ | — | — | 7.7 s ✓ | 8.7 s ✓ | 8.9 s ✗ | — | — | 1.9 s ✓ | 1.9 s ✓ | — |
+| 10000×50 | — | **78.1 ms ✓** | 109.5 ms ✓ | — | — | 435.5 ms ✓ | 524.0 ms ✓ | 504.0 ms ⚠ | — | — | 126.3 ms ✓ | 159.2 ms ✓ | — |
+| 10000×500 | — | **947.2 ms ✓** | 966.4 ms ✓ | — | — | 6.5 s ✓ | 6.8 s ✓ | 7.1 s ⚠ | — | — | 1.5 s ✓ | 1.5 s ✓ | — |
 
 
 ## ds  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## ds  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## ecr  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | — — | 1.08 ✓ | 1.20 ✓ | — — | — — | 3.00 ✓ | 5.50 ✓ | — — | — — | — — | 1.81 ✓ | 3.92 ✓ | — — |
-| 100×500 | — — | 56.9 ✓ | 56.6 ✓ | — — | — — | 79.0 ✓ | 115.0 ✓ | — — | — — | — — | 58.7 ✓ | 61.6 ✓ | — — |
-| 100×2500 | — — | 5.0s ✓ | 4.5s ✓ | — — | — — | 4.7s ✓ | 4.9s ✓ | — — | — — | — — | 5.1s ✓ | 4.9s ✓ | — — |
-| 500×50 | — — | 4.97 ✓ | 4.99 ✓ | — — | — — | 11.0 ✓ | 16.0 ✓ | — — | — — | — — | 7.47 ✓ | 9.27 ✓ | — — |
-| 500×500 | — — | 187.6 ✓ | 185.5 ✓ | — — | — — | 339.5 ✓ | 377.0 ✓ | — — | — — | — — | 200.5 ✓ | 201.6 ✓ | — — |
-| 500×2500 | — — | 7.5s ✓ | 7.1s ✓ | — — | — — | 7.7s ✓ | 8.3s ✓ | — — | — — | — — | 7.6s ✓ | 7.4s ✓ | — — |
-| 2500×50 | — — | 22.7 ✓ | 23.4 ✓ | — — | — — | 67.5 ✓ | 81.5 ✓ | — — | — — | — — | 34.1 ✓ | 37.4 ✓ | — — |
-| 2500×500 | — — | 866.0 ✓ | 873.7 ✓ | — — | — — | 2.0s ✓ | 2.0s ✓ | — — | — — | — — | 997.0 ✓ | 1.0s ✓ | — — |
-| 2500×2500 | — — | 33.3s ✓ | 32.5s ✓ | — — | — — | 39.0s ✓ | 40.0s ✓ | — — | — — | — — | 33.7s ✓ | 34.5s ✓ | — — |
-| 10000×50 | — — | 93.4 ✓ | 92.6 ✓ | — — | — — | 465.5 ✓ | 426.0 ✓ | — — | — — | — — | 133.4 ✓ | 137.1 ✓ | — — |
-| 10000×500 | — — | 3.6s ✓ | 3.6s ✓ | — — | — — | 8.9s ✓ | 9.2s ✓ | — — | — — | — — | 4.1s ✓ | 4.1s ✓ | — — |
+| 100×50 | — | **1.08 ms ✓** | 1.20 ms ✓ | — | — | 3.00 ms ✓ | 5.50 ms ✓ | — | — | — | 1.81 ms ✓ | 3.92 ms ✓ | — |
+| 100×500 | — | 56.9 ms ✓ | **56.6 ms ✓** | — | — | 79.0 ms ✓ | 115.0 ms ✓ | — | — | — | 58.7 ms ✓ | 61.6 ms ✓ | — |
+| 100×2500 | — | 5.0 s ✓ | **4.5 s ✓** | — | — | 4.7 s ✓ | 4.9 s ✓ | — | — | — | 5.1 s ✓ | 4.9 s ✓ | — |
+| 500×50 | — | **4.97 ms ✓** | 4.99 ms ✓ | — | — | 11.0 ms ✓ | 16.0 ms ✓ | — | — | — | 7.47 ms ✓ | 9.27 ms ✓ | — |
+| 500×500 | — | 187.6 ms ✓ | **185.5 ms ✓** | — | — | 339.5 ms ✓ | 377.0 ms ✓ | — | — | — | 200.5 ms ✓ | 201.6 ms ✓ | — |
+| 500×2500 | — | 7.5 s ✓ | **7.1 s ✓** | — | — | 7.7 s ✓ | 8.3 s ✓ | — | — | — | 7.6 s ✓ | 7.4 s ✓ | — |
+| 2500×50 | — | **22.7 ms ✓** | 23.4 ms ✓ | — | — | 67.5 ms ✓ | 81.5 ms ✓ | — | — | — | 34.1 ms ✓ | 37.4 ms ✓ | — |
+| 2500×500 | — | **866.0 ms ✓** | 873.7 ms ✓ | — | — | 2.0 s ✓ | 2.0 s ✓ | — | — | — | 997.0 ms ✓ | 1.0 s ✓ | — |
+| 2500×2500 | — | 33.3 s ✓ | **32.5 s ✓** | — | — | 39.0 s ✓ | 40.0 s ✓ | — | — | — | 33.7 s ✓ | 34.5 s ✓ | — |
+| 10000×50 | — | 93.4 ms ✓ | **92.6 ms ✓** | — | — | 465.5 ms ✓ | 426.0 ms ✓ | — | — | — | 133.4 ms ✓ | 137.1 ms ✓ | — |
+| 10000×500 | — | 3.6 s ✓ | **3.6 s ✓** | — | — | 8.9 s ✓ | 9.2 s ✓ | — | — | — | 4.1 s ✓ | 4.1 s ✓ | — |
 
 
 ## ecr  —  3 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | — — | 1.17 ✓ | 1.26 ✓ | — — | — — | 3.00 ✓ | 5.50 ✓ | — — | — — | — — | 1.79 ✓ | 3.70 ✓ | — — |
-| 100×500 | — — | 58.9 ✓ | 57.1 ✓ | — — | — — | 78.5 ✓ | 121.0 ✓ | — — | — — | — — | 61.3 ✓ | 62.5 ✓ | — — |
-| 100×2500 | — — | 4.9s ✓ | 4.6s ✓ | — — | — — | 4.7s ✓ | 4.8s ✓ | — — | — — | — — | 5.0s ✓ | 5.1s ✓ | — — |
-| 500×50 | — — | 4.96 ✓ | 5.12 ✓ | — — | — — | 11.5 ✓ | 18.0 ✓ | — — | — — | — — | 7.48 ✓ | 9.11 ✓ | — — |
-| 500×500 | — — | 178.2 ✓ | 179.1 ✓ | — — | — — | 320.0 ✓ | 363.5 ✓ | — — | — — | — — | 201.7 ✓ | 206.4 ✓ | — — |
-| 500×2500 | — — | 7.4s ✓ | 7.0s ✓ | — — | — — | 7.8s ✓ | 8.1s ✓ | — — | — — | — — | 7.5s ✓ | 7.4s ✓ | — — |
-| 2500×50 | — — | 23.6 ✓ | 23.6 ✓ | — — | — — | 68.0 ✓ | 82.0 ✓ | — — | — — | — — | 34.7 ✓ | 37.2 ✓ | — — |
-| 2500×500 | — — | 920.0 ✓ | 924.2 ✓ | — — | — — | 2.0s ✓ | 2.0s ✓ | — — | — — | — — | 996.7 ✓ | 1.0s ✓ | — — |
-| 2500×2500 | — — | 36.3s ✓ | 35.6s ✓ | — — | — — | 39.6s ✓ | 45.3s ✓ | — — | — — | — — | 37.1s ✓ | 35.8s ✓ | — — |
-| 10000×50 | — — | 91.7 ✓ | 95.2 ✓ | — — | — — | 459.0 ✓ | 422.0 ✓ | — — | — — | — — | 138.3 ✓ | 150.9 ✓ | — — |
-| 10000×500 | — — | 3.6s ✓ | 3.6s ✓ | — — | — — | 9.2s ✓ | 9.2s ✓ | — — | — — | — — | 4.1s ✓ | 4.1s ✓ | — — |
+| 100×50 | — | **1.17 ms ✓** | 1.26 ms ✓ | — | — | 3.00 ms ✓ | 5.50 ms ✓ | — | — | — | 1.79 ms ✓ | 3.70 ms ✓ | — |
+| 100×500 | — | 58.9 ms ✓ | **57.1 ms ✓** | — | — | 78.5 ms ✓ | 121.0 ms ✓ | — | — | — | 61.3 ms ✓ | 62.5 ms ✓ | — |
+| 100×2500 | — | 4.9 s ✓ | **4.6 s ✓** | — | — | 4.7 s ✓ | 4.8 s ✓ | — | — | — | 5.0 s ✓ | 5.1 s ✓ | — |
+| 500×50 | — | **4.96 ms ✓** | 5.12 ms ✓ | — | — | 11.5 ms ✓ | 18.0 ms ✓ | — | — | — | 7.48 ms ✓ | 9.11 ms ✓ | — |
+| 500×500 | — | **178.2 ms ✓** | 179.1 ms ✓ | — | — | 320.0 ms ✓ | 363.5 ms ✓ | — | — | — | 201.7 ms ✓ | 206.4 ms ✓ | — |
+| 500×2500 | — | 7.4 s ✓ | **7.0 s ✓** | — | — | 7.8 s ✓ | 8.1 s ✓ | — | — | — | 7.5 s ✓ | 7.4 s ✓ | — |
+| 2500×50 | — | 23.6 ms ✓ | **23.6 ms ✓** | — | — | 68.0 ms ✓ | 82.0 ms ✓ | — | — | — | 34.7 ms ✓ | 37.2 ms ✓ | — |
+| 2500×500 | — | **920.0 ms ✓** | 924.2 ms ✓ | — | — | 2.0 s ✓ | 2.0 s ✓ | — | — | — | 996.7 ms ✓ | 1.0 s ✓ | — |
+| 2500×2500 | — | 36.3 s ✓ | **35.6 s ✓** | — | — | 39.6 s ✓ | 45.3 s ✓ | — | — | — | 37.1 s ✓ | 35.8 s ✓ | — |
+| 10000×50 | — | **91.7 ms ✓** | 95.2 ms ✓ | — | — | 459.0 ms ✓ | 422.0 ms ✓ | — | — | — | 138.3 ms ✓ | 150.9 ms ✓ | — |
+| 10000×500 | — | 3.6 s ✓ | **3.6 s ✓** | — | — | 9.2 s ✓ | 9.2 s ✓ | — | — | — | 4.1 s ✓ | 4.1 s ✓ | — |
 
 
 ## ecr  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | — — | 1.08 ✓ | 1.29 ✓ | — — | — — | 2.50 ✓ | 5.50 ✓ | — — | — — | — — | 1.81 ✓ | 3.71 ✓ | — — |
-| 100×500 | — — | 58.1 ✓ | 59.7 ✓ | — — | — — | 80.5 ✓ | 116.5 ✓ | — — | — — | — — | 63.6 ✓ | 61.8 ✓ | — — |
-| 100×2500 | — — | 5.0s ✓ | 4.5s ✓ | — — | — — | 4.6s ✓ | 4.9s ✓ | — — | — — | — — | 4.9s ✓ | 4.9s ✓ | — — |
-| 500×50 | — — | 5.23 ✓ | 5.15 ✓ | — — | — — | 11.0 ✓ | 15.5 ✓ | — — | — — | — — | 7.35 ✓ | 9.09 ✓ | — — |
-| 500×500 | — — | 190.0 ✓ | 191.5 ✓ | — — | — — | 318.0 ✓ | 368.5 ✓ | — — | — — | — — | 198.8 ✓ | 208.1 ✓ | — — |
-| 500×2500 | — — | 7.4s ✓ | 6.9s ✓ | — — | — — | 7.6s ✓ | 8.3s ✓ | — — | — — | — — | 7.3s ✓ | 7.4s ✓ | — — |
-| 2500×50 | — — | 24.1 ✓ | 24.5 ✓ | — — | — — | 68.5 ✓ | 78.5 ✓ | — — | — — | — — | 34.0 ✓ | 38.2 ✓ | — — |
-| 2500×500 | — — | 882.0 ✓ | 917.9 ✓ | — — | — — | 2.0s ✓ | 2.0s ✓ | — — | — — | — — | 995.0 ✓ | 1.1s ✓ | — — |
-| 2500×2500 | — — | 35.5s ✓ | 33.4s ✓ | — — | — — | 39.9s ✓ | 40.6s ✓ | — — | — — | — — | 34.7s ✓ | 35.3s ✓ | — — |
-| 10000×50 | — — | 92.3 ✓ | 112.9 ✓ | — — | — — | 470.5 ✓ | 469.0 ✓ | — — | — — | — — | 140.2 ✓ | 178.2 ✓ | — — |
-| 10000×500 | — — | 3.6s ✓ | 3.6s ✓ | — — | — — | 9.2s ✓ | 9.4s ✓ | — — | — — | — — | 4.1s ✓ | 4.2s ✓ | — — |
+| 100×50 | — | **1.08 ms ✓** | 1.29 ms ✓ | — | — | 2.50 ms ✓ | 5.50 ms ✓ | — | — | — | 1.81 ms ✓ | 3.71 ms ✓ | — |
+| 100×500 | — | **58.1 ms ✓** | 59.7 ms ✓ | — | — | 80.5 ms ✓ | 116.5 ms ✓ | — | — | — | 63.6 ms ✓ | 61.8 ms ✓ | — |
+| 100×2500 | — | 5.0 s ✓ | **4.5 s ✓** | — | — | 4.6 s ✓ | 4.9 s ✓ | — | — | — | 4.9 s ✓ | 4.9 s ✓ | — |
+| 500×50 | — | 5.23 ms ✓ | **5.15 ms ✓** | — | — | 11.0 ms ✓ | 15.5 ms ✓ | — | — | — | 7.35 ms ✓ | 9.09 ms ✓ | — |
+| 500×500 | — | **190.0 ms ✓** | 191.5 ms ✓ | — | — | 318.0 ms ✓ | 368.5 ms ✓ | — | — | — | 198.8 ms ✓ | 208.1 ms ✓ | — |
+| 500×2500 | — | 7.4 s ✓ | **6.9 s ✓** | — | — | 7.6 s ✓ | 8.3 s ✓ | — | — | — | 7.3 s ✓ | 7.4 s ✓ | — |
+| 2500×50 | — | **24.1 ms ✓** | 24.5 ms ✓ | — | — | 68.5 ms ✓ | 78.5 ms ✓ | — | — | — | 34.0 ms ✓ | 38.2 ms ✓ | — |
+| 2500×500 | — | **882.0 ms ✓** | 917.9 ms ✓ | — | — | 2.0 s ✓ | 2.0 s ✓ | — | — | — | 995.0 ms ✓ | 1.1 s ✓ | — |
+| 2500×2500 | — | 35.5 s ✓ | **33.4 s ✓** | — | — | 39.9 s ✓ | 40.6 s ✓ | — | — | — | 34.7 s ✓ | 35.3 s ✓ | — |
+| 10000×50 | — | **92.3 ms ✓** | 112.9 ms ✓ | — | — | 470.5 ms ✓ | 469.0 ms ✓ | — | — | — | 140.2 ms ✓ | 178.2 ms ✓ | — |
+| 10000×500 | — | 3.6 s ✓ | **3.6 s ✓** | — | — | 9.2 s ✓ | 9.4 s ✓ | — | — | — | 4.1 s ✓ | 4.2 s ✓ | — |
 
 
 ## fused_sparse_pls  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 30.0 ✓ | — — | — — | — — |
-| 500×500 | — — | — — | — — | 180.0 ✓ | — — | — — | — — |
-| 2500×500 | — — | — — | — — | 1.5s ✓ | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | 8.1s ✓ | — — | — — | — — |
+| 100×500 | — | — | — | **30.0 ms ✓** | — | — | — |
+| 500×500 | — | — | — | **180.0 ms ✓** | — | — | — |
+| 2500×500 | — | — | — | **1.5 s ✓** | — | — | — |
+| 2500×2500 | — | — | — | **8.1 s ✓** | — | — | — |
 
 
 ## fused_sparse_pls  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 32.0 ✓ | — — | — — | — — |
-| 500×500 | — — | — — | — — | 182.5 ✓ | — — | — — | — — |
-| 2500×500 | — — | — — | — — | 1.5s ✓ | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | 7.6s ✓ | — — | — — | — — |
+| 100×500 | — | — | — | **32.0 ms ✓** | — | — | — |
+| 500×500 | — | — | — | **182.5 ms ✓** | — | — | — |
+| 2500×500 | — | — | — | **1.5 s ✓** | — | — | — |
+| 2500×2500 | — | — | — | **7.6 s ✓** | — | — | — |
 
 
 ## gpr_pls  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 34.0 ✓ | — — | — — | — — |
-| 500×500 | — — | — — | — — | 218.0 ✓ | — — | — — | — — |
-| 2500×500 | — — | — — | — — | 6.5s ✓ | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | 13.3s ✓ | — — | — — | — — |
+| 100×500 | — | — | — | **34.0 ms ✓** | — | — | — |
+| 500×500 | — | — | — | **218.0 ms ✓** | — | — | — |
+| 2500×500 | — | — | — | **6.5 s ✓** | — | — | — |
+| 2500×2500 | — | — | — | **13.3 s ✓** | — | — | — |
 
 
 ## gpr_pls  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 33.5 ✓ | — — | — — | — — |
-| 500×500 | — — | — — | — — | 232.5 ✓ | — — | — — | — — |
-| 2500×500 | — — | — — | — — | 6.6s ✓ | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | 13.8s ✓ | — — | — — | — — |
+| 100×500 | — | — | — | **33.5 ms ✓** | — | — | — |
+| 500×500 | — | — | — | **232.5 ms ✓** | — | — | — |
+| 2500×500 | — | — | — | **6.6 s ✓** | — | — | — |
+| 2500×2500 | — | — | — | **13.8 s ✓** | — | — | — |
 
 
 ## group_sparse_pls  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## group_sparse_pls  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## kernel_pls  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 34.5 ✓ | — — | — — | — — |
-| 500×500 | — — | — — | — — | 270.5 ✓ | — — | — — | — — |
-| 2500×500 | — — | — — | — — | 3.8s ✓ | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | 23.6s ✓ | — — | — — | — — |
+| 100×500 | — | — | — | **34.5 ms ✓** | — | — | — |
+| 500×500 | — | — | — | **270.5 ms ✓** | — | — | — |
+| 2500×500 | — | — | — | **3.8 s ✓** | — | — | — |
+| 2500×2500 | — | — | — | **23.6 s ✓** | — | — | — |
 
 
 ## kernel_pls  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 34.0 ✓ | — — | — — | — — |
-| 500×500 | — — | — — | — — | 275.5 ✓ | — — | — — | — — |
-| 2500×500 | — — | — — | — — | 4.3s ✓ | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | 23.4s ✓ | — — | — — | — — |
+| 100×500 | — | — | — | **34.0 ms ✓** | — | — | — |
+| 500×500 | — | — | — | **275.5 ms ✓** | — | — | — |
+| 2500×500 | — | — | — | **4.3 s ✓** | — | — | — |
+| 2500×2500 | — | — | — | **23.4 s ✓** | — | — | — |
 
 
 ## lw_pls  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 45.5 ✓ | — — | — — | — — |
-| 500×500 | — — | — — | — — | 290.0 ✓ | — — | — — | — — |
-| 2500×500 | — — | — — | — — | 3.1s ✓ | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | 17.4s ✓ | — — | — — | — — |
+| 100×500 | — | — | — | **45.5 ms ✓** | — | — | — |
+| 500×500 | — | — | — | **290.0 ms ✓** | — | — | — |
+| 2500×500 | — | — | — | **3.1 s ✓** | — | — | — |
+| 2500×2500 | — | — | — | **17.4 s ✓** | — | — | — |
 
 
 ## lw_pls  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 46.0 ✓ | — — | — — | — — |
-| 500×500 | — — | — — | — — | 286.5 ✓ | — — | — — | — — |
-| 2500×500 | — — | — — | — — | 3.2s ✓ | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | 17.9s ✓ | — — | — — | — — |
+| 100×500 | — | — | — | **46.0 ms ✓** | — | — | — |
+| 500×500 | — | — | — | **286.5 ms ✓** | — | — | — |
+| 2500×500 | — | — | — | **3.2 s ✓** | — | — | — |
+| 2500×2500 | — | — | — | **17.9 s ✓** | — | — | — |
 
 
 ## mir_pls  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | 0.89 ✓ | 0.84 ✓ | 0.99 ✓ | — — | — — | 2.00 ✓ | 5.50 ✓ | — — | — — | — — | 1.43 ✓ | 3.37 ✓ | — — |
-| 100×500 | 7.56 ✓ | 7.36 ✓ | 7.21 ✓ | — — | — — | 31.5 ✓ | 64.5 ✓ | — — | — — | — — | 11.5 ✓ | 13.4 ✓ | — — |
-| 100×2500 | 35.3 ✓ | 34.8 ✓ | 35.4 ✓ | — — | — — | 293.0 ✓ | 584.0 ✓ | — — | — — | — — | 58.1 ✓ | 60.2 ✓ | — — |
-| 500×50 | 3.81 ✓ | 3.75 ✓ | 3.74 ✓ | — — | — — | 10.5 ✓ | 14.0 ✓ | — — | — — | — — | 6.13 ✓ | 7.79 ✓ | — — |
-| 500×500 | 35.4 ✓ | 36.2 ✓ | 36.5 ✓ | — — | — — | 173.5 ✓ | 227.0 ✓ | — — | — — | — — | 57.4 ✓ | 60.8 ✓ | — — |
-| 500×2500 | 179.7 ✓ | 179.0 ✓ | 183.8 ✓ | — — | — — | 1.4s ✓ | 1.7s ✓ | — — | — — | — — | 308.4 ✓ | 313.3 ✓ | — — |
-| 2500×50 | 18.0 ✓ | 17.8 ✓ | 17.9 ✓ | — — | — — | 63.0 ✓ | 79.0 ✓ | — — | — — | — — | 29.1 ✓ | 31.4 ✓ | — — |
-| 2500×500 | 190.4 ✓ | 192.4 ✓ | 187.2 ✓ | — — | — — | 1.3s ✓ | 1.3s ✓ | — — | — — | — — | 301.1 ✓ | 302.7 ✓ | — — |
-| 2500×2500 | 940.8 ✓ | 942.0 ✓ | 956.3 ✓ | — — | — — | 7.9s ✓ | 8.3s ✓ | — — | — — | — — | 1.7s ✓ | 1.7s ✓ | — — |
-| 10000×50 | 72.7 ✓ | 73.7 ✓ | 72.8 ✓ | — — | — — | 441.0 ✓ | 484.5 ✓ | — — | — — | — — | 115.2 ✓ | 120.2 ✓ | — — |
-| 10000×500 | 779.3 ✓ | 767.3 ✓ | 777.0 ✓ | — — | — — | 6.3s ✓ | 6.7s ✓ | — — | — — | — — | 1.3s ✓ | 1.3s ✓ | — — |
+| 100×50 | 0.89 ms ✓ | **0.84 ms ✓** | 0.99 ms ✓ | — | — | 2.00 ms ✓ | 5.50 ms ✓ | — | — | — | 1.43 ms ✓ | 3.37 ms ✓ | — |
+| 100×500 | 7.56 ms ✓ | 7.36 ms ✓ | **7.21 ms ✓** | — | — | 31.5 ms ✓ | 64.5 ms ✓ | — | — | — | 11.5 ms ✓ | 13.4 ms ✓ | — |
+| 100×2500 | 35.3 ms ✓ | **34.8 ms ✓** | 35.4 ms ✓ | — | — | 293.0 ms ✓ | 584.0 ms ✓ | — | — | — | 58.1 ms ✓ | 60.2 ms ✓ | — |
+| 500×50 | 3.81 ms ✓ | 3.75 ms ✓ | **3.74 ms ✓** | — | — | 10.5 ms ✓ | 14.0 ms ✓ | — | — | — | 6.13 ms ✓ | 7.79 ms ✓ | — |
+| 500×500 | **35.4 ms ✓** | 36.2 ms ✓ | 36.5 ms ✓ | — | — | 173.5 ms ✓ | 227.0 ms ✓ | — | — | — | 57.4 ms ✓ | 60.8 ms ✓ | — |
+| 500×2500 | 179.7 ms ✓ | **179.0 ms ✓** | 183.8 ms ✓ | — | — | 1.4 s ✓ | 1.7 s ✓ | — | — | — | 308.4 ms ✓ | 313.3 ms ✓ | — |
+| 2500×50 | 18.0 ms ✓ | **17.8 ms ✓** | 17.9 ms ✓ | — | — | 63.0 ms ✓ | 79.0 ms ✓ | — | — | — | 29.1 ms ✓ | 31.4 ms ✓ | — |
+| 2500×500 | 190.4 ms ✓ | 192.4 ms ✓ | **187.2 ms ✓** | — | — | 1.3 s ✓ | 1.3 s ✓ | — | — | — | 301.1 ms ✓ | 302.7 ms ✓ | — |
+| 2500×2500 | **940.8 ms ✓** | 942.0 ms ✓ | 956.3 ms ✓ | — | — | 7.9 s ✓ | 8.3 s ✓ | — | — | — | 1.7 s ✓ | 1.7 s ✓ | — |
+| 10000×50 | **72.7 ms ✓** | 73.7 ms ✓ | 72.8 ms ✓ | — | — | 441.0 ms ✓ | 484.5 ms ✓ | — | — | — | 115.2 ms ✓ | 120.2 ms ✓ | — |
+| 10000×500 | 779.3 ms ✓ | **767.3 ms ✓** | 777.0 ms ✓ | — | — | 6.3 s ✓ | 6.7 s ✓ | — | — | — | 1.3 s ✓ | 1.3 s ✓ | — |
 
 
 ## mir_pls  —  3 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | 0.78 ✓ | 0.83 ✓ | 0.96 ✓ | — — | — — | 2.00 ✓ | 5.50 ✓ | — — | — — | — — | 1.59 ✓ | 3.45 ✓ | — — |
-| 100×500 | 7.63 ✓ | 7.12 ✓ | 7.20 ✓ | — — | — — | 32.0 ✓ | 61.5 ✓ | — — | — — | — — | 11.6 ✓ | 13.2 ✓ | — — |
-| 100×2500 | 35.4 ✓ | 36.4 ✓ | 35.6 ✓ | — — | — — | 298.0 ✓ | 585.5 ✓ | — — | — — | — — | 57.9 ✓ | 61.2 ✓ | — — |
-| 500×50 | 3.71 ✓ | 3.92 ✓ | 3.77 ✓ | — — | — — | 10.5 ✓ | 14.5 ✓ | — — | — — | — — | 5.99 ✓ | 8.20 ✓ | — — |
-| 500×500 | 36.4 ✓ | 35.2 ✓ | 36.0 ✓ | — — | — — | 184.0 ✓ | 236.5 ✓ | — — | — — | — — | 57.1 ✓ | 61.9 ✓ | — — |
-| 500×2500 | 181.8 ✓ | 177.1 ✓ | 191.3 ✓ | — — | — — | 1.4s ✓ | 1.8s ✓ | — — | — — | — — | 308.5 ✓ | 316.1 ✓ | — — |
-| 2500×50 | 18.3 ✓ | 18.0 ✓ | 18.1 ✓ | — — | — — | 64.5 ✓ | 77.5 ✓ | — — | — — | — — | 28.8 ✓ | 31.1 ✓ | — — |
-| 2500×500 | 189.2 ✓ | 187.2 ✓ | 194.5 ✓ | — — | — — | 1.3s ✓ | 1.3s ✓ | — — | — — | — — | 300.2 ✓ | 318.8 ✓ | — — |
-| 2500×2500 | 946.2 ✓ | 949.7 ✓ | 954.8 ✓ | — — | — — | 8.0s ✓ | 8.3s ✓ | — — | — — | — — | 1.7s ✓ | 1.8s ✓ | — — |
-| 10000×50 | 73.9 ✓ | 72.3 ✓ | 73.9 ✓ | — — | — — | 440.0 ✓ | 493.0 ✓ | — — | — — | — — | 117.0 ✓ | 125.5 ✓ | — — |
-| 10000×500 | 766.1 ✓ | 766.7 ✓ | 780.4 ✓ | — — | — — | 6.3s ✓ | 6.7s ✓ | — — | — — | — — | 1.3s ✓ | 1.3s ✓ | — — |
+| 100×50 | **0.78 ms ✓** | 0.83 ms ✓ | 0.96 ms ✓ | — | — | 2.00 ms ✓ | 5.50 ms ✓ | — | — | — | 1.59 ms ✓ | 3.45 ms ✓ | — |
+| 100×500 | 7.63 ms ✓ | **7.12 ms ✓** | 7.20 ms ✓ | — | — | 32.0 ms ✓ | 61.5 ms ✓ | — | — | — | 11.6 ms ✓ | 13.2 ms ✓ | — |
+| 100×2500 | **35.4 ms ✓** | 36.4 ms ✓ | 35.6 ms ✓ | — | — | 298.0 ms ✓ | 585.5 ms ✓ | — | — | — | 57.9 ms ✓ | 61.2 ms ✓ | — |
+| 500×50 | **3.71 ms ✓** | 3.92 ms ✓ | 3.77 ms ✓ | — | — | 10.5 ms ✓ | 14.5 ms ✓ | — | — | — | 5.99 ms ✓ | 8.20 ms ✓ | — |
+| 500×500 | 36.4 ms ✓ | **35.2 ms ✓** | 36.0 ms ✓ | — | — | 184.0 ms ✓ | 236.5 ms ✓ | — | — | — | 57.1 ms ✓ | 61.9 ms ✓ | — |
+| 500×2500 | 181.8 ms ✓ | **177.1 ms ✓** | 191.3 ms ✓ | — | — | 1.4 s ✓ | 1.8 s ✓ | — | — | — | 308.5 ms ✓ | 316.1 ms ✓ | — |
+| 2500×50 | 18.3 ms ✓ | **18.0 ms ✓** | 18.1 ms ✓ | — | — | 64.5 ms ✓ | 77.5 ms ✓ | — | — | — | 28.8 ms ✓ | 31.1 ms ✓ | — |
+| 2500×500 | 189.2 ms ✓ | **187.2 ms ✓** | 194.5 ms ✓ | — | — | 1.3 s ✓ | 1.3 s ✓ | — | — | — | 300.2 ms ✓ | 318.8 ms ✓ | — |
+| 2500×2500 | **946.2 ms ✓** | 949.7 ms ✓ | 954.8 ms ✓ | — | — | 8.0 s ✓ | 8.3 s ✓ | — | — | — | 1.7 s ✓ | 1.8 s ✓ | — |
+| 10000×50 | 73.9 ms ✓ | **72.3 ms ✓** | 73.9 ms ✓ | — | — | 440.0 ms ✓ | 493.0 ms ✓ | — | — | — | 117.0 ms ✓ | 125.5 ms ✓ | — |
+| 10000×500 | **766.1 ms ✓** | 766.7 ms ✓ | 780.4 ms ✓ | — | — | 6.3 s ✓ | 6.7 s ✓ | — | — | — | 1.3 s ✓ | 1.3 s ✓ | — |
 
 
 ## mir_pls  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | 0.80 ✓ | 0.87 ✓ | 0.96 ✓ | — — | — — | 2.50 ✓ | 5.50 ✓ | — — | — — | — — | 1.53 ✓ | 3.58 ✓ | — — |
-| 100×500 | 7.46 ✓ | 6.99 ✓ | 7.46 ✓ | — — | — — | 31.5 ✓ | 63.5 ✓ | — — | — — | — — | 11.8 ✓ | 13.8 ✓ | — — |
-| 100×2500 | 35.7 ✓ | 34.9 ✓ | 36.1 ✓ | — — | — — | 300.5 ✓ | 584.0 ✓ | — — | — — | — — | 58.9 ✓ | 61.1 ✓ | — — |
-| 500×50 | 3.71 ✓ | 3.73 ✓ | 3.71 ✓ | — — | — — | 11.0 ✓ | 14.5 ✓ | — — | — — | — — | 6.06 ✓ | 7.81 ✓ | — — |
-| 500×500 | 36.0 ✓ | 36.6 ✓ | 37.4 ✓ | — — | — — | 171.5 ✓ | 233.0 ✓ | — — | — — | — — | 56.7 ✓ | 62.1 ✓ | — — |
-| 500×2500 | 177.9 ✓ | 179.6 ✓ | 220.0 ✓ | — — | — — | 1.4s ✓ | 1.8s ✓ | — — | — — | — — | 309.3 ✓ | 350.2 ✓ | — — |
-| 2500×50 | 18.2 ✓ | 19.0 ✓ | 18.3 ✓ | — — | — — | 65.5 ✓ | 77.0 ✓ | — — | — — | — — | 29.1 ✓ | 31.4 ✓ | — — |
-| 2500×500 | 194.1 ✓ | 192.5 ✓ | 223.5 ✓ | — — | — — | 1.3s ✓ | 1.4s ✓ | — — | — — | — — | 309.5 ✓ | 354.0 ✓ | — — |
-| 2500×2500 | 943.3 ✓ | 935.9 ✓ | 986.1 ✓ | — — | — — | 7.5s ✓ | 8.4s ✓ | — — | — — | — — | 1.7s ✓ | 1.8s ✓ | — — |
-| 10000×50 | 74.2 ✓ | 75.0 ✓ | 104.9 ✓ | — — | — — | 448.5 ✓ | 539.0 ✓ | — — | — — | — — | 118.0 ✓ | 149.2 ✓ | — — |
-| 10000×500 | 774.7 ✓ | 775.2 ✓ | 826.4 ✓ | — — | — — | 6.8s ✓ | 6.7s ✓ | — — | — — | — — | 1.3s ✓ | 1.3s ✓ | — — |
+| 100×50 | **0.80 ms ✓** | 0.87 ms ✓ | 0.96 ms ✓ | — | — | 2.50 ms ✓ | 5.50 ms ✓ | — | — | — | 1.53 ms ✓ | 3.58 ms ✓ | — |
+| 100×500 | 7.46 ms ✓ | **6.99 ms ✓** | 7.46 ms ✓ | — | — | 31.5 ms ✓ | 63.5 ms ✓ | — | — | — | 11.8 ms ✓ | 13.8 ms ✓ | — |
+| 100×2500 | 35.7 ms ✓ | **34.9 ms ✓** | 36.1 ms ✓ | — | — | 300.5 ms ✓ | 584.0 ms ✓ | — | — | — | 58.9 ms ✓ | 61.1 ms ✓ | — |
+| 500×50 | 3.71 ms ✓ | 3.73 ms ✓ | **3.71 ms ✓** | — | — | 11.0 ms ✓ | 14.5 ms ✓ | — | — | — | 6.06 ms ✓ | 7.81 ms ✓ | — |
+| 500×500 | **36.0 ms ✓** | 36.6 ms ✓ | 37.4 ms ✓ | — | — | 171.5 ms ✓ | 233.0 ms ✓ | — | — | — | 56.7 ms ✓ | 62.1 ms ✓ | — |
+| 500×2500 | **177.9 ms ✓** | 179.6 ms ✓ | 220.0 ms ✓ | — | — | 1.4 s ✓ | 1.8 s ✓ | — | — | — | 309.3 ms ✓ | 350.2 ms ✓ | — |
+| 2500×50 | **18.2 ms ✓** | 19.0 ms ✓ | 18.3 ms ✓ | — | — | 65.5 ms ✓ | 77.0 ms ✓ | — | — | — | 29.1 ms ✓ | 31.4 ms ✓ | — |
+| 2500×500 | 194.1 ms ✓ | **192.5 ms ✓** | 223.5 ms ✓ | — | — | 1.3 s ✓ | 1.4 s ✓ | — | — | — | 309.5 ms ✓ | 354.0 ms ✓ | — |
+| 2500×2500 | 943.3 ms ✓ | **935.9 ms ✓** | 986.1 ms ✓ | — | — | 7.5 s ✓ | 8.4 s ✓ | — | — | — | 1.7 s ✓ | 1.8 s ✓ | — |
+| 10000×50 | **74.2 ms ✓** | 75.0 ms ✓ | 104.9 ms ✓ | — | — | 448.5 ms ✓ | 539.0 ms ✓ | — | — | — | 118.0 ms ✓ | 149.2 ms ✓ | — |
+| 10000×500 | **774.7 ms ✓** | 775.2 ms ✓ | 826.4 ms ✓ | — | — | 6.8 s ✓ | 6.7 s ✓ | — | — | — | 1.3 s ✓ | 1.3 s ✓ | — |
 
 
 ## missing_aware_nipals  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | 0.87 ✓ | 0.89 ✓ | 0.93 ✓ | — — | — — | 2.00 ✓ | 5.00 ✓ | — — | — — | — — | 1.51 ✓ | 3.58 ✓ | — — |
-| 100×500 | 8.01 ✓ | 7.71 ✓ | 7.40 ✓ | — — | — — | 31.0 ✓ | 66.0 ✓ | — — | — — | — — | 12.2 ✓ | 14.3 ✓ | — — |
-| 100×2500 | 38.1 ✓ | 37.2 ✓ | 37.8 ✓ | — — | — — | 329.5 ✓ | 607.0 ✓ | — — | — — | — — | 61.4 ✓ | 64.7 ✓ | — — |
-| 500×50 | 4.16 ✓ | 3.82 ✓ | 3.87 ✓ | — — | — — | 12.0 ✓ | 16.5 ✓ | — — | — — | — — | 6.45 ✓ | 8.81 ✓ | — — |
-| 500×500 | 44.2 ✓ | 39.6 ✓ | 41.8 ✓ | — — | — — | 204.5 ✓ | 255.5 ✓ | — — | — — | — — | 62.1 ✓ | 63.7 ✓ | — — |
-| 500×2500 | 196.2 ✓ | 191.7 ✓ | 196.7 ✓ | — — | — — | 1.2s ✓ | 1.9s ✓ | — — | — — | — — | 328.5 ✓ | 331.3 ✓ | — — |
-| 2500×50 | 20.0 ✓ | 18.8 ✓ | 19.7 ✓ | — — | — — | 73.0 ✓ | 89.0 ✓ | — — | — — | — — | 29.7 ✓ | 32.5 ✓ | — — |
-| 2500×500 | 221.8 ✓ | 224.3 ✓ | 225.5 ✓ | — — | — — | 1.5s ✓ | 1.4s ✓ | — — | — — | — — | 339.6 ✓ | 348.6 ✓ | — — |
-| 2500×2500 | 1.1s ✓ | 1.1s ✓ | 1.1s ✓ | — — | — — | 8.5s ✓ | 9.2s ✓ | — — | — — | — — | 1.8s ✓ | 1.9s ✓ | — — |
-| 10000×50 | 75.4 ✓ | 74.2 ✓ | 74.7 ✓ | — — | — — | 447.5 ✓ | 565.0 ✓ | — — | — — | — — | 118.2 ✓ | 119.1 ✓ | — — |
-| 10000×500 | 875.8 ✓ | 875.7 ✓ | 870.1 ✓ | — — | — — | 6.4s ✓ | 6.1s ✓ | — — | — — | — — | 1.4s ✓ | 1.4s ✓ | — — |
+| 100×50 | **0.87 ms ✓** | 0.89 ms ✓ | 0.93 ms ✓ | — | — | 2.00 ms ✓ | 5.00 ms ✓ | — | — | — | 1.51 ms ✓ | 3.58 ms ✓ | — |
+| 100×500 | 8.01 ms ✓ | 7.71 ms ✓ | **7.40 ms ✓** | — | — | 31.0 ms ✓ | 66.0 ms ✓ | — | — | — | 12.2 ms ✓ | 14.3 ms ✓ | — |
+| 100×2500 | 38.1 ms ✓ | **37.2 ms ✓** | 37.8 ms ✓ | — | — | 329.5 ms ✓ | 607.0 ms ✓ | — | — | — | 61.4 ms ✓ | 64.7 ms ✓ | — |
+| 500×50 | 4.16 ms ✓ | **3.82 ms ✓** | 3.87 ms ✓ | — | — | 12.0 ms ✓ | 16.5 ms ✓ | — | — | — | 6.45 ms ✓ | 8.81 ms ✓ | — |
+| 500×500 | 44.2 ms ✓ | **39.6 ms ✓** | 41.8 ms ✓ | — | — | 204.5 ms ✓ | 255.5 ms ✓ | — | — | — | 62.1 ms ✓ | 63.7 ms ✓ | — |
+| 500×2500 | 196.2 ms ✓ | **191.7 ms ✓** | 196.7 ms ✓ | — | — | 1.2 s ✓ | 1.9 s ✓ | — | — | — | 328.5 ms ✓ | 331.3 ms ✓ | — |
+| 2500×50 | 20.0 ms ✓ | **18.8 ms ✓** | 19.7 ms ✓ | — | — | 73.0 ms ✓ | 89.0 ms ✓ | — | — | — | 29.7 ms ✓ | 32.5 ms ✓ | — |
+| 2500×500 | **221.8 ms ✓** | 224.3 ms ✓ | 225.5 ms ✓ | — | — | 1.5 s ✓ | 1.4 s ✓ | — | — | — | 339.6 ms ✓ | 348.6 ms ✓ | — |
+| 2500×2500 | 1.1 s ✓ | **1.1 s ✓** | 1.1 s ✓ | — | — | 8.5 s ✓ | 9.2 s ✓ | — | — | — | 1.8 s ✓ | 1.9 s ✓ | — |
+| 10000×50 | 75.4 ms ✓ | **74.2 ms ✓** | 74.7 ms ✓ | — | — | 447.5 ms ✓ | 565.0 ms ✓ | — | — | — | 118.2 ms ✓ | 119.1 ms ✓ | — |
+| 10000×500 | 875.8 ms ✓ | 875.7 ms ✓ | **870.1 ms ✓** | — | — | 6.4 s ✓ | 6.1 s ✓ | — | — | — | 1.4 s ✓ | 1.4 s ✓ | — |
 
 
 ## missing_aware_nipals  —  3 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | 0.86 ✓ | 1.15 ✓ | 0.98 ✓ | — — | — — | 2.50 ✓ | 5.50 ✓ | — — | — — | — — | 1.65 ✓ | 3.44 ✓ | — — |
-| 100×500 | 7.53 ✓ | 7.53 ✓ | 7.53 ✓ | — — | — — | 35.0 ✓ | 64.5 ✓ | — — | — — | — — | 12.2 ✓ | 14.6 ✓ | — — |
-| 100×2500 | 35.3 ✓ | 37.0 ✓ | 38.4 ✓ | — — | — — | 309.5 ✓ | 595.0 ✓ | — — | — — | — — | 60.6 ✓ | 63.1 ✓ | — — |
-| 500×50 | 3.95 ✓ | 4.17 ✓ | 4.03 ✓ | — — | — — | 12.0 ✓ | 16.0 ✓ | — — | — — | — — | 6.72 ✓ | 8.89 ✓ | — — |
-| 500×500 | 38.6 ✓ | 38.2 ✓ | 38.4 ✓ | — — | — — | 193.5 ✓ | 240.0 ✓ | — — | — — | — — | 58.6 ✓ | 62.8 ✓ | — — |
-| 500×2500 | 187.7 ✓ | 189.5 ✓ | 195.4 ✓ | — — | — — | 1.2s ✓ | 1.9s ✓ | — — | — — | — — | 323.9 ✓ | 333.1 ✓ | — — |
-| 2500×50 | 19.1 ✓ | 19.7 ✓ | 19.6 ✓ | — — | — — | 80.5 ✓ | 86.5 ✓ | — — | — — | — — | 31.1 ✓ | 32.5 ✓ | — — |
-| 2500×500 | 223.4 ✓ | 216.9 ✓ | 217.8 ✓ | — — | — — | 1.6s ✓ | 1.4s ✓ | — — | — — | — — | 330.7 ✓ | 345.4 ✓ | — — |
-| 2500×2500 | 1.1s ✓ | 1.1s ✓ | 1.1s ✓ | — — | — — | 7.7s ✓ | 9.0s ✓ | — — | — — | — — | 1.8s ✓ | 1.8s ✓ | — — |
-| 10000×50 | 75.3 ✓ | 74.4 ✓ | 75.3 ✓ | — — | — — | 438.5 ✓ | 555.0 ✓ | — — | — — | — — | 117.2 ✓ | 128.7 ✓ | — — |
-| 10000×500 | 882.5 ✓ | 896.2 ✓ | 863.3 ✓ | — — | — — | 6.7s ✓ | 6.3s ✓ | — — | — — | — — | 1.4s ✓ | 1.4s ✓ | — — |
+| 100×50 | **0.86 ms ✓** | 1.15 ms ✓ | 0.98 ms ✓ | — | — | 2.50 ms ✓ | 5.50 ms ✓ | — | — | — | 1.65 ms ✓ | 3.44 ms ✓ | — |
+| 100×500 | 7.53 ms ✓ | 7.53 ms ✓ | **7.53 ms ✓** | — | — | 35.0 ms ✓ | 64.5 ms ✓ | — | — | — | 12.2 ms ✓ | 14.6 ms ✓ | — |
+| 100×2500 | **35.3 ms ✓** | 37.0 ms ✓ | 38.4 ms ✓ | — | — | 309.5 ms ✓ | 595.0 ms ✓ | — | — | — | 60.6 ms ✓ | 63.1 ms ✓ | — |
+| 500×50 | **3.95 ms ✓** | 4.17 ms ✓ | 4.03 ms ✓ | — | — | 12.0 ms ✓ | 16.0 ms ✓ | — | — | — | 6.72 ms ✓ | 8.89 ms ✓ | — |
+| 500×500 | 38.6 ms ✓ | **38.2 ms ✓** | 38.4 ms ✓ | — | — | 193.5 ms ✓ | 240.0 ms ✓ | — | — | — | 58.6 ms ✓ | 62.8 ms ✓ | — |
+| 500×2500 | **187.7 ms ✓** | 189.5 ms ✓ | 195.4 ms ✓ | — | — | 1.2 s ✓ | 1.9 s ✓ | — | — | — | 323.9 ms ✓ | 333.1 ms ✓ | — |
+| 2500×50 | **19.1 ms ✓** | 19.7 ms ✓ | 19.6 ms ✓ | — | — | 80.5 ms ✓ | 86.5 ms ✓ | — | — | — | 31.1 ms ✓ | 32.5 ms ✓ | — |
+| 2500×500 | 223.4 ms ✓ | **216.9 ms ✓** | 217.8 ms ✓ | — | — | 1.6 s ✓ | 1.4 s ✓ | — | — | — | 330.7 ms ✓ | 345.4 ms ✓ | — |
+| 2500×2500 | **1.1 s ✓** | 1.1 s ✓ | 1.1 s ✓ | — | — | 7.7 s ✓ | 9.0 s ✓ | — | — | — | 1.8 s ✓ | 1.8 s ✓ | — |
+| 10000×50 | 75.3 ms ✓ | **74.4 ms ✓** | 75.3 ms ✓ | — | — | 438.5 ms ✓ | 555.0 ms ✓ | — | — | — | 117.2 ms ✓ | 128.7 ms ✓ | — |
+| 10000×500 | 882.5 ms ✓ | 896.2 ms ✓ | **863.3 ms ✓** | — | — | 6.7 s ✓ | 6.3 s ✓ | — | — | — | 1.4 s ✓ | 1.4 s ✓ | — |
 
 
 ## missing_aware_nipals  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | 0.88 ✓ | 0.89 ✓ | 1.02 ✓ | — — | — — | 2.50 ✓ | 5.50 ✓ | — — | — — | — — | 1.81 ✓ | 3.56 ✓ | — — |
-| 100×500 | 7.62 ✓ | 7.59 ✓ | 7.39 ✓ | — — | — — | 33.5 ✓ | 63.0 ✓ | — — | — — | — — | 12.3 ✓ | 14.8 ✓ | — — |
-| 100×2500 | 37.9 ✓ | 37.6 ✓ | 38.5 ✓ | — — | — — | 319.5 ✓ | 597.0 ✓ | — — | — — | — — | 63.8 ✓ | 67.6 ✓ | — — |
-| 500×50 | 4.09 ✓ | 4.09 ✓ | 4.14 ✓ | — — | — — | 11.0 ✓ | 15.0 ✓ | — — | — — | — — | 6.48 ✓ | 8.72 ✓ | — — |
-| 500×500 | 37.6 ✓ | 38.9 ✓ | 38.1 ✓ | — — | — — | 200.5 ✓ | 238.0 ✓ | — — | — — | — — | 61.0 ✓ | 64.4 ✓ | — — |
-| 500×2500 | 190.1 ✓ | 194.4 ✓ | 196.6 ✓ | — — | — — | 1.2s ✓ | 1.9s ✓ | — — | — — | — — | 324.5 ✓ | 358.6 ✓ | — — |
-| 2500×50 | 19.0 ✓ | 19.4 ✓ | 20.0 ✓ | — — | — — | 74.0 ✓ | 88.0 ✓ | — — | — — | — — | 30.2 ✓ | 33.3 ✓ | — — |
-| 2500×500 | 217.6 ✓ | 227.5 ✓ | 220.4 ✓ | — — | — — | 1.6s ✓ | 1.4s ✓ | — — | — — | — — | 339.2 ✓ | 379.7 ✓ | — — |
-| 2500×2500 | 1.1s ✓ | 1.1s ✓ | 1.1s ✓ | — — | — — | 7.7s ✓ | 9.0s ✓ | — — | — — | — — | 1.8s ✓ | 1.9s ✓ | — — |
-| 10000×50 | 76.9 ✓ | 78.8 ✓ | 74.9 ✓ | — — | — — | 463.5 ✓ | 586.0 ✓ | — — | — — | — — | 118.1 ✓ | 156.4 ✓ | — — |
-| 10000×500 | 867.6 ✓ | 884.6 ✓ | 853.1 ✓ | — — | — — | 6.3s ✓ | 6.5s ✓ | — — | — — | — — | 1.3s ✓ | 1.4s ✓ | — — |
+| 100×50 | **0.88 ms ✓** | 0.89 ms ✓ | 1.02 ms ✓ | — | — | 2.50 ms ✓ | 5.50 ms ✓ | — | — | — | 1.81 ms ✓ | 3.56 ms ✓ | — |
+| 100×500 | 7.62 ms ✓ | 7.59 ms ✓ | **7.39 ms ✓** | — | — | 33.5 ms ✓ | 63.0 ms ✓ | — | — | — | 12.3 ms ✓ | 14.8 ms ✓ | — |
+| 100×2500 | 37.9 ms ✓ | **37.6 ms ✓** | 38.5 ms ✓ | — | — | 319.5 ms ✓ | 597.0 ms ✓ | — | — | — | 63.8 ms ✓ | 67.6 ms ✓ | — |
+| 500×50 | 4.09 ms ✓ | **4.09 ms ✓** | 4.14 ms ✓ | — | — | 11.0 ms ✓ | 15.0 ms ✓ | — | — | — | 6.48 ms ✓ | 8.72 ms ✓ | — |
+| 500×500 | **37.6 ms ✓** | 38.9 ms ✓ | 38.1 ms ✓ | — | — | 200.5 ms ✓ | 238.0 ms ✓ | — | — | — | 61.0 ms ✓ | 64.4 ms ✓ | — |
+| 500×2500 | **190.1 ms ✓** | 194.4 ms ✓ | 196.6 ms ✓ | — | — | 1.2 s ✓ | 1.9 s ✓ | — | — | — | 324.5 ms ✓ | 358.6 ms ✓ | — |
+| 2500×50 | **19.0 ms ✓** | 19.4 ms ✓ | 20.0 ms ✓ | — | — | 74.0 ms ✓ | 88.0 ms ✓ | — | — | — | 30.2 ms ✓ | 33.3 ms ✓ | — |
+| 2500×500 | **217.6 ms ✓** | 227.5 ms ✓ | 220.4 ms ✓ | — | — | 1.6 s ✓ | 1.4 s ✓ | — | — | — | 339.2 ms ✓ | 379.7 ms ✓ | — |
+| 2500×2500 | 1.1 s ✓ | **1.1 s ✓** | 1.1 s ✓ | — | — | 7.7 s ✓ | 9.0 s ✓ | — | — | — | 1.8 s ✓ | 1.9 s ✓ | — |
+| 10000×50 | 76.9 ms ✓ | 78.8 ms ✓ | **74.9 ms ✓** | — | — | 463.5 ms ✓ | 586.0 ms ✓ | — | — | — | 118.1 ms ✓ | 156.4 ms ✓ | — |
+| 10000×500 | 867.6 ms ✓ | 884.6 ms ✓ | **853.1 ms ✓** | — | — | 6.3 s ✓ | 6.5 s ✓ | — | — | — | 1.3 s ✓ | 1.4 s ✓ | — |
 
 
 ## o2pls  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 30.5 ✓ | 60.5 ✓ | — — | — — |
-| 500×500 | — — | — — | — — | 177.0 ✓ | 232.5 ✓ | — — | — — |
-| 2500×500 | — — | — — | — — | 1.5s ✓ | 1.4s ✓ | — — | — — |
-| 2500×2500 | — — | — — | — — | 8.2s ✓ | 9.3s ✓ | — — | — — |
+| 100×500 | — | — | — | **30.5 ms ✓** | 60.5 ms ✓ | — | — |
+| 500×500 | — | — | — | **177.0 ms ✓** | 232.5 ms ✓ | — | — |
+| 2500×500 | — | — | — | 1.5 s ✓ | **1.4 s ✓** | — | — |
+| 2500×2500 | — | — | — | **8.2 s ✓** | 9.3 s ✓ | — | — |
 
 
 ## o2pls  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | 31.5 ✓ | 62.5 ✓ | — — | — — |
-| 500×500 | — — | — — | — — | 178.0 ✓ | 229.0 ✓ | — — | — — |
-| 2500×500 | — — | — — | — — | 1.5s ✓ | 1.4s ✓ | — — | — — |
-| 2500×2500 | — — | — — | — — | 8.1s ✓ | 9.2s ✓ | — — | — — |
+| 100×500 | — | — | — | **31.5 ms ✓** | 62.5 ms ✓ | — | — |
+| 500×500 | — | — | — | **178.0 ms ✓** | 229.0 ms ✓ | — | — |
+| 2500×500 | — | — | — | 1.5 s ✓ | **1.4 s ✓** | — | — |
+| 2500×2500 | — | — | — | **8.1 s ✓** | 9.2 s ✓ | — | — |
 
 
 ## pds  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## pds  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## pls  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | 0.92 ✓ | 0.92 ✓ | 1.05 ✓ | 1.40 ✓ | 1.16 ✗ | 2.50 ✓ | 6.00 ✗ | 6.50 ✓ | — — | 8.50 ✓ | 1.59 ✓ | 5.23 ✗ | 2.38 ✓ |
-| 100×500 | 8.30 ✓ | 7.96 ✓ | 8.22 ✓ | 8.76 ✓ | 8.09 ✗ | 39.5 ✓ | 74.5 ✗ | 78.5 ✓ | — — | 67.5 ✓ | 12.9 ✓ | 17.2 ✗ | 14.2 ✓ |
-| 100×2500 | 39.8 ✓ | 40.1 ✓ | 38.9 ✓ | 40.6 ✓ | 38.8 ⚠ | 323.0 ✓ | 645.0 ⚠ | 635.0 ✓ | — — | 442.5 ✓ | 65.0 ✓ | 68.0 ⚠ | 66.7 ✓ |
-| 500×50 | 4.05 ✓ | 4.16 ✓ | 4.30 ✓ | 4.31 ✓ | 4.14 ✗ | 11.5 ✓ | 16.0 ✗ | 16.0 ✓ | — — | 27.5 ✓ | 6.85 ✓ | 10.2 ✗ | 7.33 ✓ |
-| 500×500 | 39.7 ✓ | 38.4 ✓ | 38.2 ✓ | 40.6 ✓ | 38.3 ✗ | 201.0 ✓ | 244.0 ✗ | 245.0 ✓ | — — | 295.5 ✓ | 63.4 ✓ | 69.1 ✗ | 65.6 ✓ |
-| 500×2500 | 191.2 ✓ | 191.0 ✓ | 182.1 ✓ | 192.2 ✓ | 181.5 ✗ | 1.4s ✓ | 1.8s ✗ | 1.7s ✓ | — — | 1.5s ✓ | 321.0 ✓ | 317.4 ✗ | 355.1 ✓ |
-| 2500×50 | 20.0 ✓ | 19.7 ✓ | 19.5 ✓ | 20.0 ✓ | 18.9 ⚠ | 72.5 ✓ | 74.5 ⚠ | 83.5 ✓ | — — | 105.5 ✓ | 30.6 ✓ | 34.4 ⚠ | 33.7 ✓ |
-| 2500×500 | 219.2 ✓ | 213.2 ✓ | 207.5 ✓ | 189.8 ✓ | 177.6 ✗ | 1.3s ✓ | 1.4s ✗ | 1.4s ✓ | — — | 1.3s ✓ | 334.9 ✓ | 350.7 ✗ | 335.5 ✓ |
-| 2500×2500 | 1.1s ✓ | 1.1s ✓ | 1.1s ✓ | 1.0s ✓ | 930.1 ✗ | 7.6s ✓ | 9.1s ✗ | 8.3s ✓ | — — | 7.9s ✓ | 1.9s ✓ | 1.9s ✗ | 2.0s ✓ |
-| 10000×50 | 78.0 ✓ | 77.2 ✓ | 76.4 ✓ | 77.5 ✓ | 73.9 ⚠ | 418.5 ✓ | 428.5 ⚠ | 385.5 ✓ | — — | 530.5 ✓ | 120.3 ✓ | 128.0 ⚠ | 129.9 ✓ |
-| 10000×500 | 890.4 ✓ | 896.0 ✓ | 876.4 ✓ | 832.9 ✓ | 759.2 ⚠ | 6.3s ✓ | 6.5s ⚠ | 6.5s ✓ | — — | 6.7s ✓ | 1.4s ✓ | 1.4s ⚠ | 1.6s ✓ |
+| 100×50 | **0.92 ms ✓** | 0.92 ms ✓ | 1.05 ms ✓ | 1.40 ms ✓ | 1.16 ms ✗ | 2.50 ms ✓ | 6.00 ms ✗ | 6.50 ms ✓ | — | 8.50 ms ✓ | 1.59 ms ✓ | 5.23 ms ✗ | 2.38 ms ✓ |
+| 100×500 | 8.30 ms ✓ | **7.96 ms ✓** | 8.22 ms ✓ | 8.76 ms ✓ | 8.09 ms ✗ | 39.5 ms ✓ | 74.5 ms ✗ | 78.5 ms ✓ | — | 67.5 ms ✓ | 12.9 ms ✓ | 17.2 ms ✗ | 14.2 ms ✓ |
+| 100×2500 | 39.8 ms ✓ | 40.1 ms ✓ | 38.9 ms ✓ | 40.6 ms ✓ | **38.8 ms ⚠** | 323.0 ms ✓ | 645.0 ms ⚠ | 635.0 ms ✓ | — | 442.5 ms ✓ | 65.0 ms ✓ | 68.0 ms ⚠ | 66.7 ms ✓ |
+| 500×50 | **4.05 ms ✓** | 4.16 ms ✓ | 4.30 ms ✓ | 4.31 ms ✓ | 4.14 ms ✗ | 11.5 ms ✓ | 16.0 ms ✗ | 16.0 ms ✓ | — | 27.5 ms ✓ | 6.85 ms ✓ | 10.2 ms ✗ | 7.33 ms ✓ |
+| 500×500 | 39.7 ms ✓ | 38.4 ms ✓ | **38.2 ms ✓** | 40.6 ms ✓ | 38.3 ms ✗ | 201.0 ms ✓ | 244.0 ms ✗ | 245.0 ms ✓ | — | 295.5 ms ✓ | 63.4 ms ✓ | 69.1 ms ✗ | 65.6 ms ✓ |
+| 500×2500 | 191.2 ms ✓ | 191.0 ms ✓ | **182.1 ms ✓** | 192.2 ms ✓ | 181.5 ms ✗ | 1.4 s ✓ | 1.8 s ✗ | 1.7 s ✓ | — | 1.5 s ✓ | 321.0 ms ✓ | 317.4 ms ✗ | 355.1 ms ✓ |
+| 2500×50 | 20.0 ms ✓ | 19.7 ms ✓ | 19.5 ms ✓ | 20.0 ms ✓ | **18.9 ms ⚠** | 72.5 ms ✓ | 74.5 ms ⚠ | 83.5 ms ✓ | — | 105.5 ms ✓ | 30.6 ms ✓ | 34.4 ms ⚠ | 33.7 ms ✓ |
+| 2500×500 | 219.2 ms ✓ | 213.2 ms ✓ | 207.5 ms ✓ | **189.8 ms ✓** | 177.6 ms ✗ | 1.3 s ✓ | 1.4 s ✗ | 1.4 s ✓ | — | 1.3 s ✓ | 334.9 ms ✓ | 350.7 ms ✗ | 335.5 ms ✓ |
+| 2500×2500 | 1.1 s ✓ | 1.1 s ✓ | 1.1 s ✓ | **1.0 s ✓** | 930.1 ms ✗ | 7.6 s ✓ | 9.1 s ✗ | 8.3 s ✓ | — | 7.9 s ✓ | 1.9 s ✓ | 1.9 s ✗ | 2.0 s ✓ |
+| 10000×50 | 78.0 ms ✓ | 77.2 ms ✓ | 76.4 ms ✓ | 77.5 ms ✓ | **73.9 ms ⚠** | 418.5 ms ✓ | 428.5 ms ⚠ | 385.5 ms ✓ | — | 530.5 ms ✓ | 120.3 ms ✓ | 128.0 ms ⚠ | 129.9 ms ✓ |
+| 10000×500 | 890.4 ms ✓ | 896.0 ms ✓ | 876.4 ms ✓ | 832.9 ms ✓ | **759.2 ms ⚠** | 6.3 s ✓ | 6.5 s ⚠ | 6.5 s ✓ | — | 6.7 s ✓ | 1.4 s ✓ | 1.4 s ⚠ | 1.6 s ✓ |
 
 
 ## pls  —  3 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | 0.90 ✓ | 0.86 ✓ | 1.04 ✓ | 1.34 ✓ | 1.10 ✗ | 2.50 ✓ | 6.00 ✗ | 6.50 ✓ | — — | 8.00 ✓ | 1.64 ✓ | 5.18 ✗ | 2.20 ✓ |
-| 100×500 | 7.90 ✓ | 7.76 ✓ | 8.13 ✓ | 9.03 ✓ | 8.24 ✗ | 38.5 ✓ | 76.5 ✗ | 78.0 ✓ | — — | 56.0 ✓ | 13.1 ✓ | 16.3 ✗ | 14.1 ✓ |
-| 100×2500 | 39.3 ✓ | 38.6 ✓ | 38.5 ✓ | 39.4 ✓ | 38.1 ⚠ | 326.5 ✓ | 632.5 ⚠ | 626.0 ✓ | — — | 471.0 ✓ | 63.4 ✓ | 69.8 ⚠ | 67.1 ✓ |
-| 500×50 | 4.19 ✓ | 4.13 ✓ | 4.03 ✓ | 4.28 ✓ | 4.09 ✗ | 12.5 ✓ | 15.0 ✗ | 17.5 ✓ | — — | 26.0 ✓ | 6.65 ✓ | 9.57 ✗ | 7.90 ✓ |
-| 500×500 | 39.1 ✓ | 39.3 ✓ | 38.6 ✓ | 38.4 ✓ | 36.9 ✗ | 186.5 ✓ | 248.0 ✗ | 238.5 ✓ | — — | 317.0 ✓ | 63.9 ✓ | 69.0 ✗ | 67.6 ✓ |
-| 500×2500 | 199.8 ✓ | 195.2 ✓ | 188.6 ✓ | 197.7 ✓ | 180.2 ✗ | 1.5s ✓ | 1.7s ✗ | 1.7s ✓ | — — | 1.4s ✓ | 319.0 ✓ | 320.6 ✗ | 352.6 ✓ |
-| 2500×50 | 20.1 ✓ | 19.6 ✓ | 19.2 ✓ | 20.1 ✓ | 18.4 ⚠ | 72.0 ✓ | 77.5 ⚠ | 82.5 ✓ | — — | 107.5 ✓ | 31.0 ✓ | 34.7 ⚠ | 34.9 ✓ |
-| 2500×500 | 219.8 ✓ | 217.7 ✓ | 211.8 ✓ | 196.2 ✓ | 189.2 ✗ | 1.3s ✓ | 1.4s ✗ | 1.4s ✓ | — — | 1.4s ✓ | 342.8 ✓ | 361.2 ✗ | 327.2 ✓ |
-| 2500×2500 | 1.1s ✓ | 1.1s ✓ | 1.1s ✓ | 1.0s ✓ | 967.7 ✗ | 7.9s ✓ | 9.3s ✗ | 8.9s ✓ | — — | 9.6s ✓ | 2.2s ✓ | 2.1s ✗ | 2.5s ✓ |
-| 10000×50 | 78.1 ✓ | 75.3 ✓ | 80.0 ✓ | 84.6 ✓ | 78.5 ⚠ | 438.0 ✓ | 425.5 ⚠ | 387.5 ✓ | — — | 554.5 ✓ | 119.5 ✓ | 132.6 ⚠ | 138.8 ✓ |
-| 10000×500 | 896.7 ✓ | 899.9 ✓ | 904.9 ✓ | 829.4 ✓ | 752.5 ⚠ | 6.3s ✓ | 6.6s ⚠ | 6.6s ✓ | — — | 7.1s ✓ | 1.5s ✓ | 1.5s ⚠ | 1.6s ✓ |
+| 100×50 | 0.90 ms ✓ | **0.86 ms ✓** | 1.04 ms ✓ | 1.34 ms ✓ | 1.10 ms ✗ | 2.50 ms ✓ | 6.00 ms ✗ | 6.50 ms ✓ | — | 8.00 ms ✓ | 1.64 ms ✓ | 5.18 ms ✗ | 2.20 ms ✓ |
+| 100×500 | 7.90 ms ✓ | **7.76 ms ✓** | 8.13 ms ✓ | 9.03 ms ✓ | 8.24 ms ✗ | 38.5 ms ✓ | 76.5 ms ✗ | 78.0 ms ✓ | — | 56.0 ms ✓ | 13.1 ms ✓ | 16.3 ms ✗ | 14.1 ms ✓ |
+| 100×2500 | 39.3 ms ✓ | 38.6 ms ✓ | 38.5 ms ✓ | 39.4 ms ✓ | **38.1 ms ⚠** | 326.5 ms ✓ | 632.5 ms ⚠ | 626.0 ms ✓ | — | 471.0 ms ✓ | 63.4 ms ✓ | 69.8 ms ⚠ | 67.1 ms ✓ |
+| 500×50 | 4.19 ms ✓ | 4.13 ms ✓ | **4.03 ms ✓** | 4.28 ms ✓ | 4.09 ms ✗ | 12.5 ms ✓ | 15.0 ms ✗ | 17.5 ms ✓ | — | 26.0 ms ✓ | 6.65 ms ✓ | 9.57 ms ✗ | 7.90 ms ✓ |
+| 500×500 | 39.1 ms ✓ | 39.3 ms ✓ | 38.6 ms ✓ | **38.4 ms ✓** | 36.9 ms ✗ | 186.5 ms ✓ | 248.0 ms ✗ | 238.5 ms ✓ | — | 317.0 ms ✓ | 63.9 ms ✓ | 69.0 ms ✗ | 67.6 ms ✓ |
+| 500×2500 | 199.8 ms ✓ | 195.2 ms ✓ | **188.6 ms ✓** | 197.7 ms ✓ | 180.2 ms ✗ | 1.5 s ✓ | 1.7 s ✗ | 1.7 s ✓ | — | 1.4 s ✓ | 319.0 ms ✓ | 320.6 ms ✗ | 352.6 ms ✓ |
+| 2500×50 | 20.1 ms ✓ | 19.6 ms ✓ | 19.2 ms ✓ | 20.1 ms ✓ | **18.4 ms ⚠** | 72.0 ms ✓ | 77.5 ms ⚠ | 82.5 ms ✓ | — | 107.5 ms ✓ | 31.0 ms ✓ | 34.7 ms ⚠ | 34.9 ms ✓ |
+| 2500×500 | 219.8 ms ✓ | 217.7 ms ✓ | 211.8 ms ✓ | **196.2 ms ✓** | 189.2 ms ✗ | 1.3 s ✓ | 1.4 s ✗ | 1.4 s ✓ | — | 1.4 s ✓ | 342.8 ms ✓ | 361.2 ms ✗ | 327.2 ms ✓ |
+| 2500×2500 | 1.1 s ✓ | 1.1 s ✓ | 1.1 s ✓ | **1.0 s ✓** | 967.7 ms ✗ | 7.9 s ✓ | 9.3 s ✗ | 8.9 s ✓ | — | 9.6 s ✓ | 2.2 s ✓ | 2.1 s ✗ | 2.5 s ✓ |
+| 10000×50 | 78.1 ms ✓ | **75.3 ms ✓** | 80.0 ms ✓ | 84.6 ms ✓ | 78.5 ms ⚠ | 438.0 ms ✓ | 425.5 ms ⚠ | 387.5 ms ✓ | — | 554.5 ms ✓ | 119.5 ms ✓ | 132.6 ms ⚠ | 138.8 ms ✓ |
+| 10000×500 | 896.7 ms ✓ | 899.9 ms ✓ | 904.9 ms ✓ | 829.4 ms ✓ | **752.5 ms ⚠** | 6.3 s ✓ | 6.6 s ⚠ | 6.6 s ✓ | — | 7.1 s ✓ | 1.5 s ✓ | 1.5 s ⚠ | 1.6 s ✓ |
 
 
 ## pls  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | 0.86 ✓ | 0.89 ✓ | 1.06 ✓ | 1.46 ✓ | 1.12 ✗ | 3.00 ✓ | 5.50 ✗ | 5.50 ✓ | — — | 9.00 ✓ | 1.66 ✓ | 5.68 ✗ | 2.32 ✓ |
-| 100×500 | 7.76 ✓ | 7.87 ✓ | 7.93 ✓ | 8.72 ✓ | 8.05 ✗ | 37.0 ✓ | 75.5 ✗ | 77.0 ✓ | — — | 59.0 ✓ | 13.4 ✓ | 16.7 ✗ | 14.1 ✓ |
-| 100×2500 | 39.6 ✓ | 37.9 ✓ | 38.5 ✓ | 39.6 ✓ | 38.0 ⚠ | 331.5 ✓ | 648.0 ⚠ | 623.5 ✓ | — — | 467.5 ✓ | 64.8 ✓ | 70.4 ⚠ | 68.4 ✓ |
-| 500×50 | 4.06 ✓ | 4.07 ✓ | 3.90 ✓ | 4.31 ✓ | 4.10 ✗ | 10.5 ✓ | 15.5 ✗ | 17.5 ✓ | — — | 27.0 ✓ | 6.71 ✓ | 9.56 ✗ | 7.86 ✓ |
-| 500×500 | 39.8 ✓ | 39.1 ✓ | 37.7 ✓ | 40.7 ✓ | 39.3 ✗ | 203.0 ✓ | 247.0 ✗ | 253.0 ✓ | — — | 277.5 ✓ | 59.9 ✓ | 68.1 ✗ | 66.1 ✓ |
-| 500×2500 | 190.7 ✓ | 187.1 ✓ | 178.1 ✓ | 241.5 ✓ | 221.1 ✗ | 1.5s ✓ | 1.7s ✗ | 1.8s ✓ | — — | 1.6s ✓ | 320.9 ✓ | 355.1 ✗ | 404.2 ✓ |
-| 2500×50 | 20.2 ✓ | 19.8 ✓ | 20.7 ✓ | 21.0 ✓ | 19.0 ⚠ | 70.5 ✓ | 79.5 ⚠ | 81.5 ✓ | — — | 108.0 ✓ | 31.6 ✓ | 34.8 ⚠ | 33.6 ✓ |
-| 2500×500 | 220.1 ✓ | 218.6 ✓ | 208.6 ✓ | 235.9 ✓ | 222.3 ✗ | 1.3s ✓ | 1.4s ✗ | 1.5s ✓ | — — | 1.4s ✓ | 329.9 ✓ | 383.2 ✗ | 361.9 ✓ |
-| 2500×2500 | 1.4s ✓ | 1.4s ✓ | 1.2s ✓ | 1.1s ✓ | 1.0s ✗ | 8.0s ✓ | 10.0s ✗ | 9.1s ✓ | — — | 8.1s ✓ | 1.9s ✓ | 1.9s ✗ | 2.2s ✓ |
-| 10000×50 | 76.8 ✓ | 78.3 ✓ | 76.4 ✓ | 124.8 ✓ | 112.6 ⚠ | 431.5 ✓ | 418.5 ⚠ | 446.0 ✓ | — — | 648.5 ✓ | 119.9 ✓ | 168.8 ⚠ | 169.1 ✓ |
-| 10000×500 | 963.2 ✓ | 980.0 ✓ | 932.3 ✓ | 943.2 ✓ | 823.9 ⚠ | 6.8s ✓ | 7.8s ⚠ | 7.9s ✓ | — — | 7.4s ✓ | 1.5s ✓ | 1.7s ⚠ | 2.0s ✓ |
+| 100×50 | **0.86 ms ✓** | 0.89 ms ✓ | 1.06 ms ✓ | 1.46 ms ✓ | 1.12 ms ✗ | 3.00 ms ✓ | 5.50 ms ✗ | 5.50 ms ✓ | — | 9.00 ms ✓ | 1.66 ms ✓ | 5.68 ms ✗ | 2.32 ms ✓ |
+| 100×500 | **7.76 ms ✓** | 7.87 ms ✓ | 7.93 ms ✓ | 8.72 ms ✓ | 8.05 ms ✗ | 37.0 ms ✓ | 75.5 ms ✗ | 77.0 ms ✓ | — | 59.0 ms ✓ | 13.4 ms ✓ | 16.7 ms ✗ | 14.1 ms ✓ |
+| 100×2500 | 39.6 ms ✓ | **37.9 ms ✓** | 38.5 ms ✓ | 39.6 ms ✓ | 38.0 ms ⚠ | 331.5 ms ✓ | 648.0 ms ⚠ | 623.5 ms ✓ | — | 467.5 ms ✓ | 64.8 ms ✓ | 70.4 ms ⚠ | 68.4 ms ✓ |
+| 500×50 | 4.06 ms ✓ | 4.07 ms ✓ | **3.90 ms ✓** | 4.31 ms ✓ | 4.10 ms ✗ | 10.5 ms ✓ | 15.5 ms ✗ | 17.5 ms ✓ | — | 27.0 ms ✓ | 6.71 ms ✓ | 9.56 ms ✗ | 7.86 ms ✓ |
+| 500×500 | 39.8 ms ✓ | 39.1 ms ✓ | **37.7 ms ✓** | 40.7 ms ✓ | 39.3 ms ✗ | 203.0 ms ✓ | 247.0 ms ✗ | 253.0 ms ✓ | — | 277.5 ms ✓ | 59.9 ms ✓ | 68.1 ms ✗ | 66.1 ms ✓ |
+| 500×2500 | 190.7 ms ✓ | 187.1 ms ✓ | **178.1 ms ✓** | 241.5 ms ✓ | 221.1 ms ✗ | 1.5 s ✓ | 1.7 s ✗ | 1.8 s ✓ | — | 1.6 s ✓ | 320.9 ms ✓ | 355.1 ms ✗ | 404.2 ms ✓ |
+| 2500×50 | 20.2 ms ✓ | 19.8 ms ✓ | 20.7 ms ✓ | 21.0 ms ✓ | **19.0 ms ⚠** | 70.5 ms ✓ | 79.5 ms ⚠ | 81.5 ms ✓ | — | 108.0 ms ✓ | 31.6 ms ✓ | 34.8 ms ⚠ | 33.6 ms ✓ |
+| 2500×500 | 220.1 ms ✓ | 218.6 ms ✓ | **208.6 ms ✓** | 235.9 ms ✓ | 222.3 ms ✗ | 1.3 s ✓ | 1.4 s ✗ | 1.5 s ✓ | — | 1.4 s ✓ | 329.9 ms ✓ | 383.2 ms ✗ | 361.9 ms ✓ |
+| 2500×2500 | 1.4 s ✓ | 1.4 s ✓ | 1.2 s ✓ | **1.1 s ✓** | 1.0 s ✗ | 8.0 s ✓ | 10.0 s ✗ | 9.1 s ✓ | — | 8.1 s ✓ | 1.9 s ✓ | 1.9 s ✗ | 2.2 s ✓ |
+| 10000×50 | 76.8 ms ✓ | 78.3 ms ✓ | **76.4 ms ✓** | 124.8 ms ✓ | 112.6 ms ⚠ | 431.5 ms ✓ | 418.5 ms ⚠ | 446.0 ms ✓ | — | 648.5 ms ✓ | 119.9 ms ✓ | 168.8 ms ⚠ | 169.1 ms ✓ |
+| 10000×500 | 963.2 ms ✓ | 980.0 ms ✓ | 932.3 ms ✓ | 943.2 ms ✓ | **823.9 ms ⚠** | 6.8 s ✓ | 7.8 s ⚠ | 7.9 s ✓ | — | 7.4 s ✓ | 1.5 s ✓ | 1.7 s ⚠ | 2.0 s ✓ |
 
 
 ## pls_cox  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## pls_cox  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## pls_glm  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | 7.38 ✓ | 7.29 ✓ | — — | 33.5 ✓ | — — | — — | — — |
-| 500×500 | 35.5 ✓ | 36.3 ✓ | — — | 171.5 ✓ | — — | — — | — — |
-| 2500×500 | 220.3 ✓ | 219.8 ✓ | — — | 1.5s ✓ | — — | — — | — — |
-| 2500×2500 | 1.1s ✓ | 1.1s ✓ | — — | 8.0s ✓ | — — | — — | — — |
+| 100×500 | 7.38 ms ✓ | **7.29 ms ✓** | — | 33.5 ms ✓ | — | — | — |
+| 500×500 | **35.5 ms ✓** | 36.3 ms ✓ | — | 171.5 ms ✓ | — | — | — |
+| 2500×500 | 220.3 ms ✓ | **219.8 ms ✓** | — | 1.5 s ✓ | — | — | — |
+| 2500×2500 | 1.1 s ✓ | **1.1 s ✓** | — | 8.0 s ✓ | — | — | — |
 
 
 ## pls_glm  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | 7.58 ✓ | 7.38 ✓ | — — | 30.5 ✓ | — — | — — | — — |
-| 500×500 | 36.5 ✓ | 36.2 ✓ | — — | 175.0 ✓ | — — | — — | — — |
-| 2500×500 | 225.7 ✓ | 216.5 ✓ | — — | 1.5s ✓ | — — | — — | — — |
-| 2500×2500 | 1.1s ✓ | 1.1s ✓ | — — | 8.7s ✓ | — — | — — | — — |
+| 100×500 | 7.58 ms ✓ | **7.38 ms ✓** | — | 30.5 ms ✓ | — | — | — |
+| 500×500 | 36.5 ms ✓ | **36.2 ms ✓** | — | 175.0 ms ✓ | — | — | — |
+| 2500×500 | 225.7 ms ✓ | **216.5 ms ✓** | — | 1.5 s ✓ | — | — | — |
+| 2500×2500 | 1.1 s ✓ | **1.1 s ✓** | — | 8.7 s ✓ | — | — | — |
 
 
 ## pls_lda  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## pls_lda  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## pls_logistic  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## pls_logistic  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## pls_qda  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## pls_qda  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## ridge_pls  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | — — | 0.90 ✓ | 0.94 ✓ | 1.93 ✗ | — — | 2.50 ✓ | 5.50 ✓ | — — | — — | — — | 1.49 ✓ | 3.48 ✓ | — — |
-| 100×500 | — — | 9.44 ✓ | 9.88 ✓ | 9.91 ✗ | — — | 34.5 ✓ | 63.0 ✓ | — — | — — | — — | 14.3 ✓ | 16.4 ✓ | — — |
-| 100×2500 | — — | 271.9 ✓ | 271.8 ✓ | 41.4 ✗ | — — | 530.0 ✓ | 814.5 ✓ | — — | — — | — — | 296.0 ✓ | 298.2 ✓ | — — |
-| 500×50 | — — | 4.12 ✓ | 4.05 ✓ | 4.69 ✗ | — — | 10.5 ✓ | 15.5 ✓ | — — | — — | — — | 6.13 ✓ | 8.16 ✓ | — — |
-| 500×500 | — — | 40.4 ✓ | 42.0 ✓ | 77.0 ✗ | — — | 208.5 ✓ | 260.5 ✓ | — — | — — | — — | 64.4 ✓ | 68.1 ✓ | — — |
-| 500×2500 | — — | 479.1 ✓ | 481.5 ✓ | 200.9 ✗ | — — | 1.5s ✓ | 2.3s ✓ | — — | — — | — — | 654.2 ✓ | 663.3 ✓ | — — |
-| 2500×50 | — — | 20.0 ✓ | 20.8 ✓ | 20.6 ✗ | — — | 78.0 ✓ | 91.0 ✓ | — — | — — | — — | 32.3 ✓ | 34.6 ✓ | — — |
-| 2500×500 | — — | 237.5 ✓ | 231.6 ✓ | 204.2 ✗ | — — | 1.6s ✓ | 1.5s ✓ | — — | — — | — — | 365.8 ✓ | 368.6 ✓ | — — |
-| 2500×2500 | — — | 1.4s ✓ | 1.4s ✓ | 1.1s ✗ | — — | 8.5s ✓ | 9.7s ✓ | — — | — — | — — | 2.2s ✓ | 2.2s ✓ | — — |
-| 10000×50 | — — | 79.4 ✓ | 96.8 ✓ | 74.1 ✗ | — — | 458.5 ✓ | 476.0 ✓ | — — | — — | — — | 124.5 ✓ | 133.3 ✓ | — — |
-| 10000×500 | — — | 924.9 ✓ | 931.7 ✓ | 794.5 ✗ | — — | 6.9s ✓ | 7.0s ✓ | — — | — — | — — | 1.4s ✓ | 1.4s ✓ | — — |
+| 100×50 | — | **0.90 ms ✓** | 0.94 ms ✓ | 1.93 ms ✗ | — | 2.50 ms ✓ | 5.50 ms ✓ | — | — | — | 1.49 ms ✓ | 3.48 ms ✓ | — |
+| 100×500 | — | **9.44 ms ✓** | 9.88 ms ✓ | 9.91 ms ✗ | — | 34.5 ms ✓ | 63.0 ms ✓ | — | — | — | 14.3 ms ✓ | 16.4 ms ✓ | — |
+| 100×2500 | — | 271.9 ms ✓ | **271.8 ms ✓** | 41.4 ms ✗ | — | 530.0 ms ✓ | 814.5 ms ✓ | — | — | — | 296.0 ms ✓ | 298.2 ms ✓ | — |
+| 500×50 | — | 4.12 ms ✓ | **4.05 ms ✓** | 4.69 ms ✗ | — | 10.5 ms ✓ | 15.5 ms ✓ | — | — | — | 6.13 ms ✓ | 8.16 ms ✓ | — |
+| 500×500 | — | **40.4 ms ✓** | 42.0 ms ✓ | 77.0 ms ✗ | — | 208.5 ms ✓ | 260.5 ms ✓ | — | — | — | 64.4 ms ✓ | 68.1 ms ✓ | — |
+| 500×2500 | — | **479.1 ms ✓** | 481.5 ms ✓ | 200.9 ms ✗ | — | 1.5 s ✓ | 2.3 s ✓ | — | — | — | 654.2 ms ✓ | 663.3 ms ✓ | — |
+| 2500×50 | — | **20.0 ms ✓** | 20.8 ms ✓ | 20.6 ms ✗ | — | 78.0 ms ✓ | 91.0 ms ✓ | — | — | — | 32.3 ms ✓ | 34.6 ms ✓ | — |
+| 2500×500 | — | 237.5 ms ✓ | **231.6 ms ✓** | 204.2 ms ✗ | — | 1.6 s ✓ | 1.5 s ✓ | — | — | — | 365.8 ms ✓ | 368.6 ms ✓ | — |
+| 2500×2500 | — | 1.4 s ✓ | **1.4 s ✓** | 1.1 s ✗ | — | 8.5 s ✓ | 9.7 s ✓ | — | — | — | 2.2 s ✓ | 2.2 s ✓ | — |
+| 10000×50 | — | **79.4 ms ✓** | 96.8 ms ✓ | 74.1 ms ✗ | — | 458.5 ms ✓ | 476.0 ms ✓ | — | — | — | 124.5 ms ✓ | 133.3 ms ✓ | — |
+| 10000×500 | — | **924.9 ms ✓** | 931.7 ms ✓ | 794.5 ms ✗ | — | 6.9 s ✓ | 7.0 s ✓ | — | — | — | 1.4 s ✓ | 1.4 s ✓ | — |
 
 
 ## ridge_pls  —  3 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | — — | 0.89 ✓ | 0.92 ✓ | 1.93 ✗ | — — | 2.50 ✓ | 5.50 ✓ | — — | — — | — — | 1.47 ✓ | 3.69 ✓ | — — |
-| 100×500 | — — | 9.61 ✓ | 9.83 ✓ | 12.2 ✗ | — — | 35.0 ✓ | 67.0 ✓ | — — | — — | — — | 14.1 ✓ | 17.2 ✓ | — — |
-| 100×2500 | — — | 267.8 ✓ | 259.7 ✓ | 40.4 ✗ | — — | 519.5 ✓ | 814.5 ✓ | — — | — — | — — | 294.3 ✓ | 298.4 ✓ | — — |
-| 500×50 | — — | 4.06 ✓ | 3.86 ✓ | 4.84 ✗ | — — | 10.5 ✓ | 15.5 ✓ | — — | — — | — — | 6.39 ✓ | 8.60 ✓ | — — |
-| 500×500 | — — | 42.2 ✓ | 41.6 ✓ | 71.0 ✗ | — — | 203.0 ✓ | 258.0 ✓ | — — | — — | — — | 65.1 ✓ | 68.4 ✓ | — — |
-| 500×2500 | — — | 523.6 ✓ | 486.1 ✓ | 199.8 ✗ | — — | 1.4s ✓ | 2.2s ✓ | — — | — — | — — | 774.7 ✓ | 739.3 ✓ | — — |
-| 2500×50 | — — | 19.6 ✓ | 19.9 ✓ | 20.4 ✗ | — — | 76.5 ✓ | 92.5 ✓ | — — | — — | — — | 31.2 ✓ | 34.6 ✓ | — — |
-| 2500×500 | — — | 241.7 ✓ | 234.0 ✓ | 205.1 ✗ | — — | 1.6s ✓ | 1.5s ✓ | — — | — — | — — | 374.2 ✓ | 380.1 ✓ | — — |
-| 2500×2500 | — — | 1.4s ✓ | 1.4s ✓ | 997.3 ✗ | — — | 8.7s ✓ | 9.6s ✓ | — — | — — | — — | 2.1s ✓ | 2.2s ✓ | — — |
-| 10000×50 | — — | 78.8 ✓ | 80.1 ✓ | 75.6 ✗ | — — | 518.0 ✓ | 456.5 ✓ | — — | — — | — — | 126.6 ✓ | 134.6 ✓ | — — |
-| 10000×500 | — — | 910.2 ✓ | 920.9 ✓ | 772.0 ✗ | — — | 7.1s ✓ | 7.0s ✓ | — — | — — | — — | 1.5s ✓ | 1.5s ✓ | — — |
+| 100×50 | — | **0.89 ms ✓** | 0.92 ms ✓ | 1.93 ms ✗ | — | 2.50 ms ✓ | 5.50 ms ✓ | — | — | — | 1.47 ms ✓ | 3.69 ms ✓ | — |
+| 100×500 | — | **9.61 ms ✓** | 9.83 ms ✓ | 12.2 ms ✗ | — | 35.0 ms ✓ | 67.0 ms ✓ | — | — | — | 14.1 ms ✓ | 17.2 ms ✓ | — |
+| 100×2500 | — | 267.8 ms ✓ | **259.7 ms ✓** | 40.4 ms ✗ | — | 519.5 ms ✓ | 814.5 ms ✓ | — | — | — | 294.3 ms ✓ | 298.4 ms ✓ | — |
+| 500×50 | — | 4.06 ms ✓ | **3.86 ms ✓** | 4.84 ms ✗ | — | 10.5 ms ✓ | 15.5 ms ✓ | — | — | — | 6.39 ms ✓ | 8.60 ms ✓ | — |
+| 500×500 | — | 42.2 ms ✓ | **41.6 ms ✓** | 71.0 ms ✗ | — | 203.0 ms ✓ | 258.0 ms ✓ | — | — | — | 65.1 ms ✓ | 68.4 ms ✓ | — |
+| 500×2500 | — | 523.6 ms ✓ | **486.1 ms ✓** | 199.8 ms ✗ | — | 1.4 s ✓ | 2.2 s ✓ | — | — | — | 774.7 ms ✓ | 739.3 ms ✓ | — |
+| 2500×50 | — | **19.6 ms ✓** | 19.9 ms ✓ | 20.4 ms ✗ | — | 76.5 ms ✓ | 92.5 ms ✓ | — | — | — | 31.2 ms ✓ | 34.6 ms ✓ | — |
+| 2500×500 | — | 241.7 ms ✓ | **234.0 ms ✓** | 205.1 ms ✗ | — | 1.6 s ✓ | 1.5 s ✓ | — | — | — | 374.2 ms ✓ | 380.1 ms ✓ | — |
+| 2500×2500 | — | 1.4 s ✓ | **1.4 s ✓** | 997.3 ms ✗ | — | 8.7 s ✓ | 9.6 s ✓ | — | — | — | 2.1 s ✓ | 2.2 s ✓ | — |
+| 10000×50 | — | **78.8 ms ✓** | 80.1 ms ✓ | 75.6 ms ✗ | — | 518.0 ms ✓ | 456.5 ms ✓ | — | — | — | 126.6 ms ✓ | 134.6 ms ✓ | — |
+| 10000×500 | — | **910.2 ms ✓** | 920.9 ms ✓ | 772.0 ms ✗ | — | 7.1 s ✓ | 7.0 s ✓ | — | — | — | 1.5 s ✓ | 1.5 s ✓ | — |
 
 
 ## ridge_pls  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | — — | 0.89 ✓ | 0.95 ✓ | 3.51 ✗ | — — | 2.50 ✓ | 5.00 ✓ | — — | — — | — — | 1.70 ✓ | 3.54 ✓ | — — |
-| 100×500 | — — | 10.0 ✓ | 9.65 ✓ | 20.5 ✗ | — — | 35.5 ✓ | 68.0 ✓ | — — | — — | — — | 14.6 ✓ | 16.0 ✓ | — — |
-| 100×2500 | — — | 272.5 ✓ | 261.5 ✓ | 77.5 ✗ | — — | 525.5 ✓ | 807.5 ✓ | — — | — — | — — | 298.0 ✓ | 299.5 ✓ | — — |
-| 500×50 | — — | 3.99 ✓ | 3.98 ✓ | 4.65 ✗ | — — | 11.0 ✓ | 15.5 ✓ | — — | — — | — — | 6.79 ✓ | 8.69 ✓ | — — |
-| 500×500 | — — | 41.0 ✓ | 40.2 ✓ | 103.0 ✗ | — — | 190.0 ✓ | 248.0 ✓ | — — | — — | — — | 63.1 ✓ | 69.0 ✓ | — — |
-| 500×2500 | — — | 496.6 ✓ | 487.0 ✓ | 241.2 ✗ | — — | 1.6s ✓ | 2.7s ✓ | — — | — — | — — | 773.2 ✓ | 679.3 ✓ | — — |
-| 2500×50 | — — | 19.5 ✓ | 20.3 ✓ | 19.4 ✗ | — — | 75.5 ✓ | 77.0 ✓ | — — | — — | — — | 31.7 ✓ | 35.4 ✓ | — — |
-| 2500×500 | — — | 250.3 ✓ | 237.0 ✓ | 233.7 ✗ | — — | 1.8s ✓ | 1.6s ✓ | — — | — — | — — | 360.1 ✓ | 396.7 ✓ | — — |
-| 2500×2500 | — — | 1.4s ✓ | 1.4s ✓ | 1.0s ✗ | — — | 8.6s ✓ | 10.7s ✓ | — — | — — | — — | 2.4s ✓ | 2.4s ✓ | — — |
-| 10000×50 | — — | 79.7 ✓ | 82.5 ✓ | 99.3 ✗ | — — | 480.0 ✓ | 472.0 ✓ | — — | — — | — — | 126.3 ✓ | 168.2 ✓ | — — |
-| 10000×500 | — — | 937.6 ✓ | 989.7 ✓ | 803.5 ✗ | — — | 6.7s ✓ | 7.2s ✓ | — — | — — | — — | 1.5s ✓ | 1.5s ✓ | — — |
+| 100×50 | — | **0.89 ms ✓** | 0.95 ms ✓ | 3.51 ms ✗ | — | 2.50 ms ✓ | 5.00 ms ✓ | — | — | — | 1.70 ms ✓ | 3.54 ms ✓ | — |
+| 100×500 | — | 10.0 ms ✓ | **9.65 ms ✓** | 20.5 ms ✗ | — | 35.5 ms ✓ | 68.0 ms ✓ | — | — | — | 14.6 ms ✓ | 16.0 ms ✓ | — |
+| 100×2500 | — | 272.5 ms ✓ | **261.5 ms ✓** | 77.5 ms ✗ | — | 525.5 ms ✓ | 807.5 ms ✓ | — | — | — | 298.0 ms ✓ | 299.5 ms ✓ | — |
+| 500×50 | — | 3.99 ms ✓ | **3.98 ms ✓** | 4.65 ms ✗ | — | 11.0 ms ✓ | 15.5 ms ✓ | — | — | — | 6.79 ms ✓ | 8.69 ms ✓ | — |
+| 500×500 | — | 41.0 ms ✓ | **40.2 ms ✓** | 103.0 ms ✗ | — | 190.0 ms ✓ | 248.0 ms ✓ | — | — | — | 63.1 ms ✓ | 69.0 ms ✓ | — |
+| 500×2500 | — | 496.6 ms ✓ | **487.0 ms ✓** | 241.2 ms ✗ | — | 1.6 s ✓ | 2.7 s ✓ | — | — | — | 773.2 ms ✓ | 679.3 ms ✓ | — |
+| 2500×50 | — | **19.5 ms ✓** | 20.3 ms ✓ | 19.4 ms ✗ | — | 75.5 ms ✓ | 77.0 ms ✓ | — | — | — | 31.7 ms ✓ | 35.4 ms ✓ | — |
+| 2500×500 | — | 250.3 ms ✓ | **237.0 ms ✓** | 233.7 ms ✗ | — | 1.8 s ✓ | 1.6 s ✓ | — | — | — | 360.1 ms ✓ | 396.7 ms ✓ | — |
+| 2500×2500 | — | 1.4 s ✓ | **1.4 s ✓** | 1.0 s ✗ | — | 8.6 s ✓ | 10.7 s ✓ | — | — | — | 2.4 s ✓ | 2.4 s ✓ | — |
+| 10000×50 | — | **79.7 ms ✓** | 82.5 ms ✓ | 99.3 ms ✗ | — | 480.0 ms ✓ | 472.0 ms ✓ | — | — | — | 126.3 ms ✓ | 168.2 ms ✓ | — |
+| 10000×500 | — | **937.6 ms ✓** | 989.7 ms ✓ | 803.5 ms ✗ | — | 6.7 s ✓ | 7.2 s ✓ | — | — | — | 1.5 s ✓ | 1.5 s ✓ | — |
 
 
 ## robust_pls  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | — — | 1.35 ✓ | 1.60 ✓ | — — | — — | 3.00 ✓ | 6.50 ✓ | — — | — — | — — | 2.11 ✓ | 4.11 ✓ | — — |
-| 100×500 | — — | 13.9 ✓ | 12.8 ✓ | — — | — — | 38.0 ✓ | 68.0 ✓ | — — | — — | — — | 17.8 ✓ | 21.5 ✓ | — — |
-| 100×2500 | — — | 70.8 ✓ | 80.1 ✓ | — — | — — | 358.5 ✓ | 667.0 ✓ | — — | — — | — — | 93.7 ✓ | 93.5 ✓ | — — |
-| 500×50 | — — | 6.69 ✓ | 6.24 ✓ | — — | — — | 13.0 ✓ | 17.0 ✓ | — — | — — | — — | 9.53 ✓ | 10.9 ✓ | — — |
-| 500×500 | — — | 90.1 ✓ | 87.7 ✓ | — — | — — | 252.0 ✓ | 282.5 ✓ | — — | — — | — — | 92.8 ✓ | 94.5 ✓ | — — |
-| 500×2500 | — — | 499.7 ✓ | 493.8 ✓ | — — | — — | 1.4s ✓ | 2.2s ✓ | — — | — — | — — | 541.8 ✓ | 552.4 ✓ | — — |
-| 2500×50 | — — | 37.7 ✓ | 42.5 ✓ | — — | — — | 104.5 ✓ | 115.5 ✓ | — — | — — | — — | 46.3 ✓ | 49.7 ✓ | — — |
-| 2500×500 | — — | 1.3s ✓ | 1.1s ✓ | — — | — — | 2.3s ✓ | 2.5s ✓ | — — | — — | — — | 1.3s ✓ | 1.3s ✓ | — — |
-| 2500×2500 | — — | 6.6s ✓ | 5.9s ✓ | — — | — — | 12.4s ✓ | 13.3s ✓ | — — | — — | — — | 6.9s ✓ | 8.4s ✓ | — — |
-| 10000×50 | — — | 204.8 ✓ | 192.6 ✓ | — — | — — | 559.5 ✓ | 533.0 ✓ | — — | — — | — — | 206.4 ✓ | 278.2 ✓ | — — |
-| 10000×500 | — — | 4.4s ✓ | 4.4s ✓ | — — | — — | 10.4s ✓ | 10.1s ✓ | — — | — — | — — | 4.8s ✓ | 4.9s ✓ | — — |
+| 100×50 | — | **1.35 ms ✓** | 1.60 ms ✓ | — | — | 3.00 ms ✓ | 6.50 ms ✓ | — | — | — | 2.11 ms ✓ | 4.11 ms ✓ | — |
+| 100×500 | — | 13.9 ms ✓ | **12.8 ms ✓** | — | — | 38.0 ms ✓ | 68.0 ms ✓ | — | — | — | 17.8 ms ✓ | 21.5 ms ✓ | — |
+| 100×2500 | — | **70.8 ms ✓** | 80.1 ms ✓ | — | — | 358.5 ms ✓ | 667.0 ms ✓ | — | — | — | 93.7 ms ✓ | 93.5 ms ✓ | — |
+| 500×50 | — | 6.69 ms ✓ | **6.24 ms ✓** | — | — | 13.0 ms ✓ | 17.0 ms ✓ | — | — | — | 9.53 ms ✓ | 10.9 ms ✓ | — |
+| 500×500 | — | 90.1 ms ✓ | **87.7 ms ✓** | — | — | 252.0 ms ✓ | 282.5 ms ✓ | — | — | — | 92.8 ms ✓ | 94.5 ms ✓ | — |
+| 500×2500 | — | 499.7 ms ✓ | **493.8 ms ✓** | — | — | 1.4 s ✓ | 2.2 s ✓ | — | — | — | 541.8 ms ✓ | 552.4 ms ✓ | — |
+| 2500×50 | — | **37.7 ms ✓** | 42.5 ms ✓ | — | — | 104.5 ms ✓ | 115.5 ms ✓ | — | — | — | 46.3 ms ✓ | 49.7 ms ✓ | — |
+| 2500×500 | — | 1.3 s ✓ | **1.1 s ✓** | — | — | 2.3 s ✓ | 2.5 s ✓ | — | — | — | 1.3 s ✓ | 1.3 s ✓ | — |
+| 2500×2500 | — | 6.6 s ✓ | **5.9 s ✓** | — | — | 12.4 s ✓ | 13.3 s ✓ | — | — | — | 6.9 s ✓ | 8.4 s ✓ | — |
+| 10000×50 | — | 204.8 ms ✓ | **192.6 ms ✓** | — | — | 559.5 ms ✓ | 533.0 ms ✓ | — | — | — | 206.4 ms ✓ | 278.2 ms ✓ | — |
+| 10000×500 | — | 4.4 s ✓ | **4.4 s ✓** | — | — | 10.4 s ✓ | 10.1 s ✓ | — | — | — | 4.8 s ✓ | 4.9 s ✓ | — |
 
 
 ## robust_pls  —  3 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | — — | 1.40 ✓ | 1.49 ✓ | — — | — — | 3.00 ✓ | 6.00 ✓ | — — | — — | — — | 1.99 ✓ | 4.39 ✓ | — — |
-| 100×500 | — — | 14.1 ✓ | 13.1 ✓ | — — | — — | 42.5 ✓ | 67.0 ✓ | — — | — — | — — | 18.1 ✓ | 20.9 ✓ | — — |
-| 100×2500 | — — | 69.8 ✓ | 95.5 ✓ | — — | — — | 394.5 ✓ | 693.0 ✓ | — — | — — | — — | 91.1 ✓ | 93.9 ✓ | — — |
-| 500×50 | — — | 6.92 ✓ | 6.39 ✓ | — — | — — | 14.0 ✓ | 18.0 ✓ | — — | — — | — — | 9.51 ✓ | 11.3 ✓ | — — |
-| 500×500 | — — | 89.5 ✓ | 88.3 ✓ | — — | — — | 248.5 ✓ | 292.5 ✓ | — — | — — | — — | 92.4 ✓ | 102.0 ✓ | — — |
-| 500×2500 | — — | 520.5 ✓ | 509.1 ✓ | — — | — — | 1.5s ✓ | 2.2s ✓ | — — | — — | — — | 555.2 ✓ | 635.6 ✓ | — — |
-| 2500×50 | — — | 39.3 ✓ | 42.3 ✓ | — — | — — | 101.5 ✓ | 115.0 ✓ | — — | — — | — — | 68.2 ✓ | 51.3 ✓ | — — |
-| 2500×500 | — — | 1.2s ✓ | 1.2s ✓ | — — | — — | 2.5s ✓ | 2.8s ✓ | — — | — — | — — | 1.3s ✓ | 1.3s ✓ | — — |
-| 2500×2500 | — — | 6.1s ✓ | 5.3s ✓ | — — | — — | 12.2s ✓ | 14.2s ✓ | — — | — — | — — | 6.8s ✓ | 7.0s ✓ | — — |
-| 10000×50 | — — | 193.9 ✓ | 187.2 ✓ | — — | — — | 708.0 ✓ | 562.5 ✓ | — — | — — | — — | 199.6 ✓ | 220.9 ✓ | — — |
-| 10000×500 | — — | 4.3s ✓ | 4.5s ✓ | — — | — — | 9.9s ✓ | 10.1s ✓ | — — | — — | — — | 5.2s ✓ | 5.0s ✓ | — — |
+| 100×50 | — | **1.40 ms ✓** | 1.49 ms ✓ | — | — | 3.00 ms ✓ | 6.00 ms ✓ | — | — | — | 1.99 ms ✓ | 4.39 ms ✓ | — |
+| 100×500 | — | 14.1 ms ✓ | **13.1 ms ✓** | — | — | 42.5 ms ✓ | 67.0 ms ✓ | — | — | — | 18.1 ms ✓ | 20.9 ms ✓ | — |
+| 100×2500 | — | **69.8 ms ✓** | 95.5 ms ✓ | — | — | 394.5 ms ✓ | 693.0 ms ✓ | — | — | — | 91.1 ms ✓ | 93.9 ms ✓ | — |
+| 500×50 | — | 6.92 ms ✓ | **6.39 ms ✓** | — | — | 14.0 ms ✓ | 18.0 ms ✓ | — | — | — | 9.51 ms ✓ | 11.3 ms ✓ | — |
+| 500×500 | — | 89.5 ms ✓ | **88.3 ms ✓** | — | — | 248.5 ms ✓ | 292.5 ms ✓ | — | — | — | 92.4 ms ✓ | 102.0 ms ✓ | — |
+| 500×2500 | — | 520.5 ms ✓ | **509.1 ms ✓** | — | — | 1.5 s ✓ | 2.2 s ✓ | — | — | — | 555.2 ms ✓ | 635.6 ms ✓ | — |
+| 2500×50 | — | **39.3 ms ✓** | 42.3 ms ✓ | — | — | 101.5 ms ✓ | 115.0 ms ✓ | — | — | — | 68.2 ms ✓ | 51.3 ms ✓ | — |
+| 2500×500 | — | 1.2 s ✓ | **1.2 s ✓** | — | — | 2.5 s ✓ | 2.8 s ✓ | — | — | — | 1.3 s ✓ | 1.3 s ✓ | — |
+| 2500×2500 | — | 6.1 s ✓ | **5.3 s ✓** | — | — | 12.2 s ✓ | 14.2 s ✓ | — | — | — | 6.8 s ✓ | 7.0 s ✓ | — |
+| 10000×50 | — | 193.9 ms ✓ | **187.2 ms ✓** | — | — | 708.0 ms ✓ | 562.5 ms ✓ | — | — | — | 199.6 ms ✓ | 220.9 ms ✓ | — |
+| 10000×500 | — | **4.3 s ✓** | 4.5 s ✓ | — | — | 9.9 s ✓ | 10.1 s ✓ | — | — | — | 5.2 s ✓ | 5.0 s ✓ | — |
 
 
 ## robust_pls  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | — — | 1.33 ✓ | 1.58 ✓ | — — | — — | 3.00 ✓ | 6.00 ✓ | — — | — — | — — | 2.12 ✓ | 4.75 ✓ | — — |
-| 100×500 | — — | 14.5 ✓ | 13.1 ✓ | — — | — — | 40.5 ✓ | 68.5 ✓ | — — | — — | — — | 17.4 ✓ | 20.8 ✓ | — — |
-| 100×2500 | — — | 70.9 ✓ | 77.5 ✓ | — — | — — | 355.0 ✓ | 661.0 ✓ | — — | — — | — — | 93.5 ✓ | 97.6 ✓ | — — |
-| 500×50 | — — | 6.75 ✓ | 6.71 ✓ | — — | — — | 13.5 ✓ | 17.5 ✓ | — — | — — | — — | 8.87 ✓ | 11.1 ✓ | — — |
-| 500×500 | — — | 87.3 ✓ | 90.7 ✓ | — — | — — | 243.0 ✓ | 347.0 ✓ | — — | — — | — — | 90.3 ✓ | 93.9 ✓ | — — |
-| 500×2500 | — — | 544.8 ✓ | 554.8 ✓ | — — | — — | 1.6s ✓ | 2.3s ✓ | — — | — — | — — | 591.7 ✓ | 711.7 ✓ | — — |
-| 2500×50 | — — | 41.7 ✓ | 42.4 ✓ | — — | — — | 103.5 ✓ | 117.0 ✓ | — — | — — | — — | 45.7 ✓ | 50.3 ✓ | — — |
-| 2500×500 | — — | 1.2s ✓ | 1.1s ✓ | — — | — — | 2.2s ✓ | 2.3s ✓ | — — | — — | — — | 1.3s ✓ | 1.4s ✓ | — — |
-| 2500×2500 | — — | 6.1s ✓ | 5.6s ✓ | — — | — — | 11.9s ✓ | 13.1s ✓ | — — | — — | — — | 6.5s ✓ | 6.3s ✓ | — — |
-| 10000×50 | — — | 196.7 ✓ | 183.1 ✓ | — — | — — | 553.5 ✓ | 613.0 ✓ | — — | — — | — — | 203.2 ✓ | 238.9 ✓ | — — |
-| 10000×500 | — — | 5.2s ✓ | 4.6s ✓ | — — | — — | 11.0s ✓ | 10.7s ✓ | — — | — — | — — | 5.7s ✓ | 5.8s ✓ | — — |
+| 100×50 | — | **1.33 ms ✓** | 1.58 ms ✓ | — | — | 3.00 ms ✓ | 6.00 ms ✓ | — | — | — | 2.12 ms ✓ | 4.75 ms ✓ | — |
+| 100×500 | — | 14.5 ms ✓ | **13.1 ms ✓** | — | — | 40.5 ms ✓ | 68.5 ms ✓ | — | — | — | 17.4 ms ✓ | 20.8 ms ✓ | — |
+| 100×2500 | — | **70.9 ms ✓** | 77.5 ms ✓ | — | — | 355.0 ms ✓ | 661.0 ms ✓ | — | — | — | 93.5 ms ✓ | 97.6 ms ✓ | — |
+| 500×50 | — | 6.75 ms ✓ | **6.71 ms ✓** | — | — | 13.5 ms ✓ | 17.5 ms ✓ | — | — | — | 8.87 ms ✓ | 11.1 ms ✓ | — |
+| 500×500 | — | **87.3 ms ✓** | 90.7 ms ✓ | — | — | 243.0 ms ✓ | 347.0 ms ✓ | — | — | — | 90.3 ms ✓ | 93.9 ms ✓ | — |
+| 500×2500 | — | **544.8 ms ✓** | 554.8 ms ✓ | — | — | 1.6 s ✓ | 2.3 s ✓ | — | — | — | 591.7 ms ✓ | 711.7 ms ✓ | — |
+| 2500×50 | — | **41.7 ms ✓** | 42.4 ms ✓ | — | — | 103.5 ms ✓ | 117.0 ms ✓ | — | — | — | 45.7 ms ✓ | 50.3 ms ✓ | — |
+| 2500×500 | — | 1.2 s ✓ | **1.1 s ✓** | — | — | 2.2 s ✓ | 2.3 s ✓ | — | — | — | 1.3 s ✓ | 1.4 s ✓ | — |
+| 2500×2500 | — | 6.1 s ✓ | **5.6 s ✓** | — | — | 11.9 s ✓ | 13.1 s ✓ | — | — | — | 6.5 s ✓ | 6.3 s ✓ | — |
+| 10000×50 | — | 196.7 ms ✓ | **183.1 ms ✓** | — | — | 553.5 ms ✓ | 613.0 ms ✓ | — | — | — | 203.2 ms ✓ | 238.9 ms ✓ | — |
+| 10000×500 | — | 5.2 s ✓ | **4.6 s ✓** | — | — | 11.0 s ✓ | 10.7 s ✓ | — | — | — | 5.7 s ✓ | 5.8 s ✓ | — |
 
 
 ## sparse_pls_da  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## sparse_pls_da  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## sparse_simpls  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | 0.87 ✓ | 0.92 ✓ | 1.10 ✓ | — — | — — | 2.50 ✓ | 6.50 ✓ | — — | — — | 8.50 ✗ | 1.66 ✓ | 3.78 ✓ | — — |
-| 100×500 | 8.18 ✓ | 8.20 ✓ | 8.25 ✓ | — — | — — | 38.0 ✓ | 70.0 ✓ | — — | — — | 67.5 ✗ | 14.0 ✓ | 15.6 ✓ | — — |
-| 100×2500 | 39.6 ✓ | 37.4 ✓ | 42.2 ✓ | — — | — — | 354.0 ✓ | 674.0 ✓ | — — | — — | 503.0 ✗ | 65.0 ✓ | 68.7 ✓ | — — |
-| 500×50 | 4.22 ✓ | 4.30 ✓ | 4.29 ✓ | — — | — — | 11.0 ✓ | 17.5 ✓ | — — | — — | 31.5 ✗ | 6.78 ✓ | 8.97 ✓ | — — |
-| 500×500 | 40.8 ✓ | 39.4 ✓ | 40.7 ✓ | — — | — — | 214.0 ✓ | 268.0 ✓ | — — | — — | 371.0 ✗ | 64.4 ✓ | 70.2 ✓ | — — |
-| 500×2500 | 203.4 ✓ | 202.7 ✓ | 203.3 ✓ | — — | — — | 1.5s ✓ | 1.9s ✓ | — — | — — | 1.5s ✗ | 339.4 ✓ | 345.6 ✓ | — — |
-| 2500×50 | 20.7 ✓ | 20.5 ✓ | 20.7 ✓ | — — | — — | 80.0 ✓ | 107.5 ✓ | — — | — — | 134.0 ✗ | 36.5 ✓ | 34.0 ✓ | — — |
-| 2500×500 | 247.8 ✓ | 246.1 ✓ | 231.7 ✓ | — — | — — | 1.5s ✓ | 1.5s ✓ | — — | — — | 1.7s ✗ | 403.3 ✓ | 397.1 ✓ | — — |
-| 2500×2500 | 1.3s ✓ | 1.2s ✓ | 1.2s ✓ | — — | — — | 8.4s ✓ | 8.9s ✓ | — — | — — | 9.2s ✗ | 2.0s ✓ | 2.0s ✓ | — — |
-| 10000×50 | 77.4 ✓ | 76.4 ✓ | 79.0 ✓ | — — | — — | 446.0 ✓ | 510.0 ✓ | — — | — — | 569.5 ✗ | 120.2 ✓ | 123.7 ✓ | — — |
-| 10000×500 | 954.7 ✓ | 966.3 ✓ | 926.1 ✓ | — — | — — | 6.5s ✓ | 6.9s ✓ | — — | — — | 7.1s ✗ | 1.5s ✓ | 1.4s ✓ | — — |
+| 100×50 | **0.87 ms ✓** | 0.92 ms ✓ | 1.10 ms ✓ | — | — | 2.50 ms ✓ | 6.50 ms ✓ | — | — | 8.50 ms ✗ | 1.66 ms ✓ | 3.78 ms ✓ | — |
+| 100×500 | **8.18 ms ✓** | 8.20 ms ✓ | 8.25 ms ✓ | — | — | 38.0 ms ✓ | 70.0 ms ✓ | — | — | 67.5 ms ✗ | 14.0 ms ✓ | 15.6 ms ✓ | — |
+| 100×2500 | 39.6 ms ✓ | **37.4 ms ✓** | 42.2 ms ✓ | — | — | 354.0 ms ✓ | 674.0 ms ✓ | — | — | 503.0 ms ✗ | 65.0 ms ✓ | 68.7 ms ✓ | — |
+| 500×50 | **4.22 ms ✓** | 4.30 ms ✓ | 4.29 ms ✓ | — | — | 11.0 ms ✓ | 17.5 ms ✓ | — | — | 31.5 ms ✗ | 6.78 ms ✓ | 8.97 ms ✓ | — |
+| 500×500 | 40.8 ms ✓ | **39.4 ms ✓** | 40.7 ms ✓ | — | — | 214.0 ms ✓ | 268.0 ms ✓ | — | — | 371.0 ms ✗ | 64.4 ms ✓ | 70.2 ms ✓ | — |
+| 500×2500 | 203.4 ms ✓ | **202.7 ms ✓** | 203.3 ms ✓ | — | — | 1.5 s ✓ | 1.9 s ✓ | — | — | 1.5 s ✗ | 339.4 ms ✓ | 345.6 ms ✓ | — |
+| 2500×50 | 20.7 ms ✓ | **20.5 ms ✓** | 20.7 ms ✓ | — | — | 80.0 ms ✓ | 107.5 ms ✓ | — | — | 134.0 ms ✗ | 36.5 ms ✓ | 34.0 ms ✓ | — |
+| 2500×500 | 247.8 ms ✓ | 246.1 ms ✓ | **231.7 ms ✓** | — | — | 1.5 s ✓ | 1.5 s ✓ | — | — | 1.7 s ✗ | 403.3 ms ✓ | 397.1 ms ✓ | — |
+| 2500×2500 | 1.3 s ✓ | 1.2 s ✓ | **1.2 s ✓** | — | — | 8.4 s ✓ | 8.9 s ✓ | — | — | 9.2 s ✗ | 2.0 s ✓ | 2.0 s ✓ | — |
+| 10000×50 | 77.4 ms ✓ | **76.4 ms ✓** | 79.0 ms ✓ | — | — | 446.0 ms ✓ | 510.0 ms ✓ | — | — | 569.5 ms ✗ | 120.2 ms ✓ | 123.7 ms ✓ | — |
+| 10000×500 | 954.7 ms ✓ | 966.3 ms ✓ | **926.1 ms ✓** | — | — | 6.5 s ✓ | 6.9 s ✓ | — | — | 7.1 s ✗ | 1.5 s ✓ | 1.4 s ✓ | — |
 
 
 ## sparse_simpls  —  3 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | 0.87 ✓ | 0.90 ✓ | 1.16 ✓ | — — | — — | 2.50 ✓ | 6.00 ✓ | — — | — — | 9.50 ✗ | 1.62 ✓ | 3.85 ✓ | — — |
-| 100×500 | 8.11 ✓ | 7.87 ✓ | 8.02 ✓ | — — | — — | 39.0 ✓ | 81.5 ✓ | — — | — — | 60.5 ✗ | 13.4 ✓ | 15.8 ✓ | — — |
-| 100×2500 | 39.3 ✓ | 38.4 ✓ | 40.1 ✓ | — — | — — | 345.5 ✓ | 670.5 ✓ | — — | — — | 484.5 ✗ | 65.5 ✓ | 68.2 ✓ | — — |
-| 500×50 | 4.16 ✓ | 4.34 ✓ | 4.40 ✓ | — — | — — | 12.0 ✓ | 18.0 ✓ | — — | — — | 29.0 ✗ | 6.72 ✓ | 8.84 ✓ | — — |
-| 500×500 | 40.8 ✓ | 48.8 ✓ | 40.3 ✓ | — — | — — | 199.5 ✓ | 261.0 ✓ | — — | — — | 331.5 ✗ | 62.9 ✓ | 66.5 ✓ | — — |
-| 500×2500 | 199.3 ✓ | 197.4 ✓ | 206.5 ✓ | — — | — — | 1.5s ✓ | 2.0s ✓ | — — | — — | 1.6s ✗ | 348.3 ✓ | 347.0 ✓ | — — |
-| 2500×50 | 20.0 ✓ | 20.4 ✓ | 19.9 ✓ | — — | — — | 76.5 ✓ | 112.5 ✓ | — — | — — | 136.0 ✗ | 31.6 ✓ | 34.7 ✓ | — — |
-| 2500×500 | 251.7 ✓ | 241.4 ✓ | 233.6 ✓ | — — | — — | 1.5s ✓ | 1.4s ✓ | — — | — — | 1.5s ✗ | 361.1 ✓ | 367.3 ✓ | — — |
-| 2500×2500 | 1.2s ✓ | 1.2s ✓ | 1.3s ✓ | — — | — — | 8.4s ✓ | 9.7s ✓ | — — | — — | 8.9s ✗ | 1.9s ✓ | 2.0s ✓ | — — |
-| 10000×50 | 75.2 ✓ | 74.8 ✓ | 79.3 ✓ | — — | — — | 438.5 ✓ | 488.0 ✓ | — — | — — | 592.5 ✗ | 119.1 ✓ | 133.2 ✓ | — — |
-| 10000×500 | 944.5 ✓ | 942.7 ✓ | 919.6 ✓ | — — | — — | 6.4s ✓ | 6.8s ✓ | — — | — — | 6.9s ✗ | 1.4s ✓ | 1.5s ✓ | — — |
+| 100×50 | **0.87 ms ✓** | 0.90 ms ✓ | 1.16 ms ✓ | — | — | 2.50 ms ✓ | 6.00 ms ✓ | — | — | 9.50 ms ✗ | 1.62 ms ✓ | 3.85 ms ✓ | — |
+| 100×500 | 8.11 ms ✓ | **7.87 ms ✓** | 8.02 ms ✓ | — | — | 39.0 ms ✓ | 81.5 ms ✓ | — | — | 60.5 ms ✗ | 13.4 ms ✓ | 15.8 ms ✓ | — |
+| 100×2500 | 39.3 ms ✓ | **38.4 ms ✓** | 40.1 ms ✓ | — | — | 345.5 ms ✓ | 670.5 ms ✓ | — | — | 484.5 ms ✗ | 65.5 ms ✓ | 68.2 ms ✓ | — |
+| 500×50 | **4.16 ms ✓** | 4.34 ms ✓ | 4.40 ms ✓ | — | — | 12.0 ms ✓ | 18.0 ms ✓ | — | — | 29.0 ms ✗ | 6.72 ms ✓ | 8.84 ms ✓ | — |
+| 500×500 | 40.8 ms ✓ | 48.8 ms ✓ | **40.3 ms ✓** | — | — | 199.5 ms ✓ | 261.0 ms ✓ | — | — | 331.5 ms ✗ | 62.9 ms ✓ | 66.5 ms ✓ | — |
+| 500×2500 | 199.3 ms ✓ | **197.4 ms ✓** | 206.5 ms ✓ | — | — | 1.5 s ✓ | 2.0 s ✓ | — | — | 1.6 s ✗ | 348.3 ms ✓ | 347.0 ms ✓ | — |
+| 2500×50 | 20.0 ms ✓ | 20.4 ms ✓ | **19.9 ms ✓** | — | — | 76.5 ms ✓ | 112.5 ms ✓ | — | — | 136.0 ms ✗ | 31.6 ms ✓ | 34.7 ms ✓ | — |
+| 2500×500 | 251.7 ms ✓ | 241.4 ms ✓ | **233.6 ms ✓** | — | — | 1.5 s ✓ | 1.4 s ✓ | — | — | 1.5 s ✗ | 361.1 ms ✓ | 367.3 ms ✓ | — |
+| 2500×2500 | 1.2 s ✓ | **1.2 s ✓** | 1.3 s ✓ | — | — | 8.4 s ✓ | 9.7 s ✓ | — | — | 8.9 s ✗ | 1.9 s ✓ | 2.0 s ✓ | — |
+| 10000×50 | 75.2 ms ✓ | **74.8 ms ✓** | 79.3 ms ✓ | — | — | 438.5 ms ✓ | 488.0 ms ✓ | — | — | 592.5 ms ✗ | 119.1 ms ✓ | 133.2 ms ✓ | — |
+| 10000×500 | 944.5 ms ✓ | 942.7 ms ✓ | **919.6 ms ✓** | — | — | 6.4 s ✓ | 6.8 s ✓ | — | — | 6.9 s ✗ | 1.4 s ✓ | 1.5 s ✓ | — |
 
 
 ## sparse_simpls  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | sklearn | ikpls | r_tier1 | r_tier2 | r_pls | r_ropls | r_mixomics | matlab_tier1 | matlab_tier2 | matlab_pls |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 100×50 | 0.97 ✓ | 0.94 ✓ | 1.09 ✓ | — — | — — | 2.50 ✓ | 6.00 ✓ | — — | — — | 8.50 ✗ | 1.66 ✓ | 6.67 ✓ | — — |
-| 100×500 | 9.12 ✓ | 7.89 ✓ | 8.06 ✓ | — — | — — | 40.0 ✓ | 76.0 ✓ | — — | — — | 60.0 ✗ | 13.4 ✓ | 15.8 ✓ | — — |
-| 100×2500 | 39.7 ✓ | 40.3 ✓ | 39.0 ✓ | — — | — — | 334.5 ✓ | 659.5 ✓ | — — | — — | 482.0 ✗ | 68.1 ✓ | 72.8 ✓ | — — |
-| 500×50 | 4.09 ✓ | 4.41 ✓ | 4.45 ✓ | — — | — — | 12.5 ✓ | 17.5 ✓ | — — | — — | 32.0 ✗ | 6.61 ✓ | 8.68 ✓ | — — |
-| 500×500 | 40.3 ✓ | 39.4 ✓ | 40.6 ✓ | — — | — — | 205.5 ✓ | 262.0 ✓ | — — | — — | 346.0 ✗ | 64.7 ✓ | 68.5 ✓ | — — |
-| 500×2500 | 198.5 ✓ | 200.5 ✓ | 236.6 ✓ | — — | — — | 1.7s ✓ | 2.0s ✓ | — — | — — | 1.6s ✗ | 363.2 ✓ | 373.5 ✓ | — — |
-| 2500×50 | 20.0 ✓ | 20.0 ✓ | 20.2 ✓ | — — | — — | 96.5 ✓ | 94.5 ✓ | — — | — — | 140.5 ✗ | 35.1 ✓ | 34.9 ✓ | — — |
-| 2500×500 | 241.2 ✓ | 238.8 ✓ | 260.5 ✓ | — — | — — | 1.4s ✓ | 1.5s ✓ | — — | — — | 1.7s ✗ | 356.7 ✓ | 399.6 ✓ | — — |
-| 2500×2500 | 1.2s ✓ | 1.3s ✓ | 1.3s ✓ | — — | — — | 8.2s ✓ | 8.9s ✓ | — — | — — | 8.9s ✗ | 1.9s ✓ | 2.0s ✓ | — — |
-| 10000×50 | 76.3 ✓ | 80.9 ✓ | 114.3 ✓ | — — | — — | 434.0 ✓ | 516.0 ✓ | — — | — — | 643.0 ✗ | 120.2 ✓ | 163.2 ✓ | — — |
-| 10000×500 | 969.8 ✓ | 958.2 ✓ | 962.9 ✓ | — — | — — | 6.5s ✓ | 7.0s ✓ | — — | — — | 7.1s ✗ | 1.4s ✓ | 1.5s ✓ | — — |
+| 100×50 | 0.97 ms ✓ | **0.94 ms ✓** | 1.09 ms ✓ | — | — | 2.50 ms ✓ | 6.00 ms ✓ | — | — | 8.50 ms ✗ | 1.66 ms ✓ | 6.67 ms ✓ | — |
+| 100×500 | 9.12 ms ✓ | **7.89 ms ✓** | 8.06 ms ✓ | — | — | 40.0 ms ✓ | 76.0 ms ✓ | — | — | 60.0 ms ✗ | 13.4 ms ✓ | 15.8 ms ✓ | — |
+| 100×2500 | 39.7 ms ✓ | 40.3 ms ✓ | **39.0 ms ✓** | — | — | 334.5 ms ✓ | 659.5 ms ✓ | — | — | 482.0 ms ✗ | 68.1 ms ✓ | 72.8 ms ✓ | — |
+| 500×50 | **4.09 ms ✓** | 4.41 ms ✓ | 4.45 ms ✓ | — | — | 12.5 ms ✓ | 17.5 ms ✓ | — | — | 32.0 ms ✗ | 6.61 ms ✓ | 8.68 ms ✓ | — |
+| 500×500 | 40.3 ms ✓ | **39.4 ms ✓** | 40.6 ms ✓ | — | — | 205.5 ms ✓ | 262.0 ms ✓ | — | — | 346.0 ms ✗ | 64.7 ms ✓ | 68.5 ms ✓ | — |
+| 500×2500 | **198.5 ms ✓** | 200.5 ms ✓ | 236.6 ms ✓ | — | — | 1.7 s ✓ | 2.0 s ✓ | — | — | 1.6 s ✗ | 363.2 ms ✓ | 373.5 ms ✓ | — |
+| 2500×50 | 20.0 ms ✓ | **20.0 ms ✓** | 20.2 ms ✓ | — | — | 96.5 ms ✓ | 94.5 ms ✓ | — | — | 140.5 ms ✗ | 35.1 ms ✓ | 34.9 ms ✓ | — |
+| 2500×500 | 241.2 ms ✓ | **238.8 ms ✓** | 260.5 ms ✓ | — | — | 1.4 s ✓ | 1.5 s ✓ | — | — | 1.7 s ✗ | 356.7 ms ✓ | 399.6 ms ✓ | — |
+| 2500×2500 | **1.2 s ✓** | 1.3 s ✓ | 1.3 s ✓ | — | — | 8.2 s ✓ | 8.9 s ✓ | — | — | 8.9 s ✗ | 1.9 s ✓ | 2.0 s ✓ | — |
+| 10000×50 | **76.3 ms ✓** | 80.9 ms ✓ | 114.3 ms ✓ | — | — | 434.0 ms ✓ | 516.0 ms ✓ | — | — | 643.0 ms ✗ | 120.2 ms ✓ | 163.2 ms ✓ | — |
+| 10000×500 | 969.8 ms ✓ | **958.2 ms ✓** | 962.9 ms ✓ | — | — | 6.5 s ✓ | 7.0 s ✓ | — | — | 7.1 s ✗ | 1.4 s ✓ | 1.5 s ✓ | — |
 
 
 ## weighted_pls  —  1 thread
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## weighted_pls  —  10 threads
 
-| size | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
+_Row label format: `n_samples × n_features`. Cell shows `median time + parity icon`. **Bold** = fastest backend in the row (only counted when the cell is OK and parity is ✓ or ⚠ — comparing a divergent ✗ backend to a parity-correct one would be meaningless)._
+
+| samples × features | cpp | python_tier1 | python_tier2 | r_tier1 | r_tier2 | matlab_tier1 | matlab_tier2 |
 |---|---|---|---|---|---|---|---|
-| 100×500 | — — | — — | — — | — — | — — | — — | — — |
-| 500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×500 | — — | — — | — — | — — | — — | — — | — — |
-| 2500×2500 | — — | — — | — — | — — | — — | — — | — — |
+| 100×500 | — | — | — | — | — | — | — |
+| 500×500 | — | — | — | — | — | — | — |
+| 2500×500 | — | — | — | — | — | — | — |
+| 2500×2500 | — | — | — | — | — | — | — |
 
 
 ## Backend versions
