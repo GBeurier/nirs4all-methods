@@ -10,7 +10,8 @@
 /* r_gateway.c */
 SEXP r_pls4all_version(void);
 SEXP r_pls4all_abi_version(void);
-SEXP r_pls4all_fit(SEXP X, SEXP Y, SEXP algo, SEXP n_components, SEXP store_scores);
+SEXP r_pls4all_fit(SEXP X, SEXP Y, SEXP algo, SEXP n_components, SEXP store_scores,
+                    SEXP center_x, SEXP scale_x, SEXP center_y, SEXP scale_y);
 SEXP r_pls4all_predict(SEXP model_ptr, SEXP X);
 
 /* r_methods.c — MethodResult fits */
@@ -35,7 +36,7 @@ static const R_CallMethodDef callMethods[] = {
     /* core */
     {"r_pls4all_version",     (DL_FUNC)&r_pls4all_version,     0},
     {"r_pls4all_abi_version", (DL_FUNC)&r_pls4all_abi_version, 0},
-    {"r_pls4all_fit",         (DL_FUNC)&r_pls4all_fit,         5},
+    {"r_pls4all_fit",         (DL_FUNC)&r_pls4all_fit,         9},
     {"r_pls4all_predict",     (DL_FUNC)&r_pls4all_predict,     2},
 
     /* MethodResult fits */

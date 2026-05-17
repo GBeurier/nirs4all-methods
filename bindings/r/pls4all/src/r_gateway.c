@@ -117,17 +117,33 @@ SEXP r_pls4all_abi_version(void) {
 
 /* ---- fit -------------------------------------------------------------- */
 
+/* Convert a LGLSXP/INTSXP scalar into a {0,1} flag, treating NA as the
+ * provided default. Useful for the optional fit-time switches below. */
+static int sexp_flag(SEXP s, int dflt) {
+    if (TYPEOF(s) == LGLSXP) {
+        int v = LOGICAL(s)[0];
+        return (v == NA_LOGICAL) ? dflt : (v ? 1 : 0);
+    }
+    if (TYPEOF(s) == INTSXP) {
+        int v = INTEGER(s)[0];
+        return (v == NA_INTEGER) ? dflt : (v ? 1 : 0);
+    }
+    Rf_error("expected logical or integer scalar");
+}
+
 SEXP r_pls4all_fit(SEXP X, SEXP Y, SEXP algo_sexp, SEXP n_components_sexp,
-                    SEXP store_scores_sexp) {
+                    SEXP store_scores_sexp,
+                    SEXP center_x_sexp, SEXP scale_x_sexp,
+                    SEXP center_y_sexp, SEXP scale_y_sexp) {
     if (TYPEOF(X) != REALSXP) Rf_error("X must be a numeric matrix");
     if (TYPEOF(Y) != REALSXP) Rf_error("Y must be a numeric matrix");
     if (TYPEOF(algo_sexp) != STRSXP) Rf_error("algo must be character");
     if (TYPEOF(n_components_sexp) != INTSXP) Rf_error("n_components must be integer");
-    if (TYPEOF(store_scores_sexp) != LGLSXP && TYPEOF(store_scores_sexp) != INTSXP)
-        Rf_error("store_scores must be logical or integer");
-    const int store_scores = (TYPEOF(store_scores_sexp) == LGLSXP)
-        ? LOGICAL(store_scores_sexp)[0]
-        : INTEGER(store_scores_sexp)[0];
+    const int store_scores = sexp_flag(store_scores_sexp, 0);
+    const int center_x = sexp_flag(center_x_sexp, 1);
+    const int scale_x  = sexp_flag(scale_x_sexp,  1);
+    const int center_y = sexp_flag(center_y_sexp, 1);
+    const int scale_y  = sexp_flag(scale_y_sexp,  1);
 
     SEXP X_dim = Rf_getAttrib(X, R_DimSymbol);
     SEXP Y_dim = Rf_getAttrib(Y, R_DimSymbol);
@@ -187,10 +203,10 @@ SEXP r_pls4all_fit(SEXP X, SEXP Y, SEXP algo_sexp, SEXP n_components_sexp,
     /* Match the public C ABI Config defaults (scale_x = scale_y = 1)
      * so the R binding produces byte-equivalent results to the Python
      * binding under default settings. */
-    p4a_config_set_center_x(cfg, 1);
-    p4a_config_set_scale_x(cfg, 1);
-    p4a_config_set_center_y(cfg, 1);
-    p4a_config_set_scale_y(cfg, 1);
+    p4a_config_set_center_x(cfg, center_x);
+    p4a_config_set_scale_x(cfg, scale_x);
+    p4a_config_set_center_y(cfg, center_y);
+    p4a_config_set_scale_y(cfg, scale_y);
     p4a_config_set_store_scores(cfg, store_scores ? 1 : 0);
 
     p4a_matrix_view_t X_view;
