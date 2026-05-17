@@ -38,6 +38,7 @@ PUSH_WEB="${PUSH_WEB:-0}"
 DEPLOY_PAGES="${DEPLOY_PAGES:-auto}"
 PAGES_BRANCH="${PAGES_BRANCH:-main}"
 WEB_COMMIT_MESSAGE="${WEB_COMMIT_MESSAGE:-Update benchmark web data}"
+CURRENT_BRANCH="$(git branch --show-current)"
 
 if [[ "${RENDER_DOCS}" == "auto" ]]; then
   if [[ "${OUT_CSV}" == "benchmarks/cross_binding/results/full_matrix.csv" ]]; then
@@ -53,13 +54,12 @@ if [[ "${PUBLISH_WEB}" == "1" ]]; then
   COMMIT_WEB=1
   PUSH_WEB=1
   if [[ "${DEPLOY_PAGES}" == "auto" ]]; then
-    DEPLOY_PAGES=1
+    DEPLOY_PAGES=0
   fi
 elif [[ "${DEPLOY_PAGES}" == "auto" ]]; then
   DEPLOY_PAGES=0
 fi
 
-CURRENT_BRANCH="$(git branch --show-current)"
 if [[ "${DEPLOY_PAGES}" == "1" && "${CURRENT_BRANCH}" != "${PAGES_BRANCH}" ]]; then
   echo "ERROR: GitHub Pages deployment is restricted to ${PAGES_BRANCH} in this repository." >&2
   echo "Current branch is ${CURRENT_BRANCH:-detached HEAD}." >&2
