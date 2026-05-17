@@ -168,8 +168,11 @@ CUDA) plug in via CMake presets without changing the ABI.
 # Env overrides: FORCE=1 RERUN_FAILED=1 THREADS="1 3 10" N_RUNS=5.
 benchmarks/cross_binding/run_overnight.sh
 
-# Also commit/push the refreshed web data and trigger GitHub Pages.
+# On the Pages branch (main), commit/push web data and trigger GitHub Pages.
 PUBLISH_WEB=1 benchmarks/cross_binding/run_overnight.sh
+
+# From a work branch, publish the source files without deploying live Pages.
+PUBLISH_WEB=1 DEPLOY_PAGES=0 benchmarks/cross_binding/run_overnight.sh
 
 # Render an existing CSV only
 python benchmarks/cross_binding/combine_and_render.py \

@@ -270,6 +270,12 @@ def build_payload(results_dir: Path) -> dict:
     rows_in: list[dict] = []
     full_matrix = results_dir / "full_matrix.csv"
     csv_paths = [full_matrix] if full_matrix.exists() else []
+    generated_at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    if csv_paths:
+        latest_source = max(p.stat().st_mtime for p in csv_paths)
+        generated_at = dt.datetime.fromtimestamp(
+            latest_source, dt.timezone.utc
+        ).strftime("%Y-%m-%d %H:%M UTC")
     for p in csv_paths:
         rows_in.extend(csv.DictReader(p.open()))
 
@@ -487,7 +493,7 @@ def build_payload(results_dir: Path) -> dict:
             present_langs.append(c["lang"])
 
     payload = {
-        "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "generated_at": generated_at,
         "host":         host_info(),
         "columns":      columns,
         "presets":      presets,

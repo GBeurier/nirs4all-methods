@@ -29,8 +29,11 @@ pls4all is benchmarked across three axes:
 # Existing cells in results/full_matrix.csv are skipped by default.
 benchmarks/cross_binding/run_overnight.sh
 
-# Also publish the refreshed dashboard through GitHub Pages.
+# On the Pages branch (main), also publish the refreshed dashboard.
 PUBLISH_WEB=1 benchmarks/cross_binding/run_overnight.sh
+
+# From a work branch, commit/push dashboard sources without live deploy.
+PUBLISH_WEB=1 DEPLOY_PAGES=0 benchmarks/cross_binding/run_overnight.sh
 
 # Render an existing CSV only.
 python benchmarks/cross_binding/combine_and_render.py \
