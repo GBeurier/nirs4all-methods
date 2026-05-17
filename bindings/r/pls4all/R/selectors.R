@@ -90,14 +90,10 @@ spa_select <- function(X, Y, n_components, top_k) {
 #' @export
 cars_select <- function(X, Y, n_components, n_iterations = 50L,
                          min_features = 5L) {
-  xy <- .coerce_xy(X, Y)
-  res <- .Call("r_p4a_cars_select",
-                xy$X, xy$Y,
-                as.integer(n_components),
-                as.integer(n_iterations),
-                as.integer(min_features),
-                PACKAGE = "pls4all")
-  if (!is.null(res$selected_indices))
-    res$selected_indices <- as.integer(res$selected_indices) + 1L
-  res
+    # Use the unified dispatcher (which builds a default 5-fold
+    # ValidationPlan). The legacy r_p4a_cars_select path passed NULL
+    # and the C side now rejects that with E_NULL_POINTER.
+    pls4all_method("cars_select", X, Y, n_components,
+                   params = list(n_iterations = as.integer(n_iterations),
+                                  min_features = as.integer(min_features)))
 }

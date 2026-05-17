@@ -32,6 +32,13 @@ SEXP r_p4a_pls_diagnostics_compute(SEXP model_ptr, SEXP X);
 SEXP r_p4a_approximate_press_compute(SEXP X, SEXP Y, SEXP max_components);
 SEXP r_p4a_pls_monitoring_run(SEXP model_ptr, SEXP X_ref, SEXP X_mon, SEXP alpha);
 
+/* r_dispatch.c — unified dispatcher (covers all method-result fits +
+ * selectors + diagnostics by algo name + params list) */
+SEXP r_p4a_dispatch_fit(SEXP algo, SEXP X, SEXP Y, SEXP n_components,
+                         SEXP params,
+                         SEXP center_x, SEXP scale_x,
+                         SEXP center_y, SEXP scale_y);
+
 static const R_CallMethodDef callMethods[] = {
     /* core */
     {"r_pls4all_version",     (DL_FUNC)&r_pls4all_version,     0},
@@ -56,6 +63,9 @@ static const R_CallMethodDef callMethods[] = {
     {"r_p4a_pls_diagnostics_compute",   (DL_FUNC)&r_p4a_pls_diagnostics_compute,   2},
     {"r_p4a_approximate_press_compute", (DL_FUNC)&r_p4a_approximate_press_compute, 3},
     {"r_p4a_pls_monitoring_run",        (DL_FUNC)&r_p4a_pls_monitoring_run,        4},
+
+    /* unified dispatcher */
+    {"r_p4a_dispatch_fit", (DL_FUNC)&r_p4a_dispatch_fit, 9},
 
     {NULL, NULL, 0},
 };
