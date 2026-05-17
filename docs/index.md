@@ -2,6 +2,23 @@
 
 A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
 
+## Latest highlights (May 2026)
+
+- **R binding COMPLETE** — `pls4all_method()` dispatcher covers all 33
+  MethodResult fits + 24 selectors + 4 diagnostics ; 16 formula+S3
+  tier-2 wrappers ; parsnip + mlr3 meta-models that dispatch to all
+  16 algorithms via the `algorithm` arg.
+- **MATLAB / Octave binding COMPLETE** — single dispatcher MEX exposes
+  the same surface ; 18 idiomatic `classdef` tier-2 wrappers + unified
+  `pls4all.fit(algo, X, y, …)` factory.
+- **Cross-binding benchmark** — 4 440 cells (26 algos × 13 backends ×
+  11 sizes × 3 thread counts) comparing pls4all to sklearn / pls /
+  ropls / mixOmics / ikpls / plsregress. **1 926 cells PARITY ✓**
+  (≤ 1e-6 vs the `cpp` reference). At small data pls4all leads the
+  externals **1.5–8×** ; at large BLAS-bound sizes everyone converges.
+  → [`benchmarks/cross_binding.md`](benchmarks/cross_binding.md) ·
+  [`methodology`](benchmarks/methodology.md)
+
 ## Quick links
 
 - **Architecture** — [overview](architecture/overview.md) · [memory model](architecture/memory_model.md) · [error model](architecture/error_model.md) · [threading](architecture/threading.md) · [serialization](architecture/serialization.md)
