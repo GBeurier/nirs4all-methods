@@ -1,23 +1,61 @@
-% MATLAB / Octave tier-1: pls4all.sparse_simpls @ lambda=0 (pure SIMPLS
-% via the dispatcher MEX).
-csv_path = getenv("BENCH_CSV");
-nc = str2double(getenv("BENCH_NCOMP"));
-runs = str2double(getenv("BENCH_NRUNS"));
+% MATLAB / Octave tier-1 dispatcher.
+% Reads args from BENCH_* env vars (set by orchestrator).
+algo       = getenv("BENCH_ALGO");
+csv_dir    = getenv("BENCH_CSV_DIR");
+n          = str2double(getenv("BENCH_N"));
+p          = str2double(getenv("BENCH_P"));
+nc         = str2double(getenv("BENCH_NCOMP"));
+runs       = str2double(getenv("BENCH_NRUNS"));
+seed_base  = str2double(getenv("BENCH_SEED_BASE"));
+pred_path  = getenv("BENCH_PRED_PATH");
+threads    = str2double(getenv("BENCH_THREADS"));
 
-mat = csvread(csv_path, 1, 0);  % skip header row
-X = mat(:, 1:end-1);
-y = mat(:, end);
+if exist("maxNumCompThreads", "builtin") || exist("maxNumCompThreads", "file")
+    try
+        maxNumCompThreads(threads);
+    catch
+        % maxNumCompThreads may not honour > physical cores; ignore.
+    end
+end
 
-times = zeros(runs, 1);
-for i = 1:runs
-    t0 = tic();
-    res = pls4all.sparse_simpls(X, y, nc, 0.0);
-    p = res.predictions;
-    times(i) = toc(t0) * 1000.0;
+function preds = fit_predict(algo, csv_dir, n, p, nc, seed)
+    [X, y] = pls4all_bench_load_xy(csv_dir, n, p, seed);
+    switch algo
+        case "pls"
+            res = pls4all.sparse_simpls(X, y, nc, 0.0);
+            preds = res.predictions(:);
+        case "sparse_simpls"
+            res = pls4all.sparse_simpls(X, y, nc, 0.05);
+            preds = res.predictions(:);
+        case "cppls"
+            res = pls4all.cppls(X, y, nc, 0.5);
+            preds = res.predictions(:);
+        case "ecr"
+            res = pls4all.ecr(X, y, nc, 0.5);
+            preds = res.predictions(:);
+        case "mir_pls"
+            res = pls4all.mir_pls(X, y, nc);
+            preds = res.predictions(:);
+        case "ridge_pls"
+            res = pls4all.ridge_pls(X, y, nc, 1.0);
+            preds = res.predictions(:);
+        case "robust_pls"
+            res = pls4all.robust_pls(X, y, nc, 1.345, 20);
+            preds = res.predictions(:);
+        case "missing_aware_nipals"
+            res = pls4all.missing_aware_nipals(X, y, nc);
+            preds = res.predictions(:);
+        otherwise
+            error("pls4all:bench", "matlab_tier1: unsupported algo %s", algo);
+    end
 end
-if runs >= 3
-    times = times(2:end);
-end
-out = sprintf('{"ok":true,"n_runs":%d,"median_ms":%g,"min_ms":%g,"max_ms":%g}', ...
-              length(times), median(times), min(times), max(times));
-disp(out)
+
+[stats, last_preds] = pls4all_bench_run( ...
+    @(s) fit_predict(algo, csv_dir, n, p, nc, s), runs, seed_base);
+
+versions = struct();
+versions.language = sprintf("Octave %s", OCTAVE_VERSION);
+versions.pls4all = "from libp4a-linked MEX";
+versions.blas = "linked-BLAS";
+
+pls4all_bench_emit(stats, last_preds, pred_path, versions);

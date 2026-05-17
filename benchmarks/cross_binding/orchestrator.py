@@ -1,29 +1,34 @@
 #!/usr/bin/env python3
-"""Cross-binding PLS-regression timing harness.
+"""Cross-binding × threads × sizes × algorithms × libp4a-build
+timing + parity orchestrator.
 
-For each (backend, dataset-size) combo, runs an external script that
-fits SIMPLS N times and emits a JSON record. The orchestrator
-aggregates everything into a Markdown table comparing:
+For each (algo, backend, n, p, threads, libp4a_build) cell:
+  - Generate deterministic dataset (per run, seed = seed_base + run_index)
+  - Spawn the backend's bench script with threading env vars set
+  - Collect timing (median/min/max), predictions path (.npy), versions
+  - Post-hoc: compute max_abs_diff vs the reference cell's predictions
 
-  - C++ direct (libp4a baseline, 1 thread)
-  - Python tier 1 (pls4all.cython-style)
-  - Python tier 2 (pls4all.sklearn.PLSRegression)
-  - R       tier 1 (.Call pls4all_fit)
-  - R       tier 2 (pls(formula, data, ncomp))
-  - MATLAB  tier 1 (pls4all.pls_fit)
-  - MATLAB  tier 2 (pls4all.fit("pls", ...))
-  - External Python: sklearn.cross_decomposition.PLSRegression
-  - External R:      pls::plsr(method = "simpls")
-  - External MATLAB: plsregress (Octave statistics)
-
-Each backend reports {best_ms, median_ms, min_ms, max_ms, n_runs}.
-The orchestrator computes speedup ratios relative to the external
-implementation of the same language.
+Result CSV: rows = cells, columns include parity verdict + speedup vs
+the per-language external. Result Markdown: pivot table per (algo, threads)
+with a parity icon next to each timing.
 
 Usage:
-    python orchestrator.py                                  # all sizes
-    python orchestrator.py --sizes 100x50 500x200
-    python orchestrator.py --only python_tier1 sklearn      # subset
+  # smoke (PLS at 500×200, 1 thread, all backends, ~30s)
+  python orchestrator.py --algorithms pls --sizes 500x200 --threads 1 --n-runs 3
+
+  # niveau A (PLS full matrix, ~30-60 min)
+  python orchestrator.py --algorithms pls --threads 1 3 10 --n-runs 5
+
+  # niveau B (algos with externals, ~2-4h)
+  python orchestrator.py \
+    --algorithms sparse_simpls pcr cppls opls n_pls mb_pls sparse_pls_da \
+                 ridge_pls gpr_pls pls_da \
+    --threads 1 3 10 --n-runs 5
+
+  # niveau C (pls4all-only condensed)
+  python orchestrator.py --algorithms-file pls4all_only.txt \
+    --sizes 500x500 2500x500 2500x2500 --threads 1 10 \
+    --only-pls4all --n-runs 5
 """
 from __future__ import annotations
 
@@ -32,103 +37,160 @@ import csv
 import json
 import os
 import shutil
-import statistics
 import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Iterable
+
+import numpy as np
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
 DATA_DIR = HERE / "data"
+PREDS_DIR = HERE / "data" / ".predictions"
 RESULTS_DIR = HERE / "results"
 SCRIPTS_DIR = HERE / "scripts"
-DATA_DIR.mkdir(exist_ok=True)
-RESULTS_DIR.mkdir(exist_ok=True)
-SCRIPTS_DIR.mkdir(exist_ok=True)
+for d in (DATA_DIR, PREDS_DIR, RESULTS_DIR, SCRIPTS_DIR):
+    d.mkdir(parents=True, exist_ok=True)
 
-# (name, runner_callable_or_module, language, tier_label)
-BACKENDS = [
-    ("cpp",           "bench_cpp.py",          "C++",     "direct"),
-    ("python_tier1",  "bench_python_tier1.py", "Python",  "tier 1"),
-    ("python_tier2",  "bench_python_tier2.py", "Python",  "tier 2"),
-    ("sklearn",       "bench_sklearn.py",      "Python",  "external"),
-    ("r_tier1",       "bench_r_tier1.R",       "R",       "tier 1"),
-    ("r_tier2",       "bench_r_tier2.R",       "R",       "tier 2"),
-    ("r_pls",         "bench_r_pls.R",         "R",       "external"),
-    ("matlab_tier1",  "bench_matlab_tier1.m",  "MATLAB",  "tier 1"),
-    ("matlab_tier2",  "bench_matlab_tier2.m",  "MATLAB",  "tier 2"),
-    ("matlab_pls",    "bench_matlab_pls.m",    "MATLAB",  "external"),
+# Default base seed. uint32-safe so it round-trips losslessly through
+# R/Octave doubles and accepts as sklearn random_state. +1 per run
+# inside each cell, so the 5 seeds used are [B, B+1, B+2, B+3, B+4] —
+# still uint32, still 'long int enough' to look intentional and avoid
+# collision with other ad-hoc seeds elsewhere in the test suite.
+DEFAULT_SEED_BASE = 1_234_567_890
+
+# 11 sizes (10000×2500 skipped per user decision).
+DEFAULT_SIZES = [
+    (100, 50), (100, 500), (100, 2500),
+    (500, 50), (500, 500), (500, 2500),
+    (2500, 50), (2500, 500), (2500, 2500),
+    (10000, 50), (10000, 500),
 ]
 
-DEFAULT_SIZES = [(100, 50), (500, 200), (1000, 500)]
+# Per-cell wall-clock timeout (seconds).
+DEFAULT_TIMEOUT_S = 300
+
+# (name, script, language, tier, kind)
+#   kind ∈ {"pls4all_core", "pls4all_binding", "external"}
+#   For pls4all_core / pls4all_binding entries we sweep both libp4a builds
+#   when --libp4a-build=both; externals only get one row.
+BACKENDS = [
+    ("cpp",          "bench_cpp.py",          "C++",    "direct",   "pls4all_core"),
+    ("python_tier1", "bench_python_tier1.py", "Python", "tier 1",   "pls4all_binding"),
+    ("python_tier2", "bench_python_tier2.py", "Python", "tier 2",   "pls4all_binding"),
+    ("sklearn",      "bench_sklearn.py",      "Python", "external", "external"),
+    ("ikpls",        "bench_python_ikpls.py", "Python", "external", "external"),
+    ("r_tier1",      "bench_r_tier1.R",       "R",      "tier 1",   "pls4all_binding"),
+    ("r_tier2",      "bench_r_tier2.R",       "R",      "tier 2",   "pls4all_binding"),
+    ("r_pls",        "bench_r_pls.R",         "R",      "external", "external"),
+    ("r_ropls",      "bench_r_ropls.R",       "R",      "external", "external"),
+    ("r_mixomics",   "bench_r_mixomics.R",    "R",      "external", "external"),
+    ("matlab_tier1", "bench_matlab_tier1.m",  "MATLAB", "tier 1",   "pls4all_binding"),
+    ("matlab_tier2", "bench_matlab_tier2.m",  "MATLAB", "tier 2",   "pls4all_binding"),
+    ("matlab_pls",   "bench_matlab_pls.m",    "MATLAB", "external", "external"),
+]
+
+# libp4a build → libpath, header label.
+LIBP4A_BUILDS = {
+    "dev-release": str(REPO / "build/dev-release/cpp/src"),
+    "blas-omp":    str(REPO / "build/blas-omp/cpp/src"),
+}
+
+# Conda env paths (R + Octave live here).
+PLS4ALL_R_ENV = "/home/delete/miniconda3/envs/pls4all_r"
 
 
-def gen_dataset(n: int, p: int, seed: int = 0) -> Path:
-    """Generate a deterministic NumPy-style CSV (n × p X, n × 1 y)."""
-    import numpy as np
-    out = DATA_DIR / f"data_{n}x{p}_seed{seed}.csv"
-    if out.exists():
-        return out
+def gen_dataset_csv(n: int, p: int, seed: int) -> Path:
+    """Generate and cache deterministic dataset CSV under data/.
+
+    R/MATLAB scripts read the CSV; Python scripts regenerate inline
+    via _common.make_dataset (same generator). Cached by (n, p, seed)."""
+    csv_path = DATA_DIR / f"data_{n}x{p}_seed{seed}.csv"
+    if csv_path.exists():
+        return csv_path
     rng = np.random.default_rng(seed)
-    X = rng.standard_normal((n, p))
-    y = (2.0 * X[:, 2] - X[:, 5] + 0.5 * X[:, 8]
-          + 0.05 * rng.standard_normal(n))
-    # Header row: x0 .. x{p-1}, y
+    X = rng.standard_normal((n, p)).astype(np.float64)
+    y = (2.0 * X[:, min(2, p - 1)]
+          - X[:, min(5, p - 1)]
+          + 0.5 * X[:, min(8, p - 1)]
+          + 0.05 * rng.standard_normal(n)).astype(np.float64)
     cols = [f"x{i}" for i in range(p)] + ["y"]
     arr = np.hstack([X, y.reshape(-1, 1)])
-    np.savetxt(out, arr, delimiter=",", header=",".join(cols),
-                comments="", fmt="%.10g")
-    return out
+    # %.17g preserves IEEE-double round-trip.
+    np.savetxt(csv_path, arr, delimiter=",", header=",".join(cols),
+                comments="", fmt="%.17g")
+    return csv_path
 
 
-def run_backend(name: str, script: str, csv_path: Path,
-                 n_components: int, n_runs: int) -> dict:
-    """Run one backend on one dataset; return its parsed JSON record."""
+def predictions_path(algo: str, backend: str, n: int, p: int,
+                      threads: int, build: str) -> Path:
+    return PREDS_DIR / f"{algo}_{backend}_{n}x{p}_t{threads}_{build}.npy"
+
+
+def run_backend(name: str, script: str, language: str, tier: str,
+                 kind: str, algo: str, n: int, p: int, n_components: int,
+                 n_runs: int, threads: int, libp4a_build: str,
+                 seed_base: int, timeout: int) -> dict:
+    """Run one backend on one cell. Returns the parsed JSON record
+    augmented with cell metadata."""
     script_path = SCRIPTS_DIR / script
     if not script_path.exists():
         return {"backend": name, "ok": False,
                  "reason": f"script not found: {script}"}
+
+    # Per-cell env: thread caps + libp4a build choice + seed base.
     env = os.environ.copy()
-    env.setdefault("LD_LIBRARY_PATH",
-                    str(REPO / "build/dev-release/cpp/src"))
-    # Append rather than overwrite so OCTAVE_HOME etc. survive.
-    if "OCTAVE_HOME" not in env:
-        env["OCTAVE_HOME"] = "/home/delete/miniconda3/envs/pls4all_r"
+    env["OMP_NUM_THREADS"]      = str(threads)
+    env["OPENBLAS_NUM_THREADS"] = str(threads)
+    env["MKL_NUM_THREADS"]      = str(threads)
+    env["BLIS_NUM_THREADS"]     = str(threads)
+    env["BENCH_THREADS"]        = str(threads)
+    env["BENCH_SEED_BASE"]      = str(seed_base)
+    # Externals don't care about libp4a build; pls4all backends do.
+    lib_dir = LIBP4A_BUILDS[libp4a_build]
+    env["PLS4ALL_LIB_DIR"] = lib_dir
+    env["BENCH_LIBP4A_BUILD"] = libp4a_build
     env["LD_LIBRARY_PATH"] = ":".join([
-        str(REPO / "build/dev-release/cpp/src"),
-        "/home/delete/miniconda3/envs/pls4all_r/lib",
-        "/home/delete/miniconda3/envs/pls4all_r/lib/octave/10.3.0",
+        lib_dir,
+        f"{PLS4ALL_R_ENV}/lib",
+        f"{PLS4ALL_R_ENV}/lib/octave/10.3.0",
         env.get("LD_LIBRARY_PATH", ""),
     ])
-    # Allow Python backends to import pls4all from the source tree
-    # without a system-wide install.
+    env.setdefault("OCTAVE_HOME", PLS4ALL_R_ENV)
     env["PYTHONPATH"] = ":".join([
         str(REPO / "bindings/python/src"),
         env.get("PYTHONPATH", ""),
     ])
 
+    pred_path = predictions_path(algo, name, n, p, threads, libp4a_build)
+    # Common 8-arg contract used by all scripts (Python + R via positional
+    # args; Octave reads BENCH_* env vars instead).
+    argv8 = [algo, str(DATA_DIR), str(n), str(p), str(n_components),
+              str(n_runs), str(seed_base), str(pred_path)]
+
     if script.endswith(".py"):
-        cmd = [sys.executable, str(script_path), str(csv_path),
-                str(n_components), str(n_runs)]
+        cmd = [sys.executable, str(script_path), *argv8]
     elif script.endswith(".R"):
-        rscript = shutil.which("Rscript") or \
-            "/home/delete/miniconda3/envs/pls4all_r/bin/Rscript"
-        cmd = [rscript, str(script_path), str(csv_path),
-                str(n_components), str(n_runs)]
+        rscript = shutil.which("Rscript") or f"{PLS4ALL_R_ENV}/bin/Rscript"
+        cmd = [rscript, str(script_path), *argv8]
     elif script.endswith(".m"):
-        oct_bin = shutil.which("octave") or \
-            "/home/delete/miniconda3/envs/pls4all_r/bin/octave"
-        # Octave takes the script as an --eval string; pass args via env.
-        env["BENCH_CSV"] = str(csv_path)
-        env["BENCH_NCOMP"] = str(n_components)
-        env["BENCH_NRUNS"] = str(n_runs)
+        oct_bin = shutil.which("octave") or f"{PLS4ALL_R_ENV}/bin/octave"
+        env.update({
+            "BENCH_ALGO": algo,
+            "BENCH_CSV_DIR": str(DATA_DIR),
+            "BENCH_N": str(n),
+            "BENCH_P": str(p),
+            "BENCH_NCOMP": str(n_components),
+            "BENCH_NRUNS": str(n_runs),
+            "BENCH_PRED_PATH": str(pred_path),
+        })
         m_name = Path(script).stem
-        m_dir = str(script_path.parent)
         cmd = [oct_bin, "--no-gui", "--no-history",
                 "--eval",
                 f"addpath(genpath('{REPO}/bindings/matlab')); "
-                f"addpath('{m_dir}'); {m_name}"]
+                f"addpath('{SCRIPTS_DIR}'); {m_name}"]
     else:
         return {"backend": name, "ok": False,
                  "reason": f"unsupported extension: {script}"}
@@ -136,110 +198,241 @@ def run_backend(name: str, script: str, csv_path: Path,
     t0 = time.perf_counter()
     try:
         out = subprocess.run(cmd, env=env, capture_output=True, text=True,
-                              timeout=600)
+                              timeout=timeout)
     except subprocess.TimeoutExpired:
-        return {"backend": name, "ok": False, "reason": "timeout"}
+        return {"backend": name, "ok": False, "reason": "timeout",
+                 "subprocess_s": timeout}
     elapsed = time.perf_counter() - t0
     if out.returncode != 0:
-        return {"backend": name, "ok": False, "reason":
-                  (out.stderr or out.stdout).strip().splitlines()[-1][:160],
-                  "stdout_tail": out.stdout.strip().splitlines()[-3:],
-                  "subprocess_s": elapsed}
-    # Each backend script prints its JSON record as the LAST line.
+        tail = (out.stderr or out.stdout).strip().splitlines()
+        reason = tail[-1][:200] if tail else "exit != 0"
+        return {"backend": name, "ok": False, "reason": reason,
+                 "subprocess_s": elapsed,
+                 "stdout_tail": out.stdout.strip().splitlines()[-3:],
+                 "stderr_tail": out.stderr.strip().splitlines()[-3:]}
     last = out.stdout.strip().splitlines()[-1]
     try:
         rec = json.loads(last)
     except json.JSONDecodeError:
         return {"backend": name, "ok": False,
-                 "reason": "non-json output", "tail": last[:160]}
+                 "reason": "non-json output", "tail": last[:200]}
     rec["backend"] = name
     rec["subprocess_s"] = elapsed
     rec.setdefault("ok", True)
     return rec
 
 
+def compute_parity(records: list[dict]) -> None:
+    """In-place augment each record with parity_max_diff + parity_ok.
+
+    Reference per (algo, n, p): cpp_blasomp @ 1 thread if available,
+    fallback to python_tier1 @ 1 thread, fallback to first OK record.
+    Compares the .npy at predictions_path element-wise (max abs diff)."""
+    # Group records by (algo, n, p).
+    groups: dict[tuple, list[dict]] = {}
+    for r in records:
+        if not r.get("ok"):
+            continue
+        groups.setdefault((r["algorithm"], r["n"], r["p"]), []).append(r)
+
+    for key, group in groups.items():
+        # Pick the reference: prefer cpp_blasomp @ 1 thread + algo applicable.
+        ref = None
+        for cand_name in ("cpp", "python_tier1"):
+            for r in group:
+                if (r["backend"] == cand_name and r.get("threads") == 1
+                        and r.get("libp4a_build") == "blas-omp"):
+                    ref = r
+                    break
+            if ref:
+                break
+        if ref is None:
+            ref = group[0]
+        ref_pred_path = ref.get("predictions_path")
+        if not ref_pred_path or not Path(ref_pred_path).exists():
+            for r in group:
+                r["parity_ref"] = ref["backend"]
+                r["parity_max_diff"] = float("nan")
+                r["parity_ok"] = False
+                r["parity_note"] = "ref predictions missing"
+            continue
+        ref_preds = np.load(ref_pred_path)
+        for r in group:
+            r["parity_ref"] = ref["backend"]
+            pp = r.get("predictions_path")
+            if not pp or not Path(pp).exists():
+                r["parity_max_diff"] = float("nan")
+                r["parity_ok"] = False
+                r["parity_note"] = "predictions missing"
+                continue
+            try:
+                p = np.load(pp)
+            except Exception as e:
+                r["parity_max_diff"] = float("nan")
+                r["parity_ok"] = False
+                r["parity_note"] = f"load error: {e}"
+                continue
+            if p.shape != ref_preds.shape:
+                # Some externals predict only one column for multi-Y; keep
+                # the comparison but flag it.
+                if p.size == ref_preds.size:
+                    p = p.reshape(ref_preds.shape)
+                else:
+                    r["parity_max_diff"] = float("nan")
+                    r["parity_ok"] = False
+                    r["parity_note"] = (f"shape mismatch ({p.shape} vs "
+                                          f"{ref_preds.shape})")
+                    continue
+            diff = float(np.max(np.abs(p - ref_preds)))
+            r["parity_max_diff"] = diff
+            r["parity_ok"] = diff <= r.get("parity_tolerance", 1e-6)
+
+
+def parse_sizes(args_sizes) -> list[tuple[int, int]]:
+    if not args_sizes:
+        return DEFAULT_SIZES
+    out = []
+    for s in args_sizes:
+        n, p = s.split("x")
+        out.append((int(n), int(p)))
+    return out
+
+
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--algorithms", nargs="+", default=["pls"],
+                         help="Algorithm names (space-separated)")
+    parser.add_argument("--algorithms-file",
+                         help="File with one algorithm per line")
     parser.add_argument("--sizes", nargs="*",
-                         help="dataset sizes 'NxP', e.g. 500x200")
-    parser.add_argument("--only", nargs="*",
-                         help="restrict to a subset of backends")
+                         help="Dataset sizes 'NxP' (default: 11-size matrix)")
+    parser.add_argument("--threads", nargs="+", type=int, default=[1, 3, 10],
+                         help="Thread counts to sweep")
+    parser.add_argument("--libp4a-build", choices=["dev-release", "blas-omp", "both"],
+                         default="blas-omp",
+                         help="libp4a build for pls4all backends")
+    parser.add_argument("--n-runs", type=int, default=5,
+                         help="Runs per cell (first discarded as warmup if >= 3)")
     parser.add_argument("--n-components", type=int, default=5)
-    parser.add_argument("--n-runs", type=int, default=10)
-    parser.add_argument("--no-write", action="store_true")
+    parser.add_argument("--seed-base", type=int, default=DEFAULT_SEED_BASE)
+    parser.add_argument("--only-pls4all", action="store_true",
+                         help="Skip external backends entirely")
+    parser.add_argument("--only", nargs="*",
+                         help="Restrict to a subset of backends by name")
+    parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_S)
+    parser.add_argument("--out-csv", default=None,
+                         help="Output CSV path (default: results/full_matrix.csv)")
     args = parser.parse_args()
 
-    sizes = (
-        [tuple(int(x) for x in s.split("x")) for s in args.sizes]
-        if args.sizes else DEFAULT_SIZES
-    )
+    algos = list(args.algorithms)
+    if args.algorithms_file:
+        with open(args.algorithms_file) as f:
+            algos.extend(l.strip() for l in f if l.strip())
+
+    sizes = parse_sizes(args.sizes)
+    threads = list(args.threads)
+    builds = (["dev-release", "blas-omp"] if args.libp4a_build == "both"
+              else [args.libp4a_build])
+
+    # Filter backends.
+    backends = BACKENDS
+    if args.only_pls4all:
+        backends = [b for b in backends if b[4] != "external"]
     if args.only:
-        backends = [b for b in BACKENDS if b[0] in args.only]
-    else:
-        backends = BACKENDS
+        backends = [b for b in backends if b[0] in args.only]
 
-    all_records: list[dict] = []
-    for n, p in sizes:
-        csv_path = gen_dataset(n, p)
-        print(f"\n=== {n} × {p} (components={args.n_components},"
-               f" runs={args.n_runs}) ===")
-        for name, script, lang, tier in backends:
-            print(f"  {name:14s}: ", end="", flush=True)
-            rec = run_backend(name, script, csv_path,
-                                args.n_components, args.n_runs)
-            rec.update({"n": n, "p": p,
-                          "language": lang, "tier": tier})
-            all_records.append(rec)
-            if rec.get("ok"):
-                print(f"median={rec.get('median_ms', float('nan')):.2f}ms"
-                       f"  min={rec.get('min_ms', float('nan')):.2f}ms")
-            else:
-                print(f"FAILED — {rec.get('reason', '?')[:80]}")
+    csv_out = Path(args.out_csv or RESULTS_DIR / "full_matrix.csv")
+    records: list[dict] = []
 
-    # Aggregate into a CSV + Markdown.
-    csv_out = RESULTS_DIR / "timing.csv"
-    md_out = RESULTS_DIR / "summary.md"
+    total = (len(algos) * len(sizes) * len(threads) * len(backends)
+              * sum(2 if (kind != "external") else 1
+                    for _name, _s, _l, _t, kind in backends) // len(backends)
+              if args.libp4a_build == "both" else
+              len(algos) * len(sizes) * len(threads) * len(backends))
+    print(f"# {len(algos)} algorithms × {len(sizes)} sizes × "
+           f"{len(threads)} threads × {len(backends)} backends "
+           f"(builds={builds}) ≈ {total} cells")
+    print(f"# seed_base={args.seed_base} timeout={args.timeout}s "
+           f"n_runs={args.n_runs}")
+
+    cell_count = 0
+    for algo in algos:
+        for n, p in sizes:
+            # Pre-generate CSV cache for the first run's seed (other
+            # runs regenerate inline in Python; R/MATLAB always read CSV
+            # so they need it. Each run uses seed_base+i but for parity
+            # we compare predictions from the LAST run, so we cache the
+            # LAST seed's CSV.
+            last_seed = args.seed_base + args.n_runs - 1
+            gen_dataset_csv(n, p, last_seed)
+            # Pre-generate all warmup seeds too, for backends that always
+            # reread the CSV per run.
+            for i in range(args.n_runs):
+                gen_dataset_csv(n, p, args.seed_base + i)
+
+            for thr in threads:
+                for backend in backends:
+                    name, script, lang, tier, kind = backend
+                    runs_for_this = ([("dev-release",), ("blas-omp",)]
+                                     if (kind != "external"
+                                         and args.libp4a_build == "both")
+                                     else [(args.libp4a_build if kind != "external"
+                                             else "blas-omp",)])
+                    for (build,) in runs_for_this:
+                        cell_count += 1
+                        prefix = (f"[{cell_count}] {algo:<22s} "
+                                  f"{n:>5d}×{p:<4d} t={thr:<2d} "
+                                  f"{build:<11s} {name:<14s}: ")
+                        print(prefix, end="", flush=True)
+                        rec = run_backend(name, script, lang, tier, kind,
+                                            algo, n, p, args.n_components,
+                                            args.n_runs, thr, build,
+                                            args.seed_base, args.timeout)
+                        rec.update({
+                            "algorithm": algo,
+                            "n": n, "p": p,
+                            "threads": thr,
+                            "libp4a_build": build,
+                            "language": lang,
+                            "tier": tier,
+                            "kind": kind,
+                            "seed_base": args.seed_base,
+                        })
+                        records.append(rec)
+                        if rec.get("ok"):
+                            print(f"median={rec.get('median_ms', 0):.2f}ms")
+                        else:
+                            print(f"FAIL — {rec.get('reason', '?')[:100]}")
+
+    # Post-hoc parity computation.
+    print(f"\n# Computing parity for {len(records)} records...")
+    compute_parity(records)
+
+    # Write CSV.
+    cols = ["algorithm", "backend", "language", "tier", "kind",
+            "n", "p", "threads", "libp4a_build", "seed_base",
+            "ok", "median_ms", "min_ms", "max_ms", "n_runs",
+            "parity_ref", "parity_max_diff", "parity_ok", "parity_note",
+            "subprocess_s", "predictions_path",
+            "versions_json", "reason"]
     with csv_out.open("w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["backend", "language", "tier", "n", "p", "ok",
-                      "median_ms", "min_ms", "max_ms", "n_runs", "reason"])
-        for r in all_records:
-            w.writerow([r.get("backend"), r.get("language"), r.get("tier"),
-                          r.get("n"), r.get("p"), r.get("ok"),
-                          r.get("median_ms"), r.get("min_ms"),
-                          r.get("max_ms"), r.get("n_runs"),
-                          r.get("reason", "")])
-    print(f"\nCSV written → {csv_out}")
-
-    # Build a comparison markdown — for each size, list backends with
-    # median_ms and speedup vs the external implementation in the same
-    # language (where applicable).
-    by_size: dict[tuple[int, int], list[dict]] = {}
-    for r in all_records:
-        by_size.setdefault((r["n"], r["p"]), []).append(r)
-    with md_out.open("w") as f:
-        f.write("# Cross-binding PLS regression timing\n\n")
-        for (n, p), recs in by_size.items():
-            f.write(f"## n = {n}, p = {p}\n\n")
-            f.write("| Backend | Language | Tier | Median (ms) | "
-                     "Speedup vs external | OK |\n")
-            f.write("|---|---|---|---:|---:|:---:|\n")
-            # external per-language baseline
-            ext_per_lang = {r["language"]: r for r in recs
-                             if r.get("tier") == "external" and r.get("ok")}
-            for r in recs:
-                med = r.get("median_ms", float("nan"))
-                speedup = "—"
-                if r.get("ok") and r["language"] in ext_per_lang:
-                    ext_med = ext_per_lang[r["language"]]["median_ms"]
-                    if ext_med and med:
-                        speedup = f"{ext_med / med:.2f}x"
-                ok = "✓" if r.get("ok") else "✗"
-                med_str = f"{med:.2f}" if r.get("ok") else "—"
-                f.write(f"| {r.get('backend')} | {r['language']} | "
-                         f"{r['tier']} | {med_str} | {speedup} | {ok} |\n")
-            f.write("\n")
-    print(f"Markdown → {md_out}")
+        w.writerow(cols)
+        for r in records:
+            w.writerow([
+                r.get("algorithm"), r.get("backend"), r.get("language"),
+                r.get("tier"), r.get("kind"),
+                r.get("n"), r.get("p"), r.get("threads"),
+                r.get("libp4a_build"), r.get("seed_base"),
+                r.get("ok"), r.get("median_ms"), r.get("min_ms"),
+                r.get("max_ms"), r.get("n_runs"),
+                r.get("parity_ref"), r.get("parity_max_diff"),
+                r.get("parity_ok"), r.get("parity_note", ""),
+                r.get("subprocess_s"), r.get("predictions_path"),
+                json.dumps(r.get("versions") or {}), r.get("reason", ""),
+            ])
+    print(f"CSV  → {csv_out}")
+    print(f"Predictions cache → {PREDS_DIR}")
 
 
 if __name__ == "__main__":

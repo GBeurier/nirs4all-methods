@@ -118,3 +118,8 @@ Desktop.ini
 newplot*.png
 *:Zone.Identifier
 todo.local.md
+
+# Cross-binding benchmark caches (regenerated per run)
+benchmarks/cross_binding/data/*.csv
+benchmarks/cross_binding/data/.predictions/
+benchmarks/cross_binding/results/

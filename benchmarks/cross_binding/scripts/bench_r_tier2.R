@@ -1,25 +1,44 @@
-# R tier-2: formula+S3 `pls(y ~ ., data)` via pls4all.
+# R tier-2 dispatcher — formula+S3 wrappers (pls / sparse_pls / cppls / …).
 suppressMessages(library(pls4all))
-suppressMessages(library(jsonlite))
 
-argv <- commandArgs(trailingOnly = TRUE)
-csv_path <- argv[[1]]
-nc <- as.integer(argv[[2]])
-runs <- as.integer(argv[[3]])
-
-df <- read.csv(csv_path)
-
-times <- numeric(runs)
-for (i in seq_len(runs)) {
-  t0 <- proc.time()[["elapsed"]]
-  fit <- pls(y ~ ., data = df, ncomp = nc, algo = "pls_simpls")
-  invisible(predict(fit, newdata = df))
-  times[i] <- (proc.time()[["elapsed"]] - t0) * 1000.0
+.script_dir <- function() {
+    a <- commandArgs(trailingOnly = FALSE)
+    f <- a[grep("--file=", a, fixed = TRUE)]
+    if (length(f) > 0L) normalizePath(dirname(sub("^--file=", "", f[[1]]))) else "."
 }
-if (runs >= 3L) times <- times[-1L]
-out <- list(ok = TRUE,
-            n_runs = length(times),
-            median_ms = median(times),
-            min_ms = min(times),
-            max_ms = max(times))
-cat(toJSON(out, auto_unbox = TRUE), "\n", sep = "")
+source(file.path(.script_dir(), "_npy.R"))
+
+a <- pls4all_bench_parse_args()
+
+fit_predict <- function(seed) {
+    xy <- pls4all_bench_load_xy(a$csv_dir, a$n, a$p, seed)
+    df <- as.data.frame(xy$X)
+    df$y <- xy$y
+    fit <- switch(a$algo,
+        "pls"                  = pls(y ~ ., df, ncomp = a$nc, algo = "pls_simpls"),
+        "sparse_simpls"        = sparse_pls(y ~ ., df, a$nc, 0.05),
+        "cppls"                = cppls(y ~ ., df, a$nc, 0.5),
+        "ecr"                  = ecr(y ~ ., df, a$nc, 0.5),
+        "mir_pls"              = mir_pls(y ~ ., df, a$nc),
+        "ridge_pls"            = ridge_pls(y ~ ., df, a$nc, 1.0),
+        "robust_pls"           = robust_pls(y ~ ., df, a$nc, 1.345, 20L),
+        "missing_aware_nipals" = missing_aware_nipals(y ~ ., df, a$nc),
+        "continuum_regression" = continuum_regression(y ~ ., df, a$nc, 0.5),
+        "bagging_pls"          = bagging_pls(y ~ ., df, a$nc, 50L, 0L),
+        "boosting_pls"         = boosting_pls(y ~ ., df, a$nc, 50L, 0.1),
+        "o2pls"                = o2pls(y ~ ., df, a$nc),
+        stop(sprintf("r_tier2: unsupported algo '%s'", a$algo))
+    )
+    as.numeric(predict(fit, newdata = df))
+}
+
+tr <- pls4all_bench_time_runs(fit_predict, a$runs, a$seed_base)
+
+versions <- list(
+    language = paste0("R ", R.version$major, ".", R.version$minor),
+    pls4all  = as.character(tryCatch(packageVersion("pls4all"),
+                                      error = function(e) "?")),
+    blas     = "linked-BLAS"
+)
+
+pls4all_bench_emit(tr$stats, tr$last_preds, a$pred_path, versions)
