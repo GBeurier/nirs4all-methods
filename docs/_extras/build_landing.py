@@ -178,10 +178,21 @@ def is_true(v: Any) -> bool:
 
 
 def parity_code(row: dict) -> str:
-    """ok | warn | fail | timeout | na — matches render_docs.parity_icon."""
+    """ok | warn | fail | timeout | error | na.
+
+    Distinguishes hard runtime errors (ModuleNotFoundError, ImportError,
+    crash) from "not implemented" so the dashboard can show *why* a cell
+    is missing instead of collapsing every failure to a silent dash.
+    """
     if not is_true(row.get("ok")):
         reason = (row.get("reason") or "").lower()
-        return "timeout" if "timeout" in reason else "na"
+        if "timeout" in reason:
+            return "timeout"
+        if any(k in reason for k in (
+                "modulenotfounderror", "importerror", "notimplemented",
+                "error", "exception", "crash", "traceback", "segfault")):
+            return "error"
+        return "na"
     if is_true(row.get("parity_ok")):
         return "ok"
     try:
@@ -279,35 +290,6 @@ def build_payload(results_dir: Path) -> dict:
     for r in seen.values():
         present.add(column_id(r["backend"], r.get("libp4a_build", "")))
 
-    # Canonical column order: cpp tiers first (in build order), then
-    # pls4all bindings, then externals.
-    columns: list[dict] = []
-    for build in CPP_BUILD_ORDER:
-        cid = f"pls4all.cpp.{CPP_BUILD_SUFFIX[build]}"
-        if cid in present:
-            tier, what = CPP_TIER_DESC[build]
-            columns.append({
-                "id": cid,
-                "label": cid,
-                "group": "cpp",
-                "tier": tier,
-                "lang": "C++",
-                "what": what,
-                "build": build,
-            })
-    for be in BACKEND_ORDER:
-        cid = BACKEND_DISPLAY.get(be, be)
-        if cid in present:
-            lang, tier, what = BACKEND_LONG[be]
-            columns.append({
-                "id": cid,
-                "label": cid,
-                "group": BACKEND_GROUP[be],
-                "tier": tier,
-                "lang": lang,
-                "what": what,
-                "build": "",
-            })
     # Registry-declared external reference libraries. Infer the language
     # from the slug prefix (`ref.python_*`, `ref.r_*`, `ref.matlab_*`,
     # `ref.julia_*`, …) so the language band groups them correctly.
@@ -330,17 +312,70 @@ def build_payload(results_dir: Path) -> dict:
                 return lang, group
         return "external", "ext-py"
 
+    def _ref_short(cid: str, lang_prefix: str) -> str:
+        """Compact a `ref.python_nirs4all_operators_models_sklearn_lwpls`
+        slug down to something readable in narrow columns: drop the
+        language prefix, then collapse known package prefixes."""
+        rest = cid[len("ref."):]
+        if rest.startswith(lang_prefix + "_"):
+            rest = rest[len(lang_prefix) + 1:]
+        elif rest == lang_prefix:
+            rest = lang_prefix
+        # Last segment is usually the most informative method/package name.
+        parts = rest.split("_")
+        if len(parts) >= 2:
+            return f"{parts[0]}/{parts[-1]}"
+        return rest
+
+    # Build raw column entries first, then sort by language to get
+    # contiguous language bands.
+    raw_cols: list[dict] = []
+    for build in CPP_BUILD_ORDER:
+        cid = f"pls4all.cpp.{CPP_BUILD_SUFFIX[build]}"
+        if cid in present:
+            tier, what = CPP_TIER_DESC[build]
+            raw_cols.append({
+                "id": cid, "label": cid, "short": cid[len("pls4all.cpp."):],
+                "group": "cpp", "tier": tier, "lang": "C++",
+                "what": what, "build": build, "kind": "pls4all",
+            })
+    for be in BACKEND_ORDER:
+        cid = BACKEND_DISPLAY.get(be, be)
+        if cid in present:
+            lang, tier, what = BACKEND_LONG[be]
+            is_pls4all = cid.startswith("pls4all.")
+            short = cid[len("pls4all."):] if is_pls4all else cid
+            raw_cols.append({
+                "id": cid, "label": cid, "short": short,
+                "group": BACKEND_GROUP[be], "tier": tier, "lang": lang,
+                "what": what, "build": "",
+                "kind": "pls4all" if is_pls4all else "external",
+            })
     for cid in sorted(c for c in present if c.startswith("ref.")):
         lang, group = _ref_lang(cid)
-        columns.append({
-            "id": cid,
-            "label": cid,
-            "group": group,
-            "tier": "registry reference",
-            "lang": lang,
+        # Map the lang back to the prefix used in the cid.
+        lang_to_prefix = {v[0]: k for k, v in REF_LANG_PREFIX.items()}
+        prefix = lang_to_prefix.get(lang, "")
+        short = _ref_short(cid, prefix) if prefix else cid[len("ref."):]
+        raw_cols.append({
+            "id": cid, "label": cid, "short": short,
+            "group": group, "tier": "registry reference", "lang": lang,
             "what": f"Registry-declared external reference library ({lang}).",
-            "build": "",
+            "build": "", "kind": "external",
         })
+
+    # Canonical language order for contiguous band rendering: C++,
+    # Python, R, MATLAB/Octave, then other languages alphabetically.
+    LANG_ORDER = ["C++", "Python", "R", "MATLAB/Octave",
+                  "Julia", "Rust", "Go", "JavaScript", "Java", "external"]
+    def _lang_rank(c: dict) -> int:
+        try:
+            return LANG_ORDER.index(c["lang"])
+        except ValueError:
+            return len(LANG_ORDER)
+    # Stable sort: language rank → kind (pls4all first) → original order.
+    columns = sorted(raw_cols, key=lambda c: (_lang_rank(c),
+                                                0 if c["kind"] == "pls4all" else 1))
 
     # Build rows: one per (algo, n, p, threads). Cells keyed by column id.
     # We always emit a row for every (algo, size, threads) triple that
@@ -364,10 +399,15 @@ def build_payload(results_dir: Path) -> dict:
         if ms is not None and ms == ms:   # not NaN
             cell["ms"] = round(ms, 3)
             cell["fmt"] = fmt_ms(r["median_ms"])
+        # Capture the failure reason so the dashboard tooltip can show
+        # "ModuleNotFoundError: foo" instead of a silent dash.
+        reason = (r.get("reason") or "").strip()
+        if reason and verdict in ("error", "timeout", "fail", "warn", "na"):
+            cell["reason"] = reason[:200]
         # Skip pure-empty `na`-without-timing cells: dashboard infers
-        # absence as `—`. Keep timeout / fail / warn so the user sees
-        # the verdict.
-        if ms is not None or verdict in ("timeout", "fail", "warn"):
+        # absence as `—`. Keep error / timeout / fail / warn so the user
+        # sees the verdict.
+        if ms is not None or verdict in ("timeout", "fail", "warn", "error"):
             pivot[rkey][cid] = cell
 
     rows_out = []
@@ -395,26 +435,37 @@ def build_payload(results_dir: Path) -> dict:
             if items:
                 versions[cid] = items
 
-    # Presets: which columns to show by default.
+    # Presets: which columns to show by default. Each preset's column
+    # list is filtered against `all_cols` so ghost ids that don't exist
+    # in the current data never make it into state.cols (a ghost id
+    # would blank the table — fixed). Empty presets are dropped.
     all_cols = [c["id"] for c in columns]
     cpp_blas_omp = "pls4all.cpp.blas+omp" if "pls4all.cpp.blas+omp" in all_cols else None
-    headline = [c for c in [
+    headline_candidates = [
         cpp_blas_omp, "pls4all.python", "pls4all.sklearn",
-        "pls4all.R", "pls4all.matlab", "sklearn", "pls", "plsregress",
-    ] if c and c in all_cols]
+        "pls4all.R", "pls4all.matlab",
+        # add the canonical registry column too — it's the new "pls4all"
+        # entry point in the registry-driven runs
+        "pls4all.registry",
+        "sklearn", "pls", "plsregress",
+    ]
+    headline = [c for c in headline_candidates if c and c in all_cols]
     cpp_tiers = [c for c in all_cols if c.startswith("pls4all.cpp.")]
     pls4all_only = [c for c in all_cols if c.startswith("pls4all.")]
     externals = [c for c in all_cols if not c.startswith("pls4all.")]
     thread_sweep = [c for c in [cpp_blas_omp, "pls4all.python",
-                                  "pls4all.sklearn", "sklearn"] if c]
-    presets = {
-        "all":         {"label": "All",           "cols": all_cols},
-        "headline":    {"label": "Headline",      "cols": headline},
-        "pls4all":     {"label": "pls4all only",  "cols": pls4all_only},
-        "cpp-tiers":   {"label": "C++ tiers",     "cols": cpp_tiers},
-        "externals":   {"label": "Externals",     "cols": externals},
-        "thread-sweep":{"label": "Thread sweep",  "cols": thread_sweep},
+                                  "pls4all.sklearn", "pls4all.registry",
+                                  "sklearn"] if c and c in all_cols]
+    raw_presets = {
+        "all":          {"label": "All",          "cols": all_cols},
+        "headline":     {"label": "Headline",     "cols": headline},
+        "pls4all":      {"label": "pls4all only", "cols": pls4all_only},
+        "cpp-tiers":    {"label": "C++ tiers",    "cols": cpp_tiers},
+        "externals":    {"label": "Externals",    "cols": externals},
+        "thread-sweep": {"label": "Thread sweep", "cols": thread_sweep},
     }
+    # Drop presets that would resolve to zero columns in the current data.
+    presets = {k: v for k, v in raw_presets.items() if v["cols"]}
 
     # Algo → group mapping (only for algos actually present in the data).
     present_algos = sorted({r["algo"] for r in rows_out})

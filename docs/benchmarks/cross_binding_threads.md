@@ -2,8 +2,8 @@
 
 Same matrix as the [main page](cross_binding.md), but with thread counts 1, 3 and 10 shown in separate per-(algorithm, thread) sections. **External libraries (`sklearn`, `pls`, `ropls`, `mixOmics`, `plsregress`, `ikpls`) typically don't accelerate their inner loops with thread count** — only their linked BLAS does, and that helps only when the algo is GEMM-bound. pls4all bindings use OpenMP at the C kernel level on top of the BLAS, so multi-thread wins are visible here.
 
-_Generated: 2026-05-17 22:22:14 UTC_
-_CSV: `tmp067uz5rc.csv` (142 cells)_
+_Generated: 2026-05-17 22:52:36 UTC_
+_CSV: `tmpz3s_xkm6.csv` (142 cells)_
 
 
 ## Host
@@ -51,499 +51,499 @@ Column names: anything starting with `pls4all.` is one of this project's binding
 
 ## aom_preprocess  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×40 | **210.3 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## approximate_press  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×30 | **213.2 ms ✓** | — | 191.9 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## bagging_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×30 | **170.1 ms ✓** | 611.4 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## bipls_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **172.8 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | 702.9 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×40 | **172.8 ms ✓** | — | — | — | — | — | — | — | — | — | — | 702.9 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## boosting_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×30 | **177.6 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 636.4 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×30 | **177.6 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 636.4 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## bve_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **205.3 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 377.1 ms ✗ | — | — | — |
+| 200×40 | **205.3 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 377.1 ms ✗ | — | — | — | — | — |
 
 
 ## cars_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **165.9 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 662.9 ms ✗ | — | — |
+| 200×40 | **165.9 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 662.9 ms ✗ | — | — | — | — |
 
 
 ## continuum_regression  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×50 | **167.8 ms ✓** | — | — | — | — | — | — | — | — | 578.5 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×50 | **167.8 ms ✓** | — | — | — | — | — | — | 578.5 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## cppls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×50 | **171.8 ms ✓** | — | 143.1 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## di_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×50 | **202.6 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## ds  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×30 | 166.4 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | **139.2 ms ✓** | — | — | — | — | — | — | — | — | — |
+| 200×30 | 166.4 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | **139.2 ms ✓** | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## ecr  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×50 | **176.8 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## emcuve_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **189.6 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 1.2 s ✗ | — | — | — |
+| 200×40 | **189.6 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 1.2 s ✗ | — | — | — | — | — |
 
 
 ## fused_sparse_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×50 | **167.2 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## ga_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **169.0 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 508.3 ms ✗ | — | — | — |
+| 200×40 | **169.0 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 508.3 ms ✗ | — | — | — | — | — |
 
 
 ## gpr_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 120×25 | **191.1 ms ✓** | 736.7 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## group_sparse_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×50 | **185.9 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 1.1 s ✗ | — | — | — | — | — | — | — |
+| 200×50 | **185.9 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 1.1 s ✗ | — | — | — | — | — | — | — | — | — |
 
 
 ## interval_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **165.6 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | 606.3 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×40 | **165.6 ms ✓** | — | — | — | — | — | — | — | — | — | — | 606.3 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## ipw_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **191.1 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 332.1 ms ✗ | — | — | — |
+| 200×40 | **191.1 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 332.1 ms ✗ | — | — | — | — | — |
 
 
 ## irf_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 120×30 | **173.3 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## iriv_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 80×25 | **201.1 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## kernel_pls_rbf  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×50 | **174.3 ms ✓** | — | — | — | — | — | — | — | — | — | — | 330.0 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×50 | **174.3 ms ✓** | — | — | — | — | — | — | — | — | 330.0 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## lw_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **170.1 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 596.1 ms ✗ | — | — | — | — | — |
+| 200×40 | **170.1 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 596.1 ms ✗ | — | — | — | — | — | — | — |
 
 
 ## mb_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×60 | **199.7 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 576.4 ms ✗ | — | — | — | — | — | — |
+| 200×60 | **199.7 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 576.4 ms ✗ | — | — | — | — | — | — | — | — |
 
 
 ## mir_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×30 | **168.5 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## missing_aware_nipals  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×30 | **174.3 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 582.7 ms ✓ | — | — | — | — | — | — | — | — |
+| 200×30 | **174.3 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 582.7 ms ✓ | — | — | — | — | — | — | — | — | — | — |
 
 
 ## n_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×48 | **167.7 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## o2pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×30 | **170.2 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | 927.0 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×30 | **170.2 ms ✓** | — | — | — | — | — | — | — | — | — | 927.0 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## on_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×30 | **177.4 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 24.4 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×30 | **177.4 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | 24.4 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## one_se_rule  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×30 | **171.3 ms ✓** | — | 134.2 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## opls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×50 | **165.4 ms ✓** | — | — | — | — | 3.1 s ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×50 | **165.4 ms ✓** | — | — | 3.1 s ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pcr  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×50 | 200.3 ms ✓ | 552.7 ms ✓ | **129.1 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pds  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×30 | 165.1 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | **139.4 ms ✓** | — | — | — | — | — | — | — | — | — |
+| 200×30 | 165.1 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | **139.4 ms ✓** | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×50 | 200.3 ms ✓ | 546.2 ms ✓ | **130.6 ms ✓** | 853.6 ms ✗ | 1.1 s ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×50 | 200.3 ms ✓ | 546.2 ms ✓ | **130.6 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 853.6 ms ✗ | 1.1 s ✓ |
 
 
 ## pls_cox  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×30 | **168.0 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 2.0 s ✗ | — | — | — | — | — | — | — | — | — | — |
+| 200×30 | **168.0 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 2.0 s ✗ | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_diagnostic_dmodx  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×30 | **171.0 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | 348.7 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×30 | **171.0 ms ✓** | — | — | — | — | — | — | — | — | — | — | 348.7 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_diagnostic_q  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×30 | **193.8 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | 352.4 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×30 | **193.8 ms ✓** | — | — | — | — | — | — | — | — | — | — | 352.4 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_diagnostic_t2  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×30 | **165.1 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | 364.7 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×30 | **165.1 ms ✓** | — | — | — | — | — | — | — | — | — | — | 364.7 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_glm  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×30 | **167.2 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 1.1 s ✗ | — | — | — | — | — | — | — | — | — | — | — |
+| 200×30 | **167.2 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 1.1 s ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_lda  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×40 | **185.5 ms ✓** | 565.0 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_logistic  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×40 | **168.0 ms ✓** | 560.8 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_monitoring  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×30 | **181.6 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | 369.4 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×30 | **181.6 ms ✓** | — | — | — | — | — | — | — | — | — | — | 369.4 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_qda  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×30 | **164.7 ms ✓** | 584.5 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pso_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 80×25 | **168.6 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## random_frog_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×40 | **177.8 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## random_subspace_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×30 | **166.6 ms ✓** | 598.1 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## randomization_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **171.7 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 180.1 ms ✓ |
+| 200×40 | **171.7 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 180.1 ms ✓ | — | — |
 
 
 ## recursive_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×50 | **177.3 ms ✓** | 566.1 ms ✗ | 256.4 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## rep_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **190.3 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 572.9 ms ✗ | — | — | — |
+| 200×40 | **190.3 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 572.9 ms ✗ | — | — | — | — | — |
 
 
 ## ridge_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×50 | **167.2 ms ✓** | 529.6 ms ⚠ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## robust_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×50 | **186.1 ms ✓** | — | — | — | — | — | — | — | 217.5 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×50 | **186.1 ms ✓** | — | — | — | — | — | 217.5 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## rosa  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×30 | **169.8 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | 903.4 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×30 | **169.8 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | 903.4 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## scars_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×40 | **168.8 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## shaving_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **173.4 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 357.1 ms ✗ | — | — | — |
+| 200×40 | **173.4 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 357.1 ms ✗ | — | — | — | — | — |
 
 
 ## sipls_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×40 | **169.8 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## so_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×30 | **170.1 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | 1.1 s ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×30 | **170.1 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | 1.1 s ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## spa_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **170.1 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 416.3 ms ✗ | — | — | — |
+| 200×40 | **170.1 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 416.3 ms ✗ | — | — | — | — | — |
 
 
 ## sparse_pls_da  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×50 | **168.0 ms ✓** | — | — | — | — | — | 147.0 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×50 | **168.0 ms ✓** | — | — | — | 147.0 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## sparse_simpls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×50 | **165.1 ms ✓** | — | — | — | — | — | 135.3 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 200×50 | **165.1 ms ✓** | — | — | — | 135.3 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## st_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **201.6 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 351.1 ms ✗ | — | — | — |
+| 200×40 | **201.6 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 351.1 ms ✗ | — | — | — | — | — |
 
 
 ## stability_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **174.3 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 500.4 ms ✗ | — | — | — |
+| 200×40 | **174.3 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 500.4 ms ✗ | — | — | — | — | — |
 
 
 ## t2_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **171.0 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 353.7 ms ✗ | — | — | — |
+| 200×40 | **171.0 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 353.7 ms ✗ | — | — | — | — | — |
 
 
 ## uve_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **169.3 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 505.3 ms ✗ | — | — | — |
+| 200×40 | **169.3 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 505.3 ms ✗ | — | — | — | — | — |
 
 
 ## variable_select_coef  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×40 | **677.6 ms ✓** | — | 294.0 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## variable_select_sr  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **182.7 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 288.9 ms ✗ | — | — | — |
+| 200×40 | **182.7 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 288.9 ms ✗ | — | — | — | — | — |
 
 
 ## variable_select_vip  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **164.9 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 290.3 ms ✗ | — | — | — |
+| 200×40 | **164.9 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 290.3 ms ✗ | — | — | — | — | — |
 
 
 ## vip_spa_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 80×40 | **172.8 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## vissa_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 80×25 | **182.0 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## weighted_pls  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 200×50 | **174.2 ms ✓** | 528.9 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## wvc_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **183.4 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 298.6 ms ✓ | — | — | — |
+| 200×40 | **183.4 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 298.6 ms ✓ | — | — | — | — | — |
 
 
 ## wvc_threshold_select  —  1 thread
 
-| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+| samples × features | pls4all.registry | ref.python_scikit_learn | ref.r_pls | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats | ref.python_ikpls | ref.r_mixomics |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 200×40 | **169.2 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 295.3 ms ✗ | — | — | — |
+| 200×40 | **169.2 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 295.3 ms ✗ | — | — | — | — | — |
 
 
 ## Backend definitions
@@ -555,8 +555,6 @@ Each column in the per-algorithm tables above is one of the entries below. Colum
 | `pls4all.registry` | Python | pls4all canonical | `benchmarks.parity_timing.registry.MethodSpec.pls4all_fn` — the canonical per-method pls4all entry point |
 | `ref.python_scikit_learn` | external | reference | registry-declared external reference library |
 | `ref.r_pls` | external | reference | registry-declared external reference library |
-| `ref.python_ikpls` | external | reference | registry-declared external reference library |
-| `ref.r_mixomics` | external | reference | registry-declared external reference library |
 | `ref.r_ropls` | external | reference | registry-declared external reference library |
 | `ref.r_spls` | external | reference | registry-declared external reference library |
 | `ref.python_diplslib` | external | reference | registry-declared external reference library |
@@ -583,17 +581,17 @@ Each column in the per-algorithm tables above is one of the entries below. Colum
 | `ref.r_enpls` | external | reference | registry-declared external reference library |
 | `ref.matlab_libpls` | external | reference | registry-declared external reference library |
 | `ref.r_pls_stats` | external | reference | registry-declared external reference library |
+| `ref.python_ikpls` | external | reference | registry-declared external reference library |
+| `ref.r_mixomics` | external | reference | registry-declared external reference library |
 
 
 ## Versions per backend
 
 | Column | Versions |
 |---|---|
-| `pls4all.registry` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1`; `pls4all=0.97.0`; `numpy=2.3.5`; `registry_method=pls` |
+| `pls4all.registry` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1`; `pls4all=0.97.0`; `numpy=2.3.5`; `registry_method=pcr` |
 | `ref.python_scikit_learn` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `numpy=2.3.5`; `reference_id=python_scikit_learn`; `reference_library=scikit-learn`; `reference_version=1.8.0` |
 | `ref.r_pls` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_pls`; `reference_library=pls`; `reference_version=2.8.5` |
-| `ref.python_ikpls` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `numpy=2.3.5`; `reference_id=python_ikpls`; `reference_library=ikpls`; `reference_version=4.0.1.post1` |
-| `ref.r_mixomics` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_mixomics`; `reference_library=mixOmics`; `reference_version=6.26.0` |
 | `ref.r_ropls` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_ropls`; `reference_library=ropls`; `reference_version=Bioc` |
 | `ref.r_spls` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_spls`; `reference_library=spls`; `reference_version=2.3.2` |
 | `ref.python_diplslib` | — |
@@ -620,6 +618,8 @@ Each column in the per-algorithm tables above is one of the entries below. Colum
 | `ref.r_enpls` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_enpls`; `reference_library=enpls`; `reference_version=6.1` |
 | `ref.matlab_libpls` | — |
 | `ref.r_pls_stats` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_pls_stats`; `reference_library=pls+stats`; `reference_version=R 4.3.3` |
+| `ref.python_ikpls` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `numpy=2.3.5`; `reference_id=python_ikpls`; `reference_library=ikpls`; `reference_version=4.0.1.post1` |
+| `ref.r_mixomics` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_mixomics`; `reference_library=mixOmics`; `reference_version=6.26.0` |
 
 ## Methodology
 

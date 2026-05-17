@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-17 22:25 UTC",
+  "generated_at": "2026-05-17 22:52 UTC",
   "host": {
     "os": "Linux 6.6.87.2-microsoft-standard-WSL2 (x86_64)",
     "python": "3.13.11",
@@ -15,281 +15,343 @@
     {
       "id": "pls4all.registry",
       "label": "pls4all.registry",
+      "short": "registry",
       "group": "python",
       "tier": "pls4all canonical",
       "lang": "Python",
       "what": "`benchmarks.parity_timing.registry.MethodSpec.pls4all_fn` \u2014 canonical per-method entry point",
-      "build": ""
-    },
-    {
-      "id": "ref.matlab_libpls",
-      "label": "ref.matlab_libpls",
-      "group": "ext-ml",
-      "tier": "registry reference",
-      "lang": "MATLAB/Octave",
-      "what": "Registry-declared external reference library (MATLAB/Octave).",
-      "build": ""
+      "build": "",
+      "kind": "pls4all"
     },
     {
       "id": "ref.python_auswahl",
       "label": "ref.python_auswahl",
+      "short": "auswahl",
       "group": "ext-py",
       "tier": "registry reference",
       "lang": "Python",
       "what": "Registry-declared external reference library (Python).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.python_diplslib",
       "label": "ref.python_diplslib",
+      "short": "diplslib",
       "group": "ext-py",
       "tier": "registry reference",
       "lang": "Python",
       "what": "Registry-declared external reference library (Python).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.python_ikpls",
       "label": "ref.python_ikpls",
+      "short": "ikpls",
       "group": "ext-py",
       "tier": "registry reference",
       "lang": "Python",
       "what": "Registry-declared external reference library (Python).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.python_nirs4all_bench_aom_v0_aompls",
       "label": "ref.python_nirs4all_bench_aom_v0_aompls",
+      "short": "nirs4all/aompls",
       "group": "ext-py",
       "tier": "registry reference",
       "lang": "Python",
       "what": "Registry-declared external reference library (Python).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.python_nirs4all_operators_models_sklearn_lwpls",
       "label": "ref.python_nirs4all_operators_models_sklearn_lwpls",
+      "short": "nirs4all/lwpls",
       "group": "ext-py",
       "tier": "registry reference",
       "lang": "Python",
       "what": "Registry-declared external reference library (Python).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.python_nirs4all_operators_models_sklearn_mbpls",
       "label": "ref.python_nirs4all_operators_models_sklearn_mbpls",
+      "short": "nirs4all/mbpls",
       "group": "ext-py",
       "tier": "registry reference",
       "lang": "Python",
       "what": "Registry-declared external reference library (Python).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.python_onpls",
       "label": "ref.python_onpls",
+      "short": "onpls",
       "group": "ext-py",
       "tier": "registry reference",
       "lang": "Python",
       "what": "Registry-declared external reference library (Python).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.python_pyswarms",
       "label": "ref.python_pyswarms",
+      "short": "pyswarms",
       "group": "ext-py",
       "tier": "registry reference",
       "lang": "Python",
       "what": "Registry-declared external reference library (Python).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.python_scikit_learn",
       "label": "ref.python_scikit_learn",
+      "short": "scikit/learn",
       "group": "ext-py",
       "tier": "registry reference",
       "lang": "Python",
       "what": "Registry-declared external reference library (Python).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.python_tensorly",
       "label": "ref.python_tensorly",
+      "short": "tensorly",
       "group": "ext-py",
       "tier": "registry reference",
       "lang": "Python",
       "what": "Registry-declared external reference library (Python).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_base",
       "label": "ref.r_base",
+      "short": "base",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_chemometrics",
       "label": "ref.r_chemometrics",
+      "short": "chemometrics",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_enpls",
       "label": "ref.r_enpls",
+      "short": "enpls",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_jico",
       "label": "ref.r_jico",
+      "short": "jico",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_kernlab_pls",
       "label": "ref.r_kernlab_pls",
+      "short": "kernlab/pls",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_mboost",
       "label": "ref.r_mboost",
+      "short": "mboost",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_mdatools",
       "label": "ref.r_mdatools",
+      "short": "mdatools",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_mixomics",
       "label": "ref.r_mixomics",
+      "short": "mixomics",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_multiblock",
       "label": "ref.r_multiblock",
+      "short": "multiblock",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_omicspls",
       "label": "ref.r_omicspls",
+      "short": "omicspls",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_pls",
       "label": "ref.r_pls",
+      "short": "pls",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_pls_stats",
       "label": "ref.r_pls_stats",
+      "short": "pls/stats",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_plsrcox",
       "label": "ref.r_plsrcox",
+      "short": "plsrcox",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_plsrglm",
       "label": "ref.r_plsrglm",
+      "short": "plsrglm",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_plsvarsel",
       "label": "ref.r_plsvarsel",
+      "short": "plsvarsel",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_ropls",
       "label": "ref.r_ropls",
+      "short": "ropls",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_sgpls",
       "label": "ref.r_sgpls",
+      "short": "sgpls",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_softimpute",
       "label": "ref.r_softimpute",
+      "short": "softimpute",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
     },
     {
       "id": "ref.r_spls",
       "label": "ref.r_spls",
+      "short": "spls",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
       "what": "Registry-declared external reference library (R).",
-      "build": ""
+      "build": "",
+      "kind": "external"
+    },
+    {
+      "id": "ref.matlab_libpls",
+      "label": "ref.matlab_libpls",
+      "short": "matlab/libpls",
+      "group": "ext-ml",
+      "tier": "registry reference",
+      "lang": "MATLAB/Octave",
+      "what": "Registry-declared external reference library (MATLAB/Octave).",
+      "build": "",
+      "kind": "external"
     }
   ],
   "presets": {
@@ -297,7 +359,6 @@
       "label": "All",
       "cols": [
         "pls4all.registry",
-        "ref.matlab_libpls",
         "ref.python_auswahl",
         "ref.python_diplslib",
         "ref.python_ikpls",
@@ -326,12 +387,15 @@
         "ref.r_ropls",
         "ref.r_sgpls",
         "ref.r_softimpute",
-        "ref.r_spls"
+        "ref.r_spls",
+        "ref.matlab_libpls"
       ]
     },
     "headline": {
       "label": "Headline",
-      "cols": []
+      "cols": [
+        "pls4all.registry"
+      ]
     },
     "pls4all": {
       "label": "pls4all only",
@@ -339,14 +403,9 @@
         "pls4all.registry"
       ]
     },
-    "cpp-tiers": {
-      "label": "C++ tiers",
-      "cols": []
-    },
     "externals": {
       "label": "Externals",
       "cols": [
-        "ref.matlab_libpls",
         "ref.python_auswahl",
         "ref.python_diplslib",
         "ref.python_ikpls",
@@ -375,15 +434,14 @@
         "ref.r_ropls",
         "ref.r_sgpls",
         "ref.r_softimpute",
-        "ref.r_spls"
+        "ref.r_spls",
+        "ref.matlab_libpls"
       ]
     },
     "thread-sweep": {
       "label": "Thread sweep",
       "cols": [
-        "pls4all.python",
-        "pls4all.sklearn",
-        "sklearn"
+        "pls4all.registry"
       ]
     }
   },
@@ -399,6 +457,11 @@
           "ok": true,
           "ms": 210.287,
           "fmt": "210.3 ms"
+        },
+        "ref.python_nirs4all_bench_aom_v0_aompls": {
+          "parity": "error",
+          "ok": false,
+          "reason": "RuntimeError: AOM v0 oracle is not available"
         }
       }
     },
@@ -573,6 +636,11 @@
           "ok": true,
           "ms": 202.572,
           "fmt": "202.6 ms"
+        },
+        "ref.python_diplslib": {
+          "parity": "error",
+          "ok": false,
+          "reason": "ModuleNotFoundError: No module named 'diPLSlib'"
         }
       }
     },
@@ -607,6 +675,11 @@
           "ok": true,
           "ms": 176.761,
           "fmt": "176.8 ms"
+        },
+        "ref.matlab_libpls": {
+          "parity": "error",
+          "ok": false,
+          "reason": "RuntimeError: oct2py/libPLS not available"
         }
       }
     },
@@ -755,6 +828,11 @@
           "ok": true,
           "ms": 173.332,
           "fmt": "173.3 ms"
+        },
+        "ref.matlab_libpls": {
+          "parity": "error",
+          "ok": false,
+          "reason": "RuntimeError: oct2py/libPLS not available"
         }
       }
     },
@@ -877,6 +955,11 @@
           "ok": true,
           "ms": 167.706,
           "fmt": "167.7 ms"
+        },
+        "ref.python_tensorly": {
+          "parity": "error",
+          "ok": false,
+          "reason": "ModuleNotFoundError: No module named 'tensorly'"
         }
       }
     },
@@ -1235,6 +1318,11 @@
           "ok": true,
           "ms": 168.603,
           "fmt": "168.6 ms"
+        },
+        "ref.python_pyswarms": {
+          "parity": "error",
+          "ok": false,
+          "reason": "ModuleNotFoundError: No module named 'pyswarms'"
         }
       }
     },
@@ -1249,6 +1337,11 @@
           "ok": true,
           "ms": 177.758,
           "fmt": "177.8 ms"
+        },
+        "ref.matlab_libpls": {
+          "parity": "error",
+          "ok": false,
+          "reason": "RuntimeError: oct2py/libPLS not available"
         }
       }
     },
@@ -1677,6 +1770,11 @@
           "ok": true,
           "ms": 172.828,
           "fmt": "172.8 ms"
+        },
+        "ref.python_auswahl": {
+          "parity": "error",
+          "ok": false,
+          "reason": "RuntimeError: auswahl not importable: No module named 'auswahl'"
         }
       }
     },
@@ -1691,6 +1789,11 @@
           "ok": true,
           "ms": 181.967,
           "fmt": "182.0 ms"
+        },
+        "ref.python_auswahl": {
+          "parity": "error",
+          "ok": false,
+          "reason": "RuntimeError: auswahl not importable: No module named 'auswahl'"
         }
       }
     },
@@ -1756,11 +1859,9 @@
     }
   ],
   "versions": {
-    "pls4all.registry": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; pls4all=0.97.0; numpy=2.3.5; registry_method=pls",
+    "pls4all.registry": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; pls4all=0.97.0; numpy=2.3.5; registry_method=pcr",
     "ref.python_scikit_learn": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_scikit_learn; reference_library=scikit-learn; reference_version=1.8.0",
     "ref.r_pls": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_pls; reference_library=pls; reference_version=2.8.5",
-    "ref.python_ikpls": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_ikpls; reference_library=ikpls; reference_version=4.0.1.post1",
-    "ref.r_mixomics": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_mixomics; reference_library=mixOmics; reference_version=6.26.0",
     "ref.r_ropls": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_ropls; reference_library=ropls; reference_version=Bioc",
     "ref.r_spls": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_spls; reference_library=spls; reference_version=2.3.2",
     "ref.r_chemometrics": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_chemometrics; reference_library=chemometrics; reference_version=0.7.x",
@@ -1780,7 +1881,9 @@
     "ref.python_nirs4all_operators_models_sklearn_lwpls": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_nirs4all_operators_models_sklearn_lwpls; reference_library=nirs4all.operators.models.sklearn.lwpls; reference_version=in-tree",
     "ref.r_plsvarsel": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_plsvarsel; reference_library=plsVarSel; reference_version=0.10.0",
     "ref.r_enpls": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_enpls; reference_library=enpls; reference_version=6.1",
-    "ref.r_pls_stats": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_pls_stats; reference_library=pls+stats; reference_version=R 4.3.3"
+    "ref.r_pls_stats": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_pls_stats; reference_library=pls+stats; reference_version=R 4.3.3",
+    "ref.python_ikpls": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_ikpls; reference_library=ikpls; reference_version=4.0.1.post1",
+    "ref.r_mixomics": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_mixomics; reference_library=mixOmics; reference_version=6.26.0"
   },
   "algo_to_group": {
     "aom_preprocess": "other",
@@ -1996,8 +2099,8 @@
   ],
   "languages": [
     "Python",
-    "MATLAB/Octave",
-    "R"
+    "R",
+    "MATLAB/Octave"
   ],
   "stats": {
     "algos": 71,
@@ -2008,7 +2111,7 @@
       1
     ],
     "rows": 71,
-    "cells": 133,
+    "cells": 142,
     "ok": 83
   }
 }

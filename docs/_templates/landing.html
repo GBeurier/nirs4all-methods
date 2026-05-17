@@ -34,15 +34,37 @@
       --lang-py:   #F2C46B;     /* amber-yellow */
       --lang-r:    #9CA8FA;     /* periwinkle */
       --lang-m:    #E08FCF;     /* magenta-pink */
+      --lang-jl:   #B98AE0;     /* julia purple */
+      --lang-rs:   #E89A6B;     /* rust ferric */
+      --lang-go:   #6BBFE0;     /* gopher teal */
+      --lang-js:   #E8D86B;     /* js sun-yellow */
+      --lang-java: #E08F8F;     /* java brick */
+      --lang-other:#9AA4B0;     /* neutral fallback */
       --lang-cpp-soft: rgba(109, 211, 214, 0.13);
       --lang-py-soft:  rgba(242, 196, 107, 0.13);
       --lang-r-soft:   rgba(156, 168, 250, 0.13);
       --lang-m-soft:   rgba(224, 143, 207, 0.13);
+      --lang-jl-soft:  rgba(185, 138, 224, 0.13);
+      --lang-rs-soft:  rgba(232, 154, 107, 0.13);
+      --lang-go-soft:  rgba(107, 191, 224, 0.13);
+      --lang-js-soft:  rgba(232, 216, 107, 0.13);
+      --lang-java-soft:rgba(224, 143, 143, 0.13);
+      --lang-other-soft: rgba(154, 164, 176, 0.10);
       --bg-grid: rgba(255,255,255,0.018);
 
       --display: 'Sora', 'Inter Tight', system-ui, sans-serif;
       --sans:    'Inter Tight', system-ui, sans-serif;
       --mono:    'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+      /* Fixed sticky-left column widths — the CSS sticky offsets are
+         derived from these so leftmost columns never overlap regardless
+         of content length. Override in density rules to tighten. */
+      --w-algo:    180px;
+      --w-size:    96px;
+      --w-threads: 60px;
+      --off-size:    var(--w-algo);
+      --off-threads: calc(var(--w-algo) + var(--w-size));
+      --off-data:    calc(var(--w-algo) + var(--w-size) + var(--w-threads));
     }
 
     * { box-sizing: border-box; }
@@ -351,17 +373,29 @@
       line-height: 1.1;
     }
     table.bench tr.lang-band th.lang-spacer { border-bottom-color: transparent; }
-    table.bench tr.lang-band th.lang-cpp { color: var(--lang-cpp); border-bottom-color: var(--lang-cpp); background: linear-gradient(180deg, var(--lang-cpp-soft) 0%, var(--ink-2) 100%); }
-    table.bench tr.lang-band th.lang-py  { color: var(--lang-py);  border-bottom-color: var(--lang-py);  background: linear-gradient(180deg, var(--lang-py-soft)  0%, var(--ink-2) 100%); }
-    table.bench tr.lang-band th.lang-r   { color: var(--lang-r);   border-bottom-color: var(--lang-r);   background: linear-gradient(180deg, var(--lang-r-soft)   0%, var(--ink-2) 100%); }
-    table.bench tr.lang-band th.lang-m   { color: var(--lang-m);   border-bottom-color: var(--lang-m);   background: linear-gradient(180deg, var(--lang-m-soft)   0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-cpp   { color: var(--lang-cpp);   border-bottom-color: var(--lang-cpp);   background: linear-gradient(180deg, var(--lang-cpp-soft)   0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-py    { color: var(--lang-py);    border-bottom-color: var(--lang-py);    background: linear-gradient(180deg, var(--lang-py-soft)    0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-r     { color: var(--lang-r);     border-bottom-color: var(--lang-r);     background: linear-gradient(180deg, var(--lang-r-soft)     0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-m     { color: var(--lang-m);     border-bottom-color: var(--lang-m);     background: linear-gradient(180deg, var(--lang-m-soft)     0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-jl    { color: var(--lang-jl);    border-bottom-color: var(--lang-jl);    background: linear-gradient(180deg, var(--lang-jl-soft)    0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-rs    { color: var(--lang-rs);    border-bottom-color: var(--lang-rs);    background: linear-gradient(180deg, var(--lang-rs-soft)    0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-go    { color: var(--lang-go);    border-bottom-color: var(--lang-go);    background: linear-gradient(180deg, var(--lang-go-soft)    0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-js    { color: var(--lang-js);    border-bottom-color: var(--lang-js);    background: linear-gradient(180deg, var(--lang-js-soft)    0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-java  { color: var(--lang-java);  border-bottom-color: var(--lang-java);  background: linear-gradient(180deg, var(--lang-java-soft)  0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-other { color: var(--lang-other); border-bottom-color: var(--lang-other); background: linear-gradient(180deg, var(--lang-other-soft) 0%, var(--ink-2) 100%); }
 
     /* per-language best-cell marker — subtle text-tint only, no glow */
     .cell-lang-best .cell-value { font-weight: 600; }
-    .cell-lang-best.lang-cpp .cell-value { color: var(--lang-cpp); }
-    .cell-lang-best.lang-py  .cell-value { color: var(--lang-py);  }
-    .cell-lang-best.lang-r   .cell-value { color: var(--lang-r);   }
-    .cell-lang-best.lang-m   .cell-value { color: var(--lang-m);   }
+    .cell-lang-best.lang-cpp   .cell-value { color: var(--lang-cpp); }
+    .cell-lang-best.lang-py    .cell-value { color: var(--lang-py);  }
+    .cell-lang-best.lang-r     .cell-value { color: var(--lang-r);   }
+    .cell-lang-best.lang-m     .cell-value { color: var(--lang-m);   }
+    .cell-lang-best.lang-jl    .cell-value { color: var(--lang-jl);  }
+    .cell-lang-best.lang-rs    .cell-value { color: var(--lang-rs);  }
+    .cell-lang-best.lang-go    .cell-value { color: var(--lang-go);  }
+    .cell-lang-best.lang-js    .cell-value { color: var(--lang-js);  }
+    .cell-lang-best.lang-java  .cell-value { color: var(--lang-java); }
+    .cell-lang-best.lang-other .cell-value { color: var(--lang-other); }
 
     /* Language partitions: only show a thicker separator on the FIRST
        column of each language group. No per-cell tinted borders. */
@@ -399,12 +433,25 @@
       text-shadow: 0 0 6px var(--phosphor-glow);
     }
 
-    /* sticky leftmost columns */
-    table.bench th.algo-col, table.bench td.algo-cell { position: sticky; left: 0; z-index: 4; background: var(--ink-2); }
+    /* sticky leftmost columns — widths + offsets driven by CSS vars
+       so they stay in sync across density modes. */
+    table.bench th.algo-col, table.bench td.algo-cell {
+      position: sticky; left: 0; z-index: 4;
+      background: var(--ink-2);
+      width: var(--w-algo); min-width: var(--w-algo); max-width: var(--w-algo);
+    }
     table.bench td.algo-cell { background: var(--ink-1); z-index: 2; }
-    table.bench th.size-col, table.bench td.size-cell { position: sticky; left: 132px; z-index: 4; background: var(--ink-2); }
+    table.bench th.size-col, table.bench td.size-cell {
+      position: sticky; left: var(--off-size); z-index: 4;
+      background: var(--ink-2);
+      width: var(--w-size); min-width: var(--w-size); max-width: var(--w-size);
+    }
     table.bench td.size-cell { background: var(--ink-1); z-index: 2; }
-    table.bench th.thread-col, table.bench td.thread-cell { position: sticky; left: 222px; z-index: 4; background: var(--ink-2); }
+    table.bench th.thread-col, table.bench td.thread-cell {
+      position: sticky; left: var(--off-threads); z-index: 4;
+      background: var(--ink-2);
+      width: var(--w-threads); min-width: var(--w-threads); max-width: var(--w-threads);
+    }
     table.bench td.thread-cell { background: var(--ink-1); z-index: 2; }
     table.bench th.algo-col, table.bench th.size-col, table.bench th.thread-col { z-index: 6; }
 
@@ -462,6 +509,7 @@
     .p-ok      { color: var(--phosphor); }
     .p-warn    { color: var(--amber); }
     .p-fail    { color: var(--crimson); }
+    .p-error   { color: var(--crimson); }
     .p-timeout { color: var(--indigo); }
     .p-na      { color: var(--fg-3); }
 
@@ -469,13 +517,19 @@
     .speed-equal  { color: var(--fg-1); }
     .speed-slower { color: var(--amber); }
 
-    /* density: compact */
+    /* density: compact — slightly tighter sticky widths */
+    body.density-compact {
+      --w-algo: 160px; --w-size: 86px; --w-threads: 52px;
+    }
     body.density-compact table.bench td { padding: 2.5px 8px; font-size: 11px; }
     body.density-compact table.bench th { padding: 5px 8px; font-size: 10.5px; }
     body.density-compact table.bench th .col-label { font-size: 10.5px; }
     body.density-compact table.bench th .col-meta  { font-size: 9px; }
 
-    /* density: ultra (max squeeze — fit all 17 cols in 1920px) */
+    /* density: ultra (max squeeze) — minimal sticky widths */
+    body.density-ultra {
+      --w-algo: 140px; --w-size: 72px; --w-threads: 44px;
+    }
     body.density-ultra table.bench td { padding: 1.5px 5px; font-size: 10.5px; }
     body.density-ultra table.bench th { padding: 3px 5px; font-size: 10px; }
     body.density-ultra table.bench th .col-label { font-size: 10px; letter-spacing: 0; }
@@ -486,12 +540,6 @@
     body.density-ultra .cell-fastest::before { left: 1px; width: 1.5px; }
     body.density-ultra table.bench td.algo-cell { font-size: 11px; }
     body.density-ultra table.bench td.size-cell { font-size: 10.5px; }
-    body.density-ultra table.bench th.algo-col,
-    body.density-ultra table.bench td.algo-cell { left: 0; }
-    body.density-ultra table.bench th.size-col,
-    body.density-ultra table.bench td.size-cell { left: 115px; }
-    body.density-ultra table.bench th.thread-col,
-    body.density-ultra table.bench td.thread-cell { left: 187px; }
 
     .table-meta {
       display: flex; justify-content: space-between; align-items: center;
@@ -554,7 +602,7 @@
     .info-card a:hover { text-decoration-color: var(--phosphor); }
     .info-card ul, .info-card ol { padding-left: 22px; margin: 10px 0; }
     .info-card li + li { margin-top: 6px; }
-    .info-card .p-ok, .info-card .p-warn, .info-card .p-fail, .info-card .p-timeout {
+    .info-card .p-ok, .info-card .p-warn, .info-card .p-fail, .info-card .p-error, .info-card .p-timeout {
       font-family: var(--mono); font-weight: 700; padding: 0 4px;
     }
     .info-card .kv-row {
@@ -676,12 +724,7 @@
     </div>
     <div class="control">
       <span class="control-label">threads</span>
-      <select id="filter-threads">
-        <option value="">all</option>
-        <option value="1">1 t</option>
-        <option value="3">3 t</option>
-        <option value="10">10 t</option>
-      </select>
+      <select id="filter-threads"><option value="">all</option></select>
     </div>
     <div class="control">
       <span class="control-label">lang</span>
@@ -691,6 +734,7 @@
       <span class="chip active" data-parity="ok"><span class="ico p-ok">✓</span>ok</span>
       <span class="chip active amber" data-parity="warn"><span class="ico p-warn">⚠</span>warn</span>
       <span class="chip active crimson" data-parity="fail"><span class="ico p-fail">✗</span>fail</span>
+      <span class="chip active crimson" data-parity="error"><span class="ico p-error">!</span>error</span>
       <span class="chip active gray" data-parity="timeout"><span class="ico p-timeout">⏳</span>timeout</span>
     </div>
     <div class="control">
@@ -730,6 +774,7 @@
     <span class="legend-item"><span class="ico p-ok">✓</span> bit-exact (≤ 1e-6)</span>
     <span class="legend-item"><span class="ico p-warn">⚠</span> drift (≤ 1e-3)</span>
     <span class="legend-item"><span class="ico p-fail">✗</span> divergent (preprocessing)</span>
+    <span class="legend-item"><span class="ico p-error">!</span> missing dependency / runtime error</span>
     <span class="legend-item"><span class="ico p-timeout">⏳</span> timeout (300s)</span>
     <span class="legend-item"><span class="cell-fastest" style="font-family:var(--mono);padding:0 4px">42.5</span> fastest in row (among ✓)</span>
     <span class="legend-item" style="margin-left:auto;color:var(--fg-2);font-size:10px">click any header to sort · ⇧+click for asc</span>
@@ -755,6 +800,7 @@
       <li><span class="p-ok">✓</span> <b>bit-exact</b> (≤ 1e-6 vs reference)</li>
       <li><span class="p-warn">⚠</span> <b>close</b> (≤ 1e-3) — algorithmic drift, agrees in practice</li>
       <li><span class="p-fail">✗</span> <b>divergent</b> (&gt; 1e-3) — different preprocessing default (e.g. tier-2 wrappers use <code>scale=True</code>, externals use <code>scale=False</code>)</li>
+      <li><span class="p-error">!</span> <b>error</b> — missing optional dependency or backend runtime failure; hover the cell for the recorded reason</li>
       <li><span class="p-timeout">⏳</span> cell timed out (300s wall-clock)</li>
       <li><span style="color:var(--fg-3)">—</span> see <i>why a cell is empty</i></li>
     </ul>
@@ -827,7 +873,7 @@ function loadState() {
     lang:    p.get('lang')    || '',
     size:    p.get('size')    || '',
     threads: p.get('threads') || '',
-    parity:  new Set((p.get('parity') || 'ok,warn,fail,timeout').split(',').filter(Boolean)),
+    parity:  new Set((p.get('parity') || 'ok,warn,fail,error,timeout').split(',').filter(Boolean)),
     search:  p.get('search')  || '',
     cols:    new Set((p.get('cols') || '').split('|').filter(Boolean)),
     sort:    parseSort(p.get('sort')),
@@ -848,8 +894,8 @@ function saveState() {
   if (state.lang) p.set('lang', state.lang);
   if (state.size) p.set('size', state.size);
   if (state.threads) p.set('threads', state.threads);
-  const defaultParity = new Set(['ok','warn','fail','timeout']);
-  if (state.parity.size !== 4 || [...defaultParity].some(x => !state.parity.has(x))) {
+  const defaultParity = new Set(['ok','warn','fail','error','timeout']);
+  if (state.parity.size !== 5 || [...defaultParity].some(x => !state.parity.has(x))) {
     p.set('parity', [...state.parity].join(','));
   }
   if (state.search) p.set('search', state.search);
@@ -885,9 +931,14 @@ if (!state.base) {
 
 // ---------- helpers ----------
 const $ = id => document.getElementById(id);
-const PARITY_ICON = { ok: '✓', warn: '⚠', fail: '✗', timeout: '⏳', na: '—' };
+const PARITY_ICON = { ok: '✓', warn: '⚠', fail: '✗', error: '!', timeout: '⏳', na: '—' };
 
 function sizeKey(n, p) { return `${n}×${p}`; }
+function escAttr(s) {
+  return String(s || '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
 
 function fmtSpeedup(ratio) {
   if (!Number.isFinite(ratio)) return '—';
@@ -912,7 +963,11 @@ function applyRowFilters() {
 }
 
 function cellPasses(cell) {
-  if (!cell) return true;        // empty cells displayed as — always
+  // Parity chips are a pure CELL MASK: cells with an excluded verdict
+  // render as `—`, but rows are NEVER pruned solely because their
+  // cells got masked. This avoids the surprising "filter fail and your
+  // ok rows also vanish" behaviour.
+  if (!cell) return true;        // empty cells render as — always
   return state.parity.has(cell.parity);
 }
 
@@ -927,37 +982,51 @@ function visibleColIds() {
 
 // Map raw `lang` strings to compact slug used for CSS classes.
 const LANG_SLUG = {
-  'C++':          'cpp',
-  'Python':       'py',
-  'R':            'r',
-  'MATLAB/Octave':'m',
+  'C++':           'cpp',
+  'Python':        'py',
+  'R':             'r',
+  'MATLAB/Octave': 'm',
+  'Julia':         'jl',
+  'Rust':          'rs',
+  'Go':            'go',
+  'JavaScript':    'js',
+  'Java':          'java',
+  'external':      'other',
 };
 const LANG_LABEL = {
-  'cpp': 'C++',
-  'py':  'Python',
-  'r':   'R',
-  'm':   'MATLAB / Octave',
+  'cpp':   'C++',
+  'py':    'Python',
+  'r':     'R',
+  'm':     'MATLAB / Octave',
+  'jl':    'Julia',
+  'rs':    'Rust',
+  'go':    'Go',
+  'js':    'JavaScript',
+  'java':  'Java',
+  'other': 'Other',
 };
-const LANG_ORDER = ['cpp', 'py', 'r', 'm'];
+const LANG_ORDER = ['cpp', 'py', 'r', 'm', 'jl', 'rs', 'go', 'js', 'java', 'other'];
 
 function colLangSlug(col) {
-  return LANG_SLUG[col.lang] || '';
+  return LANG_SLUG[col.lang] || 'other';
 }
 
-// Returns [{slug, label, count, cols: [colMeta...]}] for visible columns,
-// preserving the canonical language order (cpp → py → r → m).
+// Returns [{slug, label, count, cols: [colMeta...]}] computed as
+// CONTIGUOUS runs of the same language in the actual visible column
+// order. This guarantees the band header colspans line up with the
+// body cells underneath, regardless of how the columns were sorted.
 function visibleLangGroups(colMetas) {
-  const byLang = {};
+  const groups = [];
+  let cur = null;
   for (const c of colMetas) {
     const s = colLangSlug(c);
-    if (!s) continue;
-    (byLang[s] = byLang[s] || []).push(c);
-  }
-  const groups = [];
-  for (const s of LANG_ORDER) {
-    if (byLang[s] && byLang[s].length) {
-      groups.push({ slug: s, label: LANG_LABEL[s], count: byLang[s].length, cols: byLang[s] });
+    if (!cur || cur.slug !== s) {
+      cur = { slug: s, label: LANG_LABEL[s] || c.lang || 'Other',
+              count: 0, cols: [] };
+      groups.push(cur);
     }
+    cur.cols.push(c);
+    cur.count += 1;
   }
   return groups;
 }
@@ -997,22 +1066,24 @@ function fastestPerLanguage(row, cols, colsById) {
   return out;
 }
 
-function rowHasVisibleCell(row, cols) {
-  // returns true if the row should appear given current parity filter
-  // either: at least one cell with included parity, OR row was all-empty
-  // to begin with (we keep those so unimplemented algos stay visible).
-  if (Object.keys(row.cells).length === 0) return true;
-  for (const id of cols) {
-    const c = row.cells[id];
-    if (!c) continue;
-    if (cellPasses(c)) return true;
-  }
-  return false;
+function rowHasVisibleCell(_row, _cols) {
+  // Always true. Rows are filtered ONLY by the explicit row-level
+  // filters (algo, family, lang, size, threads, search). Hiding a row
+  // because all its cells got cell-masked by parity / column visibility
+  // surprised users and obscured "this algo is unimplemented in your
+  // current slice" — keep the row, render the empty cells as `—`.
+  return true;
 }
 
 function sortRows(rows, cols) {
   if (!state.sort) return rows;
   const { col, dir } = state.sort;
+  // Built-in pseudo columns (__algo / __size / __threads) are always
+  // sortable. For data columns, ignore the sort when the column has
+  // been hidden — sorting by an invisible column is invisibly active
+  // and surprises users.
+  const PSEUDO = ['__algo', '__size', '__threads'];
+  if (!PSEUDO.includes(col) && !cols.includes(col)) return rows;
   const r = [...rows];
   r.sort((a, b) => {
     if (col === '__algo')    return dir * a.algo.localeCompare(b.algo);
@@ -1048,16 +1119,31 @@ function renderStatStrip() {
 
 function renderPresetRail() {
   const rail = $('preset-rail');
-  const colsList = [...state.cols].sort().join('|');
+  // Effective visible columns = the intersection of state.cols and the
+  // language filter. Preset detection compares against the effective
+  // set so the language filter doesn't make every preset look "custom".
+  const effective = visibleColIds();
+  const colsList = [...effective].sort().join('|');
+  // For each preset, also restrict its column list to the active
+  // language filter before comparison.
+  const presetEffective = (cols) => cols
+    .filter(id => {
+      const c = DATA.columns.find(x => x.id === id);
+      return c && (!state.lang || c.lang === state.lang);
+    })
+    .sort()
+    .join('|');
   let html = '<span class="preset-label">view</span>';
+  let anyMatch = false;
   for (const [k, p] of Object.entries(DATA.presets)) {
-    const matches = [...p.cols].sort().join('|') === colsList;
-    html += `<span class="preset-pill${matches ? ' active' : ''}" data-preset="${k}">${p.label}<span class="cnt">${p.cols.length}</span></span>`;
+    const pe = presetEffective(p.cols);
+    const matches = pe === colsList && pe.length > 0;
+    if (matches) anyMatch = true;
+    const count = pe ? pe.split('|').length : 0;
+    html += `<span class="preset-pill${matches ? ' active' : ''}" data-preset="${k}">${p.label}<span class="cnt">${count}</span></span>`;
   }
-  // "custom" pill if no preset matches
-  const anyMatch = Object.values(DATA.presets).some(p => [...p.cols].sort().join('|') === colsList);
   if (!anyMatch) {
-    html += `<span class="preset-pill active" data-preset="">custom<span class="cnt">${state.cols.size}</span></span>`;
+    html += `<span class="preset-pill active" data-preset="">custom<span class="cnt">${effective.length}</span></span>`;
   }
   rail.innerHTML = html;
 }
@@ -1081,6 +1167,13 @@ function renderControls() {
   const langs = DATA.languages || [];
   $('filter-lang').innerHTML = '<option value="">all</option>' +
     langs.map(l => `<option value="${l}"${state.lang===l?' selected':''}>${l}</option>`).join('');
+
+  // threads — populate from the actual values in the payload, not a
+  // hardcoded 1/3/10 list. Picking a thread count that doesn't exist
+  // in the data is what used to silently empty the table.
+  const threadVals = (DATA.stats && DATA.stats.threads) || [];
+  $('filter-threads').innerHTML = '<option value="">all</option>' +
+    threadVals.map(t => `<option value="${t}"${String(state.threads)===String(t)?' selected':''}>${t} t</option>`).join('');
 
   // sizes
   const sizes = [...new Set(DATA.rows.map(r => sizeKey(r.n, r.p)))]
@@ -1151,15 +1244,25 @@ function renderColPicker() {
     html += `</div>`;
   }
   $('col-picker').innerHTML = html;
-  $('cols-count').textContent = `${state.cols.size}/${DATA.columns.length}`;
+  // Show EFFECTIVE / total — effective = after the language filter.
+  const eff = visibleColIds().length;
+  $('cols-count').textContent = `${eff}/${DATA.columns.length}`;
 }
 
-// Drop the redundant "pls4all." prefix from headers in compact / ultra
-// density (the language band already says which language family).
+// Compact column header label. In comfortable mode we want full
+// fidelity for pls4all bindings but already-shortened slugs for the
+// long `ref.python_nirs4all_operators_models_sklearn_lwpls` style ids.
+// In compact / ultra we always prefer the build-script's `col.short`.
 function shortLabel(label) {
-  if (state.density === 'comfortable') return label;
-  if (label.startsWith('pls4all.cpp.')) return label.slice('pls4all.cpp.'.length);
-  if (label.startsWith('pls4all.')) return label.slice('pls4all.'.length);
+  const meta = DATA.columns.find(c => c.label === label);
+  if (meta && meta.short) {
+    if (state.density === 'comfortable') {
+      // For ref.* labels which are absurdly long, prefer the short
+      // form even in comfortable mode.
+      return label.startsWith('ref.') ? meta.short : label;
+    }
+    return meta.short;
+  }
   return label;
 }
 
@@ -1172,6 +1275,12 @@ function densifyFmt(fmt) {
 }
 
 function renderTable() {
+  // Auto-include the speedup baseline in visible cols — otherwise the
+  // user sees a column of ratios with no visible reference.
+  if (state.speedup && state.base) state.cols.add(state.base);
+  // Auto-include columns matching the language filter (handled inside
+  // visibleColIds via state.lang) — no extra work needed here.
+
   const cols = visibleColIds();
   // colMetas must respect BOTH the col-picker selection AND the language
   // filter so the band header and the body iterate the same set.
@@ -1219,7 +1328,18 @@ function renderTable() {
   $('bench-head').innerHTML = head;
 
   // === BODY ===
-  const baselineId = state.speedup ? state.base : null;
+  // Resolve the effective baseline: only honour it if it's actually
+  // visible after the col-picker + language filter; otherwise fall
+  // back to the first visible column so the user sees ratios against
+  // something they can see.
+  let baselineId = null;
+  if (state.speedup) {
+    if (state.base && cols.includes(state.base)) {
+      baselineId = state.base;
+    } else if (cols.length) {
+      baselineId = cols[0];
+    }
+  }
   if (!rows.length) {
     $('bench-body').innerHTML = `<tr><td colspan="${cols.length + 3}"><div class="empty-state">
       <h3>nothing in this slice.</h3>
@@ -1244,7 +1364,8 @@ function renderTable() {
           continue;
         }
         if (!c.ok || !Number.isFinite(c.ms)) {
-          tr += `<td class="${lcls}"><span class="p-${c.parity}">${PARITY_ICON[c.parity] || '—'}</span></td>`;
+          const title = c.reason ? ` title="${escAttr(c.reason)}"` : '';
+          tr += `<td class="${lcls}"${title}><span class="p-${c.parity}">${PARITY_ICON[c.parity] || '—'}</span></td>`;
           continue;
         }
         // build value (wrapped in .cell-value so per-language tint can target text only)
@@ -1355,7 +1476,7 @@ function wire() {
   $('reset-btn').addEventListener('click', () => {
     state.algo = ''; state.group = ''; state.lang = '';
     state.size = ''; state.threads = ''; state.search = '';
-    state.parity = new Set(['ok','warn','fail','timeout']);
+    state.parity = new Set(['ok','warn','fail','error','timeout']);
     state.sort = null; state.speedup = false; state.density = 'comfortable';
     state.cols = new Set(DATA.columns.map(c => c.id));
     rerender();
@@ -1409,14 +1530,20 @@ function wire() {
   });
 
   // sortable headers
+  // - plain click on a new column → desc (fastest first for ms values)
+  // - shift+click on a new column → asc
+  // - subsequent clicks on the SAME column cycle: desc → asc → off
   $('bench-head').addEventListener('click', e => {
     const th = e.target.closest('th.sortable');
     if (!th) return;
     const col = th.dataset.col;
-    // tri-state: desc → asc → off
-    if (!state.sort || state.sort.col !== col) state.sort = { col, dir: -1 };
-    else if (state.sort.dir === -1)            state.sort = { col, dir: 1 };
-    else                                       state.sort = null;
+    if (!state.sort || state.sort.col !== col) {
+      state.sort = { col, dir: e.shiftKey ? 1 : -1 };
+    } else if (state.sort.dir === -1) {
+      state.sort = { col, dir: 1 };
+    } else {
+      state.sort = null;
+    }
     rerender();
   });
 }

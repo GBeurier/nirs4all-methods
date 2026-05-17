@@ -120,6 +120,10 @@ this repo, the host is reproducible from the commit SHA + the
 # Existing cells in results/full_matrix.csv are skipped by default.
 benchmarks/cross_binding/run_overnight.sh
 
+# Same run, then commit/push docs/_static + benchmark markdown and trigger
+# the GitHub Pages docs workflow on the current branch.
+PUBLISH_WEB=1 benchmarks/cross_binding/run_overnight.sh
+
 # Recompute after a pls4all optimization or dependency update.
 FORCE=1 CLEAN_BUILD=1 benchmarks/cross_binding/run_overnight.sh
 
