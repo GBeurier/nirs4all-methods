@@ -1,0 +1,160 @@
+# Documentation-only catalog of which backends cover which algorithms,
+# plus per-algorithm parity tolerances. The orchestrator does NOT
+# currently consume this file (each bench script's own algo dispatch
+# is authoritative); it's maintained as the human-readable cross-ref.
+#
+# Schema:
+#   <algo>:
+#     description: short text
+#     backends: [list of backend names that implement it]
+#     parity_tolerance: float (max abs diff vs reference)
+#     stochastic: bool (set true to disable parity strict check)
+
+# ============================================================
+# Niveau A — universal baseline
+# ============================================================
+
+pls:
+  description: SIMPLS PLS regression (baseline)
+  backends: [cpp, python_tier1, python_tier2, sklearn, ikpls,
+              r_tier1, r_tier2, r_pls, r_mixomics,
+              matlab_tier1, matlab_tier2, matlab_pls]
+  parity_tolerance: 1.0e-6
+  notes: |
+    Reference cell: cpp @ 1 thread, blas-omp build. Three backends
+    (ikpls, r_tier2, matlab_tier2) default to scale=True (unit
+    variance) and produce a ~0.054 absolute diff vs the centre-only
+    convention used by the others. Documented in methodology.md.
+
+# ============================================================
+# Niveau B — algorithms with external comparators
+# ============================================================
+
+sparse_simpls:
+  description: SIMPLS with soft-thresholded weights (Chun & Keles 2010)
+  backends: [cpp, python_tier1, python_tier2, r_tier1, r_tier2,
+              r_mixomics, matlab_tier1, matlab_tier2]
+  parity_tolerance: 1.0e-6
+  notes: mixOmics::spls is the closest external (with keepX param).
+
+cppls:
+  description: Canonical Powered PLS (Indahl 2005), gamma in [0,1]
+  backends: [cpp, python_tier1, python_tier2, r_tier1, r_tier2, r_pls,
+              matlab_tier1, matlab_tier2]
+  parity_tolerance: 1.0e-6
+  notes: pls::cppls is the R external.
+
+ecr:
+  description: Elastic Component Regression (Liu 2009), alpha in [0,1]
+  backends: [cpp, python_tier1, python_tier2, r_tier1, r_tier2,
+              matlab_tier1, matlab_tier2]
+  parity_tolerance: 1.0e-6
+  notes: No external implementation in this benchmark; pls4all-only matrix.
+
+pcr:
+  description: Principal Components Regression
+  backends: [cpp, python_tier1, python_tier2, sklearn, r_tier1, r_tier2, r_pls,
+              matlab_tier1, matlab_tier2]
+  parity_tolerance: 1.0e-6
+  notes: sklearn via Pipeline(PCA + LinearRegression); R via pls::pcr.
+
+opls:
+  description: Orthogonal PLS (Trygg & Wold 2002)
+  backends: [cpp, python_tier1, python_tier2, r_tier1, r_tier2, r_ropls,
+              matlab_tier1, matlab_tier2]
+  parity_tolerance: 1.0e-3
+  notes: ropls::opls is the R external; convergence path may differ slightly.
+
+n_pls:
+  description: N-PLS 3-way tensor regression (Bro 1996)
+  backends: [cpp, python_tier1, python_tier2, r_tier1, r_tier2,
+              matlab_tier1, matlab_tier2]
+  parity_tolerance: 1.0e-6
+  notes: Requires mode_j, mode_k params. No external equivalent in this benchmark.
+
+mb_pls:
+  description: Multi-block PLS (Westerhuis 1998)
+  backends: [cpp, python_tier1, python_tier2, r_tier1, r_tier2,
+              matlab_tier1, matlab_tier2]
+  parity_tolerance: 1.0e-6
+  notes: Requires block_sizes vector. Python mbpls package would be the
+    external but not installed in this env.
+
+ridge_pls:
+  description: L2-augmented PLS regression
+  backends: [cpp, python_tier1, python_tier2, sklearn, r_tier1, r_tier2,
+              matlab_tier1, matlab_tier2]
+  parity_tolerance: 1.0e-3
+  notes: sklearn uses Pipeline(PCA + Ridge) as proxy — different algorithm
+    so parity drift is expected (not bit-exact).
+
+robust_pls:
+  description: Robust PLS via Huber IRLS over SIMPLS
+  backends: [cpp, python_tier1, python_tier2, r_tier1, r_tier2,
+              matlab_tier1, matlab_tier2]
+  parity_tolerance: 1.0e-6
+
+mir_pls:
+  description: Multivariate Inverse Regression PLS (Sjöblom 1998)
+  backends: [cpp, python_tier1, python_tier2, r_tier1, r_tier2,
+              matlab_tier1, matlab_tier2]
+  parity_tolerance: 1.0e-6
+
+missing_aware_nipals:
+  description: Nelson 1996 missing-aware NIPALS PLS
+  backends: [cpp, python_tier1, python_tier2, r_tier1, r_tier2,
+              matlab_tier1, matlab_tier2]
+  parity_tolerance: 1.0e-6
+
+# ============================================================
+# Niveau C — pls4all-only (no externals)
+# ============================================================
+# Continuum / kernel / O2-PLS / NPLS / SO-PLS / ROSA / bagging / boosting
+# / random_subspace / GPR-PLS / GLM / Cox / QDA / LDA / Logistic / PDS / DS
+# all listed in the orchestrator backends but with no external coverage.
+
+continuum_regression:
+  backends: [cpp, python_tier1, python_tier2, r_tier1, r_tier2,
+              matlab_tier1, matlab_tier2]
+  parity_tolerance: 1.0e-6
+
+kernel_pls:
+  backends: [cpp, python_tier1, python_tier2, r_tier1,
+              matlab_tier1]
+  parity_tolerance: 1.0e-6
+  notes: In-sample only (no predict on new X); compare in-sample fit.
+
+o2pls:
+  backends: [cpp, python_tier1, python_tier2, r_tier1, r_tier2,
+              matlab_tier1, matlab_tier2]
+  parity_tolerance: 1.0e-6
+
+so_pls:
+  backends: [cpp, python_tier1, r_tier1, matlab_tier1]
+  parity_tolerance: 1.0e-6
+  notes: Requires block_sizes + n_components_per_block.
+
+rosa:
+  backends: [cpp, python_tier1, r_tier1, matlab_tier1]
+  parity_tolerance: 1.0e-6
+
+bagging_pls:
+  backends: [cpp, python_tier1, python_tier2, r_tier1, r_tier2,
+              matlab_tier1, matlab_tier2]
+  parity_tolerance: 1.0e-3
+  stochastic: true
+
+boosting_pls:
+  backends: [cpp, python_tier1, python_tier2, r_tier1, r_tier2,
+              matlab_tier1, matlab_tier2]
+  parity_tolerance: 1.0e-3
+  stochastic: true
+
+random_subspace_pls:
+  backends: [cpp, python_tier1, r_tier1, matlab_tier1]
+  parity_tolerance: 1.0e-3
+  stochastic: true
+
+# Selectors and remaining algos: see source bench scripts for the full
+# list (bench_python_tier1.py / bench_r_tier1.R / bench_matlab_tier1.m
+# all share the same algo set via the dispatcher fallback).
