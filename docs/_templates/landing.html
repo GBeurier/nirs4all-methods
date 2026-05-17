@@ -27,6 +27,17 @@
       --amber:          #F2B85C;
       --crimson:        #E96565;
       --indigo:         #7DA8F7;
+
+      /* per-language accent colors (used in the column band header
+         and the per-language best-cell marker) */
+      --lang-cpp:  #6DD3D6;     /* phosphor cyan */
+      --lang-py:   #F2C46B;     /* amber-yellow */
+      --lang-r:    #9CA8FA;     /* periwinkle */
+      --lang-m:    #E08FCF;     /* magenta-pink */
+      --lang-cpp-soft: rgba(109, 211, 214, 0.13);
+      --lang-py-soft:  rgba(242, 196, 107, 0.13);
+      --lang-r-soft:   rgba(156, 168, 250, 0.13);
+      --lang-m-soft:   rgba(224, 143, 207, 0.13);
       --bg-grid: rgba(255,255,255,0.018);
 
       --display: 'Sora', 'Inter Tight', system-ui, sans-serif;
@@ -324,6 +335,47 @@
       font-family: var(--mono); font-size: 12px;
     }
     table.bench thead { position: sticky; top: 0; z-index: 5; }
+
+    /* language band row */
+    table.bench tr.lang-band th {
+      padding: 4px 8px;
+      font-family: var(--sans);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      border-bottom: 2px solid;
+      border-right: 1px solid var(--line);
+      background: var(--ink-2);
+      text-align: center;
+      line-height: 1.1;
+    }
+    table.bench tr.lang-band th.lang-spacer { border-bottom-color: transparent; }
+    table.bench tr.lang-band th.lang-cpp { color: var(--lang-cpp); border-bottom-color: var(--lang-cpp); background: linear-gradient(180deg, var(--lang-cpp-soft) 0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-py  { color: var(--lang-py);  border-bottom-color: var(--lang-py);  background: linear-gradient(180deg, var(--lang-py-soft)  0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-r   { color: var(--lang-r);   border-bottom-color: var(--lang-r);   background: linear-gradient(180deg, var(--lang-r-soft)   0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-m   { color: var(--lang-m);   border-bottom-color: var(--lang-m);   background: linear-gradient(180deg, var(--lang-m-soft)   0%, var(--ink-2) 100%); }
+
+    /* per-language best-cell marker */
+    .cell-lang-best {
+      position: relative;
+    }
+    .cell-lang-best::after {
+      content: ''; position: absolute; left: 4px; right: 4px; bottom: 2px;
+      height: 2px; border-radius: 1px;
+    }
+    .cell-lang-best.lang-cpp::after { background: var(--lang-cpp); box-shadow: 0 0 4px var(--lang-cpp); }
+    .cell-lang-best.lang-py::after  { background: var(--lang-py);  box-shadow: 0 0 4px var(--lang-py);  }
+    .cell-lang-best.lang-r::after   { background: var(--lang-r);   box-shadow: 0 0 4px var(--lang-r);   }
+    .cell-lang-best.lang-m::after   { background: var(--lang-m);   box-shadow: 0 0 4px var(--lang-m);   }
+
+    /* per-cell language-tinted left border (subtle column grouping) */
+    table.bench td.col-cpp, table.bench th.col-cpp { border-left: 1px solid rgba(109, 211, 214, 0.20); }
+    table.bench td.col-py,  table.bench th.col-py  { border-left: 1px solid rgba(242, 196, 107, 0.20); }
+    table.bench td.col-r,   table.bench th.col-r   { border-left: 1px solid rgba(156, 168, 250, 0.20); }
+    table.bench td.col-m,   table.bench th.col-m   { border-left: 1px solid rgba(224, 143, 207, 0.20); }
+    table.bench td.col-lang-first, table.bench th.col-lang-first { border-left-width: 2px; }
+
     table.bench th {
       background: var(--ink-2);
       color: var(--fg-1);
@@ -424,11 +476,29 @@
     .speed-equal  { color: var(--fg-1); }
     .speed-slower { color: var(--amber); }
 
-    /* compact */
-    body.compact table.bench td { padding: 2.5px 8px; font-size: 11px; }
-    body.compact table.bench th { padding: 5px 8px; font-size: 10.5px; }
-    body.compact table.bench th .col-label { font-size: 10.5px; }
-    body.compact table.bench th .col-meta  { font-size: 9px; }
+    /* density: compact */
+    body.density-compact table.bench td { padding: 2.5px 8px; font-size: 11px; }
+    body.density-compact table.bench th { padding: 5px 8px; font-size: 10.5px; }
+    body.density-compact table.bench th .col-label { font-size: 10.5px; }
+    body.density-compact table.bench th .col-meta  { font-size: 9px; }
+
+    /* density: ultra (max squeeze — fit all 17 cols in 1920px) */
+    body.density-ultra table.bench td { padding: 1.5px 5px; font-size: 10.5px; }
+    body.density-ultra table.bench th { padding: 3px 5px; font-size: 10px; }
+    body.density-ultra table.bench th .col-label { font-size: 10px; letter-spacing: 0; }
+    body.density-ultra table.bench th .col-meta  { display: none; }
+    body.density-ultra table.bench tr.lang-band th { padding: 2px 4px; font-size: 9px; letter-spacing: 0.14em; }
+    body.density-ultra table.bench td.thread-cell .thread-pill { padding: 0 5px; font-size: 9.5px; }
+    body.density-ultra .parity { margin-left: 2px; font-size: 10px; }
+    body.density-ultra .cell-fastest::before { left: 1px; width: 1.5px; }
+    body.density-ultra table.bench td.algo-cell { font-size: 11px; }
+    body.density-ultra table.bench td.size-cell { font-size: 10.5px; }
+    body.density-ultra table.bench th.algo-col,
+    body.density-ultra table.bench td.algo-cell { left: 0; }
+    body.density-ultra table.bench th.size-col,
+    body.density-ultra table.bench td.size-cell { left: 115px; }
+    body.density-ultra table.bench th.thread-col,
+    body.density-ultra table.bench td.thread-cell { left: 187px; }
 
     .table-meta {
       display: flex; justify-content: space-between; align-items: center;
@@ -634,10 +704,14 @@
       </div>
       <div class="menu" id="col-picker"></div>
     </div>
-    <label class="control">
-      <input type="checkbox" id="compact-toggle">
-      <span>compact</span>
-    </label>
+    <div class="control">
+      <span class="control-label">density</span>
+      <select id="density-select">
+        <option value="comfortable">comfortable</option>
+        <option value="compact">compact</option>
+        <option value="ultra">ultra-dense</option>
+      </select>
+    </div>
     <div class="control" id="speedup-control">
       <input type="checkbox" id="speedup-toggle" style="margin:0 4px 0 0">
       <span class="control-label" style="border:none;margin:0;padding-right:7px">speedup vs</span>
@@ -740,10 +814,12 @@
 const DATA = JSON.parse(document.getElementById('bench-data').textContent);
 
 // ---------- state + url persistence ----------
-const URL_KEYS = ['algo','size','threads','parity','search','cols','sort','compact','speedup','base'];
+const URL_KEYS = ['algo','size','threads','parity','search','cols','sort','density','speedup','base'];
+const DENSITY_VALUES = ['comfortable', 'compact', 'ultra'];
 
 function loadState() {
   const p = new URLSearchParams(location.hash.slice(1));
+  const density = p.get('density') || '';
   return {
     algo:    p.get('algo')    || '',
     size:    p.get('size')    || '',
@@ -752,7 +828,7 @@ function loadState() {
     search:  p.get('search')  || '',
     cols:    new Set((p.get('cols') || '').split('|').filter(Boolean)),
     sort:    parseSort(p.get('sort')),
-    compact: p.get('compact') === '1',
+    density: DENSITY_VALUES.includes(density) ? density : 'comfortable',
     speedup: p.get('speedup') === '1',
     base:    p.get('base')    || '',
   };
@@ -776,7 +852,7 @@ function saveState() {
     p.set('cols', [...state.cols].join('|'));
   }
   if (state.sort) p.set('sort', `${state.sort.col}:${state.sort.dir === 1 ? 'asc' : 'desc'}`);
-  if (state.compact) p.set('compact', '1');
+  if (state.density && state.density !== 'comfortable') p.set('density', state.density);
   if (state.speedup) p.set('speedup', '1');
   if (state.base) p.set('base', state.base);
   const h = p.toString();
@@ -831,6 +907,43 @@ function visibleColIds() {
   return DATA.columns.map(c => c.id).filter(id => state.cols.has(id));
 }
 
+// Map raw `lang` strings to compact slug used for CSS classes.
+const LANG_SLUG = {
+  'C++':          'cpp',
+  'Python':       'py',
+  'R':            'r',
+  'MATLAB/Octave':'m',
+};
+const LANG_LABEL = {
+  'cpp': 'C++',
+  'py':  'Python',
+  'r':   'R',
+  'm':   'MATLAB / Octave',
+};
+const LANG_ORDER = ['cpp', 'py', 'r', 'm'];
+
+function colLangSlug(col) {
+  return LANG_SLUG[col.lang] || '';
+}
+
+// Returns [{slug, label, count, cols: [colMeta...]}] for visible columns,
+// preserving the canonical language order (cpp → py → r → m).
+function visibleLangGroups(colMetas) {
+  const byLang = {};
+  for (const c of colMetas) {
+    const s = colLangSlug(c);
+    if (!s) continue;
+    (byLang[s] = byLang[s] || []).push(c);
+  }
+  const groups = [];
+  for (const s of LANG_ORDER) {
+    if (byLang[s] && byLang[s].length) {
+      groups.push({ slug: s, label: LANG_LABEL[s], count: byLang[s].length, cols: byLang[s] });
+    }
+  }
+  return groups;
+}
+
 function fastestColumn(row, cols) {
   let best = null;
   for (const id of cols) {
@@ -840,6 +953,30 @@ function fastestColumn(row, cols) {
     if (best === null || c.ms < best.ms) best = { id, ms: c.ms };
   }
   return best ? best.id : null;
+}
+
+// Per-language: returns Map<langSlug, fastestColId>. Only includes
+// languages where 2+ ✓ cells exist (so the marker is informative —
+// a solo cell trivially "wins" its language).
+function fastestPerLanguage(row, cols, colsById) {
+  const counts = {};
+  const winners = {};
+  for (const id of cols) {
+    const c = row.cells[id];
+    if (!c || !c.ok || c.parity !== 'ok' || !Number.isFinite(c.ms)) continue;
+    if (!cellPasses(c)) continue;
+    const meta = colsById[id];
+    if (!meta) continue;
+    const slug = colLangSlug(meta);
+    if (!slug) continue;
+    counts[slug] = (counts[slug] || 0) + 1;
+    if (!winners[slug] || c.ms < winners[slug].ms) winners[slug] = { id, ms: c.ms };
+  }
+  const out = {};
+  for (const slug in winners) {
+    if (counts[slug] >= 2) out[slug] = winners[slug].id;
+  }
+  return out;
 }
 
 function rowHasVisibleCell(row, cols) {
@@ -941,8 +1078,9 @@ function renderControls() {
     `<option value="${c.id}"${state.base===c.id?' selected':''}>${c.label}</option>`).join('');
   baseSel.disabled = !state.speedup;
   $('speedup-toggle').checked = state.speedup;
-  $('compact-toggle').checked = state.compact;
-  document.body.classList.toggle('compact', state.compact);
+  $('density-select').value = state.density;
+  document.body.classList.remove('density-comfortable', 'density-compact', 'density-ultra');
+  document.body.classList.add(`density-${state.density}`);
 
   // column picker
   renderColPicker();
@@ -985,28 +1123,68 @@ function renderColPicker() {
   $('cols-count').textContent = `${state.cols.size}/${DATA.columns.length}`;
 }
 
+// Drop the redundant "pls4all." prefix from headers in compact / ultra
+// density (the language band already says which language family).
+function shortLabel(label) {
+  if (state.density === 'comfortable') return label;
+  if (label.startsWith('pls4all.cpp.')) return label.slice('pls4all.cpp.'.length);
+  if (label.startsWith('pls4all.')) return label.slice('pls4all.'.length);
+  return label;
+}
+
+// Strip "ms" unit suffix in ultra density to save horizontal space.
+// "42.5 ms" → "42.5"; "1.2 s" stays (we keep the unit when scale changes).
+function densifyFmt(fmt) {
+  if (state.density !== 'ultra') return fmt;
+  if (fmt.endsWith(' ms')) return fmt.slice(0, -3);
+  return fmt;
+}
+
 function renderTable() {
   const cols = visibleColIds();
-  const colMeta = DATA.columns.filter(c => state.cols.has(c.id));
+  const colMetas = DATA.columns.filter(c => state.cols.has(c.id));
+  const colsById = Object.fromEntries(colMetas.map(c => [c.id, c]));
 
   const rowsFiltered = applyRowFilters().filter(r => rowHasVisibleCell(r, cols));
   const rows = sortRows(rowsFiltered, cols);
 
-  // header
+  // language groups for the band row + per-cell tinted borders
+  const langGroups = visibleLangGroups(colMetas);
+  const langFirstCol = {};  // colId → true if this column starts a new lang group
+  for (const g of langGroups) {
+    if (g.cols.length) langFirstCol[g.cols[0].id] = true;
+  }
+
   const sortCol  = state.sort?.col;
   const sortDir  = state.sort?.dir;
   const arrowFor = (col) => col === sortCol ? `<span class="arrow">${sortDir === 1 ? '↑' : '↓'}</span>` : '';
   const sortCls  = (col) => col === sortCol ? 'sortable active' : 'sortable';
-  let head = `<th class="algo-col ${sortCls('__algo')}" data-col="__algo">algorithm${arrowFor('__algo')}</th>`;
+  const langCls  = (col) => {
+    const s = colLangSlug(col);
+    const first = langFirstCol[col.id] ? ' col-lang-first' : '';
+    return s ? `col-${s}${first}` : '';
+  };
+
+  // === HEADER: language band row + column header row ===
+  let head = `<tr class="lang-band">
+    <th class="algo-col lang-spacer"></th>
+    <th class="size-col lang-spacer"></th>
+    <th class="thread-col lang-spacer"></th>`;
+  for (const g of langGroups) {
+    head += `<th class="lang-${g.slug}" colspan="${g.count}">${g.label}<span style="opacity:0.6;font-weight:400;margin-left:5px">${g.count}</span></th>`;
+  }
+  head += `</tr><tr>`;
+  head += `<th class="algo-col ${sortCls('__algo')}" data-col="__algo">algorithm${arrowFor('__algo')}</th>`;
   head += `<th class="size-col ${sortCls('__size')}" data-col="__size">size${arrowFor('__size')}</th>`;
   head += `<th class="thread-col ${sortCls('__threads')}" data-col="__threads">t${arrowFor('__threads')}</th>`;
-  for (const c of colMeta) {
-    const meta = [c.tier, c.lang].filter(Boolean).join(' · ');
-    head += `<th class="${sortCls(c.id)}" data-col="${c.id}" title="${c.what || ''}"><span class="col-label">${c.label}</span><span class="col-meta">${meta}</span>${arrowFor(c.id)}</th>`;
+  for (const c of colMetas) {
+    const meta = state.density === 'comfortable' ? [c.tier, c.lang].filter(Boolean).join(' · ') : c.tier || '';
+    const lcls = langCls(c);
+    head += `<th class="${sortCls(c.id)} ${lcls}" data-col="${c.id}" title="${(c.what || '').replace(/"/g,'&quot;')}"><span class="col-label">${shortLabel(c.label)}</span><span class="col-meta">${meta}</span>${arrowFor(c.id)}</th>`;
   }
   $('bench-head').innerHTML = head;
 
-  // body
+  // === BODY ===
   const baselineId = state.speedup ? state.base : null;
   if (!rows.length) {
     $('bench-body').innerHTML = `<tr><td colspan="${cols.length + 3}"><div class="empty-state">
@@ -1018,34 +1196,45 @@ function renderTable() {
     const body = [];
     for (const row of rows) {
       const fastestId = fastestColumn(row, cols);
+      const langWinners = fastestPerLanguage(row, cols, colsById);
       const baseCell  = baselineId ? row.cells[baselineId] : null;
       const baseMs    = baseCell && Number.isFinite(baseCell.ms) ? baseCell.ms : null;
       const tCls = `thread-pill t-${row.threads}`;
       let tr = `<tr><td class="algo-cell">${row.algo}</td><td class="size-cell">${row.n}×${row.p}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
       for (const id of cols) {
+        const meta = colsById[id];
+        const lcls = meta ? langCls(meta) : '';
         const c = row.cells[id];
         if (!c || !cellPasses(c)) {
-          tr += `<td class="cell-empty">—</td>`;
+          tr += `<td class="cell-empty ${lcls}">—</td>`;
           continue;
         }
         if (!c.ok || !Number.isFinite(c.ms)) {
-          tr += `<td><span class="p-${c.parity}">${PARITY_ICON[c.parity] || '—'}</span></td>`;
+          tr += `<td class="${lcls}"><span class="p-${c.parity}">${PARITY_ICON[c.parity] || '—'}</span></td>`;
           continue;
         }
+        // build value
         let display;
         if (baselineId && id !== baselineId && baseMs !== null) {
           const r = c.ms / baseMs;
           const cls = r < 0.97 ? 'speed-faster' : r > 1.03 ? 'speed-slower' : 'speed-equal';
           display = `<span class="${cls}">${fmtSpeedup(r)}</span>`;
         } else if (baselineId && id === baselineId) {
-          display = `<span class="speed-equal">${c.fmt}</span>`;
+          display = `<span class="speed-equal">${densifyFmt(c.fmt)}</span>`;
         } else {
           const fastCls = (id === fastestId) ? 'cell-fastest' : '';
-          display = `<span class="${fastCls}">${c.fmt}</span>`;
+          display = `<span class="${fastCls}">${densifyFmt(c.fmt)}</span>`;
         }
         const parityHtml = `<span class="parity p-${c.parity}">${PARITY_ICON[c.parity]}</span>`;
-        const bgCls = (id === fastestId && !baselineId) ? 'cell-fastest-bg' : '';
-        tr += `<td class="${bgCls}">${display}${parityHtml}</td>`;
+        // assemble cell classes
+        const tdCls = [lcls];
+        if (id === fastestId && !baselineId) tdCls.push('cell-fastest-bg');
+        // per-language best (skip if it IS the row-fastest — no double mark)
+        const langSlug = meta ? colLangSlug(meta) : '';
+        if (langSlug && langWinners[langSlug] === id && id !== fastestId && !baselineId) {
+          tdCls.push('cell-lang-best', `lang-${langSlug}`);
+        }
+        tr += `<td class="${tdCls.join(' ')}">${display}${parityHtml}</td>`;
       }
       tr += `</tr>`;
       body.push(tr);
@@ -1059,7 +1248,7 @@ function renderTable() {
   $('table-meta-left').textContent  = ms;
   $('table-meta-right').textContent = baselineId
     ? `speedup mode · baseline = ${baselineId}`
-    : `absolute median wall-clock (ms)`;
+    : `absolute median wall-clock (ms) · ${langGroups.length} language${langGroups.length === 1 ? '' : 's'} shown`;
 }
 
 function renderInfo() {
@@ -1110,13 +1299,16 @@ function wire() {
     if (state.parity.has(k)) state.parity.delete(k); else state.parity.add(k);
     rerender();
   });
-  $('compact-toggle').addEventListener('change', e => { state.compact = e.target.checked; rerender(); });
+  $('density-select').addEventListener('change', e => {
+    state.density = DENSITY_VALUES.includes(e.target.value) ? e.target.value : 'comfortable';
+    rerender();
+  });
   $('speedup-toggle').addEventListener('change', e => { state.speedup = e.target.checked; rerender(); });
   $('speedup-baseline').addEventListener('change', e => { state.base = e.target.value; if (state.speedup) rerender(); else saveState(); });
   $('reset-btn').addEventListener('click', () => {
     state.algo = ''; state.size = ''; state.threads = ''; state.search = '';
     state.parity = new Set(['ok','warn','fail','timeout']);
-    state.sort = null; state.speedup = false;
+    state.sort = null; state.speedup = false; state.density = 'comfortable';
     state.cols = new Set(DATA.columns.map(c => c.id));
     rerender();
   });
