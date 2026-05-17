@@ -8,6 +8,7 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
 - **ABI** — [reference](abi/reference.md) · [stability policy](abi/stability_policy.md) · [changes log](abi/changes_log.md)
 - **Bindings** — [Python](bindings/python.md) · [R](bindings/r.md) · [MATLAB](bindings/matlab.md) · [JavaScript / WebAssembly](bindings/js.md) · [Android](bindings/android.md)
 - **Parity** — [methodology](parity/methodology.md) · [tolerances](parity/tolerances.md)
+- **Benchmarks** — [index](benchmarks/index.md) · [cross-binding parity + timing](benchmarks/cross_binding.md) · [methodology](benchmarks/methodology.md)
 - **Development** — [workflow](dev/workflow.md) · [build](dev/build.md) · [testing](dev/testing.md) · [style](dev/style.md) · [release process](dev/release_process.md)
 - **Reviews** — Codex transcripts under [`reviews/`](reviews/)
 - **Roadmap** — [`ROADMAP.md`](../ROADMAP.md), per-phase plans under [`roadmap/`](../roadmap/)
