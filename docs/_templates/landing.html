@@ -795,7 +795,7 @@
 <section class="info-grid reveal reveal-4">
   <div class="info-card">
     <h3>parity verdict</h3>
-    <p>Each cell shows <code>&lt;median_ms&gt; &lt;icon&gt;</code> vs the reference (<code>pls4all.cpp.ref</code> @ 1 thread).</p>
+    <p>Each cell shows <code>&lt;median_ms&gt; &lt;icon&gt;</code> vs the reference <span id="parity-ref-name">(see methodology)</span>.</p>
     <ul>
       <li><span class="p-ok">✓</span> <b>bit-exact</b> (≤ 1e-6 vs reference)</li>
       <li><span class="p-warn">⚠</span> <b>close</b> (≤ 1e-3) — algorithmic drift, agrees in practice</li>
@@ -1108,6 +1108,16 @@ function renderStatStrip() {
   const s = DATA.stats;
   const okPct = s.cells ? Math.round(s.ok / s.cells * 100) : 0;
   $('tagline-count').textContent = s.backends;
+  // Surface the canonical parity reference name dynamically — the data
+  // may not always have pls4all.cpp.ref, so resolve it from columns.
+  const refLabel =
+    (DATA.columns.find(c => c.id === 'pls4all.cpp.ref') ||
+     DATA.columns.find(c => c.id === 'pls4all.cpp.blas+omp') ||
+     DATA.columns.find(c => c.id.startsWith('pls4all.cpp.')) ||
+     DATA.columns.find(c => c.id === 'pls4all.registry') ||
+     DATA.columns[0] || {}).id || '—';
+  const refEl = $('parity-ref-name');
+  if (refEl) refEl.innerHTML = `(<code>${refLabel}</code> @ 1 thread)`;
   $('stat-strip').innerHTML = `
     <div class="stat"><div class="stat-label">algorithms</div><div class="stat-value">${s.algos}</div></div>
     <div class="stat"><div class="stat-label">backends</div><div class="stat-value">${s.backends}</div></div>
