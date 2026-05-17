@@ -7,7 +7,7 @@
   <meta name="description" content="Interactive cross-binding benchmark dashboard for the pls4all PLS/NIRS library. Same algorithm, same input bytes, 17 implementations across C++, Python, R, MATLAB.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500;600;700;800&family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --ink-0: #07090C;
@@ -29,7 +29,7 @@
       --indigo:         #7DA8F7;
       --bg-grid: rgba(255,255,255,0.018);
 
-      --display: 'Instrument Serif', 'Times New Roman', serif;
+      --display: 'Sora', 'Inter Tight', system-ui, sans-serif;
       --sans:    'Inter Tight', system-ui, sans-serif;
       --mono:    'JetBrains Mono', 'SF Mono', Menlo, monospace;
     }
@@ -91,16 +91,17 @@
     }
     .wordmark {
       font-family: var(--display);
-      font-size: 44px; line-height: 1; font-style: italic;
-      letter-spacing: -0.01em; color: var(--fg-0);
-      font-weight: 400;
+      font-size: 32px; line-height: 1.08;
+      letter-spacing: -0.015em; color: var(--fg-0);
+      font-weight: 300;
     }
-    .wordmark .accent { color: var(--phosphor); }
-    .wordmark .sep    { color: var(--fg-3); margin: 0 6px; font-style: normal; }
+    .wordmark .accent { color: var(--phosphor); font-weight: 700; text-shadow: 0 0 14px var(--phosphor-glow); }
+    .wordmark .sep    { color: var(--fg-3); margin: 0 10px; font-weight: 200; }
+    .wordmark .light  { font-weight: 200; color: var(--fg-1); }
     .tagline {
       font-family: var(--sans);
       font-size: 11px; text-transform: uppercase; letter-spacing: 0.22em;
-      color: var(--fg-2); margin-top: 8px;
+      color: var(--fg-2); margin-top: 9px; font-weight: 500;
     }
     .tagline .dot { color: var(--fg-3); margin: 0 8px; }
 
@@ -157,6 +158,35 @@
       max-width: 1900px; margin: 0 auto;
       flex-wrap: wrap;
     }
+    .controls-row + .controls-row { padding-top: 8px; margin-top: 6px; border-top: 1px solid var(--line); }
+    .preset-rail {
+      display: flex; align-items: center; gap: 6px;
+      flex-wrap: wrap;
+    }
+    .preset-rail .preset-label {
+      font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.14em;
+      color: var(--fg-2); font-weight: 600; margin-right: 4px;
+    }
+    .preset-rail .preset-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--ink-2); border: 1px solid var(--line);
+      border-radius: 999px; padding: 4px 11px;
+      font-size: 11.5px; color: var(--fg-1);
+      cursor: pointer; font-family: var(--sans); font-weight: 500;
+      transition: all 100ms;
+      user-select: none;
+    }
+    .preset-rail .preset-pill .cnt {
+      font-family: var(--mono); font-size: 10px; color: var(--fg-2);
+    }
+    .preset-rail .preset-pill:hover {
+      border-color: var(--phosphor); color: var(--fg-0);
+    }
+    .preset-rail .preset-pill.active {
+      background: var(--phosphor-soft); color: var(--phosphor);
+      border-color: var(--phosphor);
+    }
+    .preset-rail .preset-pill.active .cnt { color: var(--phosphor); }
     .control {
       display: inline-flex; align-items: center; gap: 6px;
       background: var(--ink-2);
@@ -410,8 +440,9 @@
       padding: 60px 40px; text-align: center; color: var(--fg-2);
     }
     .empty-state h3 {
-      font-family: var(--display); font-style: italic;
-      color: var(--fg-0); font-size: 24px; margin: 0 0 6px; font-weight: 400;
+      font-family: var(--display);
+      color: var(--fg-0); font-size: 22px; margin: 0 0 6px; font-weight: 300;
+      letter-spacing: -0.01em;
     }
     .empty-state .hint {
       color: var(--phosphor); cursor: pointer; font-size: 12px;
@@ -420,14 +451,14 @@
 
     /* ---------- INFO CARDS ---------- */
     .info-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-      gap: 12px;
-      max-width: 1900px; margin: 28px auto 28px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 18px;
+      max-width: 1900px; margin: 36px auto 36px;
       padding: 0 32px;
     }
     .info-card {
-      background: var(--ink-1); border: 1px solid var(--line);
-      border-radius: 4px; padding: 16px 18px;
+      background: var(--ink-1); border: 1px solid var(--line-2);
+      border-radius: 6px; padding: 22px 24px;
       position: relative;
       overflow: hidden;
     }
@@ -436,45 +467,48 @@
       background: linear-gradient(90deg, transparent, var(--phosphor-soft), transparent);
     }
     .info-card h3 {
-      font-family: var(--sans); font-size: 10.5px;
-      text-transform: uppercase; letter-spacing: 0.2em;
-      color: var(--phosphor); margin: 0 0 12px;
-      display: flex; align-items: center; gap: 9px;
+      font-family: var(--sans); font-size: 11.5px;
+      text-transform: uppercase; letter-spacing: 0.22em;
+      color: var(--phosphor); margin: 0 0 16px;
+      display: flex; align-items: center; gap: 10px;
       font-weight: 600;
     }
     .info-card h3::before {
-      content: ''; width: 6px; height: 6px; background: var(--phosphor);
-      box-shadow: 0 0 8px var(--phosphor-glow); border-radius: 50%;
+      content: ''; width: 7px; height: 7px; background: var(--phosphor);
+      box-shadow: 0 0 10px var(--phosphor-glow); border-radius: 50%;
     }
     .info-card p, .info-card li {
-      font-size: 12px; color: var(--fg-1); line-height: 1.6;
+      font-size: 14px; color: var(--fg-0); line-height: 1.62;
     }
+    .info-card p + p { margin-top: 10px; }
+    .info-card b, .info-card strong { color: var(--fg-0); font-weight: 600; }
     .info-card code {
-      font-family: var(--mono); font-size: 11px;
-      background: var(--ink-3); padding: 1px 5px; border-radius: 2px;
+      font-family: var(--mono); font-size: 13px;
+      background: var(--ink-3); padding: 1.5px 6px; border-radius: 3px;
       color: var(--phosphor);
     }
-    .info-card ul, .info-card ol { padding-left: 18px; margin: 6px 0; }
-    .info-card li + li { margin-top: 3px; }
-    .info-card dl { margin: 0; }
-    .info-card dt {
-      font-family: var(--mono); font-size: 11px; color: var(--phosphor);
-      margin-top: 8px;
+    .info-card a { color: var(--phosphor); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--phosphor-soft); }
+    .info-card a:hover { text-decoration-color: var(--phosphor); }
+    .info-card ul, .info-card ol { padding-left: 22px; margin: 10px 0; }
+    .info-card li + li { margin-top: 6px; }
+    .info-card .p-ok, .info-card .p-warn, .info-card .p-fail, .info-card .p-timeout {
+      font-family: var(--mono); font-weight: 700; padding: 0 4px;
     }
-    .info-card dd { margin: 0 0 0 0; font-size: 12px; color: var(--fg-1); }
     .info-card .kv-row {
-      display: grid; grid-template-columns: 110px 1fr; gap: 12px;
-      padding: 3px 0; font-size: 12px;
-      border-bottom: 1px dotted var(--line);
+      display: grid; grid-template-columns: 130px 1fr; gap: 14px;
+      padding: 7px 0; font-size: 13px;
+      border-bottom: 1px solid var(--line);
+      align-items: baseline;
     }
     .info-card .kv-row:last-child { border-bottom: none; }
     .info-card .kv-row .k {
       font-family: var(--sans); color: var(--fg-2);
-      text-transform: uppercase; font-size: 10px; letter-spacing: 0.12em;
-      font-weight: 500;
+      text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.14em;
+      font-weight: 600;
     }
     .info-card .kv-row .v {
-      font-family: var(--mono); color: var(--fg-0); font-size: 11.5px;
+      font-family: var(--mono); color: var(--fg-0); font-size: 13px;
+      line-height: 1.5;
     }
 
     /* ---------- FOOTER ---------- */
@@ -544,7 +578,7 @@
       <div class="brand">
         <span class="brand-led"></span>
         <div>
-          <div class="wordmark"><span class="accent">pls4all</span><span class="sep">·</span><span>cross-binding benchmark</span></div>
+          <div class="wordmark"><span class="accent">pls4all</span><span class="sep">/</span><span class="light">cross-binding benchmark</span></div>
           <div class="tagline">
             same algorithm <span class="dot">·</span> same input bytes <span class="dot">·</span> 17 implementations
           </div>
@@ -561,6 +595,9 @@
 
 <!-- CONTROLS -->
 <div class="controls reveal reveal-2">
+  <div class="controls-row preset-rail" id="preset-rail">
+    <span class="preset-label">view</span>
+  </div>
   <div class="controls-row">
     <div class="control">
       <span class="control-label">algo</span>
@@ -747,9 +784,10 @@ function saveState() {
 }
 
 const state = loadState();
-// default columns = "headline" preset if no selection persisted
+// default: show ALL columns if no selection persisted (so users can see
+// the full coverage matrix immediately and narrow via presets).
 if (state.cols.size === 0) {
-  for (const c of (DATA.presets.headline?.cols || [])) state.cols.add(c);
+  for (const c of DATA.columns) state.cols.add(c.id);
 }
 // fallback baseline = first cpp.blas+omp column if available
 if (!state.base) {
@@ -853,7 +891,24 @@ function renderStatStrip() {
   `;
 }
 
+function renderPresetRail() {
+  const rail = $('preset-rail');
+  const colsList = [...state.cols].sort().join('|');
+  let html = '<span class="preset-label">view</span>';
+  for (const [k, p] of Object.entries(DATA.presets)) {
+    const matches = [...p.cols].sort().join('|') === colsList;
+    html += `<span class="preset-pill${matches ? ' active' : ''}" data-preset="${k}">${p.label}<span class="cnt">${p.cols.length}</span></span>`;
+  }
+  // "custom" pill if no preset matches
+  const anyMatch = Object.values(DATA.presets).some(p => [...p.cols].sort().join('|') === colsList);
+  if (!anyMatch) {
+    html += `<span class="preset-pill active" data-preset="">custom<span class="cnt">${state.cols.size}</span></span>`;
+  }
+  rail.innerHTML = html;
+}
+
 function renderControls() {
+  renderPresetRail();
   // algo
   const algos = [...new Set(DATA.rows.map(r => r.algo))].sort();
   $('filter-algo').innerHTML = '<option value="">all</option>' +
@@ -1062,7 +1117,17 @@ function wire() {
     state.algo = ''; state.size = ''; state.threads = ''; state.search = '';
     state.parity = new Set(['ok','warn','fail','timeout']);
     state.sort = null; state.speedup = false;
-    state.cols = new Set(DATA.presets.headline?.cols || []);
+    state.cols = new Set(DATA.columns.map(c => c.id));
+    rerender();
+  });
+
+  // preset rail
+  $('preset-rail').addEventListener('click', e => {
+    const pill = e.target.closest('.preset-pill');
+    if (!pill) return;
+    const key = pill.dataset.preset;
+    if (!key || !DATA.presets[key]) return;
+    state.cols = new Set(DATA.presets[key].cols);
     rerender();
   });
 

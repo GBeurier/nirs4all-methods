@@ -319,12 +319,12 @@ def build_payload(results_dir: Path) -> dict:
     thread_sweep = [c for c in [cpp_blas_omp, "pls4all.python",
                                   "pls4all.sklearn", "sklearn"] if c]
     presets = {
+        "all":         {"label": "All",           "cols": all_cols},
         "headline":    {"label": "Headline",      "cols": headline},
-        "cpp-tiers":   {"label": "C++ tiers",     "cols": cpp_tiers},
         "pls4all":     {"label": "pls4all only",  "cols": pls4all_only},
+        "cpp-tiers":   {"label": "C++ tiers",     "cols": cpp_tiers},
         "externals":   {"label": "Externals",     "cols": externals},
         "thread-sweep":{"label": "Thread sweep",  "cols": thread_sweep},
-        "all":         {"label": "Everything",    "cols": all_cols},
     }
 
     payload = {

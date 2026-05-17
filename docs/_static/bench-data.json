@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-17 21:26 UTC",
+  "generated_at": "2026-05-17 21:42 UTC",
   "host": {
     "os": "Linux 6.6.87.2-microsoft-standard-WSL2 (x86_64)",
     "python": "3.13.11",
@@ -167,6 +167,28 @@
     }
   ],
   "presets": {
+    "all": {
+      "label": "All",
+      "cols": [
+        "pls4all.cpp.ref",
+        "pls4all.cpp.blas",
+        "pls4all.cpp.omp",
+        "pls4all.cpp.blas+omp",
+        "pls4all.cpp.cuda",
+        "pls4all.python",
+        "pls4all.sklearn",
+        "pls4all.R",
+        "pls4all.R.formula",
+        "pls4all.matlab",
+        "pls4all.matlab.classdef",
+        "sklearn",
+        "ikpls",
+        "pls",
+        "ropls",
+        "mixOmics",
+        "plsregress"
+      ]
+    },
     "headline": {
       "label": "Headline",
       "cols": [
@@ -178,16 +200,6 @@
         "sklearn",
         "pls",
         "plsregress"
-      ]
-    },
-    "cpp-tiers": {
-      "label": "C++ tiers",
-      "cols": [
-        "pls4all.cpp.ref",
-        "pls4all.cpp.blas",
-        "pls4all.cpp.omp",
-        "pls4all.cpp.blas+omp",
-        "pls4all.cpp.cuda"
       ]
     },
     "pls4all": {
@@ -204,6 +216,16 @@
         "pls4all.R.formula",
         "pls4all.matlab",
         "pls4all.matlab.classdef"
+      ]
+    },
+    "cpp-tiers": {
+      "label": "C++ tiers",
+      "cols": [
+        "pls4all.cpp.ref",
+        "pls4all.cpp.blas",
+        "pls4all.cpp.omp",
+        "pls4all.cpp.blas+omp",
+        "pls4all.cpp.cuda"
       ]
     },
     "externals": {
@@ -224,28 +246,6 @@
         "pls4all.python",
         "pls4all.sklearn",
         "sklearn"
-      ]
-    },
-    "all": {
-      "label": "Everything",
-      "cols": [
-        "pls4all.cpp.ref",
-        "pls4all.cpp.blas",
-        "pls4all.cpp.omp",
-        "pls4all.cpp.blas+omp",
-        "pls4all.cpp.cuda",
-        "pls4all.python",
-        "pls4all.sklearn",
-        "pls4all.R",
-        "pls4all.R.formula",
-        "pls4all.matlab",
-        "pls4all.matlab.classdef",
-        "sklearn",
-        "ikpls",
-        "pls",
-        "ropls",
-        "mixOmics",
-        "plsregress"
       ]
     }
   },
