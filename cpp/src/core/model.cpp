@@ -3655,25 +3655,28 @@ p4a_status_t fit_pls_regression_simpls(
             value /= x_score_norm;
         }
 
+        // x_loadings = X^T * x_score  (O(n*p) — was a hand-written
+        // strided loop walking xk column-by-column; replaced with a
+        // single BLAS gemv via linalg::gemv when libp4a is built with
+        // PLS4ALL_WITH_BLAS, which closes the perf gap vs sklearn at
+        // mid-to-large sizes. Scalar fallback in linalg::gemv preserves
+        // bit-for-bit parity when BLAS is unavailable, and BLAS-vs-
+        // scalar diff is the same class already accepted on the cross-
+        // covariance gemm earlier in this function.
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
-        for (std::size_t feature = 0; feature < p; ++feature) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < n; ++row) {
-                sum += xk[idx(row, p, feature)] * x_score[row];
-            }
-            x_loadings[feature] = sum;
-        }
+        pls4all::linalg::gemv(
+            pls4all::linalg::Trans_Yes, n, p, 1.0,
+            xk.data(), x_score.data(), 0.0, x_loadings.data());
 
+        // y_loadings = Y^T * x_score  (O(n*q) — same pattern; marginal
+        // for PLS1 but kept symmetric so the SIMPLS-family hot path is
+        // fully BLAS-routed).
         std::vector<double> y_loadings;
         resize_fill(y_loadings, q, 0.0);
-        for (std::size_t target = 0; target < q; ++target) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < n; ++row) {
-                sum += yk[idx(row, q, target)] * x_score[row];
-            }
-            y_loadings[target] = sum;
-        }
+        pls4all::linalg::gemv(
+            pls4all::linalg::Trans_Yes, n, q, 1.0,
+            yk.data(), x_score.data(), 0.0, y_loadings.data());
 
         std::vector<double> v = x_loadings;
         if (comp > 0U) {
@@ -3938,22 +3941,17 @@ p4a_status_t fit_di_pls(Context& ctx,
         for (double& value : x_score) value /= x_score_norm;
         for (double& value : direction) value /= x_score_norm;
 
+        // x_loadings = X^T * x_score, y_loadings = Y^T * x_score
+        // (BLAS gemv — see comment on fit_pls_regression_simpls for
+        // perf/parity rationale).
         std::vector<double> x_loadings(p, 0.0);
-        for (std::size_t feature = 0; feature < p; ++feature) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < n; ++row) {
-                sum += xk[idx(row, p, feature)] * x_score[row];
-            }
-            x_loadings[feature] = sum;
-        }
+        pls4all::linalg::gemv(
+            pls4all::linalg::Trans_Yes, n, p, 1.0,
+            xk.data(), x_score.data(), 0.0, x_loadings.data());
         std::vector<double> y_loadings(q, 0.0);
-        for (std::size_t target = 0; target < q; ++target) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < n; ++row) {
-                sum += yk[idx(row, q, target)] * x_score[row];
-            }
-            y_loadings[target] = sum;
-        }
+        pls4all::linalg::gemv(
+            pls4all::linalg::Trans_Yes, n, q, 1.0,
+            yk.data(), x_score.data(), 0.0, y_loadings.data());
 
         std::vector<double> v = x_loadings;
         if (comp > 0U) {
@@ -4155,25 +4153,28 @@ p4a_status_t fit_pls_sparse_simpls(Context& ctx,
         for (double& value : x_score) value /= x_score_norm;
         for (double& value : direction) value /= x_score_norm;
 
+        // x_loadings = X^T * x_score  (O(n*p) — was a hand-written
+        // strided loop walking xk column-by-column; replaced with a
+        // single BLAS gemv via linalg::gemv when libp4a is built with
+        // PLS4ALL_WITH_BLAS, which closes the perf gap vs sklearn at
+        // mid-to-large sizes. Scalar fallback in linalg::gemv preserves
+        // bit-for-bit parity when BLAS is unavailable, and BLAS-vs-
+        // scalar diff is the same class already accepted on the cross-
+        // covariance gemm earlier in this function.
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
-        for (std::size_t feature = 0; feature < p; ++feature) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < n; ++row) {
-                sum += xk[idx(row, p, feature)] * x_score[row];
-            }
-            x_loadings[feature] = sum;
-        }
+        pls4all::linalg::gemv(
+            pls4all::linalg::Trans_Yes, n, p, 1.0,
+            xk.data(), x_score.data(), 0.0, x_loadings.data());
 
+        // y_loadings = Y^T * x_score  (O(n*q) — same pattern; marginal
+        // for PLS1 but kept symmetric so the SIMPLS-family hot path is
+        // fully BLAS-routed).
         std::vector<double> y_loadings;
         resize_fill(y_loadings, q, 0.0);
-        for (std::size_t target = 0; target < q; ++target) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < n; ++row) {
-                sum += yk[idx(row, q, target)] * x_score[row];
-            }
-            y_loadings[target] = sum;
-        }
+        pls4all::linalg::gemv(
+            pls4all::linalg::Trans_Yes, n, q, 1.0,
+            yk.data(), x_score.data(), 0.0, y_loadings.data());
 
         std::vector<double> v = x_loadings;
         if (comp > 0U) {
