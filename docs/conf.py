@@ -1,8 +1,10 @@
 """Sphinx config for pls4all docs.
 
-Renders the existing flat-markdown docs tree via myst-parser. Root
-document is `index.md`; sphinx auto-discovers nested .md via
-``include_patterns`` and the per-page toctree entries.
+Root document is `about.md` (the project info page). The actual landing
+page at `/index.html` is a fully custom interactive benchmark dashboard
+generated from `_templates/landing.html` via `html_additional_pages`;
+the JSON payload is built at sphinx-build time by `_extras/build_landing.py`
+and injected through `html_context`.
 
 Build locally:
     pip install -r docs/requirements.txt
@@ -15,6 +17,10 @@ gh-pages on every push to main.
 from __future__ import annotations
 
 import datetime as _dt
+import sys as _sys
+from pathlib import Path as _Path
+
+_sys.path.insert(0, str(_Path(__file__).parent / "_extras"))
 
 # ---- project --------------------------------------------------------
 
@@ -54,9 +60,10 @@ source_suffix = {
     ".rst": "restructuredtext",
 }
 
-# Master doc.
-root_doc = "index"
-master_doc = "index"
+# Master doc — `about.md` (project info). The `index` slot is taken
+# over by the custom landing dashboard (see html_additional_pages below).
+root_doc = "about"
+master_doc = "about"
 
 # Skip the per-phase implementation logs (huge + transient).
 exclude_patterns = [
@@ -104,3 +111,61 @@ html_static_path = ["_static"]
 
 # Narrow technical font + tighter tables for the benchmark pages.
 html_css_files = ["custom.css"]
+
+# Templates dir — Sphinx auto-discovers `_templates/`, but list it
+# explicitly so the custom landing.html template is picked up.
+templates_path = ["_templates"]
+
+# Override `/index.html` with the custom interactive dashboard.
+# Sphinx still renders about.md (master_doc) at `/about.html`.
+html_additional_pages = {"index": "landing.html"}
+
+
+def setup(app):
+    """Inject the benchmark JSON payload into html_context.
+
+    Strategy:
+      1. If `benchmarks/cross_binding/results/niveau_*.csv` are present
+         (local dev environment after a benchmark run), regenerate the
+         payload fresh and also write it to `docs/_static/bench-data.json`
+         for downstream consumers.
+      2. Otherwise (CI, fresh clone, etc.), fall back to the committed
+         `docs/_static/bench-data.json`.
+
+    Either way, the landing.html template receives `bench_data_json` +
+    `generated_at` via Jinja2 substitution.
+    """
+    import json as _json
+    from build_landing import build_payload
+
+    here = _Path(__file__).parent
+    results_dir = here.parent / "benchmarks" / "cross_binding" / "results"
+    static_json = here / "_static" / "bench-data.json"
+
+    csvs_present = results_dir.exists() and any(results_dir.glob("niveau_*.csv"))
+
+    if csvs_present:
+        payload = build_payload(results_dir)
+        # Persist the JSON so CI / fresh clones can render without the raw CSVs.
+        static_json.parent.mkdir(parents=True, exist_ok=True)
+        static_json.write_text(_json.dumps(payload["payload"], indent=2))
+        bench_json = payload["json"]
+        generated_at = payload["generated_at"]
+    elif static_json.exists():
+        raw = _json.loads(static_json.read_text())
+        bench_json = _json.dumps(raw, separators=(",", ":"))
+        generated_at = raw.get("generated_at", "unknown")
+    else:
+        # Empty fallback so the template still renders gracefully.
+        bench_json = _json.dumps({
+            "generated_at": "n/a",
+            "host": {}, "columns": [], "presets": {},
+            "rows": [], "versions": {},
+            "stats": {"algos": 0, "backends": 0, "sizes": 0,
+                       "threads": [], "rows": 0, "cells": 0, "ok": 0},
+        })
+        generated_at = "n/a"
+
+    app.config.html_context = dict(app.config.html_context or {})
+    app.config.html_context["bench_data_json"] = bench_json
+    app.config.html_context["generated_at"] = generated_at

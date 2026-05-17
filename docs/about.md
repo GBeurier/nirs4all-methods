@@ -2,6 +2,8 @@
 
 A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
 
+→ **<a href="./">Interactive cross-binding benchmark dashboard</a>** — landing page · 26 algos × 17 backends × 4 400+ cells, filterable / sortable / column-toggleable.
+
 ## Latest highlights (May 2026)
 
 - **R binding COMPLETE** — `pls4all_method()` dispatcher covers all 33
