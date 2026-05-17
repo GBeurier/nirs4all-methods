@@ -98,6 +98,22 @@ static mxArray* mr_int_vector(const p4a_method_result_t *mr, const char *name) {
     return mx;
 }
 
+/* Explicit allow-list of int64 fields that hold 0-based row / feature /
+ * interval indices and therefore need a +1 shift to expose 1-based
+ * MATLAB indices. Anything not on this list is returned verbatim. */
+static int is_index_int64_name(const char *name) {
+    static const char *idx_names[] = {
+        "selected_indices",
+        "neighbor_indices_i64",
+        "top_k_intervals",
+        "removed_indices",
+        NULL,
+    };
+    for (int i = 0; idx_names[i]; ++i)
+        if (strcmp(name, idx_names[i]) == 0) return 1;
+    return 0;
+}
+
 static mxArray* mr_int64_vector(const p4a_method_result_t *mr, const char *name) {
     const int64_t *data = NULL;
     int64_t size = 0;
@@ -105,8 +121,7 @@ static mxArray* mr_int64_vector(const p4a_method_result_t *mr, const char *name)
     if (st != P4A_OK || !data) return mxCreateDoubleMatrix(0, 0, mxREAL);
     mxArray *mx = mxCreateDoubleMatrix(1, (int)size, mxREAL);
     double *dst = mxGetPr(mx);
-    /* Add 1 to all index-like fields so MATLAB sees 1-based indices. */
-    int is_index_field = (strstr(name, "indices") != NULL);
+    int is_index_field = is_index_int64_name(name);
     for (int64_t i = 0; i < size; ++i)
         dst[i] = (double)(is_index_field ? (data[i] + 1) : data[i]);
     return mx;
@@ -215,11 +230,17 @@ static int64_t* get_int64_vec_field(const mxArray *params, const char *name,
     return out;
 }
 
-/* Build a deterministic n_folds-fold contiguous-blocks ValidationPlan over
- * n samples. Returns NULL on alloc / API failure. Caller owns the result
- * and must release it via p4a_validation_plan_destroy. */
-static p4a_validation_plan_t* make_default_plan(int n, int n_folds) {
-    if (n_folds < 2 || n < n_folds) return NULL;
+/* Build a deterministic k-fold contiguous-blocks ValidationPlan over
+ * n samples. Auto-clamps requested k to min(requested, n/2) so very small
+ * datasets still get at least 2 folds. Returns NULL on alloc / API
+ * failure or when n < 4 (not enough rows for a meaningful CV).
+ * Caller owns the result and must release it via
+ * p4a_validation_plan_destroy. */
+static p4a_validation_plan_t* make_default_plan(int n, int requested_folds) {
+    if (n < 4) return NULL;
+    int n_folds = requested_folds;
+    if (n_folds > n / 2) n_folds = n / 2;
+    if (n_folds < 2) n_folds = 2;
     p4a_validation_plan_t *plan = NULL;
     if (p4a_validation_plan_create(&plan) != P4A_OK) return NULL;
     if (p4a_validation_plan_set_n_samples(plan, (int64_t)n) != P4A_OK) {
