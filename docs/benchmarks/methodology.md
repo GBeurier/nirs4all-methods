@@ -116,17 +116,20 @@ this repo, the host is reproducible from the commit SHA + the
 ## Re-running
 
 ```bash
-# Complete canonical method/reference matrix.
-python benchmarks/cross_binding/orchestrator.py \
-  --algorithms all --registry-cells \
-  --threads 1 3 10 --n-runs 5 \
-  --libp4a-build blas-omp --canonical-pls4all-only \
-  --reference-backends all \
-  --out-csv benchmarks/cross_binding/results/full_matrix.csv
+# Complete canonical method/reference matrix, including build + docs render.
+# Existing cells in results/full_matrix.csv are skipped by default.
+benchmarks/cross_binding/run_overnight.sh
+
+# Recompute after a pls4all optimization or dependency update.
+FORCE=1 CLEAN_BUILD=1 benchmarks/cross_binding/run_overnight.sh
+
+# Only retry cells that previously failed, preserving successful timings.
+RERUN_FAILED=1 benchmarks/cross_binding/run_overnight.sh
 
 # PLS headline sweep only.
 python benchmarks/cross_binding/orchestrator.py \
   --algorithms pls --threads 1 3 10 --n-runs 5 \
+  --resume-existing \
   --libp4a-build blas-omp --reference-backends all \
   --out-csv benchmarks/cross_binding/results/full_matrix.csv
 

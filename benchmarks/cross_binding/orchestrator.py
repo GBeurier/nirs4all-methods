@@ -319,6 +319,98 @@ def parse_sizes(args_sizes) -> list[tuple[int, int]]:
     return out
 
 
+CSV_COLUMNS = ["algorithm", "backend", "language", "tier", "kind",
+               "n", "p", "threads", "libp4a_build", "seed_base",
+               "ok", "median_ms", "min_ms", "max_ms", "n_runs",
+               "parity_ref", "parity_max_diff", "parity_ok", "parity_note",
+               "subprocess_s", "predictions_path",
+               "versions_json", "reason"]
+
+
+def _to_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value in (None, ""):
+        return None
+    return str(value).strip().lower() == "true"
+
+
+def _to_int(value):
+    if value in (None, ""):
+        return None
+    return int(value)
+
+
+def _to_float(value):
+    if value in (None, ""):
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
+def coerce_csv_record(row: dict) -> dict:
+    out = dict(row)
+    for name in ("n", "p", "threads", "seed_base", "n_runs"):
+        out[name] = _to_int(out.get(name))
+    for name in ("ok", "parity_ok"):
+        out[name] = _to_bool(out.get(name))
+    for name in ("median_ms", "min_ms", "max_ms",
+                 "parity_max_diff", "subprocess_s"):
+        out[name] = _to_float(out.get(name))
+    try:
+        out["versions"] = json.loads(out.get("versions_json") or "{}")
+    except json.JSONDecodeError:
+        out["versions"] = {}
+    return out
+
+
+def load_existing_records(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    with path.open(newline="") as f:
+        return [coerce_csv_record(r) for r in csv.DictReader(f)]
+
+
+def slot_key(record: dict) -> tuple:
+    return (record.get("algorithm"), record.get("backend"),
+            int(record.get("n")), int(record.get("p")),
+            int(record.get("threads")), record.get("libp4a_build"))
+
+
+def strict_key(record: dict) -> tuple:
+    return (*slot_key(record),
+            int(record.get("seed_base")), int(record.get("n_runs")))
+
+
+def planned_keys(algo: str, backend_name: str, n: int, p: int,
+                 threads: int, build: str, seed_base: int,
+                 n_runs: int) -> tuple[tuple, tuple]:
+    slot = (algo, backend_name, n, p, threads, build)
+    strict = (*slot, seed_base, n_runs)
+    return slot, strict
+
+
+def write_records(csv_out: Path, records: list[dict]) -> None:
+    with csv_out.open("w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(CSV_COLUMNS)
+        for r in records:
+            w.writerow([
+                r.get("algorithm"), r.get("backend"), r.get("language"),
+                r.get("tier"), r.get("kind"),
+                r.get("n"), r.get("p"), r.get("threads"),
+                r.get("libp4a_build"), r.get("seed_base"),
+                r.get("ok"), r.get("median_ms"), r.get("min_ms"),
+                r.get("max_ms"), r.get("n_runs"),
+                r.get("parity_ref"), r.get("parity_max_diff"),
+                r.get("parity_ok"), r.get("parity_note", ""),
+                r.get("subprocess_s"), r.get("predictions_path"),
+                json.dumps(r.get("versions") or {}), r.get("reason", ""),
+            ])
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--algorithms", nargs="+", default=["pls"],
@@ -362,6 +454,16 @@ def main():
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_S)
     parser.add_argument("--out-csv", default=None,
                          help="Output CSV path (default: results/full_matrix.csv)")
+    parser.add_argument("--resume-existing", action="store_true",
+                         help="Load --out-csv when it exists and skip cells "
+                              "already computed with the same seed/n_runs.")
+    parser.add_argument("--force", action="store_true",
+                         help="Recompute planned cells even when present in "
+                              "--out-csv.")
+    parser.add_argument("--rerun-failed", action="store_true",
+                         help="With --resume-existing, rerun existing failed "
+                              "cells instead of preserving their recorded "
+                              "failure.")
     args = parser.parse_args()
     if args.registry_cells:
         os.environ["BENCH_REGISTRY_CELLS"] = "1"
@@ -412,7 +514,17 @@ def main():
                  int(spec.cell_params["n_features"]))]
 
     csv_out = Path(args.out_csv or RESULTS_DIR / "full_matrix.csv")
+    existing_records = load_existing_records(csv_out) if args.resume_existing else []
+    existing_by_slot: dict[tuple, dict] = {}
+    for row in existing_records:
+        try:
+            existing_by_slot[slot_key(row)] = row
+        except (TypeError, ValueError):
+            continue
+    planned_slots: set[tuple] = set()
     records: list[dict] = []
+    ran_records: list[dict] = []
+    skipped_existing = 0
 
     total = 0
     for algo in algos:
@@ -461,6 +573,21 @@ def main():
                                   f"{n:>5d}×{p:<4d} t={thr:<2d} "
                                   f"{build:<11s} {name:<14s}: ")
                         print(prefix, end="", flush=True)
+                        slot, strict = planned_keys(
+                            algo, name, n, p, thr, build,
+                            args.seed_base, args.n_runs)
+                        planned_slots.add(slot)
+                        existing = existing_by_slot.get(slot)
+                        if (args.resume_existing and not args.force
+                                and existing is not None
+                                and strict_key(existing) == strict
+                                and (existing.get("ok") or not args.rerun_failed)):
+                            records.append(existing)
+                            skipped_existing += 1
+                            status = "ok" if existing.get("ok") else "failed"
+                            print(f"SKIP existing {status}")
+                            continue
+
                         rec = run_backend(name, script, lang, tier, kind,
                                             algo, n, p, args.n_components,
                                             args.n_runs, thr, build,
@@ -476,40 +603,39 @@ def main():
                             "seed_base": args.seed_base,
                         })
                         records.append(rec)
+                        ran_records.append(rec)
                         if rec.get("ok"):
                             print(f"median={rec.get('median_ms', 0):.2f}ms")
                         else:
                             print(f"FAIL — {rec.get('reason', '?')[:100]}")
 
+    if existing_records:
+        preserved = [r for r in existing_records
+                     if slot_key(r) not in planned_slots]
+        if preserved:
+            print(f"# Preserving {len(preserved)} existing out-of-scope cells")
+        records = preserved + records
+
     # Post-hoc parity computation.
-    print(f"\n# Computing parity for {len(records)} records...")
-    compute_parity(records)
+    if ran_records:
+        ran_ids = {id(r) for r in ran_records}
+        parity_scope = [r for r in records
+                        if id(r) in ran_ids
+                        or (r.get("predictions_path")
+                            and Path(str(r["predictions_path"])).exists())]
+        print(f"\n# Computing parity for {len(parity_scope)} records "
+              f"({len(ran_records)} newly run)")
+        compute_parity(parity_scope)
+    else:
+        print("\n# No cells ran; preserving existing parity columns")
 
     # Write CSV.
-    cols = ["algorithm", "backend", "language", "tier", "kind",
-            "n", "p", "threads", "libp4a_build", "seed_base",
-            "ok", "median_ms", "min_ms", "max_ms", "n_runs",
-            "parity_ref", "parity_max_diff", "parity_ok", "parity_note",
-            "subprocess_s", "predictions_path",
-            "versions_json", "reason"]
-    with csv_out.open("w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(cols)
-        for r in records:
-            w.writerow([
-                r.get("algorithm"), r.get("backend"), r.get("language"),
-                r.get("tier"), r.get("kind"),
-                r.get("n"), r.get("p"), r.get("threads"),
-                r.get("libp4a_build"), r.get("seed_base"),
-                r.get("ok"), r.get("median_ms"), r.get("min_ms"),
-                r.get("max_ms"), r.get("n_runs"),
-                r.get("parity_ref"), r.get("parity_max_diff"),
-                r.get("parity_ok"), r.get("parity_note", ""),
-                r.get("subprocess_s"), r.get("predictions_path"),
-                json.dumps(r.get("versions") or {}), r.get("reason", ""),
-            ])
+    write_records(csv_out, records)
     print(f"CSV  → {csv_out}")
     print(f"Predictions cache → {PREDS_DIR}")
+    if args.resume_existing:
+        print(f"Resume summary: skipped={skipped_existing}, "
+              f"ran={len(ran_records)}, total_written={len(records)}")
 
 
 if __name__ == "__main__":

@@ -25,14 +25,11 @@ pls4all is benchmarked across three axes:
 ## Reproducing the benchmarks
 
 ```bash
-# Canonical method/reference matrix.
-python benchmarks/cross_binding/orchestrator.py \
-  --algorithms all --registry-cells --threads 1 --n-runs 3 \
-  --libp4a-build blas-omp --canonical-pls4all-only \
-  --reference-backends all \
-  --out-csv benchmarks/cross_binding/results/full_matrix.csv
+# Canonical method/reference matrix, including build + docs render.
+# Existing cells in results/full_matrix.csv are skipped by default.
+benchmarks/cross_binding/run_overnight.sh
 
-# Render to markdown
+# Render an existing CSV only.
 python benchmarks/cross_binding/combine_and_render.py \
   --csvs benchmarks/cross_binding/results/full_matrix.csv \
   --out docs/benchmarks/cross_binding.md

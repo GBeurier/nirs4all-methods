@@ -2,8 +2,8 @@
 
 Same matrix as the [main page](cross_binding.md), but with thread counts 1, 3 and 10 shown in separate per-(algorithm, thread) sections. **External libraries (`sklearn`, `pls`, `ropls`, `mixOmics`, `plsregress`, `ikpls`) typically don't accelerate their inner loops with thread count** — only their linked BLAS does, and that helps only when the algo is GEMM-bound. pls4all bindings use OpenMP at the C kernel level on top of the BLAS, so multi-thread wins are visible here.
 
-_Generated: 2026-05-17 22:06:38 UTC_
-_CSV: `tmpf9zxl8bn.csv` (142 cells)_
+_Generated: 2026-05-17 22:22:14 UTC_
+_CSV: `tmp067uz5rc.csv` (142 cells)_
 
 
 ## Host

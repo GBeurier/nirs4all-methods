@@ -23,6 +23,51 @@
       "displayName": "Local development · Release",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
     },
+    {
+      "name": "blas-on",
+      "inherits": "_base",
+      "displayName": "Release · BLAS",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PLS4ALL_WITH_BLAS": "ON",
+        "BLAS_INCLUDE_DIRS": "$env{CONDA_PREFIX}/include",
+        "BLAS_LIBRARIES": "$env{CONDA_PREFIX}/lib/libopenblas.so",
+        "CMAKE_BUILD_RPATH": "$env{CONDA_PREFIX}/lib",
+        "CMAKE_INSTALL_RPATH": "$env{CONDA_PREFIX}/lib"
+      }
+    },
+    {
+      "name": "omp-on",
+      "inherits": "_base",
+      "displayName": "Release · OpenMP",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PLS4ALL_WITH_OPENMP": "ON"
+      }
+    },
+    {
+      "name": "blas-omp",
+      "inherits": "_base",
+      "displayName": "Release · BLAS + OpenMP",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PLS4ALL_WITH_BLAS": "ON",
+        "PLS4ALL_WITH_OPENMP": "ON",
+        "BLAS_INCLUDE_DIRS": "$env{CONDA_PREFIX}/include",
+        "BLAS_LIBRARIES": "$env{CONDA_PREFIX}/lib/libopenblas.so",
+        "CMAKE_BUILD_RPATH": "$env{CONDA_PREFIX}/lib",
+        "CMAKE_INSTALL_RPATH": "$env{CONDA_PREFIX}/lib"
+      }
+    },
+    {
+      "name": "cuda-on",
+      "inherits": "_base",
+      "displayName": "Release · CUDA",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PLS4ALL_WITH_CUDA": "ON"
+      }
+    },
 
     { "name": "ci-linux-gcc12-release", "inherits": "_base",
       "cacheVariables": {
@@ -191,6 +236,10 @@
   "buildPresets": [
     { "name": "dev-debug",                "configurePreset": "dev-debug" },
     { "name": "dev-release",              "configurePreset": "dev-release" },
+    { "name": "blas-on",                  "configurePreset": "blas-on" },
+    { "name": "omp-on",                   "configurePreset": "omp-on" },
+    { "name": "blas-omp",                 "configurePreset": "blas-omp" },
+    { "name": "cuda-on",                  "configurePreset": "cuda-on" },
     { "name": "ci-linux-gcc12-release",   "configurePreset": "ci-linux-gcc12-release" },
     { "name": "ci-linux-gcc12-debug",     "configurePreset": "ci-linux-gcc12-debug" },
     { "name": "ci-linux-gcc13-release",   "configurePreset": "ci-linux-gcc13-release" },
@@ -211,6 +260,10 @@
   "testPresets": [
     { "name": "dev-debug",                "configurePreset": "dev-debug",                "output": { "outputOnFailure": true } },
     { "name": "dev-release",              "configurePreset": "dev-release",              "output": { "outputOnFailure": true } },
+    { "name": "blas-on",                  "configurePreset": "blas-on",                  "output": { "outputOnFailure": true } },
+    { "name": "omp-on",                   "configurePreset": "omp-on",                   "output": { "outputOnFailure": true } },
+    { "name": "blas-omp",                 "configurePreset": "blas-omp",                 "output": { "outputOnFailure": true } },
+    { "name": "cuda-on",                  "configurePreset": "cuda-on",                  "output": { "outputOnFailure": true } },
     { "name": "ci-linux-gcc12-release",   "configurePreset": "ci-linux-gcc12-release",   "output": { "outputOnFailure": true } },
     { "name": "ci-linux-gcc12-debug",     "configurePreset": "ci-linux-gcc12-debug",     "output": { "outputOnFailure": true } },
     { "name": "ci-linux-gcc13-release",   "configurePreset": "ci-linux-gcc13-release",   "output": { "outputOnFailure": true } },

@@ -163,13 +163,12 @@ CUDA) plug in via CMake presets without changing the ABI.
 ## Run the cross-binding benchmark
 
 ```bash
-# Complete canonical method/reference smoke matrix
-python benchmarks/cross_binding/orchestrator.py \
-  --algorithms all --registry-cells --threads 1 --n-runs 3 \
-  --canonical-pls4all-only --reference-backends all \
-  --out-csv benchmarks/cross_binding/results/full_matrix.csv
+# Complete overnight canonical method/reference matrix.
+# Skips cells already present in results/full_matrix.csv.
+# Env overrides: FORCE=1 RERUN_FAILED=1 THREADS="1 3 10" N_RUNS=5.
+benchmarks/cross_binding/run_overnight.sh
 
-# Render to docs/benchmarks/cross_binding.md
+# Render an existing CSV only
 python benchmarks/cross_binding/combine_and_render.py \
   --csvs benchmarks/cross_binding/results/full_matrix.csv \
   --out docs/benchmarks/cross_binding.md
