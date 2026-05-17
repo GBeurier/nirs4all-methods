@@ -26,11 +26,26 @@ static SEXP r_make_string(const char* s) {
     return Rf_mkString(s);
 }
 
+/* Copy the per-context error message, destroy ctx, then longjmp via
+ * Rf_error. Doing the destroy BEFORE Rf_error prevents leaking the ctx
+ * on the longjmp (longjmp skips any cleanup below the throw site).
+ * Callers must have already freed any other C resources they owned. */
 static void r_throw_status(const char* fn, p4a_status_t status, p4a_context_t* ctx) {
     const char* status_str = p4a_status_to_string(status);
-    const char* msg = (ctx != NULL) ? p4a_context_last_error(ctx) : NULL;
-    if (msg != NULL && msg[0] != '\0') {
-        Rf_error("%s failed: %s (%s)", fn, status_str, msg);
+    char buf[4096];
+    buf[0] = '\0';
+    if (ctx != NULL) {
+        const char* msg = p4a_context_last_error(ctx);
+        if (msg != NULL && msg[0] != '\0') {
+            size_t n = strlen(msg);
+            if (n >= sizeof(buf)) n = sizeof(buf) - 1;
+            memcpy(buf, msg, n);
+            buf[n] = '\0';
+        }
+        p4a_context_destroy(ctx);
+    }
+    if (buf[0] != '\0') {
+        Rf_error("%s failed: %s (%s)", fn, status_str, buf);
     } else {
         Rf_error("%s failed: %s", fn, status_str);
     }
@@ -117,9 +132,13 @@ SEXP r_pls4all_abi_version(void) {
 
 /* ---- fit -------------------------------------------------------------- */
 
-/* Convert a LGLSXP/INTSXP scalar into a {0,1} flag, treating NA as the
- * provided default. Useful for the optional fit-time switches below. */
+/* Convert a length-1 LGLSXP/INTSXP into a {0,1} flag, treating NA as
+ * the provided default. Errors on length != 1 (NULL / empty vectors)
+ * so a typo in the R wrapper surfaces at the boundary, not as a wild
+ * read of LOGICAL(NULL)[0]. */
 static int sexp_flag(SEXP s, int dflt) {
+    if (Rf_length(s) != 1)
+        Rf_error("expected a length-1 logical or integer scalar");
     if (TYPEOF(s) == LGLSXP) {
         int v = LOGICAL(s)[0];
         return (v == NA_LOGICAL) ? dflt : (v ? 1 : 0);
@@ -218,8 +237,8 @@ SEXP r_pls4all_fit(SEXP X, SEXP Y, SEXP algo_sexp, SEXP n_components_sexp,
     status = p4a_model_fit(ctx, cfg, &X_view, &Y_view, &model);
     p4a_config_destroy(cfg);
     if (status != P4A_OK) {
-        p4a_context_destroy(ctx);
         UNPROTECT(2);
+        /* r_throw_status copies the last_error message then destroys ctx. */
         r_throw_status("p4a_model_fit", status, ctx);
     }
     p4a_context_destroy(ctx);
@@ -280,11 +299,12 @@ SEXP r_pls4all_predict(SEXP model_ptr, SEXP X) {
     p4a_matrix_view_t out_view;
     p4a_matrix_view_init_rowmajor(&out_view, outrm, n_rows, n_targets, P4A_DTYPE_F64);
     status = p4a_model_predict(ctx, model, &X_view, &out_view);
-    p4a_context_destroy(ctx);
     if (status != P4A_OK) {
         UNPROTECT(2);
+        /* r_throw_status owns ctx destruction. */
         r_throw_status("p4a_model_predict", status, ctx);
     }
+    p4a_context_destroy(ctx);
 
     /* Convert row-major predictions into a column-major R matrix. */
     SEXP out = PROTECT(Rf_allocMatrix(REALSXP, (int)n_rows, (int)n_targets));

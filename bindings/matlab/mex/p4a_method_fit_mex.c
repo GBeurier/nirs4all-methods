@@ -265,6 +265,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
         int n_blocks = (int)mxGetNumberOfElements(bs);
         int64_t *bs_buf = (int64_t *)malloc((size_t)n_blocks * sizeof(int64_t));
+        if (!bs_buf) {
+            p4a_config_destroy(cfg); p4a_context_destroy(ctx); free(X); free(Y);
+            mexErrMsgIdAndTxt("pls4all:oom", "out of memory allocating block_sizes buffer");
+        }
         int64_t sum = 0;
         if (mxIsDouble(bs)) {
             const double *src = mxGetPr(bs);
