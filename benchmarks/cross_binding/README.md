@@ -1,0 +1,113 @@
+# Cross-binding benchmark
+
+This runner is the operational benchmark for full pls4all binding coverage.
+It exercises the canonical method catalog across C++/Python/R/MATLAB
+bindings and the external references that are actually valid for each
+method.
+
+## Registry
+
+`benchmarks/parity_timing/registry.py` is the source of truth. For each
+method it declares:
+
+- canonical benchmark parameters and dataset shape;
+- the pls4all call path and prediction key;
+- supported external references, when an external library exists;
+- tolerance and method-specific notes.
+
+`run_overnight.sh` sets `REFERENCE_BACKENDS=registry` by default. The
+lower-level `orchestrator.py` still defaults to `all` for legacy audits, so
+pass `--reference-backends registry` explicitly when calling it directly.
+Registry mode runs only the external references declared for the method
+under test, so unsupported library/method combinations are not scheduled.
+
+`--reference-backends fixed` and `--reference-backends all` are legacy
+cross-product audit modes. They intentionally try fixed sklearn/R/MATLAB
+scripts against broad algorithm sets. `NOT_IMPLEMENTED` rows in those
+modes usually mean the external library does not support the algorithm, not
+that a pls4all binding is missing.
+
+## Run
+
+```bash
+# Canonical clean sweep. Defaults:
+# CANONICAL_ONLY=1 REGISTRY_CELLS=1 REFERENCE_BACKENDS=registry
+# LIBP4A_BUILD=blas-omp RESUME=1
+benchmarks/cross_binding/run_overnight.sh
+
+# Internal pls4all smoke across the complete catalog.
+python benchmarks/cross_binding/orchestrator.py \
+  --algorithms all --sizes 100x50 --threads 1 \
+  --libp4a-build blas-omp --n-runs 1 --only-pls4all \
+  --timeout 120 \
+  --out-csv /tmp/pls4all_only.csv
+
+# Registry-declared external references at canonical cells.
+python benchmarks/cross_binding/orchestrator.py \
+  --algorithms all --registry-cells --canonical-pls4all-only \
+  --reference-backends registry --threads 1 \
+  --libp4a-build blas-omp --n-runs 1 \
+  --timeout 180 \
+  --out-csv /tmp/pls4all_registry_refs.csv
+
+# Legacy fixed-reference audit, expected to include NOT_IMPLEMENTED rows.
+FULL_MATRIX=1 REFERENCE_BACKENDS=all \
+  benchmarks/cross_binding/run_overnight.sh
+```
+
+For R/Octave-backed references, either activate the conda environment that
+contains `Rscript` and `octave`, or set `PLS4ALL_R_ENV=/path/to/env`.
+Several registry helpers still contain workstation-specific fallback paths;
+the release-quality path is to make every reference resolve from the active
+environment or from a pinned package.
+
+## Result semantics
+
+- `ok=False` with a `reason` means no timing/prediction was produced for
+  that scheduled cell.
+- `binding_parity_ok=False` means a pls4all core/binding row produced
+  predictions and timing, but differs from the native C++ baseline beyond
+  tolerance.
+- `reference_parity_ok=False` means a successful row differs from the
+  registry-declared method oracle beyond tolerance.
+- External libraries are not pls4all bindings. Treat their binding parity
+  fields as not applicable even if older CSVs contain legacy values.
+- `NOT_IMPLEMENTED` is expected only for legacy fixed/all reference modes
+  when a third-party library does not implement the algorithm.
+- In `--only-pls4all` runs, reference parity is not evaluated unless the
+  canonical external reference row is also scheduled.
+
+## Current coverage
+
+The previous 2026-05-18 coverage claim was produced by the registry sweep,
+but the follow-up audit found dashboard/gate interpretation bugs. Treat the
+numbers as historical smoke evidence until the dual-gate fixes land:
+
+- 568/568 scheduled internal pls4all cells OK;
+- 143/143 registry-declared external reference cells OK.
+
+PCR, OPLS and AOM preprocessing are wired through R/MATLAB tier1/tier2.
+Complex methods such as DI-PLS, N-PLS, SO-PLS, ON-PLS, ROSA, GPR-PLS,
+MB-PLS, selectors and diagnostics route through registry parameters instead
+of ad hoc wrapper signatures.
+
+## AOM reference
+
+Cross-binding AOM/POP references should import the unreleased nirs4all
+operator implementation from a git-pinned dependency, not from a workstation
+path:
+
+```bash
+python -m pip install -r benchmarks/cross_binding/requirements-git.txt
+```
+
+The pinned dependency currently resolves to
+`git+https://github.com/GBeurier/nirs4all.git@f07f5472f73d43d886be989226b3be4b68d7846b`.
+The imported module is `nirs4all.operators.models.sklearn.aom_pls`.
+The registry reference id is
+`ref_python_nirs4all_operators_models_sklearn_aom_pls`.
+
+Fixture generation still has a separate dependency on the historical
+`AOM_v0` bench oracle path. A clean CI/release gate must either vendor that
+oracle, pin it through nirs4all, or skip those fixtures with an explicit
+policy marker.

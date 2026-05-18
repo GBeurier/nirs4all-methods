@@ -25,8 +25,8 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
 - **ABI** — [reference](abi/reference.md) · [stability policy](abi/stability_policy.md) · [changes log](abi/changes_log.md)
 - **Bindings** — [Python](bindings/python.md) · [R](bindings/r.md) · [MATLAB](bindings/matlab.md) · [JavaScript / WebAssembly](bindings/js.md) · [Android](bindings/android.md)
 - **Parity** — [methodology](parity/methodology.md) · {doc}`tolerances <parity/tolerances>`
-- **Benchmarks** — [index](benchmarks/index.md) · [cross-binding parity + timing](benchmarks/cross_binding.md) · [methodology](benchmarks/methodology.md)
-- **Development** — [workflow](dev/workflow.md) · [build](dev/build.md) · [testing](dev/testing.md) · [style](dev/style.md) · [release process](dev/release_process.md)
+- **Benchmarks** — [index](benchmarks/index.md) · [overview](benchmarks/overview.md) · [cross-binding parity + timing](benchmarks/cross_binding.md) · [methodology](benchmarks/methodology.md)
+- **Development** — [workflow](dev/workflow.md) · [build](dev/build.md) · [testing](dev/testing.md) · [stabilisation plan](dev/stabilisation_plan.md) · [style](dev/style.md) · [release process](dev/release_process.md)
 - **Reviews** — Codex transcripts under `docs/reviews/`
 - **Roadmap** — `ROADMAP.md`, per-phase plans under `roadmap/`
 
@@ -37,15 +37,21 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
 abi/reference
 abi/stability_policy
 abi/changes_log
+intro/overview
+intro/getting_started
+intro/concepts
 architecture/overview
 architecture/memory_model
 architecture/error_model
 architecture/threading
 architecture/serialization
 benchmarks/index
+benchmarks/overview
 benchmarks/cross_binding
 benchmarks/cross_binding_threads
 benchmarks/methodology
+landing/dashboard
+methods/index
 bindings/python
 bindings/r
 bindings/matlab
@@ -55,7 +61,9 @@ parity/methodology
 parity/tolerances
 dev/workflow
 dev/build
+dev/readthedocs
 dev/testing
+dev/stabilisation_plan
 dev/style
 dev/release_process
 ```

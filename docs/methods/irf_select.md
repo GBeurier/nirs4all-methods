@@ -1,0 +1,199 @@
+# `irf_select` — IRF — Iterative Random Forest
+
+_Group_: **Variable selector** · _Registry tolerance_: `1.3`
+
+## Description
+
+Interval Random Frog (Phase 52)
+
+From the `pls4all.sklearn.IRFSelector` docstring:
+
+> IRF — Interval Random Frog (Yun 2013).
+
+> **Registry note** — Octave-bridged libPLS 1.95 `irf(X, y, N, w, Q, A, 'center')`. Stochastic chain; pls4all uses splitmix64 vs MATLAB rand, and a deterministic candidate-ranking step in the proposal generator. Mask metric ~0=perfect, ~1=half disagree, ~1.41=disjoint.
+
+### Parameters
+
+| Name | Type | Default | Notes |
+|------|------|---------|-------|
+| `top_k` | `int` | `None` | Number of features to retain. |
+| `n_components` | `int` | `2` | Number of latent components extracted (k). |
+| `n_iterations` | `int` | `100` | Number of selection iterations or Monte-Carlo passes. |
+| `window_size` | `int` | `5` | Length of the moving window for recursive / interval-random-frog models. |
+| `initial_intervals` | `int` | `5` | Number of seed intervals for the interval-random-frog walk. |
+| `seed` | `int` | `0` | Random seed for reproducible sampling/initialization. |
+
+## Explanations
+
+### Bibliographic source
+
+Basu, S., Kumbier, K., Brown, J. B. & Yu, B. (2018). *Iterative random forests to discover predictive and stable high-order interactions*. Proceedings of the National Academy of Sciences 115(8), 1943–1948.
+
+### Mathematical principle
+
+IRF iteratively re-weights random forest feature importances and refits. At each iteration, features with high feature-importance get oversampled in the bootstrap of the next forest; the loop converges to a stable ranking of features by their **interaction-aware** importance.
+
+Adapted for PLS prediction: the IRF importance ranking is used to select the top-$k$ features, then PLS is fit on the selected subset. The RF importance is non-linear so this catches predictive features that interact rather than contributing additively — typically missed by linear selectors like VIP.
+
+### Implementation
+
+`p4a_irf_select`.
+
+R roxygen note (`methods_extra.R::irf_select`):
+
+> IRF — Interval Random Frog.
+> @param n_components Integer. Number of latent components.
+> @param n_iterations Integer >= 1. Number of outer-loop iterations.
+> @param window_size Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+> @param initial_intervals Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+> @param top_k Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+> @param seed Integer. Random seed for reproducibility.
+> @param X Numeric matrix of predictors (rows = samples, cols = features).
+> @param Y Numeric matrix or vector of responses, with one row per sample.
+> @export
+
+### Usage
+
+All four pls4all bindings dispatch into the same C kernel; the external libraries on the right are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language.
+
+**pls4all bindings**
+
+::::{tab-set}
+:class: pls4all-bindings
+
+:::{tab-item} C ABI · libp4a
+:sync: c
+:class-label: lang-c
+
+```c
+/* C ABI — libp4a */
+p4a_context_t* ctx = p4a_context_create();
+p4a_config_t*  cfg = p4a_config_create();
+p4a_method_result_t* res = NULL;
+p4a_irf_select(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
+/* … read coefficients / mask / scores via */
+/* p4a_method_result_get_double_matrix / vector / scalar … */
+p4a_method_result_destroy(res);
+p4a_config_destroy(cfg);
+p4a_context_destroy(ctx);
+```
+
+:::
+
+:::{tab-item} Python · pls4all (raw)
+:sync: python-raw
+:class-label: lang-python
+
+```python
+import pls4all
+from pls4all._methods import irf_select
+with pls4all.Context() as ctx, pls4all.Config() as cfg:
+    res = irf_select(ctx, cfg, X, y, n_components=3)
+# then: res.matrix("predictions"), res.matrix("coefficients"),
+# res.vector("mask"), res.scalar("intercept"), …
+```
+
+:::
+
+:::{tab-item} Python · pls4all.sklearn
+:sync: python-sklearn
+:class-label: lang-python
+
+```python
+from pls4all.sklearn import IRFSelector
+mdl = IRFSelector(top_k, n_components=2, n_iterations=100, window_size=5, initial_intervals=5, seed=0)
+mdl.fit(X, y)
+y_hat = mdl.predict(X_test)
+```
+
+:::
+
+:::{tab-item} R · pls4all_method()
+:sync: r-dispatcher
+:class-label: lang-r
+
+```r
+library(pls4all)
+# Unified low-level dispatcher (May 2026 R cleanup):
+res <- pls4all_method("irf_select", X, y,
+                      n_components = 3L, params = list(n_iterations = 30L, window_size = 4L, initial_intervals = 5L, top_k = 5L, seed = 11L))
+# res is a named list with MethodResult arrays/scalars.
+# selected_indices / top_k_intervals are 1-based.
+```
+
+:::
+
+:::{tab-item} R · pls4all (raw fn)
+:sync: r-raw
+:class-label: lang-r
+
+```r
+library(pls4all)
+res  <- irf_select(X, Y, n_components,
+            n_iterations = 100L, window_size = 10L,
+            initial_intervals = 10L, top_k = 5L, seed = 0L)
+yhat <- pls4all_predict(res, X_test)
+```
+
+:::
+
+:::{tab-item} MATLAB · pls4all (MEX)
+:sync: matlab-mex
+:class-label: lang-matlab
+
+```matlab
+res  = pls4all.fit("irf_select", X, y, "NumComponents", 3);
+yhat = predict(res, Xtest);
+```
+
+:::
+
+:::{tab-item} MATLAB · pls4all (classdef)
+:sync: matlab-classdef
+:class-label: lang-matlab
+
+_No idiomatic classdef wrapper — invoke `pls4all.fit("irf_select", X, y, …)` directly from the unified MEX factory._
+
+:::
+
+::::
+
+
+**Registry parity references** 📐
+
+:::{card}
+:class-card: external-refs
+
+- 📐 **`ref.matlab_libpls`** (matlab · python) — `libPLS` 1.95 · qualitative (rmse_rel ≤ 1e+00) — Octave-bridged libPLS 1.95 `irf(X, y, N, w, Q, A, 'center')`. RNG differs; mask metric.
+:::
+
+### Benchmarks
+
+Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.csv`](../benchmarks/overview.md). Verdict legend: ✓ exact · ≈ drift · ✗ divergent · ⊘ not available in lib · — not run · ⚠ error. The fastest backend per column is marked with a 🏆 medal. Rows tagged with **📐** are *also* declared in [`benchmarks/parity_timing/registry.py`](../benchmarks/methodology.md) as the canonical parity references for this method (`python_reference` / `r_reference` / `extra_references`). Cell parity in this table is measured against the cross-binding reference (`pls4all.cpp` blas-omp, 1 thread); the 📐 icon points at the *library-of-record* the parity gate ultimately answers to. Hover the icon to see the role and tolerance band.
+
+::::{tab-set}
+:class: parity-tabs
+
+:::{tab-item} 1 thread
+:sync: threads-1
+
+<div class="parity-table-wrap">
+<table class="docutils parity-grouped">
+<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">120×30 (ms)</th></tr></thead>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.registry</code></td><td class="parity parity-exact">✓ ref</td><td class="ms ms-best">173.3 ms<span class="medal" title="fastest">🏆</span></td></tr>
+</tbody>
+<tbody class="lang-band lang-matlab"><tr class="lang-band-row" data-lang="matlab"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>MATLAB · external</th></tr>
+<tr class="bk-row truth-source truth-source-qualitative"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (python): libPLS 1.95 — qualitative (rmse_rel ≤ 1e+00)">📐</span><code>ref.matlab_libpls</code></td><td class="parity parity-error">⚠</td><td class="ms">—</td></tr>
+</tbody>
+</table>
+</div>
+
+:::
+
+::::
+
+
+---
+
+_See also_: [benchmark overview](../benchmarks/overview.md) · [methods index](index.md) · [interactive dashboard](../landing/dashboard.md)

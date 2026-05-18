@@ -1,0 +1,648 @@
+{
+  "version": 1,
+  "description": "Structural snapshot of benchmarks/parity_timing/registry.py's parity-reference declarations. Host-insensitive: records only which reference slots are wired (python / r), the role keys of extra_references, and whether the MethodSpec is paper_only. Regenerate with `python -m benchmarks.parity_timing.lockfile`.",
+  "methods": [
+    {
+      "name": "aom_preprocess",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 5.0,
+      "prediction_key": "transformed"
+    },
+    {
+      "name": "approximate_press",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 10.0,
+      "prediction_key": "press_per_component"
+    },
+    {
+      "name": "bagging_pls",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 2.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "bipls_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.7,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "boosting_pls",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 10.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "bve_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.4,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "cars_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.4,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "continuum_regression",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 20.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "cppls",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 10.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "di_pls",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.02,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "ds",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.5,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "ecr",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.001,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "emcuve_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.35,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "fused_sparse_pls",
+      "paper_only": true,
+      "has_python_reference": false,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.05,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "ga_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.3,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "gpr_pls",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1e-08,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "group_sparse_pls",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 10.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "interval_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.0,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "ipw_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.0,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "irf_select",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.3,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "iriv_select",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.0,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "kernel_pls_rbf",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 2.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "lw_pls",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 5.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "mb_pls",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 2.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "mir_pls",
+      "paper_only": true,
+      "has_python_reference": false,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.05,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "missing_aware_nipals",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 10.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "n_pls",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 10.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "o2pls",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "on_pls",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 10.0,
+      "prediction_key": "joint_loadings_0"
+    },
+    {
+      "name": "one_se_rule",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 10.0,
+      "prediction_key": "mean_rmse_per_component"
+    },
+    {
+      "name": "opls",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.001,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "pcr",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1e-06,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "pds",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.5,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "pls",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": true,
+      "extra_reference_roles": [
+        "ikpls",
+        "mixOmics"
+      ],
+      "rmse_rel_tol": 0.1,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "pls_cox",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 5.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "pls_diagnostic_dmodx",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 5.0,
+      "prediction_key": "dmodx"
+    },
+    {
+      "name": "pls_diagnostic_q",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 5.0,
+      "prediction_key": "q"
+    },
+    {
+      "name": "pls_diagnostic_t2",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 10.0,
+      "prediction_key": "t2"
+    },
+    {
+      "name": "pls_glm",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.5,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "pls_lda",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 5.0,
+      "prediction_key": "decision_scores"
+    },
+    {
+      "name": "pls_logistic",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 5.0,
+      "prediction_key": "decision_scores"
+    },
+    {
+      "name": "pls_monitoring",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 10.0,
+      "prediction_key": "t2"
+    },
+    {
+      "name": "pls_qda",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 10.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "pso_select",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.4,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "random_frog_select",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.35,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "random_subspace_pls",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 2.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "randomization_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.3,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "recursive_pls",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.1,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "rep_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.8,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "ridge_pls",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.1,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "robust_pls",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 2.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "rosa",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "scars_select",
+      "paper_only": true,
+      "has_python_reference": false,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.0,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "shaving_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.7,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "sipls_select",
+      "paper_only": true,
+      "has_python_reference": false,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.7,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "so_pls",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "spa_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.2,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "sparse_pls_da",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 2.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "sparse_simpls",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.0,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "st_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 2.1,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "stability_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.35,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "t2_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.2,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "uve_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.7,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "variable_select_coef",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.1,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "variable_select_sr",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.3,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "variable_select_vip",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.7,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "vip_spa_select",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 1.3,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "vissa_select",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 2.5,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "weighted_pls",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.1,
+      "prediction_key": "predictions"
+    },
+    {
+      "name": "wvc_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.7,
+      "prediction_key": "mask"
+    },
+    {
+      "name": "wvc_threshold_select",
+      "paper_only": false,
+      "has_python_reference": false,
+      "has_r_reference": true,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 0.7,
+      "prediction_key": "mask"
+    }
+  ]
+}

@@ -1,0 +1,198 @@
+# `emcuve_select` — EMCUVE — Ensemble MC-UVE
+
+_Group_: **Variable selector** · _Registry tolerance_: `1.35`
+
+## Description
+
+EMCUVE ensemble MC-UVE (§18 Phase 5n)
+
+From the `pls4all.sklearn.EMCUVESelector` docstring:
+
+> Ensemble Monte-Carlo UVE selector.
+
+> **Registry note** — R `plsVarSel::mcuve_pls` called N times with seeded RNGs and vote-aggregated — same algorithm as pls4all's EMCUVE. RNG diverges between R sample() and pls4all splitmix64.
+
+### Parameters
+
+| Name | Type | Default | Notes |
+|------|------|---------|-------|
+| `n_components` | `int` | `2` | Number of latent components extracted (k). |
+| `noise_features` | `int` | `50` | Number of artificial noise variables appended to X for the UVE threshold. |
+| `noise_seed` | `int` | `0` | Seed for the appended noise variables. |
+| `n_ensembles` | `int` | `10` | Number of UVE replicates aggregated by majority vote. |
+| `vote_threshold` | `float` | `0.5` | Minimum vote fraction required to retain a variable in EMCUVE. |
+| `n_folds` | `int` | `3` | Number of cross-validation folds used inside the selector. |
+
+## Explanations
+
+### Bibliographic source
+
+Han, Q.-J., Wu, H.-L., Cai, C.-B., Xu, L. & Yu, R.-Q. (2008). *An ensemble of Monte Carlo uninformative variable elimination for wavelength selection*. Analytica Chimica Acta 612(2), 121–125. https://doi.org/10.1016/j.aca.2008.02.032 — extends the MC-UVE procedure of Cai et al. (2008) (`stability_select`) by aggregating independent MC-UVE rounds through a vote rule.
+
+### Mathematical principle
+
+Run multiple independent MC-UVE rounds with different seeds, threshold each independently, then **vote** across rounds: a feature is selected if it survives thresholding in a majority of rounds. Robust against single-round instability caused by particular bootstrap samples.
+
+The voting rule has a free parameter (majority threshold); the default of $\lceil R/2 \rceil$ is the median-style majority. Stricter thresholds give smaller but more reliable subsets.
+
+### Implementation
+
+`p4a_emcuve_select`.
+
+R roxygen note (`methods_extra.R::emcuve_select`):
+
+> EMCUVE — ensemble Monte Carlo UVE.
+> @param n_components Integer. Number of latent components.
+> @param noise_features Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+> @param noise_seed Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+> @param n_ensembles Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+> @param vote_threshold Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+> @param X Numeric matrix of predictors (rows = samples, cols = features).
+> @param Y Numeric matrix or vector of responses, with one row per sample.
+> @export
+
+### Usage
+
+All four pls4all bindings dispatch into the same C kernel; the external libraries on the right are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language.
+
+**pls4all bindings**
+
+::::{tab-set}
+:class: pls4all-bindings
+
+:::{tab-item} C ABI · libp4a
+:sync: c
+:class-label: lang-c
+
+```c
+/* C ABI — libp4a */
+p4a_context_t* ctx = p4a_context_create();
+p4a_config_t*  cfg = p4a_config_create();
+p4a_method_result_t* res = NULL;
+p4a_emcuve_select(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
+/* … read coefficients / mask / scores via */
+/* p4a_method_result_get_double_matrix / vector / scalar … */
+p4a_method_result_destroy(res);
+p4a_config_destroy(cfg);
+p4a_context_destroy(ctx);
+```
+
+:::
+
+:::{tab-item} Python · pls4all (raw)
+:sync: python-raw
+:class-label: lang-python
+
+```python
+import pls4all
+from pls4all._methods import emcuve_select
+with pls4all.Context() as ctx, pls4all.Config() as cfg:
+    res = emcuve_select(ctx, cfg, X, y, n_components=4)
+# then: res.matrix("predictions"), res.matrix("coefficients"),
+# res.vector("mask"), res.scalar("intercept"), …
+```
+
+:::
+
+:::{tab-item} Python · pls4all.sklearn
+:sync: python-sklearn
+:class-label: lang-python
+
+```python
+from pls4all.sklearn import EMCUVESelector
+mdl = EMCUVESelector(n_components=2, noise_features=50, noise_seed=0, n_ensembles=10, vote_threshold=0.5, n_folds=3)
+mdl.fit(X, y)
+y_hat = mdl.predict(X_test)
+```
+
+:::
+
+:::{tab-item} R · pls4all_method()
+:sync: r-dispatcher
+:class-label: lang-r
+
+```r
+library(pls4all)
+# Unified low-level dispatcher (May 2026 R cleanup):
+res <- pls4all_method("emcuve_select", X, y,
+                      n_components = 4L, params = list(noise_features = 5L, n_ensembles = 5L, vote_threshold = 0.5, noise_seed = 11L))
+# res is a named list with MethodResult arrays/scalars.
+# selected_indices / top_k_intervals are 1-based.
+```
+
+:::
+
+:::{tab-item} R · pls4all (raw fn)
+:sync: r-raw
+:class-label: lang-r
+
+```r
+library(pls4all)
+res  <- emcuve_select(X, Y, n_components,
+               noise_features = NULL, noise_seed = 0L,
+               n_ensembles = 5L, vote_threshold = 0.5)
+yhat <- pls4all_predict(res, X_test)
+```
+
+:::
+
+:::{tab-item} MATLAB · pls4all (MEX)
+:sync: matlab-mex
+:class-label: lang-matlab
+
+```matlab
+res  = pls4all.fit("emcuve_select", X, y, "NumComponents", 4);
+yhat = predict(res, Xtest);
+```
+
+:::
+
+:::{tab-item} MATLAB · pls4all (classdef)
+:sync: matlab-classdef
+:class-label: lang-matlab
+
+_No idiomatic classdef wrapper — invoke `pls4all.fit("emcuve_select", X, y, …)` directly from the unified MEX factory._
+
+:::
+
+::::
+
+
+**Registry parity references** 📐
+
+:::{card}
+:class-card: external-refs
+
+- 📐 **`ref.r_plsvarsel`** (R · r) — `plsVarSel` 0.10.0 · qualitative (rmse_rel ≤ 1e+00) — R `plsVarSel::mcuve_pls` repeated N times with different seeds, then vote-aggregated. Same algorithm family as pls4all's EMCUVE. RNGs differ; mask metric ~0=perfect.
+:::
+
+### Benchmarks
+
+Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.csv`](../benchmarks/overview.md). Verdict legend: ✓ exact · ≈ drift · ✗ divergent · ⊘ not available in lib · — not run · ⚠ error. The fastest backend per column is marked with a 🏆 medal. Rows tagged with **📐** are *also* declared in [`benchmarks/parity_timing/registry.py`](../benchmarks/methodology.md) as the canonical parity references for this method (`python_reference` / `r_reference` / `extra_references`). Cell parity in this table is measured against the cross-binding reference (`pls4all.cpp` blas-omp, 1 thread); the 📐 icon points at the *library-of-record* the parity gate ultimately answers to. Hover the icon to see the role and tolerance band.
+
+::::{tab-set}
+:class: parity-tabs
+
+:::{tab-item} 1 thread
+:sync: threads-1
+
+<div class="parity-table-wrap">
+<table class="docutils parity-grouped">
+<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">200×40 (ms)</th></tr></thead>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.registry</code></td><td class="parity parity-exact">✓ ref</td><td class="ms ms-best">189.6 ms<span class="medal" title="fastest">🏆</span></td></tr>
+</tbody>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · external</th></tr>
+<tr class="bk-row truth-source truth-source-qualitative"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (r): plsVarSel 0.10.0 — qualitative (rmse_rel ≤ 1e+00)">📐</span><code>ref.r_plsvarsel</code></td><td class="parity parity-divergent">✗ +1e+00</td><td class="ms">1.2 s</td></tr>
+</tbody>
+</table>
+</div>
+
+:::
+
+::::
+
+
+---
+
+_See also_: [benchmark overview](../benchmarks/overview.md) · [methods index](index.md) · [interactive dashboard](../landing/dashboard.md)

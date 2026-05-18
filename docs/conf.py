@@ -36,6 +36,7 @@ version = "0.97"
 
 extensions = [
     "myst_parser",
+    "sphinx_design",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.viewcode",
 ]
@@ -111,6 +112,7 @@ html_static_path = ["_static"]
 
 # Narrow technical font + tighter tables for the benchmark pages.
 html_css_files = ["custom.css"]
+html_js_files = ["tab-combo.js"]
 
 # Templates dir — Sphinx auto-discovers `_templates/`, but list it
 # explicitly so the custom landing.html template is picked up.

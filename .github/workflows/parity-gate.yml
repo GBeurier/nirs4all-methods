@@ -101,6 +101,16 @@ jobs:
           print("python binding smoke OK from CI")
           PY
 
+      - name: Verify parity-reference lockfile matches the registry
+        # Structural gate over benchmarks/parity_timing/registry.py. The
+        # lockfile records which methods declare a python / r / extra
+        # reference and is consumed by the per-method dashboards under
+        # docs/methods/ (📐 icon). Drift here means the documented truth
+        # sources no longer agree with the registry — fail before merge
+        # so the regenerated docs stay honest.
+        run: |
+          python -m benchmarks.parity_timing.lockfile --check
+
       - name: Confirm core parity gate
         run: |
-          echo "Core parity gate validates fixture determinism plus preprocessing, validation metrics, NIPALS, PLSCanonical, PLSSVD, PLS-DA, PLS-LDA, PLS-logistic, MB-PLS, LW-PLS, OPLS, multi-class OPLS-DA, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power, randomized-SVD, PCR and variable-selection parity through WVC-PLS."
+          echo "Core parity gate validates: (1) fixture determinism — every JSON in parity/fixtures/ regenerates bit-identically from the pinned sklearn/numpy generator under parity/python_generator/; (2) the C++ ctest suite asserts pls4all matches those fixtures within parity/tolerances.md per-row tolerances (preprocessing, validation metrics, NIPALS, PLSCanonical, PLSSVD, PLS-DA, PLS-LDA, PLS-logistic, MB-PLS, LW-PLS, OPLS, multi-class OPLS-DA, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power, randomized-SVD, PCR and variable-selection through WVC-PLS); (3) the structural parity-reference lockfile (truth_sources.lock.json) matches the live registry, so the 📐 markers in docs/methods/ never silently drift. The live cross-binding parity_timing/runner.py is a developer smoke check, not a CI gate — it needs R/Octave and is run manually."

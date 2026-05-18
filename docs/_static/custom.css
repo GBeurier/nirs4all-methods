@@ -76,3 +76,106 @@ div.body {
 .icon-ok    { color: #2e7d32; font-weight: 600; }
 .icon-warn  { color: #f57c00; font-weight: 600; }
 .icon-fail  { color: #c62828; font-weight: 600; }
+
+/* Truth-source marker (📐) — appears next to backend rows in the
+ * per-method benchmark tables when the row is also a registry-declared
+ * parity reference for that method.
+ *
+ * The row also gets one of three quality classes (strict / relaxed /
+ * qualitative), derived from `method.rmse_rel_tol`, so the tint and
+ * border colour honestly reflect how strict the parity gate is. A
+ * widened-tolerance reference (qualitative band) gets a dashed border
+ * and a duller tint so a 📐 doesn't oversell agreement. */
+.truth-mark {
+    margin-right: 4px;
+    opacity: 0.85;
+    font-size: 0.9em;
+    cursor: help;
+    user-select: none;
+}
+.truth-mark.paper-only { color: #6e6e6e; opacity: 0.7; }
+
+tr.bk-row.truth-source > td.bk-name {
+    background: rgba(46, 125, 50, 0.04);
+    border-left: 3px solid rgba(46, 125, 50, 0.55);
+}
+tr.bk-row.truth-source-strict > td.bk-name {
+    background: rgba(46, 125, 50, 0.08);
+    border-left: 3px solid rgba(46, 125, 50, 0.85);
+}
+tr.bk-row.truth-source-relaxed > td.bk-name {
+    background: rgba(255, 167, 38, 0.05);
+    border-left: 3px solid rgba(255, 167, 38, 0.7);
+}
+tr.bk-row.truth-source-qualitative > td.bk-name {
+    background: rgba(120, 120, 120, 0.04);
+    border-left: 3px dashed rgba(120, 120, 120, 0.55);
+}
+
+/* Horizontal scroll for any table wider than its container.
+ *
+ * MyST/Sphinx always wraps a Markdown table in
+ * `<div class="table-wrapper docutils container">`. Giving that wrapper
+ * `overflow-x: auto` is what produces a scroll bar; the table itself must
+ * be allowed to grow past 100% of the wrapper, otherwise the cells
+ * (which carry `white-space: nowrap` above) just collide inside a
+ * constrained width and the wrapper has nothing to scroll. */
+.table-wrapper,
+figure.table,
+.parity-table-wrap {
+    overflow-x: auto;
+    max-width: 100%;
+}
+.table-wrapper > table.docutils,
+figure.table > table.docutils,
+.parity-table-wrap > table.docutils {
+    max-width: none;
+    width: max-content;
+}
+
+/* sphinx-design tab sets are used heavily by generated method pages.
+ * The small script in tab-combo.js keeps the synced radio inputs but
+ * replaces the long row of labels with a compact select control. */
+.sd-tab-set {
+    margin: 14px 0 22px;
+}
+
+.sd-tab-set > .sd-tab-label {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.p4-tab-combo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+}
+
+.p4-tab-combo-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #6f7782;
+    box-shadow: 0 0 0 2px #f5f7fa;
+}
+
+.p4-tab-combo-dot[data-lang="python"] { background: #3572a5; }
+.p4-tab-combo-dot[data-lang="r"] { background: #276dc3; }
+.p4-tab-combo-dot[data-lang="matlab"] { background: #b35c17; }
+.p4-tab-combo-dot[data-lang="c"] { background: #555555; }
+.p4-tab-combo-dot[data-lang="cpp"] { background: #555555; }
+
+.p4-tab-combo select {
+    min-width: 220px;
+    max-width: min(420px, calc(100vw - 72px));
+    padding: 6px 30px 6px 10px;
+    border: 1px solid #c8d0d9;
+    border-radius: 4px;
+    background: #fff;
+    color: #1f2933;
+    font: inherit;
+}

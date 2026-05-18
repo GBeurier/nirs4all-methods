@@ -3439,10 +3439,10 @@ p4a_status_t fit_pcr_svd(
     model->tol = cfg.tol;
     model->max_iter = cfg.max_iter;
 
-    std::vector<double> xk;
+    std::vector<double> xs;
     std::vector<double> ys;
     center_scale_in_place(x_original, n, p, cfg.center_x != 0, cfg.scale_x != 0,
-                          model->x_mean, model->x_scale, xk);
+                          model->x_mean, model->x_scale, xs);
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, ys);
 
@@ -3454,82 +3454,195 @@ p4a_status_t fit_pcr_svd(
     resize_fill(scores_t, n * a, 0.0);
     resize_fill(y_scores_u, n * a, 0.0);
 
-    for (std::size_t comp = 0; comp < a; ++comp) {
-        std::vector<double> gram;
-        resize_fill(gram, p * p, 0.0);
-        for (std::size_t row = 0; row < p; ++row) {
-            for (std::size_t col = row; col < p; ++col) {
-                double sum = 0.0;
-                for (std::size_t sample = 0; sample < n; ++sample) {
-                    sum += xk[idx(sample, p, row)] * xk[idx(sample, p, col)];
+    // ------------------------------------------------------------------
+    // Single-shot PCR via one eigendecomposition of (Xc^T Xc).
+    //
+    // Mathematically equivalent to the per-component "build Gram + extract
+    // top eigenvector + deflate X" loop, but at a fraction of the cost:
+    //   * One Gram build  (p x p) via gemm instead of `a` rebuilds.
+    //   * One symmetric Jacobi diagonalization that yields ALL eigenpairs
+    //     in a single sweep instead of `a` invocations that each do a full
+    //     diagonalization just to read off one eigenvector.
+    //   * No X deflation: because (Xc^T Xc) eigenvectors are orthonormal,
+    //     deflated x_score_i is exactly sigma_i * U[:, i] and x_loadings_i
+    //     reduces to V[:, i] = direction_i (closed form, no inner loop).
+    // ------------------------------------------------------------------
+    if (p == 0U || a == 0U) {
+        ctx.set_errorf("PCR requires positive feature and component counts");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    if (a > p) {
+        ctx.set_errorf("PCR n_components (%llu) exceeds feature count (%llu)",
+                       ull(a), ull(p));
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+
+    // Gram = Xc^T Xc  (symmetric, p x p, row-major contiguous).
+    std::vector<double> gram;
+    resize_fill(gram, p * p, 0.0);
+    pls4all::linalg::gemm(
+        pls4all::linalg::Trans_Yes, pls4all::linalg::Trans_No,
+        p, p, n,
+        1.0,
+        xs.data(), p,
+        xs.data(), p,
+        0.0,
+        gram.data(), p);
+
+    // Full symmetric cyclic Jacobi diagonalization. After convergence:
+    //   mat[i,i]      = eigenvalues (unsorted)
+    //   eigvecs[:, i] = corresponding orthonormal eigenvector
+    //
+    // Sweeps walk every off-diagonal (row, col > row) in fixed order
+    // instead of paying O(p^2) to relocate the max-magnitude entry every
+    // single rotation. Cyclic Jacobi converges quadratically and needs
+    // only O(log p) sweeps for double-precision eigendecompositions of
+    // well-conditioned symmetric matrices; the sweep cap is set to 64
+    // which is far above the textbook 10-12 needed in practice.
+    std::vector<double> mat = gram;
+    std::vector<double> eigvecs;
+    resize_fill(eigvecs, p * p, 0.0);
+    for (std::size_t i = 0; i < p; ++i) {
+        eigvecs[idx(i, p, i)] = 1.0;
+    }
+    const double stop_tol = std::min(std::max(cfg.tol, 1e-14), 1e-12);
+    constexpr std::size_t kMaxSweeps = 64U;
+    bool converged = (p <= 1U);
+    if (p >= 2U) {
+        for (std::size_t sweep = 0; sweep < kMaxSweeps && !converged; ++sweep) {
+            double max_off = 0.0;
+            double diag_scale = 1.0;
+            for (std::size_t row = 0; row < p; ++row) {
+                diag_scale = std::max(diag_scale, std::fabs(mat[idx(row, p, row)]));
+                for (std::size_t col = row + 1U; col < p; ++col) {
+                    max_off = std::max(max_off, std::fabs(mat[idx(row, p, col)]));
                 }
-                gram[idx(row, p, col)] = sum;
-                gram[idx(col, p, row)] = sum;
+            }
+            const double threshold = stop_tol * diag_scale;
+            if (max_off <= threshold) {
+                converged = true;
+                break;
+            }
+            for (std::size_t pivot_p = 0; pivot_p < p; ++pivot_p) {
+                for (std::size_t pivot_q = pivot_p + 1U; pivot_q < p; ++pivot_q) {
+                    const double apq = mat[idx(pivot_p, p, pivot_q)];
+                    if (std::fabs(apq) <= threshold) {
+                        continue;
+                    }
+                    const double app = mat[idx(pivot_p, p, pivot_p)];
+                    const double aqq = mat[idx(pivot_q, p, pivot_q)];
+                    const double tau = (aqq - app) / (2.0 * apq);
+                    const double tau_sign = tau >= 0.0 ? 1.0 : -1.0;
+                    const double t = tau_sign /
+                                     (std::fabs(tau) + std::sqrt(1.0 + tau * tau));
+                    const double c = 1.0 / std::sqrt(1.0 + t * t);
+                    const double s = t * c;
+
+                    mat[idx(pivot_p, p, pivot_p)] = app - t * apq;
+                    mat[idx(pivot_q, p, pivot_q)] = aqq + t * apq;
+                    mat[idx(pivot_p, p, pivot_q)] = 0.0;
+                    mat[idx(pivot_q, p, pivot_p)] = 0.0;
+
+                    for (std::size_t k = 0; k < p; ++k) {
+                        if (k == pivot_p || k == pivot_q) {
+                            continue;
+                        }
+                        const double akp = mat[idx(k, p, pivot_p)];
+                        const double akq = mat[idx(k, p, pivot_q)];
+                        const double next_p = c * akp - s * akq;
+                        const double next_q = s * akp + c * akq;
+                        mat[idx(k, p, pivot_p)] = next_p;
+                        mat[idx(pivot_p, p, k)] = next_p;
+                        mat[idx(k, p, pivot_q)] = next_q;
+                        mat[idx(pivot_q, p, k)] = next_q;
+                    }
+
+                    for (std::size_t row = 0; row < p; ++row) {
+                        const double vip = eigvecs[idx(row, p, pivot_p)];
+                        const double viq = eigvecs[idx(row, p, pivot_q)];
+                        eigvecs[idx(row, p, pivot_p)] = c * vip - s * viq;
+                        eigvecs[idx(row, p, pivot_q)] = s * vip + c * viq;
+                    }
+                }
             }
         }
+    }
+    if (!converged) {
+        ctx.set_error("PCR X covariance Jacobi diagonalization failed to converge");
+        return P4A_ERR_CONVERGENCE_FAILED;
+    }
 
-        std::vector<double> direction;
-        double eigenvalue = 0.0;
-        status = largest_symmetric_eigenvector(ctx, gram, p, cfg.max_iter, cfg.tol,
-                                               "PCR X covariance", comp,
-                                               direction, eigenvalue);
-        if (status != P4A_OK) {
-            return status;
+    // Collect column indices in descending-eigenvalue order.
+    std::vector<std::size_t> order(p);
+    for (std::size_t i = 0; i < p; ++i) {
+        order[i] = i;
+    }
+    std::sort(order.begin(), order.end(),
+              [&](std::size_t lhs, std::size_t rhs) {
+                  return mat[idx(lhs, p, lhs)] > mat[idx(rhs, p, rhs)];
+              });
+
+    // For each retained component, project Xc onto the eigenvector to get
+    // x_score = sigma_i * U[:, i], compute y_loadings via x_score^T Yc /
+    // |x_score|^2, and capture y_scores via Yc * y_loadings / |y_loadings|^2.
+    // weights_w == loadings_p == V[:, i] in closed form because each
+    // eigenvector is orthonormal and the per-component deflation reduces
+    // to the identity in the (Xc^T Xc) eigenbasis.
+    std::vector<double> direction(p, 0.0);
+    std::vector<double> x_score(n, 0.0);
+    std::vector<double> y_loadings(q, 0.0);
+    std::vector<double> y_scores(n, 0.0);
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        const std::size_t col = order[comp];
+        const double eigenvalue = mat[idx(col, p, col)];
+        if (!(eigenvalue > std::numeric_limits<double>::epsilon())) {
+            ctx.set_errorf("PCR X covariance vanished at component %llu",
+                           ull(comp));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            direction[feature] = eigvecs[idx(feature, p, col)];
         }
         canonicalize_direction_sign(direction);
 
-        std::vector<double> x_score;
-        matrix_vector_product(xk, n, p, direction, x_score);
-        const double x_score_ss = squared_norm(x_score);
-        if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
-            ctx.set_errorf("PCR X score vanished at component %llu", ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
-        }
+        // x_score = Xc * direction  (length n).
+        pls4all::linalg::gemv(
+            pls4all::linalg::Trans_No,
+            n, p,
+            1.0,
+            xs.data(),
+            direction.data(),
+            0.0,
+            x_score.data());
+        const double x_score_ss = eigenvalue;  // |Xc @ v|^2 == eigenvalue for orthonormal v.
 
-        std::vector<double> x_loadings;
-        resize_fill(x_loadings, p, 0.0);
-        P4A_PARALLEL_FOR_STATIC
-        for (std::size_t feature = 0; feature < p; ++feature) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < n; ++row) {
-                sum += x_score[row] * xk[idx(row, p, feature)];
-            }
-            x_loadings[feature] = sum / x_score_ss;
-        }
+        // y_loadings = Yc^T * x_score / x_score_ss  (length q).
+        pls4all::linalg::gemv(
+            pls4all::linalg::Trans_Yes,
+            n, q,
+            1.0 / x_score_ss,
+            ys.data(),
+            x_score.data(),
+            0.0,
+            y_loadings.data());
 
-        std::vector<double> y_loadings;
-        resize_fill(y_loadings, q, 0.0);
-        for (std::size_t target = 0; target < q; ++target) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < n; ++row) {
-                sum += x_score[row] * ys[idx(row, q, target)];
-            }
-            y_loadings[target] = sum / x_score_ss;
-        }
-
-        std::vector<double> y_scores;
-        resize_fill(y_scores, n, 0.0);
+        // y_scores = Yc * y_loadings / |y_loadings|^2  (length n).
+        std::fill(y_scores.begin(), y_scores.end(), 0.0);
         const double y_loading_ss = squared_norm(y_loadings);
         if (y_loading_ss > std::numeric_limits<double>::epsilon()) {
-            for (std::size_t row = 0; row < n; ++row) {
-                double sum = 0.0;
-                for (std::size_t target = 0; target < q; ++target) {
-                    sum += ys[idx(row, q, target)] * y_loadings[target];
-                }
-                y_scores[row] = sum / y_loading_ss;
-            }
-        }
-
-        P4A_PARALLEL_FOR_STATIC
-        for (std::size_t row = 0; row < n; ++row) {
-            for (std::size_t feature = 0; feature < p; ++feature) {
-                xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
-            }
+            pls4all::linalg::gemv(
+                pls4all::linalg::Trans_No,
+                n, q,
+                1.0 / y_loading_ss,
+                ys.data(),
+                y_loadings.data(),
+                0.0,
+                y_scores.data());
         }
 
         for (std::size_t feature = 0; feature < p; ++feature) {
             model->weights_w[idx(feature, a, comp)] = direction[feature];
-            model->loadings_p[idx(feature, a, comp)] = x_loadings[feature];
+            model->loadings_p[idx(feature, a, comp)] = direction[feature];
         }
         for (std::size_t target = 0; target < q; ++target) {
             model->y_loadings_q[idx(target, a, comp)] = y_loadings[target];

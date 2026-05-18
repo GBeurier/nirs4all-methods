@@ -192,25 +192,24 @@ no OpenMP) preset; the **blas-omp** preset is shipped as an
 
 #### Binary ABI identity gate (release preflight)
 
-**Critical mismatch to fix before v1.0**: `cpp/src/CMakeLists.txt`
-currently derives `SOVERSION` from `PROJECT_VERSION_MAJOR` (= `0`),
-so a Linux build produces `libp4a.so.0`. The ABI version, however,
-is **1.16.0** (`cpp/include/pls4all/p4a_version.h`). The Linux
-SONAME shipped to all downstream consumers (Cargo, NuGet, Maven,
-Conan, vcpkg, Homebrew, Debian, …) **must** be `libp4a.so.1` so
-that a downstream binary linked against the 1.x ABI keeps loading
-across patch releases. The release preflight is therefore:
+**Current state (audited 2026-05-18):** the previous SOVERSION mismatch
+has been fixed. Linux builds now produce the ABI-major chain
+`libp4a.so -> libp4a.so.1 -> libp4a.so.1.16.0`, derived from
+`P4A_ABI_VERSION_MAJOR` and the full ABI version, not from the project
+semver. The release preflight is therefore:
 
-1. Patch `cpp/src/CMakeLists.txt` so that `SOVERSION =
-   P4A_ABI_VERSION_MAJOR` (currently `1`) and `VERSION =
-   P4A_ABI_VERSION_MAJOR.MINOR.PATCH` (currently `1.16.0`),
-   independent of the project semver.
-2. Add a `make` check (in `release-binaries.yml`) that the produced
-   SONAME matches `libp4a.so.${P4A_ABI_VERSION_MAJOR}`.
-3. Do the equivalent on macOS via `install_name_tool`: the install
-   name is `@rpath/libp4a.${ABI_MAJOR}.dylib`.
-4. Windows DLLs do not carry a SONAME; the import lib `p4a.lib`
-   carries the ABI in its filename for clarity (`p4a-1.lib`).
+1. Build from a clean tree, not from a reused local build directory. Old
+   symlinks such as `libp4a.so.0` can remain in dirty build dirs and must
+   not be copied into packages.
+2. Check that the produced Linux SONAME matches
+   `libp4a.so.${P4A_ABI_VERSION_MAJOR}`.
+3. Do the equivalent on macOS via `install_name_tool`: the install name is
+   `@rpath/libp4a.${ABI_MAJOR}.dylib`.
+4. Windows DLLs do not carry a SONAME; the import lib should carry the ABI
+   in its filename for clarity (`p4a-1.lib`).
+5. Diff the exported `p4a_*` symbol set against
+   `cpp/abi/expected_symbols_linux.txt`. Any added symbol is a public ABI
+   decision and must be documented in `docs/abi/changes_log.md`.
 
 #### Forbidden runtime dependencies (audited per archive)
 
@@ -1086,16 +1085,17 @@ every downstream manifest:
 | `CITATION.cff` `version:` | sed |
 | `docs/abi/changelog.md` | hand-edited per phase |
 
-A planned CI check (`.github/workflows/version-sync.yml`,
-**not yet present** — see §5.4 below) must fail the PR if any of
-these drift from `p4a_version.h`. Today (2026-05-18) the versions
-are out of sync (`pyproject` is 0.65.0, `R DESCRIPTION` is 0.68.0,
-`Cargo.toml` is 0.96.0, `Pls4all.jl` is 0.84.0, `package.json` is
-0.96.0, `Pls4all.csproj` is 0.96.0, header is 0.97.0). The first
-cleanup task before any registry publication is to land
-`bump_version.sh`, `version-sync.yml`, and a one-shot
-`scripts/normalise_versions.sh` that brings every manifest to the
-header's `0.97.0`.
+The CI check `.github/workflows/version-sync.yml` and
+`scripts/bump_version.sh` are now present. Before any registry
+publication, run:
+
+```bash
+scripts/bump_version.sh --check
+```
+
+and make the workflow fail PRs when any manifest drifts from
+`p4a_version.h`. If another manifest family is added, extend the script
+first and then add the new package.
 
 ### 5.4 Today's CI workflows — gaps to fill
 
@@ -1128,7 +1128,6 @@ gap list):
 | `release-maven.yml` | gradle publishToCentralPortal | called from `release.yml` |
 | `release-docker.yml` | `docker buildx` multi-arch | called from `release.yml` |
 | `release-homebrew.yml` | PR to `GBeurier/homebrew-pls4all` | called from `release.yml` |
-| `version-sync.yml` | enforces §5.3 single-source version | `pull_request` |
 | `prerelease-nightly.yml` | every-day cross-binding parity gate on `main` against an unbumped `v0.97.0-dev.${SHORTSHA}` | `schedule: cron 'nightly'` |
 | `smoke-installed.yml` | weekly pulls the last released `pls4all` from every registry and reruns the parity fixture — catches registry drift / outages | `schedule: cron 'weekly'` |
 
@@ -1287,7 +1286,7 @@ Software Heritage  → no manifest; passive
 |---------|--------|---------|
 | GitHub Releases (binaries) | ⬜ not yet wired | needs `release.yml` + multi-OS asset matrix |
 | PyPI | ⬜ name not reserved | needs first 0.0.0 placeholder upload |
-| CRAN | ⬜ never submitted | needs vendored static build (or system-req path) + first R-universe run |
+| CRAN | ⬜ never submitted | needs zero-warning `R CMD check --as-cran`, vendored-core sync, and first R-universe run |
 | R-universe | ⬜ universe not created | needs `gbeurier/universe` repo + packages.json |
 | MATLAB File Exchange | ⬜ no FX submission | needs `.mltbx` packager job + FX account |
 | npm `@pls4all/wasm` | 🟡 package.json present, never published | needs npm scope + first publish |
@@ -1313,21 +1312,18 @@ Software Heritage  → no manifest; passive
 | GitHub Packages (RC) | ⬜ not wired | reuse `release-*.yml` workflows with `--source github` |
 | Zenodo DOI | ⬜ not enabled | one-click toggle in zenodo.org settings |
 | Software Heritage | ⬜ not registered | one-time origin save |
-| Version-sync CI | ⬜ no `version-sync.yml` | enforces §5.3 single-source version |
-| SOVERSION fix | ⬜ CMake derives SOVERSION from project major (`0`) | **blocker** — patch to derive from `P4A_ABI_VERSION_MAJOR` (`1`) before any binary publish |
+| Version-sync CI | ✅ present | keep `scripts/bump_version.sh --check` authoritative |
+| SOVERSION fix | ✅ fixed | verify clean release builds produce `libp4a.so.1 -> libp4a.so.1.16.0` |
 
 Every ⬜ is a small, isolated unit of work. The first cut should
 land in this order:
 
-0. **Operational risk-zero step**: fix the SOVERSION/ABI-major mismatch
-   (`cpp/src/CMakeLists.txt` must derive `SOVERSION` from
-   `P4A_ABI_VERSION_MAJOR`, not the project major). Several registries
-   produce immutable packages once pushed; shipping `libp4a.so.0` once,
-   then `libp4a.so.1` later, would break every downstream binary that
-   linked against the first release.
-1. `version-sync.yml` + `bump_version.sh` + `normalise_versions.sh`
-   one-shot (unblocks everything else; resolves the 0.65 / 0.68 /
-   0.84 / 0.96 / 0.97 drift across manifests).
+0. **Operational risk-zero step**: keep ABI identity checked from a clean
+   build and refresh the expected symbol snapshot intentionally. Several
+   registries produce immutable packages once pushed; a stale local
+   symlink or accidental new public symbol can poison downstream packages.
+1. Keep `version-sync.yml` + `bump_version.sh --check` green before every
+   tag.
 2. `release.yml` skeleton + `release-binaries.yml` (gives us the
    GitHub-Release-as-source-of-truth, with the binary-ABI gate from
    §2.2 enforcing `libp4a.so.${ABI_MAJOR}`).
@@ -1344,12 +1340,12 @@ land in this order:
 ### Single biggest threat to a smooth v1.0 cut
 
 Publishing immutable packages with the wrong version and/or wrong ABI
-identity. The combination of (a) drifting manifest versions, (b) a
-CMake `SOVERSION` derived from project major `0` while the ABI is at
-`1.16.0`, and (c) registries that cannot be cleanly overwritten,
-means a rushed first publish can poison every downstream linker for
-the next several months. The §10-step "0" above is the single fix
-that must land first.
+identity. The remaining risks are (a) manifest drift if
+`bump_version.sh --check` is bypassed, (b) stale local build artifacts
+being copied into wheels or release archives, and (c) accidental new
+public `p4a_*` exports that are not reflected in the ABI snapshot.
+Registries cannot be cleanly overwritten, so every release job must smoke
+test the built artifact rather than the checkout.
 
 ---
 
@@ -1368,8 +1364,8 @@ Every distribution channel splits into three classes of action:
 | U1 | 👤 | Generate a GPG key (`gpg --full-gen-key`, ed25519), publish on `keys.openpgp.org`. Needed by Maven Central, signed git tags, signed Releases. |
 | U2 | 👤 | Enable 2FA on every account: GitHub (recovery codes saved), PyPI, npm, crates.io, RubyGems, NuGet, Maven Central, MathWorks, RubyGems, JuliaHub, Docker Hub. Most registries now refuse publication without it. |
 | U3 | 👤 | (Optional) issue a fine-grained PAT to me (`gh auth login --with-token`) with scope `contents:write, packages:write, pull-requests:write` if you want me to open upstream PRs (vcpkg, conan-center, etc.) from your account. Otherwise I deliver branches/diffs and you push. |
-| U4 | 🤖 | Write `scripts/bump_version.sh`, `scripts/normalise_versions.sh`, `.github/workflows/version-sync.yml`. Normalises 0.65 / 0.68 / 0.84 / 0.96 / 0.97 → 0.97.0 across every manifest and locks future drift. |
-| U5 | 🤖 | Patch `cpp/src/CMakeLists.txt` so that `SOVERSION = P4A_ABI_VERSION_MAJOR` (= 1), independent of project semver. Prevents `libp4a.so.0` from ever shipping. |
+| U4 | 🤖 | Maintain `scripts/bump_version.sh` and `.github/workflows/version-sync.yml`; extend them whenever a new manifest appears. |
+| U5 | 🤖 | Keep the SOVERSION preflight green from clean builds and prevent stale `libp4a.so.0` artifacts from entering packages. |
 | U6 | 🤖 | Write `.github/workflows/release.yml` + `release-binaries.yml` (14-triple cross-build) — gives the canonical GitHub-Release-as-source-of-truth. |
 
 ### 11.2 Per-channel split
@@ -1460,21 +1456,24 @@ GitHub-native tokens (`GITHUB_TOKEN` for GHCR + GH Packages + GH Releases) are n
 
 Target: **`install.packages("pls4all")` on CRAN + `pip install pls4all` on PyPI**, both green, both reproducible from a tag. Three milestones; each is a discrete piece of work you can pause on.
 
-### 12.1 Milestone M0 — foundations (~1 working day)
+### 12.1 Milestone M0 — foundations verification (~0.5 working day)
 
-Blocks every subsequent step. Must complete before any registry sees the project.
+Most M0 foundation work has landed: SOVERSION follows the ABI major,
+`scripts/bump_version.sh` exists, and `version-sync.yml` is present.
+Before any registry sees the project, verify those guard rails from a
+clean checkout and close the remaining ABI snapshot/doc gaps.
 
 | # | Who | Step | Output |
 |---|-----|------|--------|
-| M0.1 | 🤖 | Patch `cpp/src/CMakeLists.txt` → `SOVERSION` from `P4A_ABI_VERSION_MAJOR`, `VERSION` from full ABI version | `libp4a.so.1 -> libp4a.so.1.16.0` |
-| M0.2 | 🤖 | Write `scripts/bump_version.sh` reading `cpp/include/pls4all/p4a_version.h` and rewriting every manifest | one-shot tool |
-| M0.3 | 🤖 | Run `bump_version.sh 0.97.0` → normalises pyproject 0.65→0.97, DESCRIPTION 0.68→0.97, Cargo 0.96→0.97, Project.toml 0.84→0.97, etc. | clean diff, single commit |
-| M0.4 | 🤖 | Normalise SPDX casing to `CECILL-2.1` everywhere except R `DESCRIPTION` (which uses `CeCILL-2.1` per R's license database) and prose docs (where `CeCILL-2.1` stays as the human-readable form) | clean diff |
-| M0.5 | 🤖 | Write `.github/workflows/version-sync.yml` (fails PR if any manifest drifts from header) | guard rail |
-| M0.6 | 🤖 | Run the local C++ test suite to confirm M0.1 doesn't break ABI symbols (`ctest --preset dev-release`) | green |
-| M0.7 | 👤 | Approve + push the M0 commits to `main` | tag-ready |
+| M0.1 | 🤖 | Verify clean Linux builds produce `libp4a.so -> libp4a.so.1 -> libp4a.so.1.16.0` and no stale `libp4a.so.0` is staged into packages. | ABI identity checked |
+| M0.2 | 🤖 | Run `scripts/bump_version.sh --check` and ensure `version-sync.yml` covers every active manifest. | version guard green |
+| M0.3 | 🤖 | Refresh `cpp/abi/expected_symbols_linux.txt` only if the extra exported symbols are intentionally public. | ABI snapshot intentional |
+| M0.4 | 🤖 | Re-run `ctest --preset dev-release --output-on-failure`. | C++ gate green |
+| M0.5 | 👤 | Approve the verification diff, especially ABI symbols and package metadata. | tag-ready |
 
-**Exit criteria.** `git tag -a v0.97.0 -m "M0 baseline"` produces a tree where every binding manifest, the C++ project, the C ABI version, and the documentation agree.
+**Exit criteria.** `git tag -a v0.97.0 -m "M0 baseline"` produces a tree
+where every binding manifest, the C++ project, the C ABI version, the ABI
+symbol snapshot and the documentation agree.
 
 ### 12.2 Milestone M1 — PyPI publication (target: 2–3 working days)
 
@@ -1486,7 +1485,7 @@ Independent of M2. Can run in parallel.
 | M1.2 | 🤖 | Add `bindings/python/setup.py` shim with `Distribution.has_ext_modules = lambda self: True` **and** `package_data={"pls4all": [".libs/libp4a*", ".libs/p4a*"]}` + a `MANIFEST.in` that ships the native lib under `pls4all/.libs/`. Constrain `cibuildwheel` to **one CPython per platform/arch** (`CIBW_BUILD=cp312-*`) so retag does not collide. | non-pure platform wheel that *contains* `libp4a` |
 | M1.3 | 🤖 | Add `bindings/python/scripts/build_libp4a_in_wheel.sh` (invoked by `CIBW_BEFORE_ALL_LINUX`/`MACOS`/`WINDOWS`) — builds the C++ core then copies `libp4a.so.1.16.0` / `libp4a.1.16.0.dylib` / `p4a.dll` into `bindings/python/src/pls4all/.libs/` | native blob present at wheel-build time |
 | M1.4 | 🤖 | Add `bindings/python/scripts/retag_wheels.py` — runs **after** repair, rewrites three things in lockstep: the filename `cp312-cp312-*.whl` → `py3-none-*.whl`, the `*.dist-info/WHEEL` `Tag:` metadata lines, and `*.dist-info/RECORD` hashes/paths. Renaming only the file produces a wheel `pip` rejects. | valid `py3-none-${platform}` wheels |
-| M1.5 | 🤖 | Write `.github/workflows/release-python.yml` with: `permissions: id-token: write`, `environment: pypi`, the `cibuildwheel` matrix from §3.1, repair commands for **all three OSes** (Linux `auditwheel repair`, macOS `delocate-wheel`, Windows **explicit** `delvewheel repair` — cibuildwheel has no Windows default), retag step after repair, and an installed-wheel smoke job that runs `pip install ./wheelhouse/pls4all-*.whl` in a clean venv and checks `pls4all.abi_version() == (1, 16, 0)` | reproducible wheel matrix + green smoke |
+| M1.5 | 🤖 | Verify `.github/workflows/release-python.yml`: `permissions: id-token: write`, `environment: pypi`, `cibuildwheel` matrix, repair commands for all three OSes, retag step after repair, and an installed-wheel smoke job that runs `pip install ./wheelhouse/pls4all-*.whl` in a clean venv and checks `pls4all.abi_version() == (1, 16, 0)` | reproducible wheel matrix + green smoke |
 | M1.6 | 🤖 | Local dry run: build a single Linux wheel + run `pls4all.tests.test_smoke` | passes locally |
 | M1.7 | 👤 | Create a PyPI account if needed; verify e-mail; **enable 2FA** | unblocks publishing |
 | M1.8 | 👤 | Configure **Trusted Publishing** on PyPI at `https://pypi.org/manage/account/publishing/`: owner=`GBeurier`, repo=`pls4all`, workflow=`release-python.yml`, environment=`pypi`. Repeat on TestPyPI. | OIDC link |
@@ -1504,10 +1503,10 @@ CRAN has a human reviewer in the loop. M2.4–M2.7 are the *only* irreducible hu
 
 | # | Who | Step | Output |
 |---|-----|------|--------|
-| M2.1 | 🤖 | Migrate `bindings/r/pls4all/src/` to **vendored static** mode: copy `cpp/include/` and `cpp/src/` into `bindings/r/pls4all/src/libp4a/` (CMake-free subset compiling with `R CMD INSTALL`'s Make); write portable `Makevars` and `Makevars.win` using **R's compiler macros only** (`CXX_STD = CXX17`, `PKG_CPPFLAGS`, `PKG_CXXFLAGS`, `PKG_LIBS`); **no** hard-coded `-O3`, `-march=native`, `-Wall`, `-Werror`; no CMake invocation; no internet at install. If BLAS is later needed, use `$(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)` in that order. **Remove `SystemRequirements: libp4a`** from DESCRIPTION (replace with `SystemRequirements: GNU make, C++17` if still needed). Register native routines via `R_registerRoutines` + `R_useDynamicSymbols(dll, FALSE)` in `R_init_pls4all`. Keep example/test runtime well under CRAN's per-check budget (~10 min per platform). | self-contained CRAN source package |
+| M2.1 | 🤖 | Audit the current **vendored static** R mode: regenerate the vendored `libp4a` subset from `cpp/`, remove divergent PCR code, use R compiler macros only (`CXX_STD = CXX17`, `PKG_CPPFLAGS`, `PKG_CXXFLAGS`, `PKG_LIBS`), remove non-portable flags such as `-march=*`, avoid CMake/internet at install, and keep example/test runtime under CRAN's per-check budget. | self-contained CRAN source package |
 | M2.2 | 🤖 | Document every **exported** R function via `roxygen2`, including `@return` (mandatory for `\value{}` in the `.Rd`) and a runnable `@examples` block (any non-runnable example must be in `\dontrun{}` or `\donttest{}` with justification). Update `NAMESPACE` via `devtools::document()`. Add `tests/testthat.R`, `tests/testthat/test-*.R`, `Suggests: testthat (>= 3.0.0)`, `Config/testthat/edition: 3` in `DESCRIPTION`. Add a minimal vignette `vignettes/pls4all.Rmd` (or at least a strong `README.Rmd` rendered to `README.md`) — scientific packages without a vignette draw reviewer questions. | CRAN-clean docs + tests + (optional) vignette |
 | M2.3 | 🤖 | Write `bindings/r/pls4all/cran-comments.md`: "New submission" line, justification of vendored sources (mention CECILL-2.1, vendored from `cpp/`, no external libs), compile-time budget, list of platforms tested via R-hub v2 / win-builder / macbuilder, list of `R CMD check --as-cran` results. Update the optional comment field on each resubmission instead of editing this file. | submission text |
-| M2.4 | 🤖 | Write `.github/workflows/release-r.yml`: `R CMD check --as-cran` on **the built tarball** (not on the source directory!) across the matrix `ubuntu-22.04 release/devel`, `macos-14 arm64`, `windows-latest`; `rcmdcheck::rcmdcheck()` JSON output uploaded as an artifact; the workflow must fail on any `error`, `warning`, *or* `note`. | CI gate |
+| M2.4 | 🤖 | Verify `.github/workflows/release-r.yml`: `R CMD check --as-cran` on **the built tarball** across the matrix, `rcmdcheck::rcmdcheck()` artifacts, and fail on any `error`, `warning` or unintended `note`. | CI gate |
 | M2.5 | 👤 | R-hub v2 onboarding — choose one path: **(a)** GitHub-Actions runners via `rhub::rhub_setup()` then `rhub::rhub_check()` (needs a GitHub PAT in your local git credential store); **(b)** R Consortium runners via `rhub::rc_new_token()` then `rhub::rc_submit()` (mail-token confirmation flow). The legacy `validate_email()` / `check_for_cran()` you may remember from R-hub v1 is superseded. | rhub unlocked |
 | M2.6 | 🤖 | Run CRAN-like checks on the **built tarball** through R-hub v2 (selected platforms incl. `linux`, `macos-arm64`, `windows`), plus **win-builder** (`devtools::check_win_devel()`) and **macbuilder** (`devtools::check_mac_release()`). All must be green before submission. | CRAN-platform clean |
 | M2.7 | 👤 | Build the final tarball: `R CMD build bindings/r/pls4all` → `pls4all_0.97.0.tar.gz` (I run the command; this row is your sign-off after eyeballing the diff). | tarball |
@@ -1528,7 +1527,7 @@ CRAN has a human reviewer in the loop. M2.4–M2.7 are the *only* irreducible hu
 
 If you focus on **what only you can do** (the `👤` rows above):
 
-- M0.7 — approve the foundation commit (~10 min review).
+- M0.5 — approve the foundation verification diff (~10 min review).
 - M1.7–M1.9 — PyPI account, 2FA, Trusted Publishing config (×2 for PyPI + TestPyPI), name reservation, environment protection rules (~30–45 min if no account exists, ~15 min if accounts exist).
 - M2.5 — R-hub v2 onboarding (~10 min if GitHub PAT path; longer for token-flow).
 - M2.7 — sign-off on the built tarball after eyeballing the diff (~10 min).
@@ -1572,11 +1571,10 @@ specifically to prevent this.
 
 When you give the green light, I open work in this order, committing in small reviewable chunks:
 
-- [ ] Branch `release/m0-baseline`: M0.1 → M0.6, version-sync workflow, casing normalisation, **SOVERSION fix**. Single PR.
+- [ ] Branch `release/m0-verification`: M0.1 → M0.4, ABI snapshot decision, version-sync check, clean-build SOVERSION verification. Single PR.
 - [ ] Branch `release/m1-pypi`: M1.1 → M1.6, then tag `v0.97.0rc0` to dry-run on TestPyPI. Verify installed-wheel smoke before promoting.
 - [ ] Branch `release/m2-cran`: M2.1 → M2.4, tarball built and attached to a draft GH Release for your inspection. Verify `R CMD check --as-cran` on the *built tarball* across the matrix.
 - [ ] Once M2.6 is green on R-hub v2 + win-builder + macbuilder: I hand you `pls4all_0.97.0.tar.gz` + `cran-comments.md` → you submit (M2.8).
 - [ ] In parallel of CRAN review: M2.11 (create r-universe repo) + I drop `packages.json` into it.
 
 Say "go" and I start on M0.
-
