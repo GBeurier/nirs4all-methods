@@ -356,6 +356,15 @@ def compute_parity(records: list[dict]) -> None:
                 r["parity_ok"] = False
                 r["parity_note"] = f"load error: {e}"
                 continue
+            # Feature-selection style algos can emit zero-length prediction
+            # vectors (variable-importance shapes that don't carry per-sample
+            # outputs). Don't crash np.max on empty arrays — flag and skip.
+            if p.size == 0 or ref_preds.size == 0:
+                r["parity_max_diff"] = float("nan")
+                r["parity_ok"] = False
+                r["parity_note"] = (f"empty predictions "
+                                     f"({p.shape} vs {ref_preds.shape})")
+                continue
             if p.shape != ref_preds.shape:
                 # Some externals predict only one column for multi-Y; keep
                 # the comparison but flag it.
