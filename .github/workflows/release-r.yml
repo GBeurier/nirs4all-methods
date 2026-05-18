@@ -90,7 +90,10 @@ jobs:
         uses: r-lib/actions/check-r-package@v2
         with:
           working-directory: bindings/r/pls4all
-          args: '"--no-manual", "--as-cran"'
+          # r-lib/actions/check-r-package interpolates these values into
+          # rcmdcheck::rcmdcheck(args = ..., error_on = ...) as literal R
+          # code, so they must be valid R syntax.
+          args: 'c("--no-manual", "--as-cran")'
           error-on: '"warning"'
           upload-snapshots: true
 
