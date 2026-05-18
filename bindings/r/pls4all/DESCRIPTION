@@ -1,7 +1,7 @@
 Package: pls4all
 Type: Package
 Title: R Binding for the pls4all C ABI
-Version: 0.68.0
+Version: 0.97.0
 Date: 2026-05-15
 Authors@R: c(person("Gregory", "Beurier", role = c("aut", "cre"),
                     email = "gregory.beurier@cirad.fr"))

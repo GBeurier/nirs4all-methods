@@ -113,6 +113,7 @@ shared fixture within `rmse_rel < 1e-12` (bit-exact for several). See
 - 🌐 **Sphinx site** : (configurer GitHub Pages — voir
   [`.github/workflows/docs.yml`](.github/workflows/docs.yml))
 - 📊 **[Cross-binding benchmarks](docs/benchmarks/cross_binding.md)** — parity + timing matrix generated from the canonical method registry
+- 🧪 **[Cross-binding runbook](benchmarks/cross_binding/README.md)** — registry refs, clean sweeps, git-pinned refs, and legacy fixed-reference modes
 - 🔬 **[Methodology](docs/benchmarks/methodology.md)** — reference policy, tolerances, threading, hardware
 - 🏗️ **[Architecture](docs/architecture/overview.md)** — memory model · error model · threading · serialization
 - 📜 **[ABI reference](docs/abi/reference.md)** — 96 `p4a_*` symbols, stability policy, changes log
@@ -163,15 +164,24 @@ CUDA) plug in via CMake presets without changing the ABI.
 ## Run the cross-binding benchmark
 
 ```bash
+# Install git-only external refs not released on PyPI yet.
+python -m pip install -r benchmarks/cross_binding/requirements-git.txt
+
 # Complete overnight canonical method/reference matrix.
+# Default: registry cells + registry-declared external references only.
 # Skips cells already present in results/full_matrix.csv.
 # Env overrides: FORCE=1 RERUN_FAILED=1 THREADS="1 3 10" N_RUNS=5.
 benchmarks/cross_binding/run_overnight.sh
 
 # Exhaustive stress matrix: all pls4all bindings/tiers, all CPU libp4a
 # backend variants, the default 11-size dataset sweep, threads 1/3/10,
-# and all fixed + registry Python/R/MATLAB references.
+# and the registry-declared external references.
 FULL_MATRIX=1 benchmarks/cross_binding/run_overnight.sh
+
+# Legacy fixed-reference cross-product too. This is useful for auditing
+# external-library coverage, and may emit NOT_IMPLEMENTED for algorithms
+# that sklearn / ikpls / ropls / mixOmics / plsregress do not support.
+FULL_MATRIX=1 REFERENCE_BACKENDS=all benchmarks/cross_binding/run_overnight.sh
 
 # Include the CUDA build too when CUDA is available.
 FULL_MATRIX=1 LIBP4A_BUILD=all benchmarks/cross_binding/run_overnight.sh
@@ -207,7 +217,7 @@ recognised by French law).
   title   = {pls4all: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/pls4all},
-  version = {0.94.0}
+  version = {0.97.0}
 }
 ```
 

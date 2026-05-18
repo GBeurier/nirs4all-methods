@@ -1,8 +1,8 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
-// Version / build-info strings. Configure-time substitutions land in PR 7
-// (abi-stubs / CLI). For now everything is hard-coded against
-// p4a_version.h so PRs 4-6 do not need to wire CMake's `configure_file`.
+// Version / build-info strings. Both the project version and the ABI version
+// are pulled from p4a_version.h via the macros below, so a single
+// scripts/bump_version.sh edit propagates everywhere.
 
 #include "core/version.hpp"
 
@@ -15,10 +15,18 @@
 #  define P4A_BUILD_INFO ""
 #endif
 
+// Local stringification helpers (kept TU-local — not exposed in any header).
+#define P4A_STR_INNER_(x) #x
+#define P4A_STR_(x)       P4A_STR_INNER_(x)
+#define P4A_ABI_VERSION_STRING_                       \
+    P4A_STR_(P4A_ABI_VERSION_MAJOR) "."               \
+    P4A_STR_(P4A_ABI_VERSION_MINOR) "."               \
+    P4A_STR_(P4A_ABI_VERSION_PATCH)
+
 namespace pls4all::core {
 
 const char* version_string() noexcept {
-    return P4A_PROJECT_VERSION_STRING "+abi.1.16.0";
+    return P4A_PROJECT_VERSION_STRING "+abi." P4A_ABI_VERSION_STRING_;
 }
 
 const char* build_info() noexcept {
