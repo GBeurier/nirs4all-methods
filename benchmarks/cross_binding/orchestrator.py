@@ -384,15 +384,22 @@ def slot_key(record: dict) -> tuple:
 
 
 def strict_key(record: dict) -> tuple:
+    sb = record.get("seed_base")
+    nr = record.get("n_runs")
     return (*slot_key(record),
-            int(record.get("seed_base")), int(record.get("n_runs")))
+            int(sb) if sb is not None else None,
+            int(nr) if nr is not None else None)
 
 
 def planned_keys(algo: str, backend_name: str, n: int, p: int,
                  threads: int, build: str, seed_base: int,
                  n_runs: int) -> tuple[tuple, tuple]:
     slot = (algo, backend_name, n, p, threads, build)
-    strict = (*slot, seed_base, n_runs)
+    # Bench scripts emit n_runs = number of TIMED samples (warmup discarded
+    # when input n_runs >= 3). Resume must match against that value, not
+    # the input. See _common.time_runs_seeded.
+    measured = n_runs - 1 if n_runs >= 3 else n_runs
+    strict = (*slot, seed_base, measured)
     return slot, strict
 
 
@@ -585,11 +592,16 @@ def main():
                         slot, strict = planned_keys(
                             algo, name, n, p, thr, build,
                             args.seed_base, args.n_runs)
+                        # Accept both warmup-discarded (n_runs - 1) and raw
+                        # input (n_runs) recorded values — bench scripts emit
+                        # the timed-sample count on success but legacy/failed
+                        # rows may have the input value.
+                        strict_alt = (*slot, args.seed_base, args.n_runs)
                         planned_slots.add(slot)
                         existing = existing_by_slot.get(slot)
                         if (args.resume_existing and not args.force
                                 and existing is not None
-                                and strict_key(existing) == strict
+                                and strict_key(existing) in (strict, strict_alt)
                                 and (existing.get("ok") or not args.rerun_failed)):
                             records.append(existing)
                             skipped_existing += 1
