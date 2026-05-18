@@ -181,6 +181,7 @@ fit_predict <- function(seed) {
     # the PCR/SVD entry; we route to `pls4all_fit(...)` instead.
     dispatch_algo <- a$algo
     use_model_api <- FALSE
+    model_api_algo <- ""
     if (a$algo == "pls") {
         dispatch_algo <- "sparse_simpls"
         if (is.null(call_params$sparsity_lambda)) {
@@ -188,6 +189,10 @@ fit_predict <- function(seed) {
         }
     } else if (a$algo == "pcr") {
         use_model_api <- TRUE
+        model_api_algo <- "pcr_svd"
+    } else if (a$algo == "opls") {
+        use_model_api <- TRUE
+        model_api_algo <- "opls_nipals"
     } else if (a$algo == "kernel_pls_rbf") {
         dispatch_algo <- "kernel_pls"
         if (is.null(call_params$kernel_type)) {
@@ -202,18 +207,16 @@ fit_predict <- function(seed) {
     }
 
     if (use_model_api) {
-        # Model API for PCR/OPLS via the high-level R interface.
+        # Model API for PCR / OPLS via the high-level R interface.
+        # The C dispatcher `pls4all_method` doesn't expose pcr_svd /
+        # opls_nipals as named methods, so we go through the lower-level
+        # `pls4all_fit` model wrapper instead.
         res <- pls4all::pls4all_fit(xy$X, Y,
-                                      algo = "pcr_svd",
+                                      algo = model_api_algo,
                                       n_components = as.integer(nc),
                                       scale_x = FALSE,
                                       scale_y = FALSE)
-        # pls4all_fit returns a Model handle; extract predictions via
-        # pls4all_predict on the training X.
         preds_vec <- as.numeric(pls4all::pls4all_predict(res, xy$X))
-        if (a$algo %in% c("pls_lda", "pls_logistic")) {
-            # decision_scores style — not applicable for pcr/opls
-        }
         return(preds_vec)
     }
 
@@ -225,12 +228,21 @@ fit_predict <- function(seed) {
     # Return the result as-is (matrix or vector) so write_npy_f64 can
     # serialise it in row-major order matching Python.
     pkey <- registry_pkey
-    if (pkey == "selected_indices" && !is.null(res$selected_indices)) {
-        sel <- as.integer(res$selected_indices)
-        mask <- matrix(0.0, nrow = 1, ncol = a$p)
-        idx <- sel[sel > 0L & sel <= a$p]
-        if (length(idx) > 0L) mask[1, idx] <- 1.0
-        return(mask)
+    if (pkey %in% c("selected_indices", "mask", "support")) {
+        # Prefer res$mask / res$support / res$selected_indices in turn.
+        if (!is.null(res$mask)) {
+            return(matrix(as.numeric(res$mask), nrow = 1))
+        }
+        if (!is.null(res$support)) {
+            return(matrix(as.numeric(res$support), nrow = 1))
+        }
+        if (!is.null(res$selected_indices)) {
+            sel <- as.integer(res$selected_indices)
+            mask <- matrix(0.0, nrow = 1, ncol = a$p)
+            idx <- sel[sel > 0L & sel <= a$p]
+            if (length(idx) > 0L) mask[1, idx] <- 1.0
+            return(mask)
+        }
     }
     if (pkey == "decision_scores" && !is.null(res$decision_scores)) {
         return(res$decision_scores)

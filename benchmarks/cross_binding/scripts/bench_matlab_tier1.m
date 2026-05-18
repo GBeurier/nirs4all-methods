@@ -70,9 +70,19 @@ elseif strcmp(algo, "kernel_pls_rbf")
     if ~isfield(params, "kernel_type")
         params.kernel_type = int32(1);  % RBF
     end
-elseif strcmp(algo, "pcr") || strcmp(algo, "opls")
-    error("pls4all:bench", ...
-        "matlab_tier1: %s requires the Model API (not pls4all.p4a_method_fit_mex)", algo);
+end
+% PCR / OPLS need the Model API on the MATLAB side too — the MEX
+% dispatcher doesn't expose pcr_svd / opls_nipals as method names.
+% pls4all.PcrRegression / pls4all.OplsRegression wrap the same C
+% kernel via the model entry point.
+use_model_api = false;
+model_api_cls = '';
+if strcmp(algo, "pcr")
+    use_model_api = true;
+    model_api_cls = 'pls4all.PcrRegression';
+elseif strcmp(algo, "opls")
+    use_model_api = true;
+    model_api_cls = 'pls4all.OplsRegression';
 end
 
 % Registry uses `interval_step`; C dispatcher reads `step`.
@@ -119,8 +129,17 @@ end
 
 function preds = fit_predict(dispatch_algo, algo, csv_dir, n, p, nc, ...
                               params, seed, needs_labels, needs_sw, ...
-                              needs_groups, pkey)
+                              needs_groups, pkey, use_model_api, ...
+                              model_api_cls)
     [X, y] = pls4all_bench_load_xy(csv_dir, n, p, seed);
+
+    if use_model_api
+        % PCR / OPLS via the classdef wrapper around the model API.
+        ctor = str2func(model_api_cls);
+        mdl = ctor(double(X), double(y), int32(nc));
+        preds = double(reshape(predict(mdl, double(X)), [], 1));
+        return;
+    end
 
     if needs_labels
         n_classes = 2;
@@ -180,15 +199,25 @@ function preds = fit_predict(dispatch_algo, algo, csv_dir, n, p, nc, ...
     % scores (not labels) for parity comparison. Return matrices intact
     % (don't flatten with `:`) — write_npy_f64 transposes 2-D arrays
     % before serialising so the row-major flat-equivalent matches Python.
-    if strcmp(pkey, "selected_indices") && isfield(res, "selected_indices")
-        sel = double(res.selected_indices(:));
-        mask = zeros(1, p);
-        valid = sel(sel > 0 & sel <= p);
-        if ~isempty(valid)
-            mask(valid) = 1.0;
+    if any(strcmp(pkey, {"selected_indices", "mask", "support"}))
+        if isfield(res, "mask")
+            preds = double(reshape(res.mask, 1, []));
+            return;
         end
-        preds = mask;
-        return;
+        if isfield(res, "support")
+            preds = double(reshape(res.support, 1, []));
+            return;
+        end
+        if isfield(res, "selected_indices")
+            sel = double(res.selected_indices(:));
+            mask = zeros(1, p);
+            valid = sel(sel > 0 & sel <= p);
+            if ~isempty(valid)
+                mask(valid) = 1.0;
+            end
+            preds = mask;
+            return;
+        end
     end
     if strcmp(pkey, "decision_scores") && isfield(res, "decision_scores")
         preds = double(res.decision_scores);
@@ -219,7 +248,7 @@ end
 [stats, last_preds] = pls4all_bench_run( ...
     @(s) fit_predict(dispatch_algo, algo, csv_dir, n, p, nc, params, ...
                       s, needs_labels, needs_sw, needs_groups, ...
-                      registry_pkey), ...
+                      registry_pkey, use_model_api, model_api_cls), ...
     runs, seed_base);
 
 versions = struct();

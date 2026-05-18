@@ -167,6 +167,18 @@ def main():
         ctor_sig_params = set(inspect.signature(cls.__init__).parameters) - {"self"}
         if "n_components" in ctor_sig_params and "n_components" not in ctor_kwargs:
             ctor_kwargs["n_components"] = nc
+        # Force center_*=True, scale_*=False to match the cross-binding
+        # convention (R/MATLAB dispatcher defaults, and what the rest of
+        # the bench scripts now set explicitly on cfg). Without this,
+        # sklearn classes like PCR / PLSRegression default scale_x=True
+        # and their predictions diverge from cpp by the column-std
+        # factor.
+        for scale_kw in ("scale_x", "scale_y"):
+            if scale_kw in ctor_sig_params:
+                ctor_kwargs[scale_kw] = False
+        for center_kw in ("center_x", "center_y"):
+            if center_kw in ctor_sig_params:
+                ctor_kwargs.setdefault(center_kw, True)
         est = cls(**ctor_kwargs)
         try:
             ctx = Context()
@@ -205,10 +217,15 @@ def main():
         # emit continuous discriminant scores via `decision_function`, not
         # the integer labels `predict` returns; regressors use `predict`.
         pkey = method.prediction_key
-        if pkey == "selected_indices":
+        if pkey in ("selected_indices", "mask", "support"):
             # sklearn-style selectors expose `get_support()` (bool mask)
             # or `selected_indices_`. Build the 1×p float mask the C
             # parity reference produces.
+            if hasattr(est, "support_"):
+                support = np.asarray(est.support_, dtype=bool)
+                mask = np.zeros((1, p), dtype=np.float64)
+                mask[0, support[:p]] = 1.0
+                return mask
             if hasattr(est, "selected_indices_"):
                 sel = np.asarray(est.selected_indices_, dtype=np.int64)
                 mask = np.zeros((1, p), dtype=np.float64)
