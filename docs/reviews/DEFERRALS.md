@@ -36,6 +36,10 @@ Items intentionally left to a future phase. Each entry records:
 | 5a | **AirPLS LDLT-vs-spsolve compounding divergence** at `lam=1e7` and `tight_tol_short` (1e-6 abs / 1e-5 rel). Structural — banded LDLT vs SuperLU pivot strategies. Document residual-check in debug builds. | Phase 5b (or follow-up) | open |
 | 5a | **ArPLS extreme-arg clip** at `>700` is more aggressive than `scipy.special.expit` (which preserves `1e-305` representable values). No practical effect on parity. Cosmetic two-branch logistic stabilisation. | Phase 5b+ | open |
 | 5a | **Smoke tests for baseline ops only check `isfinite`**. Strengthen with bounded-value assertions on constant inputs (baseline≈y, output≈0). | Phase 5b cleanup | open |
+| 7-21 (parallel batch) | **Per-phase Opus / Codex post-reviews skipped** because the ten worktrees landed in a single batch commit. Phase 7-21 review transcripts not produced. Follow-up review pass to run on the integrated state before Phase 22 (Python binding) starts. | Pre-Phase 22 | open |
+| 9 / 19 | **Shared `c4a_svd_compact` signature is destructive** (`A` is consumed in place). Phase 19's `q_residuals.c` now copies `Xc` before calling the SVD; this is a workaround. Cleaner alternative is to widen the SVD signature to take a `const double*` input and copy internally. Both options change either the call sites or the helper API. | Phase 22 or later | open |
+| 20 | **Transfer metrics keeps its private Jacobi-PCA** instead of using the shared `c4a_svd_compact`. Different internal API surface (`transfer_metrics.c` rotates a private symmetric Gram block, returns eigenvalues + eigenvectors, no thin-SVD path). Refactor would require either a richer shared helper or a Phase-20-specific eigen routine. | Phase 22 or later | open |
+| 12 / 14 | **Filter operators' `c4a_filter_stats_t` is shared** (4 fields, 32 bytes). Phase 14 wrappers do not yet populate the `exclusion_rate` field — only the integer counts. Fixed at integration time by routing all three Phase 14 apply calls through a `fill_stats` helper. Code is committed but the fix never ran under the original Phase 14 worktree's review. | Pre-Phase 22 review | open |
 
 ## Closed
 

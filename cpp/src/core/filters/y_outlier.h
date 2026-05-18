@@ -1,0 +1,74 @@
+/* SPDX-License-Identifier: CECILL-2.1 */
+/*
+ * YOutlierFilter — y-array outlier detection with four selectable methods.
+ *
+ * Mirrors `nirs4all.operators.filters.YOutlierFilter` (Phase 12 — first member
+ * of the new `c4a_filter_*` ABI category). The operator is stateless per call:
+ * fit + mask in a single function. Bounds are computed from the input y, the
+ * mask is then derived bound check + NaN exclusion.
+ *
+ * Four methods:
+ *   - IQR        : `[Q1 - t*IQR, Q3 + t*IQR]` (t default 1.5)
+ *   - Z-score    : `[mu - t*sigma, mu + t*sigma]` (t default 3.0)
+ *   - Percentile : `[pct(y, lower_pct), pct(y, upper_pct)]`
+ *   - MAD        : `[median +/- t * MAD * 1.4826]` (t default 3.5)
+ *
+ * Quantiles use NumPy 1.26.4's default "linear" interpolation
+ * (`np.percentile(..., method="linear")`).
+ *
+ * Output mask convention: `mask[i] = 1` keeps sample i, `mask[i] = 0` excludes.
+ * NaN samples and degenerate (single-sample / zero-scale) inputs are treated
+ * identically to the Python reference.
+ */
+#ifndef CHEMOMETRICS4ALL_CORE_FILTERS_Y_OUTLIER_H
+#define CHEMOMETRICS4ALL_CORE_FILTERS_Y_OUTLIER_H
+
+#include <stdint.h>
+
+#include "chemometrics4all/c4a.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Method enum mirrored from the public ABI header (`c4a_filters.h`). We
+ * redeclare the integer codes here so the engine can be built without pulling
+ * in the public filters header, matching the pattern used by the rest of the
+ * core. */
+typedef enum c4a_y_outlier_method_kind_t {
+    C4A_CORE_Y_OUTLIER_IQR        = 0,
+    C4A_CORE_Y_OUTLIER_ZSCORE     = 1,
+    C4A_CORE_Y_OUTLIER_PERCENTILE = 2,
+    C4A_CORE_Y_OUTLIER_MAD        = 3
+} c4a_y_outlier_method_kind_t;
+
+/* Filter statistics returned alongside the mask. Mirrors the public
+ * `c4a_filter_stats_t` layout — same field order, same types. The
+ * engine writes into a caller-supplied struct so the C ABI wrapper can
+ * just forward the pointer. */
+typedef struct c4a_core_filter_stats_t {
+    int64_t n_samples;
+    int64_t n_kept;
+    int64_t n_excluded;
+    double  exclusion_rate;
+} c4a_core_filter_stats_t;
+
+typedef struct c4a_filter_y_outlier_state_t c4a_filter_y_outlier_state_t;
+
+c4a_filter_y_outlier_state_t* c4a_filter_y_outlier_state_new(
+    int32_t method, double threshold,
+    double lower_pct, double upper_pct);
+
+void c4a_filter_y_outlier_state_free(c4a_filter_y_outlier_state_t* state);
+
+c4a_status_t c4a_filter_y_outlier_state_apply(
+    const c4a_filter_y_outlier_state_t* state,
+    const double* y, int64_t n,
+    uint8_t* mask_out,
+    c4a_core_filter_stats_t* stats_out);
+
+#ifdef __cplusplus
+}  /* extern "C" */
+#endif
+
+#endif /* CHEMOMETRICS4ALL_CORE_FILTERS_Y_OUTLIER_H */

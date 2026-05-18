@@ -23,10 +23,16 @@ add_library(chemometrics4all_core OBJECT
     core/status.cpp
     core/version.cpp
     core/common/banded_solver.c
+    core/common/fck_kernel.c
     core/common/linalg.c
     core/common/padding.c
     core/common/rng_pcg64.c
+    core/common/svd.c
     core/common/ziggurat.c
+    core/filters/composite.c
+    core/filters/high_leverage.c
+    core/filters/spectral_quality.c
+    core/filters/y_outlier.c
     core/preprocessing/baselines/airpls.c
     core/preprocessing/baselines/arpls.c
     core/preprocessing/baselines/asls.c
@@ -52,7 +58,37 @@ add_library(chemometrics4all_core OBJECT
     core/preprocessing/derivatives/norris_williams.c
     core/preprocessing/derivatives/savitzky_golay.c
     core/preprocessing/derivatives/second_derivative.c
-    core/preprocessing/smoothing/gaussian.c)
+    core/preprocessing/smoothing/gaussian.c
+    core/preprocessing/signal_conversion/fraction_to_percent.c
+    core/preprocessing/signal_conversion/from_absorbance.c
+    core/preprocessing/signal_conversion/kubelka_munk.c
+    core/preprocessing/signal_conversion/percent_to_fraction.c
+    core/preprocessing/signal_conversion/to_absorbance.c
+    core/preprocessing/orthogonalization/epo.c
+    core/preprocessing/orthogonalization/osc.c
+    core/preprocessing/feature_selection/flexible_pca.c
+    core/preprocessing/feature_selection/flexible_svd.c
+    core/preprocessing/resampling/crop.c
+    core/preprocessing/resampling/kbins_discretizer.c
+    core/preprocessing/resampling/range_discretizer.c
+    core/preprocessing/resampling/resample_transformer.c
+    core/preprocessing/resampling/resampler.c
+    core/preprocessing/specialized/fck_static.c
+    core/splitters/binned_strat_group_kfold.c
+    core/splitters/kbins_stratified.c
+    core/splitters/kennard_stone.c
+    core/splitters/kmeans.c
+    core/splitters/split_common.c
+    core/splitters/split_splitter.c
+    core/splitters/spxy.c
+    core/splitters/spxy_fold.c
+    core/splitters/spxy_g_fold.c
+    core/splitters/systematic_circular.c
+    core/utilities/hotelling_t2.c
+    core/utilities/nirs_metrics.c
+    core/utilities/q_residuals.c
+    core/utilities/signal_type_detector.c
+    core/utilities/transfer_metrics.c)
 target_include_directories(chemometrics4all_core
     PUBLIC  ${PROJECT_SOURCE_DIR}/cpp/include
             ${PROJECT_BINARY_DIR}/generated
@@ -83,9 +119,20 @@ chemometrics4all_add_warnings(chemometrics4all_core)
 # ---------------------------------------------------------------------------
 set(_chemometrics4all_c_sources
     c_api/c_api_context.cpp
+    c_api/c_api_fck.cpp
+    c_api/c_api_feature_selection.cpp
+    c_api/c_api_filters.cpp
+    c_api/c_api_filters_meta.cpp
     c_api/c_api_matrix.cpp
+    c_api/c_api_metrics.cpp
+    c_api/c_api_orthogonalization.cpp
     c_api/c_api_preprocessing.cpp
+    c_api/c_api_resampling.cpp
     c_api/c_api_rng.cpp
+    c_api/c_api_signal_conversion.cpp
+    c_api/c_api_signal_type.cpp
+    c_api/c_api_splitters.cpp
+    c_api/c_api_transfer_metrics.cpp
     c_api/c_api_version.cpp)
 
 function(chemometrics4all_apply_c_target target)

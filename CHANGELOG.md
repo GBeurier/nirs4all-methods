@@ -6,6 +6,71 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.0+abi.1.7.0] — Phases 7-21 parallel batch (signal conversion, OSC/EPO, FlexiblePCA/SVD, resampling, splitters, filters, metrics, transfer metrics, FCK)
+
+### Added
+
+This release lands the ten Phase 7-21 worktrees that were developed in parallel
+under the same ABI base. All additions are surface-additive — no existing
+symbol changes signature, no behavioural regression on the 82 prior tests.
+ABI minor bumps from 1.6.0 to 1.7.0.
+
+- **Phase 7 — Signal conversion (5 stateless ops, 15 symbols)**: ToAbsorbance,
+  FromAbsorbance, PercentToFraction, FractionToPercent, KubelkaMunk.
+- **Phase 8 — Orthogonalization (2 stateful ops, 12 symbols)**: OSC (Wold
+  1998) and EPO (Roger 2003) with fit/transform/inverse_transform contracts.
+- **Phase 9 — Feature selection (2 stateful ops + shared Jacobi SVD, 12
+  symbols)**: FlexiblePCA, FlexibleSVD, plus internal `c4a_svd_compact`
+  (one-sided Jacobi with wide-matrix transpose fallback) used by Phases 9, 19.
+- **Phase 10 — Resampling / cropping / target discretization (5 ops)**:
+  Resampler (interpolation), CropTransformer, ResampleTransformer,
+  IntegerKBinsDiscretizer, RangeDiscretizer (int32 output).
+- **Phase 11 — Splitters (9 ops, NEW `c4a_split_*` category, 31 symbols)**:
+  KennardStone, SPXY, SPXYFold, SPXYGFold (group-aware), KMeans, KBinsStratified,
+  BinnedStratifiedGroupKFold, SystematicCircular, SPlit (data twinning), plus
+  the shared `c4a_split_result_t` struct + `c4a_split_result_destroy`.
+- **Phase 12 — YOutlierFilter (NEW `c4a_filter_*` category, 3 symbols)**:
+  IQR / Z-score / Percentile / MAD detection methods, plus the shared
+  `c4a_filter_stats_t` struct used by every filter operator.
+- **Phase 14 — Filter meta operators (3 ops, 14 symbols)**: HighLeverageFilter
+  (hat-matrix / PCA leverage), SpectralQualityFilter (6 row-level thresholds),
+  CompositeFilter (ANY / ALL combinator over sub-filters).
+- **Phase 19 — Signal type detection + NIRS metrics + T² / Q (11 symbols)**:
+  - `c4a_signal_detect` auto-detects spectrum type (absorbance, reflectance,
+    transmittance, Kubelka-Munk, log(1/R), log(1/T), and percent variants).
+  - Eight regression metrics: RMSE, MAE, bias, SEP, RPD, RPIQ, R², NRMSE.
+  - Two multivariate outlier statistics: Hotelling T², Q-residuals
+    (Jackson-Mudholkar UCL).
+- **Phase 20 — Transfer metrics (NEW `c4a_transfer_*` category, 1 symbol)**:
+  `c4a_transfer_metrics_compute` returns nine dataset-alignment metrics
+  (centroid_distance, CKA, Grassmann, RV, Procrustes, trustworthiness,
+  spread_distance, EVR source/target).
+- **Phase 21 — FCK static transformer (4 symbols, `c4a_pp_fck_static_*` +
+  `c4a_fck_kernel_1d`)**: bank of fractional convolutional kernels with
+  reflect-mode 1D convolution.
+
+### Changed
+
+- ABI minor bumps from 1.6.0 to 1.7.0. The public surface gains ~126 new
+  symbols (126 → 252).
+- `c4a.h` grows ten new sections (§13-§22) and renumbers the trailing ABI
+  guard-rail block to §23. All additions are inside the same `extern "C"`
+  block as the existing surface; no enum-size or struct-layout changes.
+- Internal helper `c4a_svd_compact` (`cpp/src/core/common/svd.{c,h}`) is the
+  single shared SVD used by Phases 9, 19 (Hotelling T² / Q-residuals).
+  Phase 20's `transfer_metrics.c` keeps its private Jacobi-PCA — its API
+  surface is incompatible with the shared helper and the parity reference
+  was generated against it.
+
+### Notes
+
+- All ten worktrees declared their tests through `register_*_tests` entry
+  points; the standalone test mains (`main_phase19.cpp`, `main_splitters.cpp`,
+  `test_transfer_metrics_main.cpp`) are dropped in favour of a single
+  `chemometrics4all_tests` executable (no auxiliary CTest targets).
+- Test suite grew from 82/82 to 171/171 passing (~89 new tests).
+- Zero new build warnings; sanitizer-clean.
+
 ## [0.1.0+abi.1.6.0] — Phase 5b baseline correction (rest) + LogTransform split
 
 ### Added

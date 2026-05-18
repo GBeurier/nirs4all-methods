@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 /*
- * chemometrics4all — public C ABI v1.6.0.
+ * chemometrics4all — public C ABI v1.7.0.
  *
  * Stability: experimental until v1.0.0. Every breaking change before that
  * version bumps the ABI MAJOR (see c4a_version.h). After v1.0.0 the ABI
@@ -1003,12 +1003,623 @@ C4A_API c4a_status_t c4a_pp_beads_transform(const c4a_pp_beads_handle_t* handle,
                                              c4a_matrix_view_t X,
                                              c4a_matrix_view_t out);
 
+/* ============================================================================
+ * 13. Phase 7 — Signal conversion preprocessings
+ * ============================================================================
+ *
+ * Five closed-form spectroscopy unit conversions:
+ *
+ *   - ToAbsorbance      : A = -log10(max(R, eps)).
+ *   - FromAbsorbance    : R = 10^(-A). Optional %-scaling.
+ *   - PercentToFraction : R_frac = R_pct / 100.
+ *   - FractionToPercent : R_pct  = R_frac * 100.
+ *   - KubelkaMunk       : KM = (1 - R)^2 / (2 R), with R guarded by epsilon.
+ *
+ * All five operators are stateless (`_create / _transform / _destroy`).
+ * Output buffers may alias the input (in-place is supported).
+ */
+
+/* ---------- ToAbsorbance ----------------------------------------------- */
+typedef struct c4a_pp_to_absorbance_handle_t c4a_pp_to_absorbance_handle_t;
+C4A_API c4a_status_t c4a_pp_to_absorbance_create(
+    c4a_pp_to_absorbance_handle_t** out,
+    int is_percent, double epsilon, int clip_negative);
+C4A_API void         c4a_pp_to_absorbance_destroy(
+    c4a_pp_to_absorbance_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_to_absorbance_transform(
+    const c4a_pp_to_absorbance_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+/* ---------- FromAbsorbance --------------------------------------------- */
+typedef struct c4a_pp_from_absorbance_handle_t c4a_pp_from_absorbance_handle_t;
+C4A_API c4a_status_t c4a_pp_from_absorbance_create(
+    c4a_pp_from_absorbance_handle_t** out, int is_percent);
+C4A_API void         c4a_pp_from_absorbance_destroy(
+    c4a_pp_from_absorbance_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_from_absorbance_transform(
+    const c4a_pp_from_absorbance_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+/* ---------- PercentToFraction ----------------------------------------- */
+typedef struct c4a_pp_pct_to_frac_handle_t c4a_pp_pct_to_frac_handle_t;
+C4A_API c4a_status_t c4a_pp_pct_to_frac_create(
+    c4a_pp_pct_to_frac_handle_t** out);
+C4A_API void         c4a_pp_pct_to_frac_destroy(
+    c4a_pp_pct_to_frac_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_pct_to_frac_transform(
+    const c4a_pp_pct_to_frac_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+/* ---------- FractionToPercent ----------------------------------------- */
+typedef struct c4a_pp_frac_to_pct_handle_t c4a_pp_frac_to_pct_handle_t;
+C4A_API c4a_status_t c4a_pp_frac_to_pct_create(
+    c4a_pp_frac_to_pct_handle_t** out);
+C4A_API void         c4a_pp_frac_to_pct_destroy(
+    c4a_pp_frac_to_pct_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_frac_to_pct_transform(
+    const c4a_pp_frac_to_pct_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+/* ---------- KubelkaMunk ----------------------------------------------- */
+typedef struct c4a_pp_kubelka_munk_handle_t c4a_pp_kubelka_munk_handle_t;
+C4A_API c4a_status_t c4a_pp_kubelka_munk_create(
+    c4a_pp_kubelka_munk_handle_t** out, int is_percent, double epsilon);
+C4A_API void         c4a_pp_kubelka_munk_destroy(
+    c4a_pp_kubelka_munk_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_kubelka_munk_transform(
+    const c4a_pp_kubelka_munk_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+/* ============================================================================
+ * 14. Phase 8 — Orthogonalization (OSC, EPO)
+ * ============================================================================
+ *
+ * Both operators expose the stateful `_create / _fit / _transform / _destroy
+ * / _is_fitted` ABI contract. OSC additionally exposes `_inverse_transform`
+ * which always returns C4A_ERR_UNSUPPORTED (the orthogonal-component
+ * deflation is many-to-one). EPO has its own `_inverse_transform`.
+ */
+
+/* ---------- Orthogonal Signal Correction (Wold 1998) ------------------- */
+typedef struct c4a_pp_osc_handle_t c4a_pp_osc_handle_t;
+C4A_API c4a_status_t c4a_pp_osc_create(c4a_pp_osc_handle_t** out,
+                                        int32_t n_components, int scale);
+C4A_API void         c4a_pp_osc_destroy(c4a_pp_osc_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_osc_fit(c4a_pp_osc_handle_t* handle,
+                                     c4a_matrix_view_t X,
+                                     const double* y, int64_t y_len);
+C4A_API c4a_status_t c4a_pp_osc_transform(const c4a_pp_osc_handle_t* handle,
+                                           c4a_matrix_view_t X,
+                                           c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_osc_inverse_transform(
+    const c4a_pp_osc_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_osc_is_fitted(const c4a_pp_osc_handle_t* handle,
+                                           int* out_fitted);
+
+/* ---------- External Parameter Orthogonalisation (Roger 2003) ---------- */
+typedef struct c4a_pp_epo_handle_t c4a_pp_epo_handle_t;
+C4A_API c4a_status_t c4a_pp_epo_create(c4a_pp_epo_handle_t** out, int scale);
+C4A_API void         c4a_pp_epo_destroy(c4a_pp_epo_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_epo_fit(c4a_pp_epo_handle_t* handle,
+                                     c4a_matrix_view_t X,
+                                     const double* d, int64_t d_len);
+C4A_API c4a_status_t c4a_pp_epo_transform(const c4a_pp_epo_handle_t* handle,
+                                           c4a_matrix_view_t X,
+                                           c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_epo_inverse_transform(
+    const c4a_pp_epo_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_epo_is_fitted(const c4a_pp_epo_handle_t* handle,
+                                           int* out_fitted);
+
+/* ============================================================================
+ * 15. Phase 9 — Feature selection (FlexiblePCA, FlexibleSVD)
+ * ============================================================================
+ *
+ * Stateful dimensionality reduction. `n_components` may be a positive
+ * integer (number of components) or a value in (0, 1] interpreted as the
+ * target cumulative explained-variance ratio (FlexiblePCA only). Use
+ * `_output_cols` to query the post-fit output column count.
+ */
+
+/* ---------- FlexiblePCA ------------------------------------------------ */
+typedef struct c4a_pp_flex_pca_handle_t c4a_pp_flex_pca_handle_t;
+C4A_API c4a_status_t c4a_pp_flex_pca_create(c4a_pp_flex_pca_handle_t** out,
+                                             double n_components);
+C4A_API void         c4a_pp_flex_pca_destroy(c4a_pp_flex_pca_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_flex_pca_fit(c4a_pp_flex_pca_handle_t* handle,
+                                          c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_flex_pca_transform(
+    const c4a_pp_flex_pca_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_flex_pca_is_fitted(
+    const c4a_pp_flex_pca_handle_t* handle, int* out_fitted);
+C4A_API c4a_status_t c4a_pp_flex_pca_output_cols(
+    const c4a_pp_flex_pca_handle_t* handle, int64_t* out_cols);
+
+/* ---------- FlexibleSVD ------------------------------------------------ */
+typedef struct c4a_pp_flex_svd_handle_t c4a_pp_flex_svd_handle_t;
+C4A_API c4a_status_t c4a_pp_flex_svd_create(c4a_pp_flex_svd_handle_t** out,
+                                             double n_components);
+C4A_API void         c4a_pp_flex_svd_destroy(c4a_pp_flex_svd_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_flex_svd_fit(c4a_pp_flex_svd_handle_t* handle,
+                                          c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_flex_svd_transform(
+    const c4a_pp_flex_svd_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_flex_svd_is_fitted(
+    const c4a_pp_flex_svd_handle_t* handle, int* out_fitted);
+C4A_API c4a_status_t c4a_pp_flex_svd_output_cols(
+    const c4a_pp_flex_svd_handle_t* handle, int64_t* out_cols);
+
+/* ============================================================================
+ * 16. Phase 10 — Resampling, cropping, target discretization
+ * ============================================================================
+ *
+ * Five operators covering wavelength resampling, cropping and target-value
+ * discretization.
+ *
+ *   - Resampler        : interpolate spectra onto a target wavelength grid
+ *                        (linear / cubic / nearest).
+ *   - CropTransformer  : slice columns [start, end).
+ *   - ResampleTransformer : trim/replicate columns to a target length.
+ *   - IntegerKBinsDiscretizer : per-column equal-width / quantile binning.
+ *   - RangeDiscretizer : monotonic edge-based binning (integer output).
+ *
+ * The two discretizers produce int32 outputs and use the I32 dtype on the
+ * output view.
+ */
+
+/* ---------- Resampler (stateful) -------------------------------------- */
+typedef struct c4a_pp_resampler_handle_t c4a_pp_resampler_handle_t;
+C4A_API c4a_status_t c4a_pp_resampler_create(c4a_pp_resampler_handle_t** out,
+                                              const double* target_wl,
+                                              int64_t n_target,
+                                              int32_t method,
+                                              double crop_min, double crop_max,
+                                              int use_crop, double fill_value,
+                                              int bounds_error,
+                                              int extrapolate);
+C4A_API void         c4a_pp_resampler_destroy(c4a_pp_resampler_handle_t* h);
+C4A_API c4a_status_t c4a_pp_resampler_fit(c4a_pp_resampler_handle_t* h,
+                                           const double* source_wl,
+                                           int64_t n_source);
+C4A_API c4a_status_t c4a_pp_resampler_is_fitted(
+    const c4a_pp_resampler_handle_t* h, int* out_fitted);
+C4A_API int64_t      c4a_pp_resampler_output_cols(
+    const c4a_pp_resampler_handle_t* h);
+C4A_API c4a_status_t c4a_pp_resampler_transform(
+    const c4a_pp_resampler_handle_t* h,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+/* ---------- CropTransformer (stateless) ------------------------------- */
+typedef struct c4a_pp_crop_handle_t c4a_pp_crop_handle_t;
+C4A_API c4a_status_t c4a_pp_crop_create(c4a_pp_crop_handle_t** out,
+                                         int64_t start, int64_t end);
+C4A_API void         c4a_pp_crop_destroy(c4a_pp_crop_handle_t* h);
+C4A_API int64_t      c4a_pp_crop_output_cols(const c4a_pp_crop_handle_t* h,
+                                              int64_t input_cols);
+C4A_API c4a_status_t c4a_pp_crop_transform(const c4a_pp_crop_handle_t* h,
+                                            c4a_matrix_view_t X,
+                                            c4a_matrix_view_t out);
+
+/* ---------- ResampleTransformer (stateless) --------------------------- */
+typedef struct c4a_pp_resample_handle_t c4a_pp_resample_handle_t;
+C4A_API c4a_status_t c4a_pp_resample_create(c4a_pp_resample_handle_t** out,
+                                             int64_t num_samples);
+C4A_API void         c4a_pp_resample_destroy(c4a_pp_resample_handle_t* h);
+C4A_API int64_t      c4a_pp_resample_output_cols(
+    const c4a_pp_resample_handle_t* h, int64_t input_cols);
+C4A_API c4a_status_t c4a_pp_resample_transform(
+    const c4a_pp_resample_handle_t* h,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+/* ---------- IntegerKBinsDiscretizer (stateful, int32 output) ---------- */
+typedef struct c4a_pp_kbins_disc_handle_t c4a_pp_kbins_disc_handle_t;
+C4A_API c4a_status_t c4a_pp_kbins_disc_create(c4a_pp_kbins_disc_handle_t** out,
+                                               int32_t n_bins,
+                                               int32_t strategy);
+C4A_API void         c4a_pp_kbins_disc_destroy(c4a_pp_kbins_disc_handle_t* h);
+C4A_API c4a_status_t c4a_pp_kbins_disc_fit(c4a_pp_kbins_disc_handle_t* h,
+                                            c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_kbins_disc_is_fitted(
+    const c4a_pp_kbins_disc_handle_t* h, int* out_fitted);
+C4A_API c4a_status_t c4a_pp_kbins_disc_transform(
+    const c4a_pp_kbins_disc_handle_t* h,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+/* ---------- RangeDiscretizer (stateless, int32 output) ---------------- */
+typedef struct c4a_pp_range_disc_handle_t c4a_pp_range_disc_handle_t;
+C4A_API c4a_status_t c4a_pp_range_disc_create(c4a_pp_range_disc_handle_t** out,
+                                               const double* bins,
+                                               int64_t n_edges);
+C4A_API void         c4a_pp_range_disc_destroy(c4a_pp_range_disc_handle_t* h);
+C4A_API c4a_status_t c4a_pp_range_disc_transform(
+    const c4a_pp_range_disc_handle_t* h,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+/* ============================================================================
+ * 17. Phase 11 — Splitters (c4a_split_*)
+ * ============================================================================
+ *
+ * Nine train/test splitting strategies. Each splitter returns a
+ * `c4a_split_result_t` containing two heap-allocated index arrays that the
+ * caller releases via `c4a_split_result_destroy`.
+ *
+ *   - KennardStone, SPXY, SPXYFold, SPXYGFold (group-aware), KMeans,
+ *     KBinsStratified, BinnedStratifiedGroupKFold, SystematicCircular,
+ *     SPlit (data twinning).
+ */
+
+/* ---------- Shared result type ----------------------------------------- */
+typedef struct c4a_split_result_t {
+    int64_t* train_idx;
+    int64_t  n_train;
+    int64_t* test_idx;
+    int64_t  n_test;
+    void*    _owner;
+} c4a_split_result_t;
+
+C4A_API void c4a_split_result_destroy(c4a_split_result_t* r);
+
+/* ---------- KennardStone ----------------------------------------------- */
+typedef struct c4a_split_kennard_stone_t c4a_split_kennard_stone_t;
+C4A_API c4a_status_t c4a_split_kennard_stone_create(
+    c4a_split_kennard_stone_t** out, double test_size);
+C4A_API void c4a_split_kennard_stone_destroy(c4a_split_kennard_stone_t* h);
+C4A_API c4a_status_t c4a_split_kennard_stone_split(
+    const c4a_split_kennard_stone_t* h,
+    c4a_matrix_view_t X, c4a_split_result_t* out);
+
+/* ---------- SPXY (single train/test, joint X-Y) ----------------------- */
+typedef struct c4a_split_spxy_t c4a_split_spxy_t;
+C4A_API c4a_status_t c4a_split_spxy_create(c4a_split_spxy_t** out,
+                                            double test_size);
+C4A_API void c4a_split_spxy_destroy(c4a_split_spxy_t* h);
+C4A_API c4a_status_t c4a_split_spxy_split(const c4a_split_spxy_t* h,
+                                           c4a_matrix_view_t X,
+                                           c4a_matrix_view_t Y,
+                                           c4a_split_result_t* out);
+
+/* ---------- SPXYFold (k-fold) ---------------------------------------- */
+typedef struct c4a_split_spxy_fold_t c4a_split_spxy_fold_t;
+C4A_API c4a_status_t c4a_split_spxy_fold_create(c4a_split_spxy_fold_t** out,
+                                                 int32_t n_splits,
+                                                 int32_t y_metric);
+C4A_API void c4a_split_spxy_fold_destroy(c4a_split_spxy_fold_t* h);
+C4A_API c4a_status_t c4a_split_spxy_fold_n_splits(
+    const c4a_split_spxy_fold_t* h, int32_t* out);
+C4A_API c4a_status_t c4a_split_spxy_fold_split_fold(
+    const c4a_split_spxy_fold_t* h,
+    c4a_matrix_view_t X, c4a_matrix_view_t Y,
+    int32_t fold_idx, c4a_split_result_t* out);
+
+/* ---------- SPXYGFold (group-aware k-fold) --------------------------- */
+typedef struct c4a_split_spxy_g_fold_t c4a_split_spxy_g_fold_t;
+C4A_API c4a_status_t c4a_split_spxy_g_fold_create(c4a_split_spxy_g_fold_t** out,
+                                                    int32_t n_splits,
+                                                    int32_t y_metric,
+                                                    int32_t aggregation);
+C4A_API void c4a_split_spxy_g_fold_destroy(c4a_split_spxy_g_fold_t* h);
+C4A_API c4a_status_t c4a_split_spxy_g_fold_n_splits(
+    const c4a_split_spxy_g_fold_t* h, int32_t* out);
+C4A_API c4a_status_t c4a_split_spxy_g_fold_split_fold(
+    const c4a_split_spxy_g_fold_t* h,
+    c4a_matrix_view_t X, c4a_matrix_view_t Y,
+    const int64_t* groups, int64_t groups_len,
+    int32_t fold_idx, c4a_split_result_t* out);
+
+/* ---------- KMeans (k-means++) ---------------------------------------- */
+typedef struct c4a_split_kmeans_t c4a_split_kmeans_t;
+C4A_API c4a_status_t c4a_split_kmeans_create(c4a_split_kmeans_t** out,
+                                               double test_size, uint64_t seed,
+                                               int32_t max_iter);
+C4A_API void c4a_split_kmeans_destroy(c4a_split_kmeans_t* h);
+C4A_API c4a_status_t c4a_split_kmeans_split(const c4a_split_kmeans_t* h,
+                                              c4a_matrix_view_t X,
+                                              c4a_split_result_t* out);
+
+/* ---------- KBinsStratified ------------------------------------------ */
+typedef struct c4a_split_kbins_stratified_t c4a_split_kbins_stratified_t;
+C4A_API c4a_status_t c4a_split_kbins_stratified_create(
+    c4a_split_kbins_stratified_t** out,
+    double test_size, uint64_t seed,
+    int32_t n_bins, int32_t strategy);
+C4A_API void c4a_split_kbins_stratified_destroy(c4a_split_kbins_stratified_t* h);
+C4A_API c4a_status_t c4a_split_kbins_stratified_split(
+    const c4a_split_kbins_stratified_t* h,
+    c4a_matrix_view_t Y, c4a_split_result_t* out);
+
+/* ---------- BinnedStratifiedGroupKFold ------------------------------- */
+typedef struct c4a_split_binned_strat_group_kfold_t
+    c4a_split_binned_strat_group_kfold_t;
+C4A_API c4a_status_t c4a_split_binned_strat_group_kfold_create(
+    c4a_split_binned_strat_group_kfold_t** out,
+    int32_t n_splits, int32_t n_bins, int32_t strategy,
+    int32_t shuffle, uint64_t seed);
+C4A_API void c4a_split_binned_strat_group_kfold_destroy(
+    c4a_split_binned_strat_group_kfold_t* h);
+C4A_API c4a_status_t c4a_split_binned_strat_group_kfold_n_splits(
+    const c4a_split_binned_strat_group_kfold_t* h, int32_t* out);
+C4A_API c4a_status_t c4a_split_binned_strat_group_kfold_split_fold(
+    const c4a_split_binned_strat_group_kfold_t* h,
+    c4a_matrix_view_t Y,
+    const int64_t* groups, int64_t groups_len,
+    int32_t fold_idx, c4a_split_result_t* out);
+
+/* ---------- SystematicCircular --------------------------------------- */
+typedef struct c4a_split_systematic_circular_t c4a_split_systematic_circular_t;
+C4A_API c4a_status_t c4a_split_systematic_circular_create(
+    c4a_split_systematic_circular_t** out, double test_size, uint64_t seed);
+C4A_API void c4a_split_systematic_circular_destroy(
+    c4a_split_systematic_circular_t* h);
+C4A_API c4a_status_t c4a_split_systematic_circular_split(
+    const c4a_split_systematic_circular_t* h,
+    c4a_matrix_view_t Y, c4a_split_result_t* out);
+
+/* ---------- SPlit (data twinning) ------------------------------------ */
+typedef struct c4a_split_split_splitter_t c4a_split_split_splitter_t;
+C4A_API c4a_status_t c4a_split_split_splitter_create(
+    c4a_split_split_splitter_t** out, double test_size, uint64_t seed);
+C4A_API void c4a_split_split_splitter_destroy(c4a_split_split_splitter_t* h);
+C4A_API c4a_status_t c4a_split_split_splitter_split(
+    const c4a_split_split_splitter_t* h,
+    c4a_matrix_view_t X, c4a_split_result_t* out);
+
+/* ============================================================================
+ * 18. Phase 12 — Sample filters: Y-based outliers (c4a_filter_*)
+ * ============================================================================
+ *
+ * Sample-level filters return a per-row keep-mask (`uint8_t`, 1 = keep,
+ * 0 = exclude) plus a `c4a_filter_stats_t` summary. Mask + stats buffers
+ * are caller-allocated.
+ *
+ * Phase 12 introduces the `c4a_filter_stats_t` struct shared with later
+ * filter phases (P14, future P13).
+ */
+
+/* ---------- Shared filter result type --------------------------------- */
+typedef struct c4a_filter_stats_t {
+    int64_t n_samples;        /* total samples seen by the filter         */
+    int64_t n_kept;           /* count of mask[i] == 1                    */
+    int64_t n_excluded;       /* n_samples - n_kept                       */
+    double  exclusion_rate;   /* n_excluded / n_samples; 0.0 when n == 0  */
+} c4a_filter_stats_t;
+
+/* ---------- Y-outlier method enum ------------------------------------- */
+typedef enum c4a_y_outlier_method_t {
+    C4A_Y_OUTLIER_IQR        = 0,
+    C4A_Y_OUTLIER_ZSCORE     = 1,
+    C4A_Y_OUTLIER_PERCENTILE = 2,
+    C4A_Y_OUTLIER_MAD        = 3
+} c4a_y_outlier_method_t;
+
+/* ---------- YOutlierFilter -------------------------------------------- */
+typedef struct c4a_filter_y_outlier_handle_t c4a_filter_y_outlier_handle_t;
+C4A_API c4a_status_t c4a_filter_y_outlier_create(
+    c4a_filter_y_outlier_handle_t** out,
+    c4a_y_outlier_method_t method,
+    double threshold, double lower_pct, double upper_pct);
+C4A_API void         c4a_filter_y_outlier_destroy(
+    c4a_filter_y_outlier_handle_t* handle);
+C4A_API c4a_status_t c4a_filter_y_outlier_fit_get_mask(
+    const c4a_filter_y_outlier_handle_t* handle,
+    const double* y, int64_t n,
+    uint8_t* mask_out, c4a_filter_stats_t* stats_out);
+
+/* ============================================================================
+ * 19. Phase 14 — Leverage / Quality / Composite filters (c4a_filter_*)
+ * ============================================================================
+ *
+ * Three meta-filter operators that reuse the §18 `c4a_filter_stats_t`.
+ *
+ *   - HighLeverageFilter   : hat-matrix or PCA score-space leverage.
+ *   - SpectralQualityFilter : six all-or-nothing thresholds on each row.
+ *   - CompositeFilter      : combines sub-filter keep-masks via ANY or ALL.
+ */
+
+/* ---------- HighLeverageFilter (stateful) ----------------------------- */
+typedef struct c4a_filter_leverage_handle_t c4a_filter_leverage_handle_t;
+C4A_API c4a_status_t c4a_filter_leverage_create(
+    c4a_filter_leverage_handle_t** out,
+    int32_t method,
+    double  threshold_multiplier,
+    int     use_absolute_threshold,
+    double  absolute_threshold,
+    int32_t n_components,
+    int     center);
+C4A_API void         c4a_filter_leverage_destroy(
+    c4a_filter_leverage_handle_t* handle);
+C4A_API c4a_status_t c4a_filter_leverage_fit(
+    c4a_filter_leverage_handle_t* handle, c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_filter_leverage_is_fitted(
+    const c4a_filter_leverage_handle_t* handle, int* out_fitted);
+C4A_API c4a_status_t c4a_filter_leverage_apply(
+    const c4a_filter_leverage_handle_t* handle,
+    c4a_matrix_view_t X,
+    uint8_t* mask_out, c4a_filter_stats_t* stats_out);
+C4A_API double       c4a_filter_leverage_threshold(
+    const c4a_filter_leverage_handle_t* handle);
+
+/* ---------- SpectralQualityFilter (stateless) ------------------------- */
+typedef struct c4a_filter_quality_handle_t c4a_filter_quality_handle_t;
+C4A_API c4a_status_t c4a_filter_quality_create(
+    c4a_filter_quality_handle_t** out,
+    double max_nan_ratio, double max_zero_ratio,
+    double min_variance,
+    int use_max, double max_value,
+    int use_min, double min_value,
+    int check_inf);
+C4A_API void         c4a_filter_quality_destroy(
+    c4a_filter_quality_handle_t* handle);
+C4A_API c4a_status_t c4a_filter_quality_apply(
+    const c4a_filter_quality_handle_t* handle,
+    c4a_matrix_view_t X,
+    uint8_t* mask_out, c4a_filter_stats_t* stats_out);
+
+/* ---------- CompositeFilter ------------------------------------------- */
+typedef enum c4a_composite_mode_t {
+    C4A_COMPOSITE_ANY = 0,    /* exclude if ANY sub-filter excludes */
+    C4A_COMPOSITE_ALL = 1     /* exclude only if ALL sub-filters exclude */
+} c4a_composite_mode_t;
+
+typedef struct c4a_filter_composite_handle_t c4a_filter_composite_handle_t;
+C4A_API c4a_status_t c4a_filter_composite_create(
+    c4a_filter_composite_handle_t** out, c4a_composite_mode_t mode);
+C4A_API void         c4a_filter_composite_destroy(
+    c4a_filter_composite_handle_t* handle);
+C4A_API c4a_status_t c4a_filter_composite_add_leverage(
+    c4a_filter_composite_handle_t* handle,
+    c4a_filter_leverage_handle_t* sub);
+C4A_API c4a_status_t c4a_filter_composite_add_quality(
+    c4a_filter_composite_handle_t* handle,
+    c4a_filter_quality_handle_t* sub);
+C4A_API c4a_status_t c4a_filter_composite_apply(
+    const c4a_filter_composite_handle_t* handle,
+    c4a_matrix_view_t X,
+    uint8_t* mask_out, c4a_filter_stats_t* stats_out);
+
+/* ============================================================================
+ * 20. Phase 19 — Signal type detection, NIRS metrics, T² / Q residuals
+ * ============================================================================
+ *
+ * Three groups of free-function utilities:
+ *
+ *   - c4a_signal_* : auto-detect spectrum type (absorbance / reflectance /
+ *                    transmittance / Kubelka-Munk / log(1/R) / log(1/T))
+ *                    plus the percent-scaled variants.
+ *   - c4a_metric_* : eight closed-form regression metrics (RMSE, MAE,
+ *                    bias, SEP, RPD, RPIQ, R², NRMSE).
+ *   - c4a_util_*   : multivariate outlier statistics (Hotelling T²,
+ *                    Q-residuals) with their analytical upper control limits.
+ */
+
+/* ---------- 20.1 SignalTypeDetector ----------------------------------- */
+typedef enum c4a_signal_type_t {
+    C4A_SIGNAL_UNKNOWN               = 0,
+    C4A_SIGNAL_ABSORBANCE            = 1,
+    C4A_SIGNAL_REFLECTANCE           = 2,
+    C4A_SIGNAL_REFLECTANCE_PERCENT   = 3,
+    C4A_SIGNAL_TRANSMITTANCE         = 4,
+    C4A_SIGNAL_TRANSMITTANCE_PERCENT = 5,
+    C4A_SIGNAL_KUBELKA_MUNK          = 6,
+    C4A_SIGNAL_LOG_1_R               = 7,
+    C4A_SIGNAL_LOG_1_T               = 8
+} c4a_signal_type_t;
+
+C4A_API c4a_status_t c4a_signal_detect(c4a_matrix_view_t X,
+                                        const double* wavelengths_optional,
+                                        int64_t wl_length,
+                                        double confidence_threshold,
+                                        c4a_signal_type_t* type_out,
+                                        double* confidence_out,
+                                        char reason_buf[256]);
+
+/* ---------- 20.2 NIRS regression metrics ------------------------------ */
+C4A_API c4a_status_t c4a_metric_rmse (const double* y_true,
+                                       const double* y_pred,
+                                       int64_t n, double* out);
+C4A_API c4a_status_t c4a_metric_mae  (const double* y_true,
+                                       const double* y_pred,
+                                       int64_t n, double* out);
+C4A_API c4a_status_t c4a_metric_bias (const double* y_true,
+                                       const double* y_pred,
+                                       int64_t n, double* out);
+C4A_API c4a_status_t c4a_metric_sep  (const double* y_true,
+                                       const double* y_pred,
+                                       int64_t n, double* out);
+C4A_API c4a_status_t c4a_metric_rpd  (const double* y_true,
+                                       const double* y_pred,
+                                       int64_t n, double* out);
+C4A_API c4a_status_t c4a_metric_rpiq (const double* y_true,
+                                       const double* y_pred,
+                                       int64_t n, double* out);
+C4A_API c4a_status_t c4a_metric_r2   (const double* y_true,
+                                       const double* y_pred,
+                                       int64_t n, double* out);
+C4A_API c4a_status_t c4a_metric_nrmse(const double* y_true,
+                                       const double* y_pred,
+                                       int64_t n, double* out);
+
+/* ---------- 20.3 Multivariate outlier statistics ---------------------- */
+C4A_API c4a_status_t c4a_util_hotelling_t2(c4a_matrix_view_t X,
+                                            int32_t n_components,
+                                            double alpha,
+                                            double* t2_per_sample,
+                                            int64_t n_samples,
+                                            double* ucl_out);
+C4A_API c4a_status_t c4a_util_q_residuals(c4a_matrix_view_t X,
+                                           int32_t n_components,
+                                           double alpha,
+                                           double* q_per_sample,
+                                           int64_t n_samples,
+                                           double* ucl_out);
+
+/* ============================================================================
+ * 21. Phase 20 — Transfer metrics utility (c4a_transfer_*)
+ * ============================================================================
+ *
+ * `c4a_transfer_metrics_compute` computes nine alignment metrics between two
+ * datasets (source and target), as defined in
+ * nirs4all/analysis/transfer_metrics.py. The struct is plain-data — every
+ * field is a `double`. NaN encodes "metric not applicable" (e.g. Grassmann
+ * when the two datasets do not share a feature count).
+ */
+typedef struct c4a_transfer_metrics_t {
+    double centroid_distance;
+    double cka_similarity;
+    double grassmann_distance;
+    double rv_coefficient;
+    double procrustes_disparity;
+    double trustworthiness;
+    double spread_distance;
+    double evr_source;
+    double evr_target;
+} c4a_transfer_metrics_t;
+
+C4A_API c4a_status_t c4a_transfer_metrics_compute(
+    c4a_matrix_view_t X_source,
+    c4a_matrix_view_t X_target,
+    int32_t n_components,
+    int32_t k_neighbors,
+    uint64_t seed,
+    c4a_transfer_metrics_t* out);
+
+/* ============================================================================
+ * 22. Phase 21 — FCK static transformer (c4a_pp_fck_static_*)
+ * ============================================================================
+ *
+ * FCKStaticTransformer applies a precomputed bank of L = n_orders * n_scales
+ * fractional convolutional kernels to each spectrum row. For an input of
+ * shape (n, p) the output has shape (n, L * p) with the L convolved signals
+ * horizontally concatenated in (sample, kernel, feature) order.
+ *
+ * Each kernel of length `kernel_size` is the standard Gaussian × fractional
+ * spatial-derivative recipe (see docs/algorithms/fck_static.md); the bank is
+ * the Cartesian product of `filter_orders` × `filter_scales` with `alpha`
+ * varying slowest.
+ */
+typedef struct c4a_pp_fck_static_handle_t c4a_pp_fck_static_handle_t;
+C4A_API c4a_status_t c4a_pp_fck_static_create(
+    c4a_pp_fck_static_handle_t** out,
+    int32_t kernel_size,
+    const double* filter_orders, int32_t n_orders,
+    const double* filter_scales, int32_t n_scales);
+C4A_API void c4a_pp_fck_static_destroy(c4a_pp_fck_static_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_fck_static_transform(
+    const c4a_pp_fck_static_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_fck_static_output_cols(int32_t n_kernels,
+                                                    int32_t n_features,
+                                                    int32_t* out);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
 
 /* ============================================================================
- * 13. ABI guard rails — fixed-size assertions on the C ABI shape
+ * 23. ABI guard rails — fixed-size assertions on the C ABI shape
  * ==========================================================================
  *
  * Compilers may shrink enums under non-default flags (e.g. -fshort-enums on

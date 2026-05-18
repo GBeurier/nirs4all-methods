@@ -25,6 +25,46 @@ void register_preprocessing_smoothing_tests(c4a_testing::Runner& r);
 // test_preprocessing_baselines.cpp.
 void register_preprocessing_baselines_tests(c4a_testing::Runner& r);
 
+// Phase 7 — signal-conversion parity tests live in
+// test_preprocessing_signal_conversion.cpp.
+void register_preprocessing_signal_conversion_tests(c4a_testing::Runner& r);
+
+// Phase 8 — orthogonalization (OSC, EPO) parity tests live in
+// test_preprocessing_orthogonalization.cpp.
+void register_preprocessing_orthogonalization_tests(c4a_testing::Runner& r);
+
+// Phase 9 — feature-selection (FlexiblePCA, FlexibleSVD) parity tests live
+// in test_preprocessing_feature_selection.cpp.
+void register_preprocessing_feature_selection_tests(c4a_testing::Runner& r);
+
+// Phase 10 — resampling / cropping / discretizers parity tests live in
+// test_preprocessing_resampling.cpp.
+void register_preprocessing_resampling_tests(c4a_testing::Runner& r);
+
+// Phase 11 — splitters parity tests live in test_splitters.cpp.
+void register_splitters_tests(c4a_testing::Runner& r);
+
+// Phase 12 — Y-outlier filter parity tests live in test_filters_y.cpp.
+void register_filters_y_tests(c4a_testing::Runner& r);
+
+// Phase 14 — leverage / quality / composite filter parity tests live in
+// test_filters_meta.cpp.
+void register_filters_meta_tests(c4a_testing::Runner& r);
+
+// Phase 19 — signal type detection parity tests live in
+// test_signal_type.cpp.
+void register_signal_type_tests(c4a_testing::Runner& r);
+
+// Phase 19 — NIRS regression metric + T²/Q parity tests live in
+// test_metrics.cpp.
+void register_metrics_tests(c4a_testing::Runner& r);
+
+// Phase 20 — transfer metrics parity tests live in test_transfer_metrics.cpp.
+void register_transfer_metrics_tests(c4a_testing::Runner& r);
+
+// Phase 21 — FCK static transformer parity tests live in test_fck.cpp.
+void register_fck_tests(c4a_testing::Runner& r);
+
 namespace {
 
 void test_version_string_nonempty() {
@@ -95,5 +135,16 @@ int main() {
     register_preprocessing_stateful_tests(r);
     register_preprocessing_smoothing_tests(r);
     register_preprocessing_baselines_tests(r);
+    register_preprocessing_signal_conversion_tests(r);
+    register_preprocessing_orthogonalization_tests(r);
+    register_preprocessing_feature_selection_tests(r);
+    register_preprocessing_resampling_tests(r);
+    register_splitters_tests(r);
+    register_filters_y_tests(r);
+    register_filters_meta_tests(r);
+    register_signal_type_tests(r);
+    register_metrics_tests(r);
+    register_transfer_metrics_tests(r);
+    register_fck_tests(r);
     return r.finalize();
 }
