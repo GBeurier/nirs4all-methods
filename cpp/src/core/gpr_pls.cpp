@@ -138,13 +138,17 @@ p4a_status_t fit_gp_on_scores(
     const std::size_t n = static_cast<std::size_t>(n_in);
     const std::size_t k = static_cast<std::size_t>(k_in);
     if (T.size() != n * k) {
-        ctx.set_errorf("fit_gp_on_scores: T.size()=%zu but n*k=%zu",
-                        T.size(), n * k);
+        // %zu is C99 but Windows MinGW gcc rejects it under the format
+        // checker. Cast to unsigned long long + %llu is portable.
+        ctx.set_errorf("fit_gp_on_scores: T.size()=%llu but n*k=%llu",
+                        static_cast<unsigned long long>(T.size()),
+                        static_cast<unsigned long long>(n * k));
         return P4A_ERR_SHAPE_MISMATCH;
     }
     if (y_centered.size() != n) {
-        ctx.set_errorf("fit_gp_on_scores: y_centered.size()=%zu but n=%zu",
-                        y_centered.size(), n);
+        ctx.set_errorf("fit_gp_on_scores: y_centered.size()=%llu but n=%llu",
+                        static_cast<unsigned long long>(y_centered.size()),
+                        static_cast<unsigned long long>(n));
         return P4A_ERR_SHAPE_MISMATCH;
     }
 
