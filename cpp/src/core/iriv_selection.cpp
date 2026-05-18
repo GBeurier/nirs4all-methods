@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // IRIV — Iteratively Retains Informative Variables. Mirrors libPLS 1.95
 // `iriv.m` minus the trailing backward-elimination pass (BVE is already

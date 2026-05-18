@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Internal binary classification metric kernels for PLS-DA style scores.
 

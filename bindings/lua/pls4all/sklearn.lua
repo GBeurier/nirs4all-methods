@@ -1,4 +1,4 @@
--- SPDX-License-Identifier: CeCILL-2.1
+-- SPDX-License-Identifier: CECILL-2.1
 --
 -- Idiomatic LuaJIT tier-2 wrapper around pls4all.fit. Provides a
 -- torch.nn-style class with :fit, :predict, :score methods.

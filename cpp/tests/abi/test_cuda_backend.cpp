@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Phase 45 regression: confirm the cuBLAS dispatch path produces
 // results numerically equivalent to the reference scalar loops on

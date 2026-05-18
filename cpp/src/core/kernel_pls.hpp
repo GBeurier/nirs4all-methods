@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Non-linear kernel PLS (§10.2). Supports RBF, polynomial, sigmoid via
 // the Gram-matrix dual path. The model stores the kernel parameters and

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // extern "C" wrappers for AOM global and per-component (POP) selection. The
 // kernel itself lives in cpp/src/core/aom_selection.cpp; this layer adapts

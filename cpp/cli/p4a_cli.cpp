@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // pls4all_cli — tiny introspection tool. Supported subcommands:
 //   --version      print "pls4all <project> (ABI <abi> · git <rev>)"

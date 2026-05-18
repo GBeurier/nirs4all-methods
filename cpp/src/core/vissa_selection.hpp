@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // VISSA-PLS (§49) — Variable Iterative Space Shrinkage Approach.
 // Weighted Binary Matrix Sampling (WBMS) iteratively shrinks the

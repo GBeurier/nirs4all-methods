@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // 3-way tensor PLS (Bro 1996, N-PLS). X is a flat row-major buffer of
 // shape (n × J × K), Y is (n × q). The kernel finds a sequence of unit

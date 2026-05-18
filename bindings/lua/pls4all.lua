@@ -1,4 +1,4 @@
--- SPDX-License-Identifier: CeCILL-2.1
+-- SPDX-License-Identifier: CECILL-2.1
 --
 -- Lua / LuaJIT binding around libp4a's `p4a_pls_fit_simple` C ABI
 -- helper. Uses LuaJIT's built-in FFI library — no external rocks

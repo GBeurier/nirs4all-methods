@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Internal kernel for Elastic Component Regression (ECR), a continuous
 // bridge between PCR (alpha=0) and PLS (alpha=1). Reference:

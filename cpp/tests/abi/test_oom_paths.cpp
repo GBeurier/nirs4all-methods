@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Lightweight churn / leak-shape tests for allocation paths. The real OOM
 // injection lives behind PLS4ALL_ENABLE_FAULT_INJECTION (a future PR);

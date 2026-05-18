@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Internal Context — the C++ object pointed to by the opaque p4a_context_s
 // handle. Owns the seed, backend choice, thread-count hint, the 4 KiB

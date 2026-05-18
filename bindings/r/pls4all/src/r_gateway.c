@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CeCILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 */
 /*
  * R .Call gateway over the pls4all libp4a C ABI.
  *
@@ -96,9 +96,15 @@ static int resolve_algo(const char* name,
         *out_solver = P4A_SOLVER_RANDOMIZED_SVD;
         return 1;
     }
-    if (strcmp(name, "pcr_svd") == 0) {
+    if (strcmp(name, "pcr_svd") == 0 || strcmp(name, "pcr") == 0) {
         *out_algo = P4A_ALGO_PCR;
         *out_solver = P4A_SOLVER_SVD;
+        return 1;
+    }
+    if (strcmp(name, "opls") == 0 || strcmp(name, "opls_nipals") == 0) {
+        *out_algo = P4A_ALGO_OPLS;
+        *out_solver = P4A_SOLVER_NIPALS;
+        *out_deflation = P4A_DEFLATION_ORTHOGONAL;
         return 1;
     }
     return 0;

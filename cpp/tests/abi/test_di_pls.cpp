@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Domain-invariant PLS (§13 of Overview.md). Verifies (a) di_lambda=0
 // matches plain SIMPLS exactly, (b) di_lambda>0 reduces the projection

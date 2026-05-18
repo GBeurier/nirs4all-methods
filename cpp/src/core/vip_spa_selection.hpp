@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // VIP_SPA variable-selection primitive: VIP scoring + threshold mask
 // followed by Successive Projections Algorithm on the surviving subset.

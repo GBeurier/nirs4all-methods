@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CeCILL-2.1
+# SPDX-License-Identifier: CECILL-2.1
 #
 # Unified low-level dispatcher wrapper. Calls the r_p4a_dispatch_fit C
 # entry point which handles 33 MethodResult fits + 24 selectors + 4

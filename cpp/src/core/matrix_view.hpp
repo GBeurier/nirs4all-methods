@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Internal helpers for p4a_matrix_view_t validation. The struct itself is
 // declared in pls4all/p4a.h and is part of the public C ABI; these helpers

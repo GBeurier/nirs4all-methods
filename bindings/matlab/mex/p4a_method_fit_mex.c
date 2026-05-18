@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CeCILL-2.1
+/* SPDX-License-Identifier: CECILL-2.1
  *
  * MATLAB / Octave MEX dispatcher covering ALL MethodResult-returning
  * entry points of libp4a v1.1.0 + selectors + diagnostics.
@@ -797,22 +797,67 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             static const char *sc[] = {"n_classes", "n_components", NULL};
             out = pack_result(mr, dm, iv, NULL, sc);
         }
+    } else if (strcmp(algo, "aom_preprocess") == 0) {
+        int n_ops = get_int_field(params, "n_operators", 3);
+        int mode = get_int_field(params, "gating_mode", 0);
+        if (n_ops < 1) n_ops = 1;
+        if (n_ops > 5) n_ops = 5;
+        p4a_operator_kind_t kinds[5] = {
+            P4A_OP_IDENTITY,
+            P4A_OP_CENTER,
+            P4A_OP_PARETO_SCALE,
+            P4A_OP_AUTOSCALE,
+            P4A_OP_SNV
+        };
+        p4a_operator_bank_t *bank = NULL;
+        p4a_gating_strategy_t *gate = NULL;
+        st = p4a_operator_bank_create(&bank);
+        for (int i = 0; st == P4A_OK && i < n_ops; ++i) {
+            st = p4a_operator_bank_add(bank, kinds[i], NULL, 0);
+        }
+        if (st == P4A_OK) {
+            st = p4a_gating_strategy_create(
+                &gate, (p4a_gating_mode_t)mode);
+        }
+        if (st == P4A_OK) {
+            st = p4a_aom_preprocess_fit(ctx, bank, gate, &Xv, &Yv, &mr);
+        }
+        if (gate) p4a_gating_strategy_destroy(gate);
+        if (bank) p4a_operator_bank_destroy(bank);
+        if (st == P4A_OK) {
+            static const char *dm[] = {"transformed", "operator_outputs",
+                                          "weights", NULL};
+            static const char *i64[] = {"operator_kinds", NULL};
+            static const char *sc[] = {"n_operators", "mode", NULL};
+            out = pack_result(mr, dm, NULL, i64, sc);
+        }
     }
 
     /* ============================================================
      *  Selectors
      * ============================================================ */
     else if (strcmp(algo, "variable_select_rank") == 0) {
-        /* Requires a fitted model handle passed via uint64 "model_ptr"
-         * field. The handle must come from `pls4all.pls_fit_handle`
-         * (an upcoming wrapper) or `pls4all.fit_for_selector`. For
-         * the common case of "fit & rank in one go", users can call
-         * the higher-level pls4all.vip_select wrapper which fits +
-         * extracts internally. */
-        throw_status(P4A_ERR_UNSUPPORTED,
-                      "variable_select_rank requires a fitted model handle; "
-                      "use pls4all.vip_select instead",
-                      ctx, cfg, X, Y);
+        /* Convenience branch: fit an internal SIMPLS model on the given
+         * X/Y with store_scores=1, then call p4a_variable_select_rank
+         * with the requested method (0=VIP, 1=coef magnitude, 2=SR) and
+         * top_k. The model is destroyed before returning. */
+        int method = get_int_field(params, "method", 0);
+        int top_k = get_int_field(params, "top_k", 10);
+        p4a_config_set_store_scores(cfg, 1);
+        p4a_model_t *model = NULL;
+        st = p4a_model_fit(ctx, cfg, &Xv, &Yv, &model);
+        if (st == P4A_OK) {
+            st = p4a_variable_select_rank(ctx, model, &Xv,
+                                            (int32_t)method,
+                                            (int32_t)top_k, &mr);
+        }
+        if (model) p4a_model_destroy(model);
+        if (st == P4A_OK) {
+            static const char *dm[] = {"scores", NULL};
+            static const char *i64[] = {"selected_indices", NULL};
+            static const char *sc[] = {"n_features", "top_k", "method", NULL};
+            out = pack_result(mr, dm, NULL, i64, sc);
+        }
     } else if (strcmp(algo, "spa_select") == 0) {
         int top_k = get_int_field(params, "top_k", 10);
         st = p4a_spa_select(ctx, cfg, &Xv, &Yv, top_k, &mr);
@@ -1178,7 +1223,84 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     /* ============================================================
      *  Diagnostics
      * ============================================================ */
-    else if (strcmp(algo, "approximate_press_compute") == 0) {
+    else if (strcmp(algo, "pls_diagnostics_compute") == 0) {
+        /* Fit SIMPLS model on X/Y (store_scores=1) and call
+         * p4a_pls_diagnostics_compute. params.X_reference (optional)
+         * overrides the reference distribution; when absent we pass
+         * NULL and the core falls back to the stored training scores. */
+        const mxArray *xr = get_array_field(params, "X_reference");
+        double *XR = NULL;
+        p4a_matrix_view_t XRv;
+        const p4a_matrix_view_t *xr_ptr = NULL;
+        if (xr) {
+            if (!mxIsDouble(xr) || mxIsComplex(xr))
+                throw_status(P4A_ERR_INVALID_ARGUMENT,
+                              "pls_diagnostics_compute (params.X_reference must be real double)",
+                              ctx, cfg, X, Y);
+            int xrr, xrc;
+            XR = colmajor_to_rowmajor_alloc(xr, &xrr, &xrc);
+            if (xrc != p) {
+                free(XR);
+                throw_status(P4A_ERR_SHAPE_MISMATCH,
+                              "pls_diagnostics_compute (X_reference ncol)",
+                              ctx, cfg, X, Y);
+            }
+            p4a_matrix_view_init_rowmajor(&XRv, XR, xrr, xrc, P4A_DTYPE_F64);
+            xr_ptr = &XRv;
+        }
+        p4a_config_set_store_scores(cfg, 1);
+        p4a_model_t *model = NULL;
+        st = p4a_model_fit(ctx, cfg, &Xv, &Yv, &model);
+        if (st == P4A_OK) {
+            st = p4a_pls_diagnostics_compute(ctx, model, &Xv, xr_ptr, &mr);
+        }
+        if (model) p4a_model_destroy(model);
+        free(XR);
+        if (st == P4A_OK) {
+            static const char *dm[] = {"t2", "q", "dmodx", NULL};
+            static const char *sc[] = {"n_components", "n_features", NULL};
+            out = pack_result(mr, dm, NULL, NULL, sc);
+        }
+    } else if (strcmp(algo, "pls_monitoring_run") == 0) {
+        /* X/Y positional inputs are the reference dataset
+         * (X_reference, Y_reference). params.X_monitor must be a real
+         * double matrix with the same number of columns as X. The
+         * internal SIMPLS fit uses store_scores=1 so the C core can
+         * derive reference thresholds. */
+        const mxArray *xm = get_array_field(params, "X_monitor");
+        if (!xm || !mxIsDouble(xm) || mxIsComplex(xm))
+            throw_status(P4A_ERR_INVALID_ARGUMENT,
+                          "pls_monitoring_run (params.X_monitor must be a real double matrix)",
+                          ctx, cfg, X, Y);
+        int xmr, xmc;
+        double *XM = colmajor_to_rowmajor_alloc(xm, &xmr, &xmc);
+        if (xmc != p) {
+            free(XM);
+            throw_status(P4A_ERR_SHAPE_MISMATCH,
+                          "pls_monitoring_run (X_monitor must have same number of columns as X_reference)",
+                          ctx, cfg, X, Y);
+        }
+        double alpha = get_scalar_field(params, "alpha", 0.05);
+        p4a_matrix_view_t XMv;
+        p4a_matrix_view_init_rowmajor(&XMv, XM, xmr, xmc, P4A_DTYPE_F64);
+        p4a_config_set_store_scores(cfg, 1);
+        p4a_model_t *model = NULL;
+        st = p4a_model_fit(ctx, cfg, &Xv, &Yv, &model);
+        if (st == P4A_OK) {
+            st = p4a_pls_monitoring_run(ctx, model, &Xv, &XMv, alpha, &mr);
+        }
+        if (model) p4a_model_destroy(model);
+        free(XM);
+        if (st == P4A_OK) {
+            static const char *dm[] = {"t2", "q", "t2_reference",
+                                          "q_reference", NULL};
+            static const char *iv[] = {"t2_alarms", "q_alarms",
+                                          "any_alarms", NULL};
+            static const char *sc[] = {"t2_threshold", "q_threshold",
+                                          "alpha", NULL};
+            out = pack_result(mr, dm, iv, NULL, sc);
+        }
+    } else if (strcmp(algo, "approximate_press_compute") == 0) {
         st = p4a_approximate_press_compute(ctx, cfg, &Xv, &Yv, n_components, &mr);
         if (st == P4A_OK) {
             static const char *dm[] = {"press_per_component",

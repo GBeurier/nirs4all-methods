@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Elastic Component Regression — closely mirrors libPLS 1.95 `ecr.m`.
 

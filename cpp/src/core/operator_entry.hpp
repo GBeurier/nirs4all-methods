@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Shared definition of a single preprocessing-operator entry, used by both
 // the OperatorBank (AOM-PLS, Phase 6) and the Pipeline (Phase 3 leakage-safe

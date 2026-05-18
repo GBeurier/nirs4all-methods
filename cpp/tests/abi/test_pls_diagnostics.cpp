@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // PLS diagnostics (§17 of Overview.md): Hotelling T2, Q-residuals,
 // DModX. Verifies the diagnostics are computed correctly against a small

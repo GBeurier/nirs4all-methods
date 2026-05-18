@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CeCILL-2.1
+# SPDX-License-Identifier: CECILL-2.1
 #
 # Pls4all.Sklearn — tier-2 idiomatic Julia wrapper around the tier-1
 # pls_fit / pls_predict primitives.

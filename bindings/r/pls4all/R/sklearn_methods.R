@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CeCILL-2.1
+# SPDX-License-Identifier: CECILL-2.1
 #
 # Formula+S3 tier-2 wrappers for the MethodResult-based tier-1 fits in
 # methods.R. Each algorithm gets its own constructor function returning

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CeCILL-2.1
+# SPDX-License-Identifier: CECILL-2.1
 #
 # Diagnostic wrappers (tier 1). Compute PLS T²/Q/DModX scores from a
 # fitted model, the approximate-PRESS curve, and the PLS monitoring

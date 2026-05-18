@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Recursive (moving-window) PLS. Ships the simplest viable variant: fit
 // SIMPLS on the last `window_size` samples and predict the next one. The

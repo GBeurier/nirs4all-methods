@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // PSO-PLS (§48) — Binary Particle Swarm Optimization for variable
 // selection. Reference: Kennedy J. & Eberhart R. C. (1997)

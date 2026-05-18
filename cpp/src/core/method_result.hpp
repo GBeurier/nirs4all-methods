@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Universal result container exposed via the public C ABI. Holds named
 // double / int arrays and named scalars so that each public fit function

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Cross-binding parity gate for the Rust binding. Builds the same
 // deterministic (X, Y) the Python generator writes, fits the model,

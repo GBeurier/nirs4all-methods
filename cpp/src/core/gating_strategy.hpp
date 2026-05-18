@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Internal GatingStrategy — for AOM-PLS / POP-PLS (Phase 6). Phase 0 only
 // stores the mode; gating coefficients are added in Phase 6.

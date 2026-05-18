@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Catalog of PLS variants required to close the Overview taxonomy.
 // Internal kernels — public ABI exposure ships with the binding tranche.

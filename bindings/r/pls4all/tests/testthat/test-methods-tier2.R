@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CeCILL-2.1
+# SPDX-License-Identifier: CECILL-2.1
 #
 # Tier-2 formula+S3 wrappers around MethodResult-based fits.
 # Verifies:

@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CeCILL-2.1
+/* SPDX-License-Identifier: CECILL-2.1
  *
  * R .Call dispatcher covering ALL MethodResult-returning entry points
  * of libp4a (33 method-result fits + 24 selectors + 4 diagnostics).
@@ -793,6 +793,40 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             static const char* iv[] = {"predictions", NULL};
             static const char* sc[] = {"n_classes", "n_components", NULL};
             out = pack_result(mr, dm, iv, NULL, sc);
+        }
+    } else if (strcmp(algo, "aom_preprocess") == 0) {
+        int n_ops = get_int(params, "n_operators", 3);
+        int mode = get_int(params, "gating_mode", 0);
+        if (n_ops < 1) n_ops = 1;
+        if (n_ops > 5) n_ops = 5;
+        p4a_operator_kind_t kinds[5] = {
+            P4A_OP_IDENTITY,
+            P4A_OP_CENTER,
+            P4A_OP_PARETO_SCALE,
+            P4A_OP_AUTOSCALE,
+            P4A_OP_SNV
+        };
+        p4a_operator_bank_t* bank = NULL;
+        p4a_gating_strategy_t* gate = NULL;
+        st = p4a_operator_bank_create(&bank);
+        for (int i = 0; st == P4A_OK && i < n_ops; ++i) {
+            st = p4a_operator_bank_add(bank, kinds[i], NULL, 0);
+        }
+        if (st == P4A_OK) {
+            st = p4a_gating_strategy_create(
+                &gate, (p4a_gating_mode_t)mode);
+        }
+        if (st == P4A_OK) {
+            st = p4a_aom_preprocess_fit(ctx, bank, gate, &Xv, &Yv, &mr);
+        }
+        if (gate) p4a_gating_strategy_destroy(gate);
+        if (bank) p4a_operator_bank_destroy(bank);
+        if (st == P4A_OK) {
+            static const char* dm[] = {"transformed", "operator_outputs",
+                                          "weights", NULL};
+            static const char* i64[] = {"operator_kinds", NULL};
+            static const char* sc[] = {"n_operators", "mode", NULL};
+            out = pack_result(mr, dm, NULL, i64, sc);
         }
     }
 

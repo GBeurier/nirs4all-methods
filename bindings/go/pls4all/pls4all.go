@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 
 // Package pls4all wraps the libp4a C ABI helper p4a_pls_fit_simple
 // for Go consumers. The package is parity-gated against the shared

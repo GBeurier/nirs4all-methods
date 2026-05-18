@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // extern "C" wrappers for the version / status / dtype / backend / ABI
 // queries. None of these functions allocate or call into user code, so they

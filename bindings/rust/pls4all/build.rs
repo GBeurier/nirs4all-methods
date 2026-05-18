@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Build script for the pls4all Rust binding. Tells cargo where to
 // find libp4a's shared object. The PLS4ALL_LIB_DIR env var overrides

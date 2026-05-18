@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CeCILL-2.1
+# SPDX-License-Identifier: CECILL-2.1
 #
 # Tier-1 R wrappers for the remaining MethodResult fits, selectors and
 # diagnostics exposed by the unified dispatcher (r_dispatch.c). The
@@ -237,6 +237,16 @@ pls_logistic_fit <- function(X, y_labels, n_components, n_classes = NULL) {
     pls4all_method("pls_logistic", X, rep(0, nrow(X)), n_components,
                    params = list(y_labels = as.integer(y_labels),
                                   n_classes = as.integer(n_classes)))
+}
+
+#' AOM preprocessing fit/transform.
+#' @export
+aom_preprocess <- function(X, Y = NULL, n_operators = 3L, gating_mode = 0L) {
+    X <- as.matrix(X)
+    if (is.null(Y)) Y <- rep(0, nrow(X))
+    pls4all_method("aom_preprocess", X, Y, 1L,
+                   params = list(n_operators = as.integer(n_operators),
+                                  gating_mode = as.integer(gating_mode)))
 }
 
 # ---- Selectors (no ValidationPlan or with default plan inside C) ----

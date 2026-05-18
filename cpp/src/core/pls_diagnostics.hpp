@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // PLS diagnostics: Hotelling T2, Q-residuals (SPE), DModX. Computed from a
 // fitted Model and a reference / test design matrix.

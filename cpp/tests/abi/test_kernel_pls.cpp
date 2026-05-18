@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Non-linear kernel PLS (§10.2). Verifies RBF and polynomial kernels
 // produce finite predictions on a non-linear synthetic dataset.

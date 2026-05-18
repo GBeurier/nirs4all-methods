@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Strict-linear AOM operator kernels matching nirs4all/bench/AOM_v0/aompls.
 

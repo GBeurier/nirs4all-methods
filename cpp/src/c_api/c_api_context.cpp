@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // extern "C" wrappers for p4a_context_t. Every wrapper has a try/catch
 // around its full body so no C++ exception ever crosses the boundary.

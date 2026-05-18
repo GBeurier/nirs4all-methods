@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Compile-time constants surfaced through the p4a_get_*_version_* family.
 // All values are derived from the canonical pls4all/p4a_version.h so that the

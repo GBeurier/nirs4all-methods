@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Tier-2 idiomatic TypeScript wrapper around the pls4all WASM tier-1
 // surface (Context / Config / Model / MethodResult).

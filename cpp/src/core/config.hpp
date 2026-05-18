@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Internal Config — POD-style storage for every knob declared on the
 // public p4a_config_t handle. Setter validation lives in the c_api_config
