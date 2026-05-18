@@ -65,7 +65,8 @@ CPP_TIER_DESC = {
 
 BACKEND_LONG: dict[str, tuple[str, str, str]] = {
     "python_tier1": ("Python",        "pls4all raw",        "`pls4all._methods.<algo>_fit(ctx, cfg, X, y, …)` — direct FFI binding"),
-    "registry_pls4all": ("Python",    "pls4all canonical",  "`benchmarks.parity_timing.registry.MethodSpec.pls4all_fn` — canonical per-method entry point"),
+    "registry_pls4all": ("Python",    "pls4all bench reference",
+                                       "`benchmarks.parity_timing.registry.MethodSpec.pls4all_fn` — the canonical pls4all invocation defined by the benchmark suite for each algorithm (algorithm + solver + deflation + …). This is the column used as the parity reference against sklearn / pls / ropls / plsregress."),
     "python_tier2": ("Python",        "pls4all idiomatic",  "`pls4all.sklearn.<Class>` — sklearn-style BaseEstimator with `.fit()/.predict()`"),
     "sklearn":      ("Python",        "external",           "`sklearn.cross_decomposition.PLSRegression`, `sklearn.decomposition.PCA` + LinearRegression / Ridge / GaussianProcessRegressor (proxies)"),
     "ikpls":        ("Python",        "external",           "`ikpls.numpy_ikpls.PLS` — Improved Kernel PLS (plain PLS only)"),
@@ -349,12 +350,23 @@ def build_payload(results_dir: Path) -> dict:
                 "group": "cpp", "tier": tier, "lang": "C++",
                 "what": what, "build": build, "kind": "pls4all",
             })
+    # Hand-tuned overrides for the displayed `short` label when the
+    # default "strip pls4all. prefix" heuristic produces internal-jargon
+    # names. Keys are the canonical backend slug from BACKEND_DISPLAY.
+    SHORT_OVERRIDES = {
+        # "registry" came from the python file name (registry.py) and
+        # collided semantically with "canonical PLS" in the PLS lit
+        # (CPPLS / Indahl 2009). "bench-ref" is unambiguous: this column
+        # is the parity reference invocation of pls4all used by the
+        # benchmark suite for each algorithm.
+        "registry_pls4all": "bench-ref",
+    }
     for be in BACKEND_ORDER:
         cid = BACKEND_DISPLAY.get(be, be)
         if cid in present:
             lang, tier, what = BACKEND_LONG[be]
             is_pls4all = cid.startswith("pls4all.")
-            short = cid[len("pls4all."):] if is_pls4all else cid
+            short = SHORT_OVERRIDES.get(be) or (cid[len("pls4all."):] if is_pls4all else cid)
             raw_cols.append({
                 "id": cid, "label": cid, "short": short,
                 "group": BACKEND_GROUP[be], "tier": tier, "lang": lang,
@@ -452,6 +464,18 @@ def build_payload(results_dir: Path) -> dict:
     # would blank the table — fixed). Empty presets are dropped.
     all_cols = [c["id"] for c in columns]
     cpp_blas_omp = "pls4all.cpp.blas+omp" if "pls4all.cpp.blas+omp" in all_cols else None
+    cpp_ref = "pls4all.cpp.ref" if "pls4all.cpp.ref" in all_cols else None
+
+    by_group = defaultdict(list)
+    for c in columns:
+        by_group[c["group"]].append(c["id"])
+    pls4all_groups = ("cpp", "python", "r", "matlab")
+
+    def by_lang(lang_value: str) -> list:
+        """All columns (pls4all bindings + externals) for a host language,
+        preserving the canonical column order."""
+        return [c["id"] for c in columns if c["lang"] == lang_value]
+
     headline_candidates = [
         cpp_blas_omp, "pls4all.python", "pls4all.sklearn",
         "pls4all.R", "pls4all.matlab",
@@ -467,13 +491,80 @@ def build_payload(results_dir: Path) -> dict:
     thread_sweep = [c for c in [cpp_blas_omp, "pls4all.python",
                                   "pls4all.sklearn", "pls4all.registry",
                                   "sklearn"] if c and c in all_cols]
+    # API-parity view — same algorithm, same idiomatic API in each
+    # language. Compares pls4all's "mimicking" bindings (sklearn-style,
+    # R-formula + S3, MATLAB classdef) against the canonical external
+    # libraries users would otherwise reach for. Raw low-level bindings
+    # (pls4all.python ctypes, pls4all.R dispatcher, pls4all.matlab MEX)
+    # are intentionally excluded — they're the wrong API to compare
+    # against sklearn / pls / plsregress.
+    api_parity_candidates = [
+        cpp_blas_omp,
+        # Python: pls4all sklearn-style binding vs canonical externals
+        "pls4all.sklearn",
+        "sklearn", "ikpls", "ref.python_scikit_learn", "ref.python_ikpls",
+        # R: pls4all formula + S3 binding vs canonical R externals
+        "pls4all.R.formula",
+        "pls", "mixOmics", "ropls",
+        "ref.r_pls", "ref.r_mixomics", "ref.r_ropls",
+        # MATLAB: pls4all classdef binding vs the stats-toolbox baseline
+        "pls4all.matlab.classdef",
+        "plsregress", "ref.matlab_libpls",
+    ]
+    api_parity = [c for c in api_parity_candidates if c and c in all_cols]
+
+    # tier-1 = raw low-level dispatcher bindings (ctypes, R dispatcher,
+    # MEX) — the columns named like their host language root.
+    tier_1 = [c for c in (
+        "pls4all.python", "pls4all.R", "pls4all.matlab"
+    ) if c in all_cols]
+    # tier-2 = idiomatic per-language wrappers built on top of the
+    # tier-1 dispatch (sklearn-style estimators, R formula + S3, MATLAB
+    # classdef). These are the bindings users will actually write code
+    # against, so the dashboard wants a one-click view that lines them
+    # up against each other.
+    tier_2 = [c for c in (
+        "pls4all.sklearn", "pls4all.R.formula", "pls4all.matlab.classdef"
+    ) if c in all_cols]
+    # registry/bench-ref is the single canonical pls4all invocation
+    # used by the benchmark suite as parity baseline; expose it as its
+    # own preset so users can see only what's parity-anchored.
+    bench_ref = [c for c in ("pls4all.registry",) if c in all_cols]
+
+    # Per-language sets (pls4all bindings + externals for that host language)
+    py_all = by_lang("Python")
+    r_all  = by_lang("R")
+    m_all  = by_lang("MATLAB/Octave")
+
+    # Native baseline tiers — compare the parity-reference scalar build
+    # against the production BLAS+OpenMP one, plus the registry entry
+    # point. This is the "how much speed do the C++ optimisations buy?"
+    # view, which is what the benchmark is really *for*.
+    native_baseline = [c for c in (
+        cpp_ref, cpp_blas_omp, "pls4all.registry",
+    ) if c and c in all_cols]
+
     raw_presets = {
-        "all":          {"label": "All",          "cols": all_cols},
-        "headline":     {"label": "Headline",     "cols": headline},
-        "pls4all":      {"label": "pls4all only", "cols": pls4all_only},
-        "cpp-tiers":    {"label": "C++ tiers",    "cols": cpp_tiers},
-        "externals":    {"label": "Externals",    "cols": externals},
-        "thread-sweep": {"label": "Thread sweep", "cols": thread_sweep},
+        # Top-level overviews — listed first so the preset rail leads
+        # with the curated comparisons before the bulkier "all of X"
+        # presets.
+        "headline":     {"label": "Headline",       "cols": headline},
+        "api-parity":   {"label": "API parity",     "cols": api_parity},
+        "tier-2":       {"label": "Tier-2 idiomatic","cols": [cpp_blas_omp, *tier_2] if cpp_blas_omp else tier_2},
+        "tier-1":       {"label": "Tier-1 raw",      "cols": [cpp_blas_omp, *tier_1] if cpp_blas_omp else tier_1},
+        "bench-ref":    {"label": "Bench reference","cols": bench_ref},
+        "native":       {"label": "C++ native",     "cols": native_baseline},
+        "cpp-tiers":    {"label": "C++ all tiers",  "cols": cpp_tiers},
+        # Language-scoped views — keep the C++ baseline included on each
+        # so users always see the anchor next to the language slice.
+        "python":       {"label": "Python (all)",   "cols": ([cpp_blas_omp] if cpp_blas_omp else []) + py_all},
+        "r":            {"label": "R (all)",        "cols": ([cpp_blas_omp] if cpp_blas_omp else []) + r_all},
+        "matlab":       {"label": "MATLAB (all)",   "cols": ([cpp_blas_omp] if cpp_blas_omp else []) + m_all},
+        # Roll-up sets — keep at the end since they're the broadest.
+        "pls4all":      {"label": "pls4all only",   "cols": pls4all_only},
+        "externals":    {"label": "Externals",      "cols": externals},
+        "thread-sweep": {"label": "Thread sweep",   "cols": thread_sweep},
+        "all":          {"label": "All",            "cols": all_cols},
     }
     # Drop presets that would resolve to zero columns in the current data.
     presets = {k: v for k, v in raw_presets.items() if v["cols"]}
