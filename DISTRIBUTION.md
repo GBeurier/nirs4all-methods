@@ -59,6 +59,8 @@ this repo, and they stop being a future risk.
 | Repository | URL | Role |
 |------------|-----|------|
 | **GitHub** primary | `github.com/GBeurier/pls4all` | source, CI, Releases, Pages docs |
+| **GitHub Pages** | `gbeurier.github.io/pls4all/` | docs deployed by `.github/workflows/docs.yml` on every push to `main` (live benchmark CSV → Sphinx) |
+| **Read the Docs** | `pls4all.readthedocs.io/` | docs built by RTD webhook (uses committed `bench-data.json` fallback) — see §3.bis |
 | **Zenodo** | `zenodo.org/account/settings/github/` enabled for `GBeurier/pls4all` | DOI per tag, archival, citable |
 | **Software Heritage** | `archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/GBeurier/pls4all` | passive mirror — register the origin once |
 | **HAL** (optional, French academia) | `hal.science` deposit + Software Heritage swhid | only when a paper is associated |
@@ -864,6 +866,44 @@ to CDNs for zero-tooling browser use:
 - `https://esm.sh/@pls4all/wasm@${VER}` (Deno-friendly imports)
 
 Nothing to do beyond §3.4 — CDNs mirror npm automatically.
+
+### 3.14 Documentation — GitHub Pages + Read the Docs
+
+The Sphinx site in `docs/` is published in parallel to **two** independent surfaces. Both build the same Sphinx config (`docs/conf.py`) from the same git history; they differ in trigger, hosting, and benchmark-data source.
+
+| Target | URL | Triggered by | Benchmark data source |
+|---|---|---|---|
+| **GitHub Pages** | `https://gbeurier.github.io/pls4all/` | `.github/workflows/docs.yml` on push to `main` | live `benchmarks/cross_binding/results/full_matrix.csv` if present, else `docs/_static/bench-data.json` |
+| **Read the Docs** | `https://pls4all.readthedocs.io/` | RTD webhook on every push (all branches + tags) | committed `docs/_static/bench-data.json` only — RTD's build env doesn't carry the full benchmark cache |
+
+**Why both?**
+- **GitHub Pages** is the canonical site (rolls forward with `main`, gets fresh benchmark data from CI).
+- **Read the Docs** adds (a) versioned snapshots (`/en/v0.97.0/`, `/en/v1.0.0/`, …), (b) PDF + ePub builds (the `.readthedocs.yaml` declares `formats: [htmlzip, pdf]`), (c) a PR-preview build per pull-request — useful when reviewing doc changes before merging.
+
+**Configuration files**:
+
+| File | Owner | Status |
+|---|---|---|
+| `.readthedocs.yaml` (repo root) | RTD build pipeline | committed at the same time as M1 |
+| `docs/conf.py` | both builds | maintained by M0 + ongoing doc work |
+| `docs/requirements.txt` | both builds (Sphinx + myst-parser) | committed |
+| `docs/dev/readthedocs.md` | maintainer-facing setup doc | committed |
+
+**One-time RTD setup (maintainer action)**:
+
+| # | Who | Action |
+|---|-----|--------|
+| RTD.1 | 👤 | Sign in at https://readthedocs.org/ with the GitHub OAuth provider (no separate password needed). |
+| RTD.2 | 👤 | **Import a Project** → pick `GBeurier/pls4all`. RTD reads `.readthedocs.yaml` automatically. |
+| RTD.3 | 👤 | In **Admin → Advanced settings** set: *Documentation type*=Sphinx HTML, *Privacy level*=Public, *Default branch*=`main`. |
+| RTD.4 | 👤 | (Optional) **Admin → Domains** → add CNAME `docs.pls4all.io` (or skip and live with `pls4all.readthedocs.io`). |
+| RTD.5 | 🤖 | Verify the first build at `https://readthedocs.org/projects/pls4all/builds/`. If it's red, I'll patch `docs/requirements.txt` / `docs/conf.py` based on the RTD log. |
+
+**Recurring cost**: zero. Both Pages and RTD build automatically on push. No secrets to manage. The two sites can drift (Pages has fresh benchmark data, RTD doesn't) but `docs/conf.py:setup()` auto-falls-back to the committed JSON so the RTD build never errors on missing benchmark inputs.
+
+**Version policy**:
+- Pages: always reflects `main` (one rolling site).
+- RTD: each git tag becomes a versioned snapshot at `/en/${TAG}/`. The "stable" alias points at the most recent non-`-rc` tag, "latest" follows `main`. RTD picks these up automatically from the tags pushed by M0/M1.
 
 ---
 
