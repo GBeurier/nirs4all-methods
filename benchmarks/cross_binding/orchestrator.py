@@ -41,12 +41,14 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 DATA_DIR = HERE / "data"
 PREDS_DIR = HERE / "data" / ".predictions"
+ORACLES_DIR = HERE / "data" / ".reference_oracles"
 RESULTS_DIR = HERE / "results"
 SCRIPTS_DIR = HERE / "scripts"
-for d in (DATA_DIR, PREDS_DIR, RESULTS_DIR, SCRIPTS_DIR):
+for d in (DATA_DIR, PREDS_DIR, ORACLES_DIR, RESULTS_DIR, SCRIPTS_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
 from benchmarks.parity_timing.registry import (  # noqa: E402
+    canonical_reference_for_method,
     get_method,
     method_names,
     resolved_references_for_method,
@@ -145,6 +147,142 @@ def gen_dataset_csv(n: int, p: int, seed: int) -> Path:
 def predictions_path(algo: str, backend: str, n: int, p: int,
                       threads: int, build: str) -> Path:
     return PREDS_DIR / f"{algo}_{backend}_{n}x{p}_t{threads}_{build}.npy"
+
+
+def reference_oracle_path(algo: str, backend: str, n: int, p: int,
+                          prediction_seed: int) -> Path:
+    return ORACLES_DIR / f"{algo}_{backend}_{n}x{p}_seed{prediction_seed}.npy"
+
+
+def prediction_metadata_path(pred_path: Path) -> Path:
+    return pred_path.with_suffix(".json")
+
+
+def record_prediction_seed(record: dict) -> int:
+    value = record.get("prediction_seed")
+    if value not in (None, ""):
+        return int(value)
+    pred_path = record.get("predictions_path")
+    if pred_path:
+        meta_path = prediction_metadata_path(Path(pred_path))
+        if meta_path.exists():
+            try:
+                meta = json.loads(meta_path.read_text())
+                value = meta.get("prediction_seed")
+                if value not in (None, ""):
+                    return int(value)
+            except (OSError, json.JSONDecodeError, TypeError, ValueError):
+                pass
+    seed_base = int(record.get("seed_base") or DEFAULT_SEED_BASE)
+    measured_runs = record.get("n_runs")
+    try:
+        measured_runs_int = int(measured_runs)
+    except (TypeError, ValueError):
+        measured_runs_int = 1
+    # Legacy CSVs did not record the exact last timed seed. Use seed_base as
+    # the safest value for one-shot runs. For warmup-discarded rows, bench
+    # scripts stored n_runs=input_runs-1, so the last seed is base+n_runs.
+    if measured_runs_int > 1:
+        return seed_base + measured_runs_int
+    return seed_base
+
+
+def write_prediction_metadata(record: dict) -> None:
+    pred_path = record.get("predictions_path")
+    if not record.get("ok") or not pred_path:
+        return
+    path = Path(pred_path)
+    if not path.exists():
+        return
+    meta = {
+        "algorithm": record.get("algorithm"),
+        "backend": record.get("backend"),
+        "kind": record.get("kind"),
+        "n": record.get("n"),
+        "p": record.get("p"),
+        "threads": record.get("threads"),
+        "libp4a_build": record.get("libp4a_build"),
+        "seed_base": record.get("seed_base"),
+        "prediction_seed": record_prediction_seed(record),
+        "n_runs": record.get("n_runs"),
+        "versions": record.get("versions") or {},
+    }
+    prediction_metadata_path(path).write_text(
+        json.dumps(meta, sort_keys=True, indent=2) + "\n")
+
+
+def snapshot_reference_oracle(record: dict) -> None:
+    """Freeze the canonical external prediction vector for later gates.
+
+    The regular predictions cache is per-run scratch. This snapshot is the
+    oracle used by --only-pls4all runs; it changes only when the canonical
+    reference backend is run again, typically after updating that library.
+    """
+    if not record.get("ok") or record.get("kind") != "external":
+        return
+    pred_path = record.get("predictions_path")
+    if not pred_path or not Path(pred_path).exists():
+        return
+    try:
+        method = get_method(record["algorithm"])
+        canonical = canonical_reference_for_method(method)
+    except KeyError:
+        return
+    if canonical is None:
+        return
+    canonical_backend = f"ref_{canonical['id']}"
+    if record.get("backend") != canonical_backend:
+        return
+
+    prediction_seed = record_prediction_seed(record)
+    dst = reference_oracle_path(
+        record["algorithm"], canonical_backend,
+        int(record["n"]), int(record["p"]), prediction_seed)
+    shutil.copy2(Path(pred_path), dst)
+    meta = {
+        "algorithm": record.get("algorithm"),
+        "backend": canonical_backend,
+        "n": record.get("n"),
+        "p": record.get("p"),
+        "seed_base": record.get("seed_base"),
+        "prediction_seed": prediction_seed,
+        "n_runs": record.get("n_runs"),
+        "source_predictions_path": str(pred_path),
+        "versions": record.get("versions") or {},
+    }
+    prediction_metadata_path(dst).write_text(
+        json.dumps(meta, sort_keys=True, indent=2) + "\n")
+
+
+def load_prediction_array(path: Path):
+    try:
+        return np.load(path), ""
+    except Exception as exc:
+        return None, f"load error: {exc}"
+
+
+def load_reference_oracle(algo: str, canonical_backend: str, n: int, p: int,
+                          prediction_seed: int, reference_ref: dict | None):
+    """Load the canonical external prediction vector for one dataset seed."""
+    if reference_ref is not None:
+        ref_seed = record_prediction_seed(reference_ref)
+        rref_path = reference_ref.get("predictions_path")
+        if ref_seed == prediction_seed and rref_path:
+            path = Path(rref_path)
+            if path.exists():
+                arr, note = load_prediction_array(path)
+                if arr is not None:
+                    return arr, str(path), "current"
+                return None, str(path), note
+
+    path = reference_oracle_path(algo, canonical_backend, n, p,
+                                 prediction_seed)
+    if path.exists():
+        arr, note = load_prediction_array(path)
+        if arr is not None:
+            return arr, str(path), "stored"
+        return None, str(path), note
+    return None, str(path), "missing"
 
 
 def _params_to_json(params: dict) -> str:
@@ -323,16 +461,20 @@ def compute_parity(records: list[dict]) -> None:
     Gate 2 — **external-reference validity** (`reference_parity_*`
     columns): cpp should agree with the canonical external reference
     (sklearn / ropls / mixOmics / ikpls / R::pls / …) declared by the
-    method's `MethodSpec`. Reference per `(algo, n, p)`: the
-    `ref_<canonical_id>` row in the same group, where canonical_id
-    comes from `registry.canonical_reference_for_method(method)`.
+    method's `MethodSpec`. Reference per `(algo, n, p, prediction_seed)`:
+    the current `ref_<canonical_id>` row when it is part of the run,
+    otherwise the frozen oracle snapshot written under
+    `data/.reference_oracles/`. Those snapshots change only when the
+    canonical reference backend is run again.
     Tolerance: `||pred - ref||_RMS / ||ref||_RMS ≤ method.rmse_rel_tol`
     (with `rmse_abs ≤ 1e-9` escape near zero). Methods with
     `reference_kind == "paper_only"` show `—` (NaN + ok=None) — no
     executable truth to compare against.
 
-    Legacy `parity_*` columns are kept as aliases for `binding_parity_*`
-    so existing rendering pipelines keep working during the migration.
+    Legacy `parity_*` columns are kept for compatibility. For pls4all
+    rows they mirror Gate 1; for external rows they are explicitly
+    not-applicable so old renderers do not show an external library as a
+    binding failure.
     """
     # Lazy imports — keep the orchestrator startup cheap when callers
     # only need the cell scheduler (e.g. unit tests).
@@ -341,14 +483,18 @@ def compute_parity(records: list[dict]) -> None:
     from benchmarks.parity_timing.registry import (
         canonical_reference_for_method, get_method, reference_kind)
 
-    # Group records by (algo, n, p).
-    groups: dict[tuple, list[dict]] = {}
     for r in records:
-        if not r.get("ok"):
-            continue
-        groups.setdefault((r["algorithm"], r["n"], r["p"]), []).append(r)
+        snapshot_reference_oracle(r)
 
-    for (algo, n, p), group in groups.items():
+    # Group records by the actual dataset seed. Binding/reference parity only
+    # makes sense when every vector came from the same generated dataset.
+    ok_groups: dict[tuple, list[dict]] = {}
+    for r in records:
+        if r.get("ok"):
+            key = (r["algorithm"], r["n"], r["p"], record_prediction_seed(r))
+            ok_groups.setdefault(key, []).append(r)
+
+    for (algo, n, p, _prediction_seed), group in ok_groups.items():
         # ---- Resolve gate-1 reference (cpp @ 1 thread @ blas-omp) ----
         binding_ref = None
         for cand_name in ("cpp", "python_tier1"):
@@ -379,21 +525,13 @@ def compute_parity(records: list[dict]) -> None:
             canonical, ref_kind = None, "external"
 
         reference_ref = None
+        canonical_backend = ""
         if canonical is not None:
             canonical_backend = f"ref_{canonical['id']}"
             for r in group:
                 if r["backend"] == canonical_backend:
                     reference_ref = r
                     break
-        reference_ref_pred = None
-        if reference_ref is not None:
-            rref_path = reference_ref.get("predictions_path")
-            if rref_path and Path(rref_path).exists():
-                try:
-                    reference_ref_pred = np.load(rref_path)
-                except Exception:
-                    reference_ref_pred = None
-
         rel_tol = float(getattr(method, "rmse_rel_tol", 5e-2)) \
             if canonical is not None else float("nan")
 
@@ -401,10 +539,11 @@ def compute_parity(records: list[dict]) -> None:
         for r in group:
             # Legacy/back-compat fields keep mirroring the binding gate
             # so the existing renderer doesn't fall over.
-            r["parity_ref"] = binding_ref["backend"]
             r["binding_parity_ref"] = binding_ref["backend"]
             r["reference_parity_ref"] = (
                 canonical_backend if canonical is not None else "")
+            r["reference_parity_tolerance"] = rel_tol
+            r["reference_oracle_path"] = ""
             r["reference_kind"] = ref_kind
             r["is_canonical_reference"] = (
                 r.get("backend") == r["reference_parity_ref"]
@@ -413,14 +552,19 @@ def compute_parity(records: list[dict]) -> None:
             pp = r.get("predictions_path")
             r_pred = None
             if pp and Path(pp).exists():
-                try:
-                    r_pred = np.load(pp)
-                except Exception as e:
-                    r["binding_parity_note"] = f"load error: {e}"
-                    r["reference_parity_note"] = f"load error: {e}"
+                r_pred, load_note = load_prediction_array(Path(pp))
+                if r_pred is None:
+                    r["binding_parity_note"] = load_note
+                    r["reference_parity_note"] = load_note
 
-            # Gate 1: binding consistency vs cpp.
-            if r_pred is None or binding_ref_pred is None:
+            # Gate 1: binding consistency vs cpp. External libraries are
+            # compared by Gate 2 only; they are not pls4all bindings.
+            is_pls4all = r.get("kind") in {"pls4all_core", "pls4all_binding"}
+            if not is_pls4all:
+                r["binding_parity_max_diff"] = float("nan")
+                r["binding_parity_ok"] = None
+                r["binding_parity_note"] = "not_applicable"
+            elif r_pred is None or binding_ref_pred is None:
                 r["binding_parity_max_diff"] = float("nan")
                 r["binding_parity_ok"] = False
                 r["binding_parity_note"] = (
@@ -434,6 +578,7 @@ def compute_parity(records: list[dict]) -> None:
                 r["binding_parity_note"] = bres.note
 
             # Legacy mirrors.
+            r["parity_ref"] = r["binding_parity_ref"] if is_pls4all else ""
             r["parity_max_diff"] = r["binding_parity_max_diff"]
             r["parity_ok"] = r["binding_parity_ok"]
             r["parity_note"] = r.get("binding_parity_note", "")
@@ -450,15 +595,29 @@ def compute_parity(records: list[dict]) -> None:
                 r["reference_parity_rmse_rel"] = 0.0
                 r["reference_parity_ok"] = True
                 r["reference_parity_note"] = "self"
-            elif r_pred is None or reference_ref_pred is None:
+            elif r_pred is None:
                 r["reference_parity_rmse_abs"] = float("nan")
                 r["reference_parity_rmse_rel"] = float("nan")
                 r["reference_parity_ok"] = False
                 r["reference_parity_note"] = (
-                    "canonical reference predictions missing"
-                    if reference_ref_pred is None
-                    else r.get("reference_parity_note", "predictions missing"))
+                    r.get("reference_parity_note", "predictions missing"))
             else:
+                prediction_seed = record_prediction_seed(r)
+                reference_ref_pred, oracle_path, oracle_status = (
+                    load_reference_oracle(algo, canonical_backend, n, p,
+                                          prediction_seed, reference_ref))
+                r["reference_oracle_path"] = oracle_path
+                if reference_ref_pred is None:
+                    r["reference_parity_rmse_abs"] = float("nan")
+                    r["reference_parity_rmse_rel"] = float("nan")
+                    r["reference_parity_ok"] = False
+                    if oracle_status == "missing":
+                        r["reference_parity_note"] = (
+                            "reference oracle missing; run canonical "
+                            "reference backend")
+                    else:
+                        r["reference_parity_note"] = oracle_status
+                    continue
                 rres = reference_parity(r_pred, reference_ref_pred,
                                           tolerance=rel_tol)
                 r["reference_parity_rmse_abs"] = rres.rmse_abs
@@ -479,7 +638,7 @@ def parse_sizes(args_sizes) -> list[tuple[int, int]]:
 
 CSV_COLUMNS = [
     "algorithm", "backend", "language", "tier", "kind",
-    "n", "p", "threads", "libp4a_build", "seed_base",
+    "n", "p", "threads", "libp4a_build", "seed_base", "prediction_seed",
     "ok", "median_ms", "min_ms", "max_ms", "n_runs",
     # Legacy alias columns — mirror the binding-consistency gate so the
     # existing dashboard renderer still works during the migration.
@@ -491,7 +650,8 @@ CSV_COLUMNS = [
     # tolerance = method.rmse_rel_tol).
     "reference_parity_ref", "reference_parity_rmse_abs",
     "reference_parity_rmse_rel", "reference_parity_ok",
-    "reference_parity_note", "reference_kind",
+    "reference_parity_note", "reference_parity_tolerance",
+    "reference_oracle_path", "reference_kind",
     "is_canonical_reference",
     "subprocess_s", "predictions_path",
     "versions_json", "reason",
@@ -523,7 +683,8 @@ def _to_float(value):
 
 def coerce_csv_record(row: dict) -> dict:
     out = dict(row)
-    for name in ("n", "p", "threads", "seed_base", "n_runs"):
+    for name in ("n", "p", "threads", "seed_base", "prediction_seed",
+                 "n_runs"):
         out[name] = _to_int(out.get(name))
     for name in ("ok", "parity_ok", "binding_parity_ok",
                  "reference_parity_ok", "is_canonical_reference"):
@@ -531,7 +692,7 @@ def coerce_csv_record(row: dict) -> dict:
     for name in ("median_ms", "min_ms", "max_ms",
                  "parity_max_diff", "binding_parity_max_diff",
                  "reference_parity_rmse_abs", "reference_parity_rmse_rel",
-                 "subprocess_s"):
+                 "reference_parity_tolerance", "subprocess_s"):
         out[name] = _to_float(out.get(name))
     try:
         out["versions"] = json.loads(out.get("versions_json") or "{}")
@@ -583,6 +744,7 @@ def write_records(csv_out: Path, records: list[dict]) -> None:
                 r.get("tier"), r.get("kind"),
                 r.get("n"), r.get("p"), r.get("threads"),
                 r.get("libp4a_build"), r.get("seed_base"),
+                r.get("prediction_seed") or record_prediction_seed(r),
                 r.get("ok"), r.get("median_ms"), r.get("min_ms"),
                 r.get("max_ms"), r.get("n_runs"),
                 # Legacy alias columns (mirror gate 1).
@@ -599,6 +761,8 @@ def write_records(csv_out: Path, records: list[dict]) -> None:
                 r.get("reference_parity_rmse_rel"),
                 r.get("reference_parity_ok"),
                 r.get("reference_parity_note", ""),
+                r.get("reference_parity_tolerance"),
+                r.get("reference_oracle_path", ""),
                 r.get("reference_kind", ""),
                 r.get("is_canonical_reference"),
                 r.get("subprocess_s"), r.get("predictions_path"),
@@ -806,7 +970,10 @@ def main():
                             "tier": tier,
                             "kind": kind,
                             "seed_base": args.seed_base,
+                            "prediction_seed": args.seed_base + args.n_runs - 1,
                         })
+                        write_prediction_metadata(rec)
+                        snapshot_reference_oracle(rec)
                         records.append(rec)
                         ran_records.append(rec)
                         if rec.get("ok"):

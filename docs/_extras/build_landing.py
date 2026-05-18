@@ -18,6 +18,7 @@ import os
 import platform
 import re
 import subprocess
+import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -244,6 +245,65 @@ def is_true(v: Any) -> bool:
     return str(v).lower() == "true"
 
 
+def _float_or_none(v: Any) -> float | None:
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    if f != f:
+        return None
+    return f
+
+
+_METHOD_TOLERANCES: dict[str, float] | None = None
+
+
+def _method_tolerances() -> dict[str, float]:
+    """Resolve MethodSpec.rmse_rel_tol without making the dashboard depend
+    on a generated CSV column that older benchmark runs did not emit."""
+    global _METHOD_TOLERANCES
+    if _METHOD_TOLERANCES is not None:
+        return _METHOD_TOLERANCES
+
+    root = Path(__file__).resolve().parents[2]
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    try:
+        from benchmarks.parity_timing.registry import METHODS
+        _METHOD_TOLERANCES = {
+            m.name: float(m.rmse_rel_tol) for m in METHODS
+        }
+        return _METHOD_TOLERANCES
+    except Exception:
+        pass
+
+    lockfile = root / "benchmarks/parity_timing/truth_sources.lock.json"
+    try:
+        data = json.loads(lockfile.read_text())
+        _METHOD_TOLERANCES = {
+            e["name"]: float(e["rmse_rel_tol"])
+            for e in data.get("methods", [])
+            if "name" in e and "rmse_rel_tol" in e
+        }
+    except Exception:
+        _METHOD_TOLERANCES = {}
+    return _METHOD_TOLERANCES
+
+
+def reference_tolerance(row: dict) -> float | None:
+    """Per-method gate-2 tolerance, preferring explicit run output."""
+    for key in (
+        "reference_parity_tolerance",
+        "reference_parity_tol",
+        "rmse_rel_tol",
+        "tolerance",
+    ):
+        f = _float_or_none(row.get(key))
+        if f is not None and f > 0:
+            return f
+    return _method_tolerances().get(row.get("algorithm") or row.get("algo"))
+
+
 def parity_code(row: dict) -> str:
     """Legacy binding-consistency parity code (gate 1 only).
 
@@ -288,8 +348,8 @@ def reference_parity_code(row: dict) -> str:
 
     Values:
       exact          — within `method.rmse_rel_tol`.
-      drift          — finite but above tolerance, < 10× tolerance.
-      divergent      — > 10× tolerance.
+      drift          — finite but above tolerance, < 10× method tolerance.
+      divergent      — >= 10× method tolerance.
       not_available  — `reference_kind=paper_only` (no executable truth).
       not_run        — backend didn't produce a prediction at all.
       error          — runtime error path (delegated to gate 1's
@@ -313,7 +373,10 @@ def reference_parity_code(row: dict) -> str:
         return "drift"
     if d != d:
         return "drift"
-    if d < 10:
+    tol = reference_tolerance(row)
+    if tol is None:
+        return "drift"
+    if d < 10 * tol:
         return "drift"
     return "divergent"
 
@@ -557,10 +620,14 @@ def build_payload(results_dir: Path) -> dict:
         # vs the method's canonical external reference). The dashboard
         # renders both icons per cell.
         cell = {"parity": verdict, "reference_parity": ref_verdict,
-                "ok": ok}
+                "binding_parity": verdict, "ok": ok,
+                "_source_is_ref": r["backend"].startswith("ref_")}
         if ms is not None and ms == ms:   # not NaN
             cell["ms"] = round(ms, 3)
             cell["fmt"] = fmt_ms(r["median_ms"])
+        tol = reference_tolerance(r)
+        if tol is not None:
+            cell["reference_parity_tolerance"] = tol
         kind = (r.get("reference_kind") or "").strip()
         if kind:
             cell["reference_kind"] = kind
@@ -589,22 +656,59 @@ def build_payload(results_dir: Path) -> dict:
                 # script never sets is_canonical_reference (the
                 # orchestrator's compute_parity sets it on the `ref_*`
                 # row by design).
-                # Whichever side has the timing data wins on ms/fmt;
-                # whichever side has the canonical flag wins on flags.
-                if existing.get("ms") is None and cell.get("ms") is not None:
+                incoming_is_ref = bool(cell.get("_source_is_ref"))
+                existing_is_ref = bool(existing.get("_source_is_ref"))
+                incoming_ok = bool(cell.get("ok"))
+                existing_ok = bool(existing.get("ok"))
+
+                # Timing is an atomic part of the selected source. Prefer
+                # the legacy fixed-bench timing when both rows succeeded,
+                # but do not keep an ok=false legacy cell if the canonical
+                # ref_* alias actually ran.
+                should_take_timing = (
+                    cell.get("ms") is not None
+                    and (
+                        existing.get("ms") is None
+                        or (incoming_ok and not existing_ok)
+                        or (existing_is_ref and not incoming_is_ref and incoming_ok)
+                    )
+                )
+                if should_take_timing:
                     existing["ms"] = cell["ms"]
                     existing["fmt"] = cell["fmt"]
+
+                should_take_status = incoming_ok and not existing_ok
+                if should_take_status:
+                    existing["ok"] = cell["ok"]
+                    existing["parity"] = cell["parity"]
+                    existing["binding_parity"] = cell["binding_parity"]
+                    existing.pop("reason", None)
                 if cell.get("is_canonical_reference"):
                     existing["is_canonical_reference"] = True
+                    # The alias row is the actual canonical reference for
+                    # this column. Its gate-2 verdict and status must win
+                    # over a failed legacy row that collapsed to the same
+                    # dashboard column.
+                    if incoming_ok or not existing_ok:
+                        existing["ok"] = cell["ok"]
+                        existing["parity"] = cell["parity"]
+                        existing["binding_parity"] = cell["binding_parity"]
+                        if incoming_ok:
+                            existing.pop("reason", None)
                 if cell.get("reference_kind") and not existing.get("reference_kind"):
                     existing["reference_kind"] = cell["reference_kind"]
+                if cell.get("reference_parity_tolerance") is not None:
+                    existing["reference_parity_tolerance"] = cell[
+                        "reference_parity_tolerance"]
                 # Prefer the gate-2 verdict from whichever side actually
-                # computed it (the `ref_*` row sees gate-2 against
-                # itself = "self"; the legacy row sees gate-2 against
-                # the canonical, which is what we want to show).
-                if (existing.get("reference_parity") in (None, "self")
-                        and cell.get("reference_parity") not in (None, "self")):
+                # computed it. If the incoming row is the canonical
+                # reference alias itself, its self-comparison verdict is
+                # the correct global gate-2 verdict for that column.
+                if (cell.get("is_canonical_reference")
+                        or existing.get("reference_parity") in (None, "self", "not_available")):
                     existing["reference_parity"] = cell["reference_parity"]
+                if reason and not existing.get("ok"):
+                    existing["reason"] = reason[:200]
 
     # Synthetic leading "Reference" column: for each row, find the cell
     # marked `is_canonical_reference=True` (set on the canonical
@@ -639,6 +743,10 @@ def build_payload(results_dir: Path) -> dict:
         if "reference_kind" in src:
             mirror["reference_kind"] = src["reference_kind"]
         cells[REF_COL_ID] = mirror
+
+    for cells in pivot.values():
+        for c in cells.values():
+            c.pop("_source_is_ref", None)
 
     rows_out = []
     for (algo, n, p_, t), cells in sorted(pivot.items(),
@@ -693,6 +801,7 @@ def build_payload(results_dir: Path) -> dict:
     # in the current data never make it into state.cols (a ghost id
     # would blank the table — fixed). Empty presets are dropped.
     all_cols = [c["id"] for c in columns]
+    selectable_cols = [c for c in all_cols if c != REF_COL_ID]
     cpp_blas_omp = "pls4all.cpp.blas+omp" if "pls4all.cpp.blas+omp" in all_cols else None
     cpp_ref = "pls4all.cpp.ref" if "pls4all.cpp.ref" in all_cols else None
 
@@ -716,8 +825,8 @@ def build_payload(results_dir: Path) -> dict:
     ]
     headline = [c for c in headline_candidates if c and c in all_cols]
     cpp_tiers = [c for c in all_cols if c.startswith("pls4all.cpp.")]
-    pls4all_only = [c for c in all_cols if c.startswith("pls4all.")]
-    externals = [c for c in all_cols if not c.startswith("pls4all.")]
+    pls4all_only = [c for c in selectable_cols if c.startswith("pls4all.")]
+    externals = [c for c in selectable_cols if not c.startswith("pls4all.")]
     thread_sweep = [c for c in [cpp_blas_omp, "pls4all.python",
                                   "pls4all.sklearn", "pls4all.registry",
                                   "sklearn"] if c and c in all_cols]
@@ -794,7 +903,7 @@ def build_payload(results_dir: Path) -> dict:
         "pls4all":      {"label": "pls4all only",   "cols": pls4all_only},
         "externals":    {"label": "Externals",      "cols": externals},
         "thread-sweep": {"label": "Thread sweep",   "cols": thread_sweep},
-        "all":          {"label": "All",            "cols": all_cols},
+        "all":          {"label": "All",            "cols": selectable_cols},
     }
     # Drop presets that would resolve to zero columns in the current data.
     presets = {k: v for k, v in raw_presets.items() if v["cols"]}
@@ -818,6 +927,25 @@ def build_payload(results_dir: Path) -> dict:
             seen_lang.add(c["lang"])
             present_langs.append(c["lang"])
 
+    columns_by_id = {c["id"]: c for c in columns}
+
+    def _cell_effective_parity(cid: str, cell: dict) -> str | None:
+        if cid == REF_COL_ID:
+            return None
+        kind = (columns_by_id.get(cid, {}).get("kind") or "").lower()
+        if kind == "external":
+            return cell.get("reference_parity") or cell.get("parity")
+        return cell.get("binding_parity") or cell.get("parity")
+
+    timed_cells = [
+        (cid, c)
+        for r in rows_out
+        for cid, c in r["cells"].items()
+        if cid != REF_COL_ID
+        and c.get("ok")
+        and isinstance(c.get("ms"), (int, float))
+    ]
+
     payload = {
         "generated_at": generated_at,
         "host":         host_info(),
@@ -835,9 +963,9 @@ def build_payload(results_dir: Path) -> dict:
             "sizes":    len({(r["n"], r["p"]) for r in rows_out}),
             "threads":  sorted({r["threads"] for r in rows_out}),
             "rows":     len(rows_out),
-            "cells":    sum(len(r["cells"]) for r in rows_out),
-            "ok":       sum(1 for r in rows_out for c in r["cells"].values()
-                            if c.get("parity") == "exact"),
+            "cells":    len(timed_cells),
+            "ok":       sum(1 for cid, c in timed_cells
+                            if _cell_effective_parity(cid, c) == "exact"),
         },
     }
     return {

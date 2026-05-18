@@ -67,6 +67,12 @@ defines whether the implementation matches the literature or established
 library behavior. External libraries are compared to this oracle too, so
 library-to-library divergence is visible.
 
+Successful canonical reference rows also refresh a stored oracle snapshot
+under `benchmarks/cross_binding/data/.reference_oracles/`. `--only-pls4all`
+runs load that snapshot to keep Gate 2 active even when the external
+backend is not scheduled. If the snapshot does not exist yet, the row fails
+with an explicit oracle-missing note.
+
 ## Parity tolerance
 
 Binding parity uses strict max-absolute tolerance, normally `1e-6`.

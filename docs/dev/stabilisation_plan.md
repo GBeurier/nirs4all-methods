@@ -26,6 +26,21 @@ Local audit results:
 | `scripts/bump_version.sh --check` | passed |
 | ABI symbol diff | failed: the current library exports additional `p4a_*` symbols absent from `cpp/abi/expected_symbols_linux.txt` |
 
+## Implementation status
+
+First stabilization pass:
+
+- P0 gate semantics implemented in the orchestrator: external rows are no
+  longer binding-parity failures, reference parity compares all successful
+  rows against the canonical oracle, and `--only-pls4all` consumes stored
+  oracle snapshots instead of skipping Gate 2.
+- P1 dashboard/static docs updated to render the two gates and to merge
+  canonical `ref_*` rows atomically.
+- P2 Python selector smoke fixed for UVE, and tier-2 selector wrappers now
+  fail closed on unknown registry parameters.
+- P4 ABI snapshot refreshed for the public 1.16.0 symbols already exported
+  by the current shared library.
+
 ## P0 — make gates truthful
 
 1. In `benchmarks/cross_binding/orchestrator.py`, compute binding parity
@@ -34,8 +49,11 @@ Local audit results:
 2. Keep reference parity for every successful row, including external
    libraries, against the canonical registry reference.
 3. When a run intentionally omits canonical external references
-   (`--only-pls4all`), mark reference parity as not run instead of failed.
-4. Make missing required references a hard error in release-gate mode, with
+   (`--only-pls4all`), load the stored oracle snapshot. Missing snapshots
+   are setup failures that must be fixed by running the canonical reference
+   backend.
+4. Make missing required reference oracles a hard error in release-gate mode,
+   with
    allowlisted `paper_only` methods only.
 5. Move workstation-specific reference paths to environment/configuration
    or pinned packages. The AOM/POP oracle must be reproducible from a clean

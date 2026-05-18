@@ -61,6 +61,20 @@ Several registry helpers still contain workstation-specific fallback paths;
 the release-quality path is to make every reference resolve from the active
 environment or from a pinned package.
 
+## Oracle snapshots
+
+External reference predictions are treated as method oracles, not as
+throwaway timing by-products. When a canonical `ref_*` backend succeeds,
+the orchestrator snapshots its prediction vector under
+`benchmarks/cross_binding/data/.reference_oracles/`, keyed by algorithm,
+reference id, canonical cell and prediction seed.
+
+Later `--only-pls4all` runs still evaluate reference parity by loading
+that stored oracle. If no snapshot exists yet, `reference_parity_ok=False`
+with `reference oracle missing; run canonical reference backend`. Refresh
+the snapshot only when the reference library, oracle code, benchmark cell
+or fixture seed is intentionally updated.
+
 ## Result semantics
 
 - `ok=False` with a `reason` means no timing/prediction was produced for
@@ -74,8 +88,9 @@ environment or from a pinned package.
   fields as not applicable even if older CSVs contain legacy values.
 - `NOT_IMPLEMENTED` is expected only for legacy fixed/all reference modes
   when a third-party library does not implement the algorithm.
-- In `--only-pls4all` runs, reference parity is not evaluated unless the
-  canonical external reference row is also scheduled.
+- In `--only-pls4all` runs, reference parity is evaluated from the stored
+  oracle snapshot. Missing snapshots are blocking setup failures, not a
+  reason to skip Gate 2.
 
 ## Current coverage
 

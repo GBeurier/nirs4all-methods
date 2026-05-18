@@ -105,18 +105,17 @@ Each cell exposes:
 The dashboard renders `reason` in a tooltip so the table itself stays
 scannable.
 
-## Known data issues from the May 2026 audit
+## Stabilization Notes
 
-- Some payload builders still merge `ref_*` rows into legacy external
-  columns without propagating `ok`, `reason`, `parity` and
-  `reference_parity` from the canonical reference row. This can show a
-  timed reference cell as failed.
-- Some filters still use the legacy `parity` alias, which represents
-  binding parity in old runs. External libraries should be filtered by
-  `reference_parity` instead.
-- `--only-pls4all` CSVs do not schedule external oracle rows. Any
-  "canonical reference predictions missing" note in that mode means
-  reference parity was not run.
+- `ref_*` rows are merged into their dashboard columns with `ok`, `reason`,
+  binding parity, reference parity, reference kind, timing and canonical
+  flags propagated together.
+- Filters use the effective verdict: `binding_parity` for pls4all rows and
+  `reference_parity` for external libraries.
+- `--only-pls4all` CSVs do not schedule external oracle rows, but Gate 2 is
+  still evaluated from stored `.reference_oracles` snapshots. Missing
+  snapshots are setup failures that must be fixed by running the canonical
+  reference backend.
 - The dashboard HTML embeds the payload at Sphinx build time. Running
   `build_landing.py` alone updates `docs/_static/bench-data.json`, but
   it does not update an already-built `docs/_build/html/index.html`.

@@ -33,6 +33,7 @@ from sklearn.pipeline import Pipeline
 
 from pls4all import sklearn as p4sk
 from pls4all.sklearn import PLSRegression
+from pls4all.sklearn import _selection as selection_mod
 
 
 @pytest.fixture(scope="module")
@@ -123,3 +124,49 @@ def test_selector_in_pipeline(name, selector_data):
     pipe.fit(X, y)
     preds = pipe.predict(X)
     assert preds.shape == (X.shape[0],)
+
+
+def test_uve_selector_min_features_fallback_is_deterministic(
+        monkeypatch, selector_data):
+    class EmptyUVEResult:
+        def vector_int64(self, name):
+            assert name == "selected_indices"
+            return np.empty(0, dtype=np.int64)
+
+        def matrix(self, name):
+            assert name == "real_stability_scores"
+            return np.array([[0.2, 0.5, 0.5, -1.0]], dtype=np.float64)
+
+    def fake_uve_select(*args, **kwargs):
+        return EmptyUVEResult()
+
+    monkeypatch.setattr(selection_mod._methods, "uve_select", fake_uve_select)
+    X, y = selector_data
+    sel = selection_mod.UVESelector(min_features=2)
+    with pytest.warns(UserWarning, match="min_features"):
+        sel.fit(X[:, :4], y)
+
+    assert np.array_equal(sel.selected_indices_, np.array([1, 2]))
+    assert np.array_equal(sel.support_, np.array([False, True, True, False]))
+
+
+def test_uve_selector_min_features_zero_preserves_empty_support(
+        monkeypatch, selector_data):
+    class EmptyUVEResult:
+        def vector_int64(self, name):
+            assert name == "selected_indices"
+            return np.empty(0, dtype=np.int64)
+
+        def matrix(self, name):
+            assert name == "real_stability_scores"
+            return np.array([[0.2, 0.5, 0.5, -1.0]], dtype=np.float64)
+
+    def fake_uve_select(*args, **kwargs):
+        return EmptyUVEResult()
+
+    monkeypatch.setattr(selection_mod._methods, "uve_select", fake_uve_select)
+    X, y = selector_data
+    sel = selection_mod.UVESelector(min_features=0).fit(X[:, :4], y)
+
+    assert sel.selected_indices_.size == 0
+    assert not sel.support_.any()

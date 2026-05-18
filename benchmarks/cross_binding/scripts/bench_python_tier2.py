@@ -2,10 +2,9 @@
 
 Maps each canonical method to its `pls4all.sklearn.<Class>` and instantiates
 it with the same per-method parameters the registry uses, then runs the
-sklearn-style `fit/predict` cycle. Constructor kwargs are filtered against
-the class signature, so adding a new method only requires (1) adding the
-sklearn class to `pls4all.sklearn`, (2) declaring the algo→class mapping
-in `_SKLEARN_CLASS` below.
+sklearn-style `fit/predict` cycle. Registry parameters are mapped explicitly
+onto constructor kwargs; unsupported algorithm parameters fail closed with
+an actionable error instead of disappearing silently.
 
 Methods without an idiomatic class emit `ok=False, reason="no sklearn
 estimator for <algo>"` and render `—` in the dashboard, honestly.
@@ -102,11 +101,64 @@ _SKLEARN_CLASS: dict[str, str | None] = {
 }
 
 
-def _filter_kwargs(cls, **kwargs) -> dict:
-    """Keep only kwargs that the constructor accepts."""
+_REGISTRY_DATA_PARAMS = {
+    "n_samples",
+    "n_features",
+    "n_targets",
+    "n_classes",
+    "n_blocks",
+    "n_unique_per_block",
+}
+
+_PARAM_ALIASES: dict[str, dict[str, str]] = {
+    "interval_select": {"interval_step": "step"},
+    "iriv_select": {"fold": "n_folds"},
+}
+
+_REFERENCE_ONLY_PARAMS: dict[str, set[str]] = {
+    # The pls4all REP kernel consumes n_steps/min_features/remove_count.
+    # These knobs configure the external plsVarSel reference adapter only.
+    "rep_select": {"rep_ratio", "rep_repeats", "rep_vip_threshold"},
+    # The pls4all VIP-SPA kernel is deterministic; this seed belongs to
+    # the auswahl reference adapter in the registry.
+    "vip_spa_select": {"seed"},
+}
+
+_BENCH_CTOR_OVERRIDES: dict[str, dict[str, object]] = {
+    # sklearn's UVESelector defaults to min_features=n_components so a
+    # downstream Pipeline cannot receive an empty feature matrix. The
+    # parity bench compares raw selector masks, so keep the C-kernel's
+    # empty-selection semantics here explicitly.
+    "uve_select": {"min_features": 0},
+}
+
+
+def _constructor_kwargs(algo: str, cls, params: dict) -> dict:
+    """Map registry params to constructor kwargs and fail on leftovers."""
     sig = inspect.signature(cls.__init__)
     keep = set(sig.parameters) - {"self"}
-    return {k: v for k, v in kwargs.items() if k in keep}
+    aliases = _PARAM_ALIASES.get(algo, {})
+    reference_only = _REFERENCE_ONLY_PARAMS.get(algo, set())
+    out: dict = {}
+    unsupported: list[str] = []
+    for key, value in params.items():
+        target = aliases.get(key, key)
+        if target in keep:
+            out[target] = value
+        elif key in _REGISTRY_DATA_PARAMS or key in reference_only:
+            continue
+        else:
+            unsupported.append(key)
+    if unsupported:
+        accepted = ", ".join(sorted(keep)) or "<none>"
+        raise RuntimeError(
+            "python_tier2: unsupported registry parameter(s) for "
+            f"{algo} -> {cls.__name__}: {', '.join(sorted(unsupported))}. "
+            "Add an alias to _PARAM_ALIASES, mark reference-only parameters "
+            "in _REFERENCE_ONLY_PARAMS, or expose them on the sklearn "
+            f"constructor. Accepted constructor params: {accepted}"
+        )
+    return out
 
 
 def _fit_kwargs(cls, extras: dict) -> dict:
@@ -151,8 +203,18 @@ def main():
         Y, extras = benchmark_inputs(method, X, y, params, seed)
         # Some array extras (group_assignment, block_sizes) are
         # constructor kwargs on the sklearn class, not fit kwargs.
-        combined = {**params, **extras}
-        ctor_kwargs = _filter_kwargs(cls, **combined)
+        ctor_kwargs = _constructor_kwargs(algo, cls, params)
+        ctor_sig_params = set(inspect.signature(cls.__init__).parameters) - {"self"}
+        for key, value in _BENCH_CTOR_OVERRIDES.get(algo, {}).items():
+            if key not in ctor_sig_params:
+                raise RuntimeError(
+                    f"python_tier2: bench override {key!r} is not accepted "
+                    f"by {class_name}"
+                )
+            ctor_kwargs[key] = value
+        ctor_kwargs.update(
+            {k: v for k, v in extras.items() if k in ctor_sig_params}
+        )
         # MBPLSRegression / ROSARegression / SOPLSRegression do
         # `if not self.block_sizes:` which is ambiguous on numpy arrays.
         # Convert to a plain Python list so the truth-value check works.
@@ -164,7 +226,6 @@ def main():
                 ctor_kwargs["n_components_per_block"].tolist())
         # Inject n_components if the class accepts it and adapted_params
         # didn't already supply it.
-        ctor_sig_params = set(inspect.signature(cls.__init__).parameters) - {"self"}
         if "n_components" in ctor_sig_params and "n_components" not in ctor_kwargs:
             ctor_kwargs["n_components"] = nc
         # Force center_*=True, scale_*=False to match the cross-binding

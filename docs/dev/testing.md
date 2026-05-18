@@ -46,13 +46,10 @@ PYTHONPATH=bindings/python/src \
 python -m pytest bindings/python/tests -q
 ```
 
-May 2026 audit result: one failure in
-`test_sklearn_selectors.py::test_selector_in_pipeline[UVESelector]`.
-The selector can choose zero features on the synthetic pipeline smoke
-dataset, which then makes sklearn `PLSRegression` receive an `(n, 0)`
-matrix. Either the estimator needs an explicit `min_features`/fallback
-policy or the smoke test must use UVE parameters known to select at least
-one feature.
+May 2026 stabilization result: the full Python suite passes locally. The
+previous UVE pipeline failure is covered by `UVESelector.min_features` and
+a deterministic fallback; `min_features=0` remains available for raw-mask
+parity benches.
 
 The narrower sklearn parity script currently passed:
 
@@ -77,8 +74,15 @@ python benchmarks/cross_binding/orchestrator.py \
 
 May 2026 audit result: `pls`, `pcr`, sklearn and R references were mostly
 green, but an external `ikpls` row was marked as binding-parity failure
-while still passing reference parity. That confirms the current reporting
-bug: external libraries must not be evaluated by binding parity.
+while still passing reference parity. The orchestrator now writes external
+binding parity as not applicable and keeps their reference parity verdict.
+
+Dual-gate unit regression:
+
+```bash
+PYTHONPATH=. \
+python -m pytest benchmarks/cross_binding/tests/test_orchestrator_parity.py -q
+```
 
 Slow-method smoke:
 
@@ -91,7 +95,9 @@ python benchmarks/cross_binding/orchestrator.py \
 ```
 
 Use this only as a timing smoke. Because `--only-pls4all` omits external
-oracle rows, reference parity is not evaluated in that run.
+oracle rows, it relies on the stored oracle snapshots produced by a prior
+registry-reference run. If a snapshot is missing, the run fails Gate 2 with
+`reference oracle missing; run canonical reference backend`.
 
 ## Release preflight
 

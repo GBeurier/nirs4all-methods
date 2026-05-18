@@ -4,7 +4,8 @@ Markdown page (docs/source/benchmarks/cross_binding.md).
 
 Layout: one section per (algo, threads) with a pivot table whose rows
 are dataset sizes and columns are backends. Each cell shows
-`<median_ms> <parity_icon>` where parity_icon is ✓ / ⚠ / ✗ / ⏳ / —.
+`<median_ms> <gate1_icon><gate2_icon>` where each icon is
+✓ / ⚠ / ✗ / ⏳ / —.
 
 Footnote: collected versions per backend.
 """
@@ -18,6 +19,7 @@ import os
 import platform
 import re
 import subprocess
+import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -227,8 +229,11 @@ def reference_parity_icon(row) -> str:
         return ICON_WARN
     if d != d:  # NaN
         return ICON_WARN
+    tol = reference_tolerance(row)
+    if tol is None:
+        return ICON_WARN
     # within 10× the per-method tolerance → WARN (close but no cigar)
-    return ICON_WARN if d < 10 else ICON_FAIL
+    return ICON_WARN if d < 10 * tol else ICON_FAIL
 
 
 def dual_parity_label(row) -> str:
@@ -240,8 +245,76 @@ def dual_parity_label(row) -> str:
     return binding_parity_icon(row) + reference_parity_icon(row)
 
 
+def effective_parity_icon(row) -> str:
+    """Verdict to use for filtering/bolding a timing in static tables.
+
+    pls4all columns are judged by gate 1 (binding parity); external
+    libraries are judged by gate 2 (reference parity), so an external
+    binding-parity icon is never treated as a global verdict.
+    """
+    if (row.get("kind") or "").lower().startswith("pls4all"):
+        return binding_parity_icon(row)
+    return reference_parity_icon(row)
+
+
 def _is_true(v) -> bool:
     return str(v).lower() == "true"
+
+
+def _float_or_none(v) -> float | None:
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    if f != f:
+        return None
+    return f
+
+
+_METHOD_TOLERANCES: dict[str, float] | None = None
+
+
+def _method_tolerances() -> dict[str, float]:
+    global _METHOD_TOLERANCES
+    if _METHOD_TOLERANCES is not None:
+        return _METHOD_TOLERANCES
+
+    root = Path(__file__).resolve().parents[2]
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    try:
+        from benchmarks.parity_timing.registry import METHODS
+        _METHOD_TOLERANCES = {
+            m.name: float(m.rmse_rel_tol) for m in METHODS
+        }
+        return _METHOD_TOLERANCES
+    except Exception:
+        pass
+
+    lockfile = root / "benchmarks/parity_timing/truth_sources.lock.json"
+    try:
+        data = json.loads(lockfile.read_text())
+        _METHOD_TOLERANCES = {
+            e["name"]: float(e["rmse_rel_tol"])
+            for e in data.get("methods", [])
+            if "name" in e and "rmse_rel_tol" in e
+        }
+    except Exception:
+        _METHOD_TOLERANCES = {}
+    return _METHOD_TOLERANCES
+
+
+def reference_tolerance(row: dict) -> float | None:
+    for key in (
+        "reference_parity_tolerance",
+        "reference_parity_tol",
+        "rmse_rel_tol",
+        "tolerance",
+    ):
+        f = _float_or_none(row.get(key))
+        if f is not None and f > 0:
+            return f
+    return _method_tolerances().get(row.get("algorithm") or row.get("algo"))
 
 
 def fmt_ms(ms_str: str) -> str:
@@ -300,7 +373,8 @@ def render(csv_path: Path, out_path: Path,
         )
     out.append(page_intro + "\n")
     info = host_cpu_info()
-    out.append(f"_Generated: {dt.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC_")
+    generated_at = dt.datetime.now(dt.UTC).strftime("%Y-%m-%d %H:%M:%S")
+    out.append(f"_Generated: {generated_at} UTC_")
     out.append(f"_CSV: `{csv_path.name}` ({len(rows)} cells)_\n")
     out.append("\n## Host\n")
     out.append("| | |")
@@ -316,25 +390,22 @@ def render(csv_path: Path, out_path: Path,
     out.append(f"| **Python**         | {info['python']} |\n")
 
     out.append("\n## How to read a cell\n")
-    out.append("Each cell shows `<median_ms> <parity icon>`. The icon "
-                "is the parity verdict vs the reference backend "
-                "(`pls4all.cpp` at 1 thread, dev-release build):\n")
-    out.append(f"- {ICON_OK} **bit-exact** (max abs diff ≤ 1e-6 vs ref) — "
-                "this backend produces the *same* predictions as the reference")
-    out.append(f"- {ICON_WARN} **close** (≤ 1e-3 but > 1e-6) — "
-                "algorithmic drift (different convergence path), answer agrees in practice")
-    out.append(f"- {ICON_FAIL} **divergent** (> 1e-3) — "
-                "different preprocessing convention "
-                "(e.g. tier-2 wrappers default to `scale=True`, "
-                "tier-1 / externals default to `scale=False`); the backend works, "
-                "it just isn't an apples-to-apples comparison")
+    out.append("Each cell shows `<median_ms> <gate1><gate2>`. Gate 1 is "
+                "binding consistency for pls4all bindings vs the native "
+                "C++ baseline; Gate 2 is external-reference validity vs "
+                "the method's canonical reference:\n")
+    out.append(f"- {ICON_OK} **exact/pass** — gate-specific tolerance passed")
+    out.append(f"- {ICON_WARN} **drift** — finite mismatch, below 10× the "
+                "method's gate-2 tolerance or below the binding drift band")
+    out.append(f"- {ICON_FAIL} **divergent** — outside the gate's tolerance band")
     out.append(f"- {ICON_TIMEOUT} cell timed out (300 s wall-clock)")
     out.append(f"- `—` see *Why a cell is empty* below\n")
 
     out.append("**Bold** = fastest cell on the row, **counted only among "
-                f"{ICON_OK} cells**. ⚠ / ✗ / — cells never carry the bold "
-                "(comparing a non-bit-exact result against bit-exact ones "
-                "would be misleading).\n")
+                f"cells whose relevant gate is {ICON_OK}**. For pls4all "
+                "columns that is Gate 1; for external libraries it is "
+                "Gate 2. Drift / divergent / empty cells never carry the "
+                "bold.\n")
 
     out.append(f"Timing is the **median of {run_text} run(s)**; the first "
                 "run is discarded as warmup when `n_runs >= 3`. All "
@@ -453,35 +524,37 @@ def render(csv_path: Path, out_path: Path,
                 match = [r for r in grp if column_key(r) == b
                           and int(r["n"]) == n and int(r["p"]) == p]
                 if not match:
-                    col_data.append((float("nan"), ICON_NA, ""))
+                    col_data.append((float("nan"), ICON_NA, "", ICON_NA))
                     continue
                 r = match[0]
                 if not _is_true(r.get("ok")):
                     col_data.append((float("nan"),
                                        fmt_ms(r.get("median_ms", "")),
-                                       parity_icon(r)))
+                                       dual_parity_label(r),
+                                       effective_parity_icon(r)))
                 else:
                     raw = cell_ms_value(r.get("median_ms", ""))
                     col_data.append((raw,
                                        fmt_ms(r.get("median_ms", "")),
-                                       parity_icon(r)))
+                                       dual_parity_label(r),
+                                       effective_parity_icon(r)))
             # Bold the fastest backend in the row, BUT only among
             # cells with strict parity ✓ (bit-exact vs reference). A
             # ⚠ cell (algorithmic drift within 1e-3) isn't strictly
             # producing the same predictions, so its timing isn't an
             # apples-to-apples win — same reason ✗ cells are excluded.
             valid_for_min = [
-                (i, raw) for i, (raw, _, icon) in enumerate(col_data)
-                if raw == raw and icon == ICON_OK
+                (i, raw) for i, (raw, _, _, effective_icon) in enumerate(col_data)
+                if raw == raw and effective_icon == ICON_OK
             ]
             min_idx = min(valid_for_min, key=lambda x: x[1])[0] if valid_for_min else None
             cells = []
-            for i, (raw, formatted, icon) in enumerate(col_data):
-                if icon == ICON_NA and formatted == ICON_NA:
+            for i, (raw, formatted, icon, effective_icon) in enumerate(col_data):
+                if not icon and formatted == ICON_NA:
                     # pure-empty cell
                     cells.append("—")
                     continue
-                label = f"{formatted} {icon}".strip()
+                label = icon if formatted == ICON_NA else f"{formatted} {icon}".strip()
                 if i == min_idx:
                     label = f"**{label}**"
                 cells.append(label)
@@ -548,9 +621,14 @@ def render(csv_path: Path, out_path: Path,
         out.append(f"| `{column_disp(key)}` | {items} |")
 
     out.append("\n## Methodology\n")
-    out.append("- Reference: `cpp` cell at 1 thread (libp4a via ctypes), "
-                "or `python_tier1` when `cpp` is unavailable for an algorithm")
-    out.append("- Parity tolerance: 1e-6 (per-algo overrides possible)")
+    out.append("- Gate 1 reference: `cpp` cell at 1 thread (libp4a via "
+                "ctypes), or `python_tier1` when `cpp` is unavailable "
+                "for an algorithm")
+    out.append("- Gate 2 reference: the registry-declared canonical "
+                "external reference for the method")
+    out.append("- Gate 1 tolerance: 1e-6 max-abs-diff; Gate 2 tolerance: "
+                "`MethodSpec.rmse_rel_tol` (also emitted as "
+                "`reference_parity_tolerance` by newer CSVs)")
     out.append("- All backends read the **same** orchestrator-generated CSV "
                 "(`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`) "
                 "so input data is bit-identical across languages")

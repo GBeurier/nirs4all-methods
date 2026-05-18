@@ -145,24 +145,23 @@ canonical oracle for each method. It is provenance, not a timed backend.
 
 ## Current caveats
 
-The May 2026 audit found these implementation gaps:
+The May 2026 stabilization work fixed the main dual-gate reporting issues:
+external rows no longer carry a binding-parity verdict, dashboard/static
+tables render both gates, and `--only-pls4all` runs evaluate Gate 2 from a
+stored oracle snapshot. Remaining caveats:
 
-- `compute_parity()` still writes binding-parity fields for external
-  rows in some runs. Consumers must not treat external `binding_parity`
-  as a real gate.
-- Dashboard aggregation and some static Markdown tables still read
-  legacy `parity_*` aliases, so external libraries can be shown as
-  binding failures even when their reference parity is acceptable.
-- `--only-pls4all` runs can emit "canonical reference predictions
-  missing"; that means Gate 2 was not scheduled, not that the C++ result
-  is numerically wrong.
+- Older CSVs may still contain legacy external `parity_*` values. Regenerate
+  benchmark CSVs before treating dashboard totals as release evidence.
+- A missing `.reference_oracles` snapshot is a setup failure. Run the
+  canonical reference backend after intentional reference-library updates;
+  do not skip Gate 2 for pls4all-only runs.
 - Fixture regeneration currently still requires the historical AOM bench
   oracle path when AOM/POP fixtures are checked. Until that oracle is
   packaged or pinned through nirs4all, fixture determinism is not fully
   reproducible from a clean clone.
-- Some selector tier-2 adapters silently drop registry parameters whose
-  names do not match the wrapper constructor. Treat timing and parity for
-  those wrappers as suspect until parameter adapters fail closed.
+- Tier-2 selector adapters now fail closed on unknown registry parameters,
+  but any newly added selector must add explicit aliases/tests before it is
+  accepted into release gates.
 
 ## How to reproduce a run
 
@@ -170,7 +169,7 @@ The May 2026 audit found these implementation gaps:
 # Canonical registry cells, pls4all + declared external references.
 benchmarks/cross_binding/run_overnight.sh
 
-# Internal pls4all smoke only. This checks Gate 1, not Gate 2.
+# Internal pls4all smoke only. Gate 2 uses stored oracle snapshots.
 python benchmarks/cross_binding/orchestrator.py \
   --algorithms all --sizes 100x50 --threads 1 \
   --libp4a-build blas-omp --n-runs 1 --only-pls4all \
