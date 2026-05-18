@@ -1,0 +1,48 @@
+# Fail the PR if any downstream manifest (pyproject.toml, DESCRIPTION,
+# Cargo.toml, Project.toml, package.json, csproj, CITATION.cff, docs/conf.py,
+# README.md) drifts from the canonical version in
+# cpp/include/chemometrics4all/c4a_version.h.
+#
+# Local equivalent:  scripts/bump_version.sh --check
+#
+# Bumping the project version on a working branch:
+#   scripts/bump_version.sh --bump X.Y.Z   # rewrites the header
+#   scripts/bump_version.sh                # syncs every downstream manifest
+
+name: version-sync
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: manifest version consistency
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify scripts/bump_version.sh exists and is executable
+        run: |
+          if [ ! -x scripts/bump_version.sh ]; then
+            echo "ERROR: scripts/bump_version.sh missing or not executable" >&2
+            exit 1
+          fi
+
+      - name: Check every manifest is in sync with c4a_version.h
+        run: scripts/bump_version.sh --check

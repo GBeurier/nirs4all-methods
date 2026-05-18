@@ -1,0 +1,1954 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>chemometrics4all · cross-binding benchmark</title>
+  <meta name="description" content="Interactive cross-binding benchmark dashboard for the chemometrics4all PLS/NIRS library. Same algorithm, same input bytes, 17 implementations across C++, Python, R, MATLAB.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500;600;700;800&family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* === LIGHT THEME (default) — paper-white surfaces, dark ink text,
+         teal accent matching the Sphinx Furo theme.
+         The dark CRT-phosphor theme lives under body.theme-dark below. */
+      --ink-0: #F7F9FB;     /* page background */
+      --ink-1: #FFFFFF;     /* cards, table body */
+      --ink-2: #F1F4F7;     /* header rows, sticky cells */
+      --ink-3: #E4E9EF;     /* hover bg */
+      --ink-4: #D1D8E0;     /* scrollbar thumb */
+      --line:   rgba(15, 30, 40, 0.07);
+      --line-2: rgba(15, 30, 40, 0.13);
+      --fg-0: #0F2027;
+      --fg-1: #36454F;
+      --fg-2: #6A7681;
+      --fg-3: #98A2AC;
+      --phosphor:       #0d9488;
+      --phosphor-soft:  rgba(13, 148, 136, 0.12);
+      --phosphor-glow:  rgba(13, 148, 136, 0.30);
+      --phosphor-faint: rgba(13, 148, 136, 0.05);
+      --amber:          #B86E0F;
+      --crimson:        #B83A37;
+      --indigo:         #2E5BB8;
+
+      /* per-language accent colors — darker variants tuned for light bg */
+      --lang-cpp:  #0E8C8F;
+      --lang-py:   #B88528;
+      --lang-r:    #4A60D6;
+      --lang-m:    #B85AA6;
+      --lang-jl:   #8260C0;
+      --lang-rs:   #C97A48;
+      --lang-go:   #2E92BD;
+      --lang-js:   #B0972A;
+      --lang-java: #B86A6A;
+      --lang-other:#6A7681;
+      --lang-cpp-soft: rgba(14, 140, 143, 0.09);
+      --lang-py-soft:  rgba(184, 133, 40, 0.09);
+      --lang-r-soft:   rgba(74, 96, 214, 0.09);
+      --lang-m-soft:   rgba(184, 90, 166, 0.09);
+      --lang-jl-soft:  rgba(130, 96, 192, 0.09);
+      --lang-rs-soft:  rgba(201, 122, 72, 0.09);
+      --lang-go-soft:  rgba(46, 146, 189, 0.09);
+      --lang-js-soft:  rgba(176, 151, 42, 0.09);
+      --lang-java-soft:rgba(184, 106, 106, 0.09);
+      --lang-other-soft: rgba(106, 118, 129, 0.07);
+      --bg-grid: rgba(15, 30, 40, 0.035);
+
+      --controls-bg: rgba(255, 255, 255, 0.92);
+      --menu-shadow: 0 16px 40px rgba(15, 30, 40, 0.14);
+
+      --display: 'Sora', 'Inter Tight', system-ui, sans-serif;
+      --sans:    'Inter Tight', system-ui, sans-serif;
+      --mono:    'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+      /* Fixed sticky-left column widths — the CSS sticky offsets are
+         derived from these so leftmost columns never overlap regardless
+         of content length. Override in density rules to tighten. */
+      --w-algo:    164px;
+      --w-size:    78px;
+      --w-threads: 42px;
+      --off-size:    var(--w-algo);
+      --off-threads: calc(var(--w-algo) + var(--w-size));
+    }
+
+    /* === DARK THEME (toggled via .theme-dark on <body>) — the original
+       CRT-phosphor aesthetic. */
+    body.theme-dark {
+      --ink-0: #07090C;
+      --ink-1: #0C1117;
+      --ink-2: #131A23;
+      --ink-3: #1C2530;
+      --ink-4: #243042;
+      --line:   rgba(255,255,255,0.06);
+      --line-2: rgba(255,255,255,0.11);
+      --fg-0: #EAF0F6;
+      --fg-1: #B5C0CC;
+      --fg-2: #6F7B89;
+      --fg-3: #485162;
+      --phosphor:       #7CE5A2;
+      --phosphor-soft:  rgba(124, 229, 162, 0.16);
+      --phosphor-glow:  rgba(124, 229, 162, 0.55);
+      --phosphor-faint: rgba(124, 229, 162, 0.05);
+      --amber:          #F2B85C;
+      --crimson:        #E96565;
+      --indigo:         #7DA8F7;
+
+      --lang-cpp:  #6DD3D6;
+      --lang-py:   #F2C46B;
+      --lang-r:    #9CA8FA;
+      --lang-m:    #E08FCF;
+      --lang-jl:   #B98AE0;
+      --lang-rs:   #E89A6B;
+      --lang-go:   #6BBFE0;
+      --lang-js:   #E8D86B;
+      --lang-java: #E08F8F;
+      --lang-other:#9AA4B0;
+      --lang-cpp-soft: rgba(109, 211, 214, 0.13);
+      --lang-py-soft:  rgba(242, 196, 107, 0.13);
+      --lang-r-soft:   rgba(156, 168, 250, 0.13);
+      --lang-m-soft:   rgba(224, 143, 207, 0.13);
+      --lang-jl-soft:  rgba(185, 138, 224, 0.13);
+      --lang-rs-soft:  rgba(232, 154, 107, 0.13);
+      --lang-go-soft:  rgba(107, 191, 224, 0.13);
+      --lang-js-soft:  rgba(232, 216, 107, 0.13);
+      --lang-java-soft:rgba(224, 143, 143, 0.13);
+      --lang-other-soft: rgba(154, 164, 176, 0.10);
+      --bg-grid: rgba(255,255,255,0.018);
+
+      --controls-bg: rgba(12, 17, 23, 0.95);
+      --menu-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Light theme drops the CRT-phosphor glow halos that look noisy on
+       a white background — the same selectors keep their accent color
+       via --phosphor; only the text-shadow halo is suppressed. */
+    body:not(.theme-dark) a:hover,
+    body:not(.theme-dark) .wordmark .accent,
+    body:not(.theme-dark) .stat-value .glow,
+    body:not(.theme-dark) .cell-fastest,
+    body:not(.theme-dark) .speed-faster,
+    body:not(.theme-dark) table.bench th .arrow,
+    body:not(.theme-dark) .info-card h3 { text-shadow: none; }
+    body:not(.theme-dark) .info-card h3::before,
+    body:not(.theme-dark) .brand-led { box-shadow: 0 0 4px var(--phosphor-soft); }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--ink-0);
+      color: var(--fg-0);
+      font-family: var(--sans);
+      font-feature-settings: 'tnum' 1, 'lnum' 1, 'ss01' 1;
+      font-size: 13.5px;
+      line-height: 1.45;
+      min-height: 100vh;
+      background-image:
+        linear-gradient(var(--bg-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+      background-size: 24px 24px;
+      background-position: -1px -1px;
+    }
+
+    a { color: var(--phosphor); text-decoration: none; }
+    a:hover { text-shadow: 0 0 6px var(--phosphor-glow); }
+
+    /* ---------- HERO ---------- */
+    .hero {
+      border-bottom: 1px solid var(--line-2);
+      background: linear-gradient(180deg, var(--ink-1) 0%, var(--ink-0) 100%);
+      padding: 24px 32px 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 800px 280px at 12% -40%, var(--phosphor-soft) 0%, transparent 60%),
+        radial-gradient(ellipse 600px 240px at 88% -20%, rgba(125, 168, 247, 0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .hero-row {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      gap: 28px;
+      max-width: 1900px; margin: 0 auto;
+      position: relative;
+    }
+    .brand { display: flex; align-items: baseline; gap: 14px; }
+    .brand-led {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--phosphor);
+      box-shadow: 0 0 12px var(--phosphor-glow);
+      animation: pulse 2.4s ease-in-out infinite;
+      align-self: center;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 12px var(--phosphor-glow); }
+      50%      { opacity: 0.45; box-shadow: 0 0 4px var(--phosphor-soft); }
+    }
+    .wordmark {
+      font-family: var(--display);
+      font-size: 32px; line-height: 1.08;
+      letter-spacing: -0.015em; color: var(--fg-0);
+      font-weight: 300;
+    }
+    .wordmark .accent { color: var(--phosphor); font-weight: 700; text-shadow: 0 0 14px var(--phosphor-glow); }
+    .wordmark .sep    { color: var(--fg-3); margin: 0 10px; font-weight: 200; }
+    .wordmark .light  { font-weight: 200; color: var(--fg-1); }
+    .tagline {
+      font-family: var(--sans);
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.22em;
+      color: var(--fg-2); margin-top: 9px; font-weight: 500;
+    }
+    .tagline .dot { color: var(--fg-3); margin: 0 8px; }
+
+    .stat-strip {
+      display: grid; grid-template-columns: repeat(6, max-content);
+      gap: 26px; font-family: var(--mono);
+    }
+    .stat {
+      display: flex; flex-direction: column;
+      border-left: 1px solid var(--line-2);
+      padding: 2px 0 2px 14px;
+    }
+    .stat-label {
+      font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.16em;
+      color: var(--fg-2); font-family: var(--sans); font-weight: 500;
+      margin-bottom: 2px;
+    }
+    .stat-value {
+      font-size: 24px; font-weight: 500; color: var(--fg-0);
+      font-family: var(--mono); line-height: 1.05;
+    }
+    .stat-value .glow { color: var(--phosphor); text-shadow: 0 0 12px var(--phosphor-glow); }
+    .stat-unit {
+      font-size: 11px; color: var(--fg-2); margin-left: 3px; font-weight: 400;
+    }
+
+    .hero-right {
+      display: flex; align-items: center; gap: 14px;
+    }
+    .theme-toggle {
+      background: var(--ink-1);
+      border: 1px solid var(--line-2);
+      border-radius: 999px;
+      padding: 7px 11px;
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      color: var(--fg-0);
+      transition: border-color 120ms, color 120ms, background 120ms;
+    }
+    .theme-toggle:hover {
+      border-color: var(--phosphor);
+      background: var(--phosphor-soft);
+    }
+    .theme-toggle .theme-ico-dark,
+    .theme-toggle .theme-ico-light { display: none; }
+    /* Light theme is active → show the moon (click to go dark). */
+    body:not(.theme-dark) .theme-toggle .theme-ico-dark { display: inline; }
+    /* Dark theme is active → show the sun (click to go light). */
+    body.theme-dark .theme-toggle .theme-ico-light { display: inline; }
+
+    .hero-spectrum {
+      height: 2px; width: calc(100% - 64px); max-width: 1900px;
+      margin: 16px auto 0;
+      background: linear-gradient(90deg,
+        #4338CA 0%, #6366F1 13%, #06B6D4 27%, #14B8A6 40%, #84CC16 53%,
+        #EAB308 67%, #F97316 82%, #B91C1C 100%);
+      opacity: 0.55;
+      box-shadow: 0 0 6px rgba(124, 229, 162, 0.2);
+    }
+    .hero-spectrum-label {
+      max-width: 1900px; margin: 4px auto 0;
+      display: flex; justify-content: space-between;
+      font-family: var(--mono); font-size: 9px;
+      color: var(--fg-3); letter-spacing: 0.12em; text-transform: uppercase;
+    }
+
+    /* ---------- CONTROLS ---------- */
+    .controls {
+      position: sticky; top: 0; z-index: 40;
+      background: var(--controls-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line-2);
+      padding: 10px 32px;
+    }
+    .controls-row {
+      display: flex; align-items: center; gap: 8px;
+      max-width: 1900px; margin: 0 auto;
+      flex-wrap: wrap;
+    }
+    .controls-row + .controls-row { padding-top: 8px; margin-top: 6px; border-top: 1px solid var(--line); }
+    .preset-rail {
+      display: flex; align-items: center; gap: 6px;
+      flex-wrap: wrap;
+    }
+    .preset-rail .preset-label {
+      font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.14em;
+      color: var(--fg-2); font-weight: 600; margin-right: 4px;
+    }
+    .preset-rail .preset-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--ink-2); border: 1px solid var(--line);
+      border-radius: 999px; padding: 4px 11px;
+      font-size: 11.5px; color: var(--fg-1);
+      cursor: pointer; font-family: var(--sans); font-weight: 500;
+      transition: all 100ms;
+      user-select: none;
+    }
+    .preset-rail .preset-pill .cnt {
+      font-family: var(--mono); font-size: 10px; color: var(--fg-2);
+    }
+    .preset-rail .preset-pill:hover {
+      border-color: var(--phosphor); color: var(--fg-0);
+    }
+    .preset-rail .preset-pill.active {
+      background: var(--phosphor-soft); color: var(--phosphor);
+      border-color: var(--phosphor);
+    }
+    .preset-rail .preset-pill.active .cnt { color: var(--phosphor); }
+    .control {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--ink-2);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      padding: 5px 9px;
+      font-size: 12px; color: var(--fg-1);
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: border-color 100ms, color 100ms;
+      user-select: none;
+    }
+    .control:hover { border-color: var(--phosphor); color: var(--fg-0); }
+    .control:focus-within { border-color: var(--phosphor); }
+    .control-label {
+      font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.14em;
+      color: var(--fg-2); padding-right: 7px;
+      border-right: 1px solid var(--line); margin-right: 2px;
+      font-weight: 500;
+    }
+    .control select, .control input[type=text], .control input[type=search] {
+      background: transparent; border: none; color: var(--fg-0);
+      font-family: var(--sans); font-size: 12px; outline: none;
+      min-width: 80px;
+    }
+    .control select option { background: var(--ink-2); color: var(--fg-0); }
+    .control input[type=search] {
+      width: 130px;
+    }
+    .control input[type=checkbox] {
+      accent-color: var(--phosphor);
+      margin: 0 4px 0 0;
+    }
+
+    .filter-chips { display: inline-flex; gap: 3px; align-items: center; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--ink-2); border: 1px solid var(--line);
+      border-radius: 999px; padding: 3px 9px;
+      font-size: 11px; color: var(--fg-2); cursor: pointer;
+      user-select: none; font-family: var(--sans);
+      transition: all 100ms;
+    }
+    .chip.active { background: var(--phosphor-soft); color: var(--phosphor); border-color: var(--phosphor); }
+    .chip.active.amber  { background: rgba(242,184,92,0.16); color: var(--amber); border-color: var(--amber); }
+    .chip.active.crimson{ background: rgba(233,101,101,0.16); color: var(--crimson); border-color: var(--crimson); }
+    .chip.active.gray   { background: rgba(180,190,200,0.10); color: var(--fg-1); border-color: var(--fg-2); }
+    .chip:hover:not(.active) { color: var(--fg-0); border-color: var(--fg-2); }
+
+    .badge {
+      display: inline-block; padding: 1px 6px; border-radius: 2px;
+      background: var(--ink-3); color: var(--fg-1);
+      font-family: var(--mono); font-size: 10px;
+    }
+    .badge.glow { background: var(--phosphor-soft); color: var(--phosphor); }
+
+    /* dropdown */
+    .dropdown { position: relative; }
+    .dropdown.open .menu { display: block; }
+    .menu {
+      display: none;
+      position: absolute; top: calc(100% + 6px); right: 0;
+      background: var(--ink-1);
+      border: 1px solid var(--line-2);
+      border-radius: 4px; padding: 12px;
+      min-width: 320px; max-height: 60vh; overflow-y: auto;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.7), 0 0 0 1px var(--phosphor-soft);
+      z-index: 100;
+    }
+    .menu-section { margin-bottom: 10px; }
+    .menu-section + .menu-section { padding-top: 8px; border-top: 1px solid var(--line); }
+    .menu-section-title {
+      font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.14em;
+      color: var(--fg-2); margin-bottom: 6px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-weight: 500;
+    }
+    .menu-section-title .tiny {
+      font-size: 10px; color: var(--phosphor); cursor: pointer;
+      text-transform: none; letter-spacing: 0;
+      font-family: var(--sans); font-weight: 400;
+    }
+    .menu-section-title .tiny:hover { text-shadow: 0 0 6px var(--phosphor-glow); }
+    .menu label {
+      display: flex; align-items: center; gap: 8px;
+      padding: 3px 0; font-size: 12px; cursor: pointer;
+      font-family: var(--mono); color: var(--fg-1);
+    }
+    .menu label:hover { color: var(--fg-0); }
+    .menu label input { accent-color: var(--phosphor); }
+    .preset-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+    .preset {
+      font-size: 10px; padding: 4px 8px;
+      background: var(--ink-3); border: 1px solid var(--line);
+      border-radius: 2px; color: var(--fg-1); cursor: pointer;
+      font-family: var(--sans); font-weight: 500;
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .preset:hover { background: var(--phosphor-soft); color: var(--phosphor); border-color: var(--phosphor); }
+
+    .ctrl-spacer { flex: 1; }
+
+    /* ---------- TABLE ---------- */
+    .table-shell {
+      max-width: 1900px; margin: 0 auto;
+      padding: 12px 32px 40px;
+    }
+    .legend {
+      display: flex; gap: 18px; padding: 8px 12px;
+      background: var(--ink-1); border: 1px solid var(--line);
+      border-radius: 4px; margin: 0 0 10px;
+      font-size: 11px;
+      flex-wrap: wrap; align-items: center;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; color: var(--fg-1); font-family: var(--sans); }
+    .legend-item .ico { font-family: var(--mono); font-weight: 600; }
+
+    .table-wrap {
+      border: 1px solid var(--line-2);
+      border-radius: 4px;
+      background: var(--ink-1);
+      overflow: auto;
+      max-height: 78vh;
+      position: relative;
+      box-shadow: 0 0 0 1px var(--phosphor-faint);
+    }
+    .table-wrap::-webkit-scrollbar { height: 10px; width: 10px; }
+    .table-wrap::-webkit-scrollbar-track { background: var(--ink-1); }
+    .table-wrap::-webkit-scrollbar-thumb { background: var(--ink-4); border-radius: 4px; }
+    .table-wrap::-webkit-scrollbar-thumb:hover { background: var(--fg-3); }
+
+    table.bench {
+      border-collapse: separate; border-spacing: 0;
+      /* Don't stretch to fill the wrap — that made each column too wide
+         when only a handful are visible. Columns size to their content;
+         the scrollbar handles overflow when many columns are on. */
+      width: max-content;
+      font-family: var(--mono); font-size: 11.5px;
+    }
+    table.bench thead { position: sticky; top: 0; z-index: 5; }
+
+    /* language band row */
+    table.bench tr.lang-band th {
+      padding: 3px 6px;
+      font-family: var(--sans);
+      font-size: 9.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      border-bottom: 2px solid;
+      border-right: 1px solid var(--line);
+      background: var(--ink-2);
+      text-align: center;
+      line-height: 1.15;
+      /* Don't let a long band label (e.g. "MATLAB / Octave 1") force its
+         underlying single-column to widen — clip the label instead. */
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 0;
+    }
+    table.bench tr.lang-band th.lang-spacer { border-bottom-color: transparent; }
+    table.bench tr.lang-band th.lang-cpp   { color: var(--lang-cpp);   border-bottom-color: var(--lang-cpp);   background: linear-gradient(180deg, var(--lang-cpp-soft)   0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-py    { color: var(--lang-py);    border-bottom-color: var(--lang-py);    background: linear-gradient(180deg, var(--lang-py-soft)    0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-r     { color: var(--lang-r);     border-bottom-color: var(--lang-r);     background: linear-gradient(180deg, var(--lang-r-soft)     0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-m     { color: var(--lang-m);     border-bottom-color: var(--lang-m);     background: linear-gradient(180deg, var(--lang-m-soft)     0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-jl    { color: var(--lang-jl);    border-bottom-color: var(--lang-jl);    background: linear-gradient(180deg, var(--lang-jl-soft)    0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-rs    { color: var(--lang-rs);    border-bottom-color: var(--lang-rs);    background: linear-gradient(180deg, var(--lang-rs-soft)    0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-go    { color: var(--lang-go);    border-bottom-color: var(--lang-go);    background: linear-gradient(180deg, var(--lang-go-soft)    0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-js    { color: var(--lang-js);    border-bottom-color: var(--lang-js);    background: linear-gradient(180deg, var(--lang-js-soft)    0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-java  { color: var(--lang-java);  border-bottom-color: var(--lang-java);  background: linear-gradient(180deg, var(--lang-java-soft)  0%, var(--ink-2) 100%); }
+    table.bench tr.lang-band th.lang-other { color: var(--lang-other); border-bottom-color: var(--lang-other); background: linear-gradient(180deg, var(--lang-other-soft) 0%, var(--ink-2) 100%); }
+
+    /* per-language best-cell marker — subtle text-tint only, no glow */
+    .cell-lang-best .cell-value { font-weight: 600; }
+    .cell-lang-best.lang-cpp   .cell-value { color: var(--lang-cpp); }
+    .cell-lang-best.lang-py    .cell-value { color: var(--lang-py);  }
+    .cell-lang-best.lang-r     .cell-value { color: var(--lang-r);   }
+    .cell-lang-best.lang-m     .cell-value { color: var(--lang-m);   }
+    .cell-lang-best.lang-jl    .cell-value { color: var(--lang-jl);  }
+    .cell-lang-best.lang-rs    .cell-value { color: var(--lang-rs);  }
+    .cell-lang-best.lang-go    .cell-value { color: var(--lang-go);  }
+    .cell-lang-best.lang-js    .cell-value { color: var(--lang-js);  }
+    .cell-lang-best.lang-java  .cell-value { color: var(--lang-java); }
+    .cell-lang-best.lang-other .cell-value { color: var(--lang-other); }
+
+    /* Language partitions: only show a thicker separator on the FIRST
+       column of each language group. No per-cell tinted borders. */
+    table.bench td.col-lang-first, table.bench th.col-lang-first {
+      border-left: 2px solid var(--line-2);
+    }
+
+    /* chemometrics4all binding columns get a faint phosphor wash so users can
+       visually distinguish "ours" from the externals they mimic. Same
+       short label can recur across the divide (chemometrics4all.sklearn vs
+       sklearn external — both render "sklearn") and the tint is what
+       carries the disambiguation. */
+    table.bench th.col-chemometrics4all {
+      background: linear-gradient(180deg, var(--phosphor-soft) 0%, var(--ink-2) 100%);
+    }
+    table.bench th.col-chemometrics4all .col-label { color: var(--phosphor); }
+    table.bench td.col-chemometrics4all { background: var(--phosphor-faint); }
+    table.bench tbody tr:hover td.col-chemometrics4all { background: var(--phosphor-soft); }
+
+    table.bench th {
+      background: var(--ink-2);
+      color: var(--fg-1);
+      font-weight: 500; font-family: var(--sans);
+      text-align: center; padding: 5px 6px;
+      border-bottom: 2px solid var(--line-2);
+      border-right: 1px solid var(--line);
+      font-size: 10.5px;
+      letter-spacing: 0.01em;
+      vertical-align: bottom;
+      /* Cap data column width so a long short label (e.g. multiblock,
+         chemometrics) doesn't blow the column out — text wraps to a
+         second line instead. Sticky columns override this below. */
+      max-width: 96px;
+    }
+    table.bench th.algo-col, table.bench th.size-col, table.bench th.thread-col {
+      text-align: left; vertical-align: middle; max-width: none;
+      padding: 6px 10px;
+    }
+    table.bench th .col-label {
+      font-family: var(--sans); font-weight: 600; color: var(--fg-0); font-size: 10.5px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.15;
+      max-height: 2.4em;
+    }
+    /* col-meta = tier subtitle below the short label (e.g. "chemometrics4all
+       reference" / "external"). Kept small and clipped to one line so
+       it adds context without stretching the column width. */
+    table.bench th .col-meta {
+      display: block;
+      font-family: var(--sans); color: var(--fg-2);
+      font-weight: 400; font-size: 9px;
+      letter-spacing: 0;
+      margin-top: 2px;
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* Hide col-meta in compact + ultra modes to save vertical room. */
+    body.density-compact table.bench th .col-meta,
+    body.density-ultra   table.bench th .col-meta { display: none; }
+    table.bench th.sortable { cursor: pointer; user-select: none; }
+    table.bench th.sortable:hover .col-label { color: var(--phosphor); }
+    table.bench th.sortable.active .col-label { color: var(--phosphor); }
+    table.bench th .arrow {
+      color: var(--phosphor); font-family: var(--mono);
+      font-weight: 700; margin-left: 3px;
+      font-size: 10px;
+    }
+
+    /* sticky leftmost columns — widths + offsets driven by CSS vars
+       so they stay in sync across density modes. */
+    table.bench th.algo-col, table.bench td.algo-cell {
+      position: sticky; left: 0; z-index: 4;
+      background: var(--ink-2);
+      width: var(--w-algo); min-width: var(--w-algo); max-width: var(--w-algo);
+    }
+    table.bench td.algo-cell { background: var(--ink-1); z-index: 2; }
+    table.bench th.size-col, table.bench td.size-cell {
+      position: sticky; left: var(--off-size); z-index: 4;
+      background: var(--ink-2);
+      width: var(--w-size); min-width: var(--w-size); max-width: var(--w-size);
+    }
+    table.bench td.size-cell { background: var(--ink-1); z-index: 2; }
+    table.bench th.thread-col, table.bench td.thread-cell {
+      position: sticky; left: var(--off-threads); z-index: 4;
+      background: var(--ink-2);
+      width: var(--w-threads); min-width: var(--w-threads); max-width: var(--w-threads);
+    }
+    table.bench td.thread-cell { background: var(--ink-1); z-index: 2; }
+    table.bench th.algo-col, table.bench th.size-col, table.bench th.thread-col { z-index: 6; }
+    /* The native (chemometrics4all.cpp) baseline column is NOT sticky — making it
+       sticky used to hide neighbouring columns when scrolling right.
+       It still gets a subtle phosphor accent so the comparison anchor
+       remains visually identifiable. */
+    table.bench th.native-col {
+      background: linear-gradient(180deg, var(--phosphor-soft) 0%, var(--ink-2) 100%);
+      border-right: 2px solid var(--phosphor-soft);
+    }
+    table.bench th.native-col .col-label { color: var(--phosphor); }
+    table.bench td.native-cell {
+      background: var(--phosphor-faint);
+      border-right: 2px solid var(--phosphor-soft);
+    }
+    table.bench tbody tr:hover td.native-cell {
+      background: var(--phosphor-soft);
+    }
+
+    table.bench td {
+      padding: 4px 8px;
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      color: var(--fg-0);
+      white-space: nowrap;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      transition: background 80ms;
+    }
+    table.bench tbody tr:hover td { background: var(--phosphor-faint); }
+    table.bench tbody tr:hover td.algo-cell,
+    table.bench tbody tr:hover td.size-cell,
+    table.bench tbody tr:hover td.thread-cell { background: var(--ink-3); }
+
+    table.bench td.algo-cell {
+      font-family: var(--sans); font-weight: 500; color: var(--fg-0);
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    table.bench td.size-cell {
+      font-family: var(--mono); color: var(--fg-1);
+      text-align: left;
+      padding-left: 10px;
+    }
+    table.bench td.thread-cell {
+      font-family: var(--mono); color: var(--fg-1);
+      text-align: center;
+      padding: 4px 4px;
+    }
+    .thread-pill {
+      display: inline-block; padding: 1px 7px;
+      background: var(--ink-3); border-radius: 999px;
+      font-size: 10.5px; color: var(--fg-1);
+      border: 1px solid var(--line);
+    }
+    .thread-pill.t-3  { color: var(--indigo); border-color: rgba(125,168,247,0.4); }
+    .thread-pill.t-10 { color: var(--phosphor); border-color: rgba(124,229,162,0.4); }
+    /* avg-speedup mode: size cell shows "avg · N" pill instead of n×p */
+    .size-avg {
+      display: inline-block; padding: 1px 7px;
+      background: var(--phosphor-soft); color: var(--phosphor);
+      border: 1px solid var(--phosphor-soft);
+      border-radius: 3px;
+      font-family: var(--sans);
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
+
+    .cell-fastest {
+      color: var(--phosphor);
+      font-weight: 600;
+      text-shadow: 0 0 8px var(--phosphor-glow);
+      position: relative;
+    }
+    .cell-fastest::before {
+      content: ''; position: absolute; left: 2px; top: 25%; bottom: 25%;
+      width: 2px; background: var(--phosphor);
+      box-shadow: 0 0 6px var(--phosphor-glow);
+      border-radius: 1px;
+    }
+    .cell-fastest-bg { background: var(--phosphor-faint) !important; }
+    .cell-empty { color: var(--fg-3); text-align: center; font-family: var(--mono); }
+    .parity { display: inline-block; min-width: 12px; text-align: center; margin-left: 5px; font-weight: 600; font-family: var(--mono); }
+    .p-exact   { color: var(--phosphor); }
+    .p-drift   { color: var(--amber); }
+    .p-divergent { color: var(--crimson); }
+    .p-error   { color: var(--crimson); }
+    .p-not_run { color: var(--indigo); }
+    .p-not_available { color: var(--fg-3); }
+    .p-ok      { color: var(--phosphor); }
+    .p-warn    { color: var(--amber); }
+    .p-fail    { color: var(--crimson); }
+    .p-timeout { color: var(--indigo); }
+    .p-na      { color: var(--fg-3); }
+
+    .speed-faster { color: var(--phosphor); text-shadow: 0 0 6px var(--phosphor-glow); font-weight: 600; }
+    .speed-equal  { color: var(--fg-1); }
+    .speed-slower { color: var(--amber); }
+
+    /* density: compact — slightly tighter sticky widths */
+    body.density-compact {
+      --w-algo: 144px; --w-size: 70px; --w-threads: 38px;
+    }
+    body.density-compact table.bench { font-size: 11px; }
+    body.density-compact table.bench td { padding: 2.5px 6px; font-size: 10.5px; }
+    body.density-compact table.bench th { padding: 4px 5px; font-size: 10px; max-width: 84px; }
+    body.density-compact table.bench th .col-label { font-size: 10px; }
+
+    /* density: ultra (max squeeze) — minimal sticky widths */
+    body.density-ultra {
+      --w-algo: 126px; --w-size: 60px; --w-threads: 32px;
+    }
+    body.density-ultra table.bench { font-size: 10.5px; }
+    body.density-ultra table.bench td { padding: 1.5px 4px; font-size: 10px; }
+    body.density-ultra table.bench th { padding: 3px 4px; font-size: 9.5px; max-width: 72px; }
+    body.density-ultra table.bench th .col-label { font-size: 9.5px; letter-spacing: 0; }
+    body.density-ultra table.bench tr.lang-band th { padding: 2px 3px; font-size: 8.5px; letter-spacing: 0.12em; }
+    body.density-ultra table.bench td.thread-cell .thread-pill { padding: 0 4px; font-size: 9px; }
+    body.density-ultra .parity { margin-left: 2px; font-size: 9.5px; }
+    body.density-ultra .cell-fastest::before { left: 1px; width: 1.5px; }
+    body.density-ultra table.bench td.algo-cell { font-size: 10.5px; padding: 1.5px 6px; }
+    body.density-ultra table.bench td.size-cell { font-size: 10px; padding: 1.5px 6px; }
+
+    .table-meta {
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: var(--mono); font-size: 10.5px; color: var(--fg-2);
+      padding: 8px 4px 0;
+      letter-spacing: 0.02em;
+    }
+    .empty-state {
+      padding: 60px 40px; text-align: center; color: var(--fg-2);
+    }
+    .empty-state h3 {
+      font-family: var(--display);
+      color: var(--fg-0); font-size: 22px; margin: 0 0 6px; font-weight: 300;
+      letter-spacing: -0.01em;
+    }
+    .empty-state .hint {
+      color: var(--phosphor); cursor: pointer; font-size: 12px;
+    }
+    .empty-state .hint:hover { text-shadow: 0 0 6px var(--phosphor-glow); }
+
+    /* ---------- INFO CARDS ---------- */
+    .info-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 18px;
+      max-width: 1900px; margin: 36px auto 36px;
+      padding: 0 32px;
+    }
+    .info-card {
+      background: var(--ink-1); border: 1px solid var(--line-2);
+      border-radius: 6px; padding: 22px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .info-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--phosphor-soft), transparent);
+    }
+    .info-card h3 {
+      font-family: var(--sans); font-size: 11.5px;
+      text-transform: uppercase; letter-spacing: 0.22em;
+      color: var(--phosphor); margin: 0 0 16px;
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 600;
+    }
+    .info-card h3::before {
+      content: ''; width: 7px; height: 7px; background: var(--phosphor);
+      box-shadow: 0 0 10px var(--phosphor-glow); border-radius: 50%;
+    }
+    .info-card p, .info-card li {
+      font-size: 14px; color: var(--fg-0); line-height: 1.62;
+    }
+    .info-card p + p { margin-top: 10px; }
+    .info-card b, .info-card strong { color: var(--fg-0); font-weight: 600; }
+    .info-card code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--ink-3); padding: 1.5px 6px; border-radius: 3px;
+      color: var(--phosphor);
+    }
+    .info-card a { color: var(--phosphor); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--phosphor-soft); }
+    .info-card a:hover { text-decoration-color: var(--phosphor); }
+    .info-card ul, .info-card ol { padding-left: 22px; margin: 10px 0; }
+    .info-card li + li { margin-top: 6px; }
+    .info-card .p-exact, .info-card .p-drift, .info-card .p-divergent,
+    .info-card .p-error, .info-card .p-not_run, .info-card .p-not_available,
+    .info-card .p-ok, .info-card .p-warn, .info-card .p-fail, .info-card .p-timeout {
+      font-family: var(--mono); font-weight: 700; padding: 0 4px;
+    }
+    .info-card .kv-row {
+      display: grid; grid-template-columns: 130px 1fr; gap: 14px;
+      padding: 7px 0; font-size: 13px;
+      border-bottom: 1px solid var(--line);
+      align-items: baseline;
+    }
+    .info-card .kv-row:last-child { border-bottom: none; }
+    .info-card .kv-row .k {
+      font-family: var(--sans); color: var(--fg-2);
+      text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.14em;
+      font-weight: 600;
+    }
+    .info-card .kv-row .v {
+      font-family: var(--mono); color: var(--fg-0); font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* ---------- FOOTER ---------- */
+    .footer {
+      text-align: center; color: var(--fg-2); font-size: 11px;
+      padding: 28px 24px 32px;
+      border-top: 1px solid var(--line);
+      font-family: var(--mono);
+      letter-spacing: 0.02em;
+    }
+    .footer .sep { color: var(--fg-3); margin: 0 10px; }
+
+    /* ---------- ANIMATIONS ---------- */
+    @keyframes scan {
+      0%   { transform: translateY(-100%); opacity: 0; }
+      18%  { opacity: 0.85; }
+      82%  { opacity: 0.85; }
+      100% { transform: translateY(100vh); opacity: 0; }
+    }
+    .scanline {
+      display: none;       /* dark theme only — CRT effect */
+      position: fixed; top: 0; left: 0; right: 0;
+      height: 90px; pointer-events: none;
+      background: linear-gradient(180deg,
+        transparent 0%,
+        rgba(124, 229, 162, 0.04) 30%,
+        rgba(124, 229, 162, 0.16) 50%,
+        rgba(124, 229, 162, 0.04) 70%,
+        transparent 100%);
+      animation: scan 1.4s cubic-bezier(0.4, 0.0, 0.2, 1) 1;
+      z-index: 999;
+    }
+    body.theme-dark .scanline { display: block; }
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .reveal { animation: fade-in 0.5s ease-out both; }
+    .reveal-1 { animation-delay: 0.05s; }
+    .reveal-2 { animation-delay: 0.15s; }
+    .reveal-3 { animation-delay: 0.25s; }
+    .reveal-4 { animation-delay: 0.4s; }
+
+    /* ---------- RESPONSIVE ---------- */
+    @media (max-width: 1100px) {
+      .hero-row { flex-direction: column; align-items: flex-start; gap: 20px; }
+      .stat-strip { grid-template-columns: repeat(3, max-content); gap: 18px; }
+      .wordmark { font-size: 34px; }
+      .info-grid { padding: 0 18px; }
+      .table-shell { padding: 12px 18px 40px; }
+      .controls { padding: 10px 18px; }
+      .hero { padding: 18px 18px 14px; }
+    }
+    @media (max-width: 680px) {
+      .stat-strip { grid-template-columns: repeat(2, max-content); }
+      .stat-value { font-size: 20px; }
+      .wordmark { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="scanline"></div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-row reveal reveal-1">
+    <div>
+      <div class="brand">
+        <span class="brand-led"></span>
+        <div>
+          <div class="wordmark"><span class="accent">chemometrics4all</span><span class="sep">/</span><span class="light">cross-binding benchmark</span></div>
+          <div class="tagline" id="tagline">
+            same algorithm <span class="dot">·</span> same input bytes <span class="dot">·</span> <span id="tagline-count">—</span> implementations
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="stat-strip" id="stat-strip"></div>
+      <button class="theme-toggle" id="theme-toggle" type="button"
+              aria-label="toggle light / dark theme"
+              title="toggle light / dark theme">
+        <span class="theme-ico-dark">🌙</span><span class="theme-ico-light">☀️</span>
+      </button>
+    </div>
+  </div>
+  <div class="hero-spectrum"></div>
+  <div class="hero-spectrum-label">
+    <span>UV · 400 nm</span><span>visible</span><span>near-infrared</span><span>2500 nm · MIR</span>
+  </div>
+</section>
+
+<!-- CONTROLS -->
+<div class="controls reveal reveal-2">
+  <div class="controls-row preset-rail" id="preset-rail">
+    <span class="preset-label">view</span>
+  </div>
+  <div class="controls-row">
+    <div class="control">
+      <span class="control-label">algo group</span>
+      <select id="filter-group"><option value="">all</option></select>
+    </div>
+    <div class="control">
+      <span class="control-label">algorithm</span>
+      <select id="filter-algo"><option value="">all</option></select>
+    </div>
+    <div class="control">
+      <span class="control-label">language</span>
+      <select id="filter-lang"><option value="">all</option></select>
+    </div>
+    <div class="control">
+      <span class="control-label">lib group</span>
+      <select id="filter-lib-group"><option value="">all</option></select>
+    </div>
+    <div class="control">
+      <span class="control-label">library</span>
+      <select id="filter-lib"><option value="">all</option></select>
+    </div>
+    <div class="control">
+      <span class="control-label">size</span>
+      <select id="filter-size"><option value="">all</option></select>
+    </div>
+    <div class="control">
+      <span class="control-label">threads</span>
+      <select id="filter-threads"><option value="">all</option></select>
+    </div>
+    <div class="filter-chips" id="parity-chips" title="filter cells by parity verdict">
+      <span class="chip active" data-parity="exact"><span class="ico p-exact">✓</span>exact</span>
+      <span class="chip active amber" data-parity="drift"><span class="ico p-drift">≈</span>drift</span>
+      <span class="chip active crimson" data-parity="divergent"><span class="ico p-divergent">✗</span>divergent</span>
+      <span class="chip active crimson" data-parity="error"><span class="ico p-error">!</span>error</span>
+      <span class="chip active gray" data-parity="not_run"><span class="ico p-not_run">·</span>not run</span>
+      <span class="chip active gray" data-parity="not_available"><span class="ico p-not_available">∅</span>not available</span>
+    </div>
+    <div class="control">
+      <span class="control-label">search</span>
+      <input type="search" id="filter-search" placeholder="algorithm…">
+    </div>
+    <div class="dropdown" id="cols-dropdown">
+      <div class="control" id="cols-btn">
+        <span class="control-label" style="border:none;margin:0;padding-right:0">columns</span>
+        <span class="badge glow" id="cols-count">—</span>
+        <span style="color:var(--fg-2);font-family:var(--mono);font-size:10px">▾</span>
+      </div>
+      <div class="menu" id="col-picker"></div>
+    </div>
+    <div class="control">
+      <span class="control-label">density</span>
+      <select id="density-select">
+        <option value="comfortable">comfortable</option>
+        <option value="compact">compact</option>
+        <option value="ultra">ultra-dense</option>
+      </select>
+    </div>
+    <div class="control">
+      <span class="control-label">viz</span>
+      <select id="viz-mode">
+        <option value="duration">duration (ms)</option>
+        <option value="speedup">speed-up × vs chemometrics4all.cpp</option>
+        <option value="avg-speedup">avg speed-up × (geomean / size)</option>
+      </select>
+    </div>
+    <span class="ctrl-spacer"></span>
+    <span class="badge" id="visible-count">— rows</span>
+    <span class="control" id="reset-btn" title="clear all filters">⟲ reset</span>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="table-shell reveal reveal-3">
+  <div class="legend">
+    <span class="legend-item"><span class="ico p-exact">✓</span> exact (≤ 1e-6)</span>
+    <span class="legend-item"><span class="ico p-drift">≈</span> drift (≤ 1e-3)</span>
+    <span class="legend-item"><span class="ico p-divergent">✗</span> divergent (&gt; 1e-3)</span>
+    <span class="legend-item"><span class="ico p-error">!</span> error</span>
+    <span class="legend-item"><span class="ico p-not_run">·</span> not run</span>
+    <span class="legend-item"><span class="ico p-not_available">∅</span> not available in lib</span>
+    <span class="legend-item"><span class="cell-fastest" style="font-family:var(--mono);padding:0 4px">42.5</span> fastest overall</span>
+    <span class="legend-item" style="margin-left:auto;color:var(--fg-2);font-size:10px">click header to sort · ⇧+click for descending</span>
+  </div>
+  <div class="table-wrap">
+    <table class="bench" id="bench-table">
+      <thead id="bench-head"></thead>
+      <tbody id="bench-body"></tbody>
+    </table>
+  </div>
+  <div class="table-meta">
+    <span id="table-meta-left">—</span>
+    <span id="table-meta-right">—</span>
+  </div>
+</div>
+
+<!-- INFO CARDS -->
+<section class="info-grid reveal reveal-4">
+  <div class="info-card">
+    <h3>methodology</h3>
+    <ul>
+      <li>Reference: <code>chemometrics4all.cpp</code> native column <span id="parity-ref-name">(resolved from data)</span></li>
+      <li>Parity tolerance: 1e-6 exact, 1e-3 drift threshold</li>
+      <li>Every backend reads the <b>same</b> orchestrator-generated CSV — bit-identical input bytes</li>
+      <li>5 runs per cell, first discarded as warmup, median reported</li>
+      <li>Per-cell timeout: 300s</li>
+      <li>Thread control via <code>OMP_NUM_THREADS</code> · <code>OPENBLAS_NUM_THREADS</code> · <code>MKL_NUM_THREADS</code> · <code>BLIS_NUM_THREADS</code> + binding-specific thread controls</li>
+    </ul>
+    <p>See the <a href="benchmarks/methodology.html">full methodology page</a> for reference policy and per-algo overrides.</p>
+  </div>
+  <div class="info-card">
+    <h3>host</h3>
+    <div id="host-info"></div>
+  </div>
+  <div class="info-card">
+    <h3>backends</h3>
+    <p>Columns named <code>owner.language[.variant]</code>: <code>chemometrics4all.*</code> are this project's bindings, others are external libraries.</p>
+    <div id="backend-info"></div>
+  </div>
+  <div class="info-card">
+    <h3>parity verdict</h3>
+    <p>Each cell shows <code>&lt;duration_ms&gt; &lt;icon&gt;</code> or <code>&lt;speed-up×&gt; &lt;icon&gt;</code> vs the native C++ column.</p>
+    <ul>
+      <li><span class="p-exact">✓</span> <b>exact</b> — ≤ 1e-6 vs reference</li>
+      <li><span class="p-drift">≈</span> <b>drift</b> — ≤ 1e-3 and not exact</li>
+      <li><span class="p-divergent">✗</span> <b>divergent</b> — &gt; 1e-3</li>
+      <li><span class="p-error">!</span> <b>error</b> — dependency, runtime, crash or exception</li>
+      <li><span class="p-not_run">·</span> <b>not run</b> — skipped, timed out, or no timing was produced</li>
+      <li><span class="p-not_available">∅</span> <b>not available in lib</b> — the library does not expose that algorithm</li>
+    </ul>
+    <p><b>Bold</b> + phosphor highlight = fastest timed cell overall; language-colored text marks the fastest timed cell inside each language.</p>
+  </div>
+</section>
+
+<div class="footer">
+  generated {{ generated_at }}<span class="sep">·</span>
+  <a href="https://github.com/GBeurier/chemometrics4all">github.com/GBeurier/chemometrics4all</a><span class="sep">·</span>
+  <a href="about.html">project info</a><span class="sep">·</span>
+  <a href="benchmarks/cross_binding.html">static markdown view</a><span class="sep">·</span>
+  <a href="benchmarks/methodology.html">methodology</a>
+</div>
+
+<script id="bench-data" type="application/json">{{ bench_data_json | safe }}</script>
+
+<script>
+(() => {
+'use strict';
+
+const DATA = JSON.parse(document.getElementById('bench-data').textContent);
+
+// ---------- state + url persistence ----------
+const URL_KEYS = ['algo','group','lang','libGroup','lib','size','threads','parity','search','cols','sort','density','viz'];
+const DENSITY_VALUES = ['comfortable', 'compact', 'ultra'];
+const PARITY_VALUES = ['exact', 'drift', 'divergent', 'error', 'not_run', 'not_available'];
+const PARITY_ALIASES = {
+  ok: 'exact',
+  warn: 'drift',
+  fail: 'divergent',
+  timeout: 'not_run',
+  na: 'not_available',
+};
+
+function normalizeParityKey(k) {
+  return PARITY_ALIASES[k] || k;
+}
+
+function parseParity(raw) {
+  if (!raw) return new Set(PARITY_VALUES);
+  const keys = raw.split(',')
+    .map(x => normalizeParityKey(x.trim()))
+    .filter(x => PARITY_VALUES.includes(x));
+  return keys.length ? new Set(keys) : new Set(PARITY_VALUES);
+}
+
+const VIZ_VALUES = ['duration', 'speedup', 'avg-speedup'];
+function loadState() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  const density = p.get('density') || '';
+  const rawViz = p.get('viz') || (p.get('speedup') === '1' ? 'speedup' : 'duration');
+  const viz = VIZ_VALUES.includes(rawViz) ? rawViz : 'duration';
+  return {
+    algo:    p.get('algo')    || '',
+    group:   p.get('group')   || '',
+    lang:    p.get('lang')    || '',
+    libGroup:p.get('libGroup')|| '',
+    lib:     p.get('lib')     || '',
+    size:    p.get('size')    || '',
+    threads: p.get('threads') || '',
+    parity:  parseParity(p.get('parity')),
+    search:  p.get('search')  || '',
+    cols:    new Set((p.get('cols') || '').split('|').filter(Boolean)),
+    sort:    parseSort(p.get('sort')),
+    density: DENSITY_VALUES.includes(density) ? density : 'comfortable',
+    viz,
+  };
+}
+function parseSort(s) {
+  if (!s) return null;
+  const [col, dir] = s.split(':');
+  return { col, dir: dir === 'asc' ? 1 : -1 };
+}
+function saveState() {
+  const p = new URLSearchParams();
+  if (state.algo) p.set('algo', state.algo);
+  if (state.group) p.set('group', state.group);
+  if (state.lang) p.set('lang', state.lang);
+  if (state.libGroup) p.set('libGroup', state.libGroup);
+  if (state.lib) p.set('lib', state.lib);
+  if (state.size) p.set('size', state.size);
+  if (state.threads) p.set('threads', state.threads);
+  const defaultParity = new Set(PARITY_VALUES);
+  if (state.parity.size !== PARITY_VALUES.length || [...defaultParity].some(x => !state.parity.has(x))) {
+    p.set('parity', [...state.parity].join(','));
+  }
+  if (state.search) p.set('search', state.search);
+  if (state.cols.size && state.cols.size !== DATA.columns.length) {
+    p.set('cols', [...state.cols].join('|'));
+  }
+  if (state.sort) p.set('sort', `${state.sort.col}:${state.sort.dir === 1 ? 'asc' : 'desc'}`);
+  if (state.density && state.density !== 'comfortable') p.set('density', state.density);
+  if (state.viz && state.viz !== 'duration') p.set('viz', state.viz);
+  const h = p.toString();
+  history.replaceState(null, '', h ? `#${h}` : location.pathname + location.search);
+}
+
+const state = loadState();
+// default: show ALL columns if no selection persisted (so users can see
+// the full coverage matrix immediately and narrow via presets).
+if (state.cols.size === 0) {
+  for (const c of DATA.columns) state.cols.add(c.id);
+}
+
+function nativeBaselineCol() {
+  const find = id => DATA.columns.find(c => c.id === id);
+  return (
+    find('chemometrics4all.cpp.ref') ||
+    find('chemometrics4all.cpp.blas+omp') ||
+    DATA.columns.find(c => c.id.startsWith('chemometrics4all.cpp.')) ||
+    null
+  );
+}
+const NATIVE_COL_ID = nativeBaselineCol()?.id || '';
+if (NATIVE_COL_ID) state.cols.add(NATIVE_COL_ID);
+
+// ---------- helpers ----------
+const $ = id => document.getElementById(id);
+const PARITY_ICON = {
+  exact: '✓',
+  drift: '≈',
+  divergent: '✗',
+  error: '!',
+  not_run: '·',
+  not_available: '∅',
+  ok: '✓',
+  warn: '≈',
+  fail: '✗',
+  timeout: '·',
+  na: '∅',
+};
+
+function sizeKey(n, p) { return `${n}×${p}`; }
+function escAttr(s) {
+  return String(s || '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+
+function fmtSpeedup(ratio) {
+  if (!Number.isFinite(ratio)) return '—';
+  if (ratio >= 100)  return `${ratio.toFixed(0)}×`;
+  if (ratio >= 10)   return `${ratio.toFixed(1)}×`;
+  if (ratio >= 1)    return `${ratio.toFixed(2)}×`;
+  if (ratio >= 0.01) return `${ratio.toFixed(2)}×`;
+  return `${ratio.toExponential(1)}×`;
+}
+
+function applyRowFilters() {
+  const q = state.search.trim().toLowerCase();
+  const groupMap = DATA.algo_to_group || {};
+  return DATA.rows.filter(row => {
+    if (state.algo    && row.algo !== state.algo) return false;
+    if (state.group   && groupMap[row.algo] !== state.group) return false;
+    if (state.size    && sizeKey(row.n, row.p) !== state.size) return false;
+    if (state.threads && String(row.threads) !== state.threads) return false;
+    if (q && !row.algo.toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function cellPasses(cell) {
+  // Parity chips are a pure CELL MASK: cells with an excluded verdict
+  // render as `—`, but rows are NEVER pruned solely because their
+  // cells got masked. This avoids the surprising "filter fail and your
+  // ok rows also vanish" behaviour.
+  if (!cell) return true;        // empty cells render as — always
+  return state.parity.has(normalizeParityKey(cell.parity));
+}
+
+function visibleColIds() {
+  // Honour DATA.columns order + column-level filters. The native C++
+  // baseline is force-kept so duration and speed-up are always anchored.
+  return DATA.columns
+    .filter(c => {
+      if (NATIVE_COL_ID && c.id === NATIVE_COL_ID) return true;
+      if (state.lang && c.lang !== state.lang) return false;
+      if (state.libGroup && c.group !== state.libGroup) return false;
+      if (state.lib && c.id !== state.lib) return false;
+      return true;
+    })
+    .map(c => c.id)
+    .filter(id => id === NATIVE_COL_ID || state.cols.has(id));
+}
+
+// Map raw `lang` strings to compact slug used for CSS classes.
+const LANG_SLUG = {
+  'C++':           'cpp',
+  'Python':        'py',
+  'R':             'r',
+  'MATLAB/Octave': 'm',
+  'Julia':         'jl',
+  'Rust':          'rs',
+  'Go':            'go',
+  'JavaScript':    'js',
+  'Java':          'java',
+  'external':      'other',
+};
+const LANG_LABEL = {
+  'cpp':   'C++',
+  'py':    'Python',
+  'r':     'R',
+  'm':     'MATLAB / Octave',
+  'jl':    'Julia',
+  'rs':    'Rust',
+  'go':    'Go',
+  'js':    'JavaScript',
+  'java':  'Java',
+  'other': 'Other',
+};
+const LANG_ORDER = ['cpp', 'py', 'r', 'm', 'jl', 'rs', 'go', 'js', 'java', 'other'];
+const COLUMN_GROUP_LABELS = {
+  cpp: 'chemometrics4all · C++',
+  python: 'chemometrics4all · Python',
+  r: 'chemometrics4all · R',
+  matlab: 'chemometrics4all · MATLAB/Octave',
+  'ext-py': 'external · Python',
+  'ext-r': 'external · R',
+  'ext-ml': 'external · MATLAB/Octave',
+  'ext-jl': 'external · Julia',
+  'ext-rs': 'external · Rust',
+  'ext-go': 'external · Go',
+  'ext-js': 'external · JavaScript',
+  'ext-java': 'external · Java',
+  'ext-cpp': 'external · C++',
+};
+const COLUMN_GROUP_ORDER = [
+  'cpp', 'python', 'r', 'matlab',
+  'ext-py', 'ext-r', 'ext-ml', 'ext-jl', 'ext-rs', 'ext-go', 'ext-js', 'ext-java', 'ext-cpp',
+];
+
+function colLangSlug(col) {
+  return LANG_SLUG[col.lang] || 'other';
+}
+
+// Returns [{slug, label, count, cols: [colMeta...]}] computed as
+// CONTIGUOUS runs of the same language in the actual visible column
+// order. This guarantees the band header colspans line up with the
+// body cells underneath, regardless of how the columns were sorted.
+function visibleLangGroups(colMetas) {
+  const groups = [];
+  let cur = null;
+  for (const c of colMetas) {
+    const s = colLangSlug(c);
+    if (!cur || cur.slug !== s) {
+      cur = { slug: s, label: LANG_LABEL[s] || c.lang || 'Other',
+              count: 0, cols: [] };
+      groups.push(cur);
+    }
+    cur.cols.push(c);
+    cur.count += 1;
+  }
+  return groups;
+}
+
+function fastestColumn(row, cols) {
+  let best = null;
+  for (const id of cols) {
+    const c = row.cells[id];
+    if (!c || !c.ok || !Number.isFinite(c.ms)) continue;
+    if (!cellPasses(c)) continue;
+    if (best === null || c.ms < best.ms) best = { id, ms: c.ms };
+  }
+  return best ? best.id : null;
+}
+
+// Per-language: returns Map<langSlug, fastestColId>. Only includes
+// languages where 2+ ✓ cells exist (so the marker is informative —
+// a solo cell trivially "wins" its language).
+function fastestPerLanguage(row, cols, colsById) {
+  const counts = {};
+  const winners = {};
+  for (const id of cols) {
+    const c = row.cells[id];
+    if (!c || !c.ok || !Number.isFinite(c.ms)) continue;
+    if (!cellPasses(c)) continue;
+    const meta = colsById[id];
+    if (!meta) continue;
+    const slug = colLangSlug(meta);
+    if (!slug) continue;
+    counts[slug] = (counts[slug] || 0) + 1;
+    if (!winners[slug] || c.ms < winners[slug].ms) winners[slug] = { id, ms: c.ms };
+  }
+  const out = {};
+  for (const slug in winners) {
+    if (counts[slug] >= 2) out[slug] = winners[slug].id;
+  }
+  return out;
+}
+
+function rowHasVisibleCell(_row, _cols) {
+  // Always true. Rows are filtered ONLY by the explicit row-level
+  // filters (algo, family, lang, size, threads, search). Hiding a row
+  // because all its cells got cell-masked by parity / column visibility
+  // surprised users and obscured "this algo is unimplemented in your
+  // current slice" — keep the row, render the empty cells as `—`.
+  return true;
+}
+
+function sortRows(rows, cols) {
+  if (!state.sort) return rows;
+  const { col, dir } = state.sort;
+  // Built-in pseudo columns (__algo / __size / __threads) are always
+  // sortable. For data columns, ignore the sort when the column has
+  // been hidden — sorting by an invisible column is invisibly active
+  // and surprises users.
+  const PSEUDO = ['__algo', '__size', '__threads'];
+  if (!PSEUDO.includes(col) && !cols.includes(col)) return rows;
+  const r = [...rows];
+  r.sort((a, b) => {
+    if (col === '__algo')    return dir * a.algo.localeCompare(b.algo);
+    if (col === '__size') {
+      // avg-speedup rows have no concrete size — keep them adjacent at
+      // the same rank regardless of direction.
+      const av = a.isAvg ? -Infinity : (a.n * a.p);
+      const bv = b.isAvg ? -Infinity : (b.n * b.p);
+      return dir * (av - bv);
+    }
+    if (col === '__threads') return dir * (a.threads - b.threads);
+    // Cell-value sort: empty / non-numeric cells ALWAYS sink to the
+    // bottom (regardless of direction). Direction only flips the order
+    // among numerically-valid cells.
+    const ca = a.cells[col]; const cb = b.cells[col];
+    const aValid = ca && Number.isFinite(ca.ms);
+    const bValid = cb && Number.isFinite(cb.ms);
+    if (!aValid && !bValid) return 0;
+    if (!aValid) return 1;
+    if (!bValid) return -1;
+    return dir * (ca.ms - cb.ms);
+  });
+  return r;
+}
+
+// ---------- render ----------
+function renderStatStrip() {
+  const s = DATA.stats;
+  const okPct = s.cells ? Math.round(s.ok / s.cells * 100) : 0;
+  $('tagline-count').textContent = s.backends;
+  const refLabel = NATIVE_COL_ID || '—';
+  const refEl = $('parity-ref-name');
+  if (refEl) refEl.innerHTML = `(<code>${refLabel}</code>)`;
+  $('stat-strip').innerHTML = `
+    <div class="stat"><div class="stat-label">algorithms</div><div class="stat-value">${s.algos}</div></div>
+    <div class="stat"><div class="stat-label">backends</div><div class="stat-value">${s.backends}</div></div>
+    <div class="stat"><div class="stat-label">sizes</div><div class="stat-value">${s.sizes}<span class="stat-unit">n × p</span></div></div>
+    <div class="stat"><div class="stat-label">threads</div><div class="stat-value">${s.threads.join('·')}</div></div>
+    <div class="stat"><div class="stat-label">cells timed</div><div class="stat-value"><span class="glow">${s.cells.toLocaleString()}</span></div></div>
+    <div class="stat"><div class="stat-label">exact ✓</div><div class="stat-value"><span class="glow">${okPct}%</span><span class="stat-unit">${s.ok.toLocaleString()}</span></div></div>
+  `;
+}
+
+function renderPresetRail() {
+  const rail = $('preset-rail');
+  // Effective visible columns = the intersection of state.cols and the
+  // language filter. Preset detection compares against the effective
+  // set so the language filter doesn't make every preset look "custom".
+  // The NATIVE column is force-injected at runtime regardless of preset
+  // — normalise both sides to ignore it so the match isn't foiled by
+  // that one phantom diff (without this fix, every preset that doesn't
+  // include cpp.ref in its definition shows as "custom" with +1 col).
+  const effective = visibleColIds();
+  const norm = (ids) => ids
+    .filter(id => id !== NATIVE_COL_ID)
+    .filter(id => {
+      const c = DATA.columns.find(x => x.id === id);
+      return c && (!state.lang || c.lang === state.lang);
+    })
+    .sort()
+    .join('|');
+  const colsList = norm(effective);
+  let html = '<span class="preset-label">view</span>';
+  let anyMatch = false;
+  for (const [k, p] of Object.entries(DATA.presets)) {
+    const pe = norm(p.cols);
+    const matches = pe === colsList && pe.length > 0;
+    if (matches) anyMatch = true;
+    // Count = preset cols present in data + native baseline (shown on screen).
+    const present = p.cols.filter(id => DATA.columns.find(x => x.id === id));
+    const withNative = new Set(present);
+    if (NATIVE_COL_ID) withNative.add(NATIVE_COL_ID);
+    html += `<span class="preset-pill${matches ? ' active' : ''}" data-preset="${k}">${p.label}<span class="cnt">${withNative.size}</span></span>`;
+  }
+  if (!anyMatch) {
+    html += `<span class="preset-pill active" data-preset="">custom<span class="cnt">${effective.length}</span></span>`;
+  }
+  rail.innerHTML = html;
+}
+
+function renderControls() {
+  renderPresetRail();
+  // group (family of algorithms)
+  const groups = DATA.algo_groups || [];
+  $('filter-group').innerHTML = '<option value="">all</option>' +
+    groups.map(g => `<option value="${g.key}"${state.group===g.key?' selected':''}>${g.label}</option>`).join('');
+
+  // algo (filtered by current group if set)
+  const groupMap = DATA.algo_to_group || {};
+  const algos = [...new Set(DATA.rows.map(r => r.algo))]
+    .filter(a => !state.group || groupMap[a] === state.group)
+    .sort();
+  $('filter-algo').innerHTML = '<option value="">all</option>' +
+    algos.map(a => `<option value="${a}"${state.algo===a?' selected':''}>${a}</option>`).join('');
+
+  // language (narrows the visible columns)
+  const langs = DATA.languages || [];
+  $('filter-lang').innerHTML = '<option value="">all</option>' +
+    langs.map(l => `<option value="${l}"${state.lang===l?' selected':''}>${l}</option>`).join('');
+
+  // library groups + libraries are column-level filters. Keep the
+  // selected library coherent when language/group filters change.
+  const groupKeys = [...new Set(DATA.columns.map(c => c.group).filter(Boolean))]
+    .sort((a, b) => {
+      const ai = COLUMN_GROUP_ORDER.indexOf(a);
+      const bi = COLUMN_GROUP_ORDER.indexOf(b);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi) || a.localeCompare(b);
+    });
+  $('filter-lib-group').innerHTML = '<option value="">all</option>' +
+    groupKeys.map(g => `<option value="${g}"${state.libGroup===g?' selected':''}>${COLUMN_GROUP_LABELS[g] || g}</option>`).join('');
+
+  const libraryOptions = DATA.columns
+    .filter(c => !state.lang || c.lang === state.lang || c.id === NATIVE_COL_ID)
+    .filter(c => !state.libGroup || c.group === state.libGroup || c.id === NATIVE_COL_ID);
+  if (state.lib && !libraryOptions.some(c => c.id === state.lib)) state.lib = '';
+  $('filter-lib').innerHTML = '<option value="">all</option>' +
+    libraryOptions.map(c => `<option value="${c.id}"${state.lib===c.id?' selected':''}>${c.label}</option>`).join('');
+
+  // threads — populate from the actual values in the payload, not a
+  // hardcoded 1/3/10 list. Picking a thread count that doesn't exist
+  // in the data is what used to silently empty the table.
+  const threadVals = (DATA.stats && DATA.stats.threads) || [];
+  $('filter-threads').innerHTML = '<option value="">all</option>' +
+    threadVals.map(t => `<option value="${t}"${String(state.threads)===String(t)?' selected':''}>${t} t</option>`).join('');
+
+  // sizes
+  const sizes = [...new Set(DATA.rows.map(r => sizeKey(r.n, r.p)))]
+    .sort((a, b) => {
+      const [an,ap] = a.split('×').map(Number);
+      const [bn,bp] = b.split('×').map(Number);
+      return an*ap - bn*bp;
+    });
+  $('filter-size').innerHTML = '<option value="">all</option>' +
+    sizes.map(s => `<option value="${s}"${state.size===s?' selected':''}>${s}</option>`).join('');
+
+  // threads
+  $('filter-threads').value = state.threads;
+
+  // search
+  $('filter-search').value = state.search;
+
+  // parity chips
+  for (const chip of $('parity-chips').children) {
+    chip.classList.toggle('active', state.parity.has(chip.dataset.parity));
+  }
+
+  $('viz-mode').value = state.viz;
+  $('density-select').value = state.density;
+  document.body.classList.remove('density-comfortable', 'density-compact', 'density-ultra');
+  document.body.classList.add(`density-${state.density}`);
+
+  // column picker
+  renderColPicker();
+}
+
+function renderColPicker() {
+  const groups = {};
+  for (const c of DATA.columns) {
+    (groups[c.group] = groups[c.group] || []).push(c);
+  }
+  const orderedGroups = [
+    ...COLUMN_GROUP_ORDER.filter(g => groups[g]),
+    ...Object.keys(groups).filter(g => !COLUMN_GROUP_ORDER.includes(g)).sort(),
+  ];
+  const presetRow = Object.entries(DATA.presets).map(([k, p]) =>
+    `<span class="preset" data-preset="${k}">${p.label}</span>`).join('');
+  let html = `<div class="preset-row">${presetRow}</div>`;
+  for (const g of orderedGroups) {
+    const cols = groups[g];
+    if (!cols) continue;
+    const toggleable = cols.filter(c => c.id !== NATIVE_COL_ID);
+    const allOn = toggleable.length ? toggleable.every(c => state.cols.has(c.id)) : true;
+    html += `<div class="menu-section">
+      <div class="menu-section-title">
+        <span>${COLUMN_GROUP_LABELS[g] || g}</span>
+        <span class="tiny" data-group="${g}">${allOn ? 'none' : 'all'}</span>
+      </div>`;
+    for (const c of cols) {
+      const native = c.id === NATIVE_COL_ID;
+      const checked = (native || state.cols.has(c.id)) ? 'checked' : '';
+      const disabled = native ? 'disabled' : '';
+      const suffix = native ? ' <span style="color:var(--fg-2);font-family:var(--sans)">(fixed)</span>' : '';
+      html += `<label><input type="checkbox" data-col="${c.id}" ${checked} ${disabled}><span>${c.label}${suffix}</span></label>`;
+    }
+    html += `</div>`;
+  }
+  $('col-picker').innerHTML = html;
+  // Show EFFECTIVE / total — effective = after the language filter.
+  const eff = visibleColIds().length;
+  $('cols-count').textContent = `${eff}/${DATA.columns.length}`;
+}
+
+// Compact column header label. Always use `col.short` so the header
+// band stays scannable across 47 backends — full labels live in the
+// tooltip + the column-picker + the bottom accordion. Same short can
+// collide across a chemometrics4all binding and the external it mimics
+// (chemometrics4all.sklearn vs sklearn both → "sklearn"); they're disambiguated
+// visually by the phosphor-tinted .native-col / chemometrics4all binding bands.
+function shortLabel(label) {
+  const meta = DATA.columns.find(c => c.label === label);
+  if (!meta) return label;
+  if (meta.id === NATIVE_COL_ID) return 'cpp.ref';
+  return meta.short || label;
+}
+
+// Strip the default "ms" unit from every cell. The table-meta footer
+// states the unit so repeating "ms" 47× per row across 140+ rows just
+// wastes horizontal space. Non-default units (" s", " µs") are kept so
+// the scale change stays visible.
+function densifyFmt(fmt) {
+  if (!fmt) return fmt;
+  if (fmt.endsWith(' ms')) return fmt.slice(0, -3);
+  return fmt;
+}
+
+function renderTable() {
+  if (NATIVE_COL_ID) state.cols.add(NATIVE_COL_ID);
+
+  const cols = visibleColIds();
+  // colMetas must iterate exactly the same column ids as the body.
+  const allColsById = Object.fromEntries(DATA.columns.map(c => [c.id, c]));
+  const colMetas = cols.map(id => allColsById[id]).filter(Boolean);
+  const colsById = Object.fromEntries(colMetas.map(c => [c.id, c]));
+
+  let rowsFiltered = applyRowFilters().filter(r => rowHasVisibleCell(r, cols));
+  // avg-speedup viz: collapse rows across sizes via geomean of speed-up
+  // ratios, so each (algo, threads) shows up once with the average
+  // multiplier vs the native baseline.
+  if (state.viz === 'avg-speedup' && NATIVE_COL_ID) {
+    rowsFiltered = aggregateRowsBySize(rowsFiltered, NATIVE_COL_ID);
+  }
+  const rows = sortRows(rowsFiltered, cols);
+
+  // language groups for the band row + per-cell tinted borders
+  const langGroups = visibleLangGroups(colMetas);
+  const langFirstCol = {};  // colId → true if this column starts a new lang group
+  for (const g of langGroups) {
+    if (g.cols.length) langFirstCol[g.cols[0].id] = true;
+  }
+
+  const sortCol  = state.sort?.col;
+  const sortDir  = state.sort?.dir;
+  const arrowFor = (col) => col === sortCol ? `<span class="arrow">${sortDir === 1 ? '↑' : '↓'}</span>` : '';
+  const sortCls  = (col) => col === sortCol ? 'sortable active' : 'sortable';
+  const langCls  = (col) => {
+    const s = colLangSlug(col);
+    const first = langFirstCol[col.id] ? ' col-lang-first' : '';
+    const native = col.id === NATIVE_COL_ID ? ' native-col' : '';
+    // Every chemometrics4all binding (not just the native baseline) gets the
+    // phosphor tint so the "ours vs theirs" comparison is unambiguous.
+    const c4a = (col.kind || '').toLowerCase() === 'chemometrics4all' ? ' col-chemometrics4all' : '';
+    return s ? `col-${s}${first}${native}${c4a}` : (native + c4a).trim();
+  };
+
+  // Tooltip text for backend column headers — full label + tier + lang
+  // + what description. Multi-line via \n so it's readable when pinned.
+  const headerTitle = (c) => {
+    const parts = [c.label];
+    if (c.tier) parts.push(c.tier);
+    if (c.lang) parts.push(c.lang);
+    if (c.what) parts.push('— ' + c.what);
+    return parts.join('\n').replace(/"/g, '&quot;');
+  };
+
+  // === HEADER: language band row + column header row ===
+  let head = `<tr class="lang-band">
+    <th class="algo-col lang-spacer"></th>
+    <th class="size-col lang-spacer"></th>
+    <th class="thread-col lang-spacer"></th>`;
+  for (const g of langGroups) {
+    head += `<th class="lang-${g.slug}" colspan="${g.count}">${g.label}<span style="opacity:0.6;font-weight:400;margin-left:5px">${g.count}</span></th>`;
+  }
+  head += `</tr><tr>`;
+  head += `<th class="algo-col ${sortCls('__algo')}" data-col="__algo"><span class="col-label">algorithm${arrowFor('__algo')}</span></th>`;
+  head += `<th class="size-col ${sortCls('__size')}" data-col="__size"><span class="col-label">size${arrowFor('__size')}</span></th>`;
+  head += `<th class="thread-col ${sortCls('__threads')}" data-col="__threads"><span class="col-label">t${arrowFor('__threads')}</span></th>`;
+  for (const c of colMetas) {
+    const lcls = langCls(c);
+    // The col-meta line below the short label carries the tier (e.g.
+    // "chemometrics4all reference", "external", "chemometrics4all + BLAS + OpenMP") so
+    // users see what flavour of binding they're comparing without
+    // hovering for the tooltip. Hidden in compact / ultra densities.
+    const sub = c.tier || c.kind || '';
+    head += `<th class="${sortCls(c.id)} ${lcls}" data-col="${c.id}" title="${headerTitle(c)}"><span class="col-label">${shortLabel(c.label)}${arrowFor(c.id)}</span><span class="col-meta">${sub}</span></th>`;
+  }
+  $('bench-head').innerHTML = head;
+
+  // === BODY ===
+  const speedupMode = state.viz === 'speedup' || state.viz === 'avg-speedup';
+  const baselineId = speedupMode && NATIVE_COL_ID ? NATIVE_COL_ID : null;
+  if (!rows.length) {
+    $('bench-body').innerHTML = `<tr><td colspan="${cols.length + 3}"><div class="empty-state">
+      <h3>nothing in this slice.</h3>
+      <p>your filters narrowed every row out.</p>
+      <p class="hint" onclick="document.getElementById('reset-btn').click()">⟲ reset all filters</p>
+    </div></td></tr>`;
+  } else {
+    const body = [];
+    for (const row of rows) {
+      const fastestId = fastestColumn(row, cols);
+      const langWinners = fastestPerLanguage(row, cols, colsById);
+      const baseCell  = baselineId ? row.cells[baselineId] : null;
+      const baseMs    = baseCell && Number.isFinite(baseCell.ms) ? baseCell.ms : null;
+      const canHighlight = !baselineId || baseMs !== null;
+      const tCls = `thread-pill t-${row.threads}`;
+      const sizeHtml = row.isAvg
+        ? `<span class="size-avg" title="geomean across ${row.sizesCount} size${row.sizesCount === 1 ? '' : 's'}">avg · ${row.sizesCount}</span>`
+        : `${row.n}×${row.p}`;
+      let tr = `<tr><td class="algo-cell">${row.algo}</td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
+      for (const id of cols) {
+        const meta = colsById[id];
+        const lcls = meta ? langCls(meta).replace('native-col', 'native-cell') : '';
+        const c = row.cells[id];
+        if (!c || !cellPasses(c)) {
+          tr += `<td class="cell-empty ${lcls}">—</td>`;
+          continue;
+        }
+        if (!c.ok || !Number.isFinite(c.ms)) {
+          const title = c.reason ? ` title="${escAttr(c.reason)}"` : '';
+          tr += `<td class="${lcls}"${title}><span class="p-${c.parity}">${PARITY_ICON[c.parity] || '—'}</span></td>`;
+          continue;
+        }
+        // build value (wrapped in .cell-value so per-language tint can target text only)
+        let display;
+        const fastCls = (canHighlight && id === fastestId) ? 'cell-fastest' : '';
+        if (baselineId && baseMs !== null) {
+          const r = id === baselineId ? 1 : baseMs / c.ms;
+          const cls = r > 1.03 ? 'speed-faster' : r < 0.97 ? 'speed-slower' : 'speed-equal';
+          display = `<span class="cell-value ${cls} ${fastCls}">${fmtSpeedup(r)}</span>`;
+        } else if (baselineId) {
+          display = `<span class="cell-value speed-equal ${fastCls}">—</span>`;
+        } else {
+          display = `<span class="cell-value ${fastCls}">${densifyFmt(c.fmt)}</span>`;
+        }
+        const parityHtml = `<span class="parity p-${c.parity}">${PARITY_ICON[c.parity]}</span>`;
+        // Assemble cell classes.
+        // - Row-overall fastest gets the phosphor glow background.
+        // - Per-language fastest gets a subtle text-color tint via
+        //   .cell-value styling. The two indicators stack cleanly: if a
+        //   cell wins its row AND its language, it shows the phosphor
+        //   glow (overall) AND its text leans toward the language hue.
+        const tdCls = [lcls];
+        if (canHighlight && id === fastestId) tdCls.push('cell-fastest-bg');
+        const langSlug = meta ? colLangSlug(meta) : '';
+        if (canHighlight && langSlug && langWinners[langSlug] === id) {
+          tdCls.push('cell-lang-best', `lang-${langSlug}`);
+        }
+        tr += `<td class="${tdCls.join(' ')}">${display}${parityHtml}</td>`;
+      }
+      tr += `</tr>`;
+      body.push(tr);
+    }
+    $('bench-body').innerHTML = body.join('');
+  }
+
+  // meta
+  $('visible-count').textContent = `${rows.length} row${rows.length === 1 ? '' : 's'} · ${cols.length} cols`;
+  $('table-meta-left').textContent = `${DATA.rows.length} rows · ${DATA.stats.cells.toLocaleString()} cells total`;
+  if (state.viz === 'avg-speedup' && baselineId) {
+    $('table-meta-right').textContent = `geomean speed-up × · baseline = ${baselineId} · sizes collapsed`;
+  } else if (baselineId) {
+    $('table-meta-right').textContent = `speed-up multiplier · baseline = ${baselineId}`;
+  } else {
+    $('table-meta-right').textContent = `absolute median wall-clock (ms) · ${langGroups.length} language${langGroups.length === 1 ? '' : 's'} shown`;
+  }
+}
+
+// Aggregate rows by (algo, threads). Cells are collapsed across (n, p)
+// using the geometric mean of the per-size speed-up vs the baseline
+// column. We anchor the baseline cell to ms=1 so the existing renderer
+// computes ratios correctly (baseMs/c.ms = geomean).
+function aggregateRowsBySize(rows, baselineId) {
+  if (!rows.length) return rows;
+  const groups = new Map();
+  for (const r of rows) {
+    const key = `${r.algo}|${r.threads}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  }
+  const PARITY_RANK = { exact: 0, drift: 1, divergent: 2, error: 3, not_run: 4, not_available: 5 };
+  const out = [];
+  for (const [, group] of groups) {
+    const sample = group[0];
+    const allColIds = new Set();
+    for (const r of group) for (const id in r.cells) allColIds.add(id);
+    const newCells = {};
+    for (const id of allColIds) {
+      const ratios = [];
+      const parities = new Set();
+      let lastReason = null;
+      for (const r of group) {
+        const c = r.cells[id];
+        const baseC = r.cells[baselineId];
+        if (!c) { parities.add('not_available'); continue; }
+        parities.add(c.parity || 'not_run');
+        if (c.reason) lastReason = c.reason;
+        if (!c.ok || !Number.isFinite(c.ms)) continue;
+        if (!baseC || !Number.isFinite(baseC.ms)) continue;
+        ratios.push(baseC.ms / c.ms);
+      }
+      if (!ratios.length) {
+        let parity = 'not_run';
+        for (const p of parities) {
+          if ((PARITY_RANK[p] ?? 99) > (PARITY_RANK[parity] ?? 99)) parity = p;
+        }
+        newCells[id] = { parity, ok: false, ms: null, reason: lastReason };
+        continue;
+      }
+      const geomean = Math.exp(ratios.reduce((s, r) => s + Math.log(r), 0) / ratios.length);
+      let parity = 'exact';
+      for (const p of parities) {
+        if (p === 'not_available' || p === 'not_run' || p === 'error') continue;
+        if ((PARITY_RANK[p] ?? 99) > (PARITY_RANK[parity] ?? 99)) parity = p;
+      }
+      newCells[id] = {
+        parity, ok: true, ms: 1 / geomean,
+        fmt: fmtSpeedup(geomean),
+        reason: `geomean over ${ratios.length} size${ratios.length === 1 ? '' : 's'}`,
+      };
+    }
+    newCells[baselineId] = {
+      parity: (newCells[baselineId] && newCells[baselineId].parity) || 'exact',
+      ok: true, ms: 1, fmt: '1.00×',
+    };
+    out.push({
+      algo: sample.algo, threads: sample.threads,
+      n: null, p: null, isAvg: true, sizesCount: group.length,
+      cells: newCells,
+    });
+  }
+  return out;
+}
+
+function renderInfo() {
+  // host
+  const h = DATA.host;
+  const rows = [
+    ['CPU',       h.cpu_model],
+    ['Cores',     `${h.cpu_count_physical} physical / ${h.cpu_count_logical} logical`],
+    h.cpu_mhz   ? ['Freq',  `${h.cpu_mhz} MHz nominal`] : null,
+    h.cpu_cache ? ['L3 cache', h.cpu_cache] : null,
+    ['RAM',       `${h.ram_gb} GB`],
+    ['OS',        h.os],
+    ['Kernel',    h.kernel],
+    ['Python',    h.python],
+  ].filter(Boolean);
+  $('host-info').innerHTML = rows.map(([k,v]) =>
+    `<div class="kv-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+
+  $('backend-info').innerHTML = DATA.columns.map(c => {
+    const version = DATA.versions[c.id] || 'version not reported';
+    return `<div class="kv-row"><span class="k">${c.label}</span><span class="v">${c.tier}${c.lang ? ' · ' + c.lang : ''}<br><span style="font-size:10.5px;color:var(--fg-2);white-space:normal;line-height:1.45">${version}</span></span></div>`;
+  }).join('');
+}
+
+function render() {
+  renderStatStrip();
+  renderControls();
+  renderTable();
+  renderInfo();
+  saveState();
+}
+
+// ---------- events ----------
+function wire() {
+  $('filter-algo').addEventListener('change', e => { state.algo = e.target.value; rerender(); });
+  $('filter-group').addEventListener('change', e => {
+    state.group = e.target.value;
+    // if current algo is outside the new group, clear it
+    if (state.algo && (DATA.algo_to_group || {})[state.algo] !== state.group && state.group) {
+      state.algo = '';
+    }
+    rerender();
+  });
+  $('filter-lang').addEventListener('change', e => { state.lang = e.target.value; rerender(); });
+  $('filter-lib-group').addEventListener('change', e => {
+    state.libGroup = e.target.value;
+    state.lib = '';
+    rerender();
+  });
+  $('filter-lib').addEventListener('change', e => { state.lib = e.target.value; rerender(); });
+  $('filter-size').addEventListener('change', e => { state.size = e.target.value; rerender(); });
+  $('filter-threads').addEventListener('change', e => { state.threads = e.target.value; rerender(); });
+  $('filter-search').addEventListener('input', e => { state.search = e.target.value; rerender(); });
+  $('parity-chips').addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    const k = chip.dataset.parity;
+    if (state.parity.has(k)) state.parity.delete(k); else state.parity.add(k);
+    rerender();
+  });
+  $('density-select').addEventListener('change', e => {
+    state.density = DENSITY_VALUES.includes(e.target.value) ? e.target.value : 'comfortable';
+    rerender();
+  });
+  $('viz-mode').addEventListener('change', e => {
+    state.viz = VIZ_VALUES.includes(e.target.value) ? e.target.value : 'duration';
+    rerender();
+  });
+  $('reset-btn').addEventListener('click', () => {
+    state.algo = ''; state.group = ''; state.lang = ''; state.libGroup = ''; state.lib = '';
+    state.size = ''; state.threads = ''; state.search = '';
+    state.parity = new Set(PARITY_VALUES);
+    state.sort = null; state.viz = 'duration'; state.density = 'comfortable';
+    state.cols = new Set(DATA.columns.map(c => c.id));
+    if (NATIVE_COL_ID) state.cols.add(NATIVE_COL_ID);
+    rerender();
+  });
+
+  // preset rail
+  $('preset-rail').addEventListener('click', e => {
+    const pill = e.target.closest('.preset-pill');
+    if (!pill) return;
+    const key = pill.dataset.preset;
+    if (!key || !DATA.presets[key]) return;
+    state.cols = new Set(DATA.presets[key].cols);
+    if (NATIVE_COL_ID) state.cols.add(NATIVE_COL_ID);
+    rerender();
+  });
+
+  // column-picker open/close
+  const ddl = $('cols-dropdown');
+  $('cols-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    ddl.classList.toggle('open');
+  });
+  document.addEventListener('click', e => {
+    if (!ddl.contains(e.target)) ddl.classList.remove('open');
+  });
+  $('col-picker').addEventListener('click', e => {
+    e.stopPropagation();
+    // preset
+    const preset = e.target.dataset.preset;
+    if (preset && DATA.presets[preset]) {
+      state.cols = new Set(DATA.presets[preset].cols);
+      rerender();
+      return;
+    }
+    // group all/none
+    const grp = e.target.dataset.group;
+    if (grp) {
+      const cols = DATA.columns.filter(c => c.group === grp);
+      const toggleable = cols.filter(c => c.id !== NATIVE_COL_ID);
+      const allOn = toggleable.length ? toggleable.every(c => state.cols.has(c.id)) : true;
+      for (const c of cols) {
+        if (c.id === NATIVE_COL_ID) continue;
+        if (allOn) state.cols.delete(c.id); else state.cols.add(c.id);
+      }
+      rerender();
+      return;
+    }
+  });
+  $('col-picker').addEventListener('change', e => {
+    const col = e.target.dataset.col;
+    if (!col) return;
+    if (col === NATIVE_COL_ID) {
+      e.target.checked = true;
+      return;
+    }
+    if (e.target.checked) state.cols.add(col); else state.cols.delete(col);
+    rerender();
+  });
+
+  // sortable headers
+  // - plain click on a new column → asc (= fastest first for ms values,
+  //   A→Z for text, low→high for size/threads). The previous default
+  //   (desc) hid the interesting rows at the bottom.
+  // - shift+click on a new column → desc
+  // - clicking the SAME column cycles: asc → desc → off
+  $('bench-head').addEventListener('click', e => {
+    const th = e.target.closest('th.sortable');
+    if (!th) return;
+    const col = th.dataset.col;
+    if (!state.sort || state.sort.col !== col) {
+      state.sort = { col, dir: e.shiftKey ? -1 : 1 };
+    } else if (state.sort.dir === 1) {
+      state.sort = { col, dir: -1 };
+    } else {
+      state.sort = null;
+    }
+    rerender();
+  });
+}
+
+function rerender() {
+  renderControls();
+  renderTable();
+  renderInfo();
+  saveState();
+}
+
+// ---------- theme toggle ----------
+// Light is the default; users can flip to the CRT-phosphor dark theme.
+// Choice persists in localStorage.
+const THEME_KEY = 'chemometrics4all.dashboard.theme';
+function applyTheme(theme) {
+  if (theme === 'dark') document.body.classList.add('theme-dark');
+  else document.body.classList.remove('theme-dark');
+}
+function initTheme() {
+  let theme = 'light';
+  try { theme = localStorage.getItem(THEME_KEY) || 'light'; } catch (e) {}
+  applyTheme(theme);
+}
+function wireThemeToggle() {
+  const btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const next = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
+    applyTheme(next);
+    try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+  });
+}
+
+// boot
+initTheme();
+wireThemeToggle();
+wire();
+render();
+
+})();
+</script>
+</body>
+</html>

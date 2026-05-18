@@ -1,0 +1,147 @@
+# GitHub Pages dashboard (`chemometrics4all.github.io`)
+
+The project's public landing page —
+[`https://gbeurier.github.io/chemometrics4all/`](https://gbeurier.github.io/chemometrics4all/)
+— is a fully interactive dashboard built from the same canonical
+benchmark CSV that drives this documentation's
+[per-method tables](../methods/index.md).
+
+This page is the user manual for that dashboard: what each column
+means, how to filter, and how to relate a dashboard cell to the
+documentation page for that algorithm.
+
+## What you see at first load
+
+A table with one row per `(algorithm, n, p, threads)` cell and one
+column per backend. Each cell shows:
+
+- a **parity icon** (✓ exact, ≈ drift, ✗ divergent, ⊘ not available,
+  — not run, ⚠ error), and
+- a **median time** (ms or s), formatted compactly.
+
+Hovering a cell reveals: the parity max diff, the library version
+that produced it, and the failure reason (if any).
+
+Above the table you'll find:
+
+- **stats summary** — how many algorithms / backends / sizes / threads
+  are represented; how many cells are exact.
+- **host card** — the OS, CPU model, RAM, BLAS used to produce the
+  CSV. This is captured at build time and embedded in the JSON
+  payload.
+- **generated-at timestamp** — the mtime of the source CSV in UTC.
+
+## Columns
+
+Columns are grouped into language bands and tier groups:
+
+| Group key | Display label | What's in it |
+|---|---|---|
+| `cpp`     | chemometrics4all · C++ (libc4a)        | `chemometrics4all.cpp.ref`, `chemometrics4all.cpp.blas`, `chemometrics4all.cpp.omp`, `chemometrics4all.cpp.blas+omp`, `chemometrics4all.cpp.cuda` |
+| `python`  | chemometrics4all · Python               | `chemometrics4all.python` (tier-1 ctypes), `chemometrics4all.sklearn` (tier-2 BaseEstimator), `chemometrics4all.registry` (canonical entry point) |
+| `r`       | chemometrics4all · R                    | `chemometrics4all.R` (tier-1 dispatcher), `chemometrics4all.R.formula` (tier-2 formula + S3) |
+| `matlab`  | chemometrics4all · MATLAB/Octave        | `chemometrics4all.matlab` (tier-1 MEX dispatcher), `chemometrics4all.matlab.classdef` (tier-2 classdef) |
+| `ext-py`  | external · Python              | `sklearn`, `ikpls`, registry-declared `ref.python_*` libs |
+| `ext-r`   | external · R                   | `pls`, `mixOmics`, `ropls`, registry-declared `ref.r_*` libs |
+| `ext-ml`  | external · MATLAB/Octave       | `plsregress`, registry-declared `ref.matlab_*` libs |
+
+The C++ tier suffix (`ref`, `blas`, `omp`, `blas+omp`, `cuda`) maps
+1:1 to the libc4a build flags. `ref` is the scalar parity baseline;
+`blas+omp` is the production combo; `cuda` only appears when CUDA was
+available at build time.
+
+## Filters and presets
+
+The toolbar exposes the following filters:
+
+- **Algorithm group** — Core, Sparse, Ensemble, Robust / weighted,
+  Nonlinear / local, Multi-block, Calibration transfer, Classification,
+  Missing data, Regularised, Selectors. Driven by the
+  `ALGO_GROUP` map in `docs/_extras/build_landing.py`.
+- **Language** — restrict to columns of one host language (C++,
+  Python, R, MATLAB/Octave, …).
+- **Threads** — pick a thread count (typically 1, 3, or 10).
+- **Column preset** — one of:
+  - `headline` — the four canonical chemometrics4all columns plus the
+    primary external in each language.
+  - `api-parity` — the C++ native baseline plus the chemometrics4all *mimicking*
+    bindings (sklearn-style, R formula + S3, MATLAB classdef) lined up
+    against the canonical externals users would otherwise reach for
+    (`sklearn`, `ikpls`, `pls`, `mixOmics`, `ropls`, `plsregress`).
+    Raw low-level bindings (ctypes, R dispatcher, MEX) are excluded —
+    this is the apples-to-apples view.
+  - `chemometrics4all` — all chemometrics4all bindings, no externals.
+  - `cpp-tiers` — the five libc4a builds side-by-side.
+  - `externals` — only the reference libraries.
+  - `thread-sweep` — a tight subset suitable for comparing 1 vs 3 vs
+    10 thread scaling.
+  - `all` — every column present in the current CSV.
+
+Presets resolve at build time against the columns actually present in
+the data, so an empty preset is dropped automatically.
+
+## Cell tooltips
+
+Each cell exposes:
+
+- `parity` — one of `exact`, `drift`, `divergent`, `error`,
+  `not_available`, `not_run`.
+- `ms` — float median wall-clock in milliseconds.
+- `fmt` — pre-formatted time string (`1.97 ms`, `4.2 s`).
+- `reason` — for non-`exact` cells, the captured failure / drift
+  reason, trimmed to 200 chars. Examples:
+  - `ModuleNotFoundError: No module named 'sgPLS'`
+  - `R `pls::cppls 2.8.5` is Liland 2009 Canonical Powered PLS, NOT
+    Indahl 2005 Powered-PLS (chemometrics4all's algorithm)`
+  - `parity diff 5.4e-02 vs tolerance 1e-6 — scaling convention drift`
+
+The dashboard renders `reason` in a tooltip so the table itself stays
+scannable.
+
+## Relationship to this documentation
+
+Each algorithm row in the dashboard links to its dedicated page in
+[the methods catalogue](../methods/index.md). The per-method page
+shows the same numbers plus:
+
+- the algorithm's bibliographic source,
+- its math principle,
+- its parameters (with C ABI / Python / R / MATLAB defaults),
+- per-binding code examples,
+- a filtered benchmark table covering only that one method.
+
+The dashboard is best for cross-method comparison; the per-method
+page is best for understanding one algorithm in depth.
+
+## Source layout
+
+| File | Role |
+|---|---|
+| `docs/_templates/landing.html`      | The HTML / CSS / JS shell. Jinja2 substitutes `{{ bench_data_json }}` at sphinx-build time. |
+| `docs/_extras/build_landing.py`     | Reads `benchmarks/cross_binding/results/full_matrix.csv`, applies the column-id and verdict conventions, and emits the compact JSON payload. |
+| `docs/_static/bench-data.json`      | The committed fallback payload — used by CI / Read the Docs builds where the raw CSVs are not present. |
+| `docs/conf.py:setup()`              | Picks between live CSV regeneration and the committed fallback, then injects the JSON into `html_context`. |
+
+## Regenerating locally
+
+```bash
+# Build with the live CSV (regenerates docs/_static/bench-data.json):
+sphinx-build -b html docs docs/_build/html
+
+# Or just write the JSON without a full Sphinx build:
+python docs/_extras/build_landing.py \
+  --results benchmarks/cross_binding/results \
+  --out docs/_static/bench-data.json
+```
+
+## Deployment paths
+
+The same HTML output is published from **two** locations:
+
+- **GitHub Pages** — `https://gbeurier.github.io/chemometrics4all/` — built by
+  `.github/workflows/docs.yml` on every push to `main`. This is the
+  canonical landing page.
+- **Read the Docs** — see [`readthedocs.md`](../dev/readthedocs.md)
+  for the RTD project configuration. The RTD build uses the committed
+  `docs/_static/bench-data.json` fallback so it does not need to
+  install the benchmark dependencies.

@@ -1,0 +1,106 @@
+name: Parity gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  fixture-determinism:
+    runs-on: ubuntu-22.04
+    env:
+      OPENBLAS_CORETYPE: HASWELL
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      PYTHONHASHSEED: "0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned generator deps
+        working-directory: parity/python_generator
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-lock.txt
+          pip install -e .
+
+      - name: Verify fixtures are bit-identical to checked-in copies
+        working-directory: parity/python_generator
+        run: generate-fixtures --check --out ../fixtures
+
+      - name: Build libc4a (Linux gcc-12 Release)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-12 g++-12 ninja-build cmake
+          cmake --preset ci-linux-gcc12-release
+          cmake --build --preset ci-linux-gcc12-release --parallel
+
+      - name: Run C++ numerical parity tests
+        run: ctest --preset ci-linux-gcc12-release --output-on-failure
+
+      - name: Run chemometrics4all Python binding smoke test
+        env:
+          CHEMOMETRICS4ALL_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libc4a.so.0.52.0
+        run: |
+          pip install -e bindings/python
+          python - <<'PY'
+          import chemometrics4all
+
+          assert chemometrics4all.version().startswith("0.52.0")
+          with chemometrics4all.Context() as ctx, chemometrics4all.Config() as cfg:
+              cfg.n_components = 3
+              cfg.algorithm = chemometrics4all.Algorithm.PCR
+              cfg.solver = chemometrics4all.Solver.SVD
+              cfg.deflation = chemometrics4all.Deflation.REGRESSION
+              assert cfg.n_components == 3
+              assert cfg.algorithm == chemometrics4all.Algorithm.PCR
+              assert cfg.solver == chemometrics4all.Solver.SVD
+              assert cfg.deflation == chemometrics4all.Deflation.REGRESSION
+              cfg.algorithm = chemometrics4all.Algorithm.PLS_CANONICAL
+              cfg.solver = chemometrics4all.Solver.NIPALS
+              cfg.deflation = chemometrics4all.Deflation.CANONICAL
+              assert cfg.algorithm == chemometrics4all.Algorithm.PLS_CANONICAL
+              assert cfg.deflation == chemometrics4all.Deflation.CANONICAL
+              cfg.algorithm = chemometrics4all.Algorithm.PLS_SVD
+              cfg.solver = chemometrics4all.Solver.SVD
+              cfg.deflation = chemometrics4all.Deflation.CANONICAL
+              assert cfg.algorithm == chemometrics4all.Algorithm.PLS_SVD
+              assert cfg.solver == chemometrics4all.Solver.SVD
+              assert cfg.deflation == chemometrics4all.Deflation.CANONICAL
+              cfg.algorithm = chemometrics4all.Algorithm.PLS_DA
+              cfg.deflation = chemometrics4all.Deflation.REGRESSION
+              assert cfg.algorithm == chemometrics4all.Algorithm.PLS_DA
+              cfg.algorithm = chemometrics4all.Algorithm.OPLS
+              cfg.solver = chemometrics4all.Solver.NIPALS
+              cfg.deflation = chemometrics4all.Deflation.ORTHOGONAL
+              assert cfg.algorithm == chemometrics4all.Algorithm.OPLS
+              assert cfg.deflation == chemometrics4all.Deflation.ORTHOGONAL
+              cfg.algorithm = chemometrics4all.Algorithm.OPLS_DA
+              cfg.deflation = chemometrics4all.Deflation.ORTHOGONAL
+              assert cfg.algorithm == chemometrics4all.Algorithm.OPLS_DA
+              cfg.algorithm = chemometrics4all.Algorithm.PLS_REGRESSION
+              cfg.deflation = chemometrics4all.Deflation.REGRESSION
+              cfg.solver = chemometrics4all.Solver.ORTHOGONAL_SCORES
+              assert cfg.solver == chemometrics4all.Solver.ORTHOGONAL_SCORES
+              cfg.solver = chemometrics4all.Solver.POWER
+              assert cfg.solver == chemometrics4all.Solver.POWER
+              cfg.solver = chemometrics4all.Solver.RANDOMIZED_SVD
+              assert cfg.solver == chemometrics4all.Solver.RANDOMIZED_SVD
+              try:
+                  ctx.backend = chemometrics4all.Backend.CUDA
+                  raise AssertionError("expected BACKEND_UNAVAILABLE")
+              except chemometrics4all.Chemometrics4allError as e:
+                  assert e.status_name == "backend unavailable"
+          print("python binding smoke OK from CI")
+          PY
+
+      - name: Confirm core parity gate
+        run: |
+          echo "Core parity gate validates fixture determinism plus preprocessing, validation metrics, NIPALS, PLSCanonical, PLSSVD, PLS-DA, PLS-LDA, PLS-logistic, MB-PLS, LW-PLS, OPLS, multi-class OPLS-DA, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD, power, randomized-SVD, PCR and variable-selection parity through WVC-PLS."

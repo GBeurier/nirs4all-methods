@@ -1,0 +1,107 @@
+name: ABI Surface
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-12 g++-12 ninja-build cmake
+      - run: cmake --preset ci-linux-gcc12-release
+      - run: cmake --build --preset ci-linux-gcc12-release --target chemometrics4all_c --parallel
+      - name: Extract exported symbols
+        run: |
+          LIB=$(find build -name 'libc4a.so.*' | head -n 1)
+          echo "Inspecting $LIB"
+          nm -D --defined-only "$LIB" | awk '{print $3}' | sort -u > /tmp/exported.txt
+          echo "----- exported -----"
+          cat /tmp/exported.txt
+          echo "----- expected -----"
+          cat cpp/abi/expected_symbols_linux.txt
+          echo "----- diff -----"
+          diff -u cpp/abi/expected_symbols_linux.txt /tmp/exported.txt
+      - name: Assert every exported symbol starts with c4a_
+        run: |
+          if grep -v '^c4a_' /tmp/exported.txt; then
+            echo "Forbidden non-c4a_ symbol exported"
+            exit 1
+          fi
+      - name: Runtime-dependency audit (forbidden libs)
+        run: |
+          LIB=$(find build -name 'libc4a.so.*' | head -n 1)
+          deps=$(ldd "$LIB" 2>&1)
+          echo "$deps"
+          # Forbidden runtime-dep list per roadmap §5.3.
+          if echo "$deps" | grep -iE 'libopenblas|libmkl|libpython|libR\.|librcpp|libboost|libeigen|libpybind11|libembind|libnlohmann|libyaml-cpp'; then
+            echo "ERROR: libc4a links a forbidden runtime dependency"
+            exit 1
+          fi
+
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install ninja cmake
+      - run: cmake --preset ci-macos-clang-release
+      - run: cmake --build --preset ci-macos-clang-release --target chemometrics4all_c --parallel
+      - name: Extract exported symbols
+        run: |
+          LIB=$(find build -name 'libc4a*.dylib' | head -n 1)
+          echo "Inspecting $LIB"
+          nm -gU "$LIB" | awk '{print $3}' | sed 's/^_//' | sort -u > /tmp/exported.txt
+          cat /tmp/exported.txt
+      - name: Assert every exported symbol starts with c4a_
+        run: |
+          if grep -v '^c4a_' /tmp/exported.txt; then
+            echo "Forbidden non-c4a_ symbol exported"
+            exit 1
+          fi
+      - name: Runtime-dependency audit (forbidden libs)
+        run: |
+          LIB=$(find build -name 'libc4a*.dylib' | head -n 1)
+          deps=$(otool -L "$LIB")
+          echo "$deps"
+          if echo "$deps" | grep -iE 'openblas|libmkl|libpython|libR\.|librcpp|libboost|libeigen|libpybind11|libembind|libnlohmann|libyaml-cpp'; then
+            echo "ERROR: libc4a links a forbidden runtime dependency"
+            exit 1
+          fi
+
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: microsoft/setup-msbuild@v2
+      - run: cmake --preset ci-windows-msvc-release
+      - run: cmake --build --preset ci-windows-msvc-release --target chemometrics4all_c --parallel --config Release
+      - name: Extract exported symbols
+        shell: pwsh
+        run: |
+          $dll = Get-ChildItem build -Recurse -Filter "c4a.dll" | Select-Object -First 1
+          if (-not $dll) { Write-Error "c4a.dll not built"; exit 1 }
+          $dumpbinPath = $null
+          $cmd = Get-Command dumpbin.exe -ErrorAction SilentlyContinue
+          if ($cmd) { $dumpbinPath = $cmd.Source }
+          if (-not $dumpbinPath) {
+            $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+            $vsRoot = & $vswhere -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath -latest
+            if ($vsRoot) {
+              $dumpbin = Get-ChildItem -Path (Join-Path $vsRoot "VC\Tools\MSVC") -Filter dumpbin.exe -Recurse |
+                Where-Object { $_.FullName -like '*Hostx64*x64*' } |
+                Select-Object -First 1
+              if ($dumpbin) { $dumpbinPath = $dumpbin.FullName }
+            }
+          }
+          if (-not $dumpbinPath) { Write-Error "dumpbin not found"; exit 1 }
+          & $dumpbinPath /EXPORTS $dll.FullName |
+            Select-String -Pattern '^\s+\d+\s+\w+\s+\w+\s+(c4a_\w+)' |
+            ForEach-Object { $_.Matches[0].Groups[1].Value } |
+            Sort-Object -Unique | Out-File -Encoding ascii exported.txt
+          Get-Content exported.txt

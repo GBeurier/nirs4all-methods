@@ -1,0 +1,32 @@
+# Read the Docs configuration for chemometrics4all
+# https://docs.readthedocs.io/en/stable/config-file/v2.html
+#
+# After pushing this file:
+#   1. Import the GitHub repo at https://readthedocs.org/dashboard/import/
+#   2. Set "Default branch" to `main`.
+#   3. Optional: link your custom domain via the Admin → Domains panel.
+#
+# The build does NOT need the C++ library or benchmark inputs. The
+# landing dashboard reads `docs/_static/bench-data.json` as a committed
+# fallback when `benchmarks/cross_binding/results/full_matrix.csv` is
+# absent (see `docs/conf.py:setup`).
+
+version: 2
+
+build:
+  os: ubuntu-24.04
+  tools:
+    python: "3.12"
+
+sphinx:
+  configuration: docs/conf.py
+  builder: html
+  fail_on_warning: false   # cross-binding md links outside docs/ are tolerated
+
+python:
+  install:
+    - requirements: docs/requirements.txt
+
+formats:
+  - htmlzip
+  - pdf
