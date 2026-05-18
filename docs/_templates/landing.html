@@ -10,6 +10,74 @@
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500;600;700;800&family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
+      /* === LIGHT THEME (default) — paper-white surfaces, dark ink text,
+         teal accent matching the Sphinx Furo theme.
+         The dark CRT-phosphor theme lives under body.theme-dark below. */
+      --ink-0: #F7F9FB;     /* page background */
+      --ink-1: #FFFFFF;     /* cards, table body */
+      --ink-2: #F1F4F7;     /* header rows, sticky cells */
+      --ink-3: #E4E9EF;     /* hover bg */
+      --ink-4: #D1D8E0;     /* scrollbar thumb */
+      --line:   rgba(15, 30, 40, 0.07);
+      --line-2: rgba(15, 30, 40, 0.13);
+      --fg-0: #0F2027;
+      --fg-1: #36454F;
+      --fg-2: #6A7681;
+      --fg-3: #98A2AC;
+      --phosphor:       #0d9488;
+      --phosphor-soft:  rgba(13, 148, 136, 0.12);
+      --phosphor-glow:  rgba(13, 148, 136, 0.30);
+      --phosphor-faint: rgba(13, 148, 136, 0.05);
+      --amber:          #B86E0F;
+      --crimson:        #B83A37;
+      --indigo:         #2E5BB8;
+
+      /* per-language accent colors — darker variants tuned for light bg */
+      --lang-cpp:  #0E8C8F;
+      --lang-py:   #B88528;
+      --lang-r:    #4A60D6;
+      --lang-m:    #B85AA6;
+      --lang-jl:   #8260C0;
+      --lang-rs:   #C97A48;
+      --lang-go:   #2E92BD;
+      --lang-js:   #B0972A;
+      --lang-java: #B86A6A;
+      --lang-other:#6A7681;
+      --lang-cpp-soft: rgba(14, 140, 143, 0.09);
+      --lang-py-soft:  rgba(184, 133, 40, 0.09);
+      --lang-r-soft:   rgba(74, 96, 214, 0.09);
+      --lang-m-soft:   rgba(184, 90, 166, 0.09);
+      --lang-jl-soft:  rgba(130, 96, 192, 0.09);
+      --lang-rs-soft:  rgba(201, 122, 72, 0.09);
+      --lang-go-soft:  rgba(46, 146, 189, 0.09);
+      --lang-js-soft:  rgba(176, 151, 42, 0.09);
+      --lang-java-soft:rgba(184, 106, 106, 0.09);
+      --lang-other-soft: rgba(106, 118, 129, 0.07);
+      --bg-grid: rgba(15, 30, 40, 0.035);
+
+      --controls-bg: rgba(255, 255, 255, 0.92);
+      --menu-shadow: 0 16px 40px rgba(15, 30, 40, 0.14);
+
+      --display: 'Sora', 'Inter Tight', system-ui, sans-serif;
+      --sans:    'Inter Tight', system-ui, sans-serif;
+      --mono:    'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+      /* Fixed sticky-left column widths — the CSS sticky offsets are
+         derived from these so leftmost columns never overlap regardless
+         of content length. Override in density rules to tighten. The
+         widths must be roomy enough that the longest algo / size / threads
+         content fits with comfortable padding; otherwise the next sticky
+         column visually clips into the previous one. */
+      --w-algo:    200px;
+      --w-size:    84px;
+      --w-threads: 56px;
+      --off-size:    var(--w-algo);
+      --off-threads: calc(var(--w-algo) + var(--w-size));
+    }
+
+    /* === DARK THEME (toggled via .theme-dark on <body>) — the original
+       CRT-phosphor aesthetic. */
+    body.theme-dark {
       --ink-0: #07090C;
       --ink-1: #0C1117;
       --ink-2: #131A23;
@@ -24,22 +92,21 @@
       --phosphor:       #7CE5A2;
       --phosphor-soft:  rgba(124, 229, 162, 0.16);
       --phosphor-glow:  rgba(124, 229, 162, 0.55);
+      --phosphor-faint: rgba(124, 229, 162, 0.05);
       --amber:          #F2B85C;
       --crimson:        #E96565;
       --indigo:         #7DA8F7;
 
-      /* per-language accent colors (used in the column band header
-         and the per-language best-cell marker) */
-      --lang-cpp:  #6DD3D6;     /* phosphor cyan */
-      --lang-py:   #F2C46B;     /* amber-yellow */
-      --lang-r:    #9CA8FA;     /* periwinkle */
-      --lang-m:    #E08FCF;     /* magenta-pink */
-      --lang-jl:   #B98AE0;     /* julia purple */
-      --lang-rs:   #E89A6B;     /* rust ferric */
-      --lang-go:   #6BBFE0;     /* gopher teal */
-      --lang-js:   #E8D86B;     /* js sun-yellow */
-      --lang-java: #E08F8F;     /* java brick */
-      --lang-other:#9AA4B0;     /* neutral fallback */
+      --lang-cpp:  #6DD3D6;
+      --lang-py:   #F2C46B;
+      --lang-r:    #9CA8FA;
+      --lang-m:    #E08FCF;
+      --lang-jl:   #B98AE0;
+      --lang-rs:   #E89A6B;
+      --lang-go:   #6BBFE0;
+      --lang-js:   #E8D86B;
+      --lang-java: #E08F8F;
+      --lang-other:#9AA4B0;
       --lang-cpp-soft: rgba(109, 211, 214, 0.13);
       --lang-py-soft:  rgba(242, 196, 107, 0.13);
       --lang-r-soft:   rgba(156, 168, 250, 0.13);
@@ -52,21 +119,22 @@
       --lang-other-soft: rgba(154, 164, 176, 0.10);
       --bg-grid: rgba(255,255,255,0.018);
 
-      --display: 'Sora', 'Inter Tight', system-ui, sans-serif;
-      --sans:    'Inter Tight', system-ui, sans-serif;
-      --mono:    'JetBrains Mono', 'SF Mono', Menlo, monospace;
-
-      /* Fixed sticky-left column widths — the CSS sticky offsets are
-         derived from these so leftmost columns never overlap regardless
-         of content length. Override in density rules to tighten. */
-      --w-algo:    180px;
-      --w-size:    96px;
-      --w-threads: 60px;
-      --w-native:  128px;
-      --off-size:    var(--w-algo);
-      --off-threads: calc(var(--w-algo) + var(--w-size));
-      --off-data:    calc(var(--w-algo) + var(--w-size) + var(--w-threads));
+      --controls-bg: rgba(12, 17, 23, 0.95);
+      --menu-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
     }
+
+    /* Light theme drops the CRT-phosphor glow halos that look noisy on
+       a white background — the same selectors keep their accent color
+       via --phosphor; only the text-shadow halo is suppressed. */
+    body:not(.theme-dark) a:hover,
+    body:not(.theme-dark) .wordmark .accent,
+    body:not(.theme-dark) .stat-value .glow,
+    body:not(.theme-dark) .cell-fastest,
+    body:not(.theme-dark) .speed-faster,
+    body:not(.theme-dark) table.bench th .arrow,
+    body:not(.theme-dark) .info-card h3 { text-shadow: none; }
+    body:not(.theme-dark) .info-card h3::before,
+    body:not(.theme-dark) .brand-led { box-shadow: 0 0 4px var(--phosphor-soft); }
 
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
@@ -83,7 +151,6 @@
         linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
       background-size: 24px 24px;
       background-position: -1px -1px;
-      overflow-x: hidden;
     }
 
     a { color: var(--phosphor); text-decoration: none; }
@@ -162,6 +229,31 @@
       font-size: 11px; color: var(--fg-2); margin-left: 3px; font-weight: 400;
     }
 
+    .hero-right {
+      display: flex; align-items: center; gap: 14px;
+    }
+    .theme-toggle {
+      background: var(--ink-1);
+      border: 1px solid var(--line-2);
+      border-radius: 999px;
+      padding: 7px 11px;
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      color: var(--fg-0);
+      transition: border-color 120ms, color 120ms, background 120ms;
+    }
+    .theme-toggle:hover {
+      border-color: var(--phosphor);
+      background: var(--phosphor-soft);
+    }
+    .theme-toggle .theme-ico-dark,
+    .theme-toggle .theme-ico-light { display: none; }
+    /* Light theme is active → show the moon (click to go dark). */
+    body:not(.theme-dark) .theme-toggle .theme-ico-dark { display: inline; }
+    /* Dark theme is active → show the sun (click to go light). */
+    body.theme-dark .theme-toggle .theme-ico-light { display: inline; }
+
     .hero-spectrum {
       height: 2px; width: calc(100% - 64px); max-width: 1900px;
       margin: 16px auto 0;
@@ -181,7 +273,7 @@
     /* ---------- CONTROLS ---------- */
     .controls {
       position: sticky; top: 0; z-index: 40;
-      background: rgba(12, 17, 23, 0.95);
+      background: var(--controls-bg);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--line-2);
@@ -342,36 +434,66 @@
       border: 1px solid var(--line-2);
       border-radius: 4px;
       background: var(--ink-1);
-      overflow: auto;
+      /* overflow-x is forced to scroll so the horizontal scrollbar is
+         always visible even when the user lands on a wide screen — the
+         table has 40+ data columns and discoverability of the scroll
+         affordance matters more than the few free pixels we save when
+         the browser auto-hides it. */
+      overflow-x: scroll;
+      overflow-y: auto;
       max-height: 78vh;
       position: relative;
-      box-shadow: 0 0 0 1px rgba(124, 229, 162, 0.04);
+      box-shadow: 0 0 0 1px var(--phosphor-faint);
+      /* Firefox-specific scrollbar styling — the -webkit-* selectors
+         below cover Chromium / Safari. Both are needed: without
+         scrollbar-color, Firefox shows its default thin-grey track
+         that disappears against the off-white wrap. */
+      scrollbar-width: auto;
+      scrollbar-color: var(--fg-3) var(--ink-2);
     }
-    .table-wrap::-webkit-scrollbar { height: 10px; width: 10px; }
-    .table-wrap::-webkit-scrollbar-track { background: var(--ink-1); }
-    .table-wrap::-webkit-scrollbar-thumb { background: var(--ink-4); border-radius: 4px; }
-    .table-wrap::-webkit-scrollbar-thumb:hover { background: var(--fg-3); }
+    .table-wrap::-webkit-scrollbar { height: 14px; width: 14px; }
+    .table-wrap::-webkit-scrollbar-track {
+      background: var(--ink-2);
+      border-top: 1px solid var(--line);
+    }
+    .table-wrap::-webkit-scrollbar-thumb {
+      background: var(--fg-3);
+      border: 3px solid var(--ink-2);
+      border-radius: 7px;
+      min-width: 60px;
+    }
+    .table-wrap::-webkit-scrollbar-thumb:hover { background: var(--fg-2); }
+    .table-wrap::-webkit-scrollbar-corner { background: var(--ink-2); }
 
     table.bench {
       border-collapse: separate; border-spacing: 0;
-      width: 100%;
-      font-family: var(--mono); font-size: 12px;
+      /* Don't stretch to fill the wrap — that made each column too wide
+         when only a handful are visible. Columns size to their content;
+         the scrollbar handles overflow when many columns are on. */
+      width: max-content;
+      font-family: var(--mono); font-size: 11.5px;
     }
     table.bench thead { position: sticky; top: 0; z-index: 5; }
 
     /* language band row */
     table.bench tr.lang-band th {
-      padding: 4px 8px;
+      padding: 3px 6px;
       font-family: var(--sans);
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.18em;
+      letter-spacing: 0.12em;
       border-bottom: 2px solid;
       border-right: 1px solid var(--line);
       background: var(--ink-2);
       text-align: center;
-      line-height: 1.1;
+      line-height: 1.15;
+      /* Don't let a long band label (e.g. "MATLAB / Octave 1") force its
+         underlying single-column to widen — clip the label instead. */
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 0;
     }
     table.bench tr.lang-band th.lang-spacer { border-bottom-color: transparent; }
     table.bench tr.lang-band th.lang-cpp   { color: var(--lang-cpp);   border-bottom-color: var(--lang-cpp);   background: linear-gradient(180deg, var(--lang-cpp-soft)   0%, var(--ink-2) 100%); }
@@ -404,84 +526,136 @@
       border-left: 2px solid var(--line-2);
     }
 
+    /* pls4all binding columns get a faint phosphor wash so users can
+       visually distinguish "ours" from the externals they mimic. Same
+       short label can recur across the divide (pls4all.sklearn vs
+       sklearn external — both render "sklearn") and the tint is what
+       carries the disambiguation. */
+    table.bench th.col-pls4all {
+      background: linear-gradient(180deg, var(--phosphor-soft) 0%, var(--ink-2) 100%);
+    }
+    table.bench th.col-pls4all .col-label { color: var(--phosphor); }
+    table.bench td.col-pls4all { background: var(--phosphor-faint); }
+    table.bench tbody tr:hover td.col-pls4all { background: var(--phosphor-soft); }
+
     table.bench th {
       background: var(--ink-2);
       color: var(--fg-1);
       font-weight: 500; font-family: var(--sans);
-      text-align: left; padding: 7px 10px;
+      text-align: center; padding: 5px 6px;
       border-bottom: 2px solid var(--line-2);
       border-right: 1px solid var(--line);
-      white-space: nowrap;
-      font-size: 11px;
-      letter-spacing: 0.02em;
-      vertical-align: top;
+      font-size: 10.5px;
+      letter-spacing: 0.01em;
+      vertical-align: bottom;
+      /* Cap data column width so a long short label (e.g. multiblock,
+         chemometrics) doesn't blow the column out — text wraps to a
+         second line instead. Sticky columns override this below. */
+      max-width: 96px;
+    }
+    table.bench th.algo-col, table.bench th.size-col, table.bench th.thread-col {
+      text-align: left; vertical-align: middle; max-width: none;
+      padding: 6px 10px;
     }
     table.bench th .col-label {
-      font-family: var(--sans); font-weight: 600; color: var(--fg-0); font-size: 11.5px;
-      display: block;
+      font-family: var(--sans); font-weight: 600; color: var(--fg-0); font-size: 10.5px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.15;
+      max-height: 2.4em;
     }
+    /* col-meta = tier subtitle below the short label (e.g. "pls4all
+       reference" / "external"). Kept small and clipped to one line so
+       it adds context without stretching the column width. */
     table.bench th .col-meta {
-      display: block; font-family: var(--mono); color: var(--fg-2);
-      font-weight: 400; font-size: 9.5px; margin-top: 2px;
+      display: block;
+      font-family: var(--sans); color: var(--fg-2);
+      font-weight: 400; font-size: 9px;
       letter-spacing: 0;
+      margin-top: 2px;
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
+    /* Hide col-meta in compact + ultra modes to save vertical room. */
+    body.density-compact table.bench th .col-meta,
+    body.density-ultra   table.bench th .col-meta { display: none; }
     table.bench th.sortable { cursor: pointer; user-select: none; }
-    table.bench th.sortable:hover { color: var(--phosphor); }
-    table.bench th.sortable.active { color: var(--phosphor); }
+    table.bench th.sortable:hover .col-label { color: var(--phosphor); }
+    table.bench th.sortable.active .col-label { color: var(--phosphor); }
     table.bench th .arrow {
       color: var(--phosphor); font-family: var(--mono);
-      font-weight: 700; margin-left: 4px;
-      text-shadow: 0 0 6px var(--phosphor-glow);
+      font-weight: 700; margin-left: 3px;
+      font-size: 10px;
     }
 
     /* sticky leftmost columns — widths + offsets driven by CSS vars
-       so they stay in sync across density modes. */
+       so they stay in sync across density modes. Body cells render at
+       z-index 3 (above tbody data cells), header cells at z-index 7
+       (above the lang-band non-sticky cells which slide under them on
+       horizontal scroll). The thread column (last sticky) carries the
+       boundary shadow so users see a clear "frozen" / "scrolling" split. */
     table.bench th.algo-col, table.bench td.algo-cell {
-      position: sticky; left: 0; z-index: 4;
+      position: sticky; left: 0; z-index: 5;
       background: var(--ink-2);
       width: var(--w-algo); min-width: var(--w-algo); max-width: var(--w-algo);
     }
-    table.bench td.algo-cell { background: var(--ink-1); z-index: 2; }
+    table.bench td.algo-cell { background: var(--ink-1); z-index: 3; }
     table.bench th.size-col, table.bench td.size-cell {
-      position: sticky; left: var(--off-size); z-index: 4;
+      position: sticky; left: var(--off-size); z-index: 5;
       background: var(--ink-2);
       width: var(--w-size); min-width: var(--w-size); max-width: var(--w-size);
     }
-    table.bench td.size-cell { background: var(--ink-1); z-index: 2; }
+    table.bench td.size-cell { background: var(--ink-1); z-index: 3; }
     table.bench th.thread-col, table.bench td.thread-cell {
-      position: sticky; left: var(--off-threads); z-index: 4;
+      position: sticky; left: var(--off-threads); z-index: 5;
       background: var(--ink-2);
       width: var(--w-threads); min-width: var(--w-threads); max-width: var(--w-threads);
+      box-shadow: 4px 0 6px -3px rgba(15, 30, 40, 0.18);
     }
-    table.bench td.thread-cell { background: var(--ink-1); z-index: 2; }
-    table.bench th.algo-col, table.bench th.size-col, table.bench th.thread-col { z-index: 6; }
-    table.bench th.native-col, table.bench td.native-cell {
-      position: sticky; left: var(--off-data);
-      width: var(--w-native); min-width: var(--w-native); max-width: var(--w-native);
-      background: var(--ink-2);
-      z-index: 5;
-      box-shadow: 2px 0 0 var(--line-2);
+    table.bench td.thread-cell {
+      background: var(--ink-1); z-index: 3;
+      box-shadow: 4px 0 6px -3px rgba(15, 30, 40, 0.10);
     }
-    table.bench td.native-cell {
-      background: var(--ink-1);
-      z-index: 3;
+    body.theme-dark table.bench th.thread-col,
+    body.theme-dark table.bench td.thread-cell {
+      box-shadow: 4px 0 6px -3px rgba(0, 0, 0, 0.55);
     }
+    table.bench th.algo-col, table.bench th.size-col, table.bench th.thread-col { z-index: 8; }
+    /* The native (pls4all.cpp) baseline column is NOT sticky — making it
+       sticky used to hide neighbouring columns when scrolling right.
+       It still gets a subtle phosphor accent so the comparison anchor
+       remains visually identifiable. */
     table.bench th.native-col {
-      z-index: 7;
+      background: linear-gradient(180deg, var(--phosphor-soft) 0%, var(--ink-2) 100%);
+      border-right: 2px solid var(--phosphor-soft);
     }
-    table.bench tbody tr:hover td.native-cell { background: var(--ink-3); }
+    table.bench th.native-col .col-label { color: var(--phosphor); }
+    table.bench td.native-cell {
+      background: var(--phosphor-faint);
+      border-right: 2px solid var(--phosphor-soft);
+    }
+    table.bench tbody tr:hover td.native-cell {
+      background: var(--phosphor-soft);
+    }
 
     table.bench td {
-      padding: 6px 10px;
+      padding: 4px 8px;
       border-bottom: 1px solid var(--line);
       border-right: 1px solid var(--line);
       color: var(--fg-0);
       white-space: nowrap;
       text-align: right;
-      font-feature-settings: 'tnum' 1;
+      font-variant-numeric: tabular-nums;
       transition: background 80ms;
     }
-    table.bench tbody tr:hover td { background: rgba(124, 229, 162, 0.03); }
+    table.bench tbody tr:hover td { background: var(--phosphor-faint); }
     table.bench tbody tr:hover td.algo-cell,
     table.bench tbody tr:hover td.size-cell,
     table.bench tbody tr:hover td.thread-cell { background: var(--ink-3); }
@@ -489,14 +663,18 @@
     table.bench td.algo-cell {
       font-family: var(--sans); font-weight: 500; color: var(--fg-0);
       text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     table.bench td.size-cell {
       font-family: var(--mono); color: var(--fg-1);
       text-align: left;
+      padding-left: 10px;
     }
     table.bench td.thread-cell {
       font-family: var(--mono); color: var(--fg-1);
       text-align: center;
+      padding: 4px 4px;
     }
     .thread-pill {
       display: inline-block; padding: 1px 7px;
@@ -506,20 +684,32 @@
     }
     .thread-pill.t-3  { color: var(--indigo); border-color: rgba(125,168,247,0.4); }
     .thread-pill.t-10 { color: var(--phosphor); border-color: rgba(124,229,162,0.4); }
+    /* avg-speedup mode: size cell shows "avg · N" pill instead of n×p */
+    .size-avg {
+      display: inline-block; padding: 1px 7px;
+      background: var(--phosphor-soft); color: var(--phosphor);
+      border: 1px solid var(--phosphor-soft);
+      border-radius: 3px;
+      font-family: var(--sans);
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
 
+    /* Winner cells: just background tint + slight font-weight bump on the
+       value. No icon, no glow halo — the highlight alone marks the cell
+       so the numeric content stays readable and isn't pushed sideways. */
     .cell-fastest {
       color: var(--phosphor);
       font-weight: 600;
-      text-shadow: 0 0 8px var(--phosphor-glow);
-      position: relative;
     }
-    .cell-fastest::before {
-      content: ''; position: absolute; left: 2px; top: 25%; bottom: 25%;
-      width: 2px; background: var(--phosphor);
-      box-shadow: 0 0 6px var(--phosphor-glow);
-      border-radius: 1px;
+    .cell-fastest-bg {
+      background: var(--phosphor-soft) !important;
+      box-shadow: inset 0 0 0 1px var(--phosphor-soft);
     }
-    .cell-fastest-bg { background: rgba(124, 229, 162, 0.05) !important; }
+    body.theme-dark .cell-fastest-bg {
+      background: rgba(124, 229, 162, 0.13) !important;
+      box-shadow: inset 0 0 0 1px rgba(124, 229, 162, 0.18);
+    }
     .cell-empty { color: var(--fg-3); text-align: center; font-family: var(--mono); }
     .parity { display: inline-block; min-width: 12px; text-align: center; margin-left: 5px; font-weight: 600; font-family: var(--mono); }
     .p-exact   { color: var(--phosphor); }
@@ -540,27 +730,26 @@
 
     /* density: compact — slightly tighter sticky widths */
     body.density-compact {
-      --w-algo: 160px; --w-size: 86px; --w-threads: 52px; --w-native: 112px;
+      --w-algo: 176px; --w-size: 76px; --w-threads: 48px;
     }
-    body.density-compact table.bench td { padding: 2.5px 8px; font-size: 11px; }
-    body.density-compact table.bench th { padding: 5px 8px; font-size: 10.5px; }
-    body.density-compact table.bench th .col-label { font-size: 10.5px; }
-    body.density-compact table.bench th .col-meta  { font-size: 9px; }
+    body.density-compact table.bench { font-size: 11px; }
+    body.density-compact table.bench td { padding: 2.5px 6px; font-size: 10.5px; }
+    body.density-compact table.bench th { padding: 4px 5px; font-size: 10px; max-width: 84px; }
+    body.density-compact table.bench th .col-label { font-size: 10px; }
 
     /* density: ultra (max squeeze) — minimal sticky widths */
     body.density-ultra {
-      --w-algo: 140px; --w-size: 72px; --w-threads: 44px; --w-native: 92px;
+      --w-algo: 156px; --w-size: 68px; --w-threads: 42px;
     }
-    body.density-ultra table.bench td { padding: 1.5px 5px; font-size: 10.5px; }
-    body.density-ultra table.bench th { padding: 3px 5px; font-size: 10px; }
-    body.density-ultra table.bench th .col-label { font-size: 10px; letter-spacing: 0; }
-    body.density-ultra table.bench th .col-meta  { display: none; }
-    body.density-ultra table.bench tr.lang-band th { padding: 2px 4px; font-size: 9px; letter-spacing: 0.14em; }
-    body.density-ultra table.bench td.thread-cell .thread-pill { padding: 0 5px; font-size: 9.5px; }
-    body.density-ultra .parity { margin-left: 2px; font-size: 10px; }
-    body.density-ultra .cell-fastest::before { left: 1px; width: 1.5px; }
-    body.density-ultra table.bench td.algo-cell { font-size: 11px; }
-    body.density-ultra table.bench td.size-cell { font-size: 10.5px; }
+    body.density-ultra table.bench { font-size: 10.5px; }
+    body.density-ultra table.bench td { padding: 1.5px 4px; font-size: 10px; }
+    body.density-ultra table.bench th { padding: 3px 4px; font-size: 9.5px; max-width: 72px; }
+    body.density-ultra table.bench th .col-label { font-size: 9.5px; letter-spacing: 0; }
+    body.density-ultra table.bench tr.lang-band th { padding: 2px 3px; font-size: 8.5px; letter-spacing: 0.12em; }
+    body.density-ultra table.bench td.thread-cell .thread-pill { padding: 0 4px; font-size: 9px; }
+    body.density-ultra .parity { margin-left: 2px; font-size: 9.5px; }
+    body.density-ultra table.bench td.algo-cell { font-size: 10.5px; padding: 1.5px 6px; }
+    body.density-ultra table.bench td.size-cell { font-size: 10px; padding: 1.5px 6px; }
 
     .table-meta {
       display: flex; justify-content: space-between; align-items: center;
@@ -645,6 +834,182 @@
       line-height: 1.5;
     }
 
+    /* ---------- BACKENDS ACCORDION ---------- */
+    /* Replaces the old vertical kv-row list inside an info-card. Cards
+       are grouped by language, laid out in a responsive grid, and click
+       to expand into description + version details. The accordion was
+       added because 47 backends in a single column made the info-card
+       impossible to skim — this version trades vertical scroll for
+       horizontal density without losing the underlying data. */
+    .backends-section {
+      max-width: 1900px; margin: 18px auto 40px;
+      padding: 0 32px;
+    }
+    .backends-header {
+      display: flex; align-items: baseline;
+      gap: 18px; flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .backends-header h2 {
+      font-family: var(--sans); font-size: 12px;
+      text-transform: uppercase; letter-spacing: 0.22em;
+      color: var(--phosphor); margin: 0; font-weight: 600;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .backends-header h2::before {
+      content: ''; width: 7px; height: 7px;
+      background: var(--phosphor);
+      box-shadow: 0 0 10px var(--phosphor-glow);
+      border-radius: 50%;
+    }
+    .backends-desc {
+      font-family: var(--sans); color: var(--fg-2); font-size: 12px;
+      flex: 1; min-width: 280px;
+    }
+    .backends-desc code {
+      font-family: var(--mono); font-size: 11px;
+      background: var(--ink-3); padding: 1px 5px; border-radius: 2px;
+      color: var(--phosphor);
+    }
+    .backends-actions {
+      display: flex; gap: 4px;
+    }
+    .text-btn {
+      background: var(--ink-2); border: 1px solid var(--line);
+      color: var(--fg-1); font-family: var(--sans);
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em;
+      padding: 5px 10px; border-radius: 3px;
+      cursor: pointer; font-weight: 600;
+      transition: all 100ms;
+    }
+    .text-btn:hover {
+      color: var(--phosphor); border-color: var(--phosphor);
+      background: var(--phosphor-soft);
+    }
+    .acc-group { margin-bottom: 18px; }
+    .acc-group-title {
+      font-family: var(--sans); font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.16em;
+      color: var(--fg-1); font-weight: 600;
+      padding: 4px 0 6px;
+      display: flex; align-items: baseline; gap: 8px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 8px;
+    }
+    .acc-group-title .acc-group-count {
+      color: var(--fg-3); font-weight: 400;
+      font-size: 9.5px; font-family: var(--mono);
+    }
+    .acc-group-title .acc-group-bullet {
+      width: 5px; height: 5px; border-radius: 50%;
+      display: inline-block; flex-shrink: 0;
+    }
+    .acc-group-cpp   .acc-group-bullet { background: var(--lang-cpp);   box-shadow: 0 0 5px var(--lang-cpp); }
+    .acc-group-python .acc-group-bullet { background: var(--lang-py);   box-shadow: 0 0 5px var(--lang-py); }
+    .acc-group-r      .acc-group-bullet { background: var(--lang-r);    box-shadow: 0 0 5px var(--lang-r); }
+    .acc-group-matlab .acc-group-bullet { background: var(--lang-m);    box-shadow: 0 0 5px var(--lang-m); }
+    .acc-group-ext-py .acc-group-bullet { background: var(--lang-py);   box-shadow: none; }
+    .acc-group-ext-r  .acc-group-bullet { background: var(--lang-r);    box-shadow: none; }
+    .acc-group-ext-ml .acc-group-bullet { background: var(--lang-m);    box-shadow: none; }
+    .acc-group-ext-jl .acc-group-bullet { background: var(--lang-jl);   box-shadow: none; }
+    .acc-group-ext-rs .acc-group-bullet { background: var(--lang-rs);   box-shadow: none; }
+    .acc-group-ext-go .acc-group-bullet { background: var(--lang-go);   box-shadow: none; }
+    .acc-group-ext-js .acc-group-bullet { background: var(--lang-js);   box-shadow: none; }
+    .acc-group-ext-java .acc-group-bullet { background: var(--lang-java); box-shadow: none; }
+    .acc-group-ext-cpp .acc-group-bullet { background: var(--lang-cpp); box-shadow: none; }
+
+    .acc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 6px;
+    }
+    .acc-card {
+      background: var(--ink-1);
+      border: 1px solid var(--line-2);
+      border-radius: 4px;
+      overflow: hidden;
+      transition: border-color 120ms, box-shadow 120ms;
+    }
+    .acc-card.kind-pls4all { border-color: var(--phosphor-soft); }
+    .acc-card:hover { border-color: var(--phosphor); }
+    .acc-card.open { box-shadow: 0 6px 18px rgba(15, 30, 40, 0.06); }
+    body.theme-dark .acc-card.open { box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55); }
+
+    .acc-card-head {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px;
+      cursor: pointer; user-select: none;
+      background: var(--ink-1);
+    }
+    .acc-card.kind-pls4all .acc-card-head { background: var(--phosphor-faint); }
+    .acc-card-head:hover { background: var(--ink-2); }
+    .acc-card.kind-pls4all .acc-card-head:hover { background: var(--phosphor-soft); }
+    .acc-card-arrow {
+      font-family: var(--mono); font-size: 9px;
+      color: var(--fg-3); width: 10px;
+      transition: transform 100ms;
+    }
+    .acc-card.open .acc-card-arrow { transform: rotate(90deg); color: var(--phosphor); }
+    .acc-card-label {
+      font-family: var(--mono); font-size: 11.5px;
+      color: var(--fg-0); font-weight: 500;
+      flex: 1; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .acc-card.kind-pls4all .acc-card-label { color: var(--phosphor); }
+    .acc-card-badge {
+      font-family: var(--sans); font-size: 8.5px;
+      font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 1.5px 6px; border-radius: 2px;
+      color: var(--fg-2);
+      background: var(--ink-3);
+    }
+    .acc-card.kind-pls4all .acc-card-badge {
+      color: var(--phosphor);
+      background: var(--phosphor-soft);
+    }
+    .acc-card-body {
+      display: none;
+      padding: 4px 12px 12px;
+      border-top: 1px solid var(--line);
+      background: var(--ink-1);
+    }
+    .acc-card.kind-pls4all .acc-card-body { background: var(--phosphor-faint); }
+    .acc-card.open .acc-card-body { display: block; }
+    .acc-card-tier {
+      font-family: var(--sans); color: var(--fg-1);
+      font-size: 11.5px; padding: 8px 0 4px;
+      font-weight: 500;
+    }
+    .acc-card-what {
+      font-family: var(--sans); color: var(--fg-0);
+      font-size: 12px; line-height: 1.55;
+      margin: 2px 0 8px;
+    }
+    .acc-card-what code {
+      font-family: var(--mono); font-size: 11px;
+      background: var(--ink-3); padding: 0.5px 4px; border-radius: 2px;
+      color: var(--phosphor);
+    }
+    .acc-card-version {
+      font-family: var(--mono); color: var(--fg-2);
+      font-size: 10.5px; line-height: 1.65;
+      background: var(--ink-2);
+      padding: 7px 10px; border-radius: 3px;
+      border: 1px solid var(--line);
+      white-space: normal; word-break: break-word;
+    }
+    .acc-card-version-label {
+      font-family: var(--sans); font-size: 9px;
+      text-transform: uppercase; letter-spacing: 0.16em;
+      color: var(--fg-3); font-weight: 600;
+      margin-bottom: 3px;
+    }
+    .acc-card-version-empty {
+      color: var(--fg-3); font-style: italic;
+    }
+
     /* ---------- FOOTER ---------- */
     .footer {
       text-align: center; color: var(--fg-2); font-size: 11px;
@@ -663,6 +1028,7 @@
       100% { transform: translateY(100vh); opacity: 0; }
     }
     .scanline {
+      display: none;       /* dark theme only — CRT effect */
       position: fixed; top: 0; left: 0; right: 0;
       height: 90px; pointer-events: none;
       background: linear-gradient(180deg,
@@ -674,6 +1040,7 @@
       animation: scan 1.4s cubic-bezier(0.4, 0.0, 0.2, 1) 1;
       z-index: 999;
     }
+    body.theme-dark .scanline { display: block; }
     @keyframes fade-in {
       from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -719,7 +1086,14 @@
         </div>
       </div>
     </div>
-    <div class="stat-strip" id="stat-strip"></div>
+    <div class="hero-right">
+      <div class="stat-strip" id="stat-strip"></div>
+      <button class="theme-toggle" id="theme-toggle" type="button"
+              aria-label="toggle light / dark theme"
+              title="toggle light / dark theme">
+        <span class="theme-ico-dark">🌙</span><span class="theme-ico-light">☀️</span>
+      </button>
+    </div>
   </div>
   <div class="hero-spectrum"></div>
   <div class="hero-spectrum-label">
@@ -792,8 +1166,9 @@
     <div class="control">
       <span class="control-label">viz</span>
       <select id="viz-mode">
-        <option value="duration">duration</option>
+        <option value="duration">duration (ms)</option>
         <option value="speedup">speed-up × vs pls4all.cpp</option>
+        <option value="avg-speedup">avg speed-up × (geomean / size)</option>
       </select>
     </div>
     <span class="ctrl-spacer"></span>
@@ -811,8 +1186,8 @@
     <span class="legend-item"><span class="ico p-error">!</span> error</span>
     <span class="legend-item"><span class="ico p-not_run">·</span> not run</span>
     <span class="legend-item"><span class="ico p-not_available">∅</span> not available in lib</span>
-    <span class="legend-item"><span class="cell-fastest" style="font-family:var(--mono);padding:0 4px">42.5</span> fastest overall</span>
-    <span class="legend-item" style="margin-left:auto;color:var(--fg-2);font-size:10px">click any header to sort · ⇧+click for asc</span>
+    <span class="legend-item"><span class="cell-fastest cell-fastest-bg" style="font-family:var(--mono);padding:1px 6px;border-radius:2px">42.5</span> fastest overall</span>
+    <span class="legend-item" style="margin-left:auto;color:var(--fg-2);font-size:10px">click header to sort · ⇧+click for descending</span>
   </div>
   <div class="table-wrap">
     <table class="bench" id="bench-table">
@@ -845,11 +1220,6 @@
     <div id="host-info"></div>
   </div>
   <div class="info-card">
-    <h3>backends</h3>
-    <p>Columns named <code>owner.language[.variant]</code>: <code>pls4all.*</code> are this project's bindings, others are external libraries.</p>
-    <div id="backend-info"></div>
-  </div>
-  <div class="info-card">
     <h3>parity verdict</h3>
     <p>Each cell shows <code>&lt;duration_ms&gt; &lt;icon&gt;</code> or <code>&lt;speed-up×&gt; &lt;icon&gt;</code> vs the native C++ column.</p>
     <ul>
@@ -862,6 +1232,21 @@
     </ul>
     <p><b>Bold</b> + phosphor highlight = fastest timed cell overall; language-colored text marks the fastest timed cell inside each language.</p>
   </div>
+</section>
+
+<!-- BACKENDS & LIBRARIES ACCORDION -->
+<section class="backends-section reveal reveal-4">
+  <div class="backends-header">
+    <h2>Backends &amp; libraries</h2>
+    <div class="backends-desc">
+      <span id="backends-count">— backends</span> grouped by host language. Click a card to expand its tier, description and reported versions. <code>pls4all.*</code> rows are this project's bindings; everything else is an external reference library.
+    </div>
+    <div class="backends-actions">
+      <button class="text-btn" id="acc-expand-all" type="button">expand all</button>
+      <button class="text-btn" id="acc-collapse-all" type="button">collapse all</button>
+    </div>
+  </div>
+  <div id="backends-acc" class="backends-acc"></div>
 </section>
 
 <div class="footer">
@@ -904,10 +1289,12 @@ function parseParity(raw) {
   return keys.length ? new Set(keys) : new Set(PARITY_VALUES);
 }
 
+const VIZ_VALUES = ['duration', 'speedup', 'avg-speedup'];
 function loadState() {
   const p = new URLSearchParams(location.hash.slice(1));
   const density = p.get('density') || '';
-  const viz = p.get('viz') || (p.get('speedup') === '1' ? 'speedup' : 'duration');
+  const rawViz = p.get('viz') || (p.get('speedup') === '1' ? 'speedup' : 'duration');
+  const viz = VIZ_VALUES.includes(rawViz) ? rawViz : 'duration';
   return {
     algo:    p.get('algo')    || '',
     group:   p.get('group')   || '',
@@ -921,7 +1308,7 @@ function loadState() {
     cols:    new Set((p.get('cols') || '').split('|').filter(Boolean)),
     sort:    parseSort(p.get('sort')),
     density: DENSITY_VALUES.includes(density) ? density : 'comfortable',
-    speedup: viz === 'speedup',
+    viz,
   };
 }
 function parseSort(s) {
@@ -948,7 +1335,7 @@ function saveState() {
   }
   if (state.sort) p.set('sort', `${state.sort.col}:${state.sort.dir === 1 ? 'asc' : 'desc'}`);
   if (state.density && state.density !== 'comfortable') p.set('density', state.density);
-  if (state.speedup) p.set('viz', 'speedup');
+  if (state.viz && state.viz !== 'duration') p.set('viz', state.viz);
   const h = p.toString();
   history.replaceState(null, '', h ? `#${h}` : location.pathname + location.search);
 }
@@ -1091,18 +1478,31 @@ function colLangSlug(col) {
   return LANG_SLUG[col.lang] || 'other';
 }
 
-// Returns [{slug, label, count, cols: [colMeta...]}] computed as
-// CONTIGUOUS runs of the same language in the actual visible column
-// order. This guarantees the band header colspans line up with the
-// body cells underneath, regardless of how the columns were sorted.
+// Returns [{slug, groupKey, label, count, cols: [colMeta...]}] computed
+// as CONTIGUOUS runs of the same (language, column-group) pair in the
+// visible column order. Splitting on group as well as language means
+// pls4all bindings and external libraries in the same language render
+// as distinct bands (e.g. "pls4all · Python" then "external · Python"),
+// not merged into one Python band. The CSS-facing `slug` is still the
+// language slug so the per-language band colour (`tr.lang-band th
+// .lang-${slug}`) keeps working unchanged.
 function visibleLangGroups(colMetas) {
   const groups = [];
   let cur = null;
   for (const c of colMetas) {
-    const s = colLangSlug(c);
-    if (!cur || cur.slug !== s) {
-      cur = { slug: s, label: LANG_LABEL[s] || c.lang || 'Other',
-              count: 0, cols: [] };
+    const langSlug = colLangSlug(c);
+    const groupKey = c.group || 'other';
+    if (!cur || cur.slug !== langSlug || cur.groupKey !== groupKey) {
+      cur = {
+        slug: langSlug,
+        groupKey,
+        label: COLUMN_GROUP_LABELS[groupKey]
+               || LANG_LABEL[langSlug]
+               || c.lang
+               || 'Other',
+        count: 0,
+        cols: [],
+      };
       groups.push(cur);
     }
     cur.cols.push(c);
@@ -1167,7 +1567,13 @@ function sortRows(rows, cols) {
   const r = [...rows];
   r.sort((a, b) => {
     if (col === '__algo')    return dir * a.algo.localeCompare(b.algo);
-    if (col === '__size')    return dir * (a.n * a.p - b.n * b.p);
+    if (col === '__size') {
+      // avg-speedup rows have no concrete size — keep them adjacent at
+      // the same rank regardless of direction.
+      const av = a.isAvg ? -Infinity : (a.n * a.p);
+      const bv = b.isAvg ? -Infinity : (b.n * b.p);
+      return dir * (av - bv);
+    }
     if (col === '__threads') return dir * (a.threads - b.threads);
     // Cell-value sort: empty / non-numeric cells ALWAYS sink to the
     // bottom (regardless of direction). Direction only flips the order
@@ -1206,25 +1612,31 @@ function renderPresetRail() {
   // Effective visible columns = the intersection of state.cols and the
   // language filter. Preset detection compares against the effective
   // set so the language filter doesn't make every preset look "custom".
+  // The NATIVE column is force-injected at runtime regardless of preset
+  // — normalise both sides to ignore it so the match isn't foiled by
+  // that one phantom diff (without this fix, every preset that doesn't
+  // include cpp.ref in its definition shows as "custom" with +1 col).
   const effective = visibleColIds();
-  const colsList = [...effective].sort().join('|');
-  // For each preset, also restrict its column list to the active
-  // language filter before comparison.
-  const presetEffective = (cols) => cols
+  const norm = (ids) => ids
+    .filter(id => id !== NATIVE_COL_ID)
     .filter(id => {
       const c = DATA.columns.find(x => x.id === id);
       return c && (!state.lang || c.lang === state.lang);
     })
     .sort()
     .join('|');
+  const colsList = norm(effective);
   let html = '<span class="preset-label">view</span>';
   let anyMatch = false;
   for (const [k, p] of Object.entries(DATA.presets)) {
-    const pe = presetEffective(p.cols);
+    const pe = norm(p.cols);
     const matches = pe === colsList && pe.length > 0;
     if (matches) anyMatch = true;
-    const count = pe ? pe.split('|').length : 0;
-    html += `<span class="preset-pill${matches ? ' active' : ''}" data-preset="${k}">${p.label}<span class="cnt">${count}</span></span>`;
+    // Count = preset cols present in data + native baseline (shown on screen).
+    const present = p.cols.filter(id => DATA.columns.find(x => x.id === id));
+    const withNative = new Set(present);
+    if (NATIVE_COL_ID) withNative.add(NATIVE_COL_ID);
+    html += `<span class="preset-pill${matches ? ' active' : ''}" data-preset="${k}">${p.label}<span class="cnt">${withNative.size}</span></span>`;
   }
   if (!anyMatch) {
     html += `<span class="preset-pill active" data-preset="">custom<span class="cnt">${effective.length}</span></span>`;
@@ -1298,7 +1710,7 @@ function renderControls() {
     chip.classList.toggle('active', state.parity.has(chip.dataset.parity));
   }
 
-  $('viz-mode').value = state.speedup ? 'speedup' : 'duration';
+  $('viz-mode').value = state.viz;
   $('density-select').value = state.density;
   document.body.classList.remove('density-comfortable', 'density-compact', 'density-ultra');
   document.body.classList.add(`density-${state.density}`);
@@ -1344,31 +1756,30 @@ function renderColPicker() {
   $('cols-count').textContent = `${eff}/${DATA.columns.length}`;
 }
 
-// Compact column header label. In comfortable mode we want full
-// fidelity for pls4all bindings but already-shortened slugs for the
-// long `ref.python_nirs4all_operators_models_sklearn_lwpls` style ids.
-// In compact / ultra we always prefer the build-script's `col.short`.
+// Compact column header label. Always use `col.short` so the header
+// band stays scannable across 47 backends — full labels live in the
+// tooltip + the column-picker + the bottom accordion. Same short can
+// collide across a pls4all binding and the external it mimics
+// (pls4all.sklearn vs sklearn both → "sklearn"); they're disambiguated
+// visually by the phosphor-tinted .native-col / pls4all binding bands.
 function shortLabel(label) {
   const meta = DATA.columns.find(c => c.label === label);
-  if (meta && meta.id === NATIVE_COL_ID) {
-    return state.density === 'ultra' ? 'cpp' : 'pls4all.cpp';
-  }
-  if (meta && meta.short) {
-    if (state.density === 'comfortable') {
-      // For ref.* labels which are absurdly long, prefer the short
-      // form even in comfortable mode.
-      return label.startsWith('ref.') ? meta.short : label;
-    }
-    return meta.short;
-  }
-  return label;
+  if (!meta) return label;
+  if (meta.id === NATIVE_COL_ID) return 'cpp.ref';
+  return meta.short || label;
 }
 
-// Strip "ms" unit suffix in ultra density to save horizontal space.
-// "42.5 ms" → "42.5"; "1.2 s" stays (we keep the unit when scale changes).
+// Strip the default "ms" unit from every cell ONLY at ultra density,
+// where every pixel matters. In comfortable / compact modes keep the
+// suffix — most readers want to see units inline, and the cells aren't
+// long enough for ms-stripping to free up much horizontal space at
+// those zoom levels. Non-default units (" s", " µs") are always kept so
+// the scale change stays visible regardless of density.
 function densifyFmt(fmt) {
-  if (state.density !== 'ultra') return fmt;
-  if (fmt.endsWith(' ms')) return fmt.slice(0, -3);
+  if (!fmt) return fmt;
+  if (state.density === 'ultra' && fmt.endsWith(' ms')) {
+    return fmt.slice(0, -3);
+  }
   return fmt;
 }
 
@@ -1381,7 +1792,13 @@ function renderTable() {
   const colMetas = cols.map(id => allColsById[id]).filter(Boolean);
   const colsById = Object.fromEntries(colMetas.map(c => [c.id, c]));
 
-  const rowsFiltered = applyRowFilters().filter(r => rowHasVisibleCell(r, cols));
+  let rowsFiltered = applyRowFilters().filter(r => rowHasVisibleCell(r, cols));
+  // avg-speedup viz: collapse rows across sizes via geomean of speed-up
+  // ratios, so each (algo, threads) shows up once with the average
+  // multiplier vs the native baseline.
+  if (state.viz === 'avg-speedup' && NATIVE_COL_ID) {
+    rowsFiltered = aggregateRowsBySize(rowsFiltered, NATIVE_COL_ID);
+  }
   const rows = sortRows(rowsFiltered, cols);
 
   // language groups for the band row + per-cell tinted borders
@@ -1399,7 +1816,20 @@ function renderTable() {
     const s = colLangSlug(col);
     const first = langFirstCol[col.id] ? ' col-lang-first' : '';
     const native = col.id === NATIVE_COL_ID ? ' native-col' : '';
-    return s ? `col-${s}${first}${native}` : native.trim();
+    // Every pls4all binding (not just the native baseline) gets the
+    // phosphor tint so the "ours vs theirs" comparison is unambiguous.
+    const p4a = (col.kind || '').toLowerCase() === 'pls4all' ? ' col-pls4all' : '';
+    return s ? `col-${s}${first}${native}${p4a}` : (native + p4a).trim();
+  };
+
+  // Tooltip text for backend column headers — full label + tier + lang
+  // + what description. Multi-line via \n so it's readable when pinned.
+  const headerTitle = (c) => {
+    const parts = [c.label];
+    if (c.tier) parts.push(c.tier);
+    if (c.lang) parts.push(c.lang);
+    if (c.what) parts.push('— ' + c.what);
+    return parts.join('\n').replace(/"/g, '&quot;');
   };
 
   // === HEADER: language band row + column header row ===
@@ -1411,18 +1841,23 @@ function renderTable() {
     head += `<th class="lang-${g.slug}" colspan="${g.count}">${g.label}<span style="opacity:0.6;font-weight:400;margin-left:5px">${g.count}</span></th>`;
   }
   head += `</tr><tr>`;
-  head += `<th class="algo-col ${sortCls('__algo')}" data-col="__algo">algorithm${arrowFor('__algo')}</th>`;
-  head += `<th class="size-col ${sortCls('__size')}" data-col="__size">size${arrowFor('__size')}</th>`;
-  head += `<th class="thread-col ${sortCls('__threads')}" data-col="__threads">t${arrowFor('__threads')}</th>`;
+  head += `<th class="algo-col ${sortCls('__algo')}" data-col="__algo"><span class="col-label">algorithm${arrowFor('__algo')}</span></th>`;
+  head += `<th class="size-col ${sortCls('__size')}" data-col="__size"><span class="col-label">size${arrowFor('__size')}</span></th>`;
+  head += `<th class="thread-col ${sortCls('__threads')}" data-col="__threads"><span class="col-label">t${arrowFor('__threads')}</span></th>`;
   for (const c of colMetas) {
-    const meta = state.density === 'comfortable' ? [c.tier, c.lang].filter(Boolean).join(' · ') : c.tier || '';
     const lcls = langCls(c);
-    head += `<th class="${sortCls(c.id)} ${lcls}" data-col="${c.id}" title="${(c.what || '').replace(/"/g,'&quot;')}"><span class="col-label">${shortLabel(c.label)}</span><span class="col-meta">${meta}</span>${arrowFor(c.id)}</th>`;
+    // The col-meta line below the short label carries the tier (e.g.
+    // "pls4all reference", "external", "pls4all + BLAS + OpenMP") so
+    // users see what flavour of binding they're comparing without
+    // hovering for the tooltip. Hidden in compact / ultra densities.
+    const sub = c.tier || c.kind || '';
+    head += `<th class="${sortCls(c.id)} ${lcls}" data-col="${c.id}" title="${headerTitle(c)}"><span class="col-label">${shortLabel(c.label)}${arrowFor(c.id)}</span><span class="col-meta">${sub}</span></th>`;
   }
   $('bench-head').innerHTML = head;
 
   // === BODY ===
-  const baselineId = state.speedup && NATIVE_COL_ID ? NATIVE_COL_ID : null;
+  const speedupMode = state.viz === 'speedup' || state.viz === 'avg-speedup';
+  const baselineId = speedupMode && NATIVE_COL_ID ? NATIVE_COL_ID : null;
   if (!rows.length) {
     $('bench-body').innerHTML = `<tr><td colspan="${cols.length + 3}"><div class="empty-state">
       <h3>nothing in this slice.</h3>
@@ -1438,7 +1873,10 @@ function renderTable() {
       const baseMs    = baseCell && Number.isFinite(baseCell.ms) ? baseCell.ms : null;
       const canHighlight = !baselineId || baseMs !== null;
       const tCls = `thread-pill t-${row.threads}`;
-      let tr = `<tr><td class="algo-cell">${row.algo}</td><td class="size-cell">${row.n}×${row.p}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
+      const sizeHtml = row.isAvg
+        ? `<span class="size-avg" title="geomean across ${row.sizesCount} size${row.sizesCount === 1 ? '' : 's'}">avg · ${row.sizesCount}</span>`
+        : `${row.n}×${row.p}`;
+      let tr = `<tr><td class="algo-cell">${row.algo}</td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
       for (const id of cols) {
         const meta = colsById[id];
         const lcls = meta ? langCls(meta).replace('native-col', 'native-cell') : '';
@@ -1487,11 +1925,80 @@ function renderTable() {
 
   // meta
   $('visible-count').textContent = `${rows.length} row${rows.length === 1 ? '' : 's'} · ${cols.length} cols`;
-  const ms = `${DATA.rows.length} rows · ${DATA.stats.cells.toLocaleString()} cells total`;
-  $('table-meta-left').textContent  = ms;
-  $('table-meta-right').textContent = baselineId
-    ? `speed-up multiplier · baseline = ${baselineId}`
-    : `absolute median wall-clock (ms) · ${langGroups.length} language${langGroups.length === 1 ? '' : 's'} shown`;
+  $('table-meta-left').textContent = `${DATA.rows.length} rows · ${DATA.stats.cells.toLocaleString()} cells total`;
+  if (state.viz === 'avg-speedup' && baselineId) {
+    $('table-meta-right').textContent = `geomean speed-up × · baseline = ${baselineId} · sizes collapsed`;
+  } else if (baselineId) {
+    $('table-meta-right').textContent = `speed-up multiplier · baseline = ${baselineId}`;
+  } else {
+    $('table-meta-right').textContent = `absolute median wall-clock (ms) · ${langGroups.length} language${langGroups.length === 1 ? '' : 's'} shown`;
+  }
+}
+
+// Aggregate rows by (algo, threads). Cells are collapsed across (n, p)
+// using the geometric mean of the per-size speed-up vs the baseline
+// column. We anchor the baseline cell to ms=1 so the existing renderer
+// computes ratios correctly (baseMs/c.ms = geomean).
+function aggregateRowsBySize(rows, baselineId) {
+  if (!rows.length) return rows;
+  const groups = new Map();
+  for (const r of rows) {
+    const key = `${r.algo}|${r.threads}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  }
+  const PARITY_RANK = { exact: 0, drift: 1, divergent: 2, error: 3, not_run: 4, not_available: 5 };
+  const out = [];
+  for (const [, group] of groups) {
+    const sample = group[0];
+    const allColIds = new Set();
+    for (const r of group) for (const id in r.cells) allColIds.add(id);
+    const newCells = {};
+    for (const id of allColIds) {
+      const ratios = [];
+      const parities = new Set();
+      let lastReason = null;
+      for (const r of group) {
+        const c = r.cells[id];
+        const baseC = r.cells[baselineId];
+        if (!c) { parities.add('not_available'); continue; }
+        parities.add(c.parity || 'not_run');
+        if (c.reason) lastReason = c.reason;
+        if (!c.ok || !Number.isFinite(c.ms)) continue;
+        if (!baseC || !Number.isFinite(baseC.ms)) continue;
+        ratios.push(baseC.ms / c.ms);
+      }
+      if (!ratios.length) {
+        let parity = 'not_run';
+        for (const p of parities) {
+          if ((PARITY_RANK[p] ?? 99) > (PARITY_RANK[parity] ?? 99)) parity = p;
+        }
+        newCells[id] = { parity, ok: false, ms: null, reason: lastReason };
+        continue;
+      }
+      const geomean = Math.exp(ratios.reduce((s, r) => s + Math.log(r), 0) / ratios.length);
+      let parity = 'exact';
+      for (const p of parities) {
+        if (p === 'not_available' || p === 'not_run' || p === 'error') continue;
+        if ((PARITY_RANK[p] ?? 99) > (PARITY_RANK[parity] ?? 99)) parity = p;
+      }
+      newCells[id] = {
+        parity, ok: true, ms: 1 / geomean,
+        fmt: fmtSpeedup(geomean),
+        reason: `geomean over ${ratios.length} size${ratios.length === 1 ? '' : 's'}`,
+      };
+    }
+    newCells[baselineId] = {
+      parity: (newCells[baselineId] && newCells[baselineId].parity) || 'exact',
+      ok: true, ms: 1, fmt: '1.00×',
+    };
+    out.push({
+      algo: sample.algo, threads: sample.threads,
+      n: null, p: null, isAvg: true, sizesCount: group.length,
+      cells: newCells,
+    });
+  }
+  return out;
 }
 
 function renderInfo() {
@@ -1510,10 +2017,76 @@ function renderInfo() {
   $('host-info').innerHTML = rows.map(([k,v]) =>
     `<div class="kv-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
 
-  $('backend-info').innerHTML = DATA.columns.map(c => {
-    const version = DATA.versions[c.id] || 'version not reported';
-    return `<div class="kv-row"><span class="k">${c.label}</span><span class="v">${c.tier}${c.lang ? ' · ' + c.lang : ''}<br><span style="font-size:10.5px;color:var(--fg-2);white-space:normal;line-height:1.45">${version}</span></span></div>`;
-  }).join('');
+  renderBackendsAccordion();
+}
+
+// Backends & libraries accordion — one expandable card per column,
+// grouped by language so the dashboard's 47 backends are skimmable
+// (the previous flat list was unusable).
+function renderBackendsAccordion() {
+  const root = $('backends-acc');
+  if (!root) return;
+  const countEl = $('backends-count');
+  if (countEl) {
+    const n = DATA.columns.length;
+    countEl.textContent = `${n} backend${n === 1 ? '' : 's'}`;
+  }
+  // Group columns by their canonical group key (cpp, python, r,
+  // matlab, ext-py, ext-r, ...). The COLUMN_GROUP_ORDER already
+  // defined for the column-picker is reused so this stays in lockstep
+  // with the table header bands.
+  const groups = {};
+  for (const c of DATA.columns) {
+    (groups[c.group] = groups[c.group] || []).push(c);
+  }
+  const ordered = [
+    ...COLUMN_GROUP_ORDER.filter(g => groups[g]),
+    ...Object.keys(groups).filter(g => !COLUMN_GROUP_ORDER.includes(g)).sort(),
+  ];
+  let html = '';
+  for (const g of ordered) {
+    const cols = groups[g];
+    const label = COLUMN_GROUP_LABELS[g] || g;
+    html += `<div class="acc-group acc-group-${g}">
+      <div class="acc-group-title">
+        <span class="acc-group-bullet"></span>
+        <span>${label}</span>
+        <span class="acc-group-count">${cols.length}</span>
+      </div>
+      <div class="acc-grid">`;
+    for (const c of cols) {
+      const isPls4all = (c.kind || '').toLowerCase() === 'pls4all';
+      const kindBadge = isPls4all ? 'pls4all' : 'external';
+      const kindCls   = isPls4all ? 'kind-pls4all' : 'kind-external';
+      const version = DATA.versions[c.id];
+      const versionHtml = version
+        ? `<div class="acc-card-version">${escAttr(version)}</div>`
+        : `<div class="acc-card-version acc-card-version-empty">no version reported</div>`;
+      html += `<div class="acc-card ${kindCls}" data-col-id="${escAttr(c.id)}">
+        <div class="acc-card-head">
+          <span class="acc-card-arrow">▸</span>
+          <span class="acc-card-label" title="${escAttr(c.label)}">${escAttr(c.label)}</span>
+          <span class="acc-card-badge">${kindBadge}</span>
+        </div>
+        <div class="acc-card-body">
+          <div class="acc-card-tier">${escAttr(c.tier || '')}${c.lang ? ' · ' + escAttr(c.lang) : ''}</div>
+          ${c.what ? `<div class="acc-card-what">${c.what}</div>` : ''}
+          <div class="acc-card-version-label">version</div>
+          ${versionHtml}
+        </div>
+      </div>`;
+    }
+    html += `</div></div>`;
+  }
+  root.innerHTML = html;
+  // Wire click handlers via event delegation so dynamic re-renders
+  // (which we don't expect, but might add for filtering) stay live.
+  root.onclick = (e) => {
+    const head = e.target.closest('.acc-card-head');
+    if (!head) return;
+    const card = head.parentElement;
+    card.classList.toggle('open');
+  };
 }
 
 function render() {
@@ -1556,12 +2129,15 @@ function wire() {
     state.density = DENSITY_VALUES.includes(e.target.value) ? e.target.value : 'comfortable';
     rerender();
   });
-  $('viz-mode').addEventListener('change', e => { state.speedup = e.target.value === 'speedup'; rerender(); });
+  $('viz-mode').addEventListener('change', e => {
+    state.viz = VIZ_VALUES.includes(e.target.value) ? e.target.value : 'duration';
+    rerender();
+  });
   $('reset-btn').addEventListener('click', () => {
     state.algo = ''; state.group = ''; state.lang = ''; state.libGroup = ''; state.lib = '';
     state.size = ''; state.threads = ''; state.search = '';
     state.parity = new Set(PARITY_VALUES);
-    state.sort = null; state.speedup = false; state.density = 'comfortable';
+    state.sort = null; state.viz = 'duration'; state.density = 'comfortable';
     state.cols = new Set(DATA.columns.map(c => c.id));
     if (NATIVE_COL_ID) state.cols.add(NATIVE_COL_ID);
     rerender();
@@ -1577,6 +2153,20 @@ function wire() {
     if (NATIVE_COL_ID) state.cols.add(NATIVE_COL_ID);
     rerender();
   });
+
+  // backends accordion expand / collapse all
+  const expandAllBtn = $('acc-expand-all');
+  const collapseAllBtn = $('acc-collapse-all');
+  if (expandAllBtn) {
+    expandAllBtn.addEventListener('click', () => {
+      document.querySelectorAll('#backends-acc .acc-card').forEach(c => c.classList.add('open'));
+    });
+  }
+  if (collapseAllBtn) {
+    collapseAllBtn.addEventListener('click', () => {
+      document.querySelectorAll('#backends-acc .acc-card').forEach(c => c.classList.remove('open'));
+    });
+  }
 
   // column-picker open/close
   const ddl = $('cols-dropdown');
@@ -1622,17 +2212,19 @@ function wire() {
   });
 
   // sortable headers
-  // - plain click on a new column → desc (fastest first for ms values)
-  // - shift+click on a new column → asc
-  // - subsequent clicks on the SAME column cycle: desc → asc → off
+  // - plain click on a new column → asc (= fastest first for ms values,
+  //   A→Z for text, low→high for size/threads). The previous default
+  //   (desc) hid the interesting rows at the bottom.
+  // - shift+click on a new column → desc
+  // - clicking the SAME column cycles: asc → desc → off
   $('bench-head').addEventListener('click', e => {
     const th = e.target.closest('th.sortable');
     if (!th) return;
     const col = th.dataset.col;
     if (!state.sort || state.sort.col !== col) {
-      state.sort = { col, dir: e.shiftKey ? 1 : -1 };
-    } else if (state.sort.dir === -1) {
-      state.sort = { col, dir: 1 };
+      state.sort = { col, dir: e.shiftKey ? -1 : 1 };
+    } else if (state.sort.dir === 1) {
+      state.sort = { col, dir: -1 };
     } else {
       state.sort = null;
     }
@@ -1647,7 +2239,32 @@ function rerender() {
   saveState();
 }
 
+// ---------- theme toggle ----------
+// Light is the default; users can flip to the CRT-phosphor dark theme.
+// Choice persists in localStorage.
+const THEME_KEY = 'pls4all.dashboard.theme';
+function applyTheme(theme) {
+  if (theme === 'dark') document.body.classList.add('theme-dark');
+  else document.body.classList.remove('theme-dark');
+}
+function initTheme() {
+  let theme = 'light';
+  try { theme = localStorage.getItem(THEME_KEY) || 'light'; } catch (e) {}
+  applyTheme(theme);
+}
+function wireThemeToggle() {
+  const btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const next = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
+    applyTheme(next);
+    try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+  });
+}
+
 // boot
+initTheme();
+wireThemeToggle();
 wire();
 render();
 
