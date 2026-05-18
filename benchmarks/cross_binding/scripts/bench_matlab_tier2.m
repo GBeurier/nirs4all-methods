@@ -90,6 +90,12 @@ end
 if isfield(params, "learning_rate")
     nv = [nv, {"LearningRate", double(params.learning_rate)}];
 end
+if isfield(params, "seed")
+    nv = [nv, {"Seed", double(params.seed)}];
+end
+if isfield(params, "features_per_subspace")
+    nv = [nv, {"FeaturesPerSubspace", double(params.features_per_subspace)}];
+end
 if isfield(params, "n_predictive")
     nv = [nv, {"NPredictive", double(params.n_predictive)}];
 end

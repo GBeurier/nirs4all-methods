@@ -187,11 +187,19 @@ def main():
             pass
         fit_sig_params = set(inspect.signature(cls.fit).parameters) - {"self"}
         # PLS-Cox-style: fit(X, survival_times, event_indicators) — y is
-        # repurposed as survival data, with all-events for the cell.
+        # repurposed as survival data. Match the registry convention
+        # exactly: `survival_times = abs(y) + 0.5` (already in extras
+        # under "sample_weights"), `event_indicators = (y_labels > 0)`.
         if "survival_times" in fit_sig_params:
-            st = np.abs(y.ravel()) + 0.5
-            ev = np.ones(n, dtype=np.int32)
-            est.fit(X, survival_times=st, event_indicators=ev)
+            sw = extras.get("sample_weights")
+            yl = extras.get("y_labels")
+            if sw is None:
+                sw = np.abs(y.ravel()) + 0.5
+            if yl is None:
+                yl = np.ones(n, dtype=np.int32)
+            ev = (np.asarray(yl, dtype=np.int32) > 0).astype(np.int32)
+            est.fit(X, survival_times=np.asarray(sw, dtype=np.float64),
+                    event_indicators=ev)
         # Classifiers carry labels in extras under "y_labels"; the
         # estimator either expects `y_labels=` or just `y` in label form.
         elif "y_labels" in extras and "y_labels" in fit_sig_params:
