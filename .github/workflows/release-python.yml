@@ -1,0 +1,336 @@
+# Build pls4all Python wheels (cibuildwheel + auditwheel/delocate/delvewheel),
+# retag to py3-none-${platform}, smoke-test the installed wheel, and publish
+# to TestPyPI (for -rc tags) or PyPI (for v* tags) via Trusted Publishing
+# (OIDC).
+#
+# Triggers
+# --------
+# - push tags v*.*.*[-rcN]   → builds + publishes
+# - pull_request on python/* → builds + smoke (no publish)
+# - workflow_dispatch        → builds, optionally publishes via input
+#
+# References
+# ----------
+# - cibuildwheel docs: https://cibuildwheel.pypa.io/
+# - PyPA gh-action-pypi-publish: https://github.com/pypa/gh-action-pypi-publish
+# - PyPI Trusted Publishers: https://docs.pypi.org/trusted-publishers/
+#
+# Trusted Publishing config (one-time, maintainer action)
+# -------------------------------------------------------
+# PyPI side:    https://pypi.org/manage/account/publishing/
+#   PyPI Project Name = pls4all
+#   Owner             = GBeurier
+#   Repository name   = pls4all
+#   Workflow filename = release-python.yml
+#   Environment       = pypi
+# Same on TestPyPI:  https://test.pypi.org/manage/account/publishing/
+#   Environment       = testpypi
+
+name: release-python
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+      - "v*.*.*-rc*"
+  pull_request:
+    paths:
+      - "bindings/python/**"
+      - "cpp/**"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "CMakePresets.json"
+      - ".github/workflows/release-python.yml"
+  workflow_dispatch:
+    inputs:
+      publish_to:
+        description: "Optional publish target (testpypi / pypi / none)"
+        required: true
+        default: "none"
+        type: choice
+        options: [none, testpypi, pypi]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # =========================================================================
+  # Build sdist
+  # =========================================================================
+  sdist:
+    name: sdist
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling
+        run: pip install --upgrade build
+
+      - name: Build sdist
+        working-directory: bindings/python
+        run: python -m build --sdist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-sdist
+          path: bindings/python/dist/*.tar.gz
+          if-no-files-found: error
+
+  # =========================================================================
+  # Build wheels across the platform matrix
+  # =========================================================================
+  wheels:
+    name: wheels / ${{ matrix.cfg.label }}
+    runs-on: ${{ matrix.cfg.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        cfg:
+          - label: linux-x86_64
+            runs_on: ubuntu-22.04
+            cibw_archs: x86_64
+            cibw_build: "cp312-manylinux_x86_64 cp312-musllinux_x86_64"
+          - label: linux-aarch64
+            runs_on: ubuntu-22.04-arm
+            cibw_archs: aarch64
+            cibw_build: "cp312-manylinux_aarch64 cp312-musllinux_aarch64"
+          - label: macos-universal2
+            runs_on: macos-14
+            cibw_archs: universal2
+            cibw_build: "cp312-macosx_universal2"
+          - label: windows-amd64
+            runs_on: windows-2022
+            cibw_archs: AMD64
+            cibw_build: "cp312-win_amd64"
+
+    env:
+      CIBW_BUILD: ${{ matrix.cfg.cibw_build }}
+      CIBW_ARCHS: ${{ matrix.cfg.cibw_archs }}
+      # Run libp4a's CMake build once per matrix entry, before any wheel.
+      CIBW_BEFORE_ALL_LINUX: bash bindings/python/scripts/build_libp4a_in_wheel.sh
+      CIBW_BEFORE_ALL_MACOS: bash bindings/python/scripts/build_libp4a_in_wheel.sh
+      CIBW_BEFORE_ALL_WINDOWS: bash bindings/python/scripts/build_libp4a_in_wheel.sh
+      # Wheel repair: bundle/verify libp4a + sibling deps.
+      CIBW_REPAIR_WHEEL_COMMAND_LINUX: "auditwheel repair -w {dest_dir} {wheel}"
+      CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
+      # cibuildwheel does NOT ship a Windows default; declare delvewheel explicitly.
+      CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "pip install delvewheel && delvewheel repair -w {dest_dir} {wheel}"
+      # The Python build backend lives under bindings/python, not at repo root.
+      CIBW_BUILD_VERBOSITY: "1"
+      # Run a clean-venv smoke test against the freshly built wheel, BEFORE
+      # we accept it.
+      CIBW_TEST_COMMAND: "python -c \"import pls4all; v = pls4all.version(); print('OK', v); assert v.startswith('0.97.0'), v\""
+      # cibuildwheel must look at bindings/python for the project metadata.
+      CIBW_BUILD_FRONTEND: "build"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling (CMake + cibuildwheel)
+        run: |
+          python -m pip install --upgrade pip
+          pip install cibuildwheel==2.21.3
+
+      - name: Linux toolchain (cmake for the manylinux runner host)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-12 g++-12 ninja-build cmake
+
+      - name: macOS toolchain
+        if: runner.os == 'macOS'
+        run: brew install ninja cmake
+
+      - name: Windows toolchain
+        if: runner.os == 'Windows'
+        uses: microsoft/setup-msbuild@v2
+
+      # cibuildwheel is invoked with bindings/python as the project root.
+      - name: Build wheels with cibuildwheel
+        run: cibuildwheel --output-dir wheelhouse bindings/python
+
+      - name: Retag wheels cp312 → py3
+        run: |
+          python bindings/python/scripts/retag_wheels.py wheelhouse --inplace
+
+      - name: Verify retag and inspect wheels
+        shell: bash
+        run: |
+          echo "=== Wheels in wheelhouse/ ==="
+          ls -la wheelhouse/
+          for whl in wheelhouse/*.whl; do
+            echo ""
+            echo "::group::Inspect $(basename "$whl")"
+            python -m zipfile -l "$whl" | head -40
+            python -c "
+          import zipfile, sys
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              wheel = [n for n in z.namelist() if n.endswith('.dist-info/WHEEL')][0]
+              print(z.read(wheel).decode())
+          " "$whl"
+            echo "::endgroup::"
+          done
+
+      - name: Installed-wheel smoke test
+        shell: bash
+        run: |
+          python -m venv /tmp/p4a-smoke
+          # shellcheck disable=SC1091
+          . /tmp/p4a-smoke/bin/activate 2>/dev/null || . /tmp/p4a-smoke/Scripts/activate
+          python -m pip install --upgrade pip
+          # Pick any wheel — they're identical apart from platform tag.
+          python -m pip install wheelhouse/pls4all-*.whl
+          python -c "
+          import pls4all
+          v = pls4all.version()
+          print('version =', v)
+          assert v.startswith('0.97.0+abi.'), v
+          assert pls4all.__version__ == '0.97.0', pls4all.__version__
+          assert pls4all.abi_version() == (1, 16, 0), pls4all.abi_version()
+          print('SMOKE OK')
+          "
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.cfg.label }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  # =========================================================================
+  # Publish to TestPyPI (push of a -rc tag, or manual)
+  # =========================================================================
+  publish-testpypi:
+    name: publish to TestPyPI
+    needs: [sdist, wheels]
+    if: |
+      (github.event_name == 'push' && contains(github.ref, '-rc')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish_to == 'testpypi')
+    runs-on: ubuntu-22.04
+    environment: testpypi
+    permissions:
+      id-token: write
+    steps:
+      - name: Download all dist artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: dist-*
+          merge-multiple: true
+
+      - name: Inspect dist/
+        run: ls -la dist/
+
+      - name: Publish to TestPyPI via Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+          attestations: true
+          packages-dir: dist
+
+  # =========================================================================
+  # Publish to PyPI (push of a v* tag without -rc, or manual)
+  # =========================================================================
+  publish-pypi:
+    name: publish to PyPI
+    needs: [sdist, wheels]
+    if: |
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-rc')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish_to == 'pypi')
+    runs-on: ubuntu-22.04
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - name: Download all dist artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: dist-*
+          merge-multiple: true
+
+      - name: Inspect dist/
+        run: ls -la dist/
+
+      - name: Publish to PyPI via Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+          attestations: true
+          packages-dir: dist
+
+  # =========================================================================
+  # Post-publish smoke test (re-install from the public index)
+  # =========================================================================
+  post-publish-smoke:
+    name: post-publish smoke (${{ matrix.target }})
+    needs: [publish-testpypi, publish-pypi]
+    if: |
+      always() &&
+      (
+        needs.publish-testpypi.result == 'success' ||
+        needs.publish-pypi.result == 'success'
+      )
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - testpypi
+          - pypi
+        include:
+          - target: testpypi
+            extra: "--index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple"
+            condition: needs.publish-testpypi.result == 'success'
+          - target: pypi
+            extra: ""
+            condition: needs.publish-pypi.result == 'success'
+    steps:
+      - name: Skip when this target was not published
+        if: ${{ !matrix.condition }}
+        run: |
+          echo "publish-${{ matrix.target }} did not run; skipping smoke test."
+          exit 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Extract version from ref
+        id: ver
+        run: |
+          ref="${GITHUB_REF#refs/tags/v}"
+          echo "version=${ref}" >> "$GITHUB_OUTPUT"
+
+      - name: Install from public index + verify
+        if: ${{ matrix.condition }}
+        run: |
+          set -euo pipefail
+          python -m venv /tmp/post-smoke
+          # shellcheck disable=SC1091
+          . /tmp/post-smoke/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install ${{ matrix.extra }} "pls4all==${{ steps.ver.outputs.version }}"
+          python -c "
+          import pls4all
+          v = pls4all.version()
+          print('post-publish smoke version =', v)
+          assert v.startswith('${{ steps.ver.outputs.version }}+abi.'), v
+          print('POST-PUBLISH OK')
+          "
