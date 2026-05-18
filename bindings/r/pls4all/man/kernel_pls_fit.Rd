@@ -14,6 +14,21 @@ kernel_pls_fit(
   degree = 3L
 )
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{kernel_type}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{gamma}{Numeric. CPPLS / kernel band parameter.}
+
+\item{coef0}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{degree}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 Non-linear kernel PLS (Rosipal & Trejo 2001).
 }

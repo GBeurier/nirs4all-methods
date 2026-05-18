@@ -7,11 +7,11 @@
 cppls_fit(X, Y, n_components, gamma = 0.5)
 }
 \arguments{
-\item{X}{Numeric matrix.}
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
 
-\item{Y}{Numeric matrix or vector.}
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
 
-\item{n_components}{Integer >= 1.}
+\item{n_components}{Integer. Number of latent components.}
 
 \item{gamma}{Power exponent in [0, 1]. 0 recovers SIMPLS, 1 is fully
 power-rescaled.}

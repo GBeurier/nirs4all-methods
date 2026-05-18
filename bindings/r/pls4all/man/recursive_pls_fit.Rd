@@ -6,6 +6,15 @@
 \usage{
 recursive_pls_fit(X, Y, n_components, window_size = 50L)
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{window_size}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 Moving-window recursive PLS.
 }

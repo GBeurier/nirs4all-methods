@@ -7,7 +7,18 @@
 weighted_pls(formula, data, ncomp = 2L, weights, na.action = stats::na.omit)
 }
 \arguments{
+\item{formula}{A two-sided formula (e.g. `y ~ .` or
+`y ~ x1 + x2 + x3`). Response on the left, predictors on the right.}
+
+\item{data}{A `data.frame` (or anything `as.data.frame`-coercible)
+containing the response and predictor columns referenced by
+`formula`.}
+
+\item{ncomp}{Integer. Number of latent components.}
+
 \item{weights}{Numeric vector of length nrow(data) with sample weights.}
+
+\item{na.action}{What to do with `NA`s. Default: `na.omit`.}
 }
 \description{
 Sample-weighted PLS — formula entry point.

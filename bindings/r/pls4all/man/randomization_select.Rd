@@ -13,6 +13,19 @@ randomization_select(
   alpha = 0.05
 )
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{n_permutations}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{randomization_seed}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{alpha}{Numeric in [0, 1]. Elastic-net / penalty mixing parameter.}
+}
 \description{
 Randomization test selector.
 }

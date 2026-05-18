@@ -6,6 +6,13 @@
 \usage{
 pds_fit(X_source, X_target, window_half_width = 2L)
 }
+\arguments{
+\item{X_source}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{X_target}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{window_half_width}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 Piecewise Direct Standardization (calibration transfer).
 }

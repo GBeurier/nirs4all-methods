@@ -51,6 +51,9 @@ sparse_simpls_fit <- function(X, Y, n_components, sparsity_lambda = 0.05) {
 #'   power-rescaled.
 #' @inheritParams sparse_simpls_fit
 #' @return A list with `coefficients`, `predictions`, `x_mean`, `y_mean`, `rmse`.
+#' @param n_components Integer. Number of latent components.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 cppls_fit <- function(X, Y, n_components, gamma = 0.5) {
   xy <- .coerce_xy(X, Y)
@@ -67,6 +70,9 @@ cppls_fit <- function(X, Y, n_components, gamma = 0.5) {
 #'   positive finite weights.
 #' @inheritParams sparse_simpls_fit
 #' @return A list with `coefficients`, `predictions`, `x_mean`, `y_mean`, `rmse`.
+#' @param n_components Integer. Number of latent components.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 weighted_pls_fit <- function(X, Y, n_components, sample_weights) {
   xy <- .coerce_xy(X, Y)
@@ -88,6 +94,9 @@ weighted_pls_fit <- function(X, Y, n_components, sample_weights) {
 #' @inheritParams sparse_simpls_fit
 #' @return A list with `coefficients`, `predictions`, `x_mean`,
 #'   `x_scale`, `intercept`, `block_weights`, `rmse`.
+#' @param n_components Integer. Number of latent components.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 mb_pls_fit <- function(X, Y, n_components, block_sizes) {
   xy <- .coerce_xy(X, Y)
@@ -109,6 +118,9 @@ mb_pls_fit <- function(X, Y, n_components, block_sizes) {
 #' @inheritParams sparse_simpls_fit
 #' @return A list with `coefficients`, `intercept`, `predictions`,
 #'   `x_mean`, `rmse`.
+#' @param n_components Integer. Number of latent components.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 pls_glm_fit <- function(X, Y, n_components, poisson = FALSE) {
   xy <- .coerce_xy(X, Y)
@@ -123,6 +135,9 @@ pls_glm_fit <- function(X, Y, n_components, poisson = FALSE) {
 #'
 #' @inheritParams sparse_simpls_fit
 #' @return A list with `coefficients`, `predictions`, `x_mean`, `y_mean`, `rmse`.
+#' @param n_components Integer. Number of latent components.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 mir_pls_fit <- function(X, Y, n_components) {
   xy <- .coerce_xy(X, Y)

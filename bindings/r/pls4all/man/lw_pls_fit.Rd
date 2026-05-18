@@ -6,6 +6,15 @@
 \usage{
 lw_pls_fit(X, Y, n_components, n_neighbors = 30L)
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{n_neighbors}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 Locally-weighted PLS (Næs & Centner 1998).
 }

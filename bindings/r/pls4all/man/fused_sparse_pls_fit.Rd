@@ -12,6 +12,17 @@ fused_sparse_pls_fit(
   fusion_lambda = 0.05
 )
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{l1_lambda}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{fusion_lambda}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 Fused-sparse PLS (L1 + adjacent-coef smoothing).
 }

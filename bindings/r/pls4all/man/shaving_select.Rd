@@ -13,6 +13,19 @@ shaving_select(
   shave_fraction = 0.1
 )
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{n_steps}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{min_features}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{shave_fraction}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 Shaving selector.
 }

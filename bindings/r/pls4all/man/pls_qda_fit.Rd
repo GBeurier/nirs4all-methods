@@ -6,6 +6,13 @@
 \usage{
 pls_qda_fit(X, y_labels, n_components)
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{y_labels}{Integer vector. Class labels.}
+
+\item{n_components}{Integer. Number of latent components.}
+}
 \description{
 PLS-QDA (Quadratic Discriminant Analysis on PLS scores).
 }

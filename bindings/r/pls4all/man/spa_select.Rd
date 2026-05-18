@@ -7,11 +7,11 @@
 spa_select(X, Y, n_components, top_k)
 }
 \arguments{
-\item{X}{Numeric matrix.}
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
 
-\item{Y}{Numeric matrix or vector.}
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
 
-\item{n_components}{Integer >= 1.}
+\item{n_components}{Integer. Number of latent components.}
 
 \item{top_k}{Number of features to select.}
 }

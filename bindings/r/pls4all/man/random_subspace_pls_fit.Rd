@@ -13,6 +13,19 @@ random_subspace_pls_fit(
   seed = 0L
 )
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{n_estimators}{Integer >= 1. Number of bootstrap / boosting / random-subspace estimators.}
+
+\item{features_per_subspace}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{seed}{Integer. Random seed for reproducibility.}
+}
 \description{
 Random-subspace PLS (Ho 1998).
 }

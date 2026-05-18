@@ -16,6 +16,25 @@ random_frog_select(
   seed = 0L
 )
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{n_iterations}{Integer >= 1. Number of outer-loop iterations.}
+
+\item{initial_size}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{min_size}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{max_size}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{top_k}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{seed}{Integer. Random seed for reproducibility.}
+}
 \description{
 Random Frog (Phase 5g).
 }

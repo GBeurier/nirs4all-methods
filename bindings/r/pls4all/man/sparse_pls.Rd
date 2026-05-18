@@ -12,6 +12,26 @@ sparse_pls(
   na.action = stats::na.omit
 )
 }
+\arguments{
+\item{formula}{A two-sided formula (e.g. `y ~ .` or
+`y ~ x1 + x2 + x3`). Response on the left, predictors on the right.}
+
+\item{data}{A `data.frame` (or anything `as.data.frame`-coercible)
+containing the response and predictor columns referenced by
+`formula`.}
+
+\item{ncomp}{Integer. Number of latent components.}
+
+\item{sparsity_lambda}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{na.action}{What to do with `NA`s. Default: `na.omit`.}
+}
+\value{
+A `pls4all_method_fit` object carrying the fitted model,
+  in-sample predictions, training RMSE, and method-specific
+  metadata. Use `predict()` for inference and `coef()` to
+  extract regression coefficients.
+}
 \description{
 Sparse SIMPLS — formula entry point.
 }

@@ -6,6 +6,15 @@
 \usage{
 continuum_regression_fit(X, Y, n_components, tau = 0.5)
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{tau}{Numeric in [0, 1]. Continuum regression mixing parameter.}
+}
 \description{
 Continuum regression (tau ∈ [0, 1]).
 }

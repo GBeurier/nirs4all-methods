@@ -14,6 +14,21 @@ ipw_select(
   weight_floor = 1e-06
 )
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{n_iterations}{Integer >= 1. Number of outer-loop iterations.}
+
+\item{top_k}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{damping}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{weight_floor}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 IPW-PLS.
 }

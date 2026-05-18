@@ -13,6 +13,19 @@ rep_select(
   remove_count = 1L
 )
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{n_steps}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{min_features}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{remove_count}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 REP-PLS.
 }

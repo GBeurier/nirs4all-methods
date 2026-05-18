@@ -79,6 +79,13 @@
 }
 
 #' Sparse SIMPLS — formula entry point.
+#'
+#' @inheritParams pls
+#' @return A `pls4all_method_fit` object carrying the fitted model,
+#'   in-sample predictions, training RMSE, and method-specific
+#'   metadata. Use `predict()` for inference and `coef()` to
+#'   extract regression coefficients.
+#' @param sparsity_lambda Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 sparse_pls <- function(formula, data, ncomp = 2L, sparsity_lambda = 0.05,
                         na.action = stats::na.omit) {
@@ -92,6 +99,13 @@ sparse_pls <- function(formula, data, ncomp = 2L, sparsity_lambda = 0.05,
 }
 
 #' Canonical Powered PLS — formula entry point.
+#'
+#' @inheritParams pls
+#' @return A `pls4all_method_fit` object carrying the fitted model,
+#'   in-sample predictions, training RMSE, and method-specific
+#'   metadata. Use `predict()` for inference and `coef()` to
+#'   extract regression coefficients.
+#' @param gamma Numeric. CPPLS / kernel band parameter.
 #' @export
 cppls <- function(formula, data, ncomp = 2L, gamma = 0.5,
                    na.action = stats::na.omit) {
@@ -105,6 +119,7 @@ cppls <- function(formula, data, ncomp = 2L, gamma = 0.5,
 
 #' Sample-weighted PLS — formula entry point.
 #' @param weights Numeric vector of length nrow(data) with sample weights.
+#' @inheritParams pls
 #' @export
 weighted_pls <- function(formula, data, ncomp = 2L, weights,
                           na.action = stats::na.omit) {
@@ -124,6 +139,7 @@ weighted_pls <- function(formula, data, ncomp = 2L, weights,
 
 #' Multi-block PLS — formula entry point.
 #' @param block_sizes Integer vector summing to the number of predictors.
+#' @inheritParams pls
 #' @export
 mb_pls <- function(formula, data, ncomp = 2L, block_sizes,
                     na.action = stats::na.omit) {
@@ -141,6 +157,13 @@ mb_pls <- function(formula, data, ncomp = 2L, block_sizes,
 
 #' PLS-GLM — formula entry point. Default is Gaussian; set
 #' `family = "poisson"` for Poisson IRLS.
+#'
+#' @inheritParams pls
+#' @return A `pls4all_method_fit` object carrying the fitted model,
+#'   in-sample predictions, training RMSE, and method-specific
+#'   metadata. Use `predict()` for inference and `coef()` to
+#'   extract regression coefficients.
+#' @param family Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 pls_glm <- function(formula, data, ncomp = 2L, family = "gaussian",
                      na.action = stats::na.omit) {
@@ -156,6 +179,12 @@ pls_glm <- function(formula, data, ncomp = 2L, family = "gaussian",
 }
 
 #' MIR-PLS — formula entry point.
+#'
+#' @inheritParams pls
+#' @return A `pls4all_method_fit` object carrying the fitted model,
+#'   in-sample predictions, training RMSE, and method-specific
+#'   metadata. Use `predict()` for inference and `coef()` to
+#'   extract regression coefficients.
 #' @export
 mir_pls <- function(formula, data, ncomp = 2L,
                      na.action = stats::na.omit) {
@@ -169,6 +198,9 @@ mir_pls <- function(formula, data, ncomp = 2L,
 # ---- S3 methods on the pls4all_method_fit class ----------------------
 
 #' Predict from a MethodResult-based pls4all fit.
+#' @param object Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param newdata Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param ... Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 predict.pls4all_method_fit <- function(object, newdata = NULL, ...) {
     if (is.null(newdata))
@@ -198,9 +230,13 @@ predict.pls4all_method_fit <- function(object, newdata = NULL, ...) {
     preds
 }
 
+#' @param object Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param ... Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 coef.pls4all_method_fit <- function(object, ...) object$coefficients
 
+#' @param x Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param ... Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 print.pls4all_method_fit <- function(x, ...) {
     cat("pls4all method fit (", x$method, ", ncomp=", x$ncomp, ")\n",
@@ -214,6 +250,8 @@ print.pls4all_method_fit <- function(x, ...) {
     invisible(x)
 }
 
+#' @param object Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param ... Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 summary.pls4all_method_fit <- function(object, ...) {
     out <- list(
@@ -228,6 +266,8 @@ summary.pls4all_method_fit <- function(object, ...) {
     out
 }
 
+#' @param x Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param ... Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 print.summary.pls4all_method_fit <- function(x, ...) {
     cat("pls4all method-fit summary\n")

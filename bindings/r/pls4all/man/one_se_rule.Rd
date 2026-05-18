@@ -6,6 +6,9 @@
 \usage{
 one_se_rule(fold_rmse_matrix)
 }
+\arguments{
+\item{fold_rmse_matrix}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 One-SE rule from a (max_components × n_folds) fold RMSE matrix.
 }

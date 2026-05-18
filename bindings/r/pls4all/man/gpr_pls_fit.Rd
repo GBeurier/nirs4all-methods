@@ -13,6 +13,19 @@ gpr_pls_fit(
   seed = 0L
 )
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{length_scale}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{noise_level}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{seed}{Integer. Random seed for reproducibility.}
+}
 \description{
 Gaussian Process Regression on PLS scores (single-target Y).
 }

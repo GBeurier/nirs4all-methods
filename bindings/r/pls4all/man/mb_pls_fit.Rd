@@ -7,11 +7,11 @@
 mb_pls_fit(X, Y, n_components, block_sizes)
 }
 \arguments{
-\item{X}{Numeric matrix.}
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
 
-\item{Y}{Numeric matrix or vector.}
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
 
-\item{n_components}{Integer >= 1.}
+\item{n_components}{Integer. Number of latent components.}
 
 \item{block_sizes}{Integer vector; must sum to ncol(X).}
 }

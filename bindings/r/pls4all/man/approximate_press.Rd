@@ -7,9 +7,9 @@
 approximate_press(X, Y, max_components)
 }
 \arguments{
-\item{X}{Numeric matrix.}
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
 
-\item{Y}{Numeric matrix or vector.}
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
 
 \item{max_components}{Integer; maximum number of components to scan.}
 }

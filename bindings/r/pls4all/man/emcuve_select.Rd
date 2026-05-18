@@ -14,6 +14,21 @@ emcuve_select(
   vote_threshold = 0.5
 )
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{noise_features}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{noise_seed}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{n_ensembles}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{vote_threshold}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 EMCUVE — ensemble Monte Carlo UVE.
 }

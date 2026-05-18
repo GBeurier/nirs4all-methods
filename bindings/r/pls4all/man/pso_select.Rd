@@ -17,6 +17,27 @@ pso_select(
   seed = 0L
 )
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{n_swarm}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{n_iterations}{Integer >= 1. Number of outer-loop iterations.}
+
+\item{w}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{c1}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{c2}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{v_max}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{seed}{Integer. Random seed for reproducibility.}
+}
 \description{
 PSO-PLS (Binary Particle Swarm Optimization).
 }

@@ -6,6 +6,15 @@
 \usage{
 sparse_pls_da_fit(X, y_labels, n_components, sparsity_lambda = 0.05)
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{y_labels}{Integer vector. Class labels.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{sparsity_lambda}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 Sparse PLS-DA classifier (`y_labels` is an integer vector of class IDs).
 }

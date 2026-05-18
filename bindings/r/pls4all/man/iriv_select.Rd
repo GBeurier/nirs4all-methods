@@ -6,6 +6,17 @@
 \usage{
 iriv_select(X, Y, n_components, max_rounds = 20L, seed = 0L)
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{max_rounds}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{seed}{Integer. Random seed for reproducibility.}
+}
 \description{
 IRIV — Iteratively Retains Informative Variables.
 }

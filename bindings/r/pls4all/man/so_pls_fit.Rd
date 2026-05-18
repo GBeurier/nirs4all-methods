@@ -8,6 +8,15 @@
 \usage{
 so_pls_fit(X, Y, block_sizes, n_components_per_block)
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{block_sizes}{Integer vector. Per-block feature counts for multi-block PLS.}
+
+\item{n_components_per_block}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 Sequential & Orthogonalised multi-block PLS (Næs et al. 2011).
 `block_sizes` integer vector summing to ncol(X);

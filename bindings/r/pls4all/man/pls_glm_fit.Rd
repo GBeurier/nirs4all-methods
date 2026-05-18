@@ -7,11 +7,11 @@
 pls_glm_fit(X, Y, n_components, poisson = FALSE)
 }
 \arguments{
-\item{X}{Numeric matrix.}
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
 
-\item{Y}{Numeric matrix or vector.}
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
 
-\item{n_components}{Integer >= 1.}
+\item{n_components}{Integer. Number of latent components.}
 
 \item{poisson}{Logical; TRUE selects the Poisson-link path.}
 }

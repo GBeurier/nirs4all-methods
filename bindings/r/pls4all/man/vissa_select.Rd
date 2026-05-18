@@ -16,6 +16,25 @@ vissa_select(
   seed = 0L
 )
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{n_iterations}{Integer >= 1. Number of outer-loop iterations.}
+
+\item{n_submodels}{Integer >= 1. Number of inner sub-models per VISSA-style iteration.}
+
+\item{ratio_kept}{Numeric in (0, 1]. Fraction of features kept per iteration.}
+
+\item{threshold}{Numeric. Convergence / pruning threshold.}
+
+\item{floor_probability}{Numeric in [0, 0.5). Lower bound on per-feature retention probability.}
+
+\item{seed}{Integer. Random seed for reproducibility.}
+}
 \description{
 VISSA — Variable Iterative Space Shrinkage Approach.
 }

@@ -6,6 +6,15 @@
 \usage{
 ridge_pls_fit(X, Y, n_components, ridge_lambda = 1)
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{ridge_lambda}{Numeric >= 0. Ridge regularisation strength.}
+}
 \description{
 L2-augmented PLS regression.
 }

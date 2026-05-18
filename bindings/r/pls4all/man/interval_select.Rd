@@ -6,6 +6,17 @@
 \usage{
 interval_select(X, Y, n_components, interval_width = 10L, step = 1L)
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{interval_width}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{step}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 Interval selector (iPLS).
 }

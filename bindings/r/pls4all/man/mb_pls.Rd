@@ -7,7 +7,18 @@
 mb_pls(formula, data, ncomp = 2L, block_sizes, na.action = stats::na.omit)
 }
 \arguments{
+\item{formula}{A two-sided formula (e.g. `y ~ .` or
+`y ~ x1 + x2 + x3`). Response on the left, predictors on the right.}
+
+\item{data}{A `data.frame` (or anything `as.data.frame`-coercible)
+containing the response and predictor columns referenced by
+`formula`.}
+
+\item{ncomp}{Integer. Number of latent components.}
+
 \item{block_sizes}{Integer vector summing to the number of predictors.}
+
+\item{na.action}{What to do with `NA`s. Default: `na.omit`.}
 }
 \description{
 Multi-block PLS — formula entry point.

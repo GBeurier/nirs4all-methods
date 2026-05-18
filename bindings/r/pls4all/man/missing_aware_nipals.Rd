@@ -6,6 +6,24 @@
 \usage{
 missing_aware_nipals(formula, data, ncomp = 2L, na.action = stats::na.pass)
 }
+\arguments{
+\item{formula}{A two-sided formula (e.g. `y ~ .` or
+`y ~ x1 + x2 + x3`). Response on the left, predictors on the right.}
+
+\item{data}{A `data.frame` (or anything `as.data.frame`-coercible)
+containing the response and predictor columns referenced by
+`formula`.}
+
+\item{ncomp}{Integer. Number of latent components.}
+
+\item{na.action}{What to do with `NA`s. Default: `na.omit`.}
+}
+\value{
+A `pls4all_method_fit` object carrying the fitted model,
+  in-sample predictions, training RMSE, and method-specific
+  metadata. Use `predict()` for inference and `coef()` to
+  extract regression coefficients.
+}
 \description{
 Missing-aware NIPALS — formula entry point.
 }

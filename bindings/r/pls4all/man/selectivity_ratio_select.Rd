@@ -7,11 +7,11 @@
 selectivity_ratio_select(model, X, top_k)
 }
 \arguments{
-\item{model}{External pointer from `pls4all_fit()`.}
+\item{model}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
 
 \item{X}{Numeric matrix used for the fit (re-passed for diagnostics).}
 
-\item{top_k}{Integer; number of features to return.}
+\item{top_k}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
 }
 \value{
 A list with `scores` and `selected_indices`.

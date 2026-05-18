@@ -6,6 +6,15 @@
 \usage{
 pls_cox_fit(X, n_components, survival_times, event_indicators)
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{survival_times}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{event_indicators}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 PLS-Cox proportional hazards.
 }

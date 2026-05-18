@@ -7,11 +7,11 @@
 cars_select(X, Y, n_components, n_iterations = 50L, min_features = 5L)
 }
 \arguments{
-\item{X}{Numeric matrix.}
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
 
-\item{Y}{Numeric matrix or vector.}
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
 
-\item{n_components}{Integer >= 1.}
+\item{n_components}{Integer. Number of latent components.}
 
 \item{n_iterations}{Number of CARS iterations (typical 50-100).}
 

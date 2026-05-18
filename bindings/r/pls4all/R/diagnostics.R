@@ -29,6 +29,8 @@ pls_diagnostics <- function(model, X) {
 #' @return A list with `press_per_component`, `rmse_per_component`,
 #'   `selected_n_components` (the argmin of PRESS, 1-based as an integer
 #'   length 1).
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 approximate_press <- function(X, Y, max_components) {
   xy <- .coerce_xy(X, Y)

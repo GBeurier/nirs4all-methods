@@ -30,6 +30,8 @@ vip_select <- function(model, X, top_k) {
 #' Coefficient-magnitude ranker.
 #' @inheritParams vip_select
 #' @return A list with `scores` (|coef| sums) and `selected_indices`.
+#' @param model Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param top_k Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 coefficient_select <- function(model, X, top_k) {
   if (!is.matrix(X)) X <- as.matrix(X)
@@ -45,6 +47,8 @@ coefficient_select <- function(model, X, top_k) {
 #' Selectivity-ratio ranker.
 #' @inheritParams vip_select
 #' @return A list with `scores` and `selected_indices`.
+#' @param model Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param top_k Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 selectivity_ratio_select <- function(model, X, top_k) {
   if (!is.matrix(X)) X <- as.matrix(X)
@@ -64,6 +68,9 @@ selectivity_ratio_select <- function(model, X, top_k) {
 #' @inheritParams sparse_simpls_fit
 #' @param top_k Number of features to select.
 #' @return A list with `selected_indices` (1-based) and `best_rmse`.
+#' @param n_components Integer. Number of latent components.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 spa_select <- function(X, Y, n_components, top_k) {
   xy <- .coerce_xy(X, Y)
@@ -87,6 +94,9 @@ spa_select <- function(X, Y, n_components, top_k) {
 #' @param n_iterations Number of CARS iterations (typical 50-100).
 #' @param min_features Lower bound on the final subset size.
 #' @return A list with `selected_indices` (1-based) and `best_rmse`.
+#' @param n_components Integer. Number of latent components.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 cars_select <- function(X, Y, n_components, n_iterations = 50L,
                          min_features = 5L) {

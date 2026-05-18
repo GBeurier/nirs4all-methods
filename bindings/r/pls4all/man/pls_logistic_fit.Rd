@@ -6,6 +6,15 @@
 \usage{
 pls_logistic_fit(X, y_labels, n_components, n_classes = NULL)
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{y_labels}{Integer vector. Class labels.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{n_classes}{Integer >= 2. Number of class labels.}
+}
 \description{
 Multinomial logistic regression on PLS scores.
 }

@@ -6,6 +6,13 @@
 \usage{
 \method{predict}{pls4all_method_fit}(object, newdata = NULL, ...)
 }
+\arguments{
+\item{object}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{newdata}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{...}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 Predict from a MethodResult-based pls4all fit.
 }

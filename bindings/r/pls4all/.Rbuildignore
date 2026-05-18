@@ -3,3 +3,13 @@
 ^.*\.Rproj$
 ^_pkgdown\.yml$
 ^docs$
+# Compiled artefacts must NEVER ship in the source tarball — CRAN's
+# build farm compiles from source, and pre-existing .o files would
+# either get used stale or break the cross-platform install.
+^src/.*\.o$
+^src/.*\.so$
+^src/.*\.dll$
+^src/.*\.dylib$
+^src/.*\.a$
+^src/Makevars\.local$
+^src/symbols\.rds$

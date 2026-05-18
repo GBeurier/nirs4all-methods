@@ -6,6 +6,17 @@
 \usage{
 o2pls_fit(X, Y, n_predictive = 2L, n_x_orthogonal = 1L, n_y_orthogonal = 1L)
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_predictive}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{n_x_orthogonal}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{n_y_orthogonal}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 O2-PLS (bi-directional OPLS).
 }

@@ -17,6 +17,11 @@
 #' @return An external pointer wrapping the fitted model handle. Pass it
 #'   to [pls4all_predict()] to obtain predictions. The model is freed
 #'   automatically when the external pointer is garbage-collected.
+#' @param store_scores Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param center_x Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param scale_x Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param center_y Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param scale_y Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 pls4all_fit <- function(X, Y, algo, n_components,
                          store_scores = FALSE,

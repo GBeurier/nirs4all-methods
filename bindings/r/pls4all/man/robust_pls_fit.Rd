@@ -6,6 +6,17 @@
 \usage{
 robust_pls_fit(X, Y, n_components, huber_k = 1.345, max_irls_iter = 20L)
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{huber_k}{Numeric >= 0. Huber loss tuning constant.}
+
+\item{max_irls_iter}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 Robust PLS via Huber IRLS.
 }

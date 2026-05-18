@@ -6,6 +6,17 @@
 \usage{
 bagging_pls_fit(X, Y, n_components, n_estimators = 50L, seed = 0L)
 }
+\arguments{
+\item{X}{Numeric matrix of predictors (rows = samples, cols = features).}
+
+\item{Y}{Numeric matrix or vector of responses, with one row per sample.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{n_estimators}{Integer >= 1. Number of bootstrap / boosting / random-subspace estimators.}
+
+\item{seed}{Integer. Random seed for reproducibility.}
+}
 \description{
 Bagging PLS (bootstrap aggregation of PLS regressors).
 }

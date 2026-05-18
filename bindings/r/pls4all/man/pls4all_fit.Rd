@@ -24,6 +24,16 @@ pls4all_fit(
 \item{algo}{Character. Solver name (see Details).}
 
 \item{n_components}{Integer >= 1.}
+
+\item{store_scores}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{center_x}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{scale_x}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{center_y}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{scale_y}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
 }
 \value{
 An external pointer wrapping the fitted model handle. Pass it

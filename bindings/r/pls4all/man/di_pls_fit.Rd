@@ -6,6 +6,17 @@
 \usage{
 di_pls_fit(X_source, Y_source, n_components, X_target, di_lambda = 1)
 }
+\arguments{
+\item{X_source}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{Y_source}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{n_components}{Integer. Number of latent components.}
+
+\item{X_target}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{di_lambda}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 Domain-Invariant PLS (Nikzad-Langerodi 2018).
 }

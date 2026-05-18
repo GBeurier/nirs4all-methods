@@ -6,6 +6,11 @@
 \usage{
 ds_fit(X_source, X_target)
 }
+\arguments{
+\item{X_source}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{X_target}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+}
 \description{
 Direct Standardization (calibration transfer).
 }
