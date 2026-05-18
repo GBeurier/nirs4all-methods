@@ -711,6 +711,36 @@
       box-shadow: inset 0 0 0 1px rgba(124, 229, 162, 0.18);
     }
     .cell-empty { color: var(--fg-3); text-align: center; font-family: var(--mono); }
+
+    /* The canonical external reference for a given algorithm — sklearn
+       for `pls`, ropls for `opls`, mixOmics for `plsda`, etc. This
+       cell is what every other implementation in the row is compared
+       against by the reference-parity (gate 2) check, so the
+       dashboard ringfences it visually. A subtle gold outline plus
+       the 📐 ruler glyph signal "this is the ground truth for this
+       row" without overwhelming the underlying timing value. */
+    .cell-canonical-ref {
+      box-shadow: inset 0 0 0 2px var(--amber);
+      background: linear-gradient(180deg,
+        rgba(255, 192, 92, 0.10) 0%,
+        rgba(255, 192, 92, 0.04) 100%) !important;
+      position: relative;
+    }
+    body.theme-dark .cell-canonical-ref {
+      background: linear-gradient(180deg,
+        rgba(255, 192, 92, 0.18) 0%,
+        rgba(255, 192, 92, 0.06) 100%) !important;
+    }
+    .cell-canonical-ref::before {
+      content: "📐";
+      position: absolute;
+      top: 1px; left: 3px;
+      font-size: 9px;
+      opacity: 0.75;
+    }
+    /* Second parity icon (gate 2: vs canonical external reference). */
+    .ref-parity { display: inline-block; min-width: 12px; text-align: center; margin-left: 3px; font-weight: 600; font-family: var(--mono); opacity: 0.85; }
+
     .parity { display: inline-block; min-width: 12px; text-align: center; margin-left: 5px; font-weight: 600; font-family: var(--mono); }
     .p-exact   { color: var(--phosphor); }
     .p-drift   { color: var(--amber); }
@@ -1187,6 +1217,8 @@
     <span class="legend-item"><span class="ico p-not_run">·</span> not run</span>
     <span class="legend-item"><span class="ico p-not_available">∅</span> not available in lib</span>
     <span class="legend-item"><span class="cell-fastest cell-fastest-bg" style="font-family:var(--mono);padding:1px 6px;border-radius:2px">42.5</span> fastest overall</span>
+    <span class="legend-item"><span class="cell-canonical-ref" style="font-family:var(--mono);padding:3px 8px 3px 12px;border-radius:2px;position:relative">42.5</span> canonical reference (📐 = ground truth for the row's gate-2 parity check)</span>
+    <span class="legend-item" style="font-size:10px;color:var(--fg-2)">cell <code>X.X ✓✓</code>: gate 1 (binding ≡ cpp) · gate 2 (cpp ≈ external ref)</span>
     <span class="legend-item" style="margin-left:auto;color:var(--fg-2);font-size:10px">click header to sort · ⇧+click for descending</span>
   </div>
   <div class="table-wrap">
@@ -1902,20 +1934,36 @@ function renderTable() {
         } else {
           display = `<span class="cell-value ${fastCls}">${densifyFmt(c.fmt)}</span>`;
         }
+        // Gate 1 icon — binding consistency (every binding vs cpp).
         const parityHtml = `<span class="parity p-${c.parity}">${PARITY_ICON[c.parity]}</span>`;
+        // Gate 2 icon — external-reference validity (cpp vs canonical
+        // external reference). Only render when the row's method has
+        // an executable canonical reference (i.e. NOT a paper_only
+        // method). The icon sits next to the binding-parity icon so a
+        // glance at the cell reveals both gate verdicts.
+        const refParity = c.reference_parity || c.parity;
+        const showRefParity = refParity && refParity !== 'not_available';
+        const refParityHtml = showRefParity
+          ? `<span class="ref-parity p-${refParity}" title="vs canonical external reference (${c.reference_kind || 'external'})">${PARITY_ICON[refParity] || ''}</span>`
+          : '';
         // Assemble cell classes.
         // - Row-overall fastest gets the phosphor glow background.
         // - Per-language fastest gets a subtle text-color tint via
         //   .cell-value styling. The two indicators stack cleanly: if a
         //   cell wins its row AND its language, it shows the phosphor
         //   glow (overall) AND its text leans toward the language hue.
+        // - The cell that IS the row's canonical external reference
+        //   (sklearn for pls, ropls for opls, …) gets a gold outline
+        //   + 📐 badge so it's visible at a glance which column the
+        //   gate-2 parity check is anchored on.
         const tdCls = [lcls];
         if (canHighlight && id === fastestId) tdCls.push('cell-fastest-bg');
         const langSlug = meta ? colLangSlug(meta) : '';
         if (canHighlight && langSlug && langWinners[langSlug] === id) {
           tdCls.push('cell-lang-best', `lang-${langSlug}`);
         }
-        tr += `<td class="${tdCls.join(' ')}">${display}${parityHtml}</td>`;
+        if (c.is_canonical_reference) tdCls.push('cell-canonical-ref');
+        tr += `<td class="${tdCls.join(' ')}">${display}${parityHtml}${refParityHtml}</td>`;
       }
       tr += `</tr>`;
       body.push(tr);
