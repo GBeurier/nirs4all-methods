@@ -1,11 +1,29 @@
-#' pls4all: R binding for the libp4a C ABI
+#' pls4all: portable Partial Least Squares and NIRS engine
 #'
-#' Provides fit/predict wrappers for the PLS regression solvers shipped
-#' by the upstream pls4all library. The shared library libp4a must be
-#' findable at load time; set PLS4ALL_LIB_PATH to its absolute location
-#' if the default search path does not work.
+#' Implements a portable Partial Least Squares (PLS) and Near-Infrared
+#' Spectroscopy (NIRS) engine. The C++17 numerical core is vendored under
+#' the package's `src/libp4a/` and compiled from source at install time;
+#' no external system library is required.
 #'
-#' @docType package
+#' The package exposes:
+#'
+#' * `pls()` / `predict.pls4all_fit()` — the canonical PLS regression fit
+#'   and inference entry points, with the underlying solver selected via
+#'   the `algo` argument (NIPALS, SIMPLS, SVD, kernel, wide-kernel, OPLS,
+#'   orthogonal-scores, power, randomized SVD, PCR).
+#' * Method-result fits (e.g. `cppls_fit`, `sparse_pls_fit`,
+#'   `weighted_pls_fit`) — direct wrappers over the C ABI.
+#' * Variable-selection methods (`spa_select`, `cars_select`,
+#'   `variable_select_rank`, ...).
+#' * Diagnostics (`pls_diagnostics_compute`, `approximate_press_compute`,
+#'   `pls_monitoring_run`).
+#' * Calibration transfer (`pds_fit`, `ds_fit`).
+#'
+#' Version + ABI introspection is available via `pls4all_version()` and
+#' `pls4all_abi_version()`.
+#'
 #' @name pls4all-package
+#' @aliases pls4all
 #' @useDynLib pls4all, .registration = TRUE
-NULL
+#' @keywords internal
+"_PACKAGE"

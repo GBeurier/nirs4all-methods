@@ -239,7 +239,32 @@ pls_logistic_fit <- function(X, y_labels, n_components, n_classes = NULL) {
                                   n_classes = as.integer(n_classes)))
 }
 
-#' AOM preprocessing fit/transform.
+#' Adaptive Operator-Mixture preprocessing fit/transform.
+#'
+#' Fits the AOM preprocessing pipeline (operator bank + gating) over
+#' `X` and returns a `pls4all_method_fit` object carrying the selected
+#' operators, the per-component gating weights, and the transformed
+#' spectra ready to feed into a downstream regression solver.
+#'
+#' @param X numeric matrix of spectra (rows = samples, cols = wavelengths).
+#' @param Y optional numeric vector of supervisory targets. When `NULL`,
+#'   the unsupervised gating path is used (a zero target vector is
+#'   substituted internally).
+#' @param n_operators number of operators in the AOM bank (default `3L`).
+#' @param gating_mode integer code selecting the gating strategy:
+#'   `0L` = hard-select per component, `1L` = soft-mixture (default `0L`).
+#'
+#' @return A `pls4all_method_fit` object. Use `predict()` for
+#'   inference on new spectra and `coef()` to extract the gating
+#'   coefficients.
+#'
+#' @examples
+#' set.seed(1)
+#' X <- matrix(rnorm(40 * 10), nrow = 40)
+#' Y <- as.numeric(X[, 1] + rnorm(40, sd = 0.1))
+#' fit <- aom_preprocess(X, Y, n_operators = 2L)
+#' class(fit)
+#'
 #' @export
 aom_preprocess <- function(X, Y = NULL, n_operators = 3L, gating_mode = 0L) {
     X <- as.matrix(X)

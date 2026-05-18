@@ -23,11 +23,12 @@ SystemRequirements: C++17, GNU make
 NeedsCompilation: yes
 Encoding: UTF-8
 Imports:
-    methods
+    stats
 Suggests:
     testthat (>= 3.0.0),
     knitr,
-    rmarkdown
+    rmarkdown,
+    pls
 VignetteBuilder: knitr
 Config/testthat/edition: 3
-RoxygenNote: 7.3.1
+Config/roxygen2/version: 8.0.0

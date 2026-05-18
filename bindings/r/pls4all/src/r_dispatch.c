@@ -31,12 +31,20 @@
 
 /* ---- shared helpers (file-local) ----------------------------------- */
 
+#if defined(__GNUC__) || defined(__clang__)
+#  define P4A_R_NORETURN __attribute__((noreturn))
+#  define P4A_R_PRINTF(a, b) __attribute__((format(printf, a, b)))
+#else
+#  define P4A_R_NORETURN
+#  define P4A_R_PRINTF(a, b)
+#endif
+
 /* Destroy ctx + cfg and longjmp via Rf_error. Used by validation
  * branches that need to bail out AFTER ctx/cfg have been allocated.
  * SEXP PROTECTs are unwound by R itself on the longjmp. */
 static void cleanup_err(p4a_context_t* ctx, p4a_config_t* cfg,
-                         const char* fmt, ...) __attribute__((noreturn))
-                                                  __attribute__((format(printf, 3, 4)));
+                         const char* fmt, ...) P4A_R_NORETURN
+                                                  P4A_R_PRINTF(3, 4);
 
 static void cleanup_err(p4a_context_t* ctx, p4a_config_t* cfg,
                          const char* fmt, ...) {
@@ -64,7 +72,7 @@ static SEXP need_real_matrix(SEXP v, p4a_context_t* ctx, p4a_config_t* cfg,
 }
 
 static void r_throw(const char* fn, p4a_status_t status, p4a_context_t* ctx)
-    __attribute__((noreturn));
+    P4A_R_NORETURN;
 
 static void r_throw(const char* fn, p4a_status_t status, p4a_context_t* ctx) {
     const char* status_str = p4a_status_to_string(status);

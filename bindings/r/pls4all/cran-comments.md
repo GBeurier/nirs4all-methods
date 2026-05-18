@@ -23,8 +23,11 @@
   - Ubuntu 22.04 (R release + devel)
   - macOS 14 (R release, arm64)
   - Windows latest (R release)
-  - R-hub v2 platforms: linux, macos-arm64, windows
-  - win-builder (devel)
+* Pre-submission R-hub v2 / win-builder / macbuilder runs are
+  invoked manually before each CRAN submission via
+  `rhub::rhub_check()`, `devtools::check_win_devel()` and
+  `devtools::check_mac_release()`. Results attached to the matching
+  GitHub Release.
 
 ## Known notes (all expected)
 

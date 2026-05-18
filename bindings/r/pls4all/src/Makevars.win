@@ -11,7 +11,11 @@ LIBP4A_OBJECTS = $(LIBP4A_SOURCES:.cpp=.o)
 R_C_SOURCES = r_init.c r_gateway.c r_dispatch.c r_methods.c
 R_C_OBJECTS = $(R_C_SOURCES:.c=.o)
 
-OBJECTS = $(R_C_OBJECTS) $(LIBP4A_OBJECTS)
+# Top-level C++ sentinel forces R into C++ link mode (R-exts §1.6).
+R_CXX_SOURCES = pls4all_cxx.cpp
+R_CXX_OBJECTS = $(R_CXX_SOURCES:.cpp=.o)
+
+OBJECTS = $(R_C_OBJECTS) $(R_CXX_OBJECTS) $(LIBP4A_OBJECTS)
 
 PKG_CPPFLAGS = -DPLS4ALL_STATIC=1 \
                -I$(LIBP4A_DIR)/include \

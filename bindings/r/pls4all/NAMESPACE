@@ -118,3 +118,4 @@ S3method(print, pls4all_method_fit)
 S3method(summary, pls4all_method_fit)
 S3method(print, summary.pls4all_method_fit)
 
+export(aom_preprocess)

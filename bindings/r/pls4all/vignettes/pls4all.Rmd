@@ -16,7 +16,7 @@ Spectroscopy (NIRS) engine. The C++17 implementation is vendored and
 compiled from source at install time; no external system library is
 required.
 
-## Quick start
+## Quick start (matrix API)
 
 ```{r quickstart}
 library(pls4all)
@@ -26,20 +26,31 @@ n <- 50
 p <- 8
 X <- matrix(rnorm(n * p), nrow = n, ncol = p)
 beta <- c(2, -1, 0.5, rep(0, p - 3))
-y <- as.numeric(X %*% beta + rnorm(n, sd = 0.1))
+y <- matrix(as.numeric(X %*% beta + rnorm(n, sd = 0.1)), ncol = 1)
 
-fit <- pls(X, y, n_components = 3)
-preds <- predict(fit, newdata = X)
+fit <- pls4all_fit(X, y, algo = "pls_nipals", n_components = 3L)
+preds <- pls4all_predict(fit, X)
 
 cat("RMSE:", sqrt(mean((preds - y)^2)), "\n")
 ```
 
-## Version + ABI
+## Formula interface
+
+The base-R formula API mirrors `lm()` and other standard regression
+modelling conventions.
+
+```{r formula}
+df <- as.data.frame(X)
+df$y <- as.numeric(y)
+fit_form <- pls(y ~ ., data = df, ncomp = 3L)
+class(fit_form)
+```
+
+## Version and ABI
 
 The runtime version string embeds both the project semver and the
-stable C ABI version. This is useful for downstream consumers that
-need to assert ABI compatibility before invoking lower-level
-entry points.
+stable C ABI version. Downstream consumers can assert ABI
+compatibility before calling lower-level entry points.
 
 ```{r version}
 pls4all_version()
@@ -48,20 +59,20 @@ pls4all_abi_version()
 
 ## Supported algorithms
 
-`pls()` selects the solver via the `algo` argument. Recognised values
-include `"pls_nipals"` (default), `"pls_simpls"`, `"pls_svd"`,
+`pls4all_fit()` selects the solver via the `algo` argument. Recognised
+values include `"pls_nipals"` (default), `"pls_simpls"`, `"pls_svd"`,
 `"pls_kernel_algorithm"`, `"pls_wide_kernel"`,
 `"pls_orthogonal_scores"`, `"pls_power"`, `"pls_randomized_svd"`, and
 `"pcr_svd"`. The full algorithm taxonomy is documented in the package
 website.
 
 ```{r algos}
-fit_simpls <- pls(X, y, n_components = 3, algo = "pls_simpls")
-fit_svd    <- pls(X, y, n_components = 3, algo = "pls_svd")
+fit_simpls <- pls4all_fit(X, y, algo = "pls_simpls", n_components = 3L)
+fit_svd    <- pls4all_fit(X, y, algo = "pls_svd",    n_components = 3L)
 
 # Same numerical answers up to algorithmic tolerance.
-all.equal(predict(fit_simpls, newdata = X[1:5, ]),
-          predict(fit_svd,    newdata = X[1:5, ]),
+all.equal(pls4all_predict(fit_simpls, X[1:5, ]),
+          pls4all_predict(fit_svd,    X[1:5, ]),
           tolerance = 1e-10)
 ```
 
@@ -75,8 +86,8 @@ all.equal(predict(fit_simpls, newdata = X[1:5, ]),
   `variable_select_rank`) return a ranked feature index suitable for
   downstream model retraining.
 * Diagnostics (`pls_diagnostics_compute`, `approximate_press_compute`,
-  `pls_monitoring_run`) implement Hotelling T², Q residuals, DModX,
-  and process-monitoring alarms.
+  `pls_monitoring_run`) implement Hotelling T-squared, Q residuals,
+  DModX, and process-monitoring alarms.
 
 See the project [website](https://gbeurier.github.io/pls4all/) and the
 cross-binding parity reports at
