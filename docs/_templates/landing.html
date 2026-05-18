@@ -778,10 +778,22 @@
       font-size: 9px;
       opacity: 0.75;
     }
-    /* Second parity icon (gate 2: vs canonical external reference). */
-    .ref-parity { display: inline-block; min-width: 12px; text-align: center; margin-left: 3px; font-weight: 600; font-family: var(--mono); opacity: 0.85; }
-
-    .parity { display: inline-block; min-width: 12px; text-align: center; margin-left: 5px; font-weight: 600; font-family: var(--mono); }
+    /* Compact parity markers. For pls4all cells, .parity is gate 1
+       (binding vs cpp) and .ref-parity is gate 2 (vs external ref).
+       For external cells, the gate-2 marker is rendered in the .parity
+       slot because there is no binding gate. */
+    .ref-parity,
+    .parity {
+      display: inline-block;
+      min-width: 9px;
+      text-align: center;
+      margin-left: 2px;
+      font-weight: 600;
+      font-family: var(--mono);
+      font-size: 10px;
+      line-height: 1;
+    }
+    .ref-parity { opacity: 0.85; }
     .p-exact   { color: var(--phosphor); }
     .p-drift   { color: var(--amber); }
     .p-divergent { color: var(--crimson); }
@@ -817,7 +829,8 @@
     body.density-ultra table.bench th .col-label { font-size: 9.5px; letter-spacing: 0; }
     body.density-ultra table.bench tr.lang-band th { padding: 2px 3px; font-size: 8.5px; letter-spacing: 0.12em; }
     body.density-ultra table.bench td.thread-cell .thread-pill { padding: 0 4px; font-size: 9px; }
-    body.density-ultra .parity { margin-left: 2px; font-size: 9.5px; }
+    body.density-ultra .parity,
+    body.density-ultra .ref-parity { margin-left: 1px; font-size: 9px; min-width: 8px; }
     body.density-ultra table.bench td.algo-cell { font-size: 10.5px; padding: 1.5px 6px; }
     body.density-ultra table.bench td.size-cell { font-size: 10px; padding: 1.5px 6px; }
 
@@ -2023,18 +2036,21 @@ function renderTable() {
         } else {
           display = `<span class="cell-value ${fastCls}">${densifyFmt(c.fmt)}</span>`;
         }
-        // Gate 1 icon — binding consistency (every binding vs cpp).
+        const metaKind = ((meta && meta.kind) || '').toLowerCase();
+        const isExternal = metaKind === 'external' || metaKind === 'reference';
         const bindingParity = c.binding_parity || c.parity || 'not_available';
-        const parityHtml = `<span class="parity p-${bindingParity}">${PARITY_ICON[bindingParity] || ''}</span>`;
-        // Gate 2 icon — external-reference validity (cpp vs canonical
-        // external reference). Only render when the row's method has
-        // an executable canonical reference (i.e. NOT a paper_only
-        // method). The icon sits next to the binding-parity icon so a
-        // glance at the cell reveals both gate verdicts.
         const refParity = c.reference_parity || c.parity;
         const showRefParity = refParity && refParity !== 'not_available';
-        const refParityHtml = showRefParity
-          ? `<span class="ref-parity p-${refParity}" title="vs canonical external reference (${c.reference_kind || 'external'})">${PARITY_ICON[refParity] || ''}</span>`
+        // External libraries have no binding gate: use the main marker
+        // slot for the reference gate. pls4all cells keep both compact
+        // markers: binding first, reference second when executable.
+        const parityHtml = isExternal
+          ? (showRefParity
+              ? `<span class="parity p-${refParity}" title="vs canonical external reference (${c.reference_kind || 'external'})">${PARITY_ICON[refParity] || ''}</span>`
+              : '')
+          : `<span class="parity p-${bindingParity}" title="binding parity vs cpp">${PARITY_ICON[bindingParity] || ''}</span>`;
+        const refParityHtml = (!isExternal && showRefParity)
+          ? `<span class="ref-parity p-${refParity}" title="reference parity vs canonical external reference (${c.reference_kind || 'external'})">${PARITY_ICON[refParity] || ''}</span>`
           : '';
         // Assemble cell classes.
         // - Row-overall fastest gets the phosphor glow background.

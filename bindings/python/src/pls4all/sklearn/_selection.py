@@ -82,7 +82,7 @@ class _BasePls4allSelector(SelectorMixin, BaseEstimator):
             solver=self._resolve_solver_(),
             deflation=Deflation.REGRESSION,
             center_x=bool(getattr(self, "center_x", True)),
-            scale_x=bool(getattr(self, "scale_x", True)),
+            scale_x=bool(getattr(self, "scale_x", False)),
             center_y=True,
             scale_y=False,
             tol=float(getattr(self, "tol", 1e-6)),

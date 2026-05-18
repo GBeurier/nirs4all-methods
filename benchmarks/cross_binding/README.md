@@ -75,6 +75,16 @@ with `reference oracle missing; run canonical reference backend`. Refresh
 the snapshot only when the reference library, oracle code, benchmark cell
 or fixture seed is intentionally updated.
 
+## Dashboard refresh rows
+
+The dashboard builder reads `results/full_matrix.csv` first and then any
+`results/dashboard_refresh_*.csv` files. Refresh files are small deltas
+keyed by `(algorithm, backend, libp4a_build, n, p, threads)`; later rows
+replace stale cells without rewriting the full historical timing matrix.
+Use them for targeted gate fixes such as a corrected oracle snapshot or a
+binding adapter repair, and regenerate the full matrix when publishing a
+new benchmark baseline.
+
 ## Result semantics
 
 - `ok=False` with a `reason` means no timing/prediction was produced for

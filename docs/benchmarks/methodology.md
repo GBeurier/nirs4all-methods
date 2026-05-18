@@ -73,6 +73,11 @@ runs load that snapshot to keep Gate 2 active even when the external
 backend is not scheduled. If the snapshot does not exist yet, the row fails
 with an explicit oracle-missing note.
 
+Dashboard JSON is built from `full_matrix.csv` plus targeted
+`dashboard_refresh_*.csv` deltas. Those refresh files are not a separate
+gate policy: they are ordinary orchestrator rows that replace stale cells
+by exact execution key until the full timing matrix is regenerated.
+
 ## Parity tolerance
 
 Binding parity uses strict max-absolute tolerance, normally `1e-6`.

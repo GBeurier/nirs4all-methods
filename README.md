@@ -4,10 +4,10 @@
 > first-class bindings for **Python, R, MATLAB / Octave**, plus JS /
 > WebAssembly, Go, Rust, Julia, Ruby, .NET, Lua, Nim, and Android.
 
-The same numerical core powers every binding: a model trained in Python
-predicts byte-for-byte the same way in R, MATLAB, a browser, or on
-Android. Cross-checked against scikit-learn, R `pls`, `ropls`,
-`mixOmics`, `ikpls`, MATLAB `plsregress`.
+The same numerical core powers every binding: a model trained in Python,
+R, MATLAB, a browser, or Android is checked against the same C++ parity
+contract and tolerance policy. Cross-checked against scikit-learn, R
+`pls`, `ropls`, `mixOmics`, `ikpls`, MATLAB `plsregress`.
 
 ---
 
@@ -102,7 +102,7 @@ predict(mdl, Xnew)
 | JNI / JVM | SIMPLS via JNI | (deferred) |
 
 Cross-binding parity: every binding's SIMPLS predictions match the
-shared fixture within `rmse_rel < 1e-12` (bit-exact for several). See
+shared fixture within `rmse_rel < 1e-12` for the committed smoke matrix. See
 [`docs/parity/`](docs/parity/) and the
 [cross-binding benchmark](docs/benchmarks/cross_binding.md).
 

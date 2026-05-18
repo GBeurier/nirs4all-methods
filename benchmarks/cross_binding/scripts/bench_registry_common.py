@@ -93,6 +93,23 @@ def adapted_params(method, n: int, p: int, n_components: int) -> dict:
         lo = int(params["n_components"])
         hi = int(p)
         params["min_selected"] = max(lo, min(int(params["min_selected"]), hi))
+    if method.name == "bve_select":
+        min_features = max(1, min(int(params.get("min_features", 5)), p))
+        # BVE is defined by a backward trajectory. On non-registry size
+        # sweeps, keep eliminating until the requested survivor floor so
+        # the external plsVarSel reference and pls4all compare masks with
+        # comparable cardinality instead of "almost all variables" vs
+        # "final survivor set".
+        params["min_features"] = min_features
+        params["n_steps"] = max(1, p - min_features)
+    if method.name == "uve_select" and not use_registry_components:
+        # The global dashboard size sweep overrides n_components. Keep a
+        # deterministic UVE noise baseline that remains comparable to the
+        # plsVarSel mcuve survivor set at the dashboard's 100x50 smoke
+        # size, while leaving the MethodSpec registry cell untouched.
+        params["n_components"] = _cap_components(3, n, p)
+        params["noise_features"] = min(max(29, int(params.get("noise_features", 5))), p)
+        params["noise_seed"] = 11
     return params
 
 

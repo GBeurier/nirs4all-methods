@@ -247,13 +247,14 @@ static p4a_validation_plan_t* make_default_plan(int n, int requested_folds) {
         p4a_validation_plan_destroy(plan);
         return NULL;
     }
-    int fold_size = (n + n_folds - 1) / n_folds;
+    /* Match the canonical Python/registry plan: equal floor-sized
+     * contiguous folds, with the remainder assigned to the final fold. */
+    int fold_size = n / n_folds;
     int64_t *train = (int64_t *)mxMalloc((size_t)n * sizeof(int64_t));
     int64_t *test  = (int64_t *)mxMalloc((size_t)n * sizeof(int64_t));
     for (int f = 0; f < n_folds; ++f) {
         int t_start = f * fold_size;
-        int t_end = t_start + fold_size;
-        if (t_end > n) t_end = n;
+        int t_end = (f < n_folds - 1) ? (t_start + fold_size) : n;
         int n_test = t_end - t_start;
         int n_train = n - n_test;
         int ti = 0, te = 0;

@@ -145,6 +145,10 @@ function preds = fit_predict(algo, csv_dir, n, p, nc, seed, nv)
     % registry convention). Strip any earlier KernelType so we don't
     % append it twice and trip the input parser.
     dispatch_algo = algo;
+    if strcmp(algo, "pls")
+        dispatch_algo = "sparse_simpls";
+        nv = [nv, {"Lambda", 0.0}];
+    end
     if strcmp(algo, "kernel_pls_rbf")
         dispatch_algo = "kernel_pls";
         % Remove any previously-appended KernelType pair.

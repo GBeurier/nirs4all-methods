@@ -241,7 +241,11 @@ def dual_parity_label(row) -> str:
 
     First icon = binding consistency (gate 1).
     Second icon = external-reference validity (gate 2).
+    External libraries have no binding gate, so they display only the
+    reference-parity icon.
     """
+    if not (row.get("kind") or "").lower().startswith("pls4all"):
+        return reference_parity_icon(row)
     return binding_parity_icon(row) + reference_parity_icon(row)
 
 

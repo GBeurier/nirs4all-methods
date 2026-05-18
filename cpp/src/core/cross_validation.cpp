@@ -2,6 +2,7 @@
 
 #include "core/cross_validation.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -229,6 +230,8 @@ p4a_status_t cross_validate_regression(Context& ctx,
         out.test_offsets.push_back(0);
 
         std::vector<std::int32_t> prediction_counts(n, 0);
+        std::size_t max_train = 0;
+        std::size_t max_test = 0;
         for (std::size_t fold_idx = 0; fold_idx < plan.folds.size(); ++fold_idx) {
             const ValidationFold& fold = plan.folds[fold_idx];
             status = validate_plan_fold(ctx, fold, n, fold_idx, prediction_counts);
@@ -236,10 +239,38 @@ p4a_status_t cross_validate_regression(Context& ctx,
                 out = CrossValidationResult{};
                 return status;
             }
+            max_train = std::max(max_train, fold.train_indices.size());
+            max_test = std::max(max_test, fold.test_indices.size());
+        }
 
-            std::vector<double> train_x;
-            std::vector<double> train_y;
-            std::vector<double> test_x;
+        std::size_t train_x_capacity = 0;
+        std::size_t train_y_capacity = 0;
+        std::size_t test_x_capacity = 0;
+        std::size_t fold_pred_capacity = 0;
+        if (!checked_matrix_size(static_cast<std::int64_t>(max_train), X.cols,
+                                 train_x_capacity) ||
+            !checked_matrix_size(static_cast<std::int64_t>(max_train), Y.cols,
+                                 train_y_capacity) ||
+            !checked_matrix_size(static_cast<std::int64_t>(max_test), X.cols,
+                                 test_x_capacity) ||
+            !checked_matrix_size(static_cast<std::int64_t>(max_test), Y.cols,
+                                 fold_pred_capacity)) {
+            ctx.set_error("cross-validation fold buffer shape is too large");
+            out = CrossValidationResult{};
+            return P4A_ERR_INVALID_ARGUMENT;
+        }
+
+        std::vector<double> train_x;
+        std::vector<double> train_y;
+        std::vector<double> test_x;
+        std::vector<double> fold_predictions;
+        train_x.reserve(train_x_capacity);
+        train_y.reserve(train_y_capacity);
+        test_x.reserve(test_x_capacity);
+        fold_predictions.reserve(fold_pred_capacity);
+
+        for (std::size_t fold_idx = 0; fold_idx < plan.folds.size(); ++fold_idx) {
+            const ValidationFold& fold = plan.folds[fold_idx];
             status = copy_rows(ctx, X, fold.train_indices, "X train", train_x);
             if (status != P4A_OK) {
                 out = CrossValidationResult{};
@@ -281,7 +312,6 @@ p4a_status_t cross_validate_regression(Context& ctx,
                 return P4A_ERR_INTERNAL;
             }
 
-            std::vector<double> fold_predictions;
             fold_predictions.assign(fold.test_indices.size() * q, 0.0);
             p4a_matrix_view_t pred_view =
                 rowmajor_f64_view(fold_predictions,

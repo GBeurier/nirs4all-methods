@@ -1,9 +1,9 @@
 # pls4all — MATLAB / Octave binding
 
-MEX shims that expose libp4a's `p4a_pls_fit_simple` C ABI to MATLAB
-(R2018a+) and GNU Octave (>= 6.0). Parity-gated against the native
-Python reference at `rmse_rel <= 5e-17` (i.e. exact to machine
-epsilon) on the shared fixture `bindings/js/test/parity_fixture.json`.
+MEX shims that expose libp4a's simple PLS entry point plus the unified
+method/model dispatchers to MATLAB (R2018a+) and GNU Octave (>= 6.0).
+The smoke fixture is parity-gated against the shared C++ contract with
+`rmse_rel <= 5e-17`.
 
 ## Layout
 
@@ -26,20 +26,24 @@ bindings/matlab/
 
 OCTAVE_HOME=$CONDA_PREFIX \
 mkoctfile --mex \
-  -o bindings/matlab/+pls4all/p4a_pls_fit_mex \
-  bindings/matlab/mex/p4a_pls_fit_mex.c \
+  -o bindings/matlab/+pls4all/p4a_method_fit_mex \
+  bindings/matlab/mex/p4a_method_fit_mex.c \
   -Icpp/include -Ibuild/dev-release/generated \
   -Lbuild/dev-release/cpp/src -lp4a \
   -Wl,-rpath,$(pwd)/build/dev-release/cpp/src
 
 OCTAVE_HOME=$CONDA_PREFIX \
 mkoctfile --mex \
-  -o bindings/matlab/+pls4all/p4a_version_mex \
-  bindings/matlab/mex/p4a_version_mex.c \
+  -o bindings/matlab/+pls4all/p4a_model_fit_mex \
+  bindings/matlab/mex/p4a_model_fit_mex.c \
   -Icpp/include -Ibuild/dev-release/generated \
   -Lbuild/dev-release/cpp/src -lp4a \
   -Wl,-rpath,$(pwd)/build/dev-release/cpp/src
 ```
+
+`bindings/matlab/build_mex.m` builds all four shims:
+`p4a_method_fit_mex`, `p4a_model_fit_mex`, `p4a_pls_fit_mex`, and
+`p4a_version_mex`.
 
 ### MATLAB
 
@@ -92,7 +96,5 @@ PARITY GATE PASS
 
 ## Limitations
 
-* Currently only the one-shot `pls_fit` entry point is wrapped.
-  `p4a_pls_predict` against a saved model is on the backlog.
 * Column-major <-> row-major conversion happens on every call. For
   large matrices, fit on the full block rather than per-row.

@@ -1,6 +1,6 @@
 # Stabilisation plan — parity, dashboard and releases
 
-Date: 2026-05-18
+Date: 2026-05-19
 Scope: parity gates, cross-binding dashboard, slow methods, and
 PyPI/CRAN readiness for pls4all 0.97.0 / ABI 1.16.0.
 
@@ -28,16 +28,25 @@ Local audit results:
 
 ## Implementation status
 
-First stabilization pass:
+Stabilization status:
 
 - P0 gate semantics implemented in the orchestrator: external rows are no
   longer binding-parity failures, reference parity compares all successful
   rows against the canonical oracle, and `--only-pls4all` consumes stored
   oracle snapshots instead of skipping Gate 2.
 - P1 dashboard/static docs updated to render the two gates and to merge
-  canonical `ref_*` rows atomically.
+  canonical `ref_*` rows atomically. External cells render only the
+  reference gate because they have no binding gate.
 - P2 Python selector smoke fixed for UVE, and tier-2 selector wrappers now
-  fail closed on unknown registry parameters.
+  fail closed on unknown registry parameters. Python/R/MATLAB selector
+  ValidationPlan defaults are aligned to the canonical 3-fold contiguous
+  plan.
+- P2 dashboard refresh data covers the previously red `100x50` cells for
+  `continuum_regression`, PCR and the selector smoke set; unavailable
+  formula/classdef selector wrappers are classified as not available rather
+  than failed parity.
+- P3 first performance pass landed for PCR batch projection and
+  cross-validation fold-buffer reuse.
 - P4 ABI snapshot refreshed for the public 1.16.0 symbols already exported
   by the current shared library.
 
@@ -81,13 +90,15 @@ First stabilization pass:
 1. Fix the UVE sklearn pipeline failure by choosing an explicit policy for
    empty selections: add a `min_features`/fallback option or use a fixture
    parameter set that cannot select zero features in pipeline smoke tests.
+   **Done.**
 2. Stop silently dropping registry parameters in tier-2 wrappers. Add
    adapter maps for alias names or fail closed when a registry parameter is
-   unsupported by a wrapper constructor.
+   unsupported by a wrapper constructor. **Done for selector smoke.**
 3. Unify selector validation plans across Python registry, sklearn classes,
    R dispatcher and MATLAB MEX. The cheapest deterministic option is a
    shared 3-fold contiguous plan; the more flexible option is to serialize
-   fold indices through benchmark parameters.
+   fold indices through benchmark parameters. **Done with the 3-fold
+   contiguous plan.**
 4. Add C++ fixture coverage for selectors currently covered only by
    registry smoke tests.
 
@@ -95,12 +106,14 @@ First stabilization pass:
 
 1. PCR: replace full `p x p` Jacobi eigensolve with a deterministic
    SVD/LAPACK or partial top-component solver, and use an `n x n` path when
-   `p >> n`.
+   `p >> n`. **Partially done:** PCR now batches component projections and
+   avoids score storage when not requested.
 2. R vendoring: regenerate the vendored libp4a copy instead of manually
    carrying divergent `model.cpp` code.
 3. Selectors: introduce a shared fitness evaluator that reuses buffers,
    validation folds and prediction arrays instead of reallocating for every
-   candidate.
+   candidate. **Started:** cross-validation fold buffers are reused across
+   candidate evaluations.
 4. Parallelize independent candidate evaluations for PSO, VISSA, BVE and
    IRIV while reducing results in deterministic order to preserve tie-breaks
    and RNG behavior.

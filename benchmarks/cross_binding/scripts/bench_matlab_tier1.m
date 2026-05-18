@@ -102,15 +102,16 @@ end
 
 % Strip Python-only metadata keys so the C dispatcher's per-algo
 % whitelists don't reject them.
-for key = ["n_samples", "n_features"]
-    if isfield(params, key)
-        params = rmfield(params, key);
+for key = {"n_samples", "n_features"}
+    name = key{1};
+    if isfield(params, name)
+        params = rmfield(params, name);
     end
 end
 
 % Integer coercion: jsondecode of a JSON array of ints yields a double
 % column vector, which the MEX side rejects when it expects int32.
-int_keys = ["block_sizes", "n_components_per_block", "n_unique_per_block", ...
+int_keys = {"block_sizes", "n_components_per_block", "n_unique_per_block", ...
              "y_labels", "group_assignment", "n_blocks", ...
              "max_iter", "max_irls_iter", "n_estimators", ...
              "n_neighbors", "n_iterations", "window_size", ...
@@ -120,19 +121,21 @@ int_keys = ["block_sizes", "n_components_per_block", "n_unique_per_block", ...
              "features_per_subspace", "n_steps", "n_folds", ...
              "noise_features", "noise_seed", "kernel_type", ...
              "degree", "n_targets", "mode_j", "mode_k", ...
-             "window_half_width"];
+             "window_half_width"};
 for k = int_keys
-    if isfield(params, k)
-        params.(k) = int32(params.(k));
+    name = k{1};
+    if isfield(params, name)
+        params.(name) = int32(params.(name));
     end
 end
 
 % Block-sizes / similar vector params can land as column vectors after
 % jsondecode — the MEX dispatcher prefers row vectors.
-for k = ["block_sizes", "n_components_per_block", "n_unique_per_block", ...
-          "y_labels", "group_assignment"]
-    if isfield(params, k)
-        params.(k) = reshape(params.(k), 1, []);
+for k = {"block_sizes", "n_components_per_block", "n_unique_per_block", ...
+          "y_labels", "group_assignment"}
+    name = k{1};
+    if isfield(params, name)
+        params.(name) = reshape(params.(name), 1, []);
     end
 end
 

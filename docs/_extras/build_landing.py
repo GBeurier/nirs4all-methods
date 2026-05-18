@@ -1,8 +1,8 @@
 """Build the JSON payload that powers the interactive landing dashboard.
 
-Reads the canonical `benchmarks/cross_binding/results/full_matrix.csv`,
-normalises rows to a dashboard-friendly shape and
-emits a compact JSON blob. The blob is injected into
+Reads the canonical `benchmarks/cross_binding/results/full_matrix.csv`
+plus optional `dashboard_refresh_*.csv` deltas, normalises rows to a
+dashboard-friendly shape and emits a compact JSON blob. The blob is injected into
 `docs/_templates/landing.html` at sphinx-build time via the
 `bench_data_json` html_context variable populated by `conf.py:setup()`.
 
@@ -163,6 +163,34 @@ ALGO_GROUP = {
     "ridge_pls":            "regularized",
 }
 
+SELECTOR_ALGOS = {
+    "vip_select", "coefficient_select", "selectivity_ratio_select",
+    "spa_select", "cars_select", "ga_select", "pso_select",
+    "vissa_select", "iriv_select", "irf_select", "shaving_select",
+    "bve_select", "rep_select", "ipw_select", "st_select",
+    "t2_select", "wvc_select", "wvc_threshold_select",
+    "emcuve_select", "randomization_select", "bipls_select",
+    "sipls_select", "interval_select", "stability_select",
+    "uve_select", "random_frog_select", "scars_select",
+    "vip_spa_select",
+}
+
+MATLAB_TIER2_SUPPORTED = {
+    "pls", "pls_simpls", "simpls", "sparse_simpls", "cppls",
+    "ecr", "weighted_pls", "robust_pls", "ridge_pls",
+    "continuum_regression", "recursive_pls", "n_pls",
+    "kernel_pls", "kernel_pls_rbf", "o2pls", "mb_pls",
+    "pls_glm", "mir_pls", "missing_aware_nipals",
+    "bagging_pls", "boosting_pls",
+}
+
+FIXED_EXTERNAL_SUPPORT = {
+    "ikpls": {"pls"},
+    "r_pls": {"pls", "pcr", "cppls"},
+    "r_ropls": {"opls"},
+    "matlab_pls": {"pls"},
+}
+
 
 # Registry-driven `ref_*` backends that ARE the same library as one of
 # the fixed legacy externals. We collapse the two into a single
@@ -315,10 +343,24 @@ def parity_code(row: dict) -> str:
     Reads `binding_parity_*` first, falls back to legacy `parity_*`.
     """
     if not is_true(row.get("ok")):
+        algo = row.get("algorithm") or row.get("algo") or ""
+        backend = row.get("backend") or ""
+        supported = FIXED_EXTERNAL_SUPPORT.get(backend)
+        if supported is not None and algo not in supported:
+            return "not_available"
+        if backend == "r_tier2" and algo in SELECTOR_ALGOS:
+            return "not_available"
+        if backend == "matlab_tier2" and algo not in MATLAB_TIER2_SUPPORTED:
+            return "not_available"
         reason = (row.get("reason") or "").lower()
         if "timeout" in reason:
             return "not_run"
         if ("not implemented by" in reason or
+                "no sklearn estimator" in reason or
+                "no formula wrapper" in reason or
+                "no pls4all.fit classdef entry" in reason or
+                "formula api limitation" in reason or
+                "only accepts 1-d y" in reason or
                 "unsupported algo" in reason or
                 "unsupported algorithm" in reason):
             return "not_available"
@@ -444,7 +486,8 @@ def build_payload(results_dir: Path) -> dict:
     """Read canonical cross-binding CSVs and build the dashboard payload."""
     rows_in: list[dict] = []
     full_matrix = results_dir / "full_matrix.csv"
-    csv_paths = [full_matrix] if full_matrix.exists() else []
+    refresh_paths = sorted(results_dir.glob("dashboard_refresh_*.csv"))
+    csv_paths = ([full_matrix] if full_matrix.exists() else []) + refresh_paths
     generated_at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     if csv_paths:
         latest_source = max(p.stat().st_mtime for p in csv_paths)
@@ -465,6 +508,36 @@ def build_payload(results_dir: Path) -> dict:
             continue
         key = (r["algorithm"], r["backend"], r.get("libp4a_build", ""), n, p_, t)
         seen[key] = r
+
+    # Non-C++ dashboard columns are unique even when the CSV contains one
+    # row per libp4a build sweep. Prefer the production `blas-omp` row so
+    # stale dev/blas/omp duplicate rows cannot keep an old gate verdict.
+    preferred: dict[tuple, dict] = {}
+    for r in seen.values():
+        be = r.get("backend", "")
+        if be == "cpp":
+            key = (
+                r["algorithm"], be, r.get("libp4a_build", ""),
+                int(r["n"]), int(r["p"]), int(r["threads"]),
+            )
+        else:
+            key = (
+                r["algorithm"], be,
+                int(r["n"]), int(r["p"]), int(r["threads"]),
+            )
+        old = preferred.get(key)
+        if old is None:
+            preferred[key] = r
+            continue
+        old_build = old.get("libp4a_build", "")
+        new_build = r.get("libp4a_build", "")
+        if new_build == "blas-omp" and old_build != "blas-omp":
+            preferred[key] = r
+    seen = {
+        (r["algorithm"], r["backend"], r.get("libp4a_build", ""),
+         int(r["n"]), int(r["p"]), int(r["threads"])): r
+        for r in preferred.values()
+    }
 
     # Collect columns actually present. Track the backend(s) that
     # contributed to each column id so the column metadata builder can

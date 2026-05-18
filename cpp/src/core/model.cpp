@@ -3582,16 +3582,20 @@ p4a_status_t fit_pcr_svd(
                   return mat[idx(lhs, p, lhs)] > mat[idx(rhs, p, rhs)];
               });
 
-    // For each retained component, project Xc onto the eigenvector to get
-    // x_score = sigma_i * U[:, i], compute y_loadings via x_score^T Yc /
-    // |x_score|^2, and capture y_scores via Yc * y_loadings / |y_loadings|^2.
+    // For each retained component, collect the eigenvector directions.
+    // Then batch the PCR projections through GEMM:
+    //   scores_t     = Xc * directions
+    //   y_loadings_q = Yc^T * scores_t / eigenvalue
+    // This preserves the same math as per-component GEMV while avoiding
+    // repeated dispatch overhead and enabling BLAS/CUDA to see a wider op.
     // weights_w == loadings_p == V[:, i] in closed form because each
     // eigenvector is orthonormal and the per-component deflation reduces
     // to the identity in the (Xc^T Xc) eigenbasis.
     std::vector<double> direction(p, 0.0);
-    std::vector<double> x_score(n, 0.0);
-    std::vector<double> y_loadings(q, 0.0);
-    std::vector<double> y_scores(n, 0.0);
+    std::vector<double> directions;
+    std::vector<double> eigenvalues;
+    resize_fill(directions, p * a, 0.0);
+    resize_fill(eigenvalues, a, 0.0);
     for (std::size_t comp = 0; comp < a; ++comp) {
         const std::size_t col = order[comp];
         const double eigenvalue = mat[idx(col, p, col)];
@@ -3604,53 +3608,63 @@ p4a_status_t fit_pcr_svd(
             direction[feature] = eigvecs[idx(feature, p, col)];
         }
         canonicalize_direction_sign(direction);
-
-        // x_score = Xc * direction  (length n).
-        pls4all::linalg::gemv(
-            pls4all::linalg::Trans_No,
-            n, p,
-            1.0,
-            xs.data(),
-            direction.data(),
-            0.0,
-            x_score.data());
-        const double x_score_ss = eigenvalue;  // |Xc @ v|^2 == eigenvalue for orthonormal v.
-
-        // y_loadings = Yc^T * x_score / x_score_ss  (length q).
-        pls4all::linalg::gemv(
-            pls4all::linalg::Trans_Yes,
-            n, q,
-            1.0 / x_score_ss,
-            ys.data(),
-            x_score.data(),
-            0.0,
-            y_loadings.data());
-
-        // y_scores = Yc * y_loadings / |y_loadings|^2  (length n).
-        std::fill(y_scores.begin(), y_scores.end(), 0.0);
-        const double y_loading_ss = squared_norm(y_loadings);
-        if (y_loading_ss > std::numeric_limits<double>::epsilon()) {
-            pls4all::linalg::gemv(
-                pls4all::linalg::Trans_No,
-                n, q,
-                1.0 / y_loading_ss,
-                ys.data(),
-                y_loadings.data(),
-                0.0,
-                y_scores.data());
-        }
-
+        eigenvalues[comp] = eigenvalue;
         for (std::size_t feature = 0; feature < p; ++feature) {
+            directions[idx(feature, a, comp)] = direction[feature];
             model->weights_w[idx(feature, a, comp)] = direction[feature];
             model->loadings_p[idx(feature, a, comp)] = direction[feature];
         }
+    }
+
+    pls4all::linalg::gemm(
+        pls4all::linalg::Trans_No, pls4all::linalg::Trans_No,
+        n, a, p,
+        1.0,
+        xs.data(), p,
+        directions.data(), a,
+        0.0,
+        scores_t.data(), a);
+    pls4all::linalg::gemm(
+        pls4all::linalg::Trans_Yes, pls4all::linalg::Trans_No,
+        q, a, n,
+        1.0,
+        ys.data(), q,
+        scores_t.data(), a,
+        0.0,
+        model->y_loadings_q.data(), a);
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        const double inv_score_ss = 1.0 / eigenvalues[comp];
         for (std::size_t target = 0; target < q; ++target) {
-            model->y_loadings_q[idx(target, a, comp)] = y_loadings[target];
+            model->y_loadings_q[idx(target, a, comp)] *= inv_score_ss;
         }
-        for (std::size_t row = 0; row < n; ++row) {
-            scores_t[idx(row, a, comp)] = x_score[row];
-            y_scores_u[idx(row, a, comp)] = y_scores[row];
+    }
+
+    if (cfg.store_scores != 0) {
+        resize_fill(y_scores_u, n * a, 0.0);
+        std::vector<double> scaled_y_loadings;
+        resize_fill(scaled_y_loadings, q * a, 0.0);
+        for (std::size_t comp = 0; comp < a; ++comp) {
+            double y_loading_ss = 0.0;
+            for (std::size_t target = 0; target < q; ++target) {
+                const double value = model->y_loadings_q[idx(target, a, comp)];
+                y_loading_ss += value * value;
+            }
+            if (y_loading_ss > std::numeric_limits<double>::epsilon()) {
+                const double inv = 1.0 / y_loading_ss;
+                for (std::size_t target = 0; target < q; ++target) {
+                    scaled_y_loadings[idx(target, a, comp)] =
+                        model->y_loadings_q[idx(target, a, comp)] * inv;
+                }
+            }
         }
+        pls4all::linalg::gemm(
+            pls4all::linalg::Trans_No, pls4all::linalg::Trans_No,
+            n, a, q,
+            1.0,
+            ys.data(), q,
+            scaled_y_loadings.data(), a,
+            0.0,
+            y_scores_u.data(), a);
     }
 
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);

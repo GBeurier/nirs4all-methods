@@ -306,6 +306,37 @@ def _params_to_json(params: dict) -> str:
     return json.dumps(out)
 
 
+def _subprocess_failure_reason(out: subprocess.CompletedProcess) -> str:
+    """Return the most actionable short failure line from stdout/stderr.
+
+    R and Octave often end with generic stack frames such as
+    "Execution halted" or "bench_*.m at line ..."; the actual gate reason
+    is usually one or two lines above.
+    """
+    lines = []
+    for text in (out.stderr, out.stdout):
+        lines.extend((text or "").strip().splitlines())
+    for line in reversed(lines):
+        clean = line.strip()
+        low = clean.lower()
+        if not clean:
+            continue
+        if clean == "Execution halted":
+            continue
+        if low.startswith("calls:"):
+            continue
+        if low == "error: called from":
+            continue
+        if low.startswith("called from"):
+            continue
+        if " at line " in low and " column " in low:
+            continue
+        if low.startswith("error: ignoring const execution_exception"):
+            continue
+        return clean[:200]
+    return "exit != 0"
+
+
 def run_backend(name: str, script: str, language: str, tier: str,
                  kind: str, algo: str, n: int, p: int, n_components: int,
                  n_runs: int, threads: int, libp4a_build: str,
@@ -431,8 +462,7 @@ def run_backend(name: str, script: str, language: str, tier: str,
                  "subprocess_s": timeout}
     elapsed = time.perf_counter() - t0
     if out.returncode != 0:
-        tail = (out.stderr or out.stdout).strip().splitlines()
-        reason = tail[-1][:200] if tail else "exit != 0"
+        reason = _subprocess_failure_reason(out)
         return {"backend": name, "ok": False, "reason": reason,
                  "subprocess_s": elapsed,
                  "stdout_tail": out.stdout.strip().splitlines()[-3:],

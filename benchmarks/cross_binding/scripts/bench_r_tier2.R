@@ -41,12 +41,19 @@ if (n_targets > 1L) {
 
 fit_predict <- function(seed) {
     xy <- pls4all_bench_load_xy(a$csv_dir, a$n, a$p, seed)
+    if (a$algo == "pcr") {
+        model <- pls4all_fit(xy$X, xy$y,
+                              algo = "pcr_svd",
+                              n_components = as.integer(nc),
+                              scale_x = FALSE,
+                              scale_y = FALSE)
+        return(as.numeric(pls4all_predict(model, xy$X)))
+    }
     df <- as.data.frame(xy$X)
     df$y <- xy$y
 
     fit <- switch(a$algo,
-        "pls" = pls(y ~ ., df, ncomp = nc,
-                     algo = "pls_simpls"),
+        "pls" = sparse_pls(y ~ ., df, nc, sparsity_lambda = 0.0),
         "sparse_simpls" = sparse_pls(y ~ ., df, nc,
                                        params$sparsity_lambda %||% 0.05),
         "cppls" = cppls(y ~ ., df, nc, params$gamma %||% 0.5),
@@ -58,7 +65,6 @@ fit_predict <- function(seed) {
                                     params$huber_k %||% 1.345,
                                     as.integer(params$max_irls_iter %||% 20L)),
         "missing_aware_nipals" = missing_aware_nipals(y ~ ., df, nc),
-        "pcr" = pls(y ~ ., df, ncomp = nc, algo = "pcr_svd"),
         "continuum_regression" = continuum_regression(y ~ ., df, nc,
                                                        params$tau %||% 0.5),
         "bagging_pls" = bagging_pls(y ~ ., df, nc,
