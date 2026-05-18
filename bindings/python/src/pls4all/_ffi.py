@@ -27,7 +27,9 @@ _PACKAGE_DIR = Path(__file__).resolve().parent
 _SIBLING_LIBS = _PACKAGE_DIR.parent / f"{_PACKAGE_DIR.name}.libs"
 _REPO_ROOT = _PACKAGE_DIR.parents[3] if _PACKAGE_DIR.parents[3].name == "pls4all" else None
 
-_LIB_PATTERNS = ("libp4a.so*", "libp4a*.dylib", "p4a*.dll", "libp4a*.dll")
+# auditwheel renames the bundled library to ``libp4a-<8hexhash>.so.1.16.0``,
+# so we must accept the form ``libp4a*.so*`` in addition to ``libp4a.so*``.
+_LIB_PATTERNS = ("libp4a*.so*", "libp4a*.dylib", "p4a*.dll", "libp4a*.dll")
 
 
 def _glob_libs(directory: Path) -> list[Path]:

@@ -36,6 +36,7 @@ import base64
 import csv
 import hashlib
 import io
+import os
 import re
 import shutil
 import sys
@@ -46,11 +47,16 @@ from pathlib import Path
 # Format reference: PEP 427 (wheel binary format) + PEP 425 (compatibility tags).
 # Tag triple: <interpreter>-<abi>-<platform>, where interpreter is "cp3X"
 # (CPython) / "pp3X" (PyPy) / "py3" (any-Python), abi is "cp3X" / "abi3" /
-# "none", platform is e.g. "manylinux_2_31_x86_64".
+# "none", platform is e.g. "manylinux_2_31_x86_64" — or, when a wheel is
+# compatible with several platform tags, dot-joined like
+# "manylinux_2_17_x86_64.manylinux2014_x86_64".
+#
+# We deliberately allow dots inside the platform segment so that compressed
+# tags are not rejected.
 _WHEEL_NAME_RE = re.compile(
     r"^(?P<dist>[A-Za-z0-9_]+(?:-[A-Za-z0-9_.]+)*)-(?P<ver>[^-]+)"
     r"-(?P<build>[^-]+-)?"
-    r"(?P<python>[^-]+)-(?P<abi>[^-]+)-(?P<platform>[^.]+)"
+    r"(?P<python>[^-]+)-(?P<abi>[^-]+)-(?P<platform>[A-Za-z0-9_.]+)"
     r"\.whl$"
 )
 
@@ -88,29 +94,31 @@ def _retag_wheel(src: Path, dest_dir: Path) -> Path:
     dest = dest_dir / new_name
 
     # Operate on a temp file so we never half-write the destination wheel.
+    # Close the fd immediately — on Windows, opening the path again as a
+    # ZipFile fails if the fd is still held open by this process.
     fd, tmp_path = tempfile.mkstemp(suffix=".whl", dir=dest_dir)
+    os.close(fd)
     tmp = Path(tmp_path)
-    new_wheel_payload: bytes | None = None
-    record_member: str | None = None
-    wheel_member: str | None = None
 
     try:
-        # Find ${distinfo}/WHEEL + ${distinfo}/RECORD members from the source.
         with zipfile.ZipFile(src, "r") as zin:
-            members = zin.namelist()
-            for name in members:
-                if name.endswith(".dist-info/WHEEL"):
-                    wheel_member = name
-                elif name.endswith(".dist-info/RECORD"):
-                    record_member = name
-            if wheel_member is None or record_member is None:
+            infos = zin.infolist()
+            wheel_info = next(
+                (i for i in infos if i.filename.endswith(".dist-info/WHEEL")),
+                None,
+            )
+            record_info = next(
+                (i for i in infos if i.filename.endswith(".dist-info/RECORD")),
+                None,
+            )
+            if wheel_info is None or record_info is None:
                 raise RuntimeError(
                     f"wheel {src.name} is missing WHEEL or RECORD; "
                     "cannot retag a malformed wheel"
                 )
 
             # Build the new WHEEL metadata in memory.
-            original_wheel = zin.read(wheel_member).decode("utf-8")
+            original_wheel = zin.read(wheel_info).decode("utf-8")
             new_wheel_payload = _rewrite_wheel_metadata(
                 original_wheel,
                 python_tag,
@@ -119,41 +127,56 @@ def _retag_wheel(src: Path, dest_dir: Path) -> Path:
                 new_python_tag,
                 new_abi_tag,
             ).encode("utf-8")
-
-            # Compute the new RECORD entry for WHEEL (must be done before
-            # writing the new zip).
             wheel_hash = _record_hash(new_wheel_payload)
             wheel_size = len(new_wheel_payload)
 
             with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zout:
-                for name in members:
-                    if name == wheel_member:
-                        zout.writestr(name, new_wheel_payload)
-                    elif name == record_member:
+                # Preserve each member's ZipInfo metadata (mtime, external_attr,
+                # compression, file flags) so the rewritten wheel matches the
+                # source byte-for-byte except for the two updated members.
+                for info in infos:
+                    if info.filename == wheel_info.filename:
+                        new_info = _clone_zipinfo(info)
+                        zout.writestr(new_info, new_wheel_payload)
+                    elif info.filename == record_info.filename:
                         new_record = _rewrite_record(
-                            zin.read(record_member).decode("utf-8"),
-                            wheel_member,
+                            zin.read(record_info).decode("utf-8"),
+                            wheel_info.filename,
                             wheel_hash,
                             wheel_size,
-                        )
-                        zout.writestr(name, new_record.encode("utf-8"))
+                        ).encode("utf-8")
+                        zout.writestr(_clone_zipinfo(info), new_record)
                     else:
-                        zout.writestr(name, zin.read(name))
+                        # Stream the original member bytes back through a
+                        # ZipInfo clone to keep metadata intact.
+                        zout.writestr(_clone_zipinfo(info), zin.read(info))
+        # Final rename. .replace is atomic on POSIX + Windows when source +
+        # destination are on the same filesystem (they are — both inside
+        # dest_dir).
         tmp.replace(dest)
+        tmp = None  # mark as moved so the finally branch leaves it alone.
     finally:
-        # mkstemp opened a fd we never use — close it to avoid leaks under
-        # pytest-temp scoping. The file itself is renamed above if we got
-        # that far; otherwise it lingers under dest_dir as a fragment and
-        # the next run will overwrite it.
-        try:
-            import os as _os
-            _os.close(fd)
-        except OSError:
-            pass
-        if tmp.exists() and tmp.name != dest.name:
+        if tmp is not None and tmp.exists():
             tmp.unlink(missing_ok=True)
 
     return dest
+
+
+def _clone_zipinfo(info: zipfile.ZipInfo) -> zipfile.ZipInfo:
+    """Return a fresh ZipInfo carrying the same metadata as ``info``.
+
+    Reusing the original ZipInfo across ZipFile boundaries can mutate it; a
+    clone is safer.
+    """
+    clone = zipfile.ZipInfo(filename=info.filename, date_time=info.date_time)
+    clone.compress_type = info.compress_type
+    clone.external_attr = info.external_attr
+    clone.create_system = info.create_system
+    clone.internal_attr = info.internal_attr
+    clone.flag_bits = info.flag_bits
+    clone.extract_version = info.extract_version
+    clone.create_version = info.create_version
+    return clone
 
 
 def _rewrite_wheel_metadata(
