@@ -153,6 +153,10 @@ jobs:
       # extension references it (ctypes loads it at runtime via CDLL).
       CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "pip install delvewheel && delvewheel repair --analyze-existing -w {dest_dir} {wheel}"
       CIBW_BUILD_VERBOSITY: "1"
+      # cibuildwheel 2.21.3's pinned constraints.txt requires packaging==24.1.
+      # Our build-system needs packaging>=24.2 (setuptools 77 PEP 639). Tell
+      # cibuildwheel to resolve build deps freely from PyPI so both can land.
+      CIBW_DEPENDENCY_VERSIONS: latest
       # Run a clean-venv smoke test against the freshly built wheel, BEFORE
       # we accept it.
       CIBW_TEST_COMMAND: "python -c \"import pls4all; v = pls4all.version(); print('OK', v); assert v.startswith('0.97.0'), v\""
