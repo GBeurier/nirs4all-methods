@@ -1507,20 +1507,28 @@ class _SelectorMaskResult:
 
 def _build_default_plan(n_samples: int, n_folds: int = 3,
                         seed: int = 0):
-    """Build a deterministic ValidationPlan with `n_folds` shuffled folds."""
+    """Build a deterministic ValidationPlan with `n_folds` contiguous folds.
+
+    Contiguous (non-shuffled) so the R + MATLAB binding-side helpers
+    (`make_default_plan` in `bindings/r/pls4all/src/r_dispatch.c` and
+    `bindings/matlab/mex/p4a_method_fit_mex.c`) produce the identical
+    plan. Shuffling the fold composition required serialising the
+    permutation across language boundaries; the simpler invariant is to
+    drop the shuffle on the Python side too. With identical folds and
+    the same per-selector `seed` (used only by the algorithm's own RNG,
+    not the plan), every selector returns bit-identical masks across
+    every binding.
+    """
     import pls4all
     plan = pls4all.ValidationPlan()
     plan.n_samples = n_samples
-    rng = np.random.default_rng(seed)
-    idx = np.arange(n_samples)
-    rng.shuffle(idx)
     fold_size = max(1, n_samples // n_folds)
     for f in range(n_folds):
         start = f * fold_size
         end = (f + 1) * fold_size if f < n_folds - 1 else n_samples
-        test = idx[start:end]
-        train = np.setdiff1d(idx, test, assume_unique=False)
-        plan.add_fold([int(x) for x in train], [int(x) for x in test])
+        test = list(range(start, end))
+        train = list(range(0, start)) + list(range(end, n_samples))
+        plan.add_fold(train, test)
     return plan
 
 
@@ -6001,3 +6009,146 @@ def resolved_reference_backends() -> list[dict[str, str]]:
         for ref in resolved_references_for_method(method):
             by_id.setdefault(ref["id"], ref)
     return [by_id[k] for k in sorted(by_id)]
+
+
+# ---- Parity-gate truth-source surface (📐 icon source data) --------------
+#
+# The benchmarks dashboard and the per-method docs surface a 📐 icon on
+# every backend row that is also declared in this registry as a parity
+# reference. Two helpers below split that information cleanly:
+#
+#   * `truth_source_metadata_for(method)` — host-sensitive, calls factories.
+#     Returns the rich {cid -> {role, language, library, version, notes,
+#     tolerance, quality}} dict the renderer needs. Drops conditionally-
+#     unavailable references (their factory returned None or raised).
+#
+#   * `truth_source_lockfile_entries()` — host-INSENSITIVE. Reads only
+#     the declarative shape of each MethodSpec (which reference slots are
+#     wired, the role keys of `extra_references`, and `paper_only`).
+#     The committed lockfile uses this so CI on a minimal host can verify
+#     "registry didn't drift" without needing R / Octave installed.
+#
+# Quality bands drive the dashboard CSS class. They derive from
+# `rmse_rel_tol` so the icon honestly reflects how strict the gate is —
+# a primary `python_reference` with tol > 1 (e.g. the AOM shape-only
+# oracle) is correctly tagged "qualitative", not "primary-strict".
+
+QUALITY_STRICT = "strict"          # tol <= 1e-6 — effectively bit-exact
+QUALITY_RELAXED = "relaxed"        # 1e-6 < tol < 1e-1 — algorithmic drift
+QUALITY_QUALITATIVE = "qualitative"  # tol >= 1e-1 — smoke / shape-only
+
+# 📐 is the registry-parity-reference marker. 📜 marks paper-only methods.
+TRUTH_SOURCE_ICON = "📐"
+PAPER_ONLY_ICON = "📜"
+
+
+def _truth_source_quality(tol: float) -> str:
+    if tol <= 1e-6:
+        return QUALITY_STRICT
+    if tol < 1e-1:
+        return QUALITY_RELAXED
+    return QUALITY_QUALITATIVE
+
+
+def truth_source_metadata_for(method: MethodSpec) -> dict[str, dict]:
+    """Resolved parity references keyed by cross-binding column id.
+
+    Used by `docs/_extras/build_methods.py` to mark the 📐 truth-source
+    rows in each method's benchmark table. The cross-binding doc encodes
+    a registry-driven reference as a `ref.<id>` column id (see
+    `column_id()` in `docs/_extras/build_methods.py` and the `ref_<id>`
+    backend name produced by `registry_reference_backends_for(algo)` in
+    `benchmarks/cross_binding/orchestrator.py`). The cid this function
+    returns matches that convention exactly.
+
+    `quality` derives from `method.rmse_rel_tol` so the renderer can
+    style strict / relaxed / qualitative bands distinctly. A primary
+    python_reference whose tolerance is wide (e.g. AOM oracle, MB/LW
+    cross-implementation refs) ends up classified by its real strength,
+    not by its role slot.
+    """
+    out: dict[str, dict] = {}
+    for ref in resolved_references_for_method(method):
+        cid = f"ref.{ref['id']}"
+        if cid in out:
+            continue
+        out[cid] = {
+            "id": ref["id"],
+            "role": ref["role"],
+            "language": ref["language"],
+            "library": ref["library"],
+            "version": ref["version"],
+            "notes": ref["notes"],
+            "tolerance": float(method.rmse_rel_tol),
+            "quality": _truth_source_quality(float(method.rmse_rel_tol)),
+        }
+    return out
+
+
+def truth_source_lockfile_entries() -> list[dict]:
+    """Host-insensitive structural snapshot of the registry's parity surface.
+
+    Each entry records, for one MethodSpec, the declarative shape of its
+    parity references — which slots are wired (python / r), the role
+    keys of `extra_references`, and the `paper_only` flag. We use this
+    in CI to gate "the registry shape stays in sync with the committed
+    lockfile / generated docs" without resolving any factory (which
+    would otherwise need R / Octave / network access).
+
+    The lockfile is the canonical structural contract for the 📐
+    surface; the resolved per-method metadata (library names, versions)
+    is computed at doc-render time on a fully-provisioned host.
+    """
+    entries: list[dict] = []
+    for method in METHODS:
+        extra_roles = [role for role, _factory in method.extra_references]
+        entries.append({
+            "name": method.name,
+            "paper_only": bool(method.paper_only),
+            "has_python_reference": method.python_reference is not None,
+            "has_r_reference": method.r_reference is not None,
+            "extra_reference_roles": sorted(extra_roles),
+            "rmse_rel_tol": float(method.rmse_rel_tol),
+            "prediction_key": method.prediction_key,
+        })
+    entries.sort(key=lambda e: e["name"])
+    return entries
+
+
+def dump_truth_sources_lockfile(path: str | Path) -> None:
+    """Write the host-insensitive lockfile to `path` as deterministic JSON."""
+    import json
+    payload = {
+        "version": 1,
+        "description": (
+            "Structural snapshot of benchmarks/parity_timing/registry.py's "
+            "parity-reference declarations. Host-insensitive: records "
+            "only which reference slots are wired (python / r), the "
+            "role keys of extra_references, and whether the MethodSpec "
+            "is paper_only. Regenerate with "
+            "`python -m benchmarks.parity_timing.lockfile`."
+        ),
+        "methods": truth_source_lockfile_entries(),
+    }
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(
+        json.dumps(payload, indent=2, sort_keys=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def validate_methods_have_references() -> list[str]:
+    """Lint: every MethodSpec must declare at least one reference factory
+    OR be flagged `paper_only`. Returns a list of method names that fail
+    this rule (empty when the registry is well-formed)."""
+    bad: list[str] = []
+    for method in METHODS:
+        has_any_ref = (
+            method.python_reference is not None
+            or method.r_reference is not None
+            or bool(method.extra_references)
+        )
+        if not has_any_ref and not method.paper_only:
+            bad.append(method.name)
+    return bad

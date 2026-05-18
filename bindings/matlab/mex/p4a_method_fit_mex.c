@@ -869,7 +869,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "cars_select") == 0) {
         int it = get_int_field(params, "n_iterations", 50);
         int mf = get_int_field(params, "min_features", 5);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "cars_select", ctx, cfg, X, Y);
             st = p4a_cars_select(ctx, cfg, &Xv, &Yv, _plan, it, mf, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -882,7 +882,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "interval_select") == 0) {
         int iw = get_int_field(params, "interval_width", 10);
         int step = get_int_field(params, "step", 1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "interval_select", ctx, cfg, X, Y);
             st = p4a_interval_select(ctx, cfg, &Xv, &Yv, _plan, iw, step, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -894,7 +894,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
     } else if (strcmp(algo, "stability_select") == 0) {
         int k = get_int_field(params, "top_k", 10);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "stability_select", ctx, cfg, X, Y);
             st = p4a_stability_select(ctx, cfg, &Xv, &Yv, _plan, k, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -907,7 +907,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "uve_select") == 0) {
         int nf = get_int_field(params, "noise_features", 0);
         uint64_t seed = get_u64_field(params, "noise_seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "uve_select", ctx, cfg, X, Y);
             st = p4a_uve_select(ctx, cfg, &Xv, &Yv, _plan, nf, seed, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -924,7 +924,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int maxz = get_int_field(params, "max_size", p);
         int tk = get_int_field(params, "top_k", 10);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "random_frog_select", ctx, cfg, X, Y);
             st = p4a_random_frog_select(ctx, cfg, &Xv, &Yv, _plan, it, isz, minz, maxz, tk, seed, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -939,7 +939,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int mf = get_int_field(params, "min_features", 5);
         double sf = get_scalar_field(params, "sample_fraction", 0.8);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "scars_select", ctx, cfg, X, Y);
             st = p4a_scars_select(ctx, cfg, &Xv, &Yv, _plan, it, mf, sf, seed, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -956,7 +956,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int maxf = get_int_field(params, "max_features", p);
         double mr_rate = get_scalar_field(params, "mutation_rate", 0.01);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "ga_select", ctx, cfg, X, Y);
             st = p4a_ga_select(ctx, cfg, &Xv, &Yv, _plan, g, psz, minf, maxf,
                             mr_rate, seed, &mr);
@@ -975,7 +975,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double c2 = get_scalar_field(params, "c2", 1.494);
         double vmax = get_scalar_field(params, "v_max", 4.0);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "pso_select", ctx, cfg, X, Y);
             st = p4a_pso_select(ctx, cfg, &Xv, &Yv, _plan, sw, it, w, c1, c2, vmax, seed, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -995,7 +995,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double th = get_scalar_field(params, "threshold", 0.5);
         double fp = get_scalar_field(params, "floor_probability", 0.01);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "vissa_select", ctx, cfg, X, Y);
             st = p4a_vissa_select(ctx, cfg, &Xv, &Yv, _plan, it, sub, rk, th, fp, seed, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1014,7 +1014,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int ns = get_int_field(params, "n_steps", 10);
         int mf = get_int_field(params, "min_features", 5);
         double sf = get_scalar_field(params, "shave_fraction", 0.1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "shaving_select", ctx, cfg, X, Y);
             st = p4a_shaving_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, sf, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1027,7 +1027,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "bve_select") == 0) {
         int ns = get_int_field(params, "n_steps", 10);
         int mf = get_int_field(params, "min_features", 5);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "bve_select", ctx, cfg, X, Y);
             st = p4a_bve_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1045,7 +1045,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                           "t2_select requires params.alpha_thresholds",
                           ctx, cfg, X, Y);
         int ms = get_int_field(params, "min_selected", 1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "t2_select", ctx, cfg, X, Y);
             st = p4a_t2_select(ctx, cfg, &Xv, &Yv, _plan, thr, nt, ms, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1081,7 +1081,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         uint64_t seed = get_u64_field(params, "noise_seed", 0);
         int ne = get_int_field(params, "n_ensembles", 5);
         double vt = get_scalar_field(params, "vote_threshold", 0.5);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "emcuve_select", ctx, cfg, X, Y);
             st = p4a_emcuve_select(ctx, cfg, &Xv, &Yv, _plan, nf, seed, ne, vt, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1104,7 +1104,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "bipls_select") == 0) {
         int iw = get_int_field(params, "interval_width", 10);
         int mi = get_int_field(params, "min_intervals", 1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "bipls_select", ctx, cfg, X, Y);
             st = p4a_bipls_select(ctx, cfg, &Xv, &Yv, _plan, iw, mi, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1117,7 +1117,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "sipls_select") == 0) {
         int iw = get_int_field(params, "interval_width", 10);
         int cs = get_int_field(params, "combination_size", 2);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "sipls_select", ctx, cfg, X, Y);
             st = p4a_sipls_select(ctx, cfg, &Xv, &Yv, _plan, iw, cs, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1131,7 +1131,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int ns = get_int_field(params, "n_steps", 10);
         int mf = get_int_field(params, "min_features", 5);
         int rc = get_int_field(params, "remove_count", 1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "rep_select", ctx, cfg, X, Y);
             st = p4a_rep_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, rc, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1146,7 +1146,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int tk = get_int_field(params, "top_k", 10);
         double damp = get_scalar_field(params, "damping", 0.5);
         double wf = get_scalar_field(params, "weight_floor", 1e-6);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "ipw_select", ctx, cfg, X, Y);
             st = p4a_ipw_select(ctx, cfg, &Xv, &Yv, _plan, it, tk, damp, wf, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1164,7 +1164,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                           "st_select requires params.thresholds",
                           ctx, cfg, X, Y);
         int ms = get_int_field(params, "min_selected", 1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "st_select", ctx, cfg, X, Y);
             st = p4a_st_select(ctx, cfg, &Xv, &Yv, _plan, thr, nt, ms, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1177,7 +1177,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "iriv_select") == 0) {
         int mr_rounds = get_int_field(params, "max_rounds", 20);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "iriv_select", ctx, cfg, X, Y);
             st = p4a_iriv_select(ctx, cfg, &Xv, &Yv, _plan, mr_rounds, seed, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1195,7 +1195,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int ii = get_int_field(params, "initial_intervals", 10);
         int tk = get_int_field(params, "top_k", 5);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "irf_select", ctx, cfg, X, Y);
             st = p4a_irf_select(ctx, cfg, &Xv, &Yv, _plan, it, ws, ii, tk, seed, &mr);
             p4a_validation_plan_destroy(_plan);

@@ -891,7 +891,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     /* Selectors that need a ValidationPlan share boilerplate via a macro. */
 #define DISPATCH_PLAN_SELECT(name, call_args, dmat_keys, iv_keys, i64_keys, sc_keys) \
     else if (strcmp(algo, name) == 0) { \
-        p4a_validation_plan_t* _plan = make_default_plan(n, 5); \
+        p4a_validation_plan_t* _plan = make_default_plan(n, 3); \
         if (!_plan) cleanup_err(ctx, cfg, name " could not build a default validation plan"); \
         st = call_args; \
         p4a_validation_plan_destroy(_plan); \
@@ -1044,7 +1044,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         if (thr == R_NilValue || TYPEOF(thr) != REALSXP)
             cleanup_err(ctx, cfg, "t2_select requires numeric params$alpha_thresholds");
         int ms = get_int(params, "min_selected", n_components);
-        p4a_validation_plan_t* _plan = make_default_plan(n, 5);
+        p4a_validation_plan_t* _plan = make_default_plan(n, 3);
         if (!_plan) cleanup_err(ctx, cfg, "t2_select plan creation failed");
         st = p4a_t2_select(ctx, cfg, &Xv, &Yv, _plan,
                             REAL(thr), Rf_length(thr), ms, &mr);
@@ -1059,7 +1059,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         if (thr == R_NilValue || TYPEOF(thr) != REALSXP)
             cleanup_err(ctx, cfg, "st_select requires numeric params$thresholds");
         int ms = get_int(params, "min_selected", n_components);
-        p4a_validation_plan_t* _plan = make_default_plan(n, 5);
+        p4a_validation_plan_t* _plan = make_default_plan(n, 3);
         if (!_plan) cleanup_err(ctx, cfg, "st_select plan creation failed");
         st = p4a_st_select(ctx, cfg, &Xv, &Yv, _plan,
                             REAL(thr), Rf_length(thr), ms, &mr);

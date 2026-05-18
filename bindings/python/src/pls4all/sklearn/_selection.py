@@ -36,21 +36,26 @@ from ._base import _check_X_y_p4a, _config_from_params, _resolve_solver
 
 def _default_plan(n_samples: int, *, n_folds: int = 3,
                     seed: int = 0) -> ValidationPlan:
-    """Deterministic k-fold ValidationPlan used by every selector that
-    needs cross-validated scoring. Mirrors the pattern in
-    ``benchmarks/parity_timing/registry.py::_build_default_plan``."""
+    """Deterministic k-fold ValidationPlan with **contiguous** folds.
+
+    Contiguous (non-shuffled) so the plan matches what the R + MATLAB
+    binding-side helpers (`make_default_plan` in
+    `bindings/r/pls4all/src/r_dispatch.c` and
+    `bindings/matlab/mex/p4a_method_fit_mex.c`) produce. With identical
+    folds + the same per-selector `seed` (used only by the algorithm's
+    own RNG, not the plan), every selector returns bit-identical masks
+    across every binding. The `seed` argument is accepted for API
+    compatibility but no longer affects the plan composition.
+    """
     plan = ValidationPlan()
     plan.n_samples = int(n_samples)
-    rng = np.random.default_rng(seed)
-    idx = np.arange(n_samples)
-    rng.shuffle(idx)
     fold_size = max(1, n_samples // n_folds)
     for f in range(n_folds):
         start = f * fold_size
         end = (f + 1) * fold_size if f < n_folds - 1 else n_samples
-        test = idx[start:end]
-        train = np.setdiff1d(idx, test, assume_unique=False)
-        plan.add_fold([int(x) for x in train], [int(x) for x in test])
+        test = list(range(start, end))
+        train = list(range(0, start)) + list(range(end, n_samples))
+        plan.add_fold(train, test)
     return plan
 
 
