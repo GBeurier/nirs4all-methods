@@ -294,6 +294,15 @@ p4a_status_t select_by_vissa(Context& ctx,
 
         // --- Sort ascending by RMSE; keep first k_actual --------------
         const std::size_t n_valid = rmses.size();
+        if (n_valid == 0) {
+            // No surviving masks in this VISSA iteration. Leave the
+            // iteration metric slots untouched (initialised to NaN by
+            // the result constructor) and skip to the next iteration.
+            // Avoids order[0] / rmses[order[0]] on an empty vector,
+            // which the compiler flags as a potential null-dereference
+            // under -Werror=null-dereference.
+            continue;
+        }
         const std::size_t k_actual = std::min(k_keep_target, n_valid);
         std::vector<std::size_t> order(n_valid);
         std::iota(order.begin(), order.end(), std::size_t{0});

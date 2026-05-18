@@ -12,7 +12,7 @@
 
 namespace {
 
-inline std::size_t idx(std::size_t row, std::size_t cols, std::size_t col) noexcept {
+[[maybe_unused]] inline std::size_t idx(std::size_t row, std::size_t cols, std::size_t col) noexcept {
     return row * cols + col;
 }
 
