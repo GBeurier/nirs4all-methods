@@ -72,16 +72,19 @@ def adapted_params(method, n: int, p: int, n_components: int) -> dict:
         params["n_blocks"] = max(1, min(n_blocks, p))
         params["n_unique_per_block"] = np.ones(params["n_blocks"],
                                                dtype=np.int32)
-    # Multi-block methods need a `block_sizes` partition of p. Build it
-    # from `n_blocks` (defaulting to the cell's value) so the sklearn
-    # tier-2 wrappers (MBPLSRegression, ROSARegression, SOPLSRegression)
-    # can take it as a ctor kwarg.
+    # Multi-block methods need a `block_sizes` partition of p. The
+    # Python registry's `_split_into_blocks(X, n_blocks)` uses
+    # `cols_per_block = p // n_blocks` for the first n_blocks-1 chunks
+    # and gives the remainder to the LAST chunk (so p=50, n_blocks=3 →
+    # [16, 16, 18]). Build the same distribution here so R/MATLAB
+    # bindings consume the same partition the C kernel will see on the
+    # Python path — otherwise cells like mb_pls / rosa / so_pls show a
+    # spurious ~0.04 max_diff across bindings.
     n_blocks_val = params.get("n_blocks")
     if n_blocks_val is not None and "block_sizes" not in params:
         nb = max(1, min(int(n_blocks_val), p))
         base = p // nb
-        rem = p - base * nb
-        sizes = [base + (1 if i < rem else 0) for i in range(nb)]
+        sizes = [base] * (nb - 1) + [p - base * (nb - 1)] if nb >= 1 else [p]
         params["block_sizes"] = np.array(sizes, dtype=np.int32)
     # `min_selected` (T2/ST selectors) must respect n_components ≤
     # min_selected ≤ p. The registry's cell may have a small fixed value

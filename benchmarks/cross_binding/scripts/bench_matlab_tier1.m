@@ -155,6 +155,22 @@ function preds = fit_predict(dispatch_algo, algo, csv_dir, n, p, nc, ...
     if is_classifier_like
         Y = zeros(numel(y), 1);
     end
+    % Multi-target methods (so_pls / rosa) need an n×n_targets matrix
+    % matching `benchmark_inputs` on the Python side (column 0 = y,
+    % column j>0 = 0.5*y + 0.1*X[:, (j-1) mod p]).
+    n_targets = 1;
+    if isfield(params, "n_targets")
+        n_targets = double(params.n_targets);
+    end
+    if n_targets > 1 && ~is_classifier_like
+        cols = zeros(numel(y), n_targets);
+        cols(:, 1) = y(:);
+        for j = 1:(n_targets - 1)
+            col_idx = mod(j - 1, p) + 1;
+            cols(:, j + 1) = 0.5 * y(:) + 0.1 * X(:, col_idx);
+        end
+        Y = cols;
+    end
 
     res = pls4all.p4a_method_fit_mex(char(dispatch_algo), ...
                                        double(X), double(Y), ...

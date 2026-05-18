@@ -156,6 +156,22 @@ fit_predict <- function(seed) {
                        "sparse_pls_da", "pls_cox", "ds", "pds")) {
         Y <- rep(0.0, length(xy$y))
     }
+    # Multi-target methods (so_pls / rosa with n_targets > 1) need a
+    # matrix Y matching the synthetic columns the Python registry
+    # generates in benchmark_inputs: column 0 is y, column j (>0) is
+    # 0.5*y + 0.1*X[:, (j-1) %% p]. Without this the C kernel runs on
+    # 1-D y and diverges from the registry path.
+    n_targets <- if (!is.null(call_params$n_targets))
+        as.integer(call_params$n_targets) else 1L
+    if (n_targets > 1L) {
+        cols <- list(as.numeric(xy$y))
+        for (j in seq_len(n_targets - 1L)) {
+            col_idx <- ((j - 1L) %% a$p) + 1L
+            cols[[j + 1L]] <- 0.5 * as.numeric(xy$y) +
+                              0.1 * as.numeric(xy$X[, col_idx])
+        }
+        Y <- do.call(cbind, cols)
+    }
 
     # Aliases for algos the R-side C dispatcher names differently than
     # the registry. "pls" runs through `sparse_simpls` with lambda=0
