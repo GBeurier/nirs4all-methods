@@ -183,26 +183,45 @@ def _rewrite_wheel_metadata(
     text: str,
     old_python: str,
     old_abi: str,
-    old_platform: str,
+    old_platform: str,  # noqa: ARG001 — kept for API symmetry
     new_python: str,
     new_abi: str,
 ) -> str:
-    """Rewrite the ``Tag:`` line(s) inside a ``WHEEL`` metadata blob."""
-    old_tag = f"{old_python}-{old_abi}-{old_platform}"
-    new_tag = f"{new_python}-{new_abi}-{old_platform}"
+    """Rewrite every matching ``Tag:`` line inside a ``WHEEL`` metadata blob.
+
+    auditwheel / delocate often expand a single compressed filename tag like
+    ``manylinux_2_17_x86_64.manylinux2014_x86_64`` into multiple separate
+    ``Tag:`` lines inside ``WHEEL`` — one per dot-joined component. We must
+    therefore rewrite **every** line whose interpreter/abi prefix matches the
+    wheel name, not just the one that exactly equals the filename's
+    dot-joined platform form.
+    """
+    old_prefix = f"{old_python}-{old_abi}-"
+    new_prefix = f"{new_python}-{new_abi}-"
     out_lines: list[str] = []
     saw_tag = False
+    rewritten = 0
     for line in text.splitlines(keepends=True):
         if line.startswith("Tag:"):
             saw_tag = True
             current = line[len("Tag:"):].strip()
-            # Only rewrite the tag we know about, leave any siblings.
-            replacement = new_tag if current == old_tag else current
-            out_lines.append(f"Tag: {replacement}\n")
+            if current.startswith(old_prefix):
+                # Strip the interpreter/abi prefix and re-prefix; preserves
+                # the platform segment exactly (including dotted forms).
+                platform_part = current[len(old_prefix):]
+                out_lines.append(f"Tag: {new_prefix}{platform_part}\n")
+                rewritten += 1
+            else:
+                out_lines.append(line)
         else:
             out_lines.append(line)
     if not saw_tag:
         raise RuntimeError("WHEEL metadata has no Tag: line")
+    if rewritten == 0:
+        raise RuntimeError(
+            f"WHEEL metadata has no Tag: line matching prefix '{old_prefix}*'; "
+            "filename and metadata disagree."
+        )
     return "".join(out_lines)
 
 

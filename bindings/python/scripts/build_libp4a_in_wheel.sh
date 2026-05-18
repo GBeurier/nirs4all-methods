@@ -60,7 +60,21 @@ case "$(uname -s)" in
         cp -a "${BUILD_DIR}/cpp/src/"libp4a*.dylib    "${SRC_LIB_DIR}/"
         ;;
     MINGW*|CYGWIN*|MSYS*)
-        cp -a "${BUILD_DIR}/cpp/src/p4a.dll"          "${SRC_LIB_DIR}/"
+        # MSVC multi-config generators (Visual Studio 17 2022 for our CI
+        # preset) drop binaries under cpp/src/Release/p4a.dll. Ninja
+        # single-config builds drop them directly under cpp/src/. Check both.
+        dll_paths=()
+        for candidate in \
+            "${BUILD_DIR}/cpp/src/Release/p4a.dll" \
+            "${BUILD_DIR}/cpp/src/p4a.dll"; do
+            [[ -f "${candidate}" ]] && dll_paths+=("${candidate}")
+        done
+        if [[ ${#dll_paths[@]} -eq 0 ]]; then
+            echo "ERROR: p4a.dll not found in ${BUILD_DIR}/cpp/src or Release/" >&2
+            find "${BUILD_DIR}/cpp/src" \( -name 'p4a*' -o -name 'libp4a*' \) -ls || true
+            exit 1
+        fi
+        cp -a "${dll_paths[@]}" "${SRC_LIB_DIR}/"
         ;;
     *)
         echo "ERROR: unrecognised platform $(uname -s)" >&2
