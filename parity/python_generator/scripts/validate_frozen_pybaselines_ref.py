@@ -76,26 +76,31 @@ def main() -> int:
 
     all_ok = True
 
+    # The frozen reference operators take 2-D matrices (n_samples, n_features);
+    # the pybaselines comparison uses the 1-D `y` directly. Wrap as a single-row
+    # matrix and unwrap the output.
+    y_mat = y[None, :]
+
     # Detrend (polynomial)
-    ours_d = c4a_ref.detrend(y, polyorder=2)
+    ours_d = c4a_ref.detrend(y_mat, polyorder=2)[0]
     theirs_z, _ = fitter.poly(y, poly_order=2)
     theirs_d = y - theirs_z
     all_ok &= _check("detrend", ours_d, theirs_d)
 
     # AsLS
-    ours_a = c4a_ref.asls(y, lam=1e6, p=0.001, max_iter=50, tol=1e-3)
+    ours_a = c4a_ref.asls(y_mat, lam=1e6, p=0.001, max_iter=50, tol=1e-3)[0]
     theirs_z, _ = fitter.asls(y, lam=1e6, p=0.001, max_iter=50, tol=1e-3)
     theirs_a = y - theirs_z
     all_ok &= _check("asls", ours_a, theirs_a)
 
     # AirPLS
-    ours_p = c4a_ref.airpls(y, lam=1e6, max_iter=50, tol=1e-2)
+    ours_p = c4a_ref.airpls(y_mat, lam=1e6, max_iter=50, tol=1e-2)[0]
     theirs_z, _ = fitter.airpls(y, lam=1e6, max_iter=50, tol=1e-2)
     theirs_p = y - theirs_z
     all_ok &= _check("airpls", ours_p, theirs_p)
 
     # ArPLS
-    ours_r = c4a_ref.arpls(y, lam=1e5, max_iter=50, tol=1e-3)
+    ours_r = c4a_ref.arpls(y_mat, lam=1e5, max_iter=50, tol=1e-3)[0]
     theirs_z, _ = fitter.arpls(y, lam=1e5, max_iter=50, tol=1e-3)
     theirs_r = y - theirs_z
     all_ok &= _check("arpls", ours_r, theirs_r)

@@ -18,6 +18,15 @@ Phase 8 (2 ops): osc, epo.
 """
 
 from .epo import epo, epo_fit_transform
+from .flexible_pca import flexible_pca_fit_transform
+from .flexible_svd import flexible_svd_fit_transform
 from .osc import osc, osc_fit_transform
 
-__all__ = ["osc", "osc_fit_transform", "epo", "epo_fit_transform"]
+__all__ = [
+    "epo",
+    "epo_fit_transform",
+    "flexible_pca_fit_transform",
+    "flexible_svd_fit_transform",
+    "osc",
+    "osc_fit_transform",
+]
