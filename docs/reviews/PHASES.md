@@ -11,8 +11,9 @@ appear with empty cells.
 | 1 | Common infrastructure (PCG64 RNG) | ACCEPT (2 nits + 1 medium fixed) | — | (pushed) | 20 / 20 |
 | 2 | Stateless scatter preprocessings | REVISE → 3 high-conf fixes applied | ACCEPT with Phase 3 prerequisites | (pushed) | 34 / 34 |
 | 3 | Stateful scatter preprocessings + c4a.h cleanup | ACCEPT (3 follow-ups applied) | — | `98c9e25` | 51 / 51 |
-| 4 | Derivatives & smoothing | ACCEPT (5 medium/low deferred) | ACCEPT (Phases 3+4 combined) | (pushed) | 61 / 61 |
-| 5 | Baseline correction (AsLS family) | — | — | — | — |
+| 4 | Derivatives & smoothing | ACCEPT (5 medium/low deferred) | ACCEPT (Phases 3+4 combined) | `92be7b7` | 61 / 61 |
+| 5a | Baseline correction (Detrend + AsLS family core) | REVISE → 3 fixes applied (algo docs, AirPLS tolerance dispatch, frozen-ref validation script) | — (Codex due after Phase 5b) | (pushed) | 69 / 69 |
+| 5b | Baseline correction (ModPoly/IModPoly/SNIP/RollingBall/IAsLS/BEADS) + LogTransform split | — | — | — | — |
 | 6 | Wavelets & denoising | — | — | — | — |
 | 7 | Signal conversion | — | — | — | — |
 | 8 | Orthogonalization | — | — | — | — |

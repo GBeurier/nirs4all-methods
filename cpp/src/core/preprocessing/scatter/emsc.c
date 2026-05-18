@@ -33,6 +33,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/common/linalg.h"
+
 struct c4a_pp_emsc_state_t {
     int32_t  degree;
     int      fitted;
@@ -72,110 +74,6 @@ void c4a_pp_emsc_state_free(c4a_pp_emsc_state_t* state) {
 
 int c4a_pp_emsc_state_is_fitted(const c4a_pp_emsc_state_t* state) {
     return (state != NULL && state->fitted) ? 1 : 0;
-}
-
-/* In-place Householder QR factorisation of a (p x m) row-major matrix A
- * with p >= m. After the call:
- *   - The upper triangle of A[0:m, 0:m] holds R (m x m upper triangular).
- *   - The lower triangle (rows m..p-1 in column k, plus the (k+1..m-1)
- *     entries of row k below the diagonal slot — actually, since this is
- *     row-major, the Householder vectors v_k for k=0..m-1 are stored in
- *     column k of A from row k+1 down: v_k[k] = 1 (implicit), v_k[i] =
- *     A[i, k] for i > k.
- *   - tau[k] = the Householder scaling for vector k.
- *
- * After QR, applying Q^T to a length-p vector b gives Q^T b in place.
- * Reflection k uses v_k stored as described, with v_k[k] = 1 implicit. */
-static void householder_qr(double* A, int64_t p, int32_t m, double* tau) {
-    for (int32_t k = 0; k < m; ++k) {
-        /* Compute the norm of A[k:p, k]. */
-        double sigma = 0.0;
-        for (int64_t i = k; i < p; ++i) {
-            const double v = A[(size_t)i * (size_t)m + (size_t)k];
-            sigma += v * v;
-        }
-        sigma = sqrt(sigma);
-
-        const double Akk = A[(size_t)k * (size_t)m + (size_t)k];
-        const double alpha = (Akk >= 0.0) ? -sigma : sigma;
-
-        if (sigma == 0.0) {
-            tau[k] = 0.0;
-            continue;
-        }
-
-        const double vk0 = Akk - alpha;            /* first component of v before scaling */
-        const double v_norm_sq = vk0 * vk0 +
-            (sigma * sigma - Akk * Akk);            /* = ||v||^2 */
-        const double t = 2.0 / v_norm_sq * vk0 * vk0;
-        /* We store the Householder vector v_k in column k from row k+1
-         * onward; the (k, k) slot will hold R[k, k] = alpha. The v vector
-         * has v[k] = vk0, but we encode it implicitly by storing v[i] /
-         * vk0 in A[i, k] for i > k and we keep tau[k] = 2 * vk0^2 / ||v||^2.
-         * Then a reflection on b is: b -= tau[k] * (v^T b / vk0^2) * v
-         *                          = b -= tau[k] * (sum_i b[i]*v[i]/vk0) * (v/vk0)
-         * with v[k]/vk0 = 1, v[i]/vk0 = A[i, k] (stored) for i > k. */
-        const double inv_vk0 = 1.0 / vk0;
-        A[(size_t)k * (size_t)m + (size_t)k] = alpha;
-        for (int64_t i = k + 1; i < p; ++i) {
-            A[(size_t)i * (size_t)m + (size_t)k] *= inv_vk0;
-        }
-        tau[k] = t;
-
-        /* Apply this reflection to columns k+1..m-1 of A. For each such
-         * column j: A[k:p, j] -= tau[k] * (v_normalised^T A[k:p, j]) * v_normalised
-         * where v_normalised[k] = 1, v_normalised[i] = A[i, k] (i > k). */
-        for (int32_t j = k + 1; j < m; ++j) {
-            double dot = A[(size_t)k * (size_t)m + (size_t)j];  /* * 1 for v[k]=1 */
-            for (int64_t i = k + 1; i < p; ++i) {
-                dot += A[(size_t)i * (size_t)m + (size_t)k]
-                     * A[(size_t)i * (size_t)m + (size_t)j];
-            }
-            const double coef = tau[k] * dot;
-            A[(size_t)k * (size_t)m + (size_t)j] -= coef;
-            for (int64_t i = k + 1; i < p; ++i) {
-                A[(size_t)i * (size_t)m + (size_t)j] -=
-                    coef * A[(size_t)i * (size_t)m + (size_t)k];
-            }
-        }
-    }
-}
-
-/* Apply Q^T to a length-p vector b in place, where Q is represented by the
- * Householder vectors in the lower triangle of A (after householder_qr). */
-static void apply_qt(const double* A, int64_t p, int32_t m,
-                     const double* tau, double* b) {
-    for (int32_t k = 0; k < m; ++k) {
-        if (tau[k] == 0.0) continue;
-        /* dot = v^T b with v[k]=1, v[i] = A[i, k] for i > k. */
-        double dot = b[k];
-        for (int64_t i = k + 1; i < p; ++i) {
-            dot += A[(size_t)i * (size_t)m + (size_t)k] * b[i];
-        }
-        const double coef = tau[k] * dot;
-        b[k] -= coef;
-        for (int64_t i = k + 1; i < p; ++i) {
-            b[i] -= coef * A[(size_t)i * (size_t)m + (size_t)k];
-        }
-    }
-}
-
-/* Back-substitute R c = y where R is the upper-triangular m x m factor in
- * the top-left block of A (row-major, stride m). */
-static c4a_status_t back_substitute(const double* A, int32_t m,
-                                     const double* y, double* c) {
-    for (int32_t i = m - 1; i >= 0; --i) {
-        double s = y[i];
-        for (int32_t j = i + 1; j < m; ++j) {
-            s -= A[(size_t)i * (size_t)m + (size_t)j] * c[j];
-        }
-        const double diag = A[(size_t)i * (size_t)m + (size_t)i];
-        if (diag == 0.0) {
-            return C4A_ERR_NUMERICAL_FAILURE;
-        }
-        c[i] = s / diag;
-    }
-    return C4A_OK;
 }
 
 c4a_status_t c4a_pp_emsc_state_fit(c4a_pp_emsc_state_t* state,
@@ -229,7 +127,15 @@ c4a_status_t c4a_pp_emsc_state_fit(c4a_pp_emsc_state_t* state,
     }
 
     /* In-place Householder QR. */
-    householder_qr(basis, p, m, tau);
+    {
+        const c4a_status_t qst = c4a_householder_qr(basis, p, (int64_t)m, tau);
+        if (qst != C4A_OK) {
+            free(basis);
+            free(poly);
+            free(tau);
+            return qst;
+        }
+    }
 
     /* Commit. */
     free(state->basis_qr);
@@ -281,9 +187,18 @@ c4a_status_t c4a_pp_emsc_state_apply(const c4a_pp_emsc_state_t* state,
     for (int64_t i = 0; i < rows; ++i) {
         const double* xrow = X + (size_t)i * (size_t)cols;
         memcpy(qt_x, xrow, (size_t)cols * sizeof(double));
-        apply_qt(state->basis_qr, cols, m, state->tau, qt_x);
+        {
+            const c4a_status_t qst = c4a_apply_qt(
+                state->basis_qr, cols, (int64_t)m, state->tau, qt_x);
+            if (qst != C4A_OK) {
+                free(qt_x);
+                free(c);
+                return qst;
+            }
+        }
 
-        const c4a_status_t st = back_substitute(state->basis_qr, m, qt_x, c);
+        const c4a_status_t st = c4a_back_solve_R(state->basis_qr, cols,
+                                                  (int64_t)m, qt_x, c);
         if (st != C4A_OK) {
             free(qt_x);
             free(c);

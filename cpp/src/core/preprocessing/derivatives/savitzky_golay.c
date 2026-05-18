@@ -38,6 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/common/linalg.h"
 #include "core/common/padding.h"
 
 struct c4a_pp_savgol_state_t {
@@ -58,54 +59,6 @@ static double sg_factorial(int32_t n) {
         f *= (double)i;
     }
     return f;
-}
-
-/* Householder QR on a (rows x cols) row-major matrix A with rows >= cols.
- * Stores R in the upper triangle in place; Householder vectors implicitly
- * encoded in the strict lower triangle (column k from row k+1 down, with
- * the implicit unit first entry) and tau[k].
- *
- * Adapted from emsc.c — kept as a local copy because the engines are
- * stateless and we want each file to be self-contained.  When more Phase-4+
- * operators need it we'll pull it up into a shared helper. */
-static void sg_householder_qr(double* A, int32_t rows, int32_t cols,
-                              double* tau) {
-    for (int32_t k = 0; k < cols; ++k) {
-        double sigma = 0.0;
-        for (int32_t i = k; i < rows; ++i) {
-            const double v = A[(size_t)i * (size_t)cols + (size_t)k];
-            sigma += v * v;
-        }
-        sigma = sqrt(sigma);
-        const double Akk = A[(size_t)k * (size_t)cols + (size_t)k];
-        const double alpha = (Akk >= 0.0) ? -sigma : sigma;
-        if (sigma == 0.0) {
-            tau[k] = 0.0;
-            continue;
-        }
-        const double vk0 = Akk - alpha;
-        const double v_norm_sq = vk0 * vk0 + (sigma * sigma - Akk * Akk);
-        const double t = 2.0 / v_norm_sq * vk0 * vk0;
-        const double inv_vk0 = 1.0 / vk0;
-        A[(size_t)k * (size_t)cols + (size_t)k] = alpha;
-        for (int32_t i = k + 1; i < rows; ++i) {
-            A[(size_t)i * (size_t)cols + (size_t)k] *= inv_vk0;
-        }
-        tau[k] = t;
-        for (int32_t j = k + 1; j < cols; ++j) {
-            double dot = A[(size_t)k * (size_t)cols + (size_t)j];
-            for (int32_t i = k + 1; i < rows; ++i) {
-                dot += A[(size_t)i * (size_t)cols + (size_t)k]
-                     * A[(size_t)i * (size_t)cols + (size_t)j];
-            }
-            const double coef = t * dot;
-            A[(size_t)k * (size_t)cols + (size_t)j] -= coef;
-            for (int32_t i = k + 1; i < rows; ++i) {
-                A[(size_t)i * (size_t)cols + (size_t)j] -=
-                    coef * A[(size_t)i * (size_t)cols + (size_t)k];
-            }
-        }
-    }
 }
 
 c4a_pp_savgol_state_t* c4a_pp_savgol_state_new(int32_t window_length,
@@ -196,7 +149,16 @@ c4a_pp_savgol_state_t* c4a_pp_savgol_state_new(int32_t window_length,
     }
     memcpy(V_orig, V, (size_t)w * (size_t)p * sizeof(double));
 
-    sg_householder_qr(V, w, p, tau);
+    if (c4a_householder_qr(V, w, p, tau) != C4A_OK) {
+        free(V);
+        free(V_orig);
+        free(tau);
+        free(y);
+        free(w_vec);
+        free(s->coeffs);
+        free(s);
+        return NULL;
+    }
     /* After QR: V[0:p, 0:p] holds R in the upper triangle. */
 
     /* Build y = e_deriv * factorial(deriv) / delta^deriv. */
@@ -285,27 +247,17 @@ static c4a_status_t sg_fit_edge_left(const c4a_pp_savgol_state_t* s,
         }
         qt_y[i] = row[i];
     }
-    sg_householder_qr(A, w, p, tau);
-    /* Apply Q^T to qt_y: same pattern as emsc.c::apply_qt. */
-    for (int32_t k = 0; k < p; ++k) {
-        if (tau[k] == 0.0) continue;
-        double dot = qt_y[k];
-        for (int32_t i = k + 1; i < w; ++i) {
-            dot += A[(size_t)i * (size_t)p + (size_t)k] * qt_y[i];
-        }
-        const double coef = tau[k] * dot;
-        qt_y[k] -= coef;
-        for (int32_t i = k + 1; i < w; ++i) {
-            qt_y[i] -= coef * A[(size_t)i * (size_t)p + (size_t)k];
-        }
+    if (c4a_householder_qr(A, w, p, tau) != C4A_OK) {
+        free(A); free(tau); free(qt_y); free(coefs);
+        return C4A_ERR_NUMERICAL_FAILURE;
     }
-    /* Back-substitute R coefs = qt_y[0:p]. */
-    for (int32_t i = p - 1; i >= 0; --i) {
-        double acc = qt_y[i];
-        for (int32_t k = i + 1; k < p; ++k) {
-            acc -= A[(size_t)i * (size_t)p + (size_t)k] * coefs[k];
-        }
-        coefs[i] = acc / A[(size_t)i * (size_t)p + (size_t)i];
+    if (c4a_apply_qt(A, w, p, tau, qt_y) != C4A_OK) {
+        free(A); free(tau); free(qt_y); free(coefs);
+        return C4A_ERR_NUMERICAL_FAILURE;
+    }
+    if (c4a_back_solve_R(A, w, p, qt_y, coefs) != C4A_OK) {
+        free(A); free(tau); free(qt_y); free(coefs);
+        return C4A_ERR_NUMERICAL_FAILURE;
     }
     /* Derivative: coefs is the polynomial p(x) = sum_j coefs[j] * x^j.
      * The deriv-th derivative is sum_{j >= deriv} coefs[j] * j!/(j-deriv)! * x^{j-deriv}. */
@@ -367,25 +319,17 @@ static c4a_status_t sg_fit_edge_right(const c4a_pp_savgol_state_t* s,
         }
         qt_y[i] = row[cols - w + i];
     }
-    sg_householder_qr(A, w, p, tau);
-    for (int32_t k = 0; k < p; ++k) {
-        if (tau[k] == 0.0) continue;
-        double dot = qt_y[k];
-        for (int32_t i = k + 1; i < w; ++i) {
-            dot += A[(size_t)i * (size_t)p + (size_t)k] * qt_y[i];
-        }
-        const double coef = tau[k] * dot;
-        qt_y[k] -= coef;
-        for (int32_t i = k + 1; i < w; ++i) {
-            qt_y[i] -= coef * A[(size_t)i * (size_t)p + (size_t)k];
-        }
+    if (c4a_householder_qr(A, w, p, tau) != C4A_OK) {
+        free(A); free(tau); free(qt_y); free(coefs);
+        return C4A_ERR_NUMERICAL_FAILURE;
     }
-    for (int32_t i = p - 1; i >= 0; --i) {
-        double acc = qt_y[i];
-        for (int32_t k = i + 1; k < p; ++k) {
-            acc -= A[(size_t)i * (size_t)p + (size_t)k] * coefs[k];
-        }
-        coefs[i] = acc / A[(size_t)i * (size_t)p + (size_t)i];
+    if (c4a_apply_qt(A, w, p, tau, qt_y) != C4A_OK) {
+        free(A); free(tau); free(qt_y); free(coefs);
+        return C4A_ERR_NUMERICAL_FAILURE;
+    }
+    if (c4a_back_solve_R(A, w, p, qt_y, coefs) != C4A_OK) {
+        free(A); free(tau); free(qt_y); free(coefs);
+        return C4A_ERR_NUMERICAL_FAILURE;
     }
     const int32_t deriv = s->deriv;
     if (deriv > 0) {

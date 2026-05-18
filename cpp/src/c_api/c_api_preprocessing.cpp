@@ -36,6 +36,10 @@
 #include "chemometrics4all/c4a.h"
 
 #include "core/matrix_view.hpp"
+#include "core/preprocessing/baselines/airpls.h"
+#include "core/preprocessing/baselines/arpls.h"
+#include "core/preprocessing/baselines/asls.h"
+#include "core/preprocessing/baselines/detrend.h"
 #include "core/preprocessing/derivatives/derivate.h"
 #include "core/preprocessing/derivatives/first_derivative.h"
 #include "core/preprocessing/derivatives/norris_williams.h"
@@ -105,6 +109,18 @@ struct c4a_pp_norris_williams_handle_t {
 };
 struct c4a_pp_gaussian_handle_t {
     c4a_pp_gaussian_state_t* state;
+};
+struct c4a_pp_detrend_handle_t {
+    c4a_pp_detrend_state_t* state;
+};
+struct c4a_pp_asls_handle_t {
+    c4a_pp_asls_state_t* state;
+};
+struct c4a_pp_airpls_handle_t {
+    c4a_pp_airpls_state_t* state;
+};
+struct c4a_pp_arpls_handle_t {
+    c4a_pp_arpls_state_t* state;
 };
 
 namespace {
@@ -1408,6 +1424,271 @@ C4A_API c4a_status_t c4a_pp_gaussian_transform(
             return C4A_ERR_SHAPE_MISMATCH;
         }
         return c4a_pp_gaussian_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Detrend (Phase 5a stateless)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_detrend_create(c4a_pp_detrend_handle_t** out,
+                                            int32_t polyorder) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (polyorder < 0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_detrend_state_t* s = c4a_pp_detrend_state_new(polyorder);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_detrend_handle_t* h =
+            new (std::nothrow) c4a_pp_detrend_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_detrend_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_detrend_destroy(c4a_pp_detrend_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_detrend_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_detrend_transform(
+    const c4a_pp_detrend_handle_t* h,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_detrend_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// AsLS (Phase 5a stateless)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_asls_create(c4a_pp_asls_handle_t** out,
+                                         double lam, double p,
+                                         int32_t max_iter, double tol) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (!(lam > 0.0) || !(p > 0.0 && p < 1.0) || max_iter < 0 ||
+        !(tol >= 0.0)) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_asls_state_t* s =
+            c4a_pp_asls_state_new(lam, p, max_iter, tol);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_asls_handle_t* h =
+            new (std::nothrow) c4a_pp_asls_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_asls_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_asls_destroy(c4a_pp_asls_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_asls_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_asls_transform(const c4a_pp_asls_handle_t* h,
+                                            c4a_matrix_view_t X,
+                                            c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_asls_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// AirPLS (Phase 5a stateless)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_airpls_create(c4a_pp_airpls_handle_t** out,
+                                           double lam,
+                                           int32_t max_iter, double tol) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (!(lam > 0.0) || max_iter < 0 || !(tol >= 0.0)) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_airpls_state_t* s =
+            c4a_pp_airpls_state_new(lam, max_iter, tol);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_airpls_handle_t* h =
+            new (std::nothrow) c4a_pp_airpls_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_airpls_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_airpls_destroy(c4a_pp_airpls_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_airpls_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_airpls_transform(
+    const c4a_pp_airpls_handle_t* h,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_airpls_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ArPLS (Phase 5a stateless)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_arpls_create(c4a_pp_arpls_handle_t** out,
+                                          double lam,
+                                          int32_t max_iter, double tol) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (!(lam > 0.0) || max_iter < 0 || !(tol >= 0.0)) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_arpls_state_t* s =
+            c4a_pp_arpls_state_new(lam, max_iter, tol);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_arpls_handle_t* h =
+            new (std::nothrow) c4a_pp_arpls_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_arpls_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_arpls_destroy(c4a_pp_arpls_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_arpls_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_arpls_transform(const c4a_pp_arpls_handle_t* h,
+                                             c4a_matrix_view_t X,
+                                             c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_arpls_state_apply(h->state, xp, xr, xc, op);
     } catch (...) {
         return C4A_ERR_INTERNAL;
     }

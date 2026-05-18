@@ -31,8 +31,21 @@ Items intentionally left to a future phase. Each entry records:
 | 4 | **Pybaselines reference vendoring** — Codex P2 from Phases 3+4 review. Vendor a frozen NumPy reference for AsLS / airPLS / arPLS / etc. (~500 LOC + algorithm comments) under `parity/python_generator/src/parity/pybaselines_ref/` BEFORE Phase 5 implementation, not as part of it. Insulates against pybaselines upstream churn. | Phase 5 (opener, ~1 day work) | open |
 | 4 | **Phase 5 brief must pin banded-solver design upfront**: banded storage layout (3-diagonal for D²ᵀD), LDLT vs Cholesky (LDLT supports indefinite W for arPLS), in-place reweighting, per-row state cleanup. pls4all's `apply_asls` is dense O(N²) — chemometrics4all's opportunity to do better. | Phase 5 (brief design) | open |
 | 4 | **Codex review timing** must be codified in CONTRIBUTING.md (currently silent): Opus reviews each phase pre-commit; PHASES/DEFERRALS/opus-post.md commit with the phase; Codex reviews every two phases post-commit against the latest tag. | Phase 5 (CONTRIBUTING.md update) | open |
+| 5a | **Per-iteration banded LDLT allocations**. AsLS/AirPLS/ArPLS engines call `c4a_banded5_factor` inside the iteration loop (50 mallocs/frees per row). Lift L/D buffers to row-scope via `c4a_banded5_factor_into(...)` for ~5–10× call-overhead reduction. | Phase 5b (banded solver refactor window) | open |
+| 5a | **Duplicated `build_penalty_diagonals` / `relative_l2_diff`** across asls.c / airpls.c / arpls.c. Extract to `core/common/banded_solver.{c,h}` as `c4a_second_diff_penalty_pent5` + shared utils. | Phase 5b (banded solver refactor window) | open |
+| 5a | **AirPLS LDLT-vs-spsolve compounding divergence** at `lam=1e7` and `tight_tol_short` (1e-6 abs / 1e-5 rel). Structural — banded LDLT vs SuperLU pivot strategies. Document residual-check in debug builds. | Phase 5b (or follow-up) | open |
+| 5a | **ArPLS extreme-arg clip** at `>700` is more aggressive than `scipy.special.expit` (which preserves `1e-305` representable values). No practical effect on parity. Cosmetic two-branch logistic stabilisation. | Phase 5b+ | open |
+| 5a | **Smoke tests for baseline ops only check `isfinite`**. Strengthen with bounded-value assertions on constant inputs (baseline≈y, output≈0). | Phase 5b cleanup | open |
 
 ## Closed
+
+| From | Topic | Closed in | Resolution |
+| --- | --- | --- | --- |
+| 4 (carried from 3+4 Codex M1) | **Shared Householder QR helper extraction**. Was 3 copies in EMSC + SG-main + SG-edge. | Phase 5a opener | Extracted to `cpp/src/core/common/linalg.{c,h}` (`c4a_householder_qr` / `c4a_apply_qt` / `c4a_back_solve_R`). EMSC + SG migrated; all 61 prior tests pass at original tolerances. |
+| 4 (carried from 3+4 Codex M1) | **Shared JSON fixture parser**. Was 3 copies of ~270 LOC each in test_preprocessing_{stateless,stateful,smoothing}.cpp. | Phase 5a opener | Extracted to `cpp/tests/fixture_parser.hpp` (header-only, templated). Net reduction: 1087 LOC eliminated from test files. |
+| 4 (carried from 3+4 Codex M2) | **`c4a_pp_derivate_*` doc fix**. c4a.h §9 banner claimed no-op `_fit`; engine actually memoises `cols` for shape validation. | Phase 5a opener | §9 banner updated to honestly state input-shape memoization. |
+| 4 (carried from 3+4 Codex P2) | **Vendor pybaselines frozen reference** at Phase 5 opener before any AsLS code lands. | Phase 5a opener | Created `parity/python_generator/src/c4a_parity_pybaselines_ref/` with frozen NumPy implementations of AsLS / AirPLS / ArPLS / Detrend matching `pybaselines==1.1.4`. Validation script at `parity/python_generator/scripts/validate_frozen_pybaselines_ref.py`. |
+| 4 (carried from 3+4 Codex P3) | **Phase 5 brief banded-solver design pinned upfront** (storage layout, LDLT vs Cholesky, in-place reweighting, per-row cleanup). | Phase 5a brief | Roadmap `phase-5a-baseline-core.md` explicitly fixes pentadiagonal storage `(n, 3)`, symmetric LDLT (handles indefinite W via fallback), row-scope scratch (factor still iter-scope — tracked Phase 5b). |
 
 | From | Topic | Closed in | Resolution |
 | --- | --- | --- | --- |

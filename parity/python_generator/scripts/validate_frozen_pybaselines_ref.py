@@ -1,0 +1,107 @@
+"""Validate the frozen pybaselines NumPy reference against the installed pybaselines package.
+
+Usage:
+    cd parity/python_generator
+    uv sync                                       # installs pybaselines==1.1.4 per pyproject
+    uv run scripts/validate_frozen_pybaselines_ref.py
+
+This script imports BOTH the frozen NumPy reference in
+``c4a_parity_pybaselines_ref`` AND the upstream ``pybaselines`` package, runs
+each baseline operator on a small synthetic spectrum, and asserts the
+max-abs-error is below ``1e-10``.
+
+The script intentionally does NOT run during CI by default — it is a manual
+attestation that the frozen reference still matches the pinned upstream
+version. Run it whenever the pin in ``pyproject.toml`` is bumped or the
+frozen reference is touched.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import numpy as np
+
+# Add the c4a_parity_pybaselines_ref module to the path.
+_HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(_HERE.parent / "src"))
+
+import c4a_parity_pybaselines_ref as c4a_ref  # noqa: E402
+
+try:
+    import pybaselines  # noqa: E402
+except ImportError as exc:
+    print(f"pybaselines not installed: {exc}", file=sys.stderr)
+    print("Install with: pip install 'pybaselines==1.1.4'", file=sys.stderr)
+    sys.exit(2)
+
+EXPECTED_VERSION = "1.1.4"
+TOLERANCE = 1e-10
+
+
+def _synthetic_spectrum(n: int = 200, seed: int = 20260518) -> np.ndarray:
+    """Build a deterministic 1-D NIR-shaped spectrum."""
+    rng = np.random.default_rng(seed)
+    x = np.linspace(0.0, 1.0, n)
+    baseline = 0.5 + 0.3 * x + 0.2 * x**2
+    peaks = (
+        1.5 * np.exp(-((x - 0.30) ** 2) / (2 * 0.02**2))
+        + 1.2 * np.exp(-((x - 0.55) ** 2) / (2 * 0.03**2))
+        + 0.8 * np.exp(-((x - 0.80) ** 2) / (2 * 0.025**2))
+    )
+    noise = rng.standard_normal(n) * 0.005
+    return baseline + peaks + noise
+
+
+def _check(label: str, ours: np.ndarray, theirs: np.ndarray) -> bool:
+    abs_err = float(np.max(np.abs(ours - theirs)))
+    ok = abs_err < TOLERANCE
+    status = "OK " if ok else "FAIL"
+    print(f"  [{status}] {label:>10s}  max_abs_err = {abs_err:.3e}")
+    return ok
+
+
+def main() -> int:
+    print(f"pybaselines installed version: {pybaselines.__version__}")
+    if pybaselines.__version__ != EXPECTED_VERSION:
+        print(
+            f"WARNING: expected pybaselines=={EXPECTED_VERSION} per pyproject.toml; "
+            f"got {pybaselines.__version__}. Continuing — algorithms have not changed "
+            "between 1.1 and 1.2 series, but the official pin is 1.1.4."
+        )
+
+    y = _synthetic_spectrum()
+    fitter = pybaselines.Baseline(x_data=np.arange(len(y), dtype=float))
+
+    all_ok = True
+
+    # Detrend (polynomial)
+    ours_d = c4a_ref.detrend(y, polyorder=2)
+    theirs_z, _ = fitter.poly(y, poly_order=2)
+    theirs_d = y - theirs_z
+    all_ok &= _check("detrend", ours_d, theirs_d)
+
+    # AsLS
+    ours_a = c4a_ref.asls(y, lam=1e6, p=0.001, max_iter=50, tol=1e-3)
+    theirs_z, _ = fitter.asls(y, lam=1e6, p=0.001, max_iter=50, tol=1e-3)
+    theirs_a = y - theirs_z
+    all_ok &= _check("asls", ours_a, theirs_a)
+
+    # AirPLS
+    ours_p = c4a_ref.airpls(y, lam=1e6, max_iter=50, tol=1e-2)
+    theirs_z, _ = fitter.airpls(y, lam=1e6, max_iter=50, tol=1e-2)
+    theirs_p = y - theirs_z
+    all_ok &= _check("airpls", ours_p, theirs_p)
+
+    # ArPLS
+    ours_r = c4a_ref.arpls(y, lam=1e5, max_iter=50, tol=1e-3)
+    theirs_z, _ = fitter.arpls(y, lam=1e5, max_iter=50, tol=1e-3)
+    theirs_r = y - theirs_z
+    all_ok &= _check("arpls", ours_r, theirs_r)
+
+    return 0 if all_ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

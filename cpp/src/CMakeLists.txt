@@ -22,9 +22,15 @@ add_library(chemometrics4all_core OBJECT
     core/matrix_view.cpp
     core/status.cpp
     core/version.cpp
+    core/common/banded_solver.c
+    core/common/linalg.c
     core/common/padding.c
     core/common/rng_pcg64.c
     core/common/ziggurat.c
+    core/preprocessing/baselines/airpls.c
+    core/preprocessing/baselines/arpls.c
+    core/preprocessing/baselines/asls.c
+    core/preprocessing/baselines/detrend.c
     core/preprocessing/scatter/snv.c
     core/preprocessing/scatter/local_snv.c
     core/preprocessing/scatter/robust_snv.c

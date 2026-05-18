@@ -6,6 +6,67 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.0+abi.1.5.0] — Phase 5a baseline correction core
+
+### Added
+
+- **Four stateless baseline correction operators** with the `_create /
+  _transform / _destroy` ABI contract:
+  - **Detrend** (`c4a_pp_detrend_*`, 3 symbols) — polynomial baseline
+    subtraction via Householder QR on a (n, polyorder+1) Vandermonde
+    matrix.  Matches `np.polyfit + np.polyval` per row.  `polyorder >= 0`.
+  - **AsLS** (`c4a_pp_asls_*`, 3 symbols) — Asymmetric Least Squares
+    (Eilers & Boelens 2005).  Iteratively reweighted penalised least
+    squares with a 2nd-order penalty `lam * D_2^T D_2`.
+  - **AirPLS** (`c4a_pp_airpls_*`, 3 symbols) — Adaptive iteratively
+    reweighted PLS (Zhang 2010).  Weight update via exponential of
+    clipped negative residuals; convergence on `|sum(neg)| / |y|_1`.
+  - **ArPLS** (`c4a_pp_arpls_*`, 3 symbols) — Asymmetrically reweighted
+    PLS (Baek 2015).  Logistic weight update based on the distribution
+    of negative residuals.
+- **Pentadiagonal symmetric LDLT solver** at
+  `cpp/src/core/common/banded_solver.{c,h}` — O(n) factorisation +
+  solve for `(diag(w) + lam D_2^T D_2)` systems.  Validated against a
+  dense Gauss-Jordan reference (residual ~9e-12 on lam=1e3 systems).
+  Internal-only; not exposed in the public ABI.
+- **Frozen NumPy reference** under
+  `parity/python_generator/src/c4a_parity_pybaselines_ref/`: pure
+  NumPy + scipy.sparse implementations of the four operators, validated
+  once against `pybaselines==1.1.4` and now the canonical parity floor.
+  Future pybaselines releases can drift without breaking the c4a
+  parity gates.
+- **Parity fixtures** under `parity/fixtures/`: `detrend_v1.json` (4
+  cases sweeping polyorder), `asls_v1.json` / `airpls_v1.json` /
+  `arpls_v1.json` (4 cases each sweeping lam / p / tol / max_iter).
+- **8 new tests** in `cpp/tests/test_preprocessing_baselines.cpp` (4
+  smoke + 4 parity).  Total: 61 → **69 tests**.
+
+### Changed (Phase 5 opener cleanup — per Codex Phase 3+4 review)
+
+- **Extracted shared Householder QR** to
+  `cpp/src/core/common/linalg.{c,h}` (`c4a_householder_qr`,
+  `c4a_apply_qt`, `c4a_back_solve_R`).  Replaces three in-line copies
+  previously living in `emsc.c`, `savitzky_golay.c` (main coef build),
+  and `savitzky_golay.c` (`sg_fit_edge_left/right`).  Bit-exact: all
+  61 prior tests still pass.
+- **Extracted shared JSON fixture parser** to
+  `cpp/tests/fixture_parser.hpp` (header-only, ~400 LOC).  Replaces
+  three in-line copies previously living in
+  `test_preprocessing_{stateless,stateful,smoothing}.cpp`.  Net
+  deletion: ~1,000 LOC of duplicated parser code across the three
+  test files.
+- **Fixed `c4a_pp_derivate_*` documentation** in `c4a.h` §9: the
+  banner now honestly states that `_fit` memoises the input column
+  count for shape validation at transform time (previously claimed
+  `_fit` was a pure no-op).
+
+### ABI
+
+- ABI 1.4.0 → **1.5.0** (additive: 12 new symbols, no breakages).
+- Symbol count 94 → **106**.
+- All three platform expected-symbols lists updated:
+  `cpp/abi/expected_symbols_{linux,macos,windows}.txt`.
+
 ## [0.1.0+abi.1.4.0] — Phase 4 derivatives & smoothing
 
 ### Added

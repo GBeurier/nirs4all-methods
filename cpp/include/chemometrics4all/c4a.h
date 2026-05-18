@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 /*
- * chemometrics4all — public C ABI v1.4.0.
+ * chemometrics4all — public C ABI v1.5.0.
  *
  * Stability: experimental until v1.0.0. Every breaking change before that
  * version bumps the ABI MAJOR (see c4a_version.h). After v1.0.0 the ABI
@@ -614,10 +614,14 @@ C4A_API c4a_status_t c4a_pp_baseline_is_fitted(
  *
  *   out = np.diff(X, n=order, axis=1) / delta ** order
  *
- * `_fit` is a no-op (the operator carries no learned state) but is still
- * required by the stateful contract; calling `_transform` before `_fit`
- * returns C4A_ERR_NOT_FITTED. This lets bindings treat Derivate uniformly
- * with the other stateful preprocessings without a special case.
+ * `_fit` memoises the input column count for shape validation at transform
+ * time — it carries no statistical learned state, but it does record `cols`
+ * so that `_transform` can reject inputs whose width disagrees with what
+ * was seen at fit time. Calling `_transform` before `_fit` returns
+ * C4A_ERR_NOT_FITTED; calling it with a column count different from the
+ * fitted value returns C4A_ERR_SHAPE_MISMATCH. This lets bindings treat
+ * Derivate uniformly with the other stateful preprocessings without a
+ * special case.
  *
  * Use `c4a_pp_derivate_output_cols(order, input_cols)` to compute the
  * output column count expected by `_transform`. The helper returns 0 when
@@ -783,12 +787,90 @@ C4A_API c4a_status_t c4a_pp_gaussian_transform(
     c4a_matrix_view_t X,
     c4a_matrix_view_t out);
 
+/* ============================================================================
+ * 11. Phase 5a — Baseline correction (core)
+ * ============================================================================
+ *
+ * Four stateless baseline correction operators, all implementing the
+ * `_create / _transform / _destroy` ABI contract from §5 (no `_fit`).
+ *
+ *   - Detrend   : polynomial baseline subtraction (np.polyfit / np.polyval).
+ *   - AsLS      : Asymmetric Least Squares (Eilers & Boelens 2005).
+ *   - AirPLS    : Adaptive iteratively reweighted PLS (Zhang 2010).
+ *   - ArPLS     : Asymmetrically reweighted PLS (Baek 2015).
+ *
+ * The three iterative operators (AsLS, AirPLS, ArPLS) all use the same
+ * underlying pentadiagonal LDLT solver against a 2nd-order penalty
+ * `lam * D2^T D2`. They iterate the reweighting loop up to `max_iter`
+ * times; on max_iter exhaustion they silently return the last iterate
+ * (matching pybaselines 1.1.4 semantics — convergence does NOT raise).
+ *
+ * Output convention: `out[i, j] = X[i, j] - baseline[i, j]`. For all four
+ * operators the output has the same shape as the input.
+ *
+ * Parity reference: the frozen NumPy reference under
+ *   parity/python_generator/src/c4a_parity_pybaselines_ref/
+ * validated once against pybaselines==1.1.4 (see parity/README.md).
+ */
+
+/* ---------- Detrend (polynomial baseline subtraction) ------------------- */
+typedef struct c4a_pp_detrend_handle_t c4a_pp_detrend_handle_t;
+/* `polyorder` >= 0. Default in pybaselines.polynomial: 1 (linear detrend). */
+C4A_API c4a_status_t c4a_pp_detrend_create(c4a_pp_detrend_handle_t** out,
+                                            int32_t polyorder);
+C4A_API void         c4a_pp_detrend_destroy(c4a_pp_detrend_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_detrend_transform(
+    const c4a_pp_detrend_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+
+/* ---------- AsLS (Eilers & Boelens 2005) -------------------------------- */
+typedef struct c4a_pp_asls_handle_t c4a_pp_asls_handle_t;
+/* `lam` > 0  (smoothing penalty; default 1e6).
+ * `p`        (asymmetry, 0 < p < 1; default 1e-2).
+ * `max_iter` >= 0 (default 50).
+ * `tol`      >= 0 (default 1e-3, relative L2 weight change). */
+C4A_API c4a_status_t c4a_pp_asls_create(c4a_pp_asls_handle_t** out,
+                                         double lam, double p,
+                                         int32_t max_iter, double tol);
+C4A_API void         c4a_pp_asls_destroy(c4a_pp_asls_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_asls_transform(const c4a_pp_asls_handle_t* handle,
+                                            c4a_matrix_view_t X,
+                                            c4a_matrix_view_t out);
+
+/* ---------- AirPLS (Zhang 2010) ----------------------------------------- */
+typedef struct c4a_pp_airpls_handle_t c4a_pp_airpls_handle_t;
+/* `lam`      > 0 (default 1e6).
+ * `max_iter` >= 0 (default 50).
+ * `tol`      >= 0 (default 1e-3, |sum(neg residuals)| / |y|_1). */
+C4A_API c4a_status_t c4a_pp_airpls_create(c4a_pp_airpls_handle_t** out,
+                                           double lam,
+                                           int32_t max_iter, double tol);
+C4A_API void         c4a_pp_airpls_destroy(c4a_pp_airpls_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_airpls_transform(
+    const c4a_pp_airpls_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+
+/* ---------- ArPLS (Baek 2015) ------------------------------------------- */
+typedef struct c4a_pp_arpls_handle_t c4a_pp_arpls_handle_t;
+/* `lam`      > 0 (default 1e5).
+ * `max_iter` >= 0 (default 50).
+ * `tol`      >= 0 (default 1e-3, relative L2 weight change). */
+C4A_API c4a_status_t c4a_pp_arpls_create(c4a_pp_arpls_handle_t** out,
+                                          double lam,
+                                          int32_t max_iter, double tol);
+C4A_API void         c4a_pp_arpls_destroy(c4a_pp_arpls_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_arpls_transform(const c4a_pp_arpls_handle_t* handle,
+                                             c4a_matrix_view_t X,
+                                             c4a_matrix_view_t out);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
 
 /* ============================================================================
- * 11. ABI guard rails — fixed-size assertions on the C ABI shape
+ * 12. ABI guard rails — fixed-size assertions on the C ABI shape
  * ==========================================================================
  *
  * Compilers may shrink enums under non-default flags (e.g. -fshort-enums on
