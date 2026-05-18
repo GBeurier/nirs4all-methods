@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-05-18 07:39 UTC",
+  "generated_at": "2026-05-18 07:44 UTC",
   "host": {
     "os": "Linux 6.6.87.2-microsoft-standard-WSL2 (x86_64)",
-    "python": "3.14.4",
+    "python": "3.13.11",
     "cpu_model": "12th Gen Intel(R) Core(TM) i9-12900K",
     "cpu_count_logical": 24,
     "cpu_count_physical": 12,
@@ -7300,6 +7300,19 @@
       }
     },
     {
+      "algo": "pcr",
+      "n": 100,
+      "p": 500,
+      "threads": 1,
+      "cells": {
+        "pls4all.registry": {
+          "parity": "not_run",
+          "ok": false,
+          "reason": "timeout"
+        }
+      }
+    },
+    {
       "algo": "pds",
       "n": 100,
       "p": 50,
@@ -7772,6 +7785,272 @@
           "ok": true,
           "ms": 1438.387,
           "fmt": "1.4 s"
+        }
+      }
+    },
+    {
+      "algo": "pls",
+      "n": 100,
+      "p": 500,
+      "threads": 1,
+      "cells": {
+        "pls4all.python": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 13.442,
+          "fmt": "13.4 ms"
+        },
+        "pls4all.cpp.ref": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 8.73,
+          "fmt": "8.73 ms"
+        },
+        "pls4all.cpp.blas+omp": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 12.964,
+          "fmt": "13.0 ms"
+        },
+        "pls4all.cpp.blas": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 10.305,
+          "fmt": "10.3 ms"
+        },
+        "pls4all.cpp.omp": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 10.652,
+          "fmt": "10.7 ms"
+        },
+        "pls4all.R": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 63.5,
+          "fmt": "63.5 ms"
+        },
+        "pls4all.R.formula": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 100.5,
+          "fmt": "100.5 ms"
+        },
+        "pls4all.sklearn": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 11.258,
+          "fmt": "11.3 ms"
+        },
+        "pls4all.matlab": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 16.107,
+          "fmt": "16.1 ms"
+        },
+        "pls4all.matlab.classdef": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 17.625,
+          "fmt": "17.6 ms"
+        },
+        "pls": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 116.0,
+          "fmt": "116.0 ms"
+        },
+        "pls4all.registry": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 10.011,
+          "fmt": "10.0 ms"
+        },
+        "sklearn": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 13.941,
+          "fmt": "13.9 ms"
+        },
+        "plsregress": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 20.969,
+          "fmt": "21.0 ms"
+        },
+        "ikpls": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 11.119,
+          "fmt": "11.1 ms"
+        },
+        "mixOmics": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 75.0,
+          "fmt": "75.0 ms"
+        },
+        "ref.python_scikit_learn": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 13.414,
+          "fmt": "13.4 ms"
+        },
+        "ropls": {
+          "parity": "not_available",
+          "ok": false,
+          "reason": "algo 'pls' not implemented by ropls"
+        },
+        "ref.python_ikpls": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 11.064,
+          "fmt": "11.1 ms"
+        },
+        "ref.r_pls": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 363.633,
+          "fmt": "363.6 ms"
+        },
+        "ref.r_mixomics": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 1781.203,
+          "fmt": "1.8 s"
+        }
+      }
+    },
+    {
+      "algo": "pls",
+      "n": 500,
+      "p": 500,
+      "threads": 1,
+      "cells": {
+        "pls4all.cpp.ref": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 56.322,
+          "fmt": "56.3 ms"
+        },
+        "pls4all.cpp.blas": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 44.649,
+          "fmt": "44.6 ms"
+        },
+        "pls4all.cpp.omp": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 43.661,
+          "fmt": "43.7 ms"
+        },
+        "pls4all.cpp.blas+omp": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 44.904,
+          "fmt": "44.9 ms"
+        },
+        "pls4all.python": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 59.624,
+          "fmt": "59.6 ms"
+        },
+        "pls4all.registry": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 57.033,
+          "fmt": "57.0 ms"
+        },
+        "pls4all.sklearn": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 55.075,
+          "fmt": "55.1 ms"
+        },
+        "pls4all.matlab": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 82.513,
+          "fmt": "82.5 ms"
+        },
+        "pls4all.R": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 351.0,
+          "fmt": "351.0 ms"
+        },
+        "pls4all.R.formula": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 413.5,
+          "fmt": "413.5 ms"
+        },
+        "pls4all.matlab.classdef": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 105.579,
+          "fmt": "105.6 ms"
+        },
+        "sklearn": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 55.529,
+          "fmt": "55.5 ms"
+        },
+        "plsregress": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 96.511,
+          "fmt": "96.5 ms"
+        },
+        "ikpls": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 52.139,
+          "fmt": "52.1 ms"
+        },
+        "pls": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 441.0,
+          "fmt": "441.0 ms"
+        },
+        "mixOmics": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 466.5,
+          "fmt": "466.5 ms"
+        },
+        "ref.python_scikit_learn": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 53.099,
+          "fmt": "53.1 ms"
+        },
+        "ropls": {
+          "parity": "not_available",
+          "ok": false,
+          "reason": "algo 'pls' not implemented by ropls"
+        },
+        "ref.python_ikpls": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 57.601,
+          "fmt": "57.6 ms"
+        },
+        "ref.r_pls": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 1183.491,
+          "fmt": "1.2 s"
+        },
+        "ref.r_mixomics": {
+          "parity": "drift",
+          "ok": true,
+          "ms": 3102.57,
+          "fmt": "3.1 s"
         }
       }
     },
@@ -15582,12 +15861,12 @@
     "algos": 71,
     "backends": 47,
     "groups": 11,
-    "sizes": 2,
+    "sizes": 4,
     "threads": [
       1
     ],
-    "rows": 142,
-    "cells": 2558,
+    "rows": 145,
+    "cells": 2601,
     "ok": 469
   }
 }

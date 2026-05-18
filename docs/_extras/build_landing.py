@@ -178,32 +178,36 @@ def is_true(v: Any) -> bool:
 
 
 def parity_code(row: dict) -> str:
-    """ok | warn | fail | timeout | error | na.
+    """exact | drift | divergent | error | not_run | not_available.
 
     Distinguishes hard runtime errors (ModuleNotFoundError, ImportError,
-    crash) from "not implemented" so the dashboard can show *why* a cell
-    is missing instead of collapsing every failure to a silent dash.
+    crash) from libraries that do not expose an algorithm so the dashboard
+    can show the right icon instead of collapsing every failure to a dash.
     """
     if not is_true(row.get("ok")):
         reason = (row.get("reason") or "").lower()
         if "timeout" in reason:
-            return "timeout"
+            return "not_run"
+        if ("not implemented by" in reason or
+                "unsupported algo" in reason or
+                "unsupported algorithm" in reason):
+            return "not_available"
         if any(k in reason for k in (
                 "modulenotfounderror", "importerror", "notimplemented",
                 "error", "exception", "crash", "traceback", "segfault")):
             return "error"
-        return "na"
+        return "not_run"
     if is_true(row.get("parity_ok")):
-        return "ok"
+        return "exact"
     try:
         d = float(row.get("parity_max_diff", "nan"))
     except (TypeError, ValueError):
-        return "warn"
+        return "drift"
     if d != d:           # NaN
-        return "warn"
+        return "drift"
     if d < 1e-3:
-        return "warn"
-    return "fail"
+        return "drift"
+    return "divergent"
 
 
 def fmt_ms(ms_str: str) -> str:
@@ -408,12 +412,13 @@ def build_payload(results_dir: Path) -> dict:
         # Capture the failure reason so the dashboard tooltip can show
         # "ModuleNotFoundError: foo" instead of a silent dash.
         reason = (r.get("reason") or "").strip()
-        if reason and verdict in ("error", "timeout", "fail", "warn", "na"):
+        if reason and verdict in ("error", "not_run", "not_available",
+                                  "divergent", "drift"):
             cell["reason"] = reason[:200]
-        # Skip pure-empty `na`-without-timing cells: dashboard infers
-        # absence as `—`. Keep error / timeout / fail / warn so the user
-        # sees the verdict.
-        if ms is not None or verdict in ("timeout", "fail", "warn", "error"):
+        # Keep every explicit verdict emitted by the orchestrator so the
+        # dashboard can distinguish "not run" from "not available in lib".
+        if ms is not None or verdict in (
+                "not_run", "not_available", "divergent", "drift", "error"):
             pivot[rkey][cid] = cell
 
     rows_out = []
@@ -511,7 +516,7 @@ def build_payload(results_dir: Path) -> dict:
             "rows":     len(rows_out),
             "cells":    sum(len(r["cells"]) for r in rows_out),
             "ok":       sum(1 for r in rows_out for c in r["cells"].values()
-                            if c.get("parity") == "ok"),
+                            if c.get("parity") == "exact"),
         },
     }
     return {
@@ -539,7 +544,7 @@ def main() -> None:
     s = p["payload"]["stats"]
     print(f"wrote {out} · {s['cells']} cells / {s['rows']} rows / "
             f"{s['backends']} cols / {s['algos']} algos / "
-            f"{s['ok']} parity ✓ ({s['ok']/s['cells']*100:.0f}%)")
+            f"{s['ok']} exact ✓ ({s['ok']/s['cells']*100:.0f}%)")
 
 
 if __name__ == "__main__":
