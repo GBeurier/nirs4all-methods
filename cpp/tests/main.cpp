@@ -17,6 +17,10 @@ void register_preprocessing_stateless_tests(c4a_testing::Runner& r);
 // test_preprocessing_stateful.cpp.
 void register_preprocessing_stateful_tests(c4a_testing::Runner& r);
 
+// Phase 4 — derivative & smoothing parity tests live in
+// test_preprocessing_smoothing.cpp.
+void register_preprocessing_smoothing_tests(c4a_testing::Runner& r);
+
 namespace {
 
 void test_version_string_nonempty() {
@@ -85,5 +89,6 @@ int main() {
     register_rng_pcg64_tests(r);
     register_preprocessing_stateless_tests(r);
     register_preprocessing_stateful_tests(r);
+    register_preprocessing_smoothing_tests(r);
     return r.finalize();
 }

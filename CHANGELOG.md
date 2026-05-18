@@ -6,6 +6,94 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.0+abi.1.4.0] — Phase 4 derivatives & smoothing
+
+### Added
+
+- **Five stateless preprocessing operators** with the `_create / _transform /
+  _destroy` ABI contract:
+  - **SavitzkyGolay** (`c4a_pp_savgol_*`, 3 symbols) — matches
+    `scipy.signal.savgol_filter`.  Vandermonde-QR pseudo-inverse for the
+    coefficient build (mathematically equivalent to scipy's SVD-based
+    lstsq path).  Five boundary modes — `mirror`, `constant`, `nearest`,
+    `wrap`, `interp` — with the same `interp` polynomial-fit-at-edges
+    behaviour as `_savitzky_golay._fit_edge`.
+  - **FirstDerivative** (`c4a_pp_first_derivative_*`, 3 symbols) — matches
+    `np.gradient(X, delta, axis=1, edge_order)` for `edge_order` in
+    {1, 2}.  Shape-preserving.
+  - **SecondDerivative** (`c4a_pp_second_derivative_*`, 3 symbols) — two
+    passes of `np.gradient`.
+  - **NorrisWilliams** (`c4a_pp_norris_williams_*`, 3 symbols) — centred
+    moving-average smoother followed by a gap finite difference, applied
+    `derivative_order` times.  Matches `nirs4all.operators.transforms.
+    norris_williams.norris_williams`.
+  - **Gaussian** (`c4a_pp_gaussian_*`, 3 symbols) — matches
+    `scipy.ndimage.gaussian_filter1d`.  Hermite-polynomial kernel
+    recursion that produces the exact same kernel bytes as
+    `_gaussian_kernel1d`.  Five boundary modes — `reflect`, `constant`,
+    `nearest`, `mirror`, `wrap`.
+- **Two new enum types** in the public header: `c4a_pp_savgol_mode_t`
+  (5 values) and `c4a_pp_gaussian_mode_t` (5 values).
+- **Boundary-padding helper** (`cpp/src/core/common/padding.{c,h}`) —
+  shared index resolution for the five SciPy modes.  Used by SG and
+  Gaussian; reused unchanged by Phases 5+.
+- **C engines** under `cpp/src/core/preprocessing/derivatives/` and
+  `cpp/src/core/preprocessing/smoothing/`.  Pure ISO C11; no
+  third-party dependencies.  SG uses an in-place Householder QR
+  factorisation (~100 LOC).
+- **C ABI wrappers** in `cpp/src/c_api/c_api_preprocessing.cpp` — 15 new
+  symbols (3 × 5).  Same try/catch / null-safe / matrix-view validation
+  conventions as the Phase 2 / 3 wrappers.
+- **Parity fixtures** under `parity/fixtures/`: `savgol_v1.json`
+  (22 cases sweeping window / polyorder / deriv / 5 modes / delta-scaling
+  / deriv > polyorder short-circuit), `first_derivative_v1.json` (4),
+  `second_derivative_v1.json` (4), `norris_williams_v1.json` (5),
+  `gaussian_v1.json` (26 — 5 (sigma, order) tuples × 5 modes + a non-default
+  `truncate` check).
+- **Fixture generator** `parity/python_generator/scripts/
+  generate_phase4_fixtures.py`.  Loads `norris_williams.py` directly from
+  the nirs4all source via `importlib`, mirroring the Phase 2 / 3 generator
+  pattern.
+- **10 new tests** in `cpp/tests/test_preprocessing_smoothing.cpp`: 5
+  smoke + 5 parity.  Total: 51 → **61 / 61**.
+- **Documentation** under `docs/algorithms/`: one Markdown page per
+  Phase 4 operator (`savitzky_golay.md`, `first_derivative.md`,
+  `second_derivative.md`, `norris_williams.md`, `gaussian.md`).
+
+### Changed
+
+- **ABI bump**: 1.3.0 → 1.4.0 (additive).  Library SOVERSION stays at 1.
+- **Total exported symbols**: 79 → **94** (15 new wrappers, no removals).
+- **Public header** gains §10 "Phase 4 — Stateless derivatives & smoothing
+  preprocessings"; the previous §10 (ABI guard rails) is renumbered to
+  §11.  Two new static-size assertions cover `c4a_pp_savgol_mode_t` and
+  `c4a_pp_gaussian_mode_t`.
+
+### Numerical parity findings
+
+- The Vandermonde-QR pseudo-inverse path agrees with scipy's SVD-based
+  `lstsq` to within ~1e-11 on the supported `(window_length, polyorder,
+  deriv)` sweep.  The 1e-9 / 1e-10 SG / Gaussian tolerance reflects this
+  structural gap, not an algorithmic drift.
+- `np.gradient(X, delta, axis=1, edge_order=2)` evaluates the boundary
+  formula `(-3 X[0] + 4 X[1] - X[2]) / (2 \delta)` and the central
+  difference `(X[j+1] - X[j-1]) / (2 \delta)` per element; the C engine
+  uses the same arithmetic order and matches byte-for-byte (1e-12 / 1e-13).
+- The Hermite recursion in scipy's `_gaussian_kernel1d` reproduces
+  bit-exactly in our C engine because both apply the same `(D + P)`
+  matrix in the same order; the only divergence comes from the
+  correlation accumulator order which is bounded by the kernel length.
+
+### Deferred (Phase 5+)
+
+- A shared JSON parser for the test harness — the parity-fixture parser
+  is currently triplicated across `test_preprocessing_{stateless,stateful,
+  smoothing}.cpp`.  Will get pulled out at Phase 6 once we have enough
+  fixtures to justify the indirection.
+- A shared QR helper — the Householder code is now copied in three places
+  (`emsc.c`, `savitzky_golay.c`, and the SG edge fit).  We hold off until
+  Phase 5 needs a fourth copy, then promote to `cpp/src/core/common/qr.{c,h}`.
+
 ## [0.1.0+abi.1.3.0] — Phase 3 stateful scatter preprocessings
 
 ### Added

@@ -37,6 +37,10 @@
 
 #include "core/matrix_view.hpp"
 #include "core/preprocessing/derivatives/derivate.h"
+#include "core/preprocessing/derivatives/first_derivative.h"
+#include "core/preprocessing/derivatives/norris_williams.h"
+#include "core/preprocessing/derivatives/savitzky_golay.h"
+#include "core/preprocessing/derivatives/second_derivative.h"
 #include "core/preprocessing/scaling/baseline.h"
 #include "core/preprocessing/scaling/log_transform.h"
 #include "core/preprocessing/scaling/normalize.h"
@@ -47,6 +51,7 @@
 #include "core/preprocessing/scatter/msc.h"
 #include "core/preprocessing/scatter/robust_snv.h"
 #include "core/preprocessing/scatter/snv.h"
+#include "core/preprocessing/smoothing/gaussian.h"
 
 // ---------------------------------------------------------------------------
 // Opaque public handles. Each one wraps the matching internal engine state.
@@ -85,6 +90,21 @@ struct c4a_pp_baseline_handle_t {
 };
 struct c4a_pp_derivate_handle_t {
     c4a_pp_derivate_state_t* state;
+};
+struct c4a_pp_savgol_handle_t {
+    c4a_pp_savgol_state_t* state;
+};
+struct c4a_pp_first_derivative_handle_t {
+    c4a_pp_first_derivative_state_t* state;
+};
+struct c4a_pp_second_derivative_handle_t {
+    c4a_pp_second_derivative_state_t* state;
+};
+struct c4a_pp_norris_williams_handle_t {
+    c4a_pp_norris_williams_state_t* state;
+};
+struct c4a_pp_gaussian_handle_t {
+    c4a_pp_gaussian_state_t* state;
 };
 
 namespace {
@@ -1004,6 +1024,392 @@ C4A_API int64_t c4a_pp_derivate_output_cols(int32_t order,
         return c4a_pp_derivate_output_cols_helper(order, input_cols);
     } catch (...) {
         return 0;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SavitzkyGolay (Phase 4 stateless)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_savgol_create(c4a_pp_savgol_handle_t** out,
+                                           int32_t window_length,
+                                           int32_t polyorder,
+                                           int32_t deriv,
+                                           double delta,
+                                           c4a_pp_savgol_mode_t mode,
+                                           double cval) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (window_length < 1 || (window_length % 2) == 0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (polyorder < 0 || polyorder >= window_length) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (deriv < 0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (delta == 0.0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (mode != C4A_PP_SAVGOL_MIRROR &&
+        mode != C4A_PP_SAVGOL_CONSTANT &&
+        mode != C4A_PP_SAVGOL_NEAREST &&
+        mode != C4A_PP_SAVGOL_WRAP &&
+        mode != C4A_PP_SAVGOL_INTERP) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_savgol_state_t* s =
+            c4a_pp_savgol_state_new(window_length, polyorder, deriv, delta,
+                                     mode, cval);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_savgol_handle_t* h =
+            new (std::nothrow) c4a_pp_savgol_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_savgol_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_savgol_destroy(c4a_pp_savgol_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_savgol_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_savgol_transform(const c4a_pp_savgol_handle_t* h,
+                                              c4a_matrix_view_t X,
+                                              c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_savgol_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// FirstDerivative (Phase 4 stateless)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_first_derivative_create(
+    c4a_pp_first_derivative_handle_t** out, double delta, int32_t edge_order) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (delta == 0.0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (edge_order != 1 && edge_order != 2) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_first_derivative_state_t* s =
+            c4a_pp_first_derivative_state_new(delta, edge_order);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_first_derivative_handle_t* h =
+            new (std::nothrow) c4a_pp_first_derivative_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_first_derivative_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_first_derivative_destroy(
+    c4a_pp_first_derivative_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_first_derivative_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_first_derivative_transform(
+    const c4a_pp_first_derivative_handle_t* h,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_first_derivative_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SecondDerivative (Phase 4 stateless)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_second_derivative_create(
+    c4a_pp_second_derivative_handle_t** out, double delta, int32_t edge_order) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (delta == 0.0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (edge_order != 1 && edge_order != 2) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_second_derivative_state_t* s =
+            c4a_pp_second_derivative_state_new(delta, edge_order);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_second_derivative_handle_t* h =
+            new (std::nothrow) c4a_pp_second_derivative_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_second_derivative_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_second_derivative_destroy(
+    c4a_pp_second_derivative_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_second_derivative_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_second_derivative_transform(
+    const c4a_pp_second_derivative_handle_t* h,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_second_derivative_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// NorrisWilliams (Phase 4 stateless)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_norris_williams_create(
+    c4a_pp_norris_williams_handle_t** out,
+    int32_t segment, int32_t gap, int32_t derivative_order, double delta) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (segment < 1 || (segment % 2) == 0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (gap < 1) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (derivative_order != 1 && derivative_order != 2) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (delta == 0.0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_norris_williams_state_t* s = c4a_pp_norris_williams_state_new(
+            segment, gap, derivative_order, delta);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_norris_williams_handle_t* h =
+            new (std::nothrow) c4a_pp_norris_williams_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_norris_williams_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_norris_williams_destroy(
+    c4a_pp_norris_williams_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_norris_williams_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_norris_williams_transform(
+    const c4a_pp_norris_williams_handle_t* h,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_norris_williams_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Gaussian (Phase 4 stateless)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_gaussian_create(
+    c4a_pp_gaussian_handle_t** out,
+    double sigma, int32_t order,
+    c4a_pp_gaussian_mode_t mode,
+    double cval, double truncate) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (!(sigma > 0.0)) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (order < 0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (!(truncate >= 0.0)) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (mode != C4A_PP_GAUSSIAN_REFLECT &&
+        mode != C4A_PP_GAUSSIAN_CONSTANT &&
+        mode != C4A_PP_GAUSSIAN_NEAREST &&
+        mode != C4A_PP_GAUSSIAN_MIRROR &&
+        mode != C4A_PP_GAUSSIAN_WRAP) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_gaussian_state_t* s =
+            c4a_pp_gaussian_state_new(sigma, order, mode, cval, truncate);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_gaussian_handle_t* h =
+            new (std::nothrow) c4a_pp_gaussian_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_gaussian_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_gaussian_destroy(c4a_pp_gaussian_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_gaussian_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_gaussian_transform(
+    const c4a_pp_gaussian_handle_t* h,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_gaussian_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
     }
 }
 

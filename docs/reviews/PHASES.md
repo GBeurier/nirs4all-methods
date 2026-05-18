@@ -10,8 +10,8 @@ appear with empty cells.
 | 0 | Bootstrap (chassis, ABI, CI) | ACCEPT (9 high-conf fixes applied) | — | _initial_ | 7 / 7 |
 | 1 | Common infrastructure (PCG64 RNG) | ACCEPT (2 nits + 1 medium fixed) | — | (pushed) | 20 / 20 |
 | 2 | Stateless scatter preprocessings | REVISE → 3 high-conf fixes applied | ACCEPT with Phase 3 prerequisites | (pushed) | 34 / 34 |
-| 3 | Stateful scatter preprocessings + c4a.h cleanup | — | — | — | 48 / 48 |
-| 4 | Derivatives & smoothing | — | — | — | — |
+| 3 | Stateful scatter preprocessings + c4a.h cleanup | ACCEPT (3 follow-ups applied) | — | `98c9e25` | 51 / 51 |
+| 4 | Derivatives & smoothing | ACCEPT (5 medium/low deferred) | ACCEPT (Phases 3+4 combined) | (pushed) | 61 / 61 |
 | 5 | Baseline correction (AsLS family) | — | — | — | — |
 | 6 | Wavelets & denoising | — | — | — | — |
 | 7 | Signal conversion | — | — | — | — |

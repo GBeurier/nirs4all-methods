@@ -22,6 +22,7 @@ add_library(chemometrics4all_core OBJECT
     core/matrix_view.cpp
     core/status.cpp
     core/version.cpp
+    core/common/padding.c
     core/common/rng_pcg64.c
     core/common/ziggurat.c
     core/preprocessing/scatter/snv.c
@@ -34,7 +35,12 @@ add_library(chemometrics4all_core OBJECT
     core/preprocessing/scaling/simple_scale.c
     core/preprocessing/scaling/log_transform.c
     core/preprocessing/scaling/baseline.c
-    core/preprocessing/derivatives/derivate.c)
+    core/preprocessing/derivatives/derivate.c
+    core/preprocessing/derivatives/first_derivative.c
+    core/preprocessing/derivatives/norris_williams.c
+    core/preprocessing/derivatives/savitzky_golay.c
+    core/preprocessing/derivatives/second_derivative.c
+    core/preprocessing/smoothing/gaussian.c)
 target_include_directories(chemometrics4all_core
     PUBLIC  ${PROJECT_SOURCE_DIR}/cpp/include
             ${PROJECT_BINARY_DIR}/generated

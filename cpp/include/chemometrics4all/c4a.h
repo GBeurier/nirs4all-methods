@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 /*
- * chemometrics4all — public C ABI v1.3.0.
+ * chemometrics4all — public C ABI v1.4.0.
  *
  * Stability: experimental until v1.0.0. Every breaking change before that
  * version bumps the ABI MAJOR (see c4a_version.h). After v1.0.0 the ABI
@@ -636,12 +636,159 @@ C4A_API c4a_status_t c4a_pp_derivate_transform(
 C4A_API int64_t      c4a_pp_derivate_output_cols(int32_t order,
                                                   int64_t input_cols);
 
+/* ============================================================================
+ * 10. Phase 4 — Stateless derivatives & smoothing preprocessings
+ * ============================================================================
+ *
+ * Five stateless smoothing / derivative operators that complete the spectral
+ * preprocessing toolkit alongside the Phase 2/3 scatter and scaling stages.
+ * All implement the `_create / _transform / _destroy` ABI contract from §5
+ * (no `_fit`).
+ *
+ *   - SavitzkyGolay     : polynomial least-squares smoothing & differentiation
+ *                         along axis=1 with 5 boundary modes.  Matches
+ *                         `scipy.signal.savgol_filter`.
+ *   - FirstDerivative   : `np.gradient(X, delta, axis=1, edge_order=...)`.
+ *                         Shape-preserving central differences.
+ *   - SecondDerivative  : two passes of `np.gradient` (shape-preserving).
+ *   - NorrisWilliams    : segment-smooth + gap-difference, applied
+ *                         `derivative_order` times.  Matches
+ *                         `nirs4all.operators.transforms.norris_williams`.
+ *   - Gaussian          : `scipy.ndimage.gaussian_filter1d` with the same
+ *                         5 boundary modes as the SciPy reference.
+ *
+ * Status semantics follow the universal rules at the top of this header.
+ * Matrix-view validation may additionally return C4A_ERR_DTYPE_MISMATCH
+ * (non-F64), C4A_ERR_STRIDE_INVALID (non-contiguous row-major), or
+ * C4A_ERR_SHAPE_MISMATCH (X and out shapes disagree).
+ */
+
+/* ---------- SavitzkyGolay -------------------------------------------------
+ *
+ * Parameters:
+ *   window_length : odd integer >= 1
+ *   polyorder     : 0 <= polyorder < window_length
+ *   deriv         : derivative order >= 0
+ *   delta         : sample spacing (non-zero)
+ *   mode          : boundary handling, see c4a_pp_savgol_mode_t below
+ *   cval          : fill value used when mode == C4A_PP_SAVGOL_CONSTANT
+ *
+ * The five modes mirror `scipy.signal.savgol_filter`:
+ *   - MIRROR   : reflection without repeating the edge (default).
+ *   - CONSTANT : pad with `cval`.
+ *   - NEAREST  : replicate the edge sample.
+ *   - WRAP     : cyclic.
+ *   - INTERP   : fit `polyorder` polynomials to the first and last
+ *                window_length samples, evaluate at the half-window
+ *                positions on each side.
+ */
+typedef struct c4a_pp_savgol_handle_t c4a_pp_savgol_handle_t;
+typedef enum c4a_pp_savgol_mode_t {
+    C4A_PP_SAVGOL_MIRROR   = 0,
+    C4A_PP_SAVGOL_CONSTANT = 1,
+    C4A_PP_SAVGOL_NEAREST  = 2,
+    C4A_PP_SAVGOL_WRAP     = 3,
+    C4A_PP_SAVGOL_INTERP   = 4
+} c4a_pp_savgol_mode_t;
+C4A_API c4a_status_t c4a_pp_savgol_create(c4a_pp_savgol_handle_t** out,
+                                           int32_t window_length,
+                                           int32_t polyorder,
+                                           int32_t deriv,
+                                           double delta,
+                                           c4a_pp_savgol_mode_t mode,
+                                           double cval);
+C4A_API void         c4a_pp_savgol_destroy(c4a_pp_savgol_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_savgol_transform(
+    const c4a_pp_savgol_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+
+/* ---------- FirstDerivative -----------------------------------------------
+ *
+ * `np.gradient(X, delta, axis=1, edge_order)` with edge_order in {1, 2}.
+ * Output shape matches input shape.  `delta` must be non-zero.
+ */
+typedef struct c4a_pp_first_derivative_handle_t
+    c4a_pp_first_derivative_handle_t;
+C4A_API c4a_status_t c4a_pp_first_derivative_create(
+    c4a_pp_first_derivative_handle_t** out, double delta, int32_t edge_order);
+C4A_API void         c4a_pp_first_derivative_destroy(
+    c4a_pp_first_derivative_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_first_derivative_transform(
+    const c4a_pp_first_derivative_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+
+/* ---------- SecondDerivative ----------------------------------------------
+ *
+ * Two passes of `np.gradient(X, delta, axis=1, edge_order)`.  Shape-preserving.
+ */
+typedef struct c4a_pp_second_derivative_handle_t
+    c4a_pp_second_derivative_handle_t;
+C4A_API c4a_status_t c4a_pp_second_derivative_create(
+    c4a_pp_second_derivative_handle_t** out, double delta, int32_t edge_order);
+C4A_API void         c4a_pp_second_derivative_destroy(
+    c4a_pp_second_derivative_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_second_derivative_transform(
+    const c4a_pp_second_derivative_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+
+/* ---------- NorrisWilliams -------------------------------------------------
+ *
+ * `segment` must be odd and >= 1 (1 disables smoothing).  `gap` must be >= 1.
+ * `derivative_order` must be 1 or 2.  `delta` must be non-zero.  Shape-preserving.
+ */
+typedef struct c4a_pp_norris_williams_handle_t
+    c4a_pp_norris_williams_handle_t;
+C4A_API c4a_status_t c4a_pp_norris_williams_create(
+    c4a_pp_norris_williams_handle_t** out,
+    int32_t segment, int32_t gap, int32_t derivative_order, double delta);
+C4A_API void         c4a_pp_norris_williams_destroy(
+    c4a_pp_norris_williams_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_norris_williams_transform(
+    const c4a_pp_norris_williams_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+
+/* ---------- Gaussian -------------------------------------------------------
+ *
+ * `scipy.ndimage.gaussian_filter1d(X, sigma, order, axis=1, mode, cval,
+ * truncate)`.  Kernel radius is `int(truncate * sigma + 0.5)`.  Sigma must be
+ * positive, order >= 0, truncate >= 0.
+ *
+ * Boundary modes mirror SciPy.ndimage:
+ *   - REFLECT  : edge-repeating reflection (default).
+ *   - CONSTANT : pad with `cval`.
+ *   - NEAREST  : replicate the edge sample.
+ *   - MIRROR   : non-edge-repeating reflection.
+ *   - WRAP     : cyclic.
+ */
+typedef struct c4a_pp_gaussian_handle_t c4a_pp_gaussian_handle_t;
+typedef enum c4a_pp_gaussian_mode_t {
+    C4A_PP_GAUSSIAN_REFLECT  = 0,
+    C4A_PP_GAUSSIAN_CONSTANT = 1,
+    C4A_PP_GAUSSIAN_NEAREST  = 2,
+    C4A_PP_GAUSSIAN_MIRROR   = 3,
+    C4A_PP_GAUSSIAN_WRAP     = 4
+} c4a_pp_gaussian_mode_t;
+C4A_API c4a_status_t c4a_pp_gaussian_create(
+    c4a_pp_gaussian_handle_t** out,
+    double sigma, int32_t order,
+    c4a_pp_gaussian_mode_t mode,
+    double cval, double truncate);
+C4A_API void         c4a_pp_gaussian_destroy(c4a_pp_gaussian_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_gaussian_transform(
+    const c4a_pp_gaussian_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
 
 /* ============================================================================
- * 10. ABI guard rails — fixed-size assertions on the C ABI shape
+ * 11. ABI guard rails — fixed-size assertions on the C ABI shape
  * ==========================================================================
  *
  * Compilers may shrink enums under non-default flags (e.g. -fshort-enums on
@@ -668,6 +815,10 @@ C4A_STATIC_ASSERT(sizeof(c4a_pp_lsnv_pad_mode_t) == 4,
                   "c4a_pp_lsnv_pad_mode_t must be 4 bytes");
 C4A_STATIC_ASSERT(sizeof(c4a_pp_area_method_t) == 4,
                   "c4a_pp_area_method_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_pp_savgol_mode_t) == 4,
+                  "c4a_pp_savgol_mode_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_pp_gaussian_mode_t) == 4,
+                  "c4a_pp_gaussian_mode_t must be 4 bytes");
 
 /* c4a_matrix_view_t must be 48 bytes on LP64 / LLP64. ILP32 is not
  * supported; on ILP32 platforms the layout would differ (pointer is 4 bytes),
