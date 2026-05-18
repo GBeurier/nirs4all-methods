@@ -36,13 +36,16 @@
 
 #include <stdint.h>
 
-#include "chemometrics4all/c4a_export.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* Build the (alpha, sigma) fractional convolutional kernel into `out`.
+ *
+ * INTERNAL — not part of the public C ABI. The kernel builder is consumed
+ * exclusively by the §22 static FCK transformer (see c4a_pp_fck_static_*);
+ * callers that need a fractional kernel must go through that handle. This
+ * symbol has hidden visibility and is intentionally absent from c4a.h.
  *
  * Parameters
  *   alpha       fractional order, any real (0 → pure Gaussian)
@@ -58,8 +61,8 @@ extern "C" {
  * L1 norm falls below 1e-12, in which case the un-normalised kernel is
  * left in place (matches the Python `if norm > 1e-12` guard).
  */
-C4A_API int c4a_fck_kernel_1d(double alpha, double sigma, int32_t kernel_size,
-                               double* out);
+int c4a_fck_kernel_1d(double alpha, double sigma, int32_t kernel_size,
+                       double* out);
 
 #ifdef __cplusplus
 }  /* extern "C" */

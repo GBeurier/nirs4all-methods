@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -44,6 +45,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parent.parent.parent
 FIXTURE_DIR = REPO_ROOT / "parity" / "fixtures"
+MANIFEST_PATH = FIXTURE_DIR / "manifest.json"
 GENERATOR_DIR = HERE
 
 
@@ -56,11 +58,28 @@ def sha256_file(path: Path) -> str:
 
 
 def snapshot_fixtures() -> dict[str, str]:
-    """SHA256 of every committed fixture for drift comparison."""
+    """SHA256 of every committed fixture for drift comparison.
+
+    `manifest.json` is excluded — it is the SHA-pinned snapshot itself.
+    """
     return {
         p.name: sha256_file(p)
         for p in sorted(FIXTURE_DIR.glob("*.json"))
+        if p.name != "manifest.json"
     }
+
+
+def load_manifest() -> dict[str, dict[str, object]] | None:
+    """Load `parity/fixtures/manifest.json` if present.
+
+    Returns the `{fixture_name: {sha256, bytes}}` map or None when the
+    manifest is missing (older checkouts before the manifest existed).
+    """
+    if not MANIFEST_PATH.exists():
+        return None
+    with open(MANIFEST_PATH, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return data.get("fixtures") or None
 
 
 def list_generators() -> list[Path]:
@@ -69,15 +88,31 @@ def list_generators() -> list[Path]:
 
 
 def stage1_fixture_determinism(verbose: bool = True) -> tuple[int, list[str]]:
-    """Regenerate every fixture and check SHA256 against the committed copy."""
+    """Regenerate every fixture and verify SHAs against the committed manifest.
+
+    The manifest (`parity/fixtures/manifest.json`) is the source of truth:
+    Stage 1 regenerates every fixture, hashes the result, and compares each
+    SHA-256 + byte count against the manifest entry. This catches drift in
+    BOTH directions — generator changes that produce different bytes, AND
+    an out-of-date manifest that has not been refreshed after a deliberate
+    fixture update.
+
+    Falls back to the legacy "before/after on-disk" diff when the manifest
+    is absent.
+    """
     failures: list[str] = []
     crashes: list[str] = []
 
+    manifest = load_manifest()
     before = snapshot_fixtures()
     generators = list_generators()
 
     if verbose:
         print(f"\n=== Stage 1: fixture determinism ({len(generators)} generators) ===\n")
+        if manifest is not None:
+            print(f"  Manifest present: {len(manifest)} pinned fixtures.")
+        else:
+            print("  Manifest missing — falling back to on-disk before/after diff.")
 
     for gen in generators:
         rel = gen.relative_to(REPO_ROOT)
@@ -105,19 +140,41 @@ def stage1_fixture_determinism(verbose: bool = True) -> tuple[int, list[str]]:
                 print("TIMEOUT")
 
     after = snapshot_fixtures()
+    drifted: list[str] = []
 
-    # Compare hashes
-    drifted = []
-    for fname, sha_before in before.items():
-        sha_after = after.get(fname)
-        if sha_after is None:
-            drifted.append(f"{fname}: vanished after regen")
-        elif sha_before != sha_after:
-            drifted.append(f"{fname}: SHA changed ({sha_before[:8]} -> {sha_after[:8]})")
-
-    new_files = set(after) - set(before)
-    if new_files:
+    if manifest is not None:
+        # Manifest-pinned comparison: every regenerated fixture's bytes/sha
+        # must match the manifest exactly.
+        for fname, entry in sorted(manifest.items()):
+            expected_sha = entry.get("sha256")
+            expected_bytes = entry.get("bytes")
+            path = FIXTURE_DIR / fname
+            if not path.exists():
+                drifted.append(f"{fname}: vanished after regen (manifest expected)")
+                continue
+            actual_sha = after.get(fname)
+            actual_bytes = path.stat().st_size
+            if actual_sha != expected_sha:
+                drifted.append(
+                    f"{fname}: SHA changed ({str(expected_sha)[:8]} -> "
+                    f"{str(actual_sha)[:8]})"
+                )
+            elif actual_bytes != expected_bytes:
+                drifted.append(
+                    f"{fname}: byte count changed ({expected_bytes} -> {actual_bytes})"
+                )
+        new_files = set(after) - set(manifest)
         for f in sorted(new_files):
+            drifted.append(f"{f}: new file created without manifest entry")
+    else:
+        # Legacy fallback: pure on-disk before/after.
+        for fname, sha_before in before.items():
+            sha_after = after.get(fname)
+            if sha_after is None:
+                drifted.append(f"{fname}: vanished after regen")
+            elif sha_before != sha_after:
+                drifted.append(f"{fname}: SHA changed ({sha_before[:8]} -> {sha_after[:8]})")
+        for f in sorted(set(after) - set(before)):
             drifted.append(f"{f}: new file created (uncommitted)")
 
     if verbose:
@@ -130,7 +187,8 @@ def stage1_fixture_determinism(verbose: bool = True) -> tuple[int, list[str]]:
             for d in drifted[:20]:
                 print(f"    - {d}")
         if not crashes and not drifted:
-            print(f"\n  [PASS] All {len(before)} fixtures bit-identical after regen.")
+            ref = "manifest" if manifest is not None else "on-disk snapshot"
+            print(f"\n  [PASS] All {len(after)} fixtures bit-identical to {ref}.")
 
     exit_code = 0
     if crashes:

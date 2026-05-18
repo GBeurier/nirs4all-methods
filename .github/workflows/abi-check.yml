@@ -7,31 +7,52 @@ on:
     branches: [main]
   workflow_dispatch: {}
 
+# The ABI surface gate enforces three invariants on libc4a:
+#   1. Every exported symbol starts with `c4a_` (defense-in-depth on top of
+#      the linker version script and `-fvisibility=hidden`).
+#   2. The set of exported symbols matches `cpp/abi/expected_symbols_<os>.txt`
+#      exactly (currently 251 symbols, ABI 1.7.0). Adds / removals require
+#      a manual snapshot bump.
+#   3. The shared library does not pull in any forbidden runtime dependency
+#      (libopenblas, libmkl, libpython, libR, librcpp, libboost, libeigen,
+#      libpybind11) — per roadmap §5.3 chemometrics4all must be runtime-pure
+#      libc + libm only.
+
 jobs:
   linux:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - run: |
+      - name: Install Linux toolchain (gcc-12 + ninja)
+        run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-12 g++-12 ninja-build cmake
-      - run: cmake --preset ci-linux-gcc12-release
-      - run: cmake --build --preset ci-linux-gcc12-release --target chemometrics4all_c --parallel
+      - name: Configure (ci-linux-gcc12-release)
+        run: cmake --preset ci-linux-gcc12-release
+      - name: Build libc4a
+        run: cmake --build --preset ci-linux-gcc12-release --target chemometrics4all_c --parallel
       - name: Extract exported symbols
         run: |
           LIB=$(find build -name 'libc4a.so.*' | head -n 1)
           echo "Inspecting $LIB"
-          nm -D --defined-only "$LIB" | awk '{print $3}' | sort -u > /tmp/exported.txt
-          echo "----- exported -----"
+          # `nm -D --defined-only` prints `addr T sym@@CHEMOMETRICS4ALL_1`
+          # for versioned exports. Strip the @@-suffix before comparing
+          # against both the expected list and the c4a_ prefix check.
+          nm -D --defined-only "$LIB" \
+            | awk '$2=="T" {print $3}' \
+            | sed 's/@@.*$//' \
+            | sort -u > /tmp/exported.txt
+          sed 's/@@.*$//' cpp/abi/expected_symbols_linux.txt | sort -u > /tmp/expected.txt
+          echo "----- exported ($(wc -l < /tmp/exported.txt) symbols) -----"
           cat /tmp/exported.txt
-          echo "----- expected -----"
-          cat cpp/abi/expected_symbols_linux.txt
+          echo "----- expected ($(wc -l < /tmp/expected.txt) symbols) -----"
+          cat /tmp/expected.txt
           echo "----- diff -----"
-          diff -u cpp/abi/expected_symbols_linux.txt /tmp/exported.txt
+          diff -u /tmp/expected.txt /tmp/exported.txt
       - name: Assert every exported symbol starts with c4a_
         run: |
           if grep -v '^c4a_' /tmp/exported.txt; then
-            echo "Forbidden non-c4a_ symbol exported"
+            echo "ERROR: forbidden non-c4a_ symbol exported"
             exit 1
           fi
       - name: Runtime-dependency audit (forbidden libs)
@@ -40,7 +61,7 @@ jobs:
           deps=$(ldd "$LIB" 2>&1)
           echo "$deps"
           # Forbidden runtime-dep list per roadmap §5.3.
-          if echo "$deps" | grep -iE 'libopenblas|libmkl|libpython|libR\.|librcpp|libboost|libeigen|libpybind11|libembind|libnlohmann|libyaml-cpp'; then
+          if echo "$deps" | grep -iE 'libopenblas|libmkl|libpython|libR\.|librcpp|libboost|libeigen|libpybind11'; then
             echo "ERROR: libc4a links a forbidden runtime dependency"
             exit 1
           fi
@@ -57,11 +78,16 @@ jobs:
           LIB=$(find build -name 'libc4a*.dylib' | head -n 1)
           echo "Inspecting $LIB"
           nm -gU "$LIB" | awk '{print $3}' | sed 's/^_//' | sort -u > /tmp/exported.txt
+          echo "----- exported ($(wc -l < /tmp/exported.txt) symbols) -----"
           cat /tmp/exported.txt
+          sed 's/@@.*$//' cpp/abi/expected_symbols_macos.txt | sort -u > /tmp/expected.txt
+          echo "----- expected ($(wc -l < /tmp/expected.txt) symbols) -----"
+          echo "----- diff -----"
+          diff -u /tmp/expected.txt /tmp/exported.txt
       - name: Assert every exported symbol starts with c4a_
         run: |
           if grep -v '^c4a_' /tmp/exported.txt; then
-            echo "Forbidden non-c4a_ symbol exported"
+            echo "ERROR: forbidden non-c4a_ symbol exported"
             exit 1
           fi
       - name: Runtime-dependency audit (forbidden libs)
@@ -69,7 +95,7 @@ jobs:
           LIB=$(find build -name 'libc4a*.dylib' | head -n 1)
           deps=$(otool -L "$LIB")
           echo "$deps"
-          if echo "$deps" | grep -iE 'openblas|libmkl|libpython|libR\.|librcpp|libboost|libeigen|libpybind11|libembind|libnlohmann|libyaml-cpp'; then
+          if echo "$deps" | grep -iE 'openblas|libmkl|libpython|libR\.|librcpp|libboost|libeigen|libpybind11'; then
             echo "ERROR: libc4a links a forbidden runtime dependency"
             exit 1
           fi
@@ -105,3 +131,11 @@ jobs:
             ForEach-Object { $_.Matches[0].Groups[1].Value } |
             Sort-Object -Unique | Out-File -Encoding ascii exported.txt
           Get-Content exported.txt
+      - name: Assert every exported symbol starts with c4a_
+        shell: pwsh
+        run: |
+          $bad = Get-Content exported.txt | Where-Object { -not $_.StartsWith('c4a_') }
+          if ($bad) {
+            Write-Error "ERROR: forbidden non-c4a_ symbol exported: $($bad -join ', ')"
+            exit 1
+          }

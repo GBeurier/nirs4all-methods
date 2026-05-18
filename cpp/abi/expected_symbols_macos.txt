@@ -15,7 +15,6 @@ c4a_context_set_seed@@CHEMOMETRICS4ALL_1
 c4a_context_set_user_data@@CHEMOMETRICS4ALL_1
 c4a_dtype_size@@CHEMOMETRICS4ALL_1
 c4a_dtype_to_string@@CHEMOMETRICS4ALL_1
-c4a_fck_kernel_1d@@CHEMOMETRICS4ALL_1
 c4a_filter_composite_add_leverage@@CHEMOMETRICS4ALL_1
 c4a_filter_composite_add_quality@@CHEMOMETRICS4ALL_1
 c4a_filter_composite_apply@@CHEMOMETRICS4ALL_1

@@ -96,10 +96,17 @@ static c4a_status_t kmeans_plus_plus_init(const double* X, int64_t rows,
 }
 
 /* Lloyd iteration: assign each sample to its closest centroid, recompute
- * centroids as column means. Returns 1 if assignments changed, 0 if stable. */
+ * centroids as column means. Returns 1 if assignments changed, 0 if stable.
+ *
+ * `new_centroids` (k * cols doubles) and `counts` (k int64_t) are scratch
+ * buffers owned by the caller. They are zeroed at entry on every iteration
+ * so the caller does not pay the malloc/free cost per Lloyd step. Mirrors
+ * the AsLS L_buf / D_buf hoisting pattern. */
 static int lloyd_step(const double* X, int64_t rows, int64_t cols,
                        int64_t k, double* centroids,
-                       int64_t* assignments) {
+                       int64_t* assignments,
+                       double*  new_centroids,
+                       int64_t* counts) {
     int changed = 0;
     for (int64_t i = 0; i < rows; ++i) {
         int64_t best_c = 0;
@@ -114,13 +121,8 @@ static int lloyd_step(const double* X, int64_t rows, int64_t cols,
         }
     }
     /* Recompute centroids. Empty clusters: leave centroid in place. */
-    double*  new_centroids = (double*)calloc((size_t)k * (size_t)cols,
-                                              sizeof(double));
-    int64_t* counts        = (int64_t*)calloc((size_t)k, sizeof(int64_t));
-    if (new_centroids == NULL || counts == NULL) {
-        free(new_centroids); free(counts);
-        return changed;  /* skip update on OOM; will converge eventually */
-    }
+    memset(new_centroids, 0, (size_t)k * (size_t)cols * sizeof(double));
+    memset(counts, 0, (size_t)k * sizeof(int64_t));
     for (int64_t i = 0; i < rows; ++i) {
         const int64_t c = assignments[i];
         for (int64_t kk = 0; kk < cols; ++kk) {
@@ -137,7 +139,6 @@ static int lloyd_step(const double* X, int64_t rows, int64_t cols,
         }
         /* Otherwise leave centroid unchanged. */
     }
-    free(new_centroids); free(counts);
     return changed;
 }
 
@@ -156,12 +157,21 @@ c4a_status_t c4a_split_kmeans_apply(const c4a_split_kmeans_state_t* state,
     if (st != C4A_OK) return st;
 
     const int64_t k = n_train;
-    double*  centroids   = (double*)malloc((size_t)k * (size_t)cols
-                                            * sizeof(double));
-    double*  closest_sq  = (double*)malloc((size_t)rows * sizeof(double));
-    int64_t* assignments = (int64_t*)malloc((size_t)rows * sizeof(int64_t));
-    if (centroids == NULL || closest_sq == NULL || assignments == NULL) {
+    /* Hoist all per-iteration scratch out of the Lloyd loop: centroids,
+     * closest-sq, assignments, plus the `new_centroids` / `counts` accumulators
+     * that lloyd_step zeroes-and-fills on every step. Saves 2*max_iter
+     * malloc/free calls per row across the Phase 11 KMeans path. */
+    double*  centroids     = (double*)malloc((size_t)k * (size_t)cols
+                                              * sizeof(double));
+    double*  closest_sq    = (double*)malloc((size_t)rows * sizeof(double));
+    int64_t* assignments   = (int64_t*)malloc((size_t)rows * sizeof(int64_t));
+    double*  new_centroids = (double*)malloc((size_t)k * (size_t)cols
+                                              * sizeof(double));
+    int64_t* counts        = (int64_t*)malloc((size_t)k * sizeof(int64_t));
+    if (centroids == NULL || closest_sq == NULL || assignments == NULL ||
+        new_centroids == NULL || counts == NULL) {
         free(centroids); free(closest_sq); free(assignments);
+        free(new_centroids); free(counts);
         return C4A_ERR_OUT_OF_MEMORY;
     }
     for (int64_t i = 0; i < rows; ++i) assignments[i] = -1;
@@ -172,10 +182,12 @@ c4a_status_t c4a_split_kmeans_apply(const c4a_split_kmeans_state_t* state,
     st = kmeans_plus_plus_init(X, rows, cols, k, &rng, centroids, closest_sq);
     if (st != C4A_OK) {
         free(centroids); free(closest_sq); free(assignments);
+        free(new_centroids); free(counts);
         return st;
     }
     for (int32_t it = 0; it < state->max_iter; ++it) {
-        if (!lloyd_step(X, rows, cols, k, centroids, assignments)) break;
+        if (!lloyd_step(X, rows, cols, k, centroids, assignments,
+                        new_centroids, counts)) break;
     }
 
     /* For each centroid, pick the closest sample (argmin, first on ties).
@@ -183,6 +195,7 @@ c4a_status_t c4a_split_kmeans_apply(const c4a_split_kmeans_state_t* state,
     int64_t* picked = (int64_t*)malloc((size_t)k * sizeof(int64_t));
     if (picked == NULL) {
         free(centroids); free(closest_sq); free(assignments);
+        free(new_centroids); free(counts);
         return C4A_ERR_OUT_OF_MEMORY;
     }
     for (int64_t c = 0; c < k; ++c) {
@@ -197,7 +210,8 @@ c4a_status_t c4a_split_kmeans_apply(const c4a_split_kmeans_state_t* state,
     /* Deduplicate via flag bitmap. */
     char* in_train = (char*)calloc((size_t)rows, sizeof(char));
     if (in_train == NULL) {
-        free(centroids); free(closest_sq); free(assignments); free(picked);
+        free(centroids); free(closest_sq); free(assignments);
+        free(new_centroids); free(counts); free(picked);
         return C4A_ERR_OUT_OF_MEMORY;
     }
     for (int64_t c = 0; c < k; ++c) in_train[picked[c]] = 1;
@@ -211,7 +225,7 @@ c4a_status_t c4a_split_kmeans_apply(const c4a_split_kmeans_state_t* state,
     st = c4a_split_result_alloc(out, actual_n_train, actual_n_test);
     if (st != C4A_OK) {
         free(centroids); free(closest_sq); free(assignments);
-        free(picked); free(in_train);
+        free(new_centroids); free(counts); free(picked); free(in_train);
         return st;
     }
     int64_t ti = 0, te = 0;
@@ -221,6 +235,6 @@ c4a_status_t c4a_split_kmeans_apply(const c4a_split_kmeans_state_t* state,
     }
 
     free(centroids); free(closest_sq); free(assignments);
-    free(picked); free(in_train);
+    free(new_centroids); free(counts); free(picked); free(in_train);
     return C4A_OK;
 }

@@ -49,9 +49,10 @@ c4a_status_t c4a_metric_rpd_impl(const double* y_true, const double* y_pred,
 c4a_status_t c4a_metric_rpiq_impl(const double* y_true, const double* y_pred,
                                    int64_t n, double* out);
 
-/* R² = 1 - SSE / SST. SST = sum((y_true - mean(y_true))^2). If SST == 0 and
- * SSE == 0 returns 1.0 (perfect-constant case, matches sklearn default of
- * 0/0 → 0 is intentionally NOT used — we mirror the canonical formula). */
+/* R² = 1 - SSE / SST. SST = sum((y_true - mean(y_true))^2). Constant-y
+ * case (SST == 0) follows the sklearn convention: returns 1.0 when SSE == 0
+ * (perfect prediction of a constant), 0.0 when SSE > 0 (any non-zero
+ * residual against a constant ground truth gets no credit). */
 c4a_status_t c4a_metric_r2_impl(const double* y_true, const double* y_pred,
                                  int64_t n, double* out);
 

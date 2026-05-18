@@ -1263,6 +1263,30 @@ typedef struct c4a_split_result_t {
 
 C4A_API void c4a_split_result_destroy(c4a_split_result_t* r);
 
+/* ---------- Splitter enums (passed as int32_t through the create API) -- */
+/* Bin-edge strategy for KBinsStratified + BinnedStratifiedGroupKFold. */
+typedef enum c4a_split_bin_strategy_t {
+    C4A_SPLIT_BIN_UNIFORM  = 0,  /* equal-width bins between y.min/y.max  */
+    C4A_SPLIT_BIN_QUANTILE = 1   /* equal-frequency bins (quantile edges) */
+} c4a_split_bin_strategy_t;
+
+/* Y-metric mode for SPXYFold / SPXYGFold. Selects how Y participates in
+ * the alternating max-min distance computation:
+ *   NONE       : ignore Y entirely (pure Kennard-Stone on X)
+ *   EUCLIDEAN  : standard SPXY (X and Y both Euclidean, summed)
+ *   HAMMING    : SPXY with Hamming on Y (classification / multilabel) */
+typedef enum c4a_split_y_metric_t {
+    C4A_SPLIT_Y_METRIC_NONE      = 0,
+    C4A_SPLIT_Y_METRIC_EUCLIDEAN = 1,
+    C4A_SPLIT_Y_METRIC_HAMMING   = 2
+} c4a_split_y_metric_t;
+
+/* Group-aggregation mode for SPXYGFold (per-group representative). */
+typedef enum c4a_split_group_agg_t {
+    C4A_SPLIT_GROUP_AGG_MEAN   = 0,
+    C4A_SPLIT_GROUP_AGG_MEDIAN = 1
+} c4a_split_group_agg_t;
+
 /* ---------- KennardStone ----------------------------------------------- */
 typedef struct c4a_split_kennard_stone_t c4a_split_kennard_stone_t;
 C4A_API c4a_status_t c4a_split_kennard_stone_create(
@@ -1417,6 +1441,14 @@ C4A_API c4a_status_t c4a_filter_y_outlier_fit_get_mask(
  *   - HighLeverageFilter   : hat-matrix or PCA score-space leverage.
  *   - SpectralQualityFilter : six all-or-nothing thresholds on each row.
  *   - CompositeFilter      : combines sub-filter keep-masks via ANY or ALL.
+ *
+ * Composite filter ownership:
+ *   Sub-filter handles passed to `c4a_filter_composite_add_*` are stored by
+ *   reference (the composite does not take ownership and does not copy the
+ *   handle). The caller MUST keep every sub-filter alive at least as long
+ *   as the composite that references it. `c4a_filter_composite_destroy`
+ *   does NOT free sub-filters — the caller must call the matching
+ *   `c4a_filter_<kind>_destroy` for each one after the composite is gone.
  */
 
 /* ---------- HighLeverageFilter (stateful) ----------------------------- */
@@ -1650,6 +1682,18 @@ C4A_STATIC_ASSERT(sizeof(c4a_pp_savgol_mode_t) == 4,
                   "c4a_pp_savgol_mode_t must be 4 bytes");
 C4A_STATIC_ASSERT(sizeof(c4a_pp_gaussian_mode_t) == 4,
                   "c4a_pp_gaussian_mode_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_y_outlier_method_t) == 4,
+                  "c4a_y_outlier_method_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_composite_mode_t) == 4,
+                  "c4a_composite_mode_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_signal_type_t) == 4,
+                  "c4a_signal_type_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_split_bin_strategy_t) == 4,
+                  "c4a_split_bin_strategy_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_split_y_metric_t) == 4,
+                  "c4a_split_y_metric_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_split_group_agg_t) == 4,
+                  "c4a_split_group_agg_t must be 4 bytes");
 
 /* c4a_matrix_view_t must be 48 bytes on LP64 / LLP64. ILP32 is not
  * supported; on ILP32 platforms the layout would differ (pointer is 4 bytes),

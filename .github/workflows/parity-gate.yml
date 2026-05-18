@@ -24,10 +24,14 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install pinned generator deps
+      - name: Install pinned generator deps (via requirements-lock.txt)
         working-directory: parity/python_generator
         run: |
           python -m pip install --upgrade pip
+          # G2: install via the lock file so transitive deps are pinned too.
+          # `pip install -e .` is layered on top to make the generator
+          # `c4a_parity_*_ref` modules importable.
+          pip install -r requirements-lock.txt
           pip install -e .
 
       - name: Install Linux toolchain (gcc-12 + ninja)

@@ -13,11 +13,14 @@
 //   1. fck_smoke               — create / transform / destroy lifecycle on
 //                                a small inline matrix, plus shape-helper
 //                                and error-status verification.
-//   2. fck_kernel_direct       — exercises c4a_fck_kernel_1d for the pure
-//                                Gaussian (alpha=0) and signed-derivative
-//                                (alpha=1.0, alpha=1.5) branches and checks
+//   2. fck_kernel_properties   — drives the static transformer with a unit-
+//                                delta input so the resulting output column
+//                                exposes the kernel (modulo scipy's
+//                                convolve1d reversal) and checks the
 //                                symmetry / zero-mean / L1 normalisation
-//                                contracts.
+//                                contracts for pure-Gaussian (alpha=0) and
+//                                signed-derivative (alpha=1.0, 1.5)
+//                                kernels via the public ABI only.
 //   3. fck_output_cols         — covers the helper's overflow and
 //                                NULL-pointer paths.
 //   4. fck_parity              — load fck_static_v1.json fixture and verify
@@ -43,11 +46,11 @@
 #  error "C4A_PARITY_FIXTURE_DIR must be defined"
 #endif
 
-// The kernel builder is private to libc4a but linked into the test target
-// via the chemometrics4all_core OBJECT library at link time. Forward-declare
-// the prototype here so the kernel-construction-direct test can exercise it.
-extern "C" int c4a_fck_kernel_1d(double alpha, double sigma,
-                                   int32_t kernel_size, double* out);
+// The kernel builder is private to libc4a (no `C4A_API` export, hidden
+// visibility, intentionally absent from c4a.h). Phase 21 review feedback:
+// the kernel must only be reachable via the static-transformer apply path,
+// so we exercise its algebraic properties through that ABI rather than
+// calling it directly.
 
 namespace {
 
@@ -136,50 +139,112 @@ void test_fck_smoke() {
 }
 
 // ---------------------------------------------------------------------------
-// Test 2 — direct kernel builder.
+// Test 2 — kernel algebraic properties via the static transformer ABI.
+//
+// The kernel builder (`c4a_fck_kernel_1d`) is internal; we exercise its
+// algebraic contracts (Gaussian symmetry, antisymmetry, zero-mean for
+// alpha>0.1, L1 normalisation) through `c4a_pp_fck_static_transform`.
+//
+// Recovery trick: feed a unit-delta row (single 1.0 at the centre, zeros
+// elsewhere). `scipy.ndimage.convolve1d` reverses the kernel before
+// correlating, so:
+//   y[i] = kernel[centre - i + (K-1)/2]   for i within K/2 of the centre
+//        = 0                                outside that band.
+// In words: the output column exposes the reversed kernel, indexed around
+// the delta position. For alpha=0 (even kernel) reversal is a no-op; for
+// alpha=1 / 1.5 (antisymmetric kernel) reversal negates each tap, so we
+// check antisymmetry as `y[i] + y[2*centre - i] == 0`. In both branches
+// the magnitudes (|y[i]|) match the kernel taps, so the L1-normalisation
+// and zero-mean contracts transfer through.
 // ---------------------------------------------------------------------------
 
-void test_fck_kernel_direct() {
+void test_fck_kernel_properties() {
+    // We use a single (alpha, sigma) pair per case so the output has one
+    // kernel band per row. The input length must be large enough to keep
+    // the kernel response away from the implicit-zero boundary (mode
+    // "constant" in scipy.ndimage.convolve1d).
+
+    auto run_kernel_via_transform = [](double alpha, double sigma,
+                                        int32_t K, int64_t N,
+                                        std::vector<double>& y_out) {
+        const int64_t centre = N / 2;
+        std::vector<double> x(static_cast<std::size_t>(N), 0.0);
+        x[static_cast<std::size_t>(centre)] = 1.0;
+        y_out.assign(static_cast<std::size_t>(N), 0.0);
+
+        const double alphas[1] = {alpha};
+        const double sigmas[1] = {sigma};
+        c4a_pp_fck_static_handle_t* h = nullptr;
+        C4A_TEST_REQUIRE(c4a_pp_fck_static_create(&h, K,
+                                                    alphas, 1,
+                                                    sigmas, 1) == C4A_OK);
+        c4a_matrix_view_t Xv = make_rowmajor_view(x.data(), 1, N);
+        c4a_matrix_view_t Yv = make_rowmajor_view(y_out.data(), 1, N);
+        C4A_TEST_REQUIRE(c4a_pp_fck_static_transform(h, Xv, Yv) == C4A_OK);
+        c4a_pp_fck_static_destroy(h);
+    };
+
+    // Sign-clean helper: convert a (possibly negative) signed index into a
+    // std::size_t for vector indexing without triggering -Wsign-conversion.
+    auto at = [](const std::vector<double>& v, int64_t i) -> double {
+        return v[static_cast<std::size_t>(i)];
+    };
+
     // Case A — alpha = 0 (pure Gaussian, even-symmetric, positive everywhere).
     {
         constexpr int32_t K = 11;
-        double h[K] = {0};
-        C4A_TEST_REQUIRE(c4a_fck_kernel_1d(0.0, 3.0, K, h) == 0);
-        // Symmetric.
-        for (int32_t i = 0; i < K / 2; ++i) {
-            C4A_TEST_REQUIRE(std::fabs(h[i] - h[K - 1 - i]) < 1e-15);
+        constexpr int64_t N = 41;
+        std::vector<double> y;
+        run_kernel_via_transform(0.0, 3.0, K, N, y);
+        const int64_t c = N / 2;
+        const int64_t half = (K - 1) / 2;
+        // Even-symmetric kernel: convolve1d's reversal is a no-op. y[c-d] == y[c+d].
+        for (int64_t d = 0; d <= half; ++d) {
+            C4A_TEST_REQUIRE(std::fabs(at(y, c - d) - at(y, c + d)) < 1e-15);
         }
-        // Positive everywhere.
-        for (int32_t i = 0; i < K; ++i) {
-            C4A_TEST_REQUIRE(h[i] > 0.0);
+        // Positive in the [c - half, c + half] band.
+        for (int64_t d = 0; d <= half; ++d) {
+            C4A_TEST_REQUIRE(at(y, c + d) > 0.0);
+            C4A_TEST_REQUIRE(at(y, c - d) > 0.0);
         }
-        // L1 norm == 1.
+        // Zero outside the kernel window.
+        for (int64_t i = 0; i < N; ++i) {
+            if (i < c - half || i > c + half) {
+                C4A_TEST_REQUIRE(std::fabs(at(y, i)) < 1e-15);
+            }
+        }
+        // L1 norm of the kernel (sum |y[c-half..c+half]|) == 1.
         double sum_abs = 0.0;
-        for (int32_t i = 0; i < K; ++i) sum_abs += std::fabs(h[i]);
+        for (int64_t d = -half; d <= half; ++d) {
+            sum_abs += std::fabs(at(y, c + d));
+        }
         C4A_TEST_REQUIRE(std::fabs(sum_abs - 1.0) < 1e-13);
         // Peak at the centre.
-        C4A_TEST_REQUIRE(h[K / 2] >= h[0]);
+        C4A_TEST_REQUIRE(at(y, c) >= at(y, c - half));
     }
 
-    // Case B — alpha = 1.0 (zero-mean, antisymmetric around centre).
+    // Case B — alpha = 1.0 (zero-mean, antisymmetric kernel).
     {
         constexpr int32_t K = 11;
-        double h[K] = {0};
-        C4A_TEST_REQUIRE(c4a_fck_kernel_1d(1.0, 3.0, K, h) == 0);
-        // Antisymmetric.
-        for (int32_t i = 0; i < K / 2; ++i) {
-            C4A_TEST_REQUIRE(std::fabs(h[i] + h[K - 1 - i]) < 1e-13);
+        constexpr int64_t N = 41;
+        std::vector<double> y;
+        run_kernel_via_transform(1.0, 3.0, K, N, y);
+        const int64_t c = N / 2;
+        const int64_t half = (K - 1) / 2;
+        // Antisymmetric kernel; convolve1d reverses (still antisymmetric).
+        for (int64_t d = 1; d <= half; ++d) {
+            C4A_TEST_REQUIRE(std::fabs(at(y, c - d) + at(y, c + d)) < 1e-13);
         }
         // Centre is 0 (sign(0) == 0 -> kernel value 0 before normalisation).
-        C4A_TEST_REQUIRE(std::fabs(h[K / 2]) < 1e-13);
-        // Zero mean.
+        C4A_TEST_REQUIRE(std::fabs(at(y, c)) < 1e-13);
+        // Zero mean across the kernel window.
         double mean = 0.0;
-        for (int32_t i = 0; i < K; ++i) mean += h[i];
-        mean /= K;
+        for (int64_t d = -half; d <= half; ++d) mean += at(y, c + d);
+        mean /= static_cast<double>(K);
         C4A_TEST_REQUIRE(std::fabs(mean) < 1e-13);
-        // L1 norm == 1.
+        // L1 norm of the kernel taps == 1.
         double sum_abs = 0.0;
-        for (int32_t i = 0; i < K; ++i) sum_abs += std::fabs(h[i]);
+        for (int64_t d = -half; d <= half; ++d) sum_abs += std::fabs(at(y, c + d));
         C4A_TEST_REQUIRE(std::fabs(sum_abs - 1.0) < 1e-13);
     }
 
@@ -187,21 +252,19 @@ void test_fck_kernel_direct() {
     // makes the kernel odd; the modulation strength is different from a=1).
     {
         constexpr int32_t K = 15;
-        double h[K] = {0};
-        C4A_TEST_REQUIRE(c4a_fck_kernel_1d(1.5, 2.5, K, h) == 0);
-        for (int32_t i = 0; i < K / 2; ++i) {
-            C4A_TEST_REQUIRE(std::fabs(h[i] + h[K - 1 - i]) < 1e-13);
+        constexpr int64_t N = 51;
+        std::vector<double> y;
+        run_kernel_via_transform(1.5, 2.5, K, N, y);
+        const int64_t c = N / 2;
+        const int64_t half = (K - 1) / 2;
+        for (int64_t d = 1; d <= half; ++d) {
+            C4A_TEST_REQUIRE(std::fabs(at(y, c - d) + at(y, c + d)) < 1e-13);
         }
         double mean = 0.0;
-        for (int32_t i = 0; i < K; ++i) mean += h[i];
-        mean /= K;
+        for (int64_t d = -half; d <= half; ++d) mean += at(y, c + d);
+        mean /= static_cast<double>(K);
         C4A_TEST_REQUIRE(std::fabs(mean) < 1e-13);
     }
-
-    // Error path.
-    double h_unused[3] = {0};
-    C4A_TEST_REQUIRE(c4a_fck_kernel_1d(1.0, 2.0, 0, h_unused) == -1);
-    C4A_TEST_REQUIRE(c4a_fck_kernel_1d(1.0, 2.0, 5, nullptr) == -1);
 }
 
 // ---------------------------------------------------------------------------
@@ -313,8 +376,8 @@ void test_fck_parity() {
 
 void register_fck_tests(c4a_testing::Runner& r);
 void register_fck_tests(c4a_testing::Runner& r) {
-    r.run("fck_smoke",            test_fck_smoke);
-    r.run("fck_kernel_direct",    test_fck_kernel_direct);
-    r.run("fck_output_cols",      test_fck_output_cols);
-    r.run("fck_parity",           test_fck_parity);
+    r.run("fck_smoke",             test_fck_smoke);
+    r.run("fck_kernel_properties", test_fck_kernel_properties);
+    r.run("fck_output_cols",       test_fck_output_cols);
+    r.run("fck_parity",            test_fck_parity);
 }

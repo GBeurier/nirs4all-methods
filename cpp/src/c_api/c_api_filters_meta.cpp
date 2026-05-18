@@ -1,23 +1,13 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
 // extern "C" wrappers for the Phase 14 meta sample filters
-// (HighLeverage, SpectralQuality, Composite).
-//
-// IMPORTANT — Phase 12 / Phase 14 coordination:
-//
-// Phase 12 introduces the `c4a_filter_*` ABI category, including the shared
-// result type `c4a_filter_stats_t` and the prefix wiring in c4a.h §13+.
-// Phase 14 (this file) implements three additional filters that plug into
-// the same category. To allow the two phases to land in parallel without
-// stepping on each other's c4a.h edits, this file declares the new public
-// symbols inline with extern "C" linkage and reuses Phase 12's
-// `c4a_filter_stats_t` definition guarded by a feature macro so the merge
-// is a no-op once both phases reach main.
-//
-// Until Phase 12 lands in c4a.h, the symbols are still exported by the
-// shared library (the Linux version script uses `c4a_*` as a wildcard),
-// but they are not yet visible through `#include "chemometrics4all/c4a.h"`.
-// The test suite includes `c_api_filters_meta.h` directly to access them.
+// (HighLeverage, SpectralQuality, Composite). The public symbols declared
+// in c4a.h §19 are implemented here on top of the engines under
+// core/filters/. Each entry point wraps the engine call in try/catch,
+// validates the matrix view contract, and routes through `fill_stats` so
+// the shared `c4a_filter_stats_t` (declared in c4a.h §18) is populated
+// consistently — including `exclusion_rate` — across leverage, quality
+// and composite.
 //
 // Universal rules (mirroring c_api_preprocessing.cpp):
 //   - Every entry point is wrapped in try/catch so no C++ exception ever
@@ -57,11 +47,11 @@ struct c4a_filter_quality_handle_t {
 };
 struct c4a_filter_composite_handle_t {
     int mode;                                                       // ANY=0 / ALL=1
+    // One vector per supported sub-filter kind. Each kind has its own
+    // apply() entry point because the underlying handles are opaque to
+    // each other; the composite re-evaluates every sub-filter on apply.
     std::vector<c4a_filter_leverage_handle_t*>  leverage_subs;
     std::vector<c4a_filter_quality_handle_t*>   quality_subs;
-    // Phase 12 introduces y_outlier (and friends); coordination hook below
-    // expands the vector list at merge time. Each kind has its own apply()
-    // entry point because the Phase 12 handles are opaque to us.
 };
 
 namespace {

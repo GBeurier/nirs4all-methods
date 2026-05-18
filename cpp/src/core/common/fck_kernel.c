@@ -23,8 +23,8 @@ static const double kFckAlphaMeanCutoff  = 0.1;     /* zero-mean threshold */
 static const double kFckSigmaFloor       = 1e-6;
 static const double kFckNormFloor        = 1e-12;
 
-C4A_API int c4a_fck_kernel_1d(double alpha, double sigma, int32_t kernel_size,
-                               double* out) {
+int c4a_fck_kernel_1d(double alpha, double sigma, int32_t kernel_size,
+                       double* out) {
     if (out == NULL || kernel_size <= 0) {
         return -1;
     }
