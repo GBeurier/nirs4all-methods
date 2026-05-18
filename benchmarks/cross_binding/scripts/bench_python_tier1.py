@@ -33,6 +33,13 @@ def main():
                 ctx.num_threads = int(os.environ.get("BENCH_THREADS", "1"))
             except Exception:
                 pass
+            # Match the R/MATLAB dispatcher defaults so cross-binding
+            # parity holds for classifier methods (see bench_cpp.py for
+            # the long explanation).
+            cfg.center_x = True
+            cfg.scale_x = False
+            cfg.center_y = True
+            cfg.scale_y = False
             result = method.pls4all_fn(ctx, cfg, X, Y, **params, **extras)
             try:
                 return np.asarray(result.matrix(method.prediction_key))

@@ -47,6 +47,19 @@ def main():
                 ctx.num_threads = int(os.environ.get("BENCH_THREADS", "1"))
             except Exception:
                 pass
+            # Establish the same center/scale defaults the R + MATLAB
+            # dispatchers use (center_*=True, scale_*=False). The
+            # registry's regression functions reset these explicitly via
+            # `_model_fit_predict_pls4all`, but classifier wrappers
+            # (_pls_lda_pls4all, _pls_logistic_pls4all, …) only set
+            # center_* — without this preamble they'd inherit the
+            # `pls4all.Config()` default `scale_*=True` and produce
+            # results that diverge from R/MATLAB by the std-scaling
+            # factor.
+            cfg.center_x = True
+            cfg.scale_x = False
+            cfg.center_y = True
+            cfg.scale_y = False
             result = method.pls4all_fn(ctx, cfg, X, Y, **params, **extras)
             try:
                 return np.asarray(result.matrix(method.prediction_key))

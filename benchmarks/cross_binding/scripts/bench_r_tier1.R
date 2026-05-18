@@ -95,8 +95,11 @@ for (k in names(params)) {
     params[[k]] <- v
 }
 
-# n_components handed in via argv (clamped by orchestrator).
-nc <- a$nc
+# n_components — adapted_params on the Python side may have clamped
+# this below the argv value (classifiers need n_components ≤
+# n_classes - 1; n_pls is bounded by the (j, k) factor pair). Prefer
+# the value from BENCH_R_PARAMS_JSON when present, fall back to argv.
+nc <- if (!is.null(params$n_components)) as.integer(params$n_components) else a$nc
 
 # Inline-deterministic extras: labels/sample_weights/group_assignment can
 # be reproduced from y/p without depending on Python's PCG64. The
@@ -107,6 +110,7 @@ needs_labels       <- Sys.getenv("BENCH_R_NEEDS_LABELS", unset = "") == "1"
 needs_sw           <- Sys.getenv("BENCH_R_NEEDS_SAMPLE_WEIGHTS", unset = "") == "1"
 needs_groups       <- Sys.getenv("BENCH_R_NEEDS_GROUP_ASSIGNMENT", unset = "") == "1"
 x_target_path     <- Sys.getenv("BENCH_R_X_TARGET_PATH", unset = "")
+registry_pkey      <- Sys.getenv("BENCH_PREDICTION_KEY", unset = "predictions")
 
 fit_predict <- function(seed) {
     xy <- pls4all_bench_load_xy(a$csv_dir, a$n, a$p, seed)
@@ -156,36 +160,80 @@ fit_predict <- function(seed) {
     # Aliases for algos the R-side C dispatcher names differently than
     # the registry. "pls" runs through `sparse_simpls` with lambda=0
     # (numerically identical to Model.fit/SIMPLS used by the Python
-    # registry function). "pcr" routes to the SVD-PCR path.
+    # registry function). "pcr" needs the Model API on the R side
+    # because `pls4all_method`/`r_p4a_dispatch_fit` does not include
+    # the PCR/SVD entry; we route to `pls4all_fit(...)` instead.
     dispatch_algo <- a$algo
+    use_model_api <- FALSE
     if (a$algo == "pls") {
         dispatch_algo <- "sparse_simpls"
         if (is.null(call_params$sparsity_lambda)) {
             call_params$sparsity_lambda <- 0.0
         }
     } else if (a$algo == "pcr") {
-        dispatch_algo <- "pcr_svd"
+        use_model_api <- TRUE
+    } else if (a$algo == "kernel_pls_rbf") {
+        dispatch_algo <- "kernel_pls"
+        if (is.null(call_params$kernel_type)) {
+            call_params$kernel_type <- 1L  # RBF
+        }
+    }
+
+    # The C dispatcher uses `step`, not the registry's `interval_step`.
+    if (!is.null(call_params$interval_step)) {
+        call_params$step <- as.integer(call_params$interval_step)
+        call_params$interval_step <- NULL
+    }
+
+    if (use_model_api) {
+        # Model API for PCR/OPLS via the high-level R interface.
+        res <- pls4all::pls4all_fit(xy$X, Y,
+                                      algo = "pcr_svd",
+                                      n_components = as.integer(nc),
+                                      scale_x = FALSE,
+                                      scale_y = FALSE)
+        # pls4all_fit returns a Model handle; extract predictions via
+        # pls4all_predict on the training X.
+        preds_vec <- as.numeric(pls4all::pls4all_predict(res, xy$X))
+        if (a$algo %in% c("pls_lda", "pls_logistic")) {
+            # decision_scores style — not applicable for pcr/opls
+        }
+        return(preds_vec)
     }
 
     res <- pls4all::pls4all_method(dispatch_algo, xy$X, Y,
                                      n_components = as.integer(nc),
                                      params = call_params)
 
-    # Extract predictions: most methods expose `$predictions`; selectors
-    # expose `$selected_indices` (1×p mask convention to match the
-    # Python registry).
+    # Pick the output field aligned with the registry's `prediction_key`.
+    # Return the result as-is (matrix or vector) so write_npy_f64 can
+    # serialise it in row-major order matching Python.
+    pkey <- registry_pkey
+    if (pkey == "selected_indices" && !is.null(res$selected_indices)) {
+        sel <- as.integer(res$selected_indices)
+        mask <- matrix(0.0, nrow = 1, ncol = a$p)
+        idx <- sel[sel > 0L & sel <= a$p]
+        if (length(idx) > 0L) mask[1, idx] <- 1.0
+        return(mask)
+    }
+    if (pkey == "decision_scores" && !is.null(res$decision_scores)) {
+        return(res$decision_scores)
+    }
+    if (!is.null(res[[pkey]])) {
+        return(res[[pkey]])
+    }
+    # Fallbacks for legacy result shapes.
     if (!is.null(res$predictions)) {
-        return(as.numeric(res$predictions))
+        return(res$predictions)
     }
     if (!is.null(res$selected_indices)) {
         sel <- as.integer(res$selected_indices)
-        mask <- double(a$p)
+        mask <- matrix(0.0, nrow = 1, ncol = a$p)
         idx <- sel[sel > 0L & sel <= a$p]
-        if (length(idx) > 0L) mask[idx] <- 1.0
+        if (length(idx) > 0L) mask[1, idx] <- 1.0
         return(mask)
     }
-    stop(sprintf("r_tier1: %s returned neither predictions nor selected_indices",
-                  a$algo))
+    stop(sprintf("r_tier1: %s returned no '%s' field", a$algo, pkey))
 }
 
 tr <- pls4all_bench_time_runs(fit_predict, a$runs, a$seed_base)

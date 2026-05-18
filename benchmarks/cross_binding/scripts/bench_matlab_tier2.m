@@ -47,6 +47,12 @@ else
     params = jsondecode(params_json);
 end
 
+% adapted_params may have clamped n_components below argv (classifier
+% algos cap at n_classes - 1, n_pls bounded by (j, k)).
+if isfield(params, "n_components")
+    nc = double(params.n_components);
+end
+
 % Map registry param keys to pls4all.fit Name-Value params.
 nv = {"NumComponents", nc};
 if isfield(params, "sparsity_lambda")
@@ -117,10 +123,23 @@ function preds = fit_predict(algo, csv_dir, n, p, nc, seed, nv)
         nv = [nv, {"Weights", w}];
     end
     % kernel_pls_rbf is just kernel_pls with KernelType=1 (rbf in the
-    % registry convention). pls4all.fit treats "kernel_pls" generically.
+    % registry convention). Strip any earlier KernelType so we don't
+    % append it twice and trip the input parser.
     dispatch_algo = algo;
     if strcmp(algo, "kernel_pls_rbf")
         dispatch_algo = "kernel_pls";
+        % Remove any previously-appended KernelType pair.
+        keep = true(1, numel(nv));
+        i = 1;
+        while i <= numel(nv) - 1
+            if ischar(nv{i}) || isstring(nv{i})
+                if strcmp(string(nv{i}), "KernelType")
+                    keep(i) = false; keep(i+1) = false;
+                end
+            end
+            i = i + 2;
+        end
+        nv = nv(keep);
         nv = [nv, {"KernelType", 1}];
     end
     mdl = pls4all.fit(char(dispatch_algo), X, y, nv{:});

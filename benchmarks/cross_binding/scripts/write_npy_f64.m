@@ -1,9 +1,23 @@
 function write_npy_f64(arr, path)
-% Tiny numpy .npy v1.0 writer for 1-D float64 arrays. Compatible with
-% numpy.load(path).
-arr = double(arr(:));
-header_body = sprintf("{'descr': '<f8', 'fortran_order': False, 'shape': (%d,), }", ...
-                       numel(arr));
+% Tiny numpy .npy v1.0 writer for float64. Honours matrix shape so that
+% a downstream `np.load(path)` reshapes to the row-major (C-order) view
+% Python emits — MATLAB / Octave store matrices column-major, so for
+% 2-D inputs we transpose before flattening.
+if ndims(arr) > 2
+    error("write_npy_f64: only 1-D / 2-D arrays supported (got %s)", ...
+        mat2str(size(arr)));
+end
+if isvector(arr)
+    flat = double(arr(:));
+    shape_str = sprintf("(%d,)", numel(flat));
+else
+    rows = size(arr, 1);
+    cols = size(arr, 2);
+    flat = double(reshape(arr.', [], 1));
+    shape_str = sprintf("(%d, %d)", rows, cols);
+end
+header_body = sprintf("{'descr': '<f8', 'fortran_order': False, 'shape': %s, }", ...
+                       shape_str);
 magic = uint8([147 78 85 77 80 89]);   % \x93NUMPY
 version = uint8([1 0]);
 base_len = numel(magic) + numel(version) + 2 + length(char(header_body)) + 1;
@@ -20,6 +34,6 @@ fwrite(fid, magic, "uint8");
 fwrite(fid, version, "uint8");
 fwrite(fid, header_len_le, "uint8");
 fwrite(fid, uint8(double(header_full)), "uint8");
-fwrite(fid, arr, "double", 0, "ieee-le");
+fwrite(fid, flat, "double", 0, "ieee-le");
 fclose(fid);
 end

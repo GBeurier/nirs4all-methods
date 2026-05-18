@@ -3,10 +3,24 @@
 # last-run predictions for post-hoc parity computation.
 
 write_npy_f64 <- function(arr, path) {
-    arr <- as.double(arr)
+    # R stores matrices column-major; numpy's default load convention is
+    # C-order (row-major). If the input is a 2-D matrix, transpose so the
+    # column-major-flatten produced by `as.double()` lands in the order a
+    # Python `np.load(path).ravel()` would expect after a `.reshape(rows,
+    # cols)`. We then declare the 2-D shape in the npy header so the
+    # cross-binding parity comparison can reshape consistently.
+    if (is.matrix(arr)) {
+        rows <- nrow(arr)
+        cols <- ncol(arr)
+        flat <- as.double(t(arr))
+        shape_str <- sprintf("(%d, %d)", rows, cols)
+    } else {
+        flat <- as.double(arr)
+        shape_str <- sprintf("(%d,)", length(flat))
+    }
     header_body <- sprintf(
-        "{'descr': '<f8', 'fortran_order': False, 'shape': (%d,), }",
-        length(arr))
+        "{'descr': '<f8', 'fortran_order': False, 'shape': %s, }",
+        shape_str)
     raw_magic <- as.raw(c(0x93, 0x4e, 0x55, 0x4d, 0x50, 0x59))  # \x93NUMPY
     version <- as.raw(c(0x01, 0x00))
     # numpy spec: total header (magic + version + len(2) + header) is
@@ -22,7 +36,7 @@ write_npy_f64 <- function(arr, path) {
     writeBin(version, con)
     writeBin(header_len_le, con)
     writeBin(charToRaw(header_full), con)
-    writeBin(arr, con, size = 8L, endian = "little")
+    writeBin(flat, con, size = 8L, endian = "little")
 }
 
 # Make `pls4all_bench_emit(stats, last_preds, pred_path, versions)`

@@ -23,6 +23,10 @@ needs_x_target = strcmp(getenv("BENCH_R_NEEDS_X_TARGET"), "1");
 needs_labels   = strcmp(getenv("BENCH_R_NEEDS_LABELS"), "1");
 needs_sw       = strcmp(getenv("BENCH_R_NEEDS_SAMPLE_WEIGHTS"), "1");
 needs_groups   = strcmp(getenv("BENCH_R_NEEDS_GROUP_ASSIGNMENT"), "1");
+registry_pkey  = getenv("BENCH_PREDICTION_KEY");
+if isempty(registry_pkey)
+    registry_pkey = "predictions";
+end
 
 if exist("maxNumCompThreads", "builtin") || exist("maxNumCompThreads", "file")
     try
@@ -44,16 +48,37 @@ else
     params = jsondecode(params_json);
 end
 
-% Algo aliasing — the C dispatcher named "pls" with sparse_simpls
-% (sparsity_lambda=0.0) and "pcr" with pcr_svd.
+% adapted_params on the Python side may have clamped n_components below
+% the argv value (classifier algos cap it to n_classes - 1, n_pls is
+% capped by the (j, k) factor pair). Prefer the value from JSON params.
+if isfield(params, "n_components")
+    nc = double(params.n_components);
+end
+
+% Algo aliasing — the MEX dispatcher needs the matching C kernel name.
+% "pls" runs through sparse_simpls(lambda=0); kernel_pls_rbf is
+% kernel_pls with KernelType=1. "pcr" requires the Model API which is
+% out of scope for the MEX dispatcher — fail the cell cleanly.
 dispatch_algo = algo;
 if strcmp(algo, "pls")
     dispatch_algo = "sparse_simpls";
     if ~isfield(params, "sparsity_lambda")
         params.sparsity_lambda = 0.0;
     end
-elseif strcmp(algo, "pcr")
-    dispatch_algo = "pcr_svd";
+elseif strcmp(algo, "kernel_pls_rbf")
+    dispatch_algo = "kernel_pls";
+    if ~isfield(params, "kernel_type")
+        params.kernel_type = int32(1);  % RBF
+    end
+elseif strcmp(algo, "pcr") || strcmp(algo, "opls")
+    error("pls4all:bench", ...
+        "matlab_tier1: %s requires the Model API (not pls4all.p4a_method_fit_mex)", algo);
+end
+
+% Registry uses `interval_step`; C dispatcher reads `step`.
+if isfield(params, "interval_step")
+    params.step = int32(params.interval_step);
+    params = rmfield(params, "interval_step");
 end
 
 % Strip Python-only metadata keys so the C dispatcher's per-algo
@@ -94,7 +119,7 @@ end
 
 function preds = fit_predict(dispatch_algo, algo, csv_dir, n, p, nc, ...
                               params, seed, needs_labels, needs_sw, ...
-                              needs_groups)
+                              needs_groups, pkey)
     [X, y] = pls4all_bench_load_xy(csv_dir, n, p, seed);
 
     if needs_labels
@@ -117,12 +142,17 @@ function preds = fit_predict(dispatch_algo, algo, csv_dir, n, p, nc, ...
         params.group_assignment = ga;
     end
 
-    % Some classifier algos repurpose Y as a label placeholder; the MEX
-    % dispatcher rebuilds the right Y on the C side using the labels we
-    % stuck in params.
+    cmps = {"pls_lda", "pls_logistic", "pls_qda", "sparse_pls_da", ...
+             "pls_cox", "ds", "pds"};
+    is_classifier_like = false;
+    for ck = 1:numel(cmps)
+        if strcmp(algo, cmps{ck})
+            is_classifier_like = true;
+            break;
+        end
+    end
     Y = y(:);
-    if any(strcmp(algo, ["pls_lda", "pls_logistic", "pls_qda", ...
-                          "sparse_pls_da", "pls_cox", "ds", "pds"]))
+    if is_classifier_like
         Y = zeros(numel(y), 1);
     end
 
@@ -130,26 +160,50 @@ function preds = fit_predict(dispatch_algo, algo, csv_dir, n, p, nc, ...
                                        double(X), double(Y), ...
                                        int32(nc), params);
 
-    if isfield(res, "predictions")
-        preds = double(res.predictions(:));
-    elseif isfield(res, "selected_indices")
+    % Honour registry prediction_key so classifiers return decision
+    % scores (not labels) for parity comparison. Return matrices intact
+    % (don't flatten with `:`) — write_npy_f64 transposes 2-D arrays
+    % before serialising so the row-major flat-equivalent matches Python.
+    if strcmp(pkey, "selected_indices") && isfield(res, "selected_indices")
         sel = double(res.selected_indices(:));
         mask = zeros(1, p);
         valid = sel(sel > 0 & sel <= p);
         if ~isempty(valid)
             mask(valid) = 1.0;
         end
-        preds = mask(:);
-    else
-        error("pls4all:bench", ...
-            "matlab_tier1: %s returned neither predictions nor selected_indices", ...
-            algo);
+        preds = mask;
+        return;
     end
+    if strcmp(pkey, "decision_scores") && isfield(res, "decision_scores")
+        preds = double(res.decision_scores);
+        return;
+    end
+    if isfield(res, char(pkey))
+        preds = double(res.(char(pkey)));
+        return;
+    end
+    if isfield(res, "predictions")
+        preds = double(res.predictions);
+        return;
+    end
+    if isfield(res, "selected_indices")
+        sel = double(res.selected_indices(:));
+        mask = zeros(1, p);
+        valid = sel(sel > 0 & sel <= p);
+        if ~isempty(valid)
+            mask(valid) = 1.0;
+        end
+        preds = mask;
+        return;
+    end
+    error("pls4all:bench", ...
+        "matlab_tier1: %s returned no '%s' field", algo, pkey);
 end
 
 [stats, last_preds] = pls4all_bench_run( ...
     @(s) fit_predict(dispatch_algo, algo, csv_dir, n, p, nc, params, ...
-                      s, needs_labels, needs_sw, needs_groups), ...
+                      s, needs_labels, needs_sw, needs_groups, ...
+                      registry_pkey), ...
     runs, seed_base);
 
 versions = struct();

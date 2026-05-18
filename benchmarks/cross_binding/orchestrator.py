@@ -241,6 +241,11 @@ def run_backend(name: str, script: str, language: str, tier: str,
                 # other languages. The R/MATLAB script fails the cell with
                 # a clear reason when this flag is missing.
                 env["BENCH_R_NEEDS_X_TARGET"] = "1"
+            # Tell R/MATLAB which field of the result struct matches the
+            # registry's parity reference — otherwise classifiers return
+            # integer labels where the registry expects `decision_scores`,
+            # producing silent parity failures.
+            env["BENCH_PREDICTION_KEY"] = method.prediction_key or "predictions"
         except Exception as exc:  # pragma: no cover
             # If the registry import fails we still launch the cell — the
             # bench script will fall back to its own dispatch logic or

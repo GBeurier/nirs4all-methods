@@ -202,25 +202,38 @@ def main():
         # Output: align with what the registry's parity comparison expects
         # (method.prediction_key tells us which result matrix the C kernel
         # would have populated). Selectors emit a 1×p mask; classifiers
-        # emit decision_scores (continuous), not labels; regressors emit
-        # predictions.
+        # emit continuous discriminant scores via `decision_function`, not
+        # the integer labels `predict` returns; regressors use `predict`.
         pkey = method.prediction_key
-        if pkey == "selected_indices" and hasattr(est, "selected_indices_"):
-            mask = np.zeros((1, p), dtype=np.float64)
-            sel = np.asarray(est.selected_indices_, dtype=np.int64)
-            valid = sel[(sel >= 0) & (sel < p)]
-            mask[0, valid] = 1.0
-            return mask
+        if pkey == "selected_indices":
+            # sklearn-style selectors expose `get_support()` (bool mask)
+            # or `selected_indices_`. Build the 1×p float mask the C
+            # parity reference produces.
+            if hasattr(est, "selected_indices_"):
+                sel = np.asarray(est.selected_indices_, dtype=np.int64)
+                mask = np.zeros((1, p), dtype=np.float64)
+                valid = sel[(sel >= 0) & (sel < p)]
+                mask[0, valid] = 1.0
+                return mask
+            if hasattr(est, "get_support"):
+                support = np.asarray(est.get_support(), dtype=bool)
+                mask = np.zeros((1, p), dtype=np.float64)
+                mask[0, support[:p]] = 1.0
+                return mask
         if pkey in ("decision_scores", "decision_function") and hasattr(
                 est, "decision_function"):
+            return np.asarray(est.decision_function(X))
+        # Classifier-style estimators with `decision_function`: prefer
+        # the continuous scores over integer `predict` labels so the
+        # parity matrix lines up with the C kernel's `predictions` field
+        # (which IS continuous for pls_qda / sparse_pls_da / etc.).
+        if hasattr(est, "decision_function") and hasattr(est, "classes_"):
             return np.asarray(est.decision_function(X))
         if hasattr(est, "predict"):
             return np.asarray(est.predict(X))
         if hasattr(est, "transform"):
             return np.asarray(est.transform(X))
         if hasattr(est, "selected_indices_"):
-            # Fallback for selectors whose prediction_key isn't
-            # "selected_indices" (shouldn't happen with current registry).
             mask = np.zeros((1, p), dtype=np.float64)
             sel = np.asarray(est.selected_indices_, dtype=np.int64)
             valid = sel[(sel >= 0) & (sel < p)]

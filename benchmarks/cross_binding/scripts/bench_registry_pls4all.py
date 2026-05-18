@@ -19,6 +19,13 @@ def main():
         params = adapted_params(method, n, p, nc)
         Y, extras = benchmark_inputs(method, X, y, params, seed)
         with pls4all.Context() as ctx, pls4all.Config() as cfg:
+            # Match the R/MATLAB dispatcher defaults (center_*=True,
+            # scale_*=False) so cross-binding parity holds for classifier
+            # methods. See bench_cpp.py for the full explanation.
+            cfg.center_x = True
+            cfg.scale_x = False
+            cfg.center_y = True
+            cfg.scale_y = False
             result = method.pls4all_fn(ctx, cfg, X, Y, **params, **extras)
             try:
                 return np.asarray(result.matrix(method.prediction_key))
