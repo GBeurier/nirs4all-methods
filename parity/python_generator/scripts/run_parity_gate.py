@@ -202,52 +202,47 @@ def stage1_fixture_determinism(verbose: bool = True) -> tuple[int, list[str]]:
 
 
 def stage2_cross_validation(verbose: bool = True) -> tuple[int, list[str]]:
-    """Run validate_*_ref.py scripts; failures are informational."""
-    if verbose:
-        print(f"\n=== Stage 2: frozen-ref cross-validation (informational) ===\n")
+    """Run the Gate-2 reference-parity runner (``run_reference_parity.py``).
 
-    validators = sorted(GENERATOR_DIR.glob("validate_*.py"))
-    if not validators:
+    Tests every operator against the *canonical* upstream implementation
+    (numpy / scipy / sklearn / pywt / pybaselines / nirs4all loaded via
+    importlib from ``/home/delete/nirs4all/nirs4all``). Failures are
+    informational: real divergence between c4a fixtures and upstream is
+    surfaced but does not gate the build — the parity floor is the C
+    engine matching the committed fixtures (Stage 3).
+    """
+    if verbose:
+        print(f"\n=== Stage 2: reference parity vs upstream (informational) ===\n")
+
+    runner = REPO_ROOT / "parity" / "run_reference_parity.py"
+    if not runner.exists():
         if verbose:
-            print("  No validators present.")
-        return 0, []
+            print(f"  Runner not found: {runner}")
+        return 0, [f"runner missing: {runner}"]
 
     issues: list[str] = []
-    for v in validators:
-        rel = v.relative_to(REPO_ROOT)
-        if verbose:
-            print(f"  {rel.name} ...", end=" ", flush=True)
-        try:
-            result = subprocess.run(
-                [sys.executable, str(v)],
-                capture_output=True,
-                text=True,
-                cwd=str(REPO_ROOT),
-                timeout=180,
-            )
-            if result.returncode == 0:
-                if verbose:
-                    print("ok")
-            else:
-                issues.append(f"{rel}: rc={result.returncode}")
-                if verbose:
-                    print(f"WARN (rc={result.returncode})")
-                    for line in (result.stdout + "\n" + result.stderr).splitlines()[-8:]:
-                        print(f"     {line}")
-        except subprocess.TimeoutExpired:
-            issues.append(f"{rel}: timeout")
-            if verbose:
-                print("TIMEOUT")
-        except Exception as e:  # noqa: BLE001
-            issues.append(f"{rel}: {e}")
-            if verbose:
-                print(f"ERROR ({e})")
+    try:
+        result = subprocess.run(
+            [sys.executable, str(runner), "--quiet-cases"],
+            capture_output=True,
+            text=True,
+            cwd=str(REPO_ROOT),
+            timeout=600,
+        )
+    except subprocess.TimeoutExpired:
+        return 0, [f"{runner.name}: timeout after 600s"]
+    except Exception as e:  # noqa: BLE001
+        return 0, [f"{runner.name}: {e}"]
 
     if verbose:
-        if issues:
-            print(f"\n  Validators reported {len(issues)} issues (informational).")
+        # Print tail of output for visibility.
+        for line in result.stdout.splitlines()[-20:]:
+            print(f"  {line}")
+        if result.returncode != 0:
+            print(f"\n  Reference parity reported failures (rc={result.returncode}).")
+            issues.append(f"reference parity rc={result.returncode}")
         else:
-            print(f"\n  [PASS] All cross-validations agree with upstream.")
+            print(f"\n  [PASS] All reference-parity suites within tolerance or SKIPped.")
 
     return 0, issues  # Always returns 0 — informational
 
