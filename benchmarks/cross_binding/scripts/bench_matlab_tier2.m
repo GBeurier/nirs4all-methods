@@ -53,6 +53,19 @@ if isfield(params, "n_components")
     nc = double(params.n_components);
 end
 
+% pls4all.fit (classdef factory) only accepts a 1-D y. Methods whose
+% canonical cell uses multi-target Y (n_targets > 1) cannot run
+% faithfully through tier-2; skip them with a clean reason.
+n_targets = 1;
+if isfield(params, "n_targets")
+    n_targets = double(params.n_targets);
+end
+if n_targets > 1
+    error("pls4all:bench", ...
+        "matlab_tier2: %s uses n_targets=%d; pls4all.fit only accepts 1-D y", ...
+        algo, n_targets);
+end
+
 % Map registry param keys to pls4all.fit Name-Value params.
 nv = {"NumComponents", nc};
 if isfield(params, "sparsity_lambda")

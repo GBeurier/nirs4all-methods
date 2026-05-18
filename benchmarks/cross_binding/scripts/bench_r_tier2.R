@@ -29,6 +29,16 @@ if (nzchar(params_env)) {
 
 nc <- if (!is.null(params$n_components)) as.integer(params$n_components) else a$nc
 
+# Formula `y ~ .` collapses the response to a 1-D vector. Methods whose
+# canonical cell uses multi-target Y (n_targets > 1) can't run
+# faithfully through the formula API; fail with a clean reason so the
+# dashboard shows `—` instead of a shape-mismatch crash downstream.
+n_targets <- if (!is.null(params$n_targets)) as.integer(params$n_targets) else 1L
+if (n_targets > 1L) {
+    stop(sprintf("r_tier2: %s uses n_targets=%d; formula API takes 1-D y",
+                  a$algo, n_targets))
+}
+
 fit_predict <- function(seed) {
     xy <- pls4all_bench_load_xy(a$csv_dir, a$n, a$p, seed)
     df <- as.data.frame(xy$X)

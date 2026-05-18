@@ -55,6 +55,15 @@ if isfield(params, "n_components")
     nc = double(params.n_components);
 end
 
+% on_pls in MATLAB takes `n_joint` where the dispatcher expects
+% n_components and requires a block-split X — the generic MEX
+% dispatcher call doesn't fit that shape and returns an empty result.
+% Mark the cell as not bound so the dashboard shows `—` honestly.
+if strcmp(algo, "on_pls")
+    error("pls4all:bench", ...
+        "matlab_tier1: on_pls needs block-split inputs (pls4all.on_pls direct call, not the MEX dispatcher)");
+end
+
 % Algo aliasing — the MEX dispatcher needs the matching C kernel name.
 % "pls" runs through sparse_simpls(lambda=0); kernel_pls_rbf is
 % kernel_pls with KernelType=1. "pcr" requires the Model API which is
