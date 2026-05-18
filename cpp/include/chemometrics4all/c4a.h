@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 /*
- * chemometrics4all — public C ABI v1.7.0.
+ * chemometrics4all — public C ABI v1.8.0.
  *
  * Stability: experimental until v1.0.0. Every breaking change before that
  * version bumps the ABI MAJOR (see c4a_version.h). After v1.0.0 the ABI
@@ -1646,12 +1646,820 @@ C4A_API c4a_status_t c4a_pp_fck_static_output_cols(int32_t n_kernels,
                                                     int32_t n_features,
                                                     int32_t* out);
 
+/* ============================================================================
+ * 23. Phase 6 — Wavelets & denoising (c4a_pp_wavelet_*, c4a_pp_haar_*,
+ *               c4a_pp_wavelet_denoise_*, c4a_pp_wavelet_features_*,
+ *               c4a_pp_wavelet_pca_*, c4a_pp_wavelet_svd_*)
+ * ============================================================================
+ *
+ * Six wavelet-domain operators backed by the shared filter banks in
+ * `core/common/wavelet_kernels`. Supported families: haar, db4, sym4, coif1.
+ * Supported boundary modes: periodization (default), symmetric, zero.
+ *
+ *   - Wavelet         : stateless single-level DWT. Output is the cA||cD
+ *                       concatenation of length `output_cols(input_cols)`.
+ *   - Haar            : convenience alias for Wavelet(haar, periodization).
+ *   - WaveletDenoise  : multi-level DWT with VisuShrink thresholding; output
+ *                       has the same width as the input.
+ *   - WaveletFeatures : multi-level DWT statistical features (mean, std, max,
+ *                       energy per decomposition level).
+ *   - WaveletPCA      : stateful — fit_then_transform with embedded PCA over
+ *                       the flattened DWT coefficient matrix.
+ *   - WaveletSVD      : stateful — same as WaveletPCA but with SVD scoring.
+ *
+ * The threshold and noise-estimator selections for WaveletDenoise are
+ * enumerated by `c4a_pp_wavelet_threshold_t` and `c4a_pp_wavelet_noise_t`.
+ */
+
+typedef enum c4a_pp_wavelet_family_t {
+    C4A_PP_WAVELET_HAAR  = 0,
+    C4A_PP_WAVELET_DB4   = 1,
+    C4A_PP_WAVELET_SYM4  = 2,
+    C4A_PP_WAVELET_COIF1 = 3
+} c4a_pp_wavelet_family_t;
+
+typedef enum c4a_pp_wavelet_boundary_t {
+    C4A_PP_WAVELET_BOUNDARY_PERIODIZATION = 0,
+    C4A_PP_WAVELET_BOUNDARY_SYMMETRIC     = 1,
+    C4A_PP_WAVELET_BOUNDARY_ZERO          = 2
+} c4a_pp_wavelet_boundary_t;
+
+typedef enum c4a_pp_wavelet_threshold_t {
+    C4A_PP_WAVELET_THRESHOLD_SOFT = 0,
+    C4A_PP_WAVELET_THRESHOLD_HARD = 1
+} c4a_pp_wavelet_threshold_t;
+
+typedef enum c4a_pp_wavelet_noise_t {
+    C4A_PP_WAVELET_NOISE_MEDIAN = 0,
+    C4A_PP_WAVELET_NOISE_STD    = 1
+} c4a_pp_wavelet_noise_t;
+
+typedef struct c4a_pp_wavelet_handle_t          c4a_pp_wavelet_handle_t;
+typedef struct c4a_pp_haar_handle_t             c4a_pp_haar_handle_t;
+typedef struct c4a_pp_wavelet_denoise_handle_t  c4a_pp_wavelet_denoise_handle_t;
+typedef struct c4a_pp_wavelet_features_handle_t c4a_pp_wavelet_features_handle_t;
+typedef struct c4a_pp_wavelet_pca_handle_t      c4a_pp_wavelet_pca_handle_t;
+typedef struct c4a_pp_wavelet_svd_handle_t      c4a_pp_wavelet_svd_handle_t;
+
+C4A_API c4a_status_t c4a_pp_wavelet_create(c4a_pp_wavelet_handle_t** out,
+                                            c4a_pp_wavelet_family_t   family,
+                                            c4a_pp_wavelet_boundary_t mode);
+C4A_API void         c4a_pp_wavelet_destroy(c4a_pp_wavelet_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_wavelet_output_cols(
+    const c4a_pp_wavelet_handle_t* handle,
+    int64_t input_cols, int64_t* out_cols);
+C4A_API c4a_status_t c4a_pp_wavelet_transform(
+    const c4a_pp_wavelet_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+C4A_API c4a_status_t c4a_pp_haar_create(c4a_pp_haar_handle_t** out);
+C4A_API void         c4a_pp_haar_destroy(c4a_pp_haar_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_haar_output_cols(int64_t input_cols,
+                                              int64_t* out_cols);
+C4A_API c4a_status_t c4a_pp_haar_transform(const c4a_pp_haar_handle_t* handle,
+                                            c4a_matrix_view_t X,
+                                            c4a_matrix_view_t out);
+
+C4A_API c4a_status_t c4a_pp_wavelet_denoise_create(
+    c4a_pp_wavelet_denoise_handle_t** out,
+    c4a_pp_wavelet_family_t    family,
+    c4a_pp_wavelet_boundary_t  mode,
+    int32_t                    level,
+    c4a_pp_wavelet_threshold_t threshold_mode,
+    c4a_pp_wavelet_noise_t     noise_estimator);
+C4A_API void         c4a_pp_wavelet_denoise_destroy(
+    c4a_pp_wavelet_denoise_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_wavelet_denoise_transform(
+    const c4a_pp_wavelet_denoise_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+C4A_API c4a_status_t c4a_pp_wavelet_features_create(
+    c4a_pp_wavelet_features_handle_t** out,
+    c4a_pp_wavelet_family_t   family,
+    c4a_pp_wavelet_boundary_t mode,
+    int32_t                   max_level);
+C4A_API void         c4a_pp_wavelet_features_destroy(
+    c4a_pp_wavelet_features_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_wavelet_features_output_cols(
+    const c4a_pp_wavelet_features_handle_t* handle,
+    int64_t input_cols, int64_t* out_cols);
+C4A_API c4a_status_t c4a_pp_wavelet_features_transform(
+    const c4a_pp_wavelet_features_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+C4A_API c4a_status_t c4a_pp_wavelet_pca_create(
+    c4a_pp_wavelet_pca_handle_t** out,
+    c4a_pp_wavelet_family_t   family,
+    c4a_pp_wavelet_boundary_t mode,
+    int32_t                   max_level,
+    double                    n_components);
+C4A_API void         c4a_pp_wavelet_pca_destroy(
+    c4a_pp_wavelet_pca_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_wavelet_pca_fit(
+    c4a_pp_wavelet_pca_handle_t* handle, c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_wavelet_pca_transform(
+    const c4a_pp_wavelet_pca_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_wavelet_pca_is_fitted(
+    const c4a_pp_wavelet_pca_handle_t* handle, int* out_fitted);
+C4A_API c4a_status_t c4a_pp_wavelet_pca_output_cols(
+    const c4a_pp_wavelet_pca_handle_t* handle, int64_t* out_cols);
+
+C4A_API c4a_status_t c4a_pp_wavelet_svd_create(
+    c4a_pp_wavelet_svd_handle_t** out,
+    c4a_pp_wavelet_family_t   family,
+    c4a_pp_wavelet_boundary_t mode,
+    int32_t                   max_level,
+    double                    n_components);
+C4A_API void         c4a_pp_wavelet_svd_destroy(
+    c4a_pp_wavelet_svd_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_wavelet_svd_fit(
+    c4a_pp_wavelet_svd_handle_t* handle, c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_wavelet_svd_transform(
+    const c4a_pp_wavelet_svd_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_wavelet_svd_is_fitted(
+    const c4a_pp_wavelet_svd_handle_t* handle, int* out_fitted);
+C4A_API c4a_status_t c4a_pp_wavelet_svd_output_cols(
+    const c4a_pp_wavelet_svd_handle_t* handle, int64_t* out_cols);
+
+/* ============================================================================
+ * 24. Phase 13 — XOutlierFilter (c4a_filter_x_outlier_*)
+ * ============================================================================
+ *
+ * Single operator with six selectable methods over the same opaque handle.
+ * Methods are selected via `c4a_filter_x_outlier_method_t` at construction
+ * time. The filter follows the same `_create / _fit / _is_fitted / _apply /
+ * _destroy` pattern as the Phase 12 Y-outlier filter, and reuses the public
+ * `c4a_filter_stats_t` (§18) for its `_apply` statistics output.
+ *
+ * Methods:
+ *   0  C4A_X_OUTLIER_MAHALANOBIS         Empirical-cov Mahalanobis distance.
+ *   1  C4A_X_OUTLIER_ROBUST_MAHALANOBIS  Mahalanobis with MinCovDet shrinkage.
+ *   2  C4A_X_OUTLIER_PCA_RESIDUAL        Q-statistic on PCA reconstruction.
+ *   3  C4A_X_OUTLIER_PCA_LEVERAGE        Hotelling T² in PCA score space.
+ *   4  C4A_X_OUTLIER_ISOLATION_FOREST    Sklearn-style ensemble.
+ *   5  C4A_X_OUTLIER_LOF                 Local Outlier Factor (k=min(20,n-1)).
+ *
+ * `use_threshold` = 0 selects contamination-quantile mode (`contamination`
+ * controls the discard fraction); `use_threshold` = 1 selects fixed-threshold
+ * mode (`threshold` is the score cutoff). For Isolation Forest /
+ * LOF the `n_estimators` and `max_samples` knobs steer the ensemble; for the
+ * PCA-backed methods `n_components` selects the PCA rank.
+ */
+
+typedef enum c4a_filter_x_outlier_method_t {
+    C4A_X_OUTLIER_MAHALANOBIS         = 0,
+    C4A_X_OUTLIER_ROBUST_MAHALANOBIS  = 1,
+    C4A_X_OUTLIER_PCA_RESIDUAL        = 2,
+    C4A_X_OUTLIER_PCA_LEVERAGE        = 3,
+    C4A_X_OUTLIER_ISOLATION_FOREST    = 4,
+    C4A_X_OUTLIER_LOF                 = 5
+} c4a_filter_x_outlier_method_t;
+
+typedef struct c4a_filter_x_outlier_handle_t c4a_filter_x_outlier_handle_t;
+C4A_API c4a_status_t c4a_filter_x_outlier_create(
+    c4a_filter_x_outlier_handle_t** out,
+    int32_t  method,
+    int      use_threshold,
+    double   threshold,
+    int32_t  n_components,
+    double   contamination,
+    uint64_t seed,
+    int32_t  n_estimators,
+    int64_t  max_samples);
+C4A_API void c4a_filter_x_outlier_destroy(c4a_filter_x_outlier_handle_t* handle);
+C4A_API c4a_status_t c4a_filter_x_outlier_fit(
+    c4a_filter_x_outlier_handle_t* handle, c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_filter_x_outlier_is_fitted(
+    const c4a_filter_x_outlier_handle_t* handle, int* out_fitted);
+C4A_API c4a_status_t c4a_filter_x_outlier_apply(
+    const c4a_filter_x_outlier_handle_t* handle,
+    c4a_matrix_view_t X,
+    uint8_t* mask_out,
+    c4a_filter_stats_t* stats_out);
+
+/* ============================================================================
+ * 25. Phase 15 — Augmenters: noise + drift (c4a_aug_*)
+ * ============================================================================
+ *
+ * Seven stochastic augmenters that consume a `c4a_rng_pcg64_state_t*` handle
+ * supplied by the caller. The augmenter does NOT own the RNG — the caller
+ * must keep it alive for the augmenter's lifetime. RNG state advances on
+ * every `_apply` call so consecutive calls produce independent draws.
+ *
+ * Universal triple:
+ *   * `_create(out, rng, ...)`   — allocate the opaque handle.
+ *   * `_apply(handle, X, out)`   — write the augmented matrix into out.
+ *   * `_destroy(handle)`         — release. NULL-safe.
+ *
+ * Parity is bit-exact (1e-15) against the frozen NumPy Generator(PCG64) refs
+ * in `c4a_parity_augmenters_ref`. The reference operates on row-major F64
+ * matrices; the augmenter validates dtype/stride/shape on each `_apply`.
+ */
+
+typedef struct c4a_aug_gaussian_noise_handle_t       c4a_aug_gaussian_noise_handle_t;
+typedef struct c4a_aug_multiplicative_noise_handle_t c4a_aug_multiplicative_noise_handle_t;
+typedef struct c4a_aug_spike_noise_handle_t          c4a_aug_spike_noise_handle_t;
+typedef struct c4a_aug_hetero_noise_handle_t         c4a_aug_hetero_noise_handle_t;
+typedef struct c4a_aug_linear_drift_handle_t         c4a_aug_linear_drift_handle_t;
+typedef struct c4a_aug_poly_drift_handle_t           c4a_aug_poly_drift_handle_t;
+typedef struct c4a_aug_path_length_handle_t          c4a_aug_path_length_handle_t;
+
+C4A_API c4a_status_t c4a_aug_gaussian_noise_create(
+    c4a_aug_gaussian_noise_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double sigma);
+C4A_API void c4a_aug_gaussian_noise_destroy(c4a_aug_gaussian_noise_handle_t* handle);
+C4A_API c4a_status_t c4a_aug_gaussian_noise_apply(
+    const c4a_aug_gaussian_noise_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+C4A_API c4a_status_t c4a_aug_multiplicative_noise_create(
+    c4a_aug_multiplicative_noise_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double sigma_gain);
+C4A_API void c4a_aug_multiplicative_noise_destroy(
+    c4a_aug_multiplicative_noise_handle_t* handle);
+C4A_API c4a_status_t c4a_aug_multiplicative_noise_apply(
+    const c4a_aug_multiplicative_noise_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+C4A_API c4a_status_t c4a_aug_spike_noise_create(
+    c4a_aug_spike_noise_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    int32_t n_spikes_min, int32_t n_spikes_max,
+    double amplitude_min, double amplitude_max);
+C4A_API void c4a_aug_spike_noise_destroy(c4a_aug_spike_noise_handle_t* handle);
+C4A_API c4a_status_t c4a_aug_spike_noise_apply(
+    const c4a_aug_spike_noise_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+C4A_API c4a_status_t c4a_aug_hetero_noise_create(
+    c4a_aug_hetero_noise_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double noise_base, double noise_signal_dep);
+C4A_API void c4a_aug_hetero_noise_destroy(c4a_aug_hetero_noise_handle_t* handle);
+C4A_API c4a_status_t c4a_aug_hetero_noise_apply(
+    const c4a_aug_hetero_noise_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+C4A_API c4a_status_t c4a_aug_linear_drift_create(
+    c4a_aug_linear_drift_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double offset_min, double offset_max,
+    double slope_min,  double slope_max);
+C4A_API void c4a_aug_linear_drift_destroy(c4a_aug_linear_drift_handle_t* handle);
+C4A_API c4a_status_t c4a_aug_linear_drift_apply(
+    const c4a_aug_linear_drift_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+C4A_API c4a_status_t c4a_aug_poly_drift_create(
+    c4a_aug_poly_drift_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    int32_t degree,
+    const double* coeff_min, const double* coeff_max);
+C4A_API void c4a_aug_poly_drift_destroy(c4a_aug_poly_drift_handle_t* handle);
+C4A_API c4a_status_t c4a_aug_poly_drift_apply(
+    const c4a_aug_poly_drift_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+C4A_API c4a_status_t c4a_aug_path_length_create(
+    c4a_aug_path_length_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double path_length_std, double min_path_length);
+C4A_API void c4a_aug_path_length_destroy(c4a_aug_path_length_handle_t* handle);
+C4A_API c4a_status_t c4a_aug_path_length_apply(
+    const c4a_aug_path_length_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+
+/* ============================================================================
+ * 26. Phase 16 — Augmenters: wavelength + spectral (c4a_aug_*)
+ * ============================================================================
+ *
+ * Ten stochastic augmenters that operate on wavelength-aware or
+ * spectral-domain features. Same universal triple as §25; consumers must
+ * supply a non-NULL `c4a_rng_pcg64_state_t*` handle.
+ *
+ * For augmenters that take a `wavelengths` array, the handle copies the
+ * wavelength axis at create time; the caller may free the pointer
+ * immediately after `_create` returns. `_apply` enforces n_features == the
+ * `n_wavelengths` captured at create time.
+ *
+ * BandMasking / ChannelDropout `mode`: 0 = zero-fill, 1 = linear interp.
+ */
+
+typedef struct c4a_aug_wavelength_shift_handle_t   c4a_aug_wavelength_shift_handle_t;
+typedef struct c4a_aug_wavelength_stretch_handle_t c4a_aug_wavelength_stretch_handle_t;
+typedef struct c4a_aug_local_warp_handle_t         c4a_aug_local_warp_handle_t;
+typedef struct c4a_aug_band_perturb_handle_t       c4a_aug_band_perturb_handle_t;
+typedef struct c4a_aug_band_mask_handle_t          c4a_aug_band_mask_handle_t;
+typedef struct c4a_aug_channel_dropout_handle_t    c4a_aug_channel_dropout_handle_t;
+typedef struct c4a_aug_gauss_jitter_handle_t       c4a_aug_gauss_jitter_handle_t;
+typedef struct c4a_aug_unsharp_mask_handle_t       c4a_aug_unsharp_mask_handle_t;
+typedef struct c4a_aug_magnitude_warp_handle_t     c4a_aug_magnitude_warp_handle_t;
+typedef struct c4a_aug_local_clip_handle_t         c4a_aug_local_clip_handle_t;
+
+C4A_API c4a_status_t c4a_aug_wavelength_shift_create(
+    c4a_aug_wavelength_shift_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double shift_lo, double shift_hi,
+    const double* wavelengths, int64_t n_wavelengths);
+C4A_API c4a_status_t c4a_aug_wavelength_shift_apply(
+    const c4a_aug_wavelength_shift_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_wavelength_shift_destroy(c4a_aug_wavelength_shift_handle_t* handle);
+
+C4A_API c4a_status_t c4a_aug_wavelength_stretch_create(
+    c4a_aug_wavelength_stretch_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double stretch_lo, double stretch_hi,
+    const double* wavelengths, int64_t n_wavelengths);
+C4A_API c4a_status_t c4a_aug_wavelength_stretch_apply(
+    const c4a_aug_wavelength_stretch_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_wavelength_stretch_destroy(c4a_aug_wavelength_stretch_handle_t* handle);
+
+C4A_API c4a_status_t c4a_aug_local_warp_create(
+    c4a_aug_local_warp_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    int32_t n_control_points,
+    double  max_shift,
+    const double* wavelengths, int64_t n_wavelengths);
+C4A_API c4a_status_t c4a_aug_local_warp_apply(
+    const c4a_aug_local_warp_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_local_warp_destroy(c4a_aug_local_warp_handle_t* handle);
+
+C4A_API c4a_status_t c4a_aug_band_perturb_create(
+    c4a_aug_band_perturb_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    int32_t n_bands,
+    int32_t bw_lo, int32_t bw_hi,
+    double  gain_lo, double  gain_hi,
+    double  offset_lo, double offset_hi);
+C4A_API c4a_status_t c4a_aug_band_perturb_apply(
+    const c4a_aug_band_perturb_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_band_perturb_destroy(c4a_aug_band_perturb_handle_t* handle);
+
+C4A_API c4a_status_t c4a_aug_band_mask_create(
+    c4a_aug_band_mask_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    int32_t n_bands_lo, int32_t n_bands_hi,
+    int32_t bw_lo, int32_t bw_hi,
+    int32_t mode);
+C4A_API c4a_status_t c4a_aug_band_mask_apply(
+    const c4a_aug_band_mask_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_band_mask_destroy(c4a_aug_band_mask_handle_t* handle);
+
+C4A_API c4a_status_t c4a_aug_channel_dropout_create(
+    c4a_aug_channel_dropout_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double  dropout_prob,
+    int32_t mode);
+C4A_API c4a_status_t c4a_aug_channel_dropout_apply(
+    const c4a_aug_channel_dropout_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_channel_dropout_destroy(c4a_aug_channel_dropout_handle_t* handle);
+
+C4A_API c4a_status_t c4a_aug_gauss_jitter_create(
+    c4a_aug_gauss_jitter_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double  sigma_lo, double sigma_hi,
+    int32_t kernel_width);
+C4A_API c4a_status_t c4a_aug_gauss_jitter_apply(
+    const c4a_aug_gauss_jitter_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_gauss_jitter_destroy(c4a_aug_gauss_jitter_handle_t* handle);
+
+C4A_API c4a_status_t c4a_aug_unsharp_mask_create(
+    c4a_aug_unsharp_mask_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double  amount_lo, double amount_hi,
+    double  sigma, int32_t kernel_width);
+C4A_API c4a_status_t c4a_aug_unsharp_mask_apply(
+    const c4a_aug_unsharp_mask_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_unsharp_mask_destroy(c4a_aug_unsharp_mask_handle_t* handle);
+
+C4A_API c4a_status_t c4a_aug_magnitude_warp_create(
+    c4a_aug_magnitude_warp_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    int32_t n_control_points,
+    double  gain_lo, double gain_hi,
+    const double* wavelengths, int64_t n_wavelengths);
+C4A_API c4a_status_t c4a_aug_magnitude_warp_apply(
+    const c4a_aug_magnitude_warp_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_magnitude_warp_destroy(c4a_aug_magnitude_warp_handle_t* handle);
+
+C4A_API c4a_status_t c4a_aug_local_clip_create(
+    c4a_aug_local_clip_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    int32_t n_regions,
+    int32_t width_lo, int32_t width_hi);
+C4A_API c4a_status_t c4a_aug_local_clip_apply(
+    const c4a_aug_local_clip_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_local_clip_destroy(c4a_aug_local_clip_handle_t* handle);
+
+/* ============================================================================
+ * 27. Phase 17 — Augmenters: mixup + physical + environmental (c4a_aug_*)
+ * ============================================================================
+ *
+ * Ten stochastic augmenters. Same universal triple as §25.
+ *
+ * Wavelength-aware augmenters take a `wavelengths` array at create time; the
+ * handle copies the wavelengths internally. `_apply` enforces n_features ==
+ * n_wavelengths captured at create time.
+ *
+ * MixupAugmenter / LocalMixupAugmenter combine TWO samples within a single
+ * batch. The output rows are pairwise convex combinations of two input rows.
+ */
+
+/* ---------- MixupAugmenter ---------- */
+typedef struct c4a_aug_mixup_handle_t c4a_aug_mixup_handle_t;
+C4A_API c4a_status_t c4a_aug_mixup_create(c4a_aug_mixup_handle_t** out,
+                                           c4a_rng_pcg64_state_t* rng,
+                                           double alpha);
+C4A_API c4a_status_t c4a_aug_mixup_apply(const c4a_aug_mixup_handle_t* handle,
+                                          c4a_matrix_view_t X,
+                                          c4a_matrix_view_t out);
+C4A_API void         c4a_aug_mixup_destroy(c4a_aug_mixup_handle_t* handle);
+
+/* ---------- LocalMixupAugmenter ---------- */
+typedef struct c4a_aug_local_mixup_handle_t c4a_aug_local_mixup_handle_t;
+C4A_API c4a_status_t c4a_aug_local_mixup_create(c4a_aug_local_mixup_handle_t** out,
+                                                 c4a_rng_pcg64_state_t* rng,
+                                                 double alpha,
+                                                 int32_t k_neighbors);
+C4A_API c4a_status_t c4a_aug_local_mixup_apply(const c4a_aug_local_mixup_handle_t* handle,
+                                                c4a_matrix_view_t X,
+                                                c4a_matrix_view_t out);
+C4A_API void         c4a_aug_local_mixup_destroy(c4a_aug_local_mixup_handle_t* handle);
+
+/* ---------- ScatterSimulationMSC ---------- */
+typedef struct c4a_aug_scatter_sim_handle_t c4a_aug_scatter_sim_handle_t;
+C4A_API c4a_status_t c4a_aug_scatter_sim_create(c4a_aug_scatter_sim_handle_t** out,
+                                                 c4a_rng_pcg64_state_t* rng,
+                                                 double a_low, double a_high,
+                                                 double b_low, double b_high);
+C4A_API c4a_status_t c4a_aug_scatter_sim_apply(const c4a_aug_scatter_sim_handle_t* handle,
+                                                c4a_matrix_view_t X,
+                                                c4a_matrix_view_t out);
+C4A_API void         c4a_aug_scatter_sim_destroy(c4a_aug_scatter_sim_handle_t* handle);
+
+/* ---------- ParticleSizeAugmenter ---------- */
+typedef struct c4a_aug_particle_size_handle_t c4a_aug_particle_size_handle_t;
+/* `use_size_range`: 0 = sample sizes from N(mean, variation), clipped to
+ *   [5, 500]; 1 = sample uniform[size_range_low, size_range_high].
+ * `include_path_length`: 0 = skip the multiplicative path-length step;
+ *   1 = apply  factor = clip(1 + path_length_sensitivity * log(size_ratio),
+ *                            0.7, 1.5).
+ */
+C4A_API c4a_status_t c4a_aug_particle_size_create(
+    c4a_aug_particle_size_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double mean_size_um, double size_variation_um,
+    int    use_size_range, double size_range_low_um, double size_range_high_um,
+    double reference_size_um, double wavelength_exponent,
+    double size_effect_strength,
+    int    include_path_length, double path_length_sensitivity,
+    const double* wavelengths, int64_t n_wavelengths);
+C4A_API c4a_status_t c4a_aug_particle_size_apply(
+    const c4a_aug_particle_size_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void         c4a_aug_particle_size_destroy(
+    c4a_aug_particle_size_handle_t* handle);
+
+/* ---------- EMSCDistortionAugmenter ---------- */
+typedef struct c4a_aug_emsc_distort_handle_t c4a_aug_emsc_distort_handle_t;
+C4A_API c4a_status_t c4a_aug_emsc_distort_create(
+    c4a_aug_emsc_distort_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double mult_low, double mult_high,
+    double add_low,  double add_high,
+    int32_t polynomial_order,
+    double  polynomial_strength,
+    double  correlation,
+    const double* wavelengths, int64_t n_wavelengths);
+C4A_API c4a_status_t c4a_aug_emsc_distort_apply(
+    const c4a_aug_emsc_distort_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void         c4a_aug_emsc_distort_destroy(
+    c4a_aug_emsc_distort_handle_t* handle);
+
+/* ---------- BatchEffectAugmenter ---------- */
+typedef struct c4a_aug_batch_effect_handle_t c4a_aug_batch_effect_handle_t;
+/* `variation_scope`: 0 = per-sample, 1 = batch.
+ * `wavelengths` may be NULL → x axis derived from the integer index. */
+C4A_API c4a_status_t c4a_aug_batch_effect_create(
+    c4a_aug_batch_effect_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double offset_std, double slope_std, double gain_std,
+    int32_t variation_scope,
+    const double* wavelengths, int64_t n_wavelengths);
+C4A_API c4a_status_t c4a_aug_batch_effect_apply(
+    const c4a_aug_batch_effect_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void         c4a_aug_batch_effect_destroy(
+    c4a_aug_batch_effect_handle_t* handle);
+
+/* ---------- InstrumentalBroadeningAugmenter ---------- */
+typedef struct c4a_aug_instrument_broaden_handle_t
+                c4a_aug_instrument_broaden_handle_t;
+/* `use_fwhm_range`: 0 = fixed `fwhm` for all rows (no RNG draws);
+ *   1 = sample FWHM uniformly in [fwhm_low, fwhm_high]. */
+C4A_API c4a_status_t c4a_aug_instrument_broaden_create(
+    c4a_aug_instrument_broaden_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double fwhm,
+    int    use_fwhm_range, double fwhm_low, double fwhm_high,
+    int32_t variation_scope,
+    const double* wavelengths, int64_t n_wavelengths);
+C4A_API c4a_status_t c4a_aug_instrument_broaden_apply(
+    const c4a_aug_instrument_broaden_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void         c4a_aug_instrument_broaden_destroy(
+    c4a_aug_instrument_broaden_handle_t* handle);
+
+/* ---------- DeadBandAugmenter ---------- */
+typedef struct c4a_aug_dead_band_handle_t c4a_aug_dead_band_handle_t;
+C4A_API c4a_status_t c4a_aug_dead_band_create(
+    c4a_aug_dead_band_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    int32_t n_bands,
+    int32_t width_low, int32_t width_high,
+    double  noise_std, double probability,
+    int32_t variation_scope);
+C4A_API c4a_status_t c4a_aug_dead_band_apply(
+    const c4a_aug_dead_band_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void         c4a_aug_dead_band_destroy(
+    c4a_aug_dead_band_handle_t* handle);
+
+/* ---------- TemperatureAugmenter ---------- */
+typedef struct c4a_aug_temperature_handle_t c4a_aug_temperature_handle_t;
+C4A_API c4a_status_t c4a_aug_temperature_create(
+    c4a_aug_temperature_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double temperature_delta,
+    int    use_temp_range, double temp_low, double temp_high,
+    int    enable_shift, int enable_intensity, int enable_broadening,
+    int    region_specific,
+    const double* wavelengths, int64_t n_wavelengths);
+C4A_API c4a_status_t c4a_aug_temperature_apply(
+    const c4a_aug_temperature_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void         c4a_aug_temperature_destroy(
+    c4a_aug_temperature_handle_t* handle);
+
+/* ---------- MoistureAugmenter ---------- */
+typedef struct c4a_aug_moisture_handle_t c4a_aug_moisture_handle_t;
+C4A_API c4a_status_t c4a_aug_moisture_create(
+    c4a_aug_moisture_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double water_activity_delta,
+    int    use_aw_range, double aw_low, double aw_high,
+    double reference_water_activity,
+    double free_water_fraction,
+    double bound_water_shift,
+    double moisture_content,
+    int    enable_shift, int enable_intensity,
+    const double* wavelengths, int64_t n_wavelengths);
+C4A_API c4a_status_t c4a_aug_moisture_apply(
+    const c4a_aug_moisture_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void         c4a_aug_moisture_destroy(
+    c4a_aug_moisture_handle_t* handle);
+
+/* ============================================================================
+ * 28. Phase 18 — Augmenters: edge + splines + random (c4a_aug_*)
+ * ============================================================================
+ *
+ * Twelve operators. Same universal triple as §25.
+ *
+ * The Spline_X_Simplification and Spline_Curve_Simplification operators are
+ * v2-deferred (per the original Phase 0 plan): the `_apply` entry point
+ * returns `C4A_ERR_NOT_IMPLEMENTED` until v2 lands the necessary
+ * `rng.choice(replace=False)` primitive in the public surface.
+ *
+ * `EdgeArtifactsAugmenter` is a combined wrapper that applies any subset
+ * of DetectorRollOff, StrayLight, EdgeCurvature, TruncatedPeak in sequence;
+ * a single 4-bit flags field selects the sub-augmenters.
+ *
+ * `Random_X_Operation` selects an elementwise operator via the `op_kind`
+ * integer: 0=multiply, 1=add, 2=subtract.
+ */
+
+/* --- DetectorRollOff ----------------------------------------------------- */
+typedef struct c4a_aug_detector_rolloff_handle_t
+    c4a_aug_detector_rolloff_handle_t;
+C4A_API c4a_status_t c4a_aug_detector_rolloff_create(
+    c4a_aug_detector_rolloff_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    int32_t detector_model,
+    double  effect_strength,
+    double  noise_amplification,
+    int32_t include_baseline_distortion);
+C4A_API c4a_status_t c4a_aug_detector_rolloff_apply(
+    const c4a_aug_detector_rolloff_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t wavelengths,
+    c4a_matrix_view_t out);
+C4A_API void c4a_aug_detector_rolloff_destroy(
+    c4a_aug_detector_rolloff_handle_t* handle);
+
+/* --- StrayLight --------------------------------------------------------- */
+typedef struct c4a_aug_stray_light_handle_t c4a_aug_stray_light_handle_t;
+C4A_API c4a_status_t c4a_aug_stray_light_create(
+    c4a_aug_stray_light_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double stray_light_fraction,
+    double edge_enhancement,
+    double edge_width,
+    int32_t include_peak_truncation);
+C4A_API c4a_status_t c4a_aug_stray_light_apply(
+    const c4a_aug_stray_light_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t wavelengths,
+    c4a_matrix_view_t out);
+C4A_API void c4a_aug_stray_light_destroy(
+    c4a_aug_stray_light_handle_t* handle);
+
+/* --- EdgeCurvature ------------------------------------------------------ */
+typedef struct c4a_aug_edge_curve_handle_t c4a_aug_edge_curve_handle_t;
+C4A_API c4a_status_t c4a_aug_edge_curve_create(
+    c4a_aug_edge_curve_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double curvature_strength,
+    int32_t curvature_type,
+    double asymmetry,
+    double edge_focus);
+C4A_API c4a_status_t c4a_aug_edge_curve_apply(
+    const c4a_aug_edge_curve_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t wavelengths,
+    c4a_matrix_view_t out);
+C4A_API void c4a_aug_edge_curve_destroy(c4a_aug_edge_curve_handle_t* handle);
+
+/* --- TruncatedPeak ------------------------------------------------------ */
+typedef struct c4a_aug_truncated_peak_handle_t
+    c4a_aug_truncated_peak_handle_t;
+C4A_API c4a_status_t c4a_aug_truncated_peak_create(
+    c4a_aug_truncated_peak_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double peak_probability,
+    double amplitude_min, double amplitude_max,
+    double width_min,     double width_max,
+    int32_t left_edge,
+    int32_t right_edge);
+C4A_API c4a_status_t c4a_aug_truncated_peak_apply(
+    const c4a_aug_truncated_peak_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t wavelengths,
+    c4a_matrix_view_t out);
+C4A_API void c4a_aug_truncated_peak_destroy(
+    c4a_aug_truncated_peak_handle_t* handle);
+
+/* --- EdgeArtifacts (combined wrapper) ----------------------------------- */
+/* Flags:
+ *   bit 0 (0x1)  : enable DetectorRollOff
+ *   bit 1 (0x2)  : enable StrayLight
+ *   bit 2 (0x4)  : enable EdgeCurvature
+ *   bit 3 (0x8)  : enable TruncatedPeak
+ * Default sequence mirrors the Python reference (truncated -> curve ->
+ * stray -> detector). The overall_strength scales every sub-augmenter's
+ * default strength. */
+#define C4A_AUG_EDGE_ARTIFACTS_DETECTOR_ROLL_OFF 0x1
+#define C4A_AUG_EDGE_ARTIFACTS_STRAY_LIGHT       0x2
+#define C4A_AUG_EDGE_ARTIFACTS_EDGE_CURVATURE    0x4
+#define C4A_AUG_EDGE_ARTIFACTS_TRUNCATED_PEAKS   0x8
+typedef struct c4a_aug_edge_artifacts_handle_t
+    c4a_aug_edge_artifacts_handle_t;
+C4A_API c4a_status_t c4a_aug_edge_artifacts_create(
+    c4a_aug_edge_artifacts_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    int32_t enabled_flags,
+    double  overall_strength,
+    int32_t detector_model);
+C4A_API c4a_status_t c4a_aug_edge_artifacts_apply(
+    const c4a_aug_edge_artifacts_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t wavelengths,
+    c4a_matrix_view_t out);
+C4A_API void c4a_aug_edge_artifacts_destroy(
+    c4a_aug_edge_artifacts_handle_t* handle);
+
+/* --- Spline_Smoothing --------------------------------------------------- */
+typedef struct c4a_aug_spline_smooth_handle_t
+    c4a_aug_spline_smooth_handle_t;
+C4A_API c4a_status_t c4a_aug_spline_smooth_create(
+    c4a_aug_spline_smooth_handle_t** out,
+    c4a_rng_pcg64_state_t* rng);
+C4A_API c4a_status_t c4a_aug_spline_smooth_apply(
+    const c4a_aug_spline_smooth_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_spline_smooth_destroy(
+    c4a_aug_spline_smooth_handle_t* handle);
+
+/* --- Spline_X_Perturbations -------------------------------------------- */
+typedef struct c4a_aug_spline_x_perturb_handle_t
+    c4a_aug_spline_x_perturb_handle_t;
+C4A_API c4a_status_t c4a_aug_spline_x_perturb_create(
+    c4a_aug_spline_x_perturb_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    int32_t spline_degree,
+    double  perturbation_density,
+    double  perturbation_range_min,
+    double  perturbation_range_max);
+C4A_API c4a_status_t c4a_aug_spline_x_perturb_apply(
+    const c4a_aug_spline_x_perturb_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_spline_x_perturb_destroy(
+    c4a_aug_spline_x_perturb_handle_t* handle);
+
+/* --- Spline_Y_Perturbations -------------------------------------------- */
+typedef struct c4a_aug_spline_y_perturb_handle_t
+    c4a_aug_spline_y_perturb_handle_t;
+/* spline_points <= 0 means "use n_features / 2". */
+C4A_API c4a_status_t c4a_aug_spline_y_perturb_create(
+    c4a_aug_spline_y_perturb_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    int32_t spline_points,
+    double  perturbation_intensity);
+C4A_API c4a_status_t c4a_aug_spline_y_perturb_apply(
+    const c4a_aug_spline_y_perturb_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_spline_y_perturb_destroy(
+    c4a_aug_spline_y_perturb_handle_t* handle);
+
+/* --- Spline_X_Simplification (v2-deferred — apply returns
+ * C4A_ERR_NOT_IMPLEMENTED) ----------------------------------------------- */
+typedef struct c4a_aug_spline_x_simplify_handle_t
+    c4a_aug_spline_x_simplify_handle_t;
+C4A_API c4a_status_t c4a_aug_spline_x_simplify_create(
+    c4a_aug_spline_x_simplify_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    int32_t spline_points,
+    int32_t uniform);
+C4A_API c4a_status_t c4a_aug_spline_x_simplify_apply(
+    const c4a_aug_spline_x_simplify_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_spline_x_simplify_destroy(
+    c4a_aug_spline_x_simplify_handle_t* handle);
+
+/* --- Spline_Curve_Simplification (v2-deferred — apply returns
+ * C4A_ERR_NOT_IMPLEMENTED) ----------------------------------------------- */
+typedef struct c4a_aug_spline_curve_simplify_handle_t
+    c4a_aug_spline_curve_simplify_handle_t;
+C4A_API c4a_status_t c4a_aug_spline_curve_simplify_create(
+    c4a_aug_spline_curve_simplify_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    int32_t spline_points,
+    int32_t uniform);
+C4A_API c4a_status_t c4a_aug_spline_curve_simplify_apply(
+    const c4a_aug_spline_curve_simplify_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_spline_curve_simplify_destroy(
+    c4a_aug_spline_curve_simplify_handle_t* handle);
+
+/* --- Rotate_Translate --------------------------------------------------- */
+typedef struct c4a_aug_rotate_translate_handle_t
+    c4a_aug_rotate_translate_handle_t;
+C4A_API c4a_status_t c4a_aug_rotate_translate_create(
+    c4a_aug_rotate_translate_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    double p_range,
+    double y_factor);
+C4A_API c4a_status_t c4a_aug_rotate_translate_apply(
+    const c4a_aug_rotate_translate_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_rotate_translate_destroy(
+    c4a_aug_rotate_translate_handle_t* handle);
+
+/* --- Random_X_Operation ------------------------------------------------- */
+typedef struct c4a_aug_random_x_op_handle_t c4a_aug_random_x_op_handle_t;
+C4A_API c4a_status_t c4a_aug_random_x_op_create(
+    c4a_aug_random_x_op_handle_t** out,
+    c4a_rng_pcg64_state_t* rng,
+    int32_t op_kind,
+    double  operator_range_min,
+    double  operator_range_max);
+C4A_API c4a_status_t c4a_aug_random_x_op_apply(
+    const c4a_aug_random_x_op_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API void c4a_aug_random_x_op_destroy(
+    c4a_aug_random_x_op_handle_t* handle);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
 
 /* ============================================================================
- * 23. ABI guard rails — fixed-size assertions on the C ABI shape
+ * 29. ABI guard rails — fixed-size assertions on the C ABI shape
  * ==========================================================================
  *
  * Compilers may shrink enums under non-default flags (e.g. -fshort-enums on
@@ -1694,6 +2502,16 @@ C4A_STATIC_ASSERT(sizeof(c4a_split_y_metric_t) == 4,
                   "c4a_split_y_metric_t must be 4 bytes");
 C4A_STATIC_ASSERT(sizeof(c4a_split_group_agg_t) == 4,
                   "c4a_split_group_agg_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_pp_wavelet_family_t) == 4,
+                  "c4a_pp_wavelet_family_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_pp_wavelet_boundary_t) == 4,
+                  "c4a_pp_wavelet_boundary_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_pp_wavelet_threshold_t) == 4,
+                  "c4a_pp_wavelet_threshold_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_pp_wavelet_noise_t) == 4,
+                  "c4a_pp_wavelet_noise_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_filter_x_outlier_method_t) == 4,
+                  "c4a_filter_x_outlier_method_t must be 4 bytes");
 
 /* c4a_matrix_view_t must be 48 bytes on LP64 / LLP64. ILP32 is not
  * supported; on ILP32 platforms the layout would differ (pointer is 4 bytes),

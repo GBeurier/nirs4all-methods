@@ -19,14 +19,7 @@
 
 #include "core/common/rng_pcg64.h"
 
-// The public ABI defines `c4a_rng_pcg64_state_t` as an opaque tag in c4a.h.
-// We provide its full definition here. The struct simply wraps the internal
-// C engine; an explicit struct (rather than `typedef c4a_rng_pcg64
-// c4a_rng_pcg64_state_t`) keeps the public name decoupled from the internal
-// one so we can change the internal layout without disturbing the ABI.
-struct c4a_rng_pcg64_state_t {
-    c4a_rng_pcg64 engine;
-};
+#include "rng_state_internal.hpp"
 
 extern "C" {
 

@@ -22,16 +22,64 @@ add_library(chemometrics4all_core OBJECT
     core/matrix_view.cpp
     core/status.cpp
     core/version.cpp
+    core/augmentations/aug_rng_utils.c
+    core/augmentations/drift/linear_drift.c
+    core/augmentations/drift/path_length.c
+    core/augmentations/drift/poly_drift.c
+    core/augmentations/edge_artifacts/detector_rolloff.c
+    core/augmentations/edge_artifacts/edge_curvature.c
+    core/augmentations/edge_artifacts/stray_light.c
+    core/augmentations/edge_artifacts/truncated_peak.c
+    core/augmentations/environmental/aug_interp.c
+    core/augmentations/environmental/moisture.c
+    core/augmentations/environmental/temperature.c
+    core/augmentations/mixup/local_mixup.c
+    core/augmentations/mixup/mixup.c
+    core/augmentations/noise/gaussian_noise.c
+    core/augmentations/noise/hetero_noise.c
+    core/augmentations/noise/multiplicative_noise.c
+    core/augmentations/noise/spike_noise.c
+    core/augmentations/random/random_x_op.c
+    core/augmentations/random/rotate_translate.c
+    core/augmentations/scattering/batch_effect.c
+    core/augmentations/scattering/dead_band.c
+    core/augmentations/scattering/emsc_distort.c
+    core/augmentations/scattering/instrument_broaden.c
+    core/augmentations/scattering/particle_size.c
+    core/augmentations/scattering/scatter_sim_msc.c
+    core/augmentations/spectral/band_mask.c
+    core/augmentations/spectral/band_perturb.c
+    core/augmentations/spectral/channel_dropout.c
+    core/augmentations/spectral/gauss_jitter.c
+    core/augmentations/spectral/local_clip.c
+    core/augmentations/spectral/magnitude_warp.c
+    core/augmentations/spectral/spectral_common.c
+    core/augmentations/spectral/unsharp_mask.c
+    core/augmentations/splines/spline_curve_simplification.c
+    core/augmentations/splines/spline_smoothing.c
+    core/augmentations/splines/spline_x_perturbations.c
+    core/augmentations/splines/spline_x_simplification.c
+    core/augmentations/splines/spline_y_perturbations.c
+    core/augmentations/wavelength/local_warp.c
+    core/augmentations/wavelength/wavelength_shift.c
+    core/augmentations/wavelength/wavelength_stretch.c
     core/common/banded_solver.c
+    core/common/bspline.c
     core/common/fck_kernel.c
     core/common/linalg.c
     core/common/padding.c
+    core/common/pca_helper.c
     core/common/rng_pcg64.c
     core/common/svd.c
+    core/common/wavelet_kernels.c
     core/common/ziggurat.c
+    core/filters/_vendored/isolation_forest.c
+    core/filters/_vendored/lof.c
+    core/filters/_vendored/min_cov_det.c
     core/filters/composite.c
     core/filters/high_leverage.c
     core/filters/spectral_quality.c
+    core/filters/x_outlier.c
     core/filters/y_outlier.c
     core/preprocessing/baselines/airpls.c
     core/preprocessing/baselines/arpls.c
@@ -74,6 +122,12 @@ add_library(chemometrics4all_core OBJECT
     core/preprocessing/resampling/resample_transformer.c
     core/preprocessing/resampling/resampler.c
     core/preprocessing/specialized/fck_static.c
+    core/preprocessing/wavelets/haar.c
+    core/preprocessing/wavelets/wavelet.c
+    core/preprocessing/wavelets/wavelet_denoise.c
+    core/preprocessing/wavelets/wavelet_features.c
+    core/preprocessing/wavelets/wavelet_pca.c
+    core/preprocessing/wavelets/wavelet_svd.c
     core/splitters/binned_strat_group_kfold.c
     core/splitters/kbins_stratified.c
     core/splitters/kennard_stone.c
@@ -118,9 +172,14 @@ chemometrics4all_add_warnings(chemometrics4all_core)
 # chemometrics4all_c_static is the same surface, statically linked.
 # ---------------------------------------------------------------------------
 set(_chemometrics4all_c_sources
+    c_api/c_api_augmenters.cpp
+    c_api/c_api_augmenters_edge_splines_random.cpp
+    c_api/c_api_augmenters_mixup_physical.cpp
+    c_api/c_api_augmenters_wavelength_spectral.cpp
     c_api/c_api_context.cpp
     c_api/c_api_fck.cpp
     c_api/c_api_feature_selection.cpp
+    c_api/c_api_filter_x_outlier.cpp
     c_api/c_api_filters.cpp
     c_api/c_api_filters_meta.cpp
     c_api/c_api_matrix.cpp
@@ -133,7 +192,8 @@ set(_chemometrics4all_c_sources
     c_api/c_api_signal_type.cpp
     c_api/c_api_splitters.cpp
     c_api/c_api_transfer_metrics.cpp
-    c_api/c_api_version.cpp)
+    c_api/c_api_version.cpp
+    c_api/c_api_wavelets.cpp)
 
 function(chemometrics4all_apply_c_target target)
     target_sources(${target} PRIVATE $<TARGET_OBJECTS:chemometrics4all_core>)

@@ -11,7 +11,7 @@ on:
 #   1. Every exported symbol starts with `c4a_` (defense-in-depth on top of
 #      the linker version script and `-fvisibility=hidden`).
 #   2. The set of exported symbols matches `cpp/abi/expected_symbols_<os>.txt`
-#      exactly (currently 251 symbols, ABI 1.7.0). Adds / removals require
+#      exactly (currently 400 symbols, ABI 1.8.0). Adds / removals require
 #      a manual snapshot bump.
 #   3. The shared library does not pull in any forbidden runtime dependency
 #      (libopenblas, libmkl, libpython, libR, librcpp, libboost, libeigen,

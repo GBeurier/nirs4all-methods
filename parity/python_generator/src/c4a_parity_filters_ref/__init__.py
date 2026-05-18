@@ -18,11 +18,15 @@ This insulation gives us two things:
      ``docs/algorithms/y_outlier_filter.md``.
 
 Phase 12 (1 op, 4 methods): y_outlier (iqr / zscore / percentile / mad).
+Phase 13 (1 op, 6 methods): x_outlier (mahalanobis / robust_mahalanobis /
+                                       pca_residual / pca_leverage /
+                                       isolation_forest / lof).
 """
 
 from .composite import composite_mask
 from .high_leverage import high_leverage_leverages, high_leverage_mask
 from .spectral_quality import spectral_quality_mask
+from .x_outlier import x_outlier_fit_get_mask
 from .y_outlier import y_outlier_fit_get_mask
 
 __all__ = [
@@ -30,5 +34,6 @@ __all__ = [
     "high_leverage_leverages",
     "high_leverage_mask",
     "spectral_quality_mask",
+    "x_outlier_fit_get_mask",
     "y_outlier_fit_get_mask",
 ]

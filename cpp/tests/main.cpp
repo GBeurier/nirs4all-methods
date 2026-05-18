@@ -65,6 +65,29 @@ void register_transfer_metrics_tests(c4a_testing::Runner& r);
 // Phase 21 — FCK static transformer parity tests live in test_fck.cpp.
 void register_fck_tests(c4a_testing::Runner& r);
 
+// Phase 6 — wavelet preprocessing parity tests live in
+// test_preprocessing_wavelets.cpp.
+void register_preprocessing_wavelets_tests(c4a_testing::Runner& r);
+
+// Phase 13 — X-outlier filter parity tests live in test_filter_x_outlier.cpp.
+void register_filter_x_outlier_tests(c4a_testing::Runner& r);
+
+// Phase 15 — noise + drift augmenter parity tests live in
+// test_augmenters_noise_drift.cpp.
+void register_augmenters_noise_drift_tests(c4a_testing::Runner& r);
+
+// Phase 16 — wavelength + spectral augmenter parity tests live in
+// test_augmenters_wavelength_spectral.cpp.
+void register_augmenters_wavelength_spectral_tests(c4a_testing::Runner& r);
+
+// Phase 17 — mixup + physical + environmental augmenter parity tests live in
+// test_augmenters_phase17.cpp.
+void register_augmenters_phase17_tests(c4a_testing::Runner& r);
+
+// Phase 18 — edge artifacts + splines + random augmenter parity tests live in
+// test_augmenters_phase18.cpp.
+void register_augmenters_phase18_tests(c4a_testing::Runner& r);
+
 namespace {
 
 void test_version_string_nonempty() {
@@ -146,5 +169,11 @@ int main() {
     register_metrics_tests(r);
     register_transfer_metrics_tests(r);
     register_fck_tests(r);
+    register_preprocessing_wavelets_tests(r);
+    register_filter_x_outlier_tests(r);
+    register_augmenters_noise_drift_tests(r);
+    register_augmenters_wavelength_spectral_tests(r);
+    register_augmenters_phase17_tests(r);
+    register_augmenters_phase18_tests(r);
     return r.finalize();
 }

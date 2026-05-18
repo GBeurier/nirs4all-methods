@@ -6,6 +6,73 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.0+abi.1.8.0] — Phases 6, 13, 15-18 parallel batch (wavelets, X-outlier filter, augmenters)
+
+### Added
+
+This release lands six worktrees developed in parallel under the Phase
+15-18 augmenter ABI contract. All additions are surface-additive — no
+existing symbol changes signature, no behavioural regression on the 171
+prior tests. ABI minor bumps from 1.7.0 to 1.8.0.
+
+- **Phase 6 — Wavelets & denoising (6 ops, 27 symbols + 4 enums)**:
+  Wavelet (single-level DWT), Haar, WaveletDenoise (multi-level VisuShrink),
+  WaveletFeatures (per-level statistical features), WaveletPCA and
+  WaveletSVD (stateful DWT-flatten + PCA / SVD). Shared filter banks for
+  haar / db4 / sym4 / coif1 under `core/common/wavelet_kernels.{c,h}`. 12
+  parity tests, bit-exact match against the frozen
+  `c4a_parity_wavelets_ref` (pywt-based) reference.
+- **Phase 13 — XOutlierFilter (1 op, 6 methods, 5 symbols + 1 enum)**:
+  Mahalanobis, RobustMahalanobis (MinCovDet shrinkage), PCA-Residual
+  (Q-statistic), PCA-Leverage (Hotelling T²), IsolationForest, LOF. Adds
+  vendored implementations under `core/filters/_vendored/` and a shared
+  `core/common/pca_helper.{c,h}` (delegates to the existing `svd.{c,h}`
+  from Phase 9). 12 parity tests.
+- **Phase 15 — Augmenters: noise + drift (7 ops, 21 symbols)**: opens the
+  new `c4a_aug_*` ABI category. GaussianNoise, MultiplicativeNoise,
+  SpikeNoise, HeteroscedasticNoise, LinearDrift, PolynomialDrift,
+  PathLength. Bit-exact 1e-15 PCG64 parity against the frozen
+  `c4a_parity_augmenters_ref` (NumPy Generator) reference. 14 tests.
+- **Phase 16 — Augmenters: wavelength + spectral (10 ops, 30 symbols)**:
+  WavelengthShift, WavelengthStretch, LocalWarp, BandPerturbation,
+  BandMasking, ChannelDropout, GaussJitter, UnsharpMask, MagnitudeWarp,
+  LocalClip. Shared `spectral_common.{c,h}` helper. 20 tests.
+- **Phase 17 — Augmenters: mixup + physical + environmental (10 ops, 30
+  symbols)**: Mixup, LocalMixup, ScatterSimulationMSC, ParticleSize,
+  EMSCDistortion, BatchEffect, InstrumentalBroadening, DeadBand,
+  Temperature, Moisture. Shared `aug_rng_utils.{c,h}` (NumPy-style uniform
+  / normal / integers / beta / permutation helpers) and `aug_interp`
+  (linear interpolation). 25 tests.
+- **Phase 18 — Augmenters: edge + splines + random (12 ops, 36 symbols)**:
+  DetectorRollOff, StrayLight, EdgeCurvature, TruncatedPeak,
+  EdgeArtifacts (combined wrapper with 4-bit flag selector), SplineSmooth,
+  SplineXPerturbations, SplineYPerturbations, SplineXSimplification
+  (v2-deferred — returns C4A_ERR_NOT_IMPLEMENTED), SplineCurveSimplification
+  (v2-deferred), RotateTranslate, RandomXOperation. Shared B-spline core
+  under `core/common/bspline.{c,h}`. Adds the internal-only
+  `c_api/rng_state_internal.hpp` (shared by `c_api_rng.cpp` and the four
+  augmenter wrappers). 12 tests.
+
+### Changed
+
+- `cpp/include/chemometrics4all/c4a.h` gains six new sections (§23-§28,
+  one per integrated phase) plus extended ABI guard-rail
+  `C4A_STATIC_ASSERT`s for the five new public enums. Previous §23 (ABI
+  guard rails) renumbered to §29.
+- `c_api_rng.cpp` refactored to include the new `rng_state_internal.hpp`
+  rather than defining the public RNG handle struct inline. The four
+  augmenter wrappers (`c_api_augmenters*.cpp`) now share that header
+  instead of re-declaring the struct bit-identically per TU.
+- `cpp/abi/expected_symbols_{linux,macos,windows}.txt` snapshot bumped
+  from 251 to 400 entries. `.github/workflows/abi-check.yml` comment
+  updated accordingly.
+
+### Surface delta (per `nm -D --defined-only`)
+
+- Symbols 251 → 400 (+149).
+- Tests 171 → 266 (+95).
+- ABI 1.7.0 → 1.8.0.
+
 ## [0.1.0+abi.1.7.0] — Phases 7-21 parallel batch (signal conversion, OSC/EPO, FlexiblePCA/SVD, resampling, splitters, filters, metrics, transfer metrics, FCK)
 
 ### Added

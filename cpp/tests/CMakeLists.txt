@@ -5,22 +5,28 @@
 
 add_executable(chemometrics4all_tests
     main.cpp
-    test_rng_pcg64.cpp
-    test_preprocessing_stateless.cpp
-    test_preprocessing_stateful.cpp
-    test_preprocessing_smoothing.cpp
-    test_preprocessing_baselines.cpp
-    test_preprocessing_signal_conversion.cpp
-    test_preprocessing_orthogonalization.cpp
-    test_preprocessing_feature_selection.cpp
-    test_preprocessing_resampling.cpp
-    test_splitters.cpp
-    test_filters_y.cpp
+    test_augmenters_noise_drift.cpp
+    test_augmenters_phase17.cpp
+    test_augmenters_phase18.cpp
+    test_augmenters_wavelength_spectral.cpp
+    test_fck.cpp
+    test_filter_x_outlier.cpp
     test_filters_meta.cpp
-    test_signal_type.cpp
+    test_filters_y.cpp
     test_metrics.cpp
-    test_transfer_metrics.cpp
-    test_fck.cpp)
+    test_preprocessing_baselines.cpp
+    test_preprocessing_feature_selection.cpp
+    test_preprocessing_orthogonalization.cpp
+    test_preprocessing_resampling.cpp
+    test_preprocessing_signal_conversion.cpp
+    test_preprocessing_smoothing.cpp
+    test_preprocessing_stateful.cpp
+    test_preprocessing_stateless.cpp
+    test_preprocessing_wavelets.cpp
+    test_rng_pcg64.cpp
+    test_signal_type.cpp
+    test_splitters.cpp
+    test_transfer_metrics.cpp)
 target_link_libraries(chemometrics4all_tests PRIVATE chemometrics4all_c)
 target_include_directories(chemometrics4all_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
