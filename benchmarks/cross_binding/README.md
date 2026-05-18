@@ -96,6 +96,8 @@ new benchmark baseline.
   registry-declared method oracle beyond tolerance.
 - External libraries are not pls4all bindings. Treat their binding parity
   fields as not applicable even if older CSVs contain legacy values.
+- Dashboard and static tables show one relevant marker per cell: reference
+  parity for C++/external rows, binding parity for internal pls4all bindings.
 - `NOT_IMPLEMENTED` is expected only for legacy fixed/all reference modes
   when a third-party library does not implement the algorithm.
 - In `--only-pls4all` runs, reference parity is evaluated from the stored

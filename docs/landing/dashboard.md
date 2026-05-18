@@ -13,12 +13,10 @@ documentation page for that algorithm.
 ## What you see at first load
 
 A table with one row per `(algorithm, n, p, threads)` cell and one
-column per backend. Each cell should show:
+column per backend. Each timed cell should show:
 
-- **binding parity** for pls4all rows, compared with the native C++
-  baseline;
-- **reference parity** for every successful row, compared with the
-  registry-declared method oracle; and
+- one parity marker: **reference parity** for C++ and external libraries,
+  or **binding parity** for internal pls4all bindings;
 - a **median time** (ms or s), formatted compactly.
 
 Hovering a cell reveals: the binding diff when relevant, the reference
@@ -110,8 +108,8 @@ scannable.
 - `ref_*` rows are merged into their dashboard columns with `ok`, `reason`,
   binding parity, reference parity, reference kind, timing and canonical
   flags propagated together.
-- Filters use the effective verdict: `binding_parity` for pls4all rows and
-  `reference_parity` for external libraries.
+- Filters use the effective verdict: `reference_parity` for C++ and
+  external library columns, `binding_parity` for internal pls4all bindings.
 - `--only-pls4all` CSVs do not schedule external oracle rows, but Gate 2 is
   still evaluated from stored `.reference_oracles` snapshots. Missing
   snapshots are setup failures that must be fixed by running the canonical

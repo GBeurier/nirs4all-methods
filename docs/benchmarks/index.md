@@ -8,7 +8,8 @@ successful implementation against the registry-declared external oracle.
 1. **Cross-binding parity + timing** — same algorithm, same data,
    pls4all bindings and external references in one matrix. For each
    `(algo, n, p, threads)` cell we report median wall-clock time and
-   both parity verdicts when the corresponding comparator was scheduled.
+   the relevant visible parity verdict: reference parity for C++/external
+   rows, binding parity for internal binding rows.
 
 2. **Accelerated backend timing** — same SIMPLS, libp4a built five
    ways (`ref`, `blas`, `omp`, `blas_omp`, `cuda`). Shows the speedup

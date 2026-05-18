@@ -1005,8 +1005,10 @@ def build_payload(results_dir: Path) -> dict:
     def _cell_effective_parity(cid: str, cell: dict) -> str | None:
         if cid == REF_COL_ID:
             return None
-        kind = (columns_by_id.get(cid, {}).get("kind") or "").lower()
-        if kind == "external":
+        column = columns_by_id.get(cid, {})
+        kind = (column.get("kind") or "").lower()
+        column_id = column.get("id") or cid
+        if kind in {"external", "reference"} or column_id.startswith("pls4all.cpp."):
             return cell.get("reference_parity") or cell.get("parity")
         return cell.get("binding_parity") or cell.get("parity")
 

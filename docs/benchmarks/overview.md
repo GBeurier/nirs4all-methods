@@ -9,9 +9,9 @@ pls4all has one benchmark matrix with two different parity questions:
 
 Those two questions must stay separate. An external library is not a
 pls4all binding, so it should not fail binding parity just because it
-uses a different convention. Conversely, a pls4all binding can be
-bit-identical to C++ and still fail reference parity if the C++ algorithm
-does not match the method oracle.
+uses a different convention. Conversely, a pls4all binding can match C++
+and still fail reference parity if the C++ algorithm does not match the
+method oracle.
 
 This page is the single explainer covering:
 
@@ -131,10 +131,12 @@ must be visible in the dashboard as relaxed/qualitative evidence.
 
 ## Reading benchmark tables
 
-Per-method pages and the dashboard should display both gates:
+Per-method pages and the dashboard display one relevant gate per timed cell:
 
-- **B** or the first icon: binding parity for pls4all rows.
-- **R** or the second icon: reference parity against the method oracle.
+- C++ and external library columns show **reference parity** against the
+  method oracle.
+- Internal pls4all binding columns show **binding parity** against the C++
+  baseline.
 
 For external libraries, the binding gate is not applicable; the reference
 gate is the meaningful one. A good external row can therefore be
@@ -147,8 +149,8 @@ canonical oracle for each method. It is provenance, not a timed backend.
 
 The May 2026 stabilization work fixed the main dual-gate reporting issues:
 external rows no longer carry a binding-parity verdict, dashboard/static
-tables render both gates, and `--only-pls4all` runs evaluate Gate 2 from a
-stored oracle snapshot. Remaining caveats:
+tables render only the relevant gate per cell, and `--only-pls4all` runs
+evaluate Gate 2 from a stored oracle snapshot. Remaining caveats:
 
 - Older CSVs may still contain legacy external `parity_*` values. Regenerate
   benchmark CSVs before treating dashboard totals as release evidence.

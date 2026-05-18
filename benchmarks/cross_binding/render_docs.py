@@ -4,8 +4,8 @@ Markdown page (docs/source/benchmarks/cross_binding.md).
 
 Layout: one section per (algo, threads) with a pivot table whose rows
 are dataset sizes and columns are backends. Each cell shows
-`<median_ms> <gate1_icon><gate2_icon>` where each icon is
-✓ / ⚠ / ✗ / ⏳ / —.
+`<median_ms> <gate_icon>` where the gate is reference parity for
+C++/external columns and binding parity for internal bindings.
 
 Footnote: collected versions per backend.
 """
@@ -236,29 +236,36 @@ def reference_parity_icon(row) -> str:
     return ICON_WARN if d < 10 * tol else ICON_FAIL
 
 
-def dual_parity_label(row) -> str:
-    """Compact two-icon label, e.g. `✓✓`, `✓✗`, `—✓`, ` ✗ — `.
+def uses_reference_gate(row) -> bool:
+    """Whether this row's visible/static verdict is reference parity."""
+    if row.get("backend") == "cpp":
+        return True
+    return not (row.get("kind") or "").lower().startswith("pls4all")
 
-    First icon = binding consistency (gate 1).
-    Second icon = external-reference validity (gate 2).
-    External libraries have no binding gate, so they display only the
-    reference-parity icon.
+
+def dual_parity_label(row) -> str:
+    """Compact one-icon label for the visible/static gate.
+
+    C++ and external libraries display reference parity. Internal
+    pls4all bindings display binding parity.
     """
-    if not (row.get("kind") or "").lower().startswith("pls4all"):
+    if uses_reference_gate(row):
         return reference_parity_icon(row)
-    return binding_parity_icon(row) + reference_parity_icon(row)
+    return binding_parity_icon(row)
 
 
 def effective_parity_icon(row) -> str:
     """Verdict to use for filtering/bolding a timing in static tables.
 
-    pls4all columns are judged by gate 1 (binding parity); external
-    libraries are judged by gate 2 (reference parity), so an external
-    binding-parity icon is never treated as a global verdict.
+    C++ and external libraries are judged by gate 2 (reference parity).
+    Internal bindings are judged by gate 1 (binding parity), so only the
+    meaningful gate drives bolding/filtering.
     """
-    if (row.get("kind") or "").lower().startswith("pls4all"):
-        return binding_parity_icon(row)
-    return reference_parity_icon(row)
+    return (
+        reference_parity_icon(row)
+        if uses_reference_gate(row)
+        else binding_parity_icon(row)
+    )
 
 
 def _is_true(v) -> bool:
@@ -371,9 +378,10 @@ def render(csv_path: Path, out_path: Path,
         page_intro = (
             "For every (algorithm × backend × dataset size × thread "
             "count) cell, we report the **median wall-clock time** "
-            "and the **parity verdict** vs a deterministic reference "
-            "backend. Same algorithm, same input bytes — different "
-            "implementations."
+            "and one visible **parity verdict**. C++/external columns "
+            "show reference parity; internal bindings show binding "
+            "parity. Every backend reads the same orchestrator-generated "
+            "CSV dataset."
         )
     out.append(page_intro + "\n")
     info = host_cpu_info()
@@ -394,10 +402,11 @@ def render(csv_path: Path, out_path: Path,
     out.append(f"| **Python**         | {info['python']} |\n")
 
     out.append("\n## How to read a cell\n")
-    out.append("Each cell shows `<median_ms> <gate1><gate2>`. Gate 1 is "
-                "binding consistency for pls4all bindings vs the native "
-                "C++ baseline; Gate 2 is external-reference validity vs "
-                "the method's canonical reference:\n")
+    out.append("Each cell shows `<median_ms> <gate>`. C++ and external "
+                "library cells use Gate 2, the reference parity against "
+                "the method's canonical oracle. Internal binding cells "
+                "use Gate 1, the binding parity against the native C++ "
+                "baseline:\n")
     out.append(f"- {ICON_OK} **exact/pass** — gate-specific tolerance passed")
     out.append(f"- {ICON_WARN} **drift** — finite mismatch, below 10× the "
                 "method's gate-2 tolerance or below the binding drift band")
@@ -406,16 +415,15 @@ def render(csv_path: Path, out_path: Path,
     out.append(f"- `—` see *Why a cell is empty* below\n")
 
     out.append("**Bold** = fastest cell on the row, **counted only among "
-                f"cells whose relevant gate is {ICON_OK}**. For pls4all "
-                "columns that is Gate 1; for external libraries it is "
-                "Gate 2. Drift / divergent / empty cells never carry the "
-                "bold.\n")
+                f"cells whose relevant gate is {ICON_OK}**. For internal "
+                "bindings that is Gate 1; for C++ and external libraries "
+                "it is Gate 2. Drift / divergent / empty cells never carry "
+                "the bold.\n")
 
     out.append(f"Timing is the **median of {run_text} run(s)**; the first "
                 "run is discarded as warmup when `n_runs >= 3`. All "
-                "backends in a single cell read "
-                "the SAME orchestrator-generated CSV so cross-language "
-                "input bytes are bit-identical. See "
+                "backends in a single cell read the same "
+                "orchestrator-generated CSV dataset. See "
                 "[methodology.md](methodology.md) for the full details.\n")
 
     out.append("\n## Why a cell is empty (`—`)\n")
@@ -633,9 +641,8 @@ def render(csv_path: Path, out_path: Path,
     out.append("- Gate 1 tolerance: 1e-6 max-abs-diff; Gate 2 tolerance: "
                 "`MethodSpec.rmse_rel_tol` (also emitted as "
                 "`reference_parity_tolerance` by newer CSVs)")
-    out.append("- All backends read the **same** orchestrator-generated CSV "
-                "(`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`) "
-                "so input data is bit-identical across languages")
+    out.append("- All backends read the same orchestrator-generated CSV dataset "
+                "(`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`)")
     out.append(f"- {run_text} run(s) per cell, first discarded as warmup "
                 "when `n_runs >= 3`, median reported")
     out.append("- Per-cell timeout: 300 s")

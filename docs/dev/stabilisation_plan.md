@@ -34,9 +34,9 @@ Stabilization status:
   longer binding-parity failures, reference parity compares all successful
   rows against the canonical oracle, and `--only-pls4all` consumes stored
   oracle snapshots instead of skipping Gate 2.
-- P1 dashboard/static docs updated to render the two gates and to merge
-  canonical `ref_*` rows atomically. External cells render only the
-  reference gate because they have no binding gate.
+- P1 dashboard/static docs updated to render one relevant gate per cell and
+  to merge canonical `ref_*` rows atomically. C++ and external cells render
+  reference parity; internal bindings render binding parity.
 - P2 Python selector smoke fixed for UVE, and tier-2 selector wrappers now
   fail closed on unknown registry parameters. Python/R/MATLAB selector
   ValidationPlan defaults are aligned to the canonical 3-fold contiguous
@@ -73,13 +73,13 @@ Stabilization status:
 1. Update `docs/_extras/build_landing.py` so canonical `ref_*` rows replace
    stale legacy cells atomically: `ok`, `reason`, both parity verdicts,
    timings, reference metadata and canonical flags.
-2. Update dashboard filtering to use `reference_parity` for external
-   libraries and `binding_parity` for pls4all rows.
+2. Update dashboard filtering to use `reference_parity` for C++ and external
+   libraries, and `binding_parity` for internal pls4all bindings.
 3. Propagate method tolerance into CSV/JSON so drift/divergent thresholds
    use "10x method tolerance" instead of a hardcoded `rmse_rel < 10`.
-4. Render both gates in static Markdown tables, or state clearly that a
-   table is binding-only. Prefer using the existing `dual_parity_label()`
-   helper instead of one-icon legacy output.
+4. Render the relevant gate in static Markdown tables: reference parity for
+   C++/external rows, binding parity for internal rows. Prefer using the
+   existing `dual_parity_label()` helper instead of ad hoc legacy output.
 5. Exclude the synthetic reference column from timed-cell statistics and
    preset matching.
 6. Keep `sphinx-design` enabled and load `tab-combo.js`; otherwise the

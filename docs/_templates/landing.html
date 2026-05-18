@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>pls4all · cross-binding benchmark</title>
-  <meta name="description" content="Interactive cross-binding benchmark dashboard for the pls4all PLS/NIRS library. Same algorithm, same input bytes, 17 implementations across C++, Python, R, MATLAB.">
+  <meta name="description" content="Interactive cross-binding benchmark dashboard for the pls4all PLS/NIRS library. Same algorithm, same generated data, 17 implementations across C++, Python, R, MATLAB.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500;600;700;800&family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -778,10 +778,8 @@
       font-size: 9px;
       opacity: 0.75;
     }
-    /* Compact parity markers. For pls4all cells, .parity is gate 1
-       (binding vs cpp) and .ref-parity is gate 2 (vs external ref).
-       For external cells, the gate-2 marker is rendered in the .parity
-       slot because there is no binding gate. */
+    /* Compact parity marker. C++ and external cells show reference parity;
+       internal binding cells show binding parity. */
     .ref-parity,
     .parity {
       display: inline-block;
@@ -1164,7 +1162,7 @@
         <div>
           <div class="wordmark"><span class="accent">pls4all</span><span class="sep">/</span><span class="light">cross-binding benchmark</span></div>
           <div class="tagline" id="tagline">
-            same algorithm <span class="dot">·</span> same input bytes <span class="dot">·</span> <span id="tagline-count">—</span> implementations
+            same algorithm <span class="dot">·</span> same generated data <span class="dot">·</span> <span id="tagline-count">—</span> implementations
           </div>
         </div>
       </div>
@@ -1293,7 +1291,7 @@
     <ul>
       <li>Reference: <code>pls4all.cpp</code> native column <span id="parity-ref-name">(resolved from data)</span></li>
       <li>Parity tolerance: 1e-6 exact, 1e-3 drift threshold</li>
-      <li>Every backend reads the <b>same</b> orchestrator-generated CSV — bit-identical input bytes</li>
+      <li>Every backend reads the <b>same</b> orchestrator-generated CSV dataset</li>
       <li>5 runs per cell, first discarded as warmup, median reported</li>
       <li>Per-cell timeout: 300s</li>
       <li>Thread control via <code>OMP_NUM_THREADS</code> · <code>OPENBLAS_NUM_THREADS</code> · <code>MKL_NUM_THREADS</code> · <code>BLIS_NUM_THREADS</code> + binding-specific thread controls</li>
@@ -1489,10 +1487,16 @@ function applyRowFilters() {
   });
 }
 
+function usesReferenceGate(meta) {
+  if (!meta) return false;
+  const kind = ((meta && meta.kind) || '').toLowerCase();
+  const id = (meta && meta.id) || '';
+  return kind === 'external' || kind === 'reference' || id.startsWith('pls4all.cpp.');
+}
+
 function effectiveParity(cell, meta) {
   if (!cell) return 'not_available';
-  const kind = ((meta && meta.kind) || '').toLowerCase();
-  if (kind === 'external' || kind === 'reference') {
+  if (usesReferenceGate(meta)) {
     return normalizeParityKey(cell.reference_parity || cell.parity || 'not_available');
   }
   return normalizeParityKey(cell.binding_parity || cell.parity || 'not_available');
@@ -2036,21 +2040,13 @@ function renderTable() {
         } else {
           display = `<span class="cell-value ${fastCls}">${densifyFmt(c.fmt)}</span>`;
         }
-        const metaKind = ((meta && meta.kind) || '').toLowerCase();
-        const isExternal = metaKind === 'external' || metaKind === 'reference';
-        const bindingParity = c.binding_parity || c.parity || 'not_available';
-        const refParity = c.reference_parity || c.parity;
-        const showRefParity = refParity && refParity !== 'not_available';
-        // External libraries have no binding gate: use the main marker
-        // slot for the reference gate. pls4all cells keep both compact
-        // markers: binding first, reference second when executable.
-        const parityHtml = isExternal
-          ? (showRefParity
-              ? `<span class="parity p-${refParity}" title="vs canonical external reference (${c.reference_kind || 'external'})">${PARITY_ICON[refParity] || ''}</span>`
-              : '')
-          : `<span class="parity p-${bindingParity}" title="binding parity vs cpp">${PARITY_ICON[bindingParity] || ''}</span>`;
-        const refParityHtml = (!isExternal && showRefParity)
-          ? `<span class="ref-parity p-${refParity}" title="reference parity vs canonical external reference (${c.reference_kind || 'external'})">${PARITY_ICON[refParity] || ''}</span>`
+        const usesRefGate = usesReferenceGate(meta);
+        const markerParity = effectiveParity(c, meta);
+        const markerTitle = usesRefGate
+          ? `reference parity vs canonical external reference (${c.reference_kind || 'external'})`
+          : 'binding parity vs cpp';
+        const parityHtml = markerParity !== 'not_available'
+          ? `<span class="parity p-${markerParity}" title="${escAttr(markerTitle)}">${PARITY_ICON[markerParity] || ''}</span>`
           : '';
         // Assemble cell classes.
         // - Row-overall fastest gets the phosphor glow background.
@@ -2069,7 +2065,7 @@ function renderTable() {
           tdCls.push('cell-lang-best', `lang-${langSlug}`);
         }
         if (c.is_canonical_reference) tdCls.push('cell-canonical-ref');
-        tr += `<td class="${tdCls.join(' ')}">${display}${parityHtml}${refParityHtml}</td>`;
+        tr += `<td class="${tdCls.join(' ')}">${display}${parityHtml}</td>`;
       }
       tr += `</tr>`;
       body.push(tr);

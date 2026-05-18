@@ -21,7 +21,7 @@ _CSV: `tmppny9evr6.csv` (2770 cells)_
 
 ## How to read a cell
 
-Each cell shows `<median_ms> <gate1><gate2>`. Gate 1 is binding consistency for pls4all bindings vs the native C++ baseline; Gate 2 is external-reference validity vs the method's canonical reference:
+Each cell shows `<median_ms> <gate>`. C++ and external library cells use Gate 2, the reference parity against the method's canonical oracle. Internal binding cells use Gate 1, the binding parity against the native C++ baseline:
 
 - ✓ **exact/pass** — gate-specific tolerance passed
 - ⚠ **drift** — finite mismatch, below 10× the method's gate-2 tolerance or below the binding drift band
@@ -29,9 +29,9 @@ Each cell shows `<median_ms> <gate1><gate2>`. Gate 1 is binding consistency for 
 - ⏳ cell timed out (300 s wall-clock)
 - `—` see *Why a cell is empty* below
 
-**Bold** = fastest cell on the row, **counted only among cells whose relevant gate is ✓**. For pls4all columns that is Gate 1; for external libraries it is Gate 2. Drift / divergent / empty cells never carry the bold.
+**Bold** = fastest cell on the row, **counted only among cells whose relevant gate is ✓**. For internal bindings that is Gate 1; for C++ and external libraries it is Gate 2. Drift / divergent / empty cells never carry the bold.
 
-Timing is the **median of 4 run(s)**; the first run is discarded as warmup when `n_runs >= 3`. All backends in a single cell read the SAME orchestrator-generated CSV so cross-language input bytes are bit-identical. See [methodology.md](methodology.md) for the full details.
+Timing is the **median of 4 run(s)**; the first run is discarded as warmup when `n_runs >= 3`. All backends in a single cell read the same orchestrator-generated CSV dataset. See [methodology.md](methodology.md) for the full details.
 
 
 ## Why a cell is empty (`—`)
@@ -658,7 +658,7 @@ Each column in the per-algorithm tables above is one of the entries below. Colum
 - Gate 1 reference: `cpp` cell at 1 thread (libp4a via ctypes), or `python_tier1` when `cpp` is unavailable for an algorithm
 - Gate 2 reference: the registry-declared canonical external reference for the method
 - Gate 1 tolerance: 1e-6 max-abs-diff; Gate 2 tolerance: `MethodSpec.rmse_rel_tol` (also emitted as `reference_parity_tolerance` by newer CSVs)
-- All backends read the **same** orchestrator-generated CSV (`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`) so input data is bit-identical across languages
+- All backends read the same orchestrator-generated CSV dataset (`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`)
 - 4 run(s) per cell, first discarded as warmup when `n_runs >= 3`, median reported
 - Per-cell timeout: 300 s
 - Thread control via `OMP_NUM_THREADS = OPENBLAS_NUM_THREADS = MKL_NUM_THREADS = BLIS_NUM_THREADS` set in the subprocess env, plus `Context.num_threads` for Python pls4all and `maxNumCompThreads()` for Octave
