@@ -23,7 +23,14 @@ add_library(chemometrics4all_core OBJECT
     core/status.cpp
     core/version.cpp
     core/common/rng_pcg64.c
-    core/common/ziggurat.c)
+    core/common/ziggurat.c
+    core/preprocessing/scatter/snv.c
+    core/preprocessing/scatter/local_snv.c
+    core/preprocessing/scatter/robust_snv.c
+    core/preprocessing/scatter/area_normalization.c
+    core/preprocessing/scaling/normalize.c
+    core/preprocessing/scaling/simple_scale.c
+    core/preprocessing/scaling/log_transform.c)
 target_include_directories(chemometrics4all_core
     PUBLIC  ${PROJECT_SOURCE_DIR}/cpp/include
             ${PROJECT_BINARY_DIR}/generated
@@ -55,6 +62,7 @@ chemometrics4all_add_warnings(chemometrics4all_core)
 set(_chemometrics4all_c_sources
     c_api/c_api_context.cpp
     c_api/c_api_matrix.cpp
+    c_api/c_api_preprocessing.cpp
     c_api/c_api_rng.cpp
     c_api/c_api_version.cpp)
 

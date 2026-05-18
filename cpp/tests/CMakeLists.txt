@@ -5,7 +5,8 @@
 
 add_executable(chemometrics4all_tests
     main.cpp
-    test_rng_pcg64.cpp)
+    test_rng_pcg64.cpp
+    test_preprocessing_stateless.cpp)
 target_link_libraries(chemometrics4all_tests PRIVATE chemometrics4all_c)
 target_include_directories(chemometrics4all_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}

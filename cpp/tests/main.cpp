@@ -9,6 +9,10 @@
 // point below is declared there and links via the same executable.
 void register_rng_pcg64_tests(c4a_testing::Runner& r);
 
+// Phase 2 — stateless preprocessing parity tests live in
+// test_preprocessing_stateless.cpp.
+void register_preprocessing_stateless_tests(c4a_testing::Runner& r);
+
 namespace {
 
 void test_version_string_nonempty() {
@@ -66,7 +70,7 @@ void test_backend_reference_cpu_available() {
 }  // namespace
 
 int main() {
-    c4a_testing::Runner r("phase-0-smoke");
+    c4a_testing::Runner r("chemometrics4all");
     r.run("version_string_nonempty",            test_version_string_nonempty);
     r.run("abi_version_compatible_with_header", test_abi_version_compatible_with_header);
     r.run("status_strings_nonnull",             test_status_strings_nonnull);
@@ -75,5 +79,6 @@ int main() {
     r.run("dtype_sizes",                        test_dtype_sizes);
     r.run("backend_reference_cpu_available",    test_backend_reference_cpu_available);
     register_rng_pcg64_tests(r);
+    register_preprocessing_stateless_tests(r);
     return r.finalize();
 }

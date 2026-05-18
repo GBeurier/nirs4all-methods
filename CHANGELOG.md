@@ -6,6 +6,45 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.0+abi.1.2.0] — Phase 2 stateless preprocessings
+
+### Added
+
+- **Seven stateless preprocessing operators** with bit-exact `nirs4all` 0.8.x / `numpy` 1.26.4 parity:
+  - **SNV** (`c4a_pp_snv_*`) — row-wise mean / std normalisation with configurable `with_mean`, `with_std`, `ddof`.
+  - **LocalSNV** (`c4a_pp_lsnv_*`) — sliding-window SNV with `reflect` / `edge` / `constant` padding and cumsum-based moving statistics matching `nirs4all.LocalStandardNormalVariate`.
+  - **RobustSNV** (`c4a_pp_rnv_*`) — median + `k * MAD` normalisation with optional center / scale, in-place quickselect median.
+  - **AreaNormalization** (`c4a_pp_area_*`) — per-row division by `sum` / `abs_sum` / `trapz` area (trapezoidal integration with unit spacing, pair-sum form matching `np.trapz`).
+  - **Normalize** (`c4a_pp_normalize_*`) — column-wise L2-norm scaling or user-defined-range scaling.
+  - **SimpleScale** (`c4a_pp_simple_scale_*`) — column-wise min-max to `[0, 1]`.
+  - **LogTransform** (`c4a_pp_log_*`) — element-wise `log(X + δ)` with optional fit-time auto-offset and arbitrary base.
+- **C engines** under `cpp/src/core/preprocessing/{scatter,scaling}/` (7 `.c` + `.h` pairs). Pure ISO C11, no third-party dependencies, all accumulations preserve NumPy's left-to-right rounding order.
+- **C ABI wrappers** in `cpp/src/c_api/c_api_preprocessing.cpp` — 21 new symbols (3 × 7 operators: `create / destroy / transform`), each wrapped in `try` / `catch` so no C++ exception ever crosses the boundary. Input validation enforces row-major contiguous F64 matrix views and matching output shape.
+- **Parity fixtures** (`parity/fixtures/{snv,lsnv,rnv,area_norm,normalize,simple_scale,log_transform}_v1.json`) generated from a deterministic 50 × 200 NIR-shaped spectrum block (PCG64 seed=20260518); doubles encoded as big-endian hex to avoid JSON float-formatting loss.
+- **Fixture generator** `parity/python_generator/scripts/generate_phase2_fixtures.py` — loads nirs4all's reference operators directly from source via `importlib` to avoid heavyweight package imports.
+- **14 new tests** in `cpp/tests/test_preprocessing_stateless.cpp` (2 per operator: a lifecycle smoke test + a parity sweep over every fixture case). Tolerance: bit-equality OR `1e-12` absolute OR `1e-13` relative.
+- **Documentation** under `docs/algorithms/` — one Markdown page per operator with algorithm, parameters, numerical contract, and reference.
+
+### Numerical parity findings
+
+- `numpy.mean / numpy.std` and `nirs4all`'s `X / std` evaluate divisions per-element. Replacing them with `X * (1 / std)` introduces single-ULP drift on certain inputs — all kernels use true division to preserve byte-for-byte parity.
+- `numpy.trapz` / `scipy.integrate.trapezoid` with unit spacing computes `0.5 * sum(x[:-1] + x[1:])`, not `sum(x) - (x[0] + x[-1]) / 2`. The two forms are algebraically equal but FP-distinct; we use the pair-sum form.
+- `nirs4all.RobustStandardNormalVariate` evaluates the two `if` blocks (center, scale) sequentially: when `with_center=False`, MAD is computed on `|X|` (raw), not on `|X - median|`. Reproducing this exact branching was the only RNV bug found during parity tuning.
+
+### ABI
+
+- Project version stays 0.1.0; **ABI bumps to 1.2.0** (additive: 21 new symbols, no breaking changes). Total exported symbols: 36 → **57**.
+
+### Tests
+
+- 34/34 passing: 7 phase-0 smoke + 13 phase-1 RNG + 14 phase-2 preprocessing.
+
+### Reviews
+
+- **Opus post-review** at `docs/reviews/phase-2/opus-post.md`. Verdict: REVISE → 3 high-confidence fixes applied: (1) SNV flat-row threshold tightened from `>= 1e-15` to `!= 0` to match nirs4all exactly, (2) `c4a_pp_lsnv_pad_mode_t` and `c4a_pp_area_method_t` enums hoisted from internal headers into public `c4a.h`, (3) LogTransform per-call recomputation behaviour documented in c4a.h.
+- **Codex Phases 1+2 review** at `docs/reviews/phase-2/codex-post.md`. Verdict: ACCEPT with Phase 3 prerequisites. Applied: test Runner renamed to `chemometrics4all`, `parity/python_generator/pyproject.toml` added with numpy 1.26.4 pin, `cpp/src/c_api/c4a_linux.map` version script added (defense-in-depth on top of `-fvisibility=hidden`). Confirmed all 57 exports are `c4a_*`.
+- Per user direction, **Codex review runs every two phases** in addition to per-phase Opus reviews.
+
 ## [0.1.0+abi.1.1.0] — Phase 1 PCG64 RNG
 
 ### Added

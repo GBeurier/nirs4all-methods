@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chemometrics4all-parity"
+version = "0.1.0"
+description = "Pinned-reference fixture generator for chemometrics4all parity gates."
+requires-python = ">=3.10"
+dependencies = [
+    "numpy==1.26.4",
+    "scipy==1.11.4",
+    "scikit-learn==1.4.2",
+    "PyWavelets==1.6.0",
+    "pybaselines==1.1.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7",
+    "ruff>=0.4",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"

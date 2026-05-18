@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 /*
- * chemometrics4all — public C ABI v1.1.0.
+ * chemometrics4all — public C ABI v1.2.0.
  *
  * Stability: experimental until v1.0.0. Every breaking change before that
  * version bumps the ABI MAJOR (see c4a_version.h). After v1.0.0 the ABI
@@ -2045,6 +2045,122 @@ C4A_API c4a_status_t c4a_rng_pcg64_standard_normal_fill(
 
 C4A_API c4a_status_t c4a_rng_pcg64_advance(c4a_rng_pcg64_state_t* rng,
                                             uint64_t delta);
+
+/* ============================================================================
+ * §-Phase 2 — Stateless scatter / scaling preprocessings
+ * ============================================================================
+ *
+ * Seven stateless row- or column-wise transforms with bit-exact NumPy
+ * parity (where applicable) against nirs4all 0.8.x. Each operator exposes a
+ * `create / transform / destroy` triplet:
+ *
+ *   - `_create(out, ...)` allocates an opaque handle initialised with the
+ *     constructor parameters; writes NULL to *out on every failure.
+ *   - `_transform(handle, X_view, out_view)` applies the operator on the
+ *     input matrix view and writes the result into the output matrix view.
+ *     Both views must be row-major contiguous, F64, same shape; the X and
+ *     out buffers may overlap (in-place is supported).
+ *   - `_destroy(handle)` releases the handle. NULL-safe.
+ *
+ * Status semantics follow the universal rules at the top of this header.
+ * Matrix-view validation may additionally return C4A_ERR_DTYPE_MISMATCH
+ * (non-F64), C4A_ERR_STRIDE_INVALID (non-contiguous row-major), or
+ * C4A_ERR_SHAPE_MISMATCH (X and out shapes disagree).
+ */
+
+/* ---------- SNV (Standard Normal Variate) -------------------------------- */
+typedef struct c4a_pp_snv_handle_t c4a_pp_snv_handle_t;
+C4A_API c4a_status_t c4a_pp_snv_create(c4a_pp_snv_handle_t** out,
+                                        int with_mean, int with_std, int ddof);
+C4A_API void         c4a_pp_snv_destroy(c4a_pp_snv_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_snv_transform(const c4a_pp_snv_handle_t* handle,
+                                           c4a_matrix_view_t X,
+                                           c4a_matrix_view_t out);
+
+/* ---------- LocalSNV (sliding-window SNV) -------------------------------- */
+typedef struct c4a_pp_lsnv_handle_t c4a_pp_lsnv_handle_t;
+typedef enum c4a_pp_lsnv_pad_mode_t {
+    C4A_PP_LSNV_PAD_REFLECT  = 0,
+    C4A_PP_LSNV_PAD_EDGE     = 1,
+    C4A_PP_LSNV_PAD_CONSTANT = 2
+} c4a_pp_lsnv_pad_mode_t;
+/* `window` must be an odd integer >= 3. */
+C4A_API c4a_status_t c4a_pp_lsnv_create(c4a_pp_lsnv_handle_t** out,
+                                         int32_t window, int32_t pad_mode,
+                                         double constant_value);
+C4A_API void         c4a_pp_lsnv_destroy(c4a_pp_lsnv_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_lsnv_transform(const c4a_pp_lsnv_handle_t* handle,
+                                            c4a_matrix_view_t X,
+                                            c4a_matrix_view_t out);
+
+/* ---------- RobustSNV (median + k * MAD) --------------------------------- */
+typedef struct c4a_pp_rnv_handle_t c4a_pp_rnv_handle_t;
+C4A_API c4a_status_t c4a_pp_rnv_create(c4a_pp_rnv_handle_t** out,
+                                        int with_center, int with_scale,
+                                        double k);
+C4A_API void         c4a_pp_rnv_destroy(c4a_pp_rnv_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_rnv_transform(const c4a_pp_rnv_handle_t* handle,
+                                           c4a_matrix_view_t X,
+                                           c4a_matrix_view_t out);
+
+/* ---------- AreaNormalization -------------------------------------------- */
+typedef struct c4a_pp_area_handle_t c4a_pp_area_handle_t;
+typedef enum c4a_pp_area_method_t {
+    C4A_PP_AREA_SUM     = 0,
+    C4A_PP_AREA_ABS_SUM = 1,
+    C4A_PP_AREA_TRAPZ   = 2
+} c4a_pp_area_method_t;
+C4A_API c4a_status_t c4a_pp_area_create(c4a_pp_area_handle_t** out,
+                                         int32_t method);
+C4A_API void         c4a_pp_area_destroy(c4a_pp_area_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_area_transform(const c4a_pp_area_handle_t* handle,
+                                            c4a_matrix_view_t X,
+                                            c4a_matrix_view_t out);
+
+/* ---------- Normalize (column-wise) -------------------------------------- */
+typedef struct c4a_pp_normalize_handle_t c4a_pp_normalize_handle_t;
+/* `(feature_min, feature_max) == (-1, 1)` selects linalg-norm mode; any
+ * other pair selects user-defined-range mode. */
+C4A_API c4a_status_t c4a_pp_normalize_create(c4a_pp_normalize_handle_t** out,
+                                              double feature_min,
+                                              double feature_max);
+C4A_API void         c4a_pp_normalize_destroy(c4a_pp_normalize_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_normalize_transform(
+    const c4a_pp_normalize_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+
+/* ---------- SimpleScale (column-wise min-max → [0, 1]) ------------------- */
+typedef struct c4a_pp_simple_scale_handle_t c4a_pp_simple_scale_handle_t;
+C4A_API c4a_status_t c4a_pp_simple_scale_create(
+    c4a_pp_simple_scale_handle_t** out);
+C4A_API void         c4a_pp_simple_scale_destroy(
+    c4a_pp_simple_scale_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_simple_scale_transform(
+    const c4a_pp_simple_scale_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+
+/* ---------- LogTransform ------------------------------------------------- */
+typedef struct c4a_pp_log_handle_t c4a_pp_log_handle_t;
+/* `base == 0.0` selects the natural logarithm. `base` must be > 0 and != 1
+ * otherwise. `min_value` must be > 0 (positive clamp target).
+ *
+ * When `auto_offset != 0`, the offset that makes the post-offset minimum
+ * equal to `min_value` is recomputed on EVERY call to `_transform` against
+ * the data seen by that call (mirroring nirs4all's `fit_transform`). This
+ * means calling `_transform` twice with different X values may yield
+ * outputs that don't share a common baseline. For sklearn-style fit-once /
+ * transform-many semantics, prefer `auto_offset = 0` with an explicit
+ * `offset`. The proper `_fit/_transform` split lands in Phase 3 once the
+ * stateful-operator ABI contract is finalised. */
+C4A_API c4a_status_t c4a_pp_log_create(c4a_pp_log_handle_t** out,
+                                        double base, double offset,
+                                        int auto_offset, double min_value);
+C4A_API void         c4a_pp_log_destroy(c4a_pp_log_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_log_transform(const c4a_pp_log_handle_t* handle,
+                                           c4a_matrix_view_t X,
+                                           c4a_matrix_view_t out);
 
 #ifdef __cplusplus
 }  /* extern "C" */
