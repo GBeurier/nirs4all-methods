@@ -1,0 +1,2 @@
+include README.md
+recursive-include src/chemometrics4all/lib *

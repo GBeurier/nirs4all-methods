@@ -1,0 +1,62 @@
+# SPDX-License-Identifier: CECILL-2.1
+#
+# Build glue for the chemometrics4all R extension. The native .so for
+# this package links against libc4a; both the public chemometrics4all/
+# headers and the libc4a binary itself must be discoverable at compile
+# / link time.
+#
+# Two environment variables control resolution:
+#
+#   CHEMOMETRICS4ALL_LIB_PATH   absolute path to libc4a.so[.X[.Y.Z]]
+#                               (required unless libc4a is on the default
+#                               loader search path AND the headers are in
+#                               /usr/include / equivalent system paths)
+#
+#   CHEMOMETRICS4ALL_INCLUDE    directory containing chemometrics4all/c4a.h
+#                               (default: <repo>/cpp/include with the build
+#                               directory containing the generated
+#                               c4a_export.h added explicitly).
+#
+# When invoked from inside the chemometrics4all source tree (for development
+# / CI), both variables are auto-derived from CHEMOMETRICS4ALL_LIB_PATH:
+#
+#   include path = $(dirname CHEMOMETRICS4ALL_LIB_PATH)/../../../cpp/include
+#                  +
+#                  $(dirname CHEMOMETRICS4ALL_LIB_PATH)/../../generated
+#
+# A CRAN-style "fat" install would ship libc4a under inst/lib/, pre-built
+# headers under inst/include/, and rely on the install-time `configure`
+# script (not provided here — out of scope for Phase 23).
+
+# ---- 1. Locate libc4a and its headers ----
+ifeq ($(CHEMOMETRICS4ALL_LIB_PATH),)
+$(error CHEMOMETRICS4ALL_LIB_PATH is not set. Point it at libc4a.so[.X.Y.Z].)
+endif
+
+# Directory containing libc4a.so. We use `realpath` on the file (not its
+# `dir` — which retains the trailing slash and confuses `..`). The
+# resulting `C4A_LIB_DIR` has no trailing slash so the `..` arithmetic
+# below behaves intuitively.
+C4A_LIB_DIR := $(patsubst %/,%,$(dir $(realpath $(CHEMOMETRICS4ALL_LIB_PATH))))
+
+# If CHEMOMETRICS4ALL_INCLUDE isn't set, infer it from the lib path:
+# we expect the typical in-tree layout
+#   <repo>/build/<preset>/cpp/src/libc4a.so.X.Y.Z
+# alongside
+#   <repo>/cpp/include/chemometrics4all/c4a.h
+#   <repo>/build/<preset>/generated/chemometrics4all/c4a_export.h
+ifeq ($(CHEMOMETRICS4ALL_INCLUDE),)
+# build/<preset>/cpp/src -> build/<preset> -> build -> repo root
+C4A_BUILD_ROOT := $(abspath $(C4A_LIB_DIR)/../..)
+C4A_REPO_ROOT  := $(abspath $(C4A_LIB_DIR)/../../../..)
+CHEMOMETRICS4ALL_INCLUDE := $(C4A_REPO_ROOT)/cpp/include
+CHEMOMETRICS4ALL_GENERATED := $(C4A_BUILD_ROOT)/generated
+else
+CHEMOMETRICS4ALL_GENERATED := $(CHEMOMETRICS4ALL_INCLUDE)
+endif
+
+PKG_CPPFLAGS = -I"$(CHEMOMETRICS4ALL_INCLUDE)" -I"$(CHEMOMETRICS4ALL_GENERATED)"
+PKG_CFLAGS   = -std=c11 -fvisibility=hidden
+PKG_LIBS     = -L"$(C4A_LIB_DIR)" -lc4a -Wl,-rpath,"$(C4A_LIB_DIR)"
+
+OBJECTS = r_methods.o

@@ -55,15 +55,38 @@ jobs:
         run: python parity/python_generator/scripts/run_parity_gate.py \
                --build-dir build/ci-linux-gcc12-release
 
-      - name: Run binding-parity (Stage 4, no-op until bindings exist)
+      - name: Run binding-parity (Stage 4, Python)
         # Stage 4: per-binding bit-exact check vs libc4a.
         # The comparator (parity/binding_parity.py) is in place; the
         # actual smoke runner ships with each language binding (e.g.
         # bindings/python/tests/test_binding_parity.py for Phase 22).
-        # This step is a no-op until at least one binding ships.
+        # This step is a no-op until the Python binding ships.
         if: hashFiles('bindings/python/**/*.py') != ''
         run: |
           python -m bindings.python.tests.test_binding_parity
+
+      - name: Set up R toolchain (Phase 23)
+        # R toolchain only needed when the R binding source tree exists.
+        if: hashFiles('bindings/r/chemometrics4all/R/*.R') != ''
+        run: |
+          sudo apt-get install -y --no-install-recommends r-base r-base-dev
+
+      - name: Install R binding-parity deps (jsonlite + testthat)
+        if: hashFiles('bindings/r/chemometrics4all/R/*.R') != ''
+        run: |
+          # CRAN-only dependencies of the R binding.
+          R --no-save --no-restore -e \
+            'install.packages(c("jsonlite", "testthat"), repos = "http://cran.r-project.org")'
+
+      - name: Run binding-parity (Stage 4, R)
+        if: hashFiles('bindings/r/chemometrics4all/R/*.R') != ''
+        env:
+          CHEMOMETRICS4ALL_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libc4a.so.1.9.0
+          CHEMOMETRICS4ALL_FIXTURE_DIR: ${{ github.workspace }}/parity/fixtures
+        run: |
+          R CMD INSTALL --install-tests bindings/r/chemometrics4all
+          cd "$(R RHOME)/library/chemometrics4all/tests"
+          Rscript testthat.R
 
       - name: CLI selfcheck
         run: ./build/ci-linux-gcc12-release/cpp/cli/chemometrics4all_cli --selfcheck

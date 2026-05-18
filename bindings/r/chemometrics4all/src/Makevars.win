@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: CECILL-2.1
+#
+# Windows variant of Makevars. The chemometrics4all/c4a.h header path
+# and the libc4a import library must be set via CHEMOMETRICS4ALL_LIB_PATH
+# (full path to c4a.dll or c4a.lib) and CHEMOMETRICS4ALL_INCLUDE.
+
+ifeq ($(CHEMOMETRICS4ALL_LIB_PATH),)
+$(error CHEMOMETRICS4ALL_LIB_PATH is not set. Point it at libc4a.dll or c4a.lib.)
+endif
+
+C4A_LIB_DIR := $(dir $(CHEMOMETRICS4ALL_LIB_PATH))
+
+ifeq ($(CHEMOMETRICS4ALL_INCLUDE),)
+C4A_BUILD_ROOT := $(abspath $(C4A_LIB_DIR)/../..)
+C4A_REPO_ROOT  := $(abspath $(C4A_LIB_DIR)/../../..)
+CHEMOMETRICS4ALL_INCLUDE := $(C4A_REPO_ROOT)/cpp/include
+CHEMOMETRICS4ALL_GENERATED := $(C4A_BUILD_ROOT)/generated
+else
+CHEMOMETRICS4ALL_GENERATED := $(CHEMOMETRICS4ALL_INCLUDE)
+endif
+
+PKG_CPPFLAGS = -I"$(CHEMOMETRICS4ALL_INCLUDE)" -I"$(CHEMOMETRICS4ALL_GENERATED)"
+PKG_CFLAGS   = -std=c11
+PKG_LIBS     = -L"$(C4A_LIB_DIR)" -lc4a
+
+OBJECTS = r_methods.o

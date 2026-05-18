@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: CECILL-2.1
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chemometrics4all"
+version = "0.1.0"
+description = "Python ctypes binding for libc4a (chemometrics4all)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "CECILL-2.1" }
+authors = [
+    { name = "chemometrics4all contributors" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+]
+dependencies = [
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+chemometrics4all = ["lib/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
