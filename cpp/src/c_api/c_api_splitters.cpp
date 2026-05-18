@@ -18,11 +18,11 @@
 //     `c4a_split_result_t*`. The result must be destroyed via
 //     `c4a_split_result_destroy` after consumption.
 //
-// The opaque public types `c4a_split_<op>_t` and `c4a_split_result_t` are
-// declared in c4a.h (§15). The definitions live in the engine headers
+// The opaque public types `c4a_split_<op>_handle_t` and `c4a_split_result_t`
+// are declared in c4a.h (§17). The definitions live in the engine headers
 // and this TU.
 //
-// NOTE: c4a.h declarations for §15 are appended centrally by the
+// NOTE: c4a.h declarations for §17 are appended centrally by the
 // integration step that ships this phase. This wrapper assumes the public
 // surface is already in place at build time.
 
@@ -48,31 +48,31 @@
 // ---------------------------------------------------------------------------
 // Opaque public handles.
 // ---------------------------------------------------------------------------
-struct c4a_split_kennard_stone_t {
+struct c4a_split_kennard_stone_handle_t {
     c4a_split_ks_state_t* state;
 };
-struct c4a_split_spxy_t {
+struct c4a_split_spxy_handle_t {
     c4a_split_spxy_state_t* state;
 };
-struct c4a_split_spxy_fold_t {
+struct c4a_split_spxy_fold_handle_t {
     c4a_split_spxy_fold_state_t* state;
 };
-struct c4a_split_spxy_g_fold_t {
+struct c4a_split_spxy_g_fold_handle_t {
     c4a_split_spxy_g_fold_state_t* state;
 };
-struct c4a_split_kmeans_t {
+struct c4a_split_kmeans_handle_t {
     c4a_split_kmeans_state_t* state;
 };
-struct c4a_split_kbins_stratified_t {
+struct c4a_split_kbins_stratified_handle_t {
     c4a_split_kbins_state_t* state;
 };
-struct c4a_split_binned_strat_group_kfold_t {
+struct c4a_split_binned_strat_group_kfold_handle_t {
     c4a_split_bsgk_state_t* state;
 };
-struct c4a_split_systematic_circular_t {
+struct c4a_split_systematic_circular_handle_t {
     c4a_split_syscirc_state_t* state;
 };
-struct c4a_split_split_splitter_t {
+struct c4a_split_split_splitter_handle_t {
     c4a_split_splt_state_t* state;
 };
 
@@ -130,7 +130,7 @@ C4A_API void c4a_split_result_destroy(c4a_split_result_t* r) {
 // ---------------------------------------------------------------------------
 
 C4A_API c4a_status_t c4a_split_kennard_stone_create(
-    c4a_split_kennard_stone_t** out, double test_size) {
+    c4a_split_kennard_stone_handle_t** out, double test_size) {
     if (out == nullptr) return C4A_ERR_NULL_POINTER;
     *out = nullptr;
     if (!(test_size > 0.0) || !(test_size < 1.0)) {
@@ -139,8 +139,8 @@ C4A_API c4a_status_t c4a_split_kennard_stone_create(
     try {
         c4a_split_ks_state_t* s = c4a_split_ks_state_new(test_size);
         if (s == nullptr) return C4A_ERR_OUT_OF_MEMORY;
-        c4a_split_kennard_stone_t* h =
-            new (std::nothrow) c4a_split_kennard_stone_t{s};
+        c4a_split_kennard_stone_handle_t* h =
+            new (std::nothrow) c4a_split_kennard_stone_handle_t{s};
         if (h == nullptr) {
             c4a_split_ks_state_free(s);
             return C4A_ERR_OUT_OF_MEMORY;
@@ -150,13 +150,13 @@ C4A_API c4a_status_t c4a_split_kennard_stone_create(
     } catch (...) { return C4A_ERR_INTERNAL; }
 }
 
-C4A_API void c4a_split_kennard_stone_destroy(c4a_split_kennard_stone_t* h) {
+C4A_API void c4a_split_kennard_stone_destroy(c4a_split_kennard_stone_handle_t* h) {
     if (h == nullptr) return;
     try { c4a_split_ks_state_free(h->state); delete h; } catch (...) {}
 }
 
 C4A_API c4a_status_t c4a_split_kennard_stone_split(
-    const c4a_split_kennard_stone_t* h,
+    const c4a_split_kennard_stone_handle_t* h,
     c4a_matrix_view_t X,
     c4a_split_result_t* out) {
     if (h == nullptr || out == nullptr) return C4A_ERR_NULL_POINTER;
@@ -174,7 +174,7 @@ C4A_API c4a_status_t c4a_split_kennard_stone_split(
 // SPXY
 // ---------------------------------------------------------------------------
 
-C4A_API c4a_status_t c4a_split_spxy_create(c4a_split_spxy_t** out,
+C4A_API c4a_status_t c4a_split_spxy_create(c4a_split_spxy_handle_t** out,
                                             double test_size) {
     if (out == nullptr) return C4A_ERR_NULL_POINTER;
     *out = nullptr;
@@ -184,19 +184,19 @@ C4A_API c4a_status_t c4a_split_spxy_create(c4a_split_spxy_t** out,
     try {
         c4a_split_spxy_state_t* s = c4a_split_spxy_state_new(test_size);
         if (s == nullptr) return C4A_ERR_OUT_OF_MEMORY;
-        c4a_split_spxy_t* h = new (std::nothrow) c4a_split_spxy_t{s};
+        c4a_split_spxy_handle_t* h = new (std::nothrow) c4a_split_spxy_handle_t{s};
         if (h == nullptr) { c4a_split_spxy_state_free(s); return C4A_ERR_OUT_OF_MEMORY; }
         *out = h;
         return C4A_OK;
     } catch (...) { return C4A_ERR_INTERNAL; }
 }
 
-C4A_API void c4a_split_spxy_destroy(c4a_split_spxy_t* h) {
+C4A_API void c4a_split_spxy_destroy(c4a_split_spxy_handle_t* h) {
     if (h == nullptr) return;
     try { c4a_split_spxy_state_free(h->state); delete h; } catch (...) {}
 }
 
-C4A_API c4a_status_t c4a_split_spxy_split(const c4a_split_spxy_t* h,
+C4A_API c4a_status_t c4a_split_spxy_split(const c4a_split_spxy_handle_t* h,
                                            c4a_matrix_view_t X,
                                            c4a_matrix_view_t Y,
                                            c4a_split_result_t* out) {
@@ -219,7 +219,7 @@ C4A_API c4a_status_t c4a_split_spxy_split(const c4a_split_spxy_t* h,
 // SPXYFold
 // ---------------------------------------------------------------------------
 
-C4A_API c4a_status_t c4a_split_spxy_fold_create(c4a_split_spxy_fold_t** out,
+C4A_API c4a_status_t c4a_split_spxy_fold_create(c4a_split_spxy_fold_handle_t** out,
                                                  int32_t n_splits,
                                                  int32_t y_metric) {
     if (out == nullptr) return C4A_ERR_NULL_POINTER;
@@ -229,19 +229,19 @@ C4A_API c4a_status_t c4a_split_spxy_fold_create(c4a_split_spxy_fold_t** out,
     try {
         c4a_split_spxy_fold_state_t* s = c4a_split_spxy_fold_state_new(n_splits, y_metric);
         if (s == nullptr) return C4A_ERR_OUT_OF_MEMORY;
-        c4a_split_spxy_fold_t* h = new (std::nothrow) c4a_split_spxy_fold_t{s};
+        c4a_split_spxy_fold_handle_t* h = new (std::nothrow) c4a_split_spxy_fold_handle_t{s};
         if (h == nullptr) { c4a_split_spxy_fold_state_free(s); return C4A_ERR_OUT_OF_MEMORY; }
         *out = h;
         return C4A_OK;
     } catch (...) { return C4A_ERR_INTERNAL; }
 }
 
-C4A_API void c4a_split_spxy_fold_destroy(c4a_split_spxy_fold_t* h) {
+C4A_API void c4a_split_spxy_fold_destroy(c4a_split_spxy_fold_handle_t* h) {
     if (h == nullptr) return;
     try { c4a_split_spxy_fold_state_free(h->state); delete h; } catch (...) {}
 }
 
-C4A_API c4a_status_t c4a_split_spxy_fold_n_splits(const c4a_split_spxy_fold_t* h,
+C4A_API c4a_status_t c4a_split_spxy_fold_n_splits(const c4a_split_spxy_fold_handle_t* h,
                                                    int32_t* out) {
     if (h == nullptr || out == nullptr) return C4A_ERR_NULL_POINTER;
     *out = h->state->n_splits;
@@ -249,7 +249,7 @@ C4A_API c4a_status_t c4a_split_spxy_fold_n_splits(const c4a_split_spxy_fold_t* h
 }
 
 C4A_API c4a_status_t c4a_split_spxy_fold_split_fold(
-    const c4a_split_spxy_fold_t* h,
+    const c4a_split_spxy_fold_handle_t* h,
     c4a_matrix_view_t X,
     c4a_matrix_view_t Y,
     int32_t fold_idx,
@@ -284,7 +284,7 @@ C4A_API c4a_status_t c4a_split_spxy_fold_split_fold(
 // SPXYGFold (group-aware k-fold)
 // ---------------------------------------------------------------------------
 
-C4A_API c4a_status_t c4a_split_spxy_g_fold_create(c4a_split_spxy_g_fold_t** out,
+C4A_API c4a_status_t c4a_split_spxy_g_fold_create(c4a_split_spxy_g_fold_handle_t** out,
                                                     int32_t n_splits,
                                                     int32_t y_metric,
                                                     int32_t aggregation) {
@@ -297,27 +297,27 @@ C4A_API c4a_status_t c4a_split_spxy_g_fold_create(c4a_split_spxy_g_fold_t** out,
         c4a_split_spxy_g_fold_state_t* s = c4a_split_spxy_g_fold_state_new(
             n_splits, y_metric, aggregation);
         if (s == nullptr) return C4A_ERR_OUT_OF_MEMORY;
-        c4a_split_spxy_g_fold_t* h = new (std::nothrow) c4a_split_spxy_g_fold_t{s};
+        c4a_split_spxy_g_fold_handle_t* h = new (std::nothrow) c4a_split_spxy_g_fold_handle_t{s};
         if (h == nullptr) { c4a_split_spxy_g_fold_state_free(s); return C4A_ERR_OUT_OF_MEMORY; }
         *out = h;
         return C4A_OK;
     } catch (...) { return C4A_ERR_INTERNAL; }
 }
 
-C4A_API void c4a_split_spxy_g_fold_destroy(c4a_split_spxy_g_fold_t* h) {
+C4A_API void c4a_split_spxy_g_fold_destroy(c4a_split_spxy_g_fold_handle_t* h) {
     if (h == nullptr) return;
     try { c4a_split_spxy_g_fold_state_free(h->state); delete h; } catch (...) {}
 }
 
 C4A_API c4a_status_t c4a_split_spxy_g_fold_n_splits(
-    const c4a_split_spxy_g_fold_t* h, int32_t* out) {
+    const c4a_split_spxy_g_fold_handle_t* h, int32_t* out) {
     if (h == nullptr || out == nullptr) return C4A_ERR_NULL_POINTER;
     *out = h->state->n_splits;
     return C4A_OK;
 }
 
 C4A_API c4a_status_t c4a_split_spxy_g_fold_split_fold(
-    const c4a_split_spxy_g_fold_t* h,
+    const c4a_split_spxy_g_fold_handle_t* h,
     c4a_matrix_view_t X,
     c4a_matrix_view_t Y,
     const int64_t* groups, int64_t groups_len,
@@ -357,7 +357,7 @@ C4A_API c4a_status_t c4a_split_spxy_g_fold_split_fold(
 // KMeans
 // ---------------------------------------------------------------------------
 
-C4A_API c4a_status_t c4a_split_kmeans_create(c4a_split_kmeans_t** out,
+C4A_API c4a_status_t c4a_split_kmeans_create(c4a_split_kmeans_handle_t** out,
                                                double test_size, uint64_t seed,
                                                int32_t max_iter) {
     if (out == nullptr) return C4A_ERR_NULL_POINTER;
@@ -370,19 +370,19 @@ C4A_API c4a_status_t c4a_split_kmeans_create(c4a_split_kmeans_t** out,
         c4a_split_kmeans_state_t* s =
             c4a_split_kmeans_state_new(test_size, seed, max_iter);
         if (s == nullptr) return C4A_ERR_OUT_OF_MEMORY;
-        c4a_split_kmeans_t* h = new (std::nothrow) c4a_split_kmeans_t{s};
+        c4a_split_kmeans_handle_t* h = new (std::nothrow) c4a_split_kmeans_handle_t{s};
         if (h == nullptr) { c4a_split_kmeans_state_free(s); return C4A_ERR_OUT_OF_MEMORY; }
         *out = h;
         return C4A_OK;
     } catch (...) { return C4A_ERR_INTERNAL; }
 }
 
-C4A_API void c4a_split_kmeans_destroy(c4a_split_kmeans_t* h) {
+C4A_API void c4a_split_kmeans_destroy(c4a_split_kmeans_handle_t* h) {
     if (h == nullptr) return;
     try { c4a_split_kmeans_state_free(h->state); delete h; } catch (...) {}
 }
 
-C4A_API c4a_status_t c4a_split_kmeans_split(const c4a_split_kmeans_t* h,
+C4A_API c4a_status_t c4a_split_kmeans_split(const c4a_split_kmeans_handle_t* h,
                                               c4a_matrix_view_t X,
                                               c4a_split_result_t* out) {
     if (h == nullptr || out == nullptr) return C4A_ERR_NULL_POINTER;
@@ -401,7 +401,7 @@ C4A_API c4a_status_t c4a_split_kmeans_split(const c4a_split_kmeans_t* h,
 // ---------------------------------------------------------------------------
 
 C4A_API c4a_status_t c4a_split_kbins_stratified_create(
-    c4a_split_kbins_stratified_t** out, double test_size, uint64_t seed,
+    c4a_split_kbins_stratified_handle_t** out, double test_size, uint64_t seed,
     int32_t n_bins, int32_t strategy) {
     if (out == nullptr) return C4A_ERR_NULL_POINTER;
     *out = nullptr;
@@ -415,21 +415,21 @@ C4A_API c4a_status_t c4a_split_kbins_stratified_create(
         c4a_split_kbins_state_t* s =
             c4a_split_kbins_state_new(test_size, seed, n_bins, strategy);
         if (s == nullptr) return C4A_ERR_OUT_OF_MEMORY;
-        c4a_split_kbins_stratified_t* h =
-            new (std::nothrow) c4a_split_kbins_stratified_t{s};
+        c4a_split_kbins_stratified_handle_t* h =
+            new (std::nothrow) c4a_split_kbins_stratified_handle_t{s};
         if (h == nullptr) { c4a_split_kbins_state_free(s); return C4A_ERR_OUT_OF_MEMORY; }
         *out = h;
         return C4A_OK;
     } catch (...) { return C4A_ERR_INTERNAL; }
 }
 
-C4A_API void c4a_split_kbins_stratified_destroy(c4a_split_kbins_stratified_t* h) {
+C4A_API void c4a_split_kbins_stratified_destroy(c4a_split_kbins_stratified_handle_t* h) {
     if (h == nullptr) return;
     try { c4a_split_kbins_state_free(h->state); delete h; } catch (...) {}
 }
 
 C4A_API c4a_status_t c4a_split_kbins_stratified_split(
-    const c4a_split_kbins_stratified_t* h,
+    const c4a_split_kbins_stratified_handle_t* h,
     c4a_matrix_view_t Y,
     c4a_split_result_t* out) {
     if (h == nullptr || out == nullptr) return C4A_ERR_NULL_POINTER;
@@ -449,7 +449,7 @@ C4A_API c4a_status_t c4a_split_kbins_stratified_split(
 // ---------------------------------------------------------------------------
 
 C4A_API c4a_status_t c4a_split_binned_strat_group_kfold_create(
-    c4a_split_binned_strat_group_kfold_t** out,
+    c4a_split_binned_strat_group_kfold_handle_t** out,
     int32_t n_splits, int32_t n_bins, int32_t strategy,
     int32_t shuffle, uint64_t seed) {
     if (out == nullptr) return C4A_ERR_NULL_POINTER;
@@ -461,8 +461,8 @@ C4A_API c4a_status_t c4a_split_binned_strat_group_kfold_create(
         c4a_split_bsgk_state_t* s =
             c4a_split_bsgk_state_new(n_splits, n_bins, strategy, shuffle, seed);
         if (s == nullptr) return C4A_ERR_OUT_OF_MEMORY;
-        c4a_split_binned_strat_group_kfold_t* h =
-            new (std::nothrow) c4a_split_binned_strat_group_kfold_t{s};
+        c4a_split_binned_strat_group_kfold_handle_t* h =
+            new (std::nothrow) c4a_split_binned_strat_group_kfold_handle_t{s};
         if (h == nullptr) { c4a_split_bsgk_state_free(s); return C4A_ERR_OUT_OF_MEMORY; }
         *out = h;
         return C4A_OK;
@@ -470,20 +470,20 @@ C4A_API c4a_status_t c4a_split_binned_strat_group_kfold_create(
 }
 
 C4A_API void c4a_split_binned_strat_group_kfold_destroy(
-    c4a_split_binned_strat_group_kfold_t* h) {
+    c4a_split_binned_strat_group_kfold_handle_t* h) {
     if (h == nullptr) return;
     try { c4a_split_bsgk_state_free(h->state); delete h; } catch (...) {}
 }
 
 C4A_API c4a_status_t c4a_split_binned_strat_group_kfold_n_splits(
-    const c4a_split_binned_strat_group_kfold_t* h, int32_t* out) {
+    const c4a_split_binned_strat_group_kfold_handle_t* h, int32_t* out) {
     if (h == nullptr || out == nullptr) return C4A_ERR_NULL_POINTER;
     *out = h->state->n_splits;
     return C4A_OK;
 }
 
 C4A_API c4a_status_t c4a_split_binned_strat_group_kfold_split_fold(
-    const c4a_split_binned_strat_group_kfold_t* h,
+    const c4a_split_binned_strat_group_kfold_handle_t* h,
     c4a_matrix_view_t Y,
     const int64_t* groups, int64_t groups_len,
     int32_t fold_idx,
@@ -517,7 +517,7 @@ C4A_API c4a_status_t c4a_split_binned_strat_group_kfold_split_fold(
 // ---------------------------------------------------------------------------
 
 C4A_API c4a_status_t c4a_split_systematic_circular_create(
-    c4a_split_systematic_circular_t** out, double test_size, uint64_t seed) {
+    c4a_split_systematic_circular_handle_t** out, double test_size, uint64_t seed) {
     if (out == nullptr) return C4A_ERR_NULL_POINTER;
     *out = nullptr;
     if (!(test_size > 0.0) || !(test_size < 1.0)) {
@@ -527,8 +527,8 @@ C4A_API c4a_status_t c4a_split_systematic_circular_create(
         c4a_split_syscirc_state_t* s =
             c4a_split_syscirc_state_new(test_size, seed);
         if (s == nullptr) return C4A_ERR_OUT_OF_MEMORY;
-        c4a_split_systematic_circular_t* h =
-            new (std::nothrow) c4a_split_systematic_circular_t{s};
+        c4a_split_systematic_circular_handle_t* h =
+            new (std::nothrow) c4a_split_systematic_circular_handle_t{s};
         if (h == nullptr) { c4a_split_syscirc_state_free(s); return C4A_ERR_OUT_OF_MEMORY; }
         *out = h;
         return C4A_OK;
@@ -536,13 +536,13 @@ C4A_API c4a_status_t c4a_split_systematic_circular_create(
 }
 
 C4A_API void c4a_split_systematic_circular_destroy(
-    c4a_split_systematic_circular_t* h) {
+    c4a_split_systematic_circular_handle_t* h) {
     if (h == nullptr) return;
     try { c4a_split_syscirc_state_free(h->state); delete h; } catch (...) {}
 }
 
 C4A_API c4a_status_t c4a_split_systematic_circular_split(
-    const c4a_split_systematic_circular_t* h,
+    const c4a_split_systematic_circular_handle_t* h,
     c4a_matrix_view_t Y,
     c4a_split_result_t* out) {
     if (h == nullptr || out == nullptr) return C4A_ERR_NULL_POINTER;
@@ -562,7 +562,7 @@ C4A_API c4a_status_t c4a_split_systematic_circular_split(
 // ---------------------------------------------------------------------------
 
 C4A_API c4a_status_t c4a_split_split_splitter_create(
-    c4a_split_split_splitter_t** out, double test_size, uint64_t seed) {
+    c4a_split_split_splitter_handle_t** out, double test_size, uint64_t seed) {
     if (out == nullptr) return C4A_ERR_NULL_POINTER;
     *out = nullptr;
     if (!(test_size > 0.0) || !(test_size < 1.0)) {
@@ -572,21 +572,21 @@ C4A_API c4a_status_t c4a_split_split_splitter_create(
         c4a_split_splt_state_t* s =
             c4a_split_splt_state_new(test_size, seed);
         if (s == nullptr) return C4A_ERR_OUT_OF_MEMORY;
-        c4a_split_split_splitter_t* h =
-            new (std::nothrow) c4a_split_split_splitter_t{s};
+        c4a_split_split_splitter_handle_t* h =
+            new (std::nothrow) c4a_split_split_splitter_handle_t{s};
         if (h == nullptr) { c4a_split_splt_state_free(s); return C4A_ERR_OUT_OF_MEMORY; }
         *out = h;
         return C4A_OK;
     } catch (...) { return C4A_ERR_INTERNAL; }
 }
 
-C4A_API void c4a_split_split_splitter_destroy(c4a_split_split_splitter_t* h) {
+C4A_API void c4a_split_split_splitter_destroy(c4a_split_split_splitter_handle_t* h) {
     if (h == nullptr) return;
     try { c4a_split_splt_state_free(h->state); delete h; } catch (...) {}
 }
 
 C4A_API c4a_status_t c4a_split_split_splitter_split(
-    const c4a_split_split_splitter_t* h,
+    const c4a_split_split_splitter_handle_t* h,
     c4a_matrix_view_t X,
     c4a_split_result_t* out) {
     if (h == nullptr || out == nullptr) return C4A_ERR_NULL_POINTER;

@@ -3,9 +3,16 @@
  * YOutlierFilter — y-array outlier detection with four selectable methods.
  *
  * Mirrors `nirs4all.operators.filters.YOutlierFilter` (Phase 12 — first member
- * of the new `c4a_filter_*` ABI category). The operator is stateless per call:
- * fit + mask in a single function. Bounds are computed from the input y, the
- * mask is then derived bound check + NaN exclusion.
+ * of the new `c4a_filter_*` ABI category). The operator follows the classical
+ * sklearn fit/apply contract:
+ *   - `_state_new` constructs an unfitted state from the method + thresholds.
+ *   - `_state_fit` learns the per-method bounds from the training y vector.
+ *     Idempotent: replaces any previously fitted bounds.
+ *   - `_state_apply` applies the previously learned bounds to a (possibly
+ *     different) y vector, returning the keep-mask and statistics. Returns
+ *     `C4A_ERR_NOT_FITTED` when called on an unfitted state.
+ *   - `_state_is_fitted` reports whether `_state_fit` has been called at
+ *     least once.
  *
  * Four methods:
  *   - IQR        : `[Q1 - t*IQR, Q3 + t*IQR]` (t default 1.5)
@@ -61,11 +68,26 @@ c4a_filter_y_outlier_state_t* c4a_filter_y_outlier_state_new(
 
 void c4a_filter_y_outlier_state_free(c4a_filter_y_outlier_state_t* state);
 
+/* Learn the bounds from the training y vector. Idempotent: subsequent
+ * calls overwrite the previously learned bounds.
+ *   y may be NULL only when n == 0.
+ *   n < 0 is rejected with C4A_ERR_INVALID_ARGUMENT. */
+c4a_status_t c4a_filter_y_outlier_state_fit(
+    c4a_filter_y_outlier_state_t* state,
+    const double* y, int64_t n);
+
+/* Apply the fitted bounds to a (possibly different) y vector. Returns
+ * C4A_ERR_INVALID_STATE when called on an unfitted state. */
 c4a_status_t c4a_filter_y_outlier_state_apply(
     const c4a_filter_y_outlier_state_t* state,
     const double* y, int64_t n,
     uint8_t* mask_out,
     c4a_core_filter_stats_t* stats_out);
+
+/* Report whether `_state_fit` has been called at least once. Writes 0/1
+ * into *out. Returns C4A_ERR_NULL_POINTER if either argument is NULL. */
+c4a_status_t c4a_filter_y_outlier_state_is_fitted(
+    const c4a_filter_y_outlier_state_t* state, int* out);
 
 #ifdef __cplusplus
 }  /* extern "C" */

@@ -32,11 +32,8 @@
 extern "C" {
 #endif
 
-/* Strategy codes for the kbins discretiser. */
-enum {
-    C4A_SPLIT_KBINS_UNIFORM  = 0,
-    C4A_SPLIT_KBINS_QUANTILE = 1
-};
+/* Strategy codes for the kbins discretiser are the public enumerators
+ * `C4A_SPLIT_KBINS_UNIFORM` / `C4A_SPLIT_KBINS_QUANTILE` from c4a.h §17. */
 
 typedef struct c4a_split_kbins_state_t {
     double   test_size;

@@ -68,16 +68,25 @@ c4a_status_t c4a_filter_y_outlier_create(c4a_filter_y_outlier_handle_t** out,
                                           double threshold,
                                           double lower_pct, double upper_pct);
 void         c4a_filter_y_outlier_destroy(c4a_filter_y_outlier_handle_t* h);
-c4a_status_t c4a_filter_y_outlier_fit_get_mask(
+
+/* Stateful fit/apply split (matches sklearn). */
+c4a_status_t c4a_filter_y_outlier_fit(
+    c4a_filter_y_outlier_handle_t* h,
+    const double* y, int64_t n);
+c4a_status_t c4a_filter_y_outlier_apply(
     const c4a_filter_y_outlier_handle_t* h,
     const double* y, int64_t n,
     uint8_t* mask_out,
     c4a_filter_stats_t* stats_out);
+c4a_status_t c4a_filter_y_outlier_is_fitted(
+    const c4a_filter_y_outlier_handle_t* h, int* out);
 ```
 
-The single-call `_fit_get_mask` combines fit and mask emission because the
-bounds are a deterministic function of `y` with no train/test split. The
-mask and stats buffers are caller-allocated.
+`_fit` learns the per-method bounds from the supplied y vector; subsequent
+calls overwrite the previously fitted bounds. `_apply` writes the keep-mask
++ stats using the previously learned bounds (returns `C4A_ERR_NOT_FITTED`
+when called on an unfitted handle). `_is_fitted` reports whether `_fit` has
+been called. The mask and stats buffers are caller-allocated.
 
 ## Numerical contract
 

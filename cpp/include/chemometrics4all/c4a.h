@@ -1265,10 +1265,10 @@ C4A_API void c4a_split_result_destroy(c4a_split_result_t* r);
 
 /* ---------- Splitter enums (passed as int32_t through the create API) -- */
 /* Bin-edge strategy for KBinsStratified + BinnedStratifiedGroupKFold. */
-typedef enum c4a_split_bin_strategy_t {
-    C4A_SPLIT_BIN_UNIFORM  = 0,  /* equal-width bins between y.min/y.max  */
-    C4A_SPLIT_BIN_QUANTILE = 1   /* equal-frequency bins (quantile edges) */
-} c4a_split_bin_strategy_t;
+typedef enum c4a_split_kbins_strategy_t {
+    C4A_SPLIT_KBINS_UNIFORM  = 0,  /* equal-width bins between y.min/y.max  */
+    C4A_SPLIT_KBINS_QUANTILE = 1   /* equal-frequency bins (quantile edges) */
+} c4a_split_kbins_strategy_t;
 
 /* Y-metric mode for SPXYFold / SPXYGFold. Selects how Y participates in
  * the alternating max-min distance computation:
@@ -1282,113 +1282,113 @@ typedef enum c4a_split_y_metric_t {
 } c4a_split_y_metric_t;
 
 /* Group-aggregation mode for SPXYGFold (per-group representative). */
-typedef enum c4a_split_group_agg_t {
-    C4A_SPLIT_GROUP_AGG_MEAN   = 0,
-    C4A_SPLIT_GROUP_AGG_MEDIAN = 1
-} c4a_split_group_agg_t;
+typedef enum c4a_split_aggregation_t {
+    C4A_SPLIT_AGGREGATION_MEAN   = 0,
+    C4A_SPLIT_AGGREGATION_MEDIAN = 1
+} c4a_split_aggregation_t;
 
 /* ---------- KennardStone ----------------------------------------------- */
-typedef struct c4a_split_kennard_stone_t c4a_split_kennard_stone_t;
+typedef struct c4a_split_kennard_stone_handle_t c4a_split_kennard_stone_handle_t;
 C4A_API c4a_status_t c4a_split_kennard_stone_create(
-    c4a_split_kennard_stone_t** out, double test_size);
-C4A_API void c4a_split_kennard_stone_destroy(c4a_split_kennard_stone_t* h);
+    c4a_split_kennard_stone_handle_t** out, double test_size);
+C4A_API void c4a_split_kennard_stone_destroy(c4a_split_kennard_stone_handle_t* h);
 C4A_API c4a_status_t c4a_split_kennard_stone_split(
-    const c4a_split_kennard_stone_t* h,
+    const c4a_split_kennard_stone_handle_t* h,
     c4a_matrix_view_t X, c4a_split_result_t* out);
 
 /* ---------- SPXY (single train/test, joint X-Y) ----------------------- */
-typedef struct c4a_split_spxy_t c4a_split_spxy_t;
-C4A_API c4a_status_t c4a_split_spxy_create(c4a_split_spxy_t** out,
+typedef struct c4a_split_spxy_handle_t c4a_split_spxy_handle_t;
+C4A_API c4a_status_t c4a_split_spxy_create(c4a_split_spxy_handle_t** out,
                                             double test_size);
-C4A_API void c4a_split_spxy_destroy(c4a_split_spxy_t* h);
-C4A_API c4a_status_t c4a_split_spxy_split(const c4a_split_spxy_t* h,
+C4A_API void c4a_split_spxy_destroy(c4a_split_spxy_handle_t* h);
+C4A_API c4a_status_t c4a_split_spxy_split(const c4a_split_spxy_handle_t* h,
                                            c4a_matrix_view_t X,
                                            c4a_matrix_view_t Y,
                                            c4a_split_result_t* out);
 
 /* ---------- SPXYFold (k-fold) ---------------------------------------- */
-typedef struct c4a_split_spxy_fold_t c4a_split_spxy_fold_t;
-C4A_API c4a_status_t c4a_split_spxy_fold_create(c4a_split_spxy_fold_t** out,
+typedef struct c4a_split_spxy_fold_handle_t c4a_split_spxy_fold_handle_t;
+C4A_API c4a_status_t c4a_split_spxy_fold_create(c4a_split_spxy_fold_handle_t** out,
                                                  int32_t n_splits,
                                                  int32_t y_metric);
-C4A_API void c4a_split_spxy_fold_destroy(c4a_split_spxy_fold_t* h);
+C4A_API void c4a_split_spxy_fold_destroy(c4a_split_spxy_fold_handle_t* h);
 C4A_API c4a_status_t c4a_split_spxy_fold_n_splits(
-    const c4a_split_spxy_fold_t* h, int32_t* out);
+    const c4a_split_spxy_fold_handle_t* h, int32_t* out);
 C4A_API c4a_status_t c4a_split_spxy_fold_split_fold(
-    const c4a_split_spxy_fold_t* h,
+    const c4a_split_spxy_fold_handle_t* h,
     c4a_matrix_view_t X, c4a_matrix_view_t Y,
     int32_t fold_idx, c4a_split_result_t* out);
 
 /* ---------- SPXYGFold (group-aware k-fold) --------------------------- */
-typedef struct c4a_split_spxy_g_fold_t c4a_split_spxy_g_fold_t;
-C4A_API c4a_status_t c4a_split_spxy_g_fold_create(c4a_split_spxy_g_fold_t** out,
+typedef struct c4a_split_spxy_g_fold_handle_t c4a_split_spxy_g_fold_handle_t;
+C4A_API c4a_status_t c4a_split_spxy_g_fold_create(c4a_split_spxy_g_fold_handle_t** out,
                                                     int32_t n_splits,
                                                     int32_t y_metric,
                                                     int32_t aggregation);
-C4A_API void c4a_split_spxy_g_fold_destroy(c4a_split_spxy_g_fold_t* h);
+C4A_API void c4a_split_spxy_g_fold_destroy(c4a_split_spxy_g_fold_handle_t* h);
 C4A_API c4a_status_t c4a_split_spxy_g_fold_n_splits(
-    const c4a_split_spxy_g_fold_t* h, int32_t* out);
+    const c4a_split_spxy_g_fold_handle_t* h, int32_t* out);
 C4A_API c4a_status_t c4a_split_spxy_g_fold_split_fold(
-    const c4a_split_spxy_g_fold_t* h,
+    const c4a_split_spxy_g_fold_handle_t* h,
     c4a_matrix_view_t X, c4a_matrix_view_t Y,
     const int64_t* groups, int64_t groups_len,
     int32_t fold_idx, c4a_split_result_t* out);
 
 /* ---------- KMeans (k-means++) ---------------------------------------- */
-typedef struct c4a_split_kmeans_t c4a_split_kmeans_t;
-C4A_API c4a_status_t c4a_split_kmeans_create(c4a_split_kmeans_t** out,
+typedef struct c4a_split_kmeans_handle_t c4a_split_kmeans_handle_t;
+C4A_API c4a_status_t c4a_split_kmeans_create(c4a_split_kmeans_handle_t** out,
                                                double test_size, uint64_t seed,
                                                int32_t max_iter);
-C4A_API void c4a_split_kmeans_destroy(c4a_split_kmeans_t* h);
-C4A_API c4a_status_t c4a_split_kmeans_split(const c4a_split_kmeans_t* h,
+C4A_API void c4a_split_kmeans_destroy(c4a_split_kmeans_handle_t* h);
+C4A_API c4a_status_t c4a_split_kmeans_split(const c4a_split_kmeans_handle_t* h,
                                               c4a_matrix_view_t X,
                                               c4a_split_result_t* out);
 
 /* ---------- KBinsStratified ------------------------------------------ */
-typedef struct c4a_split_kbins_stratified_t c4a_split_kbins_stratified_t;
+typedef struct c4a_split_kbins_stratified_handle_t c4a_split_kbins_stratified_handle_t;
 C4A_API c4a_status_t c4a_split_kbins_stratified_create(
-    c4a_split_kbins_stratified_t** out,
+    c4a_split_kbins_stratified_handle_t** out,
     double test_size, uint64_t seed,
     int32_t n_bins, int32_t strategy);
-C4A_API void c4a_split_kbins_stratified_destroy(c4a_split_kbins_stratified_t* h);
+C4A_API void c4a_split_kbins_stratified_destroy(c4a_split_kbins_stratified_handle_t* h);
 C4A_API c4a_status_t c4a_split_kbins_stratified_split(
-    const c4a_split_kbins_stratified_t* h,
+    const c4a_split_kbins_stratified_handle_t* h,
     c4a_matrix_view_t Y, c4a_split_result_t* out);
 
 /* ---------- BinnedStratifiedGroupKFold ------------------------------- */
-typedef struct c4a_split_binned_strat_group_kfold_t
-    c4a_split_binned_strat_group_kfold_t;
+typedef struct c4a_split_binned_strat_group_kfold_handle_t
+    c4a_split_binned_strat_group_kfold_handle_t;
 C4A_API c4a_status_t c4a_split_binned_strat_group_kfold_create(
-    c4a_split_binned_strat_group_kfold_t** out,
+    c4a_split_binned_strat_group_kfold_handle_t** out,
     int32_t n_splits, int32_t n_bins, int32_t strategy,
     int32_t shuffle, uint64_t seed);
 C4A_API void c4a_split_binned_strat_group_kfold_destroy(
-    c4a_split_binned_strat_group_kfold_t* h);
+    c4a_split_binned_strat_group_kfold_handle_t* h);
 C4A_API c4a_status_t c4a_split_binned_strat_group_kfold_n_splits(
-    const c4a_split_binned_strat_group_kfold_t* h, int32_t* out);
+    const c4a_split_binned_strat_group_kfold_handle_t* h, int32_t* out);
 C4A_API c4a_status_t c4a_split_binned_strat_group_kfold_split_fold(
-    const c4a_split_binned_strat_group_kfold_t* h,
+    const c4a_split_binned_strat_group_kfold_handle_t* h,
     c4a_matrix_view_t Y,
     const int64_t* groups, int64_t groups_len,
     int32_t fold_idx, c4a_split_result_t* out);
 
 /* ---------- SystematicCircular --------------------------------------- */
-typedef struct c4a_split_systematic_circular_t c4a_split_systematic_circular_t;
+typedef struct c4a_split_systematic_circular_handle_t c4a_split_systematic_circular_handle_t;
 C4A_API c4a_status_t c4a_split_systematic_circular_create(
-    c4a_split_systematic_circular_t** out, double test_size, uint64_t seed);
+    c4a_split_systematic_circular_handle_t** out, double test_size, uint64_t seed);
 C4A_API void c4a_split_systematic_circular_destroy(
-    c4a_split_systematic_circular_t* h);
+    c4a_split_systematic_circular_handle_t* h);
 C4A_API c4a_status_t c4a_split_systematic_circular_split(
-    const c4a_split_systematic_circular_t* h,
+    const c4a_split_systematic_circular_handle_t* h,
     c4a_matrix_view_t Y, c4a_split_result_t* out);
 
 /* ---------- SPlit (data twinning) ------------------------------------ */
-typedef struct c4a_split_split_splitter_t c4a_split_split_splitter_t;
+typedef struct c4a_split_split_splitter_handle_t c4a_split_split_splitter_handle_t;
 C4A_API c4a_status_t c4a_split_split_splitter_create(
-    c4a_split_split_splitter_t** out, double test_size, uint64_t seed);
-C4A_API void c4a_split_split_splitter_destroy(c4a_split_split_splitter_t* h);
+    c4a_split_split_splitter_handle_t** out, double test_size, uint64_t seed);
+C4A_API void c4a_split_split_splitter_destroy(c4a_split_split_splitter_handle_t* h);
 C4A_API c4a_status_t c4a_split_split_splitter_split(
-    const c4a_split_split_splitter_t* h,
+    const c4a_split_split_splitter_handle_t* h,
     c4a_matrix_view_t X, c4a_split_result_t* out);
 
 /* ============================================================================
@@ -1419,7 +1419,19 @@ typedef enum c4a_y_outlier_method_t {
     C4A_Y_OUTLIER_MAD        = 3
 } c4a_y_outlier_method_t;
 
-/* ---------- YOutlierFilter -------------------------------------------- */
+/* ---------- YOutlierFilter -------------------------------------------- *
+ *
+ * The filter follows the classical sklearn fit/apply split:
+ *   - `_create` constructs an unfitted handle from the method + thresholds.
+ *   - `_fit(handle, y, n)` learns the per-method bounds from the training
+ *     y vector (one shot; idempotent — recomputes on every call).
+ *   - `_apply(handle, y, n, mask, stats)` applies the previously learned
+ *     bounds to a (possibly different) y vector, returning the keep-mask
+ *     and statistics. The handle must be fitted; returns
+ *     `C4A_ERR_NOT_FITTED` when called on an unfitted handle.
+ *   - `_is_fitted(handle, out)` writes 1 when `_fit` has been called at
+ *     least once on this handle, 0 otherwise.
+ */
 typedef struct c4a_filter_y_outlier_handle_t c4a_filter_y_outlier_handle_t;
 C4A_API c4a_status_t c4a_filter_y_outlier_create(
     c4a_filter_y_outlier_handle_t** out,
@@ -1427,10 +1439,15 @@ C4A_API c4a_status_t c4a_filter_y_outlier_create(
     double threshold, double lower_pct, double upper_pct);
 C4A_API void         c4a_filter_y_outlier_destroy(
     c4a_filter_y_outlier_handle_t* handle);
-C4A_API c4a_status_t c4a_filter_y_outlier_fit_get_mask(
+C4A_API c4a_status_t c4a_filter_y_outlier_fit(
+    c4a_filter_y_outlier_handle_t* handle,
+    const double* y, int64_t n);
+C4A_API c4a_status_t c4a_filter_y_outlier_apply(
     const c4a_filter_y_outlier_handle_t* handle,
     const double* y, int64_t n,
     uint8_t* mask_out, c4a_filter_stats_t* stats_out);
+C4A_API c4a_status_t c4a_filter_y_outlier_is_fitted(
+    const c4a_filter_y_outlier_handle_t* handle, int* out);
 
 /* ============================================================================
  * 19. Phase 14 — Leverage / Quality / Composite filters (c4a_filter_*)
@@ -2496,12 +2513,12 @@ C4A_STATIC_ASSERT(sizeof(c4a_composite_mode_t) == 4,
                   "c4a_composite_mode_t must be 4 bytes");
 C4A_STATIC_ASSERT(sizeof(c4a_signal_type_t) == 4,
                   "c4a_signal_type_t must be 4 bytes");
-C4A_STATIC_ASSERT(sizeof(c4a_split_bin_strategy_t) == 4,
-                  "c4a_split_bin_strategy_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_split_kbins_strategy_t) == 4,
+                  "c4a_split_kbins_strategy_t must be 4 bytes");
 C4A_STATIC_ASSERT(sizeof(c4a_split_y_metric_t) == 4,
                   "c4a_split_y_metric_t must be 4 bytes");
-C4A_STATIC_ASSERT(sizeof(c4a_split_group_agg_t) == 4,
-                  "c4a_split_group_agg_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_split_aggregation_t) == 4,
+                  "c4a_split_aggregation_t must be 4 bytes");
 C4A_STATIC_ASSERT(sizeof(c4a_pp_wavelet_family_t) == 4,
                   "c4a_pp_wavelet_family_t must be 4 bytes");
 C4A_STATIC_ASSERT(sizeof(c4a_pp_wavelet_boundary_t) == 4,

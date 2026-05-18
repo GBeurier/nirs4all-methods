@@ -4,6 +4,15 @@
 // `c4a_filter_*`). The single operator landed in Phase 12 is YOutlierFilter
 // with four detection methods (IQR, Z-score, percentile, MAD).
 //
+// The public contract now mirrors the sklearn fit/transform split:
+//   - `_create`     builds an unfitted handle.
+//   - `_fit`        learns the bounds (idempotent — can be called more
+//                   than once to refit).
+//   - `_apply`      writes the keep-mask + stats using the fitted bounds.
+//                   Returns C4A_ERR_NOT_FITTED when called before `_fit`.
+//   - `_is_fitted`  reports the fitted state (0/1).
+//   - `_destroy`    NULL-safe deleter.
+//
 // Universal rules of the wrappers (mirrored from c_api_preprocessing.cpp):
 //   - Every entry point is wrapped in try/catch so no C++ exception ever
 //     crosses the boundary.
@@ -15,9 +24,9 @@
 //     invalid constructor parameters that the engine rejects. It writes
 //     NULL to *out on every failure.
 //   - `_destroy` is NULL-safe and never throws.
-//   - `_fit_get_mask` validates pointers, allocates no caller-visible memory
-//     (the mask + stats buffers are caller-owned), and writes counts back
-//     through the caller's stats pointer.
+//   - `_apply` validates pointers, allocates no caller-visible memory (the
+//     mask + stats buffers are caller-owned), and writes counts back through
+//     the caller's stats pointer.
 //
 // The `c4a_filter_stats_t` public layout and the engine's
 // `c4a_core_filter_stats_t` layout are byte-identical (same field order,
@@ -113,7 +122,26 @@ C4A_API void c4a_filter_y_outlier_destroy(c4a_filter_y_outlier_handle_t* h) {
     }
 }
 
-C4A_API c4a_status_t c4a_filter_y_outlier_fit_get_mask(
+C4A_API c4a_status_t c4a_filter_y_outlier_fit(
+    c4a_filter_y_outlier_handle_t* h,
+    const double* y, std::int64_t n) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    if (n < 0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (y == nullptr && n > 0) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        return c4a_filter_y_outlier_state_fit(h->state, y, n);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API c4a_status_t c4a_filter_y_outlier_apply(
     const c4a_filter_y_outlier_handle_t* h,
     const double* y, std::int64_t n,
     std::uint8_t* mask_out,
@@ -131,6 +159,18 @@ C4A_API c4a_status_t c4a_filter_y_outlier_fit_get_mask(
         return c4a_filter_y_outlier_state_apply(
             h->state, y, n, mask_out,
             reinterpret_cast<c4a_core_filter_stats_t*>(stats_out));
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API c4a_status_t c4a_filter_y_outlier_is_fitted(
+    const c4a_filter_y_outlier_handle_t* h, int* out) {
+    if (h == nullptr || out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        return c4a_filter_y_outlier_state_is_fitted(h->state, out);
     } catch (...) {
         return C4A_ERR_INTERNAL;
     }

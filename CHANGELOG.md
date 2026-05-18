@@ -6,6 +6,57 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.0+abi.1.9.0] — Phase 21.5-A pre-Phase-22 ABI cleanup (M2 splitter rename + M3 Y-outlier fit/apply split)
+
+### Changed (source-breaking)
+
+Two ABI corrections required before Phase 22 (Python binding) freezes the
+surface for downstream consumers. Source-breaking but zero external
+consumers exist today (no bindings shipped yet), so this minor-version
+bump 1.8.0 → 1.9.0 is judged adequate.
+
+- **M2 (Splitter opaque-handle naming).** Renamed nine Phase 11 splitter
+  typedefs to use the project-wide `_handle_t` suffix:
+  - `c4a_split_kennard_stone_t`            → `c4a_split_kennard_stone_handle_t`
+  - `c4a_split_spxy_t`                     → `c4a_split_spxy_handle_t`
+  - `c4a_split_spxy_fold_t`                → `c4a_split_spxy_fold_handle_t`
+  - `c4a_split_spxy_g_fold_t`              → `c4a_split_spxy_g_fold_handle_t`
+  - `c4a_split_kmeans_t`                   → `c4a_split_kmeans_handle_t`
+  - `c4a_split_kbins_stratified_t`         → `c4a_split_kbins_stratified_handle_t`
+  - `c4a_split_binned_strat_group_kfold_t` → `c4a_split_binned_strat_group_kfold_handle_t`
+  - `c4a_split_systematic_circular_t`      → `c4a_split_systematic_circular_handle_t`
+  - `c4a_split_split_splitter_t`           → `c4a_split_split_splitter_handle_t`
+
+  `c4a_split_result_t` is intentionally retained: it is a value-typed
+  struct (heap-owned index arrays), not an opaque handle.
+
+  Also renamed two splitter enums for consistency:
+  - `c4a_split_bin_strategy_t` (`C4A_SPLIT_BIN_*`) →
+    `c4a_split_kbins_strategy_t` (`C4A_SPLIT_KBINS_*` — already used by
+    the engine internals)
+  - `c4a_split_group_agg_t`  (`C4A_SPLIT_GROUP_AGG_*`) →
+    `c4a_split_aggregation_t` (`C4A_SPLIT_AGGREGATION_*`)
+
+  `c4a_split_y_metric_t` was already correctly named — kept as-is.
+
+- **M3 (Y-outlier filter fit/apply split).** Replaced the single-call
+  `c4a_filter_y_outlier_fit_get_mask` with the classical sklearn split,
+  matching the Phase 14 leverage / quality / composite filter contracts:
+  - `c4a_filter_y_outlier_fit(handle, y, n)` — learns the bounds.
+  - `c4a_filter_y_outlier_apply(handle, y, n, mask, stats)` — writes
+    the keep-mask and stats using the previously fitted bounds. Returns
+    `C4A_ERR_NOT_FITTED` when called on an unfitted handle.
+  - `c4a_filter_y_outlier_is_fitted(handle, out)` — reports 0/1.
+
+  Net symbol delta: `-1, +3` (one rename, two additions). The frozen
+  NumPy reference `c4a_parity_filters_ref.y_outlier.y_outlier_fit_get_mask`
+  is unchanged — it stays a single-call API on the reference side.
+
+### Build / version
+
+- ABI 1.8.0 → 1.9.0.
+- `cpp/abi/expected_symbols_*.txt` regenerated.
+
 ## [0.1.0+abi.1.8.0] — Phases 6, 13, 15-18 parallel batch (wavelets, X-outlier filter, augmenters)
 
 ### Added

@@ -2,28 +2,32 @@
 /*
  * YOutlierFilter — implementation.
  *
- * For each of the four methods we follow the Python reference at
- * `nirs4all/operators/filters/y_outlier.py` so that the C engine + frozen
- * NumPy reference + nirs4all reference agree bit-exactly on integer counts
- * and within 1e-12 on the numeric bounds.
+ * The engine now splits the original single-call ``state_apply`` (a
+ * fit+mask short-circuit) into two steps:
  *
- * Algorithm sketch:
+ *   1. `state_fit(y, n)`: compute the lower/upper bounds from the training
+ *      y vector using the configured method. The bounds are stored on the
+ *      state along with a ``fitted = 1`` flag.
+ *   2. `state_apply(y, n, mask, stats)`: sweep through the supplied y and
+ *      write the keep-mask + stats using the previously learned bounds.
+ *      Returns C4A_ERR_INVALID_STATE when called on an unfitted state.
+ *
+ * Algorithm sketch (fit step):
  *   1. Compute `n_valid`: count of finite (non-NaN) y values.
- *   2. If `n_valid == 0`: degenerate. Treat as if all bounds are infinite —
- *      the mask is all-zero only when there are NaN values; on a truly
- *      empty array we set lower=-inf upper=+inf and the mask is all-zero
- *      (since n == 0).
+ *   2. If `n_valid == 0`: degenerate. Bounds left at +/-inf — the mask
+ *      will be all-zero since all of y is NaN.
  *   3. If `n_valid == 1`: bounds collapse to `[v - 1e-10, v + 1e-10]`.
  *   4. Otherwise, dispatch to one of the four method-specific bound
  *      computations against the NaN-filtered slice.
- *   5. Sweep the original y array: `mask[i] = (y[i] is finite) && (lower <=
- *      y[i] <= upper) ? 1 : 0`.
- *   6. Compute counts + exclusion_rate from the mask.
  *
- * Sorting strategy: we copy the NaN-filtered values into a working buffer
- * and call qsort with a comparator that orders NaNs last (NaNs are already
- * filtered out, but the comparator is robust). Percentile interpolation
- * matches numpy's `method="linear"` (default in NumPy 1.26.4) exactly:
+ * Apply step (pure sweep):
+ *   mask[i] = (y[i] is finite) && (lower <= y[i] <= upper) ? 1 : 0.
+ *
+ * Sorting strategy (fit step): we copy the NaN-filtered values into a
+ * working buffer and call qsort with a comparator that orders NaNs last
+ * (NaNs are already filtered out, but the comparator is robust).
+ * Percentile interpolation matches numpy's `method="linear"` (default in
+ * NumPy 1.26.4) exactly:
  *     i_frac = q/100 * (n - 1)
  *     lo     = floor(i_frac)
  *     hi     = ceil(i_frac)
@@ -45,6 +49,10 @@ struct c4a_filter_y_outlier_state_t {
     double  threshold;
     double  lower_pct;
     double  upper_pct;
+    /* Fitted bounds (valid only when fitted != 0). */
+    double  lower_bound;
+    double  upper_bound;
+    int     fitted;
 };
 
 c4a_filter_y_outlier_state_t* c4a_filter_y_outlier_state_new(
@@ -67,10 +75,13 @@ c4a_filter_y_outlier_state_t* c4a_filter_y_outlier_state_new(
     if (s == NULL) {
         return NULL;
     }
-    s->method    = method;
-    s->threshold = threshold;
-    s->lower_pct = lower_pct;
-    s->upper_pct = upper_pct;
+    s->method      = method;
+    s->threshold   = threshold;
+    s->lower_pct   = lower_pct;
+    s->upper_pct   = upper_pct;
+    s->lower_bound = -INFINITY;
+    s->upper_bound =  INFINITY;
+    s->fitted      = 0;
     return s;
 }
 
@@ -175,29 +186,27 @@ static void compute_bounds_mad(const double* sorted_y, int64_t n,
     }
 }
 
-c4a_status_t c4a_filter_y_outlier_state_apply(
-    const c4a_filter_y_outlier_state_t* state,
-    const double* y, int64_t n,
-    uint8_t* mask_out,
-    c4a_core_filter_stats_t* stats_out) {
-    if (state == NULL || mask_out == NULL || stats_out == NULL) {
+c4a_status_t c4a_filter_y_outlier_state_fit(
+    c4a_filter_y_outlier_state_t* state,
+    const double* y, int64_t n) {
+    if (state == NULL) {
         return C4A_ERR_NULL_POINTER;
     }
     if (n < 0) {
         return C4A_ERR_INVALID_ARGUMENT;
     }
-    /* y may be NULL only when n == 0. */
     if (y == NULL && n > 0) {
         return C4A_ERR_NULL_POINTER;
     }
 
-    stats_out->n_samples      = n;
-    stats_out->n_kept         = 0;
-    stats_out->n_excluded     = 0;
-    stats_out->exclusion_rate = 0.0;
+    double lo = -INFINITY;
+    double hi =  INFINITY;
 
     if (n == 0) {
-        /* Empty input: nothing to mask, exclusion rate 0. */
+        /* Empty input: bounds stay at +/-inf. Still mark as fitted. */
+        state->lower_bound = lo;
+        state->upper_bound = hi;
+        state->fitted      = 1;
         return C4A_OK;
     }
 
@@ -214,13 +223,9 @@ c4a_status_t c4a_filter_y_outlier_state_apply(
         }
     }
 
-    double lo = -INFINITY;
-    double hi =  INFINITY;
-
     if (n_valid == 0) {
         /* Mirror the Python reference: empty-valid input keeps everything
-         * within +/- inf bounds. But all of y is NaN here, so every sample
-         * gets masked out by the NaN check below. */
+         * within +/- inf bounds. */
         /* lo, hi already at +/-inf. */
     } else if (n_valid == 1) {
         lo = y_valid[0] - 1e-10;
@@ -261,7 +266,45 @@ c4a_status_t c4a_filter_y_outlier_state_apply(
         }
     }
 
-    /* Pass 2: write the mask. */
+    free(y_valid);
+    state->lower_bound = lo;
+    state->upper_bound = hi;
+    state->fitted      = 1;
+    return C4A_OK;
+}
+
+c4a_status_t c4a_filter_y_outlier_state_apply(
+    const c4a_filter_y_outlier_state_t* state,
+    const double* y, int64_t n,
+    uint8_t* mask_out,
+    c4a_core_filter_stats_t* stats_out) {
+    if (state == NULL || mask_out == NULL || stats_out == NULL) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    if (n < 0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (y == NULL && n > 0) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    if (state->fitted == 0) {
+        return C4A_ERR_NOT_FITTED;
+    }
+
+    stats_out->n_samples      = n;
+    stats_out->n_kept         = 0;
+    stats_out->n_excluded     = 0;
+    stats_out->exclusion_rate = 0.0;
+
+    if (n == 0) {
+        /* Empty input: nothing to mask, exclusion rate 0. */
+        return C4A_OK;
+    }
+
+    const double lo = state->lower_bound;
+    const double hi = state->upper_bound;
+
+    /* Single-pass mask write. */
     int64_t n_kept = 0;
     for (int64_t i = 0; i < n; ++i) {
         const double v = y[i];
@@ -278,7 +321,14 @@ c4a_status_t c4a_filter_y_outlier_state_apply(
     stats_out->n_kept         = n_kept;
     stats_out->n_excluded     = n - n_kept;
     stats_out->exclusion_rate = (double)stats_out->n_excluded / (double)n;
+    return C4A_OK;
+}
 
-    free(y_valid);
+c4a_status_t c4a_filter_y_outlier_state_is_fitted(
+    const c4a_filter_y_outlier_state_t* state, int* out) {
+    if (state == NULL || out == NULL) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = state->fitted ? 1 : 0;
     return C4A_OK;
 }

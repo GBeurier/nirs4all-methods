@@ -118,7 +118,7 @@ void test_kennard_stone_smoke() {
     // 10 points in 2D — train should pick two extremes first.
     double X[20] = { 0.0, 0.0,  1.0, 0.0,  2.0, 0.0,  3.0, 0.0,  4.0, 0.0,
                       5.0, 0.0,  6.0, 0.0,  7.0, 0.0,  8.0, 0.0,  9.0, 0.0 };
-    c4a_split_kennard_stone_t* h = nullptr;
+    c4a_split_kennard_stone_handle_t* h = nullptr;
     C4A_TEST_REQUIRE(c4a_split_kennard_stone_create(&h, 0.5) == C4A_OK);
     c4a_matrix_view_t Xv = make_rowmajor_view(X, 10, 2);
     c4a_split_result_t r{};
@@ -148,7 +148,7 @@ void test_kennard_stone_smoke() {
 void test_spxy_smoke() {
     double X[20] = { 0,0,  1,0,  2,0,  3,0,  4,0,  5,0,  6,0,  7,0,  8,0,  9,0 };
     double Y[10] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-    c4a_split_spxy_t* h = nullptr;
+    c4a_split_spxy_handle_t* h = nullptr;
     C4A_TEST_REQUIRE(c4a_split_spxy_create(&h, 0.5) == C4A_OK);
     c4a_matrix_view_t Xv = make_rowmajor_view(X, 10, 2);
     c4a_matrix_view_t Yv = make_rowmajor_view(Y, 10, 1);
@@ -163,7 +163,7 @@ void test_spxy_smoke() {
 void test_spxy_fold_smoke() {
     double X[20] = { 0,0,  1,0,  2,0,  3,0,  4,0,  5,0,  6,0,  7,0,  8,0,  9,0 };
     double Y[10] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-    c4a_split_spxy_fold_t* h = nullptr;
+    c4a_split_spxy_fold_handle_t* h = nullptr;
     C4A_TEST_REQUIRE(c4a_split_spxy_fold_create(&h, /*n_splits=*/5,
                                                 /*y_metric=*/1) == C4A_OK);
     int32_t k = 0;
@@ -185,7 +185,7 @@ void test_spxy_g_fold_smoke() {
     double X[20] = { 0,0,  1,0,  2,0,  3,0,  4,0,  5,0,  6,0,  7,0,  8,0,  9,0 };
     double Y[10] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
     int64_t groups[10] = { 0, 0, 1, 1, 2, 2, 3, 3, 4, 4 };  // 5 groups, 2 each
-    c4a_split_spxy_g_fold_t* h = nullptr;
+    c4a_split_spxy_g_fold_handle_t* h = nullptr;
     C4A_TEST_REQUIRE(c4a_split_spxy_g_fold_create(&h, /*n_splits=*/5,
                                                    /*y_metric=*/1,
                                                    /*aggregation=*/0) == C4A_OK);
@@ -208,7 +208,7 @@ void test_kmeans_smoke() {
     // indices (or fewer if Lloyd merges centroids).
     double X[24] = { 0,0, 1,0, 2,0, 3,0, 4,0, 5,0,
                      6,0, 7,0, 8,0, 9,0, 10,0, 11,0 };
-    c4a_split_kmeans_t* h = nullptr;
+    c4a_split_kmeans_handle_t* h = nullptr;
     C4A_TEST_REQUIRE(c4a_split_kmeans_create(&h, /*test_size=*/0.333,
                                               /*seed=*/42, /*max_iter=*/100)
                      == C4A_OK);
@@ -228,7 +228,7 @@ void test_kmeans_smoke() {
 void test_kbins_stratified_smoke() {
     double Y[20];
     for (int i = 0; i < 20; ++i) Y[i] = static_cast<double>(i);
-    c4a_split_kbins_stratified_t* h = nullptr;
+    c4a_split_kbins_stratified_handle_t* h = nullptr;
     C4A_TEST_REQUIRE(c4a_split_kbins_stratified_create(&h, /*test_size=*/0.25,
                                                         /*seed=*/123,
                                                         /*n_bins=*/4,
@@ -253,7 +253,7 @@ void test_bsgk_smoke() {
         Y[i] = static_cast<double>(i);
         groups[i] = i / 2;  // 15 groups of 2
     }
-    c4a_split_binned_strat_group_kfold_t* h = nullptr;
+    c4a_split_binned_strat_group_kfold_handle_t* h = nullptr;
     C4A_TEST_REQUIRE(c4a_split_binned_strat_group_kfold_create(
         &h, /*n_splits=*/3, /*n_bins=*/2, /*strategy=*/0,
         /*shuffle=*/1, /*seed=*/7) == C4A_OK);
@@ -274,7 +274,7 @@ void test_bsgk_smoke() {
 
 void test_systematic_circular_smoke() {
     double Y[10] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-    c4a_split_systematic_circular_t* h = nullptr;
+    c4a_split_systematic_circular_handle_t* h = nullptr;
     C4A_TEST_REQUIRE(c4a_split_systematic_circular_create(&h, 0.25, 42)
                      == C4A_OK);
     c4a_matrix_view_t Yv = make_rowmajor_view(Y, 10, 1);
@@ -295,7 +295,7 @@ void test_split_splitter_smoke() {
         X[i * 3 + 1] = static_cast<double>(i * 2 + 1);
         X[i * 3 + 2] = static_cast<double>((i % 3)) * 0.5;
     }
-    c4a_split_split_splitter_t* h = nullptr;
+    c4a_split_split_splitter_handle_t* h = nullptr;
     C4A_TEST_REQUIRE(c4a_split_split_splitter_create(&h, 0.25, 7) == C4A_OK);
     c4a_matrix_view_t Xv = make_rowmajor_view(X, 20, 3);
     c4a_split_result_t r{};
@@ -320,7 +320,7 @@ void verify_kennard_stone_parity() {
     ParityFixture fx = load_fixture("split_kennard_stone_v1.json");
     for (const auto& c : fx.cases) {
         const double test_size = params_get_double(c.params_json, "test_size", 0.25);
-        c4a_split_kennard_stone_t* h = nullptr;
+        c4a_split_kennard_stone_handle_t* h = nullptr;
         C4A_TEST_REQUIRE(c4a_split_kennard_stone_create(&h, test_size) == C4A_OK);
         std::vector<double> X = fx.input;
         c4a_matrix_view_t Xv = make_rowmajor_view(X.data(), fx.rows, fx.cols);
@@ -343,7 +343,7 @@ void verify_spxy_parity() {
     C4A_TEST_REQUIRE(fx.has_fit);
     for (const auto& c : fx.cases) {
         const double test_size = params_get_double(c.params_json, "test_size", 0.25);
-        c4a_split_spxy_t* h = nullptr;
+        c4a_split_spxy_handle_t* h = nullptr;
         C4A_TEST_REQUIRE(c4a_split_spxy_create(&h, test_size) == C4A_OK);
         std::vector<double> X = fx.input;
         std::vector<double> Y = fx.fit_input;
@@ -374,7 +374,7 @@ void verify_spxy_fold_parity() {
             params_get_int(c.params_json, "y_metric", 1));
         const int fold_idx = static_cast<int>(
             params_get_int(c.params_json, "fold_idx", 0));
-        c4a_split_spxy_fold_t* h = nullptr;
+        c4a_split_spxy_fold_handle_t* h = nullptr;
         C4A_TEST_REQUIRE(c4a_split_spxy_fold_create(&h, n_splits, y_metric)
                          == C4A_OK);
         std::vector<double> X = fx.input;
@@ -406,7 +406,7 @@ void verify_spxy_g_fold_parity() {
         const int aggregation = static_cast<int>(params_get_int(c.params_json, "aggregation", 0));
         const int fold_idx   = static_cast<int>(params_get_int(c.params_json, "fold_idx", 0));
         const auto groups_vec = parse_int_array(c.params_json, "groups");
-        c4a_split_spxy_g_fold_t* h = nullptr;
+        c4a_split_spxy_g_fold_handle_t* h = nullptr;
         C4A_TEST_REQUIRE(c4a_split_spxy_g_fold_create(&h, n_splits, y_metric,
                                                        aggregation) == C4A_OK);
         std::vector<double> X = fx.input;
@@ -436,7 +436,7 @@ void verify_kmeans_parity() {
         const double test_size = params_get_double(c.params_json, "test_size", 0.25);
         const std::int64_t seed = params_get_int(c.params_json, "seed", 0);
         const int max_iter = static_cast<int>(params_get_int(c.params_json, "max_iter", 100));
-        c4a_split_kmeans_t* h = nullptr;
+        c4a_split_kmeans_handle_t* h = nullptr;
         C4A_TEST_REQUIRE(c4a_split_kmeans_create(&h, test_size,
                                                   static_cast<uint64_t>(seed),
                                                   max_iter) == C4A_OK);
@@ -465,7 +465,7 @@ void verify_kbins_stratified_parity() {
         const std::int64_t seed = params_get_int(c.params_json, "seed", 0);
         const int n_bins = static_cast<int>(params_get_int(c.params_json, "n_bins", 5));
         const int strategy = static_cast<int>(params_get_int(c.params_json, "strategy", 0));
-        c4a_split_kbins_stratified_t* h = nullptr;
+        c4a_split_kbins_stratified_handle_t* h = nullptr;
         C4A_TEST_REQUIRE(c4a_split_kbins_stratified_create(&h, test_size,
             static_cast<uint64_t>(seed), n_bins, strategy) == C4A_OK);
         std::vector<double> Y = fx.fit_input;
@@ -496,7 +496,7 @@ void verify_bsgk_parity() {
         const std::int64_t seed = params_get_int(c.params_json, "seed", 0);
         const int fold_idx = static_cast<int>(params_get_int(c.params_json, "fold_idx", 0));
         const auto groups_vec = parse_int_array(c.params_json, "groups");
-        c4a_split_binned_strat_group_kfold_t* h = nullptr;
+        c4a_split_binned_strat_group_kfold_handle_t* h = nullptr;
         C4A_TEST_REQUIRE(c4a_split_binned_strat_group_kfold_create(
             &h, n_splits, n_bins, strategy, shuffle,
             static_cast<uint64_t>(seed)) == C4A_OK);
@@ -525,7 +525,7 @@ void verify_systematic_circular_parity() {
     for (const auto& c : fx.cases) {
         const double test_size = params_get_double(c.params_json, "test_size", 0.25);
         const std::int64_t seed = params_get_int(c.params_json, "seed", 0);
-        c4a_split_systematic_circular_t* h = nullptr;
+        c4a_split_systematic_circular_handle_t* h = nullptr;
         C4A_TEST_REQUIRE(c4a_split_systematic_circular_create(
             &h, test_size, static_cast<uint64_t>(seed)) == C4A_OK);
         std::vector<double> Y = fx.fit_input;
@@ -550,7 +550,7 @@ void verify_split_splitter_parity() {
     for (const auto& c : fx.cases) {
         const double test_size = params_get_double(c.params_json, "test_size", 0.25);
         const std::int64_t seed = params_get_int(c.params_json, "seed", 0);
-        c4a_split_split_splitter_t* h = nullptr;
+        c4a_split_split_splitter_handle_t* h = nullptr;
         C4A_TEST_REQUIRE(c4a_split_split_splitter_create(
             &h, test_size, static_cast<uint64_t>(seed)) == C4A_OK);
         std::vector<double> X = fx.input;
