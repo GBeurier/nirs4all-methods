@@ -1972,6 +1972,24 @@ function renderTable() {
           const refSlug = refLang || 'other';
           lcls = `ref-col col-${refSlug}`;
         }
+        // For the leading "reference" column, we don't show a TIMING —
+        // the user already sees that value in the canonical lib's own
+        // column. What's useful here is the LIBRARY NAME (which lib
+        // is the truth for this row) + the gate-2 parity icon. We
+        // render that and short-circuit the regular timing path.
+        if (isRefCol) {
+          if (!c) {
+            tr += `<td class="cell-empty ${lcls}">—</td>`;
+            continue;
+          }
+          const refName = c.ref_of || '—';
+          const gate2Icon = c.reference_parity
+            ? `<span class="ref-parity p-${c.reference_parity}">${PARITY_ICON[c.reference_parity] || ''}</span>`
+            : '';
+          const refKind = c.reference_kind ? ` <span class="col-meta" style="font-size:9px">(${c.reference_kind})</span>` : '';
+          tr += `<td class="${lcls}" title="canonical reference for ${row.algo}: ${refName}"><span class="cell-value">${refName}</span>${gate2Icon}${refKind}</td>`;
+          continue;
+        }
         if (!c || !cellPasses(c)) {
           tr += `<td class="cell-empty ${lcls}">—</td>`;
           continue;
