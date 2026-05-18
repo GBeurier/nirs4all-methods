@@ -120,7 +120,12 @@ jobs:
             cibw_build: "cp312-macosx_universal2"
             # universal2 preset cross-compiles arm64 + x86_64 into one dylib;
             # delocate-wheel --require-archs catches single-arch slips.
+            # The CMake preset pins CMAKE_OSX_DEPLOYMENT_TARGET=11.0, so the
+            # wheel + delocate must agree: MACOSX_DEPLOYMENT_TARGET=11.0 makes
+            # cibuildwheel tag the wheel macosx_11_0 and tells delocate the
+            # same target so libp4a.dylib's 11.0 minimum is accepted.
             build_preset: ci-macos-universal2
+            macos_deployment_target: "11.0"
           - label: windows-amd64
             runs_on: windows-2022
             cibw_archs: AMD64
@@ -134,6 +139,9 @@ jobs:
       CIBW_ARCHS: ${{ matrix.cfg.cibw_archs }}
       # Tell build_libp4a_in_wheel.sh which CMake preset to use.
       PLS4ALL_BUILD_PRESET: ${{ matrix.cfg.build_preset }}
+      # macOS only: keep wheel tag + delocate target + CMake deployment
+      # target in sync. Empty/unset on non-macOS jobs.
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.cfg.macos_deployment_target }}
       # Propagate the preset and any extra build env into the cibuildwheel
       # subprocess so BEFORE_ALL hooks see them too.
       # cibuildwheel parses CIBW_ENVIRONMENT with shell-like syntax — semicolons
