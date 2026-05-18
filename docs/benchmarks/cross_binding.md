@@ -2,8 +2,8 @@
 
 Single-thread numbers — the cleanest cross-language comparison. **Most external libraries don't honour OMP_NUM_THREADS at the algorithm level** (sklearn, pls::plsr, plsregress, ikpls all run the PLS algo serially even when BLAS is multi-threaded), so a multi-thread comparison would compare pls4all's OpenMP path against everyone else's single-threaded loop. That's a real, useful number — see the [thread sweep page](cross_binding_threads.md) — but this main page sticks to 1 thread for honest apples-to-apples timing.
 
-_Generated: 2026-05-18 17:55:53 UTC_
-_CSV: `tmpth5k8sjt.csv` (568 cells)_
+_Generated: 2026-05-18 20:46:58 UTC_
+_CSV: `tmpllb8x5oo.csv` (2770 cells)_
 
 
 ## Host
@@ -31,7 +31,7 @@ Each cell shows `<median_ms> <parity icon>`. The icon is the parity verdict vs t
 
 **Bold** = fastest cell on the row, **counted only among ✓ cells**. ⚠ / ✗ / — cells never carry the bold (comparing a non-bit-exact result against bit-exact ones would be misleading).
 
-Timing is the **median of 1 run(s)**; the first run is discarded as warmup when `n_runs >= 3`. All backends in a single cell read the SAME orchestrator-generated CSV so cross-language input bytes are bit-identical. See [methodology.md](methodology.md) for the full details.
+Timing is the **median of 4 run(s)**; the first run is discarded as warmup when `n_runs >= 3`. All backends in a single cell read the SAME orchestrator-generated CSV so cross-language input bytes are bit-identical. See [methodology.md](methodology.md) for the full details.
 
 
 ## Why a cell is empty (`—`)
@@ -51,499 +51,499 @@ Column names: anything starting with `pls4all.` is one of this project's binding
 
 ## aom_preprocess  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 154.2 ms ✓ | 160.0 ms ✓ | 156.7 ms ✓ | — | 32.0 ms ✓ | — | **3.32 ms ✓** | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | **1.01 ms ✓** | 1.02 ms ✓ | 1.08 ms ✓ | 1.03 ms ✓ | 1.19 ms ✓ | 1.10 ms ✓ | — | 3.50 ms ✓ | — | 1.60 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## approximate_press  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | **159.7 ms ✓** | 164.5 ms ✓ | 209.6 ms ✓ | — | — | — | — | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.12 ms ✓ | **1.05 ms ✓** | 1.06 ms ✓ | 1.20 ms ✓ | 1.05 ms ✓ | 1.13 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | 146.9 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## bagging_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 212.0 ms ✓ | 209.2 ms ✓ | 162.5 ms ✓ | **2.63 ms ✓** | 31.0 ms ✓ | 23.0 ms ✓ | 3.50 ms ✓ | 10.3 ms ✓ |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.25 ms ✓ | 1.17 ms ✓ | 1.20 ms ✓ | **1.13 ms ✓** | 1.37 ms ✓ | 1.16 ms ✓ | 1.35 ms ✓ | 3.00 ms ✓ | 6.00 ms ✓ | 1.72 ms ✓ | 3.73 ms ✓ | — | — | — | — | — | — | 9.04 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## bipls_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 166.9 ms ✓ | 155.0 ms ✓ | 161.2 ms ✓ | **3.95 ms ✓** | 32.0 ms ✓ | — | 5.11 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 3.47 ms ✓ | 2.92 ms ✓ | 3.24 ms ✓ | **2.81 ms ✓** | 3.71 ms ✓ | 3.63 ms ✓ | 4.35 ms ✓ | 6.00 ms ✓ | — | 3.38 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 876.7 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## boosting_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 172.4 ms ✓ | 163.7 ms ✓ | 162.5 ms ✓ | **2.00 ms ✓** | 34.0 ms ✓ | 19.0 ms ✓ | 3.37 ms ✓ | 10.4 ms ✓ |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.14 ms ✓ | 1.44 ms ✓ | 1.26 ms ✓ | **1.12 ms ✓** | 1.38 ms ✓ | 1.18 ms ✓ | 1.28 ms ✓ | 3.00 ms ✓ | 5.50 ms ✓ | 1.79 ms ✓ | 3.79 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 541.9 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## bve_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 162.9 ms ✓ | 231.3 ms ✓ | **162.3 ms ✓** | 12.5 ms ✗ | 39.0 ms ✗ | — | 11.2 ms ✗ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 12.9 ms ✓ | 9.09 ms ✓ | 11.8 ms ✓ | **9.04 ms ✓** | 13.2 ms ✓ | 13.7 ms ✓ | 17.6 ms ✗ | 15.0 ms ✗ | — | 9.14 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 337.2 ms ✗ | — | — | — |
 
 
 ## cars_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 157.8 ms ✓ | 156.2 ms ✓ | 236.8 ms ✓ | 2.22 ms ✗ | 30.0 ms ✓ | — | **3.55 ms ✓** | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.49 ms ✓ | 1.60 ms ✓ | 1.45 ms ✓ | **1.41 ms ✓** | 1.54 ms ✓ | 1.53 ms ✓ | 1.65 ms ✗ | 3.50 ms ✓ | — | 1.88 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 620.4 ms ✗ | — | — |
 
 
 ## continuum_regression  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 227.8 ms ✓ | 223.9 ms ✓ | 248.0 ms ✓ | **1.98 ms ✓** | 35.0 ms ✓ | 20.0 ms ✓ | 3.36 ms ✓ | 10.1 ms ✓ |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 0.99 ms ✓ | **0.99 ms ✓** | 1.01 ms ✓ | 1.00 ms ✓ | 1.04 ms ✓ | 1.10 ms ✓ | 1.36 ms ✓ | 3.00 ms ✓ | 5.00 ms ✓ | 1.59 ms ✓ | 3.51 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 502.1 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## cppls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 158.0 ms ✓ | 175.1 ms ✓ | 157.3 ms ✓ | **1.72 ms ✓** | 32.0 ms ✓ | 18.0 ms ✓ | 3.34 ms ✓ | 9.56 ms ✓ |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.04 ms ✓ | **1.00 ms ✓** | 1.03 ms ✓ | 1.07 ms ✓ | 1.02 ms ✓ | 1.05 ms ✓ | 1.14 ms ✓ | 3.50 ms ✓ | 5.50 ms ✓ | 1.64 ms ✓ | 3.55 ms ✓ | — | — | 8.00 ms ✗ | — | — | — | — | 124.0 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## di_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 175.3 ms ✓ | 223.6 ms ✓ | 197.6 ms ✓ | **1.79 ms ✓** | — | — | — | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.24 ms ✓ | 1.02 ms ✓ | **1.00 ms ✓** | 1.02 ms ✓ | 1.03 ms ✓ | 1.44 ms ✓ | 1.20 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 3.59 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## ds  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 233.0 ms ✓ | 226.5 ms ✓ | 164.2 ms ✓ | **1.93 ms ✓** | — | — | — | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | **1.21 ms ✓** | 1.26 ms ✓ | 1.57 ms ✓ | 1.25 ms ✓ | 1.24 ms ✓ | 1.33 ms ✓ | 1.42 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 136.1 ms ✓ | — | — | — | — | — | — | — | — | — |
 
 
 ## ecr  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 212.7 ms ✓ | 264.9 ms ✓ | 229.4 ms ✓ | **2.15 ms ✓** | 32.0 ms ✓ | 20.0 ms ✓ | 3.54 ms ✓ | 9.95 ms ✓ |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.32 ms ✓ | **1.16 ms ✓** | 1.20 ms ✓ | 1.26 ms ✓ | 1.37 ms ✓ | 1.32 ms ✓ | 1.48 ms ✓ | 3.50 ms ✓ | 5.50 ms ✓ | 1.74 ms ✓ | 3.66 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 9.85 ms ⚠ | — |
 
 
 ## emcuve_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 160.0 ms ✓ | **156.8 ms ✓** | 167.9 ms ✓ | 2.35 ms ✗ | 30.0 ms ✗ | — | 3.76 ms ✗ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.37 ms ✓ | 1.38 ms ✓ | 1.34 ms ✓ | **1.26 ms ✓** | 1.31 ms ✓ | 1.49 ms ✓ | 1.60 ms ✗ | 3.50 ms ✗ | — | 1.90 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 659.8 ms ✗ | — | — | — |
 
 
 ## fused_sparse_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 212.3 ms ✓ | 227.3 ms ✓ | 151.0 ms ✓ | **1.62 ms ✓** | 29.0 ms ✓ | — | 3.50 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.07 ms ✓ | **0.99 ms ✓** | 1.04 ms ✓ | 1.01 ms ✓ | 1.01 ms ✓ | 1.06 ms ✓ | 1.24 ms ✓ | 3.00 ms ✓ | — | 1.64 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## ga_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 163.5 ms ✓ | 222.1 ms ✓ | **157.8 ms ✓** | 3.73 ms ✗ | 32.0 ms ✗ | — | 4.67 ms ✗ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 2.72 ms ✓ | 2.56 ms ✓ | 2.75 ms ✓ | **2.54 ms ✓** | 2.89 ms ✓ | 2.76 ms ✓ | 3.60 ms ✗ | 4.50 ms ✗ | — | 2.96 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 473.8 ms ✗ | — | — | — |
 
 
 ## gpr_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 157.9 ms ✓ | 164.4 ms ✓ | 163.1 ms ✓ | — | 31.0 ms ✓ | — | **3.71 ms ✓** | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.22 ms ✓ | 1.31 ms ✓ | 1.22 ms ✓ | 1.26 ms ✓ | **1.20 ms ✓** | 1.30 ms ✓ | — | 3.50 ms ✓ | — | 1.98 ms ✓ | — | 4.96 ms ✗ | — | — | — | — | — | 2.05 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## group_sparse_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 166.9 ms ✓ | 158.1 ms ✓ | 160.6 ms ✓ | **1.68 ms ✓** | 31.0 ms ✓ | — | 3.16 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.05 ms ✓ | 1.05 ms ✓ | **0.98 ms ✓** | 1.07 ms ✓ | 1.09 ms ✓ | 1.03 ms ✓ | 1.15 ms ✓ | 3.00 ms ✓ | — | 1.59 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 1.0 s ✗ | — | — | — | — | — | — | — |
 
 
 ## interval_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 219.1 ms ✓ | 158.9 ms ✓ | 158.9 ms ✓ | 1.92 ms ✗ | 28.0 ms ✓ | — | **3.71 ms ✓** | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.44 ms ✓ | 1.51 ms ✓ | 1.62 ms ✓ | 1.52 ms ✓ | **1.43 ms ✓** | 1.52 ms ✓ | 1.51 ms ✗ | 3.50 ms ✓ | — | 1.97 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 593.7 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## ipw_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 150.0 ms ✓ | 158.7 ms ✓ | 213.0 ms ✓ | 1.86 ms ✗ | 29.0 ms ✓ | — | **3.33 ms ✓** | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.28 ms ✓ | **1.15 ms ✓** | 1.22 ms ✓ | 1.29 ms ✓ | 1.19 ms ✓ | 1.20 ms ✓ | 1.51 ms ✗ | 3.50 ms ✓ | — | 1.64 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 310.0 ms ✗ | — | — | — |
 
 
 ## irf_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 151.6 ms ✓ | 155.1 ms ✓ | 159.2 ms ✓ | **3.17 ms ✓** | 31.0 ms ✓ | — | 4.36 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 2.52 ms ✓ | **2.13 ms ✓** | 2.33 ms ✓ | 2.26 ms ✓ | 2.55 ms ✓ | 2.38 ms ✓ | 3.11 ms ✓ | 5.00 ms ✗ | — | 2.65 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 759.8 ms ✗ | — |
 
 
 ## iriv_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 362.1 ms ✓ | **362.1 ms ✓** | 411.6 ms ✓ | 352.8 ms ✗ | 218.0 ms ✗ | — | 150.0 ms ✗ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 191.6 ms ✓ | **145.1 ms ✓** | 173.5 ms ✓ | 146.4 ms ✓ | 192.4 ms ✓ | 192.1 ms ✓ | — | 190.0 ms ✓ | — | 145.3 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 10.1 s ✗ | — |
 
 
 ## kernel_pls_rbf  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 170.4 ms ✓ | 166.2 ms ✓ | 190.9 ms ✓ | **2.10 ms ✓** | 33.0 ms ✓ | — | 3.72 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.33 ms ✓ | 1.36 ms ✓ | 1.41 ms ✓ | 1.39 ms ✓ | 1.44 ms ✓ | **1.32 ms ✓** | 1.52 ms ✓ | 3.50 ms ✓ | — | 1.90 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 299.6 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## lw_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 215.5 ms ✓ | 157.4 ms ✓ | 158.1 ms ✓ | **2.77 ms ✓** | 32.0 ms ✓ | — | 4.31 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 2.55 ms ✓ | 2.52 ms ✓ | 2.31 ms ✓ | **2.17 ms ✓** | 2.47 ms ✓ | 2.74 ms ✓ | 2.64 ms ✓ | 5.00 ms ✓ | — | 2.80 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 10.4 ms ✗ | — | — | — | — | — |
 
 
 ## mb_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 154.2 ms ✓ | 153.5 ms ✓ | 197.4 ms ✓ | **1.76 ms ✓** | 30.0 ms ✓ | 17.0 ms ✓ | 3.29 ms ✓ | 9.88 ms ✓ |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.19 ms ✓ | 1.10 ms ✓ | 1.24 ms ✓ | 1.05 ms ✓ | **1.00 ms ✓** | 1.05 ms ✓ | 1.20 ms ✓ | 3.50 ms ✓ | 5.50 ms ✓ | 1.61 ms ✓ | 3.82 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 1.74 ms ✗ | — | — | — | — | — | — |
 
 
 ## mir_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 149.7 ms ✓ | 159.6 ms ✓ | 158.8 ms ✓ | **1.77 ms ✓** | 31.0 ms ✓ | 19.0 ms ✓ | 3.62 ms ✓ | 9.99 ms ✓ |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 0.99 ms ✓ | 0.99 ms ✓ | 1.12 ms ✓ | 1.09 ms ✓ | **0.98 ms ✓** | 1.05 ms ✓ | 1.17 ms ✓ | 2.00 ms ✓ | 5.50 ms ✓ | 1.66 ms ✓ | 3.70 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## missing_aware_nipals  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 148.3 ms ✓ | 154.1 ms ✓ | 197.1 ms ✓ | **1.65 ms ✓** | 29.0 ms ✓ | 19.0 ms ✓ | 3.11 ms ✓ | 9.64 ms ✓ |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.05 ms ✓ | 1.06 ms ✓ | 1.03 ms ✓ | 1.03 ms ✓ | 1.13 ms ✓ | **1.02 ms ✓** | 1.20 ms ✓ | 2.00 ms ✓ | 4.50 ms ✓ | 1.65 ms ✓ | 3.62 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 548.3 ms ✓ | — | — | — | — | — | — | — | — |
 
 
 ## n_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 151.7 ms ✓ | 200.5 ms ✓ | 150.3 ms ✓ | **1.75 ms ✓** | 33.0 ms ✓ | — | 3.38 ms ✓ | 9.49 ms ✓ |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.07 ms ✓ | 1.04 ms ✓ | 1.03 ms ✓ | **1.00 ms ✓** | 1.01 ms ✓ | 1.07 ms ✓ | 1.25 ms ✓ | 3.00 ms ✓ | — | 1.59 ms ✓ | 3.62 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 15.0 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## o2pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 210.5 ms ✓ | 166.4 ms ✓ | 171.1 ms ✓ | **2.45 ms ✓** | 33.0 ms ✓ | — | 3.52 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.12 ms ✓ | 1.19 ms ✓ | 1.13 ms ✓ | 1.09 ms ✓ | 1.11 ms ✓ | **1.08 ms ✓** | 1.30 ms ✓ | 3.50 ms ✓ | — | 1.70 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 832.7 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## on_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 229.3 ms ✓ | 219.0 ms ✓ | **214.8 ms ✓** | — | — | — | — | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.18 ms ✓ | **1.05 ms ✓** | 1.12 ms ✓ | 1.13 ms ✓ | 1.10 ms ✓ | 1.13 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 8.95 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## one_se_rule  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 214.8 ms ✓ | 208.6 ms ✓ | **174.2 ms ✓** | — | — | — | — | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | **0.95 ms ✓** | 0.97 ms ✓ | 0.98 ms ✓ | 0.97 ms ✓ | 0.98 ms ✓ | 1.06 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | 121.8 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## opls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 161.0 ms ✓ | 193.3 ms ✓ | 159.6 ms ✓ | **1.87 ms ✓** | 33.0 ms ✓ | — | 3.87 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.03 ms ✓ | 1.13 ms ✓ | **1.03 ms ✓** | 1.11 ms ✓ | 1.07 ms ✓ | 1.03 ms ✓ | 1.24 ms ✓ | 2.50 ms ✓ | — | 1.73 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | 3.0 s ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pcr  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 271.1 ms ✓ | 224.3 ms ✓ | 255.7 ms ✓ | **28.3 ms ✓** | 50.0 ms ✓ | 39.0 ms ✗ | 35.8 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 20.0 ms ✓ | 27.0 ms ✓ | 27.5 ms ✓ | 27.3 ms ✓ | 20.2 ms ✓ | 20.2 ms ✓ | 20.2 ms ✓ | 19.5 ms ✓ | 23.5 ms ✗ | 27.2 ms ✓ | — | **2.03 ms ✓** | — | 6.50 ms ✓ | — | — | — | 2.06 ms ✓ | 109.1 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pds  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 167.3 ms ✓ | 159.0 ms ✓ | 188.4 ms ✓ | **1.72 ms ✓** | — | — | — | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.27 ms ✓ | **1.08 ms ✓** | 1.15 ms ✓ | 1.13 ms ✓ | 1.16 ms ✓ | 1.16 ms ✓ | 1.23 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 136.6 ms ✓ | — | — | — | — | — | — | — | — | — |
 
 
 ## pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 228.2 ms ✓ | 222.6 ms ✓ | 667.8 ms ✓ | **1.94 ms ✓** | 34.0 ms ✓ | 20.0 ms ✗ | 3.31 ms ✓ | 9.78 ms ✗ |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.04 ms ✓ | **1.02 ms ✓** | 1.07 ms ✓ | 1.03 ms ✓ | 1.06 ms ✓ | 1.05 ms ✓ | 1.19 ms ✓ | 2.50 ms ✓ | 6.00 ms ✗ | 1.56 ms ✓ | 3.66 ms ✗ | 1.33 ms ✓ | 1.08 ms ✗ | 5.50 ms ✓ | — | 7.50 ms ✓ | 2.21 ms ✓ | 1.77 ms ✓ | 108.7 ms ✓ | 1.22 ms ✗ | 988.9 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_cox  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 152.9 ms ✓ | 165.9 ms ✓ | 160.7 ms ✓ | **1.57 ms ✓** | — | — | — | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.04 ms ✓ | 1.07 ms ✓ | **1.00 ms ✓** | 1.11 ms ✓ | 1.00 ms ✓ | 1.13 ms ✓ | 1.06 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 1.9 s ✗ | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_diagnostic_dmodx  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 154.4 ms ✓ | 162.5 ms ✓ | **154.0 ms ✓** | — | — | — | — | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.14 ms ✓ | 1.12 ms ✓ | 1.07 ms ✓ | 1.09 ms ✓ | 1.05 ms ✓ | **1.00 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 334.3 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_diagnostic_q  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | **153.4 ms ✓** | 161.5 ms ✓ | 158.5 ms ✓ | — | — | — | — | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.06 ms ✓ | **1.04 ms ✓** | 1.22 ms ✓ | 1.07 ms ✓ | 1.07 ms ✓ | 1.07 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 328.6 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_diagnostic_t2  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | **157.1 ms ✓** | 163.3 ms ✓ | 162.8 ms ✓ | — | — | — | — | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.05 ms ✓ | 1.12 ms ✓ | 1.09 ms ✓ | 1.08 ms ✓ | 1.05 ms ✓ | **1.01 ms ✓** | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 317.0 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_glm  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 232.3 ms ✓ | 207.2 ms ✓ | 221.4 ms ✓ | **1.97 ms ✓** | 30.0 ms ✓ | — | 3.27 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.03 ms ✓ | 1.06 ms ✓ | 1.01 ms ✓ | 1.01 ms ✓ | 1.08 ms ✓ | **0.98 ms ✓** | 1.26 ms ✓ | 3.00 ms ✓ | — | 1.72 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 1.1 s ✗ | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_lda  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 158.8 ms ✓ | 157.5 ms ✓ | 158.7 ms ✓ | **1.80 ms ✓** | 28.0 ms ✓ | — | 3.80 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 0.98 ms ✓ | **0.95 ms ✓** | 1.04 ms ✓ | 0.99 ms ✓ | 1.01 ms ✓ | 0.98 ms ✓ | 1.21 ms ✓ | 3.50 ms ✓ | — | 1.63 ms ✓ | — | — | — | — | — | — | — | 1.94 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_logistic  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 155.3 ms ✓ | 155.3 ms ✓ | 231.5 ms ✓ | **2.22 ms ✓** | 32.0 ms ✓ | — | 4.19 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.19 ms ✓ | **1.01 ms ✓** | 1.10 ms ✓ | 1.15 ms ✓ | 1.18 ms ✓ | 1.20 ms ✓ | 1.32 ms ✓ | 3.50 ms ✓ | — | 1.64 ms ✓ | — | — | — | — | — | — | — | 1.95 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_monitoring  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | **153.7 ms ✓** | 223.2 ms ✓ | 170.4 ms ✓ | — | — | — | — | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.03 ms ✓ | **1.01 ms ✓** | 1.09 ms ✓ | 1.09 ms ✓ | 1.06 ms ✓ | 1.13 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 348.9 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pls_qda  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 154.9 ms ✓ | 183.3 ms ✓ | 169.0 ms ✓ | **1.84 ms ✓** | 29.0 ms ✓ | — | 3.61 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 0.98 ms ✓ | **0.98 ms ✓** | 1.12 ms ✓ | 1.06 ms ✓ | 1.10 ms ✓ | 1.08 ms ✓ | 1.22 ms ✓ | 3.50 ms ✓ | — | 1.65 ms ✓ | — | — | — | — | — | — | — | 2.06 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## pso_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | **161.0 ms ✓** | 200.3 ms ✓ | 231.3 ms ✓ | 6.86 ms ✗ | 35.0 ms ✗ | — | 7.04 ms ✗ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 5.86 ms ✓ | 4.81 ms ✓ | 5.20 ms ✓ | **4.70 ms ✓** | 6.07 ms ✓ | 5.73 ms ✓ | 7.21 ms ✗ | 7.50 ms ✓ | — | 5.09 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 169.2 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## random_frog_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 159.9 ms ✓ | 165.6 ms ✓ | **157.9 ms ✓** | 2.28 ms ✗ | 30.0 ms ✗ | — | 3.80 ms ✗ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.53 ms ✓ | 1.78 ms ✓ | 1.46 ms ✓ | 1.46 ms ✓ | 1.44 ms ✓ | **1.42 ms ✓** | 1.75 ms ✗ | 4.00 ms ✓ | — | 1.96 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 63.4 ms ✗ | — |
 
 
 ## random_subspace_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 156.2 ms ✓ | 164.7 ms ✓ | 167.7 ms ✓ | **1.83 ms ✓** | 32.0 ms ✓ | 21.0 ms ✓ | 3.42 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.05 ms ✓ | 1.05 ms ✓ | 1.08 ms ✓ | **1.02 ms ✓** | 1.03 ms ✓ | 1.09 ms ✓ | 1.17 ms ✓ | 3.50 ms ✓ | 5.50 ms ✓ | 1.61 ms ✓ | — | — | — | — | — | — | — | 8.13 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## randomization_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 650.0 ms ✓ | 155.6 ms ✓ | 256.0 ms ✓ | **3.31 ms ✓** | 29.0 ms ✓ | — | 4.22 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 2.32 ms ✓ | 2.04 ms ✓ | 2.24 ms ✓ | **1.92 ms ✓** | 2.24 ms ✓ | 2.44 ms ✓ | 2.98 ms ✓ | 4.50 ms ✓ | — | 2.40 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 167.7 ms ✓ |
 
 
 ## recursive_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 162.5 ms ✓ | 159.6 ms ✓ | 198.7 ms ✓ | **2.11 ms ✓** | 31.0 ms ✓ | — | 3.87 ms ✓ | 10.7 ms ✓ |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.66 ms ✓ | 1.48 ms ✓ | 1.68 ms ✓ | **1.42 ms ✓** | 1.75 ms ✓ | 1.73 ms ✓ | 1.97 ms ✓ | 3.50 ms ✓ | — | 2.01 ms ✓ | 3.89 ms ✓ | — | — | — | — | — | — | 18.6 ms ✓ | 154.4 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## rep_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 165.2 ms ✓ | 171.6 ms ✓ | 163.0 ms ✓ | 2.48 ms ✗ | 29.0 ms ✓ | — | **3.62 ms ✓** | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.65 ms ✓ | **1.47 ms ✓** | 1.51 ms ✓ | 1.51 ms ✓ | 1.57 ms ✓ | 1.77 ms ✓ | 1.87 ms ✗ | 4.00 ms ✓ | — | 2.12 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 471.5 ms ✗ | — | — | — |
 
 
 ## ridge_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 174.8 ms ✓ | 173.4 ms ✓ | 162.0 ms ✓ | **1.80 ms ✓** | 32.0 ms ✓ | 20.0 ms ✓ | 3.54 ms ✓ | 10.2 ms ✓ |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.02 ms ✓ | **0.99 ms ✓** | 1.06 ms ✓ | 1.11 ms ✓ | 1.10 ms ✓ | 1.02 ms ✓ | 1.14 ms ✓ | 3.00 ms ✓ | 5.50 ms ✓ | 1.67 ms ✓ | 3.58 ms ✓ | 1.85 ms ✗ | — | — | — | — | — | 1.64 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## robust_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 159.2 ms ✓ | 159.4 ms ✓ | 224.9 ms ✓ | **1.74 ms ✓** | 32.0 ms ✓ | 21.0 ms ✓ | 3.42 ms ✓ | 10.1 ms ✓ |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.14 ms ✓ | **1.09 ms ✓** | 1.25 ms ✓ | 1.25 ms ✓ | 1.11 ms ✓ | 1.17 ms ✓ | 1.26 ms ✓ | 3.50 ms ✓ | 5.50 ms ✓ | 1.65 ms ✓ | 4.02 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | 162.0 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## rosa  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 162.7 ms ✓ | 177.6 ms ✓ | 168.0 ms ✓ | **1.73 ms ✓** | 29.0 ms ✓ | — | 4.35 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.06 ms ✓ | 1.01 ms ✓ | 1.02 ms ✓ | **0.99 ms ✓** | 1.14 ms ✓ | 1.09 ms ✓ | 1.22 ms ✓ | 4.00 ms ✓ | — | 1.66 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 877.9 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## scars_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 167.2 ms ✓ | 154.6 ms ✓ | 183.5 ms ✓ | 2.31 ms ✗ | 31.0 ms ✓ | — | **3.85 ms ✓** | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.46 ms ✓ | 1.44 ms ✓ | 1.53 ms ✓ | **1.39 ms ✓** | 1.57 ms ✓ | 1.61 ms ✓ | 1.85 ms ✗ | 4.50 ms ✓ | — | 1.91 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## shaving_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 152.1 ms ✓ | 154.2 ms ✓ | 158.7 ms ✓ | 1.98 ms ✗ | 31.0 ms ✓ | — | **3.55 ms ✓** | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.41 ms ✓ | **1.26 ms ✓** | 1.32 ms ✓ | 1.30 ms ✓ | 1.49 ms ✓ | 1.37 ms ✓ | 1.57 ms ✗ | 4.00 ms ✓ | — | 1.88 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 345.0 ms ✗ | — | — | — |
 
 
 ## sipls_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 154.4 ms ✓ | 161.1 ms ✓ | 178.2 ms ✓ | **2.90 ms ✓** | 30.0 ms ✓ | — | 4.08 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 2.03 ms ✓ | **1.88 ms ✓** | 1.89 ms ✓ | 2.07 ms ✓ | 2.13 ms ✓ | 2.06 ms ✓ | 2.70 ms ✓ | 4.50 ms ✓ | — | 2.53 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## so_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 163.6 ms ✓ | 162.3 ms ✓ | 157.6 ms ✓ | **1.92 ms ✓** | 29.0 ms ✓ | — | 3.67 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.56 ms ✓ | 1.40 ms ✓ | 1.38 ms ✓ | **1.37 ms ✓** | 1.54 ms ✓ | 1.61 ms ✓ | 1.57 ms ✓ | 3.50 ms ✓ | — | 1.87 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 878.1 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## spa_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 153.5 ms ✓ | 167.6 ms ✓ | 153.0 ms ✓ | **1.87 ms ✓** | 30.0 ms ✓ | — | 3.47 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.18 ms ✓ | 1.17 ms ✓ | 1.48 ms ✓ | 1.20 ms ✓ | 1.25 ms ✓ | **1.11 ms ✓** | 1.26 ms ✓ | 3.50 ms ✓ | — | 1.70 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 365.3 ms ✗ | — | — | — |
 
 
 ## sparse_pls_da  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 155.9 ms ✓ | 325.7 ms ✓ | 155.2 ms ✓ | **2.34 ms ✓** | 29.0 ms ✓ | — | 3.20 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.06 ms ✓ | 1.02 ms ✓ | **0.97 ms ✓** | 1.00 ms ✓ | 0.99 ms ✓ | 1.00 ms ✓ | 1.36 ms ✓ | 3.00 ms ✓ | — | 1.69 ms ✓ | — | — | — | — | — | 41.5 ms ⚠ | — | — | — | — | — | — | 128.1 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## sparse_simpls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 175.8 ms ✓ | 156.1 ms ✓ | 169.1 ms ✓ | **1.75 ms ✓** | 32.0 ms ✓ | 19.0 ms ✓ | 3.14 ms ✓ | 10.3 ms ✓ |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.01 ms ✓ | 0.98 ms ✓ | 0.97 ms ✓ | 1.09 ms ✓ | **0.96 ms ✓** | 1.04 ms ✓ | 1.22 ms ✓ | 3.00 ms ✓ | 6.50 ms ✓ | 1.55 ms ✓ | 3.59 ms ✓ | — | — | — | — | 9.00 ms ✗ | — | — | — | — | — | — | 113.0 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## st_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 224.5 ms ✓ | 158.9 ms ✓ | 225.5 ms ✓ | 2.02 ms ✗ | 32.0 ms ✓ | — | **3.55 ms ✓** | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.25 ms ✓ | 1.19 ms ✓ | 1.20 ms ✓ | 1.29 ms ✓ | 1.24 ms ✓ | **1.16 ms ✓** | 1.34 ms ✗ | 3.00 ms ✓ | — | 1.69 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 332.2 ms ✗ | — | — | — |
 
 
 ## stability_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | **152.9 ms ✓** | 158.2 ms ✓ | 157.0 ms ✓ | 1.82 ms ✗ | 28.0 ms ✗ | — | 3.26 ms ✗ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.13 ms ✓ | 1.13 ms ✓ | 1.16 ms ✓ | **1.05 ms ✓** | 1.09 ms ✓ | 1.10 ms ✓ | 1.29 ms ✗ | 3.50 ms ✗ | — | 1.66 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 393.1 ms ✗ | — | — | — |
 
 
 ## t2_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 153.3 ms ✓ | 186.1 ms ✓ | 159.1 ms ✓ | 2.00 ms ✗ | 31.0 ms ✓ | — | **3.46 ms ✓** | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.30 ms ✓ | 1.30 ms ✓ | 1.16 ms ✓ | 1.29 ms ✓ | 1.18 ms ✓ | **1.14 ms ✓** | 1.34 ms ✗ | 3.50 ms ✓ | — | 1.72 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 333.0 ms ✗ | — | — | — |
 
 
 ## uve_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | **156.4 ms ✓** | 157.9 ms ✓ | 206.6 ms ✓ | 1.88 ms ✗ | 29.0 ms ✗ | — | 3.34 ms ✗ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.17 ms ✓ | 1.12 ms ✓ | 1.15 ms ✓ | **1.10 ms ✓** | 1.11 ms ✓ | 1.20 ms ✓ | 1.25 ms ✗ | 3.50 ms ✗ | — | 1.79 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 388.4 ms ✗ | — | — | — |
 
 
 ## variable_select_coef  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 150.7 ms ✓ | 165.4 ms ✓ | 161.8 ms ✓ | **1.74 ms ✓** | — | — | — | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.03 ms ✓ | 1.05 ms ✓ | 1.06 ms ✓ | 1.05 ms ✓ | **1.02 ms ✓** | 1.03 ms ✓ | 1.12 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | 276.5 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## variable_select_sr  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 195.9 ms ✓ | 160.0 ms ✓ | 158.3 ms ✓ | **1.64 ms ✓** | — | — | — | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.02 ms ✓ | 1.04 ms ✓ | 1.03 ms ✓ | 1.06 ms ✓ | **1.00 ms ✓** | 1.01 ms ✓ | 1.14 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 282.6 ms ✗ | — | — | — |
 
 
 ## variable_select_vip  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 160.2 ms ✓ | 154.5 ms ✓ | **154.1 ms ✓** | 1.66 ms ✗ | — | — | — | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | **0.98 ms ✓** | 1.03 ms ✓ | 1.09 ms ✓ | 1.00 ms ✓ | 0.99 ms ✓ | 1.14 ms ✓ | 1.44 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 272.5 ms ✗ | — | — | — |
 
 
 ## vip_spa_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 152.6 ms ✓ | 158.5 ms ✓ | 161.9 ms ✓ | 1.68 ms ✗ | 31.0 ms ✓ | — | **3.83 ms ✓** | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.04 ms ✓ | 0.99 ms ✓ | **0.97 ms ✓** | 1.00 ms ✓ | 0.99 ms ✓ | 1.02 ms ✓ | 1.15 ms ✗ | 3.00 ms ✓ | — | 1.55 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 126.4 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## vissa_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 246.7 ms ✓ | 251.0 ms ✓ | **243.5 ms ✓** | 22.1 ms ✗ | 51.0 ms ✗ | — | 18.2 ms ✗ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 18.2 ms ✓ | **15.1 ms ✓** | 16.9 ms ✓ | 15.6 ms ✓ | 18.2 ms ✓ | 18.2 ms ✓ | 23.8 ms ✗ | 20.5 ms ✗ | — | 15.3 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 1.7 s ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## weighted_pls  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 158.8 ms ✓ | 180.1 ms ✓ | 225.1 ms ✓ | **1.61 ms ✓** | 33.0 ms ✓ | 18.0 ms ✓ | 3.35 ms ✓ | 9.42 ms ✓ |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.02 ms ✓ | 1.02 ms ✓ | **1.01 ms ✓** | 1.05 ms ✓ | 1.03 ms ✓ | 1.05 ms ✓ | 1.11 ms ✓ | 2.50 ms ✓ | 5.50 ms ✓ | 1.54 ms ✓ | 3.55 ms ✓ | — | — | — | — | — | — | 1.42 ms ✗ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
 
 
 ## wvc_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 154.5 ms ✓ | 152.8 ms ✓ | 159.9 ms ✓ | **1.65 ms ✓** | 30.0 ms ✓ | — | 3.14 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.07 ms ✓ | 1.22 ms ✓ | 1.08 ms ✓ | **1.03 ms ✓** | 1.13 ms ✓ | 1.10 ms ✓ | 1.15 ms ✓ | 3.50 ms ✓ | — | 1.53 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 315.0 ms ✗ | — | — | — |
 
 
 ## wvc_threshold_select  —  1 thread
 
-| samples × features | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef |
-|---|---|---|---|---|---|---|---|---|
-| 100×50 | 154.2 ms ✓ | 153.4 ms ✓ | 236.2 ms ✓ | **1.55 ms ✓** | 30.0 ms ✓ | — | 3.31 ms ✓ | — |
+| samples × features | pls4all.cpp.ref | pls4all.cpp.blas | pls4all.cpp.omp | pls4all.cpp.blas+omp | pls4all.registry | pls4all.python | pls4all.sklearn | pls4all.R | pls4all.R.formula | pls4all.matlab | pls4all.matlab.classdef | sklearn | ikpls | pls | ropls | mixOmics | plsregress | ref.python_scikit_learn | ref.r_pls | ref.python_ikpls | ref.r_mixomics | ref.r_ropls | ref.r_spls | ref.python_diplslib | ref.r_chemometrics | ref.r_jico | ref.python_tensorly | ref.r_kernlab_pls | ref.r_omicspls | ref.r_mdatools | ref.r_multiblock | ref.python_onpls | ref.python_auswahl | ref.python_pyswarms | ref.r_mboost | ref.r_plsrglm | ref.r_plsrcox | ref.r_base | ref.r_softimpute | ref.r_sgpls | ref.python_nirs4all_operators_models_sklearn_mbpls | ref.python_nirs4all_operators_models_sklearn_lwpls | ref.python_nirs4all_bench_aom_v0_aompls | ref.r_plsvarsel | ref.r_enpls | ref.matlab_libpls | ref.r_pls_stats |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 100×50 | 1.12 ms ✓ | 1.09 ms ✓ | **1.06 ms ✓** | 1.07 ms ✓ | 1.13 ms ✓ | 1.13 ms ✓ | 1.15 ms ✓ | 3.50 ms ✓ | — | 1.59 ms ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | 300.7 ms ✗ | — | — | — |
 
 
 ## Backend definitions
@@ -552,6 +552,9 @@ Each column in the per-algorithm tables above is one of the entries below. Colum
 
 | Column | Language | Tier | What it actually runs |
 |---|---|---|---|
+| `pls4all.cpp.ref` | C++ | pls4all reference (single-thread) | libp4a built with `PLS4ALL_WITH_BLAS=OFF, OPENMP=OFF` — pure scalar reference loops, no acceleration. The parity baseline. |
+| `pls4all.cpp.blas` | C++ | pls4all + BLAS | libp4a built with `PLS4ALL_WITH_BLAS=ON` only — links system BLAS (OpenBLAS in this env), benefits from BLAS thread parallelism. |
+| `pls4all.cpp.omp` | C++ | pls4all + OpenMP | libp4a built with `PLS4ALL_WITH_OPENMP=ON` only — OpenMP parallelism in the C kernel loops, no BLAS. |
 | `pls4all.cpp.blas+omp` | C++ | pls4all + BLAS + OpenMP | libp4a built with both `PLS4ALL_WITH_BLAS=ON` and `PLS4ALL_WITH_OPENMP=ON` — the recommended production config. |
 | `pls4all.registry` | Python | pls4all canonical | `benchmarks.parity_timing.registry.MethodSpec.pls4all_fn` — the canonical per-method pls4all entry point |
 | `pls4all.python` | Python | pls4all raw | `pls4all._methods.<algo>_fit(ctx, cfg, X, y, …)` — direct FFI binding |
@@ -560,27 +563,102 @@ Each column in the per-algorithm tables above is one of the entries below. Colum
 | `pls4all.R.formula` | R | pls4all idiomatic | `pls(y ~ ., data)`, `cppls(...)`, `sparse_pls(...)`, … — base R formula+S3 wrappers |
 | `pls4all.matlab` | MATLAB/Octave | pls4all raw | `pls4all.<algo>(X, y, ...)` — single dispatcher MEX |
 | `pls4all.matlab.classdef` | MATLAB/Octave | pls4all idiomatic | `pls4all.fit(algo, X, y, ...)` factory + per-algorithm classdefs |
+| `sklearn` | Python | external | `sklearn.cross_decomposition.PLSRegression`, `sklearn.decomposition.PCA + LinearRegression / Ridge / GaussianProcessRegressor` (proxies) |
+| `ikpls` | Python | external | `ikpls.numpy_ikpls.PLS` — Improved Kernel PLS (covers plain PLS only) |
+| `pls` | R | external | CRAN `pls` package — `pls::plsr / pls::cppls / pls::pcr` |
+| `ropls` | R | external | Bioconductor `ropls` — `ropls::opls` (covers OPLS only) |
+| `mixOmics` | R | external | Bioconductor `mixOmics` — `pls / spls / plsda / splsda` |
+| `plsregress` | MATLAB/Octave | external | Octave statistics `plsregress` (SIMPLS, plain PLS only) |
+| `ref.python_scikit_learn` | external | reference | registry-declared external reference library |
+| `ref.r_pls` | external | reference | registry-declared external reference library |
+| `ref.python_ikpls` | external | reference | registry-declared external reference library |
+| `ref.r_mixomics` | external | reference | registry-declared external reference library |
+| `ref.r_ropls` | external | reference | registry-declared external reference library |
+| `ref.r_spls` | external | reference | registry-declared external reference library |
+| `ref.python_diplslib` | external | reference | registry-declared external reference library |
+| `ref.r_chemometrics` | external | reference | registry-declared external reference library |
+| `ref.r_jico` | external | reference | registry-declared external reference library |
+| `ref.python_tensorly` | external | reference | registry-declared external reference library |
+| `ref.r_kernlab_pls` | external | reference | registry-declared external reference library |
+| `ref.r_omicspls` | external | reference | registry-declared external reference library |
+| `ref.r_mdatools` | external | reference | registry-declared external reference library |
+| `ref.r_multiblock` | external | reference | registry-declared external reference library |
+| `ref.python_onpls` | external | reference | registry-declared external reference library |
+| `ref.python_auswahl` | external | reference | registry-declared external reference library |
+| `ref.python_pyswarms` | external | reference | registry-declared external reference library |
+| `ref.r_mboost` | external | reference | registry-declared external reference library |
+| `ref.r_plsrglm` | external | reference | registry-declared external reference library |
+| `ref.r_plsrcox` | external | reference | registry-declared external reference library |
+| `ref.r_base` | external | reference | registry-declared external reference library |
+| `ref.r_softimpute` | external | reference | registry-declared external reference library |
+| `ref.r_sgpls` | external | reference | registry-declared external reference library |
+| `ref.python_nirs4all_operators_models_sklearn_mbpls` | external | reference | registry-declared external reference library |
+| `ref.python_nirs4all_operators_models_sklearn_lwpls` | external | reference | registry-declared external reference library |
+| `ref.python_nirs4all_bench_aom_v0_aompls` | external | reference | registry-declared external reference library |
+| `ref.r_plsvarsel` | external | reference | registry-declared external reference library |
+| `ref.r_enpls` | external | reference | registry-declared external reference library |
+| `ref.matlab_libpls` | external | reference | registry-declared external reference library |
+| `ref.r_pls_stats` | external | reference | registry-declared external reference library |
 
 
 ## Versions per backend
 
 | Column | Versions |
 |---|---|
+| `pls4all.cpp.ref` | `language=C++ (via ctypes bridge) (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `libp4a=0.97.0+abi.1.16.0`; `numpy=2.3.5`; `registry_method=pls` |
+| `pls4all.cpp.blas` | `language=C++ (via ctypes bridge) (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.30 blas=1`; `libp4a=0.97.0+abi.1.16.0`; `numpy=2.3.5`; `registry_method=pls` |
+| `pls4all.cpp.omp` | `language=C++ (via ctypes bridge) (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1; libomp ? openmp=1`; `libp4a=0.97.0+abi.1.16.0`; `numpy=2.3.5`; `registry_method=pls` |
 | `pls4all.cpp.blas+omp` | `language=C++ (via ctypes bridge) (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.30 blas=1; libgomp ? openmp=1`; `libp4a=0.97.0+abi.1.16.0`; `numpy=2.3.5`; `registry_method=pls` |
-| `pls4all.registry` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.30 blas=1; libgomp ? openmp=1`; `pls4all=0.97.0`; `numpy=2.3.5`; `registry_method=pls` |
-| `pls4all.python` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.30 blas=1; libgomp ? openmp=1`; `pls4all=0.97.0`; `numpy=2.3.5`; `registry_method=pls` |
-| `pls4all.sklearn` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.30 blas=1; libgomp ? openmp=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `pls4all=0.97.0`; `numpy=2.3.5`; `sklearn_class=PLSRegression` |
+| `pls4all.registry` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1`; `pls4all=0.97.0`; `numpy=2.3.5`; `registry_method=pls` |
+| `pls4all.python` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1`; `pls4all=0.97.0`; `numpy=2.3.5`; `registry_method=pls` |
+| `pls4all.sklearn` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `pls4all=0.97.0`; `numpy=2.3.5`; `sklearn_class=PLSRegression` |
 | `pls4all.R` | `language=R 4.3.3`; `pls4all=0.97.0`; `registry_method=pls`; `blas=linked-BLAS` |
 | `pls4all.R.formula` | `language=R 4.3.3`; `pls4all=0.97.0`; `registry_method=pls`; `blas=linked-BLAS` |
 | `pls4all.matlab` | `language=Octave 10.3.0`; `pls4all=from libp4a-linked MEX`; `registry_method=pls`; `blas=linked-BLAS` |
 | `pls4all.matlab.classdef` | `language=Octave 10.3.0`; `pls4all=from libp4a-linked MEX + classdefs`; `registry_method=pls`; `blas=linked-BLAS` |
+| `sklearn` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `sklearn=1.8.0`; `numpy=2.3.5` |
+| `ikpls` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `ikpls=4.0.1.post1`; `numpy=2.3.5` |
+| `pls` | `language=R 4.3.3`; `pls=2.8.5` |
+| `ropls` | `language=R 4.3.3`; `ropls=1.34.0` |
+| `mixOmics` | `language=R 4.3.3`; `mixOmics=6.26.0` |
+| `plsregress` | `language=Octave 10.3.0`; `statistics=Octave statistics pkg (plsregress)`; `blas=linked-BLAS` |
+| `ref.python_scikit_learn` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `numpy=2.3.5`; `reference_id=python_scikit_learn`; `reference_library=scikit-learn`; `reference_version=1.8.0` |
+| `ref.r_pls` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_pls`; `reference_library=pls`; `reference_version=2.8.5` |
+| `ref.python_ikpls` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `numpy=2.3.5`; `reference_id=python_ikpls`; `reference_library=ikpls`; `reference_version=4.0.1.post1` |
+| `ref.r_mixomics` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_mixomics`; `reference_library=mixOmics`; `reference_version=6.26.0` |
+| `ref.r_ropls` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_ropls`; `reference_library=ropls`; `reference_version=Bioc` |
+| `ref.r_spls` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_spls`; `reference_library=spls`; `reference_version=2.3.2` |
+| `ref.python_diplslib` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `numpy=2.3.5`; `reference_id=python_diplslib`; `reference_library=diPLSlib`; `reference_version=2.5.0` |
+| `ref.r_chemometrics` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_chemometrics`; `reference_library=chemometrics`; `reference_version=0.7.x` |
+| `ref.r_jico` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_jico`; `reference_library=JICO`; `reference_version=0.0` |
+| `ref.python_tensorly` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `numpy=2.3.5`; `reference_id=python_tensorly`; `reference_library=tensorly`; `reference_version=0.9.0` |
+| `ref.r_kernlab_pls` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_kernlab_pls`; `reference_library=kernlab+pls`; `reference_version=0.9.33+2.8.5` |
+| `ref.r_omicspls` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_omicspls`; `reference_library=OmicsPLS`; `reference_version=2.1.0` |
+| `ref.r_mdatools` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_mdatools`; `reference_library=mdatools`; `reference_version=0.15.0` |
+| `ref.r_multiblock` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_multiblock`; `reference_library=multiblock`; `reference_version=0.8.10` |
+| `ref.python_onpls` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=python_onpls`; `reference_library=OnPLS`; `reference_version=github tomlof/OnPLS` |
+| `ref.python_auswahl` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `numpy=2.3.5`; `reference_id=python_auswahl`; `reference_library=auswahl`; `reference_version=0.9.0` |
+| `ref.python_pyswarms` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `numpy=2.3.5`; `reference_id=python_pyswarms`; `reference_library=pyswarms`; `reference_version=1.3.0` |
+| `ref.r_mboost` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_mboost`; `reference_library=mboost`; `reference_version=2.9-11` |
+| `ref.r_plsrglm` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_plsrglm`; `reference_library=plsRglm`; `reference_version=1.5.1` |
+| `ref.r_plsrcox` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_plsrcox`; `reference_library=plsRcox`; `reference_version=1.8.2` |
+| `ref.r_base` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_base`; `reference_library=base`; `reference_version=R 4.3.3` |
+| `ref.r_softimpute` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_softimpute`; `reference_library=softImpute`; `reference_version=1.4-1` |
+| `ref.r_sgpls` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_sgpls`; `reference_library=sgPLS`; `reference_version=1.8.1` |
+| `ref.python_nirs4all_operators_models_sklearn_mbpls` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `numpy=2.3.5`; `reference_id=python_nirs4all_operators_models_sklearn_mbpls`; `reference_library=nirs4all.operators.models.sklearn.mbpls`; `reference_version=in-tree` |
+| `ref.python_nirs4all_operators_models_sklearn_lwpls` | `language=Python 3.13.11`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `numpy=2.3.5`; `reference_id=python_nirs4all_operators_models_sklearn_lwpls`; `reference_library=nirs4all.operators.models.sklearn.lwpls`; `reference_version=in-tree` |
+| `ref.python_nirs4all_bench_aom_v0_aompls` | — |
+| `ref.r_plsvarsel` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_plsvarsel`; `reference_library=plsVarSel`; `reference_version=0.10.0` |
+| `ref.r_enpls` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_enpls`; `reference_library=enpls`; `reference_version=6.1` |
+| `ref.matlab_libpls` | `language=matlab (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=matlab_libpls`; `reference_library=libPLS`; `reference_version=1.95` |
+| `ref.r_pls_stats` | `language=R (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `numpy=2.3.5`; `reference_id=r_pls_stats`; `reference_library=pls+stats`; `reference_version=R 4.3.3` |
 
 ## Methodology
 
 - Reference: `cpp` cell at 1 thread (libp4a via ctypes), or `python_tier1` when `cpp` is unavailable for an algorithm
 - Parity tolerance: 1e-6 (per-algo overrides possible)
 - All backends read the **same** orchestrator-generated CSV (`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`) so input data is bit-identical across languages
-- 1 run(s) per cell, first discarded as warmup when `n_runs >= 3`, median reported
+- 4 run(s) per cell, first discarded as warmup when `n_runs >= 3`, median reported
 - Per-cell timeout: 300 s
 - Thread control via `OMP_NUM_THREADS = OPENBLAS_NUM_THREADS = MKL_NUM_THREADS = BLIS_NUM_THREADS` set in the subprocess env, plus `Context.num_threads` for Python pls4all and `maxNumCompThreads()` for Octave
 - pls4all libp4a build: `build/blas-omp/cpp/src/libp4a.so` (BLAS + OpenMP enabled)
