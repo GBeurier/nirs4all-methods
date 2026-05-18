@@ -2,6 +2,25 @@
 
 `chemometrics4all` is validated against multiple reference PLS implementations. The parity gate exists so that any numerical change in the C core surfaces immediately as a test failure, with a documented tolerance per pair of implementations.
 
+## Two-gate parity architecture
+
+chemometrics4all mirrors the pls4all parity model: there are *two* distinct notions of parity, each with its own comparator and CI stage.
+
+| Gate | Comparator | Tolerance | What it verifies | Where it runs |
+|---|---|---|---|---|
+| **Gate 1 — binding parity** | `parity/binding_parity.py` :: `binding_parity(pred, ref, tolerance=1e-6)` | `max|pred - ref| <= 1e-6` (default) | Every language binding (python, R, MATLAB, JS/WASM) produces bit-identical outputs to libc4a, the C kernel reference. | Stage 4 of `.github/workflows/parity-gate.yml`. **No-op until Phase 22 ships the first binding.** |
+| **Gate 2 — reference parity** | `parity/reference_parity.py` :: `reference_parity(pred, ref, tolerance)` | `||pred - ref||_RMS / ||ref||_RMS <= tol` (per-op in `parity/tolerances.md` + the `TOLERANCE_TABLE` in `parity/run_reference_parity.py`) | libc4a's algorithms agree with the canonical external reference (numpy / scipy / sklearn / pywt / pybaselines / nirs4all). | Stage 2 of the unified parity gate (`parity/python_generator/scripts/run_parity_gate.py` → `parity/run_reference_parity.py`). |
+
+The unified parity-gate runner orchestrates four stages:
+
+1. **Stage 1 — fixture determinism.** Every fixture under `parity/fixtures/` must regenerate bit-identically from the pinned generator in `parity/python_generator/`. Run by `run_parity_gate.py::stage1_fixture_determinism`.
+2. **Stage 2 — reference parity (Gate 2).** Run by `parity/run_reference_parity.py`, which loads each canonical implementation and compares to the committed fixtures via `reference_parity`.
+3. **Stage 3 — C++ parity tests.** Asserts that libc4a matches the frozen fixtures within `parity/tolerances.md` per-row tolerances. Run by `chemometrics4all_tests`.
+4. **Stage 4 — binding parity (Gate 1).** Per-binding bit-exact smoke against libc4a using `binding_parity`. Skipped today; activates when at least one binding ships.
+
+The two comparators live in **pure-numpy modules** (`parity/binding_parity.py`, `parity/reference_parity.py`) so they can be shared by the gate runner and the per-binding orchestrators without pulling in the rest of the gate plumbing. The contract mirrors `pls4all/benchmarks/parity_timing/_comparator.py` so both projects use the same comparator semantics.
+
+
 ## Layout
 
 ```

@@ -46,8 +46,24 @@ jobs:
         run: cmake --build --preset ci-linux-gcc12-release --parallel
 
       - name: Run unified parity gate (Stage 1 + 2 + 3)
+        # Stage 1: fixture determinism (regenerate from pinned generator)
+        # Stage 2: reference parity — libc4a vs canonical upstream
+        #          (numpy / scipy / sklearn / pywt / pybaselines / nirs4all)
+        #          via parity/run_reference_parity.py, comparator
+        #          parity/reference_parity.py
+        # Stage 3: C++ parity tests vs the frozen Python fixtures
         run: python parity/python_generator/scripts/run_parity_gate.py \
                --build-dir build/ci-linux-gcc12-release
+
+      - name: Run binding-parity (Stage 4, no-op until bindings exist)
+        # Stage 4: per-binding bit-exact check vs libc4a.
+        # The comparator (parity/binding_parity.py) is in place; the
+        # actual smoke runner ships with each language binding (e.g.
+        # bindings/python/tests/test_binding_parity.py for Phase 22).
+        # This step is a no-op until at least one binding ships.
+        if: hashFiles('bindings/python/**/*.py') != ''
+        run: |
+          python -m bindings.python.tests.test_binding_parity
 
       - name: CLI selfcheck
         run: ./build/ci-linux-gcc12-release/cpp/cli/chemometrics4all_cli --selfcheck
