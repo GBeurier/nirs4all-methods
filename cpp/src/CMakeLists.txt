@@ -30,7 +30,13 @@ add_library(chemometrics4all_core OBJECT
     core/preprocessing/baselines/airpls.c
     core/preprocessing/baselines/arpls.c
     core/preprocessing/baselines/asls.c
+    core/preprocessing/baselines/beads.c
     core/preprocessing/baselines/detrend.c
+    core/preprocessing/baselines/iasls.c
+    core/preprocessing/baselines/imodpoly.c
+    core/preprocessing/baselines/modpoly.c
+    core/preprocessing/baselines/rolling_ball.c
+    core/preprocessing/baselines/snip.c
     core/preprocessing/scatter/snv.c
     core/preprocessing/scatter/local_snv.c
     core/preprocessing/scatter/robust_snv.c

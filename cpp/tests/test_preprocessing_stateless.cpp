@@ -161,10 +161,60 @@ void test_log_smoke() {
                      == C4A_OK);
     c4a_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
     c4a_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
+    // auto_offset = 1 requires _fit before _transform (Phase 5b).
+    C4A_TEST_REQUIRE(c4a_pp_log_transform(h, Xv, Yv) == C4A_ERR_NOT_FITTED);
+    C4A_TEST_REQUIRE(c4a_pp_log_fit(h, Xv) == C4A_OK);
     C4A_TEST_REQUIRE(c4a_pp_log_transform(h, Xv, Yv) == C4A_OK);
     C4A_TEST_REQUIRE(std::fabs(Y[0] - std::log(1.0)) < 1e-15);
     C4A_TEST_REQUIRE(std::fabs(Y[5] - std::log(6.0)) < 1e-15);
     c4a_pp_log_destroy(h);
+}
+
+// Phase 5b — explicit lifecycle checks for the auto_offset stateful split.
+void test_log_fit_transform_split() {
+    // 1. auto_offset == 0 stays stateless: _transform works without _fit.
+    {
+        double X[3] = {1.0, 2.0, 3.0};
+        double Y[3] = {0};
+        c4a_pp_log_handle_t* h = nullptr;
+        C4A_TEST_REQUIRE(c4a_pp_log_create(&h, /*base=*/0.0, /*offset=*/0.0,
+                                            /*auto_offset=*/0,
+                                            /*min_value=*/1e-8) == C4A_OK);
+        int fitted = -1;
+        C4A_TEST_REQUIRE(c4a_pp_log_is_fitted(h, &fitted) == C4A_OK);
+        C4A_TEST_REQUIRE(fitted == 0);
+        c4a_matrix_view_t Xv = make_rowmajor_view(X, 1, 3);
+        c4a_matrix_view_t Yv = make_rowmajor_view(Y, 1, 3);
+        // Stateless path — no NOT_FITTED, transform runs directly.
+        C4A_TEST_REQUIRE(c4a_pp_log_transform(h, Xv, Yv) == C4A_OK);
+        C4A_TEST_REQUIRE(std::fabs(Y[2] - std::log(3.0)) < 1e-15);
+        c4a_pp_log_destroy(h);
+    }
+    // 2. auto_offset == 1 path: _fit caches the offset; _transform reuses it
+    //    so a second matrix with a different min sees the SAME offset.
+    {
+        double X_fit[4]  = {-3.0, -1.0, 2.0, 5.0};   // fit data: min = -3
+        double X_call[4] = {-10.0, 0.0, 1.0, 4.0};   // probe with different min
+        double Y[4] = {0};
+        c4a_pp_log_handle_t* h = nullptr;
+        C4A_TEST_REQUIRE(c4a_pp_log_create(&h, /*base=*/0.0, /*offset=*/0.0,
+                                            /*auto_offset=*/1,
+                                            /*min_value=*/1e-3) == C4A_OK);
+        c4a_matrix_view_t XvFit  = make_rowmajor_view(X_fit, 1, 4);
+        C4A_TEST_REQUIRE(c4a_pp_log_fit(h, XvFit) == C4A_OK);
+        int fitted = -1;
+        C4A_TEST_REQUIRE(c4a_pp_log_is_fitted(h, &fitted) == C4A_OK);
+        C4A_TEST_REQUIRE(fitted == 1);
+        // Fitted offset := 1e-3 - (-3) = 3.001
+        // X_call[0] + offset = -10 + 3.001 = -6.999 -> clamped to min_value=1e-3
+        // X_call[1] + offset = 3.001
+        c4a_matrix_view_t XvCall = make_rowmajor_view(X_call, 1, 4);
+        c4a_matrix_view_t Yv     = make_rowmajor_view(Y, 1, 4);
+        C4A_TEST_REQUIRE(c4a_pp_log_transform(h, XvCall, Yv) == C4A_OK);
+        C4A_TEST_REQUIRE(std::fabs(Y[0] - std::log(1e-3)) < 1e-14);
+        C4A_TEST_REQUIRE(std::fabs(Y[1] - std::log(3.001)) < 1e-14);
+        c4a_pp_log_destroy(h);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -303,6 +353,13 @@ void verify_log_parity() {
         std::vector<double> out(in.size(), 0.0);
         c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
         c4a_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
+        // Phase 5b: auto_offset != 0 requires an explicit _fit step on the same
+        // matrix that fixture generation captured via `fit_transform`. The
+        // stateless (auto_offset == 0) path skips _fit and uses the offset
+        // directly.
+        if (auto_offset) {
+            C4A_TEST_REQUIRE(c4a_pp_log_fit(h, Xv) == C4A_OK);
+        }
         C4A_TEST_REQUIRE(c4a_pp_log_transform(h, Xv, Yv) == C4A_OK);
         assert_close(out, c.expected_output, "log/" + c.name);
         c4a_pp_log_destroy(h);
@@ -326,5 +383,6 @@ void register_preprocessing_stateless_tests(c4a_testing::Runner& r) {
     r.run("pp_simple_scale_smoke",         test_simple_scale_smoke);
     r.run("pp_simple_scale_parity",        verify_simple_scale_parity);
     r.run("pp_log_smoke",                  test_log_smoke);
+    r.run("pp_log_fit_transform_split",    test_log_fit_transform_split);
     r.run("pp_log_parity",                 verify_log_parity);
 }

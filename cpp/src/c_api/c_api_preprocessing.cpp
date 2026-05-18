@@ -39,7 +39,13 @@
 #include "core/preprocessing/baselines/airpls.h"
 #include "core/preprocessing/baselines/arpls.h"
 #include "core/preprocessing/baselines/asls.h"
+#include "core/preprocessing/baselines/beads.h"
 #include "core/preprocessing/baselines/detrend.h"
+#include "core/preprocessing/baselines/iasls.h"
+#include "core/preprocessing/baselines/imodpoly.h"
+#include "core/preprocessing/baselines/modpoly.h"
+#include "core/preprocessing/baselines/rolling_ball.h"
+#include "core/preprocessing/baselines/snip.h"
 #include "core/preprocessing/derivatives/derivate.h"
 #include "core/preprocessing/derivatives/first_derivative.h"
 #include "core/preprocessing/derivatives/norris_williams.h"
@@ -121,6 +127,24 @@ struct c4a_pp_airpls_handle_t {
 };
 struct c4a_pp_arpls_handle_t {
     c4a_pp_arpls_state_t* state;
+};
+struct c4a_pp_modpoly_handle_t {
+    c4a_pp_modpoly_state_t* state;
+};
+struct c4a_pp_imodpoly_handle_t {
+    c4a_pp_imodpoly_state_t* state;
+};
+struct c4a_pp_snip_handle_t {
+    c4a_pp_snip_state_t* state;
+};
+struct c4a_pp_rolling_ball_handle_t {
+    c4a_pp_rolling_ball_state_t* state;
+};
+struct c4a_pp_iasls_handle_t {
+    c4a_pp_iasls_state_t* state;
+};
+struct c4a_pp_beads_handle_t {
+    c4a_pp_beads_state_t* state;
 };
 
 namespace {
@@ -609,6 +633,35 @@ C4A_API void c4a_pp_log_destroy(c4a_pp_log_handle_t* h) {
         delete h;
     } catch (...) {
         // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_log_fit(c4a_pp_log_handle_t* h,
+                                     c4a_matrix_view_t X) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        std::int64_t  xr = 0, xc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        return c4a_pp_log_state_fit(h->state, xp, xr, xc);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_log_is_fitted(const c4a_pp_log_handle_t* h,
+                                           int* out_fitted) {
+    if (h == nullptr || out_fitted == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        *out_fitted = c4a_pp_log_state_is_fitted(h->state);
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
     }
 }
 
@@ -1689,6 +1742,406 @@ C4A_API c4a_status_t c4a_pp_arpls_transform(const c4a_pp_arpls_handle_t* h,
             return C4A_ERR_SHAPE_MISMATCH;
         }
         return c4a_pp_arpls_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ModPoly (Phase 5b stateless)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_modpoly_create(c4a_pp_modpoly_handle_t** out,
+                                            int32_t polyorder,
+                                            int32_t max_iter, double tol) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (polyorder < 0 || max_iter < 0 || !(tol >= 0.0)) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_modpoly_state_t* s =
+            c4a_pp_modpoly_state_new(polyorder, max_iter, tol);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_modpoly_handle_t* h =
+            new (std::nothrow) c4a_pp_modpoly_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_modpoly_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_modpoly_destroy(c4a_pp_modpoly_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_modpoly_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_modpoly_transform(const c4a_pp_modpoly_handle_t* h,
+                                               c4a_matrix_view_t X,
+                                               c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_modpoly_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// IModPoly (Phase 5b stateless)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_imodpoly_create(c4a_pp_imodpoly_handle_t** out,
+                                             int32_t polyorder,
+                                             int32_t max_iter, double tol) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (polyorder < 0 || max_iter < 0 || !(tol >= 0.0)) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_imodpoly_state_t* s =
+            c4a_pp_imodpoly_state_new(polyorder, max_iter, tol);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_imodpoly_handle_t* h =
+            new (std::nothrow) c4a_pp_imodpoly_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_imodpoly_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_imodpoly_destroy(c4a_pp_imodpoly_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_imodpoly_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_imodpoly_transform(
+    const c4a_pp_imodpoly_handle_t* h,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_imodpoly_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SNIP (Phase 5b stateless)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_snip_create(c4a_pp_snip_handle_t** out,
+                                         int32_t max_half_window) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (max_half_window < 1) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_snip_state_t* s = c4a_pp_snip_state_new(max_half_window);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_snip_handle_t* h =
+            new (std::nothrow) c4a_pp_snip_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_snip_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_snip_destroy(c4a_pp_snip_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_snip_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_snip_transform(const c4a_pp_snip_handle_t* h,
+                                            c4a_matrix_view_t X,
+                                            c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_snip_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// RollingBall (Phase 5b stateless)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_rolling_ball_create(
+    c4a_pp_rolling_ball_handle_t** out,
+    int32_t half_window, int32_t smooth_half_window) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (half_window < 1 || smooth_half_window < 0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_rolling_ball_state_t* s =
+            c4a_pp_rolling_ball_state_new(half_window, smooth_half_window);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_rolling_ball_handle_t* h =
+            new (std::nothrow) c4a_pp_rolling_ball_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_rolling_ball_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_rolling_ball_destroy(c4a_pp_rolling_ball_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_rolling_ball_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_rolling_ball_transform(
+    const c4a_pp_rolling_ball_handle_t* h,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_rolling_ball_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// IAsLS (Phase 5b stateless)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_iasls_create(c4a_pp_iasls_handle_t** out,
+                                          double lam, double p,
+                                          int32_t polyorder,
+                                          int32_t max_iter, double tol) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (!(lam > 0.0) || !(p > 0.0 && p < 1.0) || polyorder < 0 ||
+        max_iter < 0 || !(tol >= 0.0)) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_iasls_state_t* s =
+            c4a_pp_iasls_state_new(lam, p, polyorder, max_iter, tol);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_iasls_handle_t* h =
+            new (std::nothrow) c4a_pp_iasls_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_iasls_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_iasls_destroy(c4a_pp_iasls_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_iasls_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_iasls_transform(const c4a_pp_iasls_handle_t* h,
+                                             c4a_matrix_view_t X,
+                                             c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_iasls_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// BEADS (Phase 5b stateless, simplified pentadiagonal variant)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_beads_create(c4a_pp_beads_handle_t** out,
+                                          double lam_0, double lam_1,
+                                          double lam_2,
+                                          int32_t max_iter, double tol) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (!(lam_0 > 0.0) || !(lam_1 > 0.0) || !(lam_2 > 0.0) ||
+        max_iter < 0 || !(tol >= 0.0)) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_beads_state_t* s =
+            c4a_pp_beads_state_new(lam_0, lam_1, lam_2, max_iter, tol);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_beads_handle_t* h =
+            new (std::nothrow) c4a_pp_beads_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_beads_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_beads_destroy(c4a_pp_beads_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_beads_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_beads_transform(const c4a_pp_beads_handle_t* h,
+                                             c4a_matrix_view_t X,
+                                             c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_beads_state_apply(h->state, xp, xr, xc, op);
     } catch (...) {
         return C4A_ERR_INTERNAL;
     }

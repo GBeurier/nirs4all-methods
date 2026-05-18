@@ -6,6 +6,85 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.0+abi.1.6.0] — Phase 5b baseline correction (rest) + LogTransform split
+
+### Added
+
+- **Six new stateless baseline correction operators** completing the family
+  started in Phase 5a (`_create / _transform / _destroy` ABI contract):
+  - **ModPoly** (`c4a_pp_modpoly_*`, 3 symbols) — Lieber & Mahadevan-Jansen
+    2003 iterative polynomial baseline. Per-row Householder QR (shared with
+    Detrend) factored once and replayed against the clipped y at each
+    iteration.
+  - **IModPoly** (`c4a_pp_imodpoly_*`, 3 symbols) — Gan, Ruan, Mo 2006
+    σ-stopping variant of ModPoly. Convergence on the relative change of
+    the residual stdev rather than the baseline.
+  - **SNIP** (`c4a_pp_snip_*`, 3 symbols) — Ryan 1988 / Morháč 1997 LLS-
+    transformed peak-clipping. Pure arithmetic, no linear algebra.
+  - **RollingBall** (`c4a_pp_rolling_ball_*`, 3 symbols) — Kneen & Annegarn
+    1996 min-then-max morphological baseline with optional moving-average
+    smoothing.
+  - **IAsLS** (`c4a_pp_iasls_*`, 3 symbols) — He 2014 AsLS variant with
+    polynomial-prefit weight initialisation. Shares the pentadiagonal
+    LDLT solver and the shared Vandermonde QR.
+  - **BEADS** (`c4a_pp_beads_*`, 3 symbols, simplified variant) — Ning &
+    Selesnick 2014 simplified to a pentadiagonal reweighted-L2 surrogate.
+    See `docs/algorithms/beads.md` for the deferred 7-diagonal Chebyshev
+    variant.
+- **LogTransform `_fit / _transform` split** (Phase 2 carry-forward,
+  finally landed): `auto_offset != 0` now captures the safety offset via
+  `c4a_pp_log_fit` and reuses the cached `_fitted_offset` on every
+  subsequent `_transform` call. `auto_offset == 0` is unchanged
+  (stateless, no fit required). Adds 2 new symbols
+  (`c4a_pp_log_fit`, `c4a_pp_log_is_fitted`).
+- **Frozen NumPy reference** for the 6 new operators under
+  `parity/python_generator/src/c4a_parity_pybaselines_ref/`. The Phase 5a
+  validation script extends to Phase 5b (10 ops total against
+  `pybaselines==1.1.4`).
+- **Parity fixtures** under `parity/fixtures/`:
+  `modpoly_v1.json`, `imodpoly_v1.json`, `iasls_v1.json`, `beads_v1.json`
+  (4 cases each) and `snip_v1.json`, `rolling_ball_v1.json` (3 cases each).
+- **13 new tests** in `cpp/tests/test_preprocessing_baselines.cpp`
+  (6 smoke + 6 parity) and `cpp/tests/test_preprocessing_stateless.cpp`
+  (1 LogTransform fit/transform split semantic check, +1 strengthened
+  AirPLS smoke on constant input). Total: 69 → **82 tests**.
+
+### Changed
+
+- **Banded LDLT solver enhancements** in
+  `cpp/src/core/common/banded_solver.{c,h}`:
+  - Added `c4a_banded5_factor_into(L_buf, D_buf, ...)` — same algorithm
+    as `c4a_banded5_factor` but writes into caller-owned scratch buffers,
+    so AsLS / AirPLS / ArPLS / IAsLS / BEADS no longer allocate inside
+    the iteration loop.
+  - Added `c4a_banded5_solve_into(L_buf, D_buf, ...)` — companion solve
+    against the in-place factor.
+  - Added `c4a_second_diff_penalty_pent5(n, lam, ...)` — shared
+    `lam * D_2^T D_2` penalty builder; replaces three inline copies
+    (AsLS / AirPLS / ArPLS).
+  - Added `c4a_relative_l2_diff(w, w_new, n)` — shared convergence
+    helper; replaces two inline copies (AsLS / ArPLS).
+- **AsLS / AirPLS / ArPLS refactored** to use the new helpers and the
+  in-place LDLT factor. Per-row L / D scratch buffers replace per-iteration
+  mallocs (saves up to `max_iter` mallocs per row in the hot path).
+  Phase 5a parity tests still pass at their original tolerances
+  (1e-7 abs / 1e-8 rel for AsLS / ArPLS; 1e-7 / 1e-8 default and
+  1e-6 / 1e-5 for the high_lam / tight_tol_short AirPLS cases).
+- **Strengthened AirPLS smoke test** (Phase 5a #7 carry-forward): now
+  asserts `|out[i]| < 1e-6` on a constant input, not just `isfinite`.
+
+### ABI
+
+- ABI 1.5.0 → **1.6.0** (additive: 20 new symbols, no breakages).
+- Symbol count 106 → **126**.
+  - +18 from the 6 baseline ops (3 symbols each).
+  - +2 from the LogTransform split (`c4a_pp_log_fit`,
+    `c4a_pp_log_is_fitted`).
+- All three platform expected-symbols lists updated:
+  `cpp/abi/expected_symbols_{linux,macos,windows}.txt`.
+- `c4a.h` adds §12 (Phase 5b baseline correction rest), updates §8
+  (LogTransform lifecycle banner).
+
 ## [0.1.0+abi.1.5.0] — Phase 5a baseline correction core
 
 ### Added

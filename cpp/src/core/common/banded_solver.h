@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 /*
- * Pentadiagonal (5-diagonal) symmetric LDLT solver.
+ * Pentadiagonal (5-diagonal) symmetric LDLT solver + helpers shared by the
+ * Whittaker-baseline operators (AsLS / AirPLS / ArPLS / IAsLS / BEADS).
  *
  * Storage layout for the input pentadiagonal symmetric matrix:
  *   main_diag[k] = A[k, k]              for k = 0 .. n-1
@@ -52,14 +53,47 @@ c4a_status_t c4a_banded5_factor(const double* main_diag,
                                 const double* super1, const double* super2,
                                 int64_t n, c4a_banded5_t* out);
 
+/* Same algorithm as c4a_banded5_factor but writes into caller-owned scratch
+ * buffers. Used by AsLS / AirPLS / ArPLS / IAsLS / BEADS to hoist the L / D
+ * allocations out of the per-iteration hot path.
+ *
+ * Layout of L_buf is identical to c4a_banded5_t::L (row-major (n, 2)).
+ *
+ * Returns the same status codes as c4a_banded5_factor minus C4A_ERR_OUT_OF_MEMORY
+ * (no allocation happens here). */
+c4a_status_t c4a_banded5_factor_into(double* L_buf, double* D_buf,
+                                      const double* main_diag,
+                                      const double* super1, const double* super2,
+                                      int64_t n);
+
 /* Solve A x = b using the precomputed factorisation. Both b and x are
  * length n; they may alias (b is read-only by convention but we copy
  * before forward-solving). */
 c4a_status_t c4a_banded5_solve(const c4a_banded5_t* fact,
                                 const double* b, double* x);
 
+/* Equivalent of c4a_banded5_solve operating directly on caller-owned L / D
+ * buffers produced by c4a_banded5_factor_into. */
+c4a_status_t c4a_banded5_solve_into(const double* L_buf, const double* D_buf,
+                                     int64_t n,
+                                     const double* b, double* x);
+
 /* Free the L and D buffers; safe to call with NULL. Zero out the struct. */
 void c4a_banded5_free(c4a_banded5_t* fact);
+
+/* Build the diagonals of `lam * D_2^T D_2` for n >= 3 — the canonical
+ * Whittaker 2nd-order difference penalty shared across AsLS / AirPLS /
+ * ArPLS / IAsLS / BEADS. The three arrays must be length n; trailing
+ * entries that are not part of the band (super1[n-1], super2[n-2..n-1])
+ * are zero-filled for completeness. */
+void c4a_second_diff_penalty_pent5(int64_t n, double lam,
+                                    double* main_diag,
+                                    double* super1, double* super2);
+
+/* Convergence helper: relative L2 difference
+ *   ||w_new - w||_2 / max(||w||_2, DBL_MIN).
+ * Matches `pybaselines.utils.relative_difference` exactly. */
+double c4a_relative_l2_diff(const double* w, const double* w_new, int64_t n);
 
 #ifdef __cplusplus
 }  /* extern "C" */

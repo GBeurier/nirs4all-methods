@@ -18,6 +18,9 @@
  *       if rel_l2_diff(w, new_w) < tol: break
  *       w := new_w
  *   out[i] := y[i] - z[i]
+ *
+ * Phase 5b refactor: shared penalty builder + in-place factor; the L/D
+ * scratch buffers are lifted to row scope.
  */
 
 #include "arpls.h"
@@ -52,44 +55,6 @@ void c4a_pp_arpls_state_free(c4a_pp_arpls_state_t* state) {
     free(state);
 }
 
-static void arpls_build_penalty(int64_t n, double lam,
-                                 double* pen_main,
-                                 double* pen_sup1,
-                                 double* pen_sup2) {
-    for (int64_t k = 0; k < n; ++k) {
-        double m;
-        if (k == 0 || k == n - 1)             m = 1.0;
-        else if (k == 1 || k == n - 2)        m = 5.0;
-        else                                  m = 6.0;
-        pen_main[k] = lam * m;
-    }
-    for (int64_t k = 0; k < n; ++k) {
-        double v;
-        if (k >= n - 1)                       v = 0.0;
-        else if (k == 0 || k == n - 2)        v = -2.0;
-        else                                  v = -4.0;
-        pen_sup1[k] = lam * v;
-    }
-    for (int64_t k = 0; k < n; ++k) {
-        const double v = (k <= n - 3) ? 1.0 : 0.0;
-        pen_sup2[k] = lam * v;
-    }
-}
-
-static double arpls_rel_l2_diff(const double* old, const double* new_, int64_t n) {
-    double num_sq = 0.0;
-    double den_sq = 0.0;
-    for (int64_t i = 0; i < n; ++i) {
-        const double d = new_[i] - old[i];
-        num_sq += d * d;
-        den_sq += old[i] * old[i];
-    }
-    const double num = sqrt(num_sq);
-    double den = sqrt(den_sq);
-    if (den < DBL_MIN) den = DBL_MIN;
-    return num / den;
-}
-
 c4a_status_t c4a_pp_arpls_state_apply(const c4a_pp_arpls_state_t* state,
                                        const double* X,
                                        int64_t rows, int64_t cols,
@@ -120,14 +85,17 @@ c4a_status_t c4a_pp_arpls_state_apply(const c4a_pp_arpls_state_t* state,
     double* w_new    = (double*)malloc((size_t)n * sizeof(double));
     double* z        = (double*)malloc((size_t)n * sizeof(double));
     double* rhs      = (double*)malloc((size_t)n * sizeof(double));
+    double* L_buf    = (double*)malloc((size_t)n * (size_t)2 * sizeof(double));
+    double* D_buf    = (double*)malloc((size_t)n * sizeof(double));
     if (!pen_main || !pen_sup1 || !pen_sup2 || !main_d ||
-        !w || !w_new || !z || !rhs) {
+        !w || !w_new || !z || !rhs || !L_buf || !D_buf) {
         free(pen_main); free(pen_sup1); free(pen_sup2);
         free(main_d); free(w); free(w_new); free(z); free(rhs);
+        free(L_buf); free(D_buf);
         return C4A_ERR_OUT_OF_MEMORY;
     }
 
-    arpls_build_penalty(n, lam, pen_main, pen_sup1, pen_sup2);
+    c4a_second_diff_penalty_pent5(n, lam, pen_main, pen_sup1, pen_sup2);
 
     for (int64_t r = 0; r < rows; ++r) {
         const double* y = X + (size_t)r * (size_t)cols;
@@ -138,19 +106,20 @@ c4a_status_t c4a_pp_arpls_state_apply(const c4a_pp_arpls_state_t* state,
                 main_d[i] = pen_main[i] + w[i];
                 rhs[i]    = w[i] * y[i];
             }
-            c4a_banded5_t fact = {0, NULL, NULL};
-            const c4a_status_t fst = c4a_banded5_factor(main_d, pen_sup1,
-                                                        pen_sup2, n, &fact);
+            const c4a_status_t fst = c4a_banded5_factor_into(
+                L_buf, D_buf, main_d, pen_sup1, pen_sup2, n);
             if (fst != C4A_OK) {
                 free(pen_main); free(pen_sup1); free(pen_sup2);
                 free(main_d); free(w); free(w_new); free(z); free(rhs);
+                free(L_buf); free(D_buf);
                 return fst;
             }
-            const c4a_status_t sst = c4a_banded5_solve(&fact, rhs, z);
-            c4a_banded5_free(&fact);
+            const c4a_status_t sst = c4a_banded5_solve_into(
+                L_buf, D_buf, n, rhs, z);
             if (sst != C4A_OK) {
                 free(pen_main); free(pen_sup1); free(pen_sup2);
                 free(main_d); free(w); free(w_new); free(z); free(rhs);
+                free(L_buf); free(D_buf);
                 return sst;
             }
             /* Collect negative residuals, compute mean and std (ddof=1). */
@@ -199,7 +168,7 @@ c4a_status_t c4a_pp_arpls_state_apply(const c4a_pp_arpls_state_t* state,
                 }
                 w_new[i] = e;
             }
-            const double rdiff = arpls_rel_l2_diff(w, w_new, n);
+            const double rdiff = c4a_relative_l2_diff(w, w_new, n);
             if (rdiff < tol) {
                 break;
             }
@@ -213,5 +182,6 @@ c4a_status_t c4a_pp_arpls_state_apply(const c4a_pp_arpls_state_t* state,
 
     free(pen_main); free(pen_sup1); free(pen_sup2);
     free(main_d); free(w); free(w_new); free(z); free(rhs);
+    free(L_buf); free(D_buf);
     return C4A_OK;
 }

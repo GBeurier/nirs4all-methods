@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 /*
- * chemometrics4all — public C ABI v1.5.0.
+ * chemometrics4all — public C ABI v1.6.0.
  *
  * Stability: experimental until v1.0.0. Every breaking change before that
  * version bumps the ABI MAJOR (see c4a_version.h). After v1.0.0 the ABI
@@ -477,18 +477,31 @@ typedef struct c4a_pp_log_handle_t c4a_pp_log_handle_t;
 /* `base == 0.0` selects the natural logarithm. `base` must be > 0 and != 1
  * otherwise. `min_value` must be > 0 (positive clamp target).
  *
- * When `auto_offset != 0`, the offset that makes the post-offset minimum
- * equal to `min_value` is recomputed on EVERY call to `_transform` against
- * the data seen by that call (mirroring nirs4all's `fit_transform`). This
- * means calling `_transform` twice with different X values may yield
- * outputs that don't share a common baseline. For sklearn-style fit-once /
- * transform-many semantics, prefer `auto_offset = 0` with an explicit
- * `offset`. A proper `_fit/_transform` split for LogTransform is deferred
- * to Phase 4+ along with the rest of the scaling family. */
+ * Lifecycle (Phase 5b split):
+ *
+ *   - When ``auto_offset == 0`` the operator is STATELESS: the user-supplied
+ *     ``offset`` is applied verbatim. ``_transform`` may be called directly
+ *     without calling ``_fit`` first.
+ *
+ *   - When ``auto_offset != 0`` the offset is captured at FIT TIME: the
+ *     caller must invoke ``c4a_pp_log_fit`` once on the training matrix.
+ *     The fitted offset is cached on the handle and re-used by subsequent
+ *     ``_transform`` calls. Calling ``_transform`` before ``_fit`` returns
+ *     C4A_ERR_NOT_FITTED. Calling ``_fit`` again replaces the prior fit
+ *     (sklearn-style refit semantics).
+ *
+ *   This preserves the pre-Phase-5b behaviour of ``auto_offset == 0`` while
+ *   giving ``auto_offset != 0`` proper sklearn-style fit-once/transform-many
+ *   semantics.
+ */
 C4A_API c4a_status_t c4a_pp_log_create(c4a_pp_log_handle_t** out,
                                         double base, double offset,
                                         int auto_offset, double min_value);
 C4A_API void         c4a_pp_log_destroy(c4a_pp_log_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_log_fit(c4a_pp_log_handle_t* handle,
+                                     c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_log_is_fitted(const c4a_pp_log_handle_t* handle,
+                                           int* out_fitted);
 C4A_API c4a_status_t c4a_pp_log_transform(const c4a_pp_log_handle_t* handle,
                                            c4a_matrix_view_t X,
                                            c4a_matrix_view_t out);
@@ -865,12 +878,137 @@ C4A_API c4a_status_t c4a_pp_arpls_transform(const c4a_pp_arpls_handle_t* handle,
                                              c4a_matrix_view_t X,
                                              c4a_matrix_view_t out);
 
+/* ============================================================================
+ * 12. Phase 5b — Baseline correction (rest)
+ * ============================================================================
+ *
+ * Six additional stateless baseline correction operators completing the
+ * family started in Phase 5a:
+ *
+ *   - ModPoly       : Iterative polynomial baseline with peak-clipping
+ *                     (Lieber & Mahadevan-Jansen 2003).
+ *   - IModPoly      : Improved ModPoly with σ-based stopping (Gan 2006).
+ *   - SNIP          : Statistics-sensitive Non-linear Iterative Peak-clipping
+ *                     (Ryan 1988, Morháč 1997).
+ *   - RollingBall   : Morphological rolling-ball baseline (Kneen & Annegarn
+ *                     1996) — min-then-max filter with window `half_window`.
+ *   - IAsLS         : Improved AsLS (He 2014) — polynomial prefit followed by
+ *                     AsLS-style banded reweighting.
+ *   - BEADS         : Simplified Baseline Estimation And Denoising with
+ *                     Sparsity (Ning & Selesnick 2014) using a banded
+ *                     pentadiagonal LDLT with reweighted L2 sparsity surrogate.
+ *                     The full BEADS algorithm (Chebyshev approximation of |.|
+ *                     over a 7-diagonal system) is deferred to a later phase.
+ *
+ * All six operators implement the `_create / _transform / _destroy` ABI
+ * contract from §5 (stateless — no `_fit`). Each operator subtracts the
+ * estimated baseline and writes `out = X - baseline`. Convergence-failure
+ * semantics match Phase 5a: silently returns the last iterate at max_iter
+ * exhaustion.
+ *
+ * Parity reference: frozen NumPy ref under
+ *   parity/python_generator/src/c4a_parity_pybaselines_ref/
+ * validated once against pybaselines==1.1.4. The simplified BEADS reference
+ * is documented separately in docs/algorithms/beads.md.
+ */
+
+/* ---------- ModPoly (Lieber & Mahadevan-Jansen 2003) -------------------- */
+typedef struct c4a_pp_modpoly_handle_t c4a_pp_modpoly_handle_t;
+/* `polyorder` >= 0 (default 2).
+ * `max_iter`  >= 0 (default 250).
+ * `tol`       >= 0 (default 1e-3, relative L2 of the baseline change). */
+C4A_API c4a_status_t c4a_pp_modpoly_create(c4a_pp_modpoly_handle_t** out,
+                                            int32_t polyorder,
+                                            int32_t max_iter, double tol);
+C4A_API void         c4a_pp_modpoly_destroy(c4a_pp_modpoly_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_modpoly_transform(
+    const c4a_pp_modpoly_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+
+/* ---------- IModPoly (Gan, Ruan, Mo 2006) ------------------------------ */
+typedef struct c4a_pp_imodpoly_handle_t c4a_pp_imodpoly_handle_t;
+/* `polyorder` >= 0 (default 2).
+ * `max_iter`  >= 0 (default 250).
+ * `tol`       >= 0 (default 1e-3, relative change in residual stdev). */
+C4A_API c4a_status_t c4a_pp_imodpoly_create(c4a_pp_imodpoly_handle_t** out,
+                                             int32_t polyorder,
+                                             int32_t max_iter, double tol);
+C4A_API void         c4a_pp_imodpoly_destroy(c4a_pp_imodpoly_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_imodpoly_transform(
+    const c4a_pp_imodpoly_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+
+/* ---------- SNIP (Ryan 1988, Morháč 1997) ------------------------------ */
+typedef struct c4a_pp_snip_handle_t c4a_pp_snip_handle_t;
+/* `max_half_window` >= 1 (default 20). The algorithm iterates window widths
+ * w in [1, max_half_window] applying the LLS-transformed local-min clip. */
+C4A_API c4a_status_t c4a_pp_snip_create(c4a_pp_snip_handle_t** out,
+                                         int32_t max_half_window);
+C4A_API void         c4a_pp_snip_destroy(c4a_pp_snip_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_snip_transform(const c4a_pp_snip_handle_t* handle,
+                                            c4a_matrix_view_t X,
+                                            c4a_matrix_view_t out);
+
+/* ---------- RollingBall (Kneen & Annegarn 1996) ------------------------ */
+typedef struct c4a_pp_rolling_ball_handle_t c4a_pp_rolling_ball_handle_t;
+/* `half_window`        >= 1 (default 20). Window radius for the min-then-max
+ *                            morphological filter.
+ * `smooth_half_window` >= 0 (default 0). Optional moving-average smoothing of
+ *                            the final baseline. 0 disables smoothing. */
+C4A_API c4a_status_t c4a_pp_rolling_ball_create(
+    c4a_pp_rolling_ball_handle_t** out,
+    int32_t half_window, int32_t smooth_half_window);
+C4A_API void         c4a_pp_rolling_ball_destroy(
+    c4a_pp_rolling_ball_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_rolling_ball_transform(
+    const c4a_pp_rolling_ball_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+
+/* ---------- IAsLS (He 2014) -------------------------------------------- */
+typedef struct c4a_pp_iasls_handle_t c4a_pp_iasls_handle_t;
+/* `lam`       > 0 (default 1e6).
+ * `p`         (asymmetry, 0 < p < 1; default 1e-2).
+ * `polyorder` >= 0 (default 2, prefit polynomial degree).
+ * `max_iter`  >= 0 (default 50).
+ * `tol`       >= 0 (default 1e-3, relative L2 weight change). */
+C4A_API c4a_status_t c4a_pp_iasls_create(c4a_pp_iasls_handle_t** out,
+                                          double lam, double p,
+                                          int32_t polyorder,
+                                          int32_t max_iter, double tol);
+C4A_API void         c4a_pp_iasls_destroy(c4a_pp_iasls_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_iasls_transform(const c4a_pp_iasls_handle_t* handle,
+                                             c4a_matrix_view_t X,
+                                             c4a_matrix_view_t out);
+
+/* ---------- BEADS (simplified) — Ning & Selesnick 2014 ----------------- */
+typedef struct c4a_pp_beads_handle_t c4a_pp_beads_handle_t;
+/* `lam_0`    > 0 (default 1e2, sparsity weight on baseline residual).
+ * `lam_1`    > 0 (default 0.5, banded 1st-difference smoothness weight).
+ * `lam_2`    > 0 (default 0.5, banded 2nd-difference smoothness weight).
+ * `max_iter` >= 0 (default 50).
+ * `tol`      >= 0 (default 1e-3, relative L2 baseline change).
+ *
+ * NOTE: this is the simplified BEADS variant using a reweighted-L2 sparsity
+ * surrogate over the pentadiagonal D_2^T D_2 + scaled D_1^T D_1 system.
+ * See docs/algorithms/beads.md for the simplification and what is deferred. */
+C4A_API c4a_status_t c4a_pp_beads_create(c4a_pp_beads_handle_t** out,
+                                          double lam_0, double lam_1,
+                                          double lam_2,
+                                          int32_t max_iter, double tol);
+C4A_API void         c4a_pp_beads_destroy(c4a_pp_beads_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_beads_transform(const c4a_pp_beads_handle_t* handle,
+                                             c4a_matrix_view_t X,
+                                             c4a_matrix_view_t out);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
 
 /* ============================================================================
- * 12. ABI guard rails — fixed-size assertions on the C ABI shape
+ * 13. ABI guard rails — fixed-size assertions on the C ABI shape
  * ==========================================================================
  *
  * Compilers may shrink enums under non-default flags (e.g. -fshort-enums on

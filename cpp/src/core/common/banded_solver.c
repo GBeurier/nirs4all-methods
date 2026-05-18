@@ -42,36 +42,31 @@
 
 #include "banded_solver.h"
 
+#include <float.h>
+#include <math.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
-c4a_status_t c4a_banded5_factor(const double* main_diag,
-                                const double* super1, const double* super2,
-                                int64_t n, c4a_banded5_t* out) {
-    if (main_diag == NULL || super1 == NULL || super2 == NULL || out == NULL) {
-        return C4A_ERR_NULL_POINTER;
-    }
-    if (n < 1) {
-        return C4A_ERR_INVALID_ARGUMENT;
-    }
-    out->n = 0;
-    out->L = NULL;
-    out->D = NULL;
-
-    double* D = (double*)malloc((size_t)n * sizeof(double));
-    double* L = (double*)calloc((size_t)n * (size_t)2, sizeof(double));
-    if (D == NULL || L == NULL) {
-        free(D);
-        free(L);
-        return C4A_ERR_OUT_OF_MEMORY;
-    }
+/* Core in-place factorisation kernel. The two public entry points
+ * (c4a_banded5_factor and c4a_banded5_factor_into) wrap this with their
+ * own allocation policy. The kernel assumes:
+ *   - L is a length-(2 * n) buffer, fully owned by the caller.
+ *   - D is a length-n buffer, fully owned by the caller.
+ *   - n >= 1 and all input pointers are non-NULL.
+ * It returns C4A_OK or C4A_ERR_NUMERICAL_FAILURE (zero pivot).
+ */
+static c4a_status_t banded5_factor_kernel(double* L, double* D,
+                                          const double* main_diag,
+                                          const double* super1,
+                                          const double* super2,
+                                          int64_t n) {
+    /* Zero-fill L so the unused trailing entries stay deterministic. */
+    memset(L, 0, (size_t)n * (size_t)2 * sizeof(double));
 
     /* k = 0: no prior pivots. */
     D[0] = main_diag[0];
     if (D[0] == 0.0) {
-        free(D);
-        free(L);
         return C4A_ERR_NUMERICAL_FAILURE;
     }
     if (n >= 2) {
@@ -86,8 +81,6 @@ c4a_status_t c4a_banded5_factor(const double* main_diag,
         const double L10 = L[0 * 2 + 0];
         D[1] = main_diag[1] - L10 * L10 * D[0];
         if (D[1] == 0.0) {
-            free(D);
-            free(L);
             return C4A_ERR_NUMERICAL_FAILURE;
         }
         if (n >= 3) {
@@ -109,8 +102,6 @@ c4a_status_t c4a_banded5_factor(const double* main_diag,
              - Lk_k1 * Lk_k1 * D[k - 1]
              - Lk_k2 * Lk_k2 * D[k - 2];
         if (D[k] == 0.0) {
-            free(D);
-            free(L);
             return C4A_ERR_NUMERICAL_FAILURE;
         }
         if (k + 1 < n) {
@@ -124,25 +115,13 @@ c4a_status_t c4a_banded5_factor(const double* main_diag,
             L[k * 2 + 1] = super2[k] / D[k];
         }
     }
-
-    out->n = n;
-    out->L = L;
-    out->D = D;
     return C4A_OK;
 }
 
-c4a_status_t c4a_banded5_solve(const c4a_banded5_t* fact,
-                                const double* b, double* x) {
-    if (fact == NULL || b == NULL || x == NULL) {
-        return C4A_ERR_NULL_POINTER;
-    }
-    if (fact->n < 1 || fact->L == NULL || fact->D == NULL) {
-        return C4A_ERR_INVALID_ARGUMENT;
-    }
-    const int64_t n = fact->n;
-    const double* L = fact->L;
-    const double* D = fact->D;
-
+/* Core in-place solve kernel. Assumes valid L (length 2*n) and D (length n)
+ * buffers and n >= 1. */
+static void banded5_solve_kernel(const double* L, const double* D, int64_t n,
+                                  const double* b, double* x) {
     /* 1. Forward solve L y = b. We reuse x as the y-buffer (the back-solve
      *    overwrites it anyway).
      *    y[0] = b[0]
@@ -175,6 +154,79 @@ c4a_status_t c4a_banded5_solve(const c4a_banded5_t* fact,
              - L[i * 2 + 0] * x[i + 1]
              - L[i * 2 + 1] * x[i + 2];
     }
+}
+
+c4a_status_t c4a_banded5_factor(const double* main_diag,
+                                const double* super1, const double* super2,
+                                int64_t n, c4a_banded5_t* out) {
+    if (main_diag == NULL || super1 == NULL || super2 == NULL || out == NULL) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    if (n < 1) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    out->n = 0;
+    out->L = NULL;
+    out->D = NULL;
+
+    double* D = (double*)malloc((size_t)n * sizeof(double));
+    double* L = (double*)malloc((size_t)n * (size_t)2 * sizeof(double));
+    if (D == NULL || L == NULL) {
+        free(D);
+        free(L);
+        return C4A_ERR_OUT_OF_MEMORY;
+    }
+
+    const c4a_status_t st = banded5_factor_kernel(L, D, main_diag,
+                                                   super1, super2, n);
+    if (st != C4A_OK) {
+        free(D);
+        free(L);
+        return st;
+    }
+
+    out->n = n;
+    out->L = L;
+    out->D = D;
+    return C4A_OK;
+}
+
+c4a_status_t c4a_banded5_factor_into(double* L_buf, double* D_buf,
+                                      const double* main_diag,
+                                      const double* super1, const double* super2,
+                                      int64_t n) {
+    if (L_buf == NULL || D_buf == NULL ||
+        main_diag == NULL || super1 == NULL || super2 == NULL) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    if (n < 1) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    return banded5_factor_kernel(L_buf, D_buf, main_diag, super1, super2, n);
+}
+
+c4a_status_t c4a_banded5_solve(const c4a_banded5_t* fact,
+                                const double* b, double* x) {
+    if (fact == NULL || b == NULL || x == NULL) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    if (fact->n < 1 || fact->L == NULL || fact->D == NULL) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    banded5_solve_kernel(fact->L, fact->D, fact->n, b, x);
+    return C4A_OK;
+}
+
+c4a_status_t c4a_banded5_solve_into(const double* L_buf, const double* D_buf,
+                                     int64_t n,
+                                     const double* b, double* x) {
+    if (L_buf == NULL || D_buf == NULL || b == NULL || x == NULL) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    if (n < 1) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    banded5_solve_kernel(L_buf, D_buf, n, b, x);
     return C4A_OK;
 }
 
@@ -185,4 +237,45 @@ void c4a_banded5_free(c4a_banded5_t* fact) {
     fact->L = NULL;
     fact->D = NULL;
     fact->n = 0;
+}
+
+void c4a_second_diff_penalty_pent5(int64_t n, double lam,
+                                    double* main_diag,
+                                    double* super1, double* super2) {
+    /* (D^T D) values: rows 0 and n-1 contribute 1 to the main; rows 1 and
+     * n-2 contribute 5; interior rows contribute 6. super1 is -2 at the
+     * boundaries (k=0, k=n-2) and -4 elsewhere. super2 is 1 for k in
+     * [0, n-3] and 0 otherwise. */
+    for (int64_t k = 0; k < n; ++k) {
+        double m;
+        if (k == 0 || k == n - 1)             m = 1.0;
+        else if (k == 1 || k == n - 2)        m = 5.0;
+        else                                  m = 6.0;
+        main_diag[k] = lam * m;
+    }
+    for (int64_t k = 0; k < n; ++k) {
+        double v;
+        if (k >= n - 1)                       v = 0.0;
+        else if (k == 0 || k == n - 2)        v = -2.0;
+        else                                  v = -4.0;
+        super1[k] = lam * v;
+    }
+    for (int64_t k = 0; k < n; ++k) {
+        const double v = (k <= n - 3) ? 1.0 : 0.0;
+        super2[k] = lam * v;
+    }
+}
+
+double c4a_relative_l2_diff(const double* w, const double* w_new, int64_t n) {
+    double num_sq = 0.0;
+    double den_sq = 0.0;
+    for (int64_t i = 0; i < n; ++i) {
+        const double d = w_new[i] - w[i];
+        num_sq += d * d;
+        den_sq += w[i] * w[i];
+    }
+    const double num = sqrt(num_sq);
+    double den = sqrt(den_sq);
+    if (den < DBL_MIN) den = DBL_MIN;
+    return num / den;
 }

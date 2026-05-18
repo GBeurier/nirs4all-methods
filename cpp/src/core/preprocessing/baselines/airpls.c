@@ -29,6 +29,9 @@
  * If l1neg == 0 we already have exit_early. Edge case: if y_l1 == 0 the
  * convergence test is undefined; we skip it (the data is all zero and the
  * baseline is zero too).
+ *
+ * Phase 5b refactor: shared penalty builder + in-place factor; the L/D
+ * scratch buffers are lifted to row scope.
  */
 
 #include "airpls.h"
@@ -36,7 +39,6 @@
 #include <float.h>
 #include <math.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "core/common/banded_solver.h"
 
@@ -61,31 +63,6 @@ c4a_pp_airpls_state_t* c4a_pp_airpls_state_new(double lam, int32_t max_iter,
 
 void c4a_pp_airpls_state_free(c4a_pp_airpls_state_t* state) {
     free(state);
-}
-
-/* Inline the penalty diagonal builder (same as asls.c — see comments there). */
-static void airpls_build_penalty(int64_t n, double lam,
-                                  double* pen_main,
-                                  double* pen_sup1,
-                                  double* pen_sup2) {
-    for (int64_t k = 0; k < n; ++k) {
-        double m;
-        if (k == 0 || k == n - 1)             m = 1.0;
-        else if (k == 1 || k == n - 2)        m = 5.0;
-        else                                  m = 6.0;
-        pen_main[k] = lam * m;
-    }
-    for (int64_t k = 0; k < n; ++k) {
-        double v;
-        if (k >= n - 1)                       v = 0.0;
-        else if (k == 0 || k == n - 2)        v = -2.0;
-        else                                  v = -4.0;
-        pen_sup1[k] = lam * v;
-    }
-    for (int64_t k = 0; k < n; ++k) {
-        const double v = (k <= n - 3) ? 1.0 : 0.0;
-        pen_sup2[k] = lam * v;
-    }
 }
 
 c4a_status_t c4a_pp_airpls_state_apply(const c4a_pp_airpls_state_t* state,
@@ -117,13 +94,17 @@ c4a_status_t c4a_pp_airpls_state_apply(const c4a_pp_airpls_state_t* state,
     double* w        = (double*)malloc((size_t)n * sizeof(double));
     double* z        = (double*)malloc((size_t)n * sizeof(double));
     double* rhs      = (double*)malloc((size_t)n * sizeof(double));
-    if (!pen_main || !pen_sup1 || !pen_sup2 || !main_d || !w || !z || !rhs) {
+    double* L_buf    = (double*)malloc((size_t)n * (size_t)2 * sizeof(double));
+    double* D_buf    = (double*)malloc((size_t)n * sizeof(double));
+    if (!pen_main || !pen_sup1 || !pen_sup2 || !main_d ||
+        !w || !z || !rhs || !L_buf || !D_buf) {
         free(pen_main); free(pen_sup1); free(pen_sup2);
         free(main_d); free(w); free(z); free(rhs);
+        free(L_buf); free(D_buf);
         return C4A_ERR_OUT_OF_MEMORY;
     }
 
-    airpls_build_penalty(n, lam, pen_main, pen_sup1, pen_sup2);
+    c4a_second_diff_penalty_pent5(n, lam, pen_main, pen_sup1, pen_sup2);
     /* Match pybaselines' clip upper bound: log(DBL_MAX) - spacing(log(DBL_MAX)).
      * spacing(x) here is the gap to the next representable double. */
     const double log_max         = log(DBL_MAX);
@@ -142,19 +123,20 @@ c4a_status_t c4a_pp_airpls_state_apply(const c4a_pp_airpls_state_t* state,
                 main_d[i] = pen_main[i] + w[i];
                 rhs[i]    = w[i] * y[i];
             }
-            c4a_banded5_t fact = {0, NULL, NULL};
-            const c4a_status_t fst = c4a_banded5_factor(main_d, pen_sup1,
-                                                        pen_sup2, n, &fact);
+            const c4a_status_t fst = c4a_banded5_factor_into(
+                L_buf, D_buf, main_d, pen_sup1, pen_sup2, n);
             if (fst != C4A_OK) {
                 free(pen_main); free(pen_sup1); free(pen_sup2);
                 free(main_d); free(w); free(z); free(rhs);
+                free(L_buf); free(D_buf);
                 return fst;
             }
-            const c4a_status_t sst = c4a_banded5_solve(&fact, rhs, z);
-            c4a_banded5_free(&fact);
+            const c4a_status_t sst = c4a_banded5_solve_into(
+                L_buf, D_buf, n, rhs, z);
             if (sst != C4A_OK) {
                 free(pen_main); free(pen_sup1); free(pen_sup2);
                 free(main_d); free(w); free(z); free(rhs);
+                free(L_buf); free(D_buf);
                 return sst;
             }
             /* Compute residual d, count negatives, sum negatives. */
@@ -206,5 +188,6 @@ c4a_status_t c4a_pp_airpls_state_apply(const c4a_pp_airpls_state_t* state,
 
     free(pen_main); free(pen_sup1); free(pen_sup2);
     free(main_d); free(w); free(z); free(rhs);
+    free(L_buf); free(D_buf);
     return C4A_OK;
 }
