@@ -312,11 +312,35 @@ def run_backend(name: str, script: str, language: str, tier: str,
 
 
 def compute_parity(records: list[dict]) -> None:
-    """In-place augment each record with parity_max_diff + parity_ok.
+    """In-place augment each record with TWO parity gates.
 
-    Reference per (algo, n, p): cpp_blasomp @ 1 thread if available,
-    fallback to python_tier1 @ 1 thread, fallback to first OK record.
-    Compares the .npy at predictions_path element-wise (max abs diff)."""
+    Gate 1 — **binding consistency** (`binding_parity_*` columns):
+    every pls4all binding should bit-exactly match our C kernel (cpp).
+    Reference per `(algo, n, p)`: cpp @ 1 thread @ blas-omp if
+    available, fall back to python_tier1 @ 1 thread @ blas-omp, then
+    first OK record. Tolerance: `max|pred - ref| ≤ 1e-6`.
+
+    Gate 2 — **external-reference validity** (`reference_parity_*`
+    columns): cpp should agree with the canonical external reference
+    (sklearn / ropls / mixOmics / ikpls / R::pls / …) declared by the
+    method's `MethodSpec`. Reference per `(algo, n, p)`: the
+    `ref_<canonical_id>` row in the same group, where canonical_id
+    comes from `registry.canonical_reference_for_method(method)`.
+    Tolerance: `||pred - ref||_RMS / ||ref||_RMS ≤ method.rmse_rel_tol`
+    (with `rmse_abs ≤ 1e-9` escape near zero). Methods with
+    `reference_kind == "paper_only"` show `—` (NaN + ok=None) — no
+    executable truth to compare against.
+
+    Legacy `parity_*` columns are kept as aliases for `binding_parity_*`
+    so existing rendering pipelines keep working during the migration.
+    """
+    # Lazy imports — keep the orchestrator startup cheap when callers
+    # only need the cell scheduler (e.g. unit tests).
+    from benchmarks.parity_timing._comparator import (binding_parity,
+                                                       reference_parity)
+    from benchmarks.parity_timing.registry import (
+        canonical_reference_for_method, get_method, reference_kind)
+
     # Group records by (algo, n, p).
     groups: dict[tuple, list[dict]] = {}
     for r in records:
@@ -324,66 +348,123 @@ def compute_parity(records: list[dict]) -> None:
             continue
         groups.setdefault((r["algorithm"], r["n"], r["p"]), []).append(r)
 
-    for key, group in groups.items():
-        # Pick the reference: prefer cpp_blasomp @ 1 thread + algo applicable.
-        ref = None
+    for (algo, n, p), group in groups.items():
+        # ---- Resolve gate-1 reference (cpp @ 1 thread @ blas-omp) ----
+        binding_ref = None
         for cand_name in ("cpp", "python_tier1"):
             for r in group:
                 if (r["backend"] == cand_name and r.get("threads") == 1
                         and r.get("libp4a_build") == "blas-omp"):
-                    ref = r
+                    binding_ref = r
                     break
-            if ref:
+            if binding_ref:
                 break
-        if ref is None:
-            ref = group[0]
-        ref_pred_path = ref.get("predictions_path")
-        if not ref_pred_path or not Path(ref_pred_path).exists():
-            for r in group:
-                r["parity_ref"] = ref["backend"]
-                r["parity_max_diff"] = float("nan")
-                r["parity_ok"] = False
-                r["parity_note"] = "ref predictions missing"
-            continue
-        ref_preds = np.load(ref_pred_path)
-        for r in group:
-            r["parity_ref"] = ref["backend"]
-            pp = r.get("predictions_path")
-            if not pp or not Path(pp).exists():
-                r["parity_max_diff"] = float("nan")
-                r["parity_ok"] = False
-                r["parity_note"] = "predictions missing"
-                continue
+        if binding_ref is None:
+            binding_ref = group[0]
+
+        binding_ref_pred = None
+        bref_path = binding_ref.get("predictions_path")
+        if bref_path and Path(bref_path).exists():
             try:
-                p = np.load(pp)
-            except Exception as e:
-                r["parity_max_diff"] = float("nan")
-                r["parity_ok"] = False
-                r["parity_note"] = f"load error: {e}"
-                continue
-            # Feature-selection style algos can emit zero-length prediction
-            # vectors (variable-importance shapes that don't carry per-sample
-            # outputs). Don't crash np.max on empty arrays — flag and skip.
-            if p.size == 0 or ref_preds.size == 0:
-                r["parity_max_diff"] = float("nan")
-                r["parity_ok"] = False
-                r["parity_note"] = (f"empty predictions "
-                                     f"({p.shape} vs {ref_preds.shape})")
-                continue
-            if p.shape != ref_preds.shape:
-                # Some externals predict only one column for multi-Y; keep
-                # the comparison but flag it.
-                if p.size == ref_preds.size:
-                    p = p.reshape(ref_preds.shape)
-                else:
-                    r["parity_max_diff"] = float("nan")
-                    r["parity_ok"] = False
-                    r["parity_note"] = (f"shape mismatch ({p.shape} vs "
-                                          f"{ref_preds.shape})")
-                    continue
-            diff = float(np.max(np.abs(p - ref_preds)))
-            r["parity_max_diff"] = diff
-            r["parity_ok"] = diff <= r.get("parity_tolerance", 1e-6)
+                binding_ref_pred = np.load(bref_path)
+            except Exception:
+                binding_ref_pred = None
+
+        # ---- Resolve gate-2 reference (canonical external) -----------
+        try:
+            method = get_method(algo)
+            canonical = canonical_reference_for_method(method)
+            ref_kind = reference_kind(method)
+        except KeyError:
+            canonical, ref_kind = None, "external"
+
+        reference_ref = None
+        if canonical is not None:
+            canonical_backend = f"ref_{canonical['id']}"
+            for r in group:
+                if r["backend"] == canonical_backend:
+                    reference_ref = r
+                    break
+        reference_ref_pred = None
+        if reference_ref is not None:
+            rref_path = reference_ref.get("predictions_path")
+            if rref_path and Path(rref_path).exists():
+                try:
+                    reference_ref_pred = np.load(rref_path)
+                except Exception:
+                    reference_ref_pred = None
+
+        rel_tol = float(getattr(method, "rmse_rel_tol", 5e-2)) \
+            if canonical is not None else float("nan")
+
+        # ---- Populate both gates per cell ---------------------------
+        for r in group:
+            # Legacy/back-compat fields keep mirroring the binding gate
+            # so the existing renderer doesn't fall over.
+            r["parity_ref"] = binding_ref["backend"]
+            r["binding_parity_ref"] = binding_ref["backend"]
+            r["reference_parity_ref"] = (
+                canonical_backend if canonical is not None else "")
+            r["reference_kind"] = ref_kind
+            r["is_canonical_reference"] = (
+                r.get("backend") == r["reference_parity_ref"]
+                and r["reference_parity_ref"] != "")
+
+            pp = r.get("predictions_path")
+            r_pred = None
+            if pp and Path(pp).exists():
+                try:
+                    r_pred = np.load(pp)
+                except Exception as e:
+                    r["binding_parity_note"] = f"load error: {e}"
+                    r["reference_parity_note"] = f"load error: {e}"
+
+            # Gate 1: binding consistency vs cpp.
+            if r_pred is None or binding_ref_pred is None:
+                r["binding_parity_max_diff"] = float("nan")
+                r["binding_parity_ok"] = False
+                r["binding_parity_note"] = (
+                    r.get("binding_parity_note") or "predictions missing")
+            else:
+                bres = binding_parity(r_pred, binding_ref_pred,
+                                       tolerance=r.get("parity_tolerance",
+                                                        1e-6))
+                r["binding_parity_max_diff"] = bres.max_abs_diff
+                r["binding_parity_ok"] = bres.ok
+                r["binding_parity_note"] = bres.note
+
+            # Legacy mirrors.
+            r["parity_max_diff"] = r["binding_parity_max_diff"]
+            r["parity_ok"] = r["binding_parity_ok"]
+            r["parity_note"] = r.get("binding_parity_note", "")
+
+            # Gate 2: external-reference validity.
+            if ref_kind == "paper_only":
+                r["reference_parity_rmse_abs"] = float("nan")
+                r["reference_parity_rmse_rel"] = float("nan")
+                r["reference_parity_ok"] = None
+                r["reference_parity_note"] = "paper_only"
+            elif r["is_canonical_reference"]:
+                # The canonical reference compared to itself — trivially OK.
+                r["reference_parity_rmse_abs"] = 0.0
+                r["reference_parity_rmse_rel"] = 0.0
+                r["reference_parity_ok"] = True
+                r["reference_parity_note"] = "self"
+            elif r_pred is None or reference_ref_pred is None:
+                r["reference_parity_rmse_abs"] = float("nan")
+                r["reference_parity_rmse_rel"] = float("nan")
+                r["reference_parity_ok"] = False
+                r["reference_parity_note"] = (
+                    "canonical reference predictions missing"
+                    if reference_ref_pred is None
+                    else r.get("reference_parity_note", "predictions missing"))
+            else:
+                rres = reference_parity(r_pred, reference_ref_pred,
+                                          tolerance=rel_tol)
+                r["reference_parity_rmse_abs"] = rres.rmse_abs
+                r["reference_parity_rmse_rel"] = rres.rmse_rel
+                r["reference_parity_ok"] = rres.ok
+                r["reference_parity_note"] = rres.note
 
 
 def parse_sizes(args_sizes) -> list[tuple[int, int]]:
@@ -396,12 +477,25 @@ def parse_sizes(args_sizes) -> list[tuple[int, int]]:
     return out
 
 
-CSV_COLUMNS = ["algorithm", "backend", "language", "tier", "kind",
-               "n", "p", "threads", "libp4a_build", "seed_base",
-               "ok", "median_ms", "min_ms", "max_ms", "n_runs",
-               "parity_ref", "parity_max_diff", "parity_ok", "parity_note",
-               "subprocess_s", "predictions_path",
-               "versions_json", "reason"]
+CSV_COLUMNS = [
+    "algorithm", "backend", "language", "tier", "kind",
+    "n", "p", "threads", "libp4a_build", "seed_base",
+    "ok", "median_ms", "min_ms", "max_ms", "n_runs",
+    # Legacy alias columns — mirror the binding-consistency gate so the
+    # existing dashboard renderer still works during the migration.
+    "parity_ref", "parity_max_diff", "parity_ok", "parity_note",
+    # Gate 1: binding consistency (every pls4all binding vs cpp).
+    "binding_parity_ref", "binding_parity_max_diff",
+    "binding_parity_ok", "binding_parity_note",
+    # Gate 2: external-reference validity (cpp vs canonical reference,
+    # tolerance = method.rmse_rel_tol).
+    "reference_parity_ref", "reference_parity_rmse_abs",
+    "reference_parity_rmse_rel", "reference_parity_ok",
+    "reference_parity_note", "reference_kind",
+    "is_canonical_reference",
+    "subprocess_s", "predictions_path",
+    "versions_json", "reason",
+]
 
 
 def _to_bool(value):
@@ -431,10 +525,13 @@ def coerce_csv_record(row: dict) -> dict:
     out = dict(row)
     for name in ("n", "p", "threads", "seed_base", "n_runs"):
         out[name] = _to_int(out.get(name))
-    for name in ("ok", "parity_ok"):
+    for name in ("ok", "parity_ok", "binding_parity_ok",
+                 "reference_parity_ok", "is_canonical_reference"):
         out[name] = _to_bool(out.get(name))
     for name in ("median_ms", "min_ms", "max_ms",
-                 "parity_max_diff", "subprocess_s"):
+                 "parity_max_diff", "binding_parity_max_diff",
+                 "reference_parity_rmse_abs", "reference_parity_rmse_rel",
+                 "subprocess_s"):
         out[name] = _to_float(out.get(name))
     try:
         out["versions"] = json.loads(out.get("versions_json") or "{}")
@@ -488,8 +585,22 @@ def write_records(csv_out: Path, records: list[dict]) -> None:
                 r.get("libp4a_build"), r.get("seed_base"),
                 r.get("ok"), r.get("median_ms"), r.get("min_ms"),
                 r.get("max_ms"), r.get("n_runs"),
+                # Legacy alias columns (mirror gate 1).
                 r.get("parity_ref"), r.get("parity_max_diff"),
                 r.get("parity_ok"), r.get("parity_note", ""),
+                # Gate 1: binding consistency.
+                r.get("binding_parity_ref"),
+                r.get("binding_parity_max_diff"),
+                r.get("binding_parity_ok"),
+                r.get("binding_parity_note", ""),
+                # Gate 2: external-reference validity.
+                r.get("reference_parity_ref", ""),
+                r.get("reference_parity_rmse_abs"),
+                r.get("reference_parity_rmse_rel"),
+                r.get("reference_parity_ok"),
+                r.get("reference_parity_note", ""),
+                r.get("reference_kind", ""),
+                r.get("is_canonical_reference"),
                 r.get("subprocess_s"), r.get("predictions_path"),
                 json.dumps(r.get("versions") or {}), r.get("reason", ""),
             ])

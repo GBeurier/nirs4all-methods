@@ -163,15 +163,22 @@ def host_cpu_info() -> dict:
 
 
 def parity_icon(row) -> str:
+    """Legacy single-icon (binding consistency only). Used by older
+    pages that haven't migrated to the two-icon dual-gate layout."""
     if not _is_true(row.get("ok")):
         reason = (row.get("reason") or "").lower()
         if "timeout" in reason:
             return ICON_TIMEOUT
         return ICON_NA
-    if _is_true(row.get("parity_ok")):
+    # Prefer the explicit binding_parity_ok column; fall back to the
+    # legacy alias parity_ok for old CSVs.
+    parity_ok = row.get("binding_parity_ok", row.get("parity_ok"))
+    if _is_true(parity_ok):
         return ICON_OK
+    diff_val = row.get("binding_parity_max_diff",
+                        row.get("parity_max_diff", "nan"))
     try:
-        d = float(row.get("parity_max_diff", "nan"))
+        d = float(diff_val)
     except (TypeError, ValueError):
         return ICON_WARN
     if d != d:  # NaN
@@ -179,6 +186,58 @@ def parity_icon(row) -> str:
     if d < 1e-3:
         return ICON_WARN
     return ICON_FAIL
+
+
+def binding_parity_icon(row) -> str:
+    """Gate 1: did this binding produce the same numbers as cpp?
+
+    Same logic as `parity_icon` (it's the binding-consistency gate),
+    kept under an explicit name so the two-gate renderer reads cleanly.
+    """
+    return parity_icon(row)
+
+
+def reference_parity_icon(row) -> str:
+    """Gate 2: does our C kernel match the canonical external reference?
+
+    Returns:
+      ICON_OK      — within `method.rmse_rel_tol`.
+      ICON_WARN    — finite RMSE near tolerance, or NaN with shape info.
+      ICON_FAIL    — RMSE well above tolerance.
+      ICON_NA / "—" — the cell didn't run, or the method is paper_only
+                      (no executable reference exists).
+      ICON_TIMEOUT — backend timed out (carried over from `ok=False`).
+    """
+    if not _is_true(row.get("ok")):
+        reason = (row.get("reason") or "").lower()
+        if "timeout" in reason:
+            return ICON_TIMEOUT
+        return ICON_NA
+    if (row.get("reference_kind") or "").lower() == "paper_only":
+        return ICON_NA
+    ref_ok = row.get("reference_parity_ok")
+    if ref_ok in (None, "", "None"):
+        return ICON_NA
+    if _is_true(ref_ok):
+        return ICON_OK
+    rel = row.get("reference_parity_rmse_rel", "nan")
+    try:
+        d = float(rel)
+    except (TypeError, ValueError):
+        return ICON_WARN
+    if d != d:  # NaN
+        return ICON_WARN
+    # within 10× the per-method tolerance → WARN (close but no cigar)
+    return ICON_WARN if d < 10 else ICON_FAIL
+
+
+def dual_parity_label(row) -> str:
+    """Compact two-icon label, e.g. `✓✓`, `✓✗`, `—✓`, ` ✗ — `.
+
+    First icon = binding consistency (gate 1).
+    Second icon = external-reference validity (gate 2).
+    """
+    return binding_parity_icon(row) + reference_parity_icon(row)
 
 
 def _is_true(v) -> bool:

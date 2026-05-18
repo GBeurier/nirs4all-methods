@@ -179,11 +179,14 @@ def is_true(v: Any) -> bool:
 
 
 def parity_code(row: dict) -> str:
-    """exact | drift | divergent | error | not_run | not_available.
+    """Legacy binding-consistency parity code (gate 1 only).
+
+    exact | drift | divergent | error | not_run | not_available.
 
     Distinguishes hard runtime errors (ModuleNotFoundError, ImportError,
     crash) from libraries that do not expose an algorithm so the dashboard
     can show the right icon instead of collapsing every failure to a dash.
+    Reads `binding_parity_*` first, falls back to legacy `parity_*`.
     """
     if not is_true(row.get("ok")):
         reason = (row.get("reason") or "").lower()
@@ -198,15 +201,53 @@ def parity_code(row: dict) -> str:
                 "error", "exception", "crash", "traceback", "segfault")):
             return "error"
         return "not_run"
-    if is_true(row.get("parity_ok")):
+    parity_ok = row.get("binding_parity_ok", row.get("parity_ok"))
+    if is_true(parity_ok):
         return "exact"
+    diff_val = row.get("binding_parity_max_diff",
+                        row.get("parity_max_diff", "nan"))
     try:
-        d = float(row.get("parity_max_diff", "nan"))
+        d = float(diff_val)
     except (TypeError, ValueError):
         return "drift"
     if d != d:           # NaN
         return "drift"
     if d < 1e-3:
+        return "drift"
+    return "divergent"
+
+
+def reference_parity_code(row: dict) -> str:
+    """Gate-2 parity classification.
+
+    Values:
+      exact          — within `method.rmse_rel_tol`.
+      drift          — finite but above tolerance, < 10× tolerance.
+      divergent      — > 10× tolerance.
+      not_available  — `reference_kind=paper_only` (no executable truth).
+      not_run        — backend didn't produce a prediction at all.
+      error          — runtime error path (delegated to gate 1's
+                       classifier, kept here so the two columns line up).
+    """
+    if not is_true(row.get("ok")):
+        # Defer to the same error/timeout categorisation as gate 1.
+        return parity_code(row)
+    kind = (row.get("reference_kind") or "").lower()
+    if kind == "paper_only":
+        return "not_available"
+    ref_ok = row.get("reference_parity_ok")
+    if ref_ok in (None, "", "None"):
+        return "not_available"
+    if is_true(ref_ok):
+        return "exact"
+    rel = row.get("reference_parity_rmse_rel", "nan")
+    try:
+        d = float(rel)
+    except (TypeError, ValueError):
+        return "drift"
+    if d != d:
+        return "drift"
+    if d < 10:
         return "drift"
     return "divergent"
 
@@ -412,15 +453,26 @@ def build_payload(results_dir: Path) -> dict:
             pivot[rkey] = {}        # ensure row exists even with no cells
         cid = column_id(r["backend"], r.get("libp4a_build", ""))
         verdict = parity_code(r)
+        ref_verdict = reference_parity_code(r)
         try:
             ms = float(r["median_ms"]) if r.get("median_ms") else None
         except ValueError:
             ms = None
         ok = is_true(r.get("ok"))
-        cell = {"parity": verdict, "ok": ok}
+        # `parity` keeps the legacy gate-1 verdict (binding consistency
+        # vs cpp). `reference_parity` is the new gate-2 verdict (kernel
+        # vs the method's canonical external reference). The dashboard
+        # renders both icons per cell.
+        cell = {"parity": verdict, "reference_parity": ref_verdict,
+                "ok": ok}
         if ms is not None and ms == ms:   # not NaN
             cell["ms"] = round(ms, 3)
             cell["fmt"] = fmt_ms(r["median_ms"])
+        kind = (r.get("reference_kind") or "").strip()
+        if kind:
+            cell["reference_kind"] = kind
+        if is_true(r.get("is_canonical_reference")):
+            cell["is_canonical_reference"] = True
         # Capture the failure reason so the dashboard tooltip can show
         # "ModuleNotFoundError: foo" instead of a silent dash.
         reason = (r.get("reason") or "").strip()

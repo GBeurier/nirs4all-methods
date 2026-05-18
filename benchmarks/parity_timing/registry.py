@@ -6011,6 +6011,61 @@ def resolved_reference_backends() -> list[dict[str, str]]:
     return [by_id[k] for k in sorted(by_id)]
 
 
+def canonical_reference_for_method(method: MethodSpec) -> dict | None:
+    """Pick the single "ground-truth" reference for a method.
+
+    Used by the cross-binding bench's reference-parity gate: every cell
+    is compared against this reference (instead of against pls4all.cpp,
+    which is the binding-consistency gate). Resolution order:
+
+    1. If the method declares `paper_only`, return None — the gate
+       degrades to "—" in the rendered dashboard since there is no
+       executable truth to compare against.
+    2. Otherwise return the first resolvable entry from
+       `resolved_references_for_method` (which honours
+       `python_reference → r_reference → extra_references[0]…` in the
+       order the MethodSpec author declared them, so to prefer
+       ikpls/ropls/mixOmics over a generic sklearn/R::pls slot just put
+       it first in `extra_references`).
+
+    Returns the same `{id, role, language, library, version, notes}`
+    shape `resolved_references_for_method` emits, or `None`.
+    """
+    if method.paper_only:
+        return None
+    refs = resolved_references_for_method(method)
+    return refs[0] if refs else None
+
+
+def reference_kind(method: MethodSpec) -> str:
+    """Classify the method by what kind of canonical reference it has.
+
+    Used by the cross-binding renderer to colour the
+    `reference_parity_*` cells:
+
+    - "external"            — at least one external library reference
+                              is declared (sklearn / ropls / R::pls /
+                              ikpls / mixOmics / plsRglm / …). The
+                              reference-parity gate runs against the
+                              first resolvable one.
+    - "nirs4all_sanctioned" — the only declared references are
+                              `nirs4all.operators.models.sklearn.*`
+                              (sanctioned per the registry policy doc).
+    - "paper_only"          — no executable reference; the gate shows
+                              `—` and surfaces the paper citation in a
+                              tooltip.
+    """
+    if method.paper_only:
+        return "paper_only"
+    refs = resolved_references_for_method(method)
+    if not refs:
+        return "paper_only"
+    libs = [r.get("library", "") for r in refs]
+    if all("nirs4all" in lib for lib in libs):
+        return "nirs4all_sanctioned"
+    return "external"
+
+
 # ---- Parity-gate truth-source surface (📐 icon source data) --------------
 #
 # The benchmarks dashboard and the per-method docs surface a 📐 icon on
