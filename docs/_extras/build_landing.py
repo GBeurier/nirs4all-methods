@@ -163,15 +163,81 @@ ALGO_GROUP = {
 }
 
 
+# Registry-driven `ref_*` backends that ARE the same library as one of
+# the fixed legacy externals. We collapse the two into a single
+# dashboard column so the user doesn't see "sklearn" AND
+# "ref.python_scikit_learn" side by side. The fixed-bench script
+# provides the timing column; the registry-driven `ref_*` row provides
+# the gate-2 parity verdict (which the orchestrator's compute_parity
+# uses internally — the row never appears in the dashboard).
+REF_ALIAS_TO_LEGACY = {
+    "ref_python_scikit_learn":  "sklearn",
+    "ref_python_ikpls":         "ikpls",
+    "ref_r_pls":                "r_pls",
+    "ref_r_ropls":              "r_ropls",
+    "ref_r_mixomics":           "r_mixomics",
+    "ref_matlab_libpls":        "matlab_pls",
+}
+
+# Display labels for registry-driven `ref_*` backends that don't have a
+# legacy equivalent. Drop the noisy "ref." prefix and just use the
+# library name verbatim.
+REF_DISPLAY_OVERRIDE = {
+    "ref_python_diplslib":          "diplslib",
+    "ref_python_tensorly":          "tensorly",
+    "ref_python_auswahl":           "auswahl",
+    "ref_python_pyswarms":          "pyswarms",
+    "ref_python_onpls":             "onpls",
+    "ref_python_nirs4all_operators_models_sklearn_aom_pls": "nirs4all.aom_pls",
+    "ref_python_nirs4all_operators_models_sklearn_mbpls":   "nirs4all.mbpls",
+    "ref_python_nirs4all_operators_models_sklearn_lwpls":   "nirs4all.lwpls",
+    "ref_python_nirs4all_bench_aom_v0_aompls":              "nirs4all.aom_v0",
+    "ref_r_spls":                   "spls",
+    "ref_r_chemometrics":           "chemometrics",
+    "ref_r_jico":                   "JICO",
+    "ref_r_kernlab_pls":            "kernlab",
+    "ref_r_omicspls":               "OmicsPLS",
+    "ref_r_mdatools":               "mdatools",
+    "ref_r_multiblock":             "multiblock",
+    "ref_r_mboost":                 "mboost",
+    "ref_r_plsrglm":                "plsRglm",
+    "ref_r_plsrcox":                "plsRcox",
+    "ref_r_base":                   "stats (R)",
+    "ref_r_softimpute":             "softImpute",
+    "ref_r_sgpls":                  "sgPLS",
+    "ref_r_plsvarsel":              "plsVarSel",
+    "ref_r_enpls":                  "enpls",
+    "ref_r_pls_stats":              "pls (R, stats)",
+}
+
+
 def column_id(backend: str, build: str) -> str:
     """Same column identity used in the markdown — `pls4all.cpp.<suffix>`
-    for the C++ tiers, the display label otherwise."""
+    for the C++ tiers, the display label otherwise.
+
+    Critical: `ref_*` rows that are the SAME library as a fixed legacy
+    external collapse onto the legacy column (so the dashboard shows ONE
+    column per library, not two). Standalone `ref_*` rows (libraries
+    that have no legacy bench script) get a display label override so
+    the column shows up as e.g. "OmicsPLS" rather than "ref.r_omicspls".
+    """
     if backend == "cpp":
         suffix = CPP_BUILD_SUFFIX.get(build, build)
         return f"pls4all.cpp.{suffix}"
     if backend.startswith("ref_"):
-        return "ref." + backend[len("ref_"):]
+        legacy = REF_ALIAS_TO_LEGACY.get(backend)
+        if legacy is not None:
+            return BACKEND_DISPLAY.get(legacy, legacy)
+        return REF_DISPLAY_OVERRIDE.get(backend, backend[len("ref_"):])
     return BACKEND_DISPLAY.get(backend, backend)
+
+
+def collapsed_backend(backend: str) -> str:
+    """When a `ref_*` row is the same library as a legacy fixed external,
+    return the legacy backend id. Used to decide whether a `ref_*` row
+    should be merged into an existing legacy cell or kept as its own
+    standalone column."""
+    return REF_ALIAS_TO_LEGACY.get(backend, backend)
 
 
 def is_true(v: Any) -> bool:
@@ -337,10 +403,16 @@ def build_payload(results_dir: Path) -> dict:
         key = (r["algorithm"], r["backend"], r.get("libp4a_build", ""), n, p_, t)
         seen[key] = r
 
-    # Collect columns actually present.
+    # Collect columns actually present. Track the backend(s) that
+    # contributed to each column id so the column metadata builder can
+    # tell when a registry-driven `ref_*` row collapsed onto a legacy
+    # column vs when it stands alone.
     present: set[str] = set()
+    backends_per_cid: dict[str, set[str]] = defaultdict(set)
     for r in seen.values():
-        present.add(column_id(r["backend"], r.get("libp4a_build", "")))
+        cid = column_id(r["backend"], r.get("libp4a_build", ""))
+        present.add(cid)
+        backends_per_cid[cid].add(r["backend"])
 
     # Registry-declared external reference libraries. Infer the language
     # from the slug prefix (`ref.python_*`, `ref.r_*`, `ref.matlab_*`,
@@ -414,14 +486,35 @@ def build_payload(results_dir: Path) -> dict:
                 "what": what, "build": "",
                 "kind": "pls4all" if is_pls4all else "external",
             })
-    for cid in sorted(c for c in present if c.startswith("ref.")):
-        lang, group = _ref_lang(cid)
-        # Map the lang back to the prefix used in the cid.
-        lang_to_prefix = {v[0]: k for k, v in REF_LANG_PREFIX.items()}
-        prefix = lang_to_prefix.get(lang, "")
-        short = _ref_short(cid, prefix) if prefix else cid[len("ref."):]
+    # Standalone `ref_*` columns: registry-declared external libraries
+    # that don't have a fixed legacy bench script. Find them by looking
+    # for cids whose only contributing backend is a `ref_*` row AND that
+    # cid isn't already registered above.
+    already_registered = {c["id"] for c in raw_cols}
+    for cid in sorted(present):
+        if cid in already_registered:
+            continue
+        contributors = backends_per_cid.get(cid, set())
+        # Skip "natural" columns that just happen to not be in present
+        # for this run (shouldn't happen but defensive).
+        if not contributors:
+            continue
+        ref_only = all(b.startswith("ref_") for b in contributors)
+        if not ref_only:
+            continue
+        # Infer the language from the original `ref_<lang>_…` backend
+        # name; the cid itself may now be a generic library name like
+        # "OmicsPLS" so we can't rely on it.
+        sample_backend = next(iter(contributors))
+        body = sample_backend[len("ref_"):]
+        lang = "external"
+        group = "ext-py"
+        for prefix, (l, g) in REF_LANG_PREFIX.items():
+            if body.startswith(prefix + "_") or body == prefix:
+                lang, group = l, g
+                break
         raw_cols.append({
-            "id": cid, "label": cid, "short": short,
+            "id": cid, "label": cid, "short": cid,
             "group": group, "tier": "registry reference", "lang": lang,
             "what": f"Registry-declared external reference library ({lang}).",
             "build": "", "kind": "external",
@@ -483,7 +576,69 @@ def build_payload(results_dir: Path) -> dict:
         # dashboard can distinguish "not run" from "not available in lib".
         if ms is not None or verdict in (
                 "not_run", "not_available", "divergent", "drift", "error"):
-            pivot[rkey][cid] = cell
+            existing = pivot[rkey].get(cid)
+            if existing is None:
+                pivot[rkey][cid] = cell
+            else:
+                # `ref_*` row collided onto the same column as its
+                # legacy equivalent (e.g. ref_python_scikit_learn →
+                # sklearn). Merge: keep the legacy bench's timing (it's
+                # what the user expects to see), but pull in the
+                # canonical-reference flag + reference-parity verdict
+                # from whichever row carries them. The legacy bench
+                # script never sets is_canonical_reference (the
+                # orchestrator's compute_parity sets it on the `ref_*`
+                # row by design).
+                # Whichever side has the timing data wins on ms/fmt;
+                # whichever side has the canonical flag wins on flags.
+                if existing.get("ms") is None and cell.get("ms") is not None:
+                    existing["ms"] = cell["ms"]
+                    existing["fmt"] = cell["fmt"]
+                if cell.get("is_canonical_reference"):
+                    existing["is_canonical_reference"] = True
+                if cell.get("reference_kind") and not existing.get("reference_kind"):
+                    existing["reference_kind"] = cell["reference_kind"]
+                # Prefer the gate-2 verdict from whichever side actually
+                # computed it (the `ref_*` row sees gate-2 against
+                # itself = "self"; the legacy row sees gate-2 against
+                # the canonical, which is what we want to show).
+                if (existing.get("reference_parity") in (None, "self")
+                        and cell.get("reference_parity") not in (None, "self")):
+                    existing["reference_parity"] = cell["reference_parity"]
+
+    # Synthetic leading "Reference" column: for each row, find the cell
+    # marked `is_canonical_reference=True` (set on the canonical
+    # external lib's row by the orchestrator's compute_parity) and
+    # mirror it into a special `__reference` cell. The renderer pins
+    # this column to the front of the table and colours it by the
+    # canonical lib's language. If no canonical reference is wired
+    # (paper_only methods), the cell stays empty.
+    REF_COL_ID = "__reference"
+    columns_by_id = {c["id"]: c for c in raw_cols}
+    for (algo, n, p_, t), cells in pivot.items():
+        canonical_cid = None
+        for cid, c in cells.items():
+            if c.get("is_canonical_reference"):
+                canonical_cid = cid
+                break
+        if canonical_cid is None:
+            continue
+        src = cells[canonical_cid]
+        col_meta = columns_by_id.get(canonical_cid, {})
+        mirror = {
+            "parity": src.get("parity"),
+            "reference_parity": src.get("reference_parity"),
+            "ok": src.get("ok"),
+            "ref_of": col_meta.get("short") or col_meta.get("label") or canonical_cid,
+            "ref_lang": col_meta.get("lang", "external"),
+            "is_canonical_reference": True,
+        }
+        if "ms" in src:
+            mirror["ms"] = src["ms"]
+            mirror["fmt"] = src["fmt"]
+        if "reference_kind" in src:
+            mirror["reference_kind"] = src["reference_kind"]
+        cells[REF_COL_ID] = mirror
 
     rows_out = []
     for (algo, n, p_, t), cells in sorted(pivot.items(),
@@ -494,6 +649,29 @@ def build_payload(results_dir: Path) -> dict:
             "algo": algo, "n": n, "p": p_, "threads": t,
             "cells": cells,
         })
+
+    # Register the synthetic Reference column at the very front so the
+    # renderer pins it before any backend column. `kind="reference"`
+    # tells the JS layer to apply the special per-row language-tint +
+    # leading-column styling. Prepended to `columns` (after the sort)
+    # rather than to `raw_cols` because language-rank sorting would
+    # otherwise scatter it back into the C++ band.
+    if any(REF_COL_ID in r["cells"] for r in rows_out):
+        columns = [{
+            "id": REF_COL_ID,
+            "label": "canonical reference",
+            "short": "reference",
+            "group": "reference",
+            "tier": "per-method canonical reference",
+            "lang": "external",   # per-row override via cell.ref_lang
+            "what": "The library that defines the ground truth for each "
+                    "method (sklearn for `pls`/`pcr`, ropls for `opls`, "
+                    "mixOmics for `*_da`, …). The cell value mirrors the "
+                    "canonical library's timing for that row and is "
+                    "language-tinted accordingly.",
+            "build": "",
+            "kind": "reference",
+        }] + columns
 
     # Per-column versions (best available).
     versions: dict[str, str] = {}

@@ -666,6 +666,18 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    table.bench td.algo-cell a {
+      color: inherit;
+      text-decoration: none;
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    table.bench td.algo-cell a:hover {
+      color: var(--phosphor);
+      text-decoration: underline;
+      text-shadow: none;
+    }
     table.bench td.size-cell {
       font-family: var(--mono); color: var(--fg-1);
       text-align: left;
@@ -711,6 +723,34 @@
       box-shadow: inset 0 0 0 1px rgba(124, 229, 162, 0.18);
     }
     .cell-empty { color: var(--fg-3); text-align: center; font-family: var(--mono); }
+
+    /* Synthetic leading column showing the canonical reference's
+       timing for each row (e.g. sklearn for `pls`, ropls for `opls`,
+       mixOmics for `*_da`). Different LIBRARY per row, so the colour
+       comes from the cell's `ref_lang` field (stamped as col-py /
+       col-r / col-m / etc. on the td). A subtle slate background
+       distinguishes it from the regular per-language tints. */
+    table.bench td.ref-col,
+    table.bench th.ref-col {
+      background: linear-gradient(180deg,
+        rgba(160, 160, 200, 0.10) 0%,
+        rgba(160, 160, 200, 0.04) 100%) !important;
+      border-right: 2px solid var(--fg-3);
+      font-weight: 600;
+    }
+    body.theme-dark table.bench td.ref-col,
+    body.theme-dark table.bench th.ref-col {
+      background: linear-gradient(180deg,
+        rgba(200, 200, 240, 0.10) 0%,
+        rgba(200, 200, 240, 0.04) 100%) !important;
+    }
+    table.bench th.ref-col {
+      border-bottom: 2px solid var(--fg-2);
+    }
+    /* Make the ref column heading slightly more prominent than other
+       column headers without screaming. */
+    table.bench th.ref-col .col-label { font-weight: 700; }
+    table.bench th.ref-col .col-meta  { opacity: 0.85; }
 
     /* The canonical external reference for a given algorithm — sklearn
        for `pls`, ropls for `opls`, mixOmics for `plsda`, etc. This
@@ -1447,17 +1487,20 @@ function cellPasses(cell) {
 
 function visibleColIds() {
   // Honour DATA.columns order + column-level filters. The native C++
-  // baseline is force-kept so duration and speed-up are always anchored.
+  // baseline + the synthetic canonical-reference column are
+  // force-kept so duration / speed-up / ground-truth are always
+  // anchored regardless of what the user has filtered.
   return DATA.columns
     .filter(c => {
       if (NATIVE_COL_ID && c.id === NATIVE_COL_ID) return true;
+      if (c.id === '__reference') return true;
       if (state.lang && c.lang !== state.lang) return false;
       if (state.libGroup && c.group !== state.libGroup) return false;
       if (state.lib && c.id !== state.lib) return false;
       return true;
     })
     .map(c => c.id)
-    .filter(id => id === NATIVE_COL_ID || state.cols.has(id));
+    .filter(id => id === NATIVE_COL_ID || id === '__reference' || state.cols.has(id));
 }
 
 // Map raw `lang` strings to compact slug used for CSS classes.
@@ -1877,13 +1920,17 @@ function renderTable() {
   head += `<th class="size-col ${sortCls('__size')}" data-col="__size"><span class="col-label">size${arrowFor('__size')}</span></th>`;
   head += `<th class="thread-col ${sortCls('__threads')}" data-col="__threads"><span class="col-label">t${arrowFor('__threads')}</span></th>`;
   for (const c of colMetas) {
-    const lcls = langCls(c);
+    let lcls = langCls(c);
+    if (c.id === '__reference') lcls = 'ref-col';
     // The col-meta line below the short label carries the tier (e.g.
     // "pls4all reference", "external", "pls4all + BLAS + OpenMP") so
     // users see what flavour of binding they're comparing without
     // hovering for the tooltip. Hidden in compact / ultra densities.
     const sub = c.tier || c.kind || '';
-    head += `<th class="${sortCls(c.id)} ${lcls}" data-col="${c.id}" title="${headerTitle(c)}"><span class="col-label">${shortLabel(c.label)}${arrowFor(c.id)}</span><span class="col-meta">${sub}</span></th>`;
+    const label = c.id === '__reference'
+        ? `<span class="col-label" title="canonical external reference per row">📐 reference${arrowFor(c.id)}</span>`
+        : `<span class="col-label">${shortLabel(c.label)}${arrowFor(c.id)}</span>`;
+    head += `<th class="${sortCls(c.id)} ${lcls}" data-col="${c.id}" title="${headerTitle(c)}">${label}<span class="col-meta">${sub}</span></th>`;
   }
   $('bench-head').innerHTML = head;
 
@@ -1908,11 +1955,23 @@ function renderTable() {
       const sizeHtml = row.isAvg
         ? `<span class="size-avg" title="geomean across ${row.sizesCount} size${row.sizesCount === 1 ? '' : 's'}">avg · ${row.sizesCount}</span>`
         : `${row.n}×${row.p}`;
-      let tr = `<tr><td class="algo-cell">${row.algo}</td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
+      let tr = `<tr><td class="algo-cell"><a href="methods/${row.algo}.html" title="open ${row.algo} method documentation">${row.algo}</a></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
       for (const id of cols) {
         const meta = colsById[id];
-        const lcls = meta ? langCls(meta).replace('native-col', 'native-cell') : '';
+        // The synthetic "canonical reference" leading column needs a
+        // per-ROW language colour (the canonical lib varies per
+        // method: sklearn for `pls`, ropls for `opls`, etc.) instead of
+        // the column-level lang. Pull `cell.ref_lang` to drive the
+        // colour and stamp the column with a `.ref-col` class so the
+        // CSS can give it a distinct background tint.
+        const isRefCol = id === '__reference';
         const c = row.cells[id];
+        let lcls = meta ? langCls(meta).replace('native-col', 'native-cell') : '';
+        if (isRefCol) {
+          const refLang = c && c.ref_lang ? LANG_SLUG[c.ref_lang] : null;
+          const refSlug = refLang || 'other';
+          lcls = `ref-col col-${refSlug}`;
+        }
         if (!c || !cellPasses(c)) {
           tr += `<td class="cell-empty ${lcls}">—</td>`;
           continue;
