@@ -147,6 +147,27 @@ def predictions_path(algo: str, backend: str, n: int, p: int,
     return PREDS_DIR / f"{algo}_{backend}_{n}x{p}_t{threads}_{build}.npy"
 
 
+def _params_to_json(params: dict) -> str:
+    """Serialise the orchestrator-side `adapted_params` dict so R/MATLAB
+    receive the exact same param shape Python uses. Numpy arrays become
+    plain lists; numpy scalars become Python scalars. Keys that only make
+    sense to the Python registry layer (n_samples, n_features) are dropped
+    so the R dispatcher's per-algo whitelists don't reject them."""
+    out = {}
+    for key, value in params.items():
+        if key in {"n_samples", "n_features"}:
+            continue
+        if hasattr(value, "tolist"):
+            out[key] = value.tolist()
+        elif isinstance(value, (np.integer,)):
+            out[key] = int(value)
+        elif isinstance(value, (np.floating,)):
+            out[key] = float(value)
+        else:
+            out[key] = value
+    return json.dumps(out)
+
+
 def run_backend(name: str, script: str, language: str, tier: str,
                  kind: str, algo: str, n: int, p: int, n_components: int,
                  n_runs: int, threads: int, libp4a_build: str,
@@ -169,6 +190,12 @@ def run_backend(name: str, script: str, language: str, tier: str,
     # Externals don't care about libp4a build; pls4all backends do.
     lib_dir = LIBP4A_BUILDS[libp4a_build]
     env["PLS4ALL_LIB_DIR"] = lib_dir
+    # PLS4ALL_LIB_PATH is the env var actually honoured by
+    # `pls4all._ffi._load_library` to override library discovery. Without
+    # it the per-build sweep silently runs against whichever libp4a the
+    # importer finds first (auditwheel sibling / pip-installed wheel /
+    # build/dev-release), making the build column degenerate.
+    env["PLS4ALL_LIB_PATH"] = os.path.join(lib_dir, "libp4a.so")
     env["BENCH_LIBP4A_BUILD"] = libp4a_build
     env["LD_LIBRARY_PATH"] = ":".join([
         lib_dir,
@@ -188,6 +215,38 @@ def run_backend(name: str, script: str, language: str, tier: str,
     ])
     if script == "bench_registry_reference.py" and name.startswith("ref_"):
         env["BENCH_REFERENCE_ID"] = name[len("ref_"):]
+
+    # R / MATLAB scripts route through `pls4all_method` (R) or the
+    # +pls4all package (MATLAB). Both need the per-algo params that
+    # `adapted_params` computes in Python. Serialise to JSON env var so
+    # the R/MATLAB script gets the exact same param shape we use on the
+    # Python side.
+    if script.endswith(".R") or script.endswith(".m"):
+        try:
+            from benchmarks.cross_binding.scripts.bench_registry_common import (
+                adapted_params, load_method)
+            method = load_method(algo)
+            params = adapted_params(method, n, p, n_components)
+            env["BENCH_R_PARAMS_JSON"] = _params_to_json(params)
+            env["BENCH_MATLAB_PARAMS_JSON"] = env["BENCH_R_PARAMS_JSON"]
+            if method.needs_labels:
+                env["BENCH_R_NEEDS_LABELS"] = "1"
+            if method.needs_sample_weights:
+                env["BENCH_R_NEEDS_SAMPLE_WEIGHTS"] = "1"
+            if method.needs_group_assignment:
+                env["BENCH_R_NEEDS_GROUP_ASSIGNMENT"] = "1"
+            if method.needs_x_target:
+                # Not yet implemented for R/MATLAB — would require per-seed
+                # .npy sidecars since Python's PCG64 isn't reproducible in
+                # other languages. The R/MATLAB script fails the cell with
+                # a clear reason when this flag is missing.
+                env["BENCH_R_NEEDS_X_TARGET"] = "1"
+        except Exception as exc:  # pragma: no cover
+            # If the registry import fails we still launch the cell — the
+            # bench script will fall back to its own dispatch logic or
+            # surface a clearer error than a hard crash here.
+            print(f"WARN: could not build BENCH_R_PARAMS_JSON for "
+                  f"{algo}: {exc!r}", flush=True)
 
     pred_path = predictions_path(algo, name, n, p, threads, libp4a_build)
     # Common 8-arg contract used by all scripts (Python + R via positional

@@ -72,6 +72,24 @@ def adapted_params(method, n: int, p: int, n_components: int) -> dict:
         params["n_blocks"] = max(1, min(n_blocks, p))
         params["n_unique_per_block"] = np.ones(params["n_blocks"],
                                                dtype=np.int32)
+    # Multi-block methods need a `block_sizes` partition of p. Build it
+    # from `n_blocks` (defaulting to the cell's value) so the sklearn
+    # tier-2 wrappers (MBPLSRegression, ROSARegression, SOPLSRegression)
+    # can take it as a ctor kwarg.
+    n_blocks_val = params.get("n_blocks")
+    if n_blocks_val is not None and "block_sizes" not in params:
+        nb = max(1, min(int(n_blocks_val), p))
+        base = p // nb
+        rem = p - base * nb
+        sizes = [base + (1 if i < rem else 0) for i in range(nb)]
+        params["block_sizes"] = np.array(sizes, dtype=np.int32)
+    # `min_selected` (T2/ST selectors) must respect n_components ≤
+    # min_selected ≤ p. The registry's cell may have a small fixed value
+    # that drops below n_components once the orchestrator overrides it.
+    if "min_selected" in params and "n_components" in params:
+        lo = int(params["n_components"])
+        hi = int(p)
+        params["min_selected"] = max(lo, min(int(params["min_selected"]), hi))
     return params
 
 
