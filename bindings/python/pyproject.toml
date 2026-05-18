@@ -1,5 +1,9 @@
 [build-system]
-requires = ["setuptools>=64", "wheel"]
+# setuptools >= 77 implements PEP 639 SPDX license validation via
+# packaging.licenses (introduced in packaging>=24). Older setuptools
+# fails with `ImportError: Cannot import 'packaging.licenses'` when the
+# project declares `license = "CECILL-2.1"`.
+requires = ["setuptools>=77", "wheel", "packaging>=24"]
 build-backend = "setuptools.build_meta"
 
 [project]

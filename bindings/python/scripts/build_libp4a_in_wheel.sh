@@ -29,6 +29,20 @@ PRESET="${PLS4ALL_BUILD_PRESET:-dev-release}"
 BUILD_DIR="build/${PRESET}"
 SRC_LIB_DIR="bindings/python/src/pls4all/lib"
 
+echo "::group::ensure cmake + ninja are present"
+
+# cibuildwheel runs the Linux build inside the manylinux container, which
+# ships only Python + pip — no system cmake/ninja in the base image. macOS
+# and Windows runners normally have them via brew / MSVC, but installing
+# via pip is a no-op when the binaries already exist and gives us one
+# deterministic source. The pip wheels for cmake/ninja install entry-point
+# scripts onto PATH that `cmake --preset` picks up regardless of host.
+python3 -m pip install --quiet --upgrade pip
+python3 -m pip install --quiet "cmake>=3.21,<5" "ninja>=1.11"
+echo "  cmake : $(command -v cmake) — $(cmake --version | head -n1)"
+echo "  ninja : $(command -v ninja) — $(ninja --version)"
+echo "::endgroup::"
+
 echo "::group::pls4all libp4a build (preset=${PRESET})"
 
 # Fresh build to avoid stale-cache surprises when cibuildwheel runs the
