@@ -13,6 +13,17 @@
   },
   "columns": [
     {
+      "id": "__reference",
+      "label": "canonical reference",
+      "short": "reference",
+      "group": "reference",
+      "tier": "per-method canonical reference",
+      "lang": "external",
+      "what": "The library that defines the ground truth for each method (sklearn for `pls`/`pcr`, ropls for `opls`, mixOmics for `*_da`, \u2026). The cell value mirrors the canonical library's timing for that row and is language-tinted accordingly.",
+      "build": "",
+      "kind": "reference"
+    },
+    {
       "id": "pls4all.cpp.ref",
       "label": "pls4all.cpp.ref",
       "short": "ref",
@@ -112,8 +123,8 @@
       "kind": "external"
     },
     {
-      "id": "ref.python_auswahl",
-      "label": "ref.python_auswahl",
+      "id": "auswahl",
+      "label": "auswahl",
       "short": "auswahl",
       "group": "ext-py",
       "tier": "registry reference",
@@ -123,8 +134,8 @@
       "kind": "external"
     },
     {
-      "id": "ref.python_diplslib",
-      "label": "ref.python_diplslib",
+      "id": "diplslib",
+      "label": "diplslib",
       "short": "diplslib",
       "group": "ext-py",
       "tier": "registry reference",
@@ -134,9 +145,9 @@
       "kind": "external"
     },
     {
-      "id": "ref.python_ikpls",
-      "label": "ref.python_ikpls",
-      "short": "ikpls",
+      "id": "nirs4all.aom_v0",
+      "label": "nirs4all.aom_v0",
+      "short": "nirs4all.aom_v0",
       "group": "ext-py",
       "tier": "registry reference",
       "lang": "Python",
@@ -145,9 +156,9 @@
       "kind": "external"
     },
     {
-      "id": "ref.python_nirs4all_bench_aom_v0_aompls",
-      "label": "ref.python_nirs4all_bench_aom_v0_aompls",
-      "short": "nirs4all/aompls",
+      "id": "nirs4all.lwpls",
+      "label": "nirs4all.lwpls",
+      "short": "nirs4all.lwpls",
       "group": "ext-py",
       "tier": "registry reference",
       "lang": "Python",
@@ -156,9 +167,9 @@
       "kind": "external"
     },
     {
-      "id": "ref.python_nirs4all_operators_models_sklearn_lwpls",
-      "label": "ref.python_nirs4all_operators_models_sklearn_lwpls",
-      "short": "nirs4all/lwpls",
+      "id": "nirs4all.mbpls",
+      "label": "nirs4all.mbpls",
+      "short": "nirs4all.mbpls",
       "group": "ext-py",
       "tier": "registry reference",
       "lang": "Python",
@@ -167,19 +178,8 @@
       "kind": "external"
     },
     {
-      "id": "ref.python_nirs4all_operators_models_sklearn_mbpls",
-      "label": "ref.python_nirs4all_operators_models_sklearn_mbpls",
-      "short": "nirs4all/mbpls",
-      "group": "ext-py",
-      "tier": "registry reference",
-      "lang": "Python",
-      "what": "Registry-declared external reference library (Python).",
-      "build": "",
-      "kind": "external"
-    },
-    {
-      "id": "ref.python_onpls",
-      "label": "ref.python_onpls",
+      "id": "onpls",
+      "label": "onpls",
       "short": "onpls",
       "group": "ext-py",
       "tier": "registry reference",
@@ -189,8 +189,8 @@
       "kind": "external"
     },
     {
-      "id": "ref.python_pyswarms",
-      "label": "ref.python_pyswarms",
+      "id": "pyswarms",
+      "label": "pyswarms",
       "short": "pyswarms",
       "group": "ext-py",
       "tier": "registry reference",
@@ -200,19 +200,8 @@
       "kind": "external"
     },
     {
-      "id": "ref.python_scikit_learn",
-      "label": "ref.python_scikit_learn",
-      "short": "scikit/learn",
-      "group": "ext-py",
-      "tier": "registry reference",
-      "lang": "Python",
-      "what": "Registry-declared external reference library (Python).",
-      "build": "",
-      "kind": "external"
-    },
-    {
-      "id": "ref.python_tensorly",
-      "label": "ref.python_tensorly",
+      "id": "tensorly",
+      "label": "tensorly",
       "short": "tensorly",
       "group": "ext-py",
       "tier": "registry reference",
@@ -277,9 +266,9 @@
       "kind": "external"
     },
     {
-      "id": "ref.r_base",
-      "label": "ref.r_base",
-      "short": "base",
+      "id": "JICO",
+      "label": "JICO",
+      "short": "JICO",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
@@ -288,8 +277,19 @@
       "kind": "external"
     },
     {
-      "id": "ref.r_chemometrics",
-      "label": "ref.r_chemometrics",
+      "id": "OmicsPLS",
+      "label": "OmicsPLS",
+      "short": "OmicsPLS",
+      "group": "ext-r",
+      "tier": "registry reference",
+      "lang": "R",
+      "what": "Registry-declared external reference library (R).",
+      "build": "",
+      "kind": "external"
+    },
+    {
+      "id": "chemometrics",
+      "label": "chemometrics",
       "short": "chemometrics",
       "group": "ext-r",
       "tier": "registry reference",
@@ -299,8 +299,8 @@
       "kind": "external"
     },
     {
-      "id": "ref.r_enpls",
-      "label": "ref.r_enpls",
+      "id": "enpls",
+      "label": "enpls",
       "short": "enpls",
       "group": "ext-r",
       "tier": "registry reference",
@@ -310,9 +310,9 @@
       "kind": "external"
     },
     {
-      "id": "ref.r_jico",
-      "label": "ref.r_jico",
-      "short": "jico",
+      "id": "kernlab",
+      "label": "kernlab",
+      "short": "kernlab",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
@@ -321,19 +321,8 @@
       "kind": "external"
     },
     {
-      "id": "ref.r_kernlab_pls",
-      "label": "ref.r_kernlab_pls",
-      "short": "kernlab/pls",
-      "group": "ext-r",
-      "tier": "registry reference",
-      "lang": "R",
-      "what": "Registry-declared external reference library (R).",
-      "build": "",
-      "kind": "external"
-    },
-    {
-      "id": "ref.r_mboost",
-      "label": "ref.r_mboost",
+      "id": "mboost",
+      "label": "mboost",
       "short": "mboost",
       "group": "ext-r",
       "tier": "registry reference",
@@ -343,8 +332,8 @@
       "kind": "external"
     },
     {
-      "id": "ref.r_mdatools",
-      "label": "ref.r_mdatools",
+      "id": "mdatools",
+      "label": "mdatools",
       "short": "mdatools",
       "group": "ext-r",
       "tier": "registry reference",
@@ -354,19 +343,8 @@
       "kind": "external"
     },
     {
-      "id": "ref.r_mixomics",
-      "label": "ref.r_mixomics",
-      "short": "mixomics",
-      "group": "ext-r",
-      "tier": "registry reference",
-      "lang": "R",
-      "what": "Registry-declared external reference library (R).",
-      "build": "",
-      "kind": "external"
-    },
-    {
-      "id": "ref.r_multiblock",
-      "label": "ref.r_multiblock",
+      "id": "multiblock",
+      "label": "multiblock",
       "short": "multiblock",
       "group": "ext-r",
       "tier": "registry reference",
@@ -376,9 +354,9 @@
       "kind": "external"
     },
     {
-      "id": "ref.r_omicspls",
-      "label": "ref.r_omicspls",
-      "short": "omicspls",
+      "id": "pls (R, stats)",
+      "label": "pls (R, stats)",
+      "short": "pls (R, stats)",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
@@ -387,9 +365,9 @@
       "kind": "external"
     },
     {
-      "id": "ref.r_pls",
-      "label": "ref.r_pls",
-      "short": "pls",
+      "id": "plsRcox",
+      "label": "plsRcox",
+      "short": "plsRcox",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
@@ -398,9 +376,9 @@
       "kind": "external"
     },
     {
-      "id": "ref.r_pls_stats",
-      "label": "ref.r_pls_stats",
-      "short": "pls/stats",
+      "id": "plsRglm",
+      "label": "plsRglm",
+      "short": "plsRglm",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
@@ -409,9 +387,9 @@
       "kind": "external"
     },
     {
-      "id": "ref.r_plsrcox",
-      "label": "ref.r_plsrcox",
-      "short": "plsrcox",
+      "id": "plsVarSel",
+      "label": "plsVarSel",
+      "short": "plsVarSel",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
@@ -420,9 +398,9 @@
       "kind": "external"
     },
     {
-      "id": "ref.r_plsrglm",
-      "label": "ref.r_plsrglm",
-      "short": "plsrglm",
+      "id": "sgPLS",
+      "label": "sgPLS",
+      "short": "sgPLS",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
@@ -431,9 +409,9 @@
       "kind": "external"
     },
     {
-      "id": "ref.r_plsvarsel",
-      "label": "ref.r_plsvarsel",
-      "short": "plsvarsel",
+      "id": "softImpute",
+      "label": "softImpute",
+      "short": "softImpute",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
@@ -442,42 +420,20 @@
       "kind": "external"
     },
     {
-      "id": "ref.r_ropls",
-      "label": "ref.r_ropls",
-      "short": "ropls",
-      "group": "ext-r",
-      "tier": "registry reference",
-      "lang": "R",
-      "what": "Registry-declared external reference library (R).",
-      "build": "",
-      "kind": "external"
-    },
-    {
-      "id": "ref.r_sgpls",
-      "label": "ref.r_sgpls",
-      "short": "sgpls",
-      "group": "ext-r",
-      "tier": "registry reference",
-      "lang": "R",
-      "what": "Registry-declared external reference library (R).",
-      "build": "",
-      "kind": "external"
-    },
-    {
-      "id": "ref.r_softimpute",
-      "label": "ref.r_softimpute",
-      "short": "softimpute",
-      "group": "ext-r",
-      "tier": "registry reference",
-      "lang": "R",
-      "what": "Registry-declared external reference library (R).",
-      "build": "",
-      "kind": "external"
-    },
-    {
-      "id": "ref.r_spls",
-      "label": "ref.r_spls",
+      "id": "spls",
+      "label": "spls",
       "short": "spls",
+      "group": "ext-r",
+      "tier": "registry reference",
+      "lang": "R",
+      "what": "Registry-declared external reference library (R).",
+      "build": "",
+      "kind": "external"
+    },
+    {
+      "id": "stats (R)",
+      "label": "stats (R)",
+      "short": "stats (R)",
       "group": "ext-r",
       "tier": "registry reference",
       "lang": "R",
@@ -517,17 +473,6 @@
       "what": "Octave statistics `plsregress` (SIMPLS, plain PLS only)",
       "build": "",
       "kind": "external"
-    },
-    {
-      "id": "ref.matlab_libpls",
-      "label": "ref.matlab_libpls",
-      "short": "matlab/libpls",
-      "group": "ext-ml",
-      "tier": "registry reference",
-      "lang": "MATLAB/Octave",
-      "what": "Registry-declared external reference library (MATLAB/Octave).",
-      "build": "",
-      "kind": "external"
     }
   ],
   "presets": {
@@ -552,18 +497,12 @@
         "pls4all.sklearn",
         "sklearn",
         "ikpls",
-        "ref.python_scikit_learn",
-        "ref.python_ikpls",
         "pls4all.R.formula",
         "pls",
         "mixOmics",
         "ropls",
-        "ref.r_pls",
-        "ref.r_mixomics",
-        "ref.r_ropls",
         "pls4all.matlab.classdef",
-        "plsregress",
-        "ref.matlab_libpls"
+        "plsregress"
       ]
     },
     "tier-2": {
@@ -616,16 +555,14 @@
         "pls4all.sklearn",
         "sklearn",
         "ikpls",
-        "ref.python_auswahl",
-        "ref.python_diplslib",
-        "ref.python_ikpls",
-        "ref.python_nirs4all_bench_aom_v0_aompls",
-        "ref.python_nirs4all_operators_models_sklearn_lwpls",
-        "ref.python_nirs4all_operators_models_sklearn_mbpls",
-        "ref.python_onpls",
-        "ref.python_pyswarms",
-        "ref.python_scikit_learn",
-        "ref.python_tensorly"
+        "auswahl",
+        "diplslib",
+        "nirs4all.aom_v0",
+        "nirs4all.lwpls",
+        "nirs4all.mbpls",
+        "onpls",
+        "pyswarms",
+        "tensorly"
       ]
     },
     "r": {
@@ -637,25 +574,22 @@
         "pls",
         "ropls",
         "mixOmics",
-        "ref.r_base",
-        "ref.r_chemometrics",
-        "ref.r_enpls",
-        "ref.r_jico",
-        "ref.r_kernlab_pls",
-        "ref.r_mboost",
-        "ref.r_mdatools",
-        "ref.r_mixomics",
-        "ref.r_multiblock",
-        "ref.r_omicspls",
-        "ref.r_pls",
-        "ref.r_pls_stats",
-        "ref.r_plsrcox",
-        "ref.r_plsrglm",
-        "ref.r_plsvarsel",
-        "ref.r_ropls",
-        "ref.r_sgpls",
-        "ref.r_softimpute",
-        "ref.r_spls"
+        "JICO",
+        "OmicsPLS",
+        "chemometrics",
+        "enpls",
+        "kernlab",
+        "mboost",
+        "mdatools",
+        "multiblock",
+        "pls (R, stats)",
+        "plsRcox",
+        "plsRglm",
+        "plsVarSel",
+        "sgPLS",
+        "softImpute",
+        "spls",
+        "stats (R)"
       ]
     },
     "matlab": {
@@ -664,8 +598,7 @@
         "pls4all.cpp.blas+omp",
         "pls4all.matlab",
         "pls4all.matlab.classdef",
-        "plsregress",
-        "ref.matlab_libpls"
+        "plsregress"
       ]
     },
     "pls4all": {
@@ -687,42 +620,37 @@
     "externals": {
       "label": "Externals",
       "cols": [
+        "__reference",
         "sklearn",
         "ikpls",
-        "ref.python_auswahl",
-        "ref.python_diplslib",
-        "ref.python_ikpls",
-        "ref.python_nirs4all_bench_aom_v0_aompls",
-        "ref.python_nirs4all_operators_models_sklearn_lwpls",
-        "ref.python_nirs4all_operators_models_sklearn_mbpls",
-        "ref.python_onpls",
-        "ref.python_pyswarms",
-        "ref.python_scikit_learn",
-        "ref.python_tensorly",
+        "auswahl",
+        "diplslib",
+        "nirs4all.aom_v0",
+        "nirs4all.lwpls",
+        "nirs4all.mbpls",
+        "onpls",
+        "pyswarms",
+        "tensorly",
         "pls",
         "ropls",
         "mixOmics",
-        "ref.r_base",
-        "ref.r_chemometrics",
-        "ref.r_enpls",
-        "ref.r_jico",
-        "ref.r_kernlab_pls",
-        "ref.r_mboost",
-        "ref.r_mdatools",
-        "ref.r_mixomics",
-        "ref.r_multiblock",
-        "ref.r_omicspls",
-        "ref.r_pls",
-        "ref.r_pls_stats",
-        "ref.r_plsrcox",
-        "ref.r_plsrglm",
-        "ref.r_plsvarsel",
-        "ref.r_ropls",
-        "ref.r_sgpls",
-        "ref.r_softimpute",
-        "ref.r_spls",
-        "plsregress",
-        "ref.matlab_libpls"
+        "JICO",
+        "OmicsPLS",
+        "chemometrics",
+        "enpls",
+        "kernlab",
+        "mboost",
+        "mdatools",
+        "multiblock",
+        "pls (R, stats)",
+        "plsRcox",
+        "plsRglm",
+        "plsVarSel",
+        "sgPLS",
+        "softImpute",
+        "spls",
+        "stats (R)",
+        "plsregress"
       ]
     },
     "thread-sweep": {
@@ -738,6 +666,7 @@
     "all": {
       "label": "All",
       "cols": [
+        "__reference",
         "pls4all.cpp.ref",
         "pls4all.cpp.blas",
         "pls4all.cpp.omp",
@@ -747,44 +676,38 @@
         "pls4all.sklearn",
         "sklearn",
         "ikpls",
-        "ref.python_auswahl",
-        "ref.python_diplslib",
-        "ref.python_ikpls",
-        "ref.python_nirs4all_bench_aom_v0_aompls",
-        "ref.python_nirs4all_operators_models_sklearn_lwpls",
-        "ref.python_nirs4all_operators_models_sklearn_mbpls",
-        "ref.python_onpls",
-        "ref.python_pyswarms",
-        "ref.python_scikit_learn",
-        "ref.python_tensorly",
+        "auswahl",
+        "diplslib",
+        "nirs4all.aom_v0",
+        "nirs4all.lwpls",
+        "nirs4all.mbpls",
+        "onpls",
+        "pyswarms",
+        "tensorly",
         "pls4all.R",
         "pls4all.R.formula",
         "pls",
         "ropls",
         "mixOmics",
-        "ref.r_base",
-        "ref.r_chemometrics",
-        "ref.r_enpls",
-        "ref.r_jico",
-        "ref.r_kernlab_pls",
-        "ref.r_mboost",
-        "ref.r_mdatools",
-        "ref.r_mixomics",
-        "ref.r_multiblock",
-        "ref.r_omicspls",
-        "ref.r_pls",
-        "ref.r_pls_stats",
-        "ref.r_plsrcox",
-        "ref.r_plsrglm",
-        "ref.r_plsvarsel",
-        "ref.r_ropls",
-        "ref.r_sgpls",
-        "ref.r_softimpute",
-        "ref.r_spls",
+        "JICO",
+        "OmicsPLS",
+        "chemometrics",
+        "enpls",
+        "kernlab",
+        "mboost",
+        "mdatools",
+        "multiblock",
+        "pls (R, stats)",
+        "plsRcox",
+        "plsRglm",
+        "plsVarSel",
+        "sgPLS",
+        "softImpute",
+        "spls",
+        "stats (R)",
         "pls4all.matlab",
         "pls4all.matlab.classdef",
-        "plsregress",
-        "ref.matlab_libpls"
+        "plsregress"
       ]
     }
   },
@@ -799,8 +722,8 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.04,
-          "fmt": "1.04 ms",
+          "ms": 1.19,
+          "fmt": "1.19 ms",
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.cpp.ref": {
@@ -839,8 +762,8 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 0.994,
-          "fmt": "0.99 ms",
+          "ms": 1.102,
+          "fmt": "1.10 ms",
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.sklearn": {
@@ -867,8 +790,8 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.648,
-          "fmt": "1.65 ms",
+          "ms": 1.595,
+          "fmt": "1.60 ms",
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.matlab.classdef": {
@@ -913,7 +836,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_nirs4all_bench_aom_v0_aompls": {
+        "nirs4all.aom_v0": {
           "parity": "error",
           "reference_parity": "error",
           "ok": false,
@@ -931,8 +854,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.039,
-          "fmt": "1.04 ms",
+          "ms": 1.05,
+          "fmt": "1.05 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -971,8 +894,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.18,
-          "fmt": "1.18 ms",
+          "ms": 1.129,
+          "fmt": "1.13 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
@@ -1021,7 +944,11 @@
           "parity": "not_available",
           "reference_parity": "not_available",
           "ok": false,
-          "reason": "algo 'approximate_press' not implemented by pls::"
+          "reason": "algo 'approximate_press' not implemented by pls::",
+          "ms": 146.862,
+          "fmt": "146.9 ms",
+          "is_canonical_reference": true,
+          "reference_kind": "external"
         },
         "ropls": {
           "parity": "not_available",
@@ -1041,14 +968,16 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_pls": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "ok": true,
+        "__reference": {
+          "parity": "not_available",
+          "reference_parity": "not_available",
+          "ok": false,
+          "ref_of": "pls",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
           "ms": 146.862,
           "fmt": "146.9 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "reference_kind": "external"
         }
       }
     },
@@ -1062,8 +991,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.136,
-          "fmt": "1.14 ms",
+          "ms": 1.366,
+          "fmt": "1.37 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -1102,16 +1031,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.222,
-          "fmt": "1.22 ms",
+          "ms": 1.156,
+          "fmt": "1.16 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.337,
-          "fmt": "1.34 ms",
+          "ms": 1.354,
+          "fmt": "1.35 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -1126,31 +1055,35 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 5.5,
-          "fmt": "5.50 ms",
+          "ms": 6.0,
+          "fmt": "6.00 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.786,
-          "fmt": "1.79 ms",
+          "ms": 1.716,
+          "fmt": "1.72 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.888,
-          "fmt": "3.89 ms",
+          "ms": 3.729,
+          "fmt": "3.73 ms",
           "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
           "reference_parity": "not_available",
           "ok": false,
-          "reason": "algo 'bagging_pls' not implemented by sklearn"
+          "reason": "algo 'bagging_pls' not implemented by sklearn",
+          "ms": 9.042,
+          "fmt": "9.04 ms",
+          "is_canonical_reference": true,
+          "reference_kind": "external"
         },
         "ikpls": {
           "parity": "not_available",
@@ -1182,14 +1115,16 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_scikit_learn": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "ok": true,
+        "__reference": {
+          "parity": "not_available",
+          "reference_parity": "not_available",
+          "ok": false,
+          "ref_of": "sklearn",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
           "ms": 9.042,
           "fmt": "9.04 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "reference_kind": "external"
         }
       }
     },
@@ -1203,8 +1138,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.908,
-          "fmt": "2.91 ms",
+          "ms": 3.708,
+          "fmt": "3.71 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -1243,24 +1178,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.76,
-          "fmt": "2.76 ms",
+          "ms": 3.628,
+          "fmt": "3.63 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.691,
-          "fmt": "3.69 ms",
+          "ms": 4.346,
+          "fmt": "4.35 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 5.5,
-          "fmt": "5.50 ms",
+          "ms": 6.0,
+          "fmt": "6.00 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -1273,8 +1208,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.245,
-          "fmt": "3.24 ms",
+          "ms": 3.384,
+          "fmt": "3.38 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -1319,7 +1254,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_mdatools": {
+        "mdatools": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
@@ -1327,6 +1262,17 @@
           "fmt": "876.7 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "exact",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "mdatools",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 876.662,
+          "fmt": "876.7 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -1340,8 +1286,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.179,
-          "fmt": "1.18 ms",
+          "ms": 1.383,
+          "fmt": "1.38 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -1380,24 +1326,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.151,
-          "fmt": "1.15 ms",
+          "ms": 1.177,
+          "fmt": "1.18 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.266,
-          "fmt": "1.27 ms",
+          "ms": 1.279,
+          "fmt": "1.28 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -1412,7 +1358,7 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.795,
+          "ms": 1.788,
           "fmt": "1.79 ms",
           "reference_kind": "external"
         },
@@ -1420,8 +1366,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.911,
-          "fmt": "3.91 ms",
+          "ms": 3.792,
+          "fmt": "3.79 ms",
           "reference_kind": "external"
         },
         "sklearn": {
@@ -1460,7 +1406,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_mboost": {
+        "mboost": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -1468,6 +1414,17 @@
           "fmt": "541.9 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "mboost",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 541.92,
+          "fmt": "541.9 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -1481,8 +1438,8 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 9.122,
-          "fmt": "9.12 ms",
+          "ms": 13.213,
+          "fmt": "13.2 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -1521,24 +1478,24 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 9.356,
-          "fmt": "9.36 ms",
+          "ms": 13.662,
+          "fmt": "13.7 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 12.167,
-          "fmt": "12.2 ms",
+          "ms": 17.558,
+          "fmt": "17.6 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "divergent",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 14.0,
-          "fmt": "14.0 ms",
+          "ms": 15.0,
+          "fmt": "15.0 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -1551,8 +1508,8 @@
           "parity": "divergent",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 10.095,
-          "fmt": "10.1 ms",
+          "ms": 9.144,
+          "fmt": "9.14 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -1597,7 +1554,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsvarsel": {
+        "plsVarSel": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -1605,6 +1562,17 @@
           "fmt": "337.2 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsVarSel",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 337.205,
+          "fmt": "337.2 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -1618,8 +1586,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.482,
-          "fmt": "1.48 ms",
+          "ms": 1.536,
+          "fmt": "1.54 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -1658,16 +1626,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.397,
-          "fmt": "1.40 ms",
+          "ms": 1.525,
+          "fmt": "1.53 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.855,
-          "fmt": "1.86 ms",
+          "ms": 1.651,
+          "fmt": "1.65 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -1688,8 +1656,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.967,
-          "fmt": "1.97 ms",
+          "ms": 1.879,
+          "fmt": "1.88 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -1734,7 +1702,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_enpls": {
+        "enpls": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -1742,6 +1710,17 @@
           "fmt": "620.4 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "enpls",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 620.42,
+          "fmt": "620.4 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -1755,8 +1734,8 @@
           "parity": "exact",
           "reference_parity": "divergent",
           "ok": true,
-          "ms": 1.062,
-          "fmt": "1.06 ms",
+          "ms": 1.036,
+          "fmt": "1.04 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -1795,16 +1774,16 @@
           "parity": "exact",
           "reference_parity": "divergent",
           "ok": true,
-          "ms": 1.021,
-          "fmt": "1.02 ms",
+          "ms": 1.098,
+          "fmt": "1.10 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "divergent",
           "ok": true,
-          "ms": 1.258,
-          "fmt": "1.26 ms",
+          "ms": 1.356,
+          "fmt": "1.36 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -1819,24 +1798,24 @@
           "parity": "exact",
           "reference_parity": "divergent",
           "ok": true,
-          "ms": 6.0,
-          "fmt": "6.00 ms",
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "divergent",
           "ok": true,
-          "ms": 1.579,
-          "fmt": "1.58 ms",
+          "ms": 1.585,
+          "fmt": "1.59 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
           "reference_parity": "divergent",
           "ok": true,
-          "ms": 3.466,
-          "fmt": "3.47 ms",
+          "ms": 3.514,
+          "fmt": "3.51 ms",
           "reference_kind": "external"
         },
         "sklearn": {
@@ -1875,7 +1854,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_jico": {
+        "JICO": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -1883,6 +1862,17 @@
           "fmt": "502.1 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "JICO",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 502.15,
+          "fmt": "502.1 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -1896,8 +1886,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.007,
-          "fmt": "1.01 ms",
+          "ms": 1.019,
+          "fmt": "1.02 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -1936,16 +1926,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.096,
-          "fmt": "1.10 ms",
+          "ms": 1.046,
+          "fmt": "1.05 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.187,
-          "fmt": "1.19 ms",
+          "ms": 1.144,
+          "fmt": "1.14 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -1968,16 +1958,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.702,
-          "fmt": "1.70 ms",
+          "ms": 1.639,
+          "fmt": "1.64 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.839,
-          "fmt": "3.84 ms",
+          "ms": 3.551,
+          "fmt": "3.55 ms",
           "reference_kind": "external"
         },
         "sklearn": {
@@ -1998,7 +1988,8 @@
           "ok": true,
           "ms": 8.0,
           "fmt": "8.00 ms",
-          "reference_kind": "external"
+          "reference_kind": "external",
+          "is_canonical_reference": true
         },
         "ropls": {
           "parity": "not_available",
@@ -2018,14 +2009,16 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_pls": {
+        "__reference": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 123.973,
-          "fmt": "124.0 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "ref_of": "pls",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 8.0,
+          "fmt": "8.00 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -2039,8 +2032,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.121,
-          "fmt": "1.12 ms",
+          "ms": 1.032,
+          "fmt": "1.03 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -2079,15 +2072,15 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.109,
-          "fmt": "1.11 ms",
+          "ms": 1.442,
+          "fmt": "1.44 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.2,
+          "ms": 1.204,
           "fmt": "1.20 ms",
           "reference_kind": "external"
         },
@@ -2151,7 +2144,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_diplslib": {
+        "diplslib": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -2159,6 +2152,17 @@
           "fmt": "3.59 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "diplslib",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
+          "ms": 3.588,
+          "fmt": "3.59 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -2172,8 +2176,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.214,
-          "fmt": "1.21 ms",
+          "ms": 1.236,
+          "fmt": "1.24 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -2212,16 +2216,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.366,
-          "fmt": "1.37 ms",
+          "ms": 1.326,
+          "fmt": "1.33 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.41,
-          "fmt": "1.41 ms",
+          "ms": 1.418,
+          "fmt": "1.42 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -2284,7 +2288,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_base": {
+        "stats (R)": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
@@ -2292,6 +2296,17 @@
           "fmt": "136.1 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "exact",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "stats (R)",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 136.112,
+          "fmt": "136.1 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -2305,8 +2320,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.185,
-          "fmt": "1.18 ms",
+          "ms": 1.369,
+          "fmt": "1.37 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -2345,24 +2360,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.232,
-          "fmt": "1.23 ms",
+          "ms": 1.316,
+          "fmt": "1.32 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.458,
-          "fmt": "1.46 ms",
+          "ms": 1.483,
+          "fmt": "1.48 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.0,
-          "fmt": "3.00 ms",
+          "ms": 3.5,
+          "fmt": "3.50 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -2377,16 +2392,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.809,
-          "fmt": "1.81 ms",
+          "ms": 1.745,
+          "fmt": "1.74 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.75,
-          "fmt": "3.75 ms",
+          "ms": 3.662,
+          "fmt": "3.66 ms",
           "reference_kind": "external"
         },
         "sklearn": {
@@ -2423,16 +2438,22 @@
           "parity": "not_run",
           "reference_parity": "not_run",
           "ok": false,
-          "reason": "bench_matlab_pls at line 20 column 5"
-        },
-        "ref.matlab_libpls": {
-          "parity": "drift",
-          "reference_parity": "exact",
-          "ok": true,
+          "reason": "bench_matlab_pls at line 20 column 5",
           "ms": 9.855,
           "fmt": "9.85 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "is_canonical_reference": true,
+          "reference_kind": "external"
+        },
+        "__reference": {
+          "parity": "not_run",
+          "reference_parity": "not_run",
+          "ok": false,
+          "ref_of": "plsregress",
+          "ref_lang": "MATLAB/Octave",
+          "is_canonical_reference": true,
+          "ms": 9.855,
+          "fmt": "9.85 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -2446,8 +2467,8 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.291,
-          "fmt": "1.29 ms",
+          "ms": 1.309,
+          "fmt": "1.31 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -2486,16 +2507,16 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.282,
-          "fmt": "1.28 ms",
+          "ms": 1.488,
+          "fmt": "1.49 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.497,
-          "fmt": "1.50 ms",
+          "ms": 1.597,
+          "fmt": "1.60 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -2516,8 +2537,8 @@
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.763,
-          "fmt": "1.76 ms",
+          "ms": 1.899,
+          "fmt": "1.90 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -2562,7 +2583,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsvarsel": {
+        "plsVarSel": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -2570,6 +2591,17 @@
           "fmt": "659.8 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsVarSel",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 659.825,
+          "fmt": "659.8 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -2583,8 +2615,8 @@
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 0.982,
-          "fmt": "0.98 ms",
+          "ms": 1.006,
+          "fmt": "1.01 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.cpp.ref": {
@@ -2623,24 +2655,24 @@
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 1.0,
-          "fmt": "1.00 ms",
+          "ms": 1.055,
+          "fmt": "1.06 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 1.159,
-          "fmt": "1.16 ms",
+          "ms": 1.244,
+          "fmt": "1.24 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.R.formula": {
@@ -2653,8 +2685,8 @@
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 1.547,
-          "fmt": "1.55 ms",
+          "ms": 1.645,
+          "fmt": "1.64 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.matlab.classdef": {
@@ -2711,8 +2743,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.591,
-          "fmt": "2.59 ms",
+          "ms": 2.89,
+          "fmt": "2.89 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -2751,16 +2783,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.491,
-          "fmt": "2.49 ms",
+          "ms": 2.761,
+          "fmt": "2.76 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.211,
-          "fmt": "3.21 ms",
+          "ms": 3.6,
+          "fmt": "3.60 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -2781,8 +2813,8 @@
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.075,
-          "fmt": "3.07 ms",
+          "ms": 2.962,
+          "fmt": "2.96 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -2827,7 +2859,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsvarsel": {
+        "plsVarSel": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -2835,6 +2867,17 @@
           "fmt": "473.8 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsVarSel",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 473.804,
+          "fmt": "473.8 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -2848,8 +2891,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.286,
-          "fmt": "1.29 ms",
+          "ms": 1.198,
+          "fmt": "1.20 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -2888,8 +2931,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.293,
-          "fmt": "1.29 ms",
+          "ms": 1.305,
+          "fmt": "1.30 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
@@ -2916,8 +2959,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.835,
-          "fmt": "1.84 ms",
+          "ms": 1.981,
+          "fmt": "1.98 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -2932,7 +2975,8 @@
           "ok": true,
           "ms": 4.962,
           "fmt": "4.96 ms",
-          "reference_kind": "external"
+          "reference_kind": "external",
+          "is_canonical_reference": true
         },
         "ikpls": {
           "parity": "not_available",
@@ -2964,14 +3008,16 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_scikit_learn": {
-          "parity": "exact",
-          "reference_parity": "exact",
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "drift",
           "ok": true,
-          "ms": 2.048,
-          "fmt": "2.05 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "ref_of": "sklearn",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
+          "ms": 4.962,
+          "fmt": "4.96 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -2985,8 +3031,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.028,
-          "fmt": "1.03 ms",
+          "ms": 1.088,
+          "fmt": "1.09 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -3025,16 +3071,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.019,
-          "fmt": "1.02 ms",
+          "ms": 1.032,
+          "fmt": "1.03 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.384,
-          "fmt": "1.38 ms",
+          "ms": 1.146,
+          "fmt": "1.15 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -3055,8 +3101,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.758,
-          "fmt": "1.76 ms",
+          "ms": 1.586,
+          "fmt": "1.59 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -3101,7 +3147,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_sgpls": {
+        "sgPLS": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -3109,6 +3155,17 @@
           "fmt": "1.0 s",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "sgPLS",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 1008.052,
+          "fmt": "1.0 s",
+          "reference_kind": "external"
         }
       }
     },
@@ -3122,8 +3179,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.437,
-          "fmt": "1.44 ms",
+          "ms": 1.431,
+          "fmt": "1.43 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -3162,24 +3219,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.38,
-          "fmt": "1.38 ms",
+          "ms": 1.523,
+          "fmt": "1.52 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.387,
-          "fmt": "1.39 ms",
+          "ms": 1.513,
+          "fmt": "1.51 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 4.0,
-          "fmt": "4.00 ms",
+          "ms": 3.5,
+          "fmt": "3.50 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -3192,8 +3249,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.126,
-          "fmt": "2.13 ms",
+          "ms": 1.969,
+          "fmt": "1.97 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -3238,7 +3295,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_mdatools": {
+        "mdatools": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -3246,6 +3303,17 @@
           "fmt": "593.7 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "mdatools",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 593.703,
+          "fmt": "593.7 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -3259,8 +3327,8 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.291,
-          "fmt": "1.29 ms",
+          "ms": 1.191,
+          "fmt": "1.19 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -3299,16 +3367,16 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.212,
-          "fmt": "1.21 ms",
+          "ms": 1.201,
+          "fmt": "1.20 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.565,
-          "fmt": "1.56 ms",
+          "ms": 1.509,
+          "fmt": "1.51 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -3329,8 +3397,8 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.66,
-          "fmt": "1.66 ms",
+          "ms": 1.637,
+          "fmt": "1.64 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -3375,7 +3443,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsvarsel": {
+        "plsVarSel": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -3383,6 +3451,17 @@
           "fmt": "310.0 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsVarSel",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 309.972,
+          "fmt": "310.0 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -3396,8 +3475,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.267,
-          "fmt": "2.27 ms",
+          "ms": 2.55,
+          "fmt": "2.55 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -3436,24 +3515,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.123,
-          "fmt": "2.12 ms",
+          "ms": 2.378,
+          "fmt": "2.38 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.181,
-          "fmt": "3.18 ms",
+          "ms": 3.106,
+          "fmt": "3.11 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 4.5,
-          "fmt": "4.50 ms",
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -3466,8 +3545,8 @@
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.579,
-          "fmt": "2.58 ms",
+          "ms": 2.646,
+          "fmt": "2.65 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -3510,16 +3589,22 @@
           "parity": "not_run",
           "reference_parity": "not_run",
           "ok": false,
-          "reason": "bench_matlab_pls at line 20 column 5"
-        },
-        "ref.matlab_libpls": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "ok": true,
+          "reason": "bench_matlab_pls at line 20 column 5",
           "ms": 759.788,
           "fmt": "759.8 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "is_canonical_reference": true,
+          "reference_kind": "external"
+        },
+        "__reference": {
+          "parity": "not_run",
+          "reference_parity": "not_run",
+          "ok": false,
+          "ref_of": "plsregress",
+          "ref_lang": "MATLAB/Octave",
+          "is_canonical_reference": true,
+          "ms": 759.788,
+          "fmt": "759.8 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -3533,8 +3618,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 146.517,
-          "fmt": "146.5 ms",
+          "ms": 192.406,
+          "fmt": "192.4 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -3573,8 +3658,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 144.604,
-          "fmt": "144.6 ms",
+          "ms": 192.116,
+          "fmt": "192.1 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
@@ -3587,8 +3672,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 192.5,
-          "fmt": "192.5 ms",
+          "ms": 190.0,
+          "fmt": "190.0 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -3601,8 +3686,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 145.752,
-          "fmt": "145.8 ms",
+          "ms": 145.306,
+          "fmt": "145.3 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -3645,16 +3730,22 @@
           "parity": "not_run",
           "reference_parity": "not_run",
           "ok": false,
-          "reason": "bench_matlab_pls at line 20 column 5"
-        },
-        "ref.matlab_libpls": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "ok": true,
+          "reason": "bench_matlab_pls at line 20 column 5",
           "ms": 10144.199,
           "fmt": "10.1 s",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "is_canonical_reference": true,
+          "reference_kind": "external"
+        },
+        "__reference": {
+          "parity": "not_run",
+          "reference_parity": "not_run",
+          "ok": false,
+          "ref_of": "plsregress",
+          "ref_lang": "MATLAB/Octave",
+          "is_canonical_reference": true,
+          "ms": 10144.199,
+          "fmt": "10.1 s",
+          "reference_kind": "external"
         }
       }
     },
@@ -3668,8 +3759,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.393,
-          "fmt": "1.39 ms",
+          "ms": 1.44,
+          "fmt": "1.44 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -3708,16 +3799,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.381,
-          "fmt": "1.38 ms",
+          "ms": 1.325,
+          "fmt": "1.32 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.477,
-          "fmt": "1.48 ms",
+          "ms": 1.518,
+          "fmt": "1.52 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -3738,8 +3829,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.91,
-          "fmt": "1.91 ms",
+          "ms": 1.899,
+          "fmt": "1.90 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -3784,7 +3875,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_kernlab_pls": {
+        "kernlab": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -3792,6 +3883,17 @@
           "fmt": "299.6 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "kernlab",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 299.611,
+          "fmt": "299.6 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -3805,8 +3907,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.125,
-          "fmt": "2.12 ms",
+          "ms": 2.468,
+          "fmt": "2.47 ms",
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.cpp.ref": {
@@ -3845,16 +3947,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.213,
-          "fmt": "2.21 ms",
+          "ms": 2.742,
+          "fmt": "2.74 ms",
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.323,
-          "fmt": "2.32 ms",
+          "ms": 2.638,
+          "fmt": "2.64 ms",
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.R": {
@@ -3875,8 +3977,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.755,
-          "fmt": "2.76 ms",
+          "ms": 2.801,
+          "fmt": "2.80 ms",
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.matlab.classdef": {
@@ -3921,7 +4023,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_nirs4all_operators_models_sklearn_lwpls": {
+        "nirs4all.lwpls": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -3929,6 +4031,17 @@
           "fmt": "10.4 ms",
           "reference_kind": "nirs4all_sanctioned",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "nirs4all.lwpls",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
+          "ms": 10.384,
+          "fmt": "10.4 ms",
+          "reference_kind": "nirs4all_sanctioned"
         }
       }
     },
@@ -3942,8 +4055,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.055,
-          "fmt": "1.05 ms",
+          "ms": 0.997,
+          "fmt": "1.00 ms",
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.cpp.ref": {
@@ -3982,15 +4095,15 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.129,
-          "fmt": "1.13 ms",
+          "ms": 1.054,
+          "fmt": "1.05 ms",
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.203,
+          "ms": 1.2,
           "fmt": "1.20 ms",
           "reference_kind": "nirs4all_sanctioned"
         },
@@ -3998,32 +4111,32 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.0,
-          "fmt": "3.00 ms",
+          "ms": 3.5,
+          "fmt": "3.50 ms",
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.R.formula": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 5.0,
-          "fmt": "5.00 ms",
+          "ms": 5.5,
+          "fmt": "5.50 ms",
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.644,
-          "fmt": "1.64 ms",
+          "ms": 1.607,
+          "fmt": "1.61 ms",
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.608,
-          "fmt": "3.61 ms",
+          "ms": 3.817,
+          "fmt": "3.82 ms",
           "reference_kind": "nirs4all_sanctioned"
         },
         "sklearn": {
@@ -4062,7 +4175,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_nirs4all_operators_models_sklearn_mbpls": {
+        "nirs4all.mbpls": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -4070,6 +4183,17 @@
           "fmt": "1.74 ms",
           "reference_kind": "nirs4all_sanctioned",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "nirs4all.mbpls",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
+          "ms": 1.742,
+          "fmt": "1.74 ms",
+          "reference_kind": "nirs4all_sanctioned"
         }
       }
     },
@@ -4083,8 +4207,8 @@
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 1.009,
-          "fmt": "1.01 ms",
+          "ms": 0.979,
+          "fmt": "0.98 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.cpp.ref": {
@@ -4123,16 +4247,16 @@
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 1.001,
-          "fmt": "1.00 ms",
+          "ms": 1.046,
+          "fmt": "1.05 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 1.315,
-          "fmt": "1.31 ms",
+          "ms": 1.168,
+          "fmt": "1.17 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.R": {
@@ -4147,24 +4271,24 @@
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 6.0,
-          "fmt": "6.00 ms",
+          "ms": 5.5,
+          "fmt": "5.50 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 1.593,
-          "fmt": "1.59 ms",
+          "ms": 1.662,
+          "fmt": "1.66 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 3.574,
-          "fmt": "3.57 ms",
+          "ms": 3.703,
+          "fmt": "3.70 ms",
           "reference_kind": "paper_only"
         },
         "sklearn": {
@@ -4215,8 +4339,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 0.992,
-          "fmt": "0.99 ms",
+          "ms": 1.126,
+          "fmt": "1.13 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -4255,48 +4379,48 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.03,
-          "fmt": "1.03 ms",
+          "ms": 1.022,
+          "fmt": "1.02 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.089,
-          "fmt": "1.09 ms",
+          "ms": 1.2,
+          "fmt": "1.20 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.5,
-          "fmt": "2.50 ms",
+          "ms": 2.0,
+          "fmt": "2.00 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 5.0,
-          "fmt": "5.00 ms",
+          "ms": 4.5,
+          "fmt": "4.50 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.546,
-          "fmt": "1.55 ms",
+          "ms": 1.651,
+          "fmt": "1.65 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.416,
-          "fmt": "3.42 ms",
+          "ms": 3.621,
+          "fmt": "3.62 ms",
           "reference_kind": "external"
         },
         "sklearn": {
@@ -4335,7 +4459,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_softimpute": {
+        "softImpute": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
@@ -4343,6 +4467,17 @@
           "fmt": "548.3 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "exact",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "softImpute",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 548.295,
+          "fmt": "548.3 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -4356,8 +4491,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.053,
-          "fmt": "1.05 ms",
+          "ms": 1.008,
+          "fmt": "1.01 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -4396,16 +4531,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.011,
-          "fmt": "1.01 ms",
+          "ms": 1.075,
+          "fmt": "1.07 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.153,
-          "fmt": "1.15 ms",
+          "ms": 1.253,
+          "fmt": "1.25 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -4426,16 +4561,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.561,
-          "fmt": "1.56 ms",
+          "ms": 1.586,
+          "fmt": "1.59 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.613,
-          "fmt": "3.61 ms",
+          "ms": 3.616,
+          "fmt": "3.62 ms",
           "reference_kind": "external"
         },
         "sklearn": {
@@ -4474,7 +4609,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_tensorly": {
+        "tensorly": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -4482,6 +4617,17 @@
           "fmt": "15.0 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "tensorly",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
+          "ms": 14.998,
+          "fmt": "15.0 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -4495,8 +4641,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.167,
-          "fmt": "1.17 ms",
+          "ms": 1.113,
+          "fmt": "1.11 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -4535,16 +4681,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.159,
-          "fmt": "1.16 ms",
+          "ms": 1.082,
+          "fmt": "1.08 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.386,
-          "fmt": "1.39 ms",
+          "ms": 1.304,
+          "fmt": "1.30 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -4565,8 +4711,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.658,
-          "fmt": "1.66 ms",
+          "ms": 1.697,
+          "fmt": "1.70 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -4611,7 +4757,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_omicspls": {
+        "OmicsPLS": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -4619,6 +4765,17 @@
           "fmt": "832.7 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "OmicsPLS",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 832.675,
+          "fmt": "832.7 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -4632,8 +4789,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.151,
-          "fmt": "1.15 ms",
+          "ms": 1.102,
+          "fmt": "1.10 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -4672,8 +4829,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.046,
-          "fmt": "1.05 ms",
+          "ms": 1.126,
+          "fmt": "1.13 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
@@ -4742,7 +4899,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_onpls": {
+        "onpls": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -4750,6 +4907,17 @@
           "fmt": "8.95 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "onpls",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
+          "ms": 8.945,
+          "fmt": "8.95 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -4763,8 +4931,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.04,
-          "fmt": "1.04 ms",
+          "ms": 0.977,
+          "fmt": "0.98 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -4803,8 +4971,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 0.968,
-          "fmt": "0.97 ms",
+          "ms": 1.058,
+          "fmt": "1.06 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
@@ -4853,7 +5021,11 @@
           "parity": "not_available",
           "reference_parity": "not_available",
           "ok": false,
-          "reason": "algo 'one_se_rule' not implemented by pls::"
+          "reason": "algo 'one_se_rule' not implemented by pls::",
+          "ms": 121.756,
+          "fmt": "121.8 ms",
+          "is_canonical_reference": true,
+          "reference_kind": "external"
         },
         "ropls": {
           "parity": "not_available",
@@ -4873,14 +5045,16 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_pls": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "ok": true,
+        "__reference": {
+          "parity": "not_available",
+          "reference_parity": "not_available",
+          "ok": false,
+          "ref_of": "pls",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
           "ms": 121.756,
           "fmt": "121.8 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "reference_kind": "external"
         }
       }
     },
@@ -4894,8 +5068,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.125,
-          "fmt": "1.13 ms",
+          "ms": 1.067,
+          "fmt": "1.07 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -4934,7 +5108,7 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.034,
+          "ms": 1.028,
           "fmt": "1.03 ms",
           "reference_kind": "external"
         },
@@ -4942,8 +5116,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.261,
-          "fmt": "1.26 ms",
+          "ms": 1.235,
+          "fmt": "1.24 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -4964,8 +5138,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.724,
-          "fmt": "1.72 ms",
+          "ms": 1.727,
+          "fmt": "1.73 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -4996,7 +5170,11 @@
           "parity": "not_run",
           "reference_parity": "not_run",
           "ok": false,
-          "reason": "Execution halted"
+          "reason": "Execution halted",
+          "ms": 2991.288,
+          "fmt": "3.0 s",
+          "is_canonical_reference": true,
+          "reference_kind": "external"
         },
         "mixOmics": {
           "parity": "not_available",
@@ -5010,14 +5188,16 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_ropls": {
-          "parity": "exact",
-          "reference_parity": "exact",
-          "ok": true,
+        "__reference": {
+          "parity": "not_run",
+          "reference_parity": "not_run",
+          "ok": false,
+          "ref_of": "ropls",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
           "ms": 2991.288,
           "fmt": "3.0 s",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "reference_kind": "external"
         }
       }
     },
@@ -5031,8 +5211,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 27.838,
-          "fmt": "27.8 ms",
+          "ms": 20.16,
+          "fmt": "20.2 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -5071,40 +5251,40 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 27.22,
-          "fmt": "27.2 ms",
+          "ms": 20.167,
+          "fmt": "20.2 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 28.036,
-          "fmt": "28.0 ms",
+          "ms": 20.209,
+          "fmt": "20.2 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 20.0,
-          "fmt": "20.0 ms",
+          "ms": 19.5,
+          "fmt": "19.5 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
           "parity": "divergent",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 23.0,
-          "fmt": "23.0 ms",
+          "ms": 23.5,
+          "fmt": "23.5 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 28.571,
-          "fmt": "28.6 ms",
+          "ms": 27.191,
+          "fmt": "27.2 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -5119,7 +5299,8 @@
           "ok": true,
           "ms": 2.026,
           "fmt": "2.03 ms",
-          "reference_kind": "external"
+          "reference_kind": "external",
+          "is_canonical_reference": true
         },
         "ikpls": {
           "parity": "not_available",
@@ -5153,21 +5334,15 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_scikit_learn": {
+        "__reference": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.06,
-          "fmt": "2.06 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
-        },
-        "ref.r_pls": {
-          "parity": "exact",
-          "reference_parity": "exact",
-          "ok": true,
-          "ms": 109.09,
-          "fmt": "109.1 ms",
+          "ref_of": "sklearn",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
+          "ms": 2.026,
+          "fmt": "2.03 ms",
           "reference_kind": "external"
         }
       }
@@ -5182,8 +5357,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.071,
-          "fmt": "1.07 ms",
+          "ms": 1.162,
+          "fmt": "1.16 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -5222,16 +5397,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.184,
-          "fmt": "1.18 ms",
+          "ms": 1.155,
+          "fmt": "1.16 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.212,
-          "fmt": "1.21 ms",
+          "ms": 1.232,
+          "fmt": "1.23 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -5294,7 +5469,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_base": {
+        "stats (R)": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
@@ -5302,6 +5477,17 @@
           "fmt": "136.6 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "exact",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "stats (R)",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 136.585,
+          "fmt": "136.6 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -5315,8 +5501,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.014,
-          "fmt": "1.01 ms",
+          "ms": 1.057,
+          "fmt": "1.06 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -5355,16 +5541,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.114,
-          "fmt": "1.11 ms",
+          "ms": 1.049,
+          "fmt": "1.05 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.221,
-          "fmt": "1.22 ms",
+          "ms": 1.189,
+          "fmt": "1.19 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -5387,16 +5573,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.582,
-          "fmt": "1.58 ms",
+          "ms": 1.559,
+          "fmt": "1.56 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.466,
-          "fmt": "3.47 ms",
+          "ms": 3.659,
+          "fmt": "3.66 ms",
           "reference_kind": "external"
         },
         "sklearn": {
@@ -5405,7 +5591,8 @@
           "ok": true,
           "ms": 1.328,
           "fmt": "1.33 ms",
-          "reference_kind": "external"
+          "reference_kind": "external",
+          "is_canonical_reference": true
         },
         "ikpls": {
           "parity": "divergent",
@@ -5445,37 +5632,15 @@
           "fmt": "2.21 ms",
           "reference_kind": "external"
         },
-        "ref.python_scikit_learn": {
+        "__reference": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.77,
-          "fmt": "1.77 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
-        },
-        "ref.r_pls": {
-          "parity": "exact",
-          "reference_parity": "exact",
-          "ok": true,
-          "ms": 108.652,
-          "fmt": "108.7 ms",
-          "reference_kind": "external"
-        },
-        "ref.python_ikpls": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "ok": true,
-          "ms": 1.217,
-          "fmt": "1.22 ms",
-          "reference_kind": "external"
-        },
-        "ref.r_mixomics": {
-          "parity": "exact",
-          "reference_parity": "exact",
-          "ok": true,
-          "ms": 988.85,
-          "fmt": "988.9 ms",
+          "ref_of": "sklearn",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
+          "ms": 1.328,
+          "fmt": "1.33 ms",
           "reference_kind": "external"
         }
       }
@@ -5530,16 +5695,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.017,
-          "fmt": "1.02 ms",
+          "ms": 1.129,
+          "fmt": "1.13 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.21,
-          "fmt": "1.21 ms",
+          "ms": 1.061,
+          "fmt": "1.06 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -5602,7 +5767,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsrcox": {
+        "plsRcox": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -5610,6 +5775,17 @@
           "fmt": "1.9 s",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsRcox",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 1876.268,
+          "fmt": "1.9 s",
+          "reference_kind": "external"
         }
       }
     },
@@ -5623,8 +5799,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.408,
-          "fmt": "1.41 ms",
+          "ms": 1.048,
+          "fmt": "1.05 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -5663,8 +5839,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.015,
-          "fmt": "1.02 ms",
+          "ms": 1.002,
+          "fmt": "1.00 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
@@ -5733,7 +5909,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_mdatools": {
+        "mdatools": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
@@ -5741,6 +5917,17 @@
           "fmt": "334.3 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "exact",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "mdatools",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 334.341,
+          "fmt": "334.3 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -5754,8 +5941,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.012,
-          "fmt": "1.01 ms",
+          "ms": 1.073,
+          "fmt": "1.07 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -5794,8 +5981,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.105,
-          "fmt": "1.10 ms",
+          "ms": 1.075,
+          "fmt": "1.07 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
@@ -5864,7 +6051,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_mdatools": {
+        "mdatools": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
@@ -5872,6 +6059,17 @@
           "fmt": "328.6 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "exact",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "mdatools",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 328.573,
+          "fmt": "328.6 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -5885,7 +6083,7 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.054,
+          "ms": 1.051,
           "fmt": "1.05 ms",
           "reference_kind": "external"
         },
@@ -5925,8 +6123,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.09,
-          "fmt": "1.09 ms",
+          "ms": 1.007,
+          "fmt": "1.01 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
@@ -5995,7 +6193,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_mdatools": {
+        "mdatools": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
@@ -6003,6 +6201,17 @@
           "fmt": "317.0 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "exact",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "mdatools",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 316.986,
+          "fmt": "317.0 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -6016,8 +6225,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.051,
-          "fmt": "1.05 ms",
+          "ms": 1.076,
+          "fmt": "1.08 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -6056,16 +6265,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.051,
-          "fmt": "1.05 ms",
+          "ms": 0.984,
+          "fmt": "0.98 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.158,
-          "fmt": "1.16 ms",
+          "ms": 1.259,
+          "fmt": "1.26 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -6086,8 +6295,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.77,
-          "fmt": "1.77 ms",
+          "ms": 1.719,
+          "fmt": "1.72 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -6132,7 +6341,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsrglm": {
+        "plsRglm": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -6140,6 +6349,17 @@
           "fmt": "1.1 s",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsRglm",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 1088.661,
+          "fmt": "1.1 s",
+          "reference_kind": "external"
         }
       }
     },
@@ -6153,8 +6373,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 0.913,
-          "fmt": "0.91 ms",
+          "ms": 1.008,
+          "fmt": "1.01 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -6193,16 +6413,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.013,
-          "fmt": "1.01 ms",
+          "ms": 0.982,
+          "fmt": "0.98 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.31,
-          "fmt": "1.31 ms",
+          "ms": 1.212,
+          "fmt": "1.21 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -6223,8 +6443,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.588,
-          "fmt": "1.59 ms",
+          "ms": 1.627,
+          "fmt": "1.63 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -6237,7 +6457,11 @@
           "parity": "not_available",
           "reference_parity": "not_available",
           "ok": false,
-          "reason": "algo 'pls_lda' not implemented by sklearn"
+          "reason": "algo 'pls_lda' not implemented by sklearn",
+          "ms": 1.943,
+          "fmt": "1.94 ms",
+          "is_canonical_reference": true,
+          "reference_kind": "external"
         },
         "ikpls": {
           "parity": "not_available",
@@ -6269,14 +6493,16 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_scikit_learn": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "ok": true,
+        "__reference": {
+          "parity": "not_available",
+          "reference_parity": "not_available",
+          "ok": false,
+          "ref_of": "sklearn",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
           "ms": 1.943,
           "fmt": "1.94 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "reference_kind": "external"
         }
       }
     },
@@ -6290,8 +6516,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.134,
-          "fmt": "1.13 ms",
+          "ms": 1.177,
+          "fmt": "1.18 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -6330,16 +6556,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.168,
-          "fmt": "1.17 ms",
+          "ms": 1.2,
+          "fmt": "1.20 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.269,
-          "fmt": "1.27 ms",
+          "ms": 1.325,
+          "fmt": "1.32 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -6360,8 +6586,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.688,
-          "fmt": "1.69 ms",
+          "ms": 1.638,
+          "fmt": "1.64 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -6374,7 +6600,11 @@
           "parity": "not_available",
           "reference_parity": "not_available",
           "ok": false,
-          "reason": "algo 'pls_logistic' not implemented by sklearn"
+          "reason": "algo 'pls_logistic' not implemented by sklearn",
+          "ms": 1.949,
+          "fmt": "1.95 ms",
+          "is_canonical_reference": true,
+          "reference_kind": "external"
         },
         "ikpls": {
           "parity": "not_available",
@@ -6406,14 +6636,16 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_scikit_learn": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "ok": true,
+        "__reference": {
+          "parity": "not_available",
+          "reference_parity": "not_available",
+          "ok": false,
+          "ref_of": "sklearn",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
           "ms": 1.949,
           "fmt": "1.95 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "reference_kind": "external"
         }
       }
     },
@@ -6427,8 +6659,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.097,
-          "fmt": "1.10 ms",
+          "ms": 1.061,
+          "fmt": "1.06 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -6467,8 +6699,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.16,
-          "fmt": "1.16 ms",
+          "ms": 1.132,
+          "fmt": "1.13 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
@@ -6537,7 +6769,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_mdatools": {
+        "mdatools": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
@@ -6545,6 +6777,17 @@
           "fmt": "348.9 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "exact",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "mdatools",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 348.867,
+          "fmt": "348.9 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -6558,8 +6801,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.006,
-          "fmt": "1.01 ms",
+          "ms": 1.099,
+          "fmt": "1.10 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -6598,24 +6841,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 0.983,
-          "fmt": "0.98 ms",
+          "ms": 1.075,
+          "fmt": "1.08 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.545,
-          "fmt": "1.54 ms",
+          "ms": 1.215,
+          "fmt": "1.22 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.0,
-          "fmt": "3.00 ms",
+          "ms": 3.5,
+          "fmt": "3.50 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -6628,7 +6871,7 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.649,
+          "ms": 1.654,
           "fmt": "1.65 ms",
           "reference_kind": "external"
         },
@@ -6642,7 +6885,11 @@
           "parity": "not_available",
           "reference_parity": "not_available",
           "ok": false,
-          "reason": "algo 'pls_qda' not implemented by sklearn"
+          "reason": "algo 'pls_qda' not implemented by sklearn",
+          "ms": 2.064,
+          "fmt": "2.06 ms",
+          "is_canonical_reference": true,
+          "reference_kind": "external"
         },
         "ikpls": {
           "parity": "not_available",
@@ -6674,14 +6921,16 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_scikit_learn": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "ok": true,
+        "__reference": {
+          "parity": "not_available",
+          "reference_parity": "not_available",
+          "ok": false,
+          "ref_of": "sklearn",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
           "ms": 2.064,
           "fmt": "2.06 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "reference_kind": "external"
         }
       }
     },
@@ -6695,8 +6944,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 4.751,
-          "fmt": "4.75 ms",
+          "ms": 6.066,
+          "fmt": "6.07 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -6735,24 +6984,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 4.669,
-          "fmt": "4.67 ms",
+          "ms": 5.733,
+          "fmt": "5.73 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 6.357,
-          "fmt": "6.36 ms",
+          "ms": 7.213,
+          "fmt": "7.21 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 8.0,
-          "fmt": "8.00 ms",
+          "ms": 7.5,
+          "fmt": "7.50 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -6765,8 +7014,8 @@
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 4.964,
-          "fmt": "4.96 ms",
+          "ms": 5.092,
+          "fmt": "5.09 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -6811,7 +7060,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_pyswarms": {
+        "pyswarms": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -6819,6 +7068,17 @@
           "fmt": "169.2 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "pyswarms",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
+          "ms": 169.166,
+          "fmt": "169.2 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -6832,8 +7092,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.418,
-          "fmt": "1.42 ms",
+          "ms": 1.443,
+          "fmt": "1.44 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -6872,16 +7132,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.328,
-          "fmt": "1.33 ms",
+          "ms": 1.419,
+          "fmt": "1.42 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.667,
-          "fmt": "1.67 ms",
+          "ms": 1.751,
+          "fmt": "1.75 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -6902,8 +7162,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.876,
-          "fmt": "1.88 ms",
+          "ms": 1.956,
+          "fmt": "1.96 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -6946,16 +7206,22 @@
           "parity": "not_run",
           "reference_parity": "not_run",
           "ok": false,
-          "reason": "bench_matlab_pls at line 20 column 5"
-        },
-        "ref.matlab_libpls": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "ok": true,
+          "reason": "bench_matlab_pls at line 20 column 5",
           "ms": 63.408,
           "fmt": "63.4 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "is_canonical_reference": true,
+          "reference_kind": "external"
+        },
+        "__reference": {
+          "parity": "not_run",
+          "reference_parity": "not_run",
+          "ok": false,
+          "ref_of": "plsregress",
+          "ref_lang": "MATLAB/Octave",
+          "is_canonical_reference": true,
+          "ms": 63.408,
+          "fmt": "63.4 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -6969,8 +7235,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.055,
-          "fmt": "1.06 ms",
+          "ms": 1.028,
+          "fmt": "1.03 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -7009,24 +7275,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.081,
-          "fmt": "1.08 ms",
+          "ms": 1.094,
+          "fmt": "1.09 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.162,
-          "fmt": "1.16 ms",
+          "ms": 1.168,
+          "fmt": "1.17 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.0,
-          "fmt": "3.00 ms",
+          "ms": 3.5,
+          "fmt": "3.50 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -7041,8 +7307,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.65,
-          "fmt": "1.65 ms",
+          "ms": 1.609,
+          "fmt": "1.61 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -7055,7 +7321,11 @@
           "parity": "not_available",
           "reference_parity": "not_available",
           "ok": false,
-          "reason": "algo 'random_subspace_pls' not implemented by sklearn"
+          "reason": "algo 'random_subspace_pls' not implemented by sklearn",
+          "ms": 8.134,
+          "fmt": "8.13 ms",
+          "is_canonical_reference": true,
+          "reference_kind": "external"
         },
         "ikpls": {
           "parity": "not_available",
@@ -7087,14 +7357,16 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_scikit_learn": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "ok": true,
+        "__reference": {
+          "parity": "not_available",
+          "reference_parity": "not_available",
+          "ok": false,
+          "ref_of": "sklearn",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
           "ms": 8.134,
           "fmt": "8.13 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "reference_kind": "external"
         }
       }
     },
@@ -7108,8 +7380,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.999,
-          "fmt": "2.00 ms",
+          "ms": 2.24,
+          "fmt": "2.24 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -7148,24 +7420,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.861,
-          "fmt": "1.86 ms",
+          "ms": 2.441,
+          "fmt": "2.44 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.3,
-          "fmt": "2.30 ms",
+          "ms": 2.978,
+          "fmt": "2.98 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 5.0,
-          "fmt": "5.00 ms",
+          "ms": 4.5,
+          "fmt": "4.50 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -7178,8 +7450,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.42,
-          "fmt": "2.42 ms",
+          "ms": 2.403,
+          "fmt": "2.40 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -7224,7 +7496,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_pls_stats": {
+        "pls (R, stats)": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
@@ -7232,6 +7504,17 @@
           "fmt": "167.7 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "exact",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "pls (R, stats)",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 167.676,
+          "fmt": "167.7 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -7245,8 +7528,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.816,
-          "fmt": "1.82 ms",
+          "ms": 1.749,
+          "fmt": "1.75 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -7285,16 +7568,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.48,
-          "fmt": "1.48 ms",
+          "ms": 1.735,
+          "fmt": "1.73 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.548,
-          "fmt": "1.55 ms",
+          "ms": 1.969,
+          "fmt": "1.97 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -7315,23 +7598,27 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.103,
-          "fmt": "2.10 ms",
+          "ms": 2.014,
+          "fmt": "2.01 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 4.38,
-          "fmt": "4.38 ms",
+          "ms": 3.893,
+          "fmt": "3.89 ms",
           "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
           "reference_parity": "not_available",
           "ok": false,
-          "reason": "algo 'recursive_pls' not implemented by sklearn"
+          "reason": "algo 'recursive_pls' not implemented by sklearn",
+          "ms": 18.616,
+          "fmt": "18.6 ms",
+          "is_canonical_reference": true,
+          "reference_kind": "external"
         },
         "ikpls": {
           "parity": "not_available",
@@ -7343,7 +7630,10 @@
           "parity": "not_available",
           "reference_parity": "not_available",
           "ok": false,
-          "reason": "algo 'recursive_pls' not implemented by pls::"
+          "reason": "algo 'recursive_pls' not implemented by pls::",
+          "ms": 154.366,
+          "fmt": "154.4 ms",
+          "reference_kind": "external"
         },
         "ropls": {
           "parity": "not_available",
@@ -7363,21 +7653,15 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_scikit_learn": {
-          "parity": "exact",
-          "reference_parity": "exact",
-          "ok": true,
+        "__reference": {
+          "parity": "not_available",
+          "reference_parity": "not_available",
+          "ok": false,
+          "ref_of": "sklearn",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
           "ms": 18.616,
           "fmt": "18.6 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
-        },
-        "ref.r_pls": {
-          "parity": "exact",
-          "reference_parity": "exact",
-          "ok": true,
-          "ms": 154.366,
-          "fmt": "154.4 ms",
           "reference_kind": "external"
         }
       }
@@ -7392,8 +7676,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.52,
-          "fmt": "1.52 ms",
+          "ms": 1.567,
+          "fmt": "1.57 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -7432,24 +7716,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.498,
-          "fmt": "1.50 ms",
+          "ms": 1.774,
+          "fmt": "1.77 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.724,
-          "fmt": "1.72 ms",
+          "ms": 1.871,
+          "fmt": "1.87 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -7462,8 +7746,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.083,
-          "fmt": "2.08 ms",
+          "ms": 2.121,
+          "fmt": "2.12 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -7508,7 +7792,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsvarsel": {
+        "plsVarSel": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -7516,6 +7800,17 @@
           "fmt": "471.5 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsVarSel",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 471.47,
+          "fmt": "471.5 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -7529,7 +7824,7 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.096,
+          "ms": 1.104,
           "fmt": "1.10 ms",
           "reference_kind": "external"
         },
@@ -7569,16 +7864,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 0.997,
-          "fmt": "1.00 ms",
+          "ms": 1.023,
+          "fmt": "1.02 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.078,
-          "fmt": "1.08 ms",
+          "ms": 1.14,
+          "fmt": "1.14 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -7593,24 +7888,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 5.0,
-          "fmt": "5.00 ms",
+          "ms": 5.5,
+          "fmt": "5.50 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.526,
-          "fmt": "1.53 ms",
+          "ms": 1.675,
+          "fmt": "1.67 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.487,
-          "fmt": "3.49 ms",
+          "ms": 3.583,
+          "fmt": "3.58 ms",
           "reference_kind": "external"
         },
         "sklearn": {
@@ -7619,7 +7914,8 @@
           "ok": true,
           "ms": 1.846,
           "fmt": "1.85 ms",
-          "reference_kind": "external"
+          "reference_kind": "external",
+          "is_canonical_reference": true
         },
         "ikpls": {
           "parity": "not_available",
@@ -7651,14 +7947,16 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_scikit_learn": {
+        "__reference": {
           "parity": "divergent",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "ok": true,
-          "ms": 1.639,
-          "fmt": "1.64 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "ref_of": "sklearn",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
+          "ms": 1.846,
+          "fmt": "1.85 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -7672,8 +7970,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.13,
-          "fmt": "1.13 ms",
+          "ms": 1.109,
+          "fmt": "1.11 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -7712,16 +8010,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.134,
-          "fmt": "1.13 ms",
+          "ms": 1.174,
+          "fmt": "1.17 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.277,
-          "fmt": "1.28 ms",
+          "ms": 1.261,
+          "fmt": "1.26 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -7744,16 +8042,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.666,
-          "fmt": "1.67 ms",
+          "ms": 1.649,
+          "fmt": "1.65 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.603,
-          "fmt": "3.60 ms",
+          "ms": 4.02,
+          "fmt": "4.02 ms",
           "reference_kind": "external"
         },
         "sklearn": {
@@ -7792,7 +8090,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_chemometrics": {
+        "chemometrics": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -7800,6 +8098,17 @@
           "fmt": "162.0 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "chemometrics",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 162.018,
+          "fmt": "162.0 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -7813,8 +8122,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.023,
-          "fmt": "1.02 ms",
+          "ms": 1.144,
+          "fmt": "1.14 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -7853,24 +8162,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 0.996,
-          "fmt": "1.00 ms",
+          "ms": 1.09,
+          "fmt": "1.09 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.147,
-          "fmt": "1.15 ms",
+          "ms": 1.222,
+          "fmt": "1.22 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -7883,8 +8192,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.578,
-          "fmt": "1.58 ms",
+          "ms": 1.658,
+          "fmt": "1.66 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -7929,7 +8238,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_multiblock": {
+        "multiblock": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -7937,6 +8246,17 @@
           "fmt": "877.9 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "multiblock",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 877.92,
+          "fmt": "877.9 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -7950,8 +8270,8 @@
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 1.428,
-          "fmt": "1.43 ms",
+          "ms": 1.574,
+          "fmt": "1.57 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.cpp.ref": {
@@ -7990,24 +8310,24 @@
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 1.534,
-          "fmt": "1.53 ms",
+          "ms": 1.61,
+          "fmt": "1.61 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 1.645,
-          "fmt": "1.64 ms",
+          "ms": 1.848,
+          "fmt": "1.85 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 4.0,
-          "fmt": "4.00 ms",
+          "ms": 4.5,
+          "fmt": "4.50 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.R.formula": {
@@ -8020,8 +8340,8 @@
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 2.228,
-          "fmt": "2.23 ms",
+          "ms": 1.911,
+          "fmt": "1.91 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.matlab.classdef": {
@@ -8078,8 +8398,8 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.358,
-          "fmt": "1.36 ms",
+          "ms": 1.487,
+          "fmt": "1.49 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -8118,16 +8438,16 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.337,
-          "fmt": "1.34 ms",
+          "ms": 1.37,
+          "fmt": "1.37 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.518,
-          "fmt": "1.52 ms",
+          "ms": 1.569,
+          "fmt": "1.57 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -8148,8 +8468,8 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.804,
-          "fmt": "1.80 ms",
+          "ms": 1.878,
+          "fmt": "1.88 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -8194,7 +8514,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsvarsel": {
+        "plsVarSel": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -8202,6 +8522,17 @@
           "fmt": "345.0 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsVarSel",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 345.002,
+          "fmt": "345.0 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -8215,8 +8546,8 @@
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 2.039,
-          "fmt": "2.04 ms",
+          "ms": 2.13,
+          "fmt": "2.13 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.cpp.ref": {
@@ -8255,24 +8586,24 @@
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 1.915,
-          "fmt": "1.91 ms",
+          "ms": 2.06,
+          "fmt": "2.06 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 2.35,
-          "fmt": "2.35 ms",
+          "ms": 2.696,
+          "fmt": "2.70 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 4.0,
-          "fmt": "4.00 ms",
+          "ms": 4.5,
+          "fmt": "4.50 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.R.formula": {
@@ -8285,8 +8616,8 @@
           "parity": "exact",
           "reference_parity": "not_available",
           "ok": true,
-          "ms": 2.487,
-          "fmt": "2.49 ms",
+          "ms": 2.531,
+          "fmt": "2.53 ms",
           "reference_kind": "paper_only"
         },
         "pls4all.matlab.classdef": {
@@ -8343,8 +8674,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.424,
-          "fmt": "1.42 ms",
+          "ms": 1.536,
+          "fmt": "1.54 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -8383,24 +8714,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.397,
-          "fmt": "1.40 ms",
+          "ms": 1.612,
+          "fmt": "1.61 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.44,
-          "fmt": "1.44 ms",
+          "ms": 1.572,
+          "fmt": "1.57 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.0,
-          "fmt": "3.00 ms",
+          "ms": 3.5,
+          "fmt": "3.50 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -8413,8 +8744,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.854,
-          "fmt": "1.85 ms",
+          "ms": 1.871,
+          "fmt": "1.87 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -8459,7 +8790,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_multiblock": {
+        "multiblock": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -8467,6 +8798,17 @@
           "fmt": "878.1 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "multiblock",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 878.066,
+          "fmt": "878.1 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -8480,8 +8822,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.148,
-          "fmt": "1.15 ms",
+          "ms": 1.25,
+          "fmt": "1.25 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -8520,16 +8862,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.324,
-          "fmt": "1.32 ms",
+          "ms": 1.112,
+          "fmt": "1.11 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.31,
-          "fmt": "1.31 ms",
+          "ms": 1.256,
+          "fmt": "1.26 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -8550,8 +8892,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.781,
-          "fmt": "1.78 ms",
+          "ms": 1.698,
+          "fmt": "1.70 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -8596,7 +8938,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsvarsel": {
+        "plsVarSel": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -8604,6 +8946,17 @@
           "fmt": "365.3 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsVarSel",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 365.301,
+          "fmt": "365.3 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -8617,8 +8970,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.086,
-          "fmt": "1.09 ms",
+          "ms": 0.988,
+          "fmt": "0.99 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -8657,24 +9010,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.152,
-          "fmt": "1.15 ms",
+          "ms": 1.005,
+          "fmt": "1.00 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.201,
-          "fmt": "1.20 ms",
+          "ms": 1.356,
+          "fmt": "1.36 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -8687,7 +9040,7 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.692,
+          "ms": 1.691,
           "fmt": "1.69 ms",
           "reference_kind": "external"
         },
@@ -8735,7 +9088,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_spls": {
+        "spls": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -8743,6 +9096,17 @@
           "fmt": "128.1 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "spls",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 128.12,
+          "fmt": "128.1 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -8756,8 +9120,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.069,
-          "fmt": "1.07 ms",
+          "ms": 0.958,
+          "fmt": "0.96 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -8796,48 +9160,48 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.082,
-          "fmt": "1.08 ms",
+          "ms": 1.035,
+          "fmt": "1.04 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.192,
-          "fmt": "1.19 ms",
+          "ms": 1.222,
+          "fmt": "1.22 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 6.0,
-          "fmt": "6.00 ms",
+          "ms": 6.5,
+          "fmt": "6.50 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.584,
-          "fmt": "1.58 ms",
+          "ms": 1.55,
+          "fmt": "1.55 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.801,
-          "fmt": "3.80 ms",
+          "ms": 3.592,
+          "fmt": "3.59 ms",
           "reference_kind": "external"
         },
         "sklearn": {
@@ -8878,7 +9242,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_spls": {
+        "spls": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -8886,6 +9250,17 @@
           "fmt": "113.0 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "spls",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 113.009,
+          "fmt": "113.0 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -8899,8 +9274,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.186,
-          "fmt": "1.19 ms",
+          "ms": 1.244,
+          "fmt": "1.24 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -8939,16 +9314,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.184,
-          "fmt": "1.18 ms",
+          "ms": 1.16,
+          "fmt": "1.16 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.404,
-          "fmt": "1.40 ms",
+          "ms": 1.337,
+          "fmt": "1.34 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -8969,8 +9344,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.676,
-          "fmt": "1.68 ms",
+          "ms": 1.693,
+          "fmt": "1.69 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -9015,7 +9390,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsvarsel": {
+        "plsVarSel": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -9023,6 +9398,17 @@
           "fmt": "332.2 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsVarSel",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 332.181,
+          "fmt": "332.2 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -9036,8 +9422,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.167,
-          "fmt": "1.17 ms",
+          "ms": 1.091,
+          "fmt": "1.09 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -9076,16 +9462,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.031,
-          "fmt": "1.03 ms",
+          "ms": 1.097,
+          "fmt": "1.10 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.185,
-          "fmt": "1.18 ms",
+          "ms": 1.293,
+          "fmt": "1.29 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -9106,8 +9492,8 @@
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.637,
-          "fmt": "1.64 ms",
+          "ms": 1.662,
+          "fmt": "1.66 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -9152,7 +9538,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsvarsel": {
+        "plsVarSel": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -9160,6 +9546,17 @@
           "fmt": "393.1 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsVarSel",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 393.065,
+          "fmt": "393.1 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -9173,8 +9570,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.238,
-          "fmt": "1.24 ms",
+          "ms": 1.177,
+          "fmt": "1.18 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -9213,24 +9610,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.409,
-          "fmt": "1.41 ms",
+          "ms": 1.142,
+          "fmt": "1.14 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.351,
-          "fmt": "1.35 ms",
+          "ms": 1.344,
+          "fmt": "1.34 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 4.0,
-          "fmt": "4.00 ms",
+          "ms": 3.5,
+          "fmt": "3.50 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -9243,8 +9640,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.739,
-          "fmt": "1.74 ms",
+          "ms": 1.725,
+          "fmt": "1.72 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -9289,7 +9686,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsvarsel": {
+        "plsVarSel": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -9297,6 +9694,17 @@
           "fmt": "333.0 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsVarSel",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 332.997,
+          "fmt": "333.0 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -9310,8 +9718,8 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.093,
-          "fmt": "1.09 ms",
+          "ms": 1.11,
+          "fmt": "1.11 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -9350,16 +9758,16 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.138,
-          "fmt": "1.14 ms",
+          "ms": 1.199,
+          "fmt": "1.20 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.305,
-          "fmt": "1.31 ms",
+          "ms": 1.248,
+          "fmt": "1.25 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -9380,8 +9788,8 @@
           "parity": "divergent",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.679,
-          "fmt": "1.68 ms",
+          "ms": 1.791,
+          "fmt": "1.79 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -9426,7 +9834,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsvarsel": {
+        "plsVarSel": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -9434,6 +9842,17 @@
           "fmt": "388.4 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsVarSel",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 388.425,
+          "fmt": "388.4 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -9447,7 +9866,7 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.024,
+          "ms": 1.017,
           "fmt": "1.02 ms",
           "reference_kind": "external"
         },
@@ -9487,7 +9906,7 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.029,
+          "ms": 1.026,
           "fmt": "1.03 ms",
           "reference_kind": "external"
         },
@@ -9495,8 +9914,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.161,
-          "fmt": "1.16 ms",
+          "ms": 1.121,
+          "fmt": "1.12 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -9539,7 +9958,11 @@
           "parity": "not_available",
           "reference_parity": "not_available",
           "ok": false,
-          "reason": "algo 'variable_select_coef' not implemented by pls::"
+          "reason": "algo 'variable_select_coef' not implemented by pls::",
+          "ms": 276.511,
+          "fmt": "276.5 ms",
+          "is_canonical_reference": true,
+          "reference_kind": "external"
         },
         "ropls": {
           "parity": "not_available",
@@ -9559,14 +9982,16 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_pls": {
-          "parity": "exact",
-          "reference_parity": "exact",
-          "ok": true,
+        "__reference": {
+          "parity": "not_available",
+          "reference_parity": "not_available",
+          "ok": false,
+          "ref_of": "pls",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
           "ms": 276.511,
           "fmt": "276.5 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "reference_kind": "external"
         }
       }
     },
@@ -9580,8 +10005,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.062,
-          "fmt": "1.06 ms",
+          "ms": 1.003,
+          "fmt": "1.00 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -9620,16 +10045,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.02,
-          "fmt": "1.02 ms",
+          "ms": 1.011,
+          "fmt": "1.01 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.312,
-          "fmt": "1.31 ms",
+          "ms": 1.14,
+          "fmt": "1.14 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -9692,7 +10117,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsvarsel": {
+        "plsVarSel": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -9700,6 +10125,17 @@
           "fmt": "282.6 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsVarSel",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 282.62,
+          "fmt": "282.6 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -9713,8 +10149,8 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.12,
-          "fmt": "1.12 ms",
+          "ms": 0.986,
+          "fmt": "0.99 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -9753,16 +10189,16 @@
           "parity": "exact",
           "reference_parity": "drift",
           "ok": true,
-          "ms": 1.017,
-          "fmt": "1.02 ms",
+          "ms": 1.139,
+          "fmt": "1.14 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.175,
-          "fmt": "1.18 ms",
+          "ms": 1.437,
+          "fmt": "1.44 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -9825,7 +10261,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsvarsel": {
+        "plsVarSel": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -9833,6 +10269,17 @@
           "fmt": "272.5 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsVarSel",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 272.543,
+          "fmt": "272.5 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -9846,8 +10293,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.128,
-          "fmt": "1.13 ms",
+          "ms": 0.991,
+          "fmt": "0.99 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -9886,16 +10333,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.261,
-          "fmt": "1.26 ms",
+          "ms": 1.024,
+          "fmt": "1.02 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.289,
-          "fmt": "1.29 ms",
+          "ms": 1.153,
+          "fmt": "1.15 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -9916,8 +10363,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.598,
-          "fmt": "1.60 ms",
+          "ms": 1.552,
+          "fmt": "1.55 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -9962,7 +10409,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_auswahl": {
+        "auswahl": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -9970,6 +10417,17 @@
           "fmt": "126.4 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "auswahl",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
+          "ms": 126.362,
+          "fmt": "126.4 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -9983,8 +10441,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 15.314,
-          "fmt": "15.3 ms",
+          "ms": 18.245,
+          "fmt": "18.2 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -10023,24 +10481,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 14.899,
-          "fmt": "14.9 ms",
+          "ms": 18.191,
+          "fmt": "18.2 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 21.529,
-          "fmt": "21.5 ms",
+          "ms": 23.797,
+          "fmt": "23.8 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 20.0,
-          "fmt": "20.0 ms",
+          "ms": 20.5,
+          "fmt": "20.5 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -10053,8 +10511,8 @@
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 15.729,
-          "fmt": "15.7 ms",
+          "ms": 15.252,
+          "fmt": "15.3 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -10099,7 +10557,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_auswahl": {
+        "auswahl": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -10107,6 +10565,17 @@
           "fmt": "1.7 s",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "auswahl",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
+          "ms": 1670.614,
+          "fmt": "1.7 s",
+          "reference_kind": "external"
         }
       }
     },
@@ -10120,8 +10589,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.0,
-          "fmt": "1.00 ms",
+          "ms": 1.027,
+          "fmt": "1.03 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -10160,15 +10629,15 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.087,
-          "fmt": "1.09 ms",
+          "ms": 1.049,
+          "fmt": "1.05 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.111,
+          "ms": 1.106,
           "fmt": "1.11 ms",
           "reference_kind": "external"
         },
@@ -10176,8 +10645,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 2.0,
-          "fmt": "2.00 ms",
+          "ms": 2.5,
+          "fmt": "2.50 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -10192,23 +10661,27 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.509,
-          "fmt": "1.51 ms",
+          "ms": 1.538,
+          "fmt": "1.54 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.669,
-          "fmt": "3.67 ms",
+          "ms": 3.554,
+          "fmt": "3.55 ms",
           "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
           "reference_parity": "not_available",
           "ok": false,
-          "reason": "algo 'weighted_pls' not implemented by sklearn"
+          "reason": "algo 'weighted_pls' not implemented by sklearn",
+          "ms": 1.423,
+          "fmt": "1.42 ms",
+          "is_canonical_reference": true,
+          "reference_kind": "external"
         },
         "ikpls": {
           "parity": "not_available",
@@ -10240,14 +10713,16 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.python_scikit_learn": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "ok": true,
+        "__reference": {
+          "parity": "not_available",
+          "reference_parity": "not_available",
+          "ok": false,
+          "ref_of": "sklearn",
+          "ref_lang": "Python",
+          "is_canonical_reference": true,
           "ms": 1.423,
           "fmt": "1.42 ms",
-          "reference_kind": "external",
-          "is_canonical_reference": true
+          "reference_kind": "external"
         }
       }
     },
@@ -10261,8 +10736,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.042,
-          "fmt": "1.04 ms",
+          "ms": 1.128,
+          "fmt": "1.13 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -10301,16 +10776,16 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.028,
-          "fmt": "1.03 ms",
+          "ms": 1.105,
+          "fmt": "1.10 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.116,
-          "fmt": "1.12 ms",
+          "ms": 1.149,
+          "fmt": "1.15 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -10331,8 +10806,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.554,
-          "fmt": "1.55 ms",
+          "ms": 1.531,
+          "fmt": "1.53 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -10377,7 +10852,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsvarsel": {
+        "plsVarSel": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -10385,6 +10860,17 @@
           "fmt": "315.0 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsVarSel",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 315.012,
+          "fmt": "315.0 ms",
+          "reference_kind": "external"
         }
       }
     },
@@ -10398,8 +10884,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.028,
-          "fmt": "1.03 ms",
+          "ms": 1.131,
+          "fmt": "1.13 ms",
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -10438,24 +10924,24 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.16,
-          "fmt": "1.16 ms",
+          "ms": 1.127,
+          "fmt": "1.13 ms",
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.184,
-          "fmt": "1.18 ms",
+          "ms": 1.149,
+          "fmt": "1.15 ms",
           "reference_kind": "external"
         },
         "pls4all.R": {
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 3.0,
-          "fmt": "3.00 ms",
+          "ms": 3.5,
+          "fmt": "3.50 ms",
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -10468,8 +10954,8 @@
           "parity": "exact",
           "reference_parity": "exact",
           "ok": true,
-          "ms": 1.665,
-          "fmt": "1.67 ms",
+          "ms": 1.59,
+          "fmt": "1.59 ms",
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -10514,7 +11000,7 @@
           "ok": false,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
-        "ref.r_plsvarsel": {
+        "plsVarSel": {
           "parity": "divergent",
           "reference_parity": "exact",
           "ok": true,
@@ -10522,6 +11008,17 @@
           "fmt": "300.7 ms",
           "reference_kind": "external",
           "is_canonical_reference": true
+        },
+        "__reference": {
+          "parity": "divergent",
+          "reference_parity": "exact",
+          "ok": true,
+          "ref_of": "plsVarSel",
+          "ref_lang": "R",
+          "is_canonical_reference": true,
+          "ms": 300.659,
+          "fmt": "300.7 ms",
+          "reference_kind": "external"
         }
       }
     }
@@ -10544,35 +11041,29 @@
     "ropls": "language=R 4.3.3; ropls=1.34.0",
     "mixOmics": "language=R 4.3.3; mixOmics=6.26.0",
     "plsregress": "language=Octave 10.3.0; statistics=Octave statistics pkg (plsregress); blas=linked-BLAS",
-    "ref.python_scikit_learn": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_scikit_learn; reference_library=scikit-learn; reference_version=1.8.0",
-    "ref.r_pls": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_pls; reference_library=pls; reference_version=2.8.5",
-    "ref.python_ikpls": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_ikpls; reference_library=ikpls; reference_version=4.0.1.post1",
-    "ref.r_mixomics": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_mixomics; reference_library=mixOmics; reference_version=6.26.0",
-    "ref.r_ropls": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_ropls; reference_library=ropls; reference_version=Bioc",
-    "ref.r_spls": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_spls; reference_library=spls; reference_version=2.3.2",
-    "ref.python_diplslib": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_diplslib; reference_library=diPLSlib; reference_version=2.5.0",
-    "ref.r_chemometrics": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_chemometrics; reference_library=chemometrics; reference_version=0.7.x",
-    "ref.r_jico": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_jico; reference_library=JICO; reference_version=0.0",
-    "ref.python_tensorly": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_tensorly; reference_library=tensorly; reference_version=0.9.0",
-    "ref.r_kernlab_pls": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_kernlab_pls; reference_library=kernlab+pls; reference_version=0.9.33+2.8.5",
-    "ref.r_omicspls": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_omicspls; reference_library=OmicsPLS; reference_version=2.1.0",
-    "ref.r_mdatools": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_mdatools; reference_library=mdatools; reference_version=0.15.0",
-    "ref.r_multiblock": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_multiblock; reference_library=multiblock; reference_version=0.8.10",
-    "ref.python_onpls": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=python_onpls; reference_library=OnPLS; reference_version=github tomlof/OnPLS",
-    "ref.python_auswahl": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_auswahl; reference_library=auswahl; reference_version=0.9.0",
-    "ref.python_pyswarms": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_pyswarms; reference_library=pyswarms; reference_version=1.3.0",
-    "ref.r_mboost": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_mboost; reference_library=mboost; reference_version=2.9-11",
-    "ref.r_plsrglm": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_plsrglm; reference_library=plsRglm; reference_version=1.5.1",
-    "ref.r_plsrcox": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_plsrcox; reference_library=plsRcox; reference_version=1.8.2",
-    "ref.r_base": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_base; reference_library=base; reference_version=R 4.3.3",
-    "ref.r_softimpute": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_softimpute; reference_library=softImpute; reference_version=1.4-1",
-    "ref.r_sgpls": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_sgpls; reference_library=sgPLS; reference_version=1.8.1",
-    "ref.python_nirs4all_operators_models_sklearn_mbpls": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_nirs4all_operators_models_sklearn_mbpls; reference_library=nirs4all.operators.models.sklearn.mbpls; reference_version=in-tree",
-    "ref.python_nirs4all_operators_models_sklearn_lwpls": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_nirs4all_operators_models_sklearn_lwpls; reference_library=nirs4all.operators.models.sklearn.lwpls; reference_version=in-tree",
-    "ref.r_plsvarsel": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_plsvarsel; reference_library=plsVarSel; reference_version=0.10.0",
-    "ref.r_enpls": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_enpls; reference_library=enpls; reference_version=6.1",
-    "ref.matlab_libpls": "language=matlab (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=matlab_libpls; reference_library=libPLS; reference_version=1.95",
-    "ref.r_pls_stats": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_pls_stats; reference_library=pls+stats; reference_version=R 4.3.3"
+    "spls": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_spls; reference_library=spls; reference_version=2.3.2",
+    "diplslib": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_diplslib; reference_library=diPLSlib; reference_version=2.5.0",
+    "chemometrics": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_chemometrics; reference_library=chemometrics; reference_version=0.7.x",
+    "JICO": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_jico; reference_library=JICO; reference_version=0.0",
+    "tensorly": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_tensorly; reference_library=tensorly; reference_version=0.9.0",
+    "kernlab": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_kernlab_pls; reference_library=kernlab+pls; reference_version=0.9.33+2.8.5",
+    "OmicsPLS": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_omicspls; reference_library=OmicsPLS; reference_version=2.1.0",
+    "mdatools": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_mdatools; reference_library=mdatools; reference_version=0.15.0",
+    "multiblock": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_multiblock; reference_library=multiblock; reference_version=0.8.10",
+    "onpls": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=python_onpls; reference_library=OnPLS; reference_version=github tomlof/OnPLS",
+    "auswahl": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_auswahl; reference_library=auswahl; reference_version=0.9.0",
+    "pyswarms": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_pyswarms; reference_library=pyswarms; reference_version=1.3.0",
+    "mboost": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_mboost; reference_library=mboost; reference_version=2.9-11",
+    "plsRglm": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_plsrglm; reference_library=plsRglm; reference_version=1.5.1",
+    "plsRcox": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_plsrcox; reference_library=plsRcox; reference_version=1.8.2",
+    "stats (R)": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_base; reference_library=base; reference_version=R 4.3.3",
+    "softImpute": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_softimpute; reference_library=softImpute; reference_version=1.4-1",
+    "sgPLS": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_sgpls; reference_library=sgPLS; reference_version=1.8.1",
+    "nirs4all.mbpls": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_nirs4all_operators_models_sklearn_mbpls; reference_library=nirs4all.operators.models.sklearn.mbpls; reference_version=in-tree",
+    "nirs4all.lwpls": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_nirs4all_operators_models_sklearn_lwpls; reference_library=nirs4all.operators.models.sklearn.lwpls; reference_version=in-tree",
+    "plsVarSel": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_plsvarsel; reference_library=plsVarSel; reference_version=0.10.0",
+    "enpls": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_enpls; reference_library=enpls; reference_version=6.1",
+    "pls (R, stats)": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_pls_stats; reference_library=pls+stats; reference_version=R 4.3.3"
   },
   "algo_to_group": {
     "aom_preprocess": "other",
@@ -10787,6 +11278,7 @@
     }
   ],
   "languages": [
+    "external",
     "C++",
     "Python",
     "R",
@@ -10794,14 +11286,14 @@
   ],
   "stats": {
     "algos": 71,
-    "backends": 47,
+    "backends": 42,
     "groups": 11,
     "sizes": 1,
     "threads": [
       1
     ],
     "rows": 71,
-    "cells": 1279,
-    "ok": 620
+    "cells": 1320,
+    "ok": 621
   }
 }
