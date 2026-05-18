@@ -118,10 +118,3 @@ S3method(print, pls4all_method_fit)
 S3method(summary, pls4all_method_fit)
 S3method(print, summary.pls4all_method_fit)
 
-# Tier 2 — tidymodels / parsnip engine (lazy registration)
-export(register_parsnip)
-export(pls_pls4all_reg)
-export(pls4all_parsnip_fit)
-
-# Tier 2 — mlr3 / R6 learner (lazy registration)
-export(register_mlr3)

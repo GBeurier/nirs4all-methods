@@ -1,0 +1,168 @@
+# Build, check, and (eventually) submit the pls4all R package.
+#
+# Triggers
+# --------
+# - push to main or release/m2-cran    → full R CMD check matrix
+# - pull_request touching the R subtree → full R CMD check matrix
+# - workflow_dispatch                  → on-demand re-check
+# - push tag v*.*.*                    → tag-time release artefact upload
+#
+# CRAN submission itself is a manual web-form step at
+# https://cran.r-project.org/submit.html — that's the irreducible
+# human part. This workflow produces and validates the tarball; the
+# maintainer downloads the tarball from the workflow run and submits.
+
+name: release-r
+
+on:
+  push:
+    branches: [main, "release/m2-cran"]
+    tags: ["v*.*.*"]
+    paths:
+      - "bindings/r/**"
+      - "cpp/**"
+      - ".github/workflows/release-r.yml"
+  pull_request:
+    paths:
+      - "bindings/r/**"
+      - "cpp/**"
+      - ".github/workflows/release-r.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # =========================================================================
+  # R CMD check --as-cran across the same matrix CRAN itself uses.
+  # =========================================================================
+  check:
+    name: R CMD check / ${{ matrix.cfg.label }}
+    runs-on: ${{ matrix.cfg.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        cfg:
+          - label: linux-release
+            runs_on: ubuntu-22.04
+            r_version: "release"
+          - label: linux-devel
+            runs_on: ubuntu-22.04
+            r_version: "devel"
+          - label: macos-arm64-release
+            runs_on: macos-14
+            r_version: "release"
+          - label: windows-release
+            runs_on: windows-2022
+            r_version: "release"
+    env:
+      R_KEEP_PKG_SOURCE: yes
+      # Some R CMD check stages need DESCRIPTION's URL fields to be
+      # reachable; this CI builds offline-only, so disable that one
+      # incoming-feasibility sub-check.
+      _R_CHECK_CRAN_INCOMING_REMOTE_: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.cfg.r_version }}
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: bindings/r/pls4all
+          extra-packages: |
+            any::rcmdcheck
+            any::knitr
+            any::rmarkdown
+            any::testthat
+
+      - name: R CMD check --as-cran
+        uses: r-lib/actions/check-r-package@v2
+        with:
+          working-directory: bindings/r/pls4all
+          args: '"--no-manual", "--as-cran"'
+          error-on: '"warning"'
+          upload-snapshots: true
+
+      - name: Upload check artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rcheck-${{ matrix.cfg.label }}
+          path: bindings/r/pls4all.Rcheck/
+
+  # =========================================================================
+  # Build the source tarball that the maintainer uploads to CRAN.
+  # =========================================================================
+  build-tarball:
+    name: Build CRAN source tarball
+    needs: check
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "release"
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: bindings/r/pls4all
+          extra-packages: any::knitr any::rmarkdown
+
+      - name: R CMD build (produces pls4all_${VER}.tar.gz)
+        working-directory: bindings/r/pls4all
+        run: R CMD build .
+
+      - name: Stage tarball
+        working-directory: bindings/r/pls4all
+        run: |
+          set -euo pipefail
+          mkdir -p ../../../dist-r
+          mv pls4all_*.tar.gz ../../../dist-r/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pls4all-cran-tarball
+          path: dist-r/pls4all_*.tar.gz
+          if-no-files-found: error
+          retention-days: 90
+
+  # =========================================================================
+  # Attach the tarball to the GitHub Release on tag pushes (vX.Y.Z).
+  # The maintainer then downloads from the Release and submits via the
+  # CRAN web form at https://cran.r-project.org/submit.html.
+  # =========================================================================
+  publish-release-asset:
+    name: Attach tarball to GitHub Release
+    needs: build-tarball
+    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pls4all-cran-tarball
+          path: dist-r/
+
+      - name: Upload to the matching Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-r/pls4all_*.tar.gz
+          fail_on_unmatched_files: true

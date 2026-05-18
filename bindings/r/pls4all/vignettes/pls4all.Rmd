@@ -1,0 +1,84 @@
+---
+title: "Introduction to pls4all"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to pls4all}
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+`pls4all` is a portable Partial Least Squares (PLS) and Near-Infrared
+Spectroscopy (NIRS) engine. The C++17 implementation is vendored and
+compiled from source at install time; no external system library is
+required.
+
+## Quick start
+
+```{r quickstart}
+library(pls4all)
+
+set.seed(42)
+n <- 50
+p <- 8
+X <- matrix(rnorm(n * p), nrow = n, ncol = p)
+beta <- c(2, -1, 0.5, rep(0, p - 3))
+y <- as.numeric(X %*% beta + rnorm(n, sd = 0.1))
+
+fit <- pls(X, y, n_components = 3)
+preds <- predict(fit, newdata = X)
+
+cat("RMSE:", sqrt(mean((preds - y)^2)), "\n")
+```
+
+## Version + ABI
+
+The runtime version string embeds both the project semver and the
+stable C ABI version. This is useful for downstream consumers that
+need to assert ABI compatibility before invoking lower-level
+entry points.
+
+```{r version}
+pls4all_version()
+pls4all_abi_version()
+```
+
+## Supported algorithms
+
+`pls()` selects the solver via the `algo` argument. Recognised values
+include `"pls_nipals"` (default), `"pls_simpls"`, `"pls_svd"`,
+`"pls_kernel_algorithm"`, `"pls_wide_kernel"`,
+`"pls_orthogonal_scores"`, `"pls_power"`, `"pls_randomized_svd"`, and
+`"pcr_svd"`. The full algorithm taxonomy is documented in the package
+website.
+
+```{r algos}
+fit_simpls <- pls(X, y, n_components = 3, algo = "pls_simpls")
+fit_svd    <- pls(X, y, n_components = 3, algo = "pls_svd")
+
+# Same numerical answers up to algorithmic tolerance.
+all.equal(predict(fit_simpls, newdata = X[1:5, ]),
+          predict(fit_svd,    newdata = X[1:5, ]),
+          tolerance = 1e-10)
+```
+
+## Further reading
+
+* The `dispatch_fit()` entry point exposes the full method catalogue
+  (sparse SIMPLS, CPPLS, weighted, robust, ridge, continuum,
+  multi-block, GLM, MIR, PDS, DS, and others) with a unified
+  parameter-list interface.
+* Variable-selection wrappers (`spa_select`, `cars_select`,
+  `variable_select_rank`) return a ranked feature index suitable for
+  downstream model retraining.
+* Diagnostics (`pls_diagnostics_compute`, `approximate_press_compute`,
+  `pls_monitoring_run`) implement Hotelling T², Q residuals, DModX,
+  and process-monitoring alarms.
+
+See the project [website](https://gbeurier.github.io/pls4all/) and the
+cross-binding parity reports at
+<https://github.com/GBeurier/pls4all/tree/main/docs/parity> for the
+full feature matrix.

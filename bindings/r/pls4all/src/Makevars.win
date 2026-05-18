@@ -1,14 +1,23 @@
-PLS4ALL_INCLUDE_DIR ?=
-PLS4ALL_LIB_DIR ?=
+# Makevars.win — identical to Makevars except for Windows-specific quirks.
+# Rtools' make is GNU make, so $(wildcard) and pattern substitution work.
 
-ifeq ($(strip $(PLS4ALL_INCLUDE_DIR)),)
-PKG_CPPFLAGS = -I$(R_PACKAGE_DIR)/../../cpp/include
-else
-PKG_CPPFLAGS = -I$(PLS4ALL_INCLUDE_DIR)
-endif
+LIBP4A_DIR     = libp4a
+LIBP4A_C_API   = $(wildcard $(LIBP4A_DIR)/c_api/*.cpp)
+LIBP4A_CORE    = $(wildcard $(LIBP4A_DIR)/core/*.cpp)
+LIBP4A_CORE_NOCUDA = $(filter-out $(LIBP4A_DIR)/core/cuda_dispatch.cpp, $(LIBP4A_CORE))
+LIBP4A_SOURCES = $(LIBP4A_C_API) $(LIBP4A_CORE_NOCUDA)
+LIBP4A_OBJECTS = $(LIBP4A_SOURCES:.cpp=.o)
 
-ifeq ($(strip $(PLS4ALL_LIB_DIR)),)
-PKG_LIBS = -lp4a
-else
-PKG_LIBS = -L$(PLS4ALL_LIB_DIR) -lp4a
-endif
+R_C_SOURCES = r_init.c r_gateway.c r_dispatch.c r_methods.c
+R_C_OBJECTS = $(R_C_SOURCES:.c=.o)
+
+OBJECTS = $(R_C_OBJECTS) $(LIBP4A_OBJECTS)
+
+PKG_CPPFLAGS = -DPLS4ALL_STATIC=1 \
+               -I$(LIBP4A_DIR)/include \
+               -I$(LIBP4A_DIR) \
+               -I.
+
+CXX_STD = CXX17
+
+PKG_LIBS =
