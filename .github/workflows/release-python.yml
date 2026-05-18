@@ -33,10 +33,14 @@ on:
     tags:
       # Production tag — publishes to PyPI. The package version in
       # pyproject.toml MUST match the tag minus the leading 'v'.
-      # GitHub's '*' glob matches '-' too, so this pattern alone is not
-      # enough to keep pre-release suffixes out. The publish-pypi job
-      # additionally guards with `!contains(github.ref_name, '-')`.
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      #
+      # GitHub tag filters use shell globs, NOT regex. '+' and '[0-9]'
+      # would be taken literally (a glob like `v[0-9]+.[0-9]+.[0-9]+`
+      # never matches `v0.97.0` because `+` is not a glob metacharacter).
+      # We therefore accept any v*.*.* tag and lean on a job-level
+      # `!contains(github.ref_name, '-')` guard plus a regex check in
+      # `publish-pypi` to keep pre-releases out of PyPI.
+      - "v*.*.*"
   pull_request:
     paths:
       - "bindings/python/**"
@@ -49,14 +53,16 @@ on:
     inputs:
       publish_to:
         description: |
-          Optional publish target. Use 'testpypi' for an RC dry-run before
-          tagging — the published version is whatever's in pyproject.toml
-          (currently 0.97.0). To stage a *different* version on TestPyPI,
-          bump pyproject.toml via scripts/bump_version.sh first.
+          Optional publish target for manual runs. PyPI is intentionally
+          NOT offered here — production publishes only via a tag push so
+          the tag + wheel-version validation step always runs. Use
+          'testpypi' for dry-runs; the published version is whatever
+          pyproject.toml says (bump via scripts/bump_version.sh first
+          for a different version).
         required: true
         default: "none"
         type: choice
-        options: [none, testpypi, pypi]
+        options: [none, testpypi]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -283,7 +289,9 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
-          skip-existing: true
+          # Do NOT use skip-existing: true — that hides stale/partial uploads
+          # as false-greens. If we collide on TestPyPI we want the workflow to
+          # fail loudly so the maintainer bumps the version first.
           attestations: true
           packages-dir: dist
 
@@ -293,13 +301,12 @@ jobs:
   publish-pypi:
     name: publish to PyPI
     needs: [sdist, wheels]
+    # PyPI publish is tag-only by design. workflow_dispatch does not expose
+    # 'pypi' as a choice; the only path to production is a SemVer tag.
     if: |
-      (
-        github.event_name == 'push'
-        && startsWith(github.ref, 'refs/tags/v')
-        && !contains(github.ref_name, '-')
-      ) ||
-      (github.event_name == 'workflow_dispatch' && inputs.publish_to == 'pypi')
+      github.event_name == 'push'
+      && startsWith(github.ref, 'refs/tags/v')
+      && !contains(github.ref_name, '-')
     runs-on: ubuntu-22.04
     environment: pypi
     permissions:
@@ -315,10 +322,29 @@ jobs:
       - name: Inspect dist/
         run: ls -la dist/
 
+      - name: Validate release tag matches semver and pyproject version
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          ref_name="${GITHUB_REF_NAME}"
+          if [[ ! "${ref_name}" =~ ^v[0-9]+[.][0-9]+[.][0-9]+$ ]]; then
+            echo "::error::Tag ${ref_name} is not a SemVer release (v<MAJOR>.<MINOR>.<PATCH>)" >&2
+            exit 1
+          fi
+          tag_version="${ref_name#v}"
+          # All wheel filenames carry the package version — pick any and check.
+          wheel_version=$(ls dist/pls4all-*-py3-none-*.whl | head -n1 \
+                          | sed -E 's|.*/pls4all-([0-9]+\.[0-9]+\.[0-9]+)-.*|\1|')
+          if [[ "${tag_version}" != "${wheel_version}" ]]; then
+            echo "::error::Tag version (${tag_version}) does not match wheel version (${wheel_version})" >&2
+            exit 1
+          fi
+          echo "tag ${ref_name} and wheel version ${wheel_version} agree."
+
       - name: Publish to PyPI via Trusted Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          skip-existing: true
+          # No skip-existing — see comment in publish-testpypi above.
           attestations: true
           packages-dir: dist
 
@@ -334,18 +360,32 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install from TestPyPI + verify
+      - name: Install from TestPyPI + verify (with propagation retry)
         run: |
           set -euo pipefail
           python -m venv /tmp/post-smoke
           # shellcheck disable=SC1091
           . /tmp/post-smoke/bin/activate
           python -m pip install --upgrade pip
-          # TestPyPI does not host numpy etc.; pull deps from real PyPI.
-          python -m pip install \
-            --index-url https://test.pypi.org/simple/ \
-            --extra-index-url https://pypi.org/simple \
-            pls4all
+          # Get deps from real PyPI first — TestPyPI does not host numpy etc.
+          python -m pip install "numpy>=1.21"
+          # Install pls4all by EXACT version from TestPyPI only. --no-deps so
+          # pip never falls back to real PyPI for the package itself (avoids
+          # dependency-confusion / namesquatting). --only-binary=:all: refuses
+          # any source-only fallback. Retry 12 × 10s for TestPyPI propagation.
+          for attempt in $(seq 1 12); do
+            if python -m pip install --no-cache-dir --only-binary=:all: --no-deps \
+                --index-url https://test.pypi.org/simple/ \
+                "pls4all==0.97.0"; then
+              break
+            fi
+            if [[ "$attempt" == "12" ]]; then
+              echo "::error::pls4all==0.97.0 not visible on TestPyPI after 12×10s" >&2
+              exit 1
+            fi
+            echo "  attempt $attempt: not yet visible; sleeping 10s …"
+            sleep 10
+          done
           python -c "
           import pls4all
           v = pls4all.version()
@@ -370,14 +410,28 @@ jobs:
         run: |
           ref="${GITHUB_REF#refs/tags/v}"
           echo "version=${ref}" >> "$GITHUB_OUTPUT"
-      - name: Install from PyPI + verify exact version
+      - name: Install from PyPI + verify exact version (with propagation retry)
         run: |
           set -euo pipefail
           python -m venv /tmp/post-smoke
           # shellcheck disable=SC1091
           . /tmp/post-smoke/bin/activate
           python -m pip install --upgrade pip
-          python -m pip install "pls4all==${{ steps.ver.outputs.version }}"
+          python -m pip install "numpy>=1.21"
+          # --no-deps + --only-binary + version-pin → no dependency confusion
+          # and no source fallback. Retry for PyPI CDN propagation.
+          for attempt in $(seq 1 12); do
+            if python -m pip install --no-cache-dir --only-binary=:all: --no-deps \
+                "pls4all==${{ steps.ver.outputs.version }}"; then
+              break
+            fi
+            if [[ "$attempt" == "12" ]]; then
+              echo "::error::pls4all==${{ steps.ver.outputs.version }} not visible on PyPI after 12×10s" >&2
+              exit 1
+            fi
+            echo "  attempt $attempt: not yet visible; sleeping 10s …"
+            sleep 10
+          done
           python -c "
           import pls4all
           v = pls4all.version()
