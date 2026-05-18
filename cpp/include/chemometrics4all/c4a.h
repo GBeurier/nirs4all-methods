@@ -93,6 +93,13 @@
 extern "C" {
 #endif
 
+/* Forward-declaration of the opaque PCG64 handle. The full declaration plus
+ * the seven entry points live in §-Phase 1 — PCG64 RNG at the end of this
+ * file, but the typedef is hoisted here so consumers can pre-declare
+ * function pointers / fields of the handle type without forcing a specific
+ * ordering of declarations in their own headers. */
+typedef struct c4a_rng_pcg64_state_t c4a_rng_pcg64_state_t;
+
 /* ============================================================================
  * 1. Status codes
  * ========================================================================== */
@@ -1991,6 +1998,53 @@ C4A_API c4a_status_t c4a_vip_spa_select(
     double vip_threshold,
     int32_t top_k,
     c4a_method_result_t** out_result);
+
+/* ============================================================================
+ * §-Phase 1 — PCG64 RNG
+ * ============================================================================
+ *
+ * Pseudo-random number generator providing bit-exact parity against
+ * NumPy 1.26.4's `numpy.random.PCG64`. All subsequent stochastic operators
+ * in chemometrics4all (augmenters, IsolationForest, KMeans, CARS, MCUVE)
+ * consume a `c4a_rng_pcg64_state_t*` so that pipelines run on this library
+ * yield identical results to their reference NumPy implementations.
+ *
+ * Algorithm: PCG-XSL-RR 128/64 with a 128-bit state and 128-bit increment.
+ * Seeding from a single uint64 reproduces `np.random.default_rng(seed)`
+ * via NumPy's SeedSequence (pool_size=4) mixer. Normal samples use the
+ * 256-region Ziggurat algorithm with NumPy's vendored constants.
+ *
+ * Parity guarantees:
+ *   - c4a_rng_pcg64_uint64_fill          ≡ np.random.default_rng(s)
+ *                                            .bit_generator.random_raw(n)
+ *     byte-for-byte exact.
+ *   - c4a_rng_pcg64_standard_normal_fill ≡ np.random.default_rng(s)
+ *                                            .standard_normal(n)
+ *     bit-exact double-for-double.
+ *
+ * Lifecycle: `c4a_rng_pcg64_create` allocates + seeds the handle;
+ * `c4a_rng_pcg64_destroy` releases it (NULL-safe, no-op on NULL).
+ * Status semantics follow the universal rules at the top of this header.
+ */
+C4A_API c4a_status_t c4a_rng_pcg64_create(uint64_t seed,
+                                           c4a_rng_pcg64_state_t** out);
+
+C4A_API void c4a_rng_pcg64_destroy(c4a_rng_pcg64_state_t* rng);
+
+C4A_API c4a_status_t c4a_rng_pcg64_set_seed(c4a_rng_pcg64_state_t* rng,
+                                             uint64_t seed);
+
+C4A_API c4a_status_t c4a_rng_pcg64_uint64(c4a_rng_pcg64_state_t* rng,
+                                           uint64_t* out);
+
+C4A_API c4a_status_t c4a_rng_pcg64_uint64_fill(c4a_rng_pcg64_state_t* rng,
+                                                uint64_t* out, size_t n);
+
+C4A_API c4a_status_t c4a_rng_pcg64_standard_normal_fill(
+    c4a_rng_pcg64_state_t* rng, double* out, size_t n);
+
+C4A_API c4a_status_t c4a_rng_pcg64_advance(c4a_rng_pcg64_state_t* rng,
+                                            uint64_t delta);
 
 #ifdef __cplusplus
 }  /* extern "C" */

@@ -5,6 +5,10 @@
 
 #include "harness.hpp"
 
+// Phase 1 — PCG64 RNG parity tests live in test_rng_pcg64.cpp; the entry
+// point below is declared there and links via the same executable.
+void register_rng_pcg64_tests(c4a_testing::Runner& r);
+
 namespace {
 
 void test_version_string_nonempty() {
@@ -70,5 +74,6 @@ int main() {
     r.run("matrix_view_rowmajor",               test_matrix_view_rowmajor);
     r.run("dtype_sizes",                        test_dtype_sizes);
     r.run("backend_reference_cpu_available",    test_backend_reference_cpu_available);
+    register_rng_pcg64_tests(r);
     return r.finalize();
 }

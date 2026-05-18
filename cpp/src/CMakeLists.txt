@@ -21,7 +21,9 @@ add_library(chemometrics4all_core OBJECT
     core/context.cpp
     core/matrix_view.cpp
     core/status.cpp
-    core/version.cpp)
+    core/version.cpp
+    core/common/rng_pcg64.c
+    core/common/ziggurat.c)
 target_include_directories(chemometrics4all_core
     PUBLIC  ${PROJECT_SOURCE_DIR}/cpp/include
             ${PROJECT_BINARY_DIR}/generated
@@ -53,6 +55,7 @@ chemometrics4all_add_warnings(chemometrics4all_core)
 set(_chemometrics4all_c_sources
     c_api/c_api_context.cpp
     c_api/c_api_matrix.cpp
+    c_api/c_api_rng.cpp
     c_api/c_api_version.cpp)
 
 function(chemometrics4all_apply_c_target target)

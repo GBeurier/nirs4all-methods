@@ -6,7 +6,8 @@ if(DEFINED _CHEMOMETRICS4ALL_COMPILER_WARNINGS_INCLUDED)
 endif()
 set(_CHEMOMETRICS4ALL_COMPILER_WARNINGS_INCLUDED ON)
 
-set(_chemometrics4all_gnu_clang_warnings
+# Common (C + C++) warning flags.
+set(_chemometrics4all_gnu_clang_warnings_common
     -Wall
     -Wextra
     -Wpedantic
@@ -17,15 +18,22 @@ set(_chemometrics4all_gnu_clang_warnings
     -Wformat=2
     -Wmissing-declarations
     -Wmissing-include-dirs
-    -Wnon-virtual-dtor
     -Wnull-dereference
-    -Wold-style-cast
-    -Woverloaded-virtual
     -Wshadow
     -Wsign-conversion
     -Wundef
     -Wuninitialized
     -Wunused
+)
+
+# C++-only warning flags. Wrapped in $<COMPILE_LANGUAGE:CXX> so they do not
+# trigger "command-line option '-W*' is valid for C++/ObjC++ but not for C"
+# diagnostics when chemometrics4all_core compiles its C TUs (rng_pcg64.c,
+# ziggurat.c, future BLAS/banded solvers, etc.).
+set(_chemometrics4all_gnu_clang_warnings_cxx_only
+    -Wnon-virtual-dtor
+    -Wold-style-cast
+    -Woverloaded-virtual
     -Wzero-as-null-pointer-constant
 )
 
@@ -51,7 +59,8 @@ function(chemometrics4all_add_warnings target)
     endif()
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
         target_compile_options(${target} PRIVATE
-            ${_chemometrics4all_gnu_clang_warnings}
+            ${_chemometrics4all_gnu_clang_warnings_common}
+            "$<$<COMPILE_LANGUAGE:CXX>:${_chemometrics4all_gnu_clang_warnings_cxx_only}>"
             ${_chemometrics4all_gnu_clang_disables})
     elseif(MSVC)
         target_compile_options(${target} PRIVATE ${_chemometrics4all_msvc_warnings})

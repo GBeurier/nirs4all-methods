@@ -26,4 +26,11 @@ c4a_matrix_view_init_colmajor
 c4a_matrix_view_init_rowmajor
 c4a_matrix_view_init_strided
 c4a_matrix_view_validate
+c4a_rng_pcg64_advance
+c4a_rng_pcg64_create
+c4a_rng_pcg64_destroy
+c4a_rng_pcg64_set_seed
+c4a_rng_pcg64_standard_normal_fill
+c4a_rng_pcg64_uint64
+c4a_rng_pcg64_uint64_fill
 c4a_status_to_string
