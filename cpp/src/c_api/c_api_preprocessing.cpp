@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
-// extern "C" wrappers for the Phase 2 stateless preprocessing operators:
-// SNV, LocalSNV, RobustSNV, AreaNormalization, Normalize, SimpleScale,
-// LogTransform. Each operator exposes a create / transform / destroy
-// triplet on the public C ABI; the bodies delegate to the internal C
-// engines under cpp/src/core/preprocessing/{scatter,scaling}/.
+// extern "C" wrappers for the Phase 2 stateless preprocessing operators
+// (SNV, LocalSNV, RobustSNV, AreaNormalization, Normalize, SimpleScale,
+// LogTransform) and the Phase 3 stateful operators (MSC, EMSC, Baseline
+// column-centering, Derivate).
+//
+// Stateless operators expose a `create / transform / destroy` triplet;
+// stateful operators expose `create / fit / transform / destroy` with
+// optional `inverse_transform` and `is_fitted`. The bodies delegate to the
+// internal C engines under cpp/src/core/preprocessing/{scatter,scaling,
+// derivatives}/.
 //
 // Universal rules of the wrappers (mirrored from c_api_rng.cpp):
 //   - Every entry point is wrapped in try/catch so no C++ exception ever
@@ -14,13 +19,14 @@
 //     layout.
 //   - `_create` takes a pointer-to-pointer out-arg; it returns
 //     C4A_ERR_NULL_POINTER if `out` is NULL and C4A_ERR_INVALID_ARGUMENT for
-//     invalid constructor parameters that the engine rejects (e.g.
-//     non-odd LSNV window). It writes NULL to *out on every failure.
+//     invalid constructor parameters that the engine rejects. It writes
+//     NULL to *out on every failure.
 //   - `_destroy` is NULL-safe and never throws.
 //   - `_transform` takes a non-NULL state, a c4a_matrix_view_t for input,
-//     and a c4a_matrix_view_t for output. It validates both views, checks
-//     shape equality, requires row-major contiguous F64, and writes
-//     in-place into the output buffer.
+//     and a c4a_matrix_view_t for output. It validates both views, requires
+//     row-major contiguous F64, and writes into the output buffer.
+//   - Stateful `_transform` and `_inverse_transform` return
+//     C4A_ERR_NOT_FITTED when the underlying state has not yet been fit.
 
 #include <cstddef>
 #include <cstdint>
@@ -30,11 +36,15 @@
 #include "chemometrics4all/c4a.h"
 
 #include "core/matrix_view.hpp"
+#include "core/preprocessing/derivatives/derivate.h"
+#include "core/preprocessing/scaling/baseline.h"
 #include "core/preprocessing/scaling/log_transform.h"
 #include "core/preprocessing/scaling/normalize.h"
 #include "core/preprocessing/scaling/simple_scale.h"
 #include "core/preprocessing/scatter/area_normalization.h"
+#include "core/preprocessing/scatter/emsc.h"
 #include "core/preprocessing/scatter/local_snv.h"
+#include "core/preprocessing/scatter/msc.h"
 #include "core/preprocessing/scatter/robust_snv.h"
 #include "core/preprocessing/scatter/snv.h"
 
@@ -63,6 +73,18 @@ struct c4a_pp_simple_scale_handle_t {
 };
 struct c4a_pp_log_handle_t {
     c4a_pp_log_state_t* state;
+};
+struct c4a_pp_msc_handle_t {
+    c4a_pp_msc_state_t* state;
+};
+struct c4a_pp_emsc_handle_t {
+    c4a_pp_emsc_state_t* state;
+};
+struct c4a_pp_baseline_handle_t {
+    c4a_pp_baseline_state_t* state;
+};
+struct c4a_pp_derivate_handle_t {
+    c4a_pp_derivate_state_t* state;
 };
 
 namespace {
@@ -574,6 +596,414 @@ C4A_API c4a_status_t c4a_pp_log_transform(const c4a_pp_log_handle_t* h,
         return c4a_pp_log_apply(h->state, xp, xr, xc, op);
     } catch (...) {
         return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// MSC (Phase 3 stateful)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_msc_create(c4a_pp_msc_handle_t** out) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    try {
+        c4a_pp_msc_state_t* s = c4a_pp_msc_state_new();
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_msc_handle_t* h = new (std::nothrow) c4a_pp_msc_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_msc_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_msc_destroy(c4a_pp_msc_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_msc_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_msc_fit(c4a_pp_msc_handle_t* h,
+                                     c4a_matrix_view_t X) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        std::int64_t  xr = 0, xc = 0;
+        const c4a_status_t s = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        return c4a_pp_msc_state_fit(h->state, xp, xr, xc);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_msc_transform(const c4a_pp_msc_handle_t* h,
+                                           c4a_matrix_view_t X,
+                                           c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_msc_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_msc_inverse_transform(
+    const c4a_pp_msc_handle_t* h,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_msc_state_inverse_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_msc_is_fitted(const c4a_pp_msc_handle_t* h,
+                                           int* out_fitted) {
+    if (h == nullptr || out_fitted == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        *out_fitted = c4a_pp_msc_state_is_fitted(h->state);
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// EMSC (Phase 3 stateful)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_emsc_create(c4a_pp_emsc_handle_t** out,
+                                         int32_t degree) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (degree < 1) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_emsc_state_t* s = c4a_pp_emsc_state_new(degree);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_emsc_handle_t* h = new (std::nothrow) c4a_pp_emsc_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_emsc_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_emsc_destroy(c4a_pp_emsc_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_emsc_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_emsc_fit(c4a_pp_emsc_handle_t* h,
+                                      c4a_matrix_view_t X) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        std::int64_t  xr = 0, xc = 0;
+        const c4a_status_t s = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        return c4a_pp_emsc_state_fit(h->state, xp, xr, xc);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_emsc_transform(const c4a_pp_emsc_handle_t* h,
+                                            c4a_matrix_view_t X,
+                                            c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_emsc_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_emsc_is_fitted(const c4a_pp_emsc_handle_t* h,
+                                            int* out_fitted) {
+    if (h == nullptr || out_fitted == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        *out_fitted = c4a_pp_emsc_state_is_fitted(h->state);
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Baseline (column-mean centering, Phase 3 stateful)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_baseline_create(c4a_pp_baseline_handle_t** out) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    try {
+        c4a_pp_baseline_state_t* s = c4a_pp_baseline_state_new();
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_baseline_handle_t* h =
+            new (std::nothrow) c4a_pp_baseline_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_baseline_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_baseline_destroy(c4a_pp_baseline_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_baseline_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_baseline_fit(c4a_pp_baseline_handle_t* h,
+                                          c4a_matrix_view_t X) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        std::int64_t  xr = 0, xc = 0;
+        const c4a_status_t s = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        return c4a_pp_baseline_state_fit(h->state, xp, xr, xc);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_baseline_transform(
+    const c4a_pp_baseline_handle_t* h,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_baseline_state_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_baseline_inverse_transform(
+    const c4a_pp_baseline_handle_t* h,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr || xc != oc) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_baseline_state_inverse_apply(h->state, xp, xr, xc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_baseline_is_fitted(
+    const c4a_pp_baseline_handle_t* h, int* out_fitted) {
+    if (h == nullptr || out_fitted == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        *out_fitted = c4a_pp_baseline_state_is_fitted(h->state);
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Derivate (Phase 3 stateful)
+// ---------------------------------------------------------------------------
+
+C4A_API c4a_status_t c4a_pp_derivate_create(c4a_pp_derivate_handle_t** out,
+                                             int32_t order, double delta) {
+    if (out == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    if (order < 1 || delta == 0.0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        c4a_pp_derivate_state_t* s = c4a_pp_derivate_state_new(order, delta);
+        if (s == nullptr) {
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        c4a_pp_derivate_handle_t* h =
+            new (std::nothrow) c4a_pp_derivate_handle_t{s};
+        if (h == nullptr) {
+            c4a_pp_derivate_state_free(s);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        *out = h;
+        return C4A_OK;
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API void c4a_pp_derivate_destroy(c4a_pp_derivate_handle_t* h) {
+    if (h == nullptr) return;
+    try {
+        c4a_pp_derivate_state_free(h->state);
+        delete h;
+    } catch (...) {
+        // swallow
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_derivate_fit(c4a_pp_derivate_handle_t* h,
+                                          c4a_matrix_view_t X) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        std::int64_t  xr = 0, xc = 0;
+        const c4a_status_t s = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        return c4a_pp_derivate_state_fit(h->state, xp, xr, xc);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API c4a_status_t c4a_pp_derivate_transform(
+    const c4a_pp_derivate_handle_t* h,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out) {
+    if (h == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    try {
+        const double* xp = nullptr;
+        double*       op = nullptr;
+        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
+        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        if (s != C4A_OK) return s;
+        s = require_rowmajor_f64_mut(out, op, orr, oc);
+        if (s != C4A_OK) return s;
+        if (xr != orr) {
+            return C4A_ERR_SHAPE_MISMATCH;
+        }
+        return c4a_pp_derivate_state_apply(h->state, xp, xr, xc, oc, op);
+    } catch (...) {
+        return C4A_ERR_INTERNAL;
+    }
+}
+
+C4A_API int64_t c4a_pp_derivate_output_cols(int32_t order,
+                                              int64_t input_cols) {
+    try {
+        return c4a_pp_derivate_output_cols_helper(order, input_cols);
+    } catch (...) {
+        return 0;
     }
 }
 

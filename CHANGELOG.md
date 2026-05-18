@@ -6,6 +6,125 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.0+abi.1.3.0] — Phase 3 stateful scatter preprocessings
+
+### Added
+
+- **Four stateful preprocessing operators** with the `_create / _fit /
+  _transform / _destroy` ABI contract (and `_inverse_transform` / `_is_fitted`
+  where applicable):
+  - **MSC** (`c4a_pp_msc_*`, 6 symbols) — Multiplicative Scatter Correction
+    with per-column linear regression against the per-row mean. Invertible.
+    Matches `nirs4all.operators.transforms.nirs.MultiplicativeScatterCorrection(scale=False)`.
+  - **EMSC** (`c4a_pp_emsc_*`, 5 symbols) — Extended MSC with polynomial
+    wavelength terms (degree configurable). Per-row least-squares solve
+    against `[reference, w^1, …, w^degree]` via Householder QR. Not
+    invertible.
+  - **Baseline** (`c4a_pp_baseline_*`, 6 symbols) — Per-column mean
+    centering (equivalent to `StandardScaler(with_std=False)`). Invertible.
+    Matches `nirs4all.operators.transforms.signal.Baseline`. Class name is
+    historical; this is NOT a baseline correction in the spectroscopic
+    sense (the polynomial / AsLS family lives in Phase 5).
+  - **Derivate** (`c4a_pp_derivate_*`, 5 symbols) — `np.diff(X, n=order,
+    axis=1) / delta**order`. Output column count is
+    `cols - order`; a helper `c4a_pp_derivate_output_cols(order, input_cols)`
+    is exposed for callers to size their output buffers. Lifecycle is
+    stateful-shaped (with a no-op `_fit`) for ABI uniformity with the
+    other Phase 3 operators.
+- **Stateful contract enforcement**: every stateful operator tracks a
+  `fitted` flag on its internal state. `_transform` (and
+  `_inverse_transform`) return `C4A_ERR_NOT_FITTED` when called before a
+  successful `_fit`. Calling `_fit` again replaces the prior state
+  (sklearn-style refit semantics).
+- **C engines** under `cpp/src/core/preprocessing/{scatter,scaling,
+  derivatives}/`: 4 `.c` + `.h` pairs. Pure ISO C11, no third-party
+  dependencies. EMSC uses an in-place Householder QR factorisation (~100
+  LOC) rather than normal-equations + Cholesky to stay numerically close
+  to LAPACK gelsd on the ill-conditioned raw-integer wavelength basis.
+- **C ABI wrappers** in `cpp/src/c_api/c_api_preprocessing.cpp` — 22 new
+  symbols (6 + 5 + 6 + 5). Same try/catch / null-safe / matrix-view
+  validation conventions as the Phase 2 stateless wrappers.
+- **Parity fixtures** (`parity/fixtures/{msc,emsc,baseline_center,
+  derivate}_v1.json`) — every fixture exercises the fit/transform split
+  with a *different* matrix for fit and transform (seeds 20260518 +
+  20260519) so the test verifies that fitted parameters are correctly
+  reused.
+- **Fixture generator** `parity/python_generator/scripts/generate_phase3_fixtures.py`
+  — loads nirs4all directly from source via `importlib`, mirroring the
+  Phase 2 generator pattern.
+- **14 new tests** in `cpp/tests/test_preprocessing_stateful.cpp`: 4
+  smoke + 4 parity + 4 not-fitted + 1 baseline inverse + 1 derivate
+  output-cols helper. Tolerance: 1e-12 abs / 1e-13 rel for Baseline and
+  Derivate (closed-form ops); 1e-10 / 1e-11 for MSC; 5e-10 / 5e-10 for
+  EMSC (Householder QR vs LAPACK gelsd on the raw-integer wavelength
+  basis costs ~8 decimal digits, which is structural to the conditioning
+  of $B$).
+- **Documentation** under `docs/algorithms/`: one Markdown page per Phase
+  3 operator (`msc.md`, `emsc.md`, `baseline_center.md`, `derivate.md`).
+- **Cross-phase review artefacts**:
+  - `docs/reviews/PHASES.md` — aggregate verdict table for Phases 0-3 and
+    placeholders for Phases 4-26.
+  - `docs/reviews/DEFERRALS.md` — cross-phase deferral tracker
+    pre-populated with all open items from Phases 0-2 + the closed
+    Phase-3 items (nirs4all pinning, PLS-orphan cleanup, etc.).
+
+### Removed (Codex R3 + R4)
+
+- **c4a.h orphan PLS declarations** — config, pipeline, model,
+  operator_bank, gating_strategy, AOM (global + per-component),
+  validation_plan, method_result, component_coefficients,
+  c4a_array_t opaque type + 4 accessors. None had implementations in
+  `cpp/src/`; all were inherited from pls4all and never wired. c4a.h
+  shrunk from **2208** lines to **680** lines (-69%).
+- **Static asserts** in the ABI guard-rail section that referenced
+  removed enums (`c4a_algorithm_t`, `c4a_solver_t`, `c4a_deflation_t`,
+  `c4a_operator_kind_t`, `c4a_gating_mode_t`, `c4a_model_array_t`).
+- **Reintroduce-c4a_array_t-at-Phase-9** deferral logged at
+  `docs/reviews/DEFERRALS.md`.
+
+### Numerical parity findings
+
+- nirs4all's `MultiplicativeScatterCorrection` uses `np.polyfit(ref,
+  col, 1)` per column where `ref = mean(X, axis=1)` is the per-row mean.
+  The slope/intercept come back as `[a, b] = polyfit(...)`, then
+  transform is `(X[:, j] - b) / a`. The c4a closed-form `(a, b)`
+  computation matches `np.polyfit`'s Vandermonde + lstsq path to within
+  ~2 ULPs.
+- For EMSC the gold standard is `np.linalg.lstsq(B, x_i, rcond=None)`
+  which dispatches to LAPACK gelsd (SVD-based). The c4a Householder QR
+  implementation agrees to ~8 decimal digits across the supported degree
+  range. The gap is structural to the conditioning of the raw-integer
+  wavelength basis and would not improve by switching solver families
+  short of a full SVD implementation.
+- `np.diff(X, n=order, axis=1) / delta**order` evaluates `delta**order`
+  as repeated multiplication when `order` is an integer (Python's
+  `int.__pow__`). The c4a engine matches this exactly and then divides
+  each output element by the precomputed scalar (true element-wise
+  division, not multiply-by-reciprocal).
+
+### ABI
+
+- Project version stays 0.1.0; **ABI bumps to 1.3.0** (additive: 22 new
+  symbols; the c4a.h trim removed only orphan declarations with no
+  exported counterparts, so it is not an ABI-breaking change). Total
+  exported symbols: 57 → **79**.
+
+### Tests
+
+- 51/51 passing: 7 phase-0 smoke + 13 phase-1 RNG + 14 phase-2
+  preprocessing + 17 phase-3 stateful preprocessing (14 original + 3
+  refit-replaces-state tests added per Opus review).
+
+### Review
+
+- **Opus post-review** at `docs/reviews/phase-3/opus-post.md`. Verdict:
+  ACCEPT with 3 recommended follow-ups, all applied:
+  1. Refit tests added for MSC, EMSC, Baseline (`pp_<op>_refit`).
+  2. Derivate vs nirs4all `Derivate` class semantic divergence logged
+     in `docs/reviews/DEFERRALS.md`.
+  3. EMSC switched from `* (1/c[0])` to `/ c[0]` to preserve byte-exact
+     NumPy rounding discipline.
+
 ## [0.1.0+abi.1.2.0] — Phase 2 stateless preprocessings
 
 ### Added

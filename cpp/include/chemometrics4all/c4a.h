@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 /*
- * chemometrics4all — public C ABI v1.2.0.
+ * chemometrics4all — public C ABI v1.3.0.
  *
  * Stability: experimental until v1.0.0. Every breaking change before that
  * version bumps the ABI MAJOR (see c4a_version.h). After v1.0.0 the ABI
@@ -23,62 +23,34 @@
  *     (C4A_ERROR_BUFFER_BYTES) that is invalidated by the next call on the
  *     same context — bindings must copy if they retain the value.
  *   - Memory ownership is symmetric: callers free what they allocated, the
- *     core frees what it allocated. The only core-allocated outputs are
- *     `c4a_array_t*` and the opaque handles below; both have explicit
- *     `c4a_*_destroy` / `c4a_array_free` functions.
+ *     core frees what it allocated. The only core-allocated outputs are the
+ *     opaque operator handles; each has an explicit `c4a_*_destroy` function.
  *
- * Current implementation status (rev 1.1.0 of this header — May 2026):
- *   - Lifecycle / config / version / matrix-view are fully implemented.
- *   - Pipeline / operator-bank / gating-strategy / validation-plan
- *     lifecycle is implemented; AOM global and POP per-component
- *     selection are exposed by `c4a_aom_global_select` and
- *     `c4a_aom_per_component_select` (see §15).
- *     Pipeline `_fit` / `_transform` are live for C4A_OP_IDENTITY,
- *     C4A_OP_CENTER, C4A_OP_AUTOSCALE, C4A_OP_PARETO_SCALE, C4A_OP_SNV,
- *     C4A_OP_MSC, C4A_OP_EMSC, C4A_OP_DETREND_POLY, C4A_OP_SAVGOL_SMOOTH,
- *     C4A_OP_SAVGOL_DERIVATIVE, C4A_OP_NORRIS_WILLIAMS,
- *     C4A_OP_ASLS_BASELINE, C4A_OP_WAVELET_DENOISE, C4A_OP_OSC and
- *     C4A_OP_EPO.
- *     C4A_OP_FINITE_DIFFERENCE, C4A_OP_WHITTAKER and C4A_OP_FCK are
- *     currently implemented by the internal strict-linear AOM operator
- *     kernels.
- *   - c4a_model_fit implements dependency-free NIPALS, orthogonal-scores,
- *     SIMPLS, kernel, wide-kernel, SVD, power-iteration and randomized-SVD PLS
- *     regression (PLS1 / PLS2) for C4A_ALGO_PLS_REGRESSION +
- *     C4A_SOLVER_NIPALS, C4A_SOLVER_ORTHOGONAL_SCORES,
- *     C4A_SOLVER_SIMPLS, C4A_SOLVER_KERNEL_ALGORITHM,
- *     C4A_SOLVER_WIDE_KERNEL, C4A_SOLVER_SVD, C4A_SOLVER_POWER or
- *     C4A_SOLVER_RANDOMIZED_SVD + C4A_DEFLATION_REGRESSION; PLS canonical
- *     for C4A_ALGO_PLS_CANONICAL + C4A_SOLVER_NIPALS/C4A_SOLVER_SVD +
- *     C4A_DEFLATION_CANONICAL; direct cross-covariance PLSSVD scores for
- *     C4A_ALGO_PLS_SVD + C4A_SOLVER_SVD + C4A_DEFLATION_CANONICAL; PLS-DA
- *     dummy-response scores for C4A_ALGO_PLS_DA + the PLS regression solver set +
- *     C4A_DEFLATION_REGRESSION; OPLS / OPLS-DA common predictive scores
- *     for C4A_ALGO_OPLS or C4A_ALGO_OPLS_DA + C4A_SOLVER_NIPALS +
- *     C4A_DEFLATION_ORTHOGONAL; plus PCR for C4A_ALGO_PCR + C4A_SOLVER_SVD +
- *     C4A_DEFLATION_REGRESSION.
- *   - Predict / transform / model-array accessors and binary serialization
- *     are implemented for fitted core PLS models.
+ * Phase 3 trim (May 2026): prior revisions of this header inherited a large
+ * set of PLS-domain declarations from pls4all (config, pipeline, model,
+ * operator bank, gating strategy, AOM, validation plan, method result,
+ * c4a_array_t). None of those had implementations in the chemometrics4all
+ * core; they were placeholders for an algorithm surface that has been
+ * deferred to later phases (or removed entirely). The header has therefore
+ * been pruned down to the canonical chemometrics4all surface: status codes,
+ * matrix views, context lifecycle, RNG (Phase 1) and preprocessing operators
+ * (Phases 2-3). Future phases append new sections in dedicated banners and
+ * bump C4A_ABI_VERSION_MINOR.
  *
  * Status-code contracts (apply uniformly unless overridden in a function's
  * own doc comment):
  *
- *   - `_create(out)` functions: return C4A_OK on success, C4A_ERR_NULL_POINTER
- *     when `out` is NULL, C4A_ERR_OUT_OF_MEMORY on allocation failure.
+ *   - `_create(out, ...)` functions: return C4A_OK on success, C4A_ERR_NULL_POINTER
+ *     when `out` is NULL, C4A_ERR_INVALID_ARGUMENT when constructor parameters
+ *     are rejected, C4A_ERR_OUT_OF_MEMORY on allocation failure. `*out` is
+ *     set to NULL on every failure.
  *   - `_destroy(handle)` functions: void, no-op on NULL.
- *   - `_clone(src, out_dst)`: C4A_OK, C4A_ERR_NULL_POINTER, C4A_ERR_OUT_OF_MEMORY.
- *   - `_set_*(handle, value)` setters: C4A_OK, C4A_ERR_NULL_POINTER (handle
- *     is NULL), C4A_ERR_INVALID_ARGUMENT (value rejected). Failed setters
- *     leave the handle's state UNCHANGED — there is no partial mutation.
- *   - `_get_*(handle, out)` getters: C4A_OK, C4A_ERR_NULL_POINTER (handle or
- *     `out` is NULL).
- *   - Any function that touches `c4a_context_t*` may additionally return
- *     C4A_ERR_OUT_OF_MEMORY (from internal allocations) and C4A_ERR_INTERNAL
- *     (from an unexpected exception caught at the C boundary). Both record
- *     a message in `c4a_context_last_error`.
+ *   - For stateful operators (Phase 3): `_transform` returns C4A_ERR_NOT_FITTED
+ *     when called before `_fit`. Calling `_fit` again replaces the prior
+ *     state (sklearn-style refit semantics).
  *   - Functions that consume `c4a_matrix_view_t` may additionally return
  *     C4A_ERR_SHAPE_MISMATCH, C4A_ERR_DTYPE_MISMATCH, C4A_ERR_STRIDE_INVALID
- *     when the view fails c4a_matrix_view_validate.
+ *     when the view fails validation.
  */
 #ifndef CHEMOMETRICS4ALL_C4A_H
 #define CHEMOMETRICS4ALL_C4A_H
@@ -92,13 +64,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* Forward-declaration of the opaque PCG64 handle. The full declaration plus
- * the seven entry points live in §-Phase 1 — PCG64 RNG at the end of this
- * file, but the typedef is hoisted here so consumers can pre-declare
- * function pointers / fields of the handle type without forcing a specific
- * ordering of declarations in their own headers. */
-typedef struct c4a_rng_pcg64_state_t c4a_rng_pcg64_state_t;
 
 /* ============================================================================
  * 1. Status codes
@@ -132,7 +97,7 @@ typedef enum c4a_status_t {
 C4A_API const char* c4a_status_to_string(c4a_status_t s);
 
 /* ============================================================================
- * 2. Backends
+ * 2. Backends and numerical dtypes
  * ==========================================================================
  *
  * Backends are runtime-selectable via c4a_context_set_backend. The reference
@@ -156,10 +121,6 @@ typedef enum c4a_backend_t {
 C4A_API int          c4a_backend_is_available(c4a_backend_t backend);
 C4A_API const char*  c4a_backend_to_string(c4a_backend_t backend);
 
-/* ============================================================================
- * 3. Numerical dtypes
- * ========================================================================== */
-
 typedef enum c4a_dtype_t {
     C4A_DTYPE_UNKNOWN = 0,
     C4A_DTYPE_F64     = 1,
@@ -174,7 +135,7 @@ C4A_API size_t       c4a_dtype_size(c4a_dtype_t dtype);
 C4A_API const char*  c4a_dtype_to_string(c4a_dtype_t dtype);
 
 /* ============================================================================
- * 4. Matrix view — non-owning, stride-aware
+ * 3. Matrix view — non-owning, stride-aware
  * ==========================================================================
  *
  * The view describes a 2-D array of `dtype` elements at `data`, with `rows`
@@ -196,7 +157,7 @@ C4A_API const char*  c4a_dtype_to_string(c4a_dtype_t dtype);
  *
  * Layout on LP64 (Linux, macOS) and LLP64 (Windows-64): 48 bytes total
  * (8+8+8+8+8+4+4). ILP32 is not supported; Android 32-bit (armeabi-v7a) is
- * explicitly excluded from Phase 0/2 — see roadmap.
+ * explicitly excluded.
  */
 typedef struct c4a_matrix_view_t {
     void*        data;
@@ -232,7 +193,7 @@ C4A_API c4a_status_t c4a_matrix_view_init_strided(
     int64_t row_stride, int64_t col_stride,
     c4a_dtype_t dtype);
 
-/* Validate that the view is well-formed. The rules are listed in §4 prelude
+/* Validate that the view is well-formed. The rules are listed in §3 prelude
  * above. Returns:
  *   - C4A_OK if all rules hold.
  *   - C4A_ERR_NULL_POINTER  if `v` is NULL, or `v->data` is NULL with
@@ -243,23 +204,7 @@ C4A_API c4a_status_t c4a_matrix_view_init_strided(
 C4A_API c4a_status_t c4a_matrix_view_validate(const c4a_matrix_view_t* v);
 
 /* ============================================================================
- * 5. Opaque handles
- * ========================================================================== */
-
-typedef struct c4a_context_s                    c4a_context_t;
-typedef struct c4a_config_s                     c4a_config_t;
-typedef struct c4a_operator_bank_s              c4a_operator_bank_t;
-typedef struct c4a_gating_strategy_s            c4a_gating_strategy_t;
-typedef struct c4a_pipeline_s                   c4a_pipeline_t;
-typedef struct c4a_model_s                      c4a_model_t;
-typedef struct c4a_array_s                      c4a_array_t;
-typedef struct c4a_validation_plan_s            c4a_validation_plan_t;
-typedef struct c4a_aom_global_result_s          c4a_aom_global_result_t;
-typedef struct c4a_aom_per_component_result_s   c4a_aom_per_component_result_t;
-typedef struct c4a_method_result_s              c4a_method_result_t;
-
-/* ============================================================================
- * 6. Context lifecycle
+ * 4. Context lifecycle
  * ==========================================================================
  *
  * One c4a_context_t represents an isolated execution environment. It owns:
@@ -276,6 +221,8 @@ typedef struct c4a_method_result_s              c4a_method_result_t;
  * Signal safety: no c4a_* function is async-signal-safe. Do not call any
  * c4a_* function from a POSIX signal handler.
  */
+typedef struct c4a_context_s c4a_context_t;
+
 C4A_API c4a_status_t c4a_context_create(c4a_context_t** out_ctx);
 C4A_API void         c4a_context_destroy(c4a_context_t* ctx);
 
@@ -317,327 +264,60 @@ C4A_API c4a_status_t c4a_context_set_user_data(c4a_context_t* ctx, void* user);
 C4A_API void*        c4a_context_get_user_data(const c4a_context_t* ctx);
 
 /* ============================================================================
- * 7. Algorithm / solver / deflation enums
- * ========================================================================== */
-
-typedef enum c4a_algorithm_t {
-    C4A_ALGO_PLS_REGRESSION = 0,
-    C4A_ALGO_PLS_CANONICAL  = 1,
-    C4A_ALGO_PLS_SVD        = 2,
-    C4A_ALGO_PLS_DA         = 3,
-    C4A_ALGO_OPLS           = 4,
-    C4A_ALGO_OPLS_DA        = 5,
-    C4A_ALGO_SPARSE_PLS     = 6,
-    C4A_ALGO_MB_PLS         = 7,
-    C4A_ALGO_LW_PLS         = 8,
-    C4A_ALGO_AOM_PLS        = 9,
-    C4A_ALGO_PCR            = 10
-    /* Nonlinear kernel PLS (RBF / polynomial / sigmoid) is intentionally
-     * deferred to Phase 4 along with the kernel-type enum + setters; we do
-     * not pre-declare it here so we don't lock in an unfinished surface.
-     * Orthogonal-scores, SIMPLS, kernel-algorithm, wide-kernel, power and
-     * randomized-SVD are SOLVERS (see below), not algorithms. POP-PLS is a
-     * GATING STRATEGY (see below). */
-} c4a_algorithm_t;
-
-typedef enum c4a_solver_t {
-    C4A_SOLVER_NIPALS            = 0,
-    C4A_SOLVER_SIMPLS            = 1,
-    C4A_SOLVER_ORTHOGONAL_SCORES = 2,
-    C4A_SOLVER_KERNEL_ALGORITHM  = 3,   /* linear kernel-algorithm PLS (Lindgren/Wold) */
-    C4A_SOLVER_WIDE_KERNEL       = 4,
-    C4A_SOLVER_SVD               = 5,
-    C4A_SOLVER_POWER             = 6,
-    C4A_SOLVER_RANDOMIZED_SVD    = 7
-} c4a_solver_t;
-
-typedef enum c4a_deflation_t {
-    C4A_DEFLATION_REGRESSION  = 0,
-    C4A_DEFLATION_CANONICAL   = 1,
-    C4A_DEFLATION_X_ONLY      = 2,
-    C4A_DEFLATION_XY          = 3,
-    C4A_DEFLATION_ORTHOGONAL  = 4
-} c4a_deflation_t;
-
-/* ============================================================================
- * 8. Config lifecycle and setters
+ * 5. ABI naming convention and operator contracts
  * ==========================================================================
  *
- * A c4a_config_t is an opaque bag of knobs. Bindings build one with the
- * setters below, hand it to c4a_model_fit, and either destroy it or reuse it.
+ * Reserved prefixes for the c4a_* namespace:
  *
- * Setter contract:
- *   - Every setter validates its inputs.
- *   - On rejection (C4A_ERR_INVALID_ARGUMENT or _NULL_POINTER), the config
- *     is left UNCHANGED — failed setters never partially mutate state.
- *   - Every setter has a corresponding getter that returns the most recent
- *     accepted value.
- */
-C4A_API c4a_status_t c4a_config_create(c4a_config_t** out_cfg);
-C4A_API void         c4a_config_destroy(c4a_config_t* cfg);
-C4A_API c4a_status_t c4a_config_clone(const c4a_config_t* src,
-                                       c4a_config_t** out_dst);
-
-/* ---- Setters ---- */
-C4A_API c4a_status_t c4a_config_set_algorithm        (c4a_config_t*, c4a_algorithm_t);
-C4A_API c4a_status_t c4a_config_set_solver           (c4a_config_t*, c4a_solver_t);
-C4A_API c4a_status_t c4a_config_set_deflation        (c4a_config_t*, c4a_deflation_t);
-/* `n_components` must be >= 1. There is no upper cap at the ABI level; if
- * the value exceeds rank(X) at fit time, Phase 1+ returns
- * C4A_ERR_INVALID_ARGUMENT from c4a_model_fit with a descriptive message. */
-C4A_API c4a_status_t c4a_config_set_n_components     (c4a_config_t*, int32_t n);
-C4A_API c4a_status_t c4a_config_set_center_x         (c4a_config_t*, int32_t enabled);
-C4A_API c4a_status_t c4a_config_set_scale_x          (c4a_config_t*, int32_t enabled);
-C4A_API c4a_status_t c4a_config_set_center_y         (c4a_config_t*, int32_t enabled);
-C4A_API c4a_status_t c4a_config_set_scale_y          (c4a_config_t*, int32_t enabled);
-C4A_API c4a_status_t c4a_config_set_tol              (c4a_config_t*, double tol);
-/* `max_iter` must be >= 1. There is no upper cap at the ABI level. */
-C4A_API c4a_status_t c4a_config_set_max_iter         (c4a_config_t*, int32_t max_iter);
-C4A_API c4a_status_t c4a_config_set_store_scores     (c4a_config_t*, int32_t enabled);
-C4A_API c4a_status_t c4a_config_set_store_diagnostics(c4a_config_t*, int32_t enabled);
-C4A_API c4a_status_t c4a_config_set_dtype            (c4a_config_t*, c4a_dtype_t);
-
-/* Composability hooks — these are non-owning pointers; the lifetime of the
- * pipeline / bank / strategy is managed by the caller. Passing NULL clears
- * the previously-set hook. */
-C4A_API c4a_status_t c4a_config_set_pipeline         (c4a_config_t*,
-                                                       const c4a_pipeline_t* pipe);
-C4A_API c4a_status_t c4a_config_set_operator_bank    (c4a_config_t*,
-                                                       const c4a_operator_bank_t* bank);
-C4A_API c4a_status_t c4a_config_set_gating_strategy  (c4a_config_t*,
-                                                       const c4a_gating_strategy_t* gate);
-
-/* ---- Getters ---- */
-C4A_API c4a_status_t c4a_config_get_algorithm        (const c4a_config_t*, c4a_algorithm_t*);
-C4A_API c4a_status_t c4a_config_get_solver           (const c4a_config_t*, c4a_solver_t*);
-C4A_API c4a_status_t c4a_config_get_deflation        (const c4a_config_t*, c4a_deflation_t*);
-C4A_API c4a_status_t c4a_config_get_n_components     (const c4a_config_t*, int32_t*);
-C4A_API c4a_status_t c4a_config_get_center_x         (const c4a_config_t*, int32_t*);
-C4A_API c4a_status_t c4a_config_get_scale_x          (const c4a_config_t*, int32_t*);
-C4A_API c4a_status_t c4a_config_get_center_y         (const c4a_config_t*, int32_t*);
-C4A_API c4a_status_t c4a_config_get_scale_y          (const c4a_config_t*, int32_t*);
-C4A_API c4a_status_t c4a_config_get_tol              (const c4a_config_t*, double*);
-C4A_API c4a_status_t c4a_config_get_max_iter         (const c4a_config_t*, int32_t*);
-C4A_API c4a_status_t c4a_config_get_store_scores     (const c4a_config_t*, int32_t*);
-C4A_API c4a_status_t c4a_config_get_store_diagnostics(const c4a_config_t*, int32_t*);
-C4A_API c4a_status_t c4a_config_get_dtype            (const c4a_config_t*, c4a_dtype_t*);
-C4A_API c4a_status_t c4a_config_get_pipeline         (const c4a_config_t*,
-                                                       const c4a_pipeline_t** out);
-C4A_API c4a_status_t c4a_config_get_operator_bank    (const c4a_config_t*,
-                                                       const c4a_operator_bank_t** out);
-C4A_API c4a_status_t c4a_config_get_gating_strategy  (const c4a_config_t*,
-                                                       const c4a_gating_strategy_t** out);
-
-/* ============================================================================
- * 9. Operator bank, gating strategy, preprocessing pipeline
- * ========================================================================== */
-
-typedef enum c4a_operator_kind_t {
-    C4A_OP_IDENTITY            = 0,
-    C4A_OP_CENTER              = 1,
-    C4A_OP_AUTOSCALE           = 2,
-    C4A_OP_PARETO_SCALE        = 3,
-    C4A_OP_SNV                 = 4,
-    C4A_OP_MSC                 = 5,
-    C4A_OP_EMSC                = 6,
-    C4A_OP_DETREND_POLY        = 7,
-    C4A_OP_SAVGOL_SMOOTH       = 8,
-    C4A_OP_SAVGOL_DERIVATIVE   = 9,
-    C4A_OP_NORRIS_WILLIAMS     = 10,
-    C4A_OP_ASLS_BASELINE       = 11,
-    C4A_OP_OSC                 = 12,
-    C4A_OP_EPO                 = 13,
-    C4A_OP_WAVELET_DENOISE     = 14,
-    C4A_OP_FINITE_DIFFERENCE   = 15,
-    C4A_OP_WHITTAKER           = 16,
-    C4A_OP_FCK                 = 17
-} c4a_operator_kind_t;
-
-/* Operator-bank lifecycle. An operator bank is an unordered collection of
- * preprocessing operators used by AOM-PLS (Phase 6) — the gating strategy
- * picks (soft / hard / sparse) which one(s) to apply per component.
+ *   c4a_pp_*       preprocessing operators (Phases 2-7, 10)
+ *   c4a_split_*    sample splitters       (Phase 11)
+ *   c4a_filter_*   sample filters         (Phases 12-14)
+ *   c4a_aug_*      data augmentations     (Phases 15-18)
+ *   c4a_util_*     generic utilities      (cross-phase)
+ *   c4a_rng_*      random number generators (Phase 1)
+ *   c4a_metric_*   metrics and diagnostics (Phases 19-20)
  *
- * Memory: `params` (when non-NULL) is COPIED into the bank by `_add`. The
- * caller's buffer may be released immediately after the call returns. */
-C4A_API c4a_status_t c4a_operator_bank_create(c4a_operator_bank_t** out);
-C4A_API void         c4a_operator_bank_destroy(c4a_operator_bank_t* bank);
-C4A_API c4a_status_t c4a_operator_bank_add   (c4a_operator_bank_t* bank,
-                                               c4a_operator_kind_t kind,
-                                               const double* params,
-                                               int32_t n_params);
-C4A_API c4a_status_t c4a_operator_bank_size  (const c4a_operator_bank_t* bank,
-                                               int32_t* out_size);
-
-/* ---- Gating strategy ---- */
-typedef enum c4a_gating_mode_t {
-    C4A_GATING_HARD            = 0,
-    C4A_GATING_SOFT            = 1,
-    C4A_GATING_SPARSE          = 2,
-    C4A_GATING_PER_COMPONENT   = 3,    /* POP-PLS */
-    C4A_GATING_PER_BLOCK       = 4,
-    C4A_GATING_PER_TARGET      = 5
-} c4a_gating_mode_t;
-
-C4A_API c4a_status_t c4a_gating_strategy_create(c4a_gating_strategy_t** out,
-                                                 c4a_gating_mode_t mode);
-C4A_API void         c4a_gating_strategy_destroy(c4a_gating_strategy_t* gs);
-
-/* ---- Preprocessing pipeline ----
- * Pipeline = ordered list of operators that share fit/transform.
- * Phase 3a/3b/3c/3d/3e/3f/3g/3h/3i/3j implements identity, center, autoscale,
- * Pareto scaling, SNV, MSC, EMSC, polynomial detrending, Savitzky-Golay
- * smoothing/derivatives, Norris-Williams gap-segment derivatives, ASLS
- * baseline correction, Haar wavelet denoising and supervised one-component
- * OSC / EPO with leakage-safe training statistics.
- * Unsupported operators are accepted by add_operator so pipelines remain
- * serialisable later, but fit returns C4A_ERR_NOT_IMPLEMENTED until the
- * operator body lands.
- */
-C4A_API c4a_status_t c4a_pipeline_create        (c4a_pipeline_t** out);
-C4A_API void         c4a_pipeline_destroy       (c4a_pipeline_t* pipe);
-C4A_API c4a_status_t c4a_pipeline_clone         (const c4a_pipeline_t* src,
-                                                  c4a_pipeline_t** out_dst);
-/* `params` (when non-NULL) is COPIED into the pipeline by `_add_operator`;
- * the caller may release the buffer immediately afterwards. */
-C4A_API c4a_status_t c4a_pipeline_add_operator  (c4a_pipeline_t* pipe,
-                                                  c4a_operator_kind_t kind,
-                                                  const double* params,
-                                                  int32_t n_params);
-C4A_API c4a_status_t c4a_pipeline_size          (const c4a_pipeline_t* pipe,
-                                                  int32_t* out_size);
-
-/* `Y` is optional for unsupervised preprocessing operators and may be NULL.
- * Supervised operators such as OSC and EPO require a non-NULL Y at fit time. */
-C4A_API c4a_status_t c4a_pipeline_fit            (c4a_context_t* ctx,
-                                                   c4a_pipeline_t* pipe,
-                                                   const c4a_matrix_view_t* X,
-                                                   const c4a_matrix_view_t* Y);
-C4A_API c4a_status_t c4a_pipeline_transform      (c4a_context_t* ctx,
-                                                   const c4a_pipeline_t* pipe,
-                                                   const c4a_matrix_view_t* X,
-                                                   c4a_matrix_view_t* out);
-C4A_API c4a_status_t c4a_pipeline_transform_alloc(c4a_context_t* ctx,
-                                                   const c4a_pipeline_t* pipe,
-                                                   const c4a_matrix_view_t* X,
-                                                   c4a_array_t** out);
-
-/* ============================================================================
- * 10. Model lifecycle
- * ==========================================================================
+ * Operator lifecycle contracts:
  *
- * The current core implements C4A_ALGO_PLS_REGRESSION with C4A_SOLVER_NIPALS,
- * C4A_SOLVER_ORTHOGONAL_SCORES, C4A_SOLVER_SIMPLS,
- * C4A_SOLVER_KERNEL_ALGORITHM, C4A_SOLVER_WIDE_KERNEL, C4A_SOLVER_SVD,
- * C4A_SOLVER_POWER or C4A_SOLVER_RANDOMIZED_SVD using
- * C4A_DEFLATION_REGRESSION; C4A_ALGO_PLS_CANONICAL with C4A_SOLVER_NIPALS or
- * C4A_SOLVER_SVD using C4A_DEFLATION_CANONICAL; C4A_ALGO_PLS_SVD with
- * C4A_SOLVER_SVD using C4A_DEFLATION_CANONICAL; C4A_ALGO_PLS_DA with the
- * PLS regression solver set using C4A_DEFLATION_REGRESSION; C4A_ALGO_OPLS
- * and C4A_ALGO_OPLS_DA with one or more Y targets, C4A_SOLVER_NIPALS and
- * C4A_DEFLATION_ORTHOGONAL; and C4A_ALGO_PCR with C4A_SOLVER_SVD using
- * C4A_DEFLATION_REGRESSION. Multi-response OPLS uses one shared predictive
- * score direction from the dominant singular pair of X.T @ Y. PLSSVD
- * transform returns direct X scores from SVD(X.T @ Y); predict uses the
- * deterministic latent projection X @ W @ V.T scaled back to Y.
- * Unsupported algorithms / solvers / deflation modes return
- * C4A_ERR_UNSUPPORTED. Phase 6 adds AOM-PLS through the operator_bank +
- * gating_strategy hooks set on the config.
- */
-C4A_API c4a_status_t c4a_model_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    c4a_model_t** out_model);
-
-C4A_API void         c4a_model_destroy(c4a_model_t* model);
-
-/* ---- Predict / transform (caller-provided output buffer) ---- */
-C4A_API c4a_status_t c4a_model_predict(
-    c4a_context_t* ctx, const c4a_model_t* model,
-    const c4a_matrix_view_t* X, c4a_matrix_view_t* out);
-
-C4A_API c4a_status_t c4a_model_transform(
-    c4a_context_t* ctx, const c4a_model_t* model,
-    const c4a_matrix_view_t* X, c4a_matrix_view_t* out_scores);
-
-/* ---- Predict / transform (core-allocated output) ---- */
-C4A_API c4a_status_t c4a_model_predict_alloc(
-    c4a_context_t* ctx, const c4a_model_t* model,
-    const c4a_matrix_view_t* X, c4a_array_t** out);
-
-C4A_API c4a_status_t c4a_model_transform_alloc(
-    c4a_context_t* ctx, const c4a_model_t* model,
-    const c4a_matrix_view_t* X, c4a_array_t** out_scores);
-
-/* Tagged accessor for fitted-model arrays. */
-typedef enum c4a_model_array_t {
-    C4A_MODEL_COEFFICIENTS = 0,   /* (n_features, n_targets) */
-    C4A_MODEL_INTERCEPT    = 1,   /* (n_targets,) */
-    C4A_MODEL_X_MEAN       = 2,
-    C4A_MODEL_X_SCALE      = 3,
-    C4A_MODEL_Y_MEAN       = 4,
-    C4A_MODEL_Y_SCALE      = 5,
-    C4A_MODEL_WEIGHTS_W    = 6,   /* (n_features, n_components) */
-    C4A_MODEL_LOADINGS_P   = 7,
-    C4A_MODEL_Y_LOADINGS_Q = 8,
-    C4A_MODEL_ROTATIONS_R  = 9,
-    C4A_MODEL_SCORES_T     = 10,  /* optional — store_scores=1 */
-    C4A_MODEL_Y_SCORES_U   = 11   /* optional — store_scores=1 */
-} c4a_model_array_t;
-
-C4A_API c4a_status_t c4a_model_get_array(
-    c4a_context_t* ctx, const c4a_model_t* model,
-    c4a_model_array_t which, c4a_array_t** out);
-
-C4A_API c4a_status_t c4a_model_get_n_components(const c4a_model_t*, int32_t* out);
-C4A_API c4a_status_t c4a_model_get_n_features  (const c4a_model_t*, int32_t* out);
-C4A_API c4a_status_t c4a_model_get_n_targets   (const c4a_model_t*, int32_t* out);
-
-/* ============================================================================
- * 11. Serialization
- * ==========================================================================
+ *   * Stateless operators expose `create / transform / destroy`:
+ *       - `_create(handle**, ...)` allocates an opaque handle parameterised
+ *         by the constructor arguments. No fitting needed; the transform is
+ *         a pure function of the inputs.
+ *       - `_transform(handle, X_view, out_view)` applies the operator.
+ *       - `_destroy(handle)` releases the handle. NULL-safe.
  *
- * The binary format starts with the four-byte magic "C4AM" (the first 4
- * bytes of C4A_SERIALIZATION_MAGIC — note that as a string literal that
- * macro is 5 bytes including the trailing NUL; consumers should compare or
- * memcpy exactly 4 bytes), followed by C4A_SERIALIZATION_FORMAT_VERSION
- * (4-byte LE) and the producing library's ABI version triple (3 × 4-byte
- * LE). The consumer rejects on C4A_SERIALIZATION_FORMAT_VERSION mismatch
- * with C4A_ERR_VERSION_INCOMPATIBLE and writes a warning to last_error if
- * the ABI version differs but the format is compatible. All multi-byte
- * integers are little-endian; all doubles are IEEE 754 binary64 LE.
+ *   * Stateful operators expose `create / fit / transform / destroy` (with
+ *     optional `inverse_transform` and `is_fitted`):
+ *       - `_create(handle**, ...)` allocates an opaque handle parameterised
+ *         by the constructor arguments. The handle starts in the *unfitted*
+ *         state.
+ *       - `_fit(handle, X_view)` learns the operator's parameters from X.
+ *         Calling `_fit` again replaces the prior state (sklearn-style
+ *         refit semantics).
+ *       - `_transform(handle, X_view, out_view)` applies the fitted
+ *         operator. Calling `_transform` (or `_inverse_transform`) before
+ *         `_fit` returns C4A_ERR_NOT_FITTED.
+ *       - `_inverse_transform(handle, X_view, out_view)` reverses the
+ *         transform when the operator is invertible. Operators with no
+ *         meaningful inverse omit this entry point.
+ *       - `_is_fitted(handle, int* out)` reports the fitted state (1 if
+ *         fitted, 0 otherwise).
+ *       - `_destroy(handle)` releases the handle. NULL-safe.
+ *
+ * Matrix view inputs must be row-major contiguous F64 for the current
+ * implementation; non-contiguous and non-F64 views return
+ * C4A_ERR_STRIDE_INVALID or C4A_ERR_DTYPE_MISMATCH respectively.
  */
 
-C4A_API c4a_status_t c4a_model_export_size(
-    const c4a_model_t* model, size_t* out_size);
-
-C4A_API c4a_status_t c4a_model_export_to_buffer(
-    const c4a_model_t* model, void* buffer, size_t buffer_size,
-    size_t* out_written);
-
-C4A_API c4a_status_t c4a_model_import_from_buffer(
-    c4a_context_t* ctx, const void* buffer, size_t buffer_size,
-    c4a_model_t** out_model);
-
-/* Inspect a buffer's header without fully importing it. Useful for ABI /
- * format compatibility checks before allocating model memory. */
-C4A_API c4a_status_t c4a_serialization_inspect(
-    const void* buffer, size_t buffer_size,
-    uint32_t* out_format_version,
-    uint32_t* out_writer_abi_major,
-    uint32_t* out_writer_abi_minor,
-    uint32_t* out_writer_abi_patch);
-
 /* ============================================================================
- * 12. ABI version + build info
+ * 6. ABI version + build info
  * ========================================================================== */
 
 C4A_API uint32_t     c4a_get_abi_version_major(void);
 C4A_API uint32_t     c4a_get_abi_version_minor(void);
 C4A_API uint32_t     c4a_get_abi_version_patch(void);
 C4A_API uint32_t     c4a_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-C4A_API const char*  c4a_get_version_string(void);    /* e.g. "0.97.0+abi.1.14.0" */
+C4A_API const char*  c4a_get_version_string(void);    /* e.g. "0.1.0+abi.1.3.0" */
 C4A_API const char*  c4a_get_build_info(void);        /* compiler / flags / backends */
 C4A_API const char*  c4a_get_git_revision(void);      /* git rev at build time, or "" */
 
@@ -649,1358 +329,7 @@ C4A_API c4a_status_t c4a_check_abi_compatibility(
     uint32_t header_abi_minor);
 
 /* ============================================================================
- * 13. Output array helper — core-allocated arrays returned by *_alloc calls
- * ==========================================================================
- *
- * c4a_array_t is a non-opaque concept (you read its dtype/shape and obtain a
- * view), but the only ways to construct one are through library functions
- * such as `c4a_model_predict_alloc` and `c4a_pipeline_transform_alloc`.
- * Callers must release it with c4a_array_free. AOM/POP selection (§15)
- * exposes its arrays through result-handle accessors that point into
- * result-owned storage instead.
- */
-C4A_API c4a_status_t c4a_array_dtype(const c4a_array_t* arr, c4a_dtype_t* out);
-C4A_API c4a_status_t c4a_array_shape(const c4a_array_t* arr,
-                                      int64_t* rows, int64_t* cols);
-C4A_API c4a_status_t c4a_array_view (const c4a_array_t* arr,
-                                      c4a_matrix_view_t* out);
-C4A_API void         c4a_array_free (c4a_array_t* arr);
-
-/* ============================================================================
- * 14. Validation plan — caller-built train/test fold list for selection
- * ==========================================================================
- *
- * A c4a_validation_plan_t carries the per-fold train and test sample indices
- * used by selection / cross-validation kernels. It is built by the caller via
- * `_set_n_samples` and one `_add_fold` per fold; index buffers are COPIED
- * into the plan (the caller may release their buffers immediately after each
- * call). Failed setters and failed `_add_fold` calls leave the plan
- * UNCHANGED — there is no partial mutation.
- *
- * Lifetime: the plan is heap-allocated by `_create` and must be released with
- * `_destroy`. A const plan pointer may be reused across multiple selection
- * calls.
- */
-C4A_API c4a_status_t c4a_validation_plan_create(c4a_validation_plan_t** out);
-C4A_API void         c4a_validation_plan_destroy(c4a_validation_plan_t* plan);
-
-/* Sets the sample count the plan refers to. `n_samples` must be >= 0; a
- * non-positive value is allowed at construction (treated as "unset") so
- * bindings may set folds before learning the sample count, but selection
- * callers must set a value of at least 2 before invoking selection. Returns
- * C4A_ERR_NULL_POINTER if `plan` is NULL, C4A_ERR_INVALID_ARGUMENT if
- * `n_samples < 0`. */
-C4A_API c4a_status_t c4a_validation_plan_set_n_samples(
-    c4a_validation_plan_t* plan, int64_t n_samples);
-
-/* Appends one fold. `n_train` and `n_test` must both be >= 1. Index buffers
- * must be non-NULL. Indices are not validated here against `n_samples`;
- * semantic checks (range, duplicates, train/test overlap) are run when a
- * selection kernel consumes the plan. The plan is left UNCHANGED on failure.
- * Returns C4A_ERR_NULL_POINTER for NULL plan or NULL index buffer, and
- * C4A_ERR_INVALID_ARGUMENT when n_train or n_test is zero or negative. */
-C4A_API c4a_status_t c4a_validation_plan_add_fold(
-    c4a_validation_plan_t* plan,
-    const int64_t* train_indices, int64_t n_train,
-    const int64_t* test_indices,  int64_t n_test);
-
-C4A_API c4a_status_t c4a_validation_plan_get_n_samples(
-    const c4a_validation_plan_t* plan, int64_t* out_n_samples);
-C4A_API c4a_status_t c4a_validation_plan_get_n_folds(
-    const c4a_validation_plan_t* plan, int32_t* out_n_folds);
-
-/* ============================================================================
- * 15. AOM / POP selection -- public C ABI for the internal AOM-SIMPLS selector
- * ==========================================================================
- *
- * AOM-PLS picks one operator (global) or one operator per latent component
- * (POP) from a c4a_operator_bank_t, scored under a caller-provided
- * c4a_validation_plan_t. Phase 6 ships strict-linear AOM operators with the
- * SIMPLS solver in C4A_DEFLATION_REGRESSION; other algorithm/solver/
- * deflation combinations return C4A_ERR_UNSUPPORTED. Both kernels require
- * a non-empty bank of strict-linear operators (see C4A_OP_IDENTITY,
- * C4A_OP_DETREND_POLY, C4A_OP_SAVGOL_SMOOTH, C4A_OP_SAVGOL_DERIVATIVE,
- * C4A_OP_NORRIS_WILLIAMS, C4A_OP_FINITE_DIFFERENCE, C4A_OP_WHITTAKER,
- * C4A_OP_FCK). Non-strict operators (e.g. C4A_OP_SNV) return
- * C4A_ERR_UNSUPPORTED.
- *
- * On entry to *_select, *out_result is set to NULL. On success the out
- * pointer is a newly heap-allocated result handle that the caller MUST
- * release with the matching *_destroy. All getter buffer pointers point
- * into the result's owned storage and are invalidated when the result is
- * destroyed; bindings must copy if they need to retain the values past the
- * handle lifetime.
- *
- * Layout conventions (all row-major, contiguous, IEEE 754 binary64):
- *   - rmse_curves[op*max_components + k]: prefix-RMSE of operator `op`
- *     using the first (k+1) latent components.
- *   - component_scores[k*n_operators + op] (POP): per-component CV score
- *     of operator `op` at latent component k.
- *   - prefix_scores[k] (POP): cumulative best score using k+1 components.
- *   - operator_scores[op]: best prefix score for operator `op`.
- *   - operator_kinds[op]: bank-order operator kind of operator `op`.
- *   - selected_operator_indices[k] (POP, int32): bank index of the
- *     operator picked at component k for the selected prefix.
- *   - predictions: full-fit predictions, shape (X.rows, Y.cols).
- *
- * Errors: the universal status-code contract in the header prelude
- * applies. Additional cases:
- *   - Empty operator bank or empty plan -> C4A_ERR_INVALID_ARGUMENT.
- *   - Plan sample count not matching X.rows -> C4A_ERR_SHAPE_MISMATCH.
- *   - Duplicate, out-of-range, or train/test-overlapping fold indices
- *     -> C4A_ERR_INVALID_ARGUMENT.
- *   - max_components < 1, max_components > X.cols, or max_components >= X.rows
- *     -> C4A_ERR_INVALID_ARGUMENT.
- *   - Unsupported solver/algorithm/deflation -> C4A_ERR_UNSUPPORTED.
- *   - Non-strict operator in the bank -> C4A_ERR_UNSUPPORTED.
- *   - X.rows != Y.rows -> C4A_ERR_SHAPE_MISMATCH.
- */
-
-C4A_API c4a_status_t c4a_aom_global_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_operator_bank_t* bank,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t max_components,
-    c4a_aom_global_result_t** out_result);
-
-C4A_API void c4a_aom_global_result_destroy(c4a_aom_global_result_t* result);
-
-C4A_API c4a_status_t c4a_aom_global_result_get_n_operators(
-    const c4a_aom_global_result_t* result, int32_t* out);
-C4A_API c4a_status_t c4a_aom_global_result_get_max_components(
-    const c4a_aom_global_result_t* result, int32_t* out);
-C4A_API c4a_status_t c4a_aom_global_result_get_selected_operator_index(
-    const c4a_aom_global_result_t* result, int32_t* out);
-C4A_API c4a_status_t c4a_aom_global_result_get_selected_n_components(
-    const c4a_aom_global_result_t* result, int32_t* out);
-C4A_API c4a_status_t c4a_aom_global_result_get_best_score(
-    const c4a_aom_global_result_t* result, double* out);
-
-C4A_API c4a_status_t c4a_aom_global_result_get_operator_kinds(
-    const c4a_aom_global_result_t* result,
-    const c4a_operator_kind_t** out_data, int32_t* out_size);
-C4A_API c4a_status_t c4a_aom_global_result_get_operator_scores(
-    const c4a_aom_global_result_t* result,
-    const double** out_data, int32_t* out_size);
-C4A_API c4a_status_t c4a_aom_global_result_get_rmse_curves(
-    const c4a_aom_global_result_t* result,
-    const double** out_data, int32_t* out_rows, int32_t* out_cols);
-C4A_API c4a_status_t c4a_aom_global_result_get_predictions(
-    const c4a_aom_global_result_t* result,
-    const double** out_data, int64_t* out_rows, int64_t* out_cols);
-
-C4A_API c4a_status_t c4a_aom_per_component_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_operator_bank_t* bank,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t max_components,
-    c4a_aom_per_component_result_t** out_result);
-
-C4A_API void c4a_aom_per_component_result_destroy(
-    c4a_aom_per_component_result_t* result);
-
-C4A_API c4a_status_t c4a_aom_per_component_result_get_n_operators(
-    const c4a_aom_per_component_result_t* result, int32_t* out);
-C4A_API c4a_status_t c4a_aom_per_component_result_get_max_components(
-    const c4a_aom_per_component_result_t* result, int32_t* out);
-C4A_API c4a_status_t c4a_aom_per_component_result_get_selected_n_components(
-    const c4a_aom_per_component_result_t* result, int32_t* out);
-C4A_API c4a_status_t c4a_aom_per_component_result_get_best_score(
-    const c4a_aom_per_component_result_t* result, double* out);
-
-C4A_API c4a_status_t c4a_aom_per_component_result_get_operator_kinds(
-    const c4a_aom_per_component_result_t* result,
-    const c4a_operator_kind_t** out_data, int32_t* out_size);
-C4A_API c4a_status_t c4a_aom_per_component_result_get_selected_operator_indices(
-    const c4a_aom_per_component_result_t* result,
-    const int32_t** out_data, int32_t* out_size);
-C4A_API c4a_status_t c4a_aom_per_component_result_get_component_scores(
-    const c4a_aom_per_component_result_t* result,
-    const double** out_data, int32_t* out_rows, int32_t* out_cols);
-C4A_API c4a_status_t c4a_aom_per_component_result_get_prefix_scores(
-    const c4a_aom_per_component_result_t* result,
-    const double** out_data, int32_t* out_size);
-C4A_API c4a_status_t c4a_aom_per_component_result_get_predictions(
-    const c4a_aom_per_component_result_t* result,
-    const double** out_data, int64_t* out_rows, int64_t* out_cols);
-
-/* ============================================================================
- * 16. Method-result handle — universal output container for the extra
- *     PLS / monitoring / diagnostics / ensemble fit functions
- * ==========================================================================
- *
- * c4a_method_result_t holds named double matrices, named int32 vectors and
- * named scalars. The fit functions below build one of these per call and
- * return it to the caller. Accessor functions look up outputs by name; the
- * caller must NOT free returned buffer pointers (they point into the
- * result-owned storage and are invalidated when the result is destroyed).
- */
-
-C4A_API void c4a_method_result_destroy(c4a_method_result_t* result);
-
-/* Read a named double matrix. Returns C4A_ERR_INVALID_ARGUMENT when the name is
- * absent. */
-C4A_API c4a_status_t c4a_method_result_get_double_matrix(
-    const c4a_method_result_t* result,
-    const char* name,
-    const double** out_data, int64_t* out_rows, int64_t* out_cols);
-
-/* Read a named int32 vector. Returns C4A_ERR_INVALID_ARGUMENT when the name is
- * absent. */
-C4A_API c4a_status_t c4a_method_result_get_int_vector(
-    const c4a_method_result_t* result,
-    const char* name,
-    const int32_t** out_data, int32_t* out_size);
-
-/* Read a named int64 vector. Returns C4A_ERR_INVALID_ARGUMENT when the name is
- * absent. Used by the §5 / §6 selectors to expose `selected_indices`,
- * `removed_indices`, etc. without losing precision for large feature counts. */
-C4A_API c4a_status_t c4a_method_result_get_int64_vector(
-    const c4a_method_result_t* result,
-    const char* name,
-    const int64_t** out_data, int64_t* out_size);
-
-/* Read a named scalar. Returns C4A_ERR_INVALID_ARGUMENT when the name is absent. */
-C4A_API c4a_status_t c4a_method_result_get_scalar(
-    const c4a_method_result_t* result,
-    const char* name,
-    double* out_value);
-
-/* ---- Fit entry points ---- */
-
-/* Sparse SIMPLS (§7). Soft-thresholds the SIMPLS direction by
- * `sparsity_lambda` at each component. The result contains:
- *   "coefficients" (n_features x n_targets, row-major)
- *   "predictions"  (n_samples  x n_targets, row-major)
- *   "x_mean"       (1 x n_features)
- *   "y_mean"       (1 x n_targets)
- *   "weights_w"    (n_features x n_components)
- *   scalar "rmse"  in-sample RMSE
- */
-C4A_API c4a_status_t c4a_sparse_simpls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    double sparsity_lambda,
-    c4a_method_result_t** out_result);
-
-/* Domain-invariant PLS (§13). Penalizes the SIMPLS direction's alignment
- * with the source-vs-target mean difference. The result contains:
- *   "coefficients"        (n_features x n_targets)
- *   "predictions"         (n_samples  x n_targets)
- *   "x_mean", "y_mean"
- *   scalar "rmse_source"  in-sample RMSE on source data
- */
-C4A_API c4a_status_t c4a_di_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X_source,
-    const c4a_matrix_view_t* Y_source,
-    const c4a_matrix_view_t* X_target,
-    double di_lambda,
-    c4a_method_result_t** out_result);
-
-/* Recursive (moving-window) PLS (§12). Predicts each sample at index >=
- * window_size from a SIMPLS model fitted on the previous window_size rows.
- * The result contains:
- *   "predictions" (n_samples x n_targets) — zeros for warmup samples
- *   int "in_window" (n_samples)           — 1 when predicted, 0 warmup
- *   scalar "rmse_predictable" on samples i >= window_size
- */
-C4A_API c4a_status_t c4a_recursive_pls_run(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    int32_t window_size,
-    c4a_method_result_t** out_result);
-
-/* CPPLS — Canonical Powered PLS (§1). Each X column is rescaled by its
- * std^gamma before SIMPLS, then coefficients are unscaled. gamma in [0, 1]
- * interpolates between PLS (gamma=0) and a power-rescaled flavour
- * (gamma=1). The result contains:
- *   "coefficients" (n_features x n_targets, row-major)
- *   "predictions"  (n_samples  x n_targets)
- *   "x_mean", "y_mean"
- *   scalar "rmse", scalar "gamma"
- */
-C4A_API c4a_status_t c4a_cppls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    double gamma,
-    c4a_method_result_t** out_result);
-
-/* Weighted PLS (§26). Pre-multiplies the centered (X, Y) rows by
- * sqrt(sample_weights[i]) before SIMPLS. `weights` must point to
- * `n_samples` strictly positive finite doubles. The result contains:
- *   "coefficients", "predictions", "x_mean", "y_mean"
- *   scalar "rmse"
- */
-C4A_API c4a_status_t c4a_weighted_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const double* sample_weights,
-    int64_t sample_weights_size,
-    c4a_method_result_t** out_result);
-
-/* Robust PLS via IRLS with Huber weights (§26). max_irls_iter <= 0 falls
- * back to 5. The result contains:
- *   "coefficients", "predictions", "x_mean", "y_mean"
- *   "final_weights" (1 x n_samples) — Huber weights at convergence
- *   scalar "rmse", scalar "huber_k"
- */
-C4A_API c4a_status_t c4a_robust_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    double huber_k,
-    int32_t max_irls_iter,
-    c4a_method_result_t** out_result);
-
-/* Ridge-augmented PLS (§26). Augments (X, Y) with sqrt(ridge_lambda)*I and
- * 0 rows, then runs SIMPLS. ridge_lambda must be >= 0. The result contains:
- *   "coefficients", "predictions", "x_mean", "y_mean"
- *   scalar "rmse", scalar "ridge_lambda"
- */
-C4A_API c4a_status_t c4a_ridge_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    double ridge_lambda,
-    c4a_method_result_t** out_result);
-
-/* Continuum regression (§26). tau in [0, 1] interpolates between PLS
- * (tau=0) and a whitened-X / OLS-like flavour (tau=1). The result contains:
- *   "coefficients", "predictions", "x_mean", "y_mean"
- *   scalar "rmse", scalar "tau"
- */
-C4A_API c4a_status_t c4a_continuum_regression_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    double tau,
-    c4a_method_result_t** out_result);
-
-/* N-PLS (§22). 3-way tensor regression via Bro's algorithm. X must be a
- * row-major (n_samples x (mode_j * mode_k)) flat view of the (n x J x K)
- * tensor. The result contains:
- *   "predictions"   (n_samples x n_targets)
- *   "coefficients"  ((mode_j*mode_k) x n_targets)
- *   "w_j"           (mode_j x n_components)
- *   "w_k"           (mode_k x n_components)
- *   "scores_t"      (n_samples x n_components)
- *   "x_mean", "y_mean"
- *   scalar "rmse"
- */
-C4A_API c4a_status_t c4a_n_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X_flat,
-    int32_t mode_j,
-    int32_t mode_k,
-    const c4a_matrix_view_t* Y,
-    c4a_method_result_t** out_result);
-
-/* Non-linear kernel PLS (§24). `kernel_type`:
- *   0 = linear, 1 = RBF, 2 = polynomial, 3 = sigmoid
- * `gamma`, `coef0`, `degree` are kernel parameters; ignored when not
- * applicable to the selected kernel. The result contains:
- *   "predictions"   (n_samples x n_targets)  in-sample predictions
- *   "alpha"         (n_samples x n_targets)  dual coefficients
- *   "y_mean"        (1 x n_targets)
- *   scalar "rmse", scalar "kernel_type" (as double)
- */
-C4A_API c4a_status_t c4a_kernel_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    int32_t kernel_type,
-    double gamma,
-    double coef0,
-    int32_t degree,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    c4a_method_result_t** out_result);
-
-/* O2PLS (§16; Trygg & Wold 2003). Bi-directional OPLS with
- * `n_predictive` joint + `n_x_orthogonal` X-orthogonal +
- * `n_y_orthogonal` Y-orthogonal components. The result contains:
- *   "coefficients"    (n_features_x x n_features_y)
- *   "predictions"     (n_samples x n_features_y)
- *   "x_mean", "y_mean"
- *   "w_predictive"    (n_features_x x n_predictive)
- *   "c_predictive"    (n_features_y x n_predictive)
- *   "w_x_orthogonal"  (n_features_x x n_x_orthogonal)
- *   "c_y_orthogonal"  (n_features_y x n_y_orthogonal)
- *   "b_predictive"    (1 x n_predictive)
- *   scalar "rmse"
- */
-C4A_API c4a_status_t c4a_o2pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    int32_t n_predictive,
-    int32_t n_x_orthogonal,
-    int32_t n_y_orthogonal,
-    c4a_method_result_t** out_result);
-
-/* Approximate-PRESS component selection (§29). For each component count
- * k in [1, max_components], fits SIMPLS, then approximates PRESS via
- * leverage-inflated in-sample residuals. The result contains:
- *   "press_per_component" (1 x max_components)
- *   "rmse_per_component"  (1 x max_components)
- *   int "selected_n_components" — argmin of press_per_component
- *   scalar "selected_n_components_d" — same as a double for convenience
- */
-C4A_API c4a_status_t c4a_approximate_press_compute(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    int32_t max_components,
-    c4a_method_result_t** out_result);
-
-/* Sparse PLS-DA (§7). Dummy-encodes integer class labels then runs
- * sparse SIMPLS with the configured `sparsity_lambda` from `cfg`.
- * `y_labels` must be a length-n_samples buffer of non-negative class
- * IDs (max value implies n_classes). The result contains:
- *   "coefficients"  (n_features x n_classes)
- *   "predictions"   (n_samples x n_classes) — soft assignments
- *   "x_mean", "y_mean"
- *   "class_priors"  (1 x n_classes)
- *   scalar "rmse"
- */
-C4A_API c4a_status_t c4a_sparse_pls_da_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const int32_t* y_labels,
-    int64_t y_labels_size,
-    c4a_method_result_t** out_result);
-
-/* Group sparse PLS (§7). Soft-thresholds groups of features together.
- * `group_assignment` is a length-n_features buffer of 0-based group IDs.
- * Result contains coefficients, predictions, x_mean, y_mean, rmse, and
- * scalar `n_groups`.
- */
-C4A_API c4a_status_t c4a_group_sparse_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const int32_t* group_assignment,
-    int64_t group_assignment_size,
-    double group_lambda,
-    c4a_method_result_t** out_result);
-
-/* Fused sparse PLS (§7). Combines L1 sparsity with fusion of
- * consecutive feature pairs. Result identical to group_sparse_pls_fit
- * plus scalars `l1_lambda` and `fusion_lambda`.
- */
-C4A_API c4a_status_t c4a_fused_sparse_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    double l1_lambda,
-    double fusion_lambda,
-    c4a_method_result_t** out_result);
-
-/* PLS process monitoring (§19). Computes Hotelling T² and Q-residual
- * thresholds from `X_reference` (phase-1) at confidence level
- * (1 - alpha), then evaluates `X_monitor` (phase-2) and flags rows
- * exceeding the thresholds. Result contains:
- *   "t2"            (1 x n_monitor)
- *   "q"             (1 x n_monitor)
- *   "t2_reference"  (1 x n_reference)
- *   "q_reference"   (1 x n_reference)
- *   int "t2_alarms"  (length n_monitor)
- *   int "q_alarms"   (length n_monitor)
- *   int "any_alarms" (length n_monitor)
- *   scalar "t2_threshold", scalar "q_threshold", scalar "alpha"
- */
-C4A_API c4a_status_t c4a_pls_monitoring_run(
-    c4a_context_t* ctx,
-    const c4a_model_t* model,
-    const c4a_matrix_view_t* X_reference,
-    const c4a_matrix_view_t* X_monitor,
-    double alpha,
-    c4a_method_result_t** out_result);
-
-/* One-SE rule for PLS component selection (§10). Given a (max_components
- * x n_folds) row-major matrix of fold RMSE values, returns the smallest
- * k whose mean fold RMSE is within one standard error of the best mean
- * fold RMSE. Result contains:
- *   "mean_rmse_per_component" (1 x max_components)
- *   int "best_n_components"       (length 1)
- *   int "one_se_n_components"     (length 1)
- *   scalar "one_se_standard_error", scalar "one_se_threshold"
- */
-C4A_API c4a_status_t c4a_one_se_rule_compute(
-    c4a_context_t* ctx,
-    const double* fold_rmse_matrix,
-    int32_t max_components,
-    int32_t n_folds,
-    c4a_method_result_t** out_result);
-
-/* SO-PLS (§17). Sequential and Orthogonalized PLS for B X-blocks
- * predicting one Y. `X_blocks` is an array of `n_blocks`
- * c4a_matrix_view_t structs (all sharing X.rows = Y.rows).
- * `n_components_per_block` is a length-n_blocks int32 array.
- * The result contains:
- *   "predictions" (n_samples x n_targets)
- *   "y_mean"      (1 x n_targets)
- *   For each block b: "block_coefficients_<b>" of shape (p_b x n_targets)
- *   scalar "n_blocks"
- */
-C4A_API c4a_status_t c4a_so_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X_blocks,
-    int32_t n_blocks,
-    const c4a_matrix_view_t* Y,
-    const int32_t* n_components_per_block,
-    int64_t n_components_per_block_size,
-    c4a_method_result_t** out_result);
-
-/* OnPLS (§18). Generalized orthogonal projection for multi-block PLS.
- * Removes joint and per-block unique components.
- * Result contains scalars `n_blocks` and `n_joint`, plus per-block
- * loading matrices "joint_loadings_<b>", "unique_loadings_<b>" and
- * "joint_scores_<b>".
- */
-C4A_API c4a_status_t c4a_on_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X_blocks,
-    int32_t n_blocks,
-    int32_t n_joint,
-    const int32_t* n_unique_per_block,
-    int64_t n_unique_per_block_size,
-    c4a_method_result_t** out_result);
-
-/* ROSA (§19). Response-Oriented Sequential Alternation: at each
- * component, picks the block whose latent direction yields the highest
- * correlation with the current Y residual.
- * Result contains:
- *   "predictions"                  (n_samples x n_targets)
- *   "y_mean"
- *   "selected_block_per_component" int vector
- *   For each block b: "block_coefficients_<b>"
- *   scalar "n_components"
- */
-C4A_API c4a_status_t c4a_rosa_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X_blocks,
-    int32_t n_blocks,
-    const c4a_matrix_view_t* Y,
-    int32_t n_components,
-    c4a_method_result_t** out_result);
-
-/* Bagging PLS (§20). Bootstrap aggregation of `n_estimators` PLS
- * regressors with the configured seed. Returns the average regression
- * coefficient matrix:
- *   "coefficients"   (n_features x n_targets)
- *   "predictions"    (n_samples x n_targets)
- *   "x_mean", "y_mean"
- *   scalar "rmse", scalar "n_estimators"
- */
-C4A_API c4a_status_t c4a_bagging_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    int32_t n_estimators,
-    uint64_t seed,
-    c4a_method_result_t** out_result);
-
-/* Boosting PLS (§20). Gradient-boosting style stage-wise refit of
- * `n_estimators` PLS regressors with a per-stage `learning_rate`.
- * Output shape identical to bagging_pls_fit.
- */
-C4A_API c4a_status_t c4a_boosting_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    int32_t n_estimators,
-    double learning_rate,
-    c4a_method_result_t** out_result);
-
-/* Random-subspace PLS (§20). Each of `n_estimators` PLS regressors is
- * fit on a random subset of `features_per_subspace` columns. The
- * result averages predictions over the missing columns by zero-padding
- * coefficients; output shape identical to bagging_pls_fit plus a
- * scalar `features_per_subspace`.
- */
-C4A_API c4a_status_t c4a_random_subspace_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    int32_t n_estimators,
-    int32_t features_per_subspace,
-    uint64_t seed,
-    c4a_method_result_t** out_result);
-
-/* GPR-on-PLS (§47): two-stage regression. First fits a SIMPLS PLS with
- * cfg.n_components latent components and rotation R (p x k). Then fits a
- * Gaussian Process with RBF kernel
- *     K(t_i, t_j) = exp(-||t_i - t_j||^2 / (2 * length_scale^2))
- * and diagonal noise sigma^2 (the `noise_level` parameter is interpreted
- * as **variance**, matching sklearn `WhiteKernel(noise_level=...)`, not
- * standard deviation). The GP solve uses Cholesky on (K + noise_level * I)
- * on the training scores T = (X - x_mean) @ R and centred y.
- * Y must be single-target (n x 1) in Phase 47.
- *
- * `seed` is reserved for ABI symmetry with the ensemble methods; the fit
- * is fully deterministic.
- *
- * Result keys:
- *   "rotation_r"           (n_features x n_components)
- *   "x_mean"               (1 x n_features)
- *   "alpha"                (n_samples x 1)            — GP dual weights
- *   "L_lower"              (n_samples x n_samples)    — Cholesky factor
- *   "training_scores"      (n_samples x n_components)
- *   "predictions"          (n_samples x 1)
- *   "predictive_variance"  (n_samples x 1)            — noise-free posterior
- *   scalar "length_scale", "noise_level", "n_components", "y_mean", "rmse", "seed"
- *
- * Returns C4A_ERR_INVALID_ARGUMENT for non-positive length_scale or
- * noise_level, or for n_components outside [1, min(n,p)].
- * Returns C4A_ERR_SHAPE_MISMATCH if Y has more than one column.
- * Returns C4A_ERR_NUMERICAL_FAILURE if the Cholesky of (K + noise*I)
- * fails (typically at very low noise with redundant score directions).
- */
-C4A_API c4a_status_t c4a_gpr_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    double length_scale,
-    double noise_level,
-    uint64_t seed,
-    c4a_method_result_t** out_result);
-
-/* Simplified SIMPLS PLS regression — raw-pointer signature for
- * language bindings whose FFI layer struggles with the
- * `c4a_matrix_view_t*` parameter pattern (notably Emscripten 5.0.7
- * and Julia 1.12 ccall with `Ref{MatrixView}`).
- *
- * X is row-major (n × p), Y is row-major (n × q). The function fits
- * SIMPLS with `center_x = center_y = scale_x = scale_y = 1` and writes
- * into caller-provided buffers:
- *
- *   coefficients_out: (p × q) row-major regression coefficients
- *   x_mean_out:       (1 × p)
- *   y_mean_out:       (1 × q)
- *   predictions_out:  (n × q) row-major in-sample predictions; pass
- *                     NULL to skip the in-sample predict step.
- *
- * Returns C4A_OK on success or a C4A_ERR_* status. This is a stable
- * additive helper — implementations may grow new variants but the
- * shape of this one is fixed at ABI minor 1.13.
- */
-C4A_API c4a_status_t c4a_pls_fit_simple(
-    const double* x, const double* y,
-    int32_t n, int32_t p, int32_t q, int32_t n_components,
-    double* coefficients_out,
-    double* x_mean_out,
-    double* y_mean_out,
-    double* predictions_out);
-
-/* PLS-GLM (§5). PLS-reduced design feeding a softmax / Poisson IRLS.
- * `poisson` selects the Poisson-link path; otherwise a one-vs-rest
- * softmax-like fit on a continuous PLS regression on Y. The result
- * contains:
- *   "coefficients"  (n_features x n_classes)
- *   "intercept"     (1 x n_classes)
- *   "predictions"   (n_samples x n_classes)
- *   "x_mean"
- *   scalar "rmse", scalar "poisson" (0 or 1)
- */
-C4A_API c4a_status_t c4a_pls_glm_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    int32_t poisson,
-    c4a_method_result_t** out_result);
-
-/* PLS-QDA (§5). Quadratic discriminant analysis on PLS scores.
- * `y_labels` is a length-n_samples buffer of non-negative class IDs.
- * The result contains:
- *   "class_means"        (n_classes x n_components)
- *   "class_covariances"  (n_classes x (n_components * n_components))
- *   "log_class_priors"   (1 x n_classes)
- *   "rotations_r"        (n_features x n_components)
- *   "x_mean"
- *   "predictions"        (n_samples x n_classes)  log-likelihood scores
- *   scalar "rmse"
- */
-C4A_API c4a_status_t c4a_pls_qda_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const int32_t* y_labels,
-    int64_t y_labels_size,
-    c4a_method_result_t** out_result);
-
-/* PLS-Cox (§5). PLS-reduced Cox proportional hazards with Breslow
- * baseline hazard. `survival_times` is the observed time, and
- * `event_indicators` is 1 (event) or 0 (censored). The result contains:
- *   "coefficients"     (n_features x 1)  linear predictor coefficients
- *   "baseline_hazard"  (1 x n_unique_event_times)
- *   "event_times"      (1 x n_unique_event_times)
- *   "x_mean"
- *   "predictions"      (n_samples x 1)  linear-predictor scores
- */
-C4A_API c4a_status_t c4a_pls_cox_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const double* survival_times,
-    int64_t survival_times_size,
-    const int32_t* event_indicators,
-    int64_t event_indicators_size,
-    c4a_method_result_t** out_result);
-
-/* PDS — Piecewise Direct Standardization (§13). Fits per-target-column
- * windowed least-squares maps from source instrument X_source to target
- * X_target. The result contains:
- *   "transformation"  (n_features_target x n_features_source)
- *   "predictions"     (n_samples x n_features_target) — X_source @ T^T
- *   scalar "rmse" — frobenius error vs X_target
- *   scalar "window_half_width"
- */
-C4A_API c4a_status_t c4a_pds_fit(
-    c4a_context_t* ctx,
-    const c4a_matrix_view_t* X_source,
-    const c4a_matrix_view_t* X_target,
-    int32_t window_half_width,
-    c4a_method_result_t** out_result);
-
-/* DS — Direct Standardization (§13). Fits a full pt × ps least-squares
- * map from centered source X to centered target X plus a bias. The
- * result contains:
- *   "transformation" (n_features_source x n_features_target)
- *   "bias"           (1 x n_features_target)
- *   "predictions"    (n_samples x n_features_target)
- *   scalar "rmse"
- */
-C4A_API c4a_status_t c4a_ds_fit(
-    c4a_context_t* ctx,
-    const c4a_matrix_view_t* X_source,
-    const c4a_matrix_view_t* X_target,
-    c4a_method_result_t** out_result);
-
-/* MIR-PLS — Multiple Inverse Regression PLS (§13). Inverts the X→Y
- * relationship by running SIMPLS on (Y, X) and pseudoinverting the
- * resulting Y→X coefficients to obtain X→Y prediction coefficients.
- * The result contains:
- *   "coefficients"  (n_features x n_targets)
- *   "predictions"   (n_samples x n_targets)
- *   "x_mean", "y_mean"
- *   scalar "rmse"
- */
-C4A_API c4a_status_t c4a_mir_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    c4a_method_result_t** out_result);
-
-/* Missing-aware NIPALS (§13). Same shape as a regular PLS regression
- * model but tolerates NaN entries in X (replaced with the current
- * latent-space iterate during NIPALS). The result contains:
- *   "coefficients", "predictions", "x_mean", "y_mean"
- *   scalar "rmse"
- */
-C4A_API c4a_status_t c4a_missing_aware_nipals_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    c4a_method_result_t** out_result);
-
-/* PLS diagnostics (§9). Computes Hotelling T², Q residuals (SPE) and
- * DModX from a fitted model and a design matrix X. When `X_reference`
- * is NULL, score variances and sigma_train fall back to the model's
- * stored training scores — this requires `cfg.store_scores = 1` at fit
- * time. When `X_reference` is non-NULL, its rows define the reference
- * score distribution.
- *
- * The result contains:
- *   "t2"     (1 x n_samples) — Hotelling T² statistic per row
- *   "q"      (1 x n_samples) — squared reconstruction residual per row
- *   "dmodx"  (1 x n_samples) — distance-to-model X per row
- *   scalar "n_components", scalar "n_features"
- */
-C4A_API c4a_status_t c4a_pls_diagnostics_compute(
-    c4a_context_t* ctx,
-    const c4a_model_t* model,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* X_reference,
-    c4a_method_result_t** out_result);
-
-/* ============================================================================
- * 17. ABI shims for §2 internal-only core algos (Phase 4r/4s/4p/4q)
- *     and §4 AOM preprocessing (Phase 6a)
- * ==========================================================================
- * These four core algorithms have full C++ implementations in cpp/src/core
- * but were not previously exposed via the public C ABI. Added 2026-05 to
- * close the parity-gate gap identified in docs/parity_audit_2026_05/.
- */
-
-/* MB-PLS — block-weighted multi-block PLS (Phase 4r). Predicts on the
- * concatenated feature matrix X (n × Σ block_sizes). Result keys:
- *   "predictions"    (n × n_targets)
- *   "coefficients"   (Σ block_sizes × n_targets, original X scale)
- *   "x_mean"         (1 × Σ block_sizes)
- *   "x_scale"        (1 × Σ block_sizes)
- *   "intercept"      (1 × n_targets)
- *   "block_weights"  (1 × n_blocks)
- *   scalar "n_blocks", scalar "rmse"
- */
-C4A_API c4a_status_t c4a_mb_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const int64_t* block_sizes,
-    int64_t n_blocks,
-    c4a_method_result_t** out_result);
-
-/* LW-PLS — locally-weighted PLS with k-NN windows (Phase 4s). Predicts
- * each test row from a per-row PLS refit on its `n_neighbors` nearest
- * training rows. Currently the training set is X itself (in-sample). Result
- * keys:
- *   "predictions"            (n × n_targets) double matrix
- *   "neighbor_indices"       (n × n_neighbors) double matrix (cast from
- *                            int64 for unified matrix-shaped reads)
- *   int64 "neighbor_indices_i64" — same data as a row-major int64 vector
- *                            (preferred for index semantics)
- *   scalar "n_neighbors", scalar "n_components", scalar "rmse"
- */
-C4A_API c4a_status_t c4a_lw_pls_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    int32_t n_neighbors,
-    c4a_method_result_t** out_result);
-
-/* PLS-LDA — Linear Discriminant Analysis on PLS scores (Phase 4p). Result
- * keys:
- *   "decision_scores"   (n × n_classes)
- *   int "predictions"   (n)
- *   scalar "n_classes", scalar "n_components"
- */
-C4A_API c4a_status_t c4a_pls_lda_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const int32_t* y_labels,
-    int64_t y_labels_size,
-    int32_t n_classes,
-    c4a_method_result_t** out_result);
-
-/* PLS-Logistic — multinomial logistic regression on PLS scores (Phase 4q).
- * Result keys:
- *   "decision_scores"  (n × n_classes)
- *   "probabilities"    (n × n_classes)
- *   "intercepts"       (1 × (n_classes - 1))
- *   "coefficients"     ((n_classes - 1) × n_components)
- *   int "predictions"  (n)
- *   scalar "n_classes", scalar "n_components"
- */
-C4A_API c4a_status_t c4a_pls_logistic_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const int32_t* y_labels,
-    int64_t y_labels_size,
-    int32_t n_classes,
-    c4a_method_result_t** out_result);
-
-/* AOM preprocessing fit/transform (Phase 6a). Applies an operator bank
- * through the gating strategy and returns both the per-operator outputs
- * and the gated/mixed transformed matrix. Y is optional (some operators
- * use it, e.g. EPO; pass NULL when not needed). Result keys:
- *   "transformed"        (n × n_features) — final gated transform
- *   "operator_outputs"   (n_operators × (n × n_features), operator-major,
- *                         stored as a (n_operators × (n*n_features)) matrix)
- *   "weights"            (1 × n_operators) — gating weights at fit time
- *   int64 "operator_kinds" (n_operators) — C4A_OP_* enum values
- *   scalar "n_operators", scalar "mode" (gating mode integer)
- */
-C4A_API c4a_status_t c4a_aom_preprocess_fit(
-    c4a_context_t* ctx,
-    const c4a_operator_bank_t* bank,
-    const c4a_gating_strategy_t* gate,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    c4a_method_result_t** out_result);
-
-/* ============================================================================
- * 18. ABI shims for §6 Phase 5 variable-selection methods
- * ==========================================================================
- * Each selector returns a c4a_method_result_t with at minimum:
- *   int64 "selected_indices"     — top-k (or final) selected feature indices
- *   double "scores" or "rmse_*"  — algorithm-specific score/RMSE arrays
- *   scalar "best_rmse" (when applicable)
- *
- * All selectors that take a ValidationPlan use the same plan API as
- * `c4a_aom_global_select`. Selectors that take seeds expose them as
- * `uint64_t` parameters.
- */
-
-/* VIP / coefficient-magnitude / selectivity-ratio rankers (Phase 5a). Method
- * enum: 0=VIP, 1=coefficient magnitude, 2=selectivity ratio. */
-C4A_API c4a_status_t c4a_variable_select_rank(
-    c4a_context_t* ctx,
-    const c4a_model_t* model,
-    const c4a_matrix_view_t* X,
-    int32_t method,
-    int32_t top_k,
-    c4a_method_result_t** out_result);
-
-/* Interval / iPLS / mwPLS scan (Phase 5b). */
-C4A_API c4a_status_t c4a_interval_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t interval_width,
-    int32_t step,
-    c4a_method_result_t** out_result);
-
-/* MCUVE / coefficient-stability selector (Phase 5c). */
-C4A_API c4a_status_t c4a_stability_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t top_k,
-    c4a_method_result_t** out_result);
-
-/* UVE — artificial-noise-thresholded selector (Phase 5d). */
-C4A_API c4a_status_t c4a_uve_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t noise_features,
-    uint64_t noise_seed,
-    c4a_method_result_t** out_result);
-
-/* SPA — Successive Projections Algorithm (Phase 5e). */
-C4A_API c4a_status_t c4a_spa_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    int32_t top_k,
-    c4a_method_result_t** out_result);
-
-/* CARS — Competitive Adaptive Reweighted Sampling (Phase 5f). */
-C4A_API c4a_status_t c4a_cars_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t n_iterations,
-    int32_t min_features,
-    c4a_method_result_t** out_result);
-
-/* Random Frog (Phase 5g). */
-C4A_API c4a_status_t c4a_random_frog_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t n_iterations,
-    int32_t initial_size,
-    int32_t min_size,
-    int32_t max_size,
-    int32_t top_k,
-    uint64_t seed,
-    c4a_method_result_t** out_result);
-
-/* SCARS — Stability + CARS (Phase 5h). */
-C4A_API c4a_status_t c4a_scars_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t n_iterations,
-    int32_t min_features,
-    double sample_fraction,
-    uint64_t seed,
-    c4a_method_result_t** out_result);
-
-/* GA-PLS (Phase 5i). */
-C4A_API c4a_status_t c4a_ga_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t n_generations,
-    int32_t population_size,
-    int32_t min_features,
-    int32_t max_features,
-    double mutation_rate,
-    uint64_t seed,
-    c4a_method_result_t** out_result);
-
-/* PSO-PLS (§48): Binary Particle Swarm Optimization variable selection
- * (Kennedy & Eberhart 1997). Each particle is a binary mask over the
- * p features; fitness is the CV-RMSE of a PLS regression on the
- * selected subset. Position update uses sigmoid stochastic threshold
- * on the continuous velocity.
- *
- * Defaults from Clerc & Kennedy (2002) convergence analysis:
- *   w = 0.729 (inertia), c1 = c2 = 1.494, v_max = 4.0.
- *
- * Result keys:
- *   "inclusion_frequencies"     (1 × n_features)
- *   "best_rmse_by_iteration"    (1 × n_iterations)
- *   "mean_rmse_by_iteration"    (1 × n_iterations)
- *   int64 "selected_indices"
- *   scalars: n_features, n_targets, n_components, n_swarm, n_iterations,
- *            w, c1, c2, v_max, seed, best_rmse
- */
-C4A_API c4a_status_t c4a_pso_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t n_swarm,
-    int32_t n_iterations,
-    double w,
-    double c1,
-    double c2,
-    double v_max,
-    uint64_t seed,
-    c4a_method_result_t** out_result);
-
-/* VISSA-PLS (§49): Variable Iterative Space Shrinkage Approach.
- * Reference: Deng B., Yun Y., Liang Y. (2014) Anal. Chim. Acta 838:27-40.
- * Paper-only — no widely installable port.
- *
- * Weighted Binary Matrix Sampling iteratively shrinks the per-feature
- * inclusion probabilities by averaging the masks of the top-K best
- * submodels per iteration. floor_probability clamps w_j to
- * [floor, 1-floor] each iteration to preserve exploration.
- *
- * Defaults: n_iterations=20, n_submodels=100, ratio_kept=0.1,
- * threshold=0.5, floor_probability=0.01.
- *
- * Result keys:
- *   "final_probabilities"   (1 × p) — final w_j vector
- *   "inclusion_frequencies" (1 × p) — alias for final_probabilities
- *   "best_rmse_by_iteration"  (1 × n_iterations)
- *   "mean_rmse_by_iteration"  (1 × n_iterations)
- *   "top_k_per_iteration"   (n_iterations × p)
- *   int64 "selected_indices" — {j : w_j > threshold}
- *   scalars: n_features, n_targets, n_components, n_iterations,
- *            n_submodels, ratio_kept, threshold, floor_probability,
- *            seed, best_rmse
- */
-C4A_API c4a_status_t c4a_vissa_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t n_iterations,
-    int32_t n_submodels,
-    double ratio_kept,
-    double threshold,
-    double floor_probability,
-    uint64_t seed,
-    c4a_method_result_t** out_result);
-
-/* Shaving (Phase 5j). */
-C4A_API c4a_status_t c4a_shaving_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t n_steps,
-    int32_t min_features,
-    double shave_fraction,
-    c4a_method_result_t** out_result);
-
-/* BVE-PLS (Phase 5k). */
-C4A_API c4a_status_t c4a_bve_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t n_steps,
-    int32_t min_features,
-    c4a_method_result_t** out_result);
-
-/* T2-PLS (Phase 5l). `alpha_thresholds` is an array of `n_alphas` α values
- * in (0, 1). */
-C4A_API c4a_status_t c4a_t2_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    const double* alpha_thresholds,
-    int64_t n_alphas,
-    int32_t min_selected,
-    c4a_method_result_t** out_result);
-
-/* WVC-PLS (Phase 5m). */
-C4A_API c4a_status_t c4a_wvc_select(
-    c4a_context_t* ctx,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    int32_t n_components,
-    int32_t top_k,
-    int32_t normalize,
-    c4a_method_result_t** out_result);
-
-/* WVC-threshold (Phase 5r). */
-C4A_API c4a_status_t c4a_wvc_threshold_select(
-    c4a_context_t* ctx,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    int32_t n_components,
-    int32_t normalize,
-    double score_threshold,
-    double threshold_factor,
-    int32_t min_selected,
-    c4a_method_result_t** out_result);
-
-/* EMCUVE (Phase 5n). */
-C4A_API c4a_status_t c4a_emcuve_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t noise_features,
-    uint64_t noise_seed,
-    int32_t n_ensembles,
-    double vote_threshold,
-    c4a_method_result_t** out_result);
-
-/* Randomization-test selector (Phase 5o). */
-C4A_API c4a_status_t c4a_randomization_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    int32_t n_permutations,
-    uint64_t randomization_seed,
-    double alpha,
-    c4a_method_result_t** out_result);
-
-/* biPLS — backward iPLS (Phase 5p). */
-C4A_API c4a_status_t c4a_bipls_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t interval_width,
-    int32_t min_intervals,
-    c4a_method_result_t** out_result);
-
-/* siPLS — synergistic interval PLS (Phase 5q). */
-C4A_API c4a_status_t c4a_sipls_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t interval_width,
-    int32_t combination_size,
-    c4a_method_result_t** out_result);
-
-/* REP-PLS (Phase 5s). */
-C4A_API c4a_status_t c4a_rep_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t n_steps,
-    int32_t min_features,
-    int32_t remove_count,
-    c4a_method_result_t** out_result);
-
-/* IPW-PLS (Phase 5t). */
-C4A_API c4a_status_t c4a_ipw_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t n_iterations,
-    int32_t top_k,
-    double damping,
-    double weight_floor,
-    c4a_method_result_t** out_result);
-
-/* ST-PLS — score-threshold (Phase 5u). `thresholds` array of `n_thresholds`
- * positive doubles. */
-C4A_API c4a_status_t c4a_st_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    const double* thresholds,
-    int64_t n_thresholds,
-    int32_t min_selected,
-    c4a_method_result_t** out_result);
-
-/* ============================================================================
- * 19. ABI shims for §6 Phase 50+ numerical methods (ECR / IRIV / IRF)
- * ==========================================================================*/
-
-/* ECR — Elastic Component Regression (Phase 50). Liu 2009/2010.
- * `alpha` in [0, 1]: 0 = PCR-like, 1 = PLS-like. Values outside the
- * interval are silently clamped to [0, 1] (mirrors libPLS `ecr.m`).
- * cfg.n_components selects how many ECR components to extract. The
- * effective component count is clamped to min(n-1, p-1, cfg.n_components).
- * The result is shaped like the other "fit" methods:
- *   "coefficients"  (n_features x n_targets)
- *   "predictions"   (n_samples x n_targets)
- *   "x_mean", "y_mean", "x_scale", "y_scale"
- *   "weights_w"     (n_features x n_components)
- *   "loadings_p"    (n_features x n_components)
- *   "y_loadings"    (n_targets  x n_components)
- *   "wstar"         (n_features x n_components, so that X · wstar = T)
- *   "r2x"           (1 x n_components, % X variance per component)
- *   "r2y"           (1 x n_components, % Y variance per component)
- *   scalars: n_samples, n_features, n_targets, n_components, alpha, rmse
- */
-C4A_API c4a_status_t c4a_ecr_fit(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    double alpha,
-    c4a_method_result_t** out_result);
-
-/* IRIV — Iteratively Retains Informative Variables (Phase 51). Yun 2014.
- * Iterative backward variable selection driven by a Mann-Whitney U test
- * on permuted-replacement CV-RMSE values.
- *   cfg.n_components — capped per round to surviving feature count.
- *   max_rounds       — hard cap on IRIV iterations (the algorithm stops
- *                      earlier if no variables are flagged uninformative).
- *   seed             — splitmix64 seed driving the binary-mask generator.
- * The result contains:
- *   "remaining_per_round" (1 x (n_rounds+1)) — features alive after each round
- *   "removed_per_round"   (1 x n_rounds)
- *   int64 "selected_indices"
- *   scalars: n_features, n_targets, n_components, n_rounds,
- *            binary_matrix_rows, seed
- */
-C4A_API c4a_status_t c4a_iriv_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t max_rounds,
-    uint64_t seed,
-    c4a_method_result_t** out_result);
-
-/* IRF — Interval Random Frog (Phase 52). Yun 2013. Random Frog applied to
- * fixed-width sliding spectral intervals (window of `window_size` features
- * each). Final selection is the union of features under the top-K
- * inclusion-frequency intervals.
- *   window_size       — interval width (1 <= w <= n_features)
- *   initial_intervals — Q in the libPLS paper (initial subset size)
- *   top_k             — number of best intervals to union into the
- *                       returned feature set
- *   seed              — splitmix64 seed
- * Result contains:
- *   "probability"        (1 x n_intervals)
- *   "rmse_by_iteration"  (1 x n_iterations)
- *   "subset_sizes"       (1 x n_iterations)
- *   int64 "top_k_intervals"
- *   int64 "selected_indices"  (union of top-K intervals)
- *   scalars: n_features, n_targets, n_components, n_iterations, window_size,
- *            initial_intervals, n_intervals, top_k, seed, best_rmse
- */
-C4A_API c4a_status_t c4a_irf_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    const c4a_validation_plan_t* plan,
-    int32_t n_iterations,
-    int32_t window_size,
-    int32_t initial_intervals,
-    int32_t top_k,
-    uint64_t seed,
-    c4a_method_result_t** out_result);
-
-/* VIP_SPA — VIP-then-SPA hybrid variable selection (Phase 53).
- * Composition of Favilla 2013 VIP scoring (mask features by VIP > threshold)
- * and Araujo 2001 Successive Projections Algorithm (greedy collinearity-
- * minimising pick over the surviving subset). Matches auswahl.VIP_SPA's
- * LSX-UniWue algorithm; the SPA start is taken as argmax(VIP) within the
- * surviving subset (deterministic) rather than auswahl's seed enumeration,
- * and successive projections are computed on raw masked X to match
- * auswahl._spa._fit_spa (which L2-normalizes only the current direction).
- *   cfg.n_components — components used to fit PLS for VIP scoring
- *   vip_threshold    — drop any feature with VIP <= threshold (auswahl default 0.3)
- *   top_k            — upper bound on selected features; truncated to the
- *                      surviving-candidate count when that is smaller.
- * Result contains:
- *   "vip_scores"        (1 x n_features)
- *   "vip_mask"          (1 x n_features) as 0/1 doubles
- *   "selection_scores"  (1 x n_selected)
- *   int64 "selected_indices" (length n_selected)
- *   scalars: n_features, n_targets, n_components, top_k (requested),
- *            n_selected (actual count), n_candidates, vip_threshold
- */
-C4A_API c4a_status_t c4a_vip_spa_select(
-    c4a_context_t* ctx,
-    const c4a_config_t* cfg,
-    const c4a_matrix_view_t* X,
-    const c4a_matrix_view_t* Y,
-    double vip_threshold,
-    int32_t top_k,
-    c4a_method_result_t** out_result);
-
-/* ============================================================================
- * §-Phase 1 — PCG64 RNG
+ * 7. Phase 1 — PCG64 RNG
  * ============================================================================
  *
  * Pseudo-random number generator providing bit-exact parity against
@@ -2026,6 +355,8 @@ C4A_API c4a_status_t c4a_vip_spa_select(
  * `c4a_rng_pcg64_destroy` releases it (NULL-safe, no-op on NULL).
  * Status semantics follow the universal rules at the top of this header.
  */
+typedef struct c4a_rng_pcg64_state_t c4a_rng_pcg64_state_t;
+
 C4A_API c4a_status_t c4a_rng_pcg64_create(uint64_t seed,
                                            c4a_rng_pcg64_state_t** out);
 
@@ -2047,7 +378,7 @@ C4A_API c4a_status_t c4a_rng_pcg64_advance(c4a_rng_pcg64_state_t* rng,
                                             uint64_t delta);
 
 /* ============================================================================
- * §-Phase 2 — Stateless scatter / scaling preprocessings
+ * 8. Phase 2 — Stateless scatter / scaling preprocessings
  * ============================================================================
  *
  * Seven stateless row- or column-wise transforms with bit-exact NumPy
@@ -2152,8 +483,8 @@ typedef struct c4a_pp_log_handle_t c4a_pp_log_handle_t;
  * means calling `_transform` twice with different X values may yield
  * outputs that don't share a common baseline. For sklearn-style fit-once /
  * transform-many semantics, prefer `auto_offset = 0` with an explicit
- * `offset`. The proper `_fit/_transform` split lands in Phase 3 once the
- * stateful-operator ABI contract is finalised. */
+ * `offset`. A proper `_fit/_transform` split for LogTransform is deferred
+ * to Phase 4+ along with the rest of the scaling family. */
 C4A_API c4a_status_t c4a_pp_log_create(c4a_pp_log_handle_t** out,
                                         double base, double offset,
                                         int auto_offset, double min_value);
@@ -2162,12 +493,155 @@ C4A_API c4a_status_t c4a_pp_log_transform(const c4a_pp_log_handle_t* handle,
                                            c4a_matrix_view_t X,
                                            c4a_matrix_view_t out);
 
+/* ============================================================================
+ * 9. Phase 3 — Stateful scatter preprocessings
+ * ============================================================================
+ *
+ * Four stateful operators implementing the `_create / _fit / _transform /
+ * _destroy` ABI contract from §5. Each operator stores parameters learned
+ * from a training matrix and replays them on subsequent calls. Calling
+ * `_transform` (or `_inverse_transform`) before `_fit` returns
+ * C4A_ERR_NOT_FITTED.
+ *
+ * Reference: nirs4all 0.8.x operators in `operators/transforms/{nirs,
+ * signal,scalers}.py`.
+ */
+
+/* ---------- MSC (Multiplicative Scatter Correction) ---------------------- */
+/*
+ * Per-column scatter correction calibrated against the per-row mean of the
+ * training matrix. For each column j of the training X:
+ *   reference[i] = mean(X[i, :])              # length n_samples
+ *   (a[j], b[j]) = polyfit(reference, X[:, j], deg=1)
+ * Transform divides each column by its slope and subtracts the intercept:
+ *   X'[:, j] = (X[:, j] - b[j]) / a[j]
+ * Inverse:   X[:, j] = X'[:, j] * a[j] + b[j]
+ *
+ * Matches `nirs4all.operators.transforms.nirs.MultiplicativeScatterCorrection`
+ * with `scale=False` (no pre-centering by column means before computing the
+ * reference). The `scale=True` flavour is deferred — it adds a column-mean
+ * pre-centering step that we do not yet need for the supported pipelines.
+ *
+ * `_fit` requires `X.rows >= 2` (least-squares fit needs >= 2 points).
+ */
+typedef struct c4a_pp_msc_handle_t c4a_pp_msc_handle_t;
+C4A_API c4a_status_t c4a_pp_msc_create(c4a_pp_msc_handle_t** out);
+C4A_API void         c4a_pp_msc_destroy(c4a_pp_msc_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_msc_fit(c4a_pp_msc_handle_t* handle,
+                                     c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_msc_transform(const c4a_pp_msc_handle_t* handle,
+                                           c4a_matrix_view_t X,
+                                           c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_msc_inverse_transform(
+    const c4a_pp_msc_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_msc_is_fitted(const c4a_pp_msc_handle_t* handle,
+                                           int* out_fitted);
+
+/* ---------- EMSC (Extended Multiplicative Scatter Correction) ------------ */
+/*
+ * Per-sample scatter correction with polynomial wavelength terms. For each
+ * row x_i, solve the least-squares system
+ *     x_i ≈ c[0] * ref + sum_{d=1..degree} c[d] * wavelengths^d
+ * then subtract the polynomial portion and divide by the reference
+ * coefficient:
+ *     x'_i = (x_i - sum_{d=1..degree} c[d] * wavelengths^d) / c[0]
+ *
+ * `ref` is the per-column mean of the training matrix (length n_features).
+ * `wavelengths` is the integer index 0, 1, …, n_features - 1 (matching the
+ * nirs4all convention; rescaling the axis to [-1, 1] would change the
+ * polynomial coefficients but not the result after subtraction-and-divide).
+ *
+ * No inverse transform: the polynomial subtraction is per-row data-driven
+ * and discards the row-specific coefficients, so inversion would require
+ * re-storing them.
+ *
+ * `_create` requires `degree >= 1`.
+ * `_fit`    requires `X.rows >= 1` and `X.cols >= degree + 2` (basis
+ *           dimensionality + reference).
+ *
+ * Matches `nirs4all.operators.transforms.nirs.ExtendedMultiplicativeScatterCorrection`
+ * with `scale=False`.
+ */
+typedef struct c4a_pp_emsc_handle_t c4a_pp_emsc_handle_t;
+C4A_API c4a_status_t c4a_pp_emsc_create(c4a_pp_emsc_handle_t** out,
+                                         int32_t degree);
+C4A_API void         c4a_pp_emsc_destroy(c4a_pp_emsc_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_emsc_fit(c4a_pp_emsc_handle_t* handle,
+                                      c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_emsc_transform(const c4a_pp_emsc_handle_t* handle,
+                                            c4a_matrix_view_t X,
+                                            c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_emsc_is_fitted(const c4a_pp_emsc_handle_t* handle,
+                                            int* out_fitted);
+
+/* ---------- Baseline (column-mean centering) ----------------------------- */
+/*
+ * Per-column mean centering. `_fit` learns `mean[j] = mean(X[:, j])`.
+ * `_transform` writes `out[i, j] = X[i, j] - mean[j]`.
+ * `_inverse_transform` writes `out[i, j] = X[i, j] + mean[j]`.
+ *
+ * Matches `nirs4all.operators.transforms.signal.Baseline` — equivalent to
+ * `sklearn.preprocessing.StandardScaler(with_std=False)`. Note the class
+ * name is historical; the operator does NOT perform baseline correction in
+ * the spectroscopic sense (a polynomial baseline removal lives in Phase 5).
+ */
+typedef struct c4a_pp_baseline_handle_t c4a_pp_baseline_handle_t;
+C4A_API c4a_status_t c4a_pp_baseline_create(c4a_pp_baseline_handle_t** out);
+C4A_API void         c4a_pp_baseline_destroy(c4a_pp_baseline_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_baseline_fit(c4a_pp_baseline_handle_t* handle,
+                                          c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_baseline_transform(
+    const c4a_pp_baseline_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_baseline_inverse_transform(
+    const c4a_pp_baseline_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_baseline_is_fitted(
+    const c4a_pp_baseline_handle_t* handle,
+    int* out_fitted);
+
+/* ---------- Derivate (finite-difference derivative along axis=1) --------- */
+/*
+ * Finite-difference derivative of order `order` (>= 1) along the wavelength
+ * axis (axis=1). The output has shape (rows, cols - order); each derivative
+ * step shortens the column count by one. Division by `delta**order` yields
+ * the physical-units derivative when `delta` is the wavelength sample
+ * spacing.
+ *
+ *   out = np.diff(X, n=order, axis=1) / delta ** order
+ *
+ * `_fit` is a no-op (the operator carries no learned state) but is still
+ * required by the stateful contract; calling `_transform` before `_fit`
+ * returns C4A_ERR_NOT_FITTED. This lets bindings treat Derivate uniformly
+ * with the other stateful preprocessings without a special case.
+ *
+ * Use `c4a_pp_derivate_output_cols(order, input_cols)` to compute the
+ * output column count expected by `_transform`. The helper returns 0 when
+ * `order >= input_cols`.
+ */
+typedef struct c4a_pp_derivate_handle_t c4a_pp_derivate_handle_t;
+C4A_API c4a_status_t c4a_pp_derivate_create(c4a_pp_derivate_handle_t** out,
+                                             int32_t order, double delta);
+C4A_API void         c4a_pp_derivate_destroy(c4a_pp_derivate_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_derivate_fit(c4a_pp_derivate_handle_t* handle,
+                                          c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_derivate_transform(
+    const c4a_pp_derivate_handle_t* handle,
+    c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+C4A_API int64_t      c4a_pp_derivate_output_cols(int32_t order,
+                                                  int64_t input_cols);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
 
 /* ============================================================================
- * 16. ABI guard rails — fixed-size assertions on the C ABI shape
+ * 10. ABI guard rails — fixed-size assertions on the C ABI shape
  * ==========================================================================
  *
  * Compilers may shrink enums under non-default flags (e.g. -fshort-enums on
@@ -2187,19 +661,17 @@ C4A_API c4a_status_t c4a_pp_log_transform(const c4a_pp_log_handle_t* handle,
 #  define C4A_STATIC_ASSERT(cond, msg) typedef char c4a_sa_##__LINE__[(cond) ? 1 : -1]
 #endif
 
-C4A_STATIC_ASSERT(sizeof(c4a_status_t)        == 4, "c4a_status_t must be 4 bytes");
-C4A_STATIC_ASSERT(sizeof(c4a_backend_t)       == 4, "c4a_backend_t must be 4 bytes");
-C4A_STATIC_ASSERT(sizeof(c4a_dtype_t)         == 4, "c4a_dtype_t must be 4 bytes");
-C4A_STATIC_ASSERT(sizeof(c4a_algorithm_t)     == 4, "c4a_algorithm_t must be 4 bytes");
-C4A_STATIC_ASSERT(sizeof(c4a_solver_t)        == 4, "c4a_solver_t must be 4 bytes");
-C4A_STATIC_ASSERT(sizeof(c4a_deflation_t)     == 4, "c4a_deflation_t must be 4 bytes");
-C4A_STATIC_ASSERT(sizeof(c4a_operator_kind_t) == 4, "c4a_operator_kind_t must be 4 bytes");
-C4A_STATIC_ASSERT(sizeof(c4a_gating_mode_t)   == 4, "c4a_gating_mode_t must be 4 bytes");
-C4A_STATIC_ASSERT(sizeof(c4a_model_array_t)   == 4, "c4a_model_array_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_status_t)         == 4, "c4a_status_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_backend_t)        == 4, "c4a_backend_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_dtype_t)          == 4, "c4a_dtype_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_pp_lsnv_pad_mode_t) == 4,
+                  "c4a_pp_lsnv_pad_mode_t must be 4 bytes");
+C4A_STATIC_ASSERT(sizeof(c4a_pp_area_method_t) == 4,
+                  "c4a_pp_area_method_t must be 4 bytes");
 
 /* c4a_matrix_view_t must be 48 bytes on LP64 / LLP64. ILP32 is not
- * supported by Phase 0; on ILP32 platforms the layout would differ
- * (pointer is 4 bytes), which is why we exclude armeabi-v7a. */
+ * supported; on ILP32 platforms the layout would differ (pointer is 4 bytes),
+ * which is why we exclude armeabi-v7a. */
 #if defined(__LP64__) || defined(_WIN64)
 C4A_STATIC_ASSERT(sizeof(c4a_matrix_view_t) == 48,
                   "c4a_matrix_view_t layout must be 48 bytes on LP64/LLP64");

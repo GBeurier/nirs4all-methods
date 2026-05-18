@@ -28,9 +28,13 @@ add_library(chemometrics4all_core OBJECT
     core/preprocessing/scatter/local_snv.c
     core/preprocessing/scatter/robust_snv.c
     core/preprocessing/scatter/area_normalization.c
+    core/preprocessing/scatter/msc.c
+    core/preprocessing/scatter/emsc.c
     core/preprocessing/scaling/normalize.c
     core/preprocessing/scaling/simple_scale.c
-    core/preprocessing/scaling/log_transform.c)
+    core/preprocessing/scaling/log_transform.c
+    core/preprocessing/scaling/baseline.c
+    core/preprocessing/derivatives/derivate.c)
 target_include_directories(chemometrics4all_core
     PUBLIC  ${PROJECT_SOURCE_DIR}/cpp/include
             ${PROJECT_BINARY_DIR}/generated
