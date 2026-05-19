@@ -985,8 +985,8 @@ def main():
                               "CRAN-fast benchmark publication while slow "
                               "cells run later.")
     parser.add_argument("--flush-each-cell", action="store_true",
-                         help="Rewrite --out-csv after every completed cell "
-                              "so long sharded runs are resumable and "
+                         help="Rewrite --out-csv after each newly completed "
+                              "cell so long sharded runs are resumable and "
                               "observable before the final parity pass.")
     args = parser.parse_args()
     if args.registry_cells:
