@@ -301,9 +301,14 @@ p4a_status_t select_by_vissa(Context& ctx,
                   [&](std::size_t a, std::size_t b) {
                       return rmses[a] < rmses[b];
                   });
+        if (order.empty()) {
+            ctx.set_error("VISSA-PLS: no valid submodels available after sorting.");
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        const std::size_t best_pos = order.front();
 
         // --- Iteration metrics ----------------------------------------
-        const double iter_best = rmses[order[0]];
+        const double iter_best = rmses.at(best_pos);
         double iter_sum = 0.0;
         for (double r : rmses) iter_sum += r;
         out.best_rmse_by_iteration[t] = iter_best;
@@ -313,7 +318,7 @@ p4a_status_t select_by_vissa(Context& ctx,
         if (iter_best < best_rmse_global) {
             best_rmse_global = iter_best;
             best_indices_global.clear();
-            const auto& m_best = masks[order[0]];
+            const auto& m_best = masks.at(best_pos);
             for (std::size_t d = 0; d < p; ++d) {
                 if (m_best[d] != 0U) {
                     best_indices_global.push_back(static_cast<std::int64_t>(d));
