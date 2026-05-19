@@ -87,6 +87,49 @@ continuum_regression <- function(formula, data, ncomp = 2L, tau = 0.5,
                                 extra = list(tau = tau))
 }
 
+#' Recursive PLS — formula entry point.
+#'
+#' Recursive PLS stores in-sample predictions rather than a reusable
+#' coefficient model. `predict()` therefore accepts only the fitted
+#' training design.
+#'
+#' @inheritParams pls
+#' @param window_size Integer moving-window size.
+#' @export
+recursive_pls <- function(formula, data, ncomp = 2L, window_size = 50L,
+                           na.action = stats::na.omit) {
+    cl <- match.call()
+    d <- .pls4all_method_design(formula, data, na.action)
+    res <- recursive_pls_fit(d$X, d$y, n_components = ncomp,
+                              window_size = as.integer(window_size))
+    out <- list(
+        formula = formula,
+        call = cl,
+        terms = d$terms,
+        xlevels = d$xlevels,
+        response_name = d$response_name,
+        n_features_in = ncol(d$X),
+        ncomp = as.integer(ncomp),
+        method = "recursive_pls",
+        predictions = as.numeric(res$predictions),
+        window_size = as.integer(window_size)
+    )
+    class(out) <- c("pls4all_recursive_fit", "pls4all_fit_base")
+    out
+}
+
+#' @export
+predict.pls4all_recursive_fit <- function(object, newdata = NULL, ...) {
+    if (is.null(newdata)) {
+        stop("predict.recursive_pls requires the fitted training frame")
+    }
+    X <- .pls4all_method_newdata(object, newdata)
+    if (nrow(X) != length(object$predictions)) {
+        stop("recursive_pls is in-sample only; newdata row count differs")
+    }
+    object$predictions
+}
+
 #' Bagging PLS — formula entry point.
 #'
 #' @inheritParams pls

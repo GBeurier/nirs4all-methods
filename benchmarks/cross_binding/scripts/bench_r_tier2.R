@@ -73,6 +73,8 @@ fit_predict <- function(seed) {
         "missing_aware_nipals" = missing_aware_nipals(y ~ ., df, nc),
         "continuum_regression" = continuum_regression(y ~ ., df, nc,
                                                        params$tau %||% 0.5),
+        "recursive_pls" = recursive_pls(y ~ ., df, nc,
+                                          as.integer(params$window_size %||% 50L)),
         "bagging_pls" = bagging_pls(y ~ ., df, nc,
                                       as.integer(params$n_estimators %||% 50L),
                                       as.integer(params$seed %||% 0L)),
