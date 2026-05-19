@@ -34,10 +34,13 @@
       --amber:          #B86E0F;
       --crimson:        #B83A37;
       --indigo:         #2E5BB8;
-      --score-best:     #1D4ED8;
-      --score-close:    #15803D;
-      --score-mid:      #B45309;
-      --score-slow:     #B91C1C;
+      --score-row-best:      #8B5CF6;
+      --score-row-best-soft: rgba(139, 92, 246, 0.15);
+      --score-lang-best:     #2563EB;
+      --score-close:         #15803D;
+      --score-mid:           #B45309;
+      --score-slow:          #C2410C;
+      --score-bad:           #B91C1C;
 
       /* per-language accent colors — darker variants tuned for light bg */
       --lang-cpp:  #0E8C8F;
@@ -108,10 +111,13 @@
       --amber:          #F2B85C;
       --crimson:        #E96565;
       --indigo:         #7DA8F7;
-      --score-best:     #8AB4FF;
-      --score-close:    #7CE5A2;
-      --score-mid:      #F2B85C;
-      --score-slow:     #FF8A8A;
+      --score-row-best:      #C4B5FD;
+      --score-row-best-soft: rgba(196, 181, 253, 0.16);
+      --score-lang-best:     #93C5FD;
+      --score-close:         #7CE5A2;
+      --score-mid:           #FDBA74;
+      --score-slow:          #FB923C;
+      --score-bad:           #F87171;
 
       --lang-cpp:  #6DD3D6;
       --lang-py:   #F2C46B;
@@ -524,18 +530,9 @@
     table.bench tr.lang-band th.lang-java  { color: var(--lang-java);  border-bottom-color: var(--lang-java);  background: linear-gradient(180deg, var(--lang-java-soft)  0%, var(--ink-2) 100%); }
     table.bench tr.lang-band th.lang-other { color: var(--lang-other); border-bottom-color: var(--lang-other); background: linear-gradient(180deg, var(--lang-other-soft) 0%, var(--ink-2) 100%); }
 
-    /* per-language best-cell marker — subtle text-tint only, no glow */
-    .cell-lang-best .cell-value { font-weight: 600; }
-    .cell-lang-best.lang-cpp   .cell-value { color: var(--lang-cpp); }
-    .cell-lang-best.lang-py    .cell-value { color: var(--lang-py);  }
-    .cell-lang-best.lang-r     .cell-value { color: var(--lang-r);   }
-    .cell-lang-best.lang-m     .cell-value { color: var(--lang-m);   }
-    .cell-lang-best.lang-jl    .cell-value { color: var(--lang-jl);  }
-    .cell-lang-best.lang-rs    .cell-value { color: var(--lang-rs);  }
-    .cell-lang-best.lang-go    .cell-value { color: var(--lang-go);  }
-    .cell-lang-best.lang-js    .cell-value { color: var(--lang-js);  }
-    .cell-lang-best.lang-java  .cell-value { color: var(--lang-java); }
-    .cell-lang-best.lang-other .cell-value { color: var(--lang-other); }
+    /* Per-language best-cell marker: weight only. Numeric color is reserved
+       for the timing scale (row-best / language-best / relative buckets). */
+    .cell-lang-best .cell-value { font-weight: 650; }
 
     /* Language partitions: only show a thicker separator on the FIRST
        column of each language group. No per-cell tinted borders. */
@@ -666,7 +663,7 @@
       border-right: 1px solid var(--line);
       color: var(--fg-0);
       white-space: nowrap;
-      text-align: right;
+      text-align: center;
       font-variant-numeric: tabular-nums;
       transition: background 80ms;
     }
@@ -762,12 +759,7 @@
       font-weight: 600;
     }
     .cell-fastest-bg {
-      background: var(--phosphor-soft) !important;
-      box-shadow: inset 0 0 0 1px var(--phosphor-soft);
-    }
-    body.theme-dark .cell-fastest-bg {
-      background: rgba(124, 229, 162, 0.13) !important;
-      box-shadow: inset 0 0 0 1px rgba(124, 229, 162, 0.18);
+      background: var(--score-row-best-soft) !important;
     }
     .cell-empty { color: var(--fg-3); text-align: center; font-family: var(--mono); }
 
@@ -844,15 +836,20 @@
       position: relative;
     }
     .reference-mark {
-      display: inline-block;
-      margin-left: 3px;
-      min-width: 10px;
-      text-align: center;
-      color: var(--amber);
-      font-family: var(--mono);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      margin-left: 4px;
+      border-radius: 3px;
+      background: var(--amber);
+      color: #111827;
+      font-family: var(--sans);
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 800;
       line-height: 1;
+      vertical-align: -2px;
     }
     /* Compact parity marker. C++ and external cells show reference parity;
        internal binding cells show binding parity. */
@@ -883,14 +880,18 @@
     .speed-faster { color: var(--phosphor); text-shadow: 0 0 6px var(--phosphor-glow); font-weight: 600; }
     .speed-equal  { color: var(--fg-1); }
     .speed-slower { color: var(--amber); }
-    .score-best  { color: var(--score-best);  font-weight: 700; }
-    .score-close { color: var(--score-close); font-weight: 600; }
-    .score-mid   { color: var(--score-mid);   font-weight: 600; }
-    .score-slow  { color: var(--score-slow);  font-weight: 600; }
-    .cell-value.score-best  { color: var(--score-best);  font-weight: 700; }
-    .cell-value.score-close { color: var(--score-close); font-weight: 600; }
-    .cell-value.score-mid   { color: var(--score-mid);   font-weight: 600; }
-    .cell-value.score-slow  { color: var(--score-slow);  font-weight: 600; }
+    .score-row-best  { color: var(--score-row-best);  font-weight: 750; }
+    .score-lang-best { color: var(--score-lang-best); font-weight: 700; }
+    .score-close     { color: var(--score-close);     font-weight: 650; }
+    .score-mid       { color: var(--score-mid);       font-weight: 650; }
+    .score-slow      { color: var(--score-slow);      font-weight: 650; }
+    .score-bad       { color: var(--score-bad);       font-weight: 650; }
+    .cell-value.score-row-best  { color: var(--score-row-best);  font-weight: 750; }
+    .cell-value.score-lang-best { color: var(--score-lang-best); font-weight: 700; }
+    .cell-value.score-close     { color: var(--score-close);     font-weight: 650; }
+    .cell-value.score-mid       { color: var(--score-mid);       font-weight: 650; }
+    .cell-value.score-slow      { color: var(--score-slow);      font-weight: 650; }
+    .cell-value.score-bad       { color: var(--score-bad);       font-weight: 650; }
 
     /* density: compact — slightly tighter sticky widths */
     body.density-compact {
@@ -1324,7 +1325,7 @@
       <span class="chip active amber" data-parity="drift"><span class="ico p-drift">≈</span>drift</span>
       <span class="chip active crimson" data-parity="divergent"><span class="ico p-divergent">✗</span>divergent</span>
       <span class="chip active crimson" data-parity="error"><span class="ico p-error">!</span>error</span>
-      <span class="chip active gray" data-parity="not_available"><span class="ico p-not_available">∅</span>not available</span>
+      <span class="chip active gray" data-parity="not_available"><span class="ico p-not_available">-</span>not available</span>
     </div>
     <div class="control">
       <span class="control-label">search</span>
@@ -1367,10 +1368,10 @@
     <span class="legend-item"><span class="ico p-drift">≈</span> drift (≤ 1e-3)</span>
     <span class="legend-item"><span class="ico p-divergent">✗</span> divergent (&gt; 1e-3)</span>
     <span class="legend-item"><span class="ico p-error">!</span> error</span>
-    <span class="legend-item"><span class="ico p-not_available">∅</span> not available in lib</span>
-    <span class="legend-item"><span class="cell-fastest cell-fastest-bg" style="font-family:var(--mono);padding:1px 6px;border-radius:2px">42.5</span> fastest overall</span>
-    <span class="legend-item"><span class="reference-mark" style="margin-left:0">∟</span> canonical reference</span>
-    <span class="legend-item"><span class="score-best">best</span> · <span class="score-close">&lt;10%</span> · <span class="score-mid">&lt;50%</span> · <span class="score-slow">rest</span></span>
+    <span class="legend-item"><span class="ico p-not_available">-</span> not available in lib</span>
+    <span class="legend-item"><span class="cell-fastest cell-fastest-bg score-row-best" style="font-family:var(--mono);padding:1px 6px;border-radius:2px">42.5</span> fastest row</span>
+    <span class="legend-item"><span class="reference-mark" style="margin-left:0">◆</span> canonical reference</span>
+    <span class="legend-item"><span class="score-row-best">row best</span> · <span class="score-lang-best">language best</span> · <span class="score-close">≤15%</span> · <span class="score-mid">≤50%</span> · <span class="score-slow">≤100%</span> · <span class="score-bad">rest</span></span>
     <span class="legend-item" style="font-size:10px;color:var(--fg-2)">cell <code>X.X ✓✓</code>: gate 1 (binding ≡ cpp) · gate 2 (cpp ≈ external ref)</span>
     <span class="legend-item" style="margin-left:auto;color:var(--fg-2);font-size:10px">click header to sort · ⇧+click for descending</span>
   </div>
@@ -1412,9 +1413,9 @@
       <li><span class="p-drift">≈</span> <b>drift</b> — ≤ 1e-3 and not exact</li>
       <li><span class="p-divergent">✗</span> <b>divergent</b> — &gt; 1e-3</li>
       <li><span class="p-error">!</span> <b>error</b> — dependency, runtime, crash or exception</li>
-      <li><span class="p-not_available">∅</span> <b>not available in lib</b> — the library does not expose that algorithm</li>
+      <li><span class="p-not_available">-</span> <b>not available in lib</b> — the library does not expose that algorithm</li>
     </ul>
-    <p><b>Bold</b> + phosphor highlight = fastest timed cell overall. Text color is by gap to the row winner: blue winner, green &lt;10%, orange &lt;50%, red otherwise.</p>
+    <p><b>Violet</b> = fastest row cell. Blue = fastest within language; green/orange/red compare each cell time to that language winner.</p>
   </div>
 </section>
 
@@ -1569,14 +1570,14 @@ const PARITY_ICON = {
   divergent: '✗',
   error: '!',
   not_run: '·',
-  not_available: '∅',
+  not_available: '-',
   ok: '✓',
   warn: '≈',
   fail: '✗',
   timeout: '!',
-  na: '∅',
+  na: '-',
 };
-const REFERENCE_ICON = '∟';
+const REFERENCE_ICON = '◆';
 
 function sizeKey(n, p) { return `${n}×${p}`; }
 function algoDisplay(algo) { return ALGO_DISPLAY[algo] || algo; }
@@ -1589,8 +1590,12 @@ function escAttr(s) {
   }[ch]));
 }
 
+function notAvailableCell(lcls) {
+  return `<td class="cell-empty ${lcls}" title="not available in lib"><span class="p-not_available">-</span></td>`;
+}
+
 function fmtSpeedup(ratio) {
-  if (!Number.isFinite(ratio)) return '—';
+  if (!Number.isFinite(ratio)) return '-';
   if (ratio >= 100)  return `${ratio.toFixed(0)}×`;
   if (ratio >= 10)   return `${ratio.toFixed(1)}×`;
   if (ratio >= 1)    return `${ratio.toFixed(2)}×`;
@@ -1632,10 +1637,10 @@ function effectiveParity(cell, meta) {
 
 function cellPasses(cell, meta) {
   // Parity chips are a pure CELL MASK: cells with an excluded verdict
-  // render as `—`, but rows are NEVER pruned solely because their
+  // render as not available, but rows are NEVER pruned solely because their
   // cells got masked. This avoids the surprising "filter fail and your
   // ok rows also vanish" behaviour.
-  if (!cell) return true;        // empty cells render as — always
+  if (!cell) return true;        // empty cells render as not available always
   return state.parity.has(effectiveParity(cell, meta));
 }
 
@@ -1830,20 +1835,21 @@ function fastestColumn(row, cols) {
   return best ? best.id : null;
 }
 
-function scoreClass(ms, bestMs) {
-  if (!Number.isFinite(ms) || !Number.isFinite(bestMs) || bestMs <= 0) return '';
-  const ratio = ms / bestMs;
-  if (ratio <= 1.000000001) return 'score-best';
-  if (ratio < 1.10) return 'score-close';
-  if (ratio < 1.50) return 'score-mid';
-  return 'score-slow';
+function scoreClass(id, ms, rowBestId, langBest) {
+  if (!Number.isFinite(ms)) return '';
+  if (id === rowBestId) return 'score-row-best';
+  if (!langBest || !Number.isFinite(langBest.ms) || langBest.ms <= 0) return '';
+  const ratio = ms / langBest.ms;
+  if (ratio <= 1.000000001) return 'score-lang-best';
+  if (ratio <= 1.15) return 'score-close';
+  if (ratio <= 1.50) return 'score-mid';
+  if (ratio <= 2.00) return 'score-slow';
+  return 'score-bad';
 }
 
-// Per-language: returns Map<langSlug, fastestColId>. Only includes
-// languages where 2+ ✓ cells exist (so the marker is informative —
-// a solo cell trivially "wins" its language).
+// Per-language: returns Map<langSlug, {id, ms}> so every language gets
+// its own timing baseline, independent from the row-wide winner.
 function fastestPerLanguage(row, cols, colsById) {
-  const counts = {};
   const winners = {};
   for (const id of cols) {
     if (id === '__reference') continue;
@@ -1854,14 +1860,9 @@ function fastestPerLanguage(row, cols, colsById) {
     if (!meta) continue;
     const slug = colLangSlug(meta);
     if (!slug) continue;
-    counts[slug] = (counts[slug] || 0) + 1;
     if (!winners[slug] || c.ms < winners[slug].ms) winners[slug] = { id, ms: c.ms };
   }
-  const out = {};
-  for (const slug in winners) {
-    if (counts[slug] >= 2) out[slug] = winners[slug].id;
-  }
-  return out;
+  return winners;
 }
 
 function rowHasVisibleCell(_row, _cols) {
@@ -1869,7 +1870,7 @@ function rowHasVisibleCell(_row, _cols) {
   // filters (algo, family, lang, size, threads, search). Hiding a row
   // because all its cells got cell-masked by parity / column visibility
   // surprised users and obscured "this algo is unimplemented in your
-  // current slice" — keep the row, render the empty cells as `—`.
+  // current slice" — keep the row, render the empty cells as not available.
   return true;
 }
 
@@ -2214,35 +2215,37 @@ function renderTable() {
         // render that and short-circuit the regular timing path.
         if (isRefCol) {
           if (!c) {
-            tr += `<td class="cell-empty ${lcls}">—</td>`;
+            tr += notAvailableCell(lcls);
             continue;
           }
-          const refName = c.ref_of || '—';
+          const refName = c.ref_of || '-';
           const refIcon = `<span class="reference-mark" title="canonical reference">${REFERENCE_ICON}</span>`;
           const refKind = c.reference_kind ? ` <span class="col-meta" style="font-size:9px">(${c.reference_kind})</span>` : '';
           tr += `<td class="${lcls}" title="canonical reference for ${row.algo}: ${refName}"><span class="cell-value">${refName}</span>${refIcon}${refKind}</td>`;
           continue;
         }
         if (!c || !cellPasses(c, meta)) {
-          tr += `<td class="cell-empty ${lcls}">—</td>`;
+          tr += notAvailableCell(lcls);
           continue;
         }
         if (!c.ok || !Number.isFinite(c.ms)) {
           const title = c.reason ? ` title="${escAttr(c.reason)}"` : '';
           const verdict = effectiveParity(c, meta);
-          tr += `<td class="${lcls}"${title}><span class="p-${verdict}">${PARITY_ICON[verdict] || '—'}</span></td>`;
+          tr += `<td class="${lcls}"${title}><span class="p-${verdict}">${PARITY_ICON[verdict] || '-'}</span></td>`;
           continue;
         }
         // build value (wrapped in .cell-value so per-language tint can target text only)
         let display;
         const fastCls = (canHighlight && id === fastestId) ? 'cell-fastest' : '';
-        const scoreCls = scoreClass(c.ms, fastestMs);
+        const langSlug = meta ? colLangSlug(meta) : '';
+        const langWinner = langSlug ? langWinners[langSlug] : null;
+        const scoreCls = scoreClass(id, c.ms, fastestId, langWinner);
         if (baselineId && baseMs !== null) {
           const r = id === baselineId ? 1 : baseMs / c.ms;
           const cls = r > 1.03 ? 'speed-faster' : r < 0.97 ? 'speed-slower' : 'speed-equal';
           display = `<span class="cell-value ${cls} ${fastCls} ${scoreCls}">${fmtSpeedup(r)}</span>`;
         } else if (baselineId) {
-          display = `<span class="cell-value speed-equal ${fastCls}">—</span>`;
+          display = `<span class="cell-value speed-equal ${fastCls}">-</span>`;
         } else {
           display = `<span class="cell-value ${fastCls} ${scoreCls}">${densifyFmt(c.fmt)}</span>`;
         }
@@ -2257,17 +2260,14 @@ function renderTable() {
           ? `<span class="parity p-${markerParity}" title="${escAttr(markerTitle)}">${PARITY_ICON[markerParity] || ''}</span>`
           : '';
         // Assemble cell classes.
-        // - Row-overall fastest gets the phosphor glow background.
-        // - Per-language fastest gets a subtle text-color tint via
-        //   .cell-value styling. The two indicators stack cleanly: if a
-        //   cell wins its row AND its language, it shows the phosphor
-        //   glow (overall) AND its text leans toward the language hue.
+        // - Row-overall fastest gets the violet row-best background.
+        // - Per-language fastest and relative buckets are encoded in
+        //   the value text colour, based on each language's own best time.
         // - The cell that IS the row's canonical external reference
-        //   gets the right-angle marker instead of a parity glyph.
+        //   gets the diamond marker instead of a parity glyph.
         const tdCls = [lcls];
         if (canHighlight && id === fastestId) tdCls.push('cell-fastest-bg');
-        const langSlug = meta ? colLangSlug(meta) : '';
-        if (canHighlight && langSlug && langWinners[langSlug] === id) {
+        if (canHighlight && langWinner && langWinner.id === id) {
           tdCls.push('cell-lang-best', `lang-${langSlug}`);
         }
         if (c.is_canonical_reference) tdCls.push('cell-canonical-ref');

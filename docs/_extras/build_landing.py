@@ -593,7 +593,7 @@ def build_payload(results_dir: Path) -> dict:
         present.add(cid)
         backends_per_cid[cid].add(r["backend"])
 
-    # Registry-declared external reference libraries. Infer the language
+    # Externally declared benchmark libraries. Infer the language
     # from the slug prefix (`ref.python_*`, `ref.r_*`, `ref.matlab_*`,
     # `ref.julia_*`, …) so the language band groups them correctly.
     REF_LANG_PREFIX = {
@@ -694,8 +694,8 @@ def build_payload(results_dir: Path) -> dict:
                 break
         raw_cols.append({
             "id": cid, "label": cid, "short": cid,
-            "group": group, "tier": "registry reference", "lang": lang,
-            "what": f"Registry-declared external reference library ({lang}).",
+            "group": group, "tier": "external", "lang": lang,
+            "what": f"External library benchmark backend ({lang}).",
             "build": "", "kind": "external",
         })
 
