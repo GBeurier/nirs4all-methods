@@ -46,43 +46,116 @@ function mdl = fit(algo, X, y, varargin)
 %   PredictionKey      MethodResult field returned by generic predict()
 if isstring(algo), algo = char(algo); end
 
-p = inputParser();
-p.addParameter("NumComponents",         2,  @(x) isscalar(x) && x > 0);
-p.addParameter("Lambda",                0.05, @isscalar);
-p.addParameter("Gamma",                 0.5,  @isscalar);
-p.addParameter("Alpha",                 0.5,  @isscalar);
-p.addParameter("DiLambda",              1.0,  @isscalar);
-p.addParameter("Tau",                   0.5,  @isscalar);
-p.addParameter("HuberK",                1.345, @isscalar);
-p.addParameter("MaxIrlsIter",           20,   @isscalar);
-p.addParameter("WindowSize",            50,   @isscalar);
-p.addParameter("ModeJ",                 0,    @isscalar);
-p.addParameter("ModeK",                 0,    @isscalar);
-p.addParameter("NEstimators",           50,   @isscalar);
-p.addParameter("LearningRate",          0.1,  @isscalar);
-p.addParameter("FeaturesPerSubspace",   10,   @isscalar);
-p.addParameter("Seed",                  0,    @isscalar);
-p.addParameter("KernelType",            1,    @isscalar);
-p.addParameter("Coef0",                 1.0,  @isscalar);
-p.addParameter("Degree",                3,    @isscalar);
-p.addParameter("NPredictive",           2,    @isscalar);
-p.addParameter("NXOrthogonal",          1,    @isscalar);
-p.addParameter("NYOrthogonal",          1,    @isscalar);
-p.addParameter("Weights",               [],   @(x) isnumeric(x) && isvector(x));
-p.addParameter("XTarget",               [],   @(x) isnumeric(x) && ismatrix(x));
-p.addParameter("BlockSizes",            [],   @(x) isnumeric(x) && isvector(x));
-p.addParameter("Params",                struct(), @isstruct);
-p.addParameter("PredictionKey",         "predictions", ...
-    @(x) ischar(x) || (isstring(x) && isscalar(x)));
-p.addParameter("Family",                "gaussian", ...
-    @(x) any(strcmpi(string(x), ["gaussian", "poisson"])));
-p.KeepUnmatched = false;
-p.parse(varargin{:});
-k = p.Results.NumComponents;
+opts = struct( ...
+    "NumComponents",       2, ...
+    "Lambda",              0.05, ...
+    "Gamma",               0.5, ...
+    "Alpha",               0.5, ...
+    "DiLambda",            1.0, ...
+    "Tau",                 0.5, ...
+    "HuberK",              1.345, ...
+    "MaxIrlsIter",         20, ...
+    "WindowSize",          50, ...
+    "ModeJ",               0, ...
+    "ModeK",               0, ...
+    "NEstimators",         50, ...
+    "LearningRate",        0.1, ...
+    "FeaturesPerSubspace", 10, ...
+    "Seed",                0, ...
+    "KernelType",          1, ...
+    "Coef0",               1.0, ...
+    "Degree",              3, ...
+    "NPredictive",         2, ...
+    "NXOrthogonal",        1, ...
+    "NYOrthogonal",        1, ...
+    "Weights",             [], ...
+    "XTarget",             [], ...
+    "BlockSizes",          [], ...
+    "Params",              struct(), ...
+    "PredictionKey",       "predictions", ...
+    "Family",              "gaussian");
+
+if mod(numel(varargin), 2) ~= 0
+    error("pls4all:nargin", "Name-value arguments must come in pairs");
+end
+for i = 1:2:numel(varargin)
+    name = varargin{i};
+    if isstring(name) && isscalar(name), name = char(name); end
+    if ~ischar(name)
+        error("pls4all:nargin", "Parameter names must be char or string scalars");
+    end
+    value = varargin{i + 1};
+    switch lower(name)
+    case "numcomponents"
+        opts.NumComponents = value;
+    case "lambda"
+        opts.Lambda = value;
+    case "gamma"
+        opts.Gamma = value;
+    case "alpha"
+        opts.Alpha = value;
+    case "dilambda"
+        opts.DiLambda = value;
+    case "tau"
+        opts.Tau = value;
+    case "huberk"
+        opts.HuberK = value;
+    case "maxirlsiter"
+        opts.MaxIrlsIter = value;
+    case "windowsize"
+        opts.WindowSize = value;
+    case "modej"
+        opts.ModeJ = value;
+    case "modek"
+        opts.ModeK = value;
+    case "nestimators"
+        opts.NEstimators = value;
+    case "learningrate"
+        opts.LearningRate = value;
+    case "featurespersubspace"
+        opts.FeaturesPerSubspace = value;
+    case "seed"
+        opts.Seed = value;
+    case "kerneltype"
+        opts.KernelType = value;
+    case "coef0"
+        opts.Coef0 = value;
+    case "degree"
+        opts.Degree = value;
+    case "npredictive"
+        opts.NPredictive = value;
+    case "nxorthogonal"
+        opts.NXOrthogonal = value;
+    case "nyorthogonal"
+        opts.NYOrthogonal = value;
+    case "weights"
+        opts.Weights = value;
+    case "xtarget"
+        opts.XTarget = value;
+    case "blocksizes"
+        opts.BlockSizes = value;
+    case "params"
+        opts.Params = value;
+    case "predictionkey"
+        opts.PredictionKey = value;
+    case "family"
+        opts.Family = value;
+    otherwise
+        error("pls4all:unknownParameter", "Unknown parameter: %s", name);
+    end
+end
+
+if isstring(opts.PredictionKey), opts.PredictionKey = char(opts.PredictionKey); end
+if isstring(opts.Family), opts.Family = char(opts.Family); end
+if ~any(strcmpi(char(opts.Family), {"gaussian", "poisson"}))
+    error("pls4all:nargin", "Family must be 'gaussian' or 'poisson'");
+end
+
+k = opts.NumComponents;
 algo_l = lower(algo);
 generic_algo = algo_l;
-generic_params = p.Results.Params;
-prediction_key = char(p.Results.PredictionKey);
+generic_params = opts.Params;
+prediction_key = char(opts.PredictionKey);
 
 if strcmp(algo_l, "kernel_pls_rbf")
     algo_l = "kernel_pls";
@@ -123,59 +196,59 @@ case "pcr"
 case {"opls", "opls_nipals"}
     mdl = pls4all.OplsRegression(X, y, k);
 case "sparse_simpls"
-    mdl = pls4all.SparsePlsRegression(X, y, k, p.Results.Lambda);
+    mdl = pls4all.SparsePlsRegression(X, y, k, opts.Lambda);
 case "cppls"
-    mdl = pls4all.CpplsRegression(X, y, k, p.Results.Gamma);
+    mdl = pls4all.CpplsRegression(X, y, k, opts.Gamma);
 case "ecr"
-    mdl = pls4all.EcrRegression(X, y, k, p.Results.Alpha);
+    mdl = pls4all.EcrRegression(X, y, k, opts.Alpha);
 case "di_pls"
-    if isempty(p.Results.XTarget)
+    if isempty(opts.XTarget)
         error("pls4all:nargin", "di_pls requires XTarget");
     end
     mdl = pls4all.DiPlsRegression(X, y, k, ...
-        p.Results.XTarget, p.Results.DiLambda);
+        opts.XTarget, opts.DiLambda);
 case "weighted_pls"
-    if isempty(p.Results.Weights)
+    if isempty(opts.Weights)
         error("pls4all:nargin", "weighted_pls requires Weights");
     end
-    mdl = pls4all.WeightedPlsRegression(X, y, k, p.Results.Weights);
+    mdl = pls4all.WeightedPlsRegression(X, y, k, opts.Weights);
 case "robust_pls"
     mdl = pls4all.RobustPlsRegression(X, y, k, ...
-        p.Results.HuberK, p.Results.MaxIrlsIter);
+        opts.HuberK, opts.MaxIrlsIter);
 case "ridge_pls"
-    mdl = pls4all.RidgePlsRegression(X, y, k, p.Results.Lambda);
+    mdl = pls4all.RidgePlsRegression(X, y, k, opts.Lambda);
 case "continuum_regression"
-    mdl = pls4all.ContinuumRegression(X, y, k, p.Results.Tau);
+    mdl = pls4all.ContinuumRegression(X, y, k, opts.Tau);
 case "recursive_pls"
-    mdl = pls4all.RecursivePlsRegression(X, y, k, p.Results.WindowSize);
+    mdl = pls4all.RecursivePlsRegression(X, y, k, opts.WindowSize);
 case "n_pls"
-    if p.Results.ModeJ <= 0 || p.Results.ModeK <= 0
+    if opts.ModeJ <= 0 || opts.ModeK <= 0
         error("pls4all:nargin", "n_pls requires ModeJ and ModeK > 0");
     end
-    mdl = pls4all.NPlsRegression(X, y, k, p.Results.ModeJ, p.Results.ModeK);
+    mdl = pls4all.NPlsRegression(X, y, k, opts.ModeJ, opts.ModeK);
 case "kernel_pls"
     mdl = pls4all.KernelPlsRegression(X, y, k, ...
-        p.Results.KernelType, p.Results.Gamma, p.Results.Coef0, p.Results.Degree);
+        opts.KernelType, opts.Gamma, opts.Coef0, opts.Degree);
 case "o2pls"
-    mdl = pls4all.O2plsRegression(X, y, p.Results.NPredictive, ...
-        p.Results.NXOrthogonal, p.Results.NYOrthogonal);
+    mdl = pls4all.O2plsRegression(X, y, opts.NPredictive, ...
+        opts.NXOrthogonal, opts.NYOrthogonal);
 case "mb_pls"
-    if isempty(p.Results.BlockSizes)
+    if isempty(opts.BlockSizes)
         error("pls4all:nargin", "mb_pls requires BlockSizes");
     end
-    mdl = pls4all.MbPlsRegression(X, y, k, p.Results.BlockSizes);
+    mdl = pls4all.MbPlsRegression(X, y, k, opts.BlockSizes);
 case "pls_glm"
-    mdl = pls4all.GlmRegression(X, y, k, p.Results.Family);
+    mdl = pls4all.GlmRegression(X, y, k, opts.Family);
 case "mir_pls"
     mdl = pls4all.MirRegression(X, y, k);
 case "missing_aware_nipals"
     mdl = pls4all.MissingAwareNipalsRegression(X, y, k);
 case "bagging_pls"
     mdl = pls4all.BaggingPlsRegression(X, y, k, ...
-        p.Results.NEstimators, p.Results.Seed);
+        opts.NEstimators, opts.Seed);
 case "boosting_pls"
     mdl = pls4all.BoostingPlsRegression(X, y, k, ...
-        p.Results.NEstimators, p.Results.LearningRate);
+        opts.NEstimators, opts.LearningRate);
 otherwise
     mdl = pls4all.GenericMethodResult(generic_algo, X, y, k, ...
                                       generic_params, prediction_key);

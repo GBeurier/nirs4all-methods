@@ -217,10 +217,11 @@ REF_DISPLAY_OVERRIDE = {
     "ref_python_auswahl":           "auswahl",
     "ref_python_pyswarms":          "pyswarms",
     "ref_python_onpls":             "onpls",
-    "ref_python_nirs4all_operators_models_sklearn_aom_pls": "nirs4all.aom_pls",
-    "ref_python_nirs4all_operators_models_sklearn_mbpls":   "nirs4all.mbpls",
-    "ref_python_nirs4all_operators_models_sklearn_lwpls":   "nirs4all.lwpls",
-    "ref_python_nirs4all_bench_aom_v0_aompls":              "nirs4all.aom_v0",
+    "ref_python_nirs4all":                                  "nirs4all",
+    "ref_python_nirs4all_operators_models_sklearn_aom_pls": "nirs4all",
+    "ref_python_nirs4all_operators_models_sklearn_mbpls":   "nirs4all",
+    "ref_python_nirs4all_operators_models_sklearn_lwpls":   "nirs4all",
+    "ref_python_nirs4all_bench_aom_v0_aompls":              "nirs4all",
     "ref_r_spls":                   "spls",
     "ref_r_chemometrics":           "chemometrics",
     "ref_r_jico":                   "JICO",
@@ -508,15 +509,18 @@ def build_payload(results_dir: Path) -> dict:
             return ""
         return str(versions.get("timing_schema") or "")
 
+    def _schema_rank(schema: str) -> int:
+        return {"warmup-v3": 2, "warmup-v2": 1}.get(schema, 0)
+
     def _row_rank(row: dict) -> tuple:
         return (
-            1 if _timing_schema(row) == "warmup-v2" else 0,
+            _schema_rank(_timing_schema(row)),
             float(row.get("_source_mtime") or 0.0),
             int(row.get("_source_index") or 0),
         )
 
     # Dedupe: same (algo, backend, build, n, p, threads). Prefer the current
-    # warmup-v2 timing schema over legacy cold-run CSV rows, then newest file.
+    # warmup timing schema over legacy cold-run CSV rows, then newest file.
     seen: dict[tuple, dict] = {}
     for r in rows_in:
         if not r.get("algorithm"):
@@ -714,7 +718,8 @@ def build_payload(results_dir: Path) -> dict:
         # renders both icons per cell.
         cell = {"parity": verdict, "reference_parity": ref_verdict,
                 "binding_parity": verdict, "ok": ok,
-                "_source_is_ref": r["backend"].startswith("ref_")}
+                "_source_is_ref": r["backend"].startswith("ref_"),
+                "_rank": _row_rank(r)}
         if ms is not None and ms == ms:   # not NaN
             cell["ms"] = round(ms, 3)
             cell["fmt"] = fmt_ms(r["median_ms"])
@@ -753,6 +758,8 @@ def build_payload(results_dir: Path) -> dict:
                 existing_is_ref = bool(existing.get("_source_is_ref"))
                 incoming_ok = bool(cell.get("ok"))
                 existing_ok = bool(existing.get("ok"))
+                incoming_rank = cell.get("_rank", (0, 0.0, 0))
+                existing_rank = existing.get("_rank", (0, 0.0, 0))
 
                 # Timing is an atomic part of the selected source. Prefer
                 # the legacy fixed-bench timing when both rows succeeded,
@@ -764,6 +771,8 @@ def build_payload(results_dir: Path) -> dict:
                         existing.get("ms") is None
                         or (incoming_ok and not existing_ok)
                         or (existing_is_ref and not incoming_is_ref and incoming_ok)
+                        or (incoming_is_ref and existing_is_ref
+                            and incoming_rank >= existing_rank)
                     )
                 )
                 if should_take_timing:
@@ -840,6 +849,7 @@ def build_payload(results_dir: Path) -> dict:
     for cells in pivot.values():
         for c in cells.values():
             c.pop("_source_is_ref", None)
+            c.pop("_rank", None)
 
     rows_out = []
     for (algo, n, p_, t), cells in sorted(pivot.items(),
@@ -876,10 +886,14 @@ def build_payload(results_dir: Path) -> dict:
 
     # Per-column versions (best available).
     versions: dict[str, str] = {}
+    version_rows: dict[str, dict] = {}
     for r in seen.values():
         cid = column_id(r["backend"], r.get("libp4a_build", ""))
-        if cid in versions:
+        old = version_rows.get(cid)
+        if old is not None and _row_rank(old) > _row_rank(r):
             continue
+        version_rows[cid] = r
+    for cid, r in version_rows.items():
         try:
             v = json.loads(r.get("versions_json") or "{}")
         except Exception:
@@ -934,7 +948,8 @@ def build_payload(results_dir: Path) -> dict:
         cpp_blas_omp,
         # Python: pls4all sklearn-style binding vs canonical externals
         "pls4all.sklearn",
-        "sklearn", "ikpls", "ref.python_scikit_learn", "ref.python_ikpls",
+        "sklearn", "ikpls", "nirs4all",
+        "ref.python_scikit_learn", "ref.python_ikpls",
         # R: pls4all formula + S3 binding vs canonical R externals
         "pls4all.R.formula",
         "pls", "mixOmics", "ropls",

@@ -421,7 +421,7 @@ def render(csv_path: Path, out_path: Path,
                 "the bold.\n")
 
     out.append(f"Timing is the **median of {run_text} timed run(s)** after "
-                "one unmeasured warmup. All "
+                "up to three unmeasured warmups. All "
                 "backends in a single cell read the same "
                 "orchestrator-generated CSV dataset. See "
                 "[methodology.md](methodology.md) for the full details.\n")

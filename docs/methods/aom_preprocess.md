@@ -6,7 +6,7 @@ _Group_: **Diagnostic** · _Registry tolerance_: `5.0`
 
 AOM preprocessing pipeline (§17 Phase 4)
 
-> **Registry note** — Bench oracle (sanctioned per user). The pls4all C kernel wires a different operator-bank shape than the oracle, so the parity is shape-only and `rmse_rel` is informational rather than strict.
+> **Registry note** — In-tree `nirs4all.operators.models.sklearn.aom_pls` is the sanctioned provider. pls4all currently exposes the preprocessing primitive, while nirs4all exposes the full AOM/POP estimator stack; parity is qualitative.
 
 ### Parameters
 
@@ -126,7 +126,7 @@ _No idiomatic classdef wrapper — invoke `pls4all.fit("aom_preprocess", X, y, �
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.python_nirs4all_bench_aom_v0_aompls`** (python · python) — `nirs4all.bench.AOM_v0.aompls` in-tree-oracle · qualitative (rmse_rel ≤ 5e+00) — Bench oracle (sanctioned per user). The pls4all C kernel wires a different operator-bank shape than the oracle, so the parity check is shape-only (smoke-fit) and the tolerance is wide.
+- 📐 **`nirs4all`** (python · python) — `nirs4all` in-tree · qualitative (rmse_rel ≤ 5e+00) — In-tree nirs4all AOM provider (sanctioned external reference). pls4all's current primitive exposes a small operator-bank preprocessing kernel, while nirs4all exposes the full AOM/POP estimator stack; the parity remains qualitative.
 :::
 
 ### Benchmarks
@@ -144,26 +144,26 @@ Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.c
 <thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">100×50 (ms)</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libp4a</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas</code></td><td class="parity parity-drift">≈</td><td class="ms">1.02 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-drift">≈</td><td class="ms">1.03 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">1.09 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.omp</code></td><td class="parity parity-drift">≈</td><td class="ms">1.08 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.ref</code></td><td class="parity parity-drift">≈</td><td class="ms">1.01 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">0.99 ms<span class="medal" title="fastest">🏆</span></td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.registry</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.15 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-error">⚠</td><td class="ms">—</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.01 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.registry</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">1.00 ms<span class="medal" title="fastest">🏆</span></td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.06 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">3.00 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">4.00 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">2.47 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">3.69 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-matlab"><tr class="lang-band-row" data-lang="matlab"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>MATLAB · pls4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.matlab</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.76 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.matlab.classdef</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">4.18 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.matlab</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.67 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.matlab.classdef</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">2.07 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>ikpls</code></td><td class="parity parity-not_available">⊘</td><td class="ms">—</td></tr>
-<tr class="bk-row truth-source truth-source-qualitative"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (python): nirs4all.bench.AOM_v0.aompls in-tree-oracle — qualitative (rmse_rel ≤ 5e+00)">📐</span><code>ref.python_nirs4all_bench_aom_v0_aompls</code></td><td class="parity parity-error">⚠</td><td class="ms">—</td></tr>
+<tr class="bk-row truth-source truth-source-qualitative"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (python): nirs4all in-tree — qualitative (rmse_rel ≤ 5e+00)">📐</span><code>nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">1.43 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>sklearn</code></td><td class="parity parity-not_available">⊘</td><td class="ms">—</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · external</th></tr>

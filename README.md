@@ -112,9 +112,9 @@ shared fixture within `rmse_rel < 1e-12` for the committed smoke matrix. See
 
 This table condenses the cross-binding benchmark matrix into a "where do I
 find this method?" view. `Python`, `R` and `MATLAB` list external reference
-libraries observed in the benchmark; `nirs4all.*` entries are sanctioned
-method-specific Python references when no packaged implementation is
-available.
+libraries observed in the benchmark; `nirs4all` is the sanctioned in-tree
+Python reference provider for methods that do not have a packaged external
+implementation.
 
 | Method | Backend C++ | pls4all R | pls4all MATLAB | Python | R | MATLAB |
 |---|---:|---|---|---|---|---|
@@ -157,11 +157,11 @@ available.
 | `group_sparse_pls` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `sgPLS` | — |
 | `fused_sparse_pls` | ✓ | `dispatcher` | `MEX/dispatcher` | — | — | — |
 | `pls_diagnostic_dmodx` | ✓ | — | — | — | `mdatools` | — |
-| `mb_pls` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | `nirs4all.mbpls` | — | — |
-| `lw_pls` | ✓ | `dispatcher` | `MEX/dispatcher` | `nirs4all.lwpls` | — | — |
+| `mb_pls` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | `nirs4all` | — | — |
+| `lw_pls` | ✓ | `dispatcher` | `MEX/dispatcher` | `nirs4all` | — | — |
 | `pls_lda` | ✓ | `dispatcher` | `MEX/dispatcher` | `scikit-learn` | — | — |
 | `pls_logistic` | ✓ | `dispatcher` | `MEX/dispatcher` | `scikit-learn` | — | — |
-| `aom_preprocess` | ✓ | `dispatcher` | `MEX/dispatcher` | `nirs4all.AOM_v0` | — | — |
+| `aom_preprocess` | ✓ | `dispatcher` | `MEX/dispatcher` | `nirs4all` | — | — |
 | `variable_select_vip` | ✓ | — | — | — | `plsVarSel` | — |
 | `variable_select_coef` | ✓ | — | — | — | `pls` | — |
 | `variable_select_sr` | ✓ | — | — | — | `plsVarSel` | — |

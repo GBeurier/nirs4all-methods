@@ -964,7 +964,13 @@ def load_truth_source_metadata(
     out: dict[str, dict[str, dict]] = {}
     for method in METHODS:
         try:
-            out[method.name] = truth_source_metadata_for(method)
+            remapped: dict[str, dict] = {}
+            for cid, meta in truth_source_metadata_for(method).items():
+                if cid.startswith("ref."):
+                    backend = "ref_" + cid[len("ref."):]
+                    cid = REF_DISPLAY_OVERRIDE.get(backend, cid)
+                remapped[cid] = meta
+            out[method.name] = remapped
         except Exception as exc:
             if strict:
                 raise
@@ -1110,6 +1116,13 @@ BACKEND_DISPLAY = {
     "r_mixomics":       "mixOmics",
     "matlab_pls":       "plsregress",
 }
+REF_DISPLAY_OVERRIDE = {
+    "ref_python_nirs4all":                                  "nirs4all",
+    "ref_python_nirs4all_operators_models_sklearn_aom_pls": "nirs4all",
+    "ref_python_nirs4all_operators_models_sklearn_mbpls":   "nirs4all",
+    "ref_python_nirs4all_operators_models_sklearn_lwpls":   "nirs4all",
+    "ref_python_nirs4all_bench_aom_v0_aompls":              "nirs4all",
+}
 CPP_BUILD_SUFFIX = {
     "dev-release": "ref",
     "blas-on":     "blas",
@@ -1123,7 +1136,8 @@ def column_id(backend: str, build: str) -> str:
     if backend == "cpp":
         return f"pls4all.cpp.{CPP_BUILD_SUFFIX.get(build, build)}"
     if backend.startswith("ref_"):
-        return "ref." + backend[len("ref_"):]
+        return REF_DISPLAY_OVERRIDE.get(
+            backend, "ref." + backend[len("ref_"):])
     return BACKEND_DISPLAY.get(backend, backend)
 
 
@@ -1237,7 +1251,8 @@ def parse_csv(path: Path) -> dict[str, list[dict]]:
 
     Method pages should agree with the dashboard: `full_matrix.csv` is the
     baseline, while `dashboard_refresh_*.csv` files can supersede stale cells.
-    Prefer warmup-v2 timings over old cold-run rows, then the newest source
+    Prefer the current warmup timing schema over old cold-run rows, then
+    the newest source
     file. Non-C++ bindings collapse to the production blas-omp row for their
     displayed column.
     """
@@ -1266,7 +1281,8 @@ def parse_csv(path: Path) -> dict[str, list[dict]]:
                 key = (algo, cid, n, p, t)
                 build = r.get("libp4a_build", "")
                 rank = (
-                    1 if _timing_schema(r) == "warmup-v2" else 0,
+                    {"warmup-v3": 2, "warmup-v2": 1}.get(
+                        _timing_schema(r), 0),
                     1 if build == "blas-omp" else 0,
                     float(source_mtime),
                     int(source_index),
@@ -1777,7 +1793,7 @@ def _band_of(cid: str) -> str:
         return "r-pls4all"
     if cid in ("pls4all.matlab", "pls4all.matlab.classdef"):
         return "matlab-pls4all"
-    if cid.startswith("ref.python_") or cid in ("sklearn", "ikpls"):
+    if cid.startswith("ref.python_") or cid in ("sklearn", "ikpls", "nirs4all"):
         return "python-ext"
     if (cid.startswith("ref.r_")
             or cid in ("pls", "mixOmics", "ropls")):

@@ -86,7 +86,7 @@ binding adapter repair, and regenerate the full matrix when publishing a
 new benchmark baseline.
 
 Refresh rows used for the dashboard must be produced by the current
-`warmup-v2` timing schema. Do not keep old `n_runs=1` cold-start refresh
+`warmup-v3` timing schema. Do not keep old `n_runs=1` cold-start refresh
 rows in these files: they measure import/process setup cost and can make
 fast C++ cells look hundreds of milliseconds slower than the actual warm
 fit/predict path.

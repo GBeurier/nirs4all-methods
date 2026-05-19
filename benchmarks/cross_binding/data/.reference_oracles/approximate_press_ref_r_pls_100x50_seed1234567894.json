@@ -1,0 +1,19 @@
+{
+  "algorithm": "approximate_press",
+  "backend": "ref_r_pls",
+  "n": 100,
+  "n_runs": 5,
+  "p": 50,
+  "prediction_seed": 1234567894,
+  "seed_base": 1234567890,
+  "source_predictions_path": "/home/delete/nirs4all/pls4all/benchmarks/cross_binding/data/.predictions/approximate_press_ref_r_pls_100x50_t1_blas-omp.npy",
+  "versions": {
+    "blas": "libscipy_openblas 0.3.30 blas=1",
+    "language": "R (host Linux x86_64)",
+    "numpy": "2.3.5",
+    "reference_id": "r_pls",
+    "reference_library": "pls",
+    "reference_version": "2.8.5",
+    "timing_schema": "warmup-v3"
+  }
+}

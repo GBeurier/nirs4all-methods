@@ -70,18 +70,28 @@ pls4all_bench_load_x_target <- function(x_target_dir, n, p, seed) {
     as.matrix(read.csv(path, header = FALSE))
 }
 
-# Timed runs (one unmeasured warmup, same convention as Python _common).
+# Timed runs (small unmeasured warmup set, same convention as Python _common).
+pls4all_bench_now_ms <- function() {
+    as.numeric(Sys.time()) * 1000.0
+}
+
+pls4all_bench_warmup_count <- function(runs) {
+    max(1L, min(3L, as.integer(runs)))
+}
+
 pls4all_bench_time_runs <- function(fit_predict_seeded, runs, seed_base) {
     if (runs < 1L) {
         stop("runs must be >= 1")
     }
-    fit_predict_seeded(seed_base)
+    for (w in seq_len(pls4all_bench_warmup_count(runs))) {
+        fit_predict_seeded(seed_base)
+    }
     samples <- numeric(runs)
     last_preds <- NULL
     for (i in seq_len(runs)) {
-        t0 <- proc.time()[["elapsed"]]
+        t0 <- pls4all_bench_now_ms()
         last_preds <- fit_predict_seeded(seed_base + (i - 1L))
-        samples[i] <- (proc.time()[["elapsed"]] - t0) * 1000
+        samples[i] <- pls4all_bench_now_ms() - t0
     }
     list(stats = list(
             ok = TRUE,

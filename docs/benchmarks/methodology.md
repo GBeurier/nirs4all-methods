@@ -9,7 +9,7 @@ For each `(algorithm, backend, n, p, threads)` cell, report:
 2. **Reference parity**: every successful row, including external
    libraries, compared against the registry-declared method oracle.
 3. **Timing**: median, min, max wall-clock milliseconds across `n_runs`
-   timed runs after one unmeasured warmup.
+   timed runs after up to three unmeasured warmups.
 4. **Versions metadata**: language, BLAS implementation, binding /
    external library versions.
 
@@ -34,7 +34,7 @@ should be rare because unsupported pairs are not scheduled. In legacy
 
 ## Determinism
 
-Each cell first runs one unmeasured warmup at `BASE`, then runs `n_runs = 5`
+Each cell first runs up to three unmeasured warmups at `BASE`, then runs `n_runs = 5`
 timed samples with seeds `[BASE, BASE+1, BASE+2, BASE+3, BASE+4]`. The base
 seed is `1_234_567_890` — a uint32-safe
 integer that round-trips losslessly through R/Octave doubles and is

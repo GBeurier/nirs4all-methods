@@ -14,6 +14,6 @@
     "reference_id": "python_scikit_learn",
     "reference_library": "scikit-learn",
     "reference_version": "1.8.0",
-    "timing_schema": "warmup-v2"
+    "timing_schema": "warmup-v3"
   }
 }

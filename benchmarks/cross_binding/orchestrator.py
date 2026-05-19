@@ -73,7 +73,7 @@ DEFAULT_SIZES = [
 
 # Per-cell wall-clock timeout (seconds).
 DEFAULT_TIMEOUT_S = 300
-TIMING_SCHEMA = "warmup-v2"
+TIMING_SCHEMA = "warmup-v3"
 
 # (name, script, language, tier, kind)
 #   kind ∈ {"pls4all_core", "pls4all_binding", "external"}
@@ -120,6 +120,8 @@ def registry_reference_backends_for(algo: str) -> list[tuple[str, str, str, str,
         display_lang = "Python" if lang == "python" else lang
         script = REFERENCE_SCRIPT_OVERRIDES.get(
             ref["id"], "bench_registry_reference.py")
+        if ref["id"] == "r_pls" and algo not in {"pls", "pcr", "cppls"}:
+            script = "bench_registry_reference.py"
         out.append((f"ref_{ref['id']}", script,
                     display_lang, ref["library"], "external"))
     return out
@@ -861,7 +863,7 @@ def main():
                               "blas + omp + blasomp; 'all' = the full "
                               "5-build sweep including cuda-on.")
     parser.add_argument("--n-runs", type=int, default=5,
-                         help="Timed runs per cell; one extra warmup is unmeasured")
+                         help="Timed runs per cell; up to three warmups are unmeasured")
     parser.add_argument("--n-components", type=int, default=5)
     parser.add_argument("--seed-base", type=int, default=DEFAULT_SEED_BASE)
     parser.add_argument("--only-pls4all", action="store_true",

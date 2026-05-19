@@ -14,6 +14,6 @@
     "reference_id": "r_mdatools",
     "reference_library": "mdatools",
     "reference_version": "0.15.0",
-    "timing_schema": "warmup-v2"
+    "timing_schema": "warmup-v3"
   }
 }
