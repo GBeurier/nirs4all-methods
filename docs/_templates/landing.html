@@ -11,8 +11,8 @@
   <style>
     :root {
       /* === LIGHT THEME (default) — paper-white surfaces, dark ink text,
-         orange accent matching the benchmark brand palette.
-         The dark amber-accent theme lives under body.theme-dark below. */
+         teal accent matching the Sphinx Furo theme.
+         The dark CRT-phosphor theme lives under body.theme-dark below. */
       --ink-0: #F7F9FB;     /* page background */
       --ink-1: #FFFFFF;     /* cards, table body */
       --ink-2: #F1F4F7;     /* header rows, sticky cells */
@@ -24,10 +24,10 @@
       --fg-1: #36454F;
       --fg-2: #6A7681;
       --fg-3: #98A2AC;
-      --phosphor:       #F97316;
-      --phosphor-soft:  rgba(249, 115, 22, 0.13);
-      --phosphor-glow:  rgba(249, 115, 22, 0.34);
-      --phosphor-faint: rgba(249, 115, 22, 0.05);
+      --phosphor:       #0d9488;
+      --phosphor-soft:  rgba(13, 148, 136, 0.12);
+      --phosphor-glow:  rgba(13, 148, 136, 0.30);
+      --phosphor-faint: rgba(13, 148, 136, 0.05);
       --amber:          #B86E0F;
       --amber-soft:     rgba(184, 110, 15, 0.14);
       --crimson:        #B83A37;
@@ -84,7 +84,7 @@
     }
 
     /* === DARK THEME (toggled via .theme-dark on <body>) — the original
-       CRT layout with the orange benchmark accent. */
+       CRT-phosphor aesthetic. */
     body.theme-dark {
       --ink-0: #07090C;
       --ink-1: #0C1117;
@@ -97,10 +97,10 @@
       --fg-1: #B5C0CC;
       --fg-2: #6F7B89;
       --fg-3: #485162;
-      --phosphor:       #F2B85C;
-      --phosphor-soft:  rgba(242, 184, 92, 0.16);
-      --phosphor-glow:  rgba(242, 184, 92, 0.55);
-      --phosphor-faint: rgba(242, 184, 92, 0.05);
+      --phosphor:       #7CE5A2;
+      --phosphor-soft:  rgba(124, 229, 162, 0.16);
+      --phosphor-glow:  rgba(124, 229, 162, 0.55);
+      --phosphor-faint: rgba(124, 229, 162, 0.05);
       --amber:          #F2B85C;
       --amber-soft:     rgba(242, 184, 92, 0.18);
       --crimson:        #E96565;
@@ -941,9 +941,9 @@
       height: 90px; pointer-events: none;
       background: linear-gradient(180deg,
         transparent 0%,
-        rgba(242, 184, 92, 0.04) 30%,
-        rgba(242, 184, 92, 0.16) 50%,
-        rgba(242, 184, 92, 0.04) 70%,
+        rgba(124, 229, 162, 0.04) 30%,
+        rgba(124, 229, 162, 0.16) 50%,
+        rgba(124, 229, 162, 0.04) 70%,
         transparent 100%);
       animation: scan 1.4s cubic-bezier(0.4, 0.0, 0.2, 1) 1;
       z-index: 999;
@@ -2293,7 +2293,7 @@ function rerender() {
 }
 
 // ---------- theme toggle ----------
-// Light is the default; users can flip to the amber-accent dark theme.
+// Light is the default; users can flip to the CRT-phosphor dark theme.
 // Choice persists in localStorage.
 const THEME_KEY = 'chemometrics4all.dashboard.theme';
 function applyTheme(theme) {
