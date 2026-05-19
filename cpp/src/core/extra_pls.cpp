@@ -655,9 +655,13 @@ p4a_status_t fit_robust_pls(Context& ctx,
             residual_norms[r] = std::sqrt(sumsq);
         }
         std::vector<double> sorted = residual_norms;
-        const auto mid = static_cast<std::ptrdiff_t>(sorted.size() / 2);
-        std::nth_element(sorted.begin(), sorted.begin() + mid, sorted.end());
-        double mad = sorted[static_cast<std::size_t>(mid)];
+        double mad = 1.0;
+        if (!sorted.empty()) {
+            auto nth = sorted.begin() +
+                       static_cast<std::ptrdiff_t>(sorted.size() / 2);
+            std::nth_element(sorted.begin(), nth, sorted.end());
+            mad = *nth;
+        }
         if (mad < kEps) mad = 1.0;
         const double scale = 1.4826 * mad;
         // Huber weights
