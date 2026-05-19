@@ -17,14 +17,12 @@ pkg load statistics
 
 if ~strcmp(algo, "pls")
     % plsregress doesn't support sparse / cppls / etc. Emit skip.
-    fprintf("%s\n", jenc(struct( ...
-        "ok", false, ...
-        "reason", sprintf("algo '%s' not implemented by Octave plsregress", algo), ...
-        "skipped", true, ...
-        "versions", struct( ...
-            "language", sprintf("Octave %s", OCTAVE_VERSION), ...
-            "statistics", "linked Octave statistics pkg") ...
-    )));
+    reason = strrep(sprintf("algo '%s' not implemented by Octave plsregress", ...
+                            algo), '"', '\"');
+    fprintf(['{"ok":false,"reason":"%s","skipped":true,' ...
+             '"versions":{"language":"Octave %s",' ...
+             '"statistics":"linked Octave statistics pkg"}}\n'], ...
+            reason, OCTAVE_VERSION);
     return
 end
 
@@ -44,25 +42,3 @@ versions.statistics = "Octave statistics pkg (plsregress)";
 versions.blas = "linked-BLAS";
 
 pls4all_bench_emit(stats, last_preds, pred_path, versions);
-
-% jenc helper used only for the skip path (since _emit_octave provides its
-% own JSON emitter, we inline a tiny one here for the early return).
-function s = jenc(v)
-    if islogical(v)
-        if v, s = "true"; else, s = "false"; end
-    elseif isnumeric(v) && isscalar(v)
-        s = sprintf("%.15g", v);
-    elseif ischar(v) || (isstring(v) && isscalar(v))
-        s = sprintf("\"%s\"", strrep(char(v), '"', '\"'));
-    elseif iscell(v) || (isnumeric(v) && ~isscalar(v))
-        parts = arrayfun(@(x) jenc(x), v, "UniformOutput", false);
-        s = sprintf("[%s]", strjoin(parts, ","));
-    elseif isstruct(v)
-        fn = fieldnames(v); parts = cell(1, length(fn));
-        for k = 1:length(fn)
-            parts{k} = sprintf("\"%s\":%s", fn{k}, jenc(v.(fn{k})));
-        end
-        s = sprintf("{%s}", strjoin(parts, ","));
-    else, s = "null";
-    end
-end

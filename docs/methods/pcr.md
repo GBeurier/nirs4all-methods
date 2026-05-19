@@ -44,6 +44,17 @@ Coefficients in the original feature scale are recovered as $\mathbf{B} = \mathb
 
 `Algorithm.PCR` + `Solver.SVD` in libp4a. Reference implementations are scikit-learn's `Pipeline(PCA(n_components=k), LinearRegression())` and R `pls::pcr`.
 
+MATLAB header (`bindings/matlab/+pls4all/PcrRegression.m`):
+
+```text
+pls4all.PcrRegression — Principal Component Regression model.
+
+ Example:
+
+     mdl = pls4all.PcrRegression(X, y, 5);
+     yhat = predict(mdl, Xnew);
+```
+
 ### Usage
 
 All four pls4all bindings dispatch into the same C kernel; the external libraries on the right are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language.
@@ -153,7 +164,10 @@ yhat = predict(res, Xtest);
 :sync: matlab-classdef
 :class-label: lang-matlab
 
-_No idiomatic classdef wrapper — invoke `pls4all.fit("pcr", X, y, …)` directly from the unified MEX factory._
+```matlab
+mdl  = pls4all.fit("pcr", X, y, "NumComponents", 4);
+yhat = predict(mdl, Xtest);
+```
 
 :::
 

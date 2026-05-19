@@ -1641,6 +1641,7 @@ METHOD_TO_R_FORMULA: dict[str, str] = {
 # Registry name → MATLAB tier-2 classdef name.
 METHOD_TO_MATLAB_CLASS: dict[str, str] = {
     "pls": "Regression",
+    "pcr": "PcrRegression",
     "cppls": "CpplsRegression",
     "sparse_simpls": "SparsePlsRegression",
     "weighted_pls": "WeightedPlsRegression",

@@ -176,7 +176,7 @@ SELECTOR_ALGOS = {
 }
 
 MATLAB_TIER2_SUPPORTED = {
-    "pls", "pls_simpls", "simpls", "sparse_simpls", "cppls",
+    "pls", "pls_simpls", "simpls", "pcr", "sparse_simpls", "cppls",
     "ecr", "weighted_pls", "robust_pls", "ridge_pls",
     "continuum_regression", "recursive_pls", "n_pls",
     "kernel_pls", "kernel_pls_rbf", "o2pls", "mb_pls",
