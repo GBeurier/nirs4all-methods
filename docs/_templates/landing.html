@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>chemometrics4all · cross-binding benchmark</title>
-  <meta name="description" content="Interactive cross-binding benchmark dashboard for the chemometrics4all PLS/NIRS library. Same algorithm, same input bytes, 17 implementations across C++, Python, R, MATLAB.">
+  <title>chemometrics4all · benchmark status</title>
+  <meta name="description" content="Benchmark status page for the chemometrics4all chemometrics/NIRS operator library: timings, external references, and parity gates.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500;600;700;800&family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       /* === LIGHT THEME (default) — paper-white surfaces, dark ink text,
-         teal accent matching the Sphinx Furo theme.
-         The dark CRT-phosphor theme lives under body.theme-dark below. */
+         orange accent matching the benchmark brand palette.
+         The dark amber-accent theme lives under body.theme-dark below. */
       --ink-0: #F7F9FB;     /* page background */
       --ink-1: #FFFFFF;     /* cards, table body */
       --ink-2: #F1F4F7;     /* header rows, sticky cells */
@@ -24,13 +24,22 @@
       --fg-1: #36454F;
       --fg-2: #6A7681;
       --fg-3: #98A2AC;
-      --phosphor:       #0d9488;
-      --phosphor-soft:  rgba(13, 148, 136, 0.12);
-      --phosphor-glow:  rgba(13, 148, 136, 0.30);
-      --phosphor-faint: rgba(13, 148, 136, 0.05);
+      --phosphor:       #F97316;
+      --phosphor-soft:  rgba(249, 115, 22, 0.13);
+      --phosphor-glow:  rgba(249, 115, 22, 0.34);
+      --phosphor-faint: rgba(249, 115, 22, 0.05);
       --amber:          #B86E0F;
+      --amber-soft:     rgba(184, 110, 15, 0.14);
       --crimson:        #B83A37;
       --indigo:         #2E5BB8;
+      --score-best:     #2563EB;
+      --score-near:     #B86E0F;
+      --score-mid:      #D58A1F;
+      --score-far:      #B45309;
+      --score-slow:     #B83A37;
+      --c4a-faint:      rgba(46, 91, 184, 0.025);
+      --c4a-soft:       rgba(46, 91, 184, 0.07);
+      --winner-bg:      rgba(184, 110, 15, 0.14);
 
       /* per-language accent colors — darker variants tuned for light bg */
       --lang-cpp:  #0E8C8F;
@@ -66,14 +75,16 @@
          derived from these so leftmost columns never overlap regardless
          of content length. Override in density rules to tighten. */
       --w-algo:    164px;
+      --w-ref:     124px;
       --w-size:    78px;
       --w-threads: 42px;
-      --off-size:    var(--w-algo);
-      --off-threads: calc(var(--w-algo) + var(--w-size));
+      --off-ref:     var(--w-algo);
+      --off-size:    calc(var(--w-algo) + var(--w-ref));
+      --off-threads: calc(var(--w-algo) + var(--w-ref) + var(--w-size));
     }
 
     /* === DARK THEME (toggled via .theme-dark on <body>) — the original
-       CRT-phosphor aesthetic. */
+       CRT layout with the orange benchmark accent. */
     body.theme-dark {
       --ink-0: #07090C;
       --ink-1: #0C1117;
@@ -86,13 +97,22 @@
       --fg-1: #B5C0CC;
       --fg-2: #6F7B89;
       --fg-3: #485162;
-      --phosphor:       #7CE5A2;
-      --phosphor-soft:  rgba(124, 229, 162, 0.16);
-      --phosphor-glow:  rgba(124, 229, 162, 0.55);
-      --phosphor-faint: rgba(124, 229, 162, 0.05);
+      --phosphor:       #F2B85C;
+      --phosphor-soft:  rgba(242, 184, 92, 0.16);
+      --phosphor-glow:  rgba(242, 184, 92, 0.55);
+      --phosphor-faint: rgba(242, 184, 92, 0.05);
       --amber:          #F2B85C;
+      --amber-soft:     rgba(242, 184, 92, 0.18);
       --crimson:        #E96565;
       --indigo:         #7DA8F7;
+      --score-best:     #7DA8F7;
+      --score-near:     #F2B85C;
+      --score-mid:      #F6C76B;
+      --score-far:      #E58B35;
+      --score-slow:     #E96565;
+      --c4a-faint:      rgba(125, 168, 247, 0.035);
+      --c4a-soft:       rgba(125, 168, 247, 0.09);
+      --winner-bg:      rgba(242, 184, 92, 0.18);
 
       --lang-cpp:  #6DD3D6;
       --lang-py:   #F2C46B;
@@ -120,7 +140,7 @@
       --menu-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
     }
 
-    /* Light theme drops the CRT-phosphor glow halos that look noisy on
+    /* Light theme drops the dark-theme glow halos that look noisy on
        a white background — the same selectors keep their accent color
        via --phosphor; only the text-shadow halo is suppressed. */
     body:not(.theme-dark) a:hover,
@@ -258,7 +278,7 @@
         #4338CA 0%, #6366F1 13%, #06B6D4 27%, #14B8A6 40%, #84CC16 53%,
         #EAB308 67%, #F97316 82%, #B91C1C 100%);
       opacity: 0.55;
-      box-shadow: 0 0 6px rgba(124, 229, 162, 0.2);
+      box-shadow: 0 0 6px var(--phosphor-soft);
     }
     .hero-spectrum-label {
       max-width: 1900px; margin: 4px auto 0;
@@ -310,6 +330,11 @@
       border-color: var(--phosphor);
     }
     .preset-rail .preset-pill.active .cnt { color: var(--phosphor); }
+    .preset-rail .preset-pill.partial {
+      background: var(--c4a-faint); color: var(--fg-0);
+      border-color: var(--fg-3);
+    }
+    .preset-rail .preset-pill.partial .cnt { color: var(--fg-1); }
     .control {
       display: inline-flex; align-items: center; gap: 6px;
       background: var(--ink-2);
@@ -409,6 +434,8 @@
       text-transform: uppercase; letter-spacing: 0.08em;
     }
     .preset:hover { background: var(--phosphor-soft); color: var(--phosphor); border-color: var(--phosphor); }
+    .preset.active { background: var(--phosphor-soft); color: var(--phosphor); border-color: var(--phosphor); }
+    .preset.partial { background: var(--c4a-faint); color: var(--fg-0); border-color: var(--fg-3); }
 
     .ctrl-spacer { flex: 1; }
 
@@ -426,6 +453,7 @@
     }
     .legend-item { display: flex; align-items: center; gap: 6px; color: var(--fg-1); font-family: var(--sans); }
     .legend-item .ico { font-family: var(--mono); font-weight: 600; }
+    .score-swatch { font-family: var(--mono); font-weight: 700; }
 
     .table-wrap {
       border: 1px solid var(--line-2);
@@ -483,18 +511,10 @@
     table.bench tr.lang-band th.lang-java  { color: var(--lang-java);  border-bottom-color: var(--lang-java);  background: linear-gradient(180deg, var(--lang-java-soft)  0%, var(--ink-2) 100%); }
     table.bench tr.lang-band th.lang-other { color: var(--lang-other); border-bottom-color: var(--lang-other); background: linear-gradient(180deg, var(--lang-other-soft) 0%, var(--ink-2) 100%); }
 
-    /* per-language best-cell marker — subtle text-tint only, no glow */
+    /* Per-language best marker: weight only. Text color is reserved for
+       row-relative timing score classes, otherwise the language tint can
+       contradict the winner/near/mid/slow semantics. */
     .cell-lang-best .cell-value { font-weight: 600; }
-    .cell-lang-best.lang-cpp   .cell-value { color: var(--lang-cpp); }
-    .cell-lang-best.lang-py    .cell-value { color: var(--lang-py);  }
-    .cell-lang-best.lang-r     .cell-value { color: var(--lang-r);   }
-    .cell-lang-best.lang-m     .cell-value { color: var(--lang-m);   }
-    .cell-lang-best.lang-jl    .cell-value { color: var(--lang-jl);  }
-    .cell-lang-best.lang-rs    .cell-value { color: var(--lang-rs);  }
-    .cell-lang-best.lang-go    .cell-value { color: var(--lang-go);  }
-    .cell-lang-best.lang-js    .cell-value { color: var(--lang-js);  }
-    .cell-lang-best.lang-java  .cell-value { color: var(--lang-java); }
-    .cell-lang-best.lang-other .cell-value { color: var(--lang-other); }
 
     /* Language partitions: only show a thicker separator on the FIRST
        column of each language group. No per-cell tinted borders. */
@@ -502,17 +522,17 @@
       border-left: 2px solid var(--line-2);
     }
 
-    /* chemometrics4all binding columns get a faint phosphor wash so users can
+    /* chemometrics4all binding columns get a faint neutral wash so users can
        visually distinguish "ours" from the externals they mimic. Same
        short label can recur across the divide (chemometrics4all.sklearn vs
        sklearn external — both render "sklearn") and the tint is what
        carries the disambiguation. */
     table.bench th.col-chemometrics4all {
-      background: linear-gradient(180deg, var(--phosphor-soft) 0%, var(--ink-2) 100%);
+      background: linear-gradient(180deg, var(--c4a-soft) 0%, var(--ink-2) 100%);
     }
-    table.bench th.col-chemometrics4all .col-label { color: var(--phosphor); }
-    table.bench td.col-chemometrics4all { background: var(--phosphor-faint); }
-    table.bench tbody tr:hover td.col-chemometrics4all { background: var(--phosphor-soft); }
+    table.bench th.col-chemometrics4all .col-label { color: var(--fg-0); }
+    table.bench td.col-chemometrics4all { background: var(--c4a-faint); }
+    table.bench tbody tr:hover td.col-chemometrics4all { background: var(--c4a-soft); }
 
     table.bench th {
       background: var(--ink-2);
@@ -529,7 +549,7 @@
          second line instead. Sticky columns override this below. */
       max-width: 96px;
     }
-    table.bench th.algo-col, table.bench th.size-col, table.bench th.thread-col {
+    table.bench th.algo-col, table.bench th.ref-col, table.bench th.size-col, table.bench th.thread-col {
       text-align: left; vertical-align: middle; max-width: none;
       padding: 6px 10px;
     }
@@ -579,6 +599,20 @@
       width: var(--w-algo); min-width: var(--w-algo); max-width: var(--w-algo);
     }
     table.bench td.algo-cell { background: var(--ink-1); z-index: 2; }
+    table.bench th.ref-col, table.bench td.ref-cell {
+      position: sticky; left: var(--off-ref); z-index: 4;
+      background: var(--ink-2);
+      width: var(--w-ref); min-width: var(--w-ref); max-width: var(--w-ref);
+    }
+    table.bench td.ref-cell {
+      background: var(--ink-1);
+      color: var(--fg-1);
+      font-size: 10.5px;
+      z-index: 2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     table.bench th.size-col, table.bench td.size-cell {
       position: sticky; left: var(--off-size); z-index: 4;
       background: var(--ink-2);
@@ -591,22 +625,22 @@
       width: var(--w-threads); min-width: var(--w-threads); max-width: var(--w-threads);
     }
     table.bench td.thread-cell { background: var(--ink-1); z-index: 2; }
-    table.bench th.algo-col, table.bench th.size-col, table.bench th.thread-col { z-index: 6; }
+    table.bench th.algo-col, table.bench th.ref-col, table.bench th.size-col, table.bench th.thread-col { z-index: 6; }
     /* The native (chemometrics4all.cpp) baseline column is NOT sticky — making it
        sticky used to hide neighbouring columns when scrolling right.
-       It still gets a subtle phosphor accent so the comparison anchor
+       It still gets a subtle internal accent so the comparison anchor
        remains visually identifiable. */
     table.bench th.native-col {
-      background: linear-gradient(180deg, var(--phosphor-soft) 0%, var(--ink-2) 100%);
-      border-right: 2px solid var(--phosphor-soft);
+      background: linear-gradient(180deg, var(--c4a-soft) 0%, var(--ink-2) 100%);
+      border-right: 2px solid var(--c4a-soft);
     }
-    table.bench th.native-col .col-label { color: var(--phosphor); }
+    table.bench th.native-col .col-label { color: var(--fg-0); }
     table.bench td.native-cell {
-      background: var(--phosphor-faint);
-      border-right: 2px solid var(--phosphor-soft);
+      background: var(--c4a-faint);
+      border-right: 2px solid var(--c4a-soft);
     }
     table.bench tbody tr:hover td.native-cell {
-      background: var(--phosphor-soft);
+      background: var(--c4a-soft);
     }
 
     table.bench td {
@@ -621,6 +655,7 @@
     }
     table.bench tbody tr:hover td { background: var(--phosphor-faint); }
     table.bench tbody tr:hover td.algo-cell,
+    table.bench tbody tr:hover td.ref-cell,
     table.bench tbody tr:hover td.size-cell,
     table.bench tbody tr:hover td.thread-cell { background: var(--ink-3); }
 
@@ -629,6 +664,42 @@
       text-align: left;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+    .algo-cell-inner {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+    .algo-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+      flex: 1;
+    }
+    .row-score-cols {
+      flex: 0 0 auto;
+      width: 18px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      background: var(--ink-2);
+      color: var(--fg-2);
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .row-score-cols:hover,
+    .row-score-cols.active {
+      color: var(--score-best);
+      border-color: var(--score-best);
+      background: var(--c4a-soft);
     }
     table.bench td.size-cell {
       font-family: var(--mono); color: var(--fg-1);
@@ -647,7 +718,7 @@
       border: 1px solid var(--line);
     }
     .thread-pill.t-3  { color: var(--indigo); border-color: rgba(125,168,247,0.4); }
-    .thread-pill.t-10 { color: var(--phosphor); border-color: rgba(124,229,162,0.4); }
+    .thread-pill.t-10 { color: var(--phosphor); border-color: var(--phosphor-glow); }
     /* avg-speedup mode: size cell shows "avg · N" pill instead of n×p */
     .size-avg {
       display: inline-block; padding: 1px 7px;
@@ -660,18 +731,47 @@
     }
 
     .cell-fastest {
-      color: var(--phosphor);
+      color: var(--score-best);
       font-weight: 600;
-      text-shadow: 0 0 8px var(--phosphor-glow);
-      position: relative;
     }
-    .cell-fastest::before {
-      content: ''; position: absolute; left: 2px; top: 25%; bottom: 25%;
-      width: 2px; background: var(--phosphor);
-      box-shadow: 0 0 6px var(--phosphor-glow);
-      border-radius: 1px;
+    .cell-fastest-bg {
+      background: var(--winner-bg) !important;
     }
-    .cell-fastest-bg { background: var(--phosphor-faint) !important; }
+    table.bench td.ref-cell.has-ref {
+      color: var(--amber);
+      font-weight: 600;
+      background: linear-gradient(90deg, var(--amber-soft), var(--ink-1) 70%);
+      border-left: 2px solid var(--amber);
+    }
+    table.bench td.ref-cell.no-ref { color: var(--fg-3); }
+    table.bench tbody tr:hover td.ref-cell.has-ref {
+      background: var(--amber-soft);
+    }
+    .ref-badge {
+      display: inline-block;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      vertical-align: bottom;
+    }
+    table.bench td.cell-reference {
+      box-shadow: none;
+    }
+    table.bench td.cell-reference.cell-fastest-bg {
+      box-shadow: none;
+    }
+    table.bench td.cell-reference-method:not(.cell-fastest-bg) {
+      background: transparent;
+    }
+    .reference-method-icon {
+      display: inline-block;
+      min-width: 12px;
+      margin-left: 5px;
+      color: var(--score-best);
+      font-family: var(--mono);
+      font-weight: 700;
+      text-align: center;
+    }
     .cell-empty { color: var(--fg-3); text-align: center; font-family: var(--mono); }
     .parity { display: inline-block; min-width: 12px; text-align: center; margin-left: 5px; font-weight: 600; font-family: var(--mono); }
     .p-exact   { color: var(--phosphor); }
@@ -679,6 +779,7 @@
     .p-divergent { color: var(--crimson); }
     .p-error   { color: var(--crimson); }
     .p-not_run { color: var(--indigo); }
+    .p-not_compared { color: var(--fg-2); }
     .p-not_available { color: var(--fg-3); }
     .p-ok      { color: var(--phosphor); }
     .p-warn    { color: var(--amber); }
@@ -686,13 +787,18 @@
     .p-timeout { color: var(--indigo); }
     .p-na      { color: var(--fg-3); }
 
-    .speed-faster { color: var(--phosphor); text-shadow: 0 0 6px var(--phosphor-glow); font-weight: 600; }
+    .speed-faster { color: var(--phosphor); font-weight: 600; }
     .speed-equal  { color: var(--fg-1); }
     .speed-slower { color: var(--amber); }
+    table.bench td .cell-value.score-best { color: var(--score-best); font-weight: 700; }
+    table.bench td .cell-value.score-near { color: var(--score-near); font-weight: 600; }
+    table.bench td .cell-value.score-mid  { color: var(--score-mid); }
+    table.bench td .cell-value.score-far  { color: var(--score-far); }
+    table.bench td .cell-value.score-slow { color: var(--score-slow); }
 
     /* density: compact — slightly tighter sticky widths */
     body.density-compact {
-      --w-algo: 144px; --w-size: 70px; --w-threads: 38px;
+      --w-algo: 144px; --w-ref: 108px; --w-size: 70px; --w-threads: 38px;
     }
     body.density-compact table.bench { font-size: 11px; }
     body.density-compact table.bench td { padding: 2.5px 6px; font-size: 10.5px; }
@@ -701,7 +807,7 @@
 
     /* density: ultra (max squeeze) — minimal sticky widths */
     body.density-ultra {
-      --w-algo: 126px; --w-size: 60px; --w-threads: 32px;
+      --w-algo: 126px; --w-ref: 96px; --w-size: 60px; --w-threads: 32px;
     }
     body.density-ultra table.bench { font-size: 10.5px; }
     body.density-ultra table.bench td { padding: 1.5px 4px; font-size: 10px; }
@@ -710,7 +816,6 @@
     body.density-ultra table.bench tr.lang-band th { padding: 2px 3px; font-size: 8.5px; letter-spacing: 0.12em; }
     body.density-ultra table.bench td.thread-cell .thread-pill { padding: 0 4px; font-size: 9px; }
     body.density-ultra .parity { margin-left: 2px; font-size: 9.5px; }
-    body.density-ultra .cell-fastest::before { left: 1px; width: 1.5px; }
     body.density-ultra table.bench td.algo-cell { font-size: 10.5px; padding: 1.5px 6px; }
     body.density-ultra table.bench td.size-cell { font-size: 10px; padding: 1.5px 6px; }
 
@@ -776,7 +881,7 @@
     .info-card ul, .info-card ol { padding-left: 22px; margin: 10px 0; }
     .info-card li + li { margin-top: 6px; }
     .info-card .p-exact, .info-card .p-drift, .info-card .p-divergent,
-    .info-card .p-error, .info-card .p-not_run, .info-card .p-not_available,
+    .info-card .p-error, .info-card .p-not_run, .info-card .p-not_compared, .info-card .p-not_available,
     .info-card .p-ok, .info-card .p-warn, .info-card .p-fail, .info-card .p-timeout {
       font-family: var(--mono); font-weight: 700; padding: 0 4px;
     }
@@ -820,9 +925,9 @@
       height: 90px; pointer-events: none;
       background: linear-gradient(180deg,
         transparent 0%,
-        rgba(124, 229, 162, 0.04) 30%,
-        rgba(124, 229, 162, 0.16) 50%,
-        rgba(124, 229, 162, 0.04) 70%,
+        rgba(242, 184, 92, 0.04) 30%,
+        rgba(242, 184, 92, 0.16) 50%,
+        rgba(242, 184, 92, 0.04) 70%,
         transparent 100%);
       animation: scan 1.4s cubic-bezier(0.4, 0.0, 0.2, 1) 1;
       z-index: 999;
@@ -866,9 +971,9 @@
       <div class="brand">
         <span class="brand-led"></span>
         <div>
-          <div class="wordmark"><span class="accent">chemometrics4all</span><span class="sep">/</span><span class="light">cross-binding benchmark</span></div>
+          <div class="wordmark"><span class="accent">chemometrics4all</span><span class="sep">/</span><span class="light">benchmark status</span></div>
           <div class="tagline" id="tagline">
-            same algorithm <span class="dot">·</span> same input bytes <span class="dot">·</span> <span id="tagline-count">—</span> implementations
+            timing matrix <span class="dot">·</span> reference + binding parity <span class="dot">·</span> <span id="tagline-count">—</span> columns
           </div>
         </div>
       </div>
@@ -953,9 +1058,9 @@
     <div class="control">
       <span class="control-label">viz</span>
       <select id="viz-mode">
-        <option value="duration">duration (ms)</option>
-        <option value="speedup">speed-up × vs chemometrics4all.cpp</option>
-        <option value="avg-speedup">avg speed-up × (geomean / size)</option>
+        <option value="duration">duration</option>
+        <option value="speedup">speed-up</option>
+        <option value="avg-speedup">avg speed-up</option>
       </select>
     </div>
     <span class="ctrl-spacer"></span>
@@ -967,13 +1072,19 @@
 <!-- TABLE -->
 <div class="table-shell reveal reveal-3">
   <div class="legend">
-    <span class="legend-item"><span class="ico p-exact">✓</span> exact (≤ 1e-6)</span>
-    <span class="legend-item"><span class="ico p-drift">≈</span> drift (≤ 1e-3)</span>
-    <span class="legend-item"><span class="ico p-divergent">✗</span> divergent (&gt; 1e-3)</span>
+    <span class="legend-item"><span class="ico p-exact">✓</span> parity ok</span>
+    <span class="legend-item"><span class="ico p-drift">≈</span> drift</span>
+    <span class="legend-item"><span class="ico p-divergent">✗</span> divergent</span>
     <span class="legend-item"><span class="ico p-error">!</span> error</span>
     <span class="legend-item"><span class="ico p-not_run">·</span> not run</span>
     <span class="legend-item"><span class="ico p-not_available">∅</span> not available in lib</span>
-    <span class="legend-item"><span class="cell-fastest" style="font-family:var(--mono);padding:0 4px">42.5</span> fastest overall</span>
+    <span class="legend-item"><span class="score-swatch" style="color:var(--score-best)">42.5</span> best row time</span>
+    <span class="legend-item"><span class="score-swatch" style="color:var(--score-near)">+15%</span> within 15%</span>
+    <span class="legend-item"><span class="score-swatch" style="color:var(--score-mid)">+50%</span> within 50%</span>
+    <span class="legend-item"><span class="score-swatch" style="color:var(--score-far)">+100%</span> within 100%</span>
+    <span class="legend-item"><span class="score-swatch" style="color:var(--score-slow)">slow</span> slower</span>
+    <span class="legend-item"><span class="reference-method-icon" style="margin-left:0">∟</span> reference method</span>
+    <span class="legend-item"><span class="ref-badge" style="color:var(--amber);font-weight:600;border-left:2px solid var(--amber);padding-left:5px">ref</span> method reference label</span>
     <span class="legend-item" style="margin-left:auto;color:var(--fg-2);font-size:10px">click header to sort · ⇧+click for descending</span>
   </div>
   <div class="table-wrap">
@@ -993,14 +1104,12 @@
   <div class="info-card">
     <h3>methodology</h3>
     <ul>
-      <li>Reference: <code>chemometrics4all.cpp</code> native column <span id="parity-ref-name">(resolved from data)</span></li>
-      <li>Parity tolerance: 1e-6 exact, 1e-3 drift threshold</li>
-      <li>Every backend reads the <b>same</b> orchestrator-generated CSV — bit-identical input bytes</li>
-      <li>5 runs per cell, first discarded as warmup, median reported</li>
-      <li>Per-cell timeout: 300s</li>
-      <li>Thread control via <code>OMP_NUM_THREADS</code> · <code>OPENBLAS_NUM_THREADS</code> · <code>MKL_NUM_THREADS</code> · <code>BLIS_NUM_THREADS</code> + binding-specific thread controls</li>
+      <li>Payload: <code>benchmarks/cross_binding/results/full_matrix.csv</code></li>
+      <li>Rows: algorithm × dataset size × thread count</li>
+      <li>Columns: C++ ABI, public bindings, and external reference libraries</li>
+      <li>Cell tooltip: raw parity, binding parity, reference parity, and reason</li>
     </ul>
-    <p>See the <a href="benchmarks/methodology.html">full methodology page</a> for reference policy and per-algo overrides.</p>
+    <p>See the <a href="benchmarks/methodology.html">methodology page</a> for the policy before publishing results.</p>
   </div>
   <div class="info-card">
     <h3>host</h3>
@@ -1008,21 +1117,22 @@
   </div>
   <div class="info-card">
     <h3>backends</h3>
-    <p>Columns named <code>owner.language[.variant]</code>: <code>chemometrics4all.*</code> are this project's bindings, others are external libraries.</p>
+    <p>Internal columns are chemometrics4all routes. External columns are third-party or language-standard reference methods.</p>
     <div id="backend-info"></div>
   </div>
   <div class="info-card">
     <h3>parity verdict</h3>
-    <p>Each cell shows <code>&lt;duration_ms&gt; &lt;icon&gt;</code> or <code>&lt;speed-up×&gt; &lt;icon&gt;</code> vs the native C++ column.</p>
+    <p>Internal binding rows compare against the direct C++ ABI. Reference gates compare native C++ and comparator rows against stored external-reference snapshots.</p>
     <ul>
-      <li><span class="p-exact">✓</span> <b>exact</b> — ≤ 1e-6 vs reference</li>
-      <li><span class="p-drift">≈</span> <b>drift</b> — ≤ 1e-3 and not exact</li>
-      <li><span class="p-divergent">✗</span> <b>divergent</b> — &gt; 1e-3</li>
-      <li><span class="p-error">!</span> <b>error</b> — dependency, runtime, crash or exception</li>
-      <li><span class="p-not_run">·</span> <b>not run</b> — skipped, timed out, or no timing was produced</li>
-      <li><span class="p-not_available">∅</span> <b>not available in lib</b> — the library does not expose that algorithm</li>
+      <li><span class="p-exact">✓</span> <b>exact</b> - result within tolerance</li>
+      <li><span class="p-drift">≈</span> <b>drift</b> - result outside exact tolerance</li>
+      <li><span class="p-divergent">✗</span> <b>divergent</b> - result outside drift threshold</li>
+      <li><span class="p-error">!</span> <b>error</b> - dependency, runtime, crash or exception</li>
+      <li><span class="p-not_compared">○</span> <b>timing only</b> - timing exists, but no parity icon is shown for that cell</li>
+      <li><span class="p-not_run">·</span> <b>not run</b> - no timing was produced</li>
+      <li><span class="p-not_available">∅</span> <b>not available in lib</b> - the library does not expose that operator</li>
     </ul>
-    <p><b>Bold</b> + phosphor highlight = fastest timed cell overall; language-colored text marks the fastest timed cell inside each language.</p>
+    <p>The reference column lists the external library or formula used for each method when one is available.</p>
   </div>
 </section>
 
@@ -1030,7 +1140,7 @@
   generated {{ generated_at }}<span class="sep">·</span>
   <a href="https://github.com/GBeurier/chemometrics4all">github.com/GBeurier/chemometrics4all</a><span class="sep">·</span>
   <a href="about.html">project info</a><span class="sep">·</span>
-  <a href="benchmarks/cross_binding.html">static markdown view</a><span class="sep">·</span>
+  <a href="benchmarks/overview.html">benchmark overview</a><span class="sep">·</span>
   <a href="benchmarks/methodology.html">methodology</a>
 </div>
 
@@ -1048,9 +1158,25 @@ const DENSITY_VALUES = ['comfortable', 'compact', 'ultra'];
 const PARITY_VALUES = ['exact', 'drift', 'divergent', 'error', 'not_run', 'not_available'];
 const PARITY_ALIASES = {
   ok: 'exact',
+  covered: 'exact',
+  reference_ok: 'exact',
+  reference_snapshot: 'exact',
+  binding_ok: 'exact',
+  external_ok: 'exact',
+  reference_snapshot_drift: 'drift',
   warn: 'drift',
-  fail: 'divergent',
+  timing_only: 'not_compared',
+  reference_snapshot_missing: 'not_compared',
+  reference_not_compared: 'not_compared',
+  binding_mismatch: 'divergent',
+  reference_diverged: 'divergent',
+  external_diverged: 'divergent',
+  fail: 'error',
+  error: 'error',
+  external_not_compared: 'not_compared',
   timeout: 'not_run',
+  not_run: 'not_run',
+  not_available: 'not_available',
   na: 'not_available',
 };
 
@@ -1135,6 +1261,66 @@ function nativeBaselineCol() {
 }
 const NATIVE_COL_ID = nativeBaselineCol()?.id || '';
 if (NATIVE_COL_ID) state.cols.add(NATIVE_COL_ID);
+let rowColumnFocus = null;
+let renderedRowsByKey = new Map();
+
+function ensureNativeColumn() {
+  if (NATIVE_COL_ID) state.cols.add(NATIVE_COL_ID);
+}
+
+function clearRowColumnFocus() {
+  rowColumnFocus = null;
+}
+
+function setColumnSelection(ids) {
+  state.cols = new Set(ids);
+  ensureNativeColumn();
+}
+
+function togglePresetColumns(key) {
+  const preset = DATA.presets[key];
+  if (!preset) return;
+  const ids = preset.cols.filter(id => DATA.columns.some(c => c.id === id) && id !== NATIVE_COL_ID);
+  const allSelected = ids.length ? ids.every(id => state.cols.has(id)) : false;
+  for (const id of ids) {
+    if (allSelected) state.cols.delete(id);
+    else state.cols.add(id);
+  }
+  ensureNativeColumn();
+  clearRowColumnFocus();
+}
+
+function rowKey(row) {
+  const size = row.isAvg ? 'avg' : `${row.n}x${row.p}`;
+  return `${row.algo}|${size}|${row.threads}`;
+}
+
+function scoreColumnIdsForRow(row) {
+  return DATA.columns
+    .filter(c => {
+      const cell = row.cells && row.cells[c.id];
+      return cell && cell.ok && Number.isFinite(cell.ms);
+    })
+    .map(c => c.id);
+}
+
+function toggleRowScoreColumns(key) {
+  const row = renderedRowsByKey.get(key);
+  if (!row) return;
+  if (rowColumnFocus && rowColumnFocus.key === key) {
+    setColumnSelection(rowColumnFocus.previousCols);
+    clearRowColumnFocus();
+    return;
+  }
+  if (!rowColumnFocus) {
+    rowColumnFocus = { key, previousCols: new Set(state.cols) };
+  } else {
+    rowColumnFocus.key = key;
+  }
+  const scored = scoreColumnIdsForRow(row);
+  if (!scored.length) return;
+  setColumnSelection(scored);
+}
 
 // ---------- helpers ----------
 const $ = id => document.getElementById(id);
@@ -1143,6 +1329,7 @@ const PARITY_ICON = {
   drift: '≈',
   divergent: '✗',
   error: '!',
+  not_compared: '○',
   not_run: '·',
   not_available: '∅',
   ok: '✓',
@@ -1187,7 +1374,9 @@ function cellPasses(cell) {
   // cells got masked. This avoids the surprising "filter fail and your
   // ok rows also vanish" behaviour.
   if (!cell) return true;        // empty cells render as — always
-  return state.parity.has(normalizeParityKey(cell.parity));
+  const key = normalizeParityKey(cell.parity);
+  if (key === 'not_compared') return true;
+  return state.parity.has(key);
 }
 
 function visibleColIds() {
@@ -1245,6 +1434,7 @@ const COLUMN_GROUP_LABELS = {
   'ext-js': 'external · JavaScript',
   'ext-java': 'external · Java',
   'ext-cpp': 'external · C++',
+  external: 'external',
 };
 const COLUMN_GROUP_ORDER = [
   'cpp', 'python', 'r', 'matlab',
@@ -1286,11 +1476,19 @@ function fastestColumn(row, cols) {
   return best ? best.id : null;
 }
 
-// Per-language: returns Map<langSlug, fastestColId>. Only includes
-// languages where 2+ ✓ cells exist (so the marker is informative —
-// a solo cell trivially "wins" its language).
+function scoreClass(ms, best, isRowBest) {
+  if (!Number.isFinite(ms) || !Number.isFinite(best) || best <= 0) return '';
+  const ratio = ms / best;
+  if (isRowBest) return 'score-best';
+  if (ratio <= 1.15) return 'score-near';
+  if (ratio <= 1.50) return 'score-mid';
+  if (ratio <= 2.00) return 'score-far';
+  return 'score-slow';
+}
+
+// Per-language: returns {slug: {id, ms, count}} so score colors compare
+// each cell with the best timed cell of its own language.
 function fastestPerLanguage(row, cols, colsById) {
-  const counts = {};
   const winners = {};
   for (const id of cols) {
     const c = row.cells[id];
@@ -1300,14 +1498,16 @@ function fastestPerLanguage(row, cols, colsById) {
     if (!meta) continue;
     const slug = colLangSlug(meta);
     if (!slug) continue;
-    counts[slug] = (counts[slug] || 0) + 1;
-    if (!winners[slug] || c.ms < winners[slug].ms) winners[slug] = { id, ms: c.ms };
+    if (!winners[slug]) winners[slug] = { id, ms: c.ms, count: 1 };
+    else {
+      winners[slug].count += 1;
+      if (c.ms < winners[slug].ms) {
+        winners[slug].id = id;
+        winners[slug].ms = c.ms;
+      }
+    }
   }
-  const out = {};
-  for (const slug in winners) {
-    if (counts[slug] >= 2) out[slug] = winners[slug].id;
-  }
-  return out;
+  return winners;
 }
 
 function rowHasVisibleCell(_row, _cols) {
@@ -1326,11 +1526,12 @@ function sortRows(rows, cols) {
   // sortable. For data columns, ignore the sort when the column has
   // been hidden — sorting by an invisible column is invisibly active
   // and surprises users.
-  const PSEUDO = ['__algo', '__size', '__threads'];
+  const PSEUDO = ['__algo', '__reference', '__size', '__threads'];
   if (!PSEUDO.includes(col) && !cols.includes(col)) return rows;
   const r = [...rows];
   r.sort((a, b) => {
     if (col === '__algo')    return dir * a.algo.localeCompare(b.algo);
+    if (col === '__reference') return dir * referenceLabel(a.algo).localeCompare(referenceLabel(b.algo));
     if (col === '__size') {
       // avg-speedup rows have no concrete size — keep them adjacent at
       // the same rank regardless of direction.
@@ -1367,44 +1568,23 @@ function renderStatStrip() {
     <div class="stat"><div class="stat-label">sizes</div><div class="stat-value">${s.sizes}<span class="stat-unit">n × p</span></div></div>
     <div class="stat"><div class="stat-label">threads</div><div class="stat-value">${s.threads.join('·')}</div></div>
     <div class="stat"><div class="stat-label">cells timed</div><div class="stat-value"><span class="glow">${s.cells.toLocaleString()}</span></div></div>
-    <div class="stat"><div class="stat-label">exact ✓</div><div class="stat-value"><span class="glow">${okPct}%</span><span class="stat-unit">${s.ok.toLocaleString()}</span></div></div>
+    <div class="stat"><div class="stat-label">timed ok</div><div class="stat-value"><span class="glow">${okPct}%</span><span class="stat-unit">${s.ok.toLocaleString()}</span></div></div>
   `;
 }
 
 function renderPresetRail() {
   const rail = $('preset-rail');
-  // Effective visible columns = the intersection of state.cols and the
-  // language filter. Preset detection compares against the effective
-  // set so the language filter doesn't make every preset look "custom".
-  // The NATIVE column is force-injected at runtime regardless of preset
-  // — normalise both sides to ignore it so the match isn't foiled by
-  // that one phantom diff (without this fix, every preset that doesn't
-  // include cpp.ref in its definition shows as "custom" with +1 col).
-  const effective = visibleColIds();
-  const norm = (ids) => ids
-    .filter(id => id !== NATIVE_COL_ID)
-    .filter(id => {
-      const c = DATA.columns.find(x => x.id === id);
-      return c && (!state.lang || c.lang === state.lang);
-    })
-    .sort()
-    .join('|');
-  const colsList = norm(effective);
   let html = '<span class="preset-label">view</span>';
-  let anyMatch = false;
   for (const [k, p] of Object.entries(DATA.presets)) {
-    const pe = norm(p.cols);
-    const matches = pe === colsList && pe.length > 0;
-    if (matches) anyMatch = true;
-    // Count = preset cols present in data + native baseline (shown on screen).
     const present = p.cols.filter(id => DATA.columns.find(x => x.id === id));
-    const withNative = new Set(present);
-    if (NATIVE_COL_ID) withNative.add(NATIVE_COL_ID);
-    html += `<span class="preset-pill${matches ? ' active' : ''}" data-preset="${k}">${p.label}<span class="cnt">${withNative.size}</span></span>`;
+    const toggleable = present.filter(id => id !== NATIVE_COL_ID);
+    const selected = toggleable.filter(id => state.cols.has(id)).length;
+    const active = toggleable.length ? selected === toggleable.length : present.every(id => state.cols.has(id));
+    const partial = selected > 0 && !active;
+    const cls = active ? ' active' : (partial ? ' partial' : '');
+    html += `<span class="preset-pill${cls}" data-preset="${k}" title="add/remove this column set">${p.label}<span class="cnt">${selected}/${toggleable.length || present.length}</span></span>`;
   }
-  if (!anyMatch) {
-    html += `<span class="preset-pill active" data-preset="">custom<span class="cnt">${effective.length}</span></span>`;
-  }
+  html += `<span class="preset-pill partial" data-preset="" title="current effective column count">custom<span class="cnt">${visibleColIds().length}</span></span>`;
   rail.innerHTML = html;
 }
 
@@ -1492,8 +1672,15 @@ function renderColPicker() {
     ...COLUMN_GROUP_ORDER.filter(g => groups[g]),
     ...Object.keys(groups).filter(g => !COLUMN_GROUP_ORDER.includes(g)).sort(),
   ];
-  const presetRow = Object.entries(DATA.presets).map(([k, p]) =>
-    `<span class="preset" data-preset="${k}">${p.label}</span>`).join('');
+  const presetRow = Object.entries(DATA.presets).map(([k, p]) => {
+    const present = p.cols.filter(id => DATA.columns.find(x => x.id === id));
+    const toggleable = present.filter(id => id !== NATIVE_COL_ID);
+    const selected = toggleable.filter(id => state.cols.has(id)).length;
+    const active = toggleable.length ? selected === toggleable.length : present.every(id => state.cols.has(id));
+    const partial = selected > 0 && !active;
+    const cls = active ? ' active' : (partial ? ' partial' : '');
+    return `<span class="preset${cls}" data-preset="${k}">${p.label}</span>`;
+  }).join('');
   let html = `<div class="preset-row">${presetRow}</div>`;
   for (const g of orderedGroups) {
     const cols = groups[g];
@@ -1525,7 +1712,7 @@ function renderColPicker() {
 // tooltip + the column-picker + the bottom accordion. Same short can
 // collide across a chemometrics4all binding and the external it mimics
 // (chemometrics4all.sklearn vs sklearn both → "sklearn"); they're disambiguated
-// visually by the phosphor-tinted .native-col / chemometrics4all binding bands.
+// visually by the subtle .native-col / chemometrics4all binding bands.
 function shortLabel(label) {
   const meta = DATA.columns.find(c => c.label === label);
   if (!meta) return label;
@@ -1543,8 +1730,95 @@ function densifyFmt(fmt) {
   return fmt;
 }
 
+function referenceInfo(algo) {
+  return (DATA.reference_by_algo || {})[algo] || null;
+}
+
+function referenceLabel(algo) {
+  const ref = referenceInfo(algo);
+  return ref && ref.label ? ref.label : '—';
+}
+
+function referenceTitle(algo) {
+  const ref = referenceInfo(algo);
+  if (!ref || !ref.libraries || !ref.libraries.length) return 'no external reference registered';
+  const lines = [];
+  if (ref.primary) lines.push(`canonical: ${ref.primary}`);
+  const comparators = ref.libraries.filter(x => x !== ref.primary);
+  if (comparators.length) lines.push(`comparators:\n${comparators.join('\n')}`);
+  return lines.length ? lines.join('\n') : ref.libraries.join('\n');
+}
+
+function isReferenceCell(row, cell, meta) {
+  if (!cell || !meta) return false;
+  const ref = referenceInfo(row.algo);
+  if (!ref || !Array.isArray(ref.libraries) || !ref.libraries.length) return false;
+  if (cell.reference_role === 'canonical') return true;
+  const primary = ref.primary || ref.label || '';
+  const label = cell.reference || meta.reference || '';
+  return Boolean(primary && label && label === primary);
+}
+
+function triLabel(v) {
+  if (v === true) return 'pass';
+  if (v === false) return 'fail';
+  return 'n/a';
+}
+
+function isCanonicalReferenceCell(cell) {
+  return cell && cell.reference_role === 'canonical';
+}
+
+function statusIconHtml(cell) {
+  if (isCanonicalReferenceCell(cell)) {
+    return '<span class="reference-method-icon" title="reference method">∟</span>';
+  }
+  if (normalizeParityKey(cell.parity) === 'not_compared') return '';
+  return `<span class="parity p-${cell.parity}">${PARITY_ICON[cell.parity] || '—'}</span>`;
+}
+
+function formatMs(value) {
+  if (!Number.isFinite(value)) return 'n/a';
+  return `${value.toFixed(3)} ms`;
+}
+
+function cellTitle(row, id, cell, meta) {
+  if (isCanonicalReferenceCell(cell)) {
+    const parts = [
+      meta ? meta.label : id,
+      'role: reference method',
+      `status: ${cell.ok ? 'available' : 'unavailable'}`,
+    ];
+    const ref = cell.reference || referenceLabel(row.algo);
+    if (ref && ref !== '—') parts.push(`reference: ${ref}`);
+    if (cell.timed_runs) {
+      const batch = cell.batch_loops && cell.batch_loops > 1 ? `; batch ${cell.batch_loops}x/sample` : '';
+      parts.push(`timing: warmup ${cell.warmup_runs || 0} + ${cell.timed_runs} runs${batch}; median ${formatMs(cell.ms)}`);
+    }
+    if (cell.samples_ms && cell.samples_ms.length) parts.push(`samples: ${cell.samples_ms.map(formatMs).join(', ')}`);
+    if (cell.reason) parts.push(`reason: ${cell.reason}`);
+    return escAttr(parts.join('\n'));
+  }
+  const parts = [
+    meta ? meta.label : id,
+    `gate: ${cell.gate || 'unknown'}`,
+    `parity: ${cell.parity || 'not_run'}${cell.raw_parity ? ` (${cell.raw_parity})` : ''}`,
+    `binding parity: ${triLabel(cell.binding_parity_ok)}`,
+    `reference parity: ${triLabel(cell.reference_parity_ok)}`,
+  ];
+  const ref = cell.reference || referenceLabel(row.algo);
+  if (ref && ref !== '—') parts.push(`reference: ${ref}`);
+  if (cell.timed_runs) {
+    const batch = cell.batch_loops && cell.batch_loops > 1 ? `; batch ${cell.batch_loops}x/sample` : '';
+    parts.push(`timing: warmup ${cell.warmup_runs || 0} + ${cell.timed_runs} runs${batch}; median ${formatMs(cell.ms)}`);
+  }
+  if (cell.samples_ms && cell.samples_ms.length) parts.push(`samples: ${cell.samples_ms.map(formatMs).join(', ')}`);
+  if (cell.reason) parts.push(`reason: ${cell.reason}`);
+  return escAttr(parts.join('\n'));
+}
+
 function renderTable() {
-  if (NATIVE_COL_ID) state.cols.add(NATIVE_COL_ID);
+  ensureNativeColumn();
 
   const cols = visibleColIds();
   // colMetas must iterate exactly the same column ids as the body.
@@ -1560,6 +1834,7 @@ function renderTable() {
     rowsFiltered = aggregateRowsBySize(rowsFiltered, NATIVE_COL_ID);
   }
   const rows = sortRows(rowsFiltered, cols);
+  renderedRowsByKey = new Map(rows.map(r => [rowKey(r), r]));
 
   // language groups for the band row + per-cell tinted borders
   const langGroups = visibleLangGroups(colMetas);
@@ -1577,7 +1852,7 @@ function renderTable() {
     const first = langFirstCol[col.id] ? ' col-lang-first' : '';
     const native = col.id === NATIVE_COL_ID ? ' native-col' : '';
     // Every chemometrics4all binding (not just the native baseline) gets the
-    // phosphor tint so the "ours vs theirs" comparison is unambiguous.
+    // subtle internal tint so the "ours vs theirs" comparison is unambiguous.
     const c4a = (col.kind || '').toLowerCase() === 'chemometrics4all' ? ' col-chemometrics4all' : '';
     return s ? `col-${s}${first}${native}${c4a}` : (native + c4a).trim();
   };
@@ -1595,6 +1870,7 @@ function renderTable() {
   // === HEADER: language band row + column header row ===
   let head = `<tr class="lang-band">
     <th class="algo-col lang-spacer"></th>
+    <th class="ref-col lang-spacer"></th>
     <th class="size-col lang-spacer"></th>
     <th class="thread-col lang-spacer"></th>`;
   for (const g of langGroups) {
@@ -1602,6 +1878,7 @@ function renderTable() {
   }
   head += `</tr><tr>`;
   head += `<th class="algo-col ${sortCls('__algo')}" data-col="__algo"><span class="col-label">algorithm${arrowFor('__algo')}</span></th>`;
+  head += `<th class="ref-col ${sortCls('__reference')}" data-col="__reference"><span class="col-label">reference${arrowFor('__reference')}</span></th>`;
   head += `<th class="size-col ${sortCls('__size')}" data-col="__size"><span class="col-label">size${arrowFor('__size')}</span></th>`;
   head += `<th class="thread-col ${sortCls('__threads')}" data-col="__threads"><span class="col-label">t${arrowFor('__threads')}</span></th>`;
   for (const c of colMetas) {
@@ -1619,7 +1896,7 @@ function renderTable() {
   const speedupMode = state.viz === 'speedup' || state.viz === 'avg-speedup';
   const baselineId = speedupMode && NATIVE_COL_ID ? NATIVE_COL_ID : null;
   if (!rows.length) {
-    $('bench-body').innerHTML = `<tr><td colspan="${cols.length + 3}"><div class="empty-state">
+    $('bench-body').innerHTML = `<tr><td colspan="${cols.length + 4}"><div class="empty-state">
       <h3>nothing in this slice.</h3>
       <p>your filters narrowed every row out.</p>
       <p class="hint" onclick="document.getElementById('reset-btn').click()">⟲ reset all filters</p>
@@ -1636,46 +1913,58 @@ function renderTable() {
       const sizeHtml = row.isAvg
         ? `<span class="size-avg" title="geomean across ${row.sizesCount} size${row.sizesCount === 1 ? '' : 's'}">avg · ${row.sizesCount}</span>`
         : `${row.n}×${row.p}`;
-      let tr = `<tr><td class="algo-cell">${row.algo}</td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
+      const refText = referenceLabel(row.algo);
+      const hasRef = refText && refText !== '—';
+      const refCls = hasRef ? 'ref-cell has-ref' : 'ref-cell no-ref';
+      const rKey = rowKey(row);
+      const scoreCols = scoreColumnIdsForRow(row).length;
+      const focusActive = rowColumnFocus && rowColumnFocus.key === rKey;
+      const focusTitle = focusActive ? 'restore previous column selection' : `show only columns with a timing for this row (${scoreCols})`;
+      let tr = `<tr><td class="algo-cell"><span class="algo-cell-inner"><span class="algo-label" title="${escAttr(row.algo)}">${row.algo}</span><button class="row-score-cols${focusActive ? ' active' : ''}" type="button" data-row-key="${escAttr(rKey)}" title="${escAttr(focusTitle)}">▥</button></span></td><td class="${refCls}" title="${escAttr(referenceTitle(row.algo))}"><span class="ref-badge">${refText}</span></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
       for (const id of cols) {
         const meta = colsById[id];
         const lcls = meta ? langCls(meta).replace('native-col', 'native-cell') : '';
         const c = row.cells[id];
+        const referenceCell = isReferenceCell(row, c, meta);
         if (!c || !cellPasses(c)) {
           tr += `<td class="cell-empty ${lcls}">—</td>`;
           continue;
         }
         if (!c.ok || !Number.isFinite(c.ms)) {
-          const title = c.reason ? ` title="${escAttr(c.reason)}"` : '';
-          tr += `<td class="${lcls}"${title}><span class="p-${c.parity}">${PARITY_ICON[c.parity] || '—'}</span></td>`;
+          const title = ` title="${cellTitle(row, id, c, meta)}"`;
+          const cls = `${lcls}${referenceCell ? ' cell-reference' : ''}${isCanonicalReferenceCell(c) ? ' cell-reference-method' : ''}`;
+          tr += `<td class="${cls}"${title}>${statusIconHtml(c)}</td>`;
           continue;
         }
-        // build value (wrapped in .cell-value so per-language tint can target text only)
+        // Build value. Score color is relative to the fastest cell in
+        // the same language for this row.
         let display;
         const fastCls = (canHighlight && id === fastestId) ? 'cell-fastest' : '';
+        const langSlug = meta ? colLangSlug(meta) : '';
+        const scoreBest = langSlug && langWinners[langSlug] ? langWinners[langSlug].ms : c.ms;
+        const scoreCls = scoreClass(c.ms, scoreBest, canHighlight && id === fastestId);
         if (baselineId && baseMs !== null) {
           const r = id === baselineId ? 1 : baseMs / c.ms;
           const cls = r > 1.03 ? 'speed-faster' : r < 0.97 ? 'speed-slower' : 'speed-equal';
-          display = `<span class="cell-value ${cls} ${fastCls}">${fmtSpeedup(r)}</span>`;
+          display = `<span class="cell-value ${cls} ${fastCls} ${scoreCls}">${fmtSpeedup(r)}</span>`;
         } else if (baselineId) {
-          display = `<span class="cell-value speed-equal ${fastCls}">—</span>`;
+          display = `<span class="cell-value speed-equal ${fastCls} ${scoreCls}">—</span>`;
         } else {
-          display = `<span class="cell-value ${fastCls}">${densifyFmt(c.fmt)}</span>`;
+          display = `<span class="cell-value ${fastCls} ${scoreCls}">${densifyFmt(c.fmt)}</span>`;
         }
-        const parityHtml = `<span class="parity p-${c.parity}">${PARITY_ICON[c.parity]}</span>`;
+        const parityHtml = statusIconHtml(c);
         // Assemble cell classes.
-        // - Row-overall fastest gets the phosphor glow background.
-        // - Per-language fastest gets a subtle text-color tint via
-        //   .cell-value styling. The two indicators stack cleanly: if a
-        //   cell wins its row AND its language, it shows the phosphor
-        //   glow (overall) AND its text leans toward the language hue.
+        // - Row-overall fastest gets the amber winner background.
+        // - Per-language fastest keeps a weight-only marker; text color
+        //   is entirely controlled by scoreClass above.
         const tdCls = [lcls];
         if (canHighlight && id === fastestId) tdCls.push('cell-fastest-bg');
-        const langSlug = meta ? colLangSlug(meta) : '';
-        if (canHighlight && langSlug && langWinners[langSlug] === id) {
+        if (referenceCell) tdCls.push('cell-reference');
+        if (isCanonicalReferenceCell(c)) tdCls.push('cell-reference-method');
+        if (canHighlight && langSlug && langWinners[langSlug] && langWinners[langSlug].id === id) {
           tdCls.push('cell-lang-best', `lang-${langSlug}`);
         }
-        tr += `<td class="${tdCls.join(' ')}">${display}${parityHtml}</td>`;
+        tr += `<td class="${tdCls.join(' ')}" title="${cellTitle(row, id, c, meta)}">${display}${parityHtml}</td>`;
       }
       tr += `</tr>`;
       body.push(tr);
@@ -1707,7 +1996,48 @@ function aggregateRowsBySize(rows, baselineId) {
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(r);
   }
-  const PARITY_RANK = { exact: 0, drift: 1, divergent: 2, error: 3, not_run: 4, not_available: 5 };
+  const PARITY_RANK = { exact: 0, drift: 1, not_compared: 2, divergent: 3, error: 4, not_run: 5, not_available: 6 };
+  const worstParity = (cells, fallback = 'not_available') => {
+    let out = fallback;
+    let seen = false;
+    for (const cell of cells) {
+      if (!cell) continue;
+      const p = normalizeParityKey(cell.parity || cell.raw_parity || '');
+      if (!p) continue;
+      if (!seen || (PARITY_RANK[p] ?? 99) > (PARITY_RANK[out] ?? 99)) out = p;
+      seen = true;
+    }
+    return seen ? out : fallback;
+  };
+  const triAggregate = (cells, key) => {
+    let hasTrue = false;
+    for (const cell of cells) {
+      if (!cell) continue;
+      if (cell[key] === false) return false;
+      if (cell[key] === true) hasTrue = true;
+    }
+    return hasTrue ? true : null;
+  };
+  const firstValue = (cells, key, fallback = '') => {
+    for (const cell of cells) {
+      if (cell && cell[key]) return cell[key];
+    }
+    return fallback;
+  };
+  const aggregateMeta = (cells) => ({
+    raw_parity: firstValue(cells, 'raw_parity', ''),
+    gate: firstValue(cells, 'gate', ''),
+    reference: firstValue(cells, 'reference', ''),
+    reference_role: cells.some(c => c && c.reference_role === 'canonical')
+      ? 'canonical'
+      : firstValue(cells, 'reference_role', ''),
+    binding_parity_ok: triAggregate(cells, 'binding_parity_ok'),
+    reference_parity_ok: triAggregate(cells, 'reference_parity_ok'),
+    warmup_runs: Math.max(0, ...cells.map(c => c && c.warmup_runs || 0)),
+    timed_runs: Math.max(0, ...cells.map(c => c && c.timed_runs || 0)),
+    batch_loops: 1,
+    samples_ms: [],
+  });
   const out = [];
   for (const [, group] of groups) {
     const sample = group[0];
@@ -1716,41 +2046,47 @@ function aggregateRowsBySize(rows, baselineId) {
     const newCells = {};
     for (const id of allColIds) {
       const ratios = [];
-      const parities = new Set();
-      let lastReason = null;
+      const sourceCells = [];
       for (const r of group) {
         const c = r.cells[id];
         const baseC = r.cells[baselineId];
-        if (!c) { parities.add('not_available'); continue; }
-        parities.add(c.parity || 'not_run');
-        if (c.reason) lastReason = c.reason;
+        if (!c) continue;
+        sourceCells.push(c);
         if (!c.ok || !Number.isFinite(c.ms)) continue;
         if (!baseC || !Number.isFinite(baseC.ms)) continue;
         ratios.push(baseC.ms / c.ms);
       }
+      const meta = aggregateMeta(sourceCells);
       if (!ratios.length) {
-        let parity = 'not_run';
-        for (const p of parities) {
-          if ((PARITY_RANK[p] ?? 99) > (PARITY_RANK[parity] ?? 99)) parity = p;
-        }
-        newCells[id] = { parity, ok: false, ms: null, reason: lastReason };
+        if (!sourceCells.length) continue;
+        newCells[id] = {
+          ...meta,
+          parity: worstParity(sourceCells, 'not_run'),
+          ok: false,
+          ms: null,
+          fmt: '—',
+          reason: firstValue(sourceCells, 'reason', 'no timed value in aggregated slice'),
+        };
         continue;
       }
       const geomean = Math.exp(ratios.reduce((s, r) => s + Math.log(r), 0) / ratios.length);
-      let parity = 'exact';
-      for (const p of parities) {
-        if (p === 'not_available' || p === 'not_run' || p === 'error') continue;
-        if ((PARITY_RANK[p] ?? 99) > (PARITY_RANK[parity] ?? 99)) parity = p;
-      }
       newCells[id] = {
-        parity, ok: true, ms: 1 / geomean,
+        ...meta,
+        parity: worstParity(sourceCells, 'exact'),
+        ok: true, ms: 1 / geomean,
         fmt: fmtSpeedup(geomean),
         reason: `geomean over ${ratios.length} size${ratios.length === 1 ? '' : 's'}`,
       };
     }
+    const baselineSources = group.map(r => r.cells[baselineId]).filter(Boolean);
+    const baselineMeta = aggregateMeta(baselineSources);
     newCells[baselineId] = {
-      parity: (newCells[baselineId] && newCells[baselineId].parity) || 'exact',
-      ok: true, ms: 1, fmt: '1.00×',
+      ...baselineMeta,
+      parity: worstParity(baselineSources, 'exact'),
+      ok: true,
+      ms: 1,
+      fmt: '1.00×',
+      reason: `baseline geomean anchor over ${group.length} size${group.length === 1 ? '' : 's'}`,
     };
     out.push({
       algo: sample.algo, threads: sample.threads,
@@ -1832,8 +2168,8 @@ function wire() {
     state.size = ''; state.threads = ''; state.search = '';
     state.parity = new Set(PARITY_VALUES);
     state.sort = null; state.viz = 'duration'; state.density = 'comfortable';
-    state.cols = new Set(DATA.columns.map(c => c.id));
-    if (NATIVE_COL_ID) state.cols.add(NATIVE_COL_ID);
+    clearRowColumnFocus();
+    setColumnSelection(DATA.columns.map(c => c.id));
     rerender();
   });
 
@@ -1843,8 +2179,7 @@ function wire() {
     if (!pill) return;
     const key = pill.dataset.preset;
     if (!key || !DATA.presets[key]) return;
-    state.cols = new Set(DATA.presets[key].cols);
-    if (NATIVE_COL_ID) state.cols.add(NATIVE_COL_ID);
+    togglePresetColumns(key);
     rerender();
   });
 
@@ -1862,7 +2197,7 @@ function wire() {
     // preset
     const preset = e.target.dataset.preset;
     if (preset && DATA.presets[preset]) {
-      state.cols = new Set(DATA.presets[preset].cols);
+      togglePresetColumns(preset);
       rerender();
       return;
     }
@@ -1876,6 +2211,8 @@ function wire() {
         if (c.id === NATIVE_COL_ID) continue;
         if (allOn) state.cols.delete(c.id); else state.cols.add(c.id);
       }
+      ensureNativeColumn();
+      clearRowColumnFocus();
       rerender();
       return;
     }
@@ -1888,6 +2225,17 @@ function wire() {
       return;
     }
     if (e.target.checked) state.cols.add(col); else state.cols.delete(col);
+    ensureNativeColumn();
+    clearRowColumnFocus();
+    rerender();
+  });
+
+  $('bench-body').addEventListener('click', e => {
+    const btn = e.target.closest('.row-score-cols');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    toggleRowScoreColumns(btn.dataset.rowKey);
     rerender();
   });
 
@@ -1920,7 +2268,7 @@ function rerender() {
 }
 
 // ---------- theme toggle ----------
-// Light is the default; users can flip to the CRT-phosphor dark theme.
+// Light is the default; users can flip to the amber-accent dark theme.
 // Choice persists in localStorage.
 const THEME_KEY = 'chemometrics4all.dashboard.theme';
 function applyTheme(theme) {

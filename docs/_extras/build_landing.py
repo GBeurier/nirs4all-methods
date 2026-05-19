@@ -1,16 +1,8 @@
-"""Build the JSON payload that powers the interactive landing dashboard.
+"""Build the JSON payload for the benchmark-status landing page."""
 
-Reads the canonical `benchmarks/cross_binding/results/full_matrix.csv`,
-normalises rows to a dashboard-friendly shape and
-emits a compact JSON blob. The blob is injected into
-`docs/_templates/landing.html` at sphinx-build time via the
-`bench_data_json` html_context variable populated by `conf.py:setup()`.
-
-Same column-naming and parity-icon conventions as `render_docs.py` so
-the dashboard agrees with the per-page markdown tables.
-"""
 from __future__ import annotations
 
+import argparse
 import csv
 import datetime as dt
 import json
@@ -18,208 +10,10 @@ import os
 import platform
 import re
 import subprocess
-from collections import defaultdict
 from pathlib import Path
-from typing import Any
 
 
-# Same canonical orderings & display labels as render_docs.py — kept in
-# sync deliberately so dashboard column ids match the markdown tables.
-BACKEND_DISPLAY: dict[str, str] = {
-    "registry_chemometrics4all": "chemometrics4all.registry",
-    "cpp":          "chemometrics4all.cpp",     # gets a build suffix
-    "python_tier1": "chemometrics4all.python",
-    "python_tier2": "chemometrics4all.sklearn",
-    "r_tier1":      "chemometrics4all.R",
-    "r_tier2":      "chemometrics4all.R.formula",
-    "matlab_tier1": "chemometrics4all.matlab",
-    "matlab_tier2": "chemometrics4all.matlab.classdef",
-    "sklearn":      "sklearn",
-    "ikpls":        "ikpls",
-    "r_pls":        "pls",
-    "r_ropls":      "ropls",
-    "r_mixomics":   "mixOmics",
-    "matlab_pls":   "plsregress",
-}
-
-CPP_BUILD_SUFFIX = {
-    "dev-release": "ref",
-    "blas-on":     "blas",
-    "omp-on":      "omp",
-    "blas-omp":    "blas+omp",
-    "cuda-on":     "cuda",
-}
-
-CPP_TIER_DESC = {
-    "dev-release": ("chemometrics4all reference (single-thread)",
-                    "libc4a built with `CHEMOMETRICS4ALL_WITH_BLAS=OFF, OPENMP=OFF` — pure scalar reference loops, no acceleration. The parity baseline."),
-    "blas-on":     ("chemometrics4all + BLAS",
-                    "libc4a built with `CHEMOMETRICS4ALL_WITH_BLAS=ON` only — links system BLAS (OpenBLAS), benefits from BLAS thread parallelism."),
-    "omp-on":      ("chemometrics4all + OpenMP",
-                    "libc4a built with `CHEMOMETRICS4ALL_WITH_OPENMP=ON` only — OpenMP in C kernel loops, no BLAS."),
-    "blas-omp":    ("chemometrics4all + BLAS + OpenMP",
-                    "libc4a built with both `BLAS=ON` and `OPENMP=ON` — the recommended production config."),
-    "cuda-on":     ("chemometrics4all + CUDA",
-                    "libc4a built with `CHEMOMETRICS4ALL_WITH_CUDA=ON` — GEMM kernels offloaded to GPU via cuBLAS. Overhead-dominated at small matrices; wins at large ones."),
-}
-
-BACKEND_LONG: dict[str, tuple[str, str, str]] = {
-    "python_tier1": ("Python",        "chemometrics4all raw",        "`chemometrics4all._methods.<algo>_fit(ctx, cfg, X, y, …)` — direct FFI binding"),
-    "registry_chemometrics4all": ("Python",    "chemometrics4all canonical",  "`benchmarks.parity_timing.registry.MethodSpec.chemometrics4all_fn` — canonical per-method entry point"),
-    "python_tier2": ("Python",        "chemometrics4all idiomatic",  "`chemometrics4all.sklearn.<Class>` — sklearn-style BaseEstimator with `.fit()/.predict()`"),
-    "sklearn":      ("Python",        "external",           "`sklearn.cross_decomposition.PLSRegression`, `sklearn.decomposition.PCA` + LinearRegression / Ridge / GaussianProcessRegressor (proxies)"),
-    "ikpls":        ("Python",        "external",           "`ikpls.numpy_ikpls.PLS` — Improved Kernel PLS (plain PLS only)"),
-    "r_tier1":      ("R",             "chemometrics4all raw",        "`chemometrics4all_method(algo, X, y, ...)` — unified dispatcher (33 fits + 24 selectors + 4 diagnostics)"),
-    "r_tier2":      ("R",             "chemometrics4all idiomatic",  "`pls(y ~ ., data)`, `cppls(...)`, `sparse_pls(...)`, … — base R formula+S3 wrappers"),
-    "r_pls":        ("R",             "external",           "CRAN `pls` package — `pls::plsr / pls::cppls / pls::pcr`"),
-    "r_ropls":      ("R",             "external",           "Bioconductor `ropls` — `ropls::opls` (OPLS only)"),
-    "r_mixomics":   ("R",             "external",           "Bioconductor `mixOmics` — `pls / spls / plsda / splsda`"),
-    "matlab_tier1": ("MATLAB/Octave", "chemometrics4all raw",        "`chemometrics4all.<algo>(X, y, ...)` — single dispatcher MEX"),
-    "matlab_tier2": ("MATLAB/Octave", "chemometrics4all idiomatic",  "`chemometrics4all.fit(algo, X, y, ...)` factory + per-algorithm classdefs"),
-    "matlab_pls":   ("MATLAB/Octave", "external",           "Octave statistics `plsregress` (SIMPLS, plain PLS only)"),
-}
-
-# Column ordering — matches render_docs.py canonical order.
-CPP_BUILD_ORDER = ["dev-release", "blas-on", "omp-on", "blas-omp", "cuda-on"]
-BACKEND_ORDER = [
-    "registry_chemometrics4all",
-    "python_tier1", "python_tier2",
-    "r_tier1", "r_tier2",
-    "matlab_tier1", "matlab_tier2",
-    "sklearn", "ikpls",
-    "r_pls", "r_ropls", "r_mixomics",
-    "matlab_pls",
-]
-
-GROUP_LABELS = {
-    "cpp":     "chemometrics4all · C++ (libc4a)",
-    "python":  "chemometrics4all · Python",
-    "r":       "chemometrics4all · R",
-    "matlab":  "chemometrics4all · MATLAB/Octave",
-    "ext-py":  "external · Python",
-    "ext-r":   "external · R",
-    "ext-ml":  "external · MATLAB/Octave",
-}
-
-BACKEND_GROUP = {
-    "python_tier1": "python", "python_tier2": "python",
-    "registry_chemometrics4all": "python",
-    "r_tier1": "r", "r_tier2": "r",
-    "matlab_tier1": "matlab", "matlab_tier2": "matlab",
-    "sklearn": "ext-py", "ikpls": "ext-py",
-    "r_pls": "ext-r", "r_ropls": "ext-r", "r_mixomics": "ext-r",
-    "matlab_pls": "ext-ml",
-}
-
-# Algorithm taxonomy — used by the dashboard for the "group" filter and
-# the per-algo group label. Order in ALGO_GROUPS_ORDER drives display
-# order in the dropdown.
-ALGO_GROUPS_ORDER = [
-    "core", "ensemble", "sparse", "robust", "nonlinear",
-    "multi-block", "calibration-transfer", "classification",
-    "missing", "regularized", "other",
-]
-ALGO_GROUP_LABELS = {
-    "core":                 "Core PLS",
-    "ensemble":             "Ensemble",
-    "sparse":               "Sparse",
-    "robust":               "Robust / weighted",
-    "nonlinear":            "Nonlinear / local",
-    "multi-block":          "Multi-block / cross-modal",
-    "calibration-transfer": "Calibration transfer",
-    "classification":       "Classification & GLM",
-    "missing":              "Missing data",
-    "regularized":          "Regularized",
-    "other":                "Other",
-}
-ALGO_GROUP = {
-    "pls":                  "core",
-    "cppls":                "core",
-    "sparse_simpls":        "sparse",
-    "fused_sparse_pls":     "sparse",
-    "sparse_pls_da":        "sparse",
-    "group_sparse_pls":     "sparse",
-    "bagging_pls":          "ensemble",
-    "boosting_pls":         "ensemble",
-    "robust_pls":           "robust",
-    "weighted_pls":         "robust",
-    "kernel_pls":           "nonlinear",
-    "lw_pls":               "nonlinear",
-    "gpr_pls":              "nonlinear",
-    "continuum_regression": "nonlinear",
-    "o2pls":                "multi-block",
-    "mir_pls":              "multi-block",
-    "ds":                   "calibration-transfer",
-    "pds":                  "calibration-transfer",
-    "ecr":                  "calibration-transfer",
-    "pls_lda":              "classification",
-    "pls_logistic":         "classification",
-    "pls_qda":              "classification",
-    "pls_glm":              "classification",
-    "pls_cox":              "classification",
-    "missing_aware_nipals": "missing",
-    "ridge_pls":            "regularized",
-}
-
-
-def column_id(backend: str, build: str) -> str:
-    """Same column identity used in the markdown — `chemometrics4all.cpp.<suffix>`
-    for the C++ tiers, the display label otherwise."""
-    if backend == "cpp":
-        suffix = CPP_BUILD_SUFFIX.get(build, build)
-        return f"chemometrics4all.cpp.{suffix}"
-    if backend.startswith("ref_"):
-        return "ref." + backend[len("ref_"):]
-    return BACKEND_DISPLAY.get(backend, backend)
-
-
-def is_true(v: Any) -> bool:
-    return str(v).lower() == "true"
-
-
-def parity_code(row: dict) -> str:
-    """exact | drift | divergent | error | not_run | not_available.
-
-    Distinguishes hard runtime errors (ModuleNotFoundError, ImportError,
-    crash) from libraries that do not expose an algorithm so the dashboard
-    can show the right icon instead of collapsing every failure to a dash.
-    """
-    if not is_true(row.get("ok")):
-        reason = (row.get("reason") or "").lower()
-        if "timeout" in reason:
-            return "not_run"
-        if ("not implemented by" in reason or
-                "unsupported algo" in reason or
-                "unsupported algorithm" in reason):
-            return "not_available"
-        if any(k in reason for k in (
-                "modulenotfounderror", "importerror", "notimplemented",
-                "error", "exception", "crash", "traceback", "segfault")):
-            return "error"
-        return "not_run"
-    if is_true(row.get("parity_ok")):
-        return "exact"
-    try:
-        d = float(row.get("parity_max_diff", "nan"))
-    except (TypeError, ValueError):
-        return "drift"
-    if d != d:           # NaN
-        return "drift"
-    if d < 1e-3:
-        return "drift"
-    return "divergent"
-
-
-def fmt_ms(ms_str: str) -> str:
-    try:
-        f = float(ms_str)
-    except (TypeError, ValueError):
-        return "—"
-    if f >= 1000:
-        return f"{f / 1000:.1f} s"
-    if f >= 10:
-        return f"{f:.1f} ms"
-    return f"{f:.2f} ms"
+PLACEHOLDER_COLUMN = "chemometrics4all.reference-registry"
 
 
 def host_info() -> dict:
@@ -237,12 +31,11 @@ def host_info() -> dict:
     cpuinfo = Path("/proc/cpuinfo")
     if cpuinfo.exists():
         try:
-            text = cpuinfo.read_text()
-            m = re.search(r"^model name\s*:\s*(.+)$", text, re.M)
-            if m:
-                info["cpu_model"] = m.group(1).strip()
-            pairs = set(re.findall(r"physical id\s*:\s*(\d+).*?core id\s*:\s*(\d+)",
-                                    text, re.S))
+            text = cpuinfo.read_text(encoding="utf-8")
+            model = re.search(r"^model name\s*:\s*(.+)$", text, re.M)
+            if model:
+                info["cpu_model"] = model.group(1).strip()
+            pairs = set(re.findall(r"physical id\s*:\s*(\d+).*?core id\s*:\s*(\d+)", text, re.S))
             if pairs:
                 info["cpu_count_physical"] = len(pairs)
             mhz = re.search(r"^cpu MHz\s*:\s*([\d.]+)$", text, re.M)
@@ -251,322 +44,444 @@ def host_info() -> dict:
             cache = re.search(r"^cache size\s*:\s*(.+)$", text, re.M)
             if cache:
                 info["cpu_cache"] = cache.group(1).strip()
-        except Exception:
+        except OSError:
             pass
     meminfo = Path("/proc/meminfo")
     if meminfo.exists():
         try:
-            m = re.search(r"^MemTotal:\s*(\d+)\s*kB", meminfo.read_text(), re.M)
-            if m:
-                info["ram_gb"] = f"{int(m.group(1)) / 1024 / 1024:.1f}"
-        except Exception:
+            total = re.search(r"^MemTotal:\s*(\d+)\s*kB", meminfo.read_text(encoding="utf-8"), re.M)
+            if total:
+                info["ram_gb"] = f"{int(total.group(1)) / 1024 / 1024:.1f}"
+        except OSError:
             pass
     try:
-        info["kernel"] = subprocess.check_output(
-            ["uname", "-r"], timeout=2).decode().strip()
-    except Exception:
+        info["kernel"] = subprocess.check_output(["uname", "-r"], timeout=2).decode().strip()
+    except (OSError, subprocess.SubprocessError):
         pass
     return info
 
 
-def build_payload(results_dir: Path) -> dict:
-    """Read canonical cross-binding CSVs and build the dashboard payload."""
-    rows_in: list[dict] = []
-    full_matrix = results_dir / "full_matrix.csv"
-    csv_paths = [full_matrix] if full_matrix.exists() else []
-    generated_at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    if csv_paths:
-        latest_source = max(p.stat().st_mtime for p in csv_paths)
-        generated_at = dt.datetime.fromtimestamp(
-            latest_source, dt.timezone.utc
-        ).strftime("%Y-%m-%d %H:%M UTC")
-    for p in csv_paths:
-        rows_in.extend(csv.DictReader(p.open()))
-
-    # Dedupe: same (algo, backend, build, n, p, threads) — keep last seen.
-    seen: dict[tuple, dict] = {}
-    for r in rows_in:
-        if not r.get("algorithm"):
-            continue
-        try:
-            n, p_, t = int(r["n"]), int(r["p"]), int(r["threads"])
-        except (ValueError, KeyError):
-            continue
-        key = (r["algorithm"], r["backend"], r.get("libc4a_build", ""), n, p_, t)
-        seen[key] = r
-
-    # Collect columns actually present.
-    present: set[str] = set()
-    for r in seen.values():
-        present.add(column_id(r["backend"], r.get("libc4a_build", "")))
-
-    # Registry-declared external reference libraries. Infer the language
-    # from the slug prefix (`ref.python_*`, `ref.r_*`, `ref.matlab_*`,
-    # `ref.julia_*`, …) so the language band groups them correctly.
-    REF_LANG_PREFIX = {
-        "python":  ("Python",        "ext-py"),
-        "r":       ("R",             "ext-r"),
-        "matlab":  ("MATLAB/Octave", "ext-ml"),
-        "octave":  ("MATLAB/Octave", "ext-ml"),
-        "julia":   ("Julia",         "ext-jl"),
-        "rust":    ("Rust",          "ext-rs"),
-        "go":      ("Go",            "ext-go"),
-        "js":      ("JavaScript",    "ext-js"),
-        "java":    ("Java",          "ext-java"),
-        "cpp":     ("C++",           "ext-cpp"),
-    }
-    def _ref_lang(cid: str) -> tuple[str, str]:
-        rest = cid[len("ref."):]
-        for prefix, (lang, group) in REF_LANG_PREFIX.items():
-            if rest.startswith(prefix + "_") or rest == prefix:
-                return lang, group
-        return "external", "ext-py"
-
-    def _ref_short(cid: str, lang_prefix: str) -> str:
-        """Compact a `ref.python_nirs4all_operators_models_sklearn_lwpls`
-        slug down to something readable in narrow columns: drop the
-        language prefix, then collapse known package prefixes."""
-        rest = cid[len("ref."):]
-        if rest.startswith(lang_prefix + "_"):
-            rest = rest[len(lang_prefix) + 1:]
-        elif rest == lang_prefix:
-            rest = lang_prefix
-        # Last segment is usually the most informative method/package name.
-        parts = rest.split("_")
-        if len(parts) >= 2:
-            return f"{parts[0]}/{parts[-1]}"
-        return rest
-
-    # Build raw column entries first, then sort by language to get
-    # contiguous language bands.
-    raw_cols: list[dict] = []
-    for build in CPP_BUILD_ORDER:
-        cid = f"chemometrics4all.cpp.{CPP_BUILD_SUFFIX[build]}"
-        if cid in present:
-            tier, what = CPP_TIER_DESC[build]
-            raw_cols.append({
-                "id": cid, "label": cid, "short": cid[len("chemometrics4all.cpp."):],
-                "group": "cpp", "tier": tier, "lang": "C++",
-                "what": what, "build": build, "kind": "chemometrics4all",
-            })
-    for be in BACKEND_ORDER:
-        cid = BACKEND_DISPLAY.get(be, be)
-        if cid in present:
-            lang, tier, what = BACKEND_LONG[be]
-            is_chemometrics4all = cid.startswith("chemometrics4all.")
-            short = cid[len("chemometrics4all."):] if is_chemometrics4all else cid
-            raw_cols.append({
-                "id": cid, "label": cid, "short": short,
-                "group": BACKEND_GROUP[be], "tier": tier, "lang": lang,
-                "what": what, "build": "",
-                "kind": "chemometrics4all" if is_chemometrics4all else "external",
-            })
-    for cid in sorted(c for c in present if c.startswith("ref.")):
-        lang, group = _ref_lang(cid)
-        # Map the lang back to the prefix used in the cid.
-        lang_to_prefix = {v[0]: k for k, v in REF_LANG_PREFIX.items()}
-        prefix = lang_to_prefix.get(lang, "")
-        short = _ref_short(cid, prefix) if prefix else cid[len("ref."):]
-        raw_cols.append({
-            "id": cid, "label": cid, "short": short,
-            "group": group, "tier": "registry reference", "lang": lang,
-            "what": f"Registry-declared external reference library ({lang}).",
-            "build": "", "kind": "external",
-        })
-
-    # Canonical language order for contiguous band rendering: C++,
-    # Python, R, MATLAB/Octave, then other languages alphabetically.
-    LANG_ORDER = ["C++", "Python", "R", "MATLAB/Octave",
-                  "Julia", "Rust", "Go", "JavaScript", "Java", "external"]
-    def _lang_rank(c: dict) -> int:
-        try:
-            return LANG_ORDER.index(c["lang"])
-        except ValueError:
-            return len(LANG_ORDER)
-    # Stable sort: language rank → kind (chemometrics4all first) → original order.
-    columns = sorted(raw_cols, key=lambda c: (_lang_rank(c),
-                                                0 if c["kind"] == "chemometrics4all" else 1))
-
-    # Build rows: one per (algo, n, p, threads). Cells keyed by column id.
-    # We always emit a row for every (algo, size, threads) triple that
-    # appears in the CSVs — even if every backend in that row failed —
-    # so the dashboard surfaces the "this algo is unimplemented
-    # everywhere" case (e.g. ds, pds, pls_cox, weighted_pls).
-    pivot: dict[tuple, dict] = defaultdict(dict)
-    for r in seen.values():
-        n = int(r["n"]); p_ = int(r["p"]); t = int(r["threads"])
-        rkey = (r["algorithm"], n, p_, t)
-        if rkey not in pivot:
-            pivot[rkey] = {}        # ensure row exists even with no cells
-        cid = column_id(r["backend"], r.get("libc4a_build", ""))
-        verdict = parity_code(r)
-        try:
-            ms = float(r["median_ms"]) if r.get("median_ms") else None
-        except ValueError:
-            ms = None
-        ok = is_true(r.get("ok"))
-        cell = {"parity": verdict, "ok": ok}
-        if ms is not None and ms == ms:   # not NaN
-            cell["ms"] = round(ms, 3)
-            cell["fmt"] = fmt_ms(r["median_ms"])
-        # Capture the failure reason so the dashboard tooltip can show
-        # "ModuleNotFoundError: foo" instead of a silent dash.
-        reason = (r.get("reason") or "").strip()
-        if reason and verdict in ("error", "not_run", "not_available",
-                                  "divergent", "drift"):
-            cell["reason"] = reason[:200]
-        # Keep every explicit verdict emitted by the orchestrator so the
-        # dashboard can distinguish "not run" from "not available in lib".
-        if ms is not None or verdict in (
-                "not_run", "not_available", "divergent", "drift", "error"):
-            pivot[rkey][cid] = cell
-
-    rows_out = []
-    for (algo, n, p_, t), cells in sorted(pivot.items(),
-                                            key=lambda x: (x[0][0],
-                                                            x[0][1] * x[0][2],
-                                                            x[0][3])):
-        rows_out.append({
-            "algo": algo, "n": n, "p": p_, "threads": t,
-            "cells": cells,
-        })
-
-    # Per-column versions (best available).
-    versions: dict[str, str] = {}
-    for r in seen.values():
-        cid = column_id(r["backend"], r.get("libc4a_build", ""))
-        if cid in versions:
-            continue
-        try:
-            v = json.loads(r.get("versions_json") or "{}")
-        except Exception:
-            v = {}
-        if v:
-            items = "; ".join(f"{k}={v[k]}" for k in v if v[k])
-            if items:
-                versions[cid] = items
-
-    # Presets: which columns to show by default. Each preset's column
-    # list is filtered against `all_cols` so ghost ids that don't exist
-    # in the current data never make it into state.cols (a ghost id
-    # would blank the table — fixed). Empty presets are dropped.
-    all_cols = [c["id"] for c in columns]
-    cpp_blas_omp = "chemometrics4all.cpp.blas+omp" if "chemometrics4all.cpp.blas+omp" in all_cols else None
-    headline_candidates = [
-        cpp_blas_omp, "chemometrics4all.python", "chemometrics4all.sklearn",
-        "chemometrics4all.R", "chemometrics4all.matlab",
-        # add the canonical registry column too — it's the new "chemometrics4all"
-        # entry point in the registry-driven runs
-        "chemometrics4all.registry",
-        "sklearn", "pls", "plsregress",
-    ]
-    headline = [c for c in headline_candidates if c and c in all_cols]
-    cpp_tiers = [c for c in all_cols if c.startswith("chemometrics4all.cpp.")]
-    chemometrics4all_only = [c for c in all_cols if c.startswith("chemometrics4all.")]
-    externals = [c for c in all_cols if not c.startswith("chemometrics4all.")]
-    thread_sweep = [c for c in [cpp_blas_omp, "chemometrics4all.python",
-                                  "chemometrics4all.sklearn", "chemometrics4all.registry",
-                                  "sklearn"] if c and c in all_cols]
-    # API-parity view — same algorithm, same idiomatic API in each
-    # language. Compares chemometrics4all's "mimicking" bindings (sklearn-style,
-    # R-formula + S3, MATLAB classdef) against the canonical external
-    # libraries users would otherwise reach for. Raw low-level bindings
-    # (chemometrics4all.python ctypes, chemometrics4all.R dispatcher, chemometrics4all.matlab MEX)
-    # are intentionally excluded — they're the wrong API to compare
-    # against sklearn / pls / plsregress.
-    api_parity_candidates = [
-        cpp_blas_omp,
-        # Python: chemometrics4all sklearn-style binding vs canonical externals
-        "chemometrics4all.sklearn",
-        "sklearn", "ikpls", "ref.python_scikit_learn", "ref.python_ikpls",
-        # R: chemometrics4all formula + S3 binding vs canonical R externals
-        "chemometrics4all.R.formula",
-        "pls", "mixOmics", "ropls",
-        "ref.r_pls", "ref.r_mixomics", "ref.r_ropls",
-        # MATLAB: chemometrics4all classdef binding vs the stats-toolbox baseline
-        "chemometrics4all.matlab.classdef",
-        "plsregress", "ref.matlab_libpls",
-    ]
-    api_parity = [c for c in api_parity_candidates if c and c in all_cols]
-    raw_presets = {
-        "all":          {"label": "All",          "cols": all_cols},
-        "headline":     {"label": "Headline",     "cols": headline},
-        "api-parity":   {"label": "API parity",   "cols": api_parity},
-        "chemometrics4all":      {"label": "chemometrics4all only", "cols": chemometrics4all_only},
-        "cpp-tiers":    {"label": "C++ tiers",    "cols": cpp_tiers},
-        "externals":    {"label": "Externals",    "cols": externals},
-        "thread-sweep": {"label": "Thread sweep", "cols": thread_sweep},
-    }
-    # Drop presets that would resolve to zero columns in the current data.
-    presets = {k: v for k, v in raw_presets.items() if v["cols"]}
-
-    # Algo → group mapping (only for algos actually present in the data).
-    present_algos = sorted({r["algo"] for r in rows_out})
-    algo_to_group = {a: ALGO_GROUP.get(a, "other") for a in present_algos}
-    # Groups actually present, in canonical order.
-    present_group_keys = [g for g in ALGO_GROUPS_ORDER
-                            if any(algo_to_group[a] == g for a in present_algos)]
-    algo_groups = [
-        {"key": g, "label": ALGO_GROUP_LABELS[g],
-         "algos": [a for a in present_algos if algo_to_group[a] == g]}
-        for g in present_group_keys
-    ]
-    # Languages actually present in the columns.
-    present_langs = []
-    seen_lang = set()
-    for c in columns:
-        if c.get("lang") and c["lang"] not in seen_lang:
-            seen_lang.add(c["lang"])
-            present_langs.append(c["lang"])
-
+def placeholder_payload(generated_at: str | None = None) -> dict:
+    generated_at = generated_at or dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     payload = {
         "generated_at": generated_at,
-        "host":         host_info(),
-        "columns":      columns,
-        "presets":      presets,
-        "rows":         rows_out,
-        "versions":     versions,
-        "algo_to_group":algo_to_group,
-        "algo_groups":  algo_groups,
-        "languages":    present_langs,
+        "host": host_info(),
+        "columns": [
+            {
+                "id": PLACEHOLDER_COLUMN,
+                "label": PLACEHOLDER_COLUMN,
+                "short": "registry",
+                "group": "python",
+                "tier": "benchmark scaffold",
+                "lang": "Python",
+                "what": "Placeholder column: the chemometrics4all benchmark registry exists, but no timing matrix has been generated yet.",
+                "build": "",
+                "kind": "chemometrics4all",
+            }
+        ],
+        "presets": {
+            "all": {"label": "Scaffold", "cols": [PLACEHOLDER_COLUMN]},
+            "chemometrics4all": {"label": "chemometrics4all only", "cols": [PLACEHOLDER_COLUMN]},
+        },
+        "rows": [
+            {
+                "algo": "registry_scaffold",
+                "n": 0,
+                "p": 0,
+                "threads": 0,
+                "cells": {
+                    PLACEHOLDER_COLUMN: {
+                        "parity": "not_run",
+                        "ok": False,
+                        "reason": "Placeholder: real chemometrics4all benchmark results have not been generated yet.",
+                    }
+                },
+            }
+        ],
+        "versions": {
+            PLACEHOLDER_COLUMN: "benchmark_registry=benchmarks/benchmark_registry.json; truth_sources=benchmarks/truth_sources.lock.json"
+        },
+        "reference_by_algo": {},
+        "algo_to_group": {"registry_scaffold": "scaffold"},
+        "algo_groups": [
+            {"key": "scaffold", "label": "Scaffold", "algos": ["registry_scaffold"]}
+        ],
+        "languages": ["Python"],
         "stats": {
-            "algos":    len(present_algos),
-            "backends": len(columns),
-            "groups":   len(algo_groups),
-            "sizes":    len({(r["n"], r["p"]) for r in rows_out}),
-            "threads":  sorted({r["threads"] for r in rows_out}),
-            "rows":     len(rows_out),
-            "cells":    sum(len(r["cells"]) for r in rows_out),
-            "ok":       sum(1 for r in rows_out for c in r["cells"].values()
-                            if c.get("parity") == "exact"),
+            "algos": 0,
+            "backends": 1,
+            "groups": 1,
+            "sizes": 0,
+            "threads": [0],
+            "rows": 1,
+            "cells": 1,
+            "ok": 0,
         },
     }
     return {
-        "payload":      payload,
-        "json":         json.dumps(payload, separators=(",", ":")),
+        "payload": payload,
+        "json": json.dumps(payload, separators=(",", ":")),
+        "generated_at": payload["generated_at"],
+    }
+
+
+def _as_bool(value: str | bool | None) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"1", "true", "yes", "ok", "pass"}
+
+
+def _tri_bool(value: str | bool | None) -> bool | None:
+    text = str(value or "").strip().lower()
+    if text == "":
+        return None
+    if isinstance(value, bool):
+        return value
+    return text in {"1", "true", "yes", "ok", "pass"}
+
+
+def _float_list(value: str | None) -> list[float]:
+    out: list[float] = []
+    for part in str(value or "").split(";"):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            out.append(float(part))
+        except ValueError:
+            continue
+    return out
+
+
+def _cell_parity(raw: dict, ok: bool) -> str:
+    parity = str(raw.get("parity") or "").strip().lower()
+    aliases = {
+        "ok": "exact",
+        "covered": "exact",
+        "reference_ok": "exact",
+        "reference_snapshot": "exact",
+        "binding_ok": "exact",
+        "external_ok": "exact",
+        "pass": "exact",
+        "binding_mismatch": "divergent",
+        "reference_diverged": "divergent",
+        "external_diverged": "divergent",
+        "reference_snapshot_drift": "drift",
+        "diverged": "divergent",
+        "divergent": "divergent",
+        "timing_only": "not_compared",
+        "reference_snapshot_missing": "not_compared",
+        "reference_not_compared": "not_compared",
+        "warn": "drift",
+        "drift": "drift",
+        "fail": "error",
+        "error": "error",
+        "external_not_compared": "not_compared",
+        "timeout": "not_run",
+        "not_run": "not_run",
+        "not_available": "not_available",
+        "na": "not_available",
+    }
+    if parity in aliases:
+        return aliases[parity]
+    if ok:
+        return "exact"
+    return "error"
+
+
+def _column_version(raw: dict) -> str:
+    backend = raw.get("backend", "").strip()
+    if backend == "ref.nirs4all":
+        return raw.get("lib_build") or "nirs4all local checkout"
+    if backend == "ref.sklearn":
+        return raw.get("lib_build") or "scikit-learn"
+    if backend == "ref.pybaselines":
+        return raw.get("lib_build") or "pybaselines"
+    if backend == "ref.pywavelets":
+        return raw.get("lib_build") or "PyWavelets"
+    if backend == "ref.scipy":
+        return raw.get("lib_build") or "scipy"
+    if backend == "ref.numpy":
+        return raw.get("lib_build") or "numpy"
+    if backend == "ref.r.base":
+        return raw.get("lib_build") or "R base"
+    if backend == "ref.r.stats":
+        return raw.get("lib_build") or "R stats"
+    return raw.get("lib_build") or raw.get("reference_library") or "not reported"
+
+
+def _column_id(row: dict) -> str:
+    backend = row.get("backend", "unknown").strip() or "unknown"
+    build = row.get("lib_build", "").strip()
+    if backend == "cpp" and build:
+        return f"chemometrics4all.cpp.{build}"
+    if backend.startswith("ref."):
+        return backend
+    return f"chemometrics4all.{backend}"
+
+
+def _column_meta(cid: str, row: dict) -> dict:
+    lang = row.get("language") or row.get("backend", "unknown").title()
+    backend = row.get("backend", "unknown")
+    library = row.get("reference_library", "").strip()
+    if backend.startswith("ref."):
+        lang_key = (lang or "").strip().lower()
+        group = {
+            "python": "ext-py",
+            "r": "ext-r",
+            "matlab": "ext-ml",
+            "matlab/octave": "ext-ml",
+            "julia": "ext-jl",
+            "rust": "ext-rs",
+            "go": "ext-go",
+            "javascript": "ext-js",
+            "java": "ext-java",
+            "c++": "ext-cpp",
+        }.get(lang_key, "external")
+        short = {
+            "ref.nirs4all": "nirs4all",
+            "ref.sklearn": "sklearn",
+            "ref.scipy": "scipy",
+            "ref.numpy": "numpy",
+            "ref.pybaselines": "pybase",
+            "ref.pywavelets": "pywt",
+            "ref.r.base": "R base",
+            "ref.r.stats": "R stats",
+        }.get(backend, library or backend.replace("ref.", ""))
+        return {
+            "id": cid,
+            "label": cid,
+            "short": short,
+            "group": group,
+            "tier": row.get("tier", ""),
+            "lang": lang,
+            "what": row.get("kind", ""),
+            "build": row.get("lib_build", ""),
+            "kind": row.get("kind", "external_reference"),
+            "reference": library,
+        }
+    group = {
+        "cpp": "cpp",
+        "python": "python",
+        "r": "r",
+        "matlab": "matlab",
+    }.get(backend, backend)
+    short = {
+        "cpp": "C++",
+        "python": "Py",
+        "r": "R",
+        "matlab": "MATLAB",
+    }.get(backend, backend)
+    return {
+        "id": cid,
+        "label": cid,
+        "short": short,
+        "group": group,
+        "tier": row.get("tier", ""),
+        "lang": lang,
+        "what": row.get("kind", ""),
+        "build": row.get("lib_build", ""),
+        "kind": row.get("kind", "chemometrics4all"),
+        "reference": library,
+    }
+
+
+def _load_registry_groups(repo_root: Path) -> tuple[dict[str, str], list[dict]]:
+    path = repo_root / "benchmarks" / "benchmark_registry.json"
+    if not path.exists():
+        return {}, []
+    try:
+        registry = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}, []
+    algo_to_group = {}
+    grouped: dict[str, list[str]] = {}
+    labels: dict[str, str] = {}
+    for method in registry.get("methods", []):
+        algo = method.get("method_id")
+        group = method.get("family", "other")
+        if not algo:
+            continue
+        algo_to_group[algo] = group
+        grouped.setdefault(group, []).append(algo)
+        labels[group] = group.replace("_", " ").title()
+    groups = [
+        {"key": key, "label": labels.get(key, key), "algos": sorted(values)}
+        for key, values in sorted(grouped.items())
+    ]
+    return algo_to_group, groups
+
+
+def build_payload(results_dir: Path) -> dict:
+    """Read a chemometrics4all cross-binding CSV and build dashboard payload."""
+    full_matrix = results_dir / "full_matrix.csv"
+    if not full_matrix.exists():
+        return placeholder_payload()
+
+    rows_in = list(csv.DictReader(full_matrix.open(encoding="utf-8")))
+    if not rows_in:
+        return placeholder_payload()
+
+    generated_at = dt.datetime.fromtimestamp(
+        full_matrix.stat().st_mtime, dt.timezone.utc
+    ).strftime("%Y-%m-%d %H:%M UTC")
+
+    columns: dict[str, dict] = {}
+    versions: dict[str, str] = {}
+    by_row: dict[tuple[str, int, int, int], dict] = {}
+    families: dict[str, str] = {}
+    references_by_algo: dict[str, dict[str, object]] = {}
+    ok_cells = 0
+
+    for raw in rows_in:
+        try:
+            n = int(raw.get("n", "0"))
+            p = int(raw.get("p", "0"))
+            threads = int(raw.get("threads", "0"))
+            ms = float(raw.get("median_ms", "nan"))
+        except ValueError:
+            continue
+        algo = raw.get("algorithm", "").strip()
+        if not algo:
+            continue
+        if raw.get("family"):
+            families[algo] = raw["family"].strip()
+        cid = _column_id(raw)
+        columns.setdefault(cid, _column_meta(cid, raw))
+        versions[cid] = _column_version(raw)
+
+        ok = _as_bool(raw.get("ok"))
+        if ok:
+            ok_cells += 1
+        backend = raw.get("backend", "").strip()
+        kind = raw.get("kind", "").strip()
+        reference_library = raw.get("reference_library", "").strip()
+        if backend.startswith("ref.") or kind == "external_reference":
+            ref_label = reference_library or backend
+            ref_info = references_by_algo.setdefault(algo, {"primary": "", "libraries": []})
+            refs = ref_info["libraries"]
+            if isinstance(refs, list) and ref_label and ref_label not in refs:
+                refs.append(ref_label)
+            if raw.get("reference_role", "").strip() == "canonical" and ref_label and not ref_info.get("primary"):
+                ref_info["primary"] = ref_label
+        gate = "reference" if (backend.startswith("ref.") or kind == "external_reference") else (
+            "binding" if backend in {"python", "r", "matlab"} else "native"
+        )
+        key = (algo, n, p, threads)
+        row = by_row.setdefault(key, {
+            "algo": algo,
+            "n": n,
+            "p": p,
+            "threads": threads,
+            "cells": {},
+        })
+        row["cells"][cid] = {
+            "ok": ok,
+            "ms": ms if ok else None,
+            "fmt": f"{ms:.3f} ms" if ok else "fail",
+            "warmup_runs": int(raw.get("warmup_runs") or 0),
+            "timed_runs": int(raw.get("timed_runs") or 0),
+            "batch_loops": int(raw.get("batch_loops") or 1),
+            "samples_ms": _float_list(raw.get("samples_ms")),
+            "parity": _cell_parity(raw, ok),
+            "raw_parity": raw.get("parity") or ("ok" if ok else "fail"),
+            "gate": gate,
+            "reason": raw.get("reason", ""),
+            "reference": reference_library,
+            "reference_role": raw.get("reference_role", "").strip(),
+            "binding_parity_ok": _tri_bool(raw.get("binding_parity_ok")),
+            "reference_parity_ok": _tri_bool(raw.get("reference_parity_ok")),
+        }
+
+    repo_root = Path(__file__).resolve().parents[2]
+    algo_to_group, _registry_groups = _load_registry_groups(repo_root)
+    result_algos = sorted({row["algo"] for row in by_row.values()})
+    grouped: dict[str, list[str]] = {}
+    for algo in result_algos:
+        group = algo_to_group.get(algo) or families.get(algo) or "other"
+        algo_to_group[algo] = group
+        grouped.setdefault(group, []).append(algo)
+    algo_groups = [
+        {"key": key, "label": key.replace("_", " ").title(), "algos": sorted(values)}
+        for key, values in sorted(grouped.items())
+    ]
+
+    rows = [by_row[key] for key in sorted(by_row)]
+    col_list = [columns[key] for key in sorted(columns)]
+    threads = sorted({row["threads"] for row in rows})
+    languages = sorted({col["lang"] for col in col_list})
+    reference_by_algo = {}
+    for algo, ref_info in sorted(references_by_algo.items()):
+        refs = ref_info.get("libraries", [])
+        if not isinstance(refs, list):
+            refs = []
+        primary = str(ref_info.get("primary") or (refs[0] if refs else ""))
+        reference_by_algo[algo] = {
+            "label": primary or (" / ".join(refs[:3]) + (f" +{len(refs) - 3}" if len(refs) > 3 else "")),
+            "primary": primary,
+            "libraries": refs,
+        }
+    payload = {
+        "generated_at": generated_at,
+        "host": host_info(),
+        "columns": col_list,
+        "presets": {
+            "all": {"label": "All", "cols": [c["id"] for c in col_list]},
+            "chemometrics4all": {
+                "label": "chemometrics4all",
+                "cols": [c["id"] for c in col_list if c["kind"] == "chemometrics4all"],
+            },
+            "externals": {
+                "label": "externals",
+                "cols": [c["id"] for c in col_list if c["kind"] == "external_reference"],
+            },
+        },
+        "rows": rows,
+        "versions": versions,
+        "reference_by_algo": reference_by_algo,
+        "algo_to_group": algo_to_group,
+        "algo_groups": algo_groups,
+        "languages": languages,
+        "stats": {
+            "algos": len({row["algo"] for row in rows}),
+            "backends": len(col_list),
+            "groups": len(algo_groups),
+            "sizes": len({(row["n"], row["p"]) for row in rows}),
+            "threads": threads,
+            "rows": len(rows),
+            "cells": sum(len(row["cells"]) for row in rows),
+            "ok": ok_cells,
+        },
+    }
+    return {
+        "payload": payload,
+        "json": json.dumps(payload, separators=(",", ":")),
         "generated_at": payload["generated_at"],
     }
 
 
 def main() -> None:
-    """CLI: write the payload to docs/_static/bench-data.json for inspection."""
-    import argparse
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--results",
-                     default="benchmarks/cross_binding/results",
-                     help="directory containing full_matrix.csv")
-    ap.add_argument("--out",
-                     default="docs/_static/bench-data.json",
-                     help="output path for the JSON payload")
-    args = ap.parse_args()
-    p = build_payload(Path(args.results))
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--results",
+        default="benchmarks/cross_binding/results",
+        help="reserved for the future generated result directory",
+    )
+    parser.add_argument(
+        "--out",
+        default="docs/_static/bench-data.json",
+        help="output path for the JSON payload",
+    )
+    args = parser.parse_args()
+    payload = build_payload(Path(args.results))
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(p["payload"], indent=2))
-    s = p["payload"]["stats"]
-    print(f"wrote {out} · {s['cells']} cells / {s['rows']} rows / "
-            f"{s['backends']} cols / {s['algos']} algos / "
-            f"{s['ok']} exact ✓ ({s['ok']/s['cells']*100:.0f}%)")
+    out.write_text(json.dumps(payload["payload"], indent=2), encoding="utf-8")
+    stats = payload["payload"]["stats"]
+    print(
+        f"wrote {out}: "
+        f"{stats['cells']} cells / {stats['backends']} columns / {stats['algos']} algos"
+    )
 
 
 if __name__ == "__main__":

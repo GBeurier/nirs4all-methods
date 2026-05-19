@@ -72,9 +72,9 @@ div.body {
     padding: 24px 32px;
 }
 
-/* Parity icons should stand out. */
-.icon-ok    { color: #2e7d32; font-weight: 600; }
-.icon-warn  { color: #f57c00; font-weight: 600; }
+/* Parity icons should stand out while staying on the orange benchmark palette. */
+.icon-ok    { color: #f97316; font-weight: 600; }
+.icon-warn  { color: #b45309; font-weight: 600; }
 .icon-fail  { color: #c62828; font-weight: 600; }
 
 /* Horizontal scroll for any table wider than its container.
