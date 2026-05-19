@@ -592,40 +592,50 @@
     }
 
     /* sticky leftmost columns — widths + offsets driven by CSS vars
-       so they stay in sync across density modes. */
+       so they stay in sync across density modes. Frozen cells need opaque
+       paint and a higher stack than scrollable cells; otherwise the first
+       data columns remain visible underneath during horizontal scroll. */
     table.bench th.algo-col, table.bench td.algo-cell {
-      position: sticky; left: 0; z-index: 4;
+      position: sticky; left: 0; z-index: 20;
       background: var(--ink-2);
+      background-clip: padding-box;
       width: var(--w-algo); min-width: var(--w-algo); max-width: var(--w-algo);
     }
-    table.bench td.algo-cell { background: var(--ink-1); z-index: 2; }
+    table.bench td.algo-cell { background: var(--ink-1); z-index: 18; }
     table.bench th.ref-col, table.bench td.ref-cell {
-      position: sticky; left: var(--off-ref); z-index: 4;
+      position: sticky; left: var(--off-ref); z-index: 20;
       background: var(--ink-2);
+      background-clip: padding-box;
       width: var(--w-ref); min-width: var(--w-ref); max-width: var(--w-ref);
     }
     table.bench td.ref-cell {
       background: var(--ink-1);
       color: var(--fg-1);
       font-size: 10.5px;
-      z-index: 2;
+      z-index: 18;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     table.bench th.size-col, table.bench td.size-cell {
-      position: sticky; left: var(--off-size); z-index: 4;
+      position: sticky; left: var(--off-size); z-index: 20;
       background: var(--ink-2);
+      background-clip: padding-box;
       width: var(--w-size); min-width: var(--w-size); max-width: var(--w-size);
     }
-    table.bench td.size-cell { background: var(--ink-1); z-index: 2; }
+    table.bench td.size-cell { background: var(--ink-1); z-index: 18; }
     table.bench th.thread-col, table.bench td.thread-cell {
-      position: sticky; left: var(--off-threads); z-index: 4;
+      position: sticky; left: var(--off-threads); z-index: 20;
       background: var(--ink-2);
+      background-clip: padding-box;
       width: var(--w-threads); min-width: var(--w-threads); max-width: var(--w-threads);
     }
-    table.bench td.thread-cell { background: var(--ink-1); z-index: 2; }
-    table.bench th.algo-col, table.bench th.ref-col, table.bench th.size-col, table.bench th.thread-col { z-index: 6; }
+    table.bench td.thread-cell {
+      background: var(--ink-1);
+      z-index: 18;
+      box-shadow: 10px 0 14px -14px rgba(15, 30, 40, 0.50);
+    }
+    table.bench th.algo-col, table.bench th.ref-col, table.bench th.size-col, table.bench th.thread-col { z-index: 30; }
     /* The native (chemometrics4all.cpp) baseline column is NOT sticky — making it
        sticky used to hide neighbouring columns when scrolling right.
        It still gets a subtle internal accent so the comparison anchor
@@ -740,12 +750,12 @@
     table.bench td.ref-cell.has-ref {
       color: var(--amber);
       font-weight: 600;
-      background: linear-gradient(90deg, var(--amber-soft), var(--ink-1) 70%);
+      background: linear-gradient(90deg, var(--amber-soft), transparent 70%), var(--ink-1);
       border-left: 2px solid var(--amber);
     }
     table.bench td.ref-cell.no-ref { color: var(--fg-3); }
     table.bench tbody tr:hover td.ref-cell.has-ref {
-      background: var(--amber-soft);
+      background: linear-gradient(90deg, var(--amber-soft), transparent 70%), var(--ink-3);
     }
     .ref-badge {
       display: inline-block;
@@ -799,6 +809,9 @@
     /* density: compact — slightly tighter sticky widths */
     body.density-compact {
       --w-algo: 144px; --w-ref: 108px; --w-size: 70px; --w-threads: 38px;
+      --off-ref:     var(--w-algo);
+      --off-size:    calc(var(--w-algo) + var(--w-ref));
+      --off-threads: calc(var(--w-algo) + var(--w-ref) + var(--w-size));
     }
     body.density-compact table.bench { font-size: 11px; }
     body.density-compact table.bench td { padding: 2.5px 6px; font-size: 10.5px; }
@@ -808,6 +821,9 @@
     /* density: ultra (max squeeze) — minimal sticky widths */
     body.density-ultra {
       --w-algo: 126px; --w-ref: 96px; --w-size: 60px; --w-threads: 32px;
+      --off-ref:     var(--w-algo);
+      --off-size:    calc(var(--w-algo) + var(--w-ref));
+      --off-threads: calc(var(--w-algo) + var(--w-ref) + var(--w-size));
     }
     body.density-ultra table.bench { font-size: 10.5px; }
     body.density-ultra table.bench td { padding: 1.5px 4px; font-size: 10px; }
@@ -954,6 +970,15 @@
       .hero { padding: 18px 18px 14px; }
     }
     @media (max-width: 680px) {
+      body {
+        --w-algo: 112px;
+        --w-ref: 76px;
+        --w-size: 52px;
+        --w-threads: 36px;
+        --off-ref:     var(--w-algo);
+        --off-size:    calc(var(--w-algo) + var(--w-ref));
+        --off-threads: calc(var(--w-algo) + var(--w-ref) + var(--w-size));
+      }
       .stat-strip { grid-template-columns: repeat(2, max-content); }
       .stat-value { font-size: 20px; }
       .wordmark { font-size: 28px; }
