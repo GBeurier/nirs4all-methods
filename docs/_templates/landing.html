@@ -783,7 +783,21 @@
       text-align: center;
     }
     .cell-empty { color: var(--fg-3); text-align: center; font-family: var(--mono); }
-    .parity { display: inline-block; min-width: 12px; text-align: center; margin-left: 5px; font-weight: 600; font-family: var(--mono); }
+    table.bench td.data-cell { text-align: center; }
+    .cell-inner {
+      display: inline-grid;
+      grid-template-columns: minmax(34px, max-content) 12px;
+      align-items: center;
+      justify-content: center;
+      column-gap: 5px;
+      width: 100%;
+    }
+    .cell-inner .cell-value {
+      min-width: 0;
+      text-align: right;
+    }
+    .cell-inner .reference-method-icon { margin-left: 0; }
+    .parity { display: inline-block; min-width: 12px; text-align: center; margin-left: 0; font-weight: 600; font-family: var(--mono); }
     .p-exact   { color: var(--phosphor); }
     .p-drift   { color: var(--amber); }
     .p-divergent { color: var(--crimson); }
@@ -831,7 +845,8 @@
     body.density-ultra table.bench th .col-label { font-size: 9.5px; letter-spacing: 0; }
     body.density-ultra table.bench tr.lang-band th { padding: 2px 3px; font-size: 8.5px; letter-spacing: 0.12em; }
     body.density-ultra table.bench td.thread-cell .thread-pill { padding: 0 4px; font-size: 9px; }
-    body.density-ultra .parity { margin-left: 2px; font-size: 9.5px; }
+    body.density-ultra .cell-inner { grid-template-columns: minmax(30px, max-content) 11px; column-gap: 2px; }
+    body.density-ultra .parity { min-width: 11px; font-size: 9.5px; }
     body.density-ultra table.bench td.algo-cell { font-size: 10.5px; padding: 1.5px 6px; }
     body.density-ultra table.bench td.size-cell { font-size: 10px; padding: 1.5px 6px; }
 
@@ -1057,6 +1072,7 @@
       <span class="chip active amber" data-parity="drift"><span class="ico p-drift">≈</span>drift</span>
       <span class="chip active crimson" data-parity="divergent"><span class="ico p-divergent">✗</span>divergent</span>
       <span class="chip active crimson" data-parity="error"><span class="ico p-error">!</span>error</span>
+      <span class="chip active gray" data-parity="not_compared"><span class="ico p-not_compared">○</span>timing only</span>
       <span class="chip active gray" data-parity="not_run"><span class="ico p-not_run">·</span>not run</span>
       <span class="chip active gray" data-parity="not_available"><span class="ico p-not_available">∅</span>not available</span>
     </div>
@@ -1153,7 +1169,7 @@
       <li><span class="p-drift">≈</span> <b>drift</b> - result outside exact tolerance</li>
       <li><span class="p-divergent">✗</span> <b>divergent</b> - result outside drift threshold</li>
       <li><span class="p-error">!</span> <b>error</b> - dependency, runtime, crash or exception</li>
-      <li><span class="p-not_compared">○</span> <b>timing only</b> - timing exists, but no parity icon is shown for that cell</li>
+      <li><span class="p-not_compared">○</span> <b>timing only</b> - timing exists, but exact parity is not comparable</li>
       <li><span class="p-not_run">·</span> <b>not run</b> - no timing was produced</li>
       <li><span class="p-not_available">∅</span> <b>not available in lib</b> - the library does not expose that operator</li>
     </ul>
@@ -1180,7 +1196,7 @@ const DATA = JSON.parse(document.getElementById('bench-data').textContent);
 // ---------- state + url persistence ----------
 const URL_KEYS = ['algo','group','lang','libGroup','lib','size','threads','parity','search','cols','sort','density','viz'];
 const DENSITY_VALUES = ['comfortable', 'compact', 'ultra'];
-const PARITY_VALUES = ['exact', 'drift', 'divergent', 'error', 'not_run', 'not_available'];
+const PARITY_VALUES = ['exact', 'drift', 'divergent', 'error', 'not_compared', 'not_run', 'not_available'];
 const PARITY_ALIASES = {
   ok: 'exact',
   covered: 'exact',
@@ -1399,8 +1415,7 @@ function cellPasses(cell) {
   // cells got masked. This avoids the surprising "filter fail and your
   // ok rows also vanish" behaviour.
   if (!cell) return true;        // empty cells render as — always
-  const key = normalizeParityKey(cell.parity);
-  if (key === 'not_compared') return true;
+  const key = normalizeParityKey(cell.parity || cell.raw_parity || 'not_run');
   return state.parity.has(key);
 }
 
@@ -1798,8 +1813,8 @@ function statusIconHtml(cell) {
   if (isCanonicalReferenceCell(cell)) {
     return '<span class="reference-method-icon" title="reference method">∟</span>';
   }
-  if (normalizeParityKey(cell.parity) === 'not_compared') return '';
-  return `<span class="parity p-${cell.parity}">${PARITY_ICON[cell.parity] || '—'}</span>`;
+  const key = normalizeParityKey(cell.parity || cell.raw_parity || 'not_run');
+  return `<span class="parity p-${key}">${PARITY_ICON[key] || '—'}</span>`;
 }
 
 function formatMs(value) {
@@ -1957,8 +1972,8 @@ function renderTable() {
         }
         if (!c.ok || !Number.isFinite(c.ms)) {
           const title = ` title="${cellTitle(row, id, c, meta)}"`;
-          const cls = `${lcls}${referenceCell ? ' cell-reference' : ''}${isCanonicalReferenceCell(c) ? ' cell-reference-method' : ''}`;
-          tr += `<td class="${cls}"${title}>${statusIconHtml(c)}</td>`;
+          const cls = `data-cell ${lcls}${referenceCell ? ' cell-reference' : ''}${isCanonicalReferenceCell(c) ? ' cell-reference-method' : ''}`;
+          tr += `<td class="${cls}"${title}><span class="cell-inner"><span class="cell-value">—</span>${statusIconHtml(c)}</span></td>`;
           continue;
         }
         // Build value. Score color is relative to the fastest cell in
@@ -1982,14 +1997,14 @@ function renderTable() {
         // - Row-overall fastest gets the amber winner background.
         // - Per-language fastest keeps a weight-only marker; text color
         //   is entirely controlled by scoreClass above.
-        const tdCls = [lcls];
+        const tdCls = ['data-cell', lcls];
         if (canHighlight && id === fastestId) tdCls.push('cell-fastest-bg');
         if (referenceCell) tdCls.push('cell-reference');
         if (isCanonicalReferenceCell(c)) tdCls.push('cell-reference-method');
         if (canHighlight && langSlug && langWinners[langSlug] && langWinners[langSlug].id === id) {
           tdCls.push('cell-lang-best', `lang-${langSlug}`);
         }
-        tr += `<td class="${tdCls.join(' ')}" title="${cellTitle(row, id, c, meta)}">${display}${parityHtml}</td>`;
+        tr += `<td class="${tdCls.join(' ')}" title="${cellTitle(row, id, c, meta)}"><span class="cell-inner">${display}${parityHtml}</span></td>`;
       }
       tr += `</tr>`;
       body.push(tr);
