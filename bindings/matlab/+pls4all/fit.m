@@ -13,6 +13,7 @@ function mdl = fit(algo, X, y, varargin)
 %   "missing_aware_nipals" → MissingAwareNipalsRegression
 %   "n_pls"          → NPlsRegression            (needs ModeJ, ModeK)
 %   "o2pls"          → O2plsRegression
+%   "opls"           → OplsRegression
 %   "pcr"            → PcrRegression
 %   "pls" | "pls_simpls" → Regression (SIMPLS)
 %   "pls_glm"        → GlmRegression             (Family: gaussian/poisson)
@@ -74,6 +75,8 @@ switch lower(algo)
         mdl = pls4all.Regression(X, y, k);
     case "pcr"
         mdl = pls4all.PcrRegression(X, y, k);
+    case {"opls", "opls_nipals"}
+        mdl = pls4all.OplsRegression(X, y, k);
     case "sparse_simpls"
         mdl = pls4all.SparsePlsRegression(X, y, k, p.Results.Lambda);
     case "cppls"

@@ -49,5 +49,5 @@ before being passed across the C boundary.
 `algo` selects the solver. Recognized values:
   "pls_nipals", "pls_orthogonal_scores", "pls_simpls",
   "pls_kernel_algorithm", "pls_wide_kernel", "pls_svd",
-  "pls_power", "pls_randomized_svd", "pcr_svd".
+  "pls_power", "pls_randomized_svd", "pcr_svd", "opls_nipals".
 }

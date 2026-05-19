@@ -15,7 +15,8 @@
 #' @param algo Character. One of `"pls_nipals"`, `"pls_simpls"`,
 #'   `"pls_svd"`, `"pls_power"`, `"pls_kernel_algorithm"`,
 #'   `"pls_wide_kernel"`, `"pls_orthogonal_scores"`,
-#'   `"pls_randomized_svd"`, `"pcr_svd"`. Defaults to `"pls_nipals"` to
+#'   `"pls_randomized_svd"`, `"pcr_svd"`, `"opls_nipals"`.
+#'   Defaults to `"pls_nipals"` to
 #'   match the R `pls` package's default.
 #' @param na.action What to do with `NA`s. Default: `na.omit`.
 #'
@@ -84,6 +85,59 @@ pls <- function(formula, data, ncomp = 2L,
             response_name = deparse(formula[[2L]])
         ),
         class = c("pls4all_fit", "pls_fit")
+    )
+}
+
+#' Formula-based OPLS regression wrapper around the pls4all C ABI.
+#'
+#' Uses the same formula/S3 return contract as [pls()], with the model API
+#' configured as `algo = "opls_nipals"`.
+#'
+#' @inheritParams pls
+#' @return An object of class `c("opls_fit", "pls4all_fit", "pls_fit")`.
+#' @export
+opls <- function(formula, data, ncomp = 2L,
+                 na.action = stats::na.omit) {
+    cl <- match.call()
+    if (!inherits(formula, "formula")) {
+        stop("formula must be a two-sided formula (e.g. `y ~ .`)")
+    }
+    mf <- stats::model.frame(formula, data = data, na.action = na.action)
+    tt <- stats::terms(mf)
+    if (attr(tt, "response") == 0L) {
+        stop("formula must have a response on the left-hand side")
+    }
+    y <- stats::model.response(mf, type = "numeric")
+    if (is.null(y)) {
+        stop("response is missing or non-numeric; opls() handles ",
+             "regression only")
+    }
+    X <- stats::model.matrix(tt, mf)
+    intercept_col <- which(colnames(X) == "(Intercept)")
+    if (length(intercept_col) > 0L) {
+        X <- X[, -intercept_col, drop = FALSE]
+    }
+    if (ncol(X) < 1L) {
+        stop("design matrix has zero predictors after dropping intercept")
+    }
+
+    model <- pls4all_fit(X, y, algo = "opls_nipals",
+                         n_components = as.integer(ncomp),
+                         scale_x = FALSE, scale_y = FALSE)
+
+    structure(
+        list(
+            model         = model,
+            formula       = formula,
+            terms         = tt,
+            xlevels       = stats::.getXlevels(tt, mf),
+            call          = cl,
+            ncomp         = as.integer(ncomp),
+            algo          = "opls_nipals",
+            n_features_in = ncol(X),
+            response_name = deparse(formula[[2L]])
+        ),
+        class = c("opls_fit", "pls4all_fit", "pls_fit")
     )
 }
 

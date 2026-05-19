@@ -19,7 +19,7 @@ containing the response and predictor columns referenced by
 \item{algo}{Character. One of `"pls_nipals"`, `"pls_simpls"`,
 `"pls_svd"`, `"pls_power"`, `"pls_kernel_algorithm"`,
 `"pls_wide_kernel"`, `"pls_orthogonal_scores"`,
-`"pls_randomized_svd"`, `"pcr_svd"`. Defaults to `"pls_nipals"` to
+`"pls_randomized_svd"`, `"pcr_svd"`, `"opls_nipals"`. Defaults to `"pls_nipals"` to
 match the R `pls` package's default.}
 
 \item{na.action}{What to do with `NA`s. Default: `na.omit`.}

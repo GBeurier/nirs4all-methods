@@ -54,6 +54,7 @@ fit_predict <- function(seed) {
 
     fit <- switch(a$algo,
         "pls" = sparse_pls(y ~ ., df, nc, sparsity_lambda = 0.0),
+        "opls" = opls(y ~ ., df, nc),
         "sparse_simpls" = sparse_pls(y ~ ., df, nc,
                                        params$sparsity_lambda %||% 0.05),
         "cppls" = cppls(y ~ ., df, nc, params$gamma %||% 0.5),
