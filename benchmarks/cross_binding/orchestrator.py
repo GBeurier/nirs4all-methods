@@ -94,6 +94,17 @@ BACKENDS = [
     ("matlab_pls",   "bench_matlab_pls.m",    "MATLAB", "external", "external"),
 ]
 
+REFERENCE_SCRIPT_OVERRIDES = {
+    # These reference libraries already have fixed external benchmark
+    # drivers that run warmup + timed samples inside one R process. The
+    # generic registry reference driver would fork Rscript for every
+    # prediction when rpy2 is unavailable, turning the reference columns
+    # into R startup timings rather than library timings.
+    "r_pls": "bench_r_pls.R",
+    "r_ropls": "bench_r_ropls.R",
+    "r_mixomics": "bench_r_mixomics.R",
+}
+
 
 def registry_reference_backends_for(algo: str) -> list[tuple[str, str, str, str, str]]:
     """External reference backends declared by the canonical MethodSpec."""
@@ -105,7 +116,9 @@ def registry_reference_backends_for(algo: str) -> list[tuple[str, str, str, str,
     for ref in resolved_references_for_method(method):
         lang = ref["language"]
         display_lang = "Python" if lang == "python" else lang
-        out.append((f"ref_{ref['id']}", "bench_registry_reference.py",
+        script = REFERENCE_SCRIPT_OVERRIDES.get(
+            ref["id"], "bench_registry_reference.py")
+        out.append((f"ref_{ref['id']}", script,
                     display_lang, ref["library"], "external"))
     return out
 
