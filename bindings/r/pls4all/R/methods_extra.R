@@ -55,7 +55,7 @@ ridge_pls_fit <- function(X, Y, n_components, ridge_lambda = 1.0) {
                    params = list(ridge_lambda = ridge_lambda))
 }
 
-#' Continuum regression (tau ∈ [0, 1]).
+#' Continuum regression (tau in [0, 1]).
 #' @param n_components Integer. Number of latent components.
 #' @param tau Numeric in [0, 1]. Continuum regression mixing parameter.
 #' @param X Numeric matrix of predictors (rows = samples, cols = features).
@@ -394,6 +394,70 @@ aom_preprocess <- function(X, Y = NULL, n_operators = 3L, gating_mode = 0L) {
                                   gating_mode = as.integer(gating_mode)))
 }
 
+#' AOM-PLS with global operator selection.
+#'
+#' Runs the compact `nirs4all` AOM bank through the pls4all native AOM
+#' selector. The selected preprocessing operator and number of latent
+#' components are chosen by cross-validated RMSE.
+#'
+#' @param X numeric matrix of spectra (rows = samples, cols = wavelengths).
+#' @param Y numeric vector or matrix of responses.
+#' @param max_components maximum number of latent PLS components.
+#' @param n_operators number of compact AOM bank operators to expose.
+#' @param cv number of contiguous cross-validation folds.
+#'
+#' @return A named list containing `predictions`, operator diagnostics,
+#'   CV scores, and selected component/operator metadata.
+#'
+#' @examples
+#' set.seed(1)
+#' X <- matrix(rnorm(40 * 20), nrow = 40)
+#' Y <- as.numeric(X[, 1] + rnorm(40, sd = 0.1))
+#' fit <- aom_pls(X, Y, max_components = 2L)
+#' dim(fit$predictions)
+#'
+#' @export
+aom_pls <- function(X, Y, max_components = 3L, n_operators = 9L, cv = 3L) {
+    pls4all_method("aom_pls", X, Y, as.integer(max_components),
+                   params = list(max_components = as.integer(max_components),
+                                  n_operators = as.integer(n_operators),
+                                  cv = as.integer(cv)))
+}
+
+#' @rdname aom_pls
+#' @export
+aompls <- aom_pls
+
+#' POP-PLS with per-component operator selection.
+#'
+#' Runs the compact `nirs4all` AOM bank with per-component operator
+#' selection. Each retained PLS component may use a different preprocessing
+#' operator.
+#'
+#' @inheritParams aom_pls
+#'
+#' @return A named list containing `predictions`, per-component selected
+#'   operators, CV scores, and selected component metadata.
+#'
+#' @examples
+#' set.seed(1)
+#' X <- matrix(rnorm(40 * 20), nrow = 40)
+#' Y <- as.numeric(X[, 1] + rnorm(40, sd = 0.1))
+#' fit <- pop_pls(X, Y, max_components = 2L)
+#' dim(fit$predictions)
+#'
+#' @export
+pop_pls <- function(X, Y, max_components = 3L, n_operators = 9L, cv = 3L) {
+    pls4all_method("pop_pls", X, Y, as.integer(max_components),
+                   params = list(max_components = as.integer(max_components),
+                                  n_operators = as.integer(n_operators),
+                                  cv = as.integer(cv)))
+}
+
+#' @rdname aom_pls
+#' @export
+poppls <- pop_pls
+
 # ---- Selectors (no ValidationPlan or with default plan inside C) ----
 
 #' Stability selector (coefficient stability, MCUVE-style).
@@ -582,7 +646,7 @@ bve_select <- function(X, Y, n_components, n_steps = 10L, min_features = 5L) {
                                   min_features = as.integer(min_features)))
 }
 
-#' T²-PLS — sweep over α-thresholds.
+#' T2-PLS - sweep over alpha thresholds.
 #' @param n_components Integer. Number of latent components.
 #' @param alpha_thresholds Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @param min_selected Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.

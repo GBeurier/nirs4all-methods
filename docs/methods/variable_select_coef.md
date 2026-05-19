@@ -52,9 +52,20 @@ R roxygen note (`selectors.R::coefficient_select`):
 > @param top_k Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 > @export
 
+MATLAB header (`bindings/matlab/+pls4all/coefficient_select.m`):
+
+```text
+pls4all.coefficient_select  Coefficient-magnitude feature ranking.
+
+   res = pls4all.coefficient_select(X, Y, n_components, top_k)
+
+ Fits an internal SIMPLS model and ranks features by the magnitude of
+ their regression coefficients.
+```
+
 ### Usage
 
-All four pls4all bindings dispatch into the same C kernel; the external libraries on the right are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language.
+Every pls4all binding tab dispatches into the same C kernel; the external libraries listed at the bottom of the page are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language. The R package now ships drop-in-compatible facades for the CRAN `pls` package (`plsr`, `pcr`, `mvr`) and for the `mdatools::pls(x, y, ...)` matrix idiom — those tabs appear only on the methods that have a meaningful equivalence.
 
 **pls4all bindings**
 
@@ -70,7 +81,7 @@ All four pls4all bindings dispatch into the same C kernel; the external librarie
 p4a_context_t* ctx = p4a_context_create();
 p4a_config_t*  cfg = p4a_config_create();
 p4a_method_result_t* res = NULL;
-p4a_variable_select_coef_fit(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
+p4a_variable_select_rank(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
 /* … read coefficients / mask / scores via */
 /* p4a_method_result_get_double_matrix / vector / scalar … */
 p4a_method_result_destroy(res);
@@ -86,9 +97,9 @@ p4a_context_destroy(ctx);
 
 ```python
 import pls4all
-from pls4all._methods import variable_select_coef_fit
+from pls4all._methods import variable_select_rank
 with pls4all.Context() as ctx, pls4all.Config() as cfg:
-    res = variable_select_coef_fit(ctx, cfg, X, y, n_components=4)
+    res = variable_select_rank(ctx, cfg, X, y, n_components=4)
 # then: res.matrix("predictions"), res.matrix("coefficients"),
 # res.vector("mask"), res.scalar("intercept"), …
 ```
@@ -140,7 +151,10 @@ yhat <- pls4all_predict(res, X_test)
 :class-label: lang-matlab
 
 ```matlab
-res  = pls4all.fit("variable_select_coef", X, y, "NumComponents", 4);
+res = pls4all.coefficient_select(X, y, 4);
+% see header of bindings/matlab/+pls4all/coefficient_select.m for full
+% parameter surface:
+%   res = coefficient_select(X, Y, n_components, top_k)
 yhat = predict(res, Xtest);
 ```
 
@@ -209,6 +223,10 @@ Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.c
 </tbody>
 <tbody class="lang-band lang-matlab"><tr class="lang-band-row" data-lang="matlab"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>MATLAB · external</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>plsregress</code></td><td class="parity parity-not_run">—</td><td class="ms">—</td></tr>
+</tbody>
+<tbody class="lang-band lang-ext"><tr class="lang-band-row" data-lang="ext"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Other</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>r_mdatools_compat</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">3.49 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>r_pls_compat</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">3.20 ms</td></tr>
 </tbody>
 </table>
 </div>

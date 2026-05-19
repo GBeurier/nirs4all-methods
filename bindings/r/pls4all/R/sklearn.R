@@ -46,10 +46,26 @@
 #' }
 #' @export
 pls <- function(formula, data, ncomp = 2L,
-                algo = "pls_nipals", na.action = stats::na.omit) {
+                algo = "pls_nipals", na.action = stats::na.omit, ...) {
     cl <- match.call()
+    dots <- list(...)
+    if (missing(formula) && !is.null(dots$x)) {
+        x <- dots$x
+        y <- dots$y
+        dots$x <- NULL
+        dots$y <- NULL
+        if (is.null(y)) stop("pls(x = ..., y = ...) requires y")
+        return(do.call(pls_mdatools,
+                       c(list(x = x, y = y, ncomp = ncomp), dots)))
+    }
     if (!inherits(formula, "formula")) {
-        stop("formula must be a two-sided formula (e.g. `y ~ .`)")
+        if (missing(data)) {
+            stop("matrix-style pls() requires a response as the second argument")
+        }
+        method <- .pls4all_mdatools_method_from_algo(algo)
+        args <- list(x = formula, y = data, ncomp = ncomp)
+        if (is.null(dots$method)) args$method <- method
+        return(do.call(pls_mdatools, c(args, dots)))
     }
     mf <- stats::model.frame(formula, data = data, na.action = na.action)
     tt <- stats::terms(mf)

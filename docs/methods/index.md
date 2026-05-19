@@ -2,7 +2,7 @@
 
 Every algorithm in `benchmarks.parity_timing.registry.METHODS` documented with its parameters, bibliographic source, math principle, every binding's signature, and its parity + timing rows.
 
-_Total methods_: **71**. Grouped by family below.
+_Total methods_: **73**. Grouped by family below.
 
 ```{toctree}
 :hidden:

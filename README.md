@@ -11,7 +11,7 @@ contract and tolerance policy. Cross-checked against scikit-learn, R
 
 ---
 
-## Headline — PLS SIMPLS, 1 thread, median ms
+## Headline — 100 × 50, 1 thread, median ms
 
 Pulled from the
 [**cross-binding benchmark matrix**](docs/benchmarks/cross_binding.md)
@@ -19,16 +19,15 @@ Pulled from the
 method catalog; committed timing snapshots are regenerated, not hand
 maintained).
 
-| n × p | pls4all C++ | pls4all Python | sklearn | pls4all R | R `pls` | pls4all MATLAB | Octave `plsregress` |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| 100 × 50    | **0.92** | 0.92 | 1.40 | **2.50** | 6.50 | **1.59** | 2.38 |
-| 500 × 500   | **39.7** | 38.4 | 40.6 | **201**  | 245  | **63.4** | 65.6 |
-| 2500 × 500  | **219**  | 213  | 190  | **1 300**| 1 400| **335**  | 336  |
-| 10000 × 500 | **890**  | 896  | 833  | **6 300**| 6 500| **1 400**| 1 600 |
+| Method | pls4all C++ | pls4all Python | pls4all R | R formula | R `pls` compat | R `mdatools` compat | pls4all MATLAB | Reference |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| PLS SIMPLS | **0.98 ms** | 0.95 ms | 2.26 ms | 3.65 ms | 6.63 ms | 4.17 ms | 1.76 ms | sklearn 1.32 ms |
+| AOM-PLS | **2.64 ms** | 2.60 ms | 3.66 ms | 4.92 ms | 5.13 ms | 4.86 ms | 2.78 ms | nirs4all 10.8 ms |
+| POP-PLS | **3.03 ms** | 3.03 ms | 3.78 ms | 4.90 ms | 4.97 ms | 4.92 ms | 3.08 ms | nirs4all 26.1 ms |
 
-At small data (`n × p ≤ 250k`), pls4all leads externals **1.5 – 8 ×**.
-At BLAS-bound sizes everyone converges. Detailed methodology, parity
-gates and per-algorithm tables in
+PLS external baselines in the same snapshot: `ikpls` 1.08 ms, R `pls`
+5.50 ms, Octave `plsregress` 2.21 ms. Detailed methodology, parity
+gates and per-algorithm tables are in
 [`docs/benchmarks/`](docs/benchmarks/).
 
 ---
@@ -52,8 +51,8 @@ y = 2 * X[:, 3] - X[:, 6] + 0.5 * np.random.randn(500)
 
 m = PLSRegression(n_components=5).fit(X, y)
 print(m.score(X, y))            # sklearn-compatible
-# 67 sklearn-style classes available: SparseSIMPLS, CPPLS, ECRegression,
-# RidgePLS, BaggingPLS, AOMPLSRegressor, …
+# 68 sklearn-style classes available: SparseSIMPLS, CPPLS, ECRegression,
+# RidgePLS, BaggingPLS, GPRPLSRegression, …
 ```
 
 ### R
@@ -71,12 +70,14 @@ library(pls4all)
 fit <- pls(y ~ ., data = df, ncomp = 5)
 predict(fit, newdata = df)
 
-# Tidymodels engine
-spec <- pls_pls4all_reg(num_comp = 5) %>%
-  set_engine("pls4all", algorithm = "sparse_simpls", sparsity_lambda = 0.05)
+# pls package style
+fit <- plsr(y ~ ., data = df, ncomp = 10, method = "simpls", validation = "CV")
+RMSEP(fit)
+selectNcomp(fit)
 
-# mlr3 learner
-lrn("regr.pls4all", ncomp = 5, algorithm = "cppls", gamma = 0.5)
+# mdatools style
+fit <- pls(X, y, ncomp = 10, center = TRUE, scale = FALSE, cv = 10)
+predict(fit, x = Xnew)
 ```
 
 ### MATLAB / Octave
@@ -95,9 +96,9 @@ predict(mdl, Xnew)
 
 | Binding | Tier 1 surface | Tier 2 idiomatic form |
 |---|---|---|
-| **Python** (`pls4all.sklearn`) | 64 / 68 ABI methods reachable | **67 sklearn classes + 6 fns** (`BaseEstimator` mixins, `.n4a` pickling, GridSearchCV-ready) |
-| **R** (`pls4all` package) | **COMPLETE** — `pls4all_method()` dispatcher: 33 fits + 24 selectors + 4 diagnostics | **3 idioms** — base R formula+S3 (16 wrappers) · parsnip meta-engine · mlr3 R6 learner (each dispatching 16 algos via `algorithm` arg) |
-| **MATLAB / Octave** (`+pls4all`) | **COMPLETE** — single MEX dispatcher: 33 fits + 24 selectors + 4 diagnostics | **18 classdefs** + unified `pls4all.fit(algo, X, y, ...)` factory |
+| **Python** (`pls4all.sklearn`) | Registry-driven tier-1 API + AOM/POP low-level ABI | **68 sklearn classes + 8 fns** (`BaseEstimator` mixins, `.n4a` pickling, GridSearchCV-ready) |
+| **R** (`pls4all` package) | **COMPLETE** — 73 registry methods via `pls4all_method()` and wrappers | NIRS-first idioms — base R formula+S3 (16 wrappers) · `pls`-compatible `plsr()` / `pcr()` · `mdatools`-compatible matrix `pls(x, y, ...)` |
+| **MATLAB / Octave** (`+pls4all`) | **COMPLETE** — 73 registry methods via the single MEX dispatcher | **18 classdefs** + unified `pls4all.fit(algo, X, y, ...)` factory |
 | Julia, JS, Go, Rust, Ruby, .NET, Lua, Nim | SIMPLS via native FFI | 1 idiomatic class per language (PoC) |
 | JNI / JVM | SIMPLS via JNI | (deferred) |
 
@@ -162,6 +163,8 @@ implementation.
 | `pls_lda` | ✓ | `dispatcher` | `MEX/dispatcher` | `scikit-learn` | — | — |
 | `pls_logistic` | ✓ | `dispatcher` | `MEX/dispatcher` | `scikit-learn` | — | — |
 | `aom_preprocess` | ✓ | `dispatcher` | `MEX/dispatcher` | `nirs4all` | — | — |
+| `aom_pls` / `aompls` | ✓ | `dispatcher` | `MEX/dispatcher` | `nirs4all` `AOMPLSRegressor` | — | — |
+| `pop_pls` / `poppls` | ✓ | `dispatcher` | `MEX/dispatcher` | `nirs4all` `POPPLSRegressor` | — | — |
 | `variable_select_vip` | ✓ | — | — | — | `plsVarSel` | — |
 | `variable_select_coef` | ✓ | — | — | — | `pls` | — |
 | `variable_select_sr` | ✓ | — | — | — | `plsVarSel` | — |
@@ -209,7 +212,7 @@ implementation.
 
 ## What's in the box
 
-- **Algorithms** (~60) — PLS regression family (NIPALS, SIMPLS, kernel, wide-kernel, SVD, power, randomized SVD, PCR), OPLS / OPLS-DA, PLSCanonical, PLSSVD, sparse SIMPLS, CPPLS, ECR, MIR-PLS, ridge PLS, robust PLS (Huber IRLS), continuum regression, MB-PLS, LW-PLS, N-PLS, O2-PLS, missing-aware NIPALS, bagging / boosting / random-subspace ensembles, GPR-on-PLS, PLS-GLM (Gaussian / Poisson), PLS-DA / LDA / QDA / logistic / Cox, PDS / DS calibration transfer, **AOM-PLS** & **POP-PLS** (the scientific differentiator).
+- **Methods** (73) — PLS regression family (NIPALS, SIMPLS, kernel, wide-kernel, SVD, power, randomized SVD, PCR), OPLS / OPLS-DA, PLSCanonical, PLSSVD, sparse SIMPLS, CPPLS, ECR, MIR-PLS, ridge PLS, robust PLS (Huber IRLS), continuum regression, MB-PLS, LW-PLS, N-PLS, O2-PLS, missing-aware NIPALS, bagging / boosting / random-subspace ensembles, GPR-on-PLS, PLS-GLM (Gaussian / Poisson), PLS-DA / LDA / QDA / logistic / Cox, PDS / DS calibration transfer, **AOM-PLS** & **POP-PLS** (the scientific differentiator).
 - **Variable selection** (24) — VIP / coefficient / SR rankers, SPA, CARS, GA-PLS, PSO, VISSA, IRIV, IRF, shaving, BVE, REP, IPW, ST-PLS, T2, WVC, EMCUVE, randomization, biPLS, siPLS, interval, stability, UVE, random frog, SCARS, VIP-SPA.
 - **Diagnostics** — Hotelling T² · Q residuals · DModX · process monitoring with alarms · approximate PRESS · one-SE rule.
 - **Preprocessing pipeline** — identity · center · autoscale · Pareto · SNV · MSC · EMSC · detrend · SG · ASLS · Norris-Williams · Haar wavelet · OSC · EPO.

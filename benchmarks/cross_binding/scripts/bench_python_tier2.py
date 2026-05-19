@@ -62,6 +62,8 @@ _SKLEARN_CLASS: dict[str, str | None] = {
     "ds":                     "DSTransformer",
     "on_pls":                 None,   # paper-only / not yet wrapped
     "aom_preprocess":         None,
+    "aom_pls":                None,
+    "pop_pls":                None,
     "approximate_press":      None,
     "one_se_rule":            None,
     "pls_monitoring":         None,
@@ -102,6 +104,8 @@ _SKLEARN_CLASS: dict[str, str | None] = {
 
 _FUNCTION_BINDINGS = {
     "aom_preprocess": "aom_preprocess",
+    "aom_pls": "aom_pls",
+    "pop_pls": "pop_pls",
     "approximate_press": "approximate_press",
     "one_se_rule": "one_se_rule",
     "on_pls": "on_pls",
@@ -203,6 +207,19 @@ def _fit_simpls_model(p4a_sklearn, X, Y, n_components: int):
 
 def _run_function_binding(algo: str, p4a_sklearn, X, y, Y, params: dict,
                           prediction_key: str) -> np.ndarray:
+    if algo in {"aom_pls", "pop_pls"}:
+        import pls4all
+        method = load_method(algo)
+        with pls4all.Context() as ctx, pls4all.Config() as cfg:
+            try:
+                ctx.num_threads = int(os.environ.get("BENCH_THREADS", "1"))
+            except Exception:
+                pass
+            result = method.pls4all_fn(ctx, cfg, X, Y, **params)
+            try:
+                return np.asarray(result.matrix(prediction_key), dtype=np.float64)
+            finally:
+                result.close()
     if algo == "aom_preprocess":
         return np.asarray(p4a_sklearn.aom_preprocess(
             X, Y,

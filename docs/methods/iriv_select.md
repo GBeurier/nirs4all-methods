@@ -50,7 +50,7 @@ R roxygen note (`methods_extra.R::iriv_select`):
 
 ### Usage
 
-All four pls4all bindings dispatch into the same C kernel; the external libraries on the right are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language.
+Every pls4all binding tab dispatches into the same C kernel; the external libraries listed at the bottom of the page are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language. The R package now ships drop-in-compatible facades for the CRAN `pls` package (`plsr`, `pcr`, `mvr`) and for the `mdatools::pls(x, y, ...)` matrix idiom — those tabs appear only on the methods that have a meaningful equivalence.
 
 **pls4all bindings**
 
@@ -178,7 +178,7 @@ Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.c
 <table class="docutils parity-grouped">
 <thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">100×50 (ms)</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libp4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas</code></td><td class="parity parity-exact">✓ 7e-01</td><td class="ms ms-best">151.1 ms<span class="medal" title="fastest">🏆</span></td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas</code></td><td class="parity parity-exact">✓ 7e-01</td><td class="ms">151.1 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-exact">✓ 6e-01</td><td class="ms">158.5 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.omp</code></td><td class="parity parity-exact">✓ 7e-01</td><td class="ms">179.5 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.ref</code></td><td class="parity parity-exact">✓ 7e-01</td><td class="ms">192.0 ms</td></tr>
@@ -208,6 +208,10 @@ Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.c
 <tbody class="lang-band lang-matlab"><tr class="lang-band-row" data-lang="matlab"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>MATLAB · external</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>plsregress</code></td><td class="parity parity-not_run">—</td><td class="ms">—</td></tr>
 <tr class="bk-row truth-source truth-source-qualitative"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (python): libPLS 1.95 — qualitative (rmse_rel ≤ 1e+00)">📐</span><code>ref.matlab_libpls</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">10.7 s</td></tr>
+</tbody>
+<tbody class="lang-band lang-ext"><tr class="lang-band-row" data-lang="ext"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Other</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>r_mdatools_compat</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">147.8 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>r_pls_compat</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">147.2 ms<span class="medal" title="fastest">🏆</span></td></tr>
 </tbody>
 </table>
 </div>

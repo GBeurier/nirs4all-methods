@@ -25,7 +25,7 @@ for every canonical method × cell × build.
 
 | pls4all column | Bench script | Build sweep |
 |----------------|-------------|-------------|
-| `pls4all.cpp.ref`            | `bench_pls4all_native.py` | dev-release |
+| `pls4all.cpp.native`         | `bench_pls4all_native.py` | dev-release |
 | `pls4all.cpp.blas`           | `bench_pls4all_native.py` | blas-on |
 | `pls4all.cpp.omp`            | `bench_pls4all_native.py` | omp-on |
 | `pls4all.cpp.blas+omp`       | `bench_pls4all_native.py` | blas-omp |
@@ -174,7 +174,7 @@ in `full_matrix.csv` need a one-shot migration pass (rename + dedupe).
 ### 9. Doc renderer (`render_docs.py`) column mapping
 
 Update `BACKEND_DISPLAY` so the new backend names map to the column titles
-listed in the target layout (cpp.ref, cpp.blas, …, python, R.direct,
+listed in the target layout (cpp.native, cpp.blas, …, python, R.direct,
 R.formula, matlab.procedural, matlab.classdef). The libp4a-build × backend
 matrix used by the renderer already understands per-build expansion; we
 just point the new `native` backend at it.

@@ -1616,6 +1616,96 @@ def _aom_preprocess_pls4all(ctx, cfg, X, Y, *, n_operators, gating_mode,
         bank.close()
 
 
+def _aom_compact_bank_pls4all(n_operators: int):
+    """Mirror the public `nirs4all` compact AOM bank.
+
+    The C ABI supports strict-linear primitive operators, so this mirrors
+    `nirs4all.operators.models.sklearn.aom_pls.compact_bank` rather than
+    the broader default bank containing composed operators.
+    """
+    import pls4all
+
+    specs = [
+        (pls4all.OperatorKind.IDENTITY, None),
+        (pls4all.OperatorKind.SAVGOL_SMOOTH, [11.0, 2.0]),
+        (pls4all.OperatorKind.SAVGOL_SMOOTH, [21.0, 3.0]),
+        (pls4all.OperatorKind.SAVGOL_DERIVATIVE, [11.0, 2.0, 1.0]),
+        (pls4all.OperatorKind.SAVGOL_DERIVATIVE, [21.0, 3.0, 1.0]),
+        (pls4all.OperatorKind.SAVGOL_DERIVATIVE, [11.0, 2.0, 2.0]),
+        (pls4all.OperatorKind.DETREND_POLY, [1.0]),
+        (pls4all.OperatorKind.DETREND_POLY, [2.0]),
+        (pls4all.OperatorKind.FINITE_DIFFERENCE, [1.0]),
+    ]
+    n_keep = max(1, min(int(n_operators), len(specs)))
+    bank = pls4all.OperatorBank()
+    for kind, params in specs[:n_keep]:
+        bank.add(kind, params)
+    return bank
+
+
+def _aom_predictions_matrix(result) -> np.ndarray:
+    values, rows, cols = result.predictions
+    return np.asarray(values, dtype=np.float64).reshape(int(rows), int(cols))
+
+
+def _aom_select_pls4all(ctx, cfg, X, Y, *, max_components, n_operators,
+                         cv, per_component: bool):
+    import pls4all
+
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.deflation = pls4all.Deflation.REGRESSION
+    cfg.n_components = int(max_components)
+    cfg.center_x = True
+    cfg.scale_x = False
+    cfg.center_y = True
+    cfg.scale_y = False
+    cfg.store_scores = False
+    bank = _aom_compact_bank_pls4all(int(n_operators))
+    plan = _build_default_plan(X.shape[0], n_folds=int(cv))
+    X_rm = np.asarray(X, dtype=np.float64, order="C")
+    Y_rm = np.asarray(Y, dtype=np.float64, order="C").reshape(X_rm.shape[0], -1)
+    selector = (pls4all.aom_per_component_select
+                if per_component else pls4all.aom_global_select)
+    try:
+        result = selector(
+            ctx, cfg, bank,
+            X_rm.ravel(order="C"), Y_rm.ravel(order="C"), plan,
+            int(max_components),
+            x_rows=X_rm.shape[0], x_cols=X_rm.shape[1],
+            y_rows=Y_rm.shape[0], y_cols=Y_rm.shape[1],
+        )
+        try:
+            return _PredictionsOnlyResult(_aom_predictions_matrix(result))
+        finally:
+            result.close()
+    finally:
+        plan.close()
+        bank.close()
+
+
+def _aom_pls_pls4all(ctx, cfg, X, Y, *, max_components, n_operators, cv,
+                      **_):
+    return _aom_select_pls4all(
+        ctx, cfg, X, Y,
+        max_components=max_components,
+        n_operators=n_operators,
+        cv=cv,
+        per_component=False,
+    )
+
+
+def _pop_pls_pls4all(ctx, cfg, X, Y, *, max_components, n_operators, cv,
+                      **_):
+    return _aom_select_pls4all(
+        ctx, cfg, X, Y,
+        max_components=max_components,
+        n_operators=n_operators,
+        cv=cv,
+        per_component=True,
+    )
+
+
 # ---- §18 selector pls4all wrappers (mask out at prediction time) ---------
 
 def _variable_select_rank_pls4all(ctx, cfg, X, Y, *, n_components,
@@ -2223,6 +2313,56 @@ class _AomPreprocessOracleReference(ReferenceAdapter):
         if self._gating_mode == 1:
             return np.mean(np.stack(outputs, axis=0), axis=0)
         return outputs[0]
+
+
+class _Nirs4allAomPlsReference(ReferenceAdapter):
+    """Reference for AOM-PLS / POP-PLS from the in-tree nirs4all port."""
+
+    library_name = "nirs4all"
+    library_version = "in-tree"
+    language = "python"
+    notes = ("In-tree nirs4all AOM/POP estimator stack (sanctioned "
+             "reference). The pls4all ABI uses the same compact "
+             "strict-linear bank and contiguous folds for cross-binding "
+             "determinism; nirs4all remains the qualitative algorithmic "
+             "reference.")
+
+    def __init__(self, *, per_component: bool, max_components: int,
+                  n_operators: int, cv: int) -> None:
+        self._per_component = bool(per_component)
+        self._max_components = int(max_components)
+        self._n_operators = int(n_operators)
+        self._cv = int(cv)
+        self._fit = None
+
+    def fit(self, X, Y, **kwargs):
+        X = np.asarray(X, dtype=np.float64)
+        Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        mod = _load_intree_module("nirs4all_aom_pls",
+                                   _NIRS4ALL_SKLEARN_DIR / "aom_pls.py")
+        cls = mod.POPPLSRegressor if self._per_component else mod.AOMPLSRegressor
+        bank = list(mod.compact_bank(X.shape[1]))[:max(1, self._n_operators)]
+        if not bank:
+            bank = [mod.IdentityOperator(p=X.shape[1])]
+        self._fit = cls(
+            n_components="auto",
+            max_components=self._max_components,
+            operator_bank=bank,
+            cv=self._cv,
+            random_state=0,
+            center=True,
+            scale=False,
+            backend="numpy",
+        )
+        y_arg = Y if Y.shape[1] > 1 else Y.ravel()
+        self._fit.fit(X, y_arg)
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=np.float64)
+        pred = np.asarray(self._fit.predict(X), dtype=np.float64)
+        if pred.ndim == 1:
+            pred = pred.reshape(-1, 1)
+        return pred
 
 
 class _PlsLdaSklearnReference(ReferenceAdapter):
@@ -5319,6 +5459,45 @@ METHODS: list[MethodSpec] = [
                "is the sanctioned provider. pls4all currently exposes "
                "the preprocessing primitive, while nirs4all exposes the "
                "full AOM/POP estimator stack; parity is qualitative."),
+    ),
+    MethodSpec(
+        name="aom_pls",
+        description="AOM-PLS — global adaptive operator selection",
+        pls4all_fn=_aom_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 40,
+                      "max_components": 3, "n_operators": 9, "cv": 3},
+        python_reference=lambda **kw: _Nirs4allAomPlsReference(
+            per_component=False,
+            max_components=kw["max_components"],
+            n_operators=kw["n_operators"],
+            cv=kw["cv"]),
+        r_reference=None,
+        prediction_key="predictions",
+        rmse_rel_tol=5.0,
+        notes=("Global AOMPLS/AOM-PLS selector with the compact strict-linear "
+               "nirs4all bank: identity, Savitzky-Golay smooth/derivative, "
+               "detrend and finite-difference operators. Reference is "
+               "the in-tree nirs4all estimator stack; parity remains "
+               "qualitative because selection tie-breaking and CV "
+               "scoring details differ across implementations."),
+    ),
+    MethodSpec(
+        name="pop_pls",
+        description="POP-PLS — per-component adaptive operator selection",
+        pls4all_fn=_pop_pls_pls4all,
+        cell_params={"n_samples": 200, "n_features": 40,
+                      "max_components": 3, "n_operators": 9, "cv": 3},
+        python_reference=lambda **kw: _Nirs4allAomPlsReference(
+            per_component=True,
+            max_components=kw["max_components"],
+            n_operators=kw["n_operators"],
+            cv=kw["cv"]),
+        r_reference=None,
+        prediction_key="predictions",
+        rmse_rel_tol=5.0,
+        notes=("POPPLS/POP-PLS uses per-component operator selection over the "
+               "same compact nirs4all bank. Reference is the in-tree "
+               "nirs4all POPPLSRegressor; parity is qualitative."),
     ),
     # ====================================================================
     # §18 — Phase 5 selector shims (21 entries). All compare via a (1, p)

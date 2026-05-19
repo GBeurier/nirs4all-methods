@@ -359,6 +359,198 @@ static p4a_validation_plan_t* make_default_plan(int n, int requested_folds) {
     return plan;
 }
 
+/* ---- AOM / POP selector helpers ------------------------------------ */
+
+static p4a_status_t add_bank_op(p4a_operator_bank_t* bank,
+                                 p4a_operator_kind_t kind,
+                                 const double* params,
+                                 int32_t n_params) {
+    return p4a_operator_bank_add(bank, kind, params, n_params);
+}
+
+static p4a_status_t make_compact_aom_bank(int n_ops,
+                                           p4a_operator_bank_t** out_bank) {
+    if (!out_bank) return P4A_ERR_INVALID_ARGUMENT;
+    *out_bank = NULL;
+    if (n_ops < 1) n_ops = 1;
+    if (n_ops > 9) n_ops = 9;
+    p4a_operator_bank_t* bank = NULL;
+    p4a_status_t st = p4a_operator_bank_create(&bank);
+    if (st != P4A_OK) return st;
+
+    const double sg11_p2[] = {11.0, 2.0};
+    const double sg21_p3[] = {21.0, 3.0};
+    const double sg11_p2_d1[] = {11.0, 2.0, 1.0};
+    const double sg21_p3_d1[] = {21.0, 3.0, 1.0};
+    const double sg11_p2_d2[] = {11.0, 2.0, 2.0};
+    const double detrend_1[] = {1.0};
+    const double detrend_2[] = {2.0};
+    const double fd_1[] = {1.0};
+
+    for (int i = 0; st == P4A_OK && i < n_ops; ++i) {
+        switch (i) {
+        case 0:
+            st = add_bank_op(bank, P4A_OP_IDENTITY, NULL, 0);
+            break;
+        case 1:
+            st = add_bank_op(bank, P4A_OP_SAVGOL_SMOOTH, sg11_p2, 2);
+            break;
+        case 2:
+            st = add_bank_op(bank, P4A_OP_SAVGOL_SMOOTH, sg21_p3, 2);
+            break;
+        case 3:
+            st = add_bank_op(bank, P4A_OP_SAVGOL_DERIVATIVE, sg11_p2_d1, 3);
+            break;
+        case 4:
+            st = add_bank_op(bank, P4A_OP_SAVGOL_DERIVATIVE, sg21_p3_d1, 3);
+            break;
+        case 5:
+            st = add_bank_op(bank, P4A_OP_SAVGOL_DERIVATIVE, sg11_p2_d2, 3);
+            break;
+        case 6:
+            st = add_bank_op(bank, P4A_OP_DETREND_POLY, detrend_1, 1);
+            break;
+        case 7:
+            st = add_bank_op(bank, P4A_OP_DETREND_POLY, detrend_2, 1);
+            break;
+        default:
+            st = add_bank_op(bank, P4A_OP_FINITE_DIFFERENCE, fd_1, 1);
+            break;
+        }
+    }
+    if (st != P4A_OK) {
+        p4a_operator_bank_destroy(bank);
+        return st;
+    }
+    *out_bank = bank;
+    return P4A_OK;
+}
+
+static SEXP double_matrix_from_rowmajor(const double* data,
+                                         int64_t rows, int64_t cols) {
+    SEXP out = PROTECT(Rf_allocMatrix(REALSXP, (int)rows, (int)cols));
+    rowmajor_to_colmajor(data, REAL(out), rows, cols);
+    UNPROTECT(1);
+    return out;
+}
+
+static SEXP double_vector_from_i32(const int32_t* data, int32_t n,
+                                    int shift) {
+    SEXP out = PROTECT(Rf_allocVector(REALSXP, n));
+    for (int32_t i = 0; i < n; ++i)
+        REAL(out)[i] = (double)(shift ? (data[i] + 1) : data[i]);
+    UNPROTECT(1);
+    return out;
+}
+
+static SEXP double_vector_from_op_kinds(const p4a_operator_kind_t* data,
+                                         int32_t n) {
+    SEXP out = PROTECT(Rf_allocVector(REALSXP, n));
+    for (int32_t i = 0; i < n; ++i)
+        REAL(out)[i] = (double)data[i];
+    UNPROTECT(1);
+    return out;
+}
+
+static SEXP double_vector_from_f64(const double* data, int32_t n) {
+    SEXP out = PROTECT(Rf_allocVector(REALSXP, n));
+    for (int32_t i = 0; i < n; ++i) REAL(out)[i] = data[i];
+    UNPROTECT(1);
+    return out;
+}
+
+static SEXP pack_aom_global_result(p4a_aom_global_result_t* res) {
+    const double* preds = NULL;
+    int64_t pred_rows = 0, pred_cols = 0;
+    const p4a_operator_kind_t* kinds = NULL;
+    int32_t n_kinds = 0;
+    const double* op_scores = NULL;
+    int32_t n_scores = 0;
+    const double* curves = NULL;
+    int32_t curve_rows = 0, curve_cols = 0;
+    int32_t selected_op = 0, selected_k = 0, n_ops = 0, max_k = 0;
+    double best_score = 0.0;
+
+    p4a_aom_global_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
+    p4a_aom_global_result_get_operator_kinds(res, &kinds, &n_kinds);
+    p4a_aom_global_result_get_operator_scores(res, &op_scores, &n_scores);
+    p4a_aom_global_result_get_rmse_curves(res, &curves, &curve_rows, &curve_cols);
+    p4a_aom_global_result_get_selected_operator_index(res, &selected_op);
+    p4a_aom_global_result_get_selected_n_components(res, &selected_k);
+    p4a_aom_global_result_get_n_operators(res, &n_ops);
+    p4a_aom_global_result_get_max_components(res, &max_k);
+    p4a_aom_global_result_get_best_score(res, &best_score);
+
+    const char* names[] = {
+        "predictions", "operator_kinds", "operator_scores",
+        "rmse_curves", "selected_operator_index",
+        "selected_n_components", "n_operators", "max_components",
+        "best_score"
+    };
+    SEXP vals[9];
+    vals[0] = PROTECT(double_matrix_from_rowmajor(preds, pred_rows, pred_cols));
+    vals[1] = PROTECT(double_vector_from_op_kinds(kinds, n_kinds));
+    vals[2] = PROTECT(double_vector_from_f64(op_scores, n_scores));
+    vals[3] = PROTECT(double_matrix_from_rowmajor(curves, curve_rows, curve_cols));
+    vals[4] = PROTECT(Rf_ScalarInteger(selected_op + 1));
+    vals[5] = PROTECT(Rf_ScalarInteger(selected_k));
+    vals[6] = PROTECT(Rf_ScalarInteger(n_ops));
+    vals[7] = PROTECT(Rf_ScalarInteger(max_k));
+    vals[8] = PROTECT(Rf_ScalarReal(best_score));
+    SEXP out = make_list(names, vals, 9);
+    UNPROTECT(9);
+    p4a_aom_global_result_destroy(res);
+    return out;
+}
+
+static SEXP pack_aom_per_component_result(p4a_aom_per_component_result_t* res) {
+    const double* preds = NULL;
+    int64_t pred_rows = 0, pred_cols = 0;
+    const p4a_operator_kind_t* kinds = NULL;
+    int32_t n_kinds = 0;
+    const int32_t* selected_ops = NULL;
+    int32_t n_selected = 0;
+    const double* component_scores = NULL;
+    int32_t comp_rows = 0, comp_cols = 0;
+    const double* prefix_scores = NULL;
+    int32_t n_prefix = 0;
+    int32_t selected_k = 0, n_ops = 0, max_k = 0;
+    double best_score = 0.0;
+
+    p4a_aom_per_component_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
+    p4a_aom_per_component_result_get_operator_kinds(res, &kinds, &n_kinds);
+    p4a_aom_per_component_result_get_selected_operator_indices(
+        res, &selected_ops, &n_selected);
+    p4a_aom_per_component_result_get_component_scores(
+        res, &component_scores, &comp_rows, &comp_cols);
+    p4a_aom_per_component_result_get_prefix_scores(res, &prefix_scores, &n_prefix);
+    p4a_aom_per_component_result_get_selected_n_components(res, &selected_k);
+    p4a_aom_per_component_result_get_n_operators(res, &n_ops);
+    p4a_aom_per_component_result_get_max_components(res, &max_k);
+    p4a_aom_per_component_result_get_best_score(res, &best_score);
+
+    const char* names[] = {
+        "predictions", "operator_kinds", "selected_operator_indices",
+        "component_scores", "prefix_scores", "selected_n_components",
+        "n_operators", "max_components", "best_score"
+    };
+    SEXP vals[9];
+    vals[0] = PROTECT(double_matrix_from_rowmajor(preds, pred_rows, pred_cols));
+    vals[1] = PROTECT(double_vector_from_op_kinds(kinds, n_kinds));
+    vals[2] = PROTECT(double_vector_from_i32(selected_ops, n_selected, 1));
+    vals[3] = PROTECT(double_matrix_from_rowmajor(component_scores,
+                                                   comp_rows, comp_cols));
+    vals[4] = PROTECT(double_vector_from_f64(prefix_scores, n_prefix));
+    vals[5] = PROTECT(Rf_ScalarInteger(selected_k));
+    vals[6] = PROTECT(Rf_ScalarInteger(n_ops));
+    vals[7] = PROTECT(Rf_ScalarInteger(max_k));
+    vals[8] = PROTECT(Rf_ScalarReal(best_score));
+    SEXP out = make_list(names, vals, 9);
+    UNPROTECT(9);
+    p4a_aom_per_component_result_destroy(res);
+    return out;
+}
+
 /* =====================================================================
  *  Main dispatcher
  * ===================================================================== */
@@ -844,6 +1036,36 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             static const char* sc[] = {"n_operators", "mode", NULL};
             out = pack_result(mr, dm, NULL, i64, sc);
         }
+    } else if (strcmp(algo, "aom_pls") == 0 ||
+               strcmp(algo, "pop_pls") == 0) {
+        int n_ops = get_int(params, "n_operators", 9);
+        int cv = get_int(params, "cv", 3);
+        int max_components = get_int(params, "max_components", n_components);
+        if (max_components < 1) max_components = 1;
+        if (max_components > p) max_components = p;
+        if (max_components >= n) max_components = n - 1;
+        if (cv < 2) cv = 2;
+
+        p4a_operator_bank_t* bank = NULL;
+        p4a_validation_plan_t* plan = NULL;
+        st = make_compact_aom_bank(n_ops, &bank);
+        if (st == P4A_OK) {
+            plan = make_default_plan(n, cv);
+            if (!plan) st = P4A_ERR_INVALID_ARGUMENT;
+        }
+        if (st == P4A_OK && strcmp(algo, "aom_pls") == 0) {
+            p4a_aom_global_result_t* aom = NULL;
+            st = p4a_aom_global_select(ctx, cfg, bank, &Xv, &Yv, plan,
+                                        max_components, &aom);
+            if (st == P4A_OK) out = pack_aom_global_result(aom);
+        } else if (st == P4A_OK) {
+            p4a_aom_per_component_result_t* pop = NULL;
+            st = p4a_aom_per_component_select(ctx, cfg, bank, &Xv, &Yv, plan,
+                                               max_components, &pop);
+            if (st == P4A_OK) out = pack_aom_per_component_result(pop);
+        }
+        if (plan) p4a_validation_plan_destroy(plan);
+        if (bank) p4a_operator_bank_destroy(bank);
     }
 
     /* ---------------- Selectors ---------------- */

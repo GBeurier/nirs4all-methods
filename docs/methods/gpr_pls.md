@@ -6,16 +6,20 @@ _Group_: **Nonlinear / local** · _Registry tolerance_: `1e-08`
 
 GPR-on-PLS — RBF Gaussian Process on PLS scores (§47)
 
+From the `pls4all.sklearn.GPRPLSRegression` docstring:
+
+> Gaussian-process head on SIMPLS training scores.
+
 > **Registry note** — GP head parity (sklearn `GaussianProcessRegressor` with RBF+WhiteKernel, optimizer=None) on the same PLS scores. Architecturally separated to allow GPR-on-AOMPLS reuse of `fit_gp_on_scores`.
 
 ### Parameters
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `n_components` | `int` | `3` | registry benchmark cell value |
-| `length_scale` | `float` | `1.0` | registry benchmark cell value |
-| `noise_level` | `float` | `0.001` | registry benchmark cell value |
-| `seed` | `int` | `0` | registry benchmark cell value |
+| `n_components` | `int` | `2` | Number of latent components extracted (k). |
+| `length_scale` | `float` | `1.0` |  |
+| `noise_level` | `float` | `0.001` |  |
+| `seed` | `int` | `0` | Random seed for reproducible sampling/initialization. |
 
 ## Explanations
 
@@ -54,7 +58,7 @@ pls4all.gpr_pls  GPR on PLS scores (RBF kernel, single-target Y).
 
 ### Usage
 
-All four pls4all bindings dispatch into the same C kernel; the external libraries on the right are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language.
+Every pls4all binding tab dispatches into the same C kernel; the external libraries listed at the bottom of the page are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language. The R package now ships drop-in-compatible facades for the CRAN `pls` package (`plsr`, `pcr`, `mvr`) and for the `mdatools::pls(x, y, ...)` matrix idiom — those tabs appear only on the methods that have a meaningful equivalence.
 
 **pls4all bindings**
 
@@ -99,7 +103,12 @@ with pls4all.Context() as ctx, pls4all.Config() as cfg:
 :sync: python-sklearn
 :class-label: lang-python
 
-_No tier-2 sklearn-style class — exposed only via `pls4all._methods`._
+```python
+from pls4all.sklearn import GPRPLSRegression
+mdl = GPRPLSRegression(n_components=2, length_scale=1.0, noise_level=0.001, seed=0)
+mdl.fit(X, y)
+y_hat = mdl.predict(X_test)
+```
 
 :::
 
@@ -127,29 +136,6 @@ library(pls4all)
 res  <- gpr_pls_fit(X, Y, n_components,
              length_scale = 1.0, noise_level = 1e-4, seed = 0L)
 yhat <- pls4all_predict(res, X_test)
-```
-
-:::
-
-:::{tab-item} R · parsnip / mlr3
-:sync: r-meta
-:class-label: lang-r
-
-```r
-# parsnip / tidymodels
-library(tidymodels)
-pls4all::register_parsnip()
-spec <- pls_pls4all_reg(num_comp = 3) %>%
-    set_engine("pls4all", algorithm = "gpr_pls") %>%
-    set_mode("regression")
-wflow <- workflow() %>% add_model(spec) %>% add_recipe(rec)
-fit <- fit(wflow, data = train)
-
-# mlr3
-library(mlr3)
-pls4all::register_mlr3()
-lrn <- lrn("regr.pls4all", algorithm = "gpr_pls", n_components = 3L)
-lrn$train(task)
 ```
 
 :::
@@ -222,7 +208,7 @@ Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.c
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>ikpls</code></td><td class="parity parity-not_available">⊘</td><td class="ms">—</td></tr>
 <tr class="bk-row truth-source truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (python): scikit-learn 1.4.2 — strict (rmse_rel ≤ 1e-08)">📐</span><code>ref.python_scikit_learn</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">2.19 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>sklearn</code></td><td class="parity parity-drift">≈ +6e-02</td><td class="ms">4.96 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>sklearn</code></td><td class="parity parity-divergent">✗ +6e-02</td><td class="ms">4.96 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · external</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>mixOmics</code></td><td class="parity parity-not_available">⊘</td><td class="ms">—</td></tr>
@@ -231,6 +217,10 @@ Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.c
 </tbody>
 <tbody class="lang-band lang-matlab"><tr class="lang-band-row" data-lang="matlab"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>MATLAB · external</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>plsregress</code></td><td class="parity parity-not_run">—</td><td class="ms">—</td></tr>
+</tbody>
+<tbody class="lang-band lang-ext"><tr class="lang-band-row" data-lang="ext"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Other</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>r_mdatools_compat</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">3.71 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>r_pls_compat</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">3.95 ms</td></tr>
 </tbody>
 </table>
 </div>

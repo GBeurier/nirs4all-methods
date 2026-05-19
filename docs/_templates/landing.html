@@ -445,6 +445,7 @@
       overflow-y: auto;
       max-height: 78vh;
       position: relative;
+      isolation: isolate;
       box-shadow: 0 0 0 1px var(--phosphor-faint);
       /* Firefox-specific scrollbar styling — the -webkit-* selectors
          below cover Chromium / Safari. Both are needed: without
@@ -598,32 +599,36 @@
     }
 
     /* sticky leftmost columns — widths + offsets driven by CSS vars
-       so they stay in sync across density modes. Body cells render at
-       z-index 3 (above tbody data cells), header cells at z-index 7
-       (above the lang-band non-sticky cells which slide under them on
-       horizontal scroll). The reference column (last sticky) carries the
-       boundary shadow so users see a clear "frozen" / "scrolling" split. */
+       so they stay in sync across density modes. Frozen cells need opaque
+       paint and a higher stack than scrollable cells; otherwise the first
+       data columns remain visible underneath them during horizontal scroll
+       or after column-filter rerenders. The reference column (last sticky)
+       carries the boundary shadow so users see a clear frozen / scrolling
+       split. */
     table.bench th.algo-col, table.bench td.algo-cell {
-      position: sticky; left: 0; z-index: 5;
+      position: sticky; left: 0; z-index: 20;
       background: var(--ink-2);
+      background-clip: padding-box;
       width: var(--w-algo); min-width: var(--w-algo); max-width: var(--w-algo);
     }
-    table.bench td.algo-cell { background: var(--ink-1); z-index: 3; }
+    table.bench td.algo-cell { background: var(--ink-1); z-index: 18; }
     table.bench th.size-col, table.bench td.size-cell {
-      position: sticky; left: var(--off-size); z-index: 5;
+      position: sticky; left: var(--off-size); z-index: 20;
       background: var(--ink-2);
+      background-clip: padding-box;
       width: var(--w-size); min-width: var(--w-size); max-width: var(--w-size);
     }
-    table.bench td.size-cell { background: var(--ink-1); z-index: 3; }
+    table.bench td.size-cell { background: var(--ink-1); z-index: 18; }
     table.bench th.thread-col, table.bench td.thread-cell {
-      position: sticky; left: var(--off-threads); z-index: 5;
+      position: sticky; left: var(--off-threads); z-index: 20;
       background: var(--ink-2);
+      background-clip: padding-box;
       width: var(--w-threads); min-width: var(--w-threads); max-width: var(--w-threads);
     }
     table.bench td.thread-cell {
-      background: var(--ink-1); z-index: 3;
+      background: var(--ink-1); z-index: 18;
     }
-    table.bench th.algo-col, table.bench th.size-col, table.bench th.thread-col { z-index: 8; }
+    table.bench th.algo-col, table.bench th.size-col, table.bench th.thread-col { z-index: 30; }
     /* The native (pls4all.cpp) baseline column is NOT sticky — making it
        sticky used to hide neighbouring columns when scrolling right.
        It still gets a subtle phosphor accent so the comparison anchor
@@ -729,10 +734,12 @@
        it from the regular per-language tints. */
     table.bench td.ref-col,
     table.bench th.ref-col {
-      position: sticky; left: var(--off-reference); z-index: 5;
+      position: sticky; left: var(--off-reference); z-index: 20;
       background: linear-gradient(180deg,
         rgba(160, 160, 200, 0.10) 0%,
-        rgba(160, 160, 200, 0.04) 100%) !important;
+        rgba(160, 160, 200, 0.04) 100%),
+        var(--ink-2) !important;
+      background-clip: padding-box;
       border-right: 2px solid var(--fg-3);
       font-weight: 600;
       width: var(--w-reference);
@@ -743,17 +750,42 @@
       text-align: left;
       box-shadow: 4px 0 6px -3px rgba(15, 30, 40, 0.18);
     }
-    table.bench td.ref-col { z-index: 3; }
+    table.bench td.ref-col {
+      z-index: 18;
+      background: linear-gradient(180deg,
+        rgba(160, 160, 200, 0.10) 0%,
+        rgba(160, 160, 200, 0.04) 100%),
+        var(--ink-1) !important;
+    }
+    table.bench tbody tr:hover td.ref-col {
+      background: linear-gradient(180deg,
+        rgba(160, 160, 200, 0.14) 0%,
+        rgba(160, 160, 200, 0.08) 100%),
+        var(--ink-3) !important;
+    }
     body.theme-dark table.bench td.ref-col,
     body.theme-dark table.bench th.ref-col {
       background: linear-gradient(180deg,
         rgba(200, 200, 240, 0.10) 0%,
-        rgba(200, 200, 240, 0.04) 100%) !important;
+        rgba(200, 200, 240, 0.04) 100%),
+        var(--ink-2) !important;
       box-shadow: 4px 0 6px -3px rgba(0, 0, 0, 0.55);
+    }
+    body.theme-dark table.bench td.ref-col {
+      background: linear-gradient(180deg,
+        rgba(200, 200, 240, 0.10) 0%,
+        rgba(200, 200, 240, 0.04) 100%),
+        var(--ink-1) !important;
+    }
+    body.theme-dark table.bench tbody tr:hover td.ref-col {
+      background: linear-gradient(180deg,
+        rgba(200, 200, 240, 0.14) 0%,
+        rgba(200, 200, 240, 0.08) 100%),
+        var(--ink-3) !important;
     }
     table.bench th.ref-col {
       border-bottom: 2px solid var(--fg-2);
-      z-index: 8;
+      z-index: 30;
     }
     /* Make the ref column heading slightly more prominent than other
        column headers without screaming. */
@@ -810,6 +842,9 @@
     /* density: compact — slightly tighter sticky widths */
     body.density-compact {
       --w-algo: 176px; --w-size: 76px; --w-threads: 48px; --w-reference: 112px;
+      --off-size:      var(--w-algo);
+      --off-threads:   calc(var(--w-algo) + var(--w-size));
+      --off-reference: calc(var(--w-algo) + var(--w-size) + var(--w-threads));
     }
     body.density-compact table.bench { font-size: 11px; }
     body.density-compact table.bench td { padding: 2.5px 6px; font-size: 10.5px; }
@@ -819,6 +854,9 @@
     /* density: ultra (max squeeze) — minimal sticky widths */
     body.density-ultra {
       --w-algo: 156px; --w-size: 68px; --w-threads: 42px; --w-reference: 96px;
+      --off-size:      var(--w-algo);
+      --off-threads:   calc(var(--w-algo) + var(--w-size));
+      --off-reference: calc(var(--w-algo) + var(--w-size) + var(--w-threads));
     }
     body.density-ultra table.bench { font-size: 10.5px; }
     body.density-ultra table.bench td { padding: 1.5px 4px; font-size: 10px; }
@@ -1143,9 +1181,21 @@
       .hero { padding: 18px 18px 14px; }
     }
     @media (max-width: 680px) {
+      body {
+        --w-algo: 112px;
+        --w-size: 52px;
+        --w-threads: 36px;
+        --w-reference: 76px;
+        --off-size:      var(--w-algo);
+        --off-threads:   calc(var(--w-algo) + var(--w-size));
+        --off-reference: calc(var(--w-algo) + var(--w-size) + var(--w-threads));
+      }
       .stat-strip { grid-template-columns: repeat(2, max-content); }
       .stat-value { font-size: 20px; }
       .wordmark { font-size: 28px; }
+      .table-shell { padding-left: 8px; padding-right: 8px; }
+      .controls { padding-left: 8px; padding-right: 8px; }
+      .hero { padding-left: 8px; padding-right: 8px; }
     }
   </style>
 </head>
@@ -1347,6 +1397,14 @@
 'use strict';
 
 const DATA = JSON.parse(document.getElementById('bench-data').textContent);
+const ALGO_DISPLAY = {
+  aom_pls: 'aom-pls',
+  pop_pls: 'pop-pls',
+};
+const ALGO_ALIASES = {
+  aom_pls: 'AOMPLS AOM-PLS AOM_PLS AOMPLSRegressor nirs4all adaptive operator mixture',
+  pop_pls: 'POPPLS POP-PLS POP_PLS POPPLSRegressor nirs4all per-component operator selection',
+};
 
 // ---------- state + url persistence ----------
 const URL_KEYS = ['algo','group','lang','libGroup','lib','size','threads','parity','search','cols','sort','density','viz'];
@@ -1433,7 +1491,7 @@ if (state.cols.size === 0) {
 function nativeBaselineCol() {
   const find = id => DATA.columns.find(c => c.id === id);
   return (
-    find('pls4all.cpp.ref') ||
+    find('pls4all.cpp.native') ||
     find('pls4all.cpp.blas+omp') ||
     DATA.columns.find(c => c.id.startsWith('pls4all.cpp.')) ||
     null
@@ -1459,6 +1517,10 @@ const PARITY_ICON = {
 };
 
 function sizeKey(n, p) { return `${n}×${p}`; }
+function algoDisplay(algo) { return ALGO_DISPLAY[algo] || algo; }
+function searchNorm(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
 function escAttr(s) {
   return String(s || '').replace(/[&<>"']/g, ch => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -1475,14 +1537,18 @@ function fmtSpeedup(ratio) {
 }
 
 function applyRowFilters() {
-  const q = state.search.trim().toLowerCase();
+  const q = searchNorm(state.search.trim());
   const groupMap = DATA.algo_to_group || {};
   return DATA.rows.filter(row => {
     if (state.algo    && row.algo !== state.algo) return false;
     if (state.group   && groupMap[row.algo] !== state.group) return false;
     if (state.size    && sizeKey(row.n, row.p) !== state.size) return false;
     if (state.threads && String(row.threads) !== state.threads) return false;
-    if (q && !row.algo.toLowerCase().includes(q)) return false;
+    if (q) {
+      const hay = searchNorm([row.algo, algoDisplay(row.algo),
+        ALGO_ALIASES[row.algo] || ''].join(' '));
+      if (!hay.includes(q)) return false;
+    }
     return true;
   });
 }
@@ -1721,7 +1787,8 @@ function renderPresetRail() {
   // The NATIVE column is force-injected at runtime regardless of preset
   // — normalise both sides to ignore it so the match isn't foiled by
   // that one phantom diff (without this fix, every preset that doesn't
-  // include cpp.ref in its definition shows as "custom" with +1 col).
+  // include the fixed native baseline in its definition shows as
+  // "custom" with +1 col).
   const effective = visibleColIds();
   const norm = (ids) => ids
     .filter(id => id !== NATIVE_COL_ID)
@@ -1765,7 +1832,7 @@ function renderControls() {
     .filter(a => !state.group || groupMap[a] === state.group)
     .sort();
   $('filter-algo').innerHTML = '<option value="">all</option>' +
-    algos.map(a => `<option value="${a}"${state.algo===a?' selected':''}>${a}</option>`).join('');
+    algos.map(a => `<option value="${a}"${state.algo===a?' selected':''}>${algoDisplay(a)}</option>`).join('');
 
   // language (narrows the visible columns)
   const langs = DATA.languages || [];
@@ -1873,7 +1940,7 @@ function renderColPicker() {
 function shortLabel(label) {
   const meta = DATA.columns.find(c => c.label === label);
   if (!meta) return label;
-  if (meta.id === NATIVE_COL_ID) return 'cpp.ref';
+  if (meta.id === NATIVE_COL_ID) return 'cpp.native';
   return meta.short || label;
 }
 
@@ -1992,7 +2059,8 @@ function renderTable() {
       const sizeHtml = row.isAvg
         ? `<span class="size-avg" title="geomean across ${row.sizesCount} size${row.sizesCount === 1 ? '' : 's'}">avg · ${row.sizesCount}</span>`
         : `${row.n}×${row.p}`;
-      let tr = `<tr><td class="algo-cell"><a href="methods/${row.algo}.html" title="open ${row.algo} method documentation">${row.algo}</a></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
+      const rowAlgoLabel = algoDisplay(row.algo);
+      let tr = `<tr><td class="algo-cell"><a href="methods/${row.algo}.html" title="open ${rowAlgoLabel} method documentation">${rowAlgoLabel}</a></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
       for (const id of cols) {
         const meta = colsById[id];
         // The synthetic "canonical reference" leading column needs a
