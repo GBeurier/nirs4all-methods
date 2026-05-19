@@ -53,6 +53,12 @@ static int use_dual_wide_svd(int64_t rows, int64_t cols,
            rows <= cols && rows <= 256;
 }
 
+static int use_tall_gram_svd(int64_t rows, int64_t cols,
+                             int64_t k_full, int64_t k) {
+    (void)k_full;
+    return k >= 1 && k < cols && rows >= cols && cols <= 64;
+}
+
 c4a_pp_flex_svd_state_t* c4a_pp_flex_svd_state_new(double n_components_param) {
     if (!(n_components_param > 0.0)) {  /* catches NaN and <= 0 */
         return NULL;
@@ -134,7 +140,8 @@ c4a_status_t c4a_pp_flex_svd_state_fit(c4a_pp_flex_svd_state_t* state,
     if (state->n_components_param >= 1.0) {
         const int64_t k_kept =
             flex_svd_select_k(state->n_components_param, k_full, NULL);
-        if (use_truncated_svd(rows, cols, k_full, k_kept)) {
+        if (use_tall_gram_svd(rows, cols, k_full, k_kept) ||
+            use_truncated_svd(rows, cols, k_full, k_kept)) {
             double* U  =
                 (double*)malloc((size_t)rows * (size_t)k_kept * sizeof(double));
             double* S  = (double*)malloc((size_t)k_kept * sizeof(double));
@@ -145,31 +152,24 @@ c4a_status_t c4a_pp_flex_svd_state_fit(c4a_pp_flex_svd_state_t* state,
                 return C4A_ERR_OUT_OF_MEMORY;
             }
             const c4a_status_t svd_st =
-                use_dual_wide_svd(rows, cols, k_full, k_kept)
-                    ? c4a_svd_truncated_dual_wide(
+                use_tall_gram_svd(rows, cols, k_full, k_kept)
+                    ? c4a_svd_truncated_tall_gram(
                           X, rows, cols, k_kept, U, S, Vt)
-                    : c4a_svd_truncated_randomized(
-                          X, rows, cols, k_kept, U, S, Vt);
+                    : (use_dual_wide_svd(rows, cols, k_full, k_kept)
+                           ? c4a_svd_truncated_dual_wide(
+                                 X, rows, cols, k_kept, U, S, Vt)
+                           : c4a_svd_truncated_randomized(
+                                 X, rows, cols, k_kept, U, S, Vt));
             free(U);
             free(S);
             if (svd_st != C4A_OK) {
                 free(Vt);
                 return svd_st;
             }
-            double* components =
-                (double*)malloc((size_t)k_kept * (size_t)cols * sizeof(double));
-            if (components == NULL) {
-                free(Vt);
-                return C4A_ERR_OUT_OF_MEMORY;
-            }
-            memcpy(components, Vt,
-                   (size_t)k_kept * (size_t)cols * sizeof(double));
-            free(Vt);
-
             free(state->components);
             state->n_features_in = cols;
             state->n_components  = k_kept;
-            state->components    = components;
+            state->components    = Vt;
             state->fitted        = 1;
             return C4A_OK;
         }
@@ -298,6 +298,33 @@ c4a_status_t c4a_pp_flex_svd_state_apply(const c4a_pp_flex_svd_state_t* state,
         return C4A_ERR_SHAPE_MISMATCH;
     }
     if (rows == 0 || cols == 0 || out_cols == 0) {
+        return C4A_OK;
+    }
+
+    if (state->n_components == 5) {
+        const double* comp0 = state->components;
+        const double* comp1 = comp0 + (size_t)cols;
+        const double* comp2 = comp1 + (size_t)cols;
+        const double* comp3 = comp2 + (size_t)cols;
+        const double* comp4 = comp3 + (size_t)cols;
+        for (int64_t i = 0; i < rows; ++i) {
+            const double* row = X + (size_t)i * (size_t)cols;
+            double* orow = out + (size_t)i * (size_t)out_cols;
+            double acc0 = 0.0, acc1 = 0.0, acc2 = 0.0, acc3 = 0.0, acc4 = 0.0;
+            for (int64_t j = 0; j < cols; ++j) {
+                const double xj = row[j];
+                acc0 += xj * comp0[j];
+                acc1 += xj * comp1[j];
+                acc2 += xj * comp2[j];
+                acc3 += xj * comp3[j];
+                acc4 += xj * comp4[j];
+            }
+            orow[0] = acc0;
+            orow[1] = acc1;
+            orow[2] = acc2;
+            orow[3] = acc3;
+            orow[4] = acc4;
+        }
         return C4A_OK;
     }
 

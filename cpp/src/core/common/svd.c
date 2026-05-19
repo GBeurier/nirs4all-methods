@@ -383,24 +383,32 @@ c4a_status_t c4a_svd_truncated_dual_wide(const double* A, int64_t m,
         return C4A_ERR_NULL_POINTER;
     }
 
-    double* G = (double*)malloc((size_t)m * (size_t)m * sizeof(double));
+    double* G = (double*)calloc((size_t)m * (size_t)m, sizeof(double));
     double* Ug = (double*)malloc((size_t)m * (size_t)m * sizeof(double));
     double* L = (double*)malloc((size_t)m * sizeof(double));
-    if (G == NULL || Ug == NULL || L == NULL) {
-        free(G); free(Ug); free(L);
+    double* colbuf = (double*)malloc((size_t)m * sizeof(double));
+    if (G == NULL || Ug == NULL || L == NULL || colbuf == NULL) {
+        free(G); free(Ug); free(L); free(colbuf);
         return C4A_ERR_OUT_OF_MEMORY;
     }
 
-    for (int64_t i = 0; i < m; ++i) {
-        const double* row_i = A + (size_t)i * (size_t)n;
-        for (int64_t j = i; j < m; ++j) {
-            const double* row_j = A + (size_t)j * (size_t)n;
-            double dot = 0.0;
-            for (int64_t c = 0; c < n; ++c) {
-                dot += row_i[c] * row_j[c];
+    for (int64_t c = 0; c < n; ++c) {
+        for (int64_t i = 0; i < m; ++i) {
+            colbuf[i] = A[(size_t)i * (size_t)n + (size_t)c];
+        }
+        for (int64_t i = 0; i < m; ++i) {
+            const double ai = colbuf[i];
+            double* grow = G + (size_t)i * (size_t)m;
+            for (int64_t j = i; j < m; ++j) {
+                grow[j] += ai * colbuf[j];
             }
-            G[(size_t)i * (size_t)m + (size_t)j] = dot;
-            G[(size_t)j * (size_t)m + (size_t)i] = dot;
+        }
+    }
+    free(colbuf);
+    for (int64_t i = 1; i < m; ++i) {
+        for (int64_t j = 0; j < i; ++j) {
+            G[(size_t)i * (size_t)m + (size_t)j] =
+                G[(size_t)j * (size_t)m + (size_t)i];
         }
     }
 
@@ -422,7 +430,43 @@ c4a_status_t c4a_svd_truncated_dual_wide(const double* A, int64_t m,
         }
     }
 
-    if (k <= 8) {
+    if (k == 5) {
+        const double inv0 = (S[0] > 0.0) ? (1.0 / S[0]) : 0.0;
+        const double inv1 = (S[1] > 0.0) ? (1.0 / S[1]) : 0.0;
+        const double inv2 = (S[2] > 0.0) ? (1.0 / S[2]) : 0.0;
+        const double inv3 = (S[3] > 0.0) ? (1.0 / S[3]) : 0.0;
+        const double inv4 = (S[4] > 0.0) ? (1.0 / S[4]) : 0.0;
+        double* v0 = Vt;
+        double* v1 = Vt + (size_t)n;
+        double* v2 = Vt + (size_t)2 * (size_t)n;
+        double* v3 = Vt + (size_t)3 * (size_t)n;
+        double* v4 = Vt + (size_t)4 * (size_t)n;
+        memset(Vt, 0, (size_t)5 * (size_t)n * sizeof(double));
+        for (int64_t i = 0; i < m; ++i) {
+            const double* row = A + (size_t)i * (size_t)n;
+            const double* urow = U + (size_t)i * (size_t)k;
+            const double u0 = urow[0];
+            const double u1 = urow[1];
+            const double u2 = urow[2];
+            const double u3 = urow[3];
+            const double u4 = urow[4];
+            for (int64_t j = 0; j < n; ++j) {
+                const double aij = row[j];
+                v0[j] += aij * u0;
+                v1[j] += aij * u1;
+                v2[j] += aij * u2;
+                v3[j] += aij * u3;
+                v4[j] += aij * u4;
+            }
+        }
+        for (int64_t j = 0; j < n; ++j) {
+            v0[j] *= inv0;
+            v1[j] *= inv1;
+            v2[j] *= inv2;
+            v3[j] *= inv3;
+            v4[j] *= inv4;
+        }
+    } else if (k <= 8) {
         double inv_s[8];
         for (int64_t comp = 0; comp < k; ++comp) {
             inv_s[comp] = (S[comp] > 0.0) ? (1.0 / S[comp]) : 0.0;
@@ -486,6 +530,94 @@ c4a_status_t c4a_svd_truncated_dual_wide(const double* A, int64_t m,
     }
 
     free(Ug);
+    free(L);
+    return C4A_OK;
+}
+
+c4a_status_t c4a_svd_truncated_tall_gram(const double* A, int64_t m,
+                                         int64_t n, int64_t k, double* U,
+                                         double* S, double* Vt) {
+    if (m < 1 || n < 1 || m < n || k < 1 || k > n) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (A == NULL || U == NULL || S == NULL || Vt == NULL) {
+        return C4A_ERR_NULL_POINTER;
+    }
+
+    double* G = (double*)calloc((size_t)n * (size_t)n, sizeof(double));
+    double* V = (double*)malloc((size_t)n * (size_t)n * sizeof(double));
+    double* L = (double*)malloc((size_t)n * sizeof(double));
+    if (G == NULL || V == NULL || L == NULL) {
+        free(G); free(V); free(L);
+        return C4A_ERR_OUT_OF_MEMORY;
+    }
+
+    for (int64_t r = 0; r < m; ++r) {
+        const double* row = A + (size_t)r * (size_t)n;
+        for (int64_t i = 0; i < n; ++i) {
+            const double ai = row[i];
+            double* grow = G + (size_t)i * (size_t)n;
+            for (int64_t j = i; j < n; ++j) {
+                grow[j] += ai * row[j];
+            }
+        }
+    }
+    for (int64_t i = 1; i < n; ++i) {
+        for (int64_t j = 0; j < i; ++j) {
+            G[(size_t)i * (size_t)n + (size_t)j] =
+                G[(size_t)j * (size_t)n + (size_t)i];
+        }
+    }
+
+    const c4a_status_t st = symmetric_eigh(G, n, L, V);
+    free(G);
+    if (st != C4A_OK) {
+        free(V); free(L);
+        return st;
+    }
+    sort_eigpairs_desc(V, L, n);
+
+    for (int64_t comp = 0; comp < k; ++comp) {
+        const double lambda = (L[comp] > 0.0) ? L[comp] : 0.0;
+        const double sigma = sqrt(lambda);
+        const double inv_sigma = (sigma > 0.0) ? (1.0 / sigma) : 0.0;
+        S[comp] = sigma;
+
+        double* vrow = Vt + (size_t)comp * (size_t)n;
+        for (int64_t j = 0; j < n; ++j) {
+            vrow[j] = V[(size_t)j * (size_t)n + (size_t)comp];
+        }
+
+        for (int64_t r = 0; r < m; ++r) {
+            const double* row = A + (size_t)r * (size_t)n;
+            double acc = 0.0;
+            for (int64_t j = 0; j < n; ++j) {
+                acc += row[j] * vrow[j];
+            }
+            U[(size_t)r * (size_t)k + (size_t)comp] = acc * inv_sigma;
+        }
+
+        int64_t argmax = 0;
+        double maxabs = 0.0;
+        for (int64_t r = 0; r < m; ++r) {
+            const double a = fabs(U[(size_t)r * (size_t)k + (size_t)comp]);
+            if (a > maxabs) {
+                maxabs = a;
+                argmax = r;
+            }
+        }
+        if (U[(size_t)argmax * (size_t)k + (size_t)comp] < 0.0) {
+            for (int64_t r = 0; r < m; ++r) {
+                U[(size_t)r * (size_t)k + (size_t)comp] =
+                    -U[(size_t)r * (size_t)k + (size_t)comp];
+            }
+            for (int64_t j = 0; j < n; ++j) {
+                vrow[j] = -vrow[j];
+            }
+        }
+    }
+
+    free(V);
     free(L);
     return C4A_OK;
 }

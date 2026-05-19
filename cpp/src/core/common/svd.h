@@ -67,6 +67,14 @@ c4a_status_t c4a_svd_truncated_dual_wide(const double* A, int64_t m, int64_t n,
                                          int64_t k, double* U, double* S,
                                          double* Vt);
 
+/* Exact leading-k SVD for tall matrices (m >= n) through the feature Gram
+ * matrix A.T @ A. This avoids the full one-sided Jacobi sweep when callers
+ * only need a small leading component count.
+ */
+c4a_status_t c4a_svd_truncated_tall_gram(const double* A, int64_t m,
+                                         int64_t n, int64_t k, double* U,
+                                         double* S, double* Vt);
+
 /* Deterministic randomized leading-k SVD for large matrices where an exact
  * full decomposition is too expensive. The input is read-only.
  */
