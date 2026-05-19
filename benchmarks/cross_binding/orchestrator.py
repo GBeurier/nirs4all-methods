@@ -241,8 +241,10 @@ def write_prediction_metadata(record: dict) -> None:
         "n_runs": record.get("n_runs"),
         "versions": record.get("versions") or {},
     }
-    prediction_metadata_path(path).write_text(
-        json.dumps(meta, sort_keys=True, indent=2) + "\n")
+    meta_path = prediction_metadata_path(path)
+    tmp = meta_path.with_name(f"{meta_path.name}.tmp.{os.getpid()}")
+    tmp.write_text(json.dumps(meta, sort_keys=True, indent=2) + "\n")
+    os.replace(tmp, meta_path)
 
 
 def snapshot_reference_oracle(record: dict) -> None:
@@ -272,7 +274,9 @@ def snapshot_reference_oracle(record: dict) -> None:
     dst = reference_oracle_path(
         record["algorithm"], canonical_backend,
         int(record["n"]), int(record["p"]), prediction_seed)
-    shutil.copy2(Path(pred_path), dst)
+    tmp = dst.with_name(f"{dst.name}.tmp.{os.getpid()}")
+    shutil.copy2(Path(pred_path), tmp)
+    os.replace(tmp, dst)
     meta = {
         "algorithm": record.get("algorithm"),
         "backend": canonical_backend,
@@ -284,8 +288,10 @@ def snapshot_reference_oracle(record: dict) -> None:
         "source_predictions_path": str(pred_path),
         "versions": record.get("versions") or {},
     }
-    prediction_metadata_path(dst).write_text(
-        json.dumps(meta, sort_keys=True, indent=2) + "\n")
+    meta_path = prediction_metadata_path(dst)
+    tmp_meta = meta_path.with_name(f"{meta_path.name}.tmp.{os.getpid()}")
+    tmp_meta.write_text(json.dumps(meta, sort_keys=True, indent=2) + "\n")
+    os.replace(tmp_meta, meta_path)
 
 
 def load_prediction_array(path: Path):
@@ -904,6 +910,10 @@ def main():
                          help="With --resume-existing, rerun existing failed "
                               "cells instead of preserving their recorded "
                               "failure.")
+    parser.add_argument("--flush-each-cell", action="store_true",
+                         help="Rewrite --out-csv after each newly completed "
+                              "cell. This makes long sharded runs resumable "
+                              "before the final parity pass completes.")
     args = parser.parse_args()
     if args.registry_cells:
         os.environ["BENCH_REGISTRY_CELLS"] = "1"
@@ -1065,6 +1075,8 @@ def main():
                             print(f"median={rec.get('median_ms', 0):.2f}ms")
                         else:
                             print(f"FAIL — {rec.get('reason', '?')[:100]}")
+                        if args.flush_each_cell:
+                            write_records(csv_out, records)
 
     if existing_records:
         preserved = [r for r in existing_records
