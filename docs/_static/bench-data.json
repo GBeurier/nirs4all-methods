@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-19 01:57 UTC",
+  "generated_at": "2026-05-19 06:42 UTC",
   "host": {
     "os": "Linux 6.6.87.2-microsoft-standard-WSL2 (x86_64)",
     "python": "3.13.13",
@@ -721,8 +721,8 @@
           "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.04,
-          "fmt": "1.04 ms",
+          "ms": 1.154,
+          "fmt": "1.15 ms",
           "reference_parity_tolerance": 5.0,
           "reference_kind": "nirs4all_sanctioned"
         },
@@ -789,36 +789,40 @@
           "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 5.0,
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "Execution halted"
+          "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.648,
-          "fmt": "1.65 ms",
+          "ms": 1.763,
+          "fmt": "1.76 ms",
           "reference_parity_tolerance": 5.0,
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.178,
+          "fmt": "4.18 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "nirs4all_sanctioned"
         },
         "sklearn": {
           "parity": "not_available",
@@ -886,11 +890,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.039,
-          "fmt": "1.04 ms",
+          "ms": 1.263,
+          "fmt": "1.26 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
@@ -953,36 +957,44 @@
           "reason": "RuntimeError: python_tier2: no sklearn estimator for 'approximate_press' (declare it in _SKLEARN_CLASS or add the class to pls4all.sklearn)"
         },
         "pls4all.R": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 1.768,
+          "fmt": "1.77 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "bench_matlab_tier1 at line 257 column 2"
+          "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.542,
+          "fmt": "4.54 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -1056,11 +1068,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.136,
-          "fmt": "1.14 ms",
+          "ms": 1.223,
+          "fmt": "1.22 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
@@ -1126,7 +1138,7 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
           "ms": 3.0,
@@ -1136,31 +1148,31 @@
         },
         "pls4all.R.formula": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 5.5,
-          "fmt": "5.50 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.786,
-          "fmt": "1.79 ms",
+          "ms": 1.887,
+          "fmt": "1.89 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.888,
-          "fmt": "3.89 ms",
+          "ms": 4.778,
+          "fmt": "4.78 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
@@ -1236,11 +1248,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.908,
-          "fmt": "2.91 ms",
+          "ms": 2.97,
+          "fmt": "2.97 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
@@ -1306,39 +1318,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 5.5,
-          "fmt": "5.50 ms",
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 6.0,
+          "fmt": "6.00 ms",
           "reference_parity_tolerance": 0.7,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.245,
-          "fmt": "3.24 ms",
+          "ms": 4.234,
+          "fmt": "4.23 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 7.14,
+          "fmt": "7.14 ms",
           "reference_parity_tolerance": 0.7,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -1420,11 +1436,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.179,
-          "fmt": "1.18 ms",
+          "ms": 1.356,
+          "fmt": "1.36 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
@@ -1490,41 +1506,41 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 5.5,
-          "fmt": "5.50 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.795,
-          "fmt": "1.79 ms",
+          "ms": 1.864,
+          "fmt": "1.86 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.911,
-          "fmt": "3.91 ms",
+          "ms": 4.721,
+          "fmt": "4.72 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
@@ -1611,8 +1627,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 36.776,
-          "fmt": "36.8 ms",
+          "ms": 37.074,
+          "fmt": "37.1 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -1681,36 +1697,40 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 48.0,
-          "fmt": "48.0 ms",
+          "ms": 50.0,
+          "fmt": "50.0 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "exact",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 51.0,
+          "fmt": "51.0 ms",
           "reference_parity_tolerance": 1.4,
-          "reason": "r_tier2: no formula wrapper for 'bve_select'"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 35.855,
-          "fmt": "35.9 ms",
+          "ms": 45.967,
+          "fmt": "46.0 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "exact",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 48.697,
+          "fmt": "48.7 ms",
           "reference_parity_tolerance": 1.4,
-          "reason": "error: matlab_tier2: no pls4all.fit classdef entry for 'bve_select'"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -1792,11 +1812,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.482,
-          "fmt": "1.48 ms",
+          "ms": 1.53,
+          "fmt": "1.53 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -1862,39 +1882,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_parity_tolerance": 1.4,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.967,
-          "fmt": "1.97 ms",
+          "ms": 2.06,
+          "fmt": "2.06 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.71,
+          "fmt": "4.71 ms",
           "reference_parity_tolerance": 1.4,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -1979,7 +2003,7 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.048,
+          "ms": 1.051,
           "fmt": "1.05 ms",
           "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
@@ -2049,8 +2073,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.0,
-          "fmt": "2.00 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
@@ -2059,8 +2083,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 6.0,
-          "fmt": "6.00 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
@@ -2069,8 +2093,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.587,
-          "fmt": "1.59 ms",
+          "ms": 1.763,
+          "fmt": "1.76 ms",
           "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
@@ -2079,8 +2103,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.746,
-          "fmt": "3.75 ms",
+          "ms": 4.447,
+          "fmt": "4.45 ms",
           "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
@@ -2164,11 +2188,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.007,
-          "fmt": "1.01 ms",
+          "ms": 1.069,
+          "fmt": "1.07 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
@@ -2234,41 +2258,41 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 5.5,
-          "fmt": "5.50 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.702,
-          "fmt": "1.70 ms",
+          "ms": 1.672,
+          "fmt": "1.67 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.839,
-          "fmt": "3.84 ms",
+          "ms": 4.412,
+          "fmt": "4.41 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
@@ -2344,11 +2368,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.121,
-          "fmt": "1.12 ms",
+          "ms": 1.028,
+          "fmt": "1.03 ms",
           "reference_parity_tolerance": 0.02,
           "reference_kind": "external"
         },
@@ -2413,36 +2437,44 @@
           "reference_kind": "external"
         },
         "pls4all.R": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_parity_tolerance": 0.02,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 6.0,
+          "fmt": "6.00 ms",
           "reference_parity_tolerance": 0.02,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 3.096,
+          "fmt": "3.10 ms",
           "reference_parity_tolerance": 0.02,
-          "reason": "bench_matlab_tier1 at line 40 column 5"
+          "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 6.557,
+          "fmt": "6.56 ms",
           "reference_parity_tolerance": 0.02,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -2524,11 +2556,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.214,
-          "fmt": "1.21 ms",
+          "ms": 1.292,
+          "fmt": "1.29 ms",
           "reference_parity_tolerance": 0.5,
           "reference_kind": "external"
         },
@@ -2593,36 +2625,44 @@
           "reference_kind": "external"
         },
         "pls4all.R": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 6.0,
+          "fmt": "6.00 ms",
           "reference_parity_tolerance": 0.5,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 6.0,
+          "fmt": "6.00 ms",
           "reference_parity_tolerance": 0.5,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 3.391,
+          "fmt": "3.39 ms",
           "reference_parity_tolerance": 0.5,
-          "reason": "bench_matlab_tier1 at line 40 column 5"
+          "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 6.311,
+          "fmt": "6.31 ms",
           "reference_parity_tolerance": 0.5,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -2704,11 +2744,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.185,
-          "fmt": "1.18 ms",
+          "ms": 1.42,
+          "fmt": "1.42 ms",
           "reference_parity_tolerance": 0.001,
           "reference_kind": "external"
         },
@@ -2774,7 +2814,7 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
           "ms": 3.0,
@@ -2784,31 +2824,31 @@
         },
         "pls4all.R.formula": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 5.5,
-          "fmt": "5.50 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 0.001,
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.809,
-          "fmt": "1.81 ms",
+          "ms": 2.086,
+          "fmt": "2.09 ms",
           "reference_parity_tolerance": 0.001,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.75,
-          "fmt": "3.75 ms",
+          "ms": 4.905,
+          "fmt": "4.90 ms",
           "reference_parity_tolerance": 0.001,
           "reference_kind": "external"
         },
@@ -2887,8 +2927,8 @@
           "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.291,
-          "fmt": "1.29 ms",
+          "ms": 1.298,
+          "fmt": "1.30 ms",
           "reference_parity_tolerance": 1.35,
           "reference_kind": "external"
         },
@@ -2953,40 +2993,44 @@
           "reference_kind": "external"
         },
         "pls4all.R": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "binding_parity": "divergent",
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 1.35,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 1.35,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "binding_parity": "divergent",
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
           "ok": true,
-          "ms": 1.763,
-          "fmt": "1.76 ms",
+          "ms": 2.188,
+          "fmt": "2.19 ms",
           "reference_parity_tolerance": 1.35,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.698,
+          "fmt": "4.70 ms",
           "reference_parity_tolerance": 1.35,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -3071,8 +3115,8 @@
           "reference_parity": "not_available",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 0.982,
-          "fmt": "0.98 ms",
+          "ms": 1.034,
+          "fmt": "1.03 ms",
           "reference_parity_tolerance": 0.05,
           "reference_kind": "paper_only"
         },
@@ -3141,36 +3185,40 @@
           "reference_parity": "not_available",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 2.0,
+          "fmt": "2.00 ms",
           "reference_parity_tolerance": 0.05,
           "reference_kind": "paper_only"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "not_available",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 0.05,
-          "reason": "Execution halted"
+          "reference_kind": "paper_only"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "not_available",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.547,
-          "fmt": "1.55 ms",
+          "ms": 1.731,
+          "fmt": "1.73 ms",
           "reference_parity_tolerance": 0.05,
           "reference_kind": "paper_only"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
+          "parity": "exact",
           "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.547,
+          "fmt": "4.55 ms",
           "reference_parity_tolerance": 0.05,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "paper_only"
         },
         "sklearn": {
           "parity": "not_available",
@@ -3230,11 +3278,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.591,
-          "fmt": "2.59 ms",
+          "ms": 2.705,
+          "fmt": "2.71 ms",
           "reference_parity_tolerance": 1.3,
           "reference_kind": "external"
         },
@@ -3299,40 +3347,44 @@
           "reference_kind": "external"
         },
         "pls4all.R": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "binding_parity": "divergent",
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
           "ok": true,
-          "ms": 4.5,
-          "fmt": "4.50 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 1.3,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_parity_tolerance": 1.3,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "binding_parity": "divergent",
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
           "ok": true,
-          "ms": 3.075,
-          "fmt": "3.07 ms",
+          "ms": 3.259,
+          "fmt": "3.26 ms",
           "reference_parity_tolerance": 1.3,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.995,
+          "fmt": "6.00 ms",
           "reference_parity_tolerance": 1.3,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -3414,11 +3466,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.286,
-          "fmt": "1.29 ms",
+          "ms": 1.339,
+          "fmt": "1.34 ms",
           "reference_parity_tolerance": 1e-08,
           "reference_kind": "external"
         },
@@ -3482,39 +3534,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 1e-08,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 1e-08,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.835,
-          "fmt": "1.84 ms",
+          "ms": 1.922,
+          "fmt": "1.92 ms",
           "reference_parity_tolerance": 1e-08,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.405,
+          "fmt": "4.41 ms",
           "reference_parity_tolerance": 1e-08,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "exact",
@@ -3588,11 +3644,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.028,
-          "fmt": "1.03 ms",
+          "ms": 1.002,
+          "fmt": "1.00 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
@@ -3658,7 +3714,7 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
           "ms": 3.0,
@@ -3667,30 +3723,34 @@
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.758,
-          "fmt": "1.76 ms",
+          "ms": 1.68,
+          "fmt": "1.68 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.056,
+          "fmt": "4.06 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -3775,8 +3835,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.519,
-          "fmt": "1.52 ms",
+          "ms": 1.621,
+          "fmt": "1.62 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -3845,36 +3905,40 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 4.0,
-          "fmt": "4.00 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "exact",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_parity_tolerance": 1.0,
-          "reason": "r_tier2: no formula wrapper for 'interval_select'"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.962,
-          "fmt": "1.96 ms",
+          "ms": 2.056,
+          "fmt": "2.06 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "exact",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.528,
+          "fmt": "4.53 ms",
           "reference_parity_tolerance": 1.0,
-          "reason": "error: matlab_tier2: no pls4all.fit classdef entry for 'interval_select'"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -3959,8 +4023,8 @@
           "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.291,
-          "fmt": "1.29 ms",
+          "ms": 1.148,
+          "fmt": "1.15 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -4029,36 +4093,40 @@
           "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 2.0,
+          "fmt": "2.00 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 1.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.66,
-          "fmt": "1.66 ms",
+          "ms": 1.674,
+          "fmt": "1.67 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.282,
+          "fmt": "4.28 ms",
           "reference_parity_tolerance": 1.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -4140,11 +4208,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.267,
-          "fmt": "2.27 ms",
+          "ms": 2.236,
+          "fmt": "2.24 ms",
           "reference_parity_tolerance": 1.3,
           "reference_kind": "external"
         },
@@ -4209,40 +4277,44 @@
           "reference_kind": "external"
         },
         "pls4all.R": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "binding_parity": "divergent",
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
           "ok": true,
-          "ms": 4.5,
-          "fmt": "4.50 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 1.3,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_parity_tolerance": 1.3,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "binding_parity": "divergent",
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
           "ok": true,
-          "ms": 2.579,
-          "fmt": "2.58 ms",
+          "ms": 3.035,
+          "fmt": "3.04 ms",
           "reference_parity_tolerance": 1.3,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 6.272,
+          "fmt": "6.27 ms",
           "reference_parity_tolerance": 1.3,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -4319,8 +4391,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 154.473,
-          "fmt": "154.5 ms",
+          "ms": 162.441,
+          "fmt": "162.4 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -4389,36 +4461,40 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 195.0,
-          "fmt": "195.0 ms",
+          "ms": 203.0,
+          "fmt": "203.0 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "exact",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 204.0,
+          "fmt": "204.0 ms",
           "reference_parity_tolerance": 1.0,
-          "reason": "r_tier2: no formula wrapper for 'iriv_select'"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 159.444,
-          "fmt": "159.4 ms",
+          "ms": 201.335,
+          "fmt": "201.3 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "exact",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 200.875,
+          "fmt": "200.9 ms",
           "reference_parity_tolerance": 1.0,
-          "reason": "error: matlab_tier2: no pls4all.fit classdef entry for 'iriv_select'"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -4492,11 +4568,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.393,
-          "fmt": "1.39 ms",
+          "ms": 1.384,
+          "fmt": "1.38 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
@@ -4562,39 +4638,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 2.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.91,
-          "fmt": "1.91 ms",
+          "ms": 2.196,
+          "fmt": "2.20 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.154,
+          "fmt": "5.15 ms",
           "reference_parity_tolerance": 2.0,
-          "reason": "bench_matlab_tier2 at line 169 column 2"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -4676,11 +4756,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.125,
-          "fmt": "2.12 ms",
+          "ms": 2.231,
+          "fmt": "2.23 ms",
           "reference_parity_tolerance": 5.0,
           "reference_kind": "nirs4all_sanctioned"
         },
@@ -4746,39 +4826,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 5.0,
-          "fmt": "5.00 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 5.0,
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 6.0,
+          "fmt": "6.00 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "Execution halted"
+          "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.755,
-          "fmt": "2.76 ms",
+          "ms": 3.397,
+          "fmt": "3.40 ms",
           "reference_parity_tolerance": 5.0,
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.497,
+          "fmt": "5.50 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "nirs4all_sanctioned"
         },
         "sklearn": {
           "parity": "not_available",
@@ -4860,11 +4944,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.055,
-          "fmt": "1.05 ms",
+          "ms": 1.061,
+          "fmt": "1.06 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "nirs4all_sanctioned"
         },
@@ -4930,41 +5014,41 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.0,
-          "fmt": "3.00 ms",
+          "ms": 2.0,
+          "fmt": "2.00 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.R.formula": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 5.0,
-          "fmt": "5.00 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.644,
-          "fmt": "1.64 ms",
+          "ms": 1.656,
+          "fmt": "1.66 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "nirs4all_sanctioned"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.608,
-          "fmt": "3.61 ms",
+          "ms": 4.445,
+          "fmt": "4.45 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "nirs4all_sanctioned"
         },
@@ -5051,8 +5135,8 @@
           "reference_parity": "not_available",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.009,
-          "fmt": "1.01 ms",
+          "ms": 1.055,
+          "fmt": "1.05 ms",
           "reference_parity_tolerance": 0.05,
           "reference_kind": "paper_only"
         },
@@ -5121,8 +5205,8 @@
           "reference_parity": "not_available",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.0,
-          "fmt": "2.00 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 0.05,
           "reference_kind": "paper_only"
         },
@@ -5131,8 +5215,8 @@
           "reference_parity": "not_available",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 6.0,
-          "fmt": "6.00 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 0.05,
           "reference_kind": "paper_only"
         },
@@ -5141,8 +5225,8 @@
           "reference_parity": "not_available",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.593,
-          "fmt": "1.59 ms",
+          "ms": 1.723,
+          "fmt": "1.72 ms",
           "reference_parity_tolerance": 0.05,
           "reference_kind": "paper_only"
         },
@@ -5151,8 +5235,8 @@
           "reference_parity": "not_available",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.574,
-          "fmt": "3.57 ms",
+          "ms": 4.215,
+          "fmt": "4.22 ms",
           "reference_parity_tolerance": 0.05,
           "reference_kind": "paper_only"
         },
@@ -5214,11 +5298,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 0.992,
-          "fmt": "0.99 ms",
+          "ms": 1.005,
+          "fmt": "1.01 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
@@ -5284,41 +5368,41 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.5,
-          "fmt": "2.50 ms",
+          "ms": 2.0,
+          "fmt": "2.00 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 5.0,
-          "fmt": "5.00 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.546,
-          "fmt": "1.55 ms",
+          "ms": 1.634,
+          "fmt": "1.63 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.416,
-          "fmt": "3.42 ms",
+          "ms": 4.423,
+          "fmt": "4.42 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
@@ -5402,11 +5486,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.053,
-          "fmt": "1.05 ms",
+          "ms": 1.019,
+          "fmt": "1.02 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
@@ -5472,7 +5556,7 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
           "ms": 3.0,
@@ -5481,30 +5565,32 @@
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.561,
-          "fmt": "1.56 ms",
+          "ms": 1.875,
+          "fmt": "1.87 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.613,
-          "fmt": "3.61 ms",
+          "ms": 4.745,
+          "fmt": "4.75 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
@@ -5588,11 +5674,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.167,
-          "fmt": "1.17 ms",
+          "ms": 1.074,
+          "fmt": "1.07 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -5658,39 +5744,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 1.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.658,
-          "fmt": "1.66 ms",
+          "ms": 1.781,
+          "fmt": "1.78 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.625,
+          "fmt": "4.62 ms",
           "reference_parity_tolerance": 1.0,
-          "reason": "bench_matlab_tier2 at line 64 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -5772,11 +5862,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.151,
-          "fmt": "1.15 ms",
+          "ms": 1.19,
+          "fmt": "1.19 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
@@ -5839,36 +5929,44 @@
           "reason": "RuntimeError: python_tier2: no sklearn estimator for 'on_pls' (declare it in _SKLEARN_CLASS or add the class to pls4all.sklearn)"
         },
         "pls4all.R": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 2.0,
+          "fmt": "2.00 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 1.763,
+          "fmt": "1.76 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "bench_matlab_tier1 at line 63 column 5"
+          "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.506,
+          "fmt": "4.51 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -5950,11 +6048,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.04,
-          "fmt": "1.04 ms",
+          "ms": 0.974,
+          "fmt": "0.97 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
@@ -6017,36 +6115,44 @@
           "reason": "RuntimeError: python_tier2: no sklearn estimator for 'one_se_rule' (declare it in _SKLEARN_CLASS or add the class to pls4all.sklearn)"
         },
         "pls4all.R": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 1.646,
+          "fmt": "1.65 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "bench_matlab_tier1 at line 257 column 2"
+          "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.304,
+          "fmt": "4.30 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -6120,11 +6226,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.125,
-          "fmt": "1.13 ms",
+          "ms": 1.061,
+          "fmt": "1.06 ms",
           "reference_parity_tolerance": 0.001,
           "reference_kind": "external"
         },
@@ -6190,39 +6296,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.5,
-          "fmt": "2.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 0.001,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 0.001,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.724,
-          "fmt": "1.72 ms",
+          "ms": 1.698,
+          "fmt": "1.70 ms",
           "reference_parity_tolerance": 0.001,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.631,
+          "fmt": "4.63 ms",
           "reference_parity_tolerance": 0.001,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -6299,8 +6409,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.827,
-          "fmt": "1.83 ms",
+          "ms": 1.796,
+          "fmt": "1.80 ms",
           "reference_parity_tolerance": 1e-06,
           "reference_kind": "external"
         },
@@ -6369,8 +6479,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 20.0,
-          "fmt": "20.0 ms",
+          "ms": 21.0,
+          "fmt": "21.0 ms",
           "reference_parity_tolerance": 1e-06,
           "reference_kind": "external"
         },
@@ -6379,8 +6489,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 20.0,
-          "fmt": "20.0 ms",
+          "ms": 22.0,
+          "fmt": "22.0 ms",
           "reference_parity_tolerance": 1e-06,
           "reference_kind": "external"
         },
@@ -6389,8 +6499,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 28.188,
-          "fmt": "28.2 ms",
+          "ms": 2.782,
+          "fmt": "2.78 ms",
           "reference_parity_tolerance": 1e-06,
           "reference_kind": "external"
         },
@@ -6399,8 +6509,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 30.653,
-          "fmt": "30.7 ms",
+          "ms": 5.103,
+          "fmt": "5.10 ms",
           "reference_parity_tolerance": 1e-06,
           "reference_kind": "external"
         },
@@ -6478,11 +6588,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.071,
-          "fmt": "1.07 ms",
+          "ms": 1.113,
+          "fmt": "1.11 ms",
           "reference_parity_tolerance": 0.5,
           "reference_kind": "external"
         },
@@ -6547,36 +6657,44 @@
           "reference_kind": "external"
         },
         "pls4all.R": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_parity_tolerance": 0.5,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 6.0,
+          "fmt": "6.00 ms",
           "reference_parity_tolerance": 0.5,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 3.428,
+          "fmt": "3.43 ms",
           "reference_parity_tolerance": 0.5,
-          "reason": "bench_matlab_tier1 at line 40 column 5"
+          "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 6.095,
+          "fmt": "6.09 ms",
           "reference_parity_tolerance": 0.5,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -6661,8 +6779,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 0.958,
-          "fmt": "0.96 ms",
+          "ms": 1.1,
+          "fmt": "1.10 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6731,8 +6849,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.0,
-          "fmt": "3.00 ms",
+          "ms": 2.0,
+          "fmt": "2.00 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6741,8 +6859,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 6.0,
-          "fmt": "6.00 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6751,8 +6869,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.56,
-          "fmt": "1.56 ms",
+          "ms": 1.756,
+          "fmt": "1.76 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6761,8 +6879,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.712,
-          "fmt": "3.71 ms",
+          "ms": 4.625,
+          "fmt": "4.63 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6846,11 +6964,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 0.998,
-          "fmt": "1.00 ms",
+          "ms": 0.982,
+          "fmt": "0.98 ms",
           "reference_parity_tolerance": 5.0,
           "reference_kind": "external"
         },
@@ -6915,36 +7033,44 @@
           "reference_kind": "external"
         },
         "pls4all.R": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 2.0,
+          "fmt": "2.00 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 1.76,
+          "fmt": "1.76 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "bench_matlab_tier1 at line 257 column 2"
+          "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.866,
+          "fmt": "4.87 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -7026,11 +7152,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.408,
-          "fmt": "1.41 ms",
+          "ms": 1.038,
+          "fmt": "1.04 ms",
           "reference_parity_tolerance": 5.0,
           "reference_kind": "external"
         },
@@ -7093,36 +7219,44 @@
           "reason": "RuntimeError: python_tier2: no sklearn estimator for 'pls_diagnostic_dmodx' (declare it in _SKLEARN_CLASS or add the class to pls4all.sklearn)"
         },
         "pls4all.R": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 1.79,
+          "fmt": "1.79 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "bench_matlab_tier1 at line 257 column 2"
+          "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.526,
+          "fmt": "4.53 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -7204,11 +7338,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.012,
-          "fmt": "1.01 ms",
+          "ms": 1.06,
+          "fmt": "1.06 ms",
           "reference_parity_tolerance": 5.0,
           "reference_kind": "external"
         },
@@ -7271,36 +7405,44 @@
           "reason": "RuntimeError: python_tier2: no sklearn estimator for 'pls_diagnostic_q' (declare it in _SKLEARN_CLASS or add the class to pls4all.sklearn)"
         },
         "pls4all.R": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 1.628,
+          "fmt": "1.63 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "bench_matlab_tier1 at line 257 column 2"
+          "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.207,
+          "fmt": "4.21 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -7382,11 +7524,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.054,
-          "fmt": "1.05 ms",
+          "ms": 1.078,
+          "fmt": "1.08 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
@@ -7449,36 +7591,44 @@
           "reason": "RuntimeError: python_tier2: no sklearn estimator for 'pls_diagnostic_t2' (declare it in _SKLEARN_CLASS or add the class to pls4all.sklearn)"
         },
         "pls4all.R": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 1.623,
+          "fmt": "1.62 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "bench_matlab_tier1 at line 257 column 2"
+          "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.019,
+          "fmt": "4.02 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -7560,11 +7710,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.051,
-          "fmt": "1.05 ms",
+          "ms": 1.091,
+          "fmt": "1.09 ms",
           "reference_parity_tolerance": 0.5,
           "reference_kind": "external"
         },
@@ -7630,7 +7780,7 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
           "ms": 3.0,
@@ -7639,30 +7789,34 @@
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 0.5,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.77,
+          "ms": 1.765,
           "fmt": "1.77 ms",
           "reference_parity_tolerance": 0.5,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.204,
+          "fmt": "4.20 ms",
           "reference_parity_tolerance": 0.5,
-          "reason": "bench_matlab_tier2 at line 64 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -7744,11 +7898,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 0.913,
-          "fmt": "0.91 ms",
+          "ms": 0.992,
+          "fmt": "0.99 ms",
           "reference_parity_tolerance": 5.0,
           "reference_kind": "external"
         },
@@ -7814,39 +7968,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 5.0,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.588,
-          "fmt": "1.59 ms",
+          "ms": 1.685,
+          "fmt": "1.69 ms",
           "reference_parity_tolerance": 5.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.057,
+          "fmt": "4.06 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "divergent",
@@ -7920,11 +8078,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.134,
-          "fmt": "1.13 ms",
+          "ms": 1.267,
+          "fmt": "1.27 ms",
           "reference_parity_tolerance": 5.0,
           "reference_kind": "external"
         },
@@ -7990,39 +8148,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 5.0,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.688,
-          "fmt": "1.69 ms",
+          "ms": 1.913,
+          "fmt": "1.91 ms",
           "reference_parity_tolerance": 5.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.541,
+          "fmt": "4.54 ms",
           "reference_parity_tolerance": 5.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "divergent",
@@ -8096,11 +8258,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.097,
-          "fmt": "1.10 ms",
+          "ms": 1.047,
+          "fmt": "1.05 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
@@ -8163,36 +8325,44 @@
           "reason": "RuntimeError: python_tier2: no sklearn estimator for 'pls_monitoring' (declare it in _SKLEARN_CLASS or add the class to pls4all.sklearn)"
         },
         "pls4all.R": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 1.694,
+          "fmt": "1.69 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "bench_matlab_tier1 at line 257 column 2"
+          "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.738,
+          "fmt": "4.74 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -8274,11 +8444,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.006,
-          "fmt": "1.01 ms",
+          "ms": 0.998,
+          "fmt": "1.00 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
@@ -8344,39 +8514,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.0,
-          "fmt": "3.00 ms",
+          "ms": 2.0,
+          "fmt": "2.00 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.649,
-          "fmt": "1.65 ms",
+          "ms": 1.744,
+          "fmt": "1.74 ms",
           "reference_parity_tolerance": 10.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.159,
+          "fmt": "4.16 ms",
           "reference_parity_tolerance": 10.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "divergent",
@@ -8453,8 +8627,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 4.802,
-          "fmt": "4.80 ms",
+          "ms": 4.933,
+          "fmt": "4.93 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -8529,30 +8703,34 @@
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "exact",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 10.0,
+          "fmt": "10.0 ms",
           "reference_parity_tolerance": 1.4,
-          "reason": "r_tier2: no formula wrapper for 'pso_select'"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 5.448,
-          "fmt": "5.45 ms",
+          "ms": 6.51,
+          "fmt": "6.51 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "exact",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 9.493,
+          "fmt": "9.49 ms",
           "reference_parity_tolerance": 1.4,
-          "reason": "error: matlab_tier2: no pls4all.fit classdef entry for 'pso_select'"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -8634,11 +8812,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.418,
-          "fmt": "1.42 ms",
+          "ms": 1.671,
+          "fmt": "1.67 ms",
           "reference_parity_tolerance": 1.35,
           "reference_kind": "external"
         },
@@ -8704,39 +8882,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 4.0,
-          "fmt": "4.00 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 1.35,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_parity_tolerance": 1.35,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.876,
-          "fmt": "1.88 ms",
+          "ms": 2.051,
+          "fmt": "2.05 ms",
           "reference_parity_tolerance": 1.35,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.791,
+          "fmt": "4.79 ms",
           "reference_parity_tolerance": 1.35,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -8810,11 +8992,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.055,
-          "fmt": "1.06 ms",
+          "ms": 1.161,
+          "fmt": "1.16 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
@@ -8880,7 +9062,7 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
           "ms": 3.0,
@@ -8890,31 +9072,33 @@
         },
         "pls4all.R.formula": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 5.5,
-          "fmt": "5.50 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.65,
-          "fmt": "1.65 ms",
+          "ms": 1.776,
+          "fmt": "1.78 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.399,
+          "fmt": "4.40 ms",
           "reference_parity_tolerance": 2.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "divergent",
@@ -8988,11 +9172,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.999,
-          "fmt": "2.00 ms",
+          "ms": 2.049,
+          "fmt": "2.05 ms",
           "reference_parity_tolerance": 1.3,
           "reference_kind": "external"
         },
@@ -9058,7 +9242,17 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
+          "reference_parity_tolerance": 1.3,
+          "reference_kind": "external"
+        },
+        "pls4all.R.formula": {
+          "parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
           "ms": 5.0,
@@ -9066,31 +9260,25 @@
           "reference_parity_tolerance": 1.3,
           "reference_kind": "external"
         },
-        "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
-          "reference_parity_tolerance": 1.3,
-          "reason": "Execution halted"
-        },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.42,
-          "fmt": "2.42 ms",
+          "ms": 2.959,
+          "fmt": "2.96 ms",
           "reference_parity_tolerance": 1.3,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.587,
+          "fmt": "5.59 ms",
           "reference_parity_tolerance": 1.3,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -9172,11 +9360,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.816,
-          "fmt": "1.82 ms",
+          "ms": 1.399,
+          "fmt": "1.40 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -9242,39 +9430,41 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 0.1,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.103,
-          "fmt": "2.10 ms",
+          "ms": 2.289,
+          "fmt": "2.29 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 4.38,
-          "fmt": "4.38 ms",
+          "ms": 4.849,
+          "fmt": "4.85 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -9352,11 +9542,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.52,
-          "fmt": "1.52 ms",
+          "ms": 1.588,
+          "fmt": "1.59 ms",
           "reference_parity_tolerance": 1.8,
           "reference_kind": "external"
         },
@@ -9422,39 +9612,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 1.8,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 1.8,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.083,
-          "fmt": "2.08 ms",
+          "ms": 2.103,
+          "fmt": "2.10 ms",
           "reference_parity_tolerance": 1.8,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.202,
+          "fmt": "5.20 ms",
           "reference_parity_tolerance": 1.8,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -9536,11 +9730,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.096,
-          "fmt": "1.10 ms",
+          "ms": 1.089,
+          "fmt": "1.09 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -9606,41 +9800,41 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.0,
-          "fmt": "3.00 ms",
+          "ms": 2.0,
+          "fmt": "2.00 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 5.0,
-          "fmt": "5.00 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.526,
-          "fmt": "1.53 ms",
+          "ms": 1.603,
+          "fmt": "1.60 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.487,
-          "fmt": "3.49 ms",
+          "ms": 4.584,
+          "fmt": "4.58 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -9716,11 +9910,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.13,
-          "fmt": "1.13 ms",
+          "ms": 1.16,
+          "fmt": "1.16 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
@@ -9786,41 +9980,41 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 5.5,
-          "fmt": "5.50 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.666,
-          "fmt": "1.67 ms",
+          "ms": 1.743,
+          "fmt": "1.74 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.603,
-          "fmt": "3.60 ms",
+          "ms": 4.348,
+          "fmt": "4.35 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
@@ -9904,11 +10098,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.023,
-          "fmt": "1.02 ms",
+          "ms": 1.157,
+          "fmt": "1.16 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -9974,39 +10168,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 2.0,
+          "fmt": "2.00 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 1.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.578,
-          "fmt": "1.58 ms",
+          "ms": 1.692,
+          "fmt": "1.69 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.161,
+          "fmt": "4.16 ms",
           "reference_parity_tolerance": 1.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -10091,8 +10289,8 @@
           "reference_parity": "not_available",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.428,
-          "fmt": "1.43 ms",
+          "ms": 1.484,
+          "fmt": "1.48 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "paper_only"
         },
@@ -10161,36 +10359,40 @@
           "reference_parity": "not_available",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 4.0,
-          "fmt": "4.00 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "paper_only"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
+          "parity": "exact",
           "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 1.0,
-          "reason": "Execution halted"
+          "reference_kind": "paper_only"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "not_available",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.228,
-          "fmt": "2.23 ms",
+          "ms": 2.006,
+          "fmt": "2.01 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "paper_only"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
+          "parity": "exact",
           "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.943,
+          "fmt": "4.94 ms",
           "reference_parity_tolerance": 1.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "paper_only"
         },
         "sklearn": {
           "parity": "not_available",
@@ -10253,8 +10455,8 @@
           "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.358,
-          "fmt": "1.36 ms",
+          "ms": 1.544,
+          "fmt": "1.54 ms",
           "reference_parity_tolerance": 0.8,
           "reference_kind": "external"
         },
@@ -10323,36 +10525,40 @@
           "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 4.0,
-          "fmt": "4.00 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 0.8,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_parity_tolerance": 0.8,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.804,
-          "fmt": "1.80 ms",
+          "ms": 2.095,
+          "fmt": "2.09 ms",
           "reference_parity_tolerance": 0.8,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.614,
+          "fmt": "4.61 ms",
           "reference_parity_tolerance": 0.8,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -10437,8 +10643,8 @@
           "reference_parity": "not_available",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.039,
-          "fmt": "2.04 ms",
+          "ms": 2.005,
+          "fmt": "2.00 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "paper_only"
         },
@@ -10513,30 +10719,34 @@
           "reference_kind": "paper_only"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
+          "parity": "exact",
           "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_parity_tolerance": 0.7,
-          "reason": "Execution halted"
+          "reference_kind": "paper_only"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "not_available",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.487,
-          "fmt": "2.49 ms",
+          "ms": 2.595,
+          "fmt": "2.59 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "paper_only"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
+          "parity": "exact",
           "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.894,
+          "fmt": "5.89 ms",
           "reference_parity_tolerance": 0.7,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "paper_only"
         },
         "sklearn": {
           "parity": "not_available",
@@ -10596,11 +10806,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.424,
-          "fmt": "1.42 ms",
+          "ms": 1.409,
+          "fmt": "1.41 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -10666,7 +10876,7 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
           "ms": 3.0,
@@ -10675,30 +10885,34 @@
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_parity_tolerance": 1.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.854,
-          "fmt": "1.85 ms",
+          "ms": 2.133,
+          "fmt": "2.13 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.967,
+          "fmt": "4.97 ms",
           "reference_parity_tolerance": 1.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -10780,11 +10994,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.148,
-          "fmt": "1.15 ms",
+          "ms": 1.177,
+          "fmt": "1.18 ms",
           "reference_parity_tolerance": 1.2,
           "reference_kind": "external"
         },
@@ -10850,39 +11064,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 1.2,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 1.2,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.781,
-          "fmt": "1.78 ms",
+          "ms": 1.743,
+          "fmt": "1.74 ms",
           "reference_parity_tolerance": 1.2,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.427,
+          "fmt": "4.43 ms",
           "reference_parity_tolerance": 1.2,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -10964,11 +11182,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.086,
-          "fmt": "1.09 ms",
+          "ms": 0.966,
+          "fmt": "0.97 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
@@ -11034,39 +11252,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 2.0,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.692,
-          "fmt": "1.69 ms",
+          "ms": 1.652,
+          "fmt": "1.65 ms",
           "reference_parity_tolerance": 2.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.321,
+          "fmt": "4.32 ms",
           "reference_parity_tolerance": 2.0,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -11150,11 +11372,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.069,
-          "fmt": "1.07 ms",
+          "ms": 1.09,
+          "fmt": "1.09 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -11220,41 +11442,41 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 6.0,
-          "fmt": "6.00 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.584,
-          "fmt": "1.58 ms",
+          "ms": 1.698,
+          "fmt": "1.70 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.801,
-          "fmt": "3.80 ms",
+          "ms": 4.285,
+          "fmt": "4.28 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -11340,11 +11562,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.186,
-          "fmt": "1.19 ms",
+          "ms": 1.148,
+          "fmt": "1.15 ms",
           "reference_parity_tolerance": 2.1,
           "reference_kind": "external"
         },
@@ -11410,7 +11632,7 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
           "ms": 3.0,
@@ -11419,30 +11641,34 @@
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 2.1,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.676,
-          "fmt": "1.68 ms",
+          "ms": 1.804,
+          "fmt": "1.80 ms",
           "reference_parity_tolerance": 2.1,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.594,
+          "fmt": "4.59 ms",
           "reference_parity_tolerance": 2.1,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -11524,11 +11750,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.167,
-          "fmt": "1.17 ms",
+          "ms": 1.049,
+          "fmt": "1.05 ms",
           "reference_parity_tolerance": 1.35,
           "reference_kind": "external"
         },
@@ -11593,40 +11819,44 @@
           "reference_kind": "external"
         },
         "pls4all.R": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "binding_parity": "divergent",
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 2.0,
+          "fmt": "2.00 ms",
           "reference_parity_tolerance": 1.35,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 1.35,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "divergent",
-          "reference_parity": "exact",
-          "binding_parity": "divergent",
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
           "ok": true,
-          "ms": 1.637,
-          "fmt": "1.64 ms",
+          "ms": 1.655,
+          "fmt": "1.65 ms",
           "reference_parity_tolerance": 1.35,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.386,
+          "fmt": "4.39 ms",
           "reference_parity_tolerance": 1.35,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -11708,11 +11938,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.238,
-          "fmt": "1.24 ms",
+          "ms": 1.281,
+          "fmt": "1.28 ms",
           "reference_parity_tolerance": 1.2,
           "reference_kind": "external"
         },
@@ -11778,7 +12008,17 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 3.0,
+          "fmt": "3.00 ms",
+          "reference_parity_tolerance": 1.2,
+          "reference_kind": "external"
+        },
+        "pls4all.R.formula": {
+          "parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
           "ms": 4.0,
@@ -11786,31 +12026,25 @@
           "reference_parity_tolerance": 1.2,
           "reference_kind": "external"
         },
-        "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
-          "reference_parity_tolerance": 1.2,
-          "reason": "Execution halted"
-        },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.739,
-          "fmt": "1.74 ms",
+          "ms": 1.856,
+          "fmt": "1.86 ms",
           "reference_parity_tolerance": 1.2,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.344,
+          "fmt": "4.34 ms",
           "reference_parity_tolerance": 1.2,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -11895,9 +12129,9 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.101,
-          "fmt": "1.10 ms",
-          "reference_parity_tolerance": 0.7,
+          "ms": 1.109,
+          "fmt": "1.11 ms",
+          "reference_parity_tolerance": 0.72,
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -11965,43 +12199,47 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.0,
-          "fmt": "3.00 ms",
-          "reference_parity_tolerance": 0.7,
+          "ms": 2.0,
+          "fmt": "2.00 ms",
+          "reference_parity_tolerance": 0.72,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
-          "reference_parity_tolerance": 0.7,
-          "reason": "r_tier2: no formula wrapper for 'uve_select'"
+          "parity": "exact",
+          "reference_parity": "exact",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
+          "reference_parity_tolerance": 0.72,
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.671,
+          "ms": 1.668,
           "fmt": "1.67 ms",
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.72,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
-          "reference_parity_tolerance": 0.7,
-          "reason": "error: matlab_tier2: no pls4all.fit classdef entry for 'uve_select'"
+          "parity": "exact",
+          "reference_parity": "exact",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.399,
+          "fmt": "4.40 ms",
+          "reference_parity_tolerance": 0.72,
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.72,
           "reason": "algo 'uve_select' not implemented by sklearn"
         },
         "ikpls": {
@@ -12009,7 +12247,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.72,
           "reason": "algo 'uve_select' not implemented by ikpls"
         },
         "pls": {
@@ -12017,7 +12255,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.72,
           "reason": "algo 'uve_select' not implemented by pls::"
         },
         "ropls": {
@@ -12025,7 +12263,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.72,
           "reason": "algo 'uve_select' not implemented by ropls"
         },
         "mixOmics": {
@@ -12033,7 +12271,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.72,
           "reason": "algo 'uve_select' not implemented by mixOmics"
         },
         "plsregress": {
@@ -12041,7 +12279,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.72,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
         "plsVarSel": {
@@ -12076,11 +12314,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.024,
-          "fmt": "1.02 ms",
+          "ms": 1.028,
+          "fmt": "1.03 ms",
           "reference_parity_tolerance": 1.1,
           "reference_kind": "external"
         },
@@ -12145,36 +12383,44 @@
           "reference_kind": "external"
         },
         "pls4all.R": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 1.1,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 1.1,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 1.577,
+          "fmt": "1.58 ms",
           "reference_parity_tolerance": 1.1,
-          "reason": "bench_matlab_tier1 at line 257 column 2"
+          "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.458,
+          "fmt": "4.46 ms",
           "reference_parity_tolerance": 1.1,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -12248,11 +12494,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.062,
-          "fmt": "1.06 ms",
+          "ms": 1.005,
+          "fmt": "1.01 ms",
           "reference_parity_tolerance": 1.3,
           "reference_kind": "external"
         },
@@ -12317,36 +12563,44 @@
           "reference_kind": "external"
         },
         "pls4all.R": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 1.3,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 1.3,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 1.788,
+          "fmt": "1.79 ms",
           "reference_parity_tolerance": 1.3,
-          "reason": "bench_matlab_tier1 at line 257 column 2"
+          "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.253,
+          "fmt": "4.25 ms",
           "reference_parity_tolerance": 1.3,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -12431,8 +12685,8 @@
           "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.12,
-          "fmt": "1.12 ms",
+          "ms": 0.996,
+          "fmt": "1.00 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
@@ -12497,36 +12751,44 @@
           "reference_kind": "external"
         },
         "pls4all.R": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 2.0,
+          "fmt": "2.00 ms",
           "reference_parity_tolerance": 0.7,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_parity_tolerance": 0.7,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
-          "parity": "not_run",
-          "reference_parity": "not_run",
-          "binding_parity": "not_run",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 1.644,
+          "fmt": "1.64 ms",
           "reference_parity_tolerance": 0.7,
-          "reason": "bench_matlab_tier1 at line 257 column 2"
+          "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.013,
+          "fmt": "4.01 ms",
           "reference_parity_tolerance": 0.7,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -12608,11 +12870,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.128,
-          "fmt": "1.13 ms",
+          "ms": 1.092,
+          "fmt": "1.09 ms",
           "reference_parity_tolerance": 1.3,
           "reference_kind": "external"
         },
@@ -12678,7 +12940,7 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
           "ms": 3.0,
@@ -12687,30 +12949,34 @@
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 5.0,
+          "fmt": "5.00 ms",
           "reference_parity_tolerance": 1.3,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.598,
-          "fmt": "1.60 ms",
+          "ms": 1.683,
+          "fmt": "1.68 ms",
           "reference_parity_tolerance": 1.3,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.209,
+          "fmt": "4.21 ms",
           "reference_parity_tolerance": 1.3,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -12795,8 +13061,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 16.245,
-          "fmt": "16.2 ms",
+          "ms": 16.762,
+          "fmt": "16.8 ms",
           "reference_parity_tolerance": 2.5,
           "reference_kind": "external"
         },
@@ -12871,30 +13137,34 @@
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "exact",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 23.0,
+          "fmt": "23.0 ms",
           "reference_parity_tolerance": 2.5,
-          "reason": "r_tier2: no formula wrapper for 'vissa_select'"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 16.796,
-          "fmt": "16.8 ms",
+          "ms": 19.722,
+          "fmt": "19.7 ms",
           "reference_parity_tolerance": 2.5,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "exact",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 23.073,
+          "fmt": "23.1 ms",
           "reference_parity_tolerance": 2.5,
-          "reason": "error: matlab_tier2: no pls4all.fit classdef entry for 'vissa_select'"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -12976,11 +13246,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.0,
-          "fmt": "1.00 ms",
+          "ms": 1.092,
+          "fmt": "1.09 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -13046,41 +13316,41 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.0,
-          "fmt": "2.00 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 5.5,
-          "fmt": "5.50 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.509,
-          "fmt": "1.51 ms",
+          "ms": 1.629,
+          "fmt": "1.63 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.669,
-          "fmt": "3.67 ms",
+          "ms": 4.306,
+          "fmt": "4.31 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -13156,11 +13426,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.042,
-          "fmt": "1.04 ms",
+          "ms": 1.014,
+          "fmt": "1.01 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
@@ -13226,39 +13496,43 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.5,
-          "fmt": "3.50 ms",
+          "ms": 2.0,
+          "fmt": "2.00 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 0.7,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.554,
-          "fmt": "1.55 ms",
+          "ms": 1.688,
+          "fmt": "1.69 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.789,
+          "fmt": "4.79 ms",
           "reference_parity_tolerance": 0.7,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -13340,11 +13614,11 @@
       "cells": {
         "pls4all.registry": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.028,
-          "fmt": "1.03 ms",
+          "ms": 1.103,
+          "fmt": "1.10 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
@@ -13410,7 +13684,7 @@
         },
         "pls4all.R": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
           "ms": 3.0,
@@ -13419,30 +13693,34 @@
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 0.7,
-          "reason": "Execution halted"
+          "reference_kind": "external"
         },
         "pls4all.matlab": {
           "parity": "exact",
-          "reference_parity": "exact",
+          "reference_parity": "drift",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.665,
-          "fmt": "1.67 ms",
+          "ms": 1.641,
+          "fmt": "1.64 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "drift",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 4.37,
+          "fmt": "4.37 ms",
           "reference_parity_tolerance": 0.7,
-          "reason": "bench_matlab_tier2 at line 40 column 5"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "not_available",
@@ -13526,7 +13804,7 @@
     "pls4all.python": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1; pls4all=0.97.0; numpy=2.3.5; registry_method=pls; timing_schema=warmup-v2",
     "pls4all.sklearn": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; pls4all=0.97.0; numpy=2.3.5; sklearn_class=PLSRegression; timing_schema=warmup-v2",
     "pls4all.R": "language=R 4.3.3; pls4all=0.97.0; registry_method=pls; blas=linked-BLAS; timing_schema=warmup-v2",
-    "pls4all.R.formula": "language=R 4.3.3; pls4all=0.97.0; registry_method=pls; blas=linked-BLAS; timing_schema=warmup-v2",
+    "pls4all.R.formula": "language=R 4.3.3; pls4all=0.97.0; registry_method=pls; formula_facade=True; blas=linked-BLAS; timing_schema=warmup-v2",
     "pls4all.matlab": "language=Octave 10.3.0; pls4all=from libp4a-linked MEX; registry_method=pls; blas=linked-BLAS; timing_schema=warmup-v2",
     "pls4all.matlab.classdef": "language=Octave 10.3.0; pls4all=from libp4a-linked MEX + classdefs; registry_method=pls; blas=linked-BLAS; timing_schema=warmup-v2",
     "sklearn": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; sklearn=1.8.0; numpy=2.3.5; timing_schema=warmup-v2",
@@ -13787,7 +14065,7 @@
       1
     ],
     "rows": 71,
-    "cells": 707,
-    "ok": 649
+    "cells": 846,
+    "ok": 796
   }
 }

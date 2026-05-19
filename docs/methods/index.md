@@ -134,7 +134,7 @@ _Total methods_: **71**. Grouped by family below.
 | [`st_select`](st_select.md) | ST-PLS soft-thresholded sparse PLS (§18 Phase 5u) | `2.1` | R |
 | [`stability_select`](stability_select.md) | Stability/MCUVE selection (§18 Phase 5c) | `1.35` | R |
 | [`t2_select`](t2_select.md) | T²-PLS loading-weight selection (§18 Phase 5l) | `1.2` | R |
-| [`uve_select`](uve_select.md) | UVE noise-thresholded selection (§18 Phase 5d) | `0.7` | R |
+| [`uve_select`](uve_select.md) | UVE noise-thresholded selection (§18 Phase 5d) | `0.72` | R |
 | [`variable_select_coef`](variable_select_coef.md) | \|Coef\| top-k selection (§18 Phase 5a, method=1) | `1.1` | R |
 | [`variable_select_sr`](variable_select_sr.md) | Selectivity-Ratio top-k (§18 Phase 5a, method=2) | `1.3` | R |
 | [`variable_select_vip`](variable_select_vip.md) | VIP top-k variable selection (§18 Phase 5a, method=0) | `0.7` | R |

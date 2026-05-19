@@ -11,6 +11,8 @@
 suppressMessages(library(pls4all))
 suppressMessages(library(jsonlite))
 
+`%||%` <- function(x, y) if (is.null(x)) y else x
+
 .script_dir <- function() {
     a <- commandArgs(trailingOnly = FALSE)
     f <- a[grep("--file=", a, fixed = TRUE)]
@@ -114,12 +116,65 @@ x_target_path     <- Sys.getenv("BENCH_R_X_TARGET_PATH", unset = "")
 x_target_dir      <- Sys.getenv("BENCH_R_X_TARGET_DIR", unset = "")
 registry_pkey      <- Sys.getenv("BENCH_PREDICTION_KEY", unset = "predictions")
 
+.fold_rmse_matrix <- function(max_components, n_folds) {
+    idx <- matrix(seq_len(max_components * n_folds) - 1L,
+                  nrow = max_components, ncol = n_folds, byrow = TRUE)
+    0.5 + 0.5 * ((idx * 37 + 11) %% 997) / 996
+}
+
+.materialize_result <- function(res, pkey, p, prefix) {
+    if (pkey %in% c("selected_indices", "mask", "support")) {
+        if (!is.null(res$mask)) {
+            return(matrix(as.numeric(res$mask), nrow = 1))
+        }
+        if (!is.null(res$support)) {
+            return(matrix(as.numeric(res$support), nrow = 1))
+        }
+        if (!is.null(res$selected_indices)) {
+            sel <- as.integer(res$selected_indices)
+            mask <- matrix(0.0, nrow = 1, ncol = p)
+            idx <- sel[sel > 0L & sel <= p]
+            if (length(idx) > 0L) mask[1, idx] <- 1.0
+            return(mask)
+        }
+        # Empty selector outputs are valid all-zero masks.
+        return(matrix(0.0, nrow = 1, ncol = p))
+    }
+    if (pkey == "decision_scores" && !is.null(res$decision_scores)) {
+        return(res$decision_scores)
+    }
+    if (!is.null(res[[pkey]])) {
+        return(res[[pkey]])
+    }
+    if (!is.null(res$predictions)) {
+        return(res$predictions)
+    }
+    if (!is.null(res$selected_indices)) {
+        sel <- as.integer(res$selected_indices)
+        mask <- matrix(0.0, nrow = 1, ncol = p)
+        idx <- sel[sel > 0L & sel <= p]
+        if (length(idx) > 0L) mask[1, idx] <- 1.0
+        return(mask)
+    }
+    stop(sprintf("%s: returned no '%s' field", prefix, pkey))
+}
+
+.fit_simpls_model <- function(X, Y, n_components) {
+    pls4all::pls4all_fit(X, Y,
+                         algo = "pls_simpls",
+                         n_components = as.integer(n_components),
+                         store_scores = TRUE,
+                         scale_x = FALSE,
+                         scale_y = FALSE)
+}
+
 fit_predict <- function(seed) {
     xy <- pls4all_bench_load_xy(a$csv_dir, a$n, a$p, seed)
     p <- a$p
     n <- a$n
 
     call_params <- params
+    call_nc <- nc
 
     if (needs_sw) {
         call_params$sample_weights <- abs(xy$y) + 0.5
@@ -146,6 +201,20 @@ fit_predict <- function(seed) {
     } else if (needs_x_target) {
         call_params$X_target <- pls4all_bench_load_x_target(
             x_target_dir, a$n, a$p, seed)
+    }
+    if (a$algo == "pls_cox") {
+        if (is.null(call_params$sample_weights)) {
+            call_params$sample_weights <- abs(xy$y) + 0.5
+        }
+        if (is.null(call_params$y_labels)) {
+            ord <- order(xy$y)
+            labels <- integer(n)
+            labels[ord] <- (seq_len(n) - 1L) %% 2L
+            call_params$y_labels <- as.integer(labels)
+        }
+        call_params$survival_times <- as.double(call_params$sample_weights)
+        call_params$event_indicators <-
+            as.integer(as.integer(call_params$y_labels) > 0L)
     }
 
     # Some methods (so_pls / on_pls) overload `n_components` semantics —
@@ -203,12 +272,62 @@ fit_predict <- function(seed) {
         if (is.null(call_params$kernel_type)) {
             call_params$kernel_type <- 1L  # RBF
         }
+    } else if (a$algo == "approximate_press") {
+        dispatch_algo <- "approximate_press_compute"
+        call_nc <- as.integer(call_params$max_components %||% call_nc)
+    } else if (a$algo == "one_se_rule") {
+        dispatch_algo <- "one_se_rule_compute"
+        max_components <- as.integer(call_params$max_components %||% call_nc)
+        n_folds <- as.integer(call_params$n_folds %||% 5L)
+        call_params$fold_rmse_matrix <-
+            .fold_rmse_matrix(max_components, n_folds)
+        call_nc <- max_components
+    } else if (a$algo == "variable_select_vip") {
+        dispatch_algo <- "variable_select_rank"
+        call_params$method <- 0L
+    } else if (a$algo == "variable_select_coef") {
+        dispatch_algo <- "variable_select_rank"
+        call_params$method <- 1L
+    } else if (a$algo == "variable_select_sr") {
+        dispatch_algo <- "variable_select_rank"
+        call_params$method <- 2L
     }
 
     # The C dispatcher uses `step`, not the registry's `interval_step`.
     if (!is.null(call_params$interval_step)) {
         call_params$step <- as.integer(call_params$interval_step)
         call_params$interval_step <- NULL
+    }
+
+    if (a$algo %in% c("pls_diagnostic_t2", "pls_diagnostic_q",
+                       "pls_diagnostic_dmodx")) {
+        model <- .fit_simpls_model(xy$X, Y, call_nc)
+        res <- pls4all::pls_diagnostics(model, xy$X)
+        return(.materialize_result(res, registry_pkey, a$p, "r_tier1"))
+    }
+    if (a$algo == "pls_monitoring") {
+        split <- as.integer(floor(nrow(xy$X) / 2L))
+        Y_mat <- if (is.null(dim(Y))) matrix(as.numeric(Y), ncol = 1L) else Y
+        model <- .fit_simpls_model(xy$X[seq_len(split), , drop = FALSE],
+                                   Y_mat[seq_len(split), , drop = FALSE],
+                                   call_nc)
+        res <- pls4all::pls_monitoring(
+            model,
+            xy$X[seq_len(split), , drop = FALSE],
+            xy$X[(split + 1L):nrow(xy$X), , drop = FALSE],
+            alpha = as.numeric(call_params$alpha %||% 0.05))
+        return(.materialize_result(res, registry_pkey, a$p, "r_tier1"))
+    }
+    if (dispatch_algo == "variable_select_rank") {
+        model <- .fit_simpls_model(xy$X, Y, call_nc)
+        top_k <- as.integer(call_params$top_k %||% 10L)
+        res <- switch(a$algo,
+            "variable_select_vip" = pls4all::vip_select(model, xy$X, top_k),
+            "variable_select_coef" =
+                pls4all::coefficient_select(model, xy$X, top_k),
+            "variable_select_sr" =
+                pls4all::selectivity_ratio_select(model, xy$X, top_k))
+        return(.materialize_result(res, registry_pkey, a$p, "r_tier1"))
     }
 
     if (use_model_api) {
@@ -218,7 +337,7 @@ fit_predict <- function(seed) {
         # `pls4all_fit` model wrapper instead.
         res <- pls4all::pls4all_fit(xy$X, Y,
                                       algo = model_api_algo,
-                                      n_components = as.integer(nc),
+                                      n_components = as.integer(call_nc),
                                       scale_x = FALSE,
                                       scale_y = FALSE)
         preds_vec <- as.numeric(pls4all::pls4all_predict(res, xy$X))
@@ -226,51 +345,9 @@ fit_predict <- function(seed) {
     }
 
     res <- pls4all::pls4all_method(dispatch_algo, xy$X, Y,
-                                     n_components = as.integer(nc),
+                                     n_components = as.integer(call_nc),
                                      params = call_params)
-
-    # Pick the output field aligned with the registry's `prediction_key`.
-    # Return the result as-is (matrix or vector) so write_npy_f64 can
-    # serialise it in row-major order matching Python.
-    pkey <- registry_pkey
-    if (pkey %in% c("selected_indices", "mask", "support")) {
-        # Prefer res$mask / res$support / res$selected_indices in turn.
-        if (!is.null(res$mask)) {
-            return(matrix(as.numeric(res$mask), nrow = 1))
-        }
-        if (!is.null(res$support)) {
-            return(matrix(as.numeric(res$support), nrow = 1))
-        }
-        if (!is.null(res$selected_indices)) {
-            sel <- as.integer(res$selected_indices)
-            mask <- matrix(0.0, nrow = 1, ncol = a$p)
-            idx <- sel[sel > 0L & sel <= a$p]
-            if (length(idx) > 0L) mask[1, idx] <- 1.0
-            return(mask)
-        }
-        # Empty selector outputs are represented by some R dispatch paths as
-        # an empty result list. For registry mask cells that is a valid
-        # all-zero mask, not a backend failure.
-        return(matrix(0.0, nrow = 1, ncol = a$p))
-    }
-    if (pkey == "decision_scores" && !is.null(res$decision_scores)) {
-        return(res$decision_scores)
-    }
-    if (!is.null(res[[pkey]])) {
-        return(res[[pkey]])
-    }
-    # Fallbacks for legacy result shapes.
-    if (!is.null(res$predictions)) {
-        return(res$predictions)
-    }
-    if (!is.null(res$selected_indices)) {
-        sel <- as.integer(res$selected_indices)
-        mask <- matrix(0.0, nrow = 1, ncol = a$p)
-        idx <- sel[sel > 0L & sel <= a$p]
-        if (length(idx) > 0L) mask[1, idx] <- 1.0
-        return(mask)
-    }
-    stop(sprintf("r_tier1: %s returned no '%s' field", a$algo, pkey))
+    .materialize_result(res, registry_pkey, a$p, "r_tier1")
 }
 
 tr <- pls4all_bench_time_runs(fit_predict, a$runs, a$seed_base)

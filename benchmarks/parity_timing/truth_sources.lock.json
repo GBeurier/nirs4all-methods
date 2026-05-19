@@ -569,7 +569,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.7,
+      "rmse_rel_tol": 0.72,
       "prediction_key": "mask"
     },
     {

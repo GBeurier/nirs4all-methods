@@ -212,14 +212,15 @@ def _run_function_binding(algo: str, p4a_sklearn, X, y, Y, params: dict,
         return np.asarray(p4a_sklearn.approximate_press(
             X, Y, max_components=int(params["max_components"]))).reshape(1, -1)
     if algo == "one_se_rule":
-        rng = np.random.default_rng(11)
-        fold_rmse = rng.uniform(
-            0.5, 1.0,
-            size=(int(params["max_components"]), int(params["n_folds"])))
+        max_components = int(params["max_components"])
+        n_folds = int(params["n_folds"])
+        idx = np.arange(max_components * n_folds,
+                        dtype=np.float64).reshape(max_components, n_folds)
+        fold_rmse = 0.5 + 0.5 * np.mod(idx * 37.0 + 11.0, 997.0) / 996.0
         result = p4a_sklearn.one_se_rule(
             fold_rmse,
-            max_components=int(params["max_components"]),
-            n_folds=int(params["n_folds"]),
+            max_components=max_components,
+            n_folds=n_folds,
             return_curve=True)
         return np.asarray(result[prediction_key], dtype=np.float64).reshape(1, -1)
     if algo in {"pls_diagnostic_dmodx", "pls_diagnostic_q", "pls_diagnostic_t2"}:

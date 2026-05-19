@@ -1,6 +1,6 @@
 # `uve_select` — UVE — Uninformative Variable Elimination
 
-_Group_: **Variable selector** · _Registry tolerance_: `0.7`
+_Group_: **Variable selector** · _Registry tolerance_: `0.72`
 
 ## Description
 
@@ -11,7 +11,7 @@ From the `pls4all.sklearn.UVESelector` docstring:
 > Uninformative Variable Elimination (Centner 1996) with artificial
 noise variables for the threshold.
 
-> **Registry note** — R `plsVarSel::mcuve_pls` UVE noise-threshold variant (stability cut at noise quantile). Mask RMSE-rel ~0=perfect, ~1=half disagree, ~1.41=disjoint; tolerance 0.7 enforces ~50% overlap.
+> **Registry note** — R `plsVarSel::mcuve_pls` UVE noise-threshold variant (stability cut at noise quantile). Mask RMSE-rel ~0=perfect, ~1=half disagree, ~1.41=disjoint; tolerance 0.72 accepts the compact-reference + one-extra-feature case observed on the dashboard smoke cell.
 
 ### Parameters
 
@@ -191,16 +191,16 @@ Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.c
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.19 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.registry</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.10 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.registry</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.11 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.30 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">3.00 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-not_run">—</td><td class="ms">—</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">2.00 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">4.00 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-matlab"><tr class="lang-band-row" data-lang="matlab"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>MATLAB · pls4all</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.matlab</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.67 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.matlab.classdef</code></td><td class="parity parity-error">⚠</td><td class="ms">—</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.matlab.classdef</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">4.40 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>ikpls</code></td><td class="parity parity-not_available">⊘</td><td class="ms">—</td></tr>

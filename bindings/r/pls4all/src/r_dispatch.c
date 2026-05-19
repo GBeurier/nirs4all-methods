@@ -611,7 +611,13 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             st = p4a_on_pls_fit(ctx, cfg, blocks, bsn, njoint, upb, upbn, &mr);
         }
         if (st == P4A_OK) {
-            static const char* dm[] = {"predictions", "y_mean", NULL};
+            static const char* dm[] = {"predictions", "y_mean",
+                                          "joint_loadings_0",
+                                          "unique_loadings_0",
+                                          "joint_loadings_1",
+                                          "unique_loadings_1",
+                                          "joint_loadings_2",
+                                          "unique_loadings_2", NULL};
             static const char* sc[] = {"n_blocks", "n_components", NULL};
             out = pack_result(mr, dm, NULL, NULL, sc);
         }

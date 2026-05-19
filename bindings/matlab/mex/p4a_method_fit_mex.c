@@ -604,7 +604,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         for (int b = 0; b < bsn; ++b) mxFree(block_bufs[b]);
         mxFree(blocks); mxFree(block_bufs); mxFree(bs);
         if (st == P4A_OK) {
-            static const char *dm[] = {"predictions", "y_mean", NULL};
+            static const char *dm[] = {"predictions", "y_mean",
+                                          "joint_loadings_0",
+                                          "unique_loadings_0",
+                                          "joint_loadings_1",
+                                          "unique_loadings_1",
+                                          "joint_loadings_2",
+                                          "unique_loadings_2", NULL};
             static const char *sc[] = {"n_blocks", "n_components", NULL};
             out = pack_result(mr, dm, NULL, NULL, sc);
         }
