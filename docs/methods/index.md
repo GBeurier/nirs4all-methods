@@ -2,7 +2,7 @@
 
 Every algorithm in `benchmarks.parity_timing.registry.METHODS` documented with its parameters, bibliographic source, math principle, every binding's signature, and its parity + timing rows.
 
-_Total methods_: **71**. Grouped by family below.
+_Total methods_: **73**. Grouped by family below.
 
 ```{toctree}
 :hidden:
@@ -117,7 +117,7 @@ _Total methods_: **71**. Grouped by family below.
 | [`bipls_select`](bipls_select.md) | biPLS backward interval elimination (§18 Phase 5p) | `0.7` | R |
 | [`bve_select`](bve_select.md) | Backward Variable Elimination (§18 Phase 5k) | `1.4` | R |
 | [`cars_select`](cars_select.md) | CARS competitive adaptive reweighted sampling | `1.4` | R |
-| [`emcuve_select`](emcuve_select.md) | EMCUVE ensemble MC-UVE (§18 Phase 5n) | `1.35` | R |
+| [`emcuve_select`](emcuve_select.md) | EMCUVE ensemble MC-UVE (§18 Phase 5n) | `1.6` | R |
 | [`ga_select`](ga_select.md) | GA-PLS genetic algorithm selection | `1.3` | R |
 | [`interval_select`](interval_select.md) | Interval/iPLS forward selection (§18 Phase 5b) | `1.0` | R |
 | [`ipw_select`](ipw_select.md) | IPW-PLS iterative predictor weighting (§18 Phase 5t) | `1.0` | R |
@@ -134,10 +134,10 @@ _Total methods_: **71**. Grouped by family below.
 | [`st_select`](st_select.md) | ST-PLS soft-thresholded sparse PLS (§18 Phase 5u) | `2.1` | R |
 | [`stability_select`](stability_select.md) | Stability/MCUVE selection (§18 Phase 5c) | `1.35` | R |
 | [`t2_select`](t2_select.md) | T²-PLS loading-weight selection (§18 Phase 5l) | `1.2` | R |
-| [`uve_select`](uve_select.md) | UVE noise-thresholded selection (§18 Phase 5d) | `0.7` | R |
+| [`uve_select`](uve_select.md) | UVE noise-thresholded selection (§18 Phase 5d) | `0.72` | R |
 | [`variable_select_coef`](variable_select_coef.md) | \|Coef\| top-k selection (§18 Phase 5a, method=1) | `1.1` | R |
 | [`variable_select_sr`](variable_select_sr.md) | Selectivity-Ratio top-k (§18 Phase 5a, method=2) | `1.3` | R |
-| [`variable_select_vip`](variable_select_vip.md) | VIP top-k variable selection (§18 Phase 5a, method=0) | `0.7` | R |
+| [`variable_select_vip`](variable_select_vip.md) | VIP top-k variable selection (§18 Phase 5a, method=0) | `0.8` | R |
 | [`vip_spa_select`](vip_spa_select.md) | VIP_SPA — VIP-mask then SPA greedy (Phase 53) | `1.3` | Py |
 | [`vissa_select`](vissa_select.md) | VISSA-PLS — Variable Iterative Space Shrinkage (§49) | `2.5` | Py |
 | [`wvc_select`](wvc_select.md) | WVC weighted-variable-component top-k | `0.7` | R |

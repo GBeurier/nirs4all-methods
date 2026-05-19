@@ -68,11 +68,13 @@
          widths must be roomy enough that the longest algo / size / threads
          content fits with comfortable padding; otherwise the next sticky
          column visually clips into the previous one. */
-      --w-algo:    200px;
-      --w-size:    84px;
-      --w-threads: 56px;
-      --off-size:    var(--w-algo);
-      --off-threads: calc(var(--w-algo) + var(--w-size));
+      --w-algo:      200px;
+      --w-size:       84px;
+      --w-threads:    56px;
+      --w-reference: 126px;
+      --off-size:      var(--w-algo);
+      --off-threads:   calc(var(--w-algo) + var(--w-size));
+      --off-reference: calc(var(--w-algo) + var(--w-size) + var(--w-threads));
     }
 
     /* === DARK THEME (toggled via .theme-dark on <body>) — the original
@@ -443,6 +445,7 @@
       overflow-y: auto;
       max-height: 78vh;
       position: relative;
+      isolation: isolate;
       box-shadow: 0 0 0 1px var(--phosphor-faint);
       /* Firefox-specific scrollbar styling — the -webkit-* selectors
          below cover Chromium / Safari. Both are needed: without
@@ -596,38 +599,36 @@
     }
 
     /* sticky leftmost columns — widths + offsets driven by CSS vars
-       so they stay in sync across density modes. Body cells render at
-       z-index 3 (above tbody data cells), header cells at z-index 7
-       (above the lang-band non-sticky cells which slide under them on
-       horizontal scroll). The thread column (last sticky) carries the
-       boundary shadow so users see a clear "frozen" / "scrolling" split. */
+       so they stay in sync across density modes. Frozen cells need opaque
+       paint and a higher stack than scrollable cells; otherwise the first
+       data columns remain visible underneath them during horizontal scroll
+       or after column-filter rerenders. The reference column (last sticky)
+       carries the boundary shadow so users see a clear frozen / scrolling
+       split. */
     table.bench th.algo-col, table.bench td.algo-cell {
-      position: sticky; left: 0; z-index: 5;
+      position: sticky; left: 0; z-index: 20;
       background: var(--ink-2);
+      background-clip: padding-box;
       width: var(--w-algo); min-width: var(--w-algo); max-width: var(--w-algo);
     }
-    table.bench td.algo-cell { background: var(--ink-1); z-index: 3; }
+    table.bench td.algo-cell { background: var(--ink-1); z-index: 18; }
     table.bench th.size-col, table.bench td.size-cell {
-      position: sticky; left: var(--off-size); z-index: 5;
+      position: sticky; left: var(--off-size); z-index: 20;
       background: var(--ink-2);
+      background-clip: padding-box;
       width: var(--w-size); min-width: var(--w-size); max-width: var(--w-size);
     }
-    table.bench td.size-cell { background: var(--ink-1); z-index: 3; }
+    table.bench td.size-cell { background: var(--ink-1); z-index: 18; }
     table.bench th.thread-col, table.bench td.thread-cell {
-      position: sticky; left: var(--off-threads); z-index: 5;
+      position: sticky; left: var(--off-threads); z-index: 20;
       background: var(--ink-2);
+      background-clip: padding-box;
       width: var(--w-threads); min-width: var(--w-threads); max-width: var(--w-threads);
-      box-shadow: 4px 0 6px -3px rgba(15, 30, 40, 0.18);
     }
     table.bench td.thread-cell {
-      background: var(--ink-1); z-index: 3;
-      box-shadow: 4px 0 6px -3px rgba(15, 30, 40, 0.10);
+      background: var(--ink-1); z-index: 18;
     }
-    body.theme-dark table.bench th.thread-col,
-    body.theme-dark table.bench td.thread-cell {
-      box-shadow: 4px 0 6px -3px rgba(0, 0, 0, 0.55);
-    }
-    table.bench th.algo-col, table.bench th.size-col, table.bench th.thread-col { z-index: 8; }
+    table.bench th.algo-col, table.bench th.size-col, table.bench th.thread-col { z-index: 30; }
     /* The native (pls4all.cpp) baseline column is NOT sticky — making it
        sticky used to hide neighbouring columns when scrolling right.
        It still gets a subtle phosphor accent so the comparison anchor
@@ -724,28 +725,67 @@
     }
     .cell-empty { color: var(--fg-3); text-align: center; font-family: var(--mono); }
 
-    /* Synthetic leading column showing the canonical reference's
-       timing for each row (e.g. sklearn for `pls`, ropls for `opls`,
-       mixOmics for `*_da`). Different LIBRARY per row, so the colour
-       comes from the cell's `ref_lang` field (stamped as col-py /
-       col-r / col-m / etc. on the td). A subtle slate background
-       distinguishes it from the regular per-language tints. */
+    /* Synthetic leading column showing the canonical reference library
+       for each row (e.g. sklearn for `pls`, ropls for `opls`, mixOmics
+       for `*_da`). It is the fourth frozen column, after algorithm,
+       size and threads. Different LIBRARY per row, so the colour comes
+       from the cell's `ref_lang` field (stamped as col-py / col-r /
+       col-m / etc. on the td). A subtle slate background distinguishes
+       it from the regular per-language tints. */
     table.bench td.ref-col,
     table.bench th.ref-col {
+      position: sticky; left: var(--off-reference); z-index: 20;
       background: linear-gradient(180deg,
         rgba(160, 160, 200, 0.10) 0%,
-        rgba(160, 160, 200, 0.04) 100%) !important;
+        rgba(160, 160, 200, 0.04) 100%),
+        var(--ink-2) !important;
+      background-clip: padding-box;
       border-right: 2px solid var(--fg-3);
       font-weight: 600;
+      width: var(--w-reference);
+      min-width: var(--w-reference);
+      max-width: var(--w-reference);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: left;
+      box-shadow: 4px 0 6px -3px rgba(15, 30, 40, 0.18);
+    }
+    table.bench td.ref-col {
+      z-index: 18;
+      background: linear-gradient(180deg,
+        rgba(160, 160, 200, 0.10) 0%,
+        rgba(160, 160, 200, 0.04) 100%),
+        var(--ink-1) !important;
+    }
+    table.bench tbody tr:hover td.ref-col {
+      background: linear-gradient(180deg,
+        rgba(160, 160, 200, 0.14) 0%,
+        rgba(160, 160, 200, 0.08) 100%),
+        var(--ink-3) !important;
     }
     body.theme-dark table.bench td.ref-col,
     body.theme-dark table.bench th.ref-col {
       background: linear-gradient(180deg,
         rgba(200, 200, 240, 0.10) 0%,
-        rgba(200, 200, 240, 0.04) 100%) !important;
+        rgba(200, 200, 240, 0.04) 100%),
+        var(--ink-2) !important;
+      box-shadow: 4px 0 6px -3px rgba(0, 0, 0, 0.55);
+    }
+    body.theme-dark table.bench td.ref-col {
+      background: linear-gradient(180deg,
+        rgba(200, 200, 240, 0.10) 0%,
+        rgba(200, 200, 240, 0.04) 100%),
+        var(--ink-1) !important;
+    }
+    body.theme-dark table.bench tbody tr:hover td.ref-col {
+      background: linear-gradient(180deg,
+        rgba(200, 200, 240, 0.14) 0%,
+        rgba(200, 200, 240, 0.08) 100%),
+        var(--ink-3) !important;
     }
     table.bench th.ref-col {
       border-bottom: 2px solid var(--fg-2);
+      z-index: 30;
     }
     /* Make the ref column heading slightly more prominent than other
        column headers without screaming. */
@@ -756,9 +796,7 @@
        for `pls`, ropls for `opls`, mixOmics for `plsda`, etc. This
        cell is what every other implementation in the row is compared
        against by the reference-parity (gate 2) check, so the
-       dashboard ringfences it visually. A subtle gold outline plus
-       the 📐 ruler glyph signal "this is the ground truth for this
-       row" without overwhelming the underlying timing value. */
+       dashboard ringfences it visually with a subtle gold outline. */
     .cell-canonical-ref {
       box-shadow: inset 0 0 0 2px var(--amber);
       background: linear-gradient(180deg,
@@ -770,13 +808,6 @@
       background: linear-gradient(180deg,
         rgba(255, 192, 92, 0.18) 0%,
         rgba(255, 192, 92, 0.06) 100%) !important;
-    }
-    .cell-canonical-ref::before {
-      content: "📐";
-      position: absolute;
-      top: 1px; left: 3px;
-      font-size: 9px;
-      opacity: 0.75;
     }
     /* Compact parity marker. C++ and external cells show reference parity;
        internal binding cells show binding parity. */
@@ -810,7 +841,10 @@
 
     /* density: compact — slightly tighter sticky widths */
     body.density-compact {
-      --w-algo: 176px; --w-size: 76px; --w-threads: 48px;
+      --w-algo: 176px; --w-size: 76px; --w-threads: 48px; --w-reference: 112px;
+      --off-size:      var(--w-algo);
+      --off-threads:   calc(var(--w-algo) + var(--w-size));
+      --off-reference: calc(var(--w-algo) + var(--w-size) + var(--w-threads));
     }
     body.density-compact table.bench { font-size: 11px; }
     body.density-compact table.bench td { padding: 2.5px 6px; font-size: 10.5px; }
@@ -819,7 +853,10 @@
 
     /* density: ultra (max squeeze) — minimal sticky widths */
     body.density-ultra {
-      --w-algo: 156px; --w-size: 68px; --w-threads: 42px;
+      --w-algo: 156px; --w-size: 68px; --w-threads: 42px; --w-reference: 96px;
+      --off-size:      var(--w-algo);
+      --off-threads:   calc(var(--w-algo) + var(--w-size));
+      --off-reference: calc(var(--w-algo) + var(--w-size) + var(--w-threads));
     }
     body.density-ultra table.bench { font-size: 10.5px; }
     body.density-ultra table.bench td { padding: 1.5px 4px; font-size: 10px; }
@@ -985,6 +1022,7 @@
       width: 5px; height: 5px; border-radius: 50%;
       display: inline-block; flex-shrink: 0;
     }
+    .acc-group-reference .acc-group-bullet { background: var(--fg-2); box-shadow: none; }
     .acc-group-cpp   .acc-group-bullet { background: var(--lang-cpp);   box-shadow: 0 0 5px var(--lang-cpp); }
     .acc-group-python .acc-group-bullet { background: var(--lang-py);   box-shadow: 0 0 5px var(--lang-py); }
     .acc-group-r      .acc-group-bullet { background: var(--lang-r);    box-shadow: 0 0 5px var(--lang-r); }
@@ -1143,9 +1181,21 @@
       .hero { padding: 18px 18px 14px; }
     }
     @media (max-width: 680px) {
+      body {
+        --w-algo: 112px;
+        --w-size: 52px;
+        --w-threads: 36px;
+        --w-reference: 76px;
+        --off-size:      var(--w-algo);
+        --off-threads:   calc(var(--w-algo) + var(--w-size));
+        --off-reference: calc(var(--w-algo) + var(--w-size) + var(--w-threads));
+      }
       .stat-strip { grid-template-columns: repeat(2, max-content); }
       .stat-value { font-size: 20px; }
       .wordmark { font-size: 28px; }
+      .table-shell { padding-left: 8px; padding-right: 8px; }
+      .controls { padding-left: 8px; padding-right: 8px; }
+      .hero { padding-left: 8px; padding-right: 8px; }
     }
   </style>
 </head>
@@ -1268,7 +1318,7 @@
     <span class="legend-item"><span class="ico p-not_run">·</span> not run</span>
     <span class="legend-item"><span class="ico p-not_available">∅</span> not available in lib</span>
     <span class="legend-item"><span class="cell-fastest cell-fastest-bg" style="font-family:var(--mono);padding:1px 6px;border-radius:2px">42.5</span> fastest overall</span>
-    <span class="legend-item"><span class="cell-canonical-ref" style="font-family:var(--mono);padding:3px 8px 3px 12px;border-radius:2px;position:relative">42.5</span> canonical reference (📐 = ground truth for the row's gate-2 parity check)</span>
+    <span class="legend-item"><span class="cell-canonical-ref" style="font-family:var(--mono);padding:3px 8px;border-radius:2px;position:relative">42.5</span> canonical reference (ground truth for the row's gate-2 parity check)</span>
     <span class="legend-item" style="font-size:10px;color:var(--fg-2)">cell <code>X.X ✓✓</code>: gate 1 (binding ≡ cpp) · gate 2 (cpp ≈ external ref)</span>
     <span class="legend-item" style="margin-left:auto;color:var(--fg-2);font-size:10px">click header to sort · ⇧+click for descending</span>
   </div>
@@ -1292,7 +1342,7 @@
       <li>Reference: <code>pls4all.cpp</code> native column <span id="parity-ref-name">(resolved from data)</span></li>
       <li>Parity tolerance: 1e-6 exact, 1e-3 drift threshold</li>
       <li>Every backend reads the <b>same</b> orchestrator-generated CSV dataset</li>
-      <li>5 timed runs per cell after one unmeasured warmup, median reported</li>
+      <li>5 timed runs per cell after up to three unmeasured warmups, median reported</li>
       <li>Per-cell timeout: 300s</li>
       <li>Thread control via <code>OMP_NUM_THREADS</code> · <code>OPENBLAS_NUM_THREADS</code> · <code>MKL_NUM_THREADS</code> · <code>BLIS_NUM_THREADS</code> + binding-specific thread controls</li>
     </ul>
@@ -1347,6 +1397,14 @@
 'use strict';
 
 const DATA = JSON.parse(document.getElementById('bench-data').textContent);
+const ALGO_DISPLAY = {
+  aom_pls: 'aom-pls',
+  pop_pls: 'pop-pls',
+};
+const ALGO_ALIASES = {
+  aom_pls: 'AOMPLS AOM-PLS AOM_PLS AOMPLSRegressor nirs4all adaptive operator mixture',
+  pop_pls: 'POPPLS POP-PLS POP_PLS POPPLSRegressor nirs4all per-component operator selection',
+};
 
 // ---------- state + url persistence ----------
 const URL_KEYS = ['algo','group','lang','libGroup','lib','size','threads','parity','search','cols','sort','density','viz'];
@@ -1433,7 +1491,7 @@ if (state.cols.size === 0) {
 function nativeBaselineCol() {
   const find = id => DATA.columns.find(c => c.id === id);
   return (
-    find('pls4all.cpp.ref') ||
+    find('pls4all.cpp.native') ||
     find('pls4all.cpp.blas+omp') ||
     DATA.columns.find(c => c.id.startsWith('pls4all.cpp.')) ||
     null
@@ -1459,6 +1517,10 @@ const PARITY_ICON = {
 };
 
 function sizeKey(n, p) { return `${n}×${p}`; }
+function algoDisplay(algo) { return ALGO_DISPLAY[algo] || algo; }
+function searchNorm(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
 function escAttr(s) {
   return String(s || '').replace(/[&<>"']/g, ch => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -1475,14 +1537,18 @@ function fmtSpeedup(ratio) {
 }
 
 function applyRowFilters() {
-  const q = state.search.trim().toLowerCase();
+  const q = searchNorm(state.search.trim());
   const groupMap = DATA.algo_to_group || {};
   return DATA.rows.filter(row => {
     if (state.algo    && row.algo !== state.algo) return false;
     if (state.group   && groupMap[row.algo] !== state.group) return false;
     if (state.size    && sizeKey(row.n, row.p) !== state.size) return false;
     if (state.threads && String(row.threads) !== state.threads) return false;
-    if (q && !row.algo.toLowerCase().includes(q)) return false;
+    if (q) {
+      const hay = searchNorm([row.algo, algoDisplay(row.algo),
+        ALGO_ALIASES[row.algo] || ''].join(' '));
+      if (!hay.includes(q)) return false;
+    }
     return true;
   });
 }
@@ -1556,6 +1622,7 @@ const LANG_LABEL = {
 };
 const LANG_ORDER = ['cpp', 'py', 'r', 'm', 'jl', 'rs', 'go', 'js', 'java', 'other'];
 const COLUMN_GROUP_LABELS = {
+  reference: 'canonical reference',
   cpp: 'pls4all · C++',
   python: 'pls4all · Python',
   r: 'pls4all · R',
@@ -1571,6 +1638,7 @@ const COLUMN_GROUP_LABELS = {
   'ext-cpp': 'external · C++',
 };
 const COLUMN_GROUP_ORDER = [
+  'reference',
   'cpp', 'python', 'r', 'matlab',
   'ext-py', 'ext-r', 'ext-ml', 'ext-jl', 'ext-rs', 'ext-go', 'ext-js', 'ext-java', 'ext-cpp',
 ];
@@ -1616,6 +1684,7 @@ function fastestColumn(row, cols) {
   let best = null;
   const colsById = Object.fromEntries(DATA.columns.map(c => [c.id, c]));
   for (const id of cols) {
+    if (id === '__reference') continue;
     const c = row.cells[id];
     if (!c || !c.ok || !Number.isFinite(c.ms)) continue;
     if (!cellPasses(c, colsById[id])) continue;
@@ -1631,6 +1700,7 @@ function fastestPerLanguage(row, cols, colsById) {
   const counts = {};
   const winners = {};
   for (const id of cols) {
+    if (id === '__reference') continue;
     const c = row.cells[id];
     if (!c || !c.ok || !Number.isFinite(c.ms)) continue;
     if (!cellPasses(c, colsById[id])) continue;
@@ -1717,7 +1787,8 @@ function renderPresetRail() {
   // The NATIVE column is force-injected at runtime regardless of preset
   // — normalise both sides to ignore it so the match isn't foiled by
   // that one phantom diff (without this fix, every preset that doesn't
-  // include cpp.ref in its definition shows as "custom" with +1 col).
+  // include the fixed native baseline in its definition shows as
+  // "custom" with +1 col).
   const effective = visibleColIds();
   const norm = (ids) => ids
     .filter(id => id !== NATIVE_COL_ID)
@@ -1739,6 +1810,7 @@ function renderPresetRail() {
     const present = p.cols.filter(id => DATA.columns.find(x => x.id === id));
     const withNative = new Set(present);
     if (NATIVE_COL_ID) withNative.add(NATIVE_COL_ID);
+    if (DATA.columns.some(c => c.id === '__reference')) withNative.add('__reference');
     html += `<span class="preset-pill${matches ? ' active' : ''}" data-preset="${k}">${p.label}<span class="cnt">${withNative.size}</span></span>`;
   }
   if (!anyMatch) {
@@ -1760,7 +1832,7 @@ function renderControls() {
     .filter(a => !state.group || groupMap[a] === state.group)
     .sort();
   $('filter-algo').innerHTML = '<option value="">all</option>' +
-    algos.map(a => `<option value="${a}"${state.algo===a?' selected':''}>${a}</option>`).join('');
+    algos.map(a => `<option value="${a}"${state.algo===a?' selected':''}>${algoDisplay(a)}</option>`).join('');
 
   // language (narrows the visible columns)
   const langs = DATA.languages || [];
@@ -1779,8 +1851,8 @@ function renderControls() {
     groupKeys.map(g => `<option value="${g}"${state.libGroup===g?' selected':''}>${COLUMN_GROUP_LABELS[g] || g}</option>`).join('');
 
   const libraryOptions = DATA.columns
-    .filter(c => !state.lang || c.lang === state.lang || c.id === NATIVE_COL_ID)
-    .filter(c => !state.libGroup || c.group === state.libGroup || c.id === NATIVE_COL_ID);
+    .filter(c => !state.lang || c.lang === state.lang || c.id === NATIVE_COL_ID || c.id === '__reference')
+    .filter(c => !state.libGroup || c.group === state.libGroup || c.id === NATIVE_COL_ID || c.id === '__reference');
   if (state.lib && !libraryOptions.some(c => c.id === state.lib)) state.lib = '';
   $('filter-lib').innerHTML = '<option value="">all</option>' +
     libraryOptions.map(c => `<option value="${c.id}"${state.lib===c.id?' selected':''}>${c.label}</option>`).join('');
@@ -1837,7 +1909,7 @@ function renderColPicker() {
   for (const g of orderedGroups) {
     const cols = groups[g];
     if (!cols) continue;
-    const toggleable = cols.filter(c => c.id !== NATIVE_COL_ID);
+    const toggleable = cols.filter(c => c.id !== NATIVE_COL_ID && c.id !== '__reference');
     const allOn = toggleable.length ? toggleable.every(c => state.cols.has(c.id)) : true;
     html += `<div class="menu-section">
       <div class="menu-section-title">
@@ -1845,10 +1917,10 @@ function renderColPicker() {
         <span class="tiny" data-group="${g}">${allOn ? 'none' : 'all'}</span>
       </div>`;
     for (const c of cols) {
-      const native = c.id === NATIVE_COL_ID;
-      const checked = (native || state.cols.has(c.id)) ? 'checked' : '';
-      const disabled = native ? 'disabled' : '';
-      const suffix = native ? ' <span style="color:var(--fg-2);font-family:var(--sans)">(fixed)</span>' : '';
+      const fixed = c.id === NATIVE_COL_ID || c.id === '__reference';
+      const checked = (fixed || state.cols.has(c.id)) ? 'checked' : '';
+      const disabled = fixed ? 'disabled' : '';
+      const suffix = fixed ? ' <span style="color:var(--fg-2);font-family:var(--sans)">(fixed)</span>' : '';
       html += `<label><input type="checkbox" data-col="${c.id}" ${checked} ${disabled}><span>${c.label}${suffix}</span></label>`;
     }
     html += `</div>`;
@@ -1868,7 +1940,7 @@ function renderColPicker() {
 function shortLabel(label) {
   const meta = DATA.columns.find(c => c.label === label);
   if (!meta) return label;
-  if (meta.id === NATIVE_COL_ID) return 'cpp.ref';
+  if (meta.id === NATIVE_COL_ID) return 'cpp.native';
   return meta.short || label;
 }
 
@@ -1893,6 +1965,7 @@ function renderTable() {
   // colMetas must iterate exactly the same column ids as the body.
   const allColsById = Object.fromEntries(DATA.columns.map(c => [c.id, c]));
   const colMetas = cols.map(id => allColsById[id]).filter(Boolean);
+  const dataColMetas = colMetas.filter(c => c.id !== '__reference');
   const colsById = Object.fromEntries(colMetas.map(c => [c.id, c]));
 
   let rowsFiltered = applyRowFilters().filter(r => rowHasVisibleCell(r, cols));
@@ -1905,7 +1978,7 @@ function renderTable() {
   const rows = sortRows(rowsFiltered, cols);
 
   // language groups for the band row + per-cell tinted borders
-  const langGroups = visibleLangGroups(colMetas);
+  const langGroups = visibleLangGroups(dataColMetas);
   const langFirstCol = {};  // colId → true if this column starts a new lang group
   for (const g of langGroups) {
     if (g.cols.length) langFirstCol[g.cols[0].id] = true;
@@ -1940,6 +2013,9 @@ function renderTable() {
     <th class="algo-col lang-spacer"></th>
     <th class="size-col lang-spacer"></th>
     <th class="thread-col lang-spacer"></th>`;
+  if (cols.includes('__reference')) {
+    head += `<th class="ref-col lang-spacer"></th>`;
+  }
   for (const g of langGroups) {
     head += `<th class="lang-${g.slug}" colspan="${g.count}">${g.label}<span style="opacity:0.6;font-weight:400;margin-left:5px">${g.count}</span></th>`;
   }
@@ -1956,7 +2032,7 @@ function renderTable() {
     // hovering for the tooltip. Hidden in compact / ultra densities.
     const sub = c.tier || c.kind || '';
     const label = c.id === '__reference'
-        ? `<span class="col-label" title="canonical external reference per row">📐 reference${arrowFor(c.id)}</span>`
+        ? `<span class="col-label" title="canonical external reference per row">reference${arrowFor(c.id)}</span>`
         : `<span class="col-label">${shortLabel(c.label)}${arrowFor(c.id)}</span>`;
     head += `<th class="${sortCls(c.id)} ${lcls}" data-col="${c.id}" title="${headerTitle(c)}">${label}<span class="col-meta">${sub}</span></th>`;
   }
@@ -1983,7 +2059,8 @@ function renderTable() {
       const sizeHtml = row.isAvg
         ? `<span class="size-avg" title="geomean across ${row.sizesCount} size${row.sizesCount === 1 ? '' : 's'}">avg · ${row.sizesCount}</span>`
         : `${row.n}×${row.p}`;
-      let tr = `<tr><td class="algo-cell"><a href="methods/${row.algo}.html" title="open ${row.algo} method documentation">${row.algo}</a></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
+      const rowAlgoLabel = algoDisplay(row.algo);
+      let tr = `<tr><td class="algo-cell"><a href="methods/${row.algo}.html" title="open ${rowAlgoLabel} method documentation">${rowAlgoLabel}</a></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
       for (const id of cols) {
         const meta = colsById[id];
         // The synthetic "canonical reference" leading column needs a
@@ -2056,8 +2133,8 @@ function renderTable() {
         //   glow (overall) AND its text leans toward the language hue.
         // - The cell that IS the row's canonical external reference
         //   (sklearn for pls, ropls for opls, …) gets a gold outline
-        //   + 📐 badge so it's visible at a glance which column the
-        //   gate-2 parity check is anchored on.
+        //   so the gate-2 anchor stays visible without adding another
+        //   marker glyph.
         const tdCls = [lcls];
         if (canHighlight && id === fastestId) tdCls.push('cell-fastest-bg');
         const langSlug = meta ? colLangSlug(meta) : '';
@@ -2358,10 +2435,10 @@ function wire() {
     const grp = e.target.dataset.group;
     if (grp) {
       const cols = DATA.columns.filter(c => c.group === grp);
-      const toggleable = cols.filter(c => c.id !== NATIVE_COL_ID);
+      const toggleable = cols.filter(c => c.id !== NATIVE_COL_ID && c.id !== '__reference');
       const allOn = toggleable.length ? toggleable.every(c => state.cols.has(c.id)) : true;
       for (const c of cols) {
-        if (c.id === NATIVE_COL_ID) continue;
+        if (c.id === NATIVE_COL_ID || c.id === '__reference') continue;
         if (allOn) state.cols.delete(c.id); else state.cols.add(c.id);
       }
       rerender();
@@ -2371,7 +2448,7 @@ function wire() {
   $('col-picker').addEventListener('change', e => {
     const col = e.target.dataset.col;
     if (!col) return;
-    if (col === NATIVE_COL_ID) {
+    if (col === NATIVE_COL_ID || col === '__reference') {
       e.target.checked = true;
       return;
     }

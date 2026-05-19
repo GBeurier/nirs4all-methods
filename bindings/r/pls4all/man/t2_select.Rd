@@ -2,7 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{t2_select}
 \alias{t2_select}
-\title{T²-PLS — sweep over α-thresholds.}
+\title{T2-PLS - sweep over alpha thresholds.}
 \usage{
 t2_select(X, Y, n_components, alpha_thresholds, min_selected = NULL)
 }
@@ -18,5 +18,5 @@ t2_select(X, Y, n_components, alpha_thresholds, min_selected = NULL)
 \item{min_selected}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
 }
 \description{
-T²-PLS — sweep over α-thresholds.
+T2-PLS - sweep over alpha thresholds.
 }

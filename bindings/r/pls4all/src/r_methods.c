@@ -510,7 +510,8 @@ SEXP r_p4a_cars_select(SEXP X, SEXP Y, SEXP n_components_sexp,
  * ==================================================================== */
 
 /* Compute T², Q, DModX from a fitted model + design matrix X.
- * X_reference defaults to X (mirrors the Python default). */
+ * A NULL X_reference mirrors the Python/MATLAB default: the core falls back
+ * to the training score distribution stored on the fitted model. */
 SEXP r_p4a_pls_diagnostics_compute(SEXP model_ptr, SEXP X) {
     if (TYPEOF(model_ptr) != EXTPTRSXP) Rf_error("model must be an external pointer");
     if (TYPEOF(X) != REALSXP) Rf_error("X must be numeric");
@@ -527,8 +528,7 @@ SEXP r_p4a_pls_diagnostics_compute(SEXP model_ptr, SEXP X) {
     p4a_matrix_view_t Xv;
     p4a_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, P4A_DTYPE_F64);
     p4a_method_result_t* mr = NULL;
-    /* Pass X as both design and reference. */
-    st = p4a_pls_diagnostics_compute(ctx, model, &Xv, &Xv, &mr);
+    st = p4a_pls_diagnostics_compute(ctx, model, &Xv, NULL, &mr);
     if (st != P4A_OK) {
         UNPROTECT(1);
         r_throw("p4a_pls_diagnostics_compute", st, ctx);

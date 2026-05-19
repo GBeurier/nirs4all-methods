@@ -70,18 +70,28 @@ pls4all_bench_load_x_target <- function(x_target_dir, n, p, seed) {
     as.matrix(read.csv(path, header = FALSE))
 }
 
-# Timed runs (one unmeasured warmup, same convention as Python _common).
+# Timed runs (small unmeasured warmup set, same convention as Python _common).
+pls4all_bench_now_ms <- function() {
+    as.numeric(Sys.time()) * 1000.0
+}
+
+pls4all_bench_warmup_count <- function(runs) {
+    max(1L, min(3L, as.integer(runs)))
+}
+
 pls4all_bench_time_runs <- function(fit_predict_seeded, runs, seed_base) {
     if (runs < 1L) {
         stop("runs must be >= 1")
     }
-    fit_predict_seeded(seed_base)
+    for (w in seq_len(pls4all_bench_warmup_count(runs))) {
+        fit_predict_seeded(seed_base)
+    }
     samples <- numeric(runs)
     last_preds <- NULL
     for (i in seq_len(runs)) {
-        t0 <- proc.time()[["elapsed"]]
+        t0 <- pls4all_bench_now_ms()
         last_preds <- fit_predict_seeded(seed_base + (i - 1L))
-        samples[i] <- (proc.time()[["elapsed"]] - t0) * 1000
+        samples[i] <- pls4all_bench_now_ms() - t0
     }
     list(stats = list(
             ok = TRUE,
@@ -110,4 +120,39 @@ pls4all_bench_parse_args <- function() {
         seed_base  = as.numeric(argv[[7]]),
         pred_path  = argv[[8]]
     )
+}
+
+pls4all_bench_params <- function() {
+    raw <- Sys.getenv("BENCH_R_PARAMS_JSON", unset = "")
+    if (!nzchar(raw)) {
+        return(list())
+    }
+    suppressMessages(library(jsonlite))
+    fromJSON(raw, simplifyVector = FALSE)
+}
+
+pls4all_bench_param_value <- function(params, name, default) {
+    value <- params[[name]]
+    if (is.null(value)) {
+        return(default)
+    }
+    unlist(value, use.names = FALSE)[[1]]
+}
+
+pls4all_bench_param_int <- function(params, name, default) {
+    as.integer(pls4all_bench_param_value(params, name, default))
+}
+
+pls4all_bench_param_num <- function(params, name, default) {
+    as.numeric(pls4all_bench_param_value(params, name, default))
+}
+
+pls4all_bench_labels <- function(y, n_classes) {
+    y <- as.numeric(y)
+    n <- length(y)
+    n_classes <- as.integer(max(2L, n_classes))
+    labels <- integer(n)
+    order_idx <- order(y)
+    labels[order_idx] <- (seq_len(n) - 1L) %% n_classes
+    labels
 }

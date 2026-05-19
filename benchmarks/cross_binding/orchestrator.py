@@ -73,7 +73,7 @@ DEFAULT_SIZES = [
 
 # Per-cell wall-clock timeout (seconds).
 DEFAULT_TIMEOUT_S = 300
-TIMING_SCHEMA = "warmup-v2"
+TIMING_SCHEMA = "warmup-v3"
 
 # (name, script, language, tier, kind)
 #   kind ∈ {"pls4all_core", "pls4all_binding", "external"}
@@ -88,6 +88,8 @@ BACKENDS = [
     ("ikpls",        "bench_python_ikpls.py", "Python", "external", "external"),
     ("r_tier1",      "bench_r_tier1.R",       "R",      "tier 1",   "pls4all_binding"),
     ("r_tier2",      "bench_r_tier2.R",       "R",      "tier 2",   "pls4all_binding"),
+    ("r_pls_compat", "bench_r_pls_compat.R",  "R",      "pls compat", "pls4all_binding"),
+    ("r_mdatools_compat", "bench_r_mdatools_compat.R", "R", "mdatools compat", "pls4all_binding"),
     ("r_pls",        "bench_r_pls.R",         "R",      "external", "external"),
     ("r_ropls",      "bench_r_ropls.R",       "R",      "external", "external"),
     ("r_mixomics",   "bench_r_mixomics.R",    "R",      "external", "external"),
@@ -120,6 +122,8 @@ def registry_reference_backends_for(algo: str) -> list[tuple[str, str, str, str,
         display_lang = "Python" if lang == "python" else lang
         script = REFERENCE_SCRIPT_OVERRIDES.get(
             ref["id"], "bench_registry_reference.py")
+        if ref["id"] == "r_pls" and algo not in {"pls", "pcr", "cppls"}:
+            script = "bench_registry_reference.py"
         out.append((f"ref_{ref['id']}", script,
                     display_lang, ref["library"], "external"))
     return out
@@ -127,7 +131,7 @@ def registry_reference_backends_for(algo: str) -> list[tuple[str, str, str, str,
 # libp4a build → libpath. Used for the cpp variant sweep: each build
 # corresponds to a distinct OpenMP / BLAS / CUDA tier of the C kernel.
 LIBP4A_BUILDS = {
-    "dev-release": str(REPO / "build/dev-release/cpp/src"),  # ref, no BLAS, no OMP
+    "dev-release": str(REPO / "build/dev-release/cpp/src"),  # native scalar, no BLAS, no OMP
     "blas-on":     str(REPO / "build/blas-on/cpp/src"),       # BLAS only
     "omp-on":      str(REPO / "build/omp-on/cpp/src"),        # OMP only
     "blas-omp":    str(REPO / "build/blas-omp/cpp/src"),      # BLAS + OMP
@@ -857,11 +861,11 @@ def main():
                                   "all-cpu", "all"],
                          default="blas-omp",
                          help="libp4a build for pls4all backends. 'both' = "
-                              "dev-release + blas-omp; 'all-cpu' = ref + "
+                              "dev-release + blas-omp; 'all-cpu' = native + "
                               "blas + omp + blasomp; 'all' = the full "
                               "5-build sweep including cuda-on.")
     parser.add_argument("--n-runs", type=int, default=5,
-                         help="Timed runs per cell; one extra warmup is unmeasured")
+                         help="Timed runs per cell; up to three warmups are unmeasured")
     parser.add_argument("--n-components", type=int, default=5)
     parser.add_argument("--seed-base", type=int, default=DEFAULT_SEED_BASE)
     parser.add_argument("--only-pls4all", action="store_true",

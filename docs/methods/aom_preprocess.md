@@ -6,7 +6,7 @@ _Group_: **Diagnostic** · _Registry tolerance_: `5.0`
 
 AOM preprocessing pipeline (§17 Phase 4)
 
-> **Registry note** — Bench oracle (sanctioned per user). The pls4all C kernel wires a different operator-bank shape than the oracle, so the parity is shape-only and `rmse_rel` is informational rather than strict.
+> **Registry note** — In-tree `nirs4all.operators.models.sklearn.aom_pls` is the sanctioned provider. pls4all currently exposes the preprocessing primitive, while nirs4all exposes the full AOM/POP estimator stack; parity is qualitative.
 
 ### Parameters
 
@@ -23,19 +23,41 @@ Beurier, G., Reiter, R., Noûs, C., Rouan, L. & Cornet, D. (2026). *Reframing pr
 
 ### Mathematical principle
 
-AOM is a **soft preprocessing ensemble**: instead of committing to a single spectroscopic preprocessing (SNV, MSC, Savitzky–Golay derivative, …), AOM operates a bank of $M$ candidate operators in parallel and combines their outputs via gating. With equal weights (soft gating) the output is the average preprocessed spectrum; with first-operator gating (hard) it is a deterministic choice driven by a downstream criterion (typically SIMPLS CV-RMSE).
+`aom_preprocess` is the **operator-bank primitive** that AOM-PLS and POP-PLS build on. Given the centered spectral matrix $\mathbf{X} \in \mathbb{R}^{n\times p}$ and a finite bank of strict-linear operators $\{\mathbf{A}_b\}_{b=1}^{M} \subset \mathbb{R}^{p\times p}$ — matrices fully determined by the wavelength grid (identity, Savitzky–Golay smooth/derivative, finite difference, polynomial detrending, Norris–Williams, Whittaker; SNV / MSC / EMSC / ASLS / OSC are excluded because they depend on $\mathbf{y}$ or on a reference spectrum) — `aom_preprocess` materializes the $M$ preprocessed views $\mathbf{X}_b = \mathbf{X}\mathbf{A}_b^{\top}$ and gates them.
 
-The motivation is that **no single preprocessing is best on all calibrations** — even within a single project, different wavelength regions favour different transforms. AOM lets the downstream PLS adapt rather than forcing the analyst to pre-commit, at the cost of $M$× the preprocessing work.
+Two gating modes are supported:
 
-AOM-PLS family methods (AOM-SIMPLS, POP-PLS) use this primitive as their building block. Phase 6a–6e of the pls4all roadmap implement the bench-parity strict-linear tranche covering identity, detrending, Savitzky–Golay, finite-difference, Norris–Williams, Whittaker smoothing and FCK operators.
+* **soft** ($\texttt{gating\_mode}=1$): equal-weight average
+
+$$\mathbf{X}_{\text{AOM}}^{\text{soft}} \;=\; \frac{1}{M}\sum_{b=1}^{M}\mathbf{X}\mathbf{A}_b^{\top}.$$
+
+* **hard** ($\texttt{gating\_mode}=0$): deterministic first-operator selection,
+
+$$\mathbf{X}_{\text{AOM}}^{\text{hard}} \;=\; \mathbf{X}\mathbf{A}_{1}^{\top}.$$
+
+Both modes preserve the **cross-covariance identity** exploited by the AOM/POP selectors: with $\mathbf{S} = \mathbf{X}^{\top}\mathbf{Y}$ and any $\mathbf{A}_b$ in the bank,
+
+$$\bigl(\mathbf{X}\mathbf{A}_b^{\top}\bigr)^{\top}\mathbf{Y} \;=\; \mathbf{A}_b\,\mathbf{S},$$
+
+so a downstream PLS step can score the whole bank by $M$ cheap $O(pq)$ left actions instead of $M$ full $O(np)$ matrix products. The motivation is that **no single preprocessing is best on all calibrations** — different wavelength regions favour different transforms — and the AOM-PLS / POP-PLS selectors exploit that by picking, respectively, a global operator (one $b^{\star}$ for the whole model) or a per-component operator (one $b_a$ for each latent direction). Predictions on new spectra reuse the absorbed operator(s) through the recovered original-space coefficients — **no preprocessing replay at predict time**.
 
 ### Implementation
 
 `p4a_aom_preprocess_fit`. Reference: git-pinned oracle `nirs4all.operators.models.sklearn.aom_pls` (sanctioned exception).
 
+R roxygen note (`methods_extra.R::aom_preprocess`):
+
+> Adaptive Operator-Mixture preprocessing fit/transform.
+
+MATLAB header (`bindings/matlab/+pls4all/aom_preprocess.m`):
+
+```text
+pls4all.aom_preprocess  AOM preprocessing fit/transform.
+```
+
 ### Usage
 
-All four pls4all bindings dispatch into the same C kernel; the external libraries on the right are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language.
+Every pls4all binding tab dispatches into the same C kernel; the external libraries listed at the bottom of the page are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language. The R package now ships drop-in-compatible facades for the CRAN `pls` package (`plsr`, `pcr`, `mvr`) and for the `mdatools::pls(x, y, ...)` matrix idiom — those tabs appear only on the methods that have a meaningful equivalence.
 
 **pls4all bindings**
 
@@ -80,7 +102,10 @@ with pls4all.Context() as ctx, pls4all.Config() as cfg:
 :sync: python-sklearn
 :class-label: lang-python
 
-_No tier-2 sklearn-style class — exposed only via `pls4all._methods`._
+```python
+from pls4all.sklearn import aom_preprocess
+result = aom_preprocess(X, y, n_components=2)
+```
 
 :::
 
@@ -99,12 +124,27 @@ res <- pls4all_method("aom_preprocess", X, y,
 
 :::
 
+:::{tab-item} R · pls4all (raw fn)
+:sync: r-raw
+:class-label: lang-r
+
+```r
+library(pls4all)
+res  <- aom_preprocess(X, Y = NULL, n_operators = 3L, gating_mode = 0L)
+yhat <- pls4all_predict(res, X_test)
+```
+
+:::
+
 :::{tab-item} MATLAB · pls4all (MEX)
 :sync: matlab-mex
 :class-label: lang-matlab
 
 ```matlab
-res  = pls4all.fit("aom_preprocess", X, y, "NumComponents", 2);
+res = pls4all.aom_preprocess(X, y, 2);
+% see header of bindings/matlab/+pls4all/aom_preprocess.m for full
+% parameter surface:
+%   res = aom_preprocess(X, Y, n_operators, gating_mode)
 yhat = predict(res, Xtest);
 ```
 
@@ -126,7 +166,7 @@ _No idiomatic classdef wrapper — invoke `pls4all.fit("aom_preprocess", X, y, �
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.python_nirs4all_bench_aom_v0_aompls`** (python · python) — `nirs4all.bench.AOM_v0.aompls` in-tree-oracle · qualitative (rmse_rel ≤ 5e+00) — Bench oracle (sanctioned per user). The pls4all C kernel wires a different operator-bank shape than the oracle, so the parity check is shape-only (smoke-fit) and the tolerance is wide.
+- 📐 **`nirs4all`** (python · python) — `nirs4all` in-tree · qualitative (rmse_rel ≤ 5e+00) — In-tree nirs4all AOM provider (sanctioned external reference). pls4all's current primitive exposes a small operator-bank preprocessing kernel, while nirs4all exposes the full AOM/POP estimator stack; the parity remains qualitative.
 :::
 
 ### Benchmarks
@@ -143,27 +183,27 @@ Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.c
 <table class="docutils parity-grouped">
 <thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">100×50 (ms)</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libp4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas</code></td><td class="parity parity-drift">≈</td><td class="ms">1.02 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-drift">≈</td><td class="ms">1.03 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.omp</code></td><td class="parity parity-drift">≈</td><td class="ms">1.08 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.ref</code></td><td class="parity parity-drift">≈</td><td class="ms">1.01 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">1.02 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">1.09 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.omp</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">1.08 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.ref</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">1.01 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">0.99 ms<span class="medal" title="fastest">🏆</span></td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.registry</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.04 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-error">⚠</td><td class="ms">—</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.01 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.registry</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">1.00 ms<span class="medal" title="fastest">🏆</span></td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.06 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">3.50 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-not_run">—</td><td class="ms">—</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">2.47 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">3.69 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-matlab"><tr class="lang-band-row" data-lang="matlab"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>MATLAB · pls4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.matlab</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.65 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.matlab.classdef</code></td><td class="parity parity-not_run">—</td><td class="ms">—</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.matlab</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.67 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.matlab.classdef</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">2.07 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>ikpls</code></td><td class="parity parity-not_available">⊘</td><td class="ms">—</td></tr>
-<tr class="bk-row truth-source truth-source-qualitative"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (python): nirs4all.bench.AOM_v0.aompls in-tree-oracle — qualitative (rmse_rel ≤ 5e+00)">📐</span><code>ref.python_nirs4all_bench_aom_v0_aompls</code></td><td class="parity parity-error">⚠</td><td class="ms">—</td></tr>
+<tr class="bk-row truth-source truth-source-qualitative"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (python): nirs4all in-tree — qualitative (rmse_rel ≤ 5e+00)">📐</span><code>nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">1.43 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>sklearn</code></td><td class="parity parity-not_available">⊘</td><td class="ms">—</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · external</th></tr>
@@ -173,6 +213,10 @@ Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.c
 </tbody>
 <tbody class="lang-band lang-matlab"><tr class="lang-band-row" data-lang="matlab"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>MATLAB · external</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>plsregress</code></td><td class="parity parity-not_run">—</td><td class="ms">—</td></tr>
+</tbody>
+<tbody class="lang-band lang-ext"><tr class="lang-band-row" data-lang="ext"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Other</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>r_mdatools_compat</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">3.59 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>r_pls_compat</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">3.39 ms</td></tr>
 </tbody>
 </table>
 </div>

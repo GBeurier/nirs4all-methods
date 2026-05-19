@@ -1,10 +1,12 @@
 function [stats, last_preds] = pls4all_bench_run(fit_predict_seeded, runs, seed_base)
-% Helper: run one unmeasured warmup, then `fit_predict_seeded(seed)` for
-% seed in [base..base+runs-1]. Return timed stats + last predictions vector.
+% Helper: run a small unmeasured warmup set, then `fit_predict_seeded(seed)`
+% for seed in [base..base+runs-1]. Return timed stats + last predictions vector.
 if runs < 1
     error('runs must be >= 1');
 end
-fit_predict_seeded(seed_base);
+for w = 1:max(1, min(3, runs))
+    fit_predict_seeded(seed_base);
+end
 samples = zeros(runs, 1);
 last_preds = [];
 for i = 1:runs

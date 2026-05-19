@@ -9,6 +9,8 @@ suppressMessages(library(ropls))
 source(file.path(.script_dir(), "_npy.R"))
 
 a <- pls4all_bench_parse_args()
+params <- pls4all_bench_params()
+nc <- pls4all_bench_param_int(params, "n_components", a$nc)
 
 if (a$algo != "opls") {
     suppressMessages(library(jsonlite))
@@ -29,10 +31,13 @@ fit_predict <- function(seed) {
         invisible(capture.output(
             mod <- ropls::opls(x = xy$X, y = xy$y,
                                 predI = 1L,
-                                orthoI = max(1L, a$nc - 1L),
+                                orthoI = max(1L, nc - 1L),
                                 scaleC = "center",
+                                crossvalI = 1L,
+                                permI = 0L,
                                 fig.pdfC = "none",
-                                info.txtC = "none")
+                                info.txtC = "none",
+                                plotSubC = "none")
         ))
     ))
     as.numeric(predict(mod, xy$X))

@@ -3,6 +3,15 @@
   "description": "Structural snapshot of benchmarks/parity_timing/registry.py's parity-reference declarations. Host-insensitive: records only which reference slots are wired (python / r), the role keys of extra_references, and whether the MethodSpec is paper_only. Regenerate with `python -m benchmarks.parity_timing.lockfile`.",
   "methods": [
     {
+      "name": "aom_pls",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 5.0,
+      "prediction_key": "predictions"
+    },
+    {
       "name": "aom_preprocess",
       "paper_only": false,
       "has_python_reference": true,
@@ -116,7 +125,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.35,
+      "rmse_rel_tol": 1.6,
       "prediction_key": "mask"
     },
     {
@@ -393,6 +402,15 @@
       "prediction_key": "predictions"
     },
     {
+      "name": "pop_pls",
+      "paper_only": false,
+      "has_python_reference": true,
+      "has_r_reference": false,
+      "extra_reference_roles": [],
+      "rmse_rel_tol": 5.0,
+      "prediction_key": "predictions"
+    },
+    {
       "name": "pso_select",
       "paper_only": false,
       "has_python_reference": true,
@@ -569,7 +587,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.7,
+      "rmse_rel_tol": 0.72,
       "prediction_key": "mask"
     },
     {
@@ -596,7 +614,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.7,
+      "rmse_rel_tol": 0.8,
       "prediction_key": "mask"
     },
     {

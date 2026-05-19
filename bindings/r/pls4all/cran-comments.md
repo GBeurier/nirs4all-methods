@@ -7,8 +7,8 @@
   Near-Infrared Spectroscopy (NIRS) engine. The C++17 numerical core is
   vendored under `src/libp4a/` and compiled from source at install time.
   No external system library is required.
-* License: CeCILL-2.1 (a GPL-compatible French free-software license,
-  listed in R's license database).
+* License: `CeCILL (== 2.1)` (a GPL-compatible French free-software
+  license, listed in R's license database).
 * The same numerical core powers the project's Python (PyPI),
   JavaScript / WebAssembly (npm), Julia, MATLAB and other bindings.
   Each binding is parity-gated against shared `parity_fixture.json`
@@ -16,8 +16,8 @@
 
 ## Test environments
 
-* local Ubuntu 22.04, R 4.4.3, GCC 10.4 (conda-forge): `R CMD check
-  --as-cran` → **0 errors, 0 warnings, N notes** (see "Known notes"
+* local Ubuntu 22.04, R 4.6.0, GCC 15.2 (conda-forge): `R CMD check
+  --as-cran` → **0 errors, 0 warnings, 3 notes** (see "Known notes"
   below for the remaining notes).
 * GitHub Actions CI (`.github/workflows/release-r.yml`):
   - Ubuntu 22.04 (R release + devel)
@@ -39,6 +39,9 @@
 * **Compilation flags** — local conda-forge R sets `-march=nocona`;
   this comes from R's own Makeconf, not from the package's Makevars.
   Not present in CRAN-farm builds.
+* **HTML tidy unavailable locally** — the local check host does not
+  have the optional `tidy` executable, so HTML validation is skipped.
+  The package manual and PDF manual both build successfully.
 
 ## Compile time
 
@@ -56,15 +59,15 @@ each on average). On a typical CRAN check farm the install takes
   invocation during examples / tests / vignettes.
 * No `:::` calls to private functions of other packages.
 * No reverse-dependency footprint — the package is a leaf in the CRAN
-  dependency graph (only depends on `methods`).
+  dependency graph (only imports `stats`).
 
 ## Tier-2 integrations parked outside CRAN
 
 The original draft of this package also shipped optional tidymodels
-(`parsnip`) and mlr3 (`R6`) integrations. Both were factored out into
-a sibling `pls4all-extensions/` directory (not part of this
-submission) to keep the CRAN core dependency-light. They will land in
-a separate `pls4all.extras` package after the core is accepted.
+(`parsnip`) and mlr3 (`R6`) integrations. Both are archived under
+`bindings/r/archive/parsnip-mlr3/` and are not part of this submission.
+The active R surface is now NIRS-first: base formula/S3, `pls`-style
+`plsr()` / `pcr()`, and `mdatools`-style matrix `pls(x, y, ...)`.
 
 ## Reviewer-facing notes
 

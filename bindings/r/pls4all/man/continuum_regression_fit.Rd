@@ -2,7 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{continuum_regression_fit}
 \alias{continuum_regression_fit}
-\title{Continuum regression (tau ∈ [0, 1]).}
+\title{Continuum regression (tau in [0, 1]).}
 \usage{
 continuum_regression_fit(X, Y, n_components, tau = 0.5)
 }
@@ -16,5 +16,5 @@ continuum_regression_fit(X, Y, n_components, tau = 0.5)
 \item{tau}{Numeric in [0, 1]. Continuum regression mixing parameter.}
 }
 \description{
-Continuum regression (tau ∈ [0, 1]).
+Continuum regression (tau in [0, 1]).
 }

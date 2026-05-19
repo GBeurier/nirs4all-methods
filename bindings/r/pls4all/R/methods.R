@@ -2,8 +2,8 @@
 #
 # R tier-1 wrappers for MethodResult-returning fits exposed by
 # r_methods.c. These are thin: validate / coerce / .Call / repackage.
-# Tier-2 idiomatic wrappers (formula+S3 / parsnip / mlr3) live in
-# sklearn.R / parsnip.R / r6_learner.R and consume these.
+# Tier-2 idiomatic wrappers (formula+S3, pls-compatible and
+# mdatools-compatible facades) consume these.
 #
 # All fits accept:
 #   X — numeric matrix (n × p)

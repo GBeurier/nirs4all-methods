@@ -33,6 +33,8 @@ BACKEND_DISPLAY: dict[str, str] = {
     "python_tier2": "pls4all.sklearn",
     "r_tier1":      "pls4all.R",
     "r_tier2":      "pls4all.R.formula",
+    "r_pls_compat": "pls4all.R.pls_compat",
+    "r_mdatools_compat": "pls4all.R.mdatools_compat",
     "matlab_tier1": "pls4all.matlab",
     "matlab_tier2": "pls4all.matlab.classdef",
     "sklearn":      "sklearn",
@@ -44,7 +46,7 @@ BACKEND_DISPLAY: dict[str, str] = {
 }
 
 CPP_BUILD_SUFFIX = {
-    "dev-release": "ref",
+    "dev-release": "native",
     "blas-on":     "blas",
     "omp-on":      "omp",
     "blas-omp":    "blas+omp",
@@ -52,8 +54,8 @@ CPP_BUILD_SUFFIX = {
 }
 
 CPP_TIER_DESC = {
-    "dev-release": ("pls4all reference (single-thread)",
-                    "libp4a built with `PLS4ALL_WITH_BLAS=OFF, OPENMP=OFF` — pure scalar reference loops, no acceleration. The parity baseline."),
+    "dev-release": ("pls4all native scalar",
+                    "libp4a built with `PLS4ALL_WITH_BLAS=OFF, OPENMP=OFF` — pure scalar native C++ loops, no acceleration. Used as one C++ implementation column; binding parity still uses cpp @ blas-omp when available."),
     "blas-on":     ("pls4all + BLAS",
                     "libp4a built with `PLS4ALL_WITH_BLAS=ON` only — links system BLAS (OpenBLAS), benefits from BLAS thread parallelism."),
     "omp-on":      ("pls4all + OpenMP",
@@ -73,6 +75,8 @@ BACKEND_LONG: dict[str, tuple[str, str, str]] = {
     "ikpls":        ("Python",        "external",           "`ikpls.numpy_ikpls.PLS` — Improved Kernel PLS (plain PLS only)"),
     "r_tier1":      ("R",             "pls4all raw",        "`pls4all_method(algo, X, y, ...)` — unified dispatcher (33 fits + 24 selectors + 4 diagnostics)"),
     "r_tier2":      ("R",             "pls4all idiomatic",  "`pls(y ~ ., data)`, `cppls(...)`, `sparse_pls(...)`, … — base R formula+S3 wrappers"),
+    "r_pls_compat": ("R",             "pls4all pls-compatible", "`plsr()` / `pcr()` for PLS/PCR/CPPLS, formula-built dispatcher path for the rest of the method matrix"),
+    "r_mdatools_compat": ("R",        "pls4all mdatools-compatible", "`pls(x, y, ...)` for PLS/PCR/CPPLS, matrix dispatcher path for the rest of the method matrix"),
     "r_pls":        ("R",             "external",           "CRAN `pls` package — `pls::plsr / pls::cppls / pls::pcr`"),
     "r_ropls":      ("R",             "external",           "Bioconductor `ropls` — `ropls::opls` (OPLS only)"),
     "r_mixomics":   ("R",             "external",           "Bioconductor `mixOmics` — `pls / spls / plsda / splsda`"),
@@ -86,7 +90,7 @@ CPP_BUILD_ORDER = ["dev-release", "blas-on", "omp-on", "blas-omp", "cuda-on"]
 BACKEND_ORDER = [
     "registry_pls4all",
     "python_tier1", "python_tier2",
-    "r_tier1", "r_tier2",
+    "r_tier1", "r_tier2", "r_pls_compat", "r_mdatools_compat",
     "matlab_tier1", "matlab_tier2",
     "sklearn", "ikpls",
     "r_pls", "r_ropls", "r_mixomics",
@@ -107,6 +111,7 @@ BACKEND_GROUP = {
     "python_tier1": "python", "python_tier2": "python",
     "registry_pls4all": "python",
     "r_tier1": "r", "r_tier2": "r",
+    "r_pls_compat": "r", "r_mdatools_compat": "r",
     "matlab_tier1": "matlab", "matlab_tier2": "matlab",
     "sklearn": "ext-py", "ikpls": "ext-py",
     "r_pls": "ext-r", "r_ropls": "ext-r", "r_mixomics": "ext-r",
@@ -119,7 +124,7 @@ BACKEND_GROUP = {
 ALGO_GROUPS_ORDER = [
     "core", "ensemble", "sparse", "robust", "nonlinear",
     "multi-block", "calibration-transfer", "classification",
-    "missing", "regularized", "other",
+    "missing", "regularized", "adaptive", "other",
 ]
 ALGO_GROUP_LABELS = {
     "core":                 "Core PLS",
@@ -132,6 +137,7 @@ ALGO_GROUP_LABELS = {
     "classification":       "Classification & GLM",
     "missing":              "Missing data",
     "regularized":          "Regularized",
+    "adaptive":             "Adaptive operators",
     "other":                "Other",
 }
 ALGO_GROUP = {
@@ -161,6 +167,9 @@ ALGO_GROUP = {
     "pls_cox":              "classification",
     "missing_aware_nipals": "missing",
     "ridge_pls":            "regularized",
+    "aom_preprocess":       "adaptive",
+    "aom_pls":              "adaptive",
+    "pop_pls":              "adaptive",
 }
 
 SELECTOR_ALGOS = {
@@ -205,7 +214,6 @@ REF_ALIAS_TO_LEGACY = {
     "ref_r_pls":                "r_pls",
     "ref_r_ropls":              "r_ropls",
     "ref_r_mixomics":           "r_mixomics",
-    "ref_matlab_libpls":        "matlab_pls",
 }
 
 # Display labels for registry-driven `ref_*` backends that don't have a
@@ -217,10 +225,11 @@ REF_DISPLAY_OVERRIDE = {
     "ref_python_auswahl":           "auswahl",
     "ref_python_pyswarms":          "pyswarms",
     "ref_python_onpls":             "onpls",
-    "ref_python_nirs4all_operators_models_sklearn_aom_pls": "nirs4all.aom_pls",
-    "ref_python_nirs4all_operators_models_sklearn_mbpls":   "nirs4all.mbpls",
-    "ref_python_nirs4all_operators_models_sklearn_lwpls":   "nirs4all.lwpls",
-    "ref_python_nirs4all_bench_aom_v0_aompls":              "nirs4all.aom_v0",
+    "ref_python_nirs4all":                                  "nirs4all",
+    "ref_python_nirs4all_operators_models_sklearn_aom_pls": "nirs4all",
+    "ref_python_nirs4all_operators_models_sklearn_mbpls":   "nirs4all",
+    "ref_python_nirs4all_operators_models_sklearn_lwpls":   "nirs4all",
+    "ref_python_nirs4all_bench_aom_v0_aompls":              "nirs4all",
     "ref_r_spls":                   "spls",
     "ref_r_chemometrics":           "chemometrics",
     "ref_r_jico":                   "JICO",
@@ -237,6 +246,7 @@ REF_DISPLAY_OVERRIDE = {
     "ref_r_plsvarsel":              "plsVarSel",
     "ref_r_enpls":                  "enpls",
     "ref_r_pls_stats":              "pls (R, stats)",
+    "ref_matlab_libpls":            "libPLS",
 }
 
 
@@ -508,15 +518,18 @@ def build_payload(results_dir: Path) -> dict:
             return ""
         return str(versions.get("timing_schema") or "")
 
+    def _schema_rank(schema: str) -> int:
+        return {"warmup-v3": 2, "warmup-v2": 1}.get(schema, 0)
+
     def _row_rank(row: dict) -> tuple:
         return (
-            1 if _timing_schema(row) == "warmup-v2" else 0,
+            _schema_rank(_timing_schema(row)),
             float(row.get("_source_mtime") or 0.0),
             int(row.get("_source_index") or 0),
         )
 
     # Dedupe: same (algo, backend, build, n, p, threads). Prefer the current
-    # warmup-v2 timing schema over legacy cold-run CSV rows, then newest file.
+    # warmup timing schema over legacy cold-run CSV rows, then newest file.
     seen: dict[tuple, dict] = {}
     for r in rows_in:
         if not r.get("algorithm"):
@@ -714,7 +727,8 @@ def build_payload(results_dir: Path) -> dict:
         # renders both icons per cell.
         cell = {"parity": verdict, "reference_parity": ref_verdict,
                 "binding_parity": verdict, "ok": ok,
-                "_source_is_ref": r["backend"].startswith("ref_")}
+                "_source_is_ref": r["backend"].startswith("ref_"),
+                "_rank": _row_rank(r)}
         if ms is not None and ms == ms:   # not NaN
             cell["ms"] = round(ms, 3)
             cell["fmt"] = fmt_ms(r["median_ms"])
@@ -753,6 +767,8 @@ def build_payload(results_dir: Path) -> dict:
                 existing_is_ref = bool(existing.get("_source_is_ref"))
                 incoming_ok = bool(cell.get("ok"))
                 existing_ok = bool(existing.get("ok"))
+                incoming_rank = cell.get("_rank", (0, 0.0, 0))
+                existing_rank = existing.get("_rank", (0, 0.0, 0))
 
                 # Timing is an atomic part of the selected source. Prefer
                 # the legacy fixed-bench timing when both rows succeeded,
@@ -764,6 +780,8 @@ def build_payload(results_dir: Path) -> dict:
                         existing.get("ms") is None
                         or (incoming_ok and not existing_ok)
                         or (existing_is_ref and not incoming_is_ref and incoming_ok)
+                        or (incoming_is_ref and existing_is_ref
+                            and incoming_rank >= existing_rank)
                     )
                 )
                 if should_take_timing:
@@ -840,6 +858,7 @@ def build_payload(results_dir: Path) -> dict:
     for cells in pivot.values():
         for c in cells.values():
             c.pop("_source_is_ref", None)
+            c.pop("_rank", None)
 
     rows_out = []
     for (algo, n, p_, t), cells in sorted(pivot.items(),
@@ -876,10 +895,14 @@ def build_payload(results_dir: Path) -> dict:
 
     # Per-column versions (best available).
     versions: dict[str, str] = {}
+    version_rows: dict[str, dict] = {}
     for r in seen.values():
         cid = column_id(r["backend"], r.get("libp4a_build", ""))
-        if cid in versions:
+        old = version_rows.get(cid)
+        if old is not None and _row_rank(old) > _row_rank(r):
             continue
+        version_rows[cid] = r
+    for cid, r in version_rows.items():
         try:
             v = json.loads(r.get("versions_json") or "{}")
         except Exception:
@@ -896,7 +919,7 @@ def build_payload(results_dir: Path) -> dict:
     all_cols = [c["id"] for c in columns]
     selectable_cols = [c for c in all_cols if c != REF_COL_ID]
     cpp_blas_omp = "pls4all.cpp.blas+omp" if "pls4all.cpp.blas+omp" in all_cols else None
-    cpp_ref = "pls4all.cpp.ref" if "pls4all.cpp.ref" in all_cols else None
+    cpp_native = "pls4all.cpp.native" if "pls4all.cpp.native" in all_cols else None
 
     by_group = defaultdict(list)
     for c in columns:
@@ -934,14 +957,16 @@ def build_payload(results_dir: Path) -> dict:
         cpp_blas_omp,
         # Python: pls4all sklearn-style binding vs canonical externals
         "pls4all.sklearn",
-        "sklearn", "ikpls", "ref.python_scikit_learn", "ref.python_ikpls",
+        "sklearn", "ikpls", "nirs4all",
+        "ref.python_scikit_learn", "ref.python_ikpls",
         # R: pls4all formula + S3 binding vs canonical R externals
         "pls4all.R.formula",
+        "pls4all.R.pls_compat", "pls4all.R.mdatools_compat",
         "pls", "mixOmics", "ropls",
         "ref.r_pls", "ref.r_mixomics", "ref.r_ropls",
         # MATLAB: pls4all classdef binding vs the stats-toolbox baseline
         "pls4all.matlab.classdef",
-        "plsregress", "ref.matlab_libpls",
+        "plsregress", "libPLS",
     ]
     api_parity = [c for c in api_parity_candidates if c and c in all_cols]
 
@@ -956,7 +981,9 @@ def build_payload(results_dir: Path) -> dict:
     # against, so the dashboard wants a one-click view that lines them
     # up against each other.
     tier_2 = [c for c in (
-        "pls4all.sklearn", "pls4all.R.formula", "pls4all.matlab.classdef"
+        "pls4all.sklearn", "pls4all.R.formula",
+        "pls4all.R.pls_compat", "pls4all.R.mdatools_compat",
+        "pls4all.matlab.classdef"
     ) if c in all_cols]
     # registry/bench-ref is the single canonical pls4all invocation
     # used by the benchmark suite as parity baseline; expose it as its
@@ -968,12 +995,12 @@ def build_payload(results_dir: Path) -> dict:
     r_all  = by_lang("R")
     m_all  = by_lang("MATLAB/Octave")
 
-    # Native baseline tiers — compare the parity-reference scalar build
+    # Native baseline tiers — compare the native scalar build
     # against the production BLAS+OpenMP one, plus the registry entry
     # point. This is the "how much speed do the C++ optimisations buy?"
     # view, which is what the benchmark is really *for*.
     native_baseline = [c for c in (
-        cpp_ref, cpp_blas_omp, "pls4all.registry",
+        cpp_native, cpp_blas_omp, "pls4all.registry",
     ) if c and c in all_cols]
 
     raw_presets = {

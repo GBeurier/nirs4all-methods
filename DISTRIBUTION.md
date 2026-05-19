@@ -26,8 +26,8 @@
 > **Casing audit (done 2026-05-18 in M0.4).** All SPDX headers and
 > manifest license expressions across the tree have been normalised
 > to `CECILL-2.1`. The R `DESCRIPTION` file keeps the human-readable
-> `CeCILL-2.1` form per R's license database. The C++ `LICENSE` file
-> at the repo root is the canonical license text (no SPDX field
+> `CeCILL (== 2.1)` form per R's license database. The C++ `LICENSE`
+> file at the repo root is the canonical license text (no SPDX field
 > there) and stays untouched.
 
 ---
@@ -344,9 +344,9 @@ Two feedstocks, in order:
 | Field | Value |
 |-------|-------|
 | Registry | https://cran.r-project.org/package=pls4all |
-| Identity | Package: `pls4all`, License: `CeCILL-2.1` (R license database short form) |
+| Identity | Package: `pls4all`, License: `CeCILL (== 2.1)` (R license database form for CeCILL-2.1) |
 | Tier 1 | `.Call` gateway over the C ABI (no Rcpp) |
-| Tier 2 | base-R formula+S3 · parsnip · mlr3 — all live |
+| Tier 2 | base-R formula+S3 · `pls`-compatible formula API · `mdatools`-compatible matrix API. parsnip/mlr3 adapters are archived under `bindings/r/archive/parsnip-mlr3/` for later revival. |
 
 **Required assets:**
 - `pls4all_${VER}.tar.gz` (CRAN source) — `R CMD build bindings/r/pls4all`.

@@ -62,6 +62,8 @@ _SKLEARN_CLASS: dict[str, str | None] = {
     "ds":                     "DSTransformer",
     "on_pls":                 None,   # paper-only / not yet wrapped
     "aom_preprocess":         None,
+    "aom_pls":                None,
+    "pop_pls":                None,
     "approximate_press":      None,
     "one_se_rule":            None,
     "pls_monitoring":         None,
@@ -102,6 +104,8 @@ _SKLEARN_CLASS: dict[str, str | None] = {
 
 _FUNCTION_BINDINGS = {
     "aom_preprocess": "aom_preprocess",
+    "aom_pls": "aom_pls",
+    "pop_pls": "pop_pls",
     "approximate_press": "approximate_press",
     "one_se_rule": "one_se_rule",
     "on_pls": "on_pls",
@@ -203,6 +207,19 @@ def _fit_simpls_model(p4a_sklearn, X, Y, n_components: int):
 
 def _run_function_binding(algo: str, p4a_sklearn, X, y, Y, params: dict,
                           prediction_key: str) -> np.ndarray:
+    if algo in {"aom_pls", "pop_pls"}:
+        import pls4all
+        method = load_method(algo)
+        with pls4all.Context() as ctx, pls4all.Config() as cfg:
+            try:
+                ctx.num_threads = int(os.environ.get("BENCH_THREADS", "1"))
+            except Exception:
+                pass
+            result = method.pls4all_fn(ctx, cfg, X, Y, **params)
+            try:
+                return np.asarray(result.matrix(prediction_key), dtype=np.float64)
+            finally:
+                result.close()
     if algo == "aom_preprocess":
         return np.asarray(p4a_sklearn.aom_preprocess(
             X, Y,
@@ -212,14 +229,15 @@ def _run_function_binding(algo: str, p4a_sklearn, X, y, Y, params: dict,
         return np.asarray(p4a_sklearn.approximate_press(
             X, Y, max_components=int(params["max_components"]))).reshape(1, -1)
     if algo == "one_se_rule":
-        rng = np.random.default_rng(11)
-        fold_rmse = rng.uniform(
-            0.5, 1.0,
-            size=(int(params["max_components"]), int(params["n_folds"])))
+        max_components = int(params["max_components"])
+        n_folds = int(params["n_folds"])
+        idx = np.arange(max_components * n_folds,
+                        dtype=np.float64).reshape(max_components, n_folds)
+        fold_rmse = 0.5 + 0.5 * np.mod(idx * 37.0 + 11.0, 997.0) / 996.0
         result = p4a_sklearn.one_se_rule(
             fold_rmse,
-            max_components=int(params["max_components"]),
-            n_folds=int(params["n_folds"]),
+            max_components=max_components,
+            n_folds=n_folds,
             return_curve=True)
         return np.asarray(result[prediction_key], dtype=np.float64).reshape(1, -1)
     if algo in {"pls_diagnostic_dmodx", "pls_diagnostic_q", "pls_diagnostic_t2"}:

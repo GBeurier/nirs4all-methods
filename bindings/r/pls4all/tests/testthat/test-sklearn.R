@@ -1,5 +1,3 @@
-context("tier-2 formula interface")
-
 test_that("pls() formula fit + predict round-trip", {
     set.seed(0)
     n <- 80; p <- 10

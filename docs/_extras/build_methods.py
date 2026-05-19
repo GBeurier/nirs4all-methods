@@ -615,6 +615,27 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Forms the building block of AOM-SIMPLS and POP-PLS."),
         "implementation": "`p4a_aom_preprocess_fit`.",
     },
+    "aom_pls": {
+        "group": "adaptive",
+        "title": "AOM-PLS",
+        "paper": "Beurier et al. (2026), operator-adaptive PLS/Ridge.",
+        "principle": (
+            "Global adaptive operator selection (nirs4all AOMPLSRegressor) "
+            "over the compact "
+            "strict-linear nirs4all bank, selecting the operator and "
+            "component count by cross-validated RMSE."),
+        "implementation": "`p4a_aom_global_select`.",
+    },
+    "pop_pls": {
+        "group": "adaptive",
+        "title": "POP-PLS",
+        "paper": "Beurier et al. (2026), POP-PLS ablation.",
+        "principle": (
+            "Per-component adaptive operator selection (nirs4all "
+            "POPPLSRegressor) over the compact "
+            "strict-linear nirs4all bank, followed by best-prefix selection."),
+        "implementation": "`p4a_aom_per_component_select`.",
+    },
     "variable_select_vip": {
         "group": "selector",
         "title": "VIP variable selection",
@@ -964,7 +985,13 @@ def load_truth_source_metadata(
     out: dict[str, dict[str, dict]] = {}
     for method in METHODS:
         try:
-            out[method.name] = truth_source_metadata_for(method)
+            remapped: dict[str, dict] = {}
+            for cid, meta in truth_source_metadata_for(method).items():
+                if cid.startswith("ref."):
+                    backend = "ref_" + cid[len("ref."):]
+                    cid = REF_DISPLAY_OVERRIDE.get(backend, cid)
+                remapped[cid] = meta
+            out[method.name] = remapped
         except Exception as exc:
             if strict:
                 raise
@@ -1110,6 +1137,13 @@ BACKEND_DISPLAY = {
     "r_mixomics":       "mixOmics",
     "matlab_pls":       "plsregress",
 }
+REF_DISPLAY_OVERRIDE = {
+    "ref_python_nirs4all":                                  "nirs4all",
+    "ref_python_nirs4all_operators_models_sklearn_aom_pls": "nirs4all",
+    "ref_python_nirs4all_operators_models_sklearn_mbpls":   "nirs4all",
+    "ref_python_nirs4all_operators_models_sklearn_lwpls":   "nirs4all",
+    "ref_python_nirs4all_bench_aom_v0_aompls":              "nirs4all",
+}
 CPP_BUILD_SUFFIX = {
     "dev-release": "ref",
     "blas-on":     "blas",
@@ -1123,7 +1157,8 @@ def column_id(backend: str, build: str) -> str:
     if backend == "cpp":
         return f"pls4all.cpp.{CPP_BUILD_SUFFIX.get(build, build)}"
     if backend.startswith("ref_"):
-        return "ref." + backend[len("ref_"):]
+        return REF_DISPLAY_OVERRIDE.get(
+            backend, "ref." + backend[len("ref_"):])
     return BACKEND_DISPLAY.get(backend, backend)
 
 
@@ -1237,7 +1272,8 @@ def parse_csv(path: Path) -> dict[str, list[dict]]:
 
     Method pages should agree with the dashboard: `full_matrix.csv` is the
     baseline, while `dashboard_refresh_*.csv` files can supersede stale cells.
-    Prefer warmup-v2 timings over old cold-run rows, then the newest source
+    Prefer the current warmup timing schema over old cold-run rows, then
+    the newest source
     file. Non-C++ bindings collapse to the production blas-omp row for their
     displayed column.
     """
@@ -1266,7 +1302,8 @@ def parse_csv(path: Path) -> dict[str, list[dict]]:
                 key = (algo, cid, n, p, t)
                 build = r.get("libp4a_build", "")
                 rank = (
-                    1 if _timing_schema(r) == "warmup-v2" else 0,
+                    {"warmup-v3": 2, "warmup-v2": 1}.get(
+                        _timing_schema(r), 0),
                     1 if build == "blas-omp" else 0,
                     float(source_mtime),
                     int(source_index),
@@ -1475,6 +1512,7 @@ METHOD_TO_PY_SKLEARN: dict[str, str] = {
     "bagging_pls": "BaggingPLSRegression",
     "boosting_pls": "BoostingPLSRegression",
     "random_subspace_pls": "RandomSubspacePLSRegression",
+    "gpr_pls": "GPRPLSRegression",
     "so_pls": "SOPLSRegression",
     "rosa": "ROSARegression",
     "group_sparse_pls": "GroupSparsePLSRegression",
@@ -1518,21 +1556,27 @@ METHOD_TO_PY_SKLEARN: dict[str, str] = {
     "vip_spa_select": "VIPSPASelector",
 }
 
-# Diagnostics: registry name → module-level Python function name.
+# Diagnostics / module-level helpers: registry name → Python function name
+# exposed by `pls4all.sklearn._diagnostics` (re-exported in
+# `pls4all.sklearn.__all__`).
 METHOD_TO_PY_FN: dict[str, str] = {
-    "pls_diagnostic_t2": "t2_score",
-    "pls_diagnostic_q":  "q_score",
+    "pls_diagnostic_t2":    "t2_score",
+    "pls_diagnostic_q":     "q_score",
     "pls_diagnostic_dmodx": "dmodx_score",
-    "approximate_press":  "approximate_press",
-    "one_se_rule":        "one_se_rule",
-    "pls_monitoring":     "pls_monitoring",
+    "approximate_press":    "approximate_press",
+    "one_se_rule":          "one_se_rule",
+    "pls_monitoring":       "pls_monitoring",
+    "aom_preprocess":       "aom_preprocess",
+    "on_pls":               "on_pls",
 }
 
 # Registry name → R tier-1 raw function (in methods.R / methods_extra.R
-# / selectors.R / diagnostics.R). After the May 2026 R-binding cleanup
-# the dispatcher `pls4all_method(algo, X, Y, k, params=list(…))` covers
-# all 33 fits + 24 selectors + 4 diagnostics; per-algo helpers below are
-# the idiomatic tier-1 shortcuts.
+# / selectors.R / diagnostics.R). The dispatcher
+# `pls4all_method(algo, X, Y, k, params=list(…))` covers all fits +
+# selectors + diagnostics; the per-algo helpers below are the idiomatic
+# tier-1 shortcuts. `pls`, `pcr`, `opls` deliberately have no raw helper
+# — they are reached through the dispatcher (algo strings
+# `"pls_nipals"`, `"pcr"`, `"opls_nipals"`) or their formula wrappers.
 METHOD_TO_R_RAW: dict[str, str] = {
     # methods.R / methods_extra.R — *_fit family
     "sparse_simpls": "sparse_simpls_fit",
@@ -1549,6 +1593,7 @@ METHOD_TO_R_RAW: dict[str, str] = {
     "recursive_pls": "recursive_pls_fit",
     "n_pls": "n_pls_fit",
     "kernel_pls_rbf": "kernel_pls_fit",
+    "o2pls": "o2pls_fit",
     "sparse_pls_da": "sparse_pls_da_fit",
     "group_sparse_pls": "group_sparse_pls_fit",
     "fused_sparse_pls": "fused_sparse_pls_fit",
@@ -1567,6 +1612,10 @@ METHOD_TO_R_RAW: dict[str, str] = {
     "lw_pls": "lw_pls_fit",
     "pls_lda": "pls_lda_fit",
     "pls_logistic": "pls_logistic_fit",
+    "aom_preprocess": "aom_preprocess",
+    "aom_pls": "aom_pls",
+    "pop_pls": "pop_pls",
+    "aom_preprocess": "aom_preprocess",
     # selectors.R / methods_extra.R — *_select family
     "variable_select_vip":  "vip_select",
     "variable_select_coef": "coefficient_select",
@@ -1605,25 +1654,22 @@ METHOD_TO_R_RAW: dict[str, str] = {
     "pls_diagnostic_dmodx": "pls_diagnostics",
 }
 
-# Registry methods that are PLS-style regressors and therefore also
-# expose a parsnip engine (`pls_pls4all_reg(num_comp, ..., engine_args =
-# list(algorithm = "<algo>"))`) and an mlr3 R6 learner
-# (`lrn("regr.pls4all", algorithm = "<algo>")`).
-PARSNIP_MLR3_ALGOS = {
-    "pls", "pcr", "opls", "cppls", "sparse_simpls", "ridge_pls",
-    "weighted_pls", "robust_pls", "continuum_regression",
-    "recursive_pls", "kernel_pls_rbf", "lw_pls", "mb_pls",
-    "mir_pls", "ecr", "ds", "pds", "missing_aware_nipals",
-    "bagging_pls", "boosting_pls", "random_subspace_pls",
-    "gpr_pls", "di_pls",
-}
+# Parsnip / mlr3 integrations were factored out into
+# `bindings/r/archive/parsnip-mlr3/` and are NOT shipped with the CRAN
+# pls4all R package. The doc generator no longer renders a parsnip / mlr3
+# tab; leaving the variable here (empty) keeps the rendering code path
+# explicit.
+PARSNIP_MLR3_ALGOS: set[str] = set()
 
 # Registry name → R tier-2 formula function (sklearn.R, sklearn_methods.R,
-# sklearn_extra.R).
+# sklearn_extra.R). These are the idiomatic sklearn-style formula wrappers
+# (`<fn>(formula, data, ncomp, ...)`).
 METHOD_TO_R_FORMULA: dict[str, str] = {
     "pls": "pls",
+    "opls": "opls",
     "sparse_simpls": "sparse_pls",
     "cppls": "cppls",
+    "di_pls": "di_pls",
     "weighted_pls": "weighted_pls",
     "mb_pls": "mb_pls",
     "pls_glm": "pls_glm",
@@ -1632,21 +1678,72 @@ METHOD_TO_R_FORMULA: dict[str, str] = {
     "robust_pls": "robust_pls",
     "ridge_pls": "ridge_pls",
     "continuum_regression": "continuum_regression",
+    "recursive_pls": "recursive_pls",
     "bagging_pls": "bagging_pls",
     "boosting_pls": "boosting_pls",
     "random_subspace_pls": "random_subspace_pls",
+    "o2pls": "o2pls",
     "missing_aware_nipals": "missing_aware_nipals",
 }
+
+# Registry name → CRAN-`pls`-package-compatible alias in
+# `bindings/r/pls4all/R/pls_compat.R`. These mirror the `pls::plsr` /
+# `pls::pcr` / `pls::mvr` signatures so existing chemometrics code that
+# uses the CRAN `pls` package can swap pls4all in with no rewrite.
+METHOD_TO_R_PLS_COMPAT: dict[str, str] = {
+    "pls": "plsr",
+    "pcr": "pcr",
+}
+
+# Registry name → `mdatools::pls(x, y, ...)`-compatible alias in
+# `bindings/r/pls4all/R/mdatools_compat.R`. A single function
+# `pls_mdatools(x, y, ncomp, method = ...)` covers PLS / PCR / CPPLS via
+# its `method=` switch (mirroring the mdatools matrix-oriented API).
+METHOD_TO_R_MDATOOLS: dict[str, tuple[str, str]] = {
+    # method → (fn_name, method-arg string for the snippet)
+    "pls": ("pls_mdatools", "simpls"),
+    "pcr": ("pls_mdatools", "pcr"),
+    "cppls": ("pls_mdatools", "cppls"),
+}
+
+# Registry method → libp4a C ABI function (the `p4a_<fn>` symbol exposed
+# as `pls4all._methods.<fn>` on the Python side). Most methods follow the
+# convention `<method>_fit`; the entries below cover the exceptions
+# (variable-rank shared kernel, diagnostic / monitoring helpers,
+# `_run` / `_compute` suffixes, and Model-based methods that have no
+# per-method shim — they go through `Model.fit`).
+METHOD_TO_C_FUNCTION: dict[str, str] = {
+    # Variable-rank selectors share one C kernel.
+    "variable_select_vip":  "variable_select_rank",
+    "variable_select_coef": "variable_select_rank",
+    "variable_select_sr":   "variable_select_rank",
+    # Diagnostics share one C kernel.
+    "pls_diagnostic_t2":    "pls_diagnostics_compute",
+    "pls_diagnostic_q":     "pls_diagnostics_compute",
+    "pls_diagnostic_dmodx": "pls_diagnostics_compute",
+    # `_run` / `_compute` exceptions.
+    "approximate_press":    "approximate_press_compute",
+    "one_se_rule":          "one_se_rule_compute",
+    "pls_monitoring":       "pls_monitoring_run",
+    "recursive_pls":        "recursive_pls_run",
+}
+# Methods that have no tier-1 `_methods.py` shim — they reach the C core
+# through `Model.fit` (Algorithm / Solver / Deflation on Config). Used by
+# `usage_section` to pick the C / Python snippet variant.
+MODEL_FIT_METHODS: set[str] = {"pls", "pcr", "opls"}
+
 
 # Registry name → MATLAB tier-2 classdef name.
 METHOD_TO_MATLAB_CLASS: dict[str, str] = {
     "pls": "Regression",
     "pcr": "PcrRegression",
+    "opls": "OplsRegression",
     "cppls": "CpplsRegression",
     "sparse_simpls": "SparsePlsRegression",
     "weighted_pls": "WeightedPlsRegression",
     "mb_pls": "MbPlsRegression",
     "ecr": "EcrRegression",
+    "di_pls": "DiPlsRegression",
     "robust_pls": "RobustPlsRegression",
     "ridge_pls": "RidgePlsRegression",
     "continuum_regression": "ContinuumRegression",
@@ -1661,18 +1758,23 @@ METHOD_TO_MATLAB_CLASS: dict[str, str] = {
     "pls_glm": "GlmRegression",
 }
 
-# Registry name → MATLAB tier-1 function (.m file, snake_case).
+# Registry name → MATLAB tier-1 function (.m file, snake_case). Aliases
+# below cover the cases where the file name and the registry method name
+# differ (PLS → pls_fit.m, RBF kernel PLS → kernel_pls.m, the three
+# diagnostics share pls_diagnostics.m, and the variable-rank selectors
+# use distinct file names).
 METHOD_TO_MATLAB_FN: dict[str, str] = {
     name: name for name in (
-        "approximate_press", "bagging_pls", "bipls_select", "boosting_pls",
-        "bve_select", "cars_select", "continuum_regression", "cppls",
-        "di_pls", "ds", "ecr", "emcuve_select", "fused_sparse_pls",
-        "ga_select", "gpr_pls", "group_sparse_pls", "interval_select",
-        "ipw_select", "irf_select", "iriv_select", "kernel_pls",
-        "lw_pls", "mb_pls", "mir_pls", "missing_aware_nipals", "n_pls",
-        "o2pls", "on_pls", "one_se_rule", "pds", "pls_cox", "pls_glm",
-        "pls_lda", "pls_logistic", "pls_qda", "pso_select",
-        "random_frog_select", "random_subspace_pls",
+        "aom_preprocess", "aom_pls", "approximate_press", "bagging_pls",
+        "bipls_select", "boosting_pls", "bve_select", "cars_select",
+        "continuum_regression", "cppls", "di_pls", "ds", "ecr",
+        "emcuve_select", "fused_sparse_pls", "ga_select", "gpr_pls",
+        "group_sparse_pls", "interval_select", "ipw_select", "irf_select",
+        "iriv_select", "lw_pls", "mb_pls", "mir_pls",
+        "missing_aware_nipals", "n_pls", "o2pls", "on_pls", "one_se_rule",
+        "opls", "pcr", "pds", "pls_cox", "pls_glm", "pls_lda",
+        "pls_logistic", "pls_monitoring", "pls_qda", "pso_select",
+        "pop_pls", "random_frog_select", "random_subspace_pls",
         "randomization_select", "recursive_pls", "rep_select",
         "ridge_pls", "robust_pls", "rosa", "scars_select",
         "shaving_select", "sipls_select", "so_pls", "spa_select",
@@ -1683,6 +1785,12 @@ METHOD_TO_MATLAB_FN: dict[str, str] = {
 }
 METHOD_TO_MATLAB_FN["kernel_pls_rbf"] = "kernel_pls"
 METHOD_TO_MATLAB_FN["pls"] = "pls_fit"
+METHOD_TO_MATLAB_FN["pls_diagnostic_t2"] = "pls_diagnostics"
+METHOD_TO_MATLAB_FN["pls_diagnostic_q"] = "pls_diagnostics"
+METHOD_TO_MATLAB_FN["pls_diagnostic_dmodx"] = "pls_diagnostics"
+METHOD_TO_MATLAB_FN["variable_select_vip"] = "vip_select"
+METHOD_TO_MATLAB_FN["variable_select_coef"] = "coefficient_select"
+METHOD_TO_MATLAB_FN["variable_select_sr"] = "selectivity_ratio_select"
 
 
 # ---------------------------------------------------------------------------
@@ -1730,6 +1838,8 @@ EXTRA_GROUPS = {
     "pls_diagnostic_q": "diagnostic", "pls_diagnostic_dmodx": "diagnostic",
     "pls_monitoring": "diagnostic", "one_se_rule": "diagnostic",
     "aom_preprocess": "diagnostic",
+    "aom_pls": "adaptive",
+    "pop_pls": "adaptive",
 }
 
 
@@ -1777,7 +1887,7 @@ def _band_of(cid: str) -> str:
         return "r-pls4all"
     if cid in ("pls4all.matlab", "pls4all.matlab.classdef"):
         return "matlab-pls4all"
-    if cid.startswith("ref.python_") or cid in ("sklearn", "ikpls"):
+    if cid.startswith("ref.python_") or cid in ("sklearn", "ikpls", "nirs4all"):
         return "python-ext"
     if (cid.startswith("ref.r_")
             or cid in ("pls", "mixOmics", "ropls")):
@@ -2059,20 +2169,82 @@ def usage_section(method: str, spec: dict, cat: dict | None,
     needs_g = spec.get("needs_group_assignment")
 
     # ---- native (libp4a C ABI) ----
-    c_fn = (cat or {}).get("c_function") or f"{name}_fit"
-    native = textwrap.dedent(f"""\
-        ```c
-        /* C ABI — libp4a */
-        p4a_context_t* ctx = p4a_context_create();
-        p4a_config_t*  cfg = p4a_config_create();
-        p4a_method_result_t* res = NULL;
-        p4a_{c_fn}(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
-        /* … read coefficients / mask / scores via */
-        /* p4a_method_result_get_double_matrix / vector / scalar … */
-        p4a_method_result_destroy(res);
-        p4a_config_destroy(cfg);
-        p4a_context_destroy(ctx);
-        ```""")
+    # Model-based methods (`pls`, `pcr`, `opls`) reach the C core through
+    # `p4a_model_fit`, not a `p4a_<method>_fit` shim. Detect that and emit
+    # the Model.fit path for both the C and Python snippets. For every
+    # other method, prefer the explicit METHOD_TO_C_FUNCTION mapping; fall
+    # back to the catalog's `c_function`; final fallback is
+    # `<method>_fit` (which is correct for the 60+ "regular" fits).
+    cat_c_function = (cat or {}).get("c_function")
+    cat_algorithm = (cat or {}).get("algorithm")
+    cat_solver = (cat or {}).get("solver")
+    use_model_path = name in MODEL_FIT_METHODS
+    c_fn = (METHOD_TO_C_FUNCTION.get(name)
+            or cat_c_function
+            or f"{name}_fit")
+
+    if name in {"aom_pls", "pop_pls"}:
+        selector_fn = ("p4a_aom_per_component_select"
+                       if name == "pop_pls" else "p4a_aom_global_select")
+        result_t = ("p4a_aom_per_component_result_t"
+                    if name == "pop_pls" else "p4a_aom_global_result_t")
+        destroy_fn = ("p4a_aom_per_component_result_destroy"
+                      if name == "pop_pls" else "p4a_aom_global_result_destroy")
+        native = textwrap.dedent(f"""\
+            ```c
+            /* C ABI — libp4a AOM/POP selector path */
+            p4a_context_t* ctx = p4a_context_create();
+            p4a_config_t*  cfg = p4a_config_create();
+            p4a_operator_bank_t* bank = NULL;
+            p4a_validation_plan_t* plan = NULL;
+            {result_t}* res = NULL;
+            p4a_operator_bank_create(&bank);
+            /* add compact nirs4all-style operators: identity, SG, detrend, FD */
+            p4a_validation_plan_create(&plan);
+            /* fill CV folds on plan */
+            {selector_fn}(ctx, cfg, bank, &x_view, &y_view, plan,
+                          /* max_components */ {nc}, &res);
+            /* read predictions and selection diagnostics via result getters */
+            {destroy_fn}(res);
+            p4a_validation_plan_destroy(plan);
+            p4a_operator_bank_destroy(bank);
+            p4a_config_destroy(cfg);
+            p4a_context_destroy(ctx);
+            ```""")
+    elif use_model_path:
+        # All three MODEL_FIT_METHODS (pls / pcr / opls) have a YAML
+        # catalog entry exposing the right algorithm / solver enum values.
+        algo_enum = cat_algorithm or "PLS_REGRESSION"
+        solver_enum = cat_solver or "SIMPLS"
+        native = textwrap.dedent(f"""\
+            ```c
+            /* C ABI — libp4a (Model.fit path) */
+            p4a_context_t* ctx = p4a_context_create();
+            p4a_config_t*  cfg = p4a_config_create();
+            p4a_config_set_algorithm(cfg, P4A_ALGORITHM_{algo_enum});
+            p4a_config_set_solver   (cfg, P4A_SOLVER_{solver_enum});
+            p4a_config_set_n_components(cfg, {nc});
+            p4a_model_t* mdl = NULL;
+            p4a_model_fit(ctx, cfg, &x_view, &y_view, &mdl);
+            p4a_model_predict(ctx, mdl, &x_test_view, &y_hat_view);
+            p4a_model_destroy(mdl);
+            p4a_config_destroy(cfg);
+            p4a_context_destroy(ctx);
+            ```""")
+    else:
+        native = textwrap.dedent(f"""\
+            ```c
+            /* C ABI — libp4a */
+            p4a_context_t* ctx = p4a_context_create();
+            p4a_config_t*  cfg = p4a_config_create();
+            p4a_method_result_t* res = NULL;
+            p4a_{c_fn}(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
+            /* … read coefficients / mask / scores via */
+            /* p4a_method_result_get_double_matrix / vector / scalar … */
+            p4a_method_result_destroy(res);
+            p4a_config_destroy(cfg);
+            p4a_context_destroy(ctx);
+            ```""")
 
     # ---- pls4all.python (tier-1) ----
     py_kwargs = ""
@@ -2088,15 +2260,48 @@ def usage_section(method: str, spec: dict, cat: dict | None,
     if "n_components" in spec.get("cell_params", {}):
         py_kwargs = f"n_components={nc}"
     args_str = ", ".join([a for a in [py_kwargs] + extras if a])
-    python_raw = textwrap.dedent(f"""\
-        ```python
-        import pls4all
-        from pls4all._methods import {c_fn}
-        with pls4all.Context() as ctx, pls4all.Config() as cfg:
-            res = {c_fn}(ctx, cfg, X, y{', ' + args_str if args_str else ''})
-        # then: res.matrix("predictions"), res.matrix("coefficients"),
-        # res.vector("mask"), res.scalar("intercept"), …
-        ```""")
+    if name in {"aom_pls", "pop_pls"}:
+        py_selector = "aom_per_component_select" if name == "pop_pls" else "aom_global_select"
+        python_raw = textwrap.dedent(f"""\
+            ```python
+            import pls4all
+
+            with pls4all.Context() as ctx, pls4all.Config() as cfg:
+                bank = pls4all.OperatorBank()
+                plan = pls4all.ValidationPlan()
+                # Add compact nirs4all-style operators and CV folds.
+                res = pls4all.{py_selector}(
+                    ctx, cfg, bank, X.ravel(), y.ravel(), plan,
+                    max_components={nc},
+                    x_rows=X.shape[0], x_cols=X.shape[1],
+                    y_rows=y.shape[0], y_cols=1,
+                )
+                values, rows, cols = res.predictions
+            ```""")
+    elif use_model_path:
+        algo_enum = cat_algorithm or "PLS_REGRESSION"
+        solver_enum = cat_solver or "SIMPLS"
+        python_raw = textwrap.dedent(f"""\
+            ```python
+            import pls4all
+            from pls4all import Algorithm, Solver
+            with pls4all.Context() as ctx, pls4all.Config() as cfg:
+                cfg.algorithm = Algorithm.{algo_enum}
+                cfg.solver = Solver.{solver_enum}
+                cfg.n_components = {nc}
+                with pls4all.Model.fit(ctx, cfg, X, y) as mdl:
+                    y_hat = mdl.predict(X_test)
+            ```""")
+    else:
+        python_raw = textwrap.dedent(f"""\
+            ```python
+            import pls4all
+            from pls4all._methods import {c_fn}
+            with pls4all.Context() as ctx, pls4all.Config() as cfg:
+                res = {c_fn}(ctx, cfg, X, y{', ' + args_str if args_str else ''})
+            # then: res.matrix("predictions"), res.matrix("coefficients"),
+            # res.vector("mask"), res.scalar("intercept"), …
+            ```""")
 
     # ---- pls4all.sklearn (tier-2 Python) — pull real __init__ params ----
     py_class = METHOD_TO_PY_SKLEARN.get(name)
@@ -2129,6 +2334,11 @@ def usage_section(method: str, spec: dict, cat: dict | None,
             from pls4all.sklearn import {py_fn}
             result = {py_fn}(X, y, n_components={nc})
             ```""")
+    elif name in {"aom_pls", "pop_pls"}:
+        python_sklearn = (
+            "_No tier-2 sklearn-style class yet — exposed via the "
+            "`pls4all.aom_global_select` / "
+            "`pls4all.aom_per_component_select` low-level ABI._")
     else:
         python_sklearn = (
             "_No tier-2 sklearn-style class — exposed only via "
@@ -2180,6 +2390,40 @@ def usage_section(method: str, spec: dict, cat: dict | None,
             fit  <- {r_formula_fn}(y ~ ., data = train, ncomp = {nc}L)
             yhat <- predict(fit, newdata = test)
             summary(fit)
+            ```""")
+
+    # ---- pls4all.R (CRAN `pls`-package compatibility) ----
+    # `pls_compat.R` exports `plsr()`, `pcr()`, `mvr()` with the same
+    # signatures as the CRAN `pls` package so existing chemometrics code
+    # can swap pls4all in without a rewrite.
+    r_pls_compat_fn = METHOD_TO_R_PLS_COMPAT.get(name)
+    r_pls_compat_block = None
+    if r_pls_compat_fn:
+        r_pls_compat_block = textwrap.dedent(f"""\
+            ```r
+            library(pls4all)
+            # Drop-in for CRAN `pls::{r_pls_compat_fn}` (same signature).
+            fit  <- {r_pls_compat_fn}(y ~ ., ncomp = {nc}L, data = train,
+                                       validation = "CV", segments = 10L)
+            yhat <- predict(fit, newdata = test, ncomp = {nc}L)
+            RMSEP(fit)
+            ```""")
+
+    # ---- pls4all.R (`mdatools::pls` matrix-API compatibility) ----
+    # `mdatools_compat.R` exports `pls_mdatools(x, y, ncomp, method = ...)`
+    # mirroring the matrix-oriented signature used by NIRS / chemometrics
+    # workflows.
+    r_mdatools_pair = METHOD_TO_R_MDATOOLS.get(name)
+    r_mdatools_block = None
+    if r_mdatools_pair:
+        mfn, mmethod = r_mdatools_pair
+        r_mdatools_block = textwrap.dedent(f"""\
+            ```r
+            library(pls4all)
+            # Drop-in for `mdatools::pls(x, y, ncomp, method = "{mmethod}")`.
+            fit  <- {mfn}(X, y, ncomp = {nc}L, method = "{mmethod}",
+                           center = TRUE, scale = FALSE)
+            yhat <- predict(fit, newdata = X_test, ncomp = {nc}L)
             ```""")
 
     # ---- pls4all.matlab (tier-1 function) ----
@@ -2239,10 +2483,15 @@ def usage_section(method: str, spec: dict, cat: dict | None,
 
     parts: list[str] = [
         "### Usage\n",
-        "All four pls4all bindings dispatch into the same C kernel; "
-        "the external libraries on the right are the parity references "
-        "registered in `benchmarks.parity_timing.registry`. Switch tabs "
-        "to read the same fit in your language.\n",
+        "Every pls4all binding tab dispatches into the same C kernel; "
+        "the external libraries listed at the bottom of the page are the "
+        "parity references registered in "
+        "`benchmarks.parity_timing.registry`. Switch tabs to read the "
+        "same fit in your language. The R package now ships "
+        "drop-in-compatible facades for the CRAN `pls` package "
+        "(`plsr`, `pcr`, `mvr`) and for the `mdatools::pls(x, y, ...)` "
+        "matrix idiom — those tabs appear only on the methods that have "
+        "a meaningful equivalence.\n",
     ]
 
     # tab-set 1: pls4all bindings -------------------------------------
@@ -2273,27 +2522,15 @@ def usage_section(method: str, spec: dict, cat: dict | None,
             "R · pls4all (formula+S3)", "r-formula", "r"))
         parts.append(r_formula_block + "\n")
         parts.append(_tab_close())
-    if name in PARSNIP_MLR3_ALGOS:
-        parsnip_block = textwrap.dedent(f"""\
-            ```r
-            # parsnip / tidymodels
-            library(tidymodels)
-            pls4all::register_parsnip()
-            spec <- pls_pls4all_reg(num_comp = {nc}) %>%
-                set_engine("pls4all", algorithm = "{name}") %>%
-                set_mode("regression")
-            wflow <- workflow() %>% add_model(spec) %>% add_recipe(rec)
-            fit <- fit(wflow, data = train)
-
-            # mlr3
-            library(mlr3)
-            pls4all::register_mlr3()
-            lrn <- lrn("regr.pls4all", algorithm = "{name}", n_components = {nc}L)
-            lrn$train(task)
-            ```""")
+    if r_pls_compat_block:
         parts.append(_tab_open(
-            "R · parsnip / mlr3", "r-meta", "r"))
-        parts.append(parsnip_block + "\n")
+            "R · `pls` package compat", "r-pls-compat", "r"))
+        parts.append(r_pls_compat_block + "\n")
+        parts.append(_tab_close())
+    if r_mdatools_block:
+        parts.append(_tab_open(
+            "R · `mdatools` compat", "r-mdatools", "r"))
+        parts.append(r_mdatools_block + "\n")
         parts.append(_tab_close())
     parts.append(_tab_open(
         "MATLAB · pls4all (MEX)", "matlab-mex", "matlab"))

@@ -13,6 +13,7 @@
     "numpy": "2.3.5",
     "reference_id": "r_plsvarsel",
     "reference_library": "plsVarSel",
-    "reference_version": "0.10.0"
+    "reference_version": "0.10.0",
+    "timing_schema": "warmup-v2"
   }
 }

@@ -1,7 +1,7 @@
 # Include the native shared library so the sdist + wheel ship libp4a
 # even though setuptools' default discovery skips arch-specific files.
-recursive-include src/pls4all/lib libp4a* p4a* *.so *.so.* *.dylib *.dll
+recursive-include src/pls4all/lib *
 
-# Include the LICENSE and README at the project root.
+# Include the package README and local license notice.
 include README.md
-include ../../LICENSE
+include LICENSE

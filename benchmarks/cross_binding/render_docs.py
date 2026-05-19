@@ -45,6 +45,8 @@ BACKEND_DISPLAY: dict[str, str] = {
     "python_tier2": "pls4all.sklearn",
     "r_tier1":      "pls4all.R",
     "r_tier2":      "pls4all.R.formula",
+    "r_pls_compat": "pls4all.R.pls_compat",
+    "r_mdatools_compat": "pls4all.R.mdatools_compat",
     "matlab_tier1": "pls4all.matlab",
     "matlab_tier2": "pls4all.matlab.classdef",
     # external libraries — their real package name
@@ -60,19 +62,25 @@ BACKEND_DISPLAY: dict[str, str] = {
 BACKEND_LONG: dict[str, tuple[str, str, str]] = {
     # name → (Language, Tier, What it runs)
     "registry_pls4all": ("Python",       "pls4all canonical", "`benchmarks.parity_timing.registry.MethodSpec.pls4all_fn` — the canonical per-method pls4all entry point"),
-    "cpp":          ("C++",          "pls4all reference", "libp4a called via ctypes — same C kernel as every pls4all binding, no high-level wrapper"),
+    "cpp":          ("C++",          "pls4all native", "libp4a called via ctypes — same C kernel as every pls4all binding, no high-level wrapper"),
     "python_tier1": ("Python",       "pls4all raw",       "`pls4all._methods.<algo>_fit(ctx, cfg, X, y, …)` — direct FFI binding"),
     "python_tier2": ("Python",       "pls4all idiomatic", "`pls4all.sklearn.<Class>` — sklearn-style BaseEstimator with `.fit() / .predict()`"),
     "sklearn":      ("Python",       "external",          "`sklearn.cross_decomposition.PLSRegression`, `sklearn.decomposition.PCA + LinearRegression / Ridge / GaussianProcessRegressor` (proxies)"),
     "ikpls":        ("Python",       "external",          "`ikpls.numpy_ikpls.PLS` — Improved Kernel PLS (covers plain PLS only)"),
     "r_tier1":      ("R",            "pls4all raw",       "`pls4all_method(algo, X, y, ...)` — unified dispatcher (33 fits + 24 selectors + 4 diagnostics)"),
     "r_tier2":      ("R",            "pls4all idiomatic", "`pls(y ~ ., data)`, `cppls(...)`, `sparse_pls(...)`, … — base R formula+S3 wrappers"),
+    "r_pls_compat": ("R",            "pls4all pls-compatible", "`plsr()` / `pcr()` for PLS/PCR/CPPLS, formula-built dispatcher path for the rest of the method matrix"),
+    "r_mdatools_compat": ("R",       "pls4all mdatools-compatible", "`pls(x, y, ...)` for PLS/PCR/CPPLS, matrix dispatcher path for the rest of the method matrix"),
     "r_pls":        ("R",            "external",          "CRAN `pls` package — `pls::plsr / pls::cppls / pls::pcr`"),
     "r_ropls":      ("R",            "external",          "Bioconductor `ropls` — `ropls::opls` (covers OPLS only)"),
     "r_mixomics":   ("R",            "external",          "Bioconductor `mixOmics` — `pls / spls / plsda / splsda`"),
     "matlab_tier1": ("MATLAB/Octave","pls4all raw",       "`pls4all.<algo>(X, y, ...)` — single dispatcher MEX"),
     "matlab_tier2": ("MATLAB/Octave","pls4all idiomatic", "`pls4all.fit(algo, X, y, ...)` factory + per-algorithm classdefs"),
     "matlab_pls":   ("MATLAB/Octave","external",          "Octave statistics `plsregress` (SIMPLS, plain PLS only)"),
+}
+
+REF_DISPLAY_OVERRIDE = {
+    "ref_matlab_libpls": "libPLS",
 }
 
 
@@ -83,13 +91,15 @@ def disp(b: str, build: str = "blas-omp") -> str:
     if b == "cpp":
         # Map libp4a build → suffix that says what's enabled.
         suffix = {
-            "dev-release": "ref",       # no BLAS, no OMP
+            "dev-release": "native",    # no BLAS, no OMP
             "blas-on":     "blas",
             "omp-on":      "omp",
             "blas-omp":    "blas+omp",
             "cuda-on":     "cuda",
         }.get(build, build)
         return f"pls4all.cpp.{suffix}"
+    if b in REF_DISPLAY_OVERRIDE:
+        return REF_DISPLAY_OVERRIDE[b]
     if b.startswith("ref_"):
         return "ref." + b[len("ref_"):]
     return BACKEND_DISPLAY.get(b, b)
@@ -367,8 +377,16 @@ def render(csv_path: Path, out_path: Path,
         rows = [r for r in rows if int(r.get("threads", "0")) in keep]
     run_counts = sorted({int(float(r.get("n_runs", "0") or 0))
                          for r in rows if r.get("n_runs")})
-    run_text = (", ".join(str(x) for x in run_counts)
-                if run_counts else "the recorded number of")
+    if not run_counts:
+        run_text = "the recorded number of timed runs"
+    elif len(run_counts) == 1:
+        n_runs = run_counts[0]
+        run_text = f"{n_runs} timed run" + ("" if n_runs == 1 else "s")
+    else:
+        run_text = " or ".join(
+            [", ".join(str(x) for x in run_counts[:-1]), str(run_counts[-1])]
+        )
+        run_text = f"{run_text} timed runs"
 
     # Header info.
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -420,8 +438,8 @@ def render(csv_path: Path, out_path: Path,
                 "it is Gate 2. Drift / divergent / empty cells never carry "
                 "the bold.\n")
 
-    out.append(f"Timing is the **median of {run_text} timed run(s)** after "
-                "one unmeasured warmup. All "
+    out.append(f"Timing is the **median of {run_text}** after "
+                "up to three unmeasured warmups. All "
                 "backends in a single cell read the same "
                 "orchestrator-generated CSV dataset. See "
                 "[methodology.md](methodology.md) for the full details.\n")
@@ -491,7 +509,7 @@ def render(csv_path: Path, out_path: Path,
     CANONICAL_BACKEND_ORDER = [
         "registry_pls4all",
         "python_tier1", "python_tier2",
-        "r_tier1", "r_tier2",
+        "r_tier1", "r_tier2", "r_pls_compat", "r_mdatools_compat",
         "matlab_tier1", "matlab_tier2",
         "sklearn", "ikpls",
         "r_pls", "r_ropls", "r_mixomics",
@@ -584,8 +602,8 @@ def render(csv_path: Path, out_path: Path,
     out.append("|---|---|---|---|")
     # Backend defs: distinguish the cpp libp4a tiers as separate rows.
     CPP_TIER_DESC = {
-        "dev-release": ("C++", "pls4all reference (single-thread)",
-                          "libp4a built with `PLS4ALL_WITH_BLAS=OFF, OPENMP=OFF` — pure scalar reference loops, no acceleration. The parity baseline."),
+        "dev-release": ("C++", "pls4all native scalar",
+                          "libp4a built with `PLS4ALL_WITH_BLAS=OFF, OPENMP=OFF` — pure scalar native C++ loops, no acceleration. Used as one C++ implementation column; binding parity still uses cpp @ blas-omp when available."),
         "blas-on":     ("C++", "pls4all + BLAS",
                           "libp4a built with `PLS4ALL_WITH_BLAS=ON` only — links system BLAS (OpenBLAS in this env), benefits from BLAS thread parallelism."),
         "omp-on":      ("C++", "pls4all + OpenMP",
@@ -643,7 +661,7 @@ def render(csv_path: Path, out_path: Path,
                 "`reference_parity_tolerance` by newer CSVs)")
     out.append("- All backends read the same orchestrator-generated CSV dataset "
                 "(`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`)")
-    out.append(f"- {run_text} timed run(s) per cell after one unmeasured "
+    out.append(f"- {run_text} per cell after one unmeasured "
                "warmup, median reported")
     out.append("- Per-cell timeout: 300 s")
     out.append("- Thread control via `OMP_NUM_THREADS = OPENBLAS_NUM_THREADS = "

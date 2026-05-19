@@ -7,7 +7,8 @@ The new (parity + timing + versions) cell convention:
 
 Each script:
   - loads / regenerates the deterministic dataset per run (seed_base+i)
-  - runs one unmeasured warmup, then `fit_predict(seed)` n_runs timed times
+  - runs a small unmeasured warmup set, then `fit_predict(seed)` n_runs
+    timed times
   - saves the LAST run's predictions as a .npy file under
     <predictions_path> so the orchestrator can compute parity post-hoc
   - emits a JSON record on the LAST stdout line with timing + versions
@@ -71,8 +72,12 @@ def load_dataset(csv_dir: Path, n: int, p: int, seed: int):
 # Timed-run loop with per-run seed
 # ----------------------------------------------------------------------
 
+def _warmup_count(n_runs: int) -> int:
+    return max(1, min(3, int(n_runs)))
+
+
 def time_runs_seeded(fit_predict_seeded, n_runs: int, seed_base: int):
-    """Run one warmup, then timed seeds [base, base+1, …, base+n_runs-1].
+    """Run warmups, then timed seeds [base, base+1, …, base+n_runs-1].
 
     Returns:
       (stats_dict, last_predictions_array)
@@ -87,10 +92,12 @@ def time_runs_seeded(fit_predict_seeded, n_runs: int, seed_base: int):
     """
     if n_runs < 1:
         raise ValueError("n_runs must be >= 1")
-    # Keep import, dynamic linker, allocator, and first-call kernel setup out
-    # of the measurement window. Reusing seed_base preserves the prediction
-    # seed contract: the last timed run is still seed_base + n_runs - 1.
-    fit_predict_seeded(seed_base)
+    # Keep import, dynamic linker, allocator, first-call kernel setup, and
+    # class factory initialisation out of the measurement window. Reusing
+    # seed_base preserves the prediction seed contract: the last timed run is
+    # still seed_base + n_runs - 1.
+    for _ in range(_warmup_count(n_runs)):
+        fit_predict_seeded(seed_base)
     samples = []
     last_preds = None
     for i in range(n_runs):

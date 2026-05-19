@@ -2,9 +2,16 @@
 % Please edit documentation in R/sklearn.R
 \name{pls}
 \alias{pls}
-\title{Formula-based PLS regression wrapper around the pls4all C ABI.}
+\title{Formula-based PLS regression wrapper around the pls4all C ABI}
 \usage{
-pls(formula, data, ncomp = 2L, algo = "pls_nipals", na.action = stats::na.omit)
+pls(
+  formula,
+  data,
+  ncomp = 2L,
+  algo = "pls_nipals",
+  na.action = stats::na.omit,
+  ...
+)
 }
 \arguments{
 \item{formula}{A two-sided formula (e.g. `y ~ .` or
@@ -23,6 +30,8 @@ containing the response and predictor columns referenced by
 match the R `pls` package's default.}
 
 \item{na.action}{What to do with `NA`s. Default: `na.omit`.}
+
+\item{...}{For matrix-style calls, forwarded to [pls_mdatools()].}
 }
 \value{
 An object of class `c("pls4all_fit", "pls_fit")` with
@@ -44,6 +53,9 @@ Tier-2 idiomatic R interface for tier-1 [pls4all_fit()] /
 so the returned object plays well with `predict()`, `summary()`,
 `coef()`, `print()`, base R `cv.glmnet`-style workflows, and any
 caret model that supports a `predict(object, newdata)` adapter.
+
+When the first argument is not a formula, `pls(x, y, ...)` dispatches
+to the matrix-oriented [pls_mdatools()] compatibility facade.
 }
 \examples{
 \dontrun{
