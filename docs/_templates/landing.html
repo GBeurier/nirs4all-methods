@@ -32,6 +32,7 @@
       --amber-soft:     rgba(184, 110, 15, 0.14);
       --crimson:        #B83A37;
       --indigo:         #2E5BB8;
+      --reference-method-blue: #2563EB;
       --score-best:     #2563EB;
       --score-near:     #B86E0F;
       --score-mid:      #D58A1F;
@@ -105,6 +106,7 @@
       --amber-soft:     rgba(242, 184, 92, 0.18);
       --crimson:        #E96565;
       --indigo:         #7DA8F7;
+      --reference-method-blue: #60A5FA;
       --score-best:     #7DA8F7;
       --score-near:     #F2B85C;
       --score-mid:      #F6C76B;
@@ -777,7 +779,7 @@
       display: inline-block;
       min-width: 12px;
       margin-left: 5px;
-      color: var(--score-best);
+      color: var(--reference-method-blue);
       font-family: var(--mono);
       font-weight: 700;
       text-align: center;
@@ -1124,7 +1126,7 @@
     <span class="legend-item"><span class="score-swatch" style="color:var(--score-mid)">+50%</span> within 50%</span>
     <span class="legend-item"><span class="score-swatch" style="color:var(--score-far)">+100%</span> within 100%</span>
     <span class="legend-item"><span class="score-swatch" style="color:var(--score-slow)">slow</span> slower</span>
-    <span class="legend-item"><span class="reference-method-icon" style="margin-left:0">∟</span> reference method</span>
+    <span class="legend-item"><span class="reference-method-icon" style="margin-left:0">◆</span> reference method</span>
     <span class="legend-item"><span class="ref-badge" style="color:var(--amber);font-weight:600;border-left:2px solid var(--amber);padding-left:5px">ref</span> method reference label</span>
     <span class="legend-item" style="margin-left:auto;color:var(--fg-2);font-size:10px">click header to sort · ⇧+click for descending</span>
   </div>
@@ -1795,7 +1797,7 @@ function isReferenceCell(row, cell, meta) {
   const ref = referenceInfo(row.algo);
   if (!ref || !Array.isArray(ref.libraries) || !ref.libraries.length) return false;
   if (cell.reference_role === 'canonical') return true;
-  const primary = ref.primary || ref.label || '';
+  const primary = ref.raw_primary || ref.primary || ref.label || '';
   const label = cell.reference || meta.reference || '';
   return Boolean(primary && label && label === primary);
 }
@@ -1812,7 +1814,7 @@ function isCanonicalReferenceCell(cell) {
 
 function statusIconHtml(cell) {
   if (isCanonicalReferenceCell(cell)) {
-    return '<span class="reference-method-icon" title="reference method">∟</span>';
+    return '<span class="reference-method-icon" title="reference method">◆</span>';
   }
   const key = normalizeParityKey(cell.parity || cell.raw_parity || 'not_run');
   return `<span class="parity p-${key}">${PARITY_ICON[key] || '—'}</span>`;

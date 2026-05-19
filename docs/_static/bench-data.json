@@ -16824,108 +16824,173 @@
   },
   "reference_by_algo": {
     "airpls": {
-      "label": "pybaselines.airpls",
-      "primary": "pybaselines.airpls",
+      "label": "pybaselines",
+      "primary": "pybaselines",
       "libraries": [
+        "pybaselines"
+      ],
+      "raw_primary": "pybaselines.airpls",
+      "raw_libraries": [
         "pybaselines.airpls"
       ]
     },
     "area_norm": {
-      "label": "nirs4all.AreaNormalization",
-      "primary": "nirs4all.AreaNormalization",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all",
+        "numpy",
+        "R base"
+      ],
+      "raw_primary": "nirs4all.AreaNormalization",
+      "raw_libraries": [
         "nirs4all.AreaNormalization",
         "numpy",
         "R base"
       ]
     },
     "arpls": {
-      "label": "pybaselines.arpls",
-      "primary": "pybaselines.arpls",
+      "label": "pybaselines",
+      "primary": "pybaselines",
       "libraries": [
+        "pybaselines"
+      ],
+      "raw_primary": "pybaselines.arpls",
+      "raw_libraries": [
         "pybaselines.arpls"
       ]
     },
     "asls": {
-      "label": "pybaselines.asls",
-      "primary": "pybaselines.asls",
+      "label": "pybaselines",
+      "primary": "pybaselines",
       "libraries": [
+        "pybaselines"
+      ],
+      "raw_primary": "pybaselines.asls",
+      "raw_libraries": [
         "pybaselines.asls"
       ]
     },
     "baseline_center": {
-      "label": "nirs4all.Baseline",
-      "primary": "nirs4all.Baseline",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all"
+      ],
+      "raw_primary": "nirs4all.Baseline",
+      "raw_libraries": [
         "nirs4all.Baseline"
       ]
     },
     "beads": {
-      "label": "c4a frozen BEADS(simplified)",
-      "primary": "c4a frozen BEADS(simplified)",
+      "label": "c4a frozen",
+      "primary": "c4a frozen",
       "libraries": [
+        "c4a frozen",
+        "pybaselines"
+      ],
+      "raw_primary": "c4a frozen BEADS(simplified)",
+      "raw_libraries": [
         "c4a frozen BEADS(simplified)",
         "pybaselines.beads(full)"
       ]
     },
     "crop": {
-      "label": "nirs4all.CropTransformer",
-      "primary": "nirs4all.CropTransformer",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all"
+      ],
+      "raw_primary": "nirs4all.CropTransformer",
+      "raw_libraries": [
         "nirs4all.CropTransformer"
       ]
     },
     "detrend": {
-      "label": "nirs4all.Detrend",
-      "primary": "nirs4all.Detrend",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all",
+        "scipy",
+        "R stats"
+      ],
+      "raw_primary": "nirs4all.Detrend",
+      "raw_libraries": [
         "nirs4all.Detrend",
         "scipy.signal.detrend",
         "R stats"
       ]
     },
     "emsc": {
-      "label": "nirs4all.ExtendedMultiplicativeScatterCorrection(scale=False)",
-      "primary": "nirs4all.ExtendedMultiplicativeScatterCorrection(scale=False)",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all"
+      ],
+      "raw_primary": "nirs4all.ExtendedMultiplicativeScatterCorrection(scale=False)",
+      "raw_libraries": [
         "nirs4all.ExtendedMultiplicativeScatterCorrection(scale=False)"
       ]
     },
     "epo": {
-      "label": "nirs4all.EPO",
-      "primary": "nirs4all.EPO",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all"
+      ],
+      "raw_primary": "nirs4all.EPO",
+      "raw_libraries": [
         "nirs4all.EPO"
       ]
     },
     "fck_static": {
-      "label": "c4a frozen FCKStatic(fckpls kernel)",
-      "primary": "c4a frozen FCKStatic(fckpls kernel)",
+      "label": "c4a frozen",
+      "primary": "c4a frozen",
       "libraries": [
+        "c4a frozen",
+        "nirs4all"
+      ],
+      "raw_primary": "c4a frozen FCKStatic(fckpls kernel)",
+      "raw_libraries": [
         "c4a frozen FCKStatic(fckpls kernel)",
         "nirs4all.FCKStaticTransformer(current)"
       ]
     },
     "first_derivative": {
-      "label": "nirs4all.FirstDerivative",
-      "primary": "nirs4all.FirstDerivative",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all",
+        "numpy"
+      ],
+      "raw_primary": "nirs4all.FirstDerivative",
+      "raw_libraries": [
         "nirs4all.FirstDerivative",
         "numpy.gradient"
       ]
     },
     "flexible_pca": {
-      "label": "nirs4all.FlexiblePCA",
-      "primary": "nirs4all.FlexiblePCA",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all",
+        "sklearn"
+      ],
+      "raw_primary": "nirs4all.FlexiblePCA",
+      "raw_libraries": [
         "nirs4all.FlexiblePCA",
         "sklearn.decomposition.PCA"
       ]
     },
     "flexible_svd": {
-      "label": "nirs4all.FlexibleSVD",
-      "primary": "nirs4all.FlexibleSVD",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all",
+        "sklearn"
+      ],
+      "raw_primary": "nirs4all.FlexibleSVD",
+      "raw_libraries": [
         "nirs4all.FlexibleSVD",
         "sklearn.decomposition.TruncatedSVD"
       ]
@@ -16936,6 +17001,11 @@
       "libraries": [
         "numpy",
         "R base"
+      ],
+      "raw_primary": "numpy",
+      "raw_libraries": [
+        "numpy",
+        "R base"
       ]
     },
     "from_absorbance": {
@@ -16944,59 +17014,97 @@
       "libraries": [
         "numpy",
         "R base"
+      ],
+      "raw_primary": "numpy",
+      "raw_libraries": [
+        "numpy",
+        "R base"
       ]
     },
     "gaussian": {
-      "label": "nirs4all.Gaussian",
-      "primary": "nirs4all.Gaussian",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all",
+        "scipy"
+      ],
+      "raw_primary": "nirs4all.Gaussian",
+      "raw_libraries": [
         "nirs4all.Gaussian",
         "scipy.ndimage.gaussian_filter1d"
       ]
     },
     "haar": {
-      "label": "PyWavelets.dwt(haar, periodization)",
-      "primary": "PyWavelets.dwt(haar, periodization)",
+      "label": "PyWavelets",
+      "primary": "PyWavelets",
       "libraries": [
+        "PyWavelets",
+        "nirs4all"
+      ],
+      "raw_primary": "PyWavelets.dwt(haar, periodization)",
+      "raw_libraries": [
         "PyWavelets.dwt(haar, periodization)",
         "nirs4all.Haar(detail-resampled)"
       ]
     },
     "iasls": {
-      "label": "pybaselines.iasls",
-      "primary": "pybaselines.iasls",
+      "label": "pybaselines",
+      "primary": "pybaselines",
       "libraries": [
+        "pybaselines"
+      ],
+      "raw_primary": "pybaselines.iasls",
+      "raw_libraries": [
         "pybaselines.iasls"
       ]
     },
     "imodpoly": {
-      "label": "pybaselines.imodpoly(mask_initial_peaks=False)",
-      "primary": "pybaselines.imodpoly(mask_initial_peaks=False)",
+      "label": "pybaselines",
+      "primary": "pybaselines",
       "libraries": [
+        "pybaselines"
+      ],
+      "raw_primary": "pybaselines.imodpoly(mask_initial_peaks=False)",
+      "raw_libraries": [
         "pybaselines.imodpoly(mask_initial_peaks=False)"
       ]
     },
     "kbins_discretizer": {
-      "label": "nirs4all.IntegerKBinsDiscretizer",
-      "primary": "nirs4all.IntegerKBinsDiscretizer",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all",
+        "sklearn"
+      ],
+      "raw_primary": "nirs4all.IntegerKBinsDiscretizer",
+      "raw_libraries": [
         "nirs4all.IntegerKBinsDiscretizer",
         "sklearn.preprocessing.KBinsDiscretizer"
       ]
     },
     "kbins_stratified": {
-      "label": "c4a frozen KBinsStratified(PCG64)",
-      "primary": "c4a frozen KBinsStratified(PCG64)",
+      "label": "c4a frozen",
+      "primary": "c4a frozen",
       "libraries": [
+        "c4a frozen",
+        "nirs4all",
+        "sklearn"
+      ],
+      "raw_primary": "c4a frozen KBinsStratified(PCG64)",
+      "raw_libraries": [
         "c4a frozen KBinsStratified(PCG64)",
         "nirs4all.KBinsStratifiedSplitter",
         "sklearn.model_selection.StratifiedShuffleSplit"
       ]
     },
     "kennard_stone": {
-      "label": "nirs4all.KennardStoneSplitter",
-      "primary": "nirs4all.KennardStoneSplitter",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all"
+      ],
+      "raw_primary": "nirs4all.KennardStoneSplitter",
+      "raw_libraries": [
         "nirs4all.KennardStoneSplitter"
       ]
     },
@@ -17006,26 +17114,43 @@
       "libraries": [
         "numpy",
         "R base"
+      ],
+      "raw_primary": "numpy",
+      "raw_libraries": [
+        "numpy",
+        "R base"
       ]
     },
     "lsnv": {
-      "label": "nirs4all.LocalStandardNormalVariate",
-      "primary": "nirs4all.LocalStandardNormalVariate",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all"
+      ],
+      "raw_primary": "nirs4all.LocalStandardNormalVariate",
+      "raw_libraries": [
         "nirs4all.LocalStandardNormalVariate"
       ]
     },
     "modpoly": {
-      "label": "pybaselines.modpoly",
-      "primary": "pybaselines.modpoly",
+      "label": "pybaselines",
+      "primary": "pybaselines",
       "libraries": [
+        "pybaselines"
+      ],
+      "raw_primary": "pybaselines.modpoly",
+      "raw_libraries": [
         "pybaselines.modpoly"
       ]
     },
     "msc": {
-      "label": "nirs4all.MultiplicativeScatterCorrection(scale=False)",
-      "primary": "nirs4all.MultiplicativeScatterCorrection(scale=False)",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all"
+      ],
+      "raw_primary": "nirs4all.MultiplicativeScatterCorrection(scale=False)",
+      "raw_libraries": [
         "nirs4all.MultiplicativeScatterCorrection(scale=False)"
       ]
     },
@@ -17035,19 +17160,32 @@
       "libraries": [
         "numpy",
         "R base"
+      ],
+      "raw_primary": "numpy",
+      "raw_libraries": [
+        "numpy",
+        "R base"
       ]
     },
     "norris_williams": {
-      "label": "nirs4all.NorrisWilliams",
-      "primary": "nirs4all.NorrisWilliams",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all"
+      ],
+      "raw_primary": "nirs4all.NorrisWilliams",
+      "raw_libraries": [
         "nirs4all.NorrisWilliams"
       ]
     },
     "osc": {
-      "label": "nirs4all.OSC",
-      "primary": "nirs4all.OSC",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all"
+      ],
+      "raw_primary": "nirs4all.OSC",
+      "raw_libraries": [
         "nirs4all.OSC"
       ]
     },
@@ -17057,27 +17195,45 @@
       "libraries": [
         "numpy",
         "R base"
+      ],
+      "raw_primary": "numpy",
+      "raw_libraries": [
+        "numpy",
+        "R base"
       ]
     },
     "range_discretizer": {
-      "label": "nirs4all.RangeDiscretizer",
-      "primary": "nirs4all.RangeDiscretizer",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all"
+      ],
+      "raw_primary": "nirs4all.RangeDiscretizer",
+      "raw_libraries": [
         "nirs4all.RangeDiscretizer"
       ]
     },
     "resample": {
-      "label": "nirs4all.ResampleTransformer",
-      "primary": "nirs4all.ResampleTransformer",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all",
+        "scipy"
+      ],
+      "raw_primary": "nirs4all.ResampleTransformer",
+      "raw_libraries": [
         "nirs4all.ResampleTransformer",
         "scipy.interpolate.interp1d"
       ]
     },
     "resampler": {
-      "label": "nirs4all.Resampler",
-      "primary": "nirs4all.Resampler",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all"
+      ],
+      "raw_primary": "nirs4all.Resampler",
+      "raw_libraries": [
         "nirs4all.Resampler"
       ]
     },
@@ -17087,44 +17243,74 @@
       "libraries": [
         "numpy",
         "R base"
+      ],
+      "raw_primary": "numpy",
+      "raw_libraries": [
+        "numpy",
+        "R base"
       ]
     },
     "rolling_ball": {
-      "label": "pybaselines.rolling_ball",
-      "primary": "pybaselines.rolling_ball",
+      "label": "pybaselines",
+      "primary": "pybaselines",
       "libraries": [
+        "pybaselines"
+      ],
+      "raw_primary": "pybaselines.rolling_ball",
+      "raw_libraries": [
         "pybaselines.rolling_ball"
       ]
     },
     "savitzky_golay": {
-      "label": "scipy.signal.savgol_filter",
-      "primary": "scipy.signal.savgol_filter",
+      "label": "scipy",
+      "primary": "scipy",
       "libraries": [
+        "scipy",
+        "nirs4all"
+      ],
+      "raw_primary": "scipy.signal.savgol_filter",
+      "raw_libraries": [
         "scipy.signal.savgol_filter",
         "nirs4all.SavitzkyGolay(default edge mode)"
       ]
     },
     "second_derivative": {
-      "label": "nirs4all.SecondDerivative",
-      "primary": "nirs4all.SecondDerivative",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all",
+        "numpy"
+      ],
+      "raw_primary": "nirs4all.SecondDerivative",
+      "raw_libraries": [
         "nirs4all.SecondDerivative",
         "numpy.gradient"
       ]
     },
     "simple_scale": {
-      "label": "sklearn.preprocessing.MinMaxScaler",
-      "primary": "sklearn.preprocessing.MinMaxScaler",
+      "label": "sklearn",
+      "primary": "sklearn",
       "libraries": [
+        "sklearn",
+        "numpy",
+        "R base"
+      ],
+      "raw_primary": "sklearn.preprocessing.MinMaxScaler",
+      "raw_libraries": [
         "sklearn.preprocessing.MinMaxScaler",
         "numpy",
         "R base"
       ]
     },
     "snip": {
-      "label": "c4a frozen SNIP(LLS)",
-      "primary": "c4a frozen SNIP(LLS)",
+      "label": "c4a frozen",
+      "primary": "c4a frozen",
       "libraries": [
+        "c4a frozen",
+        "pybaselines"
+      ],
+      "raw_primary": "c4a frozen SNIP(LLS)",
+      "raw_libraries": [
         "c4a frozen SNIP(LLS)",
         "pybaselines.snip(raw)"
       ]
@@ -17135,12 +17321,21 @@
       "libraries": [
         "numpy",
         "R base"
+      ],
+      "raw_primary": "numpy",
+      "raw_libraries": [
+        "numpy",
+        "R base"
       ]
     },
     "spxy": {
-      "label": "nirs4all.SPXYSplitter",
-      "primary": "nirs4all.SPXYSplitter",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all"
+      ],
+      "raw_primary": "nirs4all.SPXYSplitter",
+      "raw_libraries": [
         "nirs4all.SPXYSplitter"
       ]
     },
@@ -17150,44 +17345,73 @@
       "libraries": [
         "numpy",
         "R base"
+      ],
+      "raw_primary": "numpy",
+      "raw_libraries": [
+        "numpy",
+        "R base"
       ]
     },
     "wavelet": {
-      "label": "PyWavelets.dwt(haar, periodization)",
-      "primary": "PyWavelets.dwt(haar, periodization)",
+      "label": "PyWavelets",
+      "primary": "PyWavelets",
       "libraries": [
+        "PyWavelets",
+        "nirs4all"
+      ],
+      "raw_primary": "PyWavelets.dwt(haar, periodization)",
+      "raw_libraries": [
         "PyWavelets.dwt(haar, periodization)",
         "nirs4all.Wavelet(detail-resampled)"
       ]
     },
     "wavelet_denoise": {
-      "label": "PyWavelets.wavedec/waverec(db4, periodization)",
-      "primary": "PyWavelets.wavedec/waverec(db4, periodization)",
+      "label": "PyWavelets",
+      "primary": "PyWavelets",
       "libraries": [
+        "PyWavelets",
+        "nirs4all"
+      ],
+      "raw_primary": "PyWavelets.wavedec/waverec(db4, periodization)",
+      "raw_libraries": [
         "PyWavelets.wavedec/waverec(db4, periodization)",
         "nirs4all.WaveletDenoise"
       ]
     },
     "wavelet_features": {
-      "label": "PyWavelets.wavedec(haar, symmetric)+histogram band stats",
-      "primary": "PyWavelets.wavedec(haar, symmetric)+histogram band stats",
+      "label": "PyWavelets",
+      "primary": "PyWavelets",
       "libraries": [
+        "PyWavelets",
+        "nirs4all"
+      ],
+      "raw_primary": "PyWavelets.wavedec(haar, symmetric)+histogram band stats",
+      "raw_libraries": [
         "PyWavelets.wavedec(haar, symmetric)+histogram band stats",
         "nirs4all.WaveletFeatures(n_coeffs_per_level=0)"
       ]
     },
     "x_outlier_mahalanobis": {
-      "label": "sklearn.PCA(full)+EmpiricalCovariance+chi2",
-      "primary": "sklearn.PCA(full)+EmpiricalCovariance+chi2",
+      "label": "sklearn",
+      "primary": "sklearn",
       "libraries": [
+        "sklearn",
+        "nirs4all"
+      ],
+      "raw_primary": "sklearn.PCA(full)+EmpiricalCovariance+chi2",
+      "raw_libraries": [
         "sklearn.PCA(full)+EmpiricalCovariance+chi2",
         "nirs4all.XOutlierFilter(PCA auto)"
       ]
     },
     "y_outlier_iqr": {
-      "label": "nirs4all.YOutlierFilter",
-      "primary": "nirs4all.YOutlierFilter",
+      "label": "nirs4all",
+      "primary": "nirs4all",
       "libraries": [
+        "nirs4all"
+      ],
+      "raw_primary": "nirs4all.YOutlierFilter",
+      "raw_libraries": [
         "nirs4all.YOutlierFilter"
       ]
     }

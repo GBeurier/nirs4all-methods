@@ -213,6 +213,27 @@ def _column_version(raw: dict) -> str:
     return raw.get("lib_build") or raw.get("reference_library") or "not reported"
 
 
+def _reference_display_name(raw: dict) -> str:
+    backend = raw.get("backend", "").strip()
+    library = raw.get("reference_library", "").strip()
+    by_backend = {
+        "ref.nirs4all": "nirs4all",
+        "ref.sklearn": "sklearn",
+        "ref.pybaselines": "pybaselines",
+        "ref.pywavelets": "PyWavelets",
+        "ref.frozen": "c4a frozen",
+        "ref.scipy": "scipy",
+        "ref.numpy": "numpy",
+        "ref.r.base": "R base",
+        "ref.r.stats": "R stats",
+    }
+    if backend in by_backend:
+        return by_backend[backend]
+    if library:
+        return re.split(r"[.(\s]", library, maxsplit=1)[0]
+    return backend.removeprefix("ref.") if backend.startswith("ref.") else backend
+
+
 def _column_id(row: dict) -> str:
     backend = row.get("backend", "unknown").strip() or "unknown"
     build = row.get("lib_build", "").strip()
@@ -361,13 +382,21 @@ def build_payload(results_dir: Path) -> dict:
         kind = raw.get("kind", "").strip()
         reference_library = raw.get("reference_library", "").strip()
         if backend.startswith("ref.") or kind == "external_reference":
-            ref_label = reference_library or backend
-            ref_info = references_by_algo.setdefault(algo, {"primary": "", "libraries": []})
+            ref_label = _reference_display_name(raw)
+            raw_ref_label = reference_library or backend
+            ref_info = references_by_algo.setdefault(
+                algo,
+                {"primary": "", "libraries": [], "raw_primary": "", "raw_libraries": []},
+            )
             refs = ref_info["libraries"]
             if isinstance(refs, list) and ref_label and ref_label not in refs:
                 refs.append(ref_label)
+            raw_refs = ref_info["raw_libraries"]
+            if isinstance(raw_refs, list) and raw_ref_label and raw_ref_label not in raw_refs:
+                raw_refs.append(raw_ref_label)
             if raw.get("reference_role", "").strip() == "canonical" and ref_label and not ref_info.get("primary"):
                 ref_info["primary"] = ref_label
+                ref_info["raw_primary"] = raw_ref_label
         gate = "reference" if (backend.startswith("ref.") or kind == "external_reference") else (
             "binding" if backend in {"python", "r", "matlab"} else "native"
         )
@@ -420,10 +449,16 @@ def build_payload(results_dir: Path) -> dict:
         if not isinstance(refs, list):
             refs = []
         primary = str(ref_info.get("primary") or (refs[0] if refs else ""))
+        raw_refs = ref_info.get("raw_libraries", [])
+        if not isinstance(raw_refs, list):
+            raw_refs = []
+        raw_primary = str(ref_info.get("raw_primary") or (raw_refs[0] if raw_refs else ""))
         reference_by_algo[algo] = {
             "label": primary or (" / ".join(refs[:3]) + (f" +{len(refs) - 3}" if len(refs) > 3 else "")),
             "primary": primary,
             "libraries": refs,
+            "raw_primary": raw_primary,
+            "raw_libraries": raw_refs,
         }
     payload = {
         "generated_at": generated_at,
