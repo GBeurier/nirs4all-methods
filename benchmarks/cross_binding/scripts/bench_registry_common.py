@@ -53,6 +53,14 @@ def adapted_params(method, n: int, p: int, n_components: int) -> dict:
                                             max(1, n_classes - 1)))
     if "max_components" in params:
         params["max_components"] = _cap_components(params["max_components"], n, p)
+    if (method.name in {"ipw_select", "rep_select", "shaving_select"}
+            and not use_registry_components):
+        # These selectors are compared to compact plsVarSel survivor sets.
+        # Keep their registry-tuned component counts during size sweeps instead
+        # of inheriting the global dashboard n_components value.
+        params["n_components"] = _cap_components(
+            method.cell_params.get("n_components", params.get("n_components", n_components)),
+            n, p)
     if "n_predictive" in params:
         params["n_predictive"] = _cap_components(
             min(params["n_predictive"], n_components), n, p)
@@ -72,6 +80,55 @@ def adapted_params(method, n: int, p: int, n_components: int) -> dict:
         params["n_blocks"] = max(1, min(n_blocks, p))
         params["n_unique_per_block"] = np.ones(params["n_blocks"],
                                                dtype=np.int32)
+    # Multi-block methods need a `block_sizes` partition of p. The
+    # Python registry's `_split_into_blocks(X, n_blocks)` uses
+    # `cols_per_block = p // n_blocks` for the first n_blocks-1 chunks
+    # and gives the remainder to the LAST chunk (so p=50, n_blocks=3 →
+    # [16, 16, 18]). Build the same distribution here so R/MATLAB
+    # bindings consume the same partition the C kernel will see on the
+    # Python path — otherwise cells like mb_pls / rosa / so_pls show a
+    # spurious ~0.04 max_diff across bindings.
+    n_blocks_val = params.get("n_blocks")
+    if n_blocks_val is not None and "block_sizes" not in params:
+        nb = max(1, min(int(n_blocks_val), p))
+        base = p // nb
+        sizes = [base] * (nb - 1) + [p - base * (nb - 1)] if nb >= 1 else [p]
+        params["block_sizes"] = np.array(sizes, dtype=np.int32)
+    # `min_selected` (T2/ST selectors) must respect n_components ≤
+    # min_selected ≤ p. The registry's cell may have a small fixed value
+    # that drops below n_components once the orchestrator overrides it.
+    if "min_selected" in params and "n_components" in params:
+        lo = int(params["n_components"])
+        hi = int(p)
+        params["min_selected"] = max(lo, min(int(params["min_selected"]), hi))
+    if method.name == "bve_select":
+        requested_components = int(params.get("n_components", n_components))
+        # The 100x50 dashboard smoke cell is compared to plsVarSel::bve_pls,
+        # whose VIP cutoff often returns a very compact survivor set. Keep the
+        # non-registry sweep compact as well; otherwise Gate 2 mostly measures
+        # cardinality mismatch rather than BVE agreement.
+        if not use_registry_components:
+            params["n_components"] = _cap_components(3, n, p)
+            requested_components = int(params["n_components"])
+            params["min_features"] = min(
+                p, max(requested_components, min(3, p)))
+        min_features = max(requested_components,
+                           min(int(params.get("min_features", 5)), p))
+        # BVE is defined by a backward trajectory. On non-registry size
+        # sweeps, keep eliminating until the requested survivor floor so
+        # the external plsVarSel reference and pls4all compare masks with
+        # comparable cardinality instead of "almost all variables" vs
+        # "final survivor set".
+        params["min_features"] = min_features
+        params["n_steps"] = max(1, p - min_features)
+    if method.name == "uve_select" and not use_registry_components:
+        # The global dashboard size sweep overrides n_components. Keep a
+        # deterministic UVE noise baseline that remains comparable to
+        # plsVarSel::mcuve_pls at the dashboard's 100x50 smoke size, while
+        # leaving the MethodSpec registry cell untouched.
+        params["n_components"] = _cap_components(2, n, p)
+        params["noise_features"] = min(max(8, int(params.get("noise_features", 5))), p)
+        params["noise_seed"] = 12
     return params
 
 

@@ -23,8 +23,8 @@ Persistence strategy per family:
   `RecursivePLSRegression`, `LWPLSRegression`,
   `MissingAwareNipalsRegression`, `GroupSparsePLSRegression`,
   `FusedSparsePLSRegression`, `BaggingPLSRegression`,
-  `BoostingPLSRegression`, `RandomSubspacePLSRegression`,
-  `SOPLSRegression`, `ONPLSRegression`, `ROSARegression`)
+  `GPRPLSRegression`, `BoostingPLSRegression`,
+  `RandomSubspacePLSRegression`, `SOPLSRegression`, `ROSARegression`)
   store the in-sample `predictions_` and refuse predict-on-new-X
   with an informative error pointing to tier 1. See
   :mod:`pls4all.sklearn._in_sample` for the contract.
@@ -90,6 +90,7 @@ from ._in_sample import (
     BoostingPLSRegression,
     ContinuumRegression,
     FusedSparsePLSRegression,
+    GPRPLSRegression,
     GroupSparsePLSRegression,
     LWPLSRegression,
     MissingAwareNipalsRegression,
@@ -136,8 +137,10 @@ from ._selection import (
 
 # Diagnostic functions
 from ._diagnostics import (
+    aom_preprocess,
     approximate_press,
     dmodx_score,
+    on_pls,
     one_se_rule,
     pls_monitoring,
     q_score,
@@ -165,7 +168,7 @@ __all__ = [
     "RecursivePLSRegression", "LWPLSRegression",
     "MissingAwareNipalsRegression",
     "GroupSparsePLSRegression", "FusedSparsePLSRegression",
-    "BaggingPLSRegression", "BoostingPLSRegression",
+    "BaggingPLSRegression", "GPRPLSRegression", "BoostingPLSRegression",
     "RandomSubspacePLSRegression", "SOPLSRegression",
     "ROSARegression",
     # 28 SelectorMixin variable-selection wrappers
@@ -181,5 +184,5 @@ __all__ = [
     "WVCThresholdSelector",
     # Diagnostic functions
     "t2_score", "q_score", "dmodx_score", "pls_monitoring",
-    "approximate_press", "one_se_rule",
+    "approximate_press", "one_se_rule", "aom_preprocess", "on_pls",
 ]

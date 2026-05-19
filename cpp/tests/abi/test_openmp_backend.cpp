@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Phase 44 regression: confirm the OMP-annotated deflation, loading,
 // and fill_prediction paths produce results numerically equivalent to

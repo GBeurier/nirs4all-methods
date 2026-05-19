@@ -41,12 +41,16 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 DATA_DIR = HERE / "data"
 PREDS_DIR = HERE / "data" / ".predictions"
+ORACLES_DIR = HERE / "data" / ".reference_oracles"
+X_TARGET_DIR = HERE / "data" / ".x_target"
 RESULTS_DIR = HERE / "results"
 SCRIPTS_DIR = HERE / "scripts"
-for d in (DATA_DIR, PREDS_DIR, RESULTS_DIR, SCRIPTS_DIR):
+for d in (DATA_DIR, PREDS_DIR, ORACLES_DIR, X_TARGET_DIR,
+          RESULTS_DIR, SCRIPTS_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
 from benchmarks.parity_timing.registry import (  # noqa: E402
+    canonical_reference_for_method,
     get_method,
     method_names,
     resolved_references_for_method,
@@ -69,6 +73,7 @@ DEFAULT_SIZES = [
 
 # Per-cell wall-clock timeout (seconds).
 DEFAULT_TIMEOUT_S = 300
+TIMING_SCHEMA = "warmup-v2"
 
 # (name, script, language, tier, kind)
 #   kind ∈ {"pls4all_core", "pls4all_binding", "external"}
@@ -91,6 +96,17 @@ BACKENDS = [
     ("matlab_pls",   "bench_matlab_pls.m",    "MATLAB", "external", "external"),
 ]
 
+REFERENCE_SCRIPT_OVERRIDES = {
+    # These reference libraries already have fixed external benchmark
+    # drivers that run warmup + timed samples inside one R process. The
+    # generic registry reference driver would fork Rscript for every
+    # prediction when rpy2 is unavailable, turning the reference columns
+    # into R startup timings rather than library timings.
+    "r_pls": "bench_r_pls.R",
+    "r_ropls": "bench_r_ropls.R",
+    "r_mixomics": "bench_r_mixomics.R",
+}
+
 
 def registry_reference_backends_for(algo: str) -> list[tuple[str, str, str, str, str]]:
     """External reference backends declared by the canonical MethodSpec."""
@@ -102,7 +118,9 @@ def registry_reference_backends_for(algo: str) -> list[tuple[str, str, str, str,
     for ref in resolved_references_for_method(method):
         lang = ref["language"]
         display_lang = "Python" if lang == "python" else lang
-        out.append((f"ref_{ref['id']}", "bench_registry_reference.py",
+        script = REFERENCE_SCRIPT_OVERRIDES.get(
+            ref["id"], "bench_registry_reference.py")
+        out.append((f"ref_{ref['id']}", script,
                     display_lang, ref["library"], "external"))
     return out
 
@@ -142,9 +160,211 @@ def gen_dataset_csv(n: int, p: int, seed: int) -> Path:
     return csv_path
 
 
+def gen_x_target_csv(n: int, p: int, seed: int) -> Path:
+    """Generate the NumPy/PCG X_target sidecar used by R/MATLAB cells."""
+    path = X_TARGET_DIR / f"xtarget_{n}x{p}_seed{seed}.csv"
+    if path.exists():
+        return path
+    csv_path = gen_dataset_csv(n, p, seed)
+    arr = np.loadtxt(csv_path, delimiter=",", skiprows=1, dtype=np.float64)
+    X = np.ascontiguousarray(arr[:, :-1])
+    rng = np.random.default_rng(seed)
+    X_target = X + 0.01 * rng.standard_normal(X.shape)
+    np.savetxt(path, X_target, delimiter=",", comments="", fmt="%.17g")
+    return path
+
+
 def predictions_path(algo: str, backend: str, n: int, p: int,
                       threads: int, build: str) -> Path:
     return PREDS_DIR / f"{algo}_{backend}_{n}x{p}_t{threads}_{build}.npy"
+
+
+def reference_oracle_path(algo: str, backend: str, n: int, p: int,
+                          prediction_seed: int) -> Path:
+    return ORACLES_DIR / f"{algo}_{backend}_{n}x{p}_seed{prediction_seed}.npy"
+
+
+def prediction_metadata_path(pred_path: Path) -> Path:
+    return pred_path.with_suffix(".json")
+
+
+def record_prediction_seed(record: dict) -> int:
+    value = record.get("prediction_seed")
+    if value not in (None, ""):
+        return int(value)
+    pred_path = record.get("predictions_path")
+    if pred_path:
+        meta_path = prediction_metadata_path(Path(pred_path))
+        if meta_path.exists():
+            try:
+                meta = json.loads(meta_path.read_text())
+                value = meta.get("prediction_seed")
+                if value not in (None, ""):
+                    return int(value)
+            except (OSError, json.JSONDecodeError, TypeError, ValueError):
+                pass
+    seed_base = int(record.get("seed_base") or DEFAULT_SEED_BASE)
+    measured_runs = record.get("n_runs")
+    try:
+        measured_runs_int = int(measured_runs)
+    except (TypeError, ValueError):
+        measured_runs_int = 1
+    # Legacy CSVs did not record the exact last timed seed. Use seed_base as
+    # the safest value for one-shot runs. For warmup-discarded rows, bench
+    # scripts stored n_runs=input_runs-1, so the last seed is base+n_runs.
+    if measured_runs_int > 1:
+        return seed_base + measured_runs_int
+    return seed_base
+
+
+def write_prediction_metadata(record: dict) -> None:
+    pred_path = record.get("predictions_path")
+    if not record.get("ok") or not pred_path:
+        return
+    path = Path(pred_path)
+    if not path.exists():
+        return
+    meta = {
+        "algorithm": record.get("algorithm"),
+        "backend": record.get("backend"),
+        "kind": record.get("kind"),
+        "n": record.get("n"),
+        "p": record.get("p"),
+        "threads": record.get("threads"),
+        "libp4a_build": record.get("libp4a_build"),
+        "seed_base": record.get("seed_base"),
+        "prediction_seed": record_prediction_seed(record),
+        "n_runs": record.get("n_runs"),
+        "versions": record.get("versions") or {},
+    }
+    prediction_metadata_path(path).write_text(
+        json.dumps(meta, sort_keys=True, indent=2) + "\n")
+
+
+def snapshot_reference_oracle(record: dict) -> None:
+    """Freeze the canonical external prediction vector for later gates.
+
+    The regular predictions cache is per-run scratch. This snapshot is the
+    oracle used by --only-pls4all runs; it changes only when the canonical
+    reference backend is run again, typically after updating that library.
+    """
+    if not record.get("ok") or record.get("kind") != "external":
+        return
+    pred_path = record.get("predictions_path")
+    if not pred_path or not Path(pred_path).exists():
+        return
+    try:
+        method = get_method(record["algorithm"])
+        canonical = canonical_reference_for_method(method)
+    except KeyError:
+        return
+    if canonical is None:
+        return
+    canonical_backend = f"ref_{canonical['id']}"
+    if record.get("backend") != canonical_backend:
+        return
+
+    prediction_seed = record_prediction_seed(record)
+    dst = reference_oracle_path(
+        record["algorithm"], canonical_backend,
+        int(record["n"]), int(record["p"]), prediction_seed)
+    shutil.copy2(Path(pred_path), dst)
+    meta = {
+        "algorithm": record.get("algorithm"),
+        "backend": canonical_backend,
+        "n": record.get("n"),
+        "p": record.get("p"),
+        "seed_base": record.get("seed_base"),
+        "prediction_seed": prediction_seed,
+        "n_runs": record.get("n_runs"),
+        "source_predictions_path": str(pred_path),
+        "versions": record.get("versions") or {},
+    }
+    prediction_metadata_path(dst).write_text(
+        json.dumps(meta, sort_keys=True, indent=2) + "\n")
+
+
+def load_prediction_array(path: Path):
+    try:
+        return np.load(path), ""
+    except Exception as exc:
+        return None, f"load error: {exc}"
+
+
+def load_reference_oracle(algo: str, canonical_backend: str, n: int, p: int,
+                          prediction_seed: int, reference_ref: dict | None):
+    """Load the canonical external prediction vector for one dataset seed."""
+    if reference_ref is not None:
+        ref_seed = record_prediction_seed(reference_ref)
+        rref_path = reference_ref.get("predictions_path")
+        if ref_seed == prediction_seed and rref_path:
+            path = Path(rref_path)
+            if path.exists():
+                arr, note = load_prediction_array(path)
+                if arr is not None:
+                    return arr, str(path), "current"
+                return None, str(path), note
+
+    path = reference_oracle_path(algo, canonical_backend, n, p,
+                                 prediction_seed)
+    if path.exists():
+        arr, note = load_prediction_array(path)
+        if arr is not None:
+            return arr, str(path), "stored"
+        return None, str(path), note
+    return None, str(path), "missing"
+
+
+def _params_to_json(params: dict) -> str:
+    """Serialise the orchestrator-side `adapted_params` dict so R/MATLAB
+    receive the exact same param shape Python uses. Numpy arrays become
+    plain lists; numpy scalars become Python scalars. Keys that only make
+    sense to the Python registry layer (n_samples, n_features) are dropped
+    so the R dispatcher's per-algo whitelists don't reject them."""
+    out = {}
+    for key, value in params.items():
+        if key in {"n_samples", "n_features"}:
+            continue
+        if hasattr(value, "tolist"):
+            out[key] = value.tolist()
+        elif isinstance(value, (np.integer,)):
+            out[key] = int(value)
+        elif isinstance(value, (np.floating,)):
+            out[key] = float(value)
+        else:
+            out[key] = value
+    return json.dumps(out)
+
+
+def _subprocess_failure_reason(out: subprocess.CompletedProcess) -> str:
+    """Return the most actionable short failure line from stdout/stderr.
+
+    R and Octave often end with generic stack frames such as
+    "Execution halted" or "bench_*.m at line ..."; the actual gate reason
+    is usually one or two lines above.
+    """
+    lines = []
+    for text in (out.stderr, out.stdout):
+        lines.extend((text or "").strip().splitlines())
+    for line in reversed(lines):
+        clean = line.strip()
+        low = clean.lower()
+        if not clean:
+            continue
+        if clean == "Execution halted":
+            continue
+        if low.startswith("calls:"):
+            continue
+        if low == "error: called from":
+            continue
+        if low.startswith("called from"):
+            continue
+        if " at line " in low and " column " in low:
+            continue
+        if low.startswith("error: ignoring const execution_exception"):
+            continue
+        return clean[:200]
+    return "exit != 0"
 
 
 def run_backend(name: str, script: str, language: str, tier: str,
@@ -169,6 +389,12 @@ def run_backend(name: str, script: str, language: str, tier: str,
     # Externals don't care about libp4a build; pls4all backends do.
     lib_dir = LIBP4A_BUILDS[libp4a_build]
     env["PLS4ALL_LIB_DIR"] = lib_dir
+    # PLS4ALL_LIB_PATH is the env var actually honoured by
+    # `pls4all._ffi._load_library` to override library discovery. Without
+    # it the per-build sweep silently runs against whichever libp4a the
+    # importer finds first (auditwheel sibling / pip-installed wheel /
+    # build/dev-release), making the build column degenerate.
+    env["PLS4ALL_LIB_PATH"] = os.path.join(lib_dir, "libp4a.so")
     env["BENCH_LIBP4A_BUILD"] = libp4a_build
     env["LD_LIBRARY_PATH"] = ":".join([
         lib_dir,
@@ -188,6 +414,42 @@ def run_backend(name: str, script: str, language: str, tier: str,
     ])
     if script == "bench_registry_reference.py" and name.startswith("ref_"):
         env["BENCH_REFERENCE_ID"] = name[len("ref_"):]
+
+    # R / MATLAB scripts route through `pls4all_method` (R) or the
+    # +pls4all package (MATLAB). Both need the per-algo params that
+    # `adapted_params` computes in Python. Serialise to JSON env var so
+    # the R/MATLAB script gets the exact same param shape we use on the
+    # Python side.
+    if script.endswith(".R") or script.endswith(".m"):
+        try:
+            from benchmarks.cross_binding.scripts.bench_registry_common import (
+                adapted_params, load_method)
+            method = load_method(algo)
+            params = adapted_params(method, n, p, n_components)
+            env["BENCH_R_PARAMS_JSON"] = _params_to_json(params)
+            env["BENCH_MATLAB_PARAMS_JSON"] = env["BENCH_R_PARAMS_JSON"]
+            if method.needs_labels:
+                env["BENCH_R_NEEDS_LABELS"] = "1"
+            if method.needs_sample_weights:
+                env["BENCH_R_NEEDS_SAMPLE_WEIGHTS"] = "1"
+            if method.needs_group_assignment:
+                env["BENCH_R_NEEDS_GROUP_ASSIGNMENT"] = "1"
+            if method.needs_x_target:
+                # R/MATLAB read per-seed NumPy/PCG sidecars so their
+                # X_target matches the Python registry exactly.
+                env["BENCH_R_NEEDS_X_TARGET"] = "1"
+                env["BENCH_R_X_TARGET_DIR"] = str(X_TARGET_DIR)
+            # Tell R/MATLAB which field of the result struct matches the
+            # registry's parity reference — otherwise classifiers return
+            # integer labels where the registry expects `decision_scores`,
+            # producing silent parity failures.
+            env["BENCH_PREDICTION_KEY"] = method.prediction_key or "predictions"
+        except Exception as exc:  # pragma: no cover
+            # If the registry import fails we still launch the cell — the
+            # bench script will fall back to its own dispatch logic or
+            # surface a clearer error than a hard crash here.
+            print(f"WARN: could not build BENCH_R_PARAMS_JSON for "
+                  f"{algo}: {exc!r}", flush=True)
 
     pred_path = predictions_path(algo, name, n, p, threads, libp4a_build)
     # Common 8-arg contract used by all scripts (Python + R via positional
@@ -229,8 +491,7 @@ def run_backend(name: str, script: str, language: str, tier: str,
                  "subprocess_s": timeout}
     elapsed = time.perf_counter() - t0
     if out.returncode != 0:
-        tail = (out.stderr or out.stdout).strip().splitlines()
-        reason = tail[-1][:200] if tail else "exit != 0"
+        reason = _subprocess_failure_reason(out)
         return {"backend": name, "ok": False, "reason": reason,
                  "subprocess_s": elapsed,
                  "stdout_tail": out.stdout.strip().splitlines()[-3:],
@@ -241,6 +502,11 @@ def run_backend(name: str, script: str, language: str, tier: str,
     except json.JSONDecodeError:
         return {"backend": name, "ok": False,
                  "reason": "non-json output", "tail": last[:200]}
+    versions = rec.get("versions")
+    if not isinstance(versions, dict):
+        versions = {}
+    versions["timing_schema"] = TIMING_SCHEMA
+    rec["versions"] = versions
     rec["backend"] = name
     rec["subprocess_s"] = elapsed
     rec.setdefault("ok", True)
@@ -248,69 +514,180 @@ def run_backend(name: str, script: str, language: str, tier: str,
 
 
 def compute_parity(records: list[dict]) -> None:
-    """In-place augment each record with parity_max_diff + parity_ok.
+    """In-place augment each record with TWO parity gates.
 
-    Reference per (algo, n, p): cpp_blasomp @ 1 thread if available,
-    fallback to python_tier1 @ 1 thread, fallback to first OK record.
-    Compares the .npy at predictions_path element-wise (max abs diff)."""
-    # Group records by (algo, n, p).
-    groups: dict[tuple, list[dict]] = {}
+    Gate 1 — **binding consistency** (`binding_parity_*` columns):
+    every pls4all binding should bit-exactly match our C kernel (cpp).
+    Reference per `(algo, n, p)`: cpp @ 1 thread @ blas-omp if
+    available, fall back to python_tier1 @ 1 thread @ blas-omp, then
+    first OK record. Tolerance: `max|pred - ref| ≤ 1e-6`.
+
+    Gate 2 — **external-reference validity** (`reference_parity_*`
+    columns): cpp should agree with the canonical external reference
+    (sklearn / ropls / mixOmics / ikpls / R::pls / …) declared by the
+    method's `MethodSpec`. Reference per `(algo, n, p, prediction_seed)`:
+    the current `ref_<canonical_id>` row when it is part of the run,
+    otherwise the frozen oracle snapshot written under
+    `data/.reference_oracles/`. Those snapshots change only when the
+    canonical reference backend is run again.
+    Tolerance: `||pred - ref||_RMS / ||ref||_RMS ≤ method.rmse_rel_tol`
+    (with `rmse_abs ≤ 1e-9` escape near zero). Methods with
+    `reference_kind == "paper_only"` show `—` (NaN + ok=None) — no
+    executable truth to compare against.
+
+    Legacy `parity_*` columns are kept for compatibility. For pls4all
+    rows they mirror Gate 1; for external rows they are explicitly
+    not-applicable so old renderers do not show an external library as a
+    binding failure.
+    """
+    # Lazy imports — keep the orchestrator startup cheap when callers
+    # only need the cell scheduler (e.g. unit tests).
+    from benchmarks.parity_timing._comparator import (binding_parity,
+                                                       reference_parity)
+    from benchmarks.parity_timing.registry import (
+        canonical_reference_for_method, get_method, reference_kind)
+
     for r in records:
-        if not r.get("ok"):
-            continue
-        groups.setdefault((r["algorithm"], r["n"], r["p"]), []).append(r)
+        snapshot_reference_oracle(r)
 
-    for key, group in groups.items():
-        # Pick the reference: prefer cpp_blasomp @ 1 thread + algo applicable.
-        ref = None
+    # Group records by the actual dataset seed. Binding/reference parity only
+    # makes sense when every vector came from the same generated dataset.
+    ok_groups: dict[tuple, list[dict]] = {}
+    for r in records:
+        if r.get("ok"):
+            key = (r["algorithm"], r["n"], r["p"], record_prediction_seed(r))
+            ok_groups.setdefault(key, []).append(r)
+
+    for (algo, n, p, _prediction_seed), group in ok_groups.items():
+        # ---- Resolve gate-1 reference (cpp @ 1 thread @ blas-omp) ----
+        binding_ref = None
         for cand_name in ("cpp", "python_tier1"):
             for r in group:
                 if (r["backend"] == cand_name and r.get("threads") == 1
                         and r.get("libp4a_build") == "blas-omp"):
-                    ref = r
+                    binding_ref = r
                     break
-            if ref:
+            if binding_ref:
                 break
-        if ref is None:
-            ref = group[0]
-        ref_pred_path = ref.get("predictions_path")
-        if not ref_pred_path or not Path(ref_pred_path).exists():
-            for r in group:
-                r["parity_ref"] = ref["backend"]
-                r["parity_max_diff"] = float("nan")
-                r["parity_ok"] = False
-                r["parity_note"] = "ref predictions missing"
-            continue
-        ref_preds = np.load(ref_pred_path)
-        for r in group:
-            r["parity_ref"] = ref["backend"]
-            pp = r.get("predictions_path")
-            if not pp or not Path(pp).exists():
-                r["parity_max_diff"] = float("nan")
-                r["parity_ok"] = False
-                r["parity_note"] = "predictions missing"
-                continue
+        if binding_ref is None:
+            binding_ref = group[0]
+
+        binding_ref_pred = None
+        bref_path = binding_ref.get("predictions_path")
+        if bref_path and Path(bref_path).exists():
             try:
-                p = np.load(pp)
-            except Exception as e:
-                r["parity_max_diff"] = float("nan")
-                r["parity_ok"] = False
-                r["parity_note"] = f"load error: {e}"
-                continue
-            if p.shape != ref_preds.shape:
-                # Some externals predict only one column for multi-Y; keep
-                # the comparison but flag it.
-                if p.size == ref_preds.size:
-                    p = p.reshape(ref_preds.shape)
-                else:
-                    r["parity_max_diff"] = float("nan")
-                    r["parity_ok"] = False
-                    r["parity_note"] = (f"shape mismatch ({p.shape} vs "
-                                          f"{ref_preds.shape})")
+                binding_ref_pred = np.load(bref_path)
+            except Exception:
+                binding_ref_pred = None
+
+        # ---- Resolve gate-2 reference (canonical external) -----------
+        try:
+            method = get_method(algo)
+            canonical = canonical_reference_for_method(method)
+            ref_kind = reference_kind(method)
+        except KeyError:
+            canonical, ref_kind = None, "external"
+
+        reference_ref = None
+        canonical_backend = ""
+        if canonical is not None:
+            canonical_backend = f"ref_{canonical['id']}"
+            for r in group:
+                if r["backend"] == canonical_backend:
+                    reference_ref = r
+                    break
+        rel_tol = float(getattr(method, "rmse_rel_tol", 5e-2)) \
+            if canonical is not None else float("nan")
+
+        # ---- Populate both gates per cell ---------------------------
+        for r in group:
+            # Legacy/back-compat fields keep mirroring the binding gate
+            # so the existing renderer doesn't fall over.
+            r["binding_parity_ref"] = binding_ref["backend"]
+            r["reference_parity_ref"] = (
+                canonical_backend if canonical is not None else "")
+            r["reference_parity_tolerance"] = rel_tol
+            r["reference_oracle_path"] = ""
+            r["reference_kind"] = ref_kind
+            r["is_canonical_reference"] = (
+                r.get("backend") == r["reference_parity_ref"]
+                and r["reference_parity_ref"] != "")
+
+            pp = r.get("predictions_path")
+            r_pred = None
+            if pp and Path(pp).exists():
+                r_pred, load_note = load_prediction_array(Path(pp))
+                if r_pred is None:
+                    r["binding_parity_note"] = load_note
+                    r["reference_parity_note"] = load_note
+
+            # Gate 1: binding consistency vs cpp. External libraries are
+            # compared by Gate 2 only; they are not pls4all bindings.
+            is_pls4all = r.get("kind") in {"pls4all_core", "pls4all_binding"}
+            if not is_pls4all:
+                r["binding_parity_max_diff"] = float("nan")
+                r["binding_parity_ok"] = None
+                r["binding_parity_note"] = "not_applicable"
+            elif r_pred is None or binding_ref_pred is None:
+                r["binding_parity_max_diff"] = float("nan")
+                r["binding_parity_ok"] = False
+                r["binding_parity_note"] = (
+                    r.get("binding_parity_note") or "predictions missing")
+            else:
+                bres = binding_parity(r_pred, binding_ref_pred,
+                                       tolerance=r.get("parity_tolerance",
+                                                        1e-6))
+                r["binding_parity_max_diff"] = bres.max_abs_diff
+                r["binding_parity_ok"] = bres.ok
+                r["binding_parity_note"] = bres.note
+
+            # Legacy mirrors.
+            r["parity_ref"] = r["binding_parity_ref"] if is_pls4all else ""
+            r["parity_max_diff"] = r["binding_parity_max_diff"]
+            r["parity_ok"] = r["binding_parity_ok"]
+            r["parity_note"] = r.get("binding_parity_note", "")
+
+            # Gate 2: external-reference validity.
+            if ref_kind == "paper_only":
+                r["reference_parity_rmse_abs"] = float("nan")
+                r["reference_parity_rmse_rel"] = float("nan")
+                r["reference_parity_ok"] = None
+                r["reference_parity_note"] = "paper_only"
+            elif r["is_canonical_reference"]:
+                # The canonical reference compared to itself — trivially OK.
+                r["reference_parity_rmse_abs"] = 0.0
+                r["reference_parity_rmse_rel"] = 0.0
+                r["reference_parity_ok"] = True
+                r["reference_parity_note"] = "self"
+            elif r_pred is None:
+                r["reference_parity_rmse_abs"] = float("nan")
+                r["reference_parity_rmse_rel"] = float("nan")
+                r["reference_parity_ok"] = False
+                r["reference_parity_note"] = (
+                    r.get("reference_parity_note", "predictions missing"))
+            else:
+                prediction_seed = record_prediction_seed(r)
+                reference_ref_pred, oracle_path, oracle_status = (
+                    load_reference_oracle(algo, canonical_backend, n, p,
+                                          prediction_seed, reference_ref))
+                r["reference_oracle_path"] = oracle_path
+                if reference_ref_pred is None:
+                    r["reference_parity_rmse_abs"] = float("nan")
+                    r["reference_parity_rmse_rel"] = float("nan")
+                    r["reference_parity_ok"] = False
+                    if oracle_status == "missing":
+                        r["reference_parity_note"] = (
+                            "reference oracle missing; run canonical "
+                            "reference backend")
+                    else:
+                        r["reference_parity_note"] = oracle_status
                     continue
-            diff = float(np.max(np.abs(p - ref_preds)))
-            r["parity_max_diff"] = diff
-            r["parity_ok"] = diff <= r.get("parity_tolerance", 1e-6)
+                rres = reference_parity(r_pred, reference_ref_pred,
+                                          tolerance=rel_tol)
+                r["reference_parity_rmse_abs"] = rres.rmse_abs
+                r["reference_parity_rmse_rel"] = rres.rmse_rel
+                r["reference_parity_ok"] = rres.ok
+                r["reference_parity_note"] = rres.note
 
 
 def parse_sizes(args_sizes) -> list[tuple[int, int]]:
@@ -323,12 +700,26 @@ def parse_sizes(args_sizes) -> list[tuple[int, int]]:
     return out
 
 
-CSV_COLUMNS = ["algorithm", "backend", "language", "tier", "kind",
-               "n", "p", "threads", "libp4a_build", "seed_base",
-               "ok", "median_ms", "min_ms", "max_ms", "n_runs",
-               "parity_ref", "parity_max_diff", "parity_ok", "parity_note",
-               "subprocess_s", "predictions_path",
-               "versions_json", "reason"]
+CSV_COLUMNS = [
+    "algorithm", "backend", "language", "tier", "kind",
+    "n", "p", "threads", "libp4a_build", "seed_base", "prediction_seed",
+    "ok", "median_ms", "min_ms", "max_ms", "n_runs",
+    # Legacy alias columns — mirror the binding-consistency gate so the
+    # existing dashboard renderer still works during the migration.
+    "parity_ref", "parity_max_diff", "parity_ok", "parity_note",
+    # Gate 1: binding consistency (every pls4all binding vs cpp).
+    "binding_parity_ref", "binding_parity_max_diff",
+    "binding_parity_ok", "binding_parity_note",
+    # Gate 2: external-reference validity (cpp vs canonical reference,
+    # tolerance = method.rmse_rel_tol).
+    "reference_parity_ref", "reference_parity_rmse_abs",
+    "reference_parity_rmse_rel", "reference_parity_ok",
+    "reference_parity_note", "reference_parity_tolerance",
+    "reference_oracle_path", "reference_kind",
+    "is_canonical_reference",
+    "subprocess_s", "predictions_path",
+    "versions_json", "reason",
+]
 
 
 def _to_bool(value):
@@ -356,12 +747,16 @@ def _to_float(value):
 
 def coerce_csv_record(row: dict) -> dict:
     out = dict(row)
-    for name in ("n", "p", "threads", "seed_base", "n_runs"):
+    for name in ("n", "p", "threads", "seed_base", "prediction_seed",
+                 "n_runs"):
         out[name] = _to_int(out.get(name))
-    for name in ("ok", "parity_ok"):
+    for name in ("ok", "parity_ok", "binding_parity_ok",
+                 "reference_parity_ok", "is_canonical_reference"):
         out[name] = _to_bool(out.get(name))
     for name in ("median_ms", "min_ms", "max_ms",
-                 "parity_max_diff", "subprocess_s"):
+                 "parity_max_diff", "binding_parity_max_diff",
+                 "reference_parity_rmse_abs", "reference_parity_rmse_rel",
+                 "reference_parity_tolerance", "subprocess_s"):
         out[name] = _to_float(out.get(name))
     try:
         out["versions"] = json.loads(out.get("versions_json") or "{}")
@@ -395,12 +790,18 @@ def planned_keys(algo: str, backend_name: str, n: int, p: int,
                  threads: int, build: str, seed_base: int,
                  n_runs: int) -> tuple[tuple, tuple]:
     slot = (algo, backend_name, n, p, threads, build)
-    # Bench scripts emit n_runs = number of TIMED samples (warmup discarded
-    # when input n_runs >= 3). Resume must match against that value, not
-    # the input. See _common.time_runs_seeded.
-    measured = n_runs - 1 if n_runs >= 3 else n_runs
-    strict = (*slot, seed_base, measured)
+    # Bench scripts emit n_runs = number of timed samples. Warmup is always
+    # unmeasured; see scripts/_common.py::time_runs_seeded.
+    strict = (*slot, seed_base, n_runs)
     return slot, strict
+
+
+def record_timing_schema(record: dict) -> str | None:
+    versions = record.get("versions")
+    if isinstance(versions, dict):
+        value = versions.get("timing_schema")
+        return str(value) if value else None
+    return None
 
 
 def write_records(csv_out: Path, records: list[dict]) -> None:
@@ -413,10 +814,27 @@ def write_records(csv_out: Path, records: list[dict]) -> None:
                 r.get("tier"), r.get("kind"),
                 r.get("n"), r.get("p"), r.get("threads"),
                 r.get("libp4a_build"), r.get("seed_base"),
+                r.get("prediction_seed") or record_prediction_seed(r),
                 r.get("ok"), r.get("median_ms"), r.get("min_ms"),
                 r.get("max_ms"), r.get("n_runs"),
+                # Legacy alias columns (mirror gate 1).
                 r.get("parity_ref"), r.get("parity_max_diff"),
                 r.get("parity_ok"), r.get("parity_note", ""),
+                # Gate 1: binding consistency.
+                r.get("binding_parity_ref"),
+                r.get("binding_parity_max_diff"),
+                r.get("binding_parity_ok"),
+                r.get("binding_parity_note", ""),
+                # Gate 2: external-reference validity.
+                r.get("reference_parity_ref", ""),
+                r.get("reference_parity_rmse_abs"),
+                r.get("reference_parity_rmse_rel"),
+                r.get("reference_parity_ok"),
+                r.get("reference_parity_note", ""),
+                r.get("reference_parity_tolerance"),
+                r.get("reference_oracle_path", ""),
+                r.get("reference_kind", ""),
+                r.get("is_canonical_reference"),
                 r.get("subprocess_s"), r.get("predictions_path"),
                 json.dumps(r.get("versions") or {}), r.get("reason", ""),
             ])
@@ -443,7 +861,7 @@ def main():
                               "blas + omp + blasomp; 'all' = the full "
                               "5-build sweep including cuda-on.")
     parser.add_argument("--n-runs", type=int, default=5,
-                         help="Runs per cell (first discarded as warmup if >= 3)")
+                         help="Timed runs per cell; one extra warmup is unmeasured")
     parser.add_argument("--n-components", type=int, default=5)
     parser.add_argument("--seed-base", type=int, default=DEFAULT_SEED_BASE)
     parser.add_argument("--only-pls4all", action="store_true",
@@ -572,6 +990,13 @@ def main():
             # reread the CSV per run.
             for i in range(args.n_runs):
                 gen_dataset_csv(n, p, args.seed_base + i)
+            try:
+                method = get_method(algo)
+            except KeyError:
+                method = None
+            if method is not None and method.needs_x_target:
+                for i in range(args.n_runs):
+                    gen_x_target_csv(n, p, args.seed_base + i)
 
             for thr in threads:
                 for backend in algo_backends:
@@ -592,15 +1017,15 @@ def main():
                         slot, strict = planned_keys(
                             algo, name, n, p, thr, build,
                             args.seed_base, args.n_runs)
-                        # Accept both warmup-discarded (n_runs - 1) and raw
-                        # input (n_runs) recorded values — bench scripts emit
-                        # the timed-sample count on success but legacy/failed
-                        # rows may have the input value.
+                        # Accept the raw input count for current rows. The
+                        # timing_schema guard keeps legacy cold-run CSV rows
+                        # from being reused under --resume-existing.
                         strict_alt = (*slot, args.seed_base, args.n_runs)
                         planned_slots.add(slot)
                         existing = existing_by_slot.get(slot)
                         if (args.resume_existing and not args.force
                                 and existing is not None
+                                and record_timing_schema(existing) == TIMING_SCHEMA
                                 and strict_key(existing) in (strict, strict_alt)
                                 and (existing.get("ok") or not args.rerun_failed)):
                             records.append(existing)
@@ -622,7 +1047,10 @@ def main():
                             "tier": tier,
                             "kind": kind,
                             "seed_base": args.seed_base,
+                            "prediction_seed": args.seed_base + args.n_runs - 1,
                         })
+                        write_prediction_metadata(rec)
+                        snapshot_reference_oracle(rec)
                         records.append(rec)
                         ran_records.append(rec)
                         if rec.get("ok"):

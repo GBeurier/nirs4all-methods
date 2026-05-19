@@ -35,7 +35,7 @@ class PLSDAClassifier(_Pls4allModelEstimator, BaseEstimator, ClassifierMixin):
     Parameters
     ----------
     n_components : int, default=2
-    solver : str, default='nipals'
+    solver : str, default='simpls'
     center_x, scale_x : bool, default=True
     tol : float, default=1e-6
     max_iter : int, default=500
@@ -46,7 +46,7 @@ class PLSDAClassifier(_Pls4allModelEstimator, BaseEstimator, ClassifierMixin):
     def __init__(self,
                   n_components: int = 2,
                   *,
-                  solver: str = "nipals",
+                  solver: str = "simpls",
                   center_x: bool = True,
                   scale_x: bool = True,
                   tol: float = 1e-6,
@@ -142,6 +142,23 @@ class OPLSDAClassifier(PLSDAClassifier):
     """
 
     _algorithm = Algorithm.OPLS_DA
+
+    def __init__(self,
+                  n_components: int = 2,
+                  *,
+                  solver: str = "nipals",
+                  center_x: bool = True,
+                  scale_x: bool = True,
+                  tol: float = 1e-6,
+                  max_iter: int = 500) -> None:
+        super().__init__(
+            n_components=n_components,
+            solver=solver,
+            center_x=center_x,
+            scale_x=scale_x,
+            tol=tol,
+            max_iter=max_iter,
+        )
 
     def _make_config(self):
         cfg = super()._make_config()

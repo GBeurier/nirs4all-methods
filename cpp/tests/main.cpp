@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Test runner for the pls4all hand-rolled harness. Loops the registry, runs
 // each test case, reports per-group totals, exits non-zero on any failure.

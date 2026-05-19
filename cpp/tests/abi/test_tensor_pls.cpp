@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // 3-way N-PLS (§9). Verifies fit/predict on a 3-way synthetic dataset.
 

@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CeCILL-2.1
+/* SPDX-License-Identifier: CECILL-2.1
  *
  * R .Call dispatcher covering ALL MethodResult-returning entry points
  * of libp4a (33 method-result fits + 24 selectors + 4 diagnostics).
@@ -31,12 +31,20 @@
 
 /* ---- shared helpers (file-local) ----------------------------------- */
 
+#if defined(__GNUC__) || defined(__clang__)
+#  define P4A_R_NORETURN __attribute__((noreturn))
+#  define P4A_R_PRINTF(a, b) __attribute__((format(printf, a, b)))
+#else
+#  define P4A_R_NORETURN
+#  define P4A_R_PRINTF(a, b)
+#endif
+
 /* Destroy ctx + cfg and longjmp via Rf_error. Used by validation
  * branches that need to bail out AFTER ctx/cfg have been allocated.
  * SEXP PROTECTs are unwound by R itself on the longjmp. */
 static void cleanup_err(p4a_context_t* ctx, p4a_config_t* cfg,
-                         const char* fmt, ...) __attribute__((noreturn))
-                                                  __attribute__((format(printf, 3, 4)));
+                         const char* fmt, ...) P4A_R_NORETURN
+                                                  P4A_R_PRINTF(3, 4);
 
 static void cleanup_err(p4a_context_t* ctx, p4a_config_t* cfg,
                          const char* fmt, ...) {
@@ -64,7 +72,7 @@ static SEXP need_real_matrix(SEXP v, p4a_context_t* ctx, p4a_config_t* cfg,
 }
 
 static void r_throw(const char* fn, p4a_status_t status, p4a_context_t* ctx)
-    __attribute__((noreturn));
+    P4A_R_NORETURN;
 
 static void r_throw(const char* fn, p4a_status_t status, p4a_context_t* ctx) {
     const char* status_str = p4a_status_to_string(status);
@@ -329,12 +337,14 @@ static p4a_validation_plan_t* make_default_plan(int n, int requested_folds) {
         p4a_validation_plan_destroy(plan);
         return NULL;
     }
-    int fold_size = (n + k - 1) / k;
+    /* Match the canonical Python/registry plan: equal floor-sized
+       contiguous folds, with the remainder assigned to the final fold. */
+    int fold_size = n / k;
     int64_t* train = (int64_t*)R_alloc((size_t)n, sizeof(int64_t));
     int64_t* test  = (int64_t*)R_alloc((size_t)n, sizeof(int64_t));
     for (int f = 0; f < k; ++f) {
         int t0 = f * fold_size;
-        int t1 = t0 + fold_size; if (t1 > n) t1 = n;
+        int t1 = (f < k - 1) ? (t0 + fold_size) : n;
         int n_test = t1 - t0;
         int ti = 0, te = 0;
         for (int i = 0; i < n; ++i) {
@@ -794,6 +804,40 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             static const char* sc[] = {"n_classes", "n_components", NULL};
             out = pack_result(mr, dm, iv, NULL, sc);
         }
+    } else if (strcmp(algo, "aom_preprocess") == 0) {
+        int n_ops = get_int(params, "n_operators", 3);
+        int mode = get_int(params, "gating_mode", 0);
+        if (n_ops < 1) n_ops = 1;
+        if (n_ops > 5) n_ops = 5;
+        p4a_operator_kind_t kinds[5] = {
+            P4A_OP_IDENTITY,
+            P4A_OP_CENTER,
+            P4A_OP_PARETO_SCALE,
+            P4A_OP_AUTOSCALE,
+            P4A_OP_SNV
+        };
+        p4a_operator_bank_t* bank = NULL;
+        p4a_gating_strategy_t* gate = NULL;
+        st = p4a_operator_bank_create(&bank);
+        for (int i = 0; st == P4A_OK && i < n_ops; ++i) {
+            st = p4a_operator_bank_add(bank, kinds[i], NULL, 0);
+        }
+        if (st == P4A_OK) {
+            st = p4a_gating_strategy_create(
+                &gate, (p4a_gating_mode_t)mode);
+        }
+        if (st == P4A_OK) {
+            st = p4a_aom_preprocess_fit(ctx, bank, gate, &Xv, &Yv, &mr);
+        }
+        if (gate) p4a_gating_strategy_destroy(gate);
+        if (bank) p4a_operator_bank_destroy(bank);
+        if (st == P4A_OK) {
+            static const char* dm[] = {"transformed", "operator_outputs",
+                                          "weights", NULL};
+            static const char* i64[] = {"operator_kinds", NULL};
+            static const char* sc[] = {"n_operators", "mode", NULL};
+            out = pack_result(mr, dm, NULL, i64, sc);
+        }
     }
 
     /* ---------------- Selectors ---------------- */
@@ -849,7 +893,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     /* Selectors that need a ValidationPlan share boilerplate via a macro. */
 #define DISPATCH_PLAN_SELECT(name, call_args, dmat_keys, iv_keys, i64_keys, sc_keys) \
     else if (strcmp(algo, name) == 0) { \
-        p4a_validation_plan_t* _plan = make_default_plan(n, 5); \
+        p4a_validation_plan_t* _plan = make_default_plan(n, 3); \
         if (!_plan) cleanup_err(ctx, cfg, name " could not build a default validation plan"); \
         st = call_args; \
         p4a_validation_plan_destroy(_plan); \
@@ -1002,7 +1046,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         if (thr == R_NilValue || TYPEOF(thr) != REALSXP)
             cleanup_err(ctx, cfg, "t2_select requires numeric params$alpha_thresholds");
         int ms = get_int(params, "min_selected", n_components);
-        p4a_validation_plan_t* _plan = make_default_plan(n, 5);
+        p4a_validation_plan_t* _plan = make_default_plan(n, 3);
         if (!_plan) cleanup_err(ctx, cfg, "t2_select plan creation failed");
         st = p4a_t2_select(ctx, cfg, &Xv, &Yv, _plan,
                             REAL(thr), Rf_length(thr), ms, &mr);
@@ -1017,7 +1061,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         if (thr == R_NilValue || TYPEOF(thr) != REALSXP)
             cleanup_err(ctx, cfg, "st_select requires numeric params$thresholds");
         int ms = get_int(params, "min_selected", n_components);
-        p4a_validation_plan_t* _plan = make_default_plan(n, 5);
+        p4a_validation_plan_t* _plan = make_default_plan(n, 3);
         if (!_plan) cleanup_err(ctx, cfg, "st_select plan creation failed");
         st = p4a_st_select(ctx, cfg, &Xv, &Yv, _plan,
                             REAL(thr), Rf_length(thr), ms, &mr);

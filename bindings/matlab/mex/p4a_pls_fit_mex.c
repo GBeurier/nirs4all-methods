@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CeCILL-2.1
+/* SPDX-License-Identifier: CECILL-2.1
  *
  * MATLAB / Octave MEX entry: `pls4all_pls_fit_mex(X, Y, n_components)`.
  *

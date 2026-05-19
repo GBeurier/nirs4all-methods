@@ -1,0 +1,19 @@
+{
+  "algorithm": "vip_spa_select",
+  "backend": "ref_python_auswahl",
+  "n": 100,
+  "n_runs": 1,
+  "p": 50,
+  "prediction_seed": 1234567890,
+  "seed_base": 1234567890,
+  "source_predictions_path": "/home/delete/nirs4all/pls4all/benchmarks/cross_binding/data/.predictions/vip_spa_select_ref_python_auswahl_100x50_t1_blas-omp.npy",
+  "versions": {
+    "blas": "libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1",
+    "language": "Python 3.13.13",
+    "numpy": "2.3.5",
+    "reference_id": "python_auswahl",
+    "reference_library": "auswahl",
+    "reference_version": "0.9.0",
+    "timing_schema": "warmup-v2"
+  }
+}

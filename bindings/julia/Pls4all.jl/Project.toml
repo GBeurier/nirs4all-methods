@@ -1,6 +1,6 @@
 name = "Pls4all"
 uuid = "f04a4a11-0000-0000-0000-000000000001"
-version = "0.84.0"
+version = "0.97.0"
 authors = ["pls4all contributors"]
 
 [deps]

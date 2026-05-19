@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Sparse SIMPLS (§7 of Overview.md): SIMPLS with soft-thresholding of the
 // loading vector at each component. Verifies (a) lambda=0 path matches

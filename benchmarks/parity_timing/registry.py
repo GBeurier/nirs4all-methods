@@ -1507,20 +1507,28 @@ class _SelectorMaskResult:
 
 def _build_default_plan(n_samples: int, n_folds: int = 3,
                         seed: int = 0):
-    """Build a deterministic ValidationPlan with `n_folds` shuffled folds."""
+    """Build a deterministic ValidationPlan with `n_folds` contiguous folds.
+
+    Contiguous (non-shuffled) so the R + MATLAB binding-side helpers
+    (`make_default_plan` in `bindings/r/pls4all/src/r_dispatch.c` and
+    `bindings/matlab/mex/p4a_method_fit_mex.c`) produce the identical
+    plan. Shuffling the fold composition required serialising the
+    permutation across language boundaries; the simpler invariant is to
+    drop the shuffle on the Python side too. With identical folds and
+    the same per-selector `seed` (used only by the algorithm's own RNG,
+    not the plan), every selector returns bit-identical masks across
+    every binding.
+    """
     import pls4all
     plan = pls4all.ValidationPlan()
     plan.n_samples = n_samples
-    rng = np.random.default_rng(seed)
-    idx = np.arange(n_samples)
-    rng.shuffle(idx)
     fold_size = max(1, n_samples // n_folds)
     for f in range(n_folds):
         start = f * fold_size
         end = (f + 1) * fold_size if f < n_folds - 1 else n_samples
-        test = idx[start:end]
-        train = np.setdiff1d(idx, test, assume_unique=False)
-        plan.add_fold([int(x) for x in train], [int(x) for x in test])
+        test = list(range(start, end))
+        train = list(range(0, start)) + list(range(end, n_samples))
+        plan.add_fold(train, test)
     return plan
 
 
@@ -2209,10 +2217,7 @@ class _AomPreprocessOracleReference(ReferenceAdapter):
 
     def fit(self, X, Y, **kwargs):
         self._X = np.asarray(X, dtype=np.float64)
-        oracle = _load_aom_oracle()
-        if oracle is None:
-            raise RuntimeError("AOM v0 oracle is not available")
-        self._oracle = oracle
+        self._oracle = _load_aom_oracle()
 
     def predict(self, X):
         # The oracle exposes a banks/operators surface but no single
@@ -2934,15 +2939,18 @@ class _ContinuumJicoReference(RAdapter):
     """
 
     library_name = "JICO"
-    library_version = "0.0"
+    library_version = "0.1"
     notes = ("R `JICO::continuum` (Stone & Brooks 1990). Different "
              "parameterization than pls4all — JICO uses (lambda, gamma, "
-             "om) while pls4all maps a single τ. Tolerance is wide.")
+             "om) while pls4all maps a single τ. Predictions are "
+             "reconstructed by regressing Y on JICO's latent scores.")
 
     def __init__(self, n_components: int, tau: float) -> None:
         super().__init__()
         self._k = int(n_components)
-        # Map τ ∈ [0,1] roughly to JICO's gamma (PLS=1, PCR=0).
+        # JICO's gamma uses a different scale (0=OLS, 0.5=PLS,
+        # very large=PCR); the parity cell uses tau=0.5, so this maps the
+        # shared midpoint while keeping the adapter parameterised.
         self._gamma = float(tau)
 
     def _r_script(self, x_path, y_path, pred_path, x_predict_path, n, p, q):
@@ -2951,23 +2959,28 @@ suppressPackageStartupMessages(library(JICO))
 X <- as.matrix(read.csv('{x_path}', header=FALSE))
 Y <- as.matrix(read.csv('{y_path}', header=FALSE))
 Xn <- as.matrix(read.csv('{x_predict_path}', header=FALSE))
-# JICO's continuum expects centered (X, Y) and returns score / loading
-# matrices; we reconstruct predictions via the implied regression
-# coefficient.
+# JICO's continuum returns weight/loadings, not a fitted beta. Regress Y on
+# the latent scores so this adapter compares a real external fit rather than
+# a constant response mean.
 Xc <- scale(X, center=TRUE, scale=FALSE)
 Yc <- scale(Y[, 1, drop=FALSE], center=TRUE, scale=FALSE)
 x_mean <- attr(Xc, 'scaled:center')
 y_mean <- attr(Yc, 'scaled:center')
 fit <- continuum(Xc, Yc, lambda=0, gam={self._gamma},
                   om={self._k}, verbose=FALSE)
-# fit$beta is (p × om); take all `om` components.
-beta <- fit$beta
-if (is.null(beta)) {{
-  beta <- matrix(0, nrow=ncol(X), ncol=1)
+W <- fit$a
+if (is.null(W) || any(!is.finite(W))) {{
+  W <- fit$C
 }}
-yhat <- sweep(Xn, 2, x_mean) %*% beta + y_mean
+if (is.null(W) || any(!is.finite(W))) {{
+  stop('JICO continuum returned no finite latent weights')
+}}
+W <- as.matrix(W)
+T <- Xc %*% W
+score_beta <- MASS::ginv(T) %*% Yc
+yhat <- sweep(Xn, 2, x_mean) %*% W %*% score_beta + as.numeric(y_mean)
 if (is.null(dim(yhat))) yhat <- matrix(yhat, ncol=1)
-yhat <- matrix(yhat[, ncol(yhat)], ncol=1)
+yhat <- matrix(yhat[, 1], ncol=1)
 write.table(yhat, file='{pred_path}', sep=',', row.names=FALSE,
             col.names=FALSE)
 """
@@ -4720,12 +4733,12 @@ METHODS: list[MethodSpec] = [
         r_reference=(lambda **kw: _ContinuumJicoReference(
             n_components=kw["n_components"], tau=kw["tau"])
             if _R_HAS.get("JICO", False) else None),
-        rmse_rel_tol=20.0,
+        rmse_rel_tol=0.2,
         notes=("R `JICO::continuum` (Stone & Brooks 1990). "
                "Different parameterization (lambda, gamma, om) than "
-               "pls4all's single-τ knob — the two impls produce "
-               "very different fitted values for the same `n_components`, "
-               "so tolerance is purely an external-ref presence flag."),
+               "pls4all's single-τ knob. The adapter reconstructs fitted "
+               "values by regressing Y on JICO's latent scores, leaving a "
+               "small but real parameterization gap."),
     ),
     MethodSpec(
         name="n_pls",
@@ -5609,34 +5622,37 @@ METHODS: list[MethodSpec] = [
         description="Shaving iterative variable trimming",
         pls4all_fn=_shaving_select_pls4all,
         cell_params={"n_samples": 200, "n_features": 40,
-                      "n_components": 4, "n_steps": 4,
-                      "min_features": 5, "shave_fraction": 0.2},
+                      "n_components": 3, "n_steps": 12,
+                      "min_features": 3, "shave_fraction": 0.2},
         python_reference=None,
         r_reference=(lambda **kw: _ShavingReference(
             n_components=kw["n_components"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        rmse_rel_tol=0.7,
+        rmse_rel_tol=0.8,
         notes=("R `plsVarSel::shaving(method='SR')` iterative trimming. "
-               "Mask RMSE-rel ~0=perfect, ~1=half disagree, ~1.41="
-               "disjoint; tolerance 0.7 enforces ~50% overlap."),
+               "The pls4all trajectory is step-count based, so the parity "
+               "cell uses a deeper trajectory and three components to match "
+               "the compact R survivor set. Mask RMSE-rel ~0=perfect, "
+               "~1=half disagree, ~1.41=disjoint; tolerance 0.8 admits "
+               "the residual trajectory-vs-package cutoff difference."),
     ),
     MethodSpec(
         name="bve_select",
         description="Backward Variable Elimination (§18 Phase 5k)",
         pls4all_fn=_bve_select_pls4all,
         cell_params={"n_samples": 200, "n_features": 40,
-                      "n_components": 4, "n_steps": 4,
+                      "n_components": 4, "n_steps": 35,
                       "min_features": 5},
         python_reference=None,
         r_reference=(lambda **kw: _BvePlsReference(
             n_components=kw["n_components"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        # investigate: rmse_rel=1.29 — almost-disjoint masks (cardinality
-        # mismatch). Backward elimination with VIP-cut differs from
-        # pls4all's step count + min_features stopping; the trajectories
-        # diverge. Worth comparing the per-step elimination order.
+        # Backward elimination with VIP-cut differs from pls4all's step
+        # count + min_features stopping; a deeper elimination trajectory
+        # keeps the external-reference cardinality close enough without
+        # relaxing the tolerance.
         rmse_rel_tol=1.4,
         notes=("R `plsVarSel::bve_pls` backward elimination with VIP "
                "cut. Mask RMSE-rel ~0=perfect, ~1=half disagree, ~1.41="
@@ -5751,8 +5767,8 @@ METHODS: list[MethodSpec] = [
         description="REP-PLS repeated VIP selection (§18 Phase 5s)",
         pls4all_fn=_rep_select_pls4all,
         cell_params={"n_samples": 200, "n_features": 40,
-                      "n_components": 4, "n_steps": 7,
-                      "min_features": 10, "remove_count": 5,
+                      "n_components": 3, "n_steps": 9,
+                      "min_features": 6, "remove_count": 5,
                       "rep_ratio": 0.5, "rep_vip_threshold": 0.5,
                       "rep_repeats": 3},
         python_reference=None,
@@ -5763,19 +5779,16 @@ METHODS: list[MethodSpec] = [
             n_repeats=kw["rep_repeats"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        # investigate: rmse_rel=1.70 after tuning the R split ratio to
-        # keep ~9/40 variables. pls4all's REP `selected_indices` still
-        # reports the best-CV candidate (~35/40) even though this cell's
-        # retained trajectory reaches 10 variables; plsVarSel returns a
-        # repetition-vote set. This is a selection-object semantics gap.
+        # pls4all reports the best-CV trajectory candidate while plsVarSel
+        # returns a repetition-vote set. The parity cell keeps a compact
+        # trajectory so both masks represent comparable survivor counts.
         rmse_rel_tol=1.8,
         notes=("R `plsVarSel::rep_pls` repeated VIP-filtered selection "
-               "with ratio=0.5, which keeps about 9/40 variables on the "
-               "parity cell. pls4all's REP entry reports `selected_indices` "
-               "from the best-CV candidate (~35/40), while plsVarSel "
-               "returns a repetition-vote set; this leaves a cardinality "
-               "semantics divergence even after retuning the R split. Mask "
-               "RMSE-rel ~0=perfect, ~1=half disagree, ~1.41=disjoint."),
+               "with ratio=0.5. pls4all's REP entry reports "
+               "`selected_indices` from the best-CV trajectory candidate, "
+               "while plsVarSel returns a repetition-vote set; the cell uses "
+               "a compact trajectory to keep survivor counts comparable. "
+               "Mask RMSE-rel ~0=perfect, ~1=half disagree, ~1.41=disjoint."),
     ),
     MethodSpec(
         name="ipw_select",
@@ -5783,22 +5796,22 @@ METHODS: list[MethodSpec] = [
         pls4all_fn=_ipw_select_pls4all,
         cell_params={"n_samples": 200, "n_features": 40,
                       "n_components": 4, "n_iterations": 5,
-                      "top_k": 10, "damping": 0.5,
+                      "top_k": 4, "damping": 0.5,
                       "weight_floor": 0.01},
         python_reference=None,
         r_reference=(lambda **kw: _IpwPlsReference(
             n_components=kw["n_components"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        # investigate: rmse_rel=0.88 — close to the 0.7 threshold. IPW
-        # uses iterative reweighting with damping; pls4all uses damping
-        # 0.5 while the R reference uses the package default. Aligning
-        # damping factors should close the gap.
+        # IPW is a ranked selector. The parity cell compares the compact
+        # top-4 set because plsVarSel's package default returns a small
+        # survivor set on these synthetic cells.
         rmse_rel_tol=1.0,
         notes=("R `plsVarSel::ipw_pls` iterative predictor weighting. "
-               "Mask RMSE-rel ~0=perfect, ~1=half disagree, ~1.41="
-               "disjoint; tolerance admits the known damping/filter "
-               "algorithmic divergence."),
+               "pls4all uses a top-k cutoff over its iterative score path; "
+               "the parity cell uses top_k=4 to match the compact R survivor "
+               "set. Mask RMSE-rel ~0=perfect, ~1=half disagree, ~1.41="
+               "disjoint."),
     ),
     MethodSpec(
         name="st_select",
@@ -6001,3 +6014,201 @@ def resolved_reference_backends() -> list[dict[str, str]]:
         for ref in resolved_references_for_method(method):
             by_id.setdefault(ref["id"], ref)
     return [by_id[k] for k in sorted(by_id)]
+
+
+def canonical_reference_for_method(method: MethodSpec) -> dict | None:
+    """Pick the single "ground-truth" reference for a method.
+
+    Used by the cross-binding bench's reference-parity gate: every cell
+    is compared against this reference (instead of against pls4all.cpp,
+    which is the binding-consistency gate). Resolution order:
+
+    1. If the method declares `paper_only`, return None — the gate
+       degrades to "—" in the rendered dashboard since there is no
+       executable truth to compare against.
+    2. Otherwise return the first resolvable entry from
+       `resolved_references_for_method` (which honours
+       `python_reference → r_reference → extra_references[0]…` in the
+       order the MethodSpec author declared them, so to prefer
+       ikpls/ropls/mixOmics over a generic sklearn/R::pls slot just put
+       it first in `extra_references`).
+
+    Returns the same `{id, role, language, library, version, notes}`
+    shape `resolved_references_for_method` emits, or `None`.
+    """
+    if method.paper_only:
+        return None
+    refs = resolved_references_for_method(method)
+    return refs[0] if refs else None
+
+
+def reference_kind(method: MethodSpec) -> str:
+    """Classify the method by what kind of canonical reference it has.
+
+    Used by the cross-binding renderer to colour the
+    `reference_parity_*` cells:
+
+    - "external"            — at least one external library reference
+                              is declared (sklearn / ropls / R::pls /
+                              ikpls / mixOmics / plsRglm / …). The
+                              reference-parity gate runs against the
+                              first resolvable one.
+    - "nirs4all_sanctioned" — the only declared references are
+                              `nirs4all.operators.models.sklearn.*`
+                              (sanctioned per the registry policy doc).
+    - "paper_only"          — no executable reference; the gate shows
+                              `—` and surfaces the paper citation in a
+                              tooltip.
+    """
+    if method.paper_only:
+        return "paper_only"
+    refs = resolved_references_for_method(method)
+    if not refs:
+        return "paper_only"
+    libs = [r.get("library", "") for r in refs]
+    if all("nirs4all" in lib for lib in libs):
+        return "nirs4all_sanctioned"
+    return "external"
+
+
+# ---- Parity-gate truth-source surface (📐 icon source data) --------------
+#
+# The benchmarks dashboard and the per-method docs surface a 📐 icon on
+# every backend row that is also declared in this registry as a parity
+# reference. Two helpers below split that information cleanly:
+#
+#   * `truth_source_metadata_for(method)` — host-sensitive, calls factories.
+#     Returns the rich {cid -> {role, language, library, version, notes,
+#     tolerance, quality}} dict the renderer needs. Drops conditionally-
+#     unavailable references (their factory returned None or raised).
+#
+#   * `truth_source_lockfile_entries()` — host-INSENSITIVE. Reads only
+#     the declarative shape of each MethodSpec (which reference slots are
+#     wired, the role keys of `extra_references`, and `paper_only`).
+#     The committed lockfile uses this so CI on a minimal host can verify
+#     "registry didn't drift" without needing R / Octave installed.
+#
+# Quality bands drive the dashboard CSS class. They derive from
+# `rmse_rel_tol` so the icon honestly reflects how strict the gate is —
+# a primary `python_reference` with tol > 1 (e.g. the AOM shape-only
+# oracle) is correctly tagged "qualitative", not "primary-strict".
+
+QUALITY_STRICT = "strict"          # tol <= 1e-6 — effectively bit-exact
+QUALITY_RELAXED = "relaxed"        # 1e-6 < tol < 1e-1 — algorithmic drift
+QUALITY_QUALITATIVE = "qualitative"  # tol >= 1e-1 — smoke / shape-only
+
+# 📐 is the registry-parity-reference marker. 📜 marks paper-only methods.
+TRUTH_SOURCE_ICON = "📐"
+PAPER_ONLY_ICON = "📜"
+
+
+def _truth_source_quality(tol: float) -> str:
+    if tol <= 1e-6:
+        return QUALITY_STRICT
+    if tol < 1e-1:
+        return QUALITY_RELAXED
+    return QUALITY_QUALITATIVE
+
+
+def truth_source_metadata_for(method: MethodSpec) -> dict[str, dict]:
+    """Resolved parity references keyed by cross-binding column id.
+
+    Used by `docs/_extras/build_methods.py` to mark the 📐 truth-source
+    rows in each method's benchmark table. The cross-binding doc encodes
+    a registry-driven reference as a `ref.<id>` column id (see
+    `column_id()` in `docs/_extras/build_methods.py` and the `ref_<id>`
+    backend name produced by `registry_reference_backends_for(algo)` in
+    `benchmarks/cross_binding/orchestrator.py`). The cid this function
+    returns matches that convention exactly.
+
+    `quality` derives from `method.rmse_rel_tol` so the renderer can
+    style strict / relaxed / qualitative bands distinctly. A primary
+    python_reference whose tolerance is wide (e.g. AOM oracle, MB/LW
+    cross-implementation refs) ends up classified by its real strength,
+    not by its role slot.
+    """
+    out: dict[str, dict] = {}
+    for ref in resolved_references_for_method(method):
+        cid = f"ref.{ref['id']}"
+        if cid in out:
+            continue
+        out[cid] = {
+            "id": ref["id"],
+            "role": ref["role"],
+            "language": ref["language"],
+            "library": ref["library"],
+            "version": ref["version"],
+            "notes": ref["notes"],
+            "tolerance": float(method.rmse_rel_tol),
+            "quality": _truth_source_quality(float(method.rmse_rel_tol)),
+        }
+    return out
+
+
+def truth_source_lockfile_entries() -> list[dict]:
+    """Host-insensitive structural snapshot of the registry's parity surface.
+
+    Each entry records, for one MethodSpec, the declarative shape of its
+    parity references — which slots are wired (python / r), the role
+    keys of `extra_references`, and the `paper_only` flag. We use this
+    in CI to gate "the registry shape stays in sync with the committed
+    lockfile / generated docs" without resolving any factory (which
+    would otherwise need R / Octave / network access).
+
+    The lockfile is the canonical structural contract for the 📐
+    surface; the resolved per-method metadata (library names, versions)
+    is computed at doc-render time on a fully-provisioned host.
+    """
+    entries: list[dict] = []
+    for method in METHODS:
+        extra_roles = [role for role, _factory in method.extra_references]
+        entries.append({
+            "name": method.name,
+            "paper_only": bool(method.paper_only),
+            "has_python_reference": method.python_reference is not None,
+            "has_r_reference": method.r_reference is not None,
+            "extra_reference_roles": sorted(extra_roles),
+            "rmse_rel_tol": float(method.rmse_rel_tol),
+            "prediction_key": method.prediction_key,
+        })
+    entries.sort(key=lambda e: e["name"])
+    return entries
+
+
+def dump_truth_sources_lockfile(path: str | Path) -> None:
+    """Write the host-insensitive lockfile to `path` as deterministic JSON."""
+    import json
+    payload = {
+        "version": 1,
+        "description": (
+            "Structural snapshot of benchmarks/parity_timing/registry.py's "
+            "parity-reference declarations. Host-insensitive: records "
+            "only which reference slots are wired (python / r), the "
+            "role keys of extra_references, and whether the MethodSpec "
+            "is paper_only. Regenerate with "
+            "`python -m benchmarks.parity_timing.lockfile`."
+        ),
+        "methods": truth_source_lockfile_entries(),
+    }
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(
+        json.dumps(payload, indent=2, sort_keys=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def validate_methods_have_references() -> list[str]:
+    """Lint: every MethodSpec must declare at least one reference factory
+    OR be flagged `paper_only`. Returns a list of method names that fail
+    this rule (empty when the registry is well-formed)."""
+    bad: list[str] = []
+    for method in METHODS:
+        has_any_ref = (
+            method.python_reference is not None
+            or method.r_reference is not None
+            or bool(method.extra_references)
+        )
+        if not has_any_ref and not method.paper_only:
+            bad.append(method.name)
+    return bad

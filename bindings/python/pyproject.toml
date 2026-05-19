@@ -1,18 +1,59 @@
 [build-system]
-requires = ["setuptools>=64", "wheel"]
+# setuptools >= 77 implements PEP 639 SPDX license validation. It loads
+# packaging.licenses, which exists only in packaging >= 24.2 — older
+# packaging makes setuptools 77 crash with
+# `ImportError: Cannot import 'packaging.licenses'.
+#  Setuptools>=77.0.0 requires "packaging>=24.2" to work properly.`
+requires = ["setuptools>=77", "wheel", "packaging>=24.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pls4all"
-version = "0.65.0"
+version = "0.97.0"
 description = "Python binding for the pls4all C ABI — a portable PLS / NIRS engine."
 authors = [{ name = "Grégory Beurier and contributors" }]
 license = "CECILL-2.1"
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.21"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Developers",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Chemistry",
+  "Topic :: Scientific/Engineering :: Mathematics",
+]
 
 [project.urls]
 Homepage = "https://github.com/GBeurier/pls4all"
+Repository = "https://github.com/GBeurier/pls4all"
+Issues = "https://github.com/GBeurier/pls4all/issues"
+Documentation = "https://gbeurier.github.io/pls4all/"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Bundle the native shared library shipped inside the wheel.
+# cibuildwheel's build_libp4a_in_wheel.sh stages libp4a into
+# src/pls4all/lib/ before the sdist/wheel is built; the patterns below
+# tell setuptools to ship every variant (Linux .so, macOS .dylib,
+# Windows .dll, the auditwheel-renamed forms, and the SONAME symlinks).
+[tool.setuptools.package-data]
+pls4all = [
+  "lib/libp4a*",
+  "lib/p4a*",
+  "lib/*.so",
+  "lib/*.so.*",
+  "lib/*.dylib",
+  "lib/*.dll",
+]

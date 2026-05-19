@@ -1,11 +1,63 @@
 cmake_minimum_required(VERSION 3.21)
 
-# Read the project version from CHANGELOG / single source of truth would be
-# nice, but for now the version lives here and in cpp/include/pls4all/p4a_version.h
-# (the header file is the canonical version for ABI / runtime queries — this
-# CMake project version is used only for installation / find_package).
+# ============================================================================
+# Single source of truth: cpp/include/pls4all/p4a_version.h
+# ============================================================================
+# Both the project semver (P4A_PROJECT_VERSION_*) and the ABI semver
+# (P4A_ABI_VERSION_*) live in p4a_version.h. We parse the header at configure
+# time so:
+#   - PROJECT_VERSION is derived from P4A_PROJECT_VERSION_*  (used for
+#     find_package(), packaging, install metadata).
+#   - The shared library SONAME (cpp/src/CMakeLists.txt) is derived from
+#     P4A_ABI_VERSION_MAJOR — independent of project semver so the ABI can
+#     stay at 1.x while project moves from 0.x to 1.x.
+#
+# scripts/bump_version.sh edits p4a_version.h and rewrites every downstream
+# manifest. The version-sync.yml workflow fails any PR where a manifest has
+# drifted from the header.
+
+set(_p4a_version_h "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/pls4all/p4a_version.h")
+if(NOT EXISTS "${_p4a_version_h}")
+    message(FATAL_ERROR
+        "pls4all: canonical version header not found at ${_p4a_version_h}")
+endif()
+file(READ "${_p4a_version_h}" _p4a_version_h_content)
+
+foreach(_macro IN ITEMS
+        P4A_ABI_VERSION_MAJOR     P4A_ABI_VERSION_MINOR     P4A_ABI_VERSION_PATCH
+        P4A_PROJECT_VERSION_MAJOR P4A_PROJECT_VERSION_MINOR P4A_PROJECT_VERSION_PATCH)
+    # Anchor to a real preprocessor directive (allowing optional whitespace
+    # between '#' and 'define') so commented-out lines like '// #define FOO'
+    # are not matched.
+    if(NOT _p4a_version_h_content MATCHES
+            "(^|\n)[ \t]*#[ \t]*define[ \t]+${_macro}[ \t]+([0-9]+)")
+        message(FATAL_ERROR
+            "pls4all: ${_macro} not found in p4a_version.h — header drift?")
+    endif()
+    set(${_macro} "${CMAKE_MATCH_2}")
+endforeach()
+
+set(P4A_ABI_VERSION
+    "${P4A_ABI_VERSION_MAJOR}.${P4A_ABI_VERSION_MINOR}.${P4A_ABI_VERSION_PATCH}")
+set(P4A_PROJECT_VERSION
+    "${P4A_PROJECT_VERSION_MAJOR}.${P4A_PROJECT_VERSION_MINOR}.${P4A_PROJECT_VERSION_PATCH}")
+
+# Cross-check the P4A_PROJECT_VERSION_STRING literal matches the numeric macros.
+# Same line-anchored pattern as above (allows '# define' but rejects comments).
+if(NOT _p4a_version_h_content MATCHES
+        "(^|\n)[ \t]*#[ \t]*define[ \t]+P4A_PROJECT_VERSION_STRING[ \t]+\"([^\"]+)\"")
+    message(FATAL_ERROR
+        "pls4all: P4A_PROJECT_VERSION_STRING not found in p4a_version.h")
+endif()
+if(NOT "${CMAKE_MATCH_2}" STREQUAL "${P4A_PROJECT_VERSION}")
+    message(FATAL_ERROR
+        "pls4all: P4A_PROJECT_VERSION_STRING (\"${CMAKE_MATCH_2}\") disagrees "
+        "with numeric macros (${P4A_PROJECT_VERSION}). Run "
+        "scripts/bump_version.sh to re-sync.")
+endif()
+
 project(pls4all
-    VERSION 0.97.0
+    VERSION ${P4A_PROJECT_VERSION}
     DESCRIPTION "Portable PLS/NIRS engine with stable C ABI"
     HOMEPAGE_URL "https://github.com/GBeurier/pls4all"
     LANGUAGES C CXX)

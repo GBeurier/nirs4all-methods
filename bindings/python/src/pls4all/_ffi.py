@@ -1,4 +1,19 @@
-"""ctypes loader + raw symbol signatures."""
+"""ctypes loader + raw symbol signatures.
+
+Loader search order (highest priority first):
+
+1.  $PLS4ALL_LIB_PATH                                  — explicit override.
+2.  <site-packages>/pls4all.libs/libp4a-*.so*          — auditwheel-grafted
+    sibling directory (Linux wheels). delocate creates an equivalent
+    layout on macOS, and delvewheel uses pls4all.libs/ as well on Windows
+    (since delvewheel 1.5).
+3.  <site-packages>/pls4all/lib/libp4a*                — wheel layout when
+    libp4a is bundled directly as package data (the cibuildwheel
+    fallback when no repair tool runs).
+4.  <repo-root>/build/{dev-release,dev-debug}/cpp/src  — developer
+    convenience.
+5.  System search path (ctypes.util.find_library / DLL search path).
+"""
 
 from __future__ import annotations
 
@@ -9,36 +24,49 @@ import sys
 from pathlib import Path
 
 _PACKAGE_DIR = Path(__file__).resolve().parent
+_SIBLING_LIBS = _PACKAGE_DIR.parent / f"{_PACKAGE_DIR.name}.libs"
 _REPO_ROOT = _PACKAGE_DIR.parents[3] if _PACKAGE_DIR.parents[3].name == "pls4all" else None
+
+# auditwheel renames the bundled library to ``libp4a-<8hexhash>.so.1.16.0``,
+# so we must accept the form ``libp4a*.so*`` in addition to ``libp4a.so*``.
+_LIB_PATTERNS = ("libp4a*.so*", "libp4a*.dylib", "p4a*.dll", "libp4a*.dll")
+
+
+def _glob_libs(directory: Path) -> list[Path]:
+    """Return all libp4a candidates under `directory`, sorted for determinism."""
+    found: list[Path] = []
+    if not directory.is_dir():
+        return found
+    for pattern in _LIB_PATTERNS:
+        found.extend(sorted(directory.glob(pattern)))
+    return found
 
 
 def _candidate_paths() -> list[Path]:
     paths: list[Path] = []
 
+    # (1) Explicit override always wins.
     env = os.environ.get("PLS4ALL_LIB_PATH")
     if env:
         paths.append(Path(env))
 
-    # Wheel layout: bindings/python/src/pls4all/lib/libp4a*
-    for p in (_PACKAGE_DIR / "lib").glob("libp4a*"):
-        paths.append(p)
-    for p in (_PACKAGE_DIR / "lib").glob("p4a*"):
-        paths.append(p)
+    # (2) Auditwheel / delocate / delvewheel place the bundled library in a
+    #     sibling `<package>.libs/` directory at install time. The library
+    #     is content-addressed (e.g. libp4a-7c4d2a1f.so.1) — match by glob.
+    paths.extend(_glob_libs(_SIBLING_LIBS))
 
-    # Developer convenience: repo-root build directory.
+    # (3) Direct wheel layout: package_data ships libp4a under pls4all/lib/.
+    paths.extend(_glob_libs(_PACKAGE_DIR / "lib"))
+
+    # (4) Developer convenience: repo-root build directory. Glob so any
+    #     versioned SONAME the build produced is picked up without
+    #     hard-coding a version string.
     if _REPO_ROOT is not None:
         for preset in ("dev-release", "dev-debug"):
-            for name in ("libp4a.so", "libp4a.dylib", "libp4a.so.0.97.0", "libp4a.so.0.96.0", "libp4a.so.0.95.0", "libp4a.so.0.94.0", "libp4a.so.0.93.0", "libp4a.so.0.92.0", "libp4a.so.0.91.0", "libp4a.so.0.90.0", "libp4a.so.0.89.0", "libp4a.so.0.88.0", "libp4a.so.0.87.0", "libp4a.so.0.86.0", "libp4a.so.0.85.0", "libp4a.so.0.84.0", "libp4a.so.0.83.0", "libp4a.so.0.82.0", "libp4a.so.0.81.0", "libp4a.so.0.80.0", "libp4a.so.0.79.0", "libp4a.so.0.78.0", "libp4a.so.0.77.0", "libp4a.so.0.76.0", "libp4a.so.0.75.0", "libp4a.so.0.74.0", "libp4a.so.0.73.0", "libp4a.so.0.72.0", "libp4a.so.0.71.0", "libp4a.so.0.70.0", "libp4a.so.0.69.0", "libp4a.so.0.68.0", "libp4a.so.0.67.0", "libp4a.so.0.66.0", "libp4a.so.0.65.0", "libp4a.so.0.64.0", "libp4a.so.0.63.0", "libp4a.so.0.62.0", "libp4a.so.0.61.0", "libp4a.so.0.60.0", "libp4a.so.0.59.0", "libp4a.so.0.58.0", "libp4a.so.0.57.0", "libp4a.so.0.56.0", "libp4a.so.0.55.0", "libp4a.so.0.54.0", "libp4a.so.0.53.0", "libp4a.so.0.52.0", "libp4a.so.0.51.0", "libp4a.so.0.50.0", "libp4a.so.0.49.0", "libp4a.so.0.48.0", "libp4a.so.0.47.0", "libp4a.so.0.46.0", "libp4a.so.0.45.0", "libp4a.so.0.44.0", "libp4a.so.0.43.0", "libp4a.so.0.42.0", "libp4a.so.0.41.0", "libp4a.so.0.40.0", "libp4a.so.0.39.0", "libp4a.so.0.38.0", "libp4a.so.0.37.0", "libp4a.so.0.36.0", "libp4a.so.0.35.0", "libp4a.so.0.34.0", "libp4a.so.0.33.0", "libp4a.so.0.32.0", "libp4a.so.0.31.0", "libp4a.so.0.30.0", "libp4a.so.0.29.0", "libp4a.so.0.28.0", "libp4a.so.0.27.0", "libp4a.so.0.26.0", "libp4a.so.0.25.0", "libp4a.so.0.24.0", "libp4a.so.0.23.0", "libp4a.so.0.22.0", "libp4a.so.0.21.0", "libp4a.so.0.20.0", "libp4a.so.0.19.0", "libp4a.so.0.18.0", "libp4a.so.0.17.0", "libp4a.so.0.16.0", "libp4a.so.0.15.0", "libp4a.so.0.14.0", "libp4a.so.0.13.0", "libp4a.so.0.12.0", "libp4a.so.0.11.0", "libp4a.so.0.10.0", "libp4a.so.0.9.0", "libp4a.so.0.8.0", "libp4a.so.0.7.0", "libp4a.so.0.6.0", "libp4a.so.0.5.0", "libp4a.so.0.4.0", "libp4a.so.0.3.0", "libp4a.so.0.2.0", "libp4a.so.0.1.0", "p4a.dll"):
-                p = _REPO_ROOT / "build" / preset / "cpp" / "src" / name
-                if p.exists():
-                    paths.append(p)
+            paths.extend(_glob_libs(_REPO_ROOT / "build" / preset / "cpp" / "src"))
 
-    # System search path.
-    if sys.platform.startswith("linux"):
-        sys_path = ctypes.util.find_library("p4a")
-        if sys_path:
-            paths.append(Path(sys_path))
-    elif sys.platform == "darwin":
+    # (5) System search path (ctypes.util.find_library or DLL search path).
+    if sys.platform.startswith("linux") or sys.platform == "darwin":
         sys_path = ctypes.util.find_library("p4a")
         if sys_path:
             paths.append(Path(sys_path))

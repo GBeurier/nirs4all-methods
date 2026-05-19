@@ -532,7 +532,7 @@ def generate(fixture_ids: Sequence[str],
              array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -698,7 +698,7 @@ def generate_pipeline(fixture_ids: Sequence[str],
                       array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -789,7 +789,7 @@ def generate_aom_preprocessing(fixture_ids: Sequence[str],
                                array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -864,7 +864,7 @@ def generate_aom_operators(fixture_ids: Sequence[str],
                            array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -937,7 +937,7 @@ def generate_aom_selection(fixture_ids: Sequence[str],
                            array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -1049,7 +1049,7 @@ def generate_aom_pop_selection(fixture_ids: Sequence[str],
                                array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -1163,7 +1163,7 @@ def generate_metrics(fixture_ids: Sequence[str],
                      array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -1261,7 +1261,7 @@ def generate_validation(fixture_ids: Sequence[str],
                         array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -1337,7 +1337,7 @@ def generate_advanced_validation(fixture_ids: Sequence[str],
                                  array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -1450,7 +1450,7 @@ def generate_classification_metrics(fixture_ids: Sequence[str],
                                     array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -1517,7 +1517,7 @@ def generate_classification_extensions(fixture_ids: Sequence[str],
                                        array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -1604,7 +1604,7 @@ def generate_pls_lda(fixture_ids: Sequence[str],
                      array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -1679,7 +1679,7 @@ def generate_pls_logistic(fixture_ids: Sequence[str],
                           array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -1766,7 +1766,7 @@ def generate_mb_pls(fixture_ids: Sequence[str],
                     array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -1856,7 +1856,7 @@ def generate_lw_pls(fixture_ids: Sequence[str],
                     array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -1931,7 +1931,7 @@ def generate_variable_importance(fixture_ids: Sequence[str],
                                  array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -1994,7 +1994,7 @@ def generate_variable_selection(fixture_ids: Sequence[str],
                                 array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -2082,7 +2082,7 @@ def generate_interval_selection(fixture_ids: Sequence[str],
                                 array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -2168,7 +2168,7 @@ def generate_bipls_selection(fixture_ids: Sequence[str],
                              array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -2262,7 +2262,7 @@ def generate_sipls_selection(fixture_ids: Sequence[str],
                              array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -2352,7 +2352,7 @@ def generate_stability_selection(fixture_ids: Sequence[str],
                                  array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -2438,7 +2438,7 @@ def generate_uve_selection(fixture_ids: Sequence[str],
                            array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -2524,7 +2524,7 @@ def generate_emcuve_selection(fixture_ids: Sequence[str],
                               array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -2616,7 +2616,7 @@ def generate_randomization_selection(fixture_ids: Sequence[str],
                                      array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -2700,7 +2700,7 @@ def generate_spa_selection(fixture_ids: Sequence[str],
                            array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -2776,7 +2776,7 @@ def generate_cars_selection(fixture_ids: Sequence[str],
                             array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -2864,7 +2864,7 @@ def generate_random_frog_selection(fixture_ids: Sequence[str],
                                    array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -2966,7 +2966,7 @@ def generate_scars_selection(fixture_ids: Sequence[str],
                              array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -3064,7 +3064,7 @@ def generate_ga_selection(fixture_ids: Sequence[str],
                           array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -3166,7 +3166,7 @@ def generate_shaving_selection(fixture_ids: Sequence[str],
                                array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -3256,7 +3256,7 @@ def generate_rep_selection(fixture_ids: Sequence[str],
                            array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -3354,7 +3354,7 @@ def generate_ipw_selection(fixture_ids: Sequence[str],
                            array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -3454,7 +3454,7 @@ def generate_st_selection(fixture_ids: Sequence[str],
                           array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -3556,7 +3556,7 @@ def generate_bve_selection(fixture_ids: Sequence[str],
                            array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -3648,7 +3648,7 @@ def generate_t2_selection(fixture_ids: Sequence[str],
                           array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -3759,7 +3759,7 @@ def generate_wvc_selection(fixture_ids: Sequence[str],
                            array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -3849,7 +3849,7 @@ def generate_wvc_threshold_selection(fixture_ids: Sequence[str],
                                      array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -3935,7 +3935,7 @@ def generate_component_coefficients(fixture_ids: Sequence[str],
                                     array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -3994,7 +3994,7 @@ def generate_cross_validation(fixture_ids: Sequence[str],
                               array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",
@@ -4074,7 +4074,7 @@ def generate_component_cv(fixture_ids: Sequence[str],
                           array_name: str) -> None:
     fixtures = [_load_fixture(fid, fixture_dir) for fid in fixture_ids]
     lines = [
-        "// SPDX-License-Identifier: CeCILL-2.1",
+        "// SPDX-License-Identifier: CECILL-2.1",
         f"// Generated mechanically from parity/fixtures/*{family}*.json.",
         "#pragma once",
         "",

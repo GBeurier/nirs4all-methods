@@ -98,7 +98,7 @@ from ._methods import (
 
 
 def version() -> str:
-    """Return the runtime library version string, e.g. '0.58.0+abi.1.0.0'."""
+    """Return the runtime library version string, e.g. 'X.Y.Z+abi.A.B.C'."""
     return lib.p4a_get_version_string().decode("utf-8")
 
 
@@ -205,4 +205,8 @@ __all__ = [
     "abi_version",
     "build_info",
 ]
-__version__ = "0.97.0"
+
+# Derive __version__ from the loaded native library so it stays in sync with
+# the C ABI version_string without any manual maintenance. The expected shape
+# of version() is "X.Y.Z+abi.A.B.C" — we strip the "+abi.*" suffix.
+__version__ = version().split("+", 1)[0]

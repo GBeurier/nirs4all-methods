@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Catalogue smoke tests for the §7/§13/§20 extras shipped in
 // cpp/src/core/extra_pls.cpp. Each method is exercised on a small

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Minimal zero-dependency test harness for pls4all Phase 0. Inspired by the
 // hand-rolled assertion logic used in aompls; trades doctest's ergonomics

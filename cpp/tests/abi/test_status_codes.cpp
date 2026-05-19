@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 
 #include "pls4all/p4a.h"
 #include "harness.hpp"

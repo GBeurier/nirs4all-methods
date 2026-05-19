@@ -1,6 +1,6 @@
 {
   "name": "@pls4all/wasm",
-  "version": "0.96.0",
+  "version": "0.97.0",
   "description": "WebAssembly bindings for pls4all — portable PLS / NIRS engine.",
   "type": "module",
   "main": "dist/index.js",
@@ -12,12 +12,14 @@
     },
     "./p4a.wasm": "./dist/p4a.wasm"
   },
-  "files": ["dist/"],
+  "files": [
+    "dist/"
+  ],
   "scripts": {
     "build": "tsc -p .",
     "test": "node --experimental-vm-modules test/run_smoke.mjs"
   },
-  "license": "CeCILL-2.1",
+  "license": "CECILL-2.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/GBeurier/pls4all.git",

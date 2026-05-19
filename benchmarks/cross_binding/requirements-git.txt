@@ -1,0 +1,3 @@
+# Git-only benchmark references not yet released on PyPI.
+# Pin to a commit so cross-binding runs are reproducible.
+nirs4all @ git+https://github.com/GBeurier/nirs4all.git@f07f5472f73d43d886be989226b3be4b68d7846b

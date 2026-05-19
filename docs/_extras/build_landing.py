@@ -1,8 +1,8 @@
 """Build the JSON payload that powers the interactive landing dashboard.
 
-Reads the canonical `benchmarks/cross_binding/results/full_matrix.csv`,
-normalises rows to a dashboard-friendly shape and
-emits a compact JSON blob. The blob is injected into
+Reads the canonical `benchmarks/cross_binding/results/full_matrix.csv`
+plus optional `dashboard_refresh_*.csv` deltas, normalises rows to a
+dashboard-friendly shape and emits a compact JSON blob. The blob is injected into
 `docs/_templates/landing.html` at sphinx-build time via the
 `bench_data_json` html_context variable populated by `conf.py:setup()`.
 
@@ -18,6 +18,7 @@ import os
 import platform
 import re
 import subprocess
+import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -162,6 +163,34 @@ ALGO_GROUP = {
     "ridge_pls":            "regularized",
 }
 
+SELECTOR_ALGOS = {
+    "vip_select", "coefficient_select", "selectivity_ratio_select",
+    "spa_select", "cars_select", "ga_select", "pso_select",
+    "vissa_select", "iriv_select", "irf_select", "shaving_select",
+    "bve_select", "rep_select", "ipw_select", "st_select",
+    "t2_select", "wvc_select", "wvc_threshold_select",
+    "emcuve_select", "randomization_select", "bipls_select",
+    "sipls_select", "interval_select", "stability_select",
+    "uve_select", "random_frog_select", "scars_select",
+    "vip_spa_select",
+}
+
+MATLAB_TIER2_SUPPORTED = {
+    "pls", "pls_simpls", "simpls", "pcr", "sparse_simpls", "cppls",
+    "ecr", "weighted_pls", "robust_pls", "ridge_pls",
+    "continuum_regression", "recursive_pls", "n_pls",
+    "kernel_pls", "kernel_pls_rbf", "o2pls", "mb_pls",
+    "pls_glm", "mir_pls", "missing_aware_nipals",
+    "bagging_pls", "boosting_pls",
+}
+
+FIXED_EXTERNAL_SUPPORT = {
+    "ikpls": {"pls"},
+    "r_pls": {"pls", "pcr", "cppls"},
+    "r_ropls": {"opls"},
+    "matlab_pls": {"pls"},
+}
+
 
 # Registry-driven `ref_*` backends that ARE the same library as one of
 # the fixed legacy externals. We collapse the two into a single
@@ -244,18 +273,94 @@ def is_true(v: Any) -> bool:
     return str(v).lower() == "true"
 
 
+def _float_or_none(v: Any) -> float | None:
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    if f != f:
+        return None
+    return f
+
+
+_METHOD_TOLERANCES: dict[str, float] | None = None
+
+
+def _method_tolerances() -> dict[str, float]:
+    """Resolve MethodSpec.rmse_rel_tol without making the dashboard depend
+    on a generated CSV column that older benchmark runs did not emit."""
+    global _METHOD_TOLERANCES
+    if _METHOD_TOLERANCES is not None:
+        return _METHOD_TOLERANCES
+
+    root = Path(__file__).resolve().parents[2]
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    try:
+        from benchmarks.parity_timing.registry import METHODS
+        _METHOD_TOLERANCES = {
+            m.name: float(m.rmse_rel_tol) for m in METHODS
+        }
+        return _METHOD_TOLERANCES
+    except Exception:
+        pass
+
+    lockfile = root / "benchmarks/parity_timing/truth_sources.lock.json"
+    try:
+        data = json.loads(lockfile.read_text())
+        _METHOD_TOLERANCES = {
+            e["name"]: float(e["rmse_rel_tol"])
+            for e in data.get("methods", [])
+            if "name" in e and "rmse_rel_tol" in e
+        }
+    except Exception:
+        _METHOD_TOLERANCES = {}
+    return _METHOD_TOLERANCES
+
+
+def reference_tolerance(row: dict) -> float | None:
+    """Per-method gate-2 tolerance, preferring explicit run output."""
+    for key in (
+        "reference_parity_tolerance",
+        "reference_parity_tol",
+        "rmse_rel_tol",
+        "tolerance",
+    ):
+        f = _float_or_none(row.get(key))
+        if f is not None and f > 0:
+            return f
+    return _method_tolerances().get(row.get("algorithm") or row.get("algo"))
+
+
 def parity_code(row: dict) -> str:
-    """exact | drift | divergent | error | not_run | not_available.
+    """Legacy binding-consistency parity code (gate 1 only).
+
+    exact | drift | divergent | error | not_run | not_available.
 
     Distinguishes hard runtime errors (ModuleNotFoundError, ImportError,
     crash) from libraries that do not expose an algorithm so the dashboard
     can show the right icon instead of collapsing every failure to a dash.
+    Reads `binding_parity_*` first, falls back to legacy `parity_*`.
     """
     if not is_true(row.get("ok")):
+        algo = row.get("algorithm") or row.get("algo") or ""
+        backend = row.get("backend") or ""
+        supported = FIXED_EXTERNAL_SUPPORT.get(backend)
+        if supported is not None and algo not in supported:
+            return "not_available"
+        if backend == "r_tier2" and algo in SELECTOR_ALGOS:
+            return "not_available"
+        if backend == "matlab_tier2" and algo not in MATLAB_TIER2_SUPPORTED:
+            return "not_available"
         reason = (row.get("reason") or "").lower()
         if "timeout" in reason:
             return "not_run"
         if ("not implemented by" in reason or
+                "no sklearn estimator" in reason or
+                "no formula wrapper" in reason or
+                "no pls4all.fit classdef entry" in reason or
+                "formula api limitation" in reason or
+                "only accepts 1-d y" in reason or
                 "unsupported algo" in reason or
                 "unsupported algorithm" in reason):
             return "not_available"
@@ -264,15 +369,56 @@ def parity_code(row: dict) -> str:
                 "error", "exception", "crash", "traceback", "segfault")):
             return "error"
         return "not_run"
-    if is_true(row.get("parity_ok")):
+    parity_ok = row.get("binding_parity_ok", row.get("parity_ok"))
+    if is_true(parity_ok):
         return "exact"
+    diff_val = row.get("binding_parity_max_diff",
+                        row.get("parity_max_diff", "nan"))
     try:
-        d = float(row.get("parity_max_diff", "nan"))
+        d = float(diff_val)
     except (TypeError, ValueError):
         return "drift"
     if d != d:           # NaN
         return "drift"
     if d < 1e-3:
+        return "drift"
+    return "divergent"
+
+
+def reference_parity_code(row: dict) -> str:
+    """Gate-2 parity classification.
+
+    Values:
+      exact          — within `method.rmse_rel_tol`.
+      drift          — finite but above tolerance, < 10× method tolerance.
+      divergent      — >= 10× method tolerance.
+      not_available  — `reference_kind=paper_only` (no executable truth).
+      not_run        — backend didn't produce a prediction at all.
+      error          — runtime error path (delegated to gate 1's
+                       classifier, kept here so the two columns line up).
+    """
+    if not is_true(row.get("ok")):
+        # Defer to the same error/timeout categorisation as gate 1.
+        return parity_code(row)
+    kind = (row.get("reference_kind") or "").lower()
+    if kind == "paper_only":
+        return "not_available"
+    ref_ok = row.get("reference_parity_ok")
+    if ref_ok in (None, "", "None"):
+        return "not_available"
+    if is_true(ref_ok):
+        return "exact"
+    rel = row.get("reference_parity_rmse_rel", "nan")
+    try:
+        d = float(rel)
+    except (TypeError, ValueError):
+        return "drift"
+    if d != d:
+        return "drift"
+    tol = reference_tolerance(row)
+    if tol is None:
+        return "drift"
+    if d < 10 * tol:
         return "drift"
     return "divergent"
 
@@ -340,17 +486,37 @@ def build_payload(results_dir: Path) -> dict:
     """Read canonical cross-binding CSVs and build the dashboard payload."""
     rows_in: list[dict] = []
     full_matrix = results_dir / "full_matrix.csv"
-    csv_paths = [full_matrix] if full_matrix.exists() else []
+    refresh_paths = sorted(results_dir.glob("dashboard_refresh_*.csv"))
+    csv_paths = ([full_matrix] if full_matrix.exists() else []) + refresh_paths
     generated_at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     if csv_paths:
         latest_source = max(p.stat().st_mtime for p in csv_paths)
         generated_at = dt.datetime.fromtimestamp(
             latest_source, dt.timezone.utc
         ).strftime("%Y-%m-%d %H:%M UTC")
-    for p in csv_paths:
-        rows_in.extend(csv.DictReader(p.open()))
+    for source_index, path in enumerate(csv_paths):
+        source_mtime = path.stat().st_mtime
+        for row in csv.DictReader(path.open()):
+            row["_source_index"] = source_index
+            row["_source_mtime"] = source_mtime
+            rows_in.append(row)
 
-    # Dedupe: same (algo, backend, build, n, p, threads) — keep last seen.
+    def _timing_schema(row: dict) -> str:
+        try:
+            versions = json.loads(row.get("versions_json") or "{}")
+        except json.JSONDecodeError:
+            return ""
+        return str(versions.get("timing_schema") or "")
+
+    def _row_rank(row: dict) -> tuple:
+        return (
+            1 if _timing_schema(row) == "warmup-v2" else 0,
+            float(row.get("_source_mtime") or 0.0),
+            int(row.get("_source_index") or 0),
+        )
+
+    # Dedupe: same (algo, backend, build, n, p, threads). Prefer the current
+    # warmup-v2 timing schema over legacy cold-run CSV rows, then newest file.
     seen: dict[tuple, dict] = {}
     for r in rows_in:
         if not r.get("algorithm"):
@@ -360,7 +526,38 @@ def build_payload(results_dir: Path) -> dict:
         except (ValueError, KeyError):
             continue
         key = (r["algorithm"], r["backend"], r.get("libp4a_build", ""), n, p_, t)
-        seen[key] = r
+        if key not in seen or _row_rank(r) >= _row_rank(seen[key]):
+            seen[key] = r
+
+    # Non-C++ dashboard columns are unique even when the CSV contains one
+    # row per libp4a build sweep. Prefer the production `blas-omp` row so
+    # stale dev/blas/omp duplicate rows cannot keep an old gate verdict.
+    preferred: dict[tuple, dict] = {}
+    for r in seen.values():
+        be = r.get("backend", "")
+        if be == "cpp":
+            key = (
+                r["algorithm"], be, r.get("libp4a_build", ""),
+                int(r["n"]), int(r["p"]), int(r["threads"]),
+            )
+        else:
+            key = (
+                r["algorithm"], be,
+                int(r["n"]), int(r["p"]), int(r["threads"]),
+            )
+        old = preferred.get(key)
+        if old is None:
+            preferred[key] = r
+            continue
+        old_build = old.get("libp4a_build", "")
+        new_build = r.get("libp4a_build", "")
+        if new_build == "blas-omp" and old_build != "blas-omp":
+            preferred[key] = r
+    seen = {
+        (r["algorithm"], r["backend"], r.get("libp4a_build", ""),
+         int(r["n"]), int(r["p"]), int(r["threads"])): r
+        for r in preferred.values()
+    }
 
     # Collect columns actually present. Track the backend(s) that
     # contributed to each column id so the column metadata builder can
@@ -505,15 +702,30 @@ def build_payload(results_dir: Path) -> dict:
             pivot[rkey] = {}        # ensure row exists even with no cells
         cid = column_id(r["backend"], r.get("libp4a_build", ""))
         verdict = parity_code(r)
+        ref_verdict = reference_parity_code(r)
         try:
             ms = float(r["median_ms"]) if r.get("median_ms") else None
         except ValueError:
             ms = None
         ok = is_true(r.get("ok"))
-        cell = {"parity": verdict, "ok": ok}
+        # `parity` keeps the legacy gate-1 verdict (binding consistency
+        # vs cpp). `reference_parity` is the new gate-2 verdict (kernel
+        # vs the method's canonical external reference). The dashboard
+        # renders both icons per cell.
+        cell = {"parity": verdict, "reference_parity": ref_verdict,
+                "binding_parity": verdict, "ok": ok,
+                "_source_is_ref": r["backend"].startswith("ref_")}
         if ms is not None and ms == ms:   # not NaN
             cell["ms"] = round(ms, 3)
             cell["fmt"] = fmt_ms(r["median_ms"])
+        tol = reference_tolerance(r)
+        if tol is not None:
+            cell["reference_parity_tolerance"] = tol
+        kind = (r.get("reference_kind") or "").strip()
+        if kind:
+            cell["reference_kind"] = kind
+        if is_true(r.get("is_canonical_reference")):
+            cell["is_canonical_reference"] = True
         # Capture the failure reason so the dashboard tooltip can show
         # "ModuleNotFoundError: foo" instead of a silent dash.
         reason = (r.get("reason") or "").strip()
@@ -537,22 +749,59 @@ def build_payload(results_dir: Path) -> dict:
                 # script never sets is_canonical_reference (the
                 # orchestrator's compute_parity sets it on the `ref_*`
                 # row by design).
-                # Whichever side has the timing data wins on ms/fmt;
-                # whichever side has the canonical flag wins on flags.
-                if existing.get("ms") is None and cell.get("ms") is not None:
+                incoming_is_ref = bool(cell.get("_source_is_ref"))
+                existing_is_ref = bool(existing.get("_source_is_ref"))
+                incoming_ok = bool(cell.get("ok"))
+                existing_ok = bool(existing.get("ok"))
+
+                # Timing is an atomic part of the selected source. Prefer
+                # the legacy fixed-bench timing when both rows succeeded,
+                # but do not keep an ok=false legacy cell if the canonical
+                # ref_* alias actually ran.
+                should_take_timing = (
+                    cell.get("ms") is not None
+                    and (
+                        existing.get("ms") is None
+                        or (incoming_ok and not existing_ok)
+                        or (existing_is_ref and not incoming_is_ref and incoming_ok)
+                    )
+                )
+                if should_take_timing:
                     existing["ms"] = cell["ms"]
                     existing["fmt"] = cell["fmt"]
+
+                should_take_status = incoming_ok and not existing_ok
+                if should_take_status:
+                    existing["ok"] = cell["ok"]
+                    existing["parity"] = cell["parity"]
+                    existing["binding_parity"] = cell["binding_parity"]
+                    existing.pop("reason", None)
                 if cell.get("is_canonical_reference"):
                     existing["is_canonical_reference"] = True
+                    # The alias row is the actual canonical reference for
+                    # this column. Its gate-2 verdict and status must win
+                    # over a failed legacy row that collapsed to the same
+                    # dashboard column.
+                    if incoming_ok or not existing_ok:
+                        existing["ok"] = cell["ok"]
+                        existing["parity"] = cell["parity"]
+                        existing["binding_parity"] = cell["binding_parity"]
+                        if incoming_ok:
+                            existing.pop("reason", None)
                 if cell.get("reference_kind") and not existing.get("reference_kind"):
                     existing["reference_kind"] = cell["reference_kind"]
+                if cell.get("reference_parity_tolerance") is not None:
+                    existing["reference_parity_tolerance"] = cell[
+                        "reference_parity_tolerance"]
                 # Prefer the gate-2 verdict from whichever side actually
-                # computed it (the `ref_*` row sees gate-2 against
-                # itself = "self"; the legacy row sees gate-2 against
-                # the canonical, which is what we want to show).
-                if (existing.get("reference_parity") in (None, "self")
-                        and cell.get("reference_parity") not in (None, "self")):
+                # computed it. If the incoming row is the canonical
+                # reference alias itself, its self-comparison verdict is
+                # the correct global gate-2 verdict for that column.
+                if (cell.get("is_canonical_reference")
+                        or existing.get("reference_parity") in (None, "self", "not_available")):
                     existing["reference_parity"] = cell["reference_parity"]
+                if reason and not existing.get("ok"):
+                    existing["reason"] = reason[:200]
 
     # Synthetic leading "Reference" column: for each row, find the cell
     # marked `is_canonical_reference=True` (set on the canonical
@@ -587,6 +836,10 @@ def build_payload(results_dir: Path) -> dict:
         if "reference_kind" in src:
             mirror["reference_kind"] = src["reference_kind"]
         cells[REF_COL_ID] = mirror
+
+    for cells in pivot.values():
+        for c in cells.values():
+            c.pop("_source_is_ref", None)
 
     rows_out = []
     for (algo, n, p_, t), cells in sorted(pivot.items(),
@@ -641,6 +894,7 @@ def build_payload(results_dir: Path) -> dict:
     # in the current data never make it into state.cols (a ghost id
     # would blank the table — fixed). Empty presets are dropped.
     all_cols = [c["id"] for c in columns]
+    selectable_cols = [c for c in all_cols if c != REF_COL_ID]
     cpp_blas_omp = "pls4all.cpp.blas+omp" if "pls4all.cpp.blas+omp" in all_cols else None
     cpp_ref = "pls4all.cpp.ref" if "pls4all.cpp.ref" in all_cols else None
 
@@ -664,8 +918,8 @@ def build_payload(results_dir: Path) -> dict:
     ]
     headline = [c for c in headline_candidates if c and c in all_cols]
     cpp_tiers = [c for c in all_cols if c.startswith("pls4all.cpp.")]
-    pls4all_only = [c for c in all_cols if c.startswith("pls4all.")]
-    externals = [c for c in all_cols if not c.startswith("pls4all.")]
+    pls4all_only = [c for c in selectable_cols if c.startswith("pls4all.")]
+    externals = [c for c in selectable_cols if not c.startswith("pls4all.")]
     thread_sweep = [c for c in [cpp_blas_omp, "pls4all.python",
                                   "pls4all.sklearn", "pls4all.registry",
                                   "sklearn"] if c and c in all_cols]
@@ -742,7 +996,7 @@ def build_payload(results_dir: Path) -> dict:
         "pls4all":      {"label": "pls4all only",   "cols": pls4all_only},
         "externals":    {"label": "Externals",      "cols": externals},
         "thread-sweep": {"label": "Thread sweep",   "cols": thread_sweep},
-        "all":          {"label": "All",            "cols": all_cols},
+        "all":          {"label": "All",            "cols": selectable_cols},
     }
     # Drop presets that would resolve to zero columns in the current data.
     presets = {k: v for k, v in raw_presets.items() if v["cols"]}
@@ -766,6 +1020,27 @@ def build_payload(results_dir: Path) -> dict:
             seen_lang.add(c["lang"])
             present_langs.append(c["lang"])
 
+    columns_by_id = {c["id"]: c for c in columns}
+
+    def _cell_effective_parity(cid: str, cell: dict) -> str | None:
+        if cid == REF_COL_ID:
+            return None
+        column = columns_by_id.get(cid, {})
+        kind = (column.get("kind") or "").lower()
+        column_id = column.get("id") or cid
+        if kind in {"external", "reference"} or column_id.startswith("pls4all.cpp."):
+            return cell.get("reference_parity") or cell.get("parity")
+        return cell.get("binding_parity") or cell.get("parity")
+
+    timed_cells = [
+        (cid, c)
+        for r in rows_out
+        for cid, c in r["cells"].items()
+        if cid != REF_COL_ID
+        and c.get("ok")
+        and isinstance(c.get("ms"), (int, float))
+    ]
+
     payload = {
         "generated_at": generated_at,
         "host":         host_info(),
@@ -783,9 +1058,9 @@ def build_payload(results_dir: Path) -> dict:
             "sizes":    len({(r["n"], r["p"]) for r in rows_out}),
             "threads":  sorted({r["threads"] for r in rows_out}),
             "rows":     len(rows_out),
-            "cells":    sum(len(r["cells"]) for r in rows_out),
-            "ok":       sum(1 for r in rows_out for c in r["cells"].values()
-                            if c.get("parity") == "exact"),
+            "cells":    len(timed_cells),
+            "ok":       sum(1 for cid, c in timed_cells
+                            if _cell_effective_parity(cid, c) == "exact"),
         },
     }
     return {

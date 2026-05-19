@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Phase 43 regression: confirm the SIMPLS fit goes through the
 // pls4all::linalg dispatch layer without breaking numerical parity.

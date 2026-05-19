@@ -34,7 +34,12 @@ sys.path.insert(0, str(BINDING_SRC))
 
 import pls4all  # noqa: E402
 
-from .registry import METHODS, MethodSpec, iter_reference_factories  # noqa: E402
+from .registry import (  # noqa: E402
+    METHODS,
+    MethodSpec,
+    iter_reference_factories,
+    reference_id,
+)
 
 
 @dataclass
@@ -45,6 +50,12 @@ class ParityRow:
     reference_lib: str
     reference_version: str
     reference_notes: str
+    # Stable cross-binding column id for this reference (`ref.<id>`).
+    # `None` for rows that never instantiate an adapter — paper-only,
+    # `no_python_reference`, `no_r_reference`, `reference_unavailable`,
+    # or `reference_error`. Downstream tooling (docs, lockfile) joins on
+    # this id rather than the more brittle `reference_lib`.
+    reference_id: str | None
     n_samples: int
     n_features: int
     params: dict
@@ -122,6 +133,7 @@ def _run_one_reference(method: MethodSpec, factory, X, Y, X_target,
                 reference_lang="?", reference_lib="(unavailable)",
                 reference_version="-",
                 reference_notes=method.notes,
+                reference_id=None,
                 n_samples=n_samples, n_features=n_features,
                 params=method.cell_params,
                 parity_pass=False,
@@ -137,6 +149,7 @@ def _run_one_reference(method: MethodSpec, factory, X, Y, X_target,
             reference_lang="?", reference_lib="?",
             reference_version="?",
             reference_notes=method.notes,
+            reference_id=None,
             n_samples=n_samples, n_features=n_features,
             params=method.cell_params,
             parity_pass=False,
@@ -145,6 +158,8 @@ def _run_one_reference(method: MethodSpec, factory, X, Y, X_target,
             status=f"reference_error:{type(exc).__name__}:{exc}",
         )
 
+    rid = reference_id(reference.library_name, reference.language)
+
     if pls4all_pred is None:
         return ParityRow(
             method=method.name, description=method.description,
@@ -152,6 +167,7 @@ def _run_one_reference(method: MethodSpec, factory, X, Y, X_target,
             reference_lib=reference.library_name,
             reference_version=reference.library_version,
             reference_notes=reference.notes or method.notes,
+            reference_id=rid,
             n_samples=n_samples, n_features=n_features,
             params=method.cell_params,
             parity_pass=False,
@@ -167,6 +183,7 @@ def _run_one_reference(method: MethodSpec, factory, X, Y, X_target,
             reference_lib=reference.library_name,
             reference_version=reference.library_version,
             reference_notes=reference.notes or method.notes,
+            reference_id=rid,
             n_samples=n_samples, n_features=n_features,
             params=method.cell_params,
             parity_pass=False,
@@ -186,6 +203,7 @@ def _run_one_reference(method: MethodSpec, factory, X, Y, X_target,
         reference_lib=reference.library_name,
         reference_version=reference.library_version,
         reference_notes=reference.notes or method.notes,
+        reference_id=rid,
         n_samples=n_samples, n_features=n_features,
         params=method.cell_params,
         parity_pass=parity_pass,
@@ -225,6 +243,7 @@ def _run_method(method: MethodSpec) -> list[ParityRow]:
             reference_lang="paper", reference_lib="paper-only",
             reference_version="-",
             reference_notes=method.paper_only,
+            reference_id=None,
             n_samples=n, n_features=p, params=method.cell_params,
             parity_pass=pls4all_ok,
             rmse_abs=float("nan"), rmse_rel=float("nan"),
@@ -260,6 +279,7 @@ def _run_method(method: MethodSpec) -> list[ParityRow]:
             reference_lang="python", reference_lib="(none)",
             reference_version="-",
             reference_notes="No Python reference registered for this method.",
+            reference_id=None,
             n_samples=n, n_features=p, params=method.cell_params,
             parity_pass=False, rmse_abs=float("nan"), rmse_rel=float("nan"),
             tolerance=method.rmse_rel_tol,
@@ -277,6 +297,7 @@ def _run_method(method: MethodSpec) -> list[ParityRow]:
             reference_version="-",
             reference_notes=(method.notes or
                              "No R reference available for this method."),
+            reference_id=None,
             n_samples=n, n_features=p, params=method.cell_params,
             parity_pass=False, rmse_abs=float("nan"), rmse_rel=float("nan"),
             tolerance=method.rmse_rel_tol,
@@ -316,6 +337,7 @@ def _write_csv(path: Path, rows: list[ParityRow]) -> None:
     fieldnames = [
         "method", "description",
         "reference_lang", "reference_lib", "reference_version",
+        "reference_id",
         "n_samples", "n_features", "params",
         "parity_pass", "rmse_abs", "rmse_rel", "tolerance",
         "status", "reference_notes",
@@ -330,6 +352,7 @@ def _write_csv(path: Path, rows: list[ParityRow]) -> None:
                 "reference_lang": row.reference_lang,
                 "reference_lib": row.reference_lib,
                 "reference_version": row.reference_version,
+                "reference_id": row.reference_id or "",
                 "n_samples": row.n_samples,
                 "n_features": row.n_features,
                 "params": str(row.params),

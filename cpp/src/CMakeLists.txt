@@ -285,10 +285,17 @@ endfunction()
 if(PLS4ALL_BUILD_SHARED)
     add_library(pls4all_c SHARED ${_pls4all_c_sources})
     pls4all_apply_c_target(pls4all_c)
+    # SOVERSION + VERSION are derived from the **ABI** semver (parsed from
+    # p4a_version.h in the top-level CMakeLists.txt), not from the project
+    # semver. Rationale: the C ABI is stable across the project's 0.x → 1.x
+    # transition. Linux SONAME = libp4a.so.${P4A_ABI_VERSION_MAJOR}, real file
+    # = libp4a.so.${P4A_ABI_VERSION}. macOS dylib install name embeds
+    # P4A_ABI_VERSION_MAJOR via the standard CMake VERSION/SOVERSION machinery.
+    # Windows DLLs have no SONAME; the import lib name is unaffected.
     set_target_properties(pls4all_c PROPERTIES
         OUTPUT_NAME p4a
-        SOVERSION   ${PROJECT_VERSION_MAJOR}
-        VERSION     ${PROJECT_VERSION})
+        SOVERSION   ${P4A_ABI_VERSION_MAJOR}
+        VERSION     ${P4A_ABI_VERSION})
     target_compile_definitions(pls4all_c PRIVATE PLS4ALL_BUILDING_DLL=1)
 
     # Undefined-symbol enforcement + dead-code stripping at link time.

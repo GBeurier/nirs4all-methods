@@ -122,5 +122,6 @@ todo.local.md
 # Cross-binding benchmark caches (regenerated per run)
 benchmarks/cross_binding/data/*.csv
 benchmarks/cross_binding/data/.predictions/
-benchmarks/cross_binding/results/
+benchmarks/cross_binding/results/*
+!benchmarks/cross_binding/results/dashboard_refresh_*.csv
 docs/_build/

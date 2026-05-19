@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // pls4all_cli — tiny introspection tool. Supported subcommands:
 //   --version      print "pls4all <project> (ABI <abi> · git <rev>)"
@@ -16,6 +16,7 @@
 #include <string.h>
 
 #include <chrono>
+#include <limits>
 
 #include "pls4all/p4a.h"
 
@@ -756,7 +757,10 @@ int cmd_bench(int argc, char** argv) {
         last_status = p4a_model_fit(ctx, cfg, &X, &Y, &model);
         const auto fit_t1 = std::chrono::steady_clock::now();
         if (last_status != P4A_OK) {
-            fit_ms[r] = NAN; predict_ms[r] = NAN;
+            // NAN from <math.h> is a float literal on some platforms;
+            // assign explicit double NaN to avoid -Werror=double-promotion.
+            const double nan_d = std::numeric_limits<double>::quiet_NaN();
+            fit_ms[r] = nan_d; predict_ms[r] = nan_d;
             continue;
         }
         last_status = p4a_model_predict(ctx, model, &X, &Pred);

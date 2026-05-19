@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CeCILL-2.1
+# SPDX-License-Identifier: CECILL-2.1
 #
 # WASM build of libp4a via Emscripten. Produces:
 #   build/<preset>/bindings/js/p4a.js     — Emscripten glue (MODULARIZE)

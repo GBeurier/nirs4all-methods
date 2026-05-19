@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>pls4all · cross-binding benchmark</title>
-  <meta name="description" content="Interactive cross-binding benchmark dashboard for the pls4all PLS/NIRS library. Same algorithm, same input bytes, 17 implementations across C++, Python, R, MATLAB.">
+  <meta name="description" content="Interactive cross-binding benchmark dashboard for the pls4all PLS/NIRS library. Same algorithm, same generated data, 17 implementations across C++, Python, R, MATLAB.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500;600;700;800&family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -778,10 +778,20 @@
       font-size: 9px;
       opacity: 0.75;
     }
-    /* Second parity icon (gate 2: vs canonical external reference). */
-    .ref-parity { display: inline-block; min-width: 12px; text-align: center; margin-left: 3px; font-weight: 600; font-family: var(--mono); opacity: 0.85; }
-
-    .parity { display: inline-block; min-width: 12px; text-align: center; margin-left: 5px; font-weight: 600; font-family: var(--mono); }
+    /* Compact parity marker. C++ and external cells show reference parity;
+       internal binding cells show binding parity. */
+    .ref-parity,
+    .parity {
+      display: inline-block;
+      min-width: 9px;
+      text-align: center;
+      margin-left: 2px;
+      font-weight: 600;
+      font-family: var(--mono);
+      font-size: 10px;
+      line-height: 1;
+    }
+    .ref-parity { opacity: 0.85; }
     .p-exact   { color: var(--phosphor); }
     .p-drift   { color: var(--amber); }
     .p-divergent { color: var(--crimson); }
@@ -817,7 +827,8 @@
     body.density-ultra table.bench th .col-label { font-size: 9.5px; letter-spacing: 0; }
     body.density-ultra table.bench tr.lang-band th { padding: 2px 3px; font-size: 8.5px; letter-spacing: 0.12em; }
     body.density-ultra table.bench td.thread-cell .thread-pill { padding: 0 4px; font-size: 9px; }
-    body.density-ultra .parity { margin-left: 2px; font-size: 9.5px; }
+    body.density-ultra .parity,
+    body.density-ultra .ref-parity { margin-left: 1px; font-size: 9px; min-width: 8px; }
     body.density-ultra table.bench td.algo-cell { font-size: 10.5px; padding: 1.5px 6px; }
     body.density-ultra table.bench td.size-cell { font-size: 10px; padding: 1.5px 6px; }
 
@@ -1151,7 +1162,7 @@
         <div>
           <div class="wordmark"><span class="accent">pls4all</span><span class="sep">/</span><span class="light">cross-binding benchmark</span></div>
           <div class="tagline" id="tagline">
-            same algorithm <span class="dot">·</span> same input bytes <span class="dot">·</span> <span id="tagline-count">—</span> implementations
+            same algorithm <span class="dot">·</span> same generated data <span class="dot">·</span> <span id="tagline-count">—</span> implementations
           </div>
         </div>
       </div>
@@ -1280,8 +1291,8 @@
     <ul>
       <li>Reference: <code>pls4all.cpp</code> native column <span id="parity-ref-name">(resolved from data)</span></li>
       <li>Parity tolerance: 1e-6 exact, 1e-3 drift threshold</li>
-      <li>Every backend reads the <b>same</b> orchestrator-generated CSV — bit-identical input bytes</li>
-      <li>5 runs per cell, first discarded as warmup, median reported</li>
+      <li>Every backend reads the <b>same</b> orchestrator-generated CSV dataset</li>
+      <li>5 timed runs per cell after one unmeasured warmup, median reported</li>
       <li>Per-cell timeout: 300s</li>
       <li>Thread control via <code>OMP_NUM_THREADS</code> · <code>OPENBLAS_NUM_THREADS</code> · <code>MKL_NUM_THREADS</code> · <code>BLIS_NUM_THREADS</code> + binding-specific thread controls</li>
     </ul>
@@ -1476,13 +1487,28 @@ function applyRowFilters() {
   });
 }
 
-function cellPasses(cell) {
+function usesReferenceGate(meta) {
+  if (!meta) return false;
+  const kind = ((meta && meta.kind) || '').toLowerCase();
+  const id = (meta && meta.id) || '';
+  return kind === 'external' || kind === 'reference' || id.startsWith('pls4all.cpp.');
+}
+
+function effectiveParity(cell, meta) {
+  if (!cell) return 'not_available';
+  if (usesReferenceGate(meta)) {
+    return normalizeParityKey(cell.reference_parity || cell.parity || 'not_available');
+  }
+  return normalizeParityKey(cell.binding_parity || cell.parity || 'not_available');
+}
+
+function cellPasses(cell, meta) {
   // Parity chips are a pure CELL MASK: cells with an excluded verdict
   // render as `—`, but rows are NEVER pruned solely because their
   // cells got masked. This avoids the surprising "filter fail and your
   // ok rows also vanish" behaviour.
   if (!cell) return true;        // empty cells render as — always
-  return state.parity.has(normalizeParityKey(cell.parity));
+  return state.parity.has(effectiveParity(cell, meta));
 }
 
 function visibleColIds() {
@@ -1588,10 +1614,11 @@ function visibleLangGroups(colMetas) {
 
 function fastestColumn(row, cols) {
   let best = null;
+  const colsById = Object.fromEntries(DATA.columns.map(c => [c.id, c]));
   for (const id of cols) {
     const c = row.cells[id];
     if (!c || !c.ok || !Number.isFinite(c.ms)) continue;
-    if (!cellPasses(c)) continue;
+    if (!cellPasses(c, colsById[id])) continue;
     if (best === null || c.ms < best.ms) best = { id, ms: c.ms };
   }
   return best ? best.id : null;
@@ -1606,7 +1633,7 @@ function fastestPerLanguage(row, cols, colsById) {
   for (const id of cols) {
     const c = row.cells[id];
     if (!c || !c.ok || !Number.isFinite(c.ms)) continue;
-    if (!cellPasses(c)) continue;
+    if (!cellPasses(c, colsById[id])) continue;
     const meta = colsById[id];
     if (!meta) continue;
     const slug = colLangSlug(meta);
@@ -1694,6 +1721,7 @@ function renderPresetRail() {
   const effective = visibleColIds();
   const norm = (ids) => ids
     .filter(id => id !== NATIVE_COL_ID)
+    .filter(id => id !== '__reference')
     .filter(id => {
       const c = DATA.columns.find(x => x.id === id);
       return c && (!state.lang || c.lang === state.lang);
@@ -1990,13 +2018,14 @@ function renderTable() {
           tr += `<td class="${lcls}" title="canonical reference for ${row.algo}: ${refName}"><span class="cell-value">${refName}</span>${gate2Icon}${refKind}</td>`;
           continue;
         }
-        if (!c || !cellPasses(c)) {
+        if (!c || !cellPasses(c, meta)) {
           tr += `<td class="cell-empty ${lcls}">—</td>`;
           continue;
         }
         if (!c.ok || !Number.isFinite(c.ms)) {
           const title = c.reason ? ` title="${escAttr(c.reason)}"` : '';
-          tr += `<td class="${lcls}"${title}><span class="p-${c.parity}">${PARITY_ICON[c.parity] || '—'}</span></td>`;
+          const verdict = effectiveParity(c, meta);
+          tr += `<td class="${lcls}"${title}><span class="p-${verdict}">${PARITY_ICON[verdict] || '—'}</span></td>`;
           continue;
         }
         // build value (wrapped in .cell-value so per-language tint can target text only)
@@ -2011,17 +2040,13 @@ function renderTable() {
         } else {
           display = `<span class="cell-value ${fastCls}">${densifyFmt(c.fmt)}</span>`;
         }
-        // Gate 1 icon — binding consistency (every binding vs cpp).
-        const parityHtml = `<span class="parity p-${c.parity}">${PARITY_ICON[c.parity]}</span>`;
-        // Gate 2 icon — external-reference validity (cpp vs canonical
-        // external reference). Only render when the row's method has
-        // an executable canonical reference (i.e. NOT a paper_only
-        // method). The icon sits next to the binding-parity icon so a
-        // glance at the cell reveals both gate verdicts.
-        const refParity = c.reference_parity || c.parity;
-        const showRefParity = refParity && refParity !== 'not_available';
-        const refParityHtml = showRefParity
-          ? `<span class="ref-parity p-${refParity}" title="vs canonical external reference (${c.reference_kind || 'external'})">${PARITY_ICON[refParity] || ''}</span>`
+        const usesRefGate = usesReferenceGate(meta);
+        const markerParity = effectiveParity(c, meta);
+        const markerTitle = usesRefGate
+          ? `reference parity vs canonical external reference (${c.reference_kind || 'external'})`
+          : 'binding parity vs cpp';
+        const parityHtml = markerParity !== 'not_available'
+          ? `<span class="parity p-${markerParity}" title="${escAttr(markerTitle)}">${PARITY_ICON[markerParity] || ''}</span>`
           : '';
         // Assemble cell classes.
         // - Row-overall fastest gets the phosphor glow background.
@@ -2040,7 +2065,7 @@ function renderTable() {
           tdCls.push('cell-lang-best', `lang-${langSlug}`);
         }
         if (c.is_canonical_reference) tdCls.push('cell-canonical-ref');
-        tr += `<td class="${tdCls.join(' ')}">${display}${parityHtml}${refParityHtml}</td>`;
+        tr += `<td class="${tdCls.join(' ')}">${display}${parityHtml}</td>`;
       }
       tr += `</tr>`;
       body.push(tr);
@@ -2066,6 +2091,7 @@ function renderTable() {
 // computes ratios correctly (baseMs/c.ms = geomean).
 function aggregateRowsBySize(rows, baselineId) {
   if (!rows.length) return rows;
+  const colsById = Object.fromEntries(DATA.columns.map(c => [c.id, c]));
   const groups = new Map();
   for (const r of rows) {
     const key = `${r.algo}|${r.threads}`;
@@ -2082,12 +2108,14 @@ function aggregateRowsBySize(rows, baselineId) {
     for (const id of allColIds) {
       const ratios = [];
       const parities = new Set();
+      const refParities = new Set();
       let lastReason = null;
       for (const r of group) {
         const c = r.cells[id];
         const baseC = r.cells[baselineId];
         if (!c) { parities.add('not_available'); continue; }
-        parities.add(c.parity || 'not_run');
+        parities.add(effectiveParity(c, colsById[id]));
+        refParities.add(c.reference_parity || 'not_available');
         if (c.reason) lastReason = c.reason;
         if (!c.ok || !Number.isFinite(c.ms)) continue;
         if (!baseC || !Number.isFinite(baseC.ms)) continue;
@@ -2098,7 +2126,14 @@ function aggregateRowsBySize(rows, baselineId) {
         for (const p of parities) {
           if ((PARITY_RANK[p] ?? 99) > (PARITY_RANK[parity] ?? 99)) parity = p;
         }
-        newCells[id] = { parity, ok: false, ms: null, reason: lastReason };
+        let reference_parity = 'not_available';
+        for (const p of refParities) {
+          if ((PARITY_RANK[p] ?? 99) > (PARITY_RANK[reference_parity] ?? 99)) reference_parity = p;
+        }
+        newCells[id] = {
+          parity, binding_parity: parity, reference_parity,
+          ok: false, ms: null, reason: lastReason
+        };
         continue;
       }
       const geomean = Math.exp(ratios.reduce((s, r) => s + Math.log(r), 0) / ratios.length);
@@ -2107,14 +2142,22 @@ function aggregateRowsBySize(rows, baselineId) {
         if (p === 'not_available' || p === 'not_run' || p === 'error') continue;
         if ((PARITY_RANK[p] ?? 99) > (PARITY_RANK[parity] ?? 99)) parity = p;
       }
+      let reference_parity = 'exact';
+      for (const p of refParities) {
+        if (p === 'not_available' || p === 'not_run' || p === 'error') continue;
+        if ((PARITY_RANK[p] ?? 99) > (PARITY_RANK[reference_parity] ?? 99)) reference_parity = p;
+      }
       newCells[id] = {
-        parity, ok: true, ms: 1 / geomean,
+        parity, binding_parity: parity, reference_parity,
+        ok: true, ms: 1 / geomean,
         fmt: fmtSpeedup(geomean),
         reason: `geomean over ${ratios.length} size${ratios.length === 1 ? '' : 's'}`,
       };
     }
     newCells[baselineId] = {
       parity: (newCells[baselineId] && newCells[baselineId].parity) || 'exact',
+      binding_parity: (newCells[baselineId] && newCells[baselineId].binding_parity) || 'exact',
+      reference_parity: (newCells[baselineId] && newCells[baselineId].reference_parity) || 'exact',
       ok: true, ms: 1, fmt: '1.00×',
     };
     out.push({

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 
 /** Float row-major or column-major matrix view passed to pls4all. */
 export interface Matrix {

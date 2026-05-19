@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CeCILL-2.1
+/* SPDX-License-Identifier: CECILL-2.1
  *
  * Pure-C reference test for the Emscripten libp4a_static.a build.
  *

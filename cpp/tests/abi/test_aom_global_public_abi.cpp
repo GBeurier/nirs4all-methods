@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Public C ABI parity tests for global AOM selection. These exercise the
 // p4a_aom_global_select / *_result_get_* / *_result_destroy entry points and

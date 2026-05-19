@@ -3,10 +3,24 @@
 # last-run predictions for post-hoc parity computation.
 
 write_npy_f64 <- function(arr, path) {
-    arr <- as.double(arr)
+    # R stores matrices column-major; numpy's default load convention is
+    # C-order (row-major). If the input is a 2-D matrix, transpose so the
+    # column-major-flatten produced by `as.double()` lands in the order a
+    # Python `np.load(path).ravel()` would expect after a `.reshape(rows,
+    # cols)`. We then declare the 2-D shape in the npy header so the
+    # cross-binding parity comparison can reshape consistently.
+    if (is.matrix(arr)) {
+        rows <- nrow(arr)
+        cols <- ncol(arr)
+        flat <- as.double(t(arr))
+        shape_str <- sprintf("(%d, %d)", rows, cols)
+    } else {
+        flat <- as.double(arr)
+        shape_str <- sprintf("(%d,)", length(flat))
+    }
     header_body <- sprintf(
-        "{'descr': '<f8', 'fortran_order': False, 'shape': (%d,), }",
-        length(arr))
+        "{'descr': '<f8', 'fortran_order': False, 'shape': %s, }",
+        shape_str)
     raw_magic <- as.raw(c(0x93, 0x4e, 0x55, 0x4d, 0x50, 0x59))  # \x93NUMPY
     version <- as.raw(c(0x01, 0x00))
     # numpy spec: total header (magic + version + len(2) + header) is
@@ -22,7 +36,7 @@ write_npy_f64 <- function(arr, path) {
     writeBin(version, con)
     writeBin(header_len_le, con)
     writeBin(charToRaw(header_full), con)
-    writeBin(arr, con, size = 8L, endian = "little")
+    writeBin(flat, con, size = 8L, endian = "little")
 }
 
 # Make `pls4all_bench_emit(stats, last_preds, pred_path, versions)`
@@ -47,8 +61,21 @@ pls4all_bench_load_xy <- function(csv_dir, n, p, seed) {
          y = arr[, ncol(arr)])
 }
 
-# Timed runs (warmup-aware median, same convention as Python _common).
+pls4all_bench_load_x_target <- function(x_target_dir, n, p, seed) {
+    path <- file.path(x_target_dir, sprintf("xtarget_%dx%d_seed%.0f.csv",
+                                             n, p, seed))
+    if (!file.exists(path)) {
+        stop(sprintf("X_target sidecar not found: %s", path))
+    }
+    as.matrix(read.csv(path, header = FALSE))
+}
+
+# Timed runs (one unmeasured warmup, same convention as Python _common).
 pls4all_bench_time_runs <- function(fit_predict_seeded, runs, seed_base) {
+    if (runs < 1L) {
+        stop("runs must be >= 1")
+    }
+    fit_predict_seeded(seed_base)
     samples <- numeric(runs)
     last_preds <- NULL
     for (i in seq_len(runs)) {
@@ -56,13 +83,12 @@ pls4all_bench_time_runs <- function(fit_predict_seeded, runs, seed_base) {
         last_preds <- fit_predict_seeded(seed_base + (i - 1L))
         samples[i] <- (proc.time()[["elapsed"]] - t0) * 1000
     }
-    timed <- if (runs >= 3L) samples[-1L] else samples
     list(stats = list(
             ok = TRUE,
-            n_runs = length(timed),
-            median_ms = median(timed),
-            min_ms = min(timed),
-            max_ms = max(timed)
+            n_runs = length(samples),
+            median_ms = median(samples),
+            min_ms = min(samples),
+            max_ms = max(samples)
          ),
          last_preds = last_preds)
 }

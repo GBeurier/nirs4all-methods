@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CeCILL-2.1
+# SPDX-License-Identifier: CECILL-2.1
 #
 # Tier-1 R wrappers for the remaining MethodResult fits, selectors and
 # diagnostics exposed by the unified dispatcher (r_dispatch.c). The
@@ -8,12 +8,21 @@
 # ---- MethodResult fits ----------------------------------------------
 
 #' Elastic Component Regression (Liu 2009/2010).
+#' @param n_components Integer. Number of latent components.
+#' @param alpha Numeric in [0, 1]. Elastic-net / penalty mixing parameter.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 ecr_fit <- function(X, Y, n_components, alpha = 0.5) {
     pls4all_method("ecr", X, Y, n_components, params = list(alpha = alpha))
 }
 
 #' Domain-Invariant PLS (Nikzad-Langerodi 2018).
+#' @param X_source Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param Y_source Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param n_components Integer. Number of latent components.
+#' @param X_target Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param di_lambda Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 di_pls_fit <- function(X_source, Y_source, n_components, X_target, di_lambda = 1.0) {
     pls4all_method("di_pls", X_source, Y_source, n_components,
@@ -22,6 +31,11 @@ di_pls_fit <- function(X_source, Y_source, n_components, X_target, di_lambda = 1
 }
 
 #' Robust PLS via Huber IRLS.
+#' @param n_components Integer. Number of latent components.
+#' @param huber_k Numeric >= 0. Huber loss tuning constant.
+#' @param max_irls_iter Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 robust_pls_fit <- function(X, Y, n_components,
                             huber_k = 1.345, max_irls_iter = 20L) {
@@ -31,6 +45,10 @@ robust_pls_fit <- function(X, Y, n_components,
 }
 
 #' L2-augmented PLS regression.
+#' @param n_components Integer. Number of latent components.
+#' @param ridge_lambda Numeric >= 0. Ridge regularisation strength.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 ridge_pls_fit <- function(X, Y, n_components, ridge_lambda = 1.0) {
     pls4all_method("ridge_pls", X, Y, n_components,
@@ -38,6 +56,10 @@ ridge_pls_fit <- function(X, Y, n_components, ridge_lambda = 1.0) {
 }
 
 #' Continuum regression (tau ∈ [0, 1]).
+#' @param n_components Integer. Number of latent components.
+#' @param tau Numeric in [0, 1]. Continuum regression mixing parameter.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 continuum_regression_fit <- function(X, Y, n_components, tau = 0.5) {
     pls4all_method("continuum_regression", X, Y, n_components,
@@ -45,13 +67,23 @@ continuum_regression_fit <- function(X, Y, n_components, tau = 0.5) {
 }
 
 #' Moving-window recursive PLS.
+#' @param n_components Integer. Number of latent components.
+#' @param window_size Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 recursive_pls_fit <- function(X, Y, n_components, window_size = 50L) {
     pls4all_method("recursive_pls", X, Y, n_components,
                    params = list(window_size = as.integer(window_size)))
 }
 
-#' N-PLS (3-way tensor) regression. `X` is the flattened (n, mode_j*mode_k) matrix.
+#' N-PLS (3-way tensor) regression. `X_flat` is the flattened (n, mode_j*mode_k) matrix.
+#' @param X_flat Numeric matrix. The flattened 3-way design tensor
+#'   (rows = samples, cols = mode_j * mode_k).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
+#' @param n_components Integer. Number of latent components.
+#' @param mode_j Integer. Size of the first non-sample tensor mode.
+#' @param mode_k Integer. Size of the second non-sample tensor mode.
 #' @export
 n_pls_fit <- function(X_flat, Y, n_components, mode_j, mode_k) {
     pls4all_method("n_pls", X_flat, Y, n_components,
@@ -60,6 +92,13 @@ n_pls_fit <- function(X_flat, Y, n_components, mode_j, mode_k) {
 }
 
 #' Non-linear kernel PLS (Rosipal & Trejo 2001).
+#' @param n_components Integer. Number of latent components.
+#' @param kernel_type Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param gamma Numeric. CPPLS / kernel band parameter.
+#' @param coef0 Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param degree Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 kernel_pls_fit <- function(X, Y, n_components,
                             kernel_type = 1L, gamma = 0.0,
@@ -71,6 +110,11 @@ kernel_pls_fit <- function(X, Y, n_components,
 }
 
 #' O2-PLS (bi-directional OPLS).
+#' @param n_predictive Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param n_x_orthogonal Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param n_y_orthogonal Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 o2pls_fit <- function(X, Y, n_predictive = 2L,
                        n_x_orthogonal = 1L, n_y_orthogonal = 1L) {
@@ -81,6 +125,10 @@ o2pls_fit <- function(X, Y, n_predictive = 2L,
 }
 
 #' Sparse PLS-DA classifier (`y_labels` is an integer vector of class IDs).
+#' @param y_labels Integer vector. Class labels.
+#' @param n_components Integer. Number of latent components.
+#' @param sparsity_lambda Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
 #' @export
 sparse_pls_da_fit <- function(X, y_labels, n_components, sparsity_lambda = 0.05) {
     pls4all_method("sparse_pls_da", X, rep(0, nrow(X)), n_components,
@@ -89,6 +137,11 @@ sparse_pls_da_fit <- function(X, y_labels, n_components, sparsity_lambda = 0.05)
 }
 
 #' Group-sparse PLS (group L1 across feature groups).
+#' @param n_components Integer. Number of latent components.
+#' @param group_assignment Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param group_lambda Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 group_sparse_pls_fit <- function(X, Y, n_components, group_assignment,
                                   group_lambda = 0.05) {
@@ -98,6 +151,11 @@ group_sparse_pls_fit <- function(X, Y, n_components, group_assignment,
 }
 
 #' Fused-sparse PLS (L1 + adjacent-coef smoothing).
+#' @param n_components Integer. Number of latent components.
+#' @param l1_lambda Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param fusion_lambda Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 fused_sparse_pls_fit <- function(X, Y, n_components,
                                   l1_lambda = 0.05, fusion_lambda = 0.05) {
@@ -109,6 +167,10 @@ fused_sparse_pls_fit <- function(X, Y, n_components,
 #' Sequential & Orthogonalised multi-block PLS (Næs et al. 2011).
 #' `block_sizes` integer vector summing to ncol(X);
 #' `n_components_per_block` integer vector of same length.
+#' @param block_sizes Integer vector. Per-block feature counts for multi-block PLS.
+#' @param n_components_per_block Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 so_pls_fit <- function(X, Y, block_sizes, n_components_per_block) {
     n_total <- sum(n_components_per_block)
@@ -119,6 +181,11 @@ so_pls_fit <- function(X, Y, block_sizes, n_components_per_block) {
 }
 
 #' OnPLS — Orthogonal multi-block PLS (joint + unique loadings).
+#' @param n_joint Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param n_unique_per_block Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param block_sizes Integer vector. Per-block feature counts for multi-block PLS.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 on_pls_fit <- function(X, Y, n_joint, n_unique_per_block, block_sizes) {
     pls4all_method("on_pls", X, Y, as.integer(n_joint),
@@ -129,6 +196,10 @@ on_pls_fit <- function(X, Y, n_joint, n_unique_per_block, block_sizes) {
 }
 
 #' ROSA — Response-Oriented Sequential Alternation.
+#' @param n_components Integer. Number of latent components.
+#' @param block_sizes Integer vector. Per-block feature counts for multi-block PLS.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 rosa_fit <- function(X, Y, n_components, block_sizes) {
     pls4all_method("rosa", X, Y, n_components,
@@ -136,6 +207,11 @@ rosa_fit <- function(X, Y, n_components, block_sizes) {
 }
 
 #' Bagging PLS (bootstrap aggregation of PLS regressors).
+#' @param n_components Integer. Number of latent components.
+#' @param n_estimators Integer >= 1. Number of bootstrap / boosting / random-subspace estimators.
+#' @param seed Integer. Random seed for reproducibility.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 bagging_pls_fit <- function(X, Y, n_components,
                              n_estimators = 50L, seed = 0L) {
@@ -145,6 +221,11 @@ bagging_pls_fit <- function(X, Y, n_components,
 }
 
 #' Boosting PLS (stage-wise refit with learning_rate).
+#' @param n_components Integer. Number of latent components.
+#' @param n_estimators Integer >= 1. Number of bootstrap / boosting / random-subspace estimators.
+#' @param learning_rate Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 boosting_pls_fit <- function(X, Y, n_components,
                               n_estimators = 50L, learning_rate = 0.1) {
@@ -154,6 +235,12 @@ boosting_pls_fit <- function(X, Y, n_components,
 }
 
 #' Random-subspace PLS (Ho 1998).
+#' @param n_components Integer. Number of latent components.
+#' @param n_estimators Integer >= 1. Number of bootstrap / boosting / random-subspace estimators.
+#' @param features_per_subspace Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param seed Integer. Random seed for reproducibility.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 random_subspace_pls_fit <- function(X, Y, n_components,
                                      n_estimators = 50L,
@@ -167,6 +254,12 @@ random_subspace_pls_fit <- function(X, Y, n_components,
 }
 
 #' Gaussian Process Regression on PLS scores (single-target Y).
+#' @param n_components Integer. Number of latent components.
+#' @param length_scale Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param noise_level Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param seed Integer. Random seed for reproducibility.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 gpr_pls_fit <- function(X, Y, n_components,
                          length_scale = 1.0, noise_level = 1e-4, seed = 0L) {
@@ -177,6 +270,9 @@ gpr_pls_fit <- function(X, Y, n_components,
 }
 
 #' PLS-QDA (Quadratic Discriminant Analysis on PLS scores).
+#' @param y_labels Integer vector. Class labels.
+#' @param n_components Integer. Number of latent components.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
 #' @export
 pls_qda_fit <- function(X, y_labels, n_components) {
     pls4all_method("pls_qda", X, rep(0, nrow(X)), n_components,
@@ -184,6 +280,10 @@ pls_qda_fit <- function(X, y_labels, n_components) {
 }
 
 #' PLS-Cox proportional hazards.
+#' @param n_components Integer. Number of latent components.
+#' @param survival_times Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param event_indicators Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
 #' @export
 pls_cox_fit <- function(X, n_components, survival_times, event_indicators) {
     pls4all_method("pls_cox", X, rep(0, nrow(X)), n_components,
@@ -193,6 +293,9 @@ pls_cox_fit <- function(X, n_components, survival_times, event_indicators) {
 }
 
 #' Piecewise Direct Standardization (calibration transfer).
+#' @param X_source Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X_target Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param window_half_width Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 pds_fit <- function(X_source, X_target, window_half_width = 2L) {
     pls4all_method("pds", X_source, rep(0, nrow(X_source)), 1L,
@@ -202,6 +305,8 @@ pds_fit <- function(X_source, X_target, window_half_width = 2L) {
 }
 
 #' Direct Standardization (calibration transfer).
+#' @param X_source Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X_target Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 ds_fit <- function(X_source, X_target) {
     pls4all_method("ds", X_source, rep(0, nrow(X_source)), 1L,
@@ -209,12 +314,19 @@ ds_fit <- function(X_source, X_target) {
 }
 
 #' Missing-aware NIPALS PLS (Nelson 1996).
+#' @param n_components Integer. Number of latent components.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 missing_aware_nipals_fit <- function(X, Y, n_components) {
     pls4all_method("missing_aware_nipals", X, Y, n_components)
 }
 
 #' Locally-weighted PLS (Næs & Centner 1998).
+#' @param n_components Integer. Number of latent components.
+#' @param n_neighbors Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 lw_pls_fit <- function(X, Y, n_components, n_neighbors = 30L) {
     pls4all_method("lw_pls", X, Y, n_components,
@@ -222,6 +334,10 @@ lw_pls_fit <- function(X, Y, n_components, n_neighbors = 30L) {
 }
 
 #' PLS-LDA — Linear Discriminant Analysis on PLS scores.
+#' @param y_labels Integer vector. Class labels.
+#' @param n_components Integer. Number of latent components.
+#' @param n_classes Integer >= 2. Number of class labels.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
 #' @export
 pls_lda_fit <- function(X, y_labels, n_components, n_classes = NULL) {
     if (is.null(n_classes)) n_classes <- max(as.integer(y_labels)) + 1L
@@ -231,6 +347,10 @@ pls_lda_fit <- function(X, y_labels, n_components, n_classes = NULL) {
 }
 
 #' Multinomial logistic regression on PLS scores.
+#' @param y_labels Integer vector. Class labels.
+#' @param n_components Integer. Number of latent components.
+#' @param n_classes Integer >= 2. Number of class labels.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
 #' @export
 pls_logistic_fit <- function(X, y_labels, n_components, n_classes = NULL) {
     if (is.null(n_classes)) n_classes <- max(as.integer(y_labels)) + 1L
@@ -239,9 +359,48 @@ pls_logistic_fit <- function(X, y_labels, n_components, n_classes = NULL) {
                                   n_classes = as.integer(n_classes)))
 }
 
+#' Adaptive Operator-Mixture preprocessing fit/transform.
+#'
+#' Fits the AOM preprocessing pipeline (operator bank + gating) over
+#' `X` and returns a `pls4all_method_fit` object carrying the selected
+#' operators, the per-component gating weights, and the transformed
+#' spectra ready to feed into a downstream regression solver.
+#'
+#' @param X numeric matrix of spectra (rows = samples, cols = wavelengths).
+#' @param Y optional numeric vector of supervisory targets. When `NULL`,
+#'   the unsupervised gating path is used (a zero target vector is
+#'   substituted internally).
+#' @param n_operators number of operators in the AOM bank (default `3L`).
+#' @param gating_mode integer code selecting the gating strategy:
+#'   `0L` = hard-select per component, `1L` = soft-mixture (default `0L`).
+#'
+#' @return A `pls4all_method_fit` object. Use `predict()` for
+#'   inference on new spectra and `coef()` to extract the gating
+#'   coefficients.
+#'
+#' @examples
+#' set.seed(1)
+#' X <- matrix(rnorm(40 * 10), nrow = 40)
+#' Y <- as.numeric(X[, 1] + rnorm(40, sd = 0.1))
+#' fit <- aom_preprocess(X, Y, n_operators = 2L)
+#' class(fit)
+#'
+#' @export
+aom_preprocess <- function(X, Y = NULL, n_operators = 3L, gating_mode = 0L) {
+    X <- as.matrix(X)
+    if (is.null(Y)) Y <- rep(0, nrow(X))
+    pls4all_method("aom_preprocess", X, Y, 1L,
+                   params = list(n_operators = as.integer(n_operators),
+                                  gating_mode = as.integer(gating_mode)))
+}
+
 # ---- Selectors (no ValidationPlan or with default plan inside C) ----
 
 #' Stability selector (coefficient stability, MCUVE-style).
+#' @param n_components Integer. Number of latent components.
+#' @param top_k Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 stability_select <- function(X, Y, n_components, top_k = 10L) {
     pls4all_method("stability_select", X, Y, n_components,
@@ -249,6 +408,11 @@ stability_select <- function(X, Y, n_components, top_k = 10L) {
 }
 
 #' UVE — Uninformative Variable Elimination.
+#' @param n_components Integer. Number of latent components.
+#' @param noise_features Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param noise_seed Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 uve_select <- function(X, Y, n_components, noise_features = NULL, noise_seed = 0L) {
     if (is.null(noise_features)) noise_features <- ncol(as.matrix(X))
@@ -258,6 +422,11 @@ uve_select <- function(X, Y, n_components, noise_features = NULL, noise_seed = 0
 }
 
 #' Interval selector (iPLS).
+#' @param n_components Integer. Number of latent components.
+#' @param interval_width Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param step Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 interval_select <- function(X, Y, n_components, interval_width = 10L, step = 1L) {
     pls4all_method("interval_select", X, Y, n_components,
@@ -266,6 +435,15 @@ interval_select <- function(X, Y, n_components, interval_width = 10L, step = 1L)
 }
 
 #' Random Frog (Phase 5g).
+#' @param n_components Integer. Number of latent components.
+#' @param n_iterations Integer >= 1. Number of outer-loop iterations.
+#' @param initial_size Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param min_size Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param max_size Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param top_k Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param seed Integer. Random seed for reproducibility.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 random_frog_select <- function(X, Y, n_components,
                                 n_iterations = 100L,
@@ -283,6 +461,13 @@ random_frog_select <- function(X, Y, n_components,
 }
 
 #' SCARS — Stability + CARS.
+#' @param n_components Integer. Number of latent components.
+#' @param n_iterations Integer >= 1. Number of outer-loop iterations.
+#' @param min_features Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param sample_fraction Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param seed Integer. Random seed for reproducibility.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 scars_select <- function(X, Y, n_components,
                           n_iterations = 50L, min_features = 5L,
@@ -295,6 +480,15 @@ scars_select <- function(X, Y, n_components,
 }
 
 #' GA-PLS — genetic algorithm variable selection.
+#' @param n_components Integer. Number of latent components.
+#' @param n_generations Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param population_size Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param min_features Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param max_features Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param mutation_rate Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param seed Integer. Random seed for reproducibility.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 ga_select <- function(X, Y, n_components,
                        n_generations = 50L, population_size = 50L,
@@ -312,6 +506,16 @@ ga_select <- function(X, Y, n_components,
 }
 
 #' PSO-PLS (Binary Particle Swarm Optimization).
+#' @param n_components Integer. Number of latent components.
+#' @param n_swarm Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param n_iterations Integer >= 1. Number of outer-loop iterations.
+#' @param w Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param c1 Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param c2 Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param v_max Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param seed Integer. Random seed for reproducibility.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 pso_select <- function(X, Y, n_components,
                         n_swarm = 30L, n_iterations = 50L,
@@ -325,6 +529,15 @@ pso_select <- function(X, Y, n_components,
 }
 
 #' VISSA — Variable Iterative Space Shrinkage Approach.
+#' @param n_components Integer. Number of latent components.
+#' @param n_iterations Integer >= 1. Number of outer-loop iterations.
+#' @param n_submodels Integer >= 1. Number of inner sub-models per VISSA-style iteration.
+#' @param ratio_kept Numeric in (0, 1]. Fraction of features kept per iteration.
+#' @param threshold Numeric. Convergence / pruning threshold.
+#' @param floor_probability Numeric in [0, 0.5). Lower bound on per-feature retention probability.
+#' @param seed Integer. Random seed for reproducibility.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 vissa_select <- function(X, Y, n_components,
                           n_iterations = 20L, n_submodels = 100L,
@@ -340,6 +553,12 @@ vissa_select <- function(X, Y, n_components,
 }
 
 #' Shaving selector.
+#' @param n_components Integer. Number of latent components.
+#' @param n_steps Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param min_features Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param shave_fraction Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 shaving_select <- function(X, Y, n_components,
                             n_steps = 10L, min_features = 5L,
@@ -351,6 +570,11 @@ shaving_select <- function(X, Y, n_components,
 }
 
 #' BVE-PLS.
+#' @param n_components Integer. Number of latent components.
+#' @param n_steps Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param min_features Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 bve_select <- function(X, Y, n_components, n_steps = 10L, min_features = 5L) {
     pls4all_method("bve_select", X, Y, n_components,
@@ -359,6 +583,11 @@ bve_select <- function(X, Y, n_components, n_steps = 10L, min_features = 5L) {
 }
 
 #' T²-PLS — sweep over α-thresholds.
+#' @param n_components Integer. Number of latent components.
+#' @param alpha_thresholds Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param min_selected Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 t2_select <- function(X, Y, n_components, alpha_thresholds,
                        min_selected = NULL) {
@@ -369,6 +598,11 @@ t2_select <- function(X, Y, n_components, alpha_thresholds,
 }
 
 #' WVC-PLS — weighted vector correlation top-k selector.
+#' @param n_components Integer. Number of latent components.
+#' @param top_k Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param normalize Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 wvc_select <- function(X, Y, n_components, top_k = 10L, normalize = TRUE) {
     pls4all_method("wvc_select", X, Y, n_components,
@@ -377,6 +611,13 @@ wvc_select <- function(X, Y, n_components, top_k = 10L, normalize = TRUE) {
 }
 
 #' WVC-threshold selector.
+#' @param n_components Integer. Number of latent components.
+#' @param normalize Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param threshold Numeric. Convergence / pruning threshold.
+#' @param threshold_factor Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param min_selected Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 wvc_threshold_select <- function(X, Y, n_components,
                                   normalize = TRUE, threshold = 0.0,
@@ -389,6 +630,13 @@ wvc_threshold_select <- function(X, Y, n_components,
 }
 
 #' EMCUVE — ensemble Monte Carlo UVE.
+#' @param n_components Integer. Number of latent components.
+#' @param noise_features Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param noise_seed Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param n_ensembles Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param vote_threshold Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 emcuve_select <- function(X, Y, n_components,
                            noise_features = NULL, noise_seed = 0L,
@@ -402,6 +650,12 @@ emcuve_select <- function(X, Y, n_components,
 }
 
 #' Randomization test selector.
+#' @param n_components Integer. Number of latent components.
+#' @param n_permutations Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param randomization_seed Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param alpha Numeric in [0, 1]. Elastic-net / penalty mixing parameter.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 randomization_select <- function(X, Y, n_components,
                                   n_permutations = 100L,
@@ -414,6 +668,11 @@ randomization_select <- function(X, Y, n_components,
 }
 
 #' biPLS — backward interval PLS.
+#' @param n_components Integer. Number of latent components.
+#' @param interval_width Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param min_intervals Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 bipls_select <- function(X, Y, n_components,
                           interval_width = 10L, min_intervals = 1L) {
@@ -423,6 +682,11 @@ bipls_select <- function(X, Y, n_components,
 }
 
 #' siPLS — synergistic interval PLS.
+#' @param n_components Integer. Number of latent components.
+#' @param interval_width Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param combination_size Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 sipls_select <- function(X, Y, n_components,
                           interval_width = 10L, combination_size = 2L) {
@@ -432,6 +696,12 @@ sipls_select <- function(X, Y, n_components,
 }
 
 #' REP-PLS.
+#' @param n_components Integer. Number of latent components.
+#' @param n_steps Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param min_features Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param remove_count Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 rep_select <- function(X, Y, n_components,
                         n_steps = 10L, min_features = 5L, remove_count = 1L) {
@@ -442,6 +712,13 @@ rep_select <- function(X, Y, n_components,
 }
 
 #' IPW-PLS.
+#' @param n_components Integer. Number of latent components.
+#' @param n_iterations Integer >= 1. Number of outer-loop iterations.
+#' @param top_k Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param damping Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param weight_floor Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 ipw_select <- function(X, Y, n_components,
                         n_iterations = 10L, top_k = 10L,
@@ -454,6 +731,11 @@ ipw_select <- function(X, Y, n_components,
 }
 
 #' ST-PLS — score-threshold selector.
+#' @param n_components Integer. Number of latent components.
+#' @param thresholds Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param min_selected Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 st_select <- function(X, Y, n_components, thresholds, min_selected = NULL) {
     if (is.null(min_selected)) min_selected <- n_components
@@ -463,6 +745,11 @@ st_select <- function(X, Y, n_components, thresholds, min_selected = NULL) {
 }
 
 #' IRIV — Iteratively Retains Informative Variables.
+#' @param n_components Integer. Number of latent components.
+#' @param max_rounds Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param seed Integer. Random seed for reproducibility.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 iriv_select <- function(X, Y, n_components, max_rounds = 20L, seed = 0L) {
     pls4all_method("iriv_select", X, Y, n_components,
@@ -471,6 +758,14 @@ iriv_select <- function(X, Y, n_components, max_rounds = 20L, seed = 0L) {
 }
 
 #' IRF — Interval Random Frog.
+#' @param n_components Integer. Number of latent components.
+#' @param n_iterations Integer >= 1. Number of outer-loop iterations.
+#' @param window_size Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param initial_intervals Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param top_k Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param seed Integer. Random seed for reproducibility.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 irf_select <- function(X, Y, n_components,
                         n_iterations = 100L, window_size = 10L,
@@ -485,6 +780,11 @@ irf_select <- function(X, Y, n_components,
 }
 
 #' VIP-SPA hybrid selector.
+#' @param n_components Integer. Number of latent components.
+#' @param vip_threshold Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param top_k Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
 #' @export
 vip_spa_select <- function(X, Y, n_components,
                             vip_threshold = 0.3, top_k = 10L) {
@@ -496,6 +796,7 @@ vip_spa_select <- function(X, Y, n_components,
 # ---- Diagnostics ----------------------------------------------------
 
 #' One-SE rule from a (max_components × n_folds) fold RMSE matrix.
+#' @param fold_rmse_matrix Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 one_se_rule <- function(fold_rmse_matrix) {
     fr <- as.matrix(fold_rmse_matrix)

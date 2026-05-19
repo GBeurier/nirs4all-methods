@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CeCILL-2.1
+# SPDX-License-Identifier: CECILL-2.1
 #
 # Idiomatic Ruby tier-2 wrapper around Pls4all.pls_fit. Provides a
 # Rumale-style class with .fit / .predict / .score methods.

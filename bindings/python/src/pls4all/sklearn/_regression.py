@@ -110,7 +110,7 @@ class PLSRegression(_PlsRegressorBase):
     ----------
     n_components : int, default=2
         Number of latent components.
-    solver : str, default='nipals'
+    solver : str, default='simpls'
         One of 'nipals', 'simpls', 'orthogonal-scores', 'kernel',
         'wide-kernel', 'svd', 'power', 'randomized-svd'.
     center_x, scale_x : bool, default=True
@@ -128,12 +128,12 @@ class PLSRegression(_PlsRegressorBase):
     """
 
     _algorithm = Algorithm.PLS_REGRESSION
-    _default_solver = "nipals"
+    _default_solver = "simpls"
 
     def __init__(self,
                   n_components: int = 2,
                   *,
-                  solver: str = "nipals",
+                  solver: str = "simpls",
                   center_x: bool = True,
                   scale_x: bool = True,
                   center_y: bool = True,

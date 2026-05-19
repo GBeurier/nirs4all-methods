@@ -7,7 +7,7 @@ The new (parity + timing + versions) cell convention:
 
 Each script:
   - loads / regenerates the deterministic dataset per run (seed_base+i)
-  - runs `fit_predict(seed)` n_runs times, discarding the first as warmup
+  - runs one unmeasured warmup, then `fit_predict(seed)` n_runs timed times
   - saves the LAST run's predictions as a .npy file under
     <predictions_path> so the orchestrator can compute parity post-hoc
   - emits a JSON record on the LAST stdout line with timing + versions
@@ -72,19 +72,25 @@ def load_dataset(csv_dir: Path, n: int, p: int, seed: int):
 # ----------------------------------------------------------------------
 
 def time_runs_seeded(fit_predict_seeded, n_runs: int, seed_base: int):
-    """Run `fit_predict_seeded(seed)` for seed in [base, base+1, …, base+n_runs-1].
+    """Run one warmup, then timed seeds [base, base+1, …, base+n_runs-1].
 
     Returns:
       (stats_dict, last_predictions_array)
-      - stats_dict: ok / n_runs / median_ms / min_ms / max_ms (warmup
-        discarded when n_runs >= 3)
+      - stats_dict: ok / n_runs / median_ms / min_ms / max_ms for timed
+        samples only
       - last_predictions_array: the predictions array from the LAST
         timed run (seed_base + n_runs - 1). The caller persists it to
         the predictions file for post-hoc parity computation.
 
-    `fit_predict_seeded(seed)` must return a numpy.ndarray of predictions
-    (any shape, will be flattened for parity comparison).
+      `fit_predict_seeded(seed)` must return a numpy.ndarray of predictions
+      (any shape, will be flattened for parity comparison).
     """
+    if n_runs < 1:
+        raise ValueError("n_runs must be >= 1")
+    # Keep import, dynamic linker, allocator, and first-call kernel setup out
+    # of the measurement window. Reusing seed_base preserves the prediction
+    # seed contract: the last timed run is still seed_base + n_runs - 1.
+    fit_predict_seeded(seed_base)
     samples = []
     last_preds = None
     for i in range(n_runs):
@@ -92,16 +98,12 @@ def time_runs_seeded(fit_predict_seeded, n_runs: int, seed_base: int):
         t0 = time.perf_counter()
         last_preds = fit_predict_seeded(seed)
         samples.append((time.perf_counter() - t0) * 1000.0)
-    if n_runs >= 3:
-        timed = samples[1:]
-    else:
-        timed = samples
     return {
         "ok": True,
-        "n_runs": len(timed),
-        "median_ms": statistics.median(timed),
-        "min_ms": min(timed),
-        "max_ms": max(timed),
+        "n_runs": len(samples),
+        "median_ms": statistics.median(samples),
+        "min_ms": min(samples),
+        "max_ms": max(samples),
     }, last_preds
 
 
@@ -181,130 +183,7 @@ def numpy_version() -> str:
     return _safe_version("numpy")
 
 
-# ----------------------------------------------------------------------
-# Shared pls4all dispatcher (used by bench_cpp + bench_python_tier1)
-# ----------------------------------------------------------------------
-
-def dispatch_pls4all_fit(algo: str, ctx, cfg, X, y2d, n: int, p: int,
-                          seed: int):
-    """Call the right _methods.<algo>_fit with algorithm-specific params.
-
-    Returns the MethodResult. Both bench_cpp.py and bench_python_tier1.py
-    route through here so their predictions stay bit-identical, which
-    keeps the `cpp` reference column meaningful across the entire matrix.
-    """
-    from pls4all import _methods  # local import: heavy
-    import numpy as np
-
-    if algo == "pls":
-        return _methods.sparse_simpls_fit(ctx, cfg, X, y2d, sparsity_lambda=0.0)
-    if algo in ("pcr", "opls"):
-        import pls4all
-        from pls4all._model import Model
-
-        if algo == "pcr":
-            cfg.algorithm = pls4all.Algorithm.PCR
-            cfg.solver = pls4all.Solver.SVD
-            cfg.deflation = pls4all.Deflation.REGRESSION
-        else:
-            cfg.algorithm = pls4all.Algorithm.OPLS
-            cfg.solver = pls4all.Solver.NIPALS
-            cfg.deflation = pls4all.Deflation.ORTHOGONAL
-        model = Model.fit(ctx, cfg, X, y2d)
-
-        class _PredictionsOnly:
-            def __init__(self, predictions):
-                self._predictions = predictions
-
-            def matrix(self, key):
-                if key != "predictions":
-                    raise KeyError(key)
-                return self._predictions
-
-        try:
-            return _PredictionsOnly(model.predict(ctx, X))
-        finally:
-            model.close()
-    if algo == "sparse_simpls":
-        return _methods.sparse_simpls_fit(ctx, cfg, X, y2d, sparsity_lambda=0.05)
-    if algo == "cppls":
-        return _methods.cppls_fit(ctx, cfg, X, y2d, gamma=0.5)
-    if algo == "ecr":
-        return _methods.ecr_fit(ctx, cfg, X, y2d, alpha=0.5)
-    if algo == "mir_pls":
-        return _methods.mir_pls_fit(ctx, cfg, X, y2d)
-    if algo == "ridge_pls":
-        return _methods.ridge_pls_fit(ctx, cfg, X, y2d, ridge_lambda=1.0)
-    if algo == "robust_pls":
-        return _methods.robust_pls_fit(ctx, cfg, X, y2d, huber_k=1.345,
-                                         max_irls_iter=20)
-    if algo == "missing_aware_nipals":
-        return _methods.missing_aware_nipals_fit(ctx, cfg, X, y2d)
-    if algo == "continuum_regression":
-        return _methods.continuum_regression_fit(ctx, cfg, X, y2d, tau=0.5)
-    if algo == "kernel_pls":
-        return _methods.kernel_pls_fit(ctx, cfg, X, y2d, kernel_type=1,
-                                         gamma=0.0, coef0=1.0, degree=3)
-    if algo == "o2pls":
-        return _methods.o2pls_fit(ctx, cfg, X, y2d, n_predictive=cfg.n_components,
-                                    n_x_orthogonal=1, n_y_orthogonal=1)
-    if algo == "bagging_pls":
-        return _methods.bagging_pls_fit(ctx, cfg, X, y2d, n_estimators=50, seed=0)
-    if algo == "boosting_pls":
-        return _methods.boosting_pls_fit(ctx, cfg, X, y2d, n_estimators=50,
-                                           learning_rate=0.1)
-    if algo == "random_subspace_pls":
-        return _methods.random_subspace_pls_fit(ctx, cfg, X, y2d,
-                                                  n_estimators=50,
-                                                  features_per_subspace=10,
-                                                  seed=0)
-    if algo == "fused_sparse_pls":
-        return _methods.fused_sparse_pls_fit(ctx, cfg, X, y2d, l1_lambda=0.05,
-                                               fusion_lambda=0.05)
-    if algo == "group_sparse_pls":
-        ga = np.zeros(p, dtype=np.int32)
-        ga[::2] = 1
-        return _methods.group_sparse_pls_fit(ctx, cfg, X, y2d,
-                                                group_assignment=ga,
-                                                group_lambda=0.05)
-    if algo == "lw_pls":
-        return _methods.lw_pls_fit(ctx, cfg, X, y2d, n_neighbors=30)
-    if algo == "pls_glm":
-        return _methods.pls_glm_fit(ctx, cfg, X, y2d, poisson=False)
-    if algo == "weighted_pls":
-        w = np.ones(n, dtype=np.float64)
-        return _methods.weighted_pls_fit(ctx, cfg, X, y2d, sample_weights=w)
-    if algo in ("pls_qda", "pls_lda", "pls_logistic", "sparse_pls_da"):
-        labels = np.zeros(n, dtype=np.int32)
-        # Binary class from y > 0 (deterministic given seed-controlled data).
-        labels[(y2d.ravel() > 0)] = 1
-        if algo == "pls_qda":
-            return _methods.pls_qda_fit(ctx, cfg, X, y_labels=labels)
-        if algo == "pls_lda":
-            return _methods.pls_lda_fit(ctx, cfg, X, y_labels=labels, n_classes=2)
-        if algo == "pls_logistic":
-            return _methods.pls_logistic_fit(ctx, cfg, X, y_labels=labels, n_classes=2)
-        return _methods.sparse_pls_da_fit(ctx, cfg, X, y_labels=labels)
-    if algo == "pls_cox":
-        ev = np.ones(n, dtype=np.int32)
-        st = np.abs(y2d.ravel()) + 0.5
-        return _methods.pls_cox_fit(ctx, cfg, X, survival_times=st,
-                                      event_indicators=ev)
-    if algo == "pds":
-        rng = np.random.default_rng(seed)
-        Xt = X + 0.01 * rng.standard_normal(X.shape)
-        return _methods.pds_fit(ctx, X, Xt, window_half_width=2)
-    if algo == "ds":
-        rng = np.random.default_rng(seed)
-        Xt = X + 0.01 * rng.standard_normal(X.shape)
-        return _methods.ds_fit(ctx, X, Xt)
-    if algo == "gpr_pls":
-        return _methods.gpr_pls_fit(ctx, cfg, X, y2d, length_scale=1.0,
-                                      noise_level=1e-4, seed=0)
-    # Generic fallback (works only for algos whose C signature is exactly
-    # (ctx, cfg, X, y) — most don't, but if a new algo follows this
-    # convention it works without touching the dispatcher).
-    fit_fn = getattr(_methods, f"{algo}_fit", None)
-    if fit_fn is None:
-        raise RuntimeError(f"no _methods.{algo}_fit available")
-    return fit_fn(ctx, cfg, X, y2d)
+# The legacy `dispatch_pls4all_fit` hand-coded cascade was retired:
+# bench_cpp.py and bench_python_tier1.py now route through
+# `MethodSpec.pls4all_fn` in `benchmarks/parity_timing/registry.py`, which
+# covers the full canonical method catalog. See bench_registry_common.py.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Setter / getter round-trip tests. Every setter:
 //   1. Returns P4A_OK for a valid value.

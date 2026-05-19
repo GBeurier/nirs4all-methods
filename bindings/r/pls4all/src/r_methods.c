@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CeCILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 */
 /*
  * R .Call gateway for MethodResult-returning entry points
  * (sparse SIMPLS / CPPLS / weighted / MB-PLS / PLS-GLM / MIR-PLS),
@@ -32,8 +32,14 @@
  * then longjmps via Rf_error. Marked noreturn so the compiler knows
  * downstream paths are unreachable. Ctx destruction must happen
  * BEFORE Rf_error: longjmp skips any cleanup below the call site. */
+#if defined(__GNUC__) || defined(__clang__)
+#  define P4A_R_NORETURN __attribute__((noreturn))
+#else
+#  define P4A_R_NORETURN
+#endif
+
 static void r_throw(const char* fn, p4a_status_t status, p4a_context_t* ctx)
-    __attribute__((noreturn));
+    P4A_R_NORETURN;
 
 static void r_throw(const char* fn, p4a_status_t status, p4a_context_t* ctx) {
     const char* status_str = p4a_status_to_string(status);

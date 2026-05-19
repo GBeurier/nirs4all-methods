@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Owning wrapper around p4a_method_result_t — the universal output
 // container used by every method shipped in Batches 1-12 of the C ABI.

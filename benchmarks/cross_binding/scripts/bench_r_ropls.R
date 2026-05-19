@@ -30,8 +30,9 @@ fit_predict <- function(seed) {
             mod <- ropls::opls(x = xy$X, y = xy$y,
                                 predI = 1L,
                                 orthoI = max(1L, a$nc - 1L),
-                                printL = FALSE, plotL = FALSE,
-                                scaleC = "center")
+                                scaleC = "center",
+                                fig.pdfC = "none",
+                                info.txtC = "none")
         ))
     ))
     as.numeric(predict(mod, xy$X))

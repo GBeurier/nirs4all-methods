@@ -24,11 +24,11 @@
 model_regressors:
   - name: PLSRegression
     algorithm: PLS_REGRESSION
-    solver: NIPALS
+    solver: SIMPLS
     deflation: REGRESSION
     params:
       - {name: n_components, type: int, default: 2}
-      - {name: solver, type: enum, default: nipals}
+      - {name: solver, type: enum, default: simpls}
       - {name: center_x, type: bool, default: true}
       - {name: scale_x, type: bool, default: true}
       - {name: center_y, type: bool, default: true}

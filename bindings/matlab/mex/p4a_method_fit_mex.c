@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CeCILL-2.1
+/* SPDX-License-Identifier: CECILL-2.1
  *
  * MATLAB / Octave MEX dispatcher covering ALL MethodResult-returning
  * entry points of libp4a v1.1.0 + selectors + diagnostics.
@@ -247,13 +247,14 @@ static p4a_validation_plan_t* make_default_plan(int n, int requested_folds) {
         p4a_validation_plan_destroy(plan);
         return NULL;
     }
-    int fold_size = (n + n_folds - 1) / n_folds;
+    /* Match the canonical Python/registry plan: equal floor-sized
+     * contiguous folds, with the remainder assigned to the final fold. */
+    int fold_size = n / n_folds;
     int64_t *train = (int64_t *)mxMalloc((size_t)n * sizeof(int64_t));
     int64_t *test  = (int64_t *)mxMalloc((size_t)n * sizeof(int64_t));
     for (int f = 0; f < n_folds; ++f) {
         int t_start = f * fold_size;
-        int t_end = t_start + fold_size;
-        if (t_end > n) t_end = n;
+        int t_end = (f < n_folds - 1) ? (t_start + fold_size) : n;
         int n_test = t_end - t_start;
         int n_train = n - n_test;
         int ti = 0, te = 0;
@@ -797,22 +798,67 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             static const char *sc[] = {"n_classes", "n_components", NULL};
             out = pack_result(mr, dm, iv, NULL, sc);
         }
+    } else if (strcmp(algo, "aom_preprocess") == 0) {
+        int n_ops = get_int_field(params, "n_operators", 3);
+        int mode = get_int_field(params, "gating_mode", 0);
+        if (n_ops < 1) n_ops = 1;
+        if (n_ops > 5) n_ops = 5;
+        p4a_operator_kind_t kinds[5] = {
+            P4A_OP_IDENTITY,
+            P4A_OP_CENTER,
+            P4A_OP_PARETO_SCALE,
+            P4A_OP_AUTOSCALE,
+            P4A_OP_SNV
+        };
+        p4a_operator_bank_t *bank = NULL;
+        p4a_gating_strategy_t *gate = NULL;
+        st = p4a_operator_bank_create(&bank);
+        for (int i = 0; st == P4A_OK && i < n_ops; ++i) {
+            st = p4a_operator_bank_add(bank, kinds[i], NULL, 0);
+        }
+        if (st == P4A_OK) {
+            st = p4a_gating_strategy_create(
+                &gate, (p4a_gating_mode_t)mode);
+        }
+        if (st == P4A_OK) {
+            st = p4a_aom_preprocess_fit(ctx, bank, gate, &Xv, &Yv, &mr);
+        }
+        if (gate) p4a_gating_strategy_destroy(gate);
+        if (bank) p4a_operator_bank_destroy(bank);
+        if (st == P4A_OK) {
+            static const char *dm[] = {"transformed", "operator_outputs",
+                                          "weights", NULL};
+            static const char *i64[] = {"operator_kinds", NULL};
+            static const char *sc[] = {"n_operators", "mode", NULL};
+            out = pack_result(mr, dm, NULL, i64, sc);
+        }
     }
 
     /* ============================================================
      *  Selectors
      * ============================================================ */
     else if (strcmp(algo, "variable_select_rank") == 0) {
-        /* Requires a fitted model handle passed via uint64 "model_ptr"
-         * field. The handle must come from `pls4all.pls_fit_handle`
-         * (an upcoming wrapper) or `pls4all.fit_for_selector`. For
-         * the common case of "fit & rank in one go", users can call
-         * the higher-level pls4all.vip_select wrapper which fits +
-         * extracts internally. */
-        throw_status(P4A_ERR_UNSUPPORTED,
-                      "variable_select_rank requires a fitted model handle; "
-                      "use pls4all.vip_select instead",
-                      ctx, cfg, X, Y);
+        /* Convenience branch: fit an internal SIMPLS model on the given
+         * X/Y with store_scores=1, then call p4a_variable_select_rank
+         * with the requested method (0=VIP, 1=coef magnitude, 2=SR) and
+         * top_k. The model is destroyed before returning. */
+        int method = get_int_field(params, "method", 0);
+        int top_k = get_int_field(params, "top_k", 10);
+        p4a_config_set_store_scores(cfg, 1);
+        p4a_model_t *model = NULL;
+        st = p4a_model_fit(ctx, cfg, &Xv, &Yv, &model);
+        if (st == P4A_OK) {
+            st = p4a_variable_select_rank(ctx, model, &Xv,
+                                            (int32_t)method,
+                                            (int32_t)top_k, &mr);
+        }
+        if (model) p4a_model_destroy(model);
+        if (st == P4A_OK) {
+            static const char *dm[] = {"scores", NULL};
+            static const char *i64[] = {"selected_indices", NULL};
+            static const char *sc[] = {"n_features", "top_k", "method", NULL};
+            out = pack_result(mr, dm, NULL, i64, sc);
+        }
     } else if (strcmp(algo, "spa_select") == 0) {
         int top_k = get_int_field(params, "top_k", 10);
         st = p4a_spa_select(ctx, cfg, &Xv, &Yv, top_k, &mr);
@@ -824,7 +870,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "cars_select") == 0) {
         int it = get_int_field(params, "n_iterations", 50);
         int mf = get_int_field(params, "min_features", 5);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "cars_select", ctx, cfg, X, Y);
             st = p4a_cars_select(ctx, cfg, &Xv, &Yv, _plan, it, mf, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -837,7 +883,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "interval_select") == 0) {
         int iw = get_int_field(params, "interval_width", 10);
         int step = get_int_field(params, "step", 1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "interval_select", ctx, cfg, X, Y);
             st = p4a_interval_select(ctx, cfg, &Xv, &Yv, _plan, iw, step, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -849,7 +895,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
     } else if (strcmp(algo, "stability_select") == 0) {
         int k = get_int_field(params, "top_k", 10);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "stability_select", ctx, cfg, X, Y);
             st = p4a_stability_select(ctx, cfg, &Xv, &Yv, _plan, k, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -862,7 +908,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "uve_select") == 0) {
         int nf = get_int_field(params, "noise_features", 0);
         uint64_t seed = get_u64_field(params, "noise_seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "uve_select", ctx, cfg, X, Y);
             st = p4a_uve_select(ctx, cfg, &Xv, &Yv, _plan, nf, seed, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -879,7 +925,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int maxz = get_int_field(params, "max_size", p);
         int tk = get_int_field(params, "top_k", 10);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "random_frog_select", ctx, cfg, X, Y);
             st = p4a_random_frog_select(ctx, cfg, &Xv, &Yv, _plan, it, isz, minz, maxz, tk, seed, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -894,7 +940,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int mf = get_int_field(params, "min_features", 5);
         double sf = get_scalar_field(params, "sample_fraction", 0.8);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "scars_select", ctx, cfg, X, Y);
             st = p4a_scars_select(ctx, cfg, &Xv, &Yv, _plan, it, mf, sf, seed, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -911,7 +957,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int maxf = get_int_field(params, "max_features", p);
         double mr_rate = get_scalar_field(params, "mutation_rate", 0.01);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "ga_select", ctx, cfg, X, Y);
             st = p4a_ga_select(ctx, cfg, &Xv, &Yv, _plan, g, psz, minf, maxf,
                             mr_rate, seed, &mr);
@@ -930,7 +976,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double c2 = get_scalar_field(params, "c2", 1.494);
         double vmax = get_scalar_field(params, "v_max", 4.0);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "pso_select", ctx, cfg, X, Y);
             st = p4a_pso_select(ctx, cfg, &Xv, &Yv, _plan, sw, it, w, c1, c2, vmax, seed, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -950,7 +996,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double th = get_scalar_field(params, "threshold", 0.5);
         double fp = get_scalar_field(params, "floor_probability", 0.01);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "vissa_select", ctx, cfg, X, Y);
             st = p4a_vissa_select(ctx, cfg, &Xv, &Yv, _plan, it, sub, rk, th, fp, seed, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -969,7 +1015,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int ns = get_int_field(params, "n_steps", 10);
         int mf = get_int_field(params, "min_features", 5);
         double sf = get_scalar_field(params, "shave_fraction", 0.1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "shaving_select", ctx, cfg, X, Y);
             st = p4a_shaving_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, sf, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -982,7 +1028,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "bve_select") == 0) {
         int ns = get_int_field(params, "n_steps", 10);
         int mf = get_int_field(params, "min_features", 5);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "bve_select", ctx, cfg, X, Y);
             st = p4a_bve_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1000,7 +1046,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                           "t2_select requires params.alpha_thresholds",
                           ctx, cfg, X, Y);
         int ms = get_int_field(params, "min_selected", 1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "t2_select", ctx, cfg, X, Y);
             st = p4a_t2_select(ctx, cfg, &Xv, &Yv, _plan, thr, nt, ms, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1036,7 +1082,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         uint64_t seed = get_u64_field(params, "noise_seed", 0);
         int ne = get_int_field(params, "n_ensembles", 5);
         double vt = get_scalar_field(params, "vote_threshold", 0.5);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "emcuve_select", ctx, cfg, X, Y);
             st = p4a_emcuve_select(ctx, cfg, &Xv, &Yv, _plan, nf, seed, ne, vt, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1059,7 +1105,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "bipls_select") == 0) {
         int iw = get_int_field(params, "interval_width", 10);
         int mi = get_int_field(params, "min_intervals", 1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "bipls_select", ctx, cfg, X, Y);
             st = p4a_bipls_select(ctx, cfg, &Xv, &Yv, _plan, iw, mi, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1072,7 +1118,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "sipls_select") == 0) {
         int iw = get_int_field(params, "interval_width", 10);
         int cs = get_int_field(params, "combination_size", 2);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "sipls_select", ctx, cfg, X, Y);
             st = p4a_sipls_select(ctx, cfg, &Xv, &Yv, _plan, iw, cs, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1086,7 +1132,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int ns = get_int_field(params, "n_steps", 10);
         int mf = get_int_field(params, "min_features", 5);
         int rc = get_int_field(params, "remove_count", 1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "rep_select", ctx, cfg, X, Y);
             st = p4a_rep_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, rc, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1101,7 +1147,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int tk = get_int_field(params, "top_k", 10);
         double damp = get_scalar_field(params, "damping", 0.5);
         double wf = get_scalar_field(params, "weight_floor", 1e-6);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "ipw_select", ctx, cfg, X, Y);
             st = p4a_ipw_select(ctx, cfg, &Xv, &Yv, _plan, it, tk, damp, wf, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1119,7 +1165,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                           "st_select requires params.thresholds",
                           ctx, cfg, X, Y);
         int ms = get_int_field(params, "min_selected", 1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "st_select", ctx, cfg, X, Y);
             st = p4a_st_select(ctx, cfg, &Xv, &Yv, _plan, thr, nt, ms, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1132,7 +1178,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "iriv_select") == 0) {
         int mr_rounds = get_int_field(params, "max_rounds", 20);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "iriv_select", ctx, cfg, X, Y);
             st = p4a_iriv_select(ctx, cfg, &Xv, &Yv, _plan, mr_rounds, seed, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1150,7 +1196,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int ii = get_int_field(params, "initial_intervals", 10);
         int tk = get_int_field(params, "top_k", 5);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 5);
+        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "irf_select", ctx, cfg, X, Y);
             st = p4a_irf_select(ctx, cfg, &Xv, &Yv, _plan, it, ws, ii, tk, seed, &mr);
             p4a_validation_plan_destroy(_plan);
@@ -1178,7 +1224,84 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     /* ============================================================
      *  Diagnostics
      * ============================================================ */
-    else if (strcmp(algo, "approximate_press_compute") == 0) {
+    else if (strcmp(algo, "pls_diagnostics_compute") == 0) {
+        /* Fit SIMPLS model on X/Y (store_scores=1) and call
+         * p4a_pls_diagnostics_compute. params.X_reference (optional)
+         * overrides the reference distribution; when absent we pass
+         * NULL and the core falls back to the stored training scores. */
+        const mxArray *xr = get_array_field(params, "X_reference");
+        double *XR = NULL;
+        p4a_matrix_view_t XRv;
+        const p4a_matrix_view_t *xr_ptr = NULL;
+        if (xr) {
+            if (!mxIsDouble(xr) || mxIsComplex(xr))
+                throw_status(P4A_ERR_INVALID_ARGUMENT,
+                              "pls_diagnostics_compute (params.X_reference must be real double)",
+                              ctx, cfg, X, Y);
+            int xrr, xrc;
+            XR = colmajor_to_rowmajor_alloc(xr, &xrr, &xrc);
+            if (xrc != p) {
+                free(XR);
+                throw_status(P4A_ERR_SHAPE_MISMATCH,
+                              "pls_diagnostics_compute (X_reference ncol)",
+                              ctx, cfg, X, Y);
+            }
+            p4a_matrix_view_init_rowmajor(&XRv, XR, xrr, xrc, P4A_DTYPE_F64);
+            xr_ptr = &XRv;
+        }
+        p4a_config_set_store_scores(cfg, 1);
+        p4a_model_t *model = NULL;
+        st = p4a_model_fit(ctx, cfg, &Xv, &Yv, &model);
+        if (st == P4A_OK) {
+            st = p4a_pls_diagnostics_compute(ctx, model, &Xv, xr_ptr, &mr);
+        }
+        if (model) p4a_model_destroy(model);
+        free(XR);
+        if (st == P4A_OK) {
+            static const char *dm[] = {"t2", "q", "dmodx", NULL};
+            static const char *sc[] = {"n_components", "n_features", NULL};
+            out = pack_result(mr, dm, NULL, NULL, sc);
+        }
+    } else if (strcmp(algo, "pls_monitoring_run") == 0) {
+        /* X/Y positional inputs are the reference dataset
+         * (X_reference, Y_reference). params.X_monitor must be a real
+         * double matrix with the same number of columns as X. The
+         * internal SIMPLS fit uses store_scores=1 so the C core can
+         * derive reference thresholds. */
+        const mxArray *xm = get_array_field(params, "X_monitor");
+        if (!xm || !mxIsDouble(xm) || mxIsComplex(xm))
+            throw_status(P4A_ERR_INVALID_ARGUMENT,
+                          "pls_monitoring_run (params.X_monitor must be a real double matrix)",
+                          ctx, cfg, X, Y);
+        int xmr, xmc;
+        double *XM = colmajor_to_rowmajor_alloc(xm, &xmr, &xmc);
+        if (xmc != p) {
+            free(XM);
+            throw_status(P4A_ERR_SHAPE_MISMATCH,
+                          "pls_monitoring_run (X_monitor must have same number of columns as X_reference)",
+                          ctx, cfg, X, Y);
+        }
+        double alpha = get_scalar_field(params, "alpha", 0.05);
+        p4a_matrix_view_t XMv;
+        p4a_matrix_view_init_rowmajor(&XMv, XM, xmr, xmc, P4A_DTYPE_F64);
+        p4a_config_set_store_scores(cfg, 1);
+        p4a_model_t *model = NULL;
+        st = p4a_model_fit(ctx, cfg, &Xv, &Yv, &model);
+        if (st == P4A_OK) {
+            st = p4a_pls_monitoring_run(ctx, model, &Xv, &XMv, alpha, &mr);
+        }
+        if (model) p4a_model_destroy(model);
+        free(XM);
+        if (st == P4A_OK) {
+            static const char *dm[] = {"t2", "q", "t2_reference",
+                                          "q_reference", NULL};
+            static const char *iv[] = {"t2_alarms", "q_alarms",
+                                          "any_alarms", NULL};
+            static const char *sc[] = {"t2_threshold", "q_threshold",
+                                          "alpha", NULL};
+            out = pack_result(mr, dm, iv, NULL, sc);
+        }
+    } else if (strcmp(algo, "approximate_press_compute") == 0) {
         st = p4a_approximate_press_compute(ctx, cfg, &Xv, &Yv, n_components, &mr);
         if (st == P4A_OK) {
             static const char *dm[] = {"press_per_component",

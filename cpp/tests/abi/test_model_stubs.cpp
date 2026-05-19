@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CeCILL-2.1
+// SPDX-License-Identifier: CECILL-2.1
 //
 // Phase 1 model tests. The file name is kept stable so the CMake test list
 // from Phase 0 does not need churn.

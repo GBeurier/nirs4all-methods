@@ -19,6 +19,7 @@ and parameter semantics stay readable; common machinery lives in
 
 from __future__ import annotations
 
+import warnings
 from typing import Any
 
 import numpy as np
@@ -36,21 +37,26 @@ from ._base import _check_X_y_p4a, _config_from_params, _resolve_solver
 
 def _default_plan(n_samples: int, *, n_folds: int = 3,
                     seed: int = 0) -> ValidationPlan:
-    """Deterministic k-fold ValidationPlan used by every selector that
-    needs cross-validated scoring. Mirrors the pattern in
-    ``benchmarks/parity_timing/registry.py::_build_default_plan``."""
+    """Deterministic k-fold ValidationPlan with **contiguous** folds.
+
+    Contiguous (non-shuffled) so the plan matches what the R + MATLAB
+    binding-side helpers (`make_default_plan` in
+    `bindings/r/pls4all/src/r_dispatch.c` and
+    `bindings/matlab/mex/p4a_method_fit_mex.c`) produce. With identical
+    folds + the same per-selector `seed` (used only by the algorithm's
+    own RNG, not the plan), every selector returns bit-identical masks
+    across every binding. The `seed` argument is accepted for API
+    compatibility but no longer affects the plan composition.
+    """
     plan = ValidationPlan()
     plan.n_samples = int(n_samples)
-    rng = np.random.default_rng(seed)
-    idx = np.arange(n_samples)
-    rng.shuffle(idx)
     fold_size = max(1, n_samples // n_folds)
     for f in range(n_folds):
         start = f * fold_size
         end = (f + 1) * fold_size if f < n_folds - 1 else n_samples
-        test = idx[start:end]
-        train = np.setdiff1d(idx, test, assume_unique=False)
-        plan.add_fold([int(x) for x in train], [int(x) for x in test])
+        test = list(range(start, end))
+        train = list(range(0, start)) + list(range(end, n_samples))
+        plan.add_fold(train, test)
     return plan
 
 
@@ -67,7 +73,7 @@ class _BasePls4allSelector(SelectorMixin, BaseEstimator):
     # knobs; expose them anyway so power users can tune.
 
     def _resolve_solver_(self):
-        return _resolve_solver(getattr(self, "solver", "nipals"))
+        return _resolve_solver(getattr(self, "solver", "simpls"))
 
     def _make_config(self, *, store_scores: bool = False):
         return _config_from_params(
@@ -76,7 +82,7 @@ class _BasePls4allSelector(SelectorMixin, BaseEstimator):
             solver=self._resolve_solver_(),
             deflation=Deflation.REGRESSION,
             center_x=bool(getattr(self, "center_x", True)),
-            scale_x=bool(getattr(self, "scale_x", True)),
+            scale_x=bool(getattr(self, "scale_x", False)),
             center_y=True,
             scale_y=False,
             tol=float(getattr(self, "tol", 1e-6)),
@@ -155,7 +161,7 @@ class VIPSelector(_RankerSelector):
     _rank_method = 0
 
     def __init__(self, top_k: int, *, n_components: int = 2,
-                  solver: str = "nipals",
+                  solver: str = "simpls",
                   center_x: bool = True, scale_x: bool = True,
                   tol: float = 1e-6, max_iter: int = 500) -> None:
         self.top_k = top_k
@@ -179,7 +185,7 @@ class CoefficientSelector(_RankerSelector):
     _rank_method = 1
 
     def __init__(self, top_k: int, *, n_components: int = 2,
-                  solver: str = "nipals",
+                  solver: str = "simpls",
                   center_x: bool = True, scale_x: bool = True,
                   tol: float = 1e-6, max_iter: int = 500) -> None:
         self.top_k = top_k
@@ -196,7 +202,7 @@ class SelectivityRatioSelector(_RankerSelector):
     _rank_method = 2
 
     def __init__(self, top_k: int, *, n_components: int = 2,
-                  solver: str = "nipals",
+                  solver: str = "simpls",
                   center_x: bool = True, scale_x: bool = True,
                   tol: float = 1e-6, max_iter: int = 500) -> None:
         self.top_k = top_k
@@ -274,13 +280,23 @@ class UVESelector(_BasePls4allSelector):
     noise variables for the threshold."""
 
     def __init__(self, *, n_components: int = 2,
-                  noise_features: int = 50, noise_seed: int = 0) -> None:
+                  noise_features: int = 50, noise_seed: int = 0,
+                  min_features: int | None = None) -> None:
         self.n_components = n_components
         self.noise_features = noise_features
         self.noise_seed = noise_seed
+        self.min_features = min_features
 
     def fit(self, X, y):
         X_arr, y_arr, _ = _check_X_y_p4a(self, X, y)
+        min_features = int(self.min_features if self.min_features is not None
+                            else self.n_components)
+        if min_features < 0 or min_features > self.n_features_in_:
+            raise ValueError(
+                "min_features must be in "
+                f"[0, n_features_in_={self.n_features_in_}]; "
+                f"got {self.min_features!r}"
+            )
         ctx = Context()
         cfg = self._make_config()
         plan = _open_plan(X_arr.shape[0], 3, int(self.noise_seed))
@@ -298,6 +314,32 @@ class UVESelector(_BasePls4allSelector):
         finally:
             cfg.close()
             plan.close()
+        if indices.size < min_features:
+            if scores is None or np.asarray(scores).size != self.n_features_in_:
+                raise RuntimeError(
+                    "UVESelector selected fewer than min_features, but "
+                    "real_stability_scores are unavailable for deterministic "
+                    "fallback. Set min_features=0 to allow an empty support."
+                )
+            score_arr = np.asarray(scores, dtype=np.float64).ravel()
+            score_arr = np.where(np.isfinite(score_arr), score_arr, -np.inf)
+            order = sorted(
+                range(self.n_features_in_),
+                key=lambda index: (-float(score_arr[index]), int(index)),
+            )
+            existing = set(int(i) for i in indices)
+            needed = min_features - indices.size
+            additions = [i for i in order if i not in existing][:needed]
+            indices = np.concatenate(
+                [indices, np.asarray(additions, dtype=np.int64)]
+            )
+            warnings.warn(
+                "UVESelector selected fewer than min_features; added the "
+                "highest real_stability_scores deterministically. Set "
+                "min_features=0 to preserve the raw UVE empty selection.",
+                UserWarning,
+                stacklevel=2,
+            )
         self._commit_fit(indices=indices, scores=scores)
         return self
 

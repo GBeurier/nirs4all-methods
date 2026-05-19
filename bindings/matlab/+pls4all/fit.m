@@ -6,6 +6,7 @@ function mdl = fit(algo, X, y, varargin)
 %   "boosting_pls"   → BoostingPlsRegression
 %   "continuum_regression" → ContinuumRegression
 %   "cppls"          → CpplsRegression
+%   "di_pls"         → DiPlsRegression            (needs XTarget)
 %   "ecr"            → EcrRegression
 %   "kernel_pls"     → KernelPlsRegression (in-sample only)
 %   "mb_pls"         → MbPlsRegression           (needs BlockSizes)
@@ -13,6 +14,8 @@ function mdl = fit(algo, X, y, varargin)
 %   "missing_aware_nipals" → MissingAwareNipalsRegression
 %   "n_pls"          → NPlsRegression            (needs ModeJ, ModeK)
 %   "o2pls"          → O2plsRegression
+%   "opls"           → OplsRegression
+%   "pcr"            → PcrRegression
 %   "pls" | "pls_simpls" → Regression (SIMPLS)
 %   "pls_glm"        → GlmRegression             (Family: gaussian/poisson)
 %   "recursive_pls"  → RecursivePlsRegression (in-sample only)
@@ -26,6 +29,7 @@ function mdl = fit(algo, X, y, varargin)
 %   Lambda             (sparsity_lambda / ridge_lambda — context-dependent)
 %   Gamma              (CPPLS gamma; kernel_pls gamma)
 %   Alpha              (ECR alpha)
+%   DiLambda           (DI-PLS penalty)
 %   Tau                (continuum regression tau)
 %   HuberK / MaxIrlsIter (robust_pls)
 %   WindowSize         (recursive_pls)
@@ -36,6 +40,7 @@ function mdl = fit(algo, X, y, varargin)
 %   NPredictive / NXOrthogonal / NYOrthogonal (o2pls)
 %   Family             (pls_glm: "gaussian" | "poisson")
 %   Weights            (weighted_pls; numeric vector)
+%   XTarget            (di_pls; numeric matrix)
 %   BlockSizes         (mb_pls; integer vector summing to size(X, 2))
 if isstring(algo), algo = char(algo); end
 
@@ -44,6 +49,7 @@ p.addParameter("NumComponents",         2,  @(x) isscalar(x) && x > 0);
 p.addParameter("Lambda",                0.05, @isscalar);
 p.addParameter("Gamma",                 0.5,  @isscalar);
 p.addParameter("Alpha",                 0.5,  @isscalar);
+p.addParameter("DiLambda",              1.0,  @isscalar);
 p.addParameter("Tau",                   0.5,  @isscalar);
 p.addParameter("HuberK",                1.345, @isscalar);
 p.addParameter("MaxIrlsIter",           20,   @isscalar);
@@ -61,6 +67,7 @@ p.addParameter("NPredictive",           2,    @isscalar);
 p.addParameter("NXOrthogonal",          1,    @isscalar);
 p.addParameter("NYOrthogonal",          1,    @isscalar);
 p.addParameter("Weights",               [],   @(x) isnumeric(x) && isvector(x));
+p.addParameter("XTarget",               [],   @(x) isnumeric(x) && ismatrix(x));
 p.addParameter("BlockSizes",            [],   @(x) isnumeric(x) && isvector(x));
 p.addParameter("Family",                "gaussian", ...
     @(x) any(strcmpi(string(x), ["gaussian", "poisson"])));
@@ -71,12 +78,22 @@ k = p.Results.NumComponents;
 switch lower(algo)
     case {"pls", "pls_simpls", "simpls"}
         mdl = pls4all.Regression(X, y, k);
+    case "pcr"
+        mdl = pls4all.PcrRegression(X, y, k);
+    case {"opls", "opls_nipals"}
+        mdl = pls4all.OplsRegression(X, y, k);
     case "sparse_simpls"
         mdl = pls4all.SparsePlsRegression(X, y, k, p.Results.Lambda);
     case "cppls"
         mdl = pls4all.CpplsRegression(X, y, k, p.Results.Gamma);
     case "ecr"
         mdl = pls4all.EcrRegression(X, y, k, p.Results.Alpha);
+    case "di_pls"
+        if isempty(p.Results.XTarget)
+            error("pls4all:nargin", "di_pls requires XTarget");
+        end
+        mdl = pls4all.DiPlsRegression(X, y, k, ...
+            p.Results.XTarget, p.Results.DiLambda);
     case "weighted_pls"
         if isempty(p.Results.Weights)
             error("pls4all:nargin", "weighted_pls requires Weights");

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CeCILL-2.1
+# SPDX-License-Identifier: CECILL-2.1
 #
 # Formula+S3 tier-2 wrappers for the remaining MethodResult-based
 # algorithms. Each constructor returns a `pls4all_method_fit` S3
@@ -10,6 +10,13 @@
 # to .pls4all_method_fit_object.
 
 #' Elastic Component Regression — formula entry point.
+#'
+#' @inheritParams pls
+#' @return A `pls4all_method_fit` object carrying the fitted model,
+#'   in-sample predictions, training RMSE, and method-specific
+#'   metadata. Use `predict()` for inference and `coef()` to
+#'   extract regression coefficients.
+#' @param alpha Numeric in [0, 1]. Elastic-net / penalty mixing parameter.
 #' @export
 ecr <- function(formula, data, ncomp = 2L, alpha = 0.5,
                  na.action = stats::na.omit) {
@@ -21,6 +28,14 @@ ecr <- function(formula, data, ncomp = 2L, alpha = 0.5,
 }
 
 #' Robust PLS — formula entry point.
+#'
+#' @inheritParams pls
+#' @return A `pls4all_method_fit` object carrying the fitted model,
+#'   in-sample predictions, training RMSE, and method-specific
+#'   metadata. Use `predict()` for inference and `coef()` to
+#'   extract regression coefficients.
+#' @param huber_k Numeric >= 0. Huber loss tuning constant.
+#' @param max_irls_iter Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 robust_pls <- function(formula, data, ncomp = 2L,
                         huber_k = 1.345, max_irls_iter = 20L,
@@ -35,6 +50,13 @@ robust_pls <- function(formula, data, ncomp = 2L,
 }
 
 #' Ridge PLS — formula entry point.
+#'
+#' @inheritParams pls
+#' @return A `pls4all_method_fit` object carrying the fitted model,
+#'   in-sample predictions, training RMSE, and method-specific
+#'   metadata. Use `predict()` for inference and `coef()` to
+#'   extract regression coefficients.
+#' @param ridge_lambda Numeric >= 0. Ridge regularisation strength.
 #' @export
 ridge_pls <- function(formula, data, ncomp = 2L, ridge_lambda = 1.0,
                        na.action = stats::na.omit) {
@@ -47,6 +69,13 @@ ridge_pls <- function(formula, data, ncomp = 2L, ridge_lambda = 1.0,
 }
 
 #' Continuum regression — formula entry point.
+#'
+#' @inheritParams pls
+#' @return A `pls4all_method_fit` object carrying the fitted model,
+#'   in-sample predictions, training RMSE, and method-specific
+#'   metadata. Use `predict()` for inference and `coef()` to
+#'   extract regression coefficients.
+#' @param tau Numeric in [0, 1]. Continuum regression mixing parameter.
 #' @export
 continuum_regression <- function(formula, data, ncomp = 2L, tau = 0.5,
                                    na.action = stats::na.omit) {
@@ -58,7 +87,58 @@ continuum_regression <- function(formula, data, ncomp = 2L, tau = 0.5,
                                 extra = list(tau = tau))
 }
 
+#' Recursive PLS — formula entry point.
+#'
+#' Recursive PLS stores in-sample predictions rather than a reusable
+#' coefficient model. `predict()` therefore accepts only the fitted
+#' training design.
+#'
+#' @inheritParams pls
+#' @param window_size Integer moving-window size.
+#' @export
+recursive_pls <- function(formula, data, ncomp = 2L, window_size = 50L,
+                           na.action = stats::na.omit) {
+    cl <- match.call()
+    d <- .pls4all_method_design(formula, data, na.action)
+    res <- recursive_pls_fit(d$X, d$y, n_components = ncomp,
+                              window_size = as.integer(window_size))
+    out <- list(
+        formula = formula,
+        call = cl,
+        terms = d$terms,
+        xlevels = d$xlevels,
+        response_name = d$response_name,
+        n_features_in = ncol(d$X),
+        ncomp = as.integer(ncomp),
+        method = "recursive_pls",
+        predictions = as.numeric(res$predictions),
+        window_size = as.integer(window_size)
+    )
+    class(out) <- c("pls4all_recursive_fit", "pls4all_fit_base")
+    out
+}
+
+#' @export
+predict.pls4all_recursive_fit <- function(object, newdata = NULL, ...) {
+    if (is.null(newdata)) {
+        stop("predict.recursive_pls requires the fitted training frame")
+    }
+    X <- .pls4all_method_newdata(object, newdata)
+    if (nrow(X) != length(object$predictions)) {
+        stop("recursive_pls is in-sample only; newdata row count differs")
+    }
+    object$predictions
+}
+
 #' Bagging PLS — formula entry point.
+#'
+#' @inheritParams pls
+#' @return A `pls4all_method_fit` object carrying the fitted model,
+#'   in-sample predictions, training RMSE, and method-specific
+#'   metadata. Use `predict()` for inference and `coef()` to
+#'   extract regression coefficients.
+#' @param n_estimators Integer >= 1. Number of bootstrap / boosting / random-subspace estimators.
+#' @param seed Integer. Random seed for reproducibility.
 #' @export
 bagging_pls <- function(formula, data, ncomp = 2L,
                          n_estimators = 50L, seed = 0L,
@@ -72,6 +152,14 @@ bagging_pls <- function(formula, data, ncomp = 2L,
 }
 
 #' Boosting PLS — formula entry point.
+#'
+#' @inheritParams pls
+#' @return A `pls4all_method_fit` object carrying the fitted model,
+#'   in-sample predictions, training RMSE, and method-specific
+#'   metadata. Use `predict()` for inference and `coef()` to
+#'   extract regression coefficients.
+#' @param n_estimators Integer >= 1. Number of bootstrap / boosting / random-subspace estimators.
+#' @param learning_rate Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 boosting_pls <- function(formula, data, ncomp = 2L,
                           n_estimators = 50L, learning_rate = 0.1,
@@ -86,6 +174,15 @@ boosting_pls <- function(formula, data, ncomp = 2L,
 }
 
 #' Random-subspace PLS — formula entry point.
+#'
+#' @inheritParams pls
+#' @return A `pls4all_method_fit` object carrying the fitted model,
+#'   in-sample predictions, training RMSE, and method-specific
+#'   metadata. Use `predict()` for inference and `coef()` to
+#'   extract regression coefficients.
+#' @param n_estimators Integer >= 1. Number of bootstrap / boosting / random-subspace estimators.
+#' @param features_per_subspace Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param seed Integer. Random seed for reproducibility.
 #' @export
 random_subspace_pls <- function(formula, data, ncomp = 2L,
                                   n_estimators = 50L,
@@ -104,6 +201,15 @@ random_subspace_pls <- function(formula, data, ncomp = 2L,
 }
 
 #' O2-PLS — formula entry point (uses n_predictive for component count).
+#'
+#' @inheritParams pls
+#' @return A `pls4all_method_fit` object carrying the fitted model,
+#'   in-sample predictions, training RMSE, and method-specific
+#'   metadata. Use `predict()` for inference and `coef()` to
+#'   extract regression coefficients.
+#' @param n_predictive Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param n_x_orthogonal Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param n_y_orthogonal Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @export
 o2pls <- function(formula, data, n_predictive = 2L,
                    n_x_orthogonal = 1L, n_y_orthogonal = 1L,
@@ -119,6 +225,12 @@ o2pls <- function(formula, data, n_predictive = 2L,
 }
 
 #' Missing-aware NIPALS — formula entry point.
+#'
+#' @inheritParams pls
+#' @return A `pls4all_method_fit` object carrying the fitted model,
+#'   in-sample predictions, training RMSE, and method-specific
+#'   metadata. Use `predict()` for inference and `coef()` to
+#'   extract regression coefficients.
 #' @export
 missing_aware_nipals <- function(formula, data, ncomp = 2L,
                                    na.action = stats::na.pass) {
