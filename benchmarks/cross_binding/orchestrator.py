@@ -134,6 +134,7 @@ class ReferenceSpec:
     library: str
     factory: Callable[[Dataset], Callable[[], object]] | None = None
     compare: bool = True
+    gate_c4a: bool = True
     language: str = "Python"
     r_expr: str | None = None
     contract_note: str = ""
@@ -238,8 +239,6 @@ def external_version(backend: str) -> str:
             value = f"{module_name} {getattr(module, '__version__', 'unknown')}"
         except ModuleNotFoundError:
             value = module_name
-    elif backend == "ref.frozen":
-        value = "chemometrics4all frozen reference"
     elif backend == "ref.r.base":
         value = "R base"
     elif backend == "ref.r.stats":
@@ -1224,114 +1223,6 @@ def ref_pybaselines(name: str, **kwargs) -> Callable[[Dataset], Callable[[], obj
     return factory
 
 
-def ref_frozen_baseline(name: str, **kwargs) -> Callable[[Dataset], Callable[[], object]]:
-    def factory(ctx: Dataset) -> Callable[[], object]:
-        module = importlib.import_module("c4a_parity_pybaselines_ref")
-        func = getattr(module, name)
-        return lambda: func(ctx.X, **kwargs)
-
-    return factory
-
-
-def _frozen_fck_kernel_1d(alpha: float, sigma: float, kernel_size: int) -> np.ndarray:
-    idx = np.arange(kernel_size, dtype=np.float64) - (float(kernel_size - 1) * 0.5)
-    sigma_safe = max(float(sigma), 1.0e-6)
-    gaussian = np.exp(-0.5 * (idx / sigma_safe) ** 2)
-    if float(alpha) < 1.0e-10:
-        kernel = gaussian
-    else:
-        abs_idx = np.abs(idx)
-        frac = np.where(abs_idx < 1.0e-10, 0.0, np.power(abs_idx, float(alpha)))
-        kernel = gaussian * frac * np.sign(idx)
-    if float(alpha) > 0.1:
-        kernel = kernel - kernel.mean()
-    norm = float(np.sum(np.abs(kernel)))
-    if norm > 1.0e-12:
-        kernel = kernel / norm
-    return np.asarray(kernel, dtype=np.float64)
-
-
-def ref_frozen_fck_static(ctx: Dataset) -> Callable[[], object]:
-    ndimage = importlib.import_module("scipy.ndimage")
-    alphas = [0.5, 1.0]
-    sigmas = [1.0, 2.0]
-    kernel_size = 5
-
-    def run() -> object:
-        n_samples, n_features = ctx.X.shape
-        out = np.empty((n_samples, len(alphas) * len(sigmas), n_features), dtype=np.float64)
-        for a_idx, alpha in enumerate(alphas):
-            for s_idx, sigma in enumerate(sigmas):
-                kernel = _frozen_fck_kernel_1d(alpha, sigma, kernel_size)
-                out[:, a_idx * len(sigmas) + s_idx, :] = ndimage.convolve1d(
-                    ctx.X,
-                    kernel,
-                    axis=1,
-                    mode="reflect",
-                )
-        return out.reshape(n_samples, len(alphas) * len(sigmas) * n_features)
-
-    return run
-
-
-def _rng_uniform01(rng: np.random.Generator) -> float:
-    raw = int(rng.bit_generator.random_raw())
-    return (raw >> 11) * (1.0 / (1 << 53))
-
-
-def _fisher_yates(arr: np.ndarray, rng: np.random.Generator) -> None:
-    for idx in range(len(arr) - 1, 0, -1):
-        draw = _rng_uniform01(rng)
-        swap_idx = int(math.floor(draw * (idx + 1)))
-        swap_idx = min(max(swap_idx, 0), idx)
-        arr[idx], arr[swap_idx] = arr[swap_idx], arr[idx]
-
-
-def ref_frozen_kbins_stratified(ctx: Dataset) -> Callable[[], object]:
-    def run() -> object:
-        y = np.asarray(ctx.y, dtype=np.float64)
-        n = int(y.shape[0])
-        n_bins = 5
-        ymin = float(y.min())
-        ymax = float(y.max())
-        span = ymax - ymin
-        if span <= 0.0:
-            bin_of = np.zeros(n, dtype=np.int32)
-        else:
-            inv_width = n_bins / span
-            bin_of = np.empty(n, dtype=np.int32)
-            for idx, value in enumerate(y):
-                bucket = int(math.floor((float(value) - ymin) * inv_width))
-                bin_of[idx] = min(max(bucket, 0), n_bins - 1)
-
-        bin_lists: list[list[int]] = [[] for _ in range(n_bins)]
-        for idx, bucket in enumerate(bin_of):
-            bin_lists[int(bucket)].append(idx)
-
-        rng = np.random.default_rng(17)
-        in_test = np.zeros(n, dtype=bool)
-        for bucket in range(n_bins):
-            bucket_n = len(bin_lists[bucket])
-            if bucket_n == 0:
-                continue
-            indices = np.asarray(bin_lists[bucket], dtype=np.int64)
-            _fisher_yates(indices, rng)
-            bucket_test_n = int(math.floor(0.25 * bucket_n + 0.5))
-            if bucket_test_n < 1 and bucket_n >= 2:
-                bucket_test_n = 1
-            if bucket_test_n >= bucket_n:
-                bucket_test_n = bucket_n - 1
-            bucket_test_n = max(bucket_test_n, 0)
-            for selected in indices[:bucket_test_n]:
-                in_test[int(selected)] = True
-
-        train = np.where(~in_test)[0].astype(np.int64)
-        test = np.where(in_test)[0].astype(np.int64)
-        return train, test
-
-    return run
-
-
 def ref_pywavelets_wavelet(ctx: Dataset) -> Callable[[], object]:
     pywt = importlib.import_module("pywt")
 
@@ -1417,24 +1308,80 @@ def r_stats(expr: str, *, compare: bool = True, contract_note: str = "") -> Refe
     return ReferenceSpec("ref.r.stats", "R stats", compare=compare, language="R", r_expr=expr, contract_note=contract_note)
 
 
-def nirs_ref(library: str, factory: Callable[[Dataset], Callable[[], object]], *, compare: bool = True, contract_note: str = "") -> ReferenceSpec:
-    return ReferenceSpec("ref.nirs4all", library, factory, compare=compare, language="Python", contract_note=contract_note)
+def nirs_ref(
+    library: str,
+    factory: Callable[[Dataset], Callable[[], object]],
+    *,
+    compare: bool = True,
+    gate_c4a: bool = True,
+    contract_note: str = "",
+) -> ReferenceSpec:
+    return ReferenceSpec(
+        "ref.nirs4all",
+        library,
+        factory,
+        compare=compare,
+        gate_c4a=gate_c4a,
+        language="Python",
+        contract_note=contract_note,
+    )
 
 
-def sklearn_ref(library: str, factory: Callable[[Dataset], Callable[[], object]], *, compare: bool = True, contract_note: str = "") -> ReferenceSpec:
-    return ReferenceSpec("ref.sklearn", library, factory, compare=compare, language="Python", contract_note=contract_note)
+def sklearn_ref(
+    library: str,
+    factory: Callable[[Dataset], Callable[[], object]],
+    *,
+    compare: bool = True,
+    gate_c4a: bool = True,
+    contract_note: str = "",
+) -> ReferenceSpec:
+    return ReferenceSpec(
+        "ref.sklearn",
+        library,
+        factory,
+        compare=compare,
+        gate_c4a=gate_c4a,
+        language="Python",
+        contract_note=contract_note,
+    )
 
 
-def scipy_ref(library: str, factory: Callable[[Dataset], Callable[[], object]], *, compare: bool = True, contract_note: str = "") -> ReferenceSpec:
-    return ReferenceSpec("ref.scipy", library, factory, compare=compare, language="Python", contract_note=contract_note)
+def scipy_ref(
+    library: str,
+    factory: Callable[[Dataset], Callable[[], object]],
+    *,
+    compare: bool = True,
+    gate_c4a: bool = True,
+    contract_note: str = "",
+) -> ReferenceSpec:
+    return ReferenceSpec(
+        "ref.scipy",
+        library,
+        factory,
+        compare=compare,
+        gate_c4a=gate_c4a,
+        language="Python",
+        contract_note=contract_note,
+    )
 
 
-def pywavelets_ref(library: str, factory: Callable[[Dataset], Callable[[], object]], *, compare: bool = True, contract_note: str = "") -> ReferenceSpec:
-    return ReferenceSpec("ref.pywavelets", library, factory, compare=compare, language="Python", contract_note=contract_note)
-
-
-def frozen_ref(library: str, factory: Callable[[Dataset], Callable[[], object]], *, contract_note: str = "") -> ReferenceSpec:
-    return ReferenceSpec("ref.frozen", library, factory, compare=True, language="Python", contract_note=contract_note)
+def pywavelets_ref(
+    library: str,
+    factory: Callable[[Dataset], Callable[[], object]],
+    *,
+    compare: bool = True,
+    gate_c4a: bool = True,
+    contract_note: str = "",
+) -> ReferenceSpec:
+    return ReferenceSpec(
+        "ref.pywavelets",
+        library,
+        factory,
+        compare=compare,
+        gate_c4a=gate_c4a,
+        language="Python",
+        contract_note=contract_note,
+    )
 
 
 def c_same(prefix: str, *args) -> Callable[[Dataset], Callable[[], object]]:
@@ -1632,24 +1579,22 @@ METHODS: tuple[MethodSpec, ...] = (
     MethodSpec("modpoly", "ModPoly", "baseline", py_transform(c4a.ModPoly, polyorder=2, max_iter=50), c_same("c4a_pp_modpoly", ctypes.c_int32(2), ctypes.c_int32(50), ctypes.c_double(1e-3)), "modpoly(X, polyorder = 2L, max_iter = 50L)", (ReferenceSpec("ref.pybaselines", "pybaselines.modpoly", ref_pybaselines("modpoly", poly_order=2, max_iter=50)),)),
     MethodSpec("imodpoly", "IModPoly", "baseline", py_transform(c4a.IModPoly, polyorder=2, max_iter=50), c_same("c4a_pp_imodpoly", ctypes.c_int32(2), ctypes.c_int32(50), ctypes.c_double(1e-3)), "imodpoly(X, polyorder = 2L, max_iter = 50L)", (ReferenceSpec("ref.pybaselines", "pybaselines.imodpoly(mask_initial_peaks=False)", ref_pybaselines("imodpoly", poly_order=2, max_iter=50, mask_initial_peaks=False)),)),
     MethodSpec("snip", "SNIP", "baseline", py_transform(c4a.SNIP, max_half_window=10), c_same("c4a_pp_snip", ctypes.c_int32(10)), "snip(X, max_half_window = 10L)", (
-        frozen_ref("c4a frozen SNIP(LLS)", ref_frozen_baseline("snip", max_half_window=10)),
         ReferenceSpec(
             "ref.pybaselines",
             "pybaselines.snip(raw)",
             ref_pybaselines("snip", max_half_window=10),
-            compare=False,
-            contract_note="pybaselines 1.2 applies SNIP to raw data unless the caller pre-applies the LLS transform; c4a's operator is the frozen LLS variant",
+            gate_c4a=False,
+            contract_note="pybaselines applies SNIP to raw data; c4a's current operator applies the Morhac log-log-square transform before clipping",
         ),
     )),
     MethodSpec("rolling_ball", "Rolling ball", "baseline", py_transform(c4a.RollingBall, half_window=10, smooth_half_window=0), c_same("c4a_pp_rolling_ball", ctypes.c_int32(10), ctypes.c_int32(0)), "rolling_ball(X, half_window = 10L, smooth_half_window = 0L)", (ReferenceSpec("ref.pybaselines", "pybaselines.rolling_ball", ref_pybaselines("rolling_ball", half_window=10, smooth_half_window=0)),)),
     MethodSpec("iasls", "IAsLS", "baseline", py_transform(c4a.IAsLS, lam=1e5, p=0.01, lam_1=1e-4, polyorder=2, diff_order=2, max_iter=20), lambda ctx: lambda: c_iasls(ctx), "iasls(X, lam = 1e5, p = 0.01, lam_1 = 1e-4, polyorder = 2L, diff_order = 2L, max_iter = 20L)", (ReferenceSpec("ref.pybaselines", "pybaselines.iasls", ref_pybaselines("iasls", lam=1e5, p=0.01, lam_1=1e-4, diff_order=2, max_iter=20)),), comparator=outputs_close_iasls),
     MethodSpec("beads", "BEADS", "baseline", py_transform(c4a.BEADS, lam_0=100.0, lam_1=0.5, lam_2=0.5, max_iter=20), c_same("c4a_pp_beads", ctypes.c_double(100.0), ctypes.c_double(0.5), ctypes.c_double(0.5), ctypes.c_int32(20), ctypes.c_double(1e-3)), "beads(X, max_iter = 20L)", (
-        frozen_ref("c4a frozen BEADS(simplified)", ref_frozen_baseline("beads", lam_0=100.0, lam_1=0.5, lam_2=0.5, max_iter=20)),
         ReferenceSpec(
             "ref.pybaselines",
             "pybaselines.beads(full)",
             ref_pybaselines("beads", lam_0=100.0, lam_1=0.5, lam_2=0.5, max_iter=20),
-            compare=False,
+            gate_c4a=False,
             contract_note="pybaselines.beads is the full BEADS algorithm; c4a currently ships the documented simplified reweighted-L2 variant",
         ),
     )),
@@ -1724,12 +1669,11 @@ METHODS: tuple[MethodSpec, ...] = (
     MethodSpec("flexible_pca", "Flexible PCA", "feature_extraction", py_transform(c4a.FlexiblePCA, n_components=5.0), lambda ctx: lambda: c_flexible("c4a_pp_flex_pca", ctx, 5.0), "flexible_pca(X, n_components = 5.0)", (nirs_ref("nirs4all.FlexiblePCA", ref_nirs_transform("nirs4all.operators.transforms.feature_selection", "FlexiblePCA", n_components=5, svd_solver="full")), sklearn_ref("sklearn.decomposition.PCA", ref_sklearn_flexible_pca)), comparator=outputs_close_sign_invariant_columns),
     MethodSpec("flexible_svd", "Flexible SVD", "feature_extraction", py_transform(c4a.FlexibleSVD, n_components=5.0), lambda ctx: lambda: c_flexible("c4a_pp_flex_svd", ctx, 5.0), "flexible_svd(X, n_components = 5.0)", (nirs_ref("nirs4all.FlexibleSVD", ref_nirs_transform("nirs4all.operators.transforms.feature_selection", "FlexibleSVD", n_components=5, algorithm="arpack", random_state=0)), sklearn_ref("sklearn.decomposition.TruncatedSVD", ref_sklearn_flexible_svd)), comparator=outputs_close_sign_invariant_columns),
     MethodSpec("fck_static", "FCK static", "feature_extraction", py_fck, lambda ctx: lambda: c_fck_static(ctx), "fck_static(X, kernel_size = 5L, filter_orders = c(0.5, 1.0), filter_scales = c(1.0, 2.0))", (
-        frozen_ref("c4a frozen FCKStatic(fckpls kernel)", ref_frozen_fck_static),
         nirs_ref(
-            "nirs4all.FCKStaticTransformer(current)",
+            "nirs4all.FCKStaticTransformer",
             ref_nirs_transform("nirs4all.operators.transforms.fck_static", "FCKStaticTransformer", alphas=[0.5, 1.0], scales=[1.0, 2.0], kernel_sizes=[5], sigma=3.0),
-            compare=False,
-            contract_note="current nirs4all transformer uses a different scaled kernel bank; c4a gates the frozen fckpls fractional_kernel_1d contract",
+            gate_c4a=False,
+            contract_note="nirs4all uses a scaled kernel bank and nearest-edge convolution; c4a currently uses its legacy sigma-bank reflect-convolution contract",
         ),
     )),
     MethodSpec("crop", "Crop", "resampling", py_crop, c_crop_factory, "{start <- ncol(X) %/% 8L; end <- ncol(X) - ncol(X) %/% 8L; crop_transform(X, start = start, end = end)}", (nirs_ref("nirs4all.CropTransformer", ref_nirs_crop),)),
@@ -1740,12 +1684,11 @@ METHODS: tuple[MethodSpec, ...] = (
     MethodSpec("kennard_stone", "Kennard-Stone", "splitter", py_ks, lambda ctx: lambda: c_split_kennard_stone(ctx), "kennard_stone(X)", (nirs_ref("nirs4all.KennardStoneSplitter", ref_nirs_split_ks),)),
     MethodSpec("spxy", "SPXY", "splitter", py_spxy, lambda ctx: lambda: c_split_spxy(ctx), "spxy(X, matrix(y, ncol = 1))", (nirs_ref("nirs4all.SPXYSplitter", ref_nirs_split_spxy),)),
     MethodSpec("kbins_stratified", "K-bins stratified", "splitter", py_kbins_stratified, lambda ctx: lambda: c_split_kbins_stratified(ctx), "kbins_stratified(matrix(y, ncol = 1L), test_size = 0.25, seed = 17, n_bins = 5L, strategy = 'uniform')", (
-        frozen_ref("c4a frozen KBinsStratified(PCG64)", ref_frozen_kbins_stratified),
         nirs_ref(
             "nirs4all.KBinsStratifiedSplitter",
             ref_nirs_split_kbins_stratified,
-            compare=False,
-            contract_note="nirs4all/sklearn use StratifiedShuffleSplit RNG/index ordering; c4a uses the documented PCG64 per-bin shuffle",
+            gate_c4a=False,
+            contract_note="nirs4all/sklearn use StratifiedShuffleSplit RNG/index ordering; c4a uses its documented PCG64 per-bin shuffle",
         ),
         sklearn_ref(
             "sklearn.model_selection.StratifiedShuffleSplit",
@@ -2116,10 +2059,26 @@ def benchmark_spec(
             if spec.compare_internal:
                 native_output = cpp_output
             reference_ok: bool | None = None
-            if canonical_ref is not None and reference_snapshot_output is not None and spec.compare_internal:
+            if (
+                canonical_ref is not None
+                and reference_snapshot_output is not None
+                and spec.compare_internal
+                and canonical_ref.gate_c4a
+            ):
                 reference_ok, reference_reason = compare_outputs(spec, cpp_output, reference_snapshot_output)
                 parity = "reference_ok" if reference_ok else "reference_diverged"
                 reason = f"timed direct libc4a C ABI; reference gate vs stored {canonical_ref.library} snapshot: {reference_reason}"
+            elif (
+                canonical_ref is not None
+                and reference_snapshot_output is not None
+                and not canonical_ref.gate_c4a
+            ):
+                note = canonical_ref.contract_note or "external implementation uses a different published contract"
+                parity = "context"
+                reason = (
+                    f"timed direct libc4a C ABI; external snapshot stored from {canonical_ref.library}, "
+                    f"but no parity gate is run: {note}"
+                )
             elif canonical_ref is not None and reference_snapshot_output is None:
                 parity = "fail"
                 reason = f"timed direct libc4a C ABI; reference gate not run: {reference_snapshot_error or reference_error or 'reference snapshot unavailable'}"

@@ -90,7 +90,7 @@
     },
     "haar": {
       "category": "reference-model",
-      "reason": "fixture uses the frozen c4a parity wavelet reference; direct PyWavelets output layout is not yet a canonical oracle",
+      "reason": "fixture uses the in-tree parity wavelet fixture; direct PyWavelets output layout is not yet a canonical oracle",
       "expires": "2026-08-31"
     },
     "split_binned_strat_group_kfold": {
@@ -120,22 +120,22 @@
     },
     "wavelet": {
       "category": "reference-model",
-      "reason": "fixture uses the frozen c4a parity wavelet reference; direct PyWavelets output layout is not yet a canonical oracle",
+      "reason": "fixture uses the in-tree parity wavelet fixture; direct PyWavelets output layout is not yet a canonical oracle",
       "expires": "2026-08-31"
     },
     "wavelet_features": {
       "category": "reference-model",
-      "reason": "fixture uses the frozen c4a parity wavelet reference; direct PyWavelets output layout is not yet a canonical oracle",
+      "reason": "fixture uses the in-tree parity wavelet fixture; direct PyWavelets output layout is not yet a canonical oracle",
       "expires": "2026-08-31"
     },
     "wavelet_pca": {
       "category": "reference-model",
-      "reason": "fixture uses the frozen c4a parity wavelet reference; direct PyWavelets output layout is not yet a canonical oracle",
+      "reason": "fixture uses the in-tree parity wavelet fixture; direct PyWavelets output layout is not yet a canonical oracle",
       "expires": "2026-08-31"
     },
     "wavelet_svd": {
       "category": "reference-model",
-      "reason": "fixture uses the frozen c4a parity wavelet reference; direct PyWavelets output layout is not yet a canonical oracle",
+      "reason": "fixture uses the in-tree parity wavelet fixture; direct PyWavelets output layout is not yet a canonical oracle",
       "expires": "2026-08-31"
     }
   },

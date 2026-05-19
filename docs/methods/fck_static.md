@@ -144,8 +144,7 @@ Reference backends are registered in the benchmark matrix and stored as reproduc
 | C ABI | `c4a_pp_fck_static` | C/C++ | Stable libc4a entry point family. |
 | Python | `chemometrics4all.FCKStaticTransformer` | Python | sklearn-style wrapper backed by ctypes. |
 | R | `fck_static(X, kernel_size = 5L, filter_orders = c(0.5, 1.0), filter_scales = c(1.0, 2.0))` | R | Public package wrapper around the C ABI. |
-| ref.frozen | `c4a frozen FCKStatic(fckpls kernel)` | Python | canonical/comparator |
-| ref.nirs4all | `nirs4all.FCKStaticTransformer(current)` | Python | context only; current nirs4all transformer uses a different scaled kernel bank; c4a gates the frozen fckpls fractional_kernel_1d contract |
+| ref.nirs4all | `nirs4all.FCKStaticTransformer` | Python | canonical snapshot; c4a context; nirs4all uses a scaled kernel bank and nearest-edge convolution; c4a currently uses its legacy sigma-bank reflect-convolution contract |
 
 ### Usage
 
@@ -200,8 +199,7 @@ res <- fck_static(X, kernel_size = 5L, filter_orders = c(0.5, 1.0), filter_scale
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.frozen`** (Python · canonical) — `c4a frozen FCKStatic(fckpls kernel)` · chemometrics4all frozen reference
-- ℹ **`ref.nirs4all`** (Python · context) — `nirs4all.FCKStaticTransformer(current)` · nirs4all@cd731a23+dirty — current nirs4all transformer uses a different scaled kernel bank; c4a gates the frozen fckpls fractional_kernel_1d contract
+- 📐 **`ref.nirs4all`** (Python · canonical) — `nirs4all.FCKStaticTransformer` · nirs4all@cd731a23+dirty — nirs4all uses a scaled kernel bank and nearest-edge convolution; c4a currently uses its legacy sigma-bank reflect-convolution contract
 :::
 
 ### Benchmarks
@@ -216,17 +214,16 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C++</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.066 ms</td><td class="ms">0.423 ms</td><td class="ms">2.119 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-context">≈ context</td><td class="ms ms-best">🏆 0.065 ms</td><td class="ms ms-best">🏆 0.426 ms</td><td class="ms">2.043 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>Py</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.066 ms</td><td class="ms ms-best">🏆 0.417 ms</td><td class="ms ms-best">🏆 2.119 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.069 ms</td><td class="ms">0.435 ms</td><td class="ms ms-best">🏆 2.033 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.104 ms</td><td class="ms">0.992 ms</td><td class="ms">6.562 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.107 ms</td><td class="ms">1.047 ms</td><td class="ms">6.562 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): c4a frozen FCKStatic(fckpls kernel) · chemometrics4all frozen reference — canonical">📐</span><code>ref.frozen</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.098 ms</td><td class="ms">0.529 ms</td><td class="ms">2.621 ms</td></tr>
-<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.FCKStaticTransformer(current) · nirs4all@cd731a23+dirty — context">📐</span><code>ref.nirs4all</code></td><td class="parity parity-context">✓ ref</td><td class="ms">0.156 ms</td><td class="ms">0.603 ms</td><td class="ms">3.023 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.FCKStaticTransformer · nirs4all@cd731a23+dirty — canonical">📐</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.151 ms</td><td class="ms">0.598 ms</td><td class="ms">2.915 ms</td></tr>
 </tbody>
 </table>
 </div>

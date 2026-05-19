@@ -57,8 +57,7 @@ Reference backends are registered in the benchmark matrix and stored as reproduc
 | C ABI | `c4a_pp_snip` | C/C++ | Stable libc4a entry point family. |
 | Python | `chemometrics4all.SNIP` | Python | sklearn-style wrapper backed by ctypes. |
 | R | `snip(X, max_half_window = 20L)` | R | Public package wrapper around the C ABI. |
-| ref.frozen | `c4a frozen SNIP(LLS)` | Python | canonical/comparator |
-| ref.pybaselines | `pybaselines.snip(raw)` | Python | context only; pybaselines 1.2 applies SNIP to raw data unless the caller pre-applies the LLS transform; c4a's operator is the frozen LLS variant |
+| ref.pybaselines | `pybaselines.snip(raw)` | Python | canonical snapshot; c4a context; pybaselines applies SNIP to raw data; c4a's current operator applies the Morhac log-log-square transform before clipping |
 
 ### Usage
 
@@ -112,8 +111,7 @@ res <- snip(X, max_half_window = 10L)
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.frozen`** (Python · canonical) — `c4a frozen SNIP(LLS)` · chemometrics4all frozen reference
-- ℹ **`ref.pybaselines`** (Python · context) — `pybaselines.snip(raw)` · pybaselines 1.2.1 — pybaselines 1.2 applies SNIP to raw data unless the caller pre-applies the LLS transform; c4a's operator is the frozen LLS variant
+- 📐 **`ref.pybaselines`** (Python · canonical) — `pybaselines.snip(raw)` · pybaselines 1.2.1 — pybaselines applies SNIP to raw data; c4a's current operator applies the Morhac log-log-square transform before clipping
 :::
 
 ### Benchmarks
@@ -128,17 +126,16 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C++</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.151 ms</td><td class="ms">2.292 ms</td><td class="ms ms-best">🏆 11.268 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-context">≈ context</td><td class="ms ms-best">🏆 0.150 ms</td><td class="ms ms-best">🏆 2.282 ms</td><td class="ms">11.262 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>Py</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.195 ms</td><td class="ms ms-best">🏆 2.285 ms</td><td class="ms">11.298 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.155 ms</td><td class="ms">2.351 ms</td><td class="ms ms-best">🏆 11.249 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.157 ms</td><td class="ms">2.375 ms</td><td class="ms">13.062 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.157 ms</td><td class="ms">2.406 ms</td><td class="ms">13.750 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): c4a frozen SNIP(LLS) · chemometrics4all frozen reference — canonical">📐</span><code>ref.frozen</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">8.183 ms</td><td class="ms">89.475 ms</td><td class="ms">463.143 ms</td></tr>
-<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.snip(raw) · pybaselines 1.2.1 — context">📐</span><code>ref.pybaselines</code></td><td class="parity parity-context">✓ ref</td><td class="ms">15.435 ms</td><td class="ms">17.931 ms</td><td class="ms">27.648 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.snip(raw) · pybaselines 1.2.1 — canonical">📐</span><code>ref.pybaselines</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">18.099 ms</td><td class="ms">19.640 ms</td><td class="ms">27.789 ms</td></tr>
 </tbody>
 </table>
 </div>

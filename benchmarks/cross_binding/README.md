@@ -38,15 +38,16 @@ pls4all matrix: `100x50`, `100x500`, `100x2500`, `500x50`, `500x500`,
 `10000x500`.
 
 The current generated matrix covers 48 methods, 3 dataset sizes, 1 thread
-setting, and dashboard columns for `cpp`, `python`, `r`, frozen c4a parity
-references, `nirs4all`, NumPy, SciPy, scikit-learn, pybaselines, PyWavelets,
-R base, and R stats. Every registered method has direct C ABI, Python binding,
-and R binding timing. Every dashboard method has a same-contract reference gate
-when a credible reference exists; methods whose only public namesakes expose a
-different contract use the repo's frozen parity reference as the canonical gate.
-External rows that are useful for performance context but invalid for exact
-parity are marked `reference_role=context` with `parity=context` and are never
-compared against a stored snapshot.
+setting, and dashboard columns for `cpp`, `python`, `r`, `nirs4all`, NumPy,
+SciPy, scikit-learn, pybaselines, PyWavelets, R base, and R stats. Every
+registered method has direct C ABI, Python binding, and R binding timing. Every
+dashboard method has an external reference method when a credible public
+implementation exists. When that implementation exposes the same numerical
+contract, C++ rows are parity-gated against the stored external snapshot. When
+the only credible public implementation exposes a different documented contract,
+the external snapshot is still stored as the canonical external run, but the
+C++ row is marked `parity=context` with the contract reason instead of running
+an invalid comparison.
 `nirs4all.WaveletFeatures` is timed with `n_coeffs_per_level=0`, histogram
 entropy, and the symmetric boundary contract so its output feature count and
 contract match the chemometrics4all dashboard surface.

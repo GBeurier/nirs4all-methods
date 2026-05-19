@@ -200,8 +200,6 @@ def _column_version(raw: dict) -> str:
         return raw.get("lib_build") or "pybaselines"
     if backend == "ref.pywavelets":
         return raw.get("lib_build") or "PyWavelets"
-    if backend == "ref.frozen":
-        return raw.get("lib_build") or "c4a frozen reference"
     if backend == "ref.scipy":
         return raw.get("lib_build") or "scipy"
     if backend == "ref.numpy":
@@ -221,7 +219,6 @@ def _reference_display_name(raw: dict) -> str:
         "ref.sklearn": "sklearn",
         "ref.pybaselines": "pybaselines",
         "ref.pywavelets": "PyWavelets",
-        "ref.frozen": "c4a frozen",
         "ref.scipy": "scipy",
         "ref.numpy": "numpy",
         "ref.r.base": "R base",
@@ -269,7 +266,6 @@ def _column_meta(cid: str, row: dict) -> dict:
             "ref.numpy": "numpy",
             "ref.pybaselines": "pybase",
             "ref.pywavelets": "pywt",
-            "ref.frozen": "frozen",
             "ref.r.base": "R base",
             "ref.r.stats": "R stats",
         }.get(backend, library or backend.replace("ref.", ""))
@@ -292,10 +288,10 @@ def _column_meta(cid: str, row: dict) -> dict:
         "matlab": "matlab",
     }.get(backend, backend)
     short = {
-        "cpp": "C++",
-        "python": "Py",
-        "r": "R",
-        "matlab": "MATLAB",
+        "cpp": "C4A.cpp",
+        "python": "C4A.sklearn",
+        "r": "C4A.R",
+        "matlab": "C4A.MATLAB",
     }.get(backend, backend)
     return {
         "id": cid,
@@ -309,6 +305,31 @@ def _column_meta(cid: str, row: dict) -> dict:
         "kind": row.get("kind", "chemometrics4all"),
         "reference": library,
     }
+
+
+_LANG_ORDER = {
+    "C++": 0,
+    "C": 0,
+    "Python": 1,
+    "R": 2,
+    "MATLAB/Octave": 3,
+    "MATLAB": 3,
+    "Octave": 3,
+    "JavaScript": 4,
+    "Julia": 5,
+    "Rust": 6,
+    "Go": 7,
+    "Java": 8,
+}
+
+
+def _column_sort_key(col: dict) -> tuple:
+    lang = col.get("lang", "")
+    lang_rank = _LANG_ORDER.get(lang, 90)
+    kind_rank = 0 if col.get("kind") == "chemometrics4all" else 1
+    group = str(col.get("group", ""))
+    label = str(col.get("short") or col.get("label") or col.get("id") or "")
+    return (lang_rank, lang, kind_rank, group, label)
 
 
 def _load_registry_groups(repo_root: Path) -> tuple[dict[str, str], list[dict]]:
@@ -440,9 +461,9 @@ def build_payload(results_dir: Path) -> dict:
     ]
 
     rows = [by_row[key] for key in sorted(by_row)]
-    col_list = [columns[key] for key in sorted(columns)]
+    col_list = sorted(columns.values(), key=_column_sort_key)
     threads = sorted({row["threads"] for row in rows})
-    languages = sorted({col["lang"] for col in col_list})
+    languages = sorted({col["lang"] for col in col_list}, key=lambda lang: (_LANG_ORDER.get(lang, 90), lang))
     reference_by_algo = {}
     for algo, ref_info in sorted(references_by_algo.items()):
         refs = ref_info.get("libraries", [])

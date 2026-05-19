@@ -740,7 +740,7 @@
     }
     .thread-pill.t-3  { color: var(--indigo); border-color: rgba(125,168,247,0.4); }
     .thread-pill.t-10 { color: var(--phosphor); border-color: var(--phosphor-glow); }
-    /* avg-speedup mode: size cell shows "avg · N" pill instead of n×p */
+    /* avg relative-duration mode: size cell shows "avg · N" pill instead of n×p */
     .size-avg {
       display: inline-block; padding: 1px 7px;
       background: var(--phosphor-soft); color: var(--phosphor);
@@ -1111,8 +1111,8 @@
       <span class="control-label">viz</span>
       <select id="viz-mode">
         <option value="duration">duration</option>
-        <option value="speedup">speed-up</option>
-        <option value="avg-speedup">avg speed-up</option>
+        <option value="speedup">duration %</option>
+        <option value="avg-speedup">avg duration %</option>
       </select>
     </div>
     <span class="ctrl-spacer"></span>
@@ -1399,13 +1399,14 @@ function escAttr(s) {
   }[ch]));
 }
 
-function fmtSpeedup(ratio) {
+function fmtDurationPercent(ratio) {
   if (!Number.isFinite(ratio)) return '—';
-  if (ratio >= 100)  return `${ratio.toFixed(0)}×`;
-  if (ratio >= 10)   return `${ratio.toFixed(1)}×`;
-  if (ratio >= 1)    return `${ratio.toFixed(2)}×`;
-  if (ratio >= 0.01) return `${ratio.toFixed(2)}×`;
-  return `${ratio.toExponential(1)}×`;
+  const pct = ratio * 100;
+  if (pct >= 1000) return `${pct.toFixed(0)}%`;
+  if (pct >= 100) return `${pct.toFixed(0)}%`;
+  if (pct >= 10) return `${pct.toFixed(1)}%`;
+  if (pct >= 1) return `${pct.toFixed(2)}%`;
+  return `${pct.toExponential(1)}%`;
 }
 
 function applyRowFilters() {
@@ -1433,7 +1434,8 @@ function cellPasses(cell) {
 
 function visibleColIds() {
   // Honour DATA.columns order + column-level filters. The native C++
-  // baseline is force-kept so duration and speed-up are always anchored.
+  // baseline is force-kept so duration and relative-duration views are
+  // always anchored.
   return DATA.columns
     .filter(c => {
       if (NATIVE_COL_ID && c.id === NATIVE_COL_ID) return true;
@@ -1585,7 +1587,7 @@ function sortRows(rows, cols) {
     if (col === '__algo')    return dir * a.algo.localeCompare(b.algo);
     if (col === '__reference') return dir * referenceLabel(a.algo).localeCompare(referenceLabel(b.algo));
     if (col === '__size') {
-      // avg-speedup rows have no concrete size — keep them adjacent at
+      // avg relative-duration rows have no concrete size — keep them adjacent at
       // the same rank regardless of direction.
       const av = a.isAvg ? -Infinity : (a.n * a.p);
       const bv = b.isAvg ? -Infinity : (b.n * b.p);
@@ -1760,11 +1762,10 @@ function renderColPicker() {
 }
 
 // Compact column header label. Always use `col.short` so the header
-// band stays scannable across 47 backends — full labels live in the
-// tooltip + the column-picker + the bottom accordion. Same short can
-// collide across a chemometrics4all binding and the external it mimics
-// (chemometrics4all.sklearn vs sklearn both → "sklearn"); they're disambiguated
-// visually by the subtle .native-col / chemometrics4all binding bands.
+// band stays scannable across many backends — full labels live in the
+// tooltip + the column-picker + the bottom accordion. C4A bindings keep
+// explicit short names (for example C4A.sklearn) so they cannot be mistaken
+// for the external library columns.
 function shortLabel(label) {
   const meta = DATA.columns.find(c => c.label === label);
   if (!meta) return label;
@@ -1849,7 +1850,11 @@ function cellTitle(row, id, cell, meta) {
     if (ref && ref !== '—') parts.push(`reference: ${ref}`);
     if (cell.timed_runs) {
       const batch = cell.batch_loops && cell.batch_loops > 1 ? `; batch ${cell.batch_loops}x/sample` : '';
-      parts.push(`timing: warmup ${cell.warmup_runs || 0} + ${cell.timed_runs} runs${batch}; median ${formatMs(cell.ms)}`);
+      const timingLabel = Number.isFinite(cell.duration_ratio) ? 'geomean duration' : 'median';
+      parts.push(`timing: warmup ${cell.warmup_runs || 0} + ${cell.timed_runs} runs${batch}; ${timingLabel} ${formatMs(cell.ms)}`);
+      if (Number.isFinite(cell.duration_ratio) && cell.duration_ratio !== 1) {
+        parts.push(`duration: ${fmtDurationPercent(cell.duration_ratio)} of C++ baseline`);
+      }
     }
     if (cell.samples_ms && cell.samples_ms.length) parts.push(`samples: ${cell.samples_ms.map(formatMs).join(', ')}`);
     if (cell.reason) parts.push(`reason: ${cell.reason}`);
@@ -1866,7 +1871,11 @@ function cellTitle(row, id, cell, meta) {
   if (ref && ref !== '—') parts.push(`reference: ${ref}`);
   if (cell.timed_runs) {
     const batch = cell.batch_loops && cell.batch_loops > 1 ? `; batch ${cell.batch_loops}x/sample` : '';
-    parts.push(`timing: warmup ${cell.warmup_runs || 0} + ${cell.timed_runs} runs${batch}; median ${formatMs(cell.ms)}`);
+    const timingLabel = Number.isFinite(cell.duration_ratio) ? 'geomean duration' : 'median';
+    parts.push(`timing: warmup ${cell.warmup_runs || 0} + ${cell.timed_runs} runs${batch}; ${timingLabel} ${formatMs(cell.ms)}`);
+    if (Number.isFinite(cell.duration_ratio) && cell.duration_ratio !== 1) {
+      parts.push(`duration: ${fmtDurationPercent(cell.duration_ratio)} of C++ baseline`);
+    }
   }
   if (cell.samples_ms && cell.samples_ms.length) parts.push(`samples: ${cell.samples_ms.map(formatMs).join(', ')}`);
   if (cell.reason) parts.push(`reason: ${cell.reason}`);
@@ -1883,11 +1892,11 @@ function renderTable() {
   const colsById = Object.fromEntries(colMetas.map(c => [c.id, c]));
 
   let rowsFiltered = applyRowFilters().filter(r => rowHasVisibleCell(r, cols));
-  // avg-speedup viz: collapse rows across sizes via geomean of speed-up
-  // ratios, so each (algo, threads) shows up once with the average
-  // multiplier vs the native baseline.
+  // avg relative-duration viz: collapse rows across sizes via geomean of
+  // duration ratios, so each (algo, threads) shows up once with the
+  // average duration percentage vs the native baseline.
   if (state.viz === 'avg-speedup' && NATIVE_COL_ID) {
-    rowsFiltered = aggregateRowsBySize(rowsFiltered, NATIVE_COL_ID);
+    rowsFiltered = aggregateRowsByDurationRatio(rowsFiltered, NATIVE_COL_ID);
   }
   const rows = sortRows(rowsFiltered, cols);
   renderedRowsByKey = new Map(rows.map(r => [rowKey(r), r]));
@@ -1949,8 +1958,8 @@ function renderTable() {
   $('bench-head').innerHTML = head;
 
   // === BODY ===
-  const speedupMode = state.viz === 'speedup' || state.viz === 'avg-speedup';
-  const baselineId = speedupMode && NATIVE_COL_ID ? NATIVE_COL_ID : null;
+  const relativeDurationMode = state.viz === 'speedup' || state.viz === 'avg-speedup';
+  const baselineId = relativeDurationMode && NATIVE_COL_ID ? NATIVE_COL_ID : null;
   if (!rows.length) {
     $('bench-body').innerHTML = `<tr><td colspan="${cols.length + 4}"><div class="empty-state">
       <h3>nothing in this slice.</h3>
@@ -2001,9 +2010,13 @@ function renderTable() {
         const scoreBest = langSlug && langWinners[langSlug] ? langWinners[langSlug].ms : c.ms;
         const scoreCls = scoreClass(c.ms, scoreBest, canHighlight && id === fastestId);
         if (baselineId && baseMs !== null) {
-          const r = id === baselineId ? 1 : baseMs / c.ms;
-          const cls = r > 1.03 ? 'speed-faster' : r < 0.97 ? 'speed-slower' : 'speed-equal';
-          display = `<span class="cell-value ${cls} ${fastCls} ${scoreCls}">${fmtSpeedup(r)}</span>`;
+          if (id === baselineId) {
+            display = `<span class="cell-value speed-equal ${fastCls} ${scoreCls}">${densifyFmt(c.fmt || formatMs(c.ms))}</span>`;
+          } else {
+            const r = Number.isFinite(c.duration_ratio) ? c.duration_ratio : c.ms / baseMs;
+            const cls = r < 0.97 ? 'speed-faster' : r > 1.03 ? 'speed-slower' : 'speed-equal';
+            display = `<span class="cell-value ${cls} ${fastCls} ${scoreCls}">${fmtDurationPercent(r)}</span>`;
+          }
         } else if (baselineId) {
           display = `<span class="cell-value speed-equal ${fastCls} ${scoreCls}">—</span>`;
         } else {
@@ -2033,19 +2046,19 @@ function renderTable() {
   $('visible-count').textContent = `${rows.length} row${rows.length === 1 ? '' : 's'} · ${cols.length} cols`;
   $('table-meta-left').textContent = `${DATA.rows.length} rows · ${DATA.stats.cells.toLocaleString()} cells total`;
   if (state.viz === 'avg-speedup' && baselineId) {
-    $('table-meta-right').textContent = `geomean speed-up × · baseline = ${baselineId} · sizes collapsed`;
+    $('table-meta-right').textContent = `geomean duration % · ${baselineId} shows geomean time · sizes collapsed`;
   } else if (baselineId) {
-    $('table-meta-right').textContent = `speed-up multiplier · baseline = ${baselineId}`;
+    $('table-meta-right').textContent = `duration % vs ${baselineId} · baseline column shows median time`;
   } else {
     $('table-meta-right').textContent = `absolute median wall-clock (ms) · ${langGroups.length} language${langGroups.length === 1 ? '' : 's'} shown`;
   }
 }
 
 // Aggregate rows by (algo, threads). Cells are collapsed across (n, p)
-// using the geometric mean of the per-size speed-up vs the baseline
-// column. We anchor the baseline cell to ms=1 so the existing renderer
-// computes ratios correctly (baseMs/c.ms = geomean).
-function aggregateRowsBySize(rows, baselineId) {
+// using the geometric mean of per-size duration ratios vs the baseline
+// column. The baseline cell keeps an actual geomean duration; the other
+// cells keep their own geomean duration plus `duration_ratio` for display.
+function aggregateRowsByDurationRatio(rows, baselineId) {
   if (!rows.length) return rows;
   const groups = new Map();
   for (const r of rows) {
@@ -2102,6 +2115,8 @@ function aggregateRowsBySize(rows, baselineId) {
     for (const r of group) for (const id in r.cells) allColIds.add(id);
     const newCells = {};
     for (const id of allColIds) {
+      if (id === baselineId) continue;
+      const durations = [];
       const ratios = [];
       const sourceCells = [];
       for (const r of group) {
@@ -2111,7 +2126,8 @@ function aggregateRowsBySize(rows, baselineId) {
         sourceCells.push(c);
         if (!c.ok || !Number.isFinite(c.ms)) continue;
         if (!baseC || !Number.isFinite(baseC.ms)) continue;
-        ratios.push(baseC.ms / c.ms);
+        durations.push(c.ms);
+        ratios.push(c.ms / baseC.ms);
       }
       const meta = aggregateMeta(sourceCells);
       if (!ratios.length) {
@@ -2126,24 +2142,34 @@ function aggregateRowsBySize(rows, baselineId) {
         };
         continue;
       }
-      const geomean = Math.exp(ratios.reduce((s, r) => s + Math.log(r), 0) / ratios.length);
+      const geomeanDuration = Math.exp(durations.reduce((s, r) => s + Math.log(r), 0) / durations.length);
+      const geomeanRatio = Math.exp(ratios.reduce((s, r) => s + Math.log(r), 0) / ratios.length);
       newCells[id] = {
         ...meta,
         parity: worstParity(sourceCells, 'exact'),
-        ok: true, ms: 1 / geomean,
-        fmt: fmtSpeedup(geomean),
-        reason: `geomean over ${ratios.length} size${ratios.length === 1 ? '' : 's'}`,
+        ok: true,
+        ms: geomeanDuration,
+        duration_ratio: geomeanRatio,
+        fmt: formatMs(geomeanDuration),
+        reason: `geomean duration ratio over ${ratios.length} size${ratios.length === 1 ? '' : 's'}`,
       };
     }
     const baselineSources = group.map(r => r.cells[baselineId]).filter(Boolean);
+    const baselineDurations = baselineSources
+      .filter(c => c && c.ok && Number.isFinite(c.ms))
+      .map(c => c.ms);
     const baselineMeta = aggregateMeta(baselineSources);
+    const baselineGeomean = baselineDurations.length
+      ? Math.exp(baselineDurations.reduce((s, r) => s + Math.log(r), 0) / baselineDurations.length)
+      : null;
     newCells[baselineId] = {
       ...baselineMeta,
       parity: worstParity(baselineSources, 'exact'),
-      ok: true,
-      ms: 1,
-      fmt: '1.00×',
-      reason: `baseline geomean anchor over ${group.length} size${group.length === 1 ? '' : 's'}`,
+      ok: baselineGeomean !== null,
+      ms: baselineGeomean,
+      duration_ratio: 1,
+      fmt: baselineGeomean !== null ? formatMs(baselineGeomean) : '—',
+      reason: `baseline geomean duration over ${baselineDurations.length} size${baselineDurations.length === 1 ? '' : 's'}`,
     };
     out.push({
       algo: sample.algo, threads: sample.threads,

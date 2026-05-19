@@ -75,8 +75,7 @@ Reference backends are registered in the benchmark matrix and stored as reproduc
 | C ABI | `c4a_pp_beads` | C/C++ | Stable libc4a entry point family. |
 | Python | `chemometrics4all.BEADS` | Python | sklearn-style wrapper backed by ctypes. |
 | R | `beads(X, lam_0 = 100.0, lam_1 = 0.5, lam_2 = 0.5, max_iter = 50L, tol = 1e-3)` | R | Public package wrapper around the C ABI. |
-| ref.frozen | `c4a frozen BEADS(simplified)` | Python | canonical/comparator |
-| ref.pybaselines | `pybaselines.beads(full)` | Python | context only; pybaselines.beads is the full BEADS algorithm; c4a currently ships the documented simplified reweighted-L2 variant |
+| ref.pybaselines | `pybaselines.beads(full)` | Python | canonical snapshot; c4a context; pybaselines.beads is the full BEADS algorithm; c4a currently ships the documented simplified reweighted-L2 variant |
 
 ### Usage
 
@@ -130,8 +129,7 @@ res <- beads(X, max_iter = 20L)
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.frozen`** (Python · canonical) — `c4a frozen BEADS(simplified)` · chemometrics4all frozen reference
-- ℹ **`ref.pybaselines`** (Python · context) — `pybaselines.beads(full)` · pybaselines 1.2.1 — pybaselines.beads is the full BEADS algorithm; c4a currently ships the documented simplified reweighted-L2 variant
+- 📐 **`ref.pybaselines`** (Python · canonical) — `pybaselines.beads(full)` · pybaselines 1.2.1 — pybaselines.beads is the full BEADS algorithm; c4a currently ships the documented simplified reweighted-L2 variant
 :::
 
 ### Benchmarks
@@ -146,17 +144,16 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C++</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.118 ms</td><td class="ms ms-best">🏆 1.277 ms</td><td class="ms ms-best">🏆 6.819 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-context">≈ context</td><td class="ms ms-best">🏆 0.118 ms</td><td class="ms ms-best">🏆 1.295 ms</td><td class="ms">6.952 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>Py</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.124 ms</td><td class="ms">1.312 ms</td><td class="ms">6.897 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.167 ms</td><td class="ms">1.341 ms</td><td class="ms ms-best">🏆 6.918 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.146 ms</td><td class="ms">1.516 ms</td><td class="ms">7.875 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.157 ms</td><td class="ms">1.523 ms</td><td class="ms">8.188 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): c4a frozen BEADS(simplified) · chemometrics4all frozen reference — canonical">📐</span><code>ref.frozen</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">30.549 ms</td><td class="ms">51.746 ms</td><td class="ms">215.855 ms</td></tr>
-<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.beads(full) · pybaselines 1.2.1 — context">📐</span><code>ref.pybaselines</code></td><td class="parity parity-context">✓ ref</td><td class="ms">249.644 ms</td><td class="ms">360.442 ms</td><td class="ms">1041.274 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.beads(full) · pybaselines 1.2.1 — canonical">📐</span><code>ref.pybaselines</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">210.784 ms</td><td class="ms">377.355 ms</td><td class="ms">1044.608 ms</td></tr>
 </tbody>
 </table>
 </div>

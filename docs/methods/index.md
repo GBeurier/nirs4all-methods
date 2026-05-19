@@ -45,13 +45,13 @@ _Total methods_: **80**. Grouped by family below.
 | [`airpls`](airpls.md) | AirPLS | yes | pybaselines |
 | [`arpls`](arpls.md) | ArPLS | yes | pybaselines |
 | [`asls`](asls.md) | AsLS | yes | pybaselines |
-| [`beads`](beads.md) | BEADS | yes | frozen, pybaselines |
+| [`beads`](beads.md) | BEADS | yes | pybaselines |
 | [`detrend`](detrend.md) | Detrend | yes | nirs4all, r.stats, scipy |
 | [`iasls`](iasls.md) | IAsLS | yes | pybaselines |
 | [`imodpoly`](imodpoly.md) | IModPoly | yes | pybaselines |
 | [`modpoly`](modpoly.md) | ModPoly | yes | pybaselines |
 | [`rolling_ball`](rolling_ball.md) | Rolling ball | yes | pybaselines |
-| [`snip`](snip.md) | SNIP | yes | frozen, pybaselines |
+| [`snip`](snip.md) | SNIP | yes | pybaselines |
 
 ## Wavelet
 
@@ -69,7 +69,7 @@ _Total methods_: **80**. Grouped by family below.
 | Method | Name | Benchmark | References |
 |--------|------|-----------|------------|
 | [`epo`](epo.md) | EPO | yes | nirs4all |
-| [`fck_static`](fck_static.md) | FCK static | yes | frozen, nirs4all |
+| [`fck_static`](fck_static.md) | FCK static | yes | nirs4all |
 | [`flexible_pca`](flexible_pca.md) | Flexible PCA | yes | nirs4all, sklearn |
 | [`flexible_svd`](flexible_svd.md) | Flexible SVD | yes | nirs4all, sklearn |
 | [`osc`](osc.md) | OSC | yes | nirs4all |
@@ -88,7 +88,7 @@ _Total methods_: **80**. Grouped by family below.
 
 | Method | Name | Benchmark | References |
 |--------|------|-----------|------------|
-| [`kbins_stratified`](kbins_stratified.md) | K-bins stratified | yes | frozen, nirs4all, sklearn |
+| [`kbins_stratified`](kbins_stratified.md) | K-bins stratified | yes | nirs4all, sklearn |
 | [`kennard_stone`](kennard_stone.md) | Kennard-Stone | yes | nirs4all |
 | [`spxy`](spxy.md) | SPXY | yes | nirs4all |
 

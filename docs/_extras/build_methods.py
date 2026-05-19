@@ -124,7 +124,6 @@ REFERENCE_BACKENDS = {
     "sklearn_ref": ("ref.sklearn", "Python"),
     "scipy_ref": ("ref.scipy", "Python"),
     "pywavelets_ref": ("ref.pywavelets", "Python"),
-    "frozen_ref": ("ref.frozen", "Python"),
     "r_base": ("ref.r.base", "R"),
     "r_stats": ("ref.r.stats", "R"),
 }
@@ -168,6 +167,7 @@ class Reference:
     library: str
     language: str
     compare: bool = True
+    gate_c4a: bool = True
     note: str = ""
 
 
@@ -236,19 +236,22 @@ def _parse_reference(node: ast.AST) -> Reference | None:
         return None
     name = _call_name(node.func)
     compare = _literal_bool(_keyword(node, "compare"), True)
+    gate_c4a = _literal_bool(_keyword(node, "gate_c4a"), True)
     note = _literal_string(_keyword(node, "contract_note"))
     if name == "ReferenceSpec" and len(node.args) >= 2:
         backend = _literal_string(node.args[0])
         library = _literal_string(node.args[1])
-        language = _literal_string(node.args[4]) if len(node.args) > 4 else "Python"
-        return Reference(backend, library, language or "Python", compare, note)
+        language = _literal_string(_keyword(node, "language"))
+        if not language and len(node.args) > 5:
+            language = _literal_string(node.args[5])
+        return Reference(backend, library, language or "Python", compare, gate_c4a, note)
     if name in REFERENCE_BACKENDS:
         backend, language = REFERENCE_BACKENDS[name]
         if name in {"r_base", "r_stats"}:
             library = "R base" if name == "r_base" else "R stats"
         else:
             library = _literal_string(node.args[0]) if node.args else backend
-        return Reference(backend, library, language, compare, note)
+        return Reference(backend, library, language, compare, gate_c4a, note)
     return None
 
 
@@ -613,7 +616,12 @@ def render_implementation_table(m: Method, py_classes: dict[str, dict[str, Any]]
         r_entry = r_name.group(1) if r_name else m.r_expr
         rows.append(("R", code(r_sigs.get(r_entry, r_entry)), "R", "Public package wrapper around the C ABI."))
     for ref in m.refs:
-        role = "canonical/comparator" if ref.compare else "context only"
+        if ref.compare and ref.gate_c4a:
+            role = "canonical/comparator"
+        elif ref.compare:
+            role = "canonical snapshot; c4a context"
+        else:
+            role = "context only"
         rows.append((ref.backend, code(ref.library), ref.language, role + (f"; {ref.note}" if ref.note else "")))
     out = ["### Implementations\n", "| Layer | Entry point | Language | Contract |", "|-------|-------------|----------|----------|"]
     for layer, entry, lang, note in rows:
@@ -748,9 +756,9 @@ def benchmark_parity_label(cell: dict[str, Any] | None) -> tuple[str, str]:
     parity = str(cell.get("parity") or "not_run")
     gate = str(cell.get("gate") or "")
     if cell.get("ok"):
-        if gate == "reference":
+        if gate == "reference" and parity == "exact":
             return (f"parity-{parity}", "✓ ref")
-        if gate == "binding":
+        if gate == "binding" and parity == "exact":
             return (f"parity-{parity}", "✓ bind")
         if gate == "native" and parity == "exact":
             return (f"parity-{parity}", "✓ exact")
