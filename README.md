@@ -4,6 +4,8 @@
 > first-class bindings for **Python, R, MATLAB / Octave**, plus JS /
 > WebAssembly, Go, Rust, Julia, Ruby, .NET, Lua, Nim, and Android.
 
+**Docs + benchmark matrix:** [gbeurier.github.io/pls4all](https://gbeurier.github.io/pls4all/)
+
 The same numerical core powers every binding: a model trained in Python,
 R, MATLAB, a browser, or Android is checked against the same C++ parity
 contract and tolerance policy. Cross-checked against scikit-learn, R
@@ -111,84 +113,85 @@ shared fixture within `rmse_rel < 1e-12` for the committed smoke matrix. See
 ## Method availability map
 
 This table condenses the cross-binding benchmark matrix into a "where do I
-find this method?" view. `Python`, `R` and `MATLAB` list external reference
-libraries observed in the benchmark; `nirs4all.*` entries are sanctioned
-method-specific Python references when no packaged implementation is
-available.
+find this method?" view. `pls4all R (formula)` and `pls4all MATLAB` mark
+availability in the project bindings; `Python`, `R` and `MATLAB` list
+reference libraries observed in the benchmark. `nirs4all.*` entries are
+sanctioned method-specific Python references when no packaged implementation
+is available.
 
-| Method | Backend C++ | pls4all R | pls4all MATLAB | Python | R | MATLAB |
+| Method | Backend C++ | pls4all R (formula) | pls4all MATLAB | Python | R | MATLAB |
 |---|---:|---|---|---|---|---|
-| `pls` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | `scikit-learn`<br>`ikpls` | `pls`<br>`mixOmics` | `Octave plsregress` |
-| `pcr` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | `scikit-learn` | `pls` | — |
-| `opls` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `ropls` | — |
-| `sparse_simpls` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | — | `mixOmics`<br>`spls` | — |
-| `di_pls` | ✓ | — | — | `diPLSlib` | — | — |
-| `recursive_pls` | ✓ | `dispatcher` | `MEX/dispatcher`<br>`classdef/factory` | `scikit-learn` | `pls` | — |
-| `cppls` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | — | `pls` | — |
-| `weighted_pls` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | `scikit-learn` | — | — |
-| `robust_pls` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | — | `chemometrics` | — |
-| `ridge_pls` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | `scikit-learn` | — | — |
-| `continuum_regression` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | — | `JICO` | — |
-| `n_pls` | ✓ | `dispatcher` | `MEX/dispatcher`<br>`classdef/factory` | `tensorly` | — | — |
-| `kernel_pls_rbf` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `kernlab+pls` | — |
-| `o2pls` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `OmicsPLS` | — |
-| `approximate_press` | ✓ | — | — | — | `pls` | — |
-| `pls_diagnostic_t2` | ✓ | — | — | — | `mdatools` | — |
-| `pls_diagnostic_q` | ✓ | — | — | — | `mdatools` | — |
-| `pls_monitoring` | ✓ | — | — | — | `mdatools` | — |
-| `one_se_rule` | ✓ | — | — | — | `pls` | — |
-| `so_pls` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `multiblock` | — |
-| `on_pls` | ✓ | — | — | `OnPLS` | — | — |
-| `rosa` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `multiblock` | — |
-| `vissa_select` | ✓ | `dispatcher` | `MEX/dispatcher` | `auswahl` | — | — |
-| `pso_select` | ✓ | `dispatcher` | `MEX/dispatcher` | `pyswarms` | — | — |
-| `gpr_pls` | ✓ | `dispatcher` | `MEX/dispatcher` | `scikit-learn` | — | — |
-| `bagging_pls` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | `scikit-learn` | — | — |
-| `boosting_pls` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | — | `mboost` | — |
-| `random_subspace_pls` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher` | `scikit-learn` | — | — |
-| `pls_glm` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `plsRglm` | — |
-| `pls_qda` | ✓ | `dispatcher` | `MEX/dispatcher` | `scikit-learn` | — | — |
-| `pls_cox` | ✓ | — | — | — | `plsRcox` | — |
-| `pds` | ✓ | — | — | — | `base` | — |
-| `ds` | ✓ | — | — | — | `base` | — |
-| `mir_pls` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | — | — | — |
-| `missing_aware_nipals` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | — | `softImpute` | — |
-| `sparse_pls_da` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `mixOmics`<br>`spls` | — |
-| `group_sparse_pls` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `sgPLS` | — |
-| `fused_sparse_pls` | ✓ | `dispatcher` | `MEX/dispatcher` | — | — | — |
-| `pls_diagnostic_dmodx` | ✓ | — | — | — | `mdatools` | — |
-| `mb_pls` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | `nirs4all.mbpls` | — | — |
-| `lw_pls` | ✓ | `dispatcher` | `MEX/dispatcher` | `nirs4all.lwpls` | — | — |
-| `pls_lda` | ✓ | `dispatcher` | `MEX/dispatcher` | `scikit-learn` | — | — |
-| `pls_logistic` | ✓ | `dispatcher` | `MEX/dispatcher` | `scikit-learn` | — | — |
-| `aom_preprocess` | ✓ | `dispatcher` | `MEX/dispatcher` | `nirs4all.AOM_v0` | — | — |
-| `variable_select_vip` | ✓ | — | — | — | `plsVarSel` | — |
-| `variable_select_coef` | ✓ | — | — | — | `pls` | — |
-| `variable_select_sr` | ✓ | — | — | — | `plsVarSel` | — |
-| `interval_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `mdatools` | — |
-| `bipls_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `mdatools` | — |
-| `sipls_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | — | — |
-| `stability_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `plsVarSel` | — |
-| `uve_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `plsVarSel` | — |
-| `spa_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `plsVarSel` | — |
-| `cars_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `enpls` | — |
-| `random_frog_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | — | `libPLS` |
-| `scars_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | — | — |
-| `ga_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `plsVarSel` | — |
-| `shaving_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `plsVarSel` | — |
-| `bve_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `plsVarSel` | — |
-| `t2_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `plsVarSel` | — |
-| `wvc_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `plsVarSel` | — |
-| `wvc_threshold_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `plsVarSel` | — |
-| `emcuve_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `plsVarSel` | — |
-| `randomization_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `pls+stats` | — |
-| `rep_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `plsVarSel` | — |
-| `ipw_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `plsVarSel` | — |
-| `st_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | `plsVarSel` | — |
-| `ecr` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | — | — | `libPLS` |
-| `iriv_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | — | `libPLS` |
-| `irf_select` | ✓ | `dispatcher` | `MEX/dispatcher` | — | — | `libPLS` |
-| `vip_spa_select` | ✓ | `dispatcher` | `MEX/dispatcher` | `auswahl` | — | — |
+| `pls` | ✓ | ✓ | ✓ | `scikit-learn`<br>`ikpls` | `pls`<br>`mixOmics` | `Octave plsregress` |
+| `pcr` | ✓ | ✓ | ✓ | `scikit-learn` | `pls` | — |
+| `opls` | ✓ | ✓ | ✓ | — | `ropls` | — |
+| `sparse_simpls` | ✓ | ✓ | ✓ | — | `mixOmics`<br>`spls` | — |
+| `di_pls` | ✓ | ✓ | ✓ | `diPLSlib` | — | — |
+| `recursive_pls` | ✓ | ✓ | ✓ | `scikit-learn` | `pls` | — |
+| `cppls` | ✓ | ✓ | ✓ | — | `pls` | — |
+| `weighted_pls` | ✓ | ✓ | ✓ | `scikit-learn` | — | — |
+| `robust_pls` | ✓ | ✓ | ✓ | — | `chemometrics` | — |
+| `ridge_pls` | ✓ | ✓ | ✓ | `scikit-learn` | — | — |
+| `continuum_regression` | ✓ | ✓ | ✓ | — | `JICO` | — |
+| `n_pls` | ✓ | ✓ | ✓ | `tensorly` | — | — |
+| `kernel_pls_rbf` | ✓ | ✓ | ✓ | — | `kernlab+pls` | — |
+| `o2pls` | ✓ | ✓ | ✓ | — | `OmicsPLS` | — |
+| `approximate_press` | ✓ | ✓ | ✓ | — | `pls` | — |
+| `pls_diagnostic_t2` | ✓ | ✓ | ✓ | — | `mdatools` | — |
+| `pls_diagnostic_q` | ✓ | ✓ | ✓ | — | `mdatools` | — |
+| `pls_monitoring` | ✓ | ✓ | ✓ | — | `mdatools` | — |
+| `one_se_rule` | ✓ | ✓ | ✓ | — | `pls` | — |
+| `so_pls` | ✓ | ✓ | ✓ | — | `multiblock` | — |
+| `on_pls` | ✓ | ✓ | ✓ | `OnPLS` | — | — |
+| `rosa` | ✓ | ✓ | ✓ | — | `multiblock` | — |
+| `vissa_select` | ✓ | ✓ | ✓ | `auswahl` | — | — |
+| `pso_select` | ✓ | ✓ | ✓ | `pyswarms` | — | — |
+| `gpr_pls` | ✓ | ✓ | ✓ | `scikit-learn` | — | — |
+| `bagging_pls` | ✓ | ✓ | ✓ | `scikit-learn` | — | — |
+| `boosting_pls` | ✓ | ✓ | ✓ | — | `mboost` | — |
+| `random_subspace_pls` | ✓ | ✓ | ✓ | `scikit-learn` | — | — |
+| `pls_glm` | ✓ | ✓ | ✓ | — | `plsRglm` | — |
+| `pls_qda` | ✓ | ✓ | ✓ | `scikit-learn` | — | — |
+| `pls_cox` | ✓ | ✓ | ✓ | — | `plsRcox` | — |
+| `pds` | ✓ | ✓ | ✓ | — | `base` | — |
+| `ds` | ✓ | ✓ | ✓ | — | `base` | — |
+| `mir_pls` | ✓ | ✓ | ✓ | — | — | — |
+| `missing_aware_nipals` | ✓ | ✓ | ✓ | — | `softImpute` | — |
+| `sparse_pls_da` | ✓ | ✓ | ✓ | — | `mixOmics`<br>`spls` | — |
+| `group_sparse_pls` | ✓ | ✓ | ✓ | — | `sgPLS` | — |
+| `fused_sparse_pls` | ✓ | ✓ | ✓ | — | — | — |
+| `pls_diagnostic_dmodx` | ✓ | ✓ | ✓ | — | `mdatools` | — |
+| `mb_pls` | ✓ | ✓ | ✓ | `nirs4all.mbpls` | — | — |
+| `lw_pls` | ✓ | ✓ | ✓ | `nirs4all.lwpls` | — | — |
+| `pls_lda` | ✓ | ✓ | ✓ | `scikit-learn` | — | — |
+| `pls_logistic` | ✓ | ✓ | ✓ | `scikit-learn` | — | — |
+| `aom_preprocess` | ✓ | ✓ | ✓ | `nirs4all.AOM_v0` | — | — |
+| `variable_select_vip` | ✓ | ✓ | ✓ | — | `plsVarSel` | — |
+| `variable_select_coef` | ✓ | ✓ | ✓ | — | `pls` | — |
+| `variable_select_sr` | ✓ | ✓ | ✓ | — | `plsVarSel` | — |
+| `interval_select` | ✓ | ✓ | ✓ | — | `mdatools` | — |
+| `bipls_select` | ✓ | ✓ | ✓ | — | `mdatools` | — |
+| `sipls_select` | ✓ | ✓ | ✓ | — | — | — |
+| `stability_select` | ✓ | ✓ | ✓ | — | `plsVarSel` | — |
+| `uve_select` | ✓ | ✓ | ✓ | — | `plsVarSel` | — |
+| `spa_select` | ✓ | ✓ | ✓ | — | `plsVarSel` | — |
+| `cars_select` | ✓ | ✓ | ✓ | — | `enpls` | — |
+| `random_frog_select` | ✓ | ✓ | ✓ | — | — | `libPLS` |
+| `scars_select` | ✓ | ✓ | ✓ | — | — | — |
+| `ga_select` | ✓ | ✓ | ✓ | — | `plsVarSel` | — |
+| `shaving_select` | ✓ | ✓ | ✓ | — | `plsVarSel` | — |
+| `bve_select` | ✓ | ✓ | ✓ | — | `plsVarSel` | — |
+| `t2_select` | ✓ | ✓ | ✓ | — | `plsVarSel` | — |
+| `wvc_select` | ✓ | ✓ | ✓ | — | `plsVarSel` | — |
+| `wvc_threshold_select` | ✓ | ✓ | ✓ | — | `plsVarSel` | — |
+| `emcuve_select` | ✓ | ✓ | ✓ | — | `plsVarSel` | — |
+| `randomization_select` | ✓ | ✓ | ✓ | — | `pls+stats` | — |
+| `rep_select` | ✓ | ✓ | ✓ | — | `plsVarSel` | — |
+| `ipw_select` | ✓ | ✓ | ✓ | — | `plsVarSel` | — |
+| `st_select` | ✓ | ✓ | ✓ | — | `plsVarSel` | — |
+| `ecr` | ✓ | ✓ | ✓ | — | — | `libPLS` |
+| `iriv_select` | ✓ | ✓ | ✓ | — | — | `libPLS` |
+| `irf_select` | ✓ | ✓ | ✓ | — | — | `libPLS` |
+| `vip_spa_select` | ✓ | ✓ | ✓ | `auswahl` | — | — |
 
 ---
 
