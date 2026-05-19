@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import itertools
+import json
 import math
 import os
 import sys
@@ -4792,6 +4793,20 @@ def _aom_bench_root() -> Path:
     raise FileNotFoundError(f"nirs4all bench AOM_v0 reference not found; searched: {searched}")
 
 
+def _checked_in_fixture(fixture_id: str) -> dict[str, Any]:
+    path = Path(__file__).resolve().parents[4] / "parity" / "fixtures" / f"{fixture_id}.json"
+    with path.open("r", encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def _aom_bench_can_generate() -> bool:
+    try:
+        _aom_bench_root()
+    except FileNotFoundError:
+        return False
+    return True
+
+
 def _aom_bench_imports() -> Any:
     root = _aom_bench_root()
     root_str = str(root)
@@ -7531,6 +7546,9 @@ def synthetic_aom_hard_preprocessing_v1() -> dict[str, Any]:
 
 def synthetic_aom_global_simpls_cv_v1() -> dict[str, Any]:
     """9 samples, 6 features for bench AOM_v0 global SIMPLS CV parity."""
+    fixture_id = "synthetic_aom_global_simpls_cv_v1"
+    if not _aom_bench_can_generate():
+        return _checked_in_fixture(fixture_id)
     X = np.array([
         [1.0, 2.0, 3.0, 4.5, 5.5, 7.0],
         [1.2, 2.1, 3.4, 4.8, 5.8, 7.5],
@@ -7543,7 +7561,7 @@ def synthetic_aom_global_simpls_cv_v1() -> dict[str, Any]:
         [2.9, 4.0, 5.6, 7.1, 8.2, 9.9],
     ], dtype=np.float64)
     Y = np.array([1.1, 1.4, 0.9, 1.8, 2.1, 2.5, 2.8, 3.2, 3.6], dtype=np.float64)
-    return _aom_global_selection_fixture("synthetic_aom_global_simpls_cv_v1",
+    return _aom_global_selection_fixture(fixture_id,
                                          seed=49,
                                          X=X,
                                          Y=Y,
@@ -7555,6 +7573,9 @@ def synthetic_aom_global_simpls_cv_v1() -> dict[str, Any]:
 
 def synthetic_aom_strict_operators_v1() -> dict[str, Any]:
     """4 samples, 7 features for bench AOM_v0 strict-linear operator parity."""
+    fixture_id = "synthetic_aom_strict_operators_v1"
+    if not _aom_bench_can_generate():
+        return _checked_in_fixture(fixture_id)
     X = np.array([
         [0.20, 0.55, 1.10, 1.75, 2.35, 2.70, 3.10],
         [1.00, 0.85, 0.65, 0.72, 1.05, 1.62, 2.40],
@@ -7562,7 +7583,7 @@ def synthetic_aom_strict_operators_v1() -> dict[str, Any]:
         [0.10, 0.40, 0.95, 1.35, 1.80, 2.55, 3.45],
     ], dtype=np.float64)
     return _aom_operator_fixture(
-        "synthetic_aom_strict_operators_v1",
+        fixture_id,
         seed=50,
         X=X,
         operator_names=[
@@ -7578,6 +7599,9 @@ def synthetic_aom_strict_operators_v1() -> dict[str, Any]:
 
 def synthetic_aom_global_simpls_sg_cv_v1() -> dict[str, Any]:
     """10 samples, 7 features for bench AOM_v0 global SIMPLS CV with SG operators."""
+    fixture_id = "synthetic_aom_global_simpls_sg_cv_v1"
+    if not _aom_bench_can_generate():
+        return _checked_in_fixture(fixture_id)
     X = np.array([
         [0.20, 0.55, 1.10, 1.75, 2.35, 2.70, 3.10],
         [0.30, 0.70, 1.20, 1.85, 2.55, 2.95, 3.45],
@@ -7591,7 +7615,7 @@ def synthetic_aom_global_simpls_sg_cv_v1() -> dict[str, Any]:
         [1.38, 2.08, 2.95, 3.88, 4.76, 5.48, 6.20],
     ], dtype=np.float64)
     Y = np.array([0.45, 0.62, 0.38, 0.78, 0.96, 1.18, 1.42, 1.70, 1.98, 2.30], dtype=np.float64)
-    return _aom_global_selection_fixture("synthetic_aom_global_simpls_sg_cv_v1",
+    return _aom_global_selection_fixture(fixture_id,
                                          seed=51,
                                          X=X,
                                          Y=Y,
@@ -7610,6 +7634,9 @@ def synthetic_aom_global_simpls_sg_cv_v1() -> dict[str, Any]:
 
 def synthetic_aom_extended_strict_operators_v1() -> dict[str, Any]:
     """5 samples, 9 features for bench AOM_v0 Whittaker and FCK operator parity."""
+    fixture_id = "synthetic_aom_extended_strict_operators_v1"
+    if not _aom_bench_can_generate():
+        return _checked_in_fixture(fixture_id)
     X = np.array([
         [0.10, 0.32, 0.70, 1.18, 1.72, 2.18, 2.52, 2.82, 3.08],
         [1.40, 1.18, 0.96, 0.88, 1.02, 1.36, 1.82, 2.24, 2.60],
@@ -7618,7 +7645,7 @@ def synthetic_aom_extended_strict_operators_v1() -> dict[str, Any]:
         [1.02, 1.34, 1.82, 2.24, 2.52, 2.72, 2.86, 2.96, 3.02],
     ], dtype=np.float64)
     return _aom_operator_fixture(
-        "synthetic_aom_extended_strict_operators_v1",
+        fixture_id,
         seed=52,
         X=X,
         operator_names=[
@@ -7630,6 +7657,9 @@ def synthetic_aom_extended_strict_operators_v1() -> dict[str, Any]:
 
 def synthetic_aom_global_simpls_fck_whittaker_cv_v1() -> dict[str, Any]:
     """11 samples, 9 features for bench AOM_v0 global SIMPLS CV with Whittaker/FCK."""
+    fixture_id = "synthetic_aom_global_simpls_fck_whittaker_cv_v1"
+    if not _aom_bench_can_generate():
+        return _checked_in_fixture(fixture_id)
     X = np.array([
         [0.10, 0.32, 0.70, 1.18, 1.72, 2.18, 2.52, 2.82, 3.08],
         [0.22, 0.48, 0.86, 1.34, 1.92, 2.42, 2.82, 3.14, 3.45],
@@ -7644,7 +7674,7 @@ def synthetic_aom_global_simpls_fck_whittaker_cv_v1() -> dict[str, Any]:
         [1.82, 2.70, 3.66, 4.66, 5.70, 6.68, 7.58, 8.40, 9.16],
     ], dtype=np.float64)
     Y = np.array([0.30, 0.48, 0.36, 0.72, 0.94, 1.22, 1.52, 1.84, 2.20, 2.58, 3.02], dtype=np.float64)
-    return _aom_global_selection_fixture("synthetic_aom_global_simpls_fck_whittaker_cv_v1",
+    return _aom_global_selection_fixture(fixture_id,
                                          seed=53,
                                          X=X,
                                          Y=Y,
@@ -7661,6 +7691,9 @@ def synthetic_aom_global_simpls_fck_whittaker_cv_v1() -> dict[str, Any]:
 
 def synthetic_aom_pop_simpls_covariance_cv_v1() -> dict[str, Any]:
     """12 samples, 9 features for bench AOM_v0 POP-SIMPLS per-component CV."""
+    fixture_id = "synthetic_aom_pop_simpls_covariance_cv_v1"
+    if not _aom_bench_can_generate():
+        return _checked_in_fixture(fixture_id)
     X = np.array([
         [0.10, 0.32, 0.70, 1.18, 1.72, 2.18, 2.52, 2.82, 3.08],
         [0.22, 0.48, 0.86, 1.34, 1.92, 2.42, 2.82, 3.14, 3.45],
@@ -7677,7 +7710,7 @@ def synthetic_aom_pop_simpls_covariance_cv_v1() -> dict[str, Any]:
     ], dtype=np.float64)
     Y = np.array([0.30, 0.48, 0.36, 0.72, 0.94, 1.22, 1.52, 1.84, 2.20, 2.58, 3.02, 3.44],
                  dtype=np.float64)
-    return _aom_pop_selection_fixture("synthetic_aom_pop_simpls_covariance_cv_v1",
+    return _aom_pop_selection_fixture(fixture_id,
                                       seed=54,
                                       X=X,
                                       Y=Y,
