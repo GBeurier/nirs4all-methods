@@ -8,8 +8,9 @@ For each `(algorithm, backend, n, p, threads)` cell, report:
    canonical native C++ row for that method and dataset.
 2. **Reference parity**: every successful row, including external
    libraries, compared against the registry-declared method oracle.
-3. **Timing**: median, min, max wall-clock milliseconds across `n_runs`
-   timed runs after up to three unmeasured warmups.
+3. **Timing**: adaptive wall-clock milliseconds. The reported value may be
+   a single run, a mean, or a median depending on the observed cell cost;
+   the CSV records the choice in `timing_statistic`.
 4. **Versions metadata**: language, BLAS implementation, binding /
    external library versions.
 
@@ -32,13 +33,38 @@ given algorithm. In `--reference-backends registry` mode those rows
 should be rare because unsupported pairs are not scheduled. In legacy
 `fixed`/`all` audit modes they are expected.
 
+## Timing Protocol
+
+Each cell uses the same adaptive protocol in Python, R and Octave/MATLAB:
+
+1. Run #1 is a warmstart at `BASE` and is timed.
+2. If run #1 takes more than 5 min, report run #1 and stop.
+3. Otherwise, run #2 is the first scored run. From this point on the
+   warmstart is excluded from the score.
+4. If run #2 takes more than 30 s, report run #2 alone.
+5. If run #2 takes more than 5 s, run one more sample and report the mean
+   of runs #2-#3.
+6. If run #2 takes more than 1 s, run up to 10 total executions and report
+   the median of runs #2-#10.
+7. If run #2 takes more than 0.1 s, run up to 20 total executions and
+   report the median after the warmstart.
+8. Otherwise, run up to 40 total executions and report the median after
+   the warmstart.
+
+`reported_ms` is the score used by the dashboard. `n_runs` is the number
+of scored samples after excluding the warmstart, except for the one-run
+warmstart-abort case. `total_runs` includes the warmstart. `median_ms` is
+kept as a compatibility alias for older renderers and mirrors
+`reported_ms` under the current `adaptive-v1` timing schema.
+
+The per-cell timeout is only a 24 h guard. Slow cells should stop because
+of the adaptive protocol, not because of a short timeout.
+
 ## Determinism
 
-Each cell first runs up to three unmeasured warmups at `BASE`, then runs `n_runs = 5`
-timed samples with seeds `[BASE, BASE+1, BASE+2, BASE+3, BASE+4]`. The base
-seed is `1_234_567_890` — a uint32-safe
-integer that round-trips losslessly through R/Octave doubles and is
-accepted as `sklearn`'s `random_state`.
+The base seed is `1_234_567_890` — a uint32-safe integer that round-trips
+losslessly through R/Octave doubles and is accepted as `sklearn`'s
+`random_state`.
 
 **All backends in the same cell read the same orchestrator-generated
 CSV** (`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`).
@@ -137,9 +163,10 @@ should pick the convention matching their reference paper.
 
 ## Timeout
 
-Per-cell wall-clock timeout: **300 s**. Cells that time out are marked
-with the ⏳ icon in the rendered Markdown. Empty / failed cells are
-marked `—`.
+Per-cell wall-clock guard: **24 h**. Cells should normally stop through
+the adaptive timing rules. The guard is only there to catch hangs, OOMs
+or dependency deadlocks. Guard hits are marked with the ⏳ icon in the
+rendered Markdown. Empty / failed cells are marked `—`.
 
 ## Hardware context
 

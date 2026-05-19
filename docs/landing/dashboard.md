@@ -19,7 +19,7 @@ the canonical oracle for that method. Each timed cell should show:
 
 - one parity marker: **reference parity** for C++ and external libraries,
   or **binding parity** for internal pls4all bindings;
-- a **median time** (ms or s), formatted compactly.
+- an **adaptive reported time** (ms or s), formatted compactly.
 
 Hovering a cell reveals: the binding diff when relevant, the reference
 RMSE-relative diff when available, the library version that produced it,
@@ -95,8 +95,12 @@ Each cell exposes:
 - `binding_parity` — pls4all binding/core consistency verdict, or not
   applicable for external libraries.
 - `reference_parity` — method-oracle verdict.
-- `ms` — float median wall-clock in milliseconds.
+- `ms` — adaptive reported wall-clock in milliseconds.
 - `fmt` — pre-formatted time string (`1.97 ms`, `4.2 s`).
+- `timing_statistic` — `single`, `mean`, or `median`.
+- `n_runs` — number of scored samples, excluding the warmstart unless the
+  warmstart was the only completed run.
+- `total_runs` — total executions including the warmstart.
 - `reason` — for non-`exact` cells, the captured failure / drift
   reason, trimmed to 200 chars. Examples:
   - `ModuleNotFoundError: No module named 'sgPLS'`

@@ -52,8 +52,11 @@ jobs:
           pip install -e bindings/python
           python - <<'PY'
           import pls4all
+          import importlib.metadata as md
 
-          assert pls4all.version().startswith("0.97.2")
+          expected = md.version("pls4all")
+          assert pls4all.__version__ == expected
+          assert pls4all.version().startswith(expected + "+abi.")
           with pls4all.Context() as ctx, pls4all.Config() as cfg:
               cfg.n_components = 3
               cfg.algorithm = pls4all.Algorithm.PCR

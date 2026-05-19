@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import os
-import statistics
 import subprocess
 import tempfile
 from pathlib import Path
@@ -11,13 +10,10 @@ from pathlib import Path
 import numpy as np
 
 from _common import (parse_args, time_runs_seeded, emit_record,
-                       load_dataset, collect_versions, _safe_version)
+                     load_dataset, collect_versions, _safe_version,
+                     WARMUP_ABORT_MS)
 from bench_registry_common import (adapted_params, benchmark_inputs,
                                    find_reference, load_method)
-
-
-def _warmup_count(n_runs: int) -> int:
-    return max(1, min(3, int(n_runs)))
 
 
 def _r_quote(path: Path | str) -> str:
@@ -40,13 +36,29 @@ def _write_xy_case(tmp: Path, idx: int, X: np.ndarray,
     return x_path, y_path, xp_path, pred_path, idx_path
 
 
-def _stats_from_samples(samples: list[float]) -> dict:
+def _stats_from_samples(samples: list[float], *, statistic: str,
+                        warmup_ms: float, decision: str,
+                        max_runs: int, total_runs: int,
+                        warmup_included: bool = False) -> dict:
+    if len(samples) == 1:
+        statistic = "single"
+    reported = (sum(samples) / len(samples)
+                if statistic == "mean" else float(np.median(samples)))
     return {
         "ok": True,
         "n_runs": len(samples),
-        "median_ms": statistics.median(samples),
+        "median_ms": reported,
+        "reported_ms": reported,
+        "sample_median_ms": float(np.median(samples)),
+        "mean_ms": float(np.mean(samples)),
         "min_ms": min(samples),
         "max_ms": max(samples),
+        "warmup_ms": warmup_ms,
+        "warmup_included": warmup_included,
+        "timing_statistic": statistic,
+        "timing_decision": decision,
+        "max_runs": max(1, int(max_runs)),
+        "total_runs": max(1, int(total_runs)),
     }
 
 
@@ -213,25 +225,27 @@ def _time_r_reference_batched(reference, method, params, csv_dir, n: int,
 
     with tempfile.TemporaryDirectory(prefix="pls4all_rbatch_") as tmp_s:
         tmp = Path(tmp_s)
-        warmups = [seed_base] * _warmup_count(runs)
-        timed = [seed_base + i for i in range(runs)]
+        max_runs = max(1, int(runs))
         cases: list[dict] = []
         script_parts = [
-            "samples <- numeric(0)\n",
-            "run_one <- function(expr, timed) {\n",
-            "  if (timed) {\n",
-            "    t0 <- as.numeric(Sys.time()) * 1000.0\n",
-            "    force(expr)\n",
-            "    samples <<- c(samples, as.numeric(Sys.time()) * 1000.0 - t0)\n",
-            "  } else {\n",
-            "    force(expr)\n",
-            "  }\n",
+            "now_ms <- function() as.numeric(Sys.time()) * 1000.0\n",
+            "time_call <- function(fn) {\n",
+            "  t0 <- now_ms()\n",
+            "  fn()\n",
+            "  now_ms() - t0\n",
+            "}\n",
+            "adaptive_target <- function(probe_ms, max_runs) {\n",
+            "  max_runs <- max(2L, as.integer(max_runs))\n",
+            "  if (probe_ms > 60000.0) return(list(target=2L, statistic='single', decision='probe_gt_60s'))\n",
+            "  if (probe_ms > 30000.0) return(list(target=min(max_runs, 2L), statistic='single', decision='probe_gt_30s'))\n",
+            "  if (probe_ms > 5000.0) return(list(target=min(max_runs, 3L), statistic='mean', decision='probe_gt_5s'))\n",
+            "  if (probe_ms > 1000.0) return(list(target=min(max_runs, 10L), statistic='median', decision='probe_gt_1s'))\n",
+            "  if (probe_ms > 100.0) return(list(target=min(max_runs, 20L), statistic='median', decision='probe_gt_100ms'))\n",
+            "  list(target=min(max_runs, 40L), statistic='median', decision='probe_le_100ms')\n",
             "}\n",
         ]
-        last_pred_path: Path | None = None
-        last_idx_path: Path | None = None
-        for idx, (seed, is_timed) in enumerate(
-                [(s, False) for s in warmups] + [(s, True) for s in timed]):
+        for idx, seed in enumerate([seed_base] + [
+                seed_base + i for i in range(max_runs)]):
             X, y = load_dataset(csv_dir, n, p, seed)
             Y, extras = benchmark_inputs(method, X, y, params, seed)
             x_path, y_path, xp_path, out_path, idx_path = _write_xy_case(
@@ -255,34 +269,85 @@ def _time_r_reference_batched(reference, method, params, csv_dir, n: int,
                 return None
             cases.append({"pred": out_path, "idx": idx_path,
                           "is_mask": is_mask, "p": int(X.shape[1])})
-            script_parts.append("run_one(local({\n")
+            script_parts.append(f"case_{idx:03d} <- function() {{\n")
             script_parts.append(body)
-            script_parts.append(f"\n}}), {'TRUE' if is_timed else 'FALSE'})\n")
-            if is_timed:
-                last_pred_path = out_path
-                last_idx_path = idx_path
+            script_parts.append("\n}\n")
         samples_path = tmp / "samples.csv"
+        meta_path = tmp / "timing_meta.csv"
+        case_names = ", ".join(f"case_{idx:03d}" for idx in range(len(cases)))
         script_parts.append(
+            f"case_fns <- list({case_names})\n"
+            f"max_runs <- {max_runs}L\n"
+            "samples <- numeric(0)\n"
+            "last_case <- 0L\n"
+            "warmup_included <- FALSE\n"
+            "warmup_ms <- time_call(case_fns[[1L]])\n"
+            f"if (warmup_ms > {WARMUP_ABORT_MS:.1f}) {{\n"
+            "  samples <- c(warmup_ms)\n"
+            "  timing_statistic <- 'single'\n"
+            "  timing_decision <- 'warmup_gt_5min'\n"
+            "  warmup_included <- TRUE\n"
+            "} else if (max_runs < 2L) {\n"
+            "  samples <- c(warmup_ms)\n"
+            "  timing_statistic <- 'single'\n"
+            "  timing_decision <- 'max_runs_1_warmup_only'\n"
+            "  warmup_included <- TRUE\n"
+            "} else {\n"
+            "  samples <- c(time_call(case_fns[[2L]]))\n"
+            "  last_case <- 1L\n"
+            "  target <- adaptive_target(samples[[1]], max_runs)\n"
+            "  timing_statistic <- target$statistic\n"
+            "  timing_decision <- target$decision\n"
+            "  target_samples <- max(1L, target$target - 1L)\n"
+            "  if (target_samples > 1L) {\n"
+            "    for (i in 2:target_samples) {\n"
+            "      case_idx <- i + 1L\n"
+            "      samples <- c(samples, time_call(case_fns[[case_idx]]))\n"
+            "      last_case <- i\n"
+            "    }\n"
+            "  }\n"
+            "}\n"
             f"write.table(matrix(samples, ncol=1), file={_r_quote(samples_path)}, "
-            "sep=',', row.names=FALSE, col.names=FALSE)\n")
+            "sep=',', row.names=FALSE, col.names=FALSE)\n"
+            "meta <- data.frame(warmup_ms=warmup_ms, last_case=last_case,\n"
+            "                   timing_statistic=timing_statistic,\n"
+            "                   timing_decision=timing_decision,\n"
+            "                   warmup_included=warmup_included,\n"
+            "                   total_runs=ifelse(warmup_included, 1L, 1L + length(samples)),\n"
+            "                   max_runs=max_runs)\n"
+            f"write.table(meta, file={_r_quote(meta_path)}, sep=',', "
+            "row.names=FALSE, col.names=TRUE)\n")
         script_path = tmp / "batch.R"
         script_path.write_text("".join(script_parts), encoding="utf-8")
+        timeout_s = int(os.environ.get("BENCH_CELL_TIMEOUT", "900"))
         proc = subprocess.run([RSCRIPT, "--vanilla", str(script_path)],
                               capture_output=True, text=True, env=R_ENV,
-                              timeout=900)
+                              timeout=timeout_s)
         if proc.returncode != 0:
             raise RuntimeError(
                 f"batched R reference failed (rc={proc.returncode}): "
                 f"{proc.stderr.strip()[-500:]}")
         samples = np.atleast_1d(np.loadtxt(samples_path, delimiter=","))
         samples_f = [float(x) for x in samples]
-        last = cases[-1]
+        with meta_path.open() as f:
+            meta_rows = list(__import__("csv").DictReader(f))
+        meta = meta_rows[0] if meta_rows else {}
+        last_case = int(float(meta.get("last_case") or 0))
+        last = cases[last_case]
         if last["is_mask"]:
-            last_preds = _mask_from_indices(last_idx_path or last["idx"],
-                                            int(last["p"]))
+            last_preds = _mask_from_indices(last["idx"], int(last["p"]))
         else:
-            last_preds = _read_csv_array(last_pred_path or last["pred"])
-        return _stats_from_samples(samples_f), last_preds
+            last_preds = _read_csv_array(last["pred"])
+        return _stats_from_samples(
+            samples_f,
+            statistic=str(meta.get("timing_statistic") or "median"),
+            warmup_ms=float(meta.get("warmup_ms") or 0.0),
+            decision=str(meta.get("timing_decision") or "unknown"),
+            max_runs=int(float(meta.get("max_runs") or max_runs)),
+            total_runs=int(float(meta.get("total_runs") or len(samples_f))),
+            warmup_included=str(meta.get("warmup_included") or "").lower()
+            == "true",
+        ), last_preds
 
 
 def main():

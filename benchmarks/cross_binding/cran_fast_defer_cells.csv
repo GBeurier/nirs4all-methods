@@ -1,0 +1,34 @@
+algorithm,backend,language,tier,kind,n,p,threads,libp4a_build,reason
+*,*,*,*,*,*,2500,*,*,deferred slow 2500-feature cell for CRAN-fast benchmark; run in catch-up matrix
+vissa_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+pso_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+random_frog_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+bve_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+emcuve_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+randomization_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+iriv_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+irf_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+vip_spa_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+ga_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+scars_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+cars_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+shaving_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+wvc_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+wvc_threshold_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+ipw_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+st_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+ecr,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+rep_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+stability_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+uve_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+spa_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+interval_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+bipls_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+sipls_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+variable_select_vip,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+variable_select_coef,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+variable_select_sr,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+t2_select,*,*,*,*,*,500,*,*,deferred slow selector cell for CRAN-fast benchmark; run in catch-up matrix
+pcr,*,R,*,*,*,500,*,*,deferred slow R PCR cell for CRAN-fast benchmark; run in catch-up matrix
+*,*,*,*,*,*,500,8,*,deferred t=8 500-feature cell for CRAN-fast benchmark; run in catch-up matrix
+*,*,R,*,*,1000,500,1,*,deferred t=1 R 1000x500 cell for CRAN-fast benchmark; run in catch-up matrix

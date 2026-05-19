@@ -2,13 +2,12 @@
 
 The new (parity + timing + versions) cell convention:
 
-  python script.py <algo> <n> <p> <n_components> <n_runs> \
+  python script.py <algo> <n> <p> <n_components> <max_total_runs> \
       <seed_base> <predictions_path>
 
 Each script:
   - loads / regenerates the deterministic dataset per run (seed_base+i)
-  - runs a small unmeasured warmup set, then `fit_predict(seed)` n_runs
-    timed times
+  - runs the adaptive timing protocol used by the benchmark dashboard
   - saves the LAST run's predictions as a .npy file under
     <predictions_path> so the orchestrator can compute parity post-hoc
   - emits a JSON record on the LAST stdout line with timing + versions
@@ -34,7 +33,7 @@ import numpy as np
 # ----------------------------------------------------------------------
 
 def parse_args():
-    """Return (algo, csv_dir, n, p, n_components, n_runs, seed_base, predictions_path).
+    """Return (algo, csv_dir, n, p, n_components, max_total_runs, seed_base, predictions_path).
 
     All backends read the orchestrator-generated CSV files
     `<csv_dir>/data_<n>x<p>_seed<seed>.csv` so they train on the *exact*
@@ -43,7 +42,7 @@ def parse_args():
     fact that NumPy / R / Octave use different RNGs from the same seed.
     """
     if len(sys.argv) != 9:
-        print("usage: SCRIPT algo csv_dir n p n_components n_runs "
+        print("usage: SCRIPT algo csv_dir n p n_components max_total_runs "
                "seed_base predictions_path",
                file=sys.stderr)
         sys.exit(2)
@@ -69,20 +68,81 @@ def load_dataset(csv_dir: Path, n: int, p: int, seed: int):
 
 
 # ----------------------------------------------------------------------
-# Timed-run loop with per-run seed
+# Adaptive timed-run loop with per-run seed
 # ----------------------------------------------------------------------
 
-def _warmup_count(n_runs: int) -> int:
-    return max(1, min(3, int(n_runs)))
+WARMUP_ABORT_MS = 5 * 60 * 1000.0
+PROBE_ABORT_MS = 60 * 1000.0
+DEFAULT_MAX_RUNS = 40
+
+
+def adaptive_target(probe_ms: float, max_runs: int) -> tuple[int, str, str]:
+    """Return (target total executions, statistic, decision) from run #2."""
+    max_runs = max(2, int(max_runs))
+    if probe_ms > PROBE_ABORT_MS:
+        return 2, "single", "probe_gt_60s"
+    if probe_ms > 30_000.0:
+        return min(max_runs, 2), "single", "probe_gt_30s"
+    if probe_ms > 5_000.0:
+        return min(max_runs, 3), "mean", "probe_gt_5s"
+    if probe_ms > 1_000.0:
+        return min(max_runs, 10), "median", "probe_gt_1s"
+    if probe_ms > 100.0:
+        return min(max_runs, 20), "median", "probe_gt_100ms"
+    return min(max_runs, DEFAULT_MAX_RUNS), "median", "probe_le_100ms"
+
+
+def _reported_value(samples: list[float], statistic: str) -> float:
+    if statistic == "mean":
+        return statistics.fmean(samples)
+    return statistics.median(samples)
+
+
+def _stats(samples: list[float], *, statistic: str, warmup_ms: float,
+           decision: str, max_runs: int, total_runs: int,
+           warmup_included: bool = False) -> dict:
+    if len(samples) == 1:
+        statistic = "single"
+    reported = _reported_value(samples, statistic)
+    return {
+        "ok": True,
+        "n_runs": len(samples),
+        # Compatibility: legacy renderers read median_ms as the score.
+        # For adaptive-v1 this is the reported score, which may be a mean
+        # for slow cells. New renderers should prefer reported_ms.
+        "median_ms": reported,
+        "reported_ms": reported,
+        "sample_median_ms": statistics.median(samples),
+        "mean_ms": statistics.fmean(samples),
+        "min_ms": min(samples),
+        "max_ms": max(samples),
+        "warmup_ms": warmup_ms,
+        "warmup_included": warmup_included,
+        "timing_statistic": statistic,
+        "timing_decision": decision,
+        "max_runs": max(1, int(max_runs)),
+        "total_runs": max(1, int(total_runs)),
+    }
 
 
 def time_runs_seeded(fit_predict_seeded, n_runs: int, seed_base: int):
-    """Run warmups, then timed seeds [base, base+1, …, base+n_runs-1].
+    """Run the adaptive timing protocol.
+
+    Protocol:
+      1. Run one warm-up with `seed_base` and time it.
+      2. If the warm-up takes more than 5 min, report that single time.
+      3. Otherwise run one timed probe with `seed_base`.
+      4. If run #2 takes more than 30 s, report that single second-run
+         time (the warm-up is discarded).
+      5. Otherwise choose the total execution count from run #2:
+         >5 s -> 3 runs / mean of runs #2..#3; >1 s -> 10 runs /
+         median of runs #2..#10; >0.1 s -> 20 runs / median; <=0.1 s
+         -> up to 40 runs / median.
 
     Returns:
       (stats_dict, last_predictions_array)
-      - stats_dict: ok / n_runs / median_ms / min_ms / max_ms for timed
-        samples only
+      - stats_dict: ok / n_runs / reported_ms / timing_statistic /
+        median_ms / mean_ms / min_ms / max_ms
       - last_predictions_array: the predictions array from the LAST
         timed run (seed_base + n_runs - 1). The caller persists it to
         the predictions file for post-hoc parity computation.
@@ -90,28 +150,39 @@ def time_runs_seeded(fit_predict_seeded, n_runs: int, seed_base: int):
       `fit_predict_seeded(seed)` must return a numpy.ndarray of predictions
       (any shape, will be flattened for parity comparison).
     """
-    if n_runs < 1:
-        raise ValueError("n_runs must be >= 1")
-    # Keep import, dynamic linker, allocator, first-call kernel setup, and
-    # class factory initialisation out of the measurement window. Reusing
-    # seed_base preserves the prediction seed contract: the last timed run is
-    # still seed_base + n_runs - 1.
-    for _ in range(_warmup_count(n_runs)):
-        fit_predict_seeded(seed_base)
+    max_runs = max(1, int(n_runs))
+
+    t0 = time.perf_counter()
+    warmup_preds = fit_predict_seeded(seed_base)
+    warmup_ms = (time.perf_counter() - t0) * 1000.0
+    if warmup_ms > WARMUP_ABORT_MS:
+        return _stats([warmup_ms], statistic="single", warmup_ms=warmup_ms,
+                      decision="warmup_gt_5min", max_runs=max_runs,
+                      total_runs=1, warmup_included=True), warmup_preds
+
+    if max_runs < 2:
+        return _stats([warmup_ms], statistic="single", warmup_ms=warmup_ms,
+                      decision="max_runs_1_warmup_only",
+                      max_runs=max_runs, total_runs=1,
+                      warmup_included=True), warmup_preds
+
     samples = []
-    last_preds = None
-    for i in range(n_runs):
+    t0 = time.perf_counter()
+    last_preds = fit_predict_seeded(seed_base)
+    probe_ms = (time.perf_counter() - t0) * 1000.0
+    samples.append(probe_ms)
+
+    target_total, statistic, decision = adaptive_target(probe_ms, max_runs)
+    target_samples = max(1, target_total - 1)
+    for i in range(1, target_samples):
         seed = seed_base + i
         t0 = time.perf_counter()
         last_preds = fit_predict_seeded(seed)
         samples.append((time.perf_counter() - t0) * 1000.0)
-    return {
-        "ok": True,
-        "n_runs": len(samples),
-        "median_ms": statistics.median(samples),
-        "min_ms": min(samples),
-        "max_ms": max(samples),
-    }, last_preds
+
+    return _stats(samples, statistic=statistic, warmup_ms=warmup_ms,
+                  decision=decision, max_runs=max_runs,
+                  total_runs=1 + len(samples)), last_preds
 
 
 # ----------------------------------------------------------------------

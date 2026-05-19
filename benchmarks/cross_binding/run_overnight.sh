@@ -21,8 +21,8 @@ CLEAN_BUILD="${CLEAN_BUILD:-1}"
 ALGORITHMS="${ALGORITHMS:-all}"
 SIZES="${SIZES:-}"
 THREADS="${THREADS:-1 3 10}"
-N_RUNS="${N_RUNS:-5}"
-TIMEOUT="${TIMEOUT:-300}"
+N_RUNS="${N_RUNS:-40}"
+TIMEOUT="${TIMEOUT:-86400}"
 REFERENCE_BACKENDS="${REFERENCE_BACKENDS:-all}"
 OUT_CSV="${OUT_CSV:-benchmarks/cross_binding/results/full_matrix.csv}"
 LOG_DIR="${LOG_DIR:-benchmarks/cross_binding/results/logs}"
@@ -161,7 +161,7 @@ fi
 
 {
   echo "# $(date -u +%Y-%m-%dT%H:%M:%SZ) starting pls4all overnight benchmark"
-  echo "# build_presets=${build_presets[*]} clean_build=${CLEAN_BUILD} libp4a=${LIBP4A_BUILD} algorithms=${ALGORITHMS} registry_cells=${REGISTRY_CELLS} sizes=${SIZES:-default} threads=${THREADS} n_runs=${N_RUNS}"
+  echo "# build_presets=${build_presets[*]} clean_build=${CLEAN_BUILD} libp4a=${LIBP4A_BUILD} algorithms=${ALGORITHMS} registry_cells=${REGISTRY_CELLS} sizes=${SIZES:-default} threads=${THREADS} adaptive_max_total_runs=${N_RUNS}"
   echo "# references=${REFERENCE_BACKENDS} canonical_only=${CANONICAL_ONLY} full_matrix=${FULL_MATRIX} resume=${RESUME} force=${FORCE} rerun_failed=${RERUN_FAILED} render_docs=${RENDER_DOCS} build_site=${BUILD_SITE} publish_web=${PUBLISH_WEB} deploy_pages=${DEPLOY_PAGES} pages_branch=${PAGES_BRANCH} timeout=${TIMEOUT}"
 
   for preset in "${build_presets[@]}"; do
@@ -183,6 +183,7 @@ fi
     --libp4a-build "${LIBP4A_BUILD}" \
     "${canonical_flags[@]}" \
     "${resume_flags[@]}" \
+    --flush-each-cell \
     --reference-backends "${REFERENCE_BACKENDS}" \
     --out-csv "${OUT_CSV}"
 

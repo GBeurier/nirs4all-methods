@@ -29,7 +29,7 @@ author = "G. Beurier and contributors"
 copyright = f"{_dt.datetime.now().year}, {author}"
 
 # Read version from cpp version header when available, else fallback.
-release = "0.97.2"
+release = "0.97.3"
 version = "0.97"
 
 # ---- extensions -----------------------------------------------------
@@ -39,6 +39,7 @@ extensions = [
     "sphinx_design",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.viewcode",
+    "sphinx.ext.mathjax",
 ]
 
 # myst-parser: enable the optional features we actually use.
@@ -50,6 +51,8 @@ myst_enable_extensions = [
     "substitution",
     "tasklist",
     "attrs_inline",
+    "dollarmath",           # $...$ inline and $$...$$ block math
+    "amsmath",              # \begin{align}...\end{align} environments
 ]
 myst_heading_anchors = 3
 # Some long titles in benchmarks; allow.
@@ -92,10 +95,13 @@ html_theme_options = {
                     "JavaScript, Android, Go, Rust, Julia, Ruby, .NET, Lua, Nim.",
     "github_user": "GBeurier",
     "github_repo": "pls4all",
-    "github_button": True,
+    # Alabaster's github_button is a third-party iframe (ghbtns.com) that
+    # interrupts the sidebar visually. Disabled — a quiet repo link in
+    # the footer (or wordmark hover) is sufficient.
+    "github_button": False,
     "fixed_sidebar": True,
-    "sidebar_width": "260px",
-    "page_width": "1200px",
+    "sidebar_width": "280px",
+    "page_width": "1380px",
     "show_relbars": True,
 }
 
@@ -110,9 +116,9 @@ html_sidebars = {
 # Static assets dir.
 html_static_path = ["_static"]
 
-# Narrow technical font + tighter tables for the benchmark pages.
-html_css_files = ["custom.css"]
-html_js_files = ["tab-combo.js"]
+# Alabaster auto-injects _static/custom.css via its layout, so
+# listing it again in html_css_files would duplicate the <link>.
+html_js_files = ["tab-combo.js", "sidebar-scroll.js"]
 
 # Templates dir — Sphinx auto-discovers `_templates/`, but list it
 # explicitly so the custom landing.html template is picked up.
@@ -124,21 +130,20 @@ html_additional_pages = {"index": "landing.html"}
 
 
 def setup(app):
-    """Inject the benchmark JSON payload into html_context.
+    """Inject benchmark data into the build.
 
-    Strategy:
-      1. If `benchmarks/cross_binding/results/full_matrix.csv` is present
-         (local dev environment after a benchmark run), regenerate the
-         payload fresh and also write it to `docs/_static/bench-data.json`
-         for downstream consumers.
-      2. Otherwise (CI, fresh clone, etc.), fall back to the committed
-         `docs/_static/bench-data.json`.
+    Two refresh paths run here, both follow the same priority chain:
+    live CSV → committed snapshot → empty fallback.
 
-    Either way, the landing.html template receives `bench_data_json` +
-    `generated_at` via Jinja2 substitution.
+      1. **Landing dashboard** payload — `docs/_static/bench-data.json`,
+         consumed by `_templates/landing.html` via Jinja2.
+      2. **Per-method benchmark tables** in `docs/methods/*.md` —
+         re-rendered on the fly via a `source-read` hook so the
+         published pages always reflect the latest results.
     """
     import json as _json
     from build_landing import build_payload
+    from method_benchmark_tables import load_or_build_blocks, install_sphinx_hook
 
     here = _Path(__file__).parent
     results_dir = here.parent / "benchmarks" / "cross_binding" / "results"
@@ -171,3 +176,20 @@ def setup(app):
     app.config.html_context = dict(app.config.html_context or {})
     app.config.html_context["bench_data_json"] = bench_json
     app.config.html_context["generated_at"] = generated_at
+
+    # Per-method benchmark tables — refresh from the live CSV (or fall
+    # back to the committed snapshot) and swap each method page's
+    # `### Benchmarks` section in `source-read`. See
+    # `_extras/method_benchmark_tables.py` for the data-flow.
+    from sphinx.util import logging as _sphinx_logging
+    _docs_log = _sphinx_logging.getLogger("pls4all-docs")
+    method_blocks, method_blocks_source = load_or_build_blocks()
+    if method_blocks_source == "none":
+        _docs_log.warning(
+            "method benchmark blocks: no CSV and no snapshot found; "
+            "method pages will keep their committed ### Benchmarks "
+            "sections (which may be stale).")
+    else:
+        _docs_log.info("method benchmark blocks: %d from %s",
+                        len(method_blocks), method_blocks_source)
+    install_sphinx_hook(app, method_blocks)

@@ -38,7 +38,7 @@ benchmarks/cross_binding/run_overnight.sh
 # Internal pls4all smoke across the complete catalog.
 python benchmarks/cross_binding/orchestrator.py \
   --algorithms all --sizes 100x50 --threads 1 \
-  --libp4a-build blas-omp --n-runs 1 --only-pls4all \
+  --libp4a-build blas-omp --n-runs 2 --only-pls4all \
   --timeout 120 \
   --out-csv /tmp/pls4all_only.csv
 
@@ -46,7 +46,7 @@ python benchmarks/cross_binding/orchestrator.py \
 python benchmarks/cross_binding/orchestrator.py \
   --algorithms all --registry-cells --canonical-pls4all-only \
   --reference-backends registry --threads 1 \
-  --libp4a-build blas-omp --n-runs 1 \
+  --libp4a-build blas-omp --n-runs 2 \
   --timeout 180 \
   --out-csv /tmp/pls4all_registry_refs.csv
 
@@ -86,10 +86,31 @@ binding adapter repair, and regenerate the full matrix when publishing a
 new benchmark baseline.
 
 Refresh rows used for the dashboard must be produced by the current
-`warmup-v3` timing schema. Do not keep old `n_runs=1` cold-start refresh
-rows in these files: they measure import/process setup cost and can make
-fast C++ cells look hundreds of milliseconds slower than the actual warm
-fit/predict path.
+`adaptive-v1` timing schema. Do not keep old `n_runs=1` cold-start or
+`warmup-v*` refresh rows in these files: they measure a different
+protocol and can make fast C++ cells look hundreds of milliseconds
+slower than the actual warm fit/predict path.
+
+## Timing protocol
+
+Every scheduled cell starts with run #1 as a timed warmstart. If this
+warmstart exceeds 5 min, the benchmark reports that single time and stops.
+Otherwise run #2 is the first scored run, and the warmstart is excluded
+from all reported statistics.
+
+The run #2 duration chooses the total execution count:
+
+| Run #2 duration | Total executions | Reported statistic |
+|---|---:|---|
+| `> 30 s` | 2 | run #2 only |
+| `> 5 s` | 3 | mean of runs #2-#3 |
+| `> 1 s` | 10 | median after warmstart |
+| `> 0.1 s` | 20 | median after warmstart |
+| `<= 0.1 s` | 40 | median after warmstart |
+
+`reported_ms` is the dashboard score. `n_runs` counts scored samples
+after dropping the warmstart; `total_runs` includes it. `median_ms` is a
+compatibility alias for `reported_ms` in `adaptive-v1` CSVs.
 
 ## Result semantics
 

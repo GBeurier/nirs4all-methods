@@ -785,8 +785,13 @@
       max-width: var(--w-reference);
       overflow: hidden;
       text-overflow: ellipsis;
-      text-align: left;
+      text-align: center;
       box-shadow: none;
+    }
+    table.bench td.ref-name-cell .cell-value {
+      display: block;
+      width: 100%;
+      text-align: center;
     }
     table.bench td.ref-col {
       z-index: 18;
@@ -836,20 +841,13 @@
       position: relative;
     }
     .reference-mark {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 16px;
-      height: 16px;
+      display: inline-block;
       margin-left: 4px;
-      border-radius: 3px;
-      background: var(--amber);
-      color: #111827;
+      color: var(--amber);
       font-family: var(--sans);
-      font-size: 11px;
-      font-weight: 800;
+      font-size: 12px;
       line-height: 1;
-      vertical-align: -2px;
+      vertical-align: -1px;
     }
     /* Compact parity marker. C++ and external cells show reference parity;
        internal binding cells show binding parity. */
@@ -869,6 +867,7 @@
     .p-drift   { color: var(--amber); }
     .p-divergent { color: var(--crimson); }
     .p-error   { color: var(--crimson); }
+    .p-deferred { color: var(--indigo); }
     .p-not_run { color: var(--indigo); }
     .p-not_available { color: var(--fg-3); }
     .p-ok      { color: var(--phosphor); }
@@ -892,6 +891,28 @@
     .cell-value.score-mid       { color: var(--score-mid);       font-weight: 650; }
     .cell-value.score-slow      { color: var(--score-slow);      font-weight: 650; }
     .cell-value.score-bad       { color: var(--score-bad);       font-weight: 650; }
+
+    /* duration-% viz: baseline cell shows its raw ms (or "100%" in avg
+       mode) — italicised so it reads as a label, not another data point. */
+    .cell-value.cell-pct-baseline {
+      color: var(--fg-1);
+      font-style: italic;
+      font-weight: 500;
+    }
+
+    /* divergence-δ viz: per-cell colour reflects gate strength.
+       binding     = phosphor (gate 1 = pls4all binding ↔ C++; always tight)
+       strict      = phosphor (ref gate ≤ 1e-6; bit-exact)
+       relaxed     = amber    (ref gate ≤ 1e-1; known algorithmic drift)
+       qualitative = grey     (ref gate ≥ 1e-1; shape/smoke only)
+       self        = italic grey (this row IS the canonical reference)
+       unknown     = grey     (no tolerance recorded) */
+    .cell-value.div-binding     { color: var(--phosphor); font-weight: 600; font-family: var(--mono); }
+    .cell-value.div-strict      { color: var(--phosphor); font-weight: 600; font-family: var(--mono); }
+    .cell-value.div-relaxed     { color: var(--amber);    font-weight: 600; font-family: var(--mono); }
+    .cell-value.div-qualitative { color: var(--fg-2);     font-weight: 500; font-family: var(--mono); }
+    .cell-value.div-unknown     { color: var(--fg-3);     font-family: var(--mono); font-style: italic; }
+    .cell-value.div-self        { color: var(--fg-2);     font-style: italic; }
 
     /* density: compact — slightly tighter sticky widths */
     body.density-compact {
@@ -985,7 +1006,7 @@
     .info-card ul, .info-card ol { padding-left: 22px; margin: 10px 0; }
     .info-card li + li { margin-top: 6px; }
     .info-card .p-exact, .info-card .p-drift, .info-card .p-divergent,
-    .info-card .p-error, .info-card .p-not_run, .info-card .p-not_available,
+    .info-card .p-error, .info-card .p-deferred, .info-card .p-not_run, .info-card .p-not_available,
     .info-card .p-ok, .info-card .p-warn, .info-card .p-fail, .info-card .p-timeout {
       font-family: var(--mono); font-weight: 700; padding: 0 4px;
     }
@@ -1325,6 +1346,7 @@
       <span class="chip active amber" data-parity="drift"><span class="ico p-drift">≈</span>drift</span>
       <span class="chip active crimson" data-parity="divergent"><span class="ico p-divergent">✗</span>divergent</span>
       <span class="chip active crimson" data-parity="error"><span class="ico p-error">!</span>error</span>
+      <span class="chip active gray" data-parity="deferred"><span class="ico p-deferred">…</span>deferred</span>
       <span class="chip active gray" data-parity="not_available"><span class="ico p-not_available">-</span>not available</span>
     </div>
     <div class="control">
@@ -1353,6 +1375,9 @@
         <option value="duration">duration (ms)</option>
         <option value="speedup">speed-up × vs pls4all.cpp</option>
         <option value="avg-speedup">avg speed-up × (geomean / size)</option>
+        <option value="duration-pct">duration % vs pls4all.cpp (&lt;100 faster · &gt;100 slower)</option>
+        <option value="avg-duration-pct">avg duration % (geomean / size)</option>
+        <option value="divergence">divergence δ (vs C++ for bindings, vs ref for externals)</option>
       </select>
     </div>
     <span class="ctrl-spacer"></span>
@@ -1368,9 +1393,9 @@
     <span class="legend-item"><span class="ico p-drift">≈</span> drift (≤ 1e-3)</span>
     <span class="legend-item"><span class="ico p-divergent">✗</span> divergent (&gt; 1e-3)</span>
     <span class="legend-item"><span class="ico p-error">!</span> error</span>
+    <span class="legend-item"><span class="ico p-deferred">…</span> deferred for catch-up run</span>
     <span class="legend-item"><span class="ico p-not_available">-</span> not available in lib</span>
     <span class="legend-item"><span class="cell-fastest cell-fastest-bg score-row-best" style="font-family:var(--mono);padding:1px 6px;border-radius:2px">42.5</span> fastest row</span>
-    <span class="legend-item"><span class="reference-mark" style="margin-left:0">◆</span> canonical reference</span>
     <span class="legend-item"><span class="score-row-best">row best</span> · <span class="score-lang-best">language best</span> · <span class="score-close">≤15%</span> · <span class="score-mid">≤50%</span> · <span class="score-slow">≤100%</span> · <span class="score-bad">rest</span></span>
     <span class="legend-item" style="font-size:10px;color:var(--fg-2)">cell <code>X.X ✓✓</code>: gate 1 (binding ≡ cpp) · gate 2 (cpp ≈ external ref)</span>
     <span class="legend-item" style="margin-left:auto;color:var(--fg-2);font-size:10px">click header to sort · ⇧+click for descending</span>
@@ -1395,8 +1420,8 @@
       <li>Reference: <code>pls4all.cpp</code> native column <span id="parity-ref-name">(resolved from data)</span></li>
       <li>Parity tolerance: 1e-6 exact, 1e-3 drift threshold</li>
       <li>Every backend reads the <b>same</b> orchestrator-generated CSV dataset</li>
-      <li>5 timed runs per cell after up to three unmeasured warmups, median reported</li>
-      <li>Per-cell timeout: 300s</li>
+      <li>Adaptive timing: run #1 is warmstart; 2 runs report run #2, 3 runs average runs #2-#3, 10/20/40 runs report the median after warmstart</li>
+      <li>Per-cell timeout guard: 24h</li>
       <li>Thread control via <code>OMP_NUM_THREADS</code> · <code>OPENBLAS_NUM_THREADS</code> · <code>MKL_NUM_THREADS</code> · <code>BLIS_NUM_THREADS</code> + binding-specific thread controls</li>
     </ul>
     <p>See the <a href="benchmarks/methodology.html">full methodology page</a> for reference policy and per-algo overrides.</p>
@@ -1413,6 +1438,7 @@
       <li><span class="p-drift">≈</span> <b>drift</b> — ≤ 1e-3 and not exact</li>
       <li><span class="p-divergent">✗</span> <b>divergent</b> — &gt; 1e-3</li>
       <li><span class="p-error">!</span> <b>error</b> — dependency, runtime, crash or exception</li>
+      <li><span class="p-deferred">…</span> <b>deferred</b> — intentionally skipped from the CRAN-fast benchmark; catch-up runs fill it later</li>
       <li><span class="p-not_available">-</span> <b>not available in lib</b> — the library does not expose that algorithm</li>
     </ul>
     <p><b>Violet</b> = fastest row cell. Blue = fastest within language; green/orange/red compare each cell time to that language winner.</p>
@@ -1461,12 +1487,14 @@ const ALGO_ALIASES = {
 // ---------- state + url persistence ----------
 const URL_KEYS = ['algo','group','lang','libGroup','lib','size','threads','parity','search','cols','sort','density','viz'];
 const DENSITY_VALUES = ['comfortable', 'compact', 'ultra'];
-const PARITY_VALUES = ['exact', 'drift', 'divergent', 'error', 'not_run', 'not_available'];
+const PARITY_VALUES = ['exact', 'drift', 'divergent', 'error', 'deferred', 'not_run', 'not_available'];
 const PARITY_ALIASES = {
   ok: 'exact',
   warn: 'drift',
   fail: 'divergent',
   timeout: 'error',
+  skip: 'deferred',
+  skipped: 'deferred',
   na: 'not_available',
 };
 
@@ -1482,7 +1510,8 @@ function parseParity(raw) {
   return keys.length ? new Set(keys) : new Set(PARITY_VALUES);
 }
 
-const VIZ_VALUES = ['duration', 'speedup', 'avg-speedup'];
+const VIZ_VALUES = ['duration', 'speedup', 'avg-speedup',
+                     'duration-pct', 'avg-duration-pct', 'divergence'];
 function loadState() {
   const p = new URLSearchParams(location.hash.slice(1));
   const density = p.get('density') || '';
@@ -1569,6 +1598,7 @@ const PARITY_ICON = {
   drift: '≈',
   divergent: '✗',
   error: '!',
+  deferred: '…',
   not_run: '·',
   not_available: '-',
   ok: '✓',
@@ -1601,6 +1631,19 @@ function fmtSpeedup(ratio) {
   if (ratio >= 1)    return `${ratio.toFixed(2)}×`;
   if (ratio >= 0.01) return `${ratio.toFixed(2)}×`;
   return `${ratio.toExponential(1)}×`;
+}
+
+// Duration % = (c.ms / baseline.ms) * 100. Faster than baseline → <100,
+// slower → >100. The baseline cell renders its own ms (not a %) so the
+// reader has a concrete time anchor to interpret every other %.
+function fmtDurationPct(pct) {
+  if (!Number.isFinite(pct)) return '-';
+  if (pct >= 10000) return `${pct.toFixed(0)}%`;
+  if (pct >= 1000)  return `${pct.toFixed(0)}%`;
+  if (pct >= 100)   return `${pct.toFixed(0)}%`;
+  if (pct >= 10)    return `${pct.toFixed(1)}%`;
+  if (pct >= 1)     return `${pct.toFixed(1)}%`;
+  return `${pct.toFixed(2)}%`;
 }
 
 function applyRowFilters() {
@@ -2092,10 +2135,11 @@ function renderTable() {
   const colsById = Object.fromEntries(colMetas.map(c => [c.id, c]));
 
   let rowsFiltered = applyRowFilters().filter(r => rowHasVisibleCell(r, cols));
-  // avg-speedup viz: collapse rows across sizes via geomean of speed-up
-  // ratios, so each (algo, threads) shows up once with the average
-  // multiplier vs the native baseline.
-  if (state.viz === 'avg-speedup' && NATIVE_COL_ID) {
+  // avg-speedup and avg-duration-pct vizs: collapse rows across sizes
+  // via geomean of speed-up ratios, so each (algo, threads) shows up
+  // once with the average value vs the native baseline.
+  if ((state.viz === 'avg-speedup' || state.viz === 'avg-duration-pct')
+      && NATIVE_COL_ID) {
     rowsFiltered = aggregateRowsBySize(rowsFiltered, NATIVE_COL_ID);
   }
   const rows = sortRows(rowsFiltered, cols);
@@ -2164,7 +2208,11 @@ function renderTable() {
 
   // === BODY ===
   const speedupMode = state.viz === 'speedup' || state.viz === 'avg-speedup';
-  const baselineId = speedupMode && NATIVE_COL_ID ? NATIVE_COL_ID : null;
+  const durationPctMode = state.viz === 'duration-pct'
+                        || state.viz === 'avg-duration-pct';
+  // Both modes use NATIVE_COL_ID (pls4all.cpp.ref) as their baseline.
+  const baselineId = (speedupMode || durationPctMode) && NATIVE_COL_ID
+                      ? NATIVE_COL_ID : null;
   if (!rows.length) {
     $('bench-body').innerHTML = `<tr><td colspan="${cols.length + 3}"><div class="empty-state">
       <h3>nothing in this slice.</h3>
@@ -2219,9 +2267,7 @@ function renderTable() {
             continue;
           }
           const refName = c.ref_of || '-';
-          const refIcon = `<span class="reference-mark" title="canonical reference">${REFERENCE_ICON}</span>`;
-          const refKind = c.reference_kind ? ` <span class="col-meta" style="font-size:9px">(${c.reference_kind})</span>` : '';
-          tr += `<td class="${lcls}" title="canonical reference for ${row.algo}: ${refName}"><span class="cell-value">${refName}</span>${refIcon}${refKind}</td>`;
+          tr += `<td class="${lcls} ref-name-cell" title="canonical reference for ${row.algo}: ${refName}"><span class="cell-value">${refName}</span></td>`;
           continue;
         }
         if (!c || !cellPasses(c, meta)) {
@@ -2240,7 +2286,44 @@ function renderTable() {
         const langSlug = meta ? colLangSlug(meta) : '';
         const langWinner = langSlug ? langWinners[langSlug] : null;
         const scoreCls = scoreClass(id, c.ms, fastestId, langWinner);
-        if (baselineId && baseMs !== null) {
+        if (state.viz === 'divergence') {
+          // Divergence-δ mode: show the binding diff vs C++ baseline
+          // for pls4all bindings, the reference-gate rmse_rel vs the
+          // MethodSpec reference for externals/pls4all_core, and
+          // "source" for the row's canonical reference.
+          const dq = c.divergence_quality || 'unknown';
+          const dFmt = c.divergence_fmt || '—';
+          const basis = c.divergence_basis || 'unknown';
+          const divTitle = basis === 'binding'
+            ? `binding diff vs C++ baseline (gate 1): ${dFmt}`
+            : basis === 'reference'
+              ? `reference-gate rmse_rel vs ${c.reference_kind || 'external ref'} (gate 2, ${dq}): ${dFmt}`
+              : basis === 'self'
+                ? `this row is the canonical reference for this method`
+                : 'no divergence recorded';
+          display = `<span class="cell-value div-${dq}" title="${escAttr(divTitle)}">${dFmt}</span>`;
+        } else if (durationPctMode && baselineId && baseMs !== null) {
+          // Duration % mode: the baseline cell anchors the comparison.
+          //   - duration-pct (single-size): baseline shows its raw ms.
+          //   - avg-duration-pct (aggregated): the aggregator wrote
+          //     ms=1, fmt='1.00×' as sentinels — those are speedup-mode
+          //     artefacts, not a meaningful time. Show "baseline 100%"
+          //     instead so the column header reads honestly.
+          // Every non-baseline cell: (c.ms / baseMs) * 100.
+          // < 100 = faster than baseline · > 100 = slower.
+          if (id === baselineId) {
+            const isAvg = state.viz === 'avg-duration-pct';
+            display = isAvg
+              ? `<span class="cell-value cell-pct-baseline">100%</span>`
+              : `<span class="cell-value cell-pct-baseline ${fastCls}" title="baseline duration · every other cell is % of this">${densifyFmt(c.fmt)}</span>`;
+          } else {
+            const pct = (c.ms / baseMs) * 100;
+            const cls = pct < 97 ? 'speed-faster' : pct > 103 ? 'speed-slower' : 'speed-equal';
+            display = `<span class="cell-value ${cls} ${fastCls} ${scoreCls}" title="${pct.toFixed(2)}% of baseline (${baselineId})">${fmtDurationPct(pct)}</span>`;
+          }
+        } else if (durationPctMode) {
+          display = `<span class="cell-value speed-equal ${fastCls}">-</span>`;
+        } else if (baselineId && baseMs !== null) {
           const r = id === baselineId ? 1 : baseMs / c.ms;
           const cls = r > 1.03 ? 'speed-faster' : r < 0.97 ? 'speed-slower' : 'speed-equal';
           display = `<span class="cell-value ${cls} ${fastCls} ${scoreCls}">${fmtSpeedup(r)}</span>`;
@@ -2249,6 +2332,9 @@ function renderTable() {
         } else {
           display = `<span class="cell-value ${fastCls} ${scoreCls}">${densifyFmt(c.fmt)}</span>`;
         }
+        const timingTitle = c.timing_statistic
+          ? `timing: ${c.timing_statistic}, ${c.n_runs || '?'} scored run${c.n_runs === 1 ? '' : 's'}${c.total_runs ? ` / ${c.total_runs} total` : ''}`
+          : '';
         const usesRefGate = usesReferenceGate(meta);
         const markerParity = effectiveParity(c, meta);
         const markerTitle = usesRefGate
@@ -2265,13 +2351,25 @@ function renderTable() {
         //   the value text colour, based on each language's own best time.
         // - The cell that IS the row's canonical external reference
         //   gets the diamond marker instead of a parity glyph.
+        // - In divergence mode the "fastest" notion is meaningless
+        //   (the displayed value is δ, not ms), so suppress those
+        //   highlight classes to avoid misleading violet/blue tints.
         const tdCls = [lcls];
-        if (canHighlight && id === fastestId) tdCls.push('cell-fastest-bg');
-        if (canHighlight && langWinner && langWinner.id === id) {
-          tdCls.push('cell-lang-best', `lang-${langSlug}`);
+        // Highlight classes only make sense for the duration view.
+        // Speed-up, duration-%, and divergence already encode their own
+        // colour meaning per cell — adding the violet "row-best" tint
+        // on top would compete and mislead.
+        const baselineDrivenViz = speedupMode || durationPctMode
+                                || state.viz === 'divergence';
+        if (!baselineDrivenViz) {
+          if (canHighlight && id === fastestId) tdCls.push('cell-fastest-bg');
+          if (canHighlight && langWinner && langWinner.id === id) {
+            tdCls.push('cell-lang-best', `lang-${langSlug}`);
+          }
         }
         if (c.is_canonical_reference) tdCls.push('cell-canonical-ref');
-        tr += `<td class="${tdCls.join(' ')}">${display}${parityHtml}</td>`;
+        const tdTitle = timingTitle ? ` title="${escAttr(timingTitle)}"` : '';
+        tr += `<td class="${tdCls.join(' ')}"${tdTitle}>${display}${parityHtml}</td>`;
       }
       tr += `</tr>`;
       body.push(tr);
@@ -2284,10 +2382,16 @@ function renderTable() {
   $('table-meta-left').textContent = `${DATA.rows.length} rows · ${DATA.stats.cells.toLocaleString()} cells total`;
   if (state.viz === 'avg-speedup' && baselineId) {
     $('table-meta-right').textContent = `geomean speed-up × · baseline = ${baselineId} · sizes collapsed`;
+  } else if (state.viz === 'avg-duration-pct' && baselineId) {
+    $('table-meta-right').textContent = `geomean duration % · baseline = ${baselineId} · sizes collapsed · <100 faster · >100 slower`;
+  } else if (state.viz === 'duration-pct' && baselineId) {
+    $('table-meta-right').textContent = `duration % · baseline = ${baselineId} · <100 faster · >100 slower`;
   } else if (baselineId) {
     $('table-meta-right').textContent = `speed-up multiplier · baseline = ${baselineId}`;
+  } else if (state.viz === 'divergence') {
+    $('table-meta-right').textContent = `divergence δ · binding gate vs C++ (pls4all bindings) or reference gate vs MethodSpec ref (externals & C++ core)`;
   } else {
-    $('table-meta-right').textContent = `absolute median wall-clock (ms) · ${langGroups.length} language${langGroups.length === 1 ? '' : 's'} shown`;
+    $('table-meta-right').textContent = `adaptive wall-clock (ms) · ${langGroups.length} language${langGroups.length === 1 ? '' : 's'} shown`;
   }
 }
 
@@ -2304,7 +2408,7 @@ function aggregateRowsBySize(rows, baselineId) {
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(r);
   }
-  const PARITY_RANK = { exact: 0, drift: 1, divergent: 2, error: 3, not_run: 4, not_available: 5 };
+  const PARITY_RANK = { exact: 0, drift: 1, divergent: 2, error: 3, deferred: 4, not_run: 5, not_available: 6 };
   const out = [];
   for (const [, group] of groups) {
     const sample = group[0];

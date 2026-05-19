@@ -3,7 +3,7 @@
 ## Submission summary
 
 * This is a **new submission** to CRAN.
-* `pls4all` 0.97.2 — a portable Partial Least Squares (PLS) and
+* `pls4all` 0.97.3 — a portable Partial Least Squares (PLS) and
   Near-Infrared Spectroscopy (NIRS) engine. The C++17 numerical core is
   vendored under `src/libp4a/` and compiled from source at install time.
   No external system library is required.
