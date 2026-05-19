@@ -21,12 +21,12 @@ maintained).
 
 | Method | pls4all C++ | pls4all Python | pls4all R | R formula | R `pls` compat | R `mdatools` compat | pls4all MATLAB | Reference |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| PLS SIMPLS | **0.98 ms** | 0.95 ms | 2.26 ms | 3.65 ms | 6.63 ms | 4.17 ms | 1.76 ms | sklearn 1.32 ms |
-| AOM-PLS | **2.64 ms** | 2.60 ms | 3.66 ms | 4.92 ms | 5.13 ms | 4.86 ms | 2.78 ms | nirs4all 10.8 ms |
-| POP-PLS | **3.03 ms** | 3.03 ms | 3.78 ms | 4.90 ms | 4.97 ms | 4.92 ms | 3.08 ms | nirs4all 26.1 ms |
+| PLS SIMPLS | **1.03 ms** | 1.11 ms | 2.50 ms | 6.00 ms | 6.63 ms | 4.17 ms | 1.58 ms | sklearn 1.33 ms |
+| AOM-PLS | 2.64 ms | **2.60 ms** | 3.66 ms | 4.92 ms | 5.13 ms | 4.86 ms | 2.78 ms | nirs4all 10.8 ms |
+| POP-PLS | 3.05 ms | **3.03 ms** | 3.78 ms | 4.90 ms | 4.97 ms | 4.92 ms | 3.08 ms | nirs4all 26.1 ms |
 
 PLS external baselines in the same snapshot: `ikpls` 1.08 ms, R `pls`
-5.50 ms, Octave `plsregress` 2.21 ms. Detailed methodology, parity
+5.22 ms, R `mixOmics` 7.77 ms, Octave `plsregress` 2.18 ms. Detailed methodology, parity
 gates and per-algorithm tables are in
 [`docs/benchmarks/`](docs/benchmarks/).
 

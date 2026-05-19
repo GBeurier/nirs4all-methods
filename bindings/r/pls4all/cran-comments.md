@@ -16,8 +16,8 @@
 
 ## Test environments
 
-* local Ubuntu 22.04, R 4.3.3, GCC 15.2 (conda-forge): `R CMD check
-  --as-cran` → **0 errors, 0 warnings, 4 notes** (see "Known notes"
+* local Ubuntu 22.04, R 4.6.0, GCC 15.2 (conda-forge): `R CMD check
+  --as-cran` → **0 errors, 0 warnings, 3 notes** (see "Known notes"
   below for the remaining notes).
 * GitHub Actions CI (`.github/workflows/release-r.yml`):
   - Ubuntu 22.04 (R release + devel)
@@ -36,12 +36,12 @@
   vendored C++ sources without hard-coding each filename. GNU make is
   declared in `SystemRequirements`.
 * **New submission** — first upload.
-* **Future file timestamps / unable to verify current time** — local
-  check environment could not verify the wall clock; no files with
-  future timestamps are shipped.
 * **Compilation flags** — local conda-forge R sets `-march=nocona`;
   this comes from R's own Makeconf, not from the package's Makevars.
   Not present in CRAN-farm builds.
+* **HTML tidy unavailable locally** — the local check host does not
+  have the optional `tidy` executable, so HTML validation is skipped.
+  The package manual and PDF manual both build successfully.
 
 ## Compile time
 

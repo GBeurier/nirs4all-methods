@@ -214,7 +214,6 @@ REF_ALIAS_TO_LEGACY = {
     "ref_r_pls":                "r_pls",
     "ref_r_ropls":              "r_ropls",
     "ref_r_mixomics":           "r_mixomics",
-    "ref_matlab_libpls":        "matlab_pls",
 }
 
 # Display labels for registry-driven `ref_*` backends that don't have a
@@ -247,6 +246,7 @@ REF_DISPLAY_OVERRIDE = {
     "ref_r_plsvarsel":              "plsVarSel",
     "ref_r_enpls":                  "enpls",
     "ref_r_pls_stats":              "pls (R, stats)",
+    "ref_matlab_libpls":            "libPLS",
 }
 
 
@@ -966,7 +966,7 @@ def build_payload(results_dir: Path) -> dict:
         "ref.r_pls", "ref.r_mixomics", "ref.r_ropls",
         # MATLAB: pls4all classdef binding vs the stats-toolbox baseline
         "pls4all.matlab.classdef",
-        "plsregress", "ref.matlab_libpls",
+        "plsregress", "libPLS",
     ]
     api_parity = [c for c in api_parity_candidates if c and c in all_cols]
 

@@ -79,6 +79,10 @@ BACKEND_LONG: dict[str, tuple[str, str, str]] = {
     "matlab_pls":   ("MATLAB/Octave","external",          "Octave statistics `plsregress` (SIMPLS, plain PLS only)"),
 }
 
+REF_DISPLAY_OVERRIDE = {
+    "ref_matlab_libpls": "libPLS",
+}
+
 
 def disp(b: str, build: str = "blas-omp") -> str:
     """Display label for a (backend, libp4a_build) pair. For the cpp
@@ -94,6 +98,8 @@ def disp(b: str, build: str = "blas-omp") -> str:
             "cuda-on":     "cuda",
         }.get(build, build)
         return f"pls4all.cpp.{suffix}"
+    if b in REF_DISPLAY_OVERRIDE:
+        return REF_DISPLAY_OVERRIDE[b]
     if b.startswith("ref_"):
         return "ref." + b[len("ref_"):]
     return BACKEND_DISPLAY.get(b, b)
@@ -371,8 +377,16 @@ def render(csv_path: Path, out_path: Path,
         rows = [r for r in rows if int(r.get("threads", "0")) in keep]
     run_counts = sorted({int(float(r.get("n_runs", "0") or 0))
                          for r in rows if r.get("n_runs")})
-    run_text = (", ".join(str(x) for x in run_counts)
-                if run_counts else "the recorded number of")
+    if not run_counts:
+        run_text = "the recorded number of timed runs"
+    elif len(run_counts) == 1:
+        n_runs = run_counts[0]
+        run_text = f"{n_runs} timed run" + ("" if n_runs == 1 else "s")
+    else:
+        run_text = " or ".join(
+            [", ".join(str(x) for x in run_counts[:-1]), str(run_counts[-1])]
+        )
+        run_text = f"{run_text} timed runs"
 
     # Header info.
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -424,7 +438,7 @@ def render(csv_path: Path, out_path: Path,
                 "it is Gate 2. Drift / divergent / empty cells never carry "
                 "the bold.\n")
 
-    out.append(f"Timing is the **median of {run_text} timed run(s)** after "
+    out.append(f"Timing is the **median of {run_text}** after "
                 "up to three unmeasured warmups. All "
                 "backends in a single cell read the same "
                 "orchestrator-generated CSV dataset. See "
@@ -647,7 +661,7 @@ def render(csv_path: Path, out_path: Path,
                 "`reference_parity_tolerance` by newer CSVs)")
     out.append("- All backends read the same orchestrator-generated CSV dataset "
                 "(`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`)")
-    out.append(f"- {run_text} timed run(s) per cell after one unmeasured "
+    out.append(f"- {run_text} per cell after one unmeasured "
                "warmup, median reported")
     out.append("- Per-cell timeout: 300 s")
     out.append("- Thread control via `OMP_NUM_THREADS = OPENBLAS_NUM_THREADS = "
