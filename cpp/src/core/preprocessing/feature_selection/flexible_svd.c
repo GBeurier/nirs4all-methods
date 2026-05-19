@@ -40,6 +40,19 @@ struct c4a_pp_flex_svd_state_t {
     double*  components;          /* k' x n_features_in, row-major */
 };
 
+static int use_truncated_svd(int64_t rows, int64_t cols,
+                             int64_t k_full, int64_t k) {
+    const int64_t min_large_elements = 32768;
+    if (k < 1 || k >= k_full) return 0;
+    return rows > 0 && cols > 0 && rows >= min_large_elements / cols;
+}
+
+static int use_dual_wide_svd(int64_t rows, int64_t cols,
+                             int64_t k_full, int64_t k) {
+    return use_truncated_svd(rows, cols, k_full, k) &&
+           rows <= cols && rows <= 256;
+}
+
 c4a_pp_flex_svd_state_t* c4a_pp_flex_svd_state_new(double n_components_param) {
     if (!(n_components_param > 0.0)) {  /* catches NaN and <= 0 */
         return NULL;
@@ -118,7 +131,51 @@ c4a_status_t c4a_pp_flex_svd_state_fit(c4a_pp_flex_svd_state_t* state,
     }
     const int64_t k_full = (rows < cols) ? rows : cols;
 
-    /* Build a working copy of X so the SVD can consume it in place. */
+    if (state->n_components_param >= 1.0) {
+        const int64_t k_kept =
+            flex_svd_select_k(state->n_components_param, k_full, NULL);
+        if (use_truncated_svd(rows, cols, k_full, k_kept)) {
+            double* U  =
+                (double*)malloc((size_t)rows * (size_t)k_kept * sizeof(double));
+            double* S  = (double*)malloc((size_t)k_kept * sizeof(double));
+            double* Vt =
+                (double*)malloc((size_t)k_kept * (size_t)cols * sizeof(double));
+            if (U == NULL || S == NULL || Vt == NULL) {
+                free(U); free(S); free(Vt);
+                return C4A_ERR_OUT_OF_MEMORY;
+            }
+            const c4a_status_t svd_st =
+                use_dual_wide_svd(rows, cols, k_full, k_kept)
+                    ? c4a_svd_truncated_dual_wide(
+                          X, rows, cols, k_kept, U, S, Vt)
+                    : c4a_svd_truncated_randomized(
+                          X, rows, cols, k_kept, U, S, Vt);
+            free(U);
+            free(S);
+            if (svd_st != C4A_OK) {
+                free(Vt);
+                return svd_st;
+            }
+            double* components =
+                (double*)malloc((size_t)k_kept * (size_t)cols * sizeof(double));
+            if (components == NULL) {
+                free(Vt);
+                return C4A_ERR_OUT_OF_MEMORY;
+            }
+            memcpy(components, Vt,
+                   (size_t)k_kept * (size_t)cols * sizeof(double));
+            free(Vt);
+
+            free(state->components);
+            state->n_features_in = cols;
+            state->n_components  = k_kept;
+            state->components    = components;
+            state->fitted        = 1;
+            return C4A_OK;
+        }
+    }
+
+    /* Build a working copy of X so the full SVD can consume it in place. */
     double* Xwork =
         (double*)malloc((size_t)rows * (size_t)cols * sizeof(double));
     if (Xwork == NULL) {
@@ -241,6 +298,24 @@ c4a_status_t c4a_pp_flex_svd_state_apply(const c4a_pp_flex_svd_state_t* state,
         return C4A_ERR_SHAPE_MISMATCH;
     }
     if (rows == 0 || cols == 0 || out_cols == 0) {
+        return C4A_OK;
+    }
+
+    if (state->n_components <= 8) {
+        for (int64_t i = 0; i < rows; ++i) {
+            const double* row = X + (size_t)i * (size_t)cols;
+            double* orow = out + (size_t)i * (size_t)out_cols;
+            double acc[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+            for (int64_t j = 0; j < cols; ++j) {
+                const double xj = row[j];
+                for (int64_t k = 0; k < state->n_components; ++k) {
+                    acc[k] += xj * state->components[(size_t)k * (size_t)cols + (size_t)j];
+                }
+            }
+            for (int64_t k = 0; k < state->n_components; ++k) {
+                orow[k] = acc[k];
+            }
+        }
         return C4A_OK;
     }
 

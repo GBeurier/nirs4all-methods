@@ -15,6 +15,8 @@
 #include <math.h>
 #include <stdlib.h>
 
+#define C4A_PP_NORMALIZE_STACK_COLS 4096
+
 struct c4a_pp_normalize_state_t {
     double feature_min;
     double feature_max;
@@ -51,47 +53,106 @@ c4a_status_t c4a_pp_normalize_apply(const c4a_pp_normalize_state_t* state,
         return C4A_OK;
     }
 
+    const size_t n_cols = (size_t)cols;
+
     if (state->user_defined) {
         const double imin = state->feature_min;
         const double imax = state->feature_max;
         const double span = imax - imin;
+        double min_stack[C4A_PP_NORMALIZE_STACK_COLS];
+        double max_stack[C4A_PP_NORMALIZE_STACK_COLS];
+        double* col_min = min_stack;
+        double* col_max = max_stack;
+        int heap = 0;
 
-        for (int64_t j = 0; j < cols; ++j) {
-            /* numpy.min / numpy.max scan left-to-right. */
-            double col_min = X[(size_t)j];
-            double col_max = col_min;
-            for (int64_t i = 1; i < rows; ++i) {
-                const double v = X[(size_t)i * (size_t)cols + (size_t)j];
-                if (v < col_min) col_min = v;
-                if (v > col_max) col_max = v;
+        if (n_cols > C4A_PP_NORMALIZE_STACK_COLS) {
+            col_min = (double*)malloc(n_cols * sizeof(*col_min));
+            col_max = (double*)malloc(n_cols * sizeof(*col_max));
+            if (col_min == NULL || col_max == NULL) {
+                free(col_min);
+                free(col_max);
+                return C4A_ERR_OUT_OF_MEMORY;
             }
-            /* nirs4all: `f = (imax - imin) / (max - min)` then
-             *           `X = imin + f * (X - min_)`. We replicate this
-             * exact arithmetic tree (single division per column, single
-             * multiplication per element) so the rounding sequence matches. */
-            const double f = span / (col_max - col_min);
-            for (int64_t i = 0; i < rows; ++i) {
-                const size_t idx = (size_t)i * (size_t)cols + (size_t)j;
-                out[idx] = imin + f * (X[idx] - col_min);
+            heap = 1;
+        }
+
+        for (size_t j = 0; j < n_cols; ++j) {
+            col_min[j] = X[j];
+            col_max[j] = X[j];
+        }
+        /* numpy.min / numpy.max scan left-to-right within each column. This
+         * row-major traversal preserves that per-column order while avoiding
+         * repeated long-stride passes over X. */
+        for (int64_t i = 1; i < rows; ++i) {
+            const double* row = X + (size_t)i * n_cols;
+            for (size_t j = 0; j < n_cols; ++j) {
+                const double v = row[j];
+                if (v < col_min[j]) col_min[j] = v;
+                if (v > col_max[j]) col_max[j] = v;
             }
         }
-    } else {
-        for (int64_t j = 0; j < cols; ++j) {
-            /* np.linalg.norm(X, axis=0) = sqrt(sum(X[:, j]^2)). */
-            double sq = 0.0;
-            for (int64_t i = 0; i < rows; ++i) {
-                const double v = X[(size_t)i * (size_t)cols + (size_t)j];
-                sq += v * v;
+        for (size_t j = 0; j < n_cols; ++j) {
+            col_max[j] = span / (col_max[j] - col_min[j]);
+        }
+
+        for (int64_t i = 0; i < rows; ++i) {
+            const double* row_in = X + (size_t)i * n_cols;
+            double* row_out = out + (size_t)i * n_cols;
+            for (size_t j = 0; j < n_cols; ++j) {
+                /* nirs4all: `f = (imax - imin) / (max - min)` then
+                 *           `X = imin + f * (X - min_)`. We replicate this
+                 * exact arithmetic tree (single division per column, single
+                 * multiplication per element) so the rounding sequence
+                 * matches. */
+                row_out[j] = imin + col_max[j] * (row_in[j] - col_min[j]);
             }
-            const double norm = sqrt(sq);
+        }
+        if (heap) {
+            free(col_min);
+            free(col_max);
+        }
+    } else {
+        double norm_stack[C4A_PP_NORMALIZE_STACK_COLS];
+        double* norm = norm_stack;
+        int heap = 0;
+
+        if (n_cols > C4A_PP_NORMALIZE_STACK_COLS) {
+            norm = (double*)malloc(n_cols * sizeof(*norm));
+            if (norm == NULL) {
+                return C4A_ERR_OUT_OF_MEMORY;
+            }
+            heap = 1;
+        }
+
+        for (size_t j = 0; j < n_cols; ++j) {
+            norm[j] = 0.0;
+        }
+        /* np.linalg.norm(X, axis=0) = sqrt(sum(X[:, j]^2)). For every column
+         * the additions still happen in row order, matching the previous
+         * parity-preserving reduction order. */
+        for (int64_t i = 0; i < rows; ++i) {
+            const double* row = X + (size_t)i * n_cols;
+            for (size_t j = 0; j < n_cols; ++j) {
+                const double v = row[j];
+                norm[j] += v * v;
+            }
+        }
+        for (size_t j = 0; j < n_cols; ++j) {
+            norm[j] = sqrt(norm[j]);
+        }
+        for (int64_t i = 0; i < rows; ++i) {
+            const double* row_in = X + (size_t)i * n_cols;
+            double* row_out = out + (size_t)i * n_cols;
             /* nirs4all evaluates `X / self.linalg_norm_` — a true element-wise
              * division, NOT a multiplication by a precomputed reciprocal.
              * IEEE 754 ordering matters; the parity test below would fail
              * with a `mul by 1/norm` path on selected fixtures. */
-            for (int64_t i = 0; i < rows; ++i) {
-                const size_t idx = (size_t)i * (size_t)cols + (size_t)j;
-                out[idx] = X[idx] / norm;
+            for (size_t j = 0; j < n_cols; ++j) {
+                row_out[j] = row_in[j] / norm[j];
             }
+        }
+        if (heap) {
+            free(norm);
         }
     }
     return C4A_OK;

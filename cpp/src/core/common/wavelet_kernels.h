@@ -149,6 +149,27 @@ c4a_status_t c4a_wavelet_wavedec(const double* in, int64_t n,
                                   int64_t* offsets,
                                   int64_t coeffs_capacity);
 
+/* Workspace-backed variant of ``c4a_wavelet_wavedec``.  The workspace is
+ * caller-owned and may be reused across rows with identical shape/params. */
+c4a_status_t c4a_wavelet_wavedec_workspace_length(
+    int64_t n,
+    c4a_wavelet_family_t family,
+    c4a_wavelet_mode_t mode,
+    int32_t level,
+    int64_t* out_work_len);
+
+c4a_status_t c4a_wavelet_wavedec_with_workspace(
+    const double* in, int64_t n,
+    c4a_wavelet_family_t family,
+    c4a_wavelet_mode_t mode,
+    int32_t level,
+    double* coeffs,
+    int64_t* coef_lengths,
+    int64_t* offsets,
+    int64_t coeffs_capacity,
+    double* work,
+    int64_t work_capacity);
+
 /* Compute the total flattened coefficient length and per-level lengths
  * for a multi-level decomposition.  Used by callers to size buffers
  * before calling ``c4a_wavelet_wavedec``. */
@@ -170,6 +191,23 @@ c4a_status_t c4a_wavelet_waverec(const double* coeffs,
                                   c4a_wavelet_mode_t mode,
                                   int64_t n_out,
                                   double* out);
+
+c4a_status_t c4a_wavelet_waverec_workspace_length(
+    int64_t n_out,
+    int32_t level,
+    int64_t* out_work_len);
+
+c4a_status_t c4a_wavelet_waverec_with_workspace(
+    const double* coeffs,
+    const int64_t* coef_lengths,
+    const int64_t* offsets,
+    int32_t level,
+    c4a_wavelet_family_t family,
+    c4a_wavelet_mode_t mode,
+    int64_t n_out,
+    double* out,
+    double* work,
+    int64_t work_capacity);
 
 #ifdef __cplusplus
 }  /* extern "C" */

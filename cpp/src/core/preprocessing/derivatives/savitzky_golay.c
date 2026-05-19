@@ -384,6 +384,7 @@ c4a_status_t c4a_pp_savgol_state_apply(const c4a_pp_savgol_state_t* state,
     }
     const int32_t pos = state->pos;
     const double* coeffs = state->coeffs;
+    const int in_place = (X == out);
 
     /* Map SG mode → underlying padding mode for the cross-correlation
      * (only used in non-interp modes).  "mirror" in scipy.signal aligns
@@ -399,16 +400,19 @@ c4a_status_t c4a_pp_savgol_state_apply(const c4a_pp_savgol_state_t* state,
         default:                     return C4A_ERR_INVALID_ARGUMENT;
     }
 
-    /* Stage each row in a scratch buffer so we can support in-place
-     * (X and out may alias). */
-    double* scratch = (double*)malloc((size_t)cols * sizeof(double));
-    if (scratch == NULL) {
+    /* Only stage rows when the caller requests in-place operation. */
+    double* scratch = NULL;
+    if (in_place) {
+        scratch = (double*)malloc((size_t)cols * sizeof(double));
+    }
+    if (in_place && scratch == NULL) {
         return C4A_ERR_OUT_OF_MEMORY;
     }
 
     for (int64_t r = 0; r < rows; ++r) {
         const double* row_in = X + (size_t)r * (size_t)cols;
         double*       row_out = out + (size_t)r * (size_t)cols;
+        double*       dst = in_place ? scratch : row_out;
 
         if (use_interp) {
             /* Interior: pure convolution; no padding needed for positions
@@ -421,18 +425,18 @@ c4a_status_t c4a_pp_savgol_state_apply(const c4a_pp_savgol_state_t* state,
                 for (int32_t k = 0; k < w; ++k) {
                     acc += coeffs[k] * row_in[j + (int64_t)pos - (int64_t)k];
                 }
-                scratch[j] = acc;
+                dst[j] = acc;
             }
             /* Left edge: positions [0, pos). */
             c4a_status_t st = sg_fit_edge_left(state, row_in, cols,
-                                                (int64_t)pos, scratch);
+                                                (int64_t)pos, dst);
             if (st != C4A_OK) {
                 free(scratch);
                 return st;
             }
             /* Right edge: positions [cols - pos, cols). */
             st = sg_fit_edge_right(state, row_in, cols, cols - (int64_t)pos,
-                                    scratch);
+                                    dst);
             if (st != C4A_OK) {
                 free(scratch);
                 return st;
@@ -440,7 +444,13 @@ c4a_status_t c4a_pp_savgol_state_apply(const c4a_pp_savgol_state_t* state,
         } else {
             /* Pad-by-mode convolution matching scipy's `convolve1d` index
              * map: out[j] = sum_k coeffs[k] * x[j + pos - k]. */
-            for (int64_t j = 0; j < cols; ++j) {
+            const int64_t left_end = ((int64_t)pos < cols) ? (int64_t)pos : cols;
+            const int64_t interior_begin = (int64_t)pos;
+            const int64_t interior_end = (cols - (int64_t)pos > interior_begin)
+                ? cols - (int64_t)pos
+                : interior_begin;
+
+            for (int64_t j = 0; j < left_end; ++j) {
                 double acc = 0.0;
                 for (int32_t k = 0; k < w; ++k) {
                     const int64_t src_idx = j + (int64_t)pos - (int64_t)k;
@@ -456,11 +466,64 @@ c4a_status_t c4a_pp_savgol_state_apply(const c4a_pp_savgol_state_t* state,
                     }
                     acc += coeffs[k] * v;
                 }
-                scratch[j] = acc;
+                dst[j] = acc;
+            }
+
+            if (interior_end > interior_begin) {
+                if (w == 11) {
+                    for (int64_t j = interior_begin; j < interior_end; ++j) {
+                        const double* x = row_in + (size_t)(j + (int64_t)pos);
+                        double acc = 0.0;
+                        acc += coeffs[0] * x[0];
+                        acc += coeffs[1] * x[-1];
+                        acc += coeffs[2] * x[-2];
+                        acc += coeffs[3] * x[-3];
+                        acc += coeffs[4] * x[-4];
+                        acc += coeffs[5] * x[-5];
+                        acc += coeffs[6] * x[-6];
+                        acc += coeffs[7] * x[-7];
+                        acc += coeffs[8] * x[-8];
+                        acc += coeffs[9] * x[-9];
+                        acc += coeffs[10] * x[-10];
+                        dst[j] = acc;
+                    }
+                } else {
+                    for (int64_t j = interior_begin; j < interior_end; ++j) {
+                        const double* x = row_in + (size_t)(j + (int64_t)pos);
+                        double acc = 0.0;
+                        for (int32_t k = 0; k < w; ++k) {
+                            acc += coeffs[k] * x[-k];
+                        }
+                        dst[j] = acc;
+                    }
+                }
+            }
+
+            const int64_t right_begin =
+                (interior_end > left_end) ? interior_end : left_end;
+            for (int64_t j = right_begin; j < cols; ++j) {
+                double acc = 0.0;
+                for (int32_t k = 0; k < w; ++k) {
+                    const int64_t src_idx = j + (int64_t)pos - (int64_t)k;
+                    double v;
+                    if (src_idx >= 0 && src_idx < cols) {
+                        v = row_in[src_idx];
+                    } else if (pad == C4A_PAD_CONSTANT) {
+                        v = state->cval;
+                    } else {
+                        const int64_t resolved =
+                            c4a_pad_resolve_index(src_idx, cols, pad);
+                        v = row_in[resolved];
+                    }
+                    acc += coeffs[k] * v;
+                }
+                dst[j] = acc;
             }
         }
 
-        memcpy(row_out, scratch, (size_t)cols * sizeof(double));
+        if (in_place) {
+            memcpy(row_out, scratch, (size_t)cols * sizeof(double));
+        }
     }
 
     free(scratch);

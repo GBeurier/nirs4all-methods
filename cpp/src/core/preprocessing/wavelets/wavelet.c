@@ -34,6 +34,32 @@ c4a_wavelet_mode_t c4a_pp_wavelet_state_mode(
     return state->mode;
 }
 
+static void apply_haar_periodization_rows(
+    const double* X, int64_t rows, int64_t cols,
+    int64_t out_cols, double* out) {
+    const double s = 0.7071067811865476;
+    const int64_t m = (cols + 1) / 2;
+    const int64_t pairs = cols / 2;
+    for (int64_t i = 0; i < rows; ++i) {
+        const double* row = X + (size_t)i * (size_t)cols;
+        double* o = out + (size_t)i * (size_t)out_cols;
+        double* cA = o;
+        double* cD = o + m;
+        for (int64_t k = 0; k < pairs; ++k) {
+            const int64_t j = 2 * k;
+            const double a = row[j];
+            const double b = row[j + 1];
+            cA[k] = (a + b) * s;
+            cD[k] = (a - b) * s;
+        }
+        if ((cols & 1) != 0) {
+            const double a = row[cols - 1];
+            cA[pairs] = (a + a) * s;
+            cD[pairs] = 0.0;
+        }
+    }
+}
+
 c4a_status_t c4a_pp_wavelet_state_apply(
     const c4a_pp_wavelet_state_t* state,
     const double* X, int64_t rows, int64_t cols,
@@ -51,6 +77,11 @@ c4a_status_t c4a_pp_wavelet_state_apply(
         c4a_wavelet_dwt_output_length(cols, state->family, state->mode);
     if (out_cols != 2 * m) {
         return C4A_ERR_SHAPE_MISMATCH;
+    }
+    if (state->family == C4A_WAVELET_HAAR &&
+        state->mode == C4A_WAVELET_MODE_PERIODIZATION) {
+        apply_haar_periodization_rows(X, rows, cols, out_cols, out);
+        return C4A_OK;
     }
     /* Row-by-row DWT.  cA goes to out[i, 0..m), cD to out[i, m..2m). */
     for (int64_t i = 0; i < rows; ++i) {

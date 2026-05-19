@@ -12,6 +12,19 @@
 
 #include "core/common/svd.h"
 
+static int use_truncated_svd(int64_t rows, int64_t cols,
+                             int64_t k_full, int64_t k) {
+    const int64_t min_large_elements = 32768;
+    if (k < 1 || k >= k_full) return 0;
+    return rows > 0 && cols > 0 && rows >= min_large_elements / cols;
+}
+
+static int use_dual_wide_svd(int64_t rows, int64_t cols,
+                             int64_t k_full, int64_t k) {
+    return use_truncated_svd(rows, cols, k_full, k) &&
+           rows <= cols && rows <= 256;
+}
+
 /* Apply the sklearn sign convention: per principal axis (row of components),
  * the entry with the largest absolute value is non-negative. If we need to
  * flip a row, we also flip the corresponding column of the scores buffer
@@ -62,17 +75,21 @@ c4a_status_t c4a_pca_fit(const double* X, int64_t rows, int64_t cols,
         return C4A_ERR_OUT_OF_MEMORY;
     }
     if (center) {
-        for (int64_t j = 0; j < cols; ++j) {
-            double s = 0.0;
-            for (int64_t i = 0; i < rows; ++i) {
-                s += X[(size_t)i * (size_t)cols + (size_t)j];
+        for (int64_t j = 0; j < cols; ++j) mean[j] = 0.0;
+        for (int64_t i = 0; i < rows; ++i) {
+            const double* row = X + (size_t)i * (size_t)cols;
+            for (int64_t j = 0; j < cols; ++j) {
+                mean[j] += row[j];
             }
-            mean[j] = s / (double)rows;
+        }
+        for (int64_t j = 0; j < cols; ++j) {
+            mean[j] /= (double)rows;
         }
         for (int64_t i = 0; i < rows; ++i) {
+            const double* row = X + (size_t)i * (size_t)cols;
+            double* crow = Xc + (size_t)i * (size_t)cols;
             for (int64_t j = 0; j < cols; ++j) {
-                Xc[(size_t)i * (size_t)cols + (size_t)j] =
-                    X[(size_t)i * (size_t)cols + (size_t)j] - mean[j];
+                crow[j] = row[j] - mean[j];
             }
         }
     } else {
@@ -81,6 +98,56 @@ c4a_status_t c4a_pca_fit(const double* X, int64_t rows, int64_t cols,
     }
 
     const int64_t k_full = (rows < cols) ? rows : cols;
+
+    if (use_truncated_svd(rows, cols, k_full, k)) {
+        double* U  = (double*)malloc((size_t)rows * (size_t)k * sizeof(double));
+        double* S  = (double*)malloc((size_t)k * sizeof(double));
+        double* Vt = (double*)malloc((size_t)k * (size_t)cols * sizeof(double));
+        if (U == NULL || S == NULL || Vt == NULL) {
+            free(mean); free(Xc); free(U); free(S); free(Vt);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        const c4a_status_t sst = use_dual_wide_svd(rows, cols, k_full, k)
+            ? c4a_svd_truncated_dual_wide(Xc, rows, cols, k, U, S, Vt)
+            : c4a_svd_truncated_randomized(Xc, rows, cols, k, U, S, Vt);
+        if (sst != C4A_OK) {
+            free(mean); free(Xc); free(U); free(S); free(Vt);
+            return sst;
+        }
+
+        double* components =
+            (double*)malloc((size_t)k * (size_t)cols * sizeof(double));
+        double* ev = (double*)malloc((size_t)k * sizeof(double));
+        double* scores_train =
+            (double*)malloc((size_t)rows * (size_t)k * sizeof(double));
+        if (components == NULL || ev == NULL || scores_train == NULL) {
+            free(mean); free(Xc); free(U); free(S); free(Vt);
+            free(components); free(ev); free(scores_train);
+            return C4A_ERR_OUT_OF_MEMORY;
+        }
+        memcpy(components, Vt, (size_t)k * (size_t)cols * sizeof(double));
+        const double n_minus_1 = (double)(rows - 1);
+        for (int64_t i = 0; i < k; ++i) {
+            ev[i] = (n_minus_1 > 0.0) ? (S[i] * S[i] / n_minus_1) : 0.0;
+            for (int64_t r = 0; r < rows; ++r) {
+                scores_train[(size_t)r * (size_t)k + (size_t)i] =
+                    U[(size_t)r * (size_t)k + (size_t)i] * S[i];
+            }
+        }
+        flip_signs_max_abs(components, scores_train, k, cols, rows);
+
+        out->rows = rows;
+        out->cols = cols;
+        out->k = k;
+        out->mean = mean;
+        out->components = components;
+        out->scores = scores_train;
+        out->explained_var = ev;
+
+        free(Xc); free(U); free(S); free(Vt);
+        return C4A_OK;
+    }
+
     double* U  = (double*)malloc((size_t)rows * (size_t)k_full * sizeof(double));
     double* S  = (double*)malloc((size_t)k_full * sizeof(double));
     double* Vt = (double*)malloc((size_t)k_full * (size_t)cols * sizeof(double));
@@ -129,9 +196,10 @@ c4a_status_t c4a_pca_fit(const double* X, int64_t rows, int64_t cols,
     out->k = k;
     out->mean = mean;
     out->components = components;
+    out->scores = scores_train;
     out->explained_var = ev;
 
-    free(Xc); free(U); free(S); free(Vt); free(scores_train);
+    free(Xc); free(U); free(S); free(Vt);
     return C4A_OK;
 }
 
@@ -139,6 +207,7 @@ void c4a_pca_fit_free(c4a_pca_fit_t* fit) {
     if (fit == NULL) return;
     free(fit->mean);          fit->mean = NULL;
     free(fit->components);    fit->components = NULL;
+    free(fit->scores);        fit->scores = NULL;
     free(fit->explained_var); fit->explained_var = NULL;
     fit->rows = fit->cols = fit->k = 0;
 }
@@ -152,6 +221,23 @@ c4a_status_t c4a_pca_transform(const c4a_pca_fit_t* fit,
     if (X_new == NULL) return C4A_ERR_NULL_POINTER;
     const int64_t cols = fit->cols;
     const int64_t k = fit->k;
+    if (k <= 8) {
+        for (int64_t r = 0; r < n_rows; ++r) {
+            const double* row = X_new + (size_t)r * (size_t)cols;
+            double* srow = scores + (size_t)r * (size_t)k;
+            double acc[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+            for (int64_t j = 0; j < cols; ++j) {
+                const double xj = row[j] - fit->mean[j];
+                for (int64_t i = 0; i < k; ++i) {
+                    acc[i] += xj * fit->components[(size_t)i * (size_t)cols + (size_t)j];
+                }
+            }
+            for (int64_t i = 0; i < k; ++i) {
+                srow[i] = acc[i];
+            }
+        }
+        return C4A_OK;
+    }
     for (int64_t r = 0; r < n_rows; ++r) {
         const double* row = X_new + (size_t)r * (size_t)cols;
         for (int64_t i = 0; i < k; ++i) {

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 /*
- * Shared dense SVD helper used by Phase 9 feature-selection operators
+ * Shared dense SVD helpers used by Phase 9 feature-selection operators
  * (FlexiblePCA, FlexibleSVD) and potentially by Phase 8 / Phase 19 agents
  * (T^2 / Q residuals, OSC) that need a portable in-process SVD.
  *
@@ -58,6 +58,21 @@ extern "C" {
  */
 c4a_status_t c4a_svd_compact(double* A, int64_t m, int64_t n,
                               double* U, double* S, double* Vt);
+
+/* Exact leading-k SVD for wide matrices (m <= n) through the sample Gram
+ * matrix A @ A.T. This avoids the expensive column-pair Jacobi sweep on the
+ * original feature width while preserving full-SVD parity for small m.
+ */
+c4a_status_t c4a_svd_truncated_dual_wide(const double* A, int64_t m, int64_t n,
+                                         int64_t k, double* U, double* S,
+                                         double* Vt);
+
+/* Deterministic randomized leading-k SVD for large matrices where an exact
+ * full decomposition is too expensive. The input is read-only.
+ */
+c4a_status_t c4a_svd_truncated_randomized(const double* A, int64_t m,
+                                          int64_t n, int64_t k,
+                                          double* U, double* S, double* Vt);
 
 #ifdef __cplusplus
 }  /* extern "C" */

@@ -156,6 +156,7 @@ c4a_status_t c4a_pp_gaussian_state_apply(
     const int32_t lw = state->lw;
     const int32_t length = 2 * lw + 1;
     const double* kernel = state->kernel;
+    const int in_place = (X == out);
 
     c4a_pad_mode_t pad = C4A_PAD_REFLECT;
     switch (state->mode) {
@@ -167,14 +168,25 @@ c4a_status_t c4a_pp_gaussian_state_apply(
         default:                       return C4A_ERR_INVALID_ARGUMENT;
     }
 
-    double* scratch = (double*)malloc((size_t)cols * sizeof(double));
-    if (scratch == NULL) {
+    double* scratch = NULL;
+    if (in_place) {
+        scratch = (double*)malloc((size_t)cols * sizeof(double));
+    }
+    if (in_place && scratch == NULL) {
         return C4A_ERR_OUT_OF_MEMORY;
     }
     for (int64_t r = 0; r < rows; ++r) {
         const double* row_in  = X + (size_t)r * (size_t)cols;
         double*       row_out = out + (size_t)r * (size_t)cols;
-        for (int64_t j = 0; j < cols; ++j) {
+        double*       dst     = in_place ? scratch : row_out;
+
+        const int64_t left_end = ((int64_t)lw < cols) ? (int64_t)lw : cols;
+        const int64_t interior_begin = (int64_t)lw;
+        const int64_t interior_end = (cols - (int64_t)lw > interior_begin)
+            ? cols - (int64_t)lw
+            : interior_begin;
+
+        for (int64_t j = 0; j < left_end; ++j) {
             double acc = 0.0;
             for (int32_t k = 0; k < length; ++k) {
                 const int64_t src_idx = j + (int64_t)k - (int64_t)lw;
@@ -190,9 +202,61 @@ c4a_status_t c4a_pp_gaussian_state_apply(
                 }
                 acc += kernel[k] * v;
             }
-            scratch[j] = acc;
+            dst[j] = acc;
         }
-        memcpy(row_out, scratch, (size_t)cols * sizeof(double));
+
+        if (interior_end > interior_begin) {
+            if (length == 9) {
+                for (int64_t j = interior_begin; j < interior_end; ++j) {
+                    const double* x = row_in + (size_t)(j - (int64_t)lw);
+                    double acc = 0.0;
+                    acc += kernel[0] * x[0];
+                    acc += kernel[1] * x[1];
+                    acc += kernel[2] * x[2];
+                    acc += kernel[3] * x[3];
+                    acc += kernel[4] * x[4];
+                    acc += kernel[5] * x[5];
+                    acc += kernel[6] * x[6];
+                    acc += kernel[7] * x[7];
+                    acc += kernel[8] * x[8];
+                    dst[j] = acc;
+                }
+            } else {
+                for (int64_t j = interior_begin; j < interior_end; ++j) {
+                    const double* x = row_in + (size_t)(j - (int64_t)lw);
+                    double acc = 0.0;
+                    for (int32_t k = 0; k < length; ++k) {
+                        acc += kernel[k] * x[k];
+                    }
+                    dst[j] = acc;
+                }
+            }
+        }
+
+        const int64_t right_begin =
+            (interior_end > left_end) ? interior_end : left_end;
+        for (int64_t j = right_begin; j < cols; ++j) {
+            double acc = 0.0;
+            for (int32_t k = 0; k < length; ++k) {
+                const int64_t src_idx = j + (int64_t)k - (int64_t)lw;
+                double v;
+                if (src_idx >= 0 && src_idx < cols) {
+                    v = row_in[src_idx];
+                } else if (pad == C4A_PAD_CONSTANT) {
+                    v = state->cval;
+                } else {
+                    const int64_t resolved =
+                        c4a_pad_resolve_index(src_idx, cols, pad);
+                    v = row_in[resolved];
+                }
+                acc += kernel[k] * v;
+            }
+            dst[j] = acc;
+        }
+
+        if (in_place) {
+            memcpy(row_out, scratch, (size_t)cols * sizeof(double));
+        }
     }
     free(scratch);
     return C4A_OK;

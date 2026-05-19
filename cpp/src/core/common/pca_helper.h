@@ -40,6 +40,7 @@ typedef struct c4a_pca_fit_t {
     int64_t k;              /* effective components kept                     */
     double* mean;           /* (cols,)                                        */
     double* components;     /* (k, cols) row-major — principal axes           */
+    double* scores;         /* (rows, k) row-major — training scores          */
     double* explained_var;  /* (k,) = S^2 / (rows - 1)                         */
 } c4a_pca_fit_t;
 

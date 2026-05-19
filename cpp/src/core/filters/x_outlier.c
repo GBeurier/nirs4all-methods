@@ -264,12 +264,16 @@ static c4a_status_t fit_mahalanobis(c4a_filter_x_outlier_state_t* s,
         c4a_status_t ps = c4a_pca_fit(X, rows, cols, eff_max, 1, s->maha_pca);
         if (ps != C4A_OK) return ps;
         eff_dim = s->maha_pca->k;
-        scores = (double*)malloc((size_t)rows * (size_t)eff_dim * sizeof(double));
-        if (scores == NULL) return C4A_ERR_OUT_OF_MEMORY;
-        const c4a_status_t ts =
-            c4a_pca_transform(s->maha_pca, X, rows, scores);
-        if (ts != C4A_OK) { free(scores); return ts; }
-        X_used = scores;
+        if (s->maha_pca->scores != NULL) {
+            X_used = s->maha_pca->scores;
+        } else {
+            scores = (double*)malloc((size_t)rows * (size_t)eff_dim * sizeof(double));
+            if (scores == NULL) return C4A_ERR_OUT_OF_MEMORY;
+            const c4a_status_t ts =
+                c4a_pca_transform(s->maha_pca, X, rows, scores);
+            if (ts != C4A_OK) { free(scores); return ts; }
+            X_used = scores;
+        }
         cols_used = eff_dim;
     }
 

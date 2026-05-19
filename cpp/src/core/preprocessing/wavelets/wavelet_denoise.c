@@ -36,21 +36,51 @@ void c4a_pp_wavelet_denoise_state_free(c4a_pp_wavelet_denoise_state_t* state) {
     free(state);
 }
 
-/* Quickselect median in-place (NumPy default behaviour: even n returns
- * the average of the two middle elements; odd n returns the middle). */
-static int cmp_double(const void* a, const void* b) {
-    const double da = *(const double*)a;
-    const double db = *(const double*)b;
-    if (da < db) return -1;
-    if (da > db) return  1;
-    return 0;
+static void swap_double(double* a, double* b) {
+    const double t = *a;
+    *a = *b;
+    *b = t;
+}
+
+static int64_t partition(double* buf, int64_t left, int64_t right,
+                         int64_t pivot_index) {
+    const double pivot = buf[pivot_index];
+    swap_double(buf + pivot_index, buf + right);
+    int64_t store = left;
+    for (int64_t i = left; i < right; ++i) {
+        if (buf[i] < pivot) {
+            swap_double(buf + store, buf + i);
+            ++store;
+        }
+    }
+    swap_double(buf + right, buf + store);
+    return store;
+}
+
+static double select_kth(double* buf, int64_t n, int64_t k) {
+    int64_t left = 0;
+    int64_t right = n - 1;
+    while (left < right) {
+        const int64_t pivot_guess = left + (right - left) / 2;
+        const int64_t pivot = partition(buf, left, right, pivot_guess);
+        if (k == pivot) {
+            return buf[k];
+        }
+        if (k < pivot) {
+            right = pivot - 1;
+        } else {
+            left = pivot + 1;
+        }
+    }
+    return buf[left];
 }
 
 static double median_inplace(double* buf, int64_t n) {
     if (n <= 0) return 0.0;
-    qsort(buf, (size_t)n, sizeof(double), cmp_double);
-    if (n & 1) return buf[n / 2];
-    return 0.5 * (buf[n / 2 - 1] + buf[n / 2]);
+    if (n & 1) return select_kth(buf, n, n / 2);
+    const double hi = select_kth(buf, n, n / 2);
+    const double lo = select_kth(buf, n, n / 2 - 1);
+    return 0.5 * (lo + hi);
 }
 
 static void apply_threshold(double* buf, int64_t n, double thr,
@@ -121,22 +151,38 @@ c4a_status_t c4a_pp_wavelet_denoise_state_apply(
     /* Scratch for median (finest detail length). */
     double* mscratch =
         (double*)malloc((size_t)coef_lengths[level] * sizeof(double));
-    if (coeffs == NULL || mscratch == NULL) {
+    int64_t dec_work_len = 0;
+    int64_t rec_work_len = 0;
+    st = c4a_wavelet_wavedec_workspace_length(
+        cols, state->family, state->mode, level, &dec_work_len);
+    if (st == C4A_OK) {
+        st = c4a_wavelet_waverec_workspace_length(cols, level, &rec_work_len);
+    }
+    if (st != C4A_OK) {
         free(coeffs); free(mscratch);
+        free(coef_lengths); free(offsets);
+        return st;
+    }
+    double* work =
+        (double*)malloc((size_t)(dec_work_len + rec_work_len) * sizeof(double));
+    if (coeffs == NULL || mscratch == NULL || work == NULL) {
+        free(coeffs); free(mscratch); free(work);
         free(coef_lengths); free(offsets);
         return C4A_ERR_OUT_OF_MEMORY;
     }
+    double* dec_work = work;
+    double* rec_work = work + dec_work_len;
 
     const double universal_factor = sqrt(2.0 * log((double)cols));
 
     for (int64_t i = 0; i < rows; ++i) {
         const double* row = X + (size_t)i * (size_t)cols;
         double*       row_out = out + (size_t)i * (size_t)cols;
-        st = c4a_wavelet_wavedec(row, cols, state->family, state->mode,
-                                  level, coeffs, coef_lengths, offsets,
-                                  total);
+        st = c4a_wavelet_wavedec_with_workspace(
+            row, cols, state->family, state->mode, level,
+            coeffs, coef_lengths, offsets, total, dec_work, dec_work_len);
         if (st != C4A_OK) {
-            free(coeffs); free(mscratch);
+            free(coeffs); free(mscratch); free(work);
             free(coef_lengths); free(offsets);
             return st;
         }
@@ -166,16 +212,17 @@ c4a_status_t c4a_pp_wavelet_denoise_state_apply(
                              state->threshold_mode);
         }
         /* Reconstruct directly into row_out. */
-        st = c4a_wavelet_waverec(coeffs, coef_lengths, offsets, level,
-                                  state->family, state->mode, cols, row_out);
+        st = c4a_wavelet_waverec_with_workspace(
+            coeffs, coef_lengths, offsets, level,
+            state->family, state->mode, cols, row_out, rec_work, rec_work_len);
         if (st != C4A_OK) {
-            free(coeffs); free(mscratch);
+            free(coeffs); free(mscratch); free(work);
             free(coef_lengths); free(offsets);
             return st;
         }
     }
 
-    free(coeffs); free(mscratch);
+    free(coeffs); free(mscratch); free(work);
     free(coef_lengths); free(offsets);
     return C4A_OK;
 }

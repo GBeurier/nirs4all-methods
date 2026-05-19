@@ -54,6 +54,8 @@
  * orthogonalisation criterion within ~2 bits of the machine precision. */
 static const double C4A_SVD_EPS = 4.0 * DBL_EPSILON;
 
+static const double C4A_SVD_ZERO_TOL = 1e-300;
+
 /* Read / write helpers (kept inline-friendly via the compiler — no
  * function call overhead at -O2). */
 static inline double A_at(const double* A, int64_t n, int64_t i, int64_t j) {
@@ -69,6 +71,213 @@ static inline void A_set(double* A, int64_t n, int64_t i, int64_t j,
  * for m < n. */
 static c4a_status_t svd_compact_tall(double* A, int64_t m, int64_t n,
                                       double* U, double* S, double* Vt);
+static void householder_tridiagonal(double* V, int64_t n, double* d,
+                                    double* e) {
+    for (int64_t i = n - 1; i > 0; --i) {
+        const int64_t l = i - 1;
+        double h = 0.0;
+        double scale = 0.0;
+
+        if (l > 0) {
+            for (int64_t k = 0; k <= l; ++k) {
+                scale += fabs(V[(size_t)i * (size_t)n + (size_t)k]);
+            }
+            if (scale > 0.0) {
+                for (int64_t k = 0; k <= l; ++k) {
+                    V[(size_t)i * (size_t)n + (size_t)k] /= scale;
+                    const double v = V[(size_t)i * (size_t)n + (size_t)k];
+                    h += v * v;
+                }
+
+                const double f = V[(size_t)i * (size_t)n + (size_t)l];
+                const double g = (f >= 0.0) ? -sqrt(h) : sqrt(h);
+                e[i] = scale * g;
+                h -= f * g;
+                V[(size_t)i * (size_t)n + (size_t)l] = f - g;
+
+                double fsum = 0.0;
+                for (int64_t j = 0; j <= l; ++j) {
+                    V[(size_t)j * (size_t)n + (size_t)i] =
+                        V[(size_t)i * (size_t)n + (size_t)j] / h;
+                    double gsum = 0.0;
+                    for (int64_t k = 0; k <= j; ++k) {
+                        gsum += V[(size_t)j * (size_t)n + (size_t)k] *
+                                V[(size_t)i * (size_t)n + (size_t)k];
+                    }
+                    for (int64_t k = j + 1; k <= l; ++k) {
+                        gsum += V[(size_t)k * (size_t)n + (size_t)j] *
+                                V[(size_t)i * (size_t)n + (size_t)k];
+                    }
+                    e[j] = gsum / h;
+                    fsum += e[j] * V[(size_t)i * (size_t)n + (size_t)j];
+                }
+
+                const double hh = fsum / (h + h);
+                for (int64_t j = 0; j <= l; ++j) {
+                    const double f2 =
+                        V[(size_t)i * (size_t)n + (size_t)j];
+                    const double g2 = e[j] - hh * f2;
+                    e[j] = g2;
+                    for (int64_t k = 0; k <= j; ++k) {
+                        V[(size_t)j * (size_t)n + (size_t)k] -=
+                            f2 * e[k] +
+                            g2 * V[(size_t)i * (size_t)n + (size_t)k];
+                    }
+                }
+            } else {
+                e[i] = V[(size_t)i * (size_t)n + (size_t)l];
+            }
+        } else {
+            e[i] = V[(size_t)i * (size_t)n + (size_t)l];
+        }
+        d[i] = h;
+    }
+
+    d[0] = 0.0;
+    e[0] = 0.0;
+    for (int64_t i = 0; i < n; ++i) {
+        const int64_t l = i - 1;
+        if (d[i] != 0.0) {
+            for (int64_t j = 0; j <= l; ++j) {
+                double g = 0.0;
+                for (int64_t k = 0; k <= l; ++k) {
+                    g += V[(size_t)i * (size_t)n + (size_t)k] *
+                         V[(size_t)k * (size_t)n + (size_t)j];
+                }
+                for (int64_t k = 0; k <= l; ++k) {
+                    V[(size_t)k * (size_t)n + (size_t)j] -=
+                        g * V[(size_t)k * (size_t)n + (size_t)i];
+                }
+            }
+        }
+        d[i] = V[(size_t)i * (size_t)n + (size_t)i];
+        V[(size_t)i * (size_t)n + (size_t)i] = 1.0;
+        for (int64_t j = 0; j <= l; ++j) {
+            V[(size_t)j * (size_t)n + (size_t)i] = 0.0;
+            V[(size_t)i * (size_t)n + (size_t)j] = 0.0;
+        }
+    }
+}
+
+static c4a_status_t tridiagonal_ql_eigenvectors(double* d, double* e,
+                                                int64_t n, double* V) {
+    for (int64_t i = 1; i < n; ++i) {
+        e[i - 1] = e[i];
+    }
+    e[n - 1] = 0.0;
+
+    for (int64_t l = 0; l < n; ++l) {
+        int iter = 0;
+        for (;;) {
+            int64_t m = l;
+            for (; m < n - 1; ++m) {
+                const double dd = fabs(d[m]) + fabs(d[m + 1]);
+                if (fabs(e[m]) <= DBL_EPSILON * dd) {
+                    break;
+                }
+            }
+            if (m == l) {
+                break;
+            }
+            if (++iter > 64) {
+                return C4A_ERR_CONVERGENCE_FAILED;
+            }
+
+            double g = (d[l + 1] - d[l]) / (2.0 * e[l]);
+            double r = hypot(g, 1.0);
+            g = d[m] - d[l] +
+                e[l] / (g + ((g >= 0.0) ? fabs(r) : -fabs(r)));
+
+            double s = 1.0;
+            double c = 1.0;
+            double p = 0.0;
+            int early = 0;
+            for (int64_t i = m - 1; i >= l; --i) {
+                const double f = s * e[i];
+                const double b = c * e[i];
+                r = hypot(f, g);
+                e[i + 1] = r;
+                if (r == 0.0) {
+                    d[i + 1] -= p;
+                    e[m] = 0.0;
+                    early = 1;
+                    break;
+                }
+                s = f / r;
+                c = g / r;
+                g = d[i + 1] - p;
+                r = (d[i] - g) * s + 2.0 * c * b;
+                p = s * r;
+                d[i + 1] = g + p;
+                g = c * r - b;
+
+                for (int64_t k = 0; k < n; ++k) {
+                    const double vki =
+                        V[(size_t)k * (size_t)n + (size_t)i];
+                    const double vkip1 =
+                        V[(size_t)k * (size_t)n + (size_t)(i + 1)];
+                    V[(size_t)k * (size_t)n + (size_t)(i + 1)] =
+                        s * vki + c * vkip1;
+                    V[(size_t)k * (size_t)n + (size_t)i] =
+                        c * vki - s * vkip1;
+                }
+            }
+            if (early) {
+                continue;
+            }
+            d[l] -= p;
+            e[l] = g;
+            e[m] = 0.0;
+        }
+    }
+    return C4A_OK;
+}
+
+static c4a_status_t symmetric_eigh(double* A, int64_t n, double* eigvals,
+                                   double* V) {
+    if (A == NULL || eigvals == NULL || V == NULL) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    if (n < 1) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+
+    double* offdiag = (double*)malloc((size_t)n * sizeof(double));
+    if (offdiag == NULL) {
+        return C4A_ERR_OUT_OF_MEMORY;
+    }
+
+    for (int64_t i = 0; i < n; ++i) {
+        memcpy(V + (size_t)i * (size_t)n,
+               A + (size_t)i * (size_t)n,
+               (size_t)n * sizeof(double));
+    }
+
+    householder_tridiagonal(V, n, eigvals, offdiag);
+    const c4a_status_t st =
+        tridiagonal_ql_eigenvectors(eigvals, offdiag, n, V);
+    free(offdiag);
+    return st;
+}
+
+static void sort_eigpairs_desc(double* V, double* eigvals, int64_t n) {
+    for (int64_t i = 0; i < n - 1; ++i) {
+        int64_t best = i;
+        for (int64_t j = i + 1; j < n; ++j) {
+            if (eigvals[j] > eigvals[best]) best = j;
+        }
+        if (best == i) continue;
+        const double ev = eigvals[i];
+        eigvals[i] = eigvals[best];
+        eigvals[best] = ev;
+        for (int64_t r = 0; r < n; ++r) {
+            const double tmp = V[(size_t)r * (size_t)n + (size_t)i];
+            V[(size_t)r * (size_t)n + (size_t)i] =
+                V[(size_t)r * (size_t)n + (size_t)best];
+            V[(size_t)r * (size_t)n + (size_t)best] = tmp;
+        }
+    }
+}
 
 c4a_status_t c4a_svd_compact(double* A, int64_t m, int64_t n,
                               double* U, double* S, double* Vt) {
@@ -161,6 +370,310 @@ c4a_status_t c4a_svd_compact(double* A, int64_t m, int64_t n,
             }
         }
     }
+    return C4A_OK;
+}
+
+c4a_status_t c4a_svd_truncated_dual_wide(const double* A, int64_t m,
+                                         int64_t n, int64_t k, double* U,
+                                         double* S, double* Vt) {
+    if (m < 1 || n < 1 || m > n || k < 1 || k > m) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (A == NULL || U == NULL || S == NULL || Vt == NULL) {
+        return C4A_ERR_NULL_POINTER;
+    }
+
+    double* G = (double*)malloc((size_t)m * (size_t)m * sizeof(double));
+    double* Ug = (double*)malloc((size_t)m * (size_t)m * sizeof(double));
+    double* L = (double*)malloc((size_t)m * sizeof(double));
+    if (G == NULL || Ug == NULL || L == NULL) {
+        free(G); free(Ug); free(L);
+        return C4A_ERR_OUT_OF_MEMORY;
+    }
+
+    for (int64_t i = 0; i < m; ++i) {
+        const double* row_i = A + (size_t)i * (size_t)n;
+        for (int64_t j = i; j < m; ++j) {
+            const double* row_j = A + (size_t)j * (size_t)n;
+            double dot = 0.0;
+            for (int64_t c = 0; c < n; ++c) {
+                dot += row_i[c] * row_j[c];
+            }
+            G[(size_t)i * (size_t)m + (size_t)j] = dot;
+            G[(size_t)j * (size_t)m + (size_t)i] = dot;
+        }
+    }
+
+    const c4a_status_t st = symmetric_eigh(G, m, L, Ug);
+    free(G);
+    if (st != C4A_OK) {
+        free(Ug); free(L);
+        return st;
+    }
+    sort_eigpairs_desc(Ug, L, m);
+
+    for (int64_t comp = 0; comp < k; ++comp) {
+        const double lambda = (L[comp] > 0.0) ? L[comp] : 0.0;
+        const double sigma = sqrt(lambda);
+        S[comp] = sigma;
+        for (int64_t i = 0; i < m; ++i) {
+            U[(size_t)i * (size_t)k + (size_t)comp] =
+                Ug[(size_t)i * (size_t)m + (size_t)comp];
+        }
+    }
+
+    if (k <= 8) {
+        double inv_s[8];
+        for (int64_t comp = 0; comp < k; ++comp) {
+            inv_s[comp] = (S[comp] > 0.0) ? (1.0 / S[comp]) : 0.0;
+        }
+        for (int64_t j = 0; j < n; ++j) {
+            double acc[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+            for (int64_t i = 0; i < m; ++i) {
+                const double aij = A[(size_t)i * (size_t)n + (size_t)j];
+                const double* urow = U + (size_t)i * (size_t)k;
+                for (int64_t comp = 0; comp < k; ++comp) {
+                    acc[comp] += aij * urow[comp];
+                }
+            }
+            for (int64_t comp = 0; comp < k; ++comp) {
+                Vt[(size_t)comp * (size_t)n + (size_t)j] =
+                    acc[comp] * inv_s[comp];
+            }
+        }
+    } else {
+        for (int64_t comp = 0; comp < k; ++comp) {
+            double* vrow = Vt + (size_t)comp * (size_t)n;
+            if (S[comp] > 0.0) {
+                const double inv_sigma = 1.0 / S[comp];
+                for (int64_t j = 0; j < n; ++j) {
+                    double acc = 0.0;
+                    for (int64_t i = 0; i < m; ++i) {
+                        acc += A[(size_t)i * (size_t)n + (size_t)j] *
+                               U[(size_t)i * (size_t)k + (size_t)comp];
+                    }
+                    vrow[j] = acc * inv_sigma;
+                }
+            } else {
+                for (int64_t j = 0; j < n; ++j) {
+                    vrow[j] = 0.0;
+                }
+            }
+        }
+    }
+
+    for (int64_t comp = 0; comp < k; ++comp) {
+        double* vrow = Vt + (size_t)comp * (size_t)n;
+
+        int64_t argmax = 0;
+        double maxabs = 0.0;
+        for (int64_t i = 0; i < m; ++i) {
+            const double a = fabs(U[(size_t)i * (size_t)k + (size_t)comp]);
+            if (a > maxabs) {
+                maxabs = a;
+                argmax = i;
+            }
+        }
+        if (U[(size_t)argmax * (size_t)k + (size_t)comp] < 0.0) {
+            for (int64_t i = 0; i < m; ++i) {
+                U[(size_t)i * (size_t)k + (size_t)comp] =
+                    -U[(size_t)i * (size_t)k + (size_t)comp];
+            }
+            for (int64_t j = 0; j < n; ++j) {
+                vrow[j] = -vrow[j];
+            }
+        }
+    }
+
+    free(Ug);
+    free(L);
+    return C4A_OK;
+}
+
+static uint64_t splitmix64_next(uint64_t x) {
+    x += UINT64_C(0x9e3779b97f4a7c15);
+    x = (x ^ (x >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);
+    x = (x ^ (x >> 27)) * UINT64_C(0x94d049bb133111eb);
+    return x ^ (x >> 31);
+}
+
+static double deterministic_omega(int64_t row, int64_t col) {
+    uint64_t x = UINT64_C(0x6a09e667f3bcc909);
+    x ^= (uint64_t)(row + 1) * UINT64_C(0xbf58476d1ce4e5b9);
+    x ^= (uint64_t)(col + 1) * UINT64_C(0x94d049bb133111eb);
+    x = splitmix64_next(x);
+    const double unit = (double)(x >> 11) * (1.0 / 9007199254740992.0);
+    return 2.0 * unit - 1.0;
+}
+
+static void orthonormalize_columns(double* A, int64_t rows, int64_t cols) {
+    for (int64_t c = 0; c < cols; ++c) {
+        double* col_c = A + (size_t)c;
+        for (int64_t prev = 0; prev < c; ++prev) {
+            const double* col_prev = A + (size_t)prev;
+            double dot = 0.0;
+            for (int64_t i = 0; i < rows; ++i) {
+                dot += col_c[(size_t)i * (size_t)cols] *
+                       col_prev[(size_t)i * (size_t)cols];
+            }
+            for (int64_t i = 0; i < rows; ++i) {
+                col_c[(size_t)i * (size_t)cols] -=
+                    dot * col_prev[(size_t)i * (size_t)cols];
+            }
+        }
+        double norm2 = 0.0;
+        for (int64_t i = 0; i < rows; ++i) {
+            const double v = col_c[(size_t)i * (size_t)cols];
+            norm2 += v * v;
+        }
+        if (!(norm2 > C4A_SVD_ZERO_TOL) || !isfinite(norm2)) {
+            for (int64_t i = 0; i < rows; ++i) {
+                col_c[(size_t)i * (size_t)cols] = 0.0;
+            }
+            continue;
+        }
+        const double inv = 1.0 / sqrt(norm2);
+        for (int64_t i = 0; i < rows; ++i) {
+            col_c[(size_t)i * (size_t)cols] *= inv;
+        }
+    }
+}
+
+c4a_status_t c4a_svd_truncated_randomized(const double* A, int64_t m,
+                                          int64_t n, int64_t k,
+                                          double* U, double* S, double* Vt) {
+    const int64_t k_full = (m < n) ? m : n;
+    if (m < 1 || n < 1 || k < 1 || k > k_full) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (A == NULL || U == NULL || S == NULL || Vt == NULL) {
+        return C4A_ERR_NULL_POINTER;
+    }
+
+    int64_t l = k + 8;
+    if (l > k_full) l = k_full;
+    if (l < k) l = k;
+    const int power_iter = 2;
+
+    double* Omega = (double*)malloc((size_t)n * (size_t)l * sizeof(double));
+    double* Q = (double*)malloc((size_t)m * (size_t)l * sizeof(double));
+    double* Z = (double*)malloc((size_t)n * (size_t)l * sizeof(double));
+    double* B = (double*)malloc((size_t)l * (size_t)n * sizeof(double));
+    double* Ub = (double*)malloc((size_t)l * (size_t)l * sizeof(double));
+    double* Sb = (double*)malloc((size_t)l * sizeof(double));
+    double* Vtb = (double*)malloc((size_t)l * (size_t)n * sizeof(double));
+    if (Omega == NULL || Q == NULL || Z == NULL || B == NULL ||
+        Ub == NULL || Sb == NULL || Vtb == NULL) {
+        free(Omega); free(Q); free(Z); free(B); free(Ub); free(Sb); free(Vtb);
+        return C4A_ERR_OUT_OF_MEMORY;
+    }
+
+    for (int64_t i = 0; i < n; ++i) {
+        for (int64_t j = 0; j < l; ++j) {
+            Omega[(size_t)i * (size_t)l + (size_t)j] =
+                deterministic_omega(i, j);
+        }
+    }
+
+    memset(Q, 0, (size_t)m * (size_t)l * sizeof(double));
+    for (int64_t i = 0; i < m; ++i) {
+        const double* row = A + (size_t)i * (size_t)n;
+        double* qrow = Q + (size_t)i * (size_t)l;
+        for (int64_t j = 0; j < n; ++j) {
+            const double aij = row[j];
+            const double* omegaj = Omega + (size_t)j * (size_t)l;
+            for (int64_t c = 0; c < l; ++c) {
+                qrow[c] += aij * omegaj[c];
+            }
+        }
+    }
+    orthonormalize_columns(Q, m, l);
+
+    for (int iter = 0; iter < power_iter; ++iter) {
+        memset(Z, 0, (size_t)n * (size_t)l * sizeof(double));
+        for (int64_t i = 0; i < m; ++i) {
+            const double* row = A + (size_t)i * (size_t)n;
+            const double* qrow = Q + (size_t)i * (size_t)l;
+            for (int64_t j = 0; j < n; ++j) {
+                double* zrow = Z + (size_t)j * (size_t)l;
+                const double aij = row[j];
+                for (int64_t c = 0; c < l; ++c) {
+                    zrow[c] += aij * qrow[c];
+                }
+            }
+        }
+        orthonormalize_columns(Z, n, l);
+
+        memset(Q, 0, (size_t)m * (size_t)l * sizeof(double));
+        for (int64_t i = 0; i < m; ++i) {
+            const double* row = A + (size_t)i * (size_t)n;
+            double* qrow = Q + (size_t)i * (size_t)l;
+            for (int64_t j = 0; j < n; ++j) {
+                const double aij = row[j];
+                const double* zrow = Z + (size_t)j * (size_t)l;
+                for (int64_t c = 0; c < l; ++c) {
+                    qrow[c] += aij * zrow[c];
+                }
+            }
+        }
+        orthonormalize_columns(Q, m, l);
+    }
+
+    memset(B, 0, (size_t)l * (size_t)n * sizeof(double));
+    for (int64_t i = 0; i < m; ++i) {
+        const double* row = A + (size_t)i * (size_t)n;
+        const double* qrow = Q + (size_t)i * (size_t)l;
+        for (int64_t c = 0; c < l; ++c) {
+            double* brow = B + (size_t)c * (size_t)n;
+            const double qic = qrow[c];
+            for (int64_t j = 0; j < n; ++j) {
+                brow[j] += qic * row[j];
+            }
+        }
+    }
+
+    const c4a_status_t st = c4a_svd_compact(B, l, n, Ub, Sb, Vtb);
+    if (st != C4A_OK) {
+        free(Omega); free(Q); free(Z); free(B); free(Ub); free(Sb); free(Vtb);
+        return st;
+    }
+
+    for (int64_t comp = 0; comp < k; ++comp) {
+        S[comp] = Sb[comp];
+        for (int64_t i = 0; i < m; ++i) {
+            const double* qrow = Q + (size_t)i * (size_t)l;
+            double acc = 0.0;
+            for (int64_t c = 0; c < l; ++c) {
+                acc += qrow[c] * Ub[(size_t)c * (size_t)l + (size_t)comp];
+            }
+            U[(size_t)i * (size_t)k + (size_t)comp] = acc;
+        }
+        memcpy(Vt + (size_t)comp * (size_t)n,
+               Vtb + (size_t)comp * (size_t)n,
+               (size_t)n * sizeof(double));
+
+        int64_t argmax = 0;
+        double maxabs = 0.0;
+        for (int64_t i = 0; i < m; ++i) {
+            const double a = fabs(U[(size_t)i * (size_t)k + (size_t)comp]);
+            if (a > maxabs) {
+                maxabs = a;
+                argmax = i;
+            }
+        }
+        if (U[(size_t)argmax * (size_t)k + (size_t)comp] < 0.0) {
+            for (int64_t i = 0; i < m; ++i) {
+                U[(size_t)i * (size_t)k + (size_t)comp] =
+                    -U[(size_t)i * (size_t)k + (size_t)comp];
+            }
+            double* vrow = Vt + (size_t)comp * (size_t)n;
+            for (int64_t j = 0; j < n; ++j) {
+                vrow[j] = -vrow[j];
+            }
+        }
+    }
+
+    free(Omega); free(Q); free(Z); free(B); free(Ub); free(Sb); free(Vtb);
     return C4A_OK;
 }
 

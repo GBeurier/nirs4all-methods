@@ -133,6 +133,36 @@ static const double k_coif1_rec_hi[6] = {
 
 /* ------------------------ Public helper functions ------------------------ */
 
+static void dec_filter_ptrs(c4a_wavelet_family_t family,
+                             const double** out_lo,
+                             const double** out_hi) {
+    const double* lo = NULL;
+    const double* hi = NULL;
+    switch (family) {
+        case C4A_WAVELET_HAAR:  lo = k_haar_dec_lo;  hi = k_haar_dec_hi;  break;
+        case C4A_WAVELET_DB4:   lo = k_db4_dec_lo;   hi = k_db4_dec_hi;   break;
+        case C4A_WAVELET_SYM4:  lo = k_sym4_dec_lo;  hi = k_sym4_dec_hi;  break;
+        case C4A_WAVELET_COIF1: lo = k_coif1_dec_lo; hi = k_coif1_dec_hi; break;
+    }
+    if (out_lo != NULL) *out_lo = lo;
+    if (out_hi != NULL) *out_hi = hi;
+}
+
+static void rec_filter_ptrs(c4a_wavelet_family_t family,
+                             const double** out_lo,
+                             const double** out_hi) {
+    const double* lo = NULL;
+    const double* hi = NULL;
+    switch (family) {
+        case C4A_WAVELET_HAAR:  lo = k_haar_rec_lo;  hi = k_haar_rec_hi;  break;
+        case C4A_WAVELET_DB4:   lo = k_db4_rec_lo;   hi = k_db4_rec_hi;   break;
+        case C4A_WAVELET_SYM4:  lo = k_sym4_rec_lo;  hi = k_sym4_rec_hi;  break;
+        case C4A_WAVELET_COIF1: lo = k_coif1_rec_lo; hi = k_coif1_rec_hi; break;
+    }
+    if (out_lo != NULL) *out_lo = lo;
+    if (out_hi != NULL) *out_hi = hi;
+}
+
 int c4a_wavelet_family_from_name(const char* name, c4a_wavelet_family_t* out) {
     if (name == NULL || out == NULL) return -1;
     if (strcmp(name, "haar")  == 0) { *out = C4A_WAVELET_HAAR;  return 0; }
@@ -166,12 +196,7 @@ void c4a_wavelet_dec_filters(c4a_wavelet_family_t family,
     const int32_t L = c4a_wavelet_filter_length(family);
     const double* lo = NULL;
     const double* hi = NULL;
-    switch (family) {
-        case C4A_WAVELET_HAAR:  lo = k_haar_dec_lo;  hi = k_haar_dec_hi;  break;
-        case C4A_WAVELET_DB4:   lo = k_db4_dec_lo;   hi = k_db4_dec_hi;   break;
-        case C4A_WAVELET_SYM4:  lo = k_sym4_dec_lo;  hi = k_sym4_dec_hi;  break;
-        case C4A_WAVELET_COIF1: lo = k_coif1_dec_lo; hi = k_coif1_dec_hi; break;
-    }
+    dec_filter_ptrs(family, &lo, &hi);
     if (out_lo && lo) memcpy(out_lo, lo, (size_t)L * sizeof(double));
     if (out_hi && hi) memcpy(out_hi, hi, (size_t)L * sizeof(double));
 }
@@ -181,12 +206,7 @@ void c4a_wavelet_rec_filters(c4a_wavelet_family_t family,
     const int32_t L = c4a_wavelet_filter_length(family);
     const double* lo = NULL;
     const double* hi = NULL;
-    switch (family) {
-        case C4A_WAVELET_HAAR:  lo = k_haar_rec_lo;  hi = k_haar_rec_hi;  break;
-        case C4A_WAVELET_DB4:   lo = k_db4_rec_lo;   hi = k_db4_rec_hi;   break;
-        case C4A_WAVELET_SYM4:  lo = k_sym4_rec_lo;  hi = k_sym4_rec_hi;  break;
-        case C4A_WAVELET_COIF1: lo = k_coif1_rec_lo; hi = k_coif1_rec_hi; break;
-    }
+    rec_filter_ptrs(family, &lo, &hi);
     if (out_lo && lo) memcpy(out_lo, lo, (size_t)L * sizeof(double));
     if (out_hi && hi) memcpy(out_hi, hi, (size_t)L * sizeof(double));
 }
@@ -231,39 +251,55 @@ static int64_t periodization_index(int64_t k, int64_t n_eff) {
     return (r < 0) ? r + n_eff : r;
 }
 
+static void dwt_haar_periodization(const double* in, int64_t n,
+                                    double* out_cA, double* out_cD) {
+    const double s = 0.7071067811865476;
+    const int64_t pairs = n / 2;
+    for (int64_t k = 0; k < pairs; ++k) {
+        const int64_t j = 2 * k;
+        const double a = in[j];
+        const double b = in[j + 1];
+        out_cA[k] = (a + b) * s;
+        out_cD[k] = (a - b) * s;
+    }
+    if ((n & 1) != 0) {
+        const double a = in[n - 1];
+        out_cA[pairs] = (a + a) * s;
+        out_cD[pairs] = 0.0;
+    }
+}
+
 static void dwt_periodization(const double* in, int64_t n,
                                const double* h_lo, const double* h_hi,
                                int32_t L,
-                               double* out_cA, double* out_cD,
-                               double* x_eff_scratch) {
-    /* When n is odd, pywt appends the last sample so n_eff = n + 1.  When
-     * n is even, x_eff aliases ``in`` directly. */
+                               double* out_cA, double* out_cD) {
+    /* When n is odd, pywt appends the last sample so n_eff = n + 1. */
     const int64_t n_eff = n + (n & 1);
-    const double* x_eff = NULL;
-    if ((n & 1) == 0) {
-        x_eff = in;
-    } else {
-        if (x_eff_scratch == NULL) return;
-        memcpy(x_eff_scratch, in, (size_t)n * sizeof(double));
-        x_eff_scratch[n] = in[n - 1];
-        x_eff = x_eff_scratch;
-    }
     const int64_t out_len = n_eff / 2;
     const int32_t half_offset = L / 2 - 1;
     for (int64_t k = 0; k < out_len; ++k) {
+        const int64_t base = (int64_t)(2 * k) - (int64_t)half_offset;
         double accA = 0.0;
         double accD = 0.0;
-        for (int32_t i = 0; i < L; ++i) {
-            const int64_t idx =
-                periodization_index((int64_t)(2 * k) + i - half_offset, n_eff);
-            const double v = x_eff[idx];
-            /* h_lo / h_hi are stored in forward order (low-pass and
-             * high-pass analysis filters).  The DWT formula uses the
-             * reversed filter; folding the reversal into the index gives
-             * h[L - 1 - i] * x[...].  Equivalent: iterate i over [0, L)
-             * and use h[L - 1 - i].  We keep the index explicit. */
-            accA += h_lo[L - 1 - i] * v;
-            accD += h_hi[L - 1 - i] * v;
+        if (base >= 0 && base + (int64_t)L <= n) {
+            for (int32_t i = 0; i < L; ++i) {
+                const double v = in[base + i];
+                accA += h_lo[L - 1 - i] * v;
+                accD += h_hi[L - 1 - i] * v;
+            }
+        } else {
+            for (int32_t i = 0; i < L; ++i) {
+                int64_t idx = base + i;
+                if (idx < 0 || idx >= n) {
+                    idx = periodization_index(idx, n_eff);
+                }
+                const double v = (idx == n) ? in[n - 1] : in[idx];
+                /* h_lo / h_hi are stored in forward order (low-pass and
+                 * high-pass analysis filters).  The DWT formula uses the
+                 * reversed filter. */
+                accA += h_lo[L - 1 - i] * v;
+                accD += h_hi[L - 1 - i] * v;
+            }
         }
         out_cA[k] = accA;
         out_cD[k] = accD;
@@ -342,25 +378,23 @@ c4a_status_t c4a_wavelet_dwt(const double* in, int64_t n,
     }
     const int32_t L = c4a_wavelet_filter_length(family);
     if (L <= 0) return C4A_ERR_INVALID_ARGUMENT;
-    double h_lo[C4A_WAVELET_MAX_FILTER];
-    double h_hi[C4A_WAVELET_MAX_FILTER];
-    c4a_wavelet_dec_filters(family, h_lo, h_hi);
     if (mode == C4A_WAVELET_MODE_PERIODIZATION) {
-        double* scratch = NULL;
-        double  stack_scratch[64];
-        if (n & 1) {
-            if (n + 1 <= (int64_t)(sizeof(stack_scratch) / sizeof(stack_scratch[0]))) {
-                scratch = stack_scratch;
-            } else {
-                scratch = (double*)malloc((size_t)(n + 1) * sizeof(double));
-                if (scratch == NULL) return C4A_ERR_OUT_OF_MEMORY;
-            }
+        if (family == C4A_WAVELET_HAAR) {
+            dwt_haar_periodization(in, n, out_cA, out_cD);
+            return C4A_OK;
         }
-        dwt_periodization(in, n, h_lo, h_hi, L, out_cA, out_cD, scratch);
-        if (scratch != NULL && scratch != stack_scratch) free(scratch);
+        const double* h_lo = NULL;
+        const double* h_hi = NULL;
+        dec_filter_ptrs(family, &h_lo, &h_hi);
+        if (h_lo == NULL || h_hi == NULL) return C4A_ERR_INVALID_ARGUMENT;
+        dwt_periodization(in, n, h_lo, h_hi, L, out_cA, out_cD);
         return C4A_OK;
     }
     if (mode == C4A_WAVELET_MODE_SYMMETRIC || mode == C4A_WAVELET_MODE_ZERO) {
+        const double* h_lo = NULL;
+        const double* h_hi = NULL;
+        dec_filter_ptrs(family, &h_lo, &h_hi);
+        if (h_lo == NULL || h_hi == NULL) return C4A_ERR_INVALID_ARGUMENT;
         dwt_symmetric_or_zero(in, n, h_lo, h_hi, L, mode, out_cA, out_cD);
         return C4A_OK;
     }
@@ -382,9 +416,10 @@ c4a_status_t c4a_wavelet_idwt(const double* cA, const double* cD, int64_t m,
     }
     const int32_t L = c4a_wavelet_filter_length(family);
     if (L <= 0) return C4A_ERR_INVALID_ARGUMENT;
-    double g_lo[C4A_WAVELET_MAX_FILTER];
-    double g_hi[C4A_WAVELET_MAX_FILTER];
-    c4a_wavelet_rec_filters(family, g_lo, g_hi);
+    const double* g_lo = NULL;
+    const double* g_hi = NULL;
+    rec_filter_ptrs(family, &g_lo, &g_hi);
+    if (g_lo == NULL || g_hi == NULL) return C4A_ERR_INVALID_ARGUMENT;
 
     /* For symmetric / zero modes we need to compute the full-convolution
      * of the upsampled coefficients with the reconstruction filters and
@@ -420,41 +455,45 @@ c4a_status_t c4a_wavelet_idwt(const double* cA, const double* cD, int64_t m,
 
     if (mode == C4A_WAVELET_MODE_PERIODIZATION) {
         const int64_t period = 2 * m;
-        /* Compute the full-convolution length 2*m + L - 1, fold modulo
-         * period, then roll by ``L/2 - 1`` so that the first element of
-         * ``out`` corresponds to the original signal's first sample. */
+        /* Fold each non-zero upsampled tap directly into the rolled output.
+         * This halves the inner work versus scanning full-convolution indices
+         * and removes the per-call wrapped buffer for the common even case. */
         if (period <= 0) return C4A_ERR_INVALID_ARGUMENT;
         const int32_t roll = L / 2 - 1;
         double  stack_wrapped[64];
         double* wrapped = NULL;
-        if (period <= (int64_t)(sizeof(stack_wrapped) / sizeof(stack_wrapped[0]))) {
-            wrapped = stack_wrapped;
+        if (n_out == period) {
+            wrapped = out;
+            memset(wrapped, 0, (size_t)period * sizeof(double));
         } else {
-            wrapped = (double*)malloc((size_t)period * sizeof(double));
-            if (wrapped == NULL) return C4A_ERR_OUT_OF_MEMORY;
-        }
-        memset(wrapped, 0, (size_t)period * sizeof(double));
-        for (int64_t f = 0; f < 2 * m + (int64_t)(L - 1); ++f) {
-            double acc = 0.0;
-            for (int32_t i = 0; i < L; ++i) {
-                const int64_t up_idx = f - i;
-                if (up_idx < 0 || up_idx >= 2 * m) continue;
-                if ((up_idx & 1) != 0) continue;
-                const int64_t tap = up_idx / 2;
-                const double v_cA = cA[tap];
-                const double v_cD = (cD != NULL) ? cD[tap] : 0.0;
-                acc += g_lo[i] * v_cA + g_hi[i] * v_cD;
+            if (period <= (int64_t)(sizeof(stack_wrapped) / sizeof(stack_wrapped[0]))) {
+                wrapped = stack_wrapped;
+            } else {
+                wrapped = (double*)malloc((size_t)period * sizeof(double));
+                if (wrapped == NULL) return C4A_ERR_OUT_OF_MEMORY;
             }
-            int64_t pos = f % period;
-            if (pos < 0) pos += period;
-            wrapped[pos] += acc;
+            memset(wrapped, 0, (size_t)period * sizeof(double));
         }
-        for (int64_t k = 0; k < n_out; ++k) {
-            int64_t src = (k + roll) % period;
-            if (src < 0) src += period;
-            out[k] = wrapped[src];
+        for (int64_t tap = 0; tap < m; ++tap) {
+            const double v_cA = cA[tap];
+            const double v_cD = (cD != NULL) ? cD[tap] : 0.0;
+            const int64_t up_idx = 2 * tap;
+            for (int32_t i = 0; i < L; ++i) {
+                int64_t pos = up_idx + (int64_t)i - (int64_t)roll;
+                if (pos < 0) {
+                    pos += period;
+                } else if (pos >= period) {
+                    pos -= period;
+                }
+                wrapped[pos] += g_lo[i] * v_cA + g_hi[i] * v_cD;
+            }
         }
-        if (wrapped != stack_wrapped) free(wrapped);
+        if (wrapped != out) {
+            for (int64_t k = 0; k < n_out; ++k) {
+                out[k] = wrapped[k % period];
+            }
+        }
+        if (wrapped != out && wrapped != stack_wrapped) free(wrapped);
         return C4A_OK;
     }
 
@@ -508,17 +547,66 @@ c4a_status_t c4a_wavelet_wavedec(const double* in, int64_t n,
     if (n < 1 || level < 0) {
         return C4A_ERR_INVALID_ARGUMENT;
     }
+    int64_t work_len = 0;
+    c4a_status_t st = c4a_wavelet_wavedec_workspace_length(
+        n, family, mode, level, &work_len);
+    if (st != C4A_OK) return st;
+    double* work = NULL;
+    if (work_len > 0) {
+        work = (double*)malloc((size_t)work_len * sizeof(double));
+        if (work == NULL) return C4A_ERR_OUT_OF_MEMORY;
+    }
+    st = c4a_wavelet_wavedec_with_workspace(
+        in, n, family, mode, level, coeffs, coef_lengths, offsets,
+        coeffs_capacity, work, work_len);
+    free(work);
+    return st;
+}
+
+c4a_status_t c4a_wavelet_wavedec_workspace_length(
+    int64_t n,
+    c4a_wavelet_family_t family,
+    c4a_wavelet_mode_t mode,
+    int32_t level,
+    int64_t* out_work_len) {
+    if (out_work_len == NULL) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    if (n < 1 || level < 0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (level == 0) {
+        *out_work_len = 0;
+        return C4A_OK;
+    }
+    const int64_t max_step = c4a_wavelet_dwt_output_length(n, family, mode);
+    if (max_step < 1) return C4A_ERR_INVALID_ARGUMENT;
+    *out_work_len = 2 * max_step;
+    return C4A_OK;
+}
+
+c4a_status_t c4a_wavelet_wavedec_with_workspace(
+    const double* in, int64_t n,
+    c4a_wavelet_family_t family,
+    c4a_wavelet_mode_t mode,
+    int32_t level,
+    double* coeffs,
+    int64_t* coef_lengths,
+    int64_t* offsets,
+    int64_t coeffs_capacity,
+    double* work,
+    int64_t work_capacity) {
+    if (in == NULL || coeffs == NULL || coef_lengths == NULL || offsets == NULL) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    if (n < 1 || level < 0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
     int64_t total = 0;
     const c4a_status_t lst =
         c4a_wavelet_wavedec_lengths(n, family, mode, level, &total, coef_lengths);
     if (lst != C4A_OK) return lst;
     if (coeffs_capacity < total) return C4A_ERR_SHAPE_MISMATCH;
-
-    /* Allocate scratch for the running approximation. */
-    double* cur = (double*)malloc((size_t)n * sizeof(double));
-    if (cur == NULL) return C4A_ERR_OUT_OF_MEMORY;
-    memcpy(cur, in, (size_t)n * sizeof(double));
-    int64_t cur_len = n;
 
     /* Detail buffers go from finest to coarsest, but the output is laid
      * out coarsest-first.  We compute level by level and stage detail
@@ -532,40 +620,40 @@ c4a_status_t c4a_wavelet_wavedec(const double* in, int64_t n,
         acc += coef_lengths[k];
     }
 
-    /* Buffers for one DWT step: cA and cD of length next_len. */
-    int64_t max_step = c4a_wavelet_dwt_output_length(n, family, mode);
-    /* In all subsequent steps, the input length is even smaller, so
-     * ``max_step`` is a safe upper bound. */
-    double* next_cA = (double*)malloc((size_t)max_step * sizeof(double));
-    double* next_cD = (double*)malloc((size_t)max_step * sizeof(double));
-    if (next_cA == NULL || next_cD == NULL) {
-        free(cur); free(next_cA); free(next_cD);
+    if (level == 0) {
+        memcpy(coeffs + offsets[0], in, (size_t)n * sizeof(double));
+        return C4A_OK;
+    }
+
+    const int64_t max_step = c4a_wavelet_dwt_output_length(n, family, mode);
+    if (max_step < 1) return C4A_ERR_INVALID_ARGUMENT;
+    const int64_t needed_work = 2 * max_step;
+    if (work == NULL || work_capacity < needed_work) {
         return C4A_ERR_OUT_OF_MEMORY;
     }
+
+    const double* cur = in;
+    int64_t cur_len = n;
+    double* buf_a = work;
+    double* buf_b = work + max_step;
+    double* next_cA = buf_a;
 
     for (int32_t k = 0; k < level; ++k) {
         const int64_t out_len =
             c4a_wavelet_dwt_output_length(cur_len, family, mode);
-        const c4a_status_t st =
-            c4a_wavelet_dwt(cur, cur_len, family, mode, next_cA, next_cD);
-        if (st != C4A_OK) {
-            free(cur); free(next_cA); free(next_cD);
-            return st;
-        }
         /* Detail at iteration k corresponds to detail level (level - k). */
         const int32_t out_slot = level - k;
-        memcpy(coeffs + offsets[out_slot], next_cD,
-               (size_t)coef_lengths[out_slot] * sizeof(double));
+        const c4a_status_t st = c4a_wavelet_dwt(
+            cur, cur_len, family, mode, next_cA, coeffs + offsets[out_slot]);
+        if (st != C4A_OK) return st;
         /* Approximation becomes the next input. */
-        memcpy(cur, next_cA, (size_t)out_len * sizeof(double));
+        cur = next_cA;
         cur_len = out_len;
+        next_cA = (next_cA == buf_a) ? buf_b : buf_a;
     }
     /* Final approximation -> coeffs[offsets[0] : offsets[0] + cur_len]. */
     memcpy(coeffs + offsets[0], cur, (size_t)cur_len * sizeof(double));
 
-    free(cur);
-    free(next_cA);
-    free(next_cD);
     return C4A_OK;
 }
 
@@ -577,6 +665,53 @@ c4a_status_t c4a_wavelet_waverec(const double* coeffs,
                                   c4a_wavelet_mode_t mode,
                                   int64_t n_out,
                                   double* out) {
+    if (coeffs == NULL || coef_lengths == NULL || offsets == NULL || out == NULL) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    if (level < 0 || n_out < 1) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    int64_t work_len = 0;
+    c4a_status_t st = c4a_wavelet_waverec_workspace_length(
+        n_out, level, &work_len);
+    if (st != C4A_OK) return st;
+    double* work = NULL;
+    if (work_len > 0) {
+        work = (double*)malloc((size_t)work_len * sizeof(double));
+        if (work == NULL) return C4A_ERR_OUT_OF_MEMORY;
+    }
+    st = c4a_wavelet_waverec_with_workspace(
+        coeffs, coef_lengths, offsets, level, family, mode, n_out, out,
+        work, work_len);
+    free(work);
+    return st;
+}
+
+c4a_status_t c4a_wavelet_waverec_workspace_length(
+    int64_t n_out,
+    int32_t level,
+    int64_t* out_work_len) {
+    if (out_work_len == NULL) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    if (level < 0 || n_out < 1) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    *out_work_len = (level == 0) ? 0 : 2 * n_out;
+    return C4A_OK;
+}
+
+c4a_status_t c4a_wavelet_waverec_with_workspace(
+    const double* coeffs,
+    const int64_t* coef_lengths,
+    const int64_t* offsets,
+    int32_t level,
+    c4a_wavelet_family_t family,
+    c4a_wavelet_mode_t mode,
+    int64_t n_out,
+    double* out,
+    double* work,
+    int64_t work_capacity) {
     if (coeffs == NULL || coef_lengths == NULL || offsets == NULL || out == NULL) {
         return C4A_ERR_NULL_POINTER;
     }
@@ -612,18 +747,16 @@ c4a_status_t c4a_wavelet_waverec(const double* coeffs,
         return C4A_ERR_SHAPE_MISMATCH;
     }
 
-    /* Allocate two scratch buffers and ping-pong. */
-    const int64_t max_len = n_out;  /* upper bound at the bottom step */
-    double* cur = (double*)malloc((size_t)max_len * sizeof(double));
-    if (cur == NULL) return C4A_ERR_OUT_OF_MEMORY;
-    int64_t cur_len = coef_lengths[0];
-    memcpy(cur, coeffs + offsets[0], (size_t)cur_len * sizeof(double));
-
-    double* next = (double*)malloc((size_t)max_len * sizeof(double));
-    if (next == NULL) {
-        free(cur);
+    const int64_t needed_work = 2 * n_out;
+    if (work == NULL || work_capacity < needed_work) {
         return C4A_ERR_OUT_OF_MEMORY;
     }
+
+    /* Use two caller-owned scratch buffers and ping-pong between them. */
+    double* cur = work;
+    double* next = work + n_out;
+    int64_t cur_len = coef_lengths[0];
+    memcpy(cur, coeffs + offsets[0], (size_t)cur_len * sizeof(double));
 
     /* Reconstruction iterates from the top of the tree down to the
      * leaves.  ``coef_lengths`` is laid out as
@@ -634,22 +767,22 @@ c4a_status_t c4a_wavelet_waverec(const double* coeffs,
     for (int32_t step = 1; step <= level; ++step) {
         const int64_t det_len = coef_lengths[step];
         if (det_len != cur_len) {
-            free(cur); free(next);
             return C4A_ERR_SHAPE_MISMATCH;
         }
         const int64_t target_len = approx_lens[level - step];
+        double* target = (step == level) ? out : next;
         const c4a_status_t st = c4a_wavelet_idwt(
             cur, coeffs + offsets[step], cur_len, target_len,
-            family, mode, next);
+            family, mode, target);
         if (st != C4A_OK) {
-            free(cur); free(next);
             return st;
         }
-        memcpy(cur, next, (size_t)target_len * sizeof(double));
-        cur_len = target_len;
+        if (step != level) {
+            double* tmp = cur;
+            cur = next;
+            next = tmp;
+            cur_len = target_len;
+        }
     }
-    memcpy(out, cur, (size_t)n_out * sizeof(double));
-    free(cur);
-    free(next);
     return C4A_OK;
 }

@@ -11,6 +11,8 @@
 
 #include <stdlib.h>
 
+#define C4A_PP_SIMPLE_SCALE_STACK_COLS 4096
+
 struct c4a_pp_simple_scale_state_t {
     int _reserved;
 };
@@ -43,19 +45,51 @@ c4a_status_t c4a_pp_simple_scale_apply(const c4a_pp_simple_scale_state_t* state,
         return C4A_OK;
     }
 
-    for (int64_t j = 0; j < cols; ++j) {
-        double col_min = X[(size_t)j];
-        double col_max = col_min;
-        for (int64_t i = 1; i < rows; ++i) {
-            const double v = X[(size_t)i * (size_t)cols + (size_t)j];
-            if (v < col_min) col_min = v;
-            if (v > col_max) col_max = v;
+    const size_t n_cols = (size_t)cols;
+    double min_stack[C4A_PP_SIMPLE_SCALE_STACK_COLS];
+    double range_stack[C4A_PP_SIMPLE_SCALE_STACK_COLS];
+    double* col_min = min_stack;
+    double* col_range = range_stack;
+    int heap = 0;
+
+    if (n_cols > C4A_PP_SIMPLE_SCALE_STACK_COLS) {
+        col_min = (double*)malloc(n_cols * sizeof(*col_min));
+        col_range = (double*)malloc(n_cols * sizeof(*col_range));
+        if (col_min == NULL || col_range == NULL) {
+            free(col_min);
+            free(col_range);
+            return C4A_ERR_OUT_OF_MEMORY;
         }
-        const double range = col_max - col_min;
-        for (int64_t i = 0; i < rows; ++i) {
-            const size_t idx = (size_t)i * (size_t)cols + (size_t)j;
-            out[idx] = (X[idx] - col_min) / range;
+        heap = 1;
+    }
+
+    for (size_t j = 0; j < n_cols; ++j) {
+        col_min[j] = X[j];
+        col_range[j] = X[j];
+    }
+    /* Preserve the per-column left-to-right min/max order while reading the
+     * matrix row-major. */
+    for (int64_t i = 1; i < rows; ++i) {
+        const double* row = X + (size_t)i * n_cols;
+        for (size_t j = 0; j < n_cols; ++j) {
+            const double v = row[j];
+            if (v < col_min[j]) col_min[j] = v;
+            if (v > col_range[j]) col_range[j] = v;
         }
+    }
+    for (size_t j = 0; j < n_cols; ++j) {
+        col_range[j] -= col_min[j];
+    }
+    for (int64_t i = 0; i < rows; ++i) {
+        const double* row_in = X + (size_t)i * n_cols;
+        double* row_out = out + (size_t)i * n_cols;
+        for (size_t j = 0; j < n_cols; ++j) {
+            row_out[j] = (row_in[j] - col_min[j]) / col_range[j];
+        }
+    }
+    if (heap) {
+        free(col_min);
+        free(col_range);
     }
     return C4A_OK;
 }
