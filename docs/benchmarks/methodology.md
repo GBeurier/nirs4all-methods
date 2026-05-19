@@ -1,161 +1,110 @@
-# Cross-binding benchmark — methodology
+# Benchmark methodology
 
-## Goal
+This page defines the policy for chemometrics4all benchmarks. The current
+runner is a bootstrap matrix for Python tier-2 bindings; the same CSV contract
+is intended for C++/R/MATLAB and external references.
 
-For each `(algorithm, backend, n, p, threads)` cell, report:
+## Policy
 
-1. **Parity**: max absolute difference of predictions vs a reference
-   backend, with a verdict (`✓` if ≤ tolerance, `✗` otherwise).
-2. **Timing**: median, min, max wall-clock milliseconds across `n_runs`
-   runs (first discarded as warmup).
-3. **Versions metadata**: language, BLAS implementation, binding /
-   external library versions.
-
-The combination supports the project's core claim: *same numerical
-result as the established external implementation, often faster*.
-
-## Cell composition
-
-| Axis | Values |
-|---|---|
-| **Algorithms** | Canonical `benchmarks.parity_timing.registry.METHODS` catalog (`--algorithms all`) |
-| **Backends** | chemometrics4all bindings + registry-driven external reference columns (`ref.<library>`) |
-| **Sizes** | Default 11-size sweep, or one canonical MethodSpec cell per method with `--registry-cells` |
-| **Thread counts** | 1, 3, 10 |
-| **libc4a build** | `blas-omp` by default (OpenBLAS + OpenMP); `dev-release` available for the single-thread reference column |
-
-A "skip" record is emitted (instead of a failure) when an external
-backend doesn't implement a given algorithm (e.g. sklearn has no native
-sparse PLS, plsregress has no CPPLS).
-
-## Determinism
-
-Each cell runs `n_runs = 5` times with seeds `[BASE, BASE+1, BASE+2,
-BASE+3, BASE+4]`. The base seed is `1_234_567_890` — a uint32-safe
-integer that round-trips losslessly through R/Octave doubles and is
-accepted as `sklearn`'s `random_state`.
-
-**All backends in the same cell read the same orchestrator-generated
-CSV** (`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`).
-This is essential because Python NumPy, R `set.seed()` and Octave
-`randn("state", ...)` produce different streams from the same seed —
-sharing the CSV bytes is the only way to make cross-language parity
-meaningful.
+1. A method must be listed in `benchmarks/benchmark_registry.json`.
+2. Every reference used by that method must be locked in
+   `benchmarks/truth_sources.lock.json`.
+3. `python benchmarks/check_truth_sources.py` must pass before results are
+   rendered.
+4. Result metadata must capture package versions, project commits, host details,
+   thread settings, dataset dimensions, and seeds.
+5. No dashboard or documentation page may report timing, speedup, parity, or
+   "exact" counts without an actual generated result file.
 
 ## Reference policy
 
-For each `(algorithm, n, p)` group, the parity reference is:
+Prefer references in this order:
 
-1. **`cpp` at 1 thread, `blas-omp` build** when present (default for all
-   algos with a libc4a entry point); else
-2. **`python_tier1` at 1 thread** as fallback (covers algos that don't
-   have a direct ctypes path on the C++ side).
+1. the local git checkout of `nirs4all` for chemometrics-specific homemade
+   conventions such as splitters, outlier filters, EPO/OSC-style operators,
+   resampling, and wavelet feature conventions;
+2. pinned package references for numerical primitives or established algorithms
+   (`scipy.signal`, `scipy.ndimage`, scikit-learn, NumPy, pybaselines, R base,
+   R stats, and PyWavelets).
 
-The reference's predictions are saved to
-`benchmarks/cross_binding/data/.predictions/*.npy` and compared
-element-wise to every other backend's `.npy` for that cell.
+External references are allowed only when they match the operator being tested:
+same parameters, same boundary convention, same output shape, same deterministic
+RNG contract when exact indices are compared, and equivalent component
+conventions for PCA/SVD-style methods.
+PLS model references from sklearn, `pls`, `mixOmics`, `ropls`, or MATLAB
+toolboxes are not valid references for this repository's non-model operators.
+
+The cross-binding dashboard records the resolved external source in each CSV
+row. For `nirs4all`, the runner inserts `/home/delete/nirs4all/nirs4all` ahead
+of installed packages and stores the git short SHA plus a dirty marker in
+`lib_build`.
+
+Each method has one canonical external reference row
+(`reference_role=canonical`). That row identifies the reference method and is
+not itself rendered as a pass/fail gate. For credible same-contract references,
+the benchmark runner stores the canonical external output in
+`benchmarks/reference_snapshots/cross_binding/` together with package version or
+git commit metadata. Native C++ rows carry the reference gate against that
+stored snapshot; non-canonical external rows carry comparator parity against the
+same snapshot; Python/R/MATLAB binding rows carry binding parity against the
+native C++ route.
+
+Rows that are useful for performance but not credible for exact numerical
+parity are kept as `timing_only`/`reference_not_compared`. Examples include
+SciPy Fourier resampling when the operator is linear interpolation, wavelet
+transforms with different coefficient ordering/statistical contracts,
+Savitzky-Golay calls with different edge modes, and randomized splitters that
+do not share the same RNG contract. For `nirs4all.WaveletFeatures`, the runner
+sets `n_coeffs_per_level=0` and selects c4a's `histogram` entropy with
+`symmetric` boundary mode so the comparator row uses the same contract.
+
+Some external libraries expose a different computational surface even when the
+name is close. `pybaselines` baseline references are applied row-by-row because
+the public API is one-dimensional; `pybaselines.iasls` is now the c4a IAsLS
+contract, while `pybaselines.beads(full)` remains a full external algorithm and
+chemometrics4all still ships a compact NIRS-oriented BEADS variant.
+`pybaselines.imodpoly` is called with
+`mask_initial_peaks=False` to match chemometrics4all's disabled initial peak
+masking before the row is kept as timing-only.
 
 ## Parity tolerance
 
-Default tolerance: `1e-6` absolute. Per-algorithm overrides exist for
-inherently noisier algorithms:
+The initial binding-parity gate uses `1e-6`, matching the package-level
+binding parity tests. External-reference tolerances must still be declared per
+method before external rows are promoted into the dashboard.
 
-| Algorithm | Tolerance | Reason |
-|---|---|---|
-| `gpr_pls` | 1e-3 | Iterative GP solver, different convergence criteria across libs |
-| `bagging_pls`, `boosting_pls`, ensembles | 1e-3 | Stochastic averaging; per-implementation RNG differences |
-| `GA`, `PSO`, `VISSA` selectors | non-applicable | Stochastic feature selection; per-implementation RNG streams |
+PCA/SVD score comparisons are sign-invariant per component because eigenvector
+and singular-vector signs are mathematically arbitrary. This keeps the gate on
+the subspace/projection contract instead of flagging meaningless sign flips.
 
-## Thread control
+## Timing protocol
 
-The orchestrator sets the following env vars **before** spawning each
-backend subprocess:
+The cross-binding runner follows the pls4all timing convention: each callable
+gets `max(1, min(3, repeat))` warmup calls that are not measured, then `repeat`
+timed calls. The reported `median_ms` is the median per-call wall time across
+the timed samples. The default is `--repeat 5`.
 
-```
-OMP_NUM_THREADS      = N
-OPENBLAS_NUM_THREADS = N
-MKL_NUM_THREADS      = N
-BLIS_NUM_THREADS     = N
-BENCH_THREADS        = N
-```
+Very short calls are measured in adaptive batches: each timed sample may run
+the callable several times and divide by `batch_loops`. This keeps sub-ms C++,
+Python, and R cells from being dominated by clock quantization or a single R
+runtime event. The CSV stores `warmup_runs`, `timed_runs`, `batch_loops`, and
+semicolon-separated per-call `samples_ms` so suspicious cells can be audited
+without rerunning the matrix.
 
-In addition:
-- Python chemometrics4all calls `Context.num_threads = N` for belt-and-braces.
-- Octave bench scripts call `maxNumCompThreads(N)` at start.
-- Externals (sklearn, pls::plsr, plsregress) rely on the env vars only.
-- MATLAB/libPLS registry references run through `oct2py`; the
-  orchestrator prepends `$CHEMOMETRICS4ALL_R_ENV/bin` and sets `OCTAVE_HOME` so
-  the conda-provided Octave is visible from Python.
+Python-side BLAS/OpenMP threadpools are constrained with `threadpoolctl` in
+addition to `OMP_NUM_THREADS`/`OPENBLAS_NUM_THREADS`/`MKL_NUM_THREADS`, because
+NumPy may already be imported before a benchmark thread setting is selected.
+Datasets are keyed by size and seed only, not by thread count, so thread sweeps
+measure the same input matrix.
 
-`OPENBLAS_NUM_THREADS == OMP_NUM_THREADS` (i.e. not OMP×BLAS) to avoid
-oversubscription.
+Use `--write-reference-snapshots` only when deliberately creating or refreshing
+the stored external-reference outputs. Normal gate runs load the stored
+snapshots and compare against them.
 
-## Notes on observed parity gaps
+## Result status
 
-The smoke runs surfaced a recurring `0.054` divergence among three
-backends: `ikpls`, `r_tier2`, `matlab_tier2`. Root cause: those wrappers
-default to `scale_x=True / scale_y=True` (unit-variance scaling), while
-`cpp`, `python_tier1`, `python_tier2`, `r_tier1`, `r_pls`, `r_mixomics`,
-`matlab_tier1`, `matlab_pls` default to `scale_x=False / scale_y=False`
-(centring only — the spectroscopy convention).
-
-This is **not a bug**: both conventions are valid. The benchmark
-surfaces it as a parity ✗ because the predictions DO differ. Users
-should pick the convention matching their reference paper.
-
-## Timeout
-
-Per-cell wall-clock timeout: **300 s**. Cells that time out are marked
-with the ⏳ icon in the rendered Markdown. Empty / failed cells are
-marked `—`.
-
-## Hardware context
-
-Captured per run in the rendered Markdown header (host platform string,
-BLAS impl + version, run date). For the headline runs documented in
-this repo, the host is reproducible from the commit SHA + the
-`results/full_matrix.csv` `versions_json` column.
-
-## Re-running
-
-```bash
-# Complete canonical method/reference matrix, including build + docs render.
-# Existing cells in results/full_matrix.csv are skipped by default.
-benchmarks/cross_binding/run_overnight.sh
-
-# Exhaustive stress matrix: all chemometrics4all bindings/tiers, all CPU libc4a
-# backend variants, the default 11-size dataset sweep, threads 1/3/10,
-# and all fixed + registry Python/R/MATLAB references.
-FULL_MATRIX=1 benchmarks/cross_binding/run_overnight.sh
-
-# Include the CUDA libc4a build too when CUDA is available.
-FULL_MATRIX=1 LIBC4A_BUILD=all benchmarks/cross_binding/run_overnight.sh
-
-# Same run on the Pages branch (main), then commit/push docs/_static +
-# benchmark markdown and trigger the GitHub Pages docs workflow.
-PUBLISH_WEB=1 benchmarks/cross_binding/run_overnight.sh
-
-# Exhaustive run, then publish the refreshed dashboard from main.
-FULL_MATRIX=1 PUBLISH_WEB=1 benchmarks/cross_binding/run_overnight.sh
-
-# From a work branch, commit/push the web sources but skip live Pages deploy.
-PUBLISH_WEB=1 DEPLOY_PAGES=0 benchmarks/cross_binding/run_overnight.sh
-
-# Recompute after a chemometrics4all optimization or dependency update.
-FORCE=1 CLEAN_BUILD=1 benchmarks/cross_binding/run_overnight.sh
-
-# Only retry cells that previously failed, preserving successful timings.
-RERUN_FAILED=1 benchmarks/cross_binding/run_overnight.sh
-
-# PLS headline sweep only.
-python benchmarks/cross_binding/orchestrator.py \
-  --algorithms pls --threads 1 3 10 --n-runs 5 \
-  --resume-existing \
-  --libc4a-build blas-omp --reference-backends all \
-  --out-csv benchmarks/cross_binding/results/full_matrix.csv
-
-# Render
-python benchmarks/cross_binding/combine_and_render.py \
-  --csvs benchmarks/cross_binding/results/full_matrix.csv \
-  --out docs/benchmarks/cross_binding.md
-```
+The committed dashboard matrix is generated by
+`benchmarks/cross_binding/orchestrator.py`. The small default preset follows
+pls4all's NIRS smoke sizes (`100x50`, `100x500`, `100x2500`); the full preset
+uses the pls4all production size matrix. If `full_matrix.csv` is absent, the
+dashboard builder falls back to an explicit placeholder.

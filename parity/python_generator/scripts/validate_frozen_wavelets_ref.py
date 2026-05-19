@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: CECILL-2.1
-"""Validate the frozen NumPy wavelets reference against PyWavelets 1.6.0.
+"""Validate the frozen NumPy wavelets reference against installed PyWavelets.
 
-Once-only validation: confirms that the pure-NumPy reference under
+Historical once-only validation used PyWavelets 1.6.0. This script confirms
+that the pure-NumPy reference under
 ``c4a_parity_wavelets_ref`` matches ``pywt`` exactly for the supported
 (family, mode) pairs.  After this script passes, the frozen reference
 becomes the canonical parity floor for chemometrics4all and pywt is
@@ -141,7 +142,8 @@ def main() -> None:
     try:
         import pywt  # type: ignore
     except ImportError:
-        print("pywt is not installed; install PyWavelets==1.6.0 to run the "
+        print("pywt is not installed; install PyWavelets from "
+              "parity/python_generator/requirements-lock.txt to run the "
               "validation.  Skipping (frozen reference assumed valid).")
         return
     print(f"PyWavelets version: {pywt.__version__}")

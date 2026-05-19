@@ -1,0 +1,80 @@
+{
+  "schema": "chemometrics4all.truth_sources_lock.v0",
+  "locked_at": "2026-05-19",
+  "sources": {
+    "nirs4all_snv": {
+      "type": "project_reference",
+      "project": "nirs4all",
+      "package": "nirs4all",
+      "version_policy": "git-pinned by benchmark environment",
+      "reference_path": "nirs4all.operators.preprocessing.snv",
+      "notes": "External project reference; exact commit must be captured in future result metadata."
+    },
+    "nirs4all_msc": {
+      "type": "project_reference",
+      "project": "nirs4all",
+      "package": "nirs4all",
+      "version_policy": "git-pinned by benchmark environment",
+      "reference_path": "nirs4all.operators.preprocessing.msc",
+      "notes": "External project reference; exact commit must be captured in future result metadata."
+    },
+    "nirs4all_savitzky_golay": {
+      "type": "project_reference",
+      "project": "nirs4all",
+      "package": "nirs4all",
+      "version_policy": "git-pinned by benchmark environment",
+      "reference_path": "nirs4all.operators.preprocessing.savitzky_golay",
+      "notes": "Used for chemometrics convention checks around padding and derivative scaling."
+    },
+    "nirs4all_kennard_stone": {
+      "type": "project_reference",
+      "project": "nirs4all",
+      "package": "nirs4all",
+      "version_policy": "git-pinned by benchmark environment",
+      "reference_path": "nirs4all.operators.split.kennard_stone",
+      "notes": "Index-order reference for deterministic sample selection."
+    },
+    "scipy_savgol_filter": {
+      "type": "package_reference",
+      "package": "scipy",
+      "version": "1.17.1",
+      "reference_path": "scipy.signal.savgol_filter",
+      "notes": "Current external-reference pin for Savitzky-Golay coefficients and convolution behavior."
+    },
+    "pybaselines_asls": {
+      "type": "package_reference",
+      "package": "pybaselines",
+      "version": "1.2.1",
+      "reference_path": "pybaselines.whittaker.asls",
+      "notes": "Canonical external reference method; benchmark gates compare against stored output snapshots generated from this package/version."
+    },
+    "pybaselines_airpls": {
+      "type": "package_reference",
+      "package": "pybaselines",
+      "version": "1.2.1",
+      "reference_path": "pybaselines.whittaker.airpls",
+      "notes": "Canonical external reference method; benchmark gates compare against stored output snapshots generated from this package/version."
+    },
+    "pybaselines_arpls": {
+      "type": "package_reference",
+      "package": "pybaselines",
+      "version": "1.2.1",
+      "reference_path": "pybaselines.whittaker.arpls",
+      "notes": "Canonical external reference method; benchmark gates compare against stored output snapshots generated from this package/version."
+    },
+    "numpy_svd": {
+      "type": "package_reference",
+      "package": "numpy",
+      "version": "1.26.4",
+      "reference_path": "numpy.linalg.svd",
+      "notes": "Linear algebra reference for PCA-style diagnostics."
+    },
+    "scipy_f_distribution": {
+      "type": "package_reference",
+      "package": "scipy",
+      "version": "1.17.1",
+      "reference_path": "scipy.stats.f",
+      "notes": "Reference distribution for Hotelling T2 control limits."
+    }
+  }
+}

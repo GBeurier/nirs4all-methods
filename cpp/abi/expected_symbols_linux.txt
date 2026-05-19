@@ -219,6 +219,7 @@ c4a_pp_epo_fit@@CHEMOMETRICS4ALL_1
 c4a_pp_epo_inverse_transform@@CHEMOMETRICS4ALL_1
 c4a_pp_epo_is_fitted@@CHEMOMETRICS4ALL_1
 c4a_pp_epo_transform@@CHEMOMETRICS4ALL_1
+c4a_pp_epo_transform_with_d@@CHEMOMETRICS4ALL_1
 c4a_pp_fck_static_create@@CHEMOMETRICS4ALL_1
 c4a_pp_fck_static_destroy@@CHEMOMETRICS4ALL_1
 c4a_pp_fck_static_output_cols@@CHEMOMETRICS4ALL_1
@@ -252,6 +253,7 @@ c4a_pp_haar_destroy@@CHEMOMETRICS4ALL_1
 c4a_pp_haar_output_cols@@CHEMOMETRICS4ALL_1
 c4a_pp_haar_transform@@CHEMOMETRICS4ALL_1
 c4a_pp_iasls_create@@CHEMOMETRICS4ALL_1
+c4a_pp_iasls_create_ex@@CHEMOMETRICS4ALL_1
 c4a_pp_iasls_destroy@@CHEMOMETRICS4ALL_1
 c4a_pp_iasls_transform@@CHEMOMETRICS4ALL_1
 c4a_pp_imodpoly_create@@CHEMOMETRICS4ALL_1
@@ -340,6 +342,7 @@ c4a_pp_wavelet_denoise_destroy@@CHEMOMETRICS4ALL_1
 c4a_pp_wavelet_denoise_transform@@CHEMOMETRICS4ALL_1
 c4a_pp_wavelet_destroy@@CHEMOMETRICS4ALL_1
 c4a_pp_wavelet_features_create@@CHEMOMETRICS4ALL_1
+c4a_pp_wavelet_features_create_ex@@CHEMOMETRICS4ALL_1
 c4a_pp_wavelet_features_destroy@@CHEMOMETRICS4ALL_1
 c4a_pp_wavelet_features_output_cols@@CHEMOMETRICS4ALL_1
 c4a_pp_wavelet_features_transform@@CHEMOMETRICS4ALL_1

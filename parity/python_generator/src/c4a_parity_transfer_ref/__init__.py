@@ -11,9 +11,9 @@ trivially mirror SplitMix64. The Python reference and the C engine are
 therefore byte-identical w.r.t. their selected indices for any given seed.
 
 The metrics themselves (PCA, CKA, RV, Grassmann, Procrustes, Trustworthiness,
-Spread) are computed via NumPy ground-truth identical to scikit-learn 1.4.2
-and SciPy 1.11.4 — those libraries are not in the runtime path of the
-reference, only of the validation tests.
+Spread) are computed via NumPy ground-truth identical to the current
+scikit-learn and SciPy parity pins — those libraries are not in the runtime
+path of the reference, only of the validation tests.
 """
 
 from .transfer_metrics import (

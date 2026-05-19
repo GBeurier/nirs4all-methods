@@ -1,0 +1,7 @@
+#!/bin/sh
+# SPDX-License-Identifier: CECILL-2.1
+set -eu
+
+# Windows uses the same vendored-core Makevars.win path as Unix; no external
+# c4a.dll or import library is required.
+exit 0

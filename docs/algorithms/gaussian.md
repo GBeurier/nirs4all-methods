@@ -67,4 +67,4 @@ Five modes mirror `scipy.ndimage`:
 ## Reference
 
 `scipy.ndimage.gaussian_filter1d`
-([source](https://github.com/scipy/scipy/blob/v1.11.4/scipy/ndimage/_filters.py)).
+([source](https://github.com/scipy/scipy/blob/v1.17.1/scipy/ndimage/_filters.py)).

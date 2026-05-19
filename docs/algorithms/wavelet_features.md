@@ -14,12 +14,19 @@ $$
 \text{std}(c) = \sqrt{\tfrac{1}{|c|} \sum_i (c_i - \text{mean}(c))^2}
 $$
 $$
-\text{energy}(c) = \sum_i c_i^2, \qquad
-\text{entropy}(c) = -\sum_i p_i \log p_i, \quad p_i = \frac{c_i^2}{\text{energy}(c)}
+\text{energy}(c) = \sum_i c_i^2
 $$
 
-(`std` uses population variance `ddof=0`; zero-energy bands return
-entropy 0 by convention.)
+(`std` uses population variance `ddof=0`.)
+
+The entropy statistic is selectable:
+
+- `entropy="energy"`: Shannon entropy of the squared-coefficient
+  distribution, `p_i = c_i^2 / sum(c^2)`. Zero-energy bands return 0.
+- `entropy="histogram"`: ten equal-width histogram bins, normalized as a
+  probability distribution before `-sum(p log p)`. This matches
+  `nirs4all.WaveletFeatures` when the boundary mode is also aligned to
+  PyWavelets' default `symmetric`.
 
 The output row has length $4 (K + 1)$ laid out as
 $[\text{approx stats}, \text{detail}_K \text{ stats}, \ldots,
@@ -33,6 +40,7 @@ this value.
 | `family`    | (db4)   | Wavelet family                                  |
 | `mode`      | (per.)  | Boundary mode                                   |
 | `max_level` | 5       | Cap on decomposition depth                     |
+| `entropy`   | energy  | `energy` or `histogram` entropy definition      |
 
 ## Lifecycle
 
@@ -49,8 +57,18 @@ Stateless: `_create / _transform / _destroy` plus `_output_cols`.
 
 ## Reference
 
-`nirs4all.operators.transforms.nirs.WaveletFeatures` (Mallat 1989,
-"A theory for multiresolution signal decomposition").
-chemometrics4all reduces the nirs4all surface to the four canonical
-statistics — top-K coefficient retention is omitted in v1 to keep the
-parity surface compact.
+`PyWavelets.wavedec(...)+band stats` is the canonical external reference used
+for exact parity snapshots. The dashboard benchmark currently uses
+`haar + symmetric + histogram` so the c4a, PyWavelets, and nirs4all rows compare
+the same feature contract.
+
+`nirs4all.operators.transforms.nirs.WaveletFeatures` is also timed as an
+external comparator. Its default surface adds top-K retained coefficients per
+band; the benchmark calls it with `n_coeffs_per_level=0` so its output has the
+same feature count as chemometrics4all. The benchmark selects the same
+histogram entropy and symmetric boundary contract, so this row now carries an
+external comparator parity gate instead of timing-only status.
+
+chemometrics4all reduces the nirs4all surface to the four canonical statistics
+in v1; top-K coefficient retention is omitted to keep the ABI and parity
+surface compact.

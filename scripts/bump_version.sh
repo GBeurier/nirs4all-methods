@@ -328,17 +328,32 @@ update_with_sed \
     "^Version:[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)" \
     "s/^(Version:[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+/\1${VERSION}/"
 
+run_optional_manifest() {
+    local rel="$1"
+    shift
+    if [[ ! -f "${ROOT}/${rel}" ]]; then
+        echo "  skip optional manifest: ${rel} (not present yet)"
+        return 0
+    fi
+    "$@"
+}
+
+# Future bindings are listed here as optional manifests. Once a binding is
+# scaffolded, this same table starts enforcing its version automatically.
+
 # Julia (Project.toml:  version = "X.Y.Z")
-update_with_sed \
-    "bindings/julia/Chemometrics4all.jl/Project.toml" \
-    "^version[[:space:]]*=[[:space:]]*\"([0-9]+\.[0-9]+\.[0-9]+)\"" \
-    "s/^(version[[:space:]]*=[[:space:]]*\")[0-9]+\.[0-9]+\.[0-9]+(\")/\1${VERSION}\2/"
+run_optional_manifest "bindings/julia/Chemometrics4all.jl/Project.toml" \
+    update_with_sed \
+        "bindings/julia/Chemometrics4all.jl/Project.toml" \
+        "^version[[:space:]]*=[[:space:]]*\"([0-9]+\.[0-9]+\.[0-9]+)\"" \
+        "s/^(version[[:space:]]*=[[:space:]]*\")[0-9]+\.[0-9]+\.[0-9]+(\")/\1${VERSION}\2/"
 
 # Rust (Cargo.toml:  version = "X.Y.Z" inside [package])
-update_with_sed \
-    "bindings/rust/chemometrics4all/Cargo.toml" \
-    "^version[[:space:]]*=[[:space:]]*\"([0-9]+\.[0-9]+\.[0-9]+)\"" \
-    "s/^(version[[:space:]]*=[[:space:]]*\")[0-9]+\.[0-9]+\.[0-9]+(\")/\1${VERSION}\2/"
+run_optional_manifest "bindings/rust/chemometrics4all/Cargo.toml" \
+    update_with_sed \
+        "bindings/rust/chemometrics4all/Cargo.toml" \
+        "^version[[:space:]]*=[[:space:]]*\"([0-9]+\.[0-9]+\.[0-9]+)\"" \
+        "s/^(version[[:space:]]*=[[:space:]]*\")[0-9]+\.[0-9]+\.[0-9]+(\")/\1${VERSION}\2/"
 
 # Rust lock (Cargo.lock:  bump only the [[package]] entry where name = "chemometrics4all")
 # We use a small python helper because TOML arrays-of-tables are not pleasant
@@ -399,14 +414,17 @@ PY
 update_cargo_lock
 
 # JS (package.json: top-level "version")
-update_json_field "bindings/js/package.json"      "version"
-update_package_lock "bindings/js/package-lock.json"
+run_optional_manifest "bindings/js/package.json" \
+    update_json_field "bindings/js/package.json" "version"
+run_optional_manifest "bindings/js/package-lock.json" \
+    update_package_lock "bindings/js/package-lock.json"
 
 # .NET (csproj:  <Version>X.Y.Z</Version>)
-update_with_sed \
-    "bindings/dotnet/Chemometrics4all/Chemometrics4all.csproj" \
-    "<Version>([0-9]+\.[0-9]+\.[0-9]+)</Version>" \
-    "s,<Version>[0-9]+\.[0-9]+\.[0-9]+</Version>,<Version>${VERSION}</Version>,"
+run_optional_manifest "bindings/dotnet/Chemometrics4all/Chemometrics4all.csproj" \
+    update_with_sed \
+        "bindings/dotnet/Chemometrics4all/Chemometrics4all.csproj" \
+        "<Version>([0-9]+\.[0-9]+\.[0-9]+)</Version>" \
+        "s,<Version>[0-9]+\.[0-9]+\.[0-9]+</Version>,<Version>${VERSION}</Version>,"
 
 # CITATION.cff (version: X.Y.Z   — note: existing value may have suffixes)
 update_with_sed \
@@ -414,18 +432,11 @@ update_with_sed \
     "^version:[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)" \
     "s/^(version:[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+([-_a-zA-Z0-9.]*)$/\1${VERSION}/"
 
-# Docs Sphinx (docs/conf.py: both 'release = "X.Y.Z"' and the short
-# 'version = "X.Y"' that Sphinx uses for navigation. Both must agree with
-# the canonical project semver.)
+# Docs Sphinx. The current config reads the canonical version directly from
+# c4a_version.h; older static configs used release/version literals.
 SHORT_VERSION="${PMAJOR}.${PMINOR}"
 
-update_with_sed \
-    "docs/conf.py" \
-    "^release[[:space:]]*=[[:space:]]*\"([0-9]+\.[0-9]+\.[0-9]+)\"" \
-    "s/^(release[[:space:]]*=[[:space:]]*\")[0-9]+\.[0-9]+\.[0-9]+(\")/\1${VERSION}\2/"
-
-# docs/conf.py Sphinx 'short' version: must match MAJOR.MINOR.
-update_sphinx_short_version() {
+update_sphinx_versions() {
     local rel="docs/conf.py"
     local abs="${ROOT}/${rel}"
     if [[ ! -f "${abs}" ]]; then
@@ -434,6 +445,16 @@ update_sphinx_short_version() {
         EXIT_CODE=1
         return 0
     fi
+    if grep -Eq '^release,[[:space:]]*version[[:space:]]*=[[:space:]]*_parse_version\(\)' "${abs}"; then
+        echo "  OK: ${rel} derives release/version from c4a_version.h"
+        return 0
+    fi
+
+    update_with_sed \
+        "${rel}" \
+        "^release[[:space:]]*=[[:space:]]*\"([0-9]+\.[0-9]+\.[0-9]+)\"" \
+        "s/^(release[[:space:]]*=[[:space:]]*\")[0-9]+\.[0-9]+\.[0-9]+(\")/\1${VERSION}\2/"
+
     local found
     found=$(grep -E '^version[[:space:]]*=[[:space:]]*"[0-9]+\.[0-9]+"' "${abs}" \
         | head -n1 \
@@ -459,13 +480,17 @@ update_sphinx_short_version() {
         echo "  updated ${rel} (short version): ${found} → ${SHORT_VERSION}"
     fi
 }
-update_sphinx_short_version
+update_sphinx_versions
 
 # README.md citation block (  version = {X.Y.Z}  )
-update_with_sed \
-    "README.md" \
-    "version[[:space:]]*=[[:space:]]*\\{([0-9]+\.[0-9]+\.[0-9]+)\\}" \
-    "s/(version[[:space:]]*=[[:space:]]*\\{)[0-9]+\.[0-9]+\.[0-9]+(\\})/\1${VERSION}\2/"
+if grep -Eq "version[[:space:]]*=[[:space:]]*\\{[0-9]+\.[0-9]+\.[0-9]+\\}" "${ROOT}/README.md"; then
+    update_with_sed \
+        "README.md" \
+        "version[[:space:]]*=[[:space:]]*\\{([0-9]+\.[0-9]+\.[0-9]+)\\}" \
+        "s/(version[[:space:]]*=[[:space:]]*\\{)[0-9]+\.[0-9]+\.[0-9]+(\\})/\1${VERSION}\2/"
+else
+    echo "  skip optional README citation version block (not present)"
+fi
 
 # ---------------------------------------------------------------------------
 # 7. Summary

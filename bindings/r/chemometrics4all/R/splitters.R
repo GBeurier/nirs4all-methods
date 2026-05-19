@@ -25,3 +25,27 @@ kennard_stone <- function(X, test_size = 0.25) {
 spxy <- function(X, Y, test_size = 0.25) {
   c4a_split_spxy_split(X, Y, test_size = test_size)
 }
+
+#' K-bins stratified train/test split.
+#'
+#' @param Y numeric response vector or matrix.
+#' @param test_size numeric(1).
+#' @param seed numeric(1).
+#' @param n_bins integer(1).
+#' @param strategy character(1) or integer(1). One of "uniform", "quantile".
+#' @return list with `train_idx` and `test_idx` integer vectors.
+#' @export
+kbins_stratified <- function(Y, test_size = 0.25, seed = 0,
+                             n_bins = 5L, strategy = "uniform") {
+  strategy_int <- if (is.character(strategy)) {
+    switch(strategy,
+           "uniform"  = 0L,
+           "quantile" = 1L,
+           stop(sprintf("kbins_stratified: unknown strategy '%s'", strategy),
+                call. = FALSE))
+  } else {
+    as.integer(strategy)[1L]
+  }
+  c4a_split_kbins_stratified_split(Y, test_size = test_size, seed = seed,
+                                   n_bins = n_bins, strategy = strategy_int)
+}

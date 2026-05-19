@@ -1,7 +1,7 @@
 # chemometrics4all — Stopping Point Handoff
 
-**Date arrêt**: 2026-05-18
-**Dernier commit pushé**: à venir (Phase 22+23 binding commit ci-dessous)
+**Date arrêt**: 2026-05-19
+**Dernier commit pushé**: à venir (post-audit bindings/gates/release)
 **Branch**: `main`
 **Repo**: https://github.com/GBeurier/chemometrics4all
 
@@ -11,11 +11,13 @@
 |---|---|
 | Project version | 0.1.0 |
 | ABI version | **1.9.0** |
-| ABI symbols exported | **402** |
-| C++ tests | **266/266 PASS** |
+| ABI symbols exported | **403** |
+| C++ tests | local tests build `build/local-tests`: **266 PASS / 0 FAIL** |
 | Reference parity gate (Gate 2) | **76 PASS / 0 FAIL / 27 SKIP** |
-| Binding parity Python (Gate 1) | **20/20 PASS** @ tol 1e-6 |
-| Binding parity R (Gate 1) | **93/94 PASS** @ tol 1e-6 (1 SKIP: MSC.inverse_transform not in tier-2 yet) |
+| Binding parity Python (Gate 1) | **57 binding-parity suites PASS** @ tol 1e-6; full Python tests **64 PASS** |
+| Binding parity R (Gate 1) | **175 PASS / 0 FAIL / 0 SKIP**; R source tarball self-contained; `R CMD check --no-manual --no-build-vignettes` from `/tmp` = **Status OK** |
+| Python package | sdist + wheel build OK; wheel smoke import OK without `CHEMOMETRICS4ALL_LIB_PATH` after staging bundled `libc4a` |
+| Dashboard perf | Small pls4all NIRS timing CSV + payload generated from C++/Python/R bindings plus external reference methods; reference gates use stored output snapshots under `benchmarks/reference_snapshots/cross_binding/` |
 | Commits sur main | ~17 |
 | c4a.h | ~2580 lignes |
 
@@ -31,8 +33,9 @@
 - **Phase 20** Transfer metrics (9-metric vector)
 - **Phase 21** FCK static transformer
 - **Phase 21.5** Pre-binding ABI cleanup (M2 splitter `_handle_t` rename + M3 filter `_fit`/`_apply` split + splitter enums to c4a.h) + parity comparator modules
-- **Phase 22** Python binding (ctypes + 20 sklearn-compatible classes; binding_parity 20/20 PASS)
-- **Phase 23** R binding (.Call + 15 idiomatic R functions; binding_parity 93/94 PASS)
+- **Phase 22** Python binding (ctypes + expanded sklearn-compatible surface; binding parity PASS)
+- **Phase 23** R binding (.Call + idiomatic R functions across the 48 benchmarked methods; inverse transforms exposed where ABI supports them; vendored core for CRAN-style source builds)
+- **Phase 26a** Benchmarks/dashboard aligned with pls4all contract: C ABI + Python + R + external references, thread/size sweeps, real `bench-data.json`
 
 ## Phases restantes
 
@@ -40,7 +43,9 @@
 |---|---|---|
 | **24** | MATLAB binding | pending |
 | **25** | JS/WASM binding | pending |
-| **26** | Benchmarks + GitHub Pages + pls4all re-pull | pending |
+| **26** | Full benchmarks + GitHub Pages + pls4all re-pull | benchmarks/dashboard implemented locally; nightly workflow/GitHub Pages polish pending |
+| **27** | CARS/MCUVE feature selection | pending; requires internal PLS callback/model substrate |
+| **28** | PLS/AOM model families from nirs4all | pending; likely belongs after/with pls4all model substrate |
 
 ## Reprendre le travail
 
@@ -60,15 +65,26 @@ Pour valider les bindings Python:
 cd bindings/python && pip install -e . && cd ../..
 CHEMOMETRICS4ALL_LIB_PATH=$(pwd)/build/dev-debug/cpp/src/libc4a.so.1.9.0 \
   python -m pytest bindings/python/tests/test_binding_parity.py -v
-# expected: 20/20 PASS
+# expected: binding parity PASS
 ```
 
-Pour valider le R (nécessite R installé):
+Pour valider le R CRAN-style (nécessite R installé):
 ```bash
-CHEMOMETRICS4ALL_LIB_PATH=$(pwd)/build/dev-debug/cpp/src/libc4a.so.1.9.0 \
-  R CMD INSTALL --install-tests bindings/r/chemometrics4all
-cd $(R RHOME)/library/chemometrics4all/tests && Rscript testthat.R
-# expected: 93/94 PASS (1 skip)
+R CMD build bindings/r/chemometrics4all
+tmp=$(mktemp -d)
+cp chemometrics4all_0.1.0.tar.gz "$tmp/"
+(cd "$tmp" && R CMD check --no-manual --no-build-vignettes chemometrics4all_0.1.0.tar.gz)
+# expected: Status OK
+```
+
+Pour valider le wheel Python avec libc4a embarquée:
+```bash
+bindings/python/scripts/build_libc4a_in_wheel.sh
+rm -rf bindings/python/dist
+python -m build --sdist --wheel bindings/python
+python -m venv /tmp/c4a-wheel-smoke
+/tmp/c4a-wheel-smoke/bin/python -m pip install bindings/python/dist/*.whl
+env -u CHEMOMETRICS4ALL_LIB_PATH /tmp/c4a-wheel-smoke/bin/python -c "import chemometrics4all as c4a; print(c4a.version())"
 ```
 
 Pour les parity gates complètes:
@@ -90,12 +106,17 @@ python parity/python_generator/scripts/run_parity_gate.py
 3. **Pas de matrix de workflow multi-binding** — un seul `parity-gate.yml` avec Stage 4 conditionnels per binding (présence du dir)
 4. **Frozen NumPy refs** (`parity/python_generator/src/c4a_parity_*_ref/`) restent comme insulation layer (contrat origine, pas remplacés par Gate 2)
 5. **Stratégie batch parallèle**: phases indépendantes lancées en parallèle via git worktrees, intégrées en commit unique. A bien marché pour Phases 7-21 + Phases 6,13,15-18.
+6. **R/CRAN**: le package R vendore `src/libc4a` et compile statiquement dans `chemometrics4all.so`; ne dépend plus de `CHEMOMETRICS4ALL_LIB_PATH`.
+7. **EPO d-aware ABI**: `c4a_pp_epo_transform_with_d(handle, X, d, d_len, out)` est exporté et utilisé par Python `EPO.fit_transform(X, d)` et par la ligne benchmark C++ `epo`. `c4a_pp_epo_transform(handle, X, out)` reste le contrat sans `d` et donc pass-through à `d = d_mean`.
+8. **Inverse transforms bindings**: les bindings doivent exposer `inverse_transform` quand l'ABI le supporte (`MSC`, `BaselineCenter`). Pour les projections lossy (`OSC`, `EPO`), l'ABI retourne `C4A_ERR_UNSUPPORTED`; on expose l'appel côté Python mais on ne fabrique pas de faux inverse.
 
 ### Décisions à prendre pour rediscussion
 
 - **27 SKIPs Gate 2**: doit-on essayer d'aligner les implémentations c4a avec nirs4all (perte de C-side determinism garantie) ou shipper comme divergences documentées?
 - **`c4a_array_t` reintroduction**: deferred to Phase 9 (FlexiblePCA needed variable-shape output) but never landed. À voir si Phase 24 MATLAB ou Phase 25 JS/WASM le requiert.
-- **Tier-2 Python coverage**: actuellement 20 ops, devrait s'étendre à ~50-95 selon priorité user-facing.
+- **Tier-2 binding coverage**: Python couvre maintenant la majorité des opérateurs non-modèle exposés en ABI; R couvre le premier bloc CRAN-safe dont preprocessings/baselines/signal conversions avec inverses MSC/BaselineCenter.
+- **CARS/MCUVE**: absents du core/ABI; à implémenter après une décision sur le callback PLS interne.
+- **Modèles PLS/AOM/Ridge nirs4all**: hors scope actuel de chemometrics4all; nécessitent un design ABI modèle distinct et probablement réutilisation/coordination avec pls4all.
 
 ### Phase 24 — MATLAB binding (à faire)
 
@@ -116,7 +137,14 @@ Via Emscripten:
 ### Phase 26 — Benchmarks + GitHub Pages
 
 - **Re-pull pls4all** depuis sa branche actuelle pour refresh CRAN/bench infra (user instruction depuis Phase 0)
-- `benchmarks/cross_binding/` — 5 suites (preprocess_matrix, augment_matrix, splitter, filter, cross_binding) similaire à pls4all/benchmarks
+- `benchmarks/cross_binding/` — timing matrix now covers direct C ABI for every registered method, Python, installed R, and local `nirs4all`/NumPy/SciPy/sklearn/pybaselines/PyWavelets/R base/R stats references where credible comparators exist
+- Current snapshot refresh command: `python benchmarks/cross_binding/orchestrator.py --repeat 5 --size-preset small --threads 1 --write-reference-snapshots`
+- Full NIRS size matrix matches pls4all via `--size-preset pls4all`; current generated dashboard intentionally uses only the small pls4all block (`100x50`, `100x500`, `100x2500`)
+- Dashboard payload: `python docs/_extras/build_landing.py --results benchmarks/cross_binding/results --out docs/_static/bench-data.json`
+- Current dashboard: 48 methods, 3 sizes, 1 thread setting; generated locally from the current cross-binding CSV
+- Canonical external reference rows use `reference_role=canonical` and render with a reference-method icon, not a gate icon; `cpp` carries the reference gate vs the stored canonical external snapshot, and non-canonical externals carry comparator parity vs that same snapshot
+- Exact comparator rows are now restricted to credible same-contract comparisons. Timing-only rows are used for useful but non-parity-compatible externals such as nirs4all Savitzky-Golay edge-mode mismatch, nirs4all wavelet output-shape mismatch, nirs4all FCK convention drift, sklearn/nirs4all K-bins RNG/index-order mismatch, and SciPy APIs with different semantics.
+- Timing now follows the pls4all warmup convention: unmeasured warmup calls, then `repeat` timed calls with median per-call wall time; default `repeat=5`.
 - `bench-nightly.yml` workflow weekly cron avec >20% regression gate
 - Docs Sphinx auto-deployed to `https://gbeurier.github.io/chemometrics4all/`
 
@@ -128,7 +156,7 @@ Via Emscripten:
 | `cpp/include/chemometrics4all/c4a_version.h` | ABI 1.9.0 / project 0.1.0 |
 | `cpp/src/core/` | Engines C internes (preprocessing/, augmentations/, splitters/, filters/, utilities/, common/) |
 | `cpp/src/c_api/` | extern "C" wrappers |
-| `cpp/abi/expected_symbols_*.txt` | 402 symboles ABI |
+| `cpp/abi/expected_symbols_*.txt` | 403 symboles ABI |
 | `parity/fixtures/*_v1.json` | 104 fixtures parity |
 | `parity/binding_parity.py` | Gate 1 comparator |
 | `parity/reference_parity.py` | Gate 2 comparator |
@@ -138,6 +166,9 @@ Via Emscripten:
 | `parity/divergences.md` | Pas encore créé (cf. SKIPs decisions) |
 | `bindings/python/` | Phase 22 binding |
 | `bindings/r/chemometrics4all/` | Phase 23 binding |
+| `benchmarks/cross_binding/orchestrator.py` | Cross-binding timing matrix (C ABI/Python/R/external) |
+| `benchmarks/cross_binding/results/full_matrix.csv` | CSV dashboard final local run |
+| `docs/_static/bench-data.json` | Payload dashboard généré depuis CSV final |
 | `.github/workflows/parity-gate.yml` | CI gate (Stages 1+2+3+4) |
 | `docs/reviews/PHASES.md` | Verdict aggregate |
 | `docs/reviews/DEFERRALS.md` | Cross-phase tracker |
@@ -177,11 +208,14 @@ ou laisser tels quels pour audit trail.
 
 ## Pour aller plus loin
 
-Le repo est dans un état stable production-quality pour la couche C++ + 2 bindings (Python + R) à parity gates verts. Le scope opérateurs est 100% couvert.
+Le repo est dans un état stable pour la couche C++ non-modèle + 2 bindings
+(Python + R) à parity gates verts. Le scope opérateurs non-modèles déjà
+implémenté en ABI est largement couvert; les vrais manques fonctionnels restent
+CARS/MCUVE et les familles de modèles PLS/AOM/Ridge issues de `nirs4all`.
 
-Les prochaines phases (24-26) sont **moins critiques** et peuvent attendre des décisions stratégiques:
+Les prochaines phases 24/25/26-polish sont **moins critiques** et peuvent attendre des décisions stratégiques:
 - MATLAB / WASM bindings: nice-to-have, dépend de la cible utilisateur (MATLAB = labs académiques, WASM = web dashboards)
-- Benchmarks: utile pour le marketing et la documentation perf, mais ne change pas la fonctionnalité
+- Benchmarks: la matrice locale est en place; restent surtout le cron nightly, le seuil de régression et la publication GitHub Pages
 - Re-pull pls4all: pour synchroniser les améliorations d'infra (CRAN, nightly bench) ajoutées par pls4all depuis Phase 0
 
 Tout le repo est sur GitHub publique: https://github.com/GBeurier/chemometrics4all

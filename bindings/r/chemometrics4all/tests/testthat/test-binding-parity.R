@@ -19,6 +19,19 @@ skip_if_no_lib <- function() {
   }
 }
 
+run_matrix_parity_cases <- function(stem, fun, label = stem, tolerance = 1e-6) {
+  skip_if_no_lib()
+  fx <- load_fixture(stem)
+  X <- fixture_input_matrix(fx)
+  for (case in fx$cases) {
+    params <- case$params %||% list()
+    pred <- do.call(fun, c(list(X), params))
+    ref <- case_output_matrix(case, fx)
+    expect_binding_parity(pred, ref, tolerance = tolerance,
+                          label = paste0(label, "/", case$name))
+  }
+}
+
 # ---- ABI smoke ----
 
 test_that("c4a_abi_version returns 1.x.y", {
@@ -44,6 +57,26 @@ test_that("SNV: every case matches libc4a", {
   }
 })
 
+test_that("LSNV: every case matches libc4a", {
+  run_matrix_parity_cases("lsnv", lsnv, "lsnv")
+})
+
+test_that("RNV: every case matches libc4a", {
+  run_matrix_parity_cases("rnv", rnv, "rnv")
+})
+
+test_that("AreaNormalization: every case matches libc4a", {
+  run_matrix_parity_cases("area_norm", area_normalization, "area_norm")
+})
+
+test_that("Normalize: every case matches libc4a", {
+  run_matrix_parity_cases("normalize", normalize, "normalize")
+})
+
+test_that("SimpleScale: every case matches libc4a", {
+  run_matrix_parity_cases("simple_scale", simple_scale, "simple_scale")
+})
+
 test_that("MSC: every case matches libc4a", {
   skip_if_no_lib()
   fx <- load_fixture("msc")
@@ -56,9 +89,9 @@ test_that("MSC: every case matches libc4a", {
       ref  <- case_output_matrix(case, fx)
       expect_binding_parity(pred, ref, label = paste0("msc/", case$name))
     } else {
-      # Inverse-transform case: skip — not exposed by the tier-2 R API.
-      testthat::skip(sprintf("msc/%s requires inverse_transform (not exposed)",
-                             case$name))
+      pred <- msc_inverse_transform(msc(X, X_fit = X_fit), X_fit = X_fit)
+      ref  <- case_output_matrix(case, fx)
+      expect_binding_parity(pred, ref, label = paste0("msc/", case$name))
     }
   }
 })
@@ -72,6 +105,29 @@ test_that("EMSC: every case matches libc4a", {
     pred <- emsc(X, X_fit = X_fit, degree = case$params$degree)
     ref  <- case_output_matrix(case, fx)
     expect_binding_parity(pred, ref, label = paste0("emsc/", case$name))
+  }
+})
+
+test_that("BaselineCenter: every case matches libc4a", {
+  skip_if_no_lib()
+  fx <- load_fixture("baseline_center")
+  X_fit <- fixture_fit_matrix(fx)
+  X     <- fixture_input_matrix(fx)
+  for (case in fx$cases) {
+    variant <- case$params$variant %||% "fit"
+    if (identical(variant, "inverse")) {
+      pred <- baseline_center_inverse_transform(
+        baseline_center(X_fit, X_fit = X_fit),
+        X_fit = X_fit
+      )
+    } else if (identical(variant, "test")) {
+      pred <- baseline_center(X, X_fit = X_fit)
+    } else {
+      pred <- baseline_center(X_fit, X_fit = X_fit)
+    }
+    ref <- case_output_matrix(case, fx)
+    expect_binding_parity(pred, ref,
+                          label = paste0("baseline_center/", case$name))
   }
 })
 
@@ -120,6 +176,15 @@ test_that("SecondDerivative: every case matches libc4a", {
   }
 })
 
+test_that("NorrisWilliams: every case matches libc4a", {
+  run_matrix_parity_cases("norris_williams", norris_williams,
+                          "norris_williams")
+})
+
+test_that("Gaussian: every case matches libc4a", {
+  run_matrix_parity_cases("gaussian", gaussian, "gaussian")
+})
+
 test_that("ToAbsorbance: every case matches libc4a", {
   skip_if_no_lib()
   fx <- load_fixture("to_absorbance")
@@ -137,6 +202,19 @@ test_that("ToAbsorbance: every case matches libc4a", {
     expect_binding_parity(pred, ref,
                           label = paste0("to_absorbance/", case$name))
   }
+})
+
+test_that("FromAbsorbance: every case matches libc4a", {
+  run_matrix_parity_cases("from_absorbance", from_absorbance,
+                          "from_absorbance")
+})
+
+test_that("PercentToFraction: every case matches libc4a", {
+  run_matrix_parity_cases("pct_to_frac", percent_to_fraction, "pct_to_frac")
+})
+
+test_that("FractionToPercent: every case matches libc4a", {
+  run_matrix_parity_cases("frac_to_pct", fraction_to_percent, "frac_to_pct")
 })
 
 test_that("KubelkaMunk: every case matches libc4a", {
@@ -195,6 +273,34 @@ test_that("AirPLS: every case matches libc4a", {
     ref <- case_output_matrix(case, fx)
     expect_binding_parity(pred, ref, label = paste0("airpls/", case$name))
   }
+})
+
+test_that("ArPLS: every case matches libc4a", {
+  run_matrix_parity_cases("arpls", arpls, "arpls")
+})
+
+test_that("ModPoly: every case matches libc4a", {
+  run_matrix_parity_cases("modpoly", modpoly, "modpoly")
+})
+
+test_that("IModPoly: every case matches libc4a", {
+  run_matrix_parity_cases("imodpoly", imodpoly, "imodpoly")
+})
+
+test_that("SNIP: every case matches libc4a", {
+  run_matrix_parity_cases("snip", snip, "snip")
+})
+
+test_that("RollingBall: every case matches libc4a", {
+  run_matrix_parity_cases("rolling_ball", rolling_ball, "rolling_ball")
+})
+
+test_that("IAsLS: every case matches libc4a", {
+  run_matrix_parity_cases("iasls", iasls, "iasls", tolerance = 5e-6)
+})
+
+test_that("BEADS: every case matches libc4a", {
+  run_matrix_parity_cases("beads", beads, "beads")
 })
 
 # ---- Phase 11 splitters ----

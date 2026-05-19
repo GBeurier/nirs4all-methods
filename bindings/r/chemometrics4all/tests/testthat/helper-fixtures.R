@@ -18,11 +18,17 @@ if (!exists("%||%", envir = baseenv(), inherits = FALSE)) {
   env <- Sys.getenv("CHEMOMETRICS4ALL_FIXTURE_DIR", unset = "")
   if (nzchar(env) && dir.exists(env)) return(env)
 
+  local <- file.path(getwd(), "fixtures")
+  if (dir.exists(local)) return(local)
+
   # When tests run inside `devtools::test()` or `R CMD check`, the working
   # directory is `tests/testthat/` (or its installed copy). Walk parents
-  # looking for a `parity/fixtures` sibling.
+  # looking first for packaged test fixtures, then for a repo-level
+  # `parity/fixtures` sibling used by developer runs.
   search <- normalizePath(getwd(), mustWork = FALSE)
   for (i in seq_len(8L)) {
+    candidate <- file.path(search, "tests", "testthat", "fixtures")
+    if (dir.exists(candidate)) return(candidate)
     candidate <- file.path(search, "parity", "fixtures")
     if (dir.exists(candidate)) return(candidate)
     parent <- dirname(search)

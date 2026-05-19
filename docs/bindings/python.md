@@ -36,3 +36,12 @@ with chemometrics4all.Config() as cfg:
 
 Phase 2 expands the surface to a full sklearn-compatible estimator with
 zero-copy NumPy `c4a_matrix_view_t` round-trips.
+
+## EPO compatibility note
+
+`EPO.fit_transform(X, d)` applies the training-time EPO projection expected by
+nirs4all/sklearn-style callers via the public
+`c4a_pp_epo_transform_with_d(...)` ABI entry point. `EPO.transform(X)` remains
+available for the no-`d` contract and is therefore a pass-through at
+`d = d_mean`. Use `EPO.transform_with_d(X, d)` when the external parameter is
+known for the transform batch.

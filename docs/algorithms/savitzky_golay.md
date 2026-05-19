@@ -3,8 +3,8 @@
 ## Algorithm
 
 A 1-D Savitzky-Golay FIR filter applied per row along the wavelength axis,
-matching `scipy.signal.savgol_filter` (scipy 1.11.4 canonical; later
-versions produce identical bytes along the same code path).
+matching `scipy.signal.savgol_filter` from the current SciPy 1.17.1 parity
+pin. Earlier SciPy releases on the same code path produced identical bytes.
 
 The filter is a fixed convolution kernel of length `window_length` that is
 the least-squares pseudo-inverse of a Vandermonde basis through positions

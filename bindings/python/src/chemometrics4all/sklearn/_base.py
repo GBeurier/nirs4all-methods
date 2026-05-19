@@ -77,6 +77,22 @@ class _HandleEstimator:
         check(status, f"{self._C_PREFIX}_transform")
         return out
 
+    def _call_inverse_transform(self, X: np.ndarray, out_shape=None) -> np.ndarray:
+        """Run ``c4a_<prefix>_inverse_transform`` when the ABI exposes it."""
+        if out_shape is None:
+            out_shape = X.shape
+        symbol = f"{self._C_PREFIX}_inverse_transform"
+        inverse = getattr(lib, symbol, None)
+        if inverse is None:
+            raise NotImplementedError(
+                f"{type(self).__name__} does not expose inverse_transform in libc4a"
+            )
+        handle = self._ensure_handle()
+        out = empty_like_f64(out_shape)
+        status = inverse(handle, numpy_to_view(X), numpy_to_view(out))
+        check(status, symbol)
+        return out
+
 
 class StatelessOperator(_HandleEstimator):
     """Wrapper for stateless operators (no ``fit`` needed)."""
@@ -114,6 +130,14 @@ class StatefulOperator(_HandleEstimator):
             raise RuntimeError(f"{type(self).__name__} must be fitted before transform")
         X = as_f64_2d(X)
         return self._call_transform(X)
+
+    def inverse_transform(self, X) -> np.ndarray:
+        if not self._fitted:
+            raise RuntimeError(
+                f"{type(self).__name__} must be fitted before inverse_transform"
+            )
+        X = as_f64_2d(X)
+        return self._call_inverse_transform(X)
 
     def fit_transform(self, X, y=None) -> np.ndarray:
         return self.fit(X, y).transform(X)

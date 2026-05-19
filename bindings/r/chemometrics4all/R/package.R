@@ -2,18 +2,14 @@
 #
 # Package load logic for chemometrics4all R binding (Phase 23).
 #
-# The native shared object that ships with this package (the R extension
-# `chemometrics4all.so`) is linked against libc4a at compile time via
-# src/Makevars (variable `CHEMOMETRICS4ALL_LIB_PATH`). When the R session
-# loads the package, libc4a itself must be discoverable by the dynamic
-# loader. We support three resolution paths, tried in order:
+# The CRAN package vendors the libc4a source and builds it into the native R
+# extension. Developer builds may still load an external shared libc4a so tests
+# can target an in-tree CMake build. Resolution paths, tried in order:
 #
-#   1. environment variable `CHEMOMETRICS4ALL_LIB_PATH` (full path to
-#      libc4a.so.X.Y.Z) — used by CI and by the test-suite when running
-#      against an in-tree build of libc4a.
-#   2. shared object bundled under `inst/extdata/lib/` (preferred for
-#      "fat" CRAN-style installs).
-#   3. let the system loader find it (LD_LIBRARY_PATH / rpath fallback).
+#   1. environment variable `CHEMOMETRICS4ALL_LIB_PATH` — developer/CI override.
+#   2. shared object bundled under `inst/extdata/lib/`, if a binary package
+#      ever ships one.
+#   3. let the already-loaded package extension or the system loader resolve it.
 #
 # Any failure to load libc4a is fatal: the `.Call` entry points in
 # `chemometrics4all.so` will fail with unresolved symbols on first call,

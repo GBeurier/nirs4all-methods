@@ -24,8 +24,8 @@ still produces those fixture files, but this script validates them against
 the canonical upstream implementations rather than the vendored frozen
 references.
 
-Cache: ``parity/cache/<name>_upstream_v1.json`` (skipped when params + input
-hashes match).
+Cache: ``parity/cache/<name>_upstream_v1.json`` (skipped when fixture inputs,
+params, upstream dependency versions, and the nirs4all reference path match).
 
 Usage::
 
@@ -34,8 +34,9 @@ Usage::
     /tmp/n4all_venv_np1264/bin/python3 parity/run_reference_parity.py --regenerate-cache
     /tmp/n4all_venv_np1264/bin/python3 parity/run_reference_parity.py --list
 
-Exit code is 0 when every registered suite either PASSes (within tolerance)
-or SKIPs (with a reason). Returns 1 if any FAIL.
+Exit code is 0 when every registered suite PASSes, or SKIPs only because it is
+listed in ``parity/divergences.json``. Returns 1 for any FAIL or unexpected
+SKIP.
 """
 
 from __future__ import annotations
@@ -44,6 +45,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import struct
 import sys
@@ -69,8 +71,12 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 PARITY_DIR = REPO_ROOT / "parity"
 FIXTURES_DIR = PARITY_DIR / "fixtures"
 CACHE_DIR = PARITY_DIR / "cache"
+DEFAULT_DIVERGENCES_PATH = PARITY_DIR / "divergences.json"
 
-NIRS4ALL_ROOT = Path("/home/delete/nirs4all/nirs4all/nirs4all")
+DEFAULT_NIRS4ALL_ROOT = Path(
+    os.environ.get("NIRS4ALL_ROOT", "/home/delete/nirs4all/nirs4all/nirs4all")
+)
+NIRS4ALL_ROOT = DEFAULT_NIRS4ALL_ROOT
 
 
 # ---------------------------------------------------------------------------
@@ -282,7 +288,7 @@ TOLERANCE_TABLE: dict[str, tuple[float, float]] = {
     "asls": (1e-9, 1e-6),         # iterative; tail-of-convergence drift
     "airpls": (1e-8, 1e-4),       # iterative; tight_tol_short stops early and drifts
     "arpls": (1e-11, 1e-9),       # iterative; tighter than AsLS (re-weighting)
-    "iasls": (1e-1, 1e-1),        # pybaselines uses different IAsLS basis
+    "iasls": (5e-6, 1e-5),        # pybaselines IAsLS; SuperLU vs LDLT drift
     "beads": (1.0, 1e4),          # pybaselines BEADS differs fundamentally
     "modpoly": (1e-12, 1e-12),
     "imodpoly": (1e-1, 1.0),      # pybaselines IModPoly uses different prefit
@@ -456,6 +462,13 @@ def _hash_payload(payload: dict[str, Any]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _dependency_versions_for_cache() -> dict[str, str]:
+    """Dependency versions that affect upstream reference outputs."""
+    versions = collect_upstream_versions()
+    versions["nirs4all_root"] = str(NIRS4ALL_ROOT)
+    return versions
+
+
 def load_cached_upstream(suite_name: str, fingerprint: str) -> dict[str, Any] | None:
     """Return cached upstream payload if fingerprint matches, else None."""
     path = cache_path(suite_name)
@@ -584,6 +597,7 @@ def run_suite(name: str, fixture_name: str, tol: tuple[Any, Any],
             hashlib.sha256(
                 json.dumps([c.get("params", {}) for c in fix["cases"]],
                            sort_keys=True).encode()).hexdigest(),
+        "upstream_versions": _dependency_versions_for_cache(),
     }
     fingerprint = _hash_payload(fp_payload)
 
@@ -961,8 +975,8 @@ def gaussian_suite() -> SuiteResult:
 
 # ===========================================================================
 # Phase 5a/5b: pybaselines baselines (detrend, asls, airpls, arpls, modpoly, ...).
-# Uses the installed pybaselines (1.2.1 here vs the pinned 1.1.4); the
-# comparison still uses the relaxed asls-family tolerance.
+# Uses the installed pybaselines from the parity lock environment. Expected
+# drift versus the frozen fixture oracle is tracked in parity/divergences.json.
 # ===========================================================================
 
 def _detrend_upstream(fix: dict[str, Any]):
@@ -1036,6 +1050,8 @@ register_suite("arpls")(_make_pybaselines_suite(
 register_suite("iasls")(_make_pybaselines_suite(
     "iasls", "iasls",
     lambda p: dict(lam=float(p["lam"]), p=float(p["p"]),
+                    lam_1=float(p.get("lam_1", 1e-4)),
+                    diff_order=int(p.get("diff_order", 2)),
                     max_iter=int(p["max_iter"]), tol=float(p["tol"]))))
 register_suite("modpoly")(_make_pybaselines_suite(
     "modpoly", "modpoly",
@@ -2401,18 +2417,80 @@ def collect_upstream_versions() -> dict[str, str]:
             versions[mod_name] = getattr(m, "__version__", "?")
         except ImportError:
             versions[mod_name] = "MISSING"
-    versions["nirs4all"] = get_nirs4all_version() + " (importlib from /home/delete/nirs4all/nirs4all)"
+    versions["nirs4all"] = f"{get_nirs4all_version()} (importlib from {NIRS4ALL_ROOT})"
     return versions
 
 
+def load_divergence_contract(path: Path) -> dict[str, Any]:
+    """Load the reference-parity divergence/skip allowlist."""
+    if not path.exists():
+        return {
+            "schema_version": 0,
+            "allowed_suite_skips": {},
+            "allowed_case_skips": {},
+        }
+    with path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+    data.setdefault("allowed_suite_skips", {})
+    data.setdefault("allowed_case_skips", {})
+    return data
+
+
+def find_skip_policy_violations(
+    results: list[SuiteResult],
+    contract: dict[str, Any],
+    policy: str,
+) -> tuple[list[str], int]:
+    """Return unexpected skip messages and the number of allowlisted skips."""
+    if policy == "legacy":
+        return [], 0
+
+    allowed_suite_skips = contract.get("allowed_suite_skips", {})
+    allowed_case_skips = contract.get("allowed_case_skips", {})
+    violations: list[str] = []
+    allowed_count = 0
+
+    for r in results:
+        if r.status == "SKIP":
+            allowed = policy == "allowlist" and r.name in allowed_suite_skips
+            if allowed:
+                allowed_count += 1
+            else:
+                violations.append(f"{r.name}: suite skipped ({r.detail[:140]})")
+
+        skipped_cases = [c for c in r.case_results if c.status == "SKIP"]
+        if not skipped_cases:
+            continue
+        allowed_cases = allowed_case_skips.get(r.name, [])
+        allow_all_cases = policy == "allowlist" and "*" in allowed_cases
+        for c in skipped_cases:
+            allowed = allow_all_cases or (
+                policy == "allowlist" and c.name in allowed_cases
+            )
+            if allowed:
+                allowed_count += 1
+            else:
+                violations.append(f"{r.name}/{c.name}: case skipped ({c.detail[:140]})")
+
+    return violations, allowed_count
+
+
 def main(argv: list[str] | None = None) -> int:
-    global CACHE_DIR, FIXTURES_DIR
+    global CACHE_DIR, FIXTURES_DIR, NIRS4ALL_ROOT
     parser = argparse.ArgumentParser(
         description="Cross-implementation parity check for chemometrics4all.")
     parser.add_argument("--cache-dir", type=Path, default=CACHE_DIR,
                         help="Cache directory (default: parity/cache).")
     parser.add_argument("--fixtures-dir", type=Path, default=FIXTURES_DIR,
                         help="Fixtures directory (default: parity/fixtures).")
+    parser.add_argument("--nirs4all-root", type=Path, default=DEFAULT_NIRS4ALL_ROOT,
+                        help="Path to the nirs4all Python package root used for homemade references.")
+    parser.add_argument("--divergences", type=Path, default=DEFAULT_DIVERGENCES_PATH,
+                        help="Reference-parity divergence/skip allowlist.")
+    parser.add_argument("--skip-policy", choices=("allowlist", "fail", "legacy"),
+                        default="allowlist",
+                        help=("How skipped suites/cases affect exit status: "
+                              "allowlist (default), fail, or legacy."))
     parser.add_argument("--only", action="append", default=None,
                         help="Run only this suite (repeatable).")
     parser.add_argument("--list", action="store_true",
@@ -2425,6 +2503,8 @@ def main(argv: list[str] | None = None) -> int:
 
     CACHE_DIR = args.cache_dir
     FIXTURES_DIR = args.fixtures_dir
+    NIRS4ALL_ROOT = args.nirs4all_root
+    contract = load_divergence_contract(args.divergences)
 
     if args.list:
         for n in sorted(_REGISTRY):
@@ -2440,6 +2520,17 @@ def main(argv: list[str] | None = None) -> int:
     missing = [s for s in suites_to_run if s not in _REGISTRY]
     if missing:
         print(f"Unknown suite(s): {missing}", file=sys.stderr)
+        return 2
+    allowed_suite_names = set(contract.get("allowed_suite_skips", {}))
+    allowed_case_suite_names = set(contract.get("allowed_case_skips", {}))
+    unknown_contract_suites = sorted(
+        (allowed_suite_names | allowed_case_suite_names) - set(_REGISTRY)
+    )
+    if unknown_contract_suites:
+        print(
+            f"Unknown suite(s) in {args.divergences}: {unknown_contract_suites}",
+            file=sys.stderr,
+        )
         return 2
 
     print("=== chemometrics4all cross-impl parity check ===\n")
@@ -2486,11 +2577,17 @@ def main(argv: list[str] | None = None) -> int:
     n_pass = sum(1 for r in results if r.status == "PASS")
     n_fail = sum(1 for r in results if r.status == "FAIL")
     n_skip = sum(1 for r in results if r.status == "SKIP")
+    skip_violations, allowed_skips = find_skip_policy_violations(
+        results, contract, args.skip_policy
+    )
 
     print()
     print(f"=== Summary: {n_pass} PASS / {n_fail} FAIL / {n_skip} SKIP "
           f"(of {n_total} suites) ===")
     print(f"Cache hits: {total_cache_hits}/{n_total}")
+    if args.skip_policy != "legacy":
+        print(f"Skip policy: {args.skip_policy} "
+              f"({allowed_skips} allowlisted, {len(skip_violations)} unexpected)")
     if n_fail:
         print()
         print("=== FAIL details ===")
@@ -2513,8 +2610,13 @@ def main(argv: list[str] | None = None) -> int:
             if r.status != "SKIP":
                 continue
             print(f"  {YELLOW}{r.name}{RESET}: {r.detail[:160]}")
+    if skip_violations:
+        print()
+        print("=== Unexpected SKIP details ===")
+        for detail in skip_violations[:40]:
+            print(f"  {YELLOW}{detail}{RESET}")
     print()
-    return 0 if n_fail == 0 else 1
+    return 0 if n_fail == 0 and not skip_violations else 1
 
 
 if __name__ == "__main__":

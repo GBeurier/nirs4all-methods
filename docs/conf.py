@@ -1,10 +1,10 @@
 """Sphinx config for chemometrics4all docs.
 
 Root document is `about.md` (the project info page). The actual landing
-page at `/index.html` is a fully custom interactive benchmark dashboard
-generated from `_templates/landing.html` via `html_additional_pages`;
-the JSON payload is built at sphinx-build time by `_extras/build_landing.py`
-and injected through `html_context`.
+page at `/index.html` is a custom benchmark-status page generated from
+`_templates/landing.html` via `html_additional_pages`; the JSON payload is
+built at sphinx-build time by `_extras/build_landing.py` and injected through
+`html_context`.
 
 Build locally:
     pip install -r docs/requirements.txt
@@ -98,8 +98,8 @@ html_short_title = "chemometrics4all"
 html_show_sourcelink = True
 
 html_theme_options = {
-    "description": "Portable PLS / NIRS engine in C++17 with a stable C ABI "
-                    "and thin first-class bindings for Python, R, MATLAB, "
+    "description": "Portable chemometrics / NIRS operator engine in C++17 "
+                    "with a stable C ABI and thin first-class bindings for Python, R, MATLAB, "
                     "JavaScript, Android, Go, Rust, Julia, Ruby, .NET, Lua, Nim.",
     "github_user": "GBeurier",
     "github_repo": "chemometrics4all",
@@ -128,7 +128,7 @@ html_css_files = ["custom.css"]
 # explicitly so the custom landing.html template is picked up.
 templates_path = ["_templates"]
 
-# Override `/index.html` with the custom interactive dashboard.
+# Override `/index.html` with the custom benchmark-status/dashboard page.
 # Sphinx still renders about.md (master_doc) at `/about.html`.
 html_additional_pages = {"index": "landing.html"}
 
@@ -137,12 +137,10 @@ def setup(app):
     """Inject the benchmark JSON payload into html_context.
 
     Strategy:
-      1. If `benchmarks/cross_binding/results/full_matrix.csv` is present
-         (local dev environment after a benchmark run), regenerate the
-         payload fresh and also write it to `docs/_static/bench-data.json`
-         for downstream consumers.
-      2. Otherwise (CI, fresh clone, etc.), fall back to the committed
-         `docs/_static/bench-data.json`.
+      1. If a future benchmark runner writes a supported payload, this hook can
+         be extended to publish it.
+      2. Until then, use the committed placeholder payload or regenerate the
+         same scaffold via `_extras/build_landing.py`.
 
     Either way, the landing.html template receives `bench_data_json` +
     `generated_at` via Jinja2 substitution.
@@ -154,29 +152,14 @@ def setup(app):
     results_dir = here.parent / "benchmarks" / "cross_binding" / "results"
     static_json = here / "_static" / "bench-data.json"
 
-    csvs_present = results_dir.exists() and (results_dir / "full_matrix.csv").exists()
-
-    if csvs_present:
-        payload = build_payload(results_dir)
-        # Persist the JSON so CI / fresh clones can render without the raw CSVs.
-        static_json.parent.mkdir(parents=True, exist_ok=True)
-        static_json.write_text(_json.dumps(payload["payload"], indent=2))
-        bench_json = payload["json"]
-        generated_at = payload["generated_at"]
-    elif static_json.exists():
+    if static_json.exists():
         raw = _json.loads(static_json.read_text())
         bench_json = _json.dumps(raw, separators=(",", ":"))
         generated_at = raw.get("generated_at", "unknown")
     else:
-        # Empty fallback so the template still renders gracefully.
-        bench_json = _json.dumps({
-            "generated_at": "n/a",
-            "host": {}, "columns": [], "presets": {},
-            "rows": [], "versions": {},
-            "stats": {"algos": 0, "backends": 0, "sizes": 0,
-                       "threads": [], "rows": 0, "cells": 0, "ok": 0},
-        })
-        generated_at = "n/a"
+        payload = build_payload(results_dir)
+        bench_json = payload["json"]
+        generated_at = payload["generated_at"]
 
     app.config.html_context = dict(app.config.html_context or {})
     app.config.html_context["bench_data_json"] = bench_json

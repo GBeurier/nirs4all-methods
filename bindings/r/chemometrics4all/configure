@@ -1,0 +1,8 @@
+#!/bin/sh
+# SPDX-License-Identifier: CECILL-2.1
+set -eu
+
+# libc4a is vendored under src/libc4a and compiled by src/Makevars. Keep this
+# configure script intentionally minimal so source installs behave like pls4all
+# while still leaving a hook for future feature probes.
+exit 0

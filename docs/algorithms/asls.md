@@ -35,4 +35,4 @@ c4a_status_t c4a_pp_asls_transform(const c4a_pp_asls_handle_t* h,
 
 ## Reference
 - Eilers, P. H. C. & Boelens, H. F. M. (2005). "Baseline Correction with Asymmetric Least Squares Smoothing." Leiden University Medical Centre Report.
-- Frozen Python reference: `parity/python_generator/src/c4a_parity_pybaselines_ref/asls.py` (validated against `pybaselines==1.1.4`).
+- Frozen Python reference: `parity/python_generator/src/c4a_parity_pybaselines_ref/asls.py` (historically validated against `pybaselines==1.1.4`); current upstream `pybaselines` drift is tracked by the reference parity gate.

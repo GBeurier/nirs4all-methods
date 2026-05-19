@@ -8,7 +8,7 @@ Six operators, all stateless:
   * IModPoly     — Gan, Ruan, Mo 2006 σ-stopping modified polynomial.
   * SNIP         — Ryan 1988 / Morháč 1997 LLS-transformed peak-clipping.
   * RollingBall  — Kneen & Annegarn 1996 min-then-max morphology.
-  * IAsLS        — He 2014 AsLS with polynomial weight init.
+  * IAsLS        — pybaselines-compatible He 2014 IAsLS (diff_order=2).
   * BEADS (simp) — Ning & Selesnick 2014 simplified pentadiagonal variant.
 
 References come from the frozen ``c4a_parity_pybaselines_ref`` package.
@@ -143,22 +143,30 @@ def rolling_ball_cases(X: np.ndarray):
 
 def iasls_cases(X: np.ndarray):
     return [
-        ("default",        {"lam": 1e6, "p": 1e-2, "polyorder": 2,
+        ("default",        {"lam": 1e6, "p": 1e-2, "lam_1": 1e-4,
+                            "polyorder": 2, "diff_order": 2,
                             "max_iter": 50, "tol": 1e-3},
-         lambda X=X: iasls(X, lam=1e6, p=1e-2, polyorder=2,
-                            max_iter=50, tol=1e-3)),
-        ("low_lam",        {"lam": 1e4, "p": 1e-2, "polyorder": 2,
+         lambda X=X: iasls(X, lam=1e6, p=1e-2, lam_1=1e-4,
+                            polyorder=2, diff_order=2, max_iter=50,
+                            tol=1e-3)),
+        ("low_lam",        {"lam": 1e4, "p": 1e-2, "lam_1": 1e-4,
+                            "polyorder": 2, "diff_order": 2,
                             "max_iter": 50, "tol": 1e-3},
-         lambda X=X: iasls(X, lam=1e4, p=1e-2, polyorder=2,
-                            max_iter=50, tol=1e-3)),
-        ("order1",         {"lam": 1e6, "p": 1e-2, "polyorder": 1,
+         lambda X=X: iasls(X, lam=1e4, p=1e-2, lam_1=1e-4,
+                            polyorder=2, diff_order=2, max_iter=50,
+                            tol=1e-3)),
+        ("high_lam1",      {"lam": 1e6, "p": 1e-2, "lam_1": 1e-2,
+                            "polyorder": 2, "diff_order": 2,
                             "max_iter": 50, "tol": 1e-3},
-         lambda X=X: iasls(X, lam=1e6, p=1e-2, polyorder=1,
-                            max_iter=50, tol=1e-3)),
-        ("tight_tol_short", {"lam": 1e6, "p": 1e-2, "polyorder": 2,
+         lambda X=X: iasls(X, lam=1e6, p=1e-2, lam_1=1e-2,
+                            polyorder=2, diff_order=2, max_iter=50,
+                            tol=1e-3)),
+        ("tight_tol_short", {"lam": 1e6, "p": 1e-2, "lam_1": 1e-4,
+                             "polyorder": 2, "diff_order": 2,
                              "max_iter": 10, "tol": 1e-4},
-         lambda X=X: iasls(X, lam=1e6, p=1e-2, polyorder=2,
-                            max_iter=10, tol=1e-4)),
+         lambda X=X: iasls(X, lam=1e6, p=1e-2, lam_1=1e-4,
+                            polyorder=2, diff_order=2, max_iter=10,
+                            tol=1e-4)),
     ]
 
 

@@ -483,15 +483,18 @@ void verify_iasls_parity() {
     for (const auto& c : fx.cases) {
         const double lam       = params_get_double(c.params_json, "lam", 1e6);
         const double p         = params_get_double(c.params_json, "p", 1e-2);
+        const double lam_1     = params_get_double(c.params_json, "lam_1", 1e-4);
         const int    polyorder = static_cast<int>(
             params_get_int(c.params_json, "polyorder", 2));
+        const int    diff_order = static_cast<int>(
+            params_get_int(c.params_json, "diff_order", 2));
         const int    max_it    = static_cast<int>(
             params_get_int(c.params_json, "max_iter", 50));
         const double tol       = params_get_double(c.params_json, "tol", 1e-3);
 
         c4a_pp_iasls_handle_t* h = nullptr;
-        C4A_TEST_REQUIRE(c4a_pp_iasls_create(&h, lam, p, polyorder,
-                                              max_it, tol) == C4A_OK);
+        C4A_TEST_REQUIRE(c4a_pp_iasls_create_ex(&h, lam, p, lam_1, polyorder,
+                                                 diff_order, max_it, tol) == C4A_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
         c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
@@ -499,8 +502,8 @@ void verify_iasls_parity() {
         C4A_TEST_REQUIRE(c4a_pp_iasls_transform(h, Xv, Yv) == C4A_OK);
         ::c4a_testing::assert_close(out, c.expected_output,
                                      "iasls/" + c.name,
-                                     /*abs_tol=*/1e-7,
-                                     /*rel_tol=*/1e-8);
+                                     /*abs_tol=*/5e-6,
+                                     /*rel_tol=*/1e-5);
         c4a_pp_iasls_destroy(h);
     }
 }

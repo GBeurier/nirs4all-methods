@@ -2,8 +2,9 @@
 
 Usage:
     cd parity/python_generator
-    uv sync                                       # installs pybaselines==1.1.4 per pyproject
-    uv run scripts/validate_frozen_pybaselines_ref.py
+    python -m venv /tmp/c4a-pybaselines-1.1.4
+    /tmp/c4a-pybaselines-1.1.4/bin/pip install -e . 'pybaselines==1.1.4'
+    /tmp/c4a-pybaselines-1.1.4/bin/python scripts/validate_frozen_pybaselines_ref.py
 
 This script imports BOTH the frozen NumPy reference in
 ``c4a_parity_pybaselines_ref`` AND the upstream ``pybaselines`` package, runs
@@ -12,8 +13,10 @@ max-abs-error is below ``1e-10``.
 
 The script intentionally does NOT run during CI by default — it is a manual
 attestation that the frozen reference still matches the pinned upstream
-version. Run it whenever the pin in ``pyproject.toml`` is bumped or the
-frozen reference is touched.
+historical version. The current external-reference pin is compared by
+``parity/run_reference_parity.py`` instead; it may legitimately diverge from
+this frozen fixture oracle. Run this script only when the frozen reference is
+touched or when re-attesting the historical oracle.
 """
 
 from __future__ import annotations
@@ -66,10 +69,12 @@ def main() -> int:
     print(f"pybaselines installed version: {pybaselines.__version__}")
     if pybaselines.__version__ != EXPECTED_VERSION:
         print(
-            f"WARNING: expected pybaselines=={EXPECTED_VERSION} per pyproject.toml; "
-            f"got {pybaselines.__version__}. Continuing — algorithms have not changed "
-            "between 1.1 and 1.2 series, but the official pin is 1.1.4."
+            f"ERROR: expected pybaselines=={EXPECTED_VERSION} for frozen-reference "
+            f"attestation; got {pybaselines.__version__}. Use "
+            "parity/run_reference_parity.py to compare against the current "
+            "external-reference lock."
         )
+        return 2
 
     y = _synthetic_spectrum()
     fitter = pybaselines.Baseline(x_data=np.arange(len(y), dtype=float))
@@ -139,10 +144,11 @@ def main() -> int:
     print(f"  [INFO] rolling_ball max_abs_err (rough) = {abs_err:.3e}")
 
     # IAsLS — pybaselines exposes it under whittaker
-    ours = c4a_ref.iasls(y_mat, lam=1e6, p=1e-2, polyorder=2,
-                          max_iter=50, tol=1e-3)[0]
-    theirs_z, _ = fitter.iasls(y, lam=1e6, p=1e-2, poly_order=2,
-                                max_iter=50, tol=1e-3)
+    ours = c4a_ref.iasls(y_mat, lam=1e6, p=1e-2, lam_1=1e-4,
+                          polyorder=2, diff_order=2, max_iter=50,
+                          tol=1e-3)[0]
+    theirs_z, _ = fitter.iasls(y, lam=1e6, p=1e-2, lam_1=1e-4,
+                                diff_order=2, max_iter=50, tol=1e-3)
     all_ok &= _check("iasls", ours, y - theirs_z)
 
     # BEADS (simplified) — the c4a variant is intentionally simplified; the

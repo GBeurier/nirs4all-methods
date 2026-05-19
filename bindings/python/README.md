@@ -5,23 +5,35 @@ chemometrics4all.
 
 ## Tiers
 
-* **Tier 1 (`chemometrics4all._ffi`)** — raw `ctypes.CDLL` access to the 402
+* **Tier 1 (`chemometrics4all._ffi`)** — raw `ctypes.CDLL` access to the 403
   `c4a_*` symbols. Loads the shared library from
   `CHEMOMETRICS4ALL_LIB_PATH`, the wheel's bundled `lib/` directory, or the
   development build tree (`build/dev-debug/cpp/src/`).
 
 * **Tier 2 (`chemometrics4all.sklearn`)** — hand-written scikit-learn–style
-  wrappers (`fit`, `transform`, `fit_transform`) over the 20 most-used
-  operators:
+  wrappers (`fit`, `transform`, `fit_transform`, and `inverse_transform`
+  where the C ABI exposes a real inverse) over the main non-model NIRS
+  operators already present in the C ABI:
 
   | Family           | Classes                                                              |
   | ---------------- | -------------------------------------------------------------------- |
-  | Preprocessings   | `SNV`, `LSNV`, `RNV`, `MSC`, `EMSC`, `SavitzkyGolay`,                |
-  |                  | `FirstDerivative`, `SecondDerivative`, `ToAbsorbance`, `KubelkaMunk` |
-  | Baseline         | `Detrend`, `AsLS`, `AirPLS`                                          |
+  | Preprocessings   | `SNV`, `LSNV`, `RNV`, `AreaNormalization`, `Normalize`, `SimpleScale`, |
+  |                  | `LogTransform`, `MSC`, `EMSC`, `BaselineCenter`, `Derivate`,          |
+  |                  | `SavitzkyGolay`, `FirstDerivative`, `SecondDerivative`,               |
+  |                  | `NorrisWilliams`, `Gaussian`, `ToAbsorbance`, `FromAbsorbance`,       |
+  |                  | `PercentToFraction`, `FractionToPercent`, `KubelkaMunk`              |
+  | Baseline         | `Detrend`, `AsLS`, `AirPLS`, `ArPLS`, `ModPoly`, `IModPoly`,         |
+  |                  | `SNIP`, `RollingBall`, `IAsLS`, `BEADS`                              |
+  | Feature extraction | `OSC`, `EPO`, `FlexiblePCA`, `FlexibleSVD`, `FCKStaticTransformer`  |
+  | Resampling       | `CropTransformer`, `ResampleTransformer`, `Resampler`,               |
+  |                  | `IntegerKBinsDiscretizer`, `RangeDiscretizer`                        |
+  | Wavelets         | `Wavelet`, `Haar`, `WaveletDenoise`, `WaveletFeatures`,              |
+  |                  | `WaveletPCA`, `WaveletSVD`                                           |
   | Splitters        | `KennardStoneSplitter`, `SPXYSplitter`, `KBinsStratifiedSplitter`    |
   | Filters          | `YOutlierFilter`, `XOutlierFilter`                                   |
-  | Misc             | `WaveletDenoise`, `GaussianAdditiveNoise`                            |
+  | Augmentation     | `GaussianAdditiveNoise`                                              |
+  | Metrics          | `rmse`, `mae`, `bias`, `sep`, `rpd`, `rpiq`, `r2`, `nrmse`,          |
+  |                  | `hotelling_t2`, `q_residuals`, `transfer_metrics`                    |
 
 ## binding_parity gate
 

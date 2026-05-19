@@ -1,18 +1,5 @@
 # SPDX-License-Identifier: CECILL-2.1
-"""Stateless and stateful preprocessing wrappers.
-
-Covers the ten preprocessing operators included in Gate 1:
-
-* :class:`SNV` — Standard Normal Variate (stateless).
-* :class:`LSNV` — Local Standard Normal Variate (sliding window, stateless).
-* :class:`RNV` — Robust Standard Normal Variate (median + k·MAD, stateless).
-* :class:`MSC` — Multiplicative Scatter Correction (stateful).
-* :class:`EMSC` — Extended Multiplicative Scatter Correction (stateful).
-* :class:`SavitzkyGolay` — polynomial smoothing / differentiation (stateless).
-* :class:`FirstDerivative`, :class:`SecondDerivative` — np.gradient (stateless).
-* :class:`ToAbsorbance` — A = -log10(R) (stateless).
-* :class:`KubelkaMunk` — (1-R)^2 / 2R (stateless).
-"""
+"""Stateless and stateful preprocessing wrappers."""
 from __future__ import annotations
 
 import ctypes
@@ -24,6 +11,8 @@ from ._base import StatefulOperator, StatelessOperator
 # Boundary-mode lookups for the operators that accept a string mode.
 _SAVGOL_MODES = {"mirror": 0, "constant": 1, "nearest": 2, "wrap": 3, "interp": 4}
 _LSNV_PAD_MODES = {"reflect": 0, "edge": 1, "constant": 2}
+_AREA_METHODS = {"sum": 0, "abs_sum": 1, "trapz": 2}
+_GAUSSIAN_MODES = {"reflect": 0, "constant": 1, "nearest": 2, "mirror": 3, "wrap": 4}
 
 
 class SNV(StatelessOperator):
@@ -107,6 +96,101 @@ class RNV(StatelessOperator):
         return h
 
 
+class AreaNormalization(StatelessOperator):
+    """Per-row area normalisation."""
+
+    _C_PREFIX = "c4a_pp_area"
+
+    def __init__(self, method: str = "sum"):
+        super().__init__()
+        self.method = str(method)
+
+    def _create_handle(self):
+        h = ctypes.c_void_p()
+        try:
+            method = _AREA_METHODS[self.method]
+        except KeyError as exc:
+            raise ValueError(f"Unknown AreaNormalization method: {self.method}") from exc
+        check(
+            lib.c4a_pp_area_create(ctypes.byref(h), ctypes.c_int32(method)),
+            "c4a_pp_area_create",
+        )
+        return h
+
+
+class Normalize(StatelessOperator):
+    """Column-wise normalisation."""
+
+    _C_PREFIX = "c4a_pp_normalize"
+
+    def __init__(self, feature_min: float = -1.0, feature_max: float = 1.0):
+        super().__init__()
+        self.feature_min = float(feature_min)
+        self.feature_max = float(feature_max)
+
+    def _create_handle(self):
+        h = ctypes.c_void_p()
+        check(
+            lib.c4a_pp_normalize_create(
+                ctypes.byref(h),
+                ctypes.c_double(self.feature_min),
+                ctypes.c_double(self.feature_max),
+            ),
+            "c4a_pp_normalize_create",
+        )
+        return h
+
+
+class SimpleScale(StatelessOperator):
+    """Column-wise min-max scaling to ``[0, 1]``."""
+
+    _C_PREFIX = "c4a_pp_simple_scale"
+
+    def __init__(self):
+        super().__init__()
+
+    def _create_handle(self):
+        h = ctypes.c_void_p()
+        check(
+            lib.c4a_pp_simple_scale_create(ctypes.byref(h)),
+            "c4a_pp_simple_scale_create",
+        )
+        return h
+
+
+class LogTransform(StatefulOperator):
+    """Element-wise logarithm with optional fit-time auto-offset."""
+
+    _C_PREFIX = "c4a_pp_log"
+
+    def __init__(
+        self,
+        base: float = 0.0,
+        offset: float = 0.0,
+        auto_offset: bool = True,
+        min_value: float = 1e-8,
+    ):
+        super().__init__()
+        self.base = float(base)
+        self.offset = float(offset)
+        self.auto_offset = bool(auto_offset)
+        self.min_value = float(min_value)
+
+    def _create_handle(self):
+        h = ctypes.c_void_p()
+        check(
+            lib.c4a_pp_log_create(
+                ctypes.byref(h),
+                ctypes.c_double(self.base),
+                ctypes.c_double(self.offset),
+                ctypes.c_int(1 if self.auto_offset else 0),
+                ctypes.c_double(self.min_value),
+            ),
+            "c4a_pp_log_create",
+        )
+        return h
+
+
 class MSC(StatefulOperator):
     """Multiplicative Scatter Correction.
 
@@ -143,6 +227,58 @@ class EMSC(StatefulOperator):
         return h
 
 
+class BaselineCenter(StatefulOperator):
+    """Column-mean baseline centering."""
+
+    _C_PREFIX = "c4a_pp_baseline"
+
+    def __init__(self):
+        super().__init__()
+
+    def _create_handle(self):
+        h = ctypes.c_void_p()
+        check(lib.c4a_pp_baseline_create(ctypes.byref(h)), "c4a_pp_baseline_create")
+        return h
+
+
+class Derivate(StatefulOperator):
+    """Finite-difference derivative along the wavelength axis."""
+
+    _C_PREFIX = "c4a_pp_derivate"
+
+    def __init__(self, order: int = 1, delta: float = 1.0):
+        super().__init__()
+        self.order = int(order)
+        self.delta = float(delta)
+
+    def _create_handle(self):
+        h = ctypes.c_void_p()
+        check(
+            lib.c4a_pp_derivate_create(
+                ctypes.byref(h),
+                ctypes.c_int32(self.order),
+                ctypes.c_double(self.delta),
+            ),
+            "c4a_pp_derivate_create",
+        )
+        return h
+
+    def transform(self, X):
+        if not self._fitted:
+            raise RuntimeError(f"{type(self).__name__} must be fitted before transform")
+        from .._matrix import as_f64_2d
+
+        X = as_f64_2d(X)
+        out_cols = int(lib.c4a_pp_derivate_output_cols(
+            ctypes.c_int32(self.order), ctypes.c_int64(X.shape[1])
+        ))
+        if out_cols <= 0:
+            raise ValueError(
+                "Derivate output has no columns; order must be smaller than input width"
+            )
+        return self._call_transform(X, (X.shape[0], out_cols))
+
+
 class SavitzkyGolay(StatelessOperator):
     """scipy.signal.savgol_filter parity."""
 
@@ -176,6 +312,79 @@ class SavitzkyGolay(StatelessOperator):
                 ctypes.c_double(self.cval),
             ),
             "c4a_pp_savgol_create",
+        )
+        return h
+
+
+class NorrisWilliams(StatelessOperator):
+    """Segment smoothing followed by gap finite differences."""
+
+    _C_PREFIX = "c4a_pp_norris_williams"
+
+    def __init__(
+        self,
+        segment: int = 5,
+        gap: int = 5,
+        derivative_order: int = 1,
+        delta: float = 1.0,
+    ):
+        super().__init__()
+        self.segment = int(segment)
+        self.gap = int(gap)
+        self.derivative_order = int(derivative_order)
+        self.delta = float(delta)
+
+    def _create_handle(self):
+        h = ctypes.c_void_p()
+        check(
+            lib.c4a_pp_norris_williams_create(
+                ctypes.byref(h),
+                ctypes.c_int32(self.segment),
+                ctypes.c_int32(self.gap),
+                ctypes.c_int32(self.derivative_order),
+                ctypes.c_double(self.delta),
+            ),
+            "c4a_pp_norris_williams_create",
+        )
+        return h
+
+
+class Gaussian(StatelessOperator):
+    """SciPy-compatible 1-D Gaussian filter along the wavelength axis."""
+
+    _C_PREFIX = "c4a_pp_gaussian"
+
+    def __init__(
+        self,
+        sigma: float = 1.0,
+        order: int = 0,
+        mode: str = "reflect",
+        cval: float = 0.0,
+        truncate: float = 4.0,
+    ):
+        super().__init__()
+        self.sigma = float(sigma)
+        self.order = int(order)
+        self.mode = str(mode)
+        self.cval = float(cval)
+        self.truncate = float(truncate)
+
+    def _create_handle(self):
+        h = ctypes.c_void_p()
+        try:
+            mode = _GAUSSIAN_MODES[self.mode]
+        except KeyError as exc:
+            raise ValueError(f"Unknown Gaussian mode: {self.mode}") from exc
+        check(
+            lib.c4a_pp_gaussian_create(
+                ctypes.byref(h),
+                ctypes.c_double(self.sigma),
+                ctypes.c_int32(self.order),
+                ctypes.c_int(mode),
+                ctypes.c_double(self.cval),
+                ctypes.c_double(self.truncate),
+            ),
+            "c4a_pp_gaussian_create",
         )
         return h
 
@@ -252,6 +461,60 @@ class ToAbsorbance(StatelessOperator):
         return h
 
 
+class FromAbsorbance(StatelessOperator):
+    """R = 10**(-A), optionally returned as percent."""
+
+    _C_PREFIX = "c4a_pp_from_absorbance"
+
+    def __init__(self, is_percent: bool = False):
+        super().__init__()
+        self.is_percent = bool(is_percent)
+
+    def _create_handle(self):
+        h = ctypes.c_void_p()
+        check(
+            lib.c4a_pp_from_absorbance_create(
+                ctypes.byref(h), ctypes.c_int(1 if self.is_percent else 0)
+            ),
+            "c4a_pp_from_absorbance_create",
+        )
+        return h
+
+
+class PercentToFraction(StatelessOperator):
+    """Convert percent reflectance/transmittance to fraction."""
+
+    _C_PREFIX = "c4a_pp_pct_to_frac"
+
+    def __init__(self):
+        super().__init__()
+
+    def _create_handle(self):
+        h = ctypes.c_void_p()
+        check(
+            lib.c4a_pp_pct_to_frac_create(ctypes.byref(h)),
+            "c4a_pp_pct_to_frac_create",
+        )
+        return h
+
+
+class FractionToPercent(StatelessOperator):
+    """Convert fractional reflectance/transmittance to percent."""
+
+    _C_PREFIX = "c4a_pp_frac_to_pct"
+
+    def __init__(self):
+        super().__init__()
+
+    def _create_handle(self):
+        h = ctypes.c_void_p()
+        check(
+            lib.c4a_pp_frac_to_pct_create(ctypes.byref(h)),
+            "c4a_pp_frac_to_pct_create",
+        )
+        return h
+
+
 class KubelkaMunk(StatelessOperator):
     """KM = (1 - R)^2 / (2 R), with R guarded by epsilon."""
 
@@ -276,14 +539,25 @@ class KubelkaMunk(StatelessOperator):
 
 
 __all__ = [
+    "AreaNormalization",
+    "BaselineCenter",
+    "Derivate",
     "EMSC",
     "FirstDerivative",
+    "FractionToPercent",
+    "FromAbsorbance",
+    "Gaussian",
     "KubelkaMunk",
     "LSNV",
+    "LogTransform",
     "MSC",
+    "Normalize",
+    "NorrisWilliams",
+    "PercentToFraction",
     "RNV",
     "SNV",
     "SavitzkyGolay",
     "SecondDerivative",
+    "SimpleScale",
     "ToAbsorbance",
 ]

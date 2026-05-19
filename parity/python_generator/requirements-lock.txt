@@ -14,11 +14,11 @@
 
 # Top-level pins (must mirror pyproject.toml)
 numpy==1.26.4
-scipy==1.11.4
-scikit-learn==1.4.2
-PyWavelets==1.6.0
-pybaselines==1.1.4
+scipy==1.17.1
+scikit-learn==1.8.0
+PyWavelets==1.8.0
+pybaselines==1.2.1
 
-# Transitive deps locked by scikit-learn 1.4.2
-joblib==1.4.2
-threadpoolctl==3.5.0
+# Transitive deps locked by scikit-learn 1.8.0
+joblib==1.5.2
+threadpoolctl==3.6.0

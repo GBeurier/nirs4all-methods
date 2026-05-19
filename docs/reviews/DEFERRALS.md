@@ -51,6 +51,7 @@ Items intentionally left to a future phase. Each entry records:
 
 | From | Topic | Closed in | Resolution |
 | --- | --- | --- | --- |
+| 8 / 26 | **EPO public ABI lacks `transform_with_d`.** | Phase 26 dashboard/gates cleanup | Added `c4a_pp_epo_transform_with_d(handle, X, d, d_len, out)`, exported it in the ABI symbol lists, bound it in Python, and moved the benchmark C++ EPO row to the d-aware path. |
 | 4 (carried from 3+4 Codex M1) | **Shared Householder QR helper extraction**. Was 3 copies in EMSC + SG-main + SG-edge. | Phase 5a opener | Extracted to `cpp/src/core/common/linalg.{c,h}` (`c4a_householder_qr` / `c4a_apply_qt` / `c4a_back_solve_R`). EMSC + SG migrated; all 61 prior tests pass at original tolerances. |
 | 4 (carried from 3+4 Codex M1) | **Shared JSON fixture parser**. Was 3 copies of ~270 LOC each in test_preprocessing_{stateless,stateful,smoothing}.cpp. | Phase 5a opener | Extracted to `cpp/tests/fixture_parser.hpp` (header-only, templated). Net reduction: 1087 LOC eliminated from test files. |
 | 4 (carried from 3+4 Codex M2) | **`c4a_pp_derivate_*` doc fix**. c4a.h §9 banner claimed no-op `_fit`; engine actually memoises `cols` for shape validation. | Phase 5a opener | §9 banner updated to honestly state input-shape memoization. |

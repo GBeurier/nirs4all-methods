@@ -9,14 +9,14 @@ import pytest
 
 
 def test_library_loads():
-    """Loading the package binds 402 ABI symbols."""
+    """Loading the package binds all declared ABI symbols."""
     from chemometrics4all._ffi import lib
     from chemometrics4all._ffi_decls import SYMBOLS
 
-    # All 402 declared symbols must be present on the loaded library.
+    # All declared symbols must be present on the loaded library.
     missing = [name for name, _, _ in SYMBOLS if not hasattr(lib, name)]
     assert not missing, f"Missing symbols: {missing[:5]} (and {len(missing) - 5} more)"
-    assert len(SYMBOLS) == 402
+    assert len(SYMBOLS) == 403
 
 
 def test_abi_version_matches():
@@ -31,6 +31,15 @@ def test_abi_version_matches():
     assert lib.c4a_get_abi_version_major() == ABI_VERSION_MAJOR
     assert lib.c4a_get_abi_version_minor() == ABI_VERSION_MINOR
     assert lib.c4a_get_abi_version_patch() == ABI_VERSION_PATCH
+
+
+def test_public_version_api():
+    """Top-level version helpers expose package and ABI versions."""
+    import chemometrics4all
+
+    assert chemometrics4all.__version__ == "0.1.0"
+    assert chemometrics4all.abi_version() == (1, 9, 0)
+    assert chemometrics4all.version().startswith("0.1.0+abi.1.9.0")
 
 
 def test_status_to_string():

@@ -23,8 +23,9 @@ length $2m$ where $m$ is the per-mode output length:
 - **symmetric** / **zero**: $m = \lfloor (n + L - 1) / 2 \rfloor$.
 
 Supported wavelet families: **haar** ($L=2$), **db4** ($L=8$), **sym4**
-($L=8$), **coif1** ($L=6$).  Filter banks are vendored from PyWavelets
-1.6.0.
+($L=8$), **coif1** ($L=6$). Filter banks are vendored from the frozen
+PyWavelets 1.6.0 oracle; current PyWavelets package drift is checked
+separately by the reference parity gate.
 
 ## Parameters
 
@@ -52,4 +53,5 @@ Stateless: `_create / _transform / _destroy` plus the
 
 `nirs4all.operators.transforms.nirs.Wavelet` (single-level DWT;
 chemometrics4all returns both `cA` and `cD` instead of resampling the
-detail band).  Filter banks: PyWavelets 1.6.0.
+detail band). Filter banks: frozen PyWavelets 1.6.0 oracle, with current
+upstream comparison handled by reference parity.

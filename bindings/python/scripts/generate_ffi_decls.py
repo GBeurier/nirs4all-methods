@@ -6,7 +6,7 @@ Parses ``cpp/include/chemometrics4all/c4a.h`` and emits a python module
 ``_ffi_decls.py`` containing two helper functions:
 
     apply_argtypes(lib): bind argtypes/restype for every exported function.
-    SYMBOLS: a tuple of (symbol_name, argtypes, restype) for all 402 exports.
+    SYMBOLS: a tuple of (symbol_name, argtypes, restype) for all ABI exports.
 
 The parser is intentionally simple: every ``C4A_API <return> <name>(<args>);``
 declaration that fits on one or more lines (delimited by ``;``) is recognised.

@@ -1,9 +1,13 @@
 # chemometrics4all
 
 [![License: CeCILL-2.1](https://img.shields.io/badge/license-CeCILL--2.1-blue.svg)](LICENSE)
-[![Status: Phase 0](https://img.shields.io/badge/status-Phase%200%20bootstrap-orange.svg)](ROADMAP.md)
+[![Status: Stabilization](https://img.shields.io/badge/status-stabilization-blue.svg)](ROADMAP.md)
 
-**chemometrics4all** is a portable C++17 library that ships the **NIRS toolchain around PLS**: preprocessings, splitters, filters, augmentations, signal-type detection, transfer metrics, and FCK feature engineering. It is the companion of [pls4all](https://github.com/GBeurier/pls4all) (which provides the PLS regression / classification variants) and gives every binding language the same parity-validated, zero-mandatory-dependency NIRS engine.
+**chemometrics4all** is a portable C++17 library for chemometrics / NIRS
+operators: preprocessings, splitters, filters, augmentations, signal-type
+detection, transfer metrics, diagnostics, and FCK feature engineering. It is the
+companion of [pls4all](https://github.com/GBeurier/pls4all), which owns the PLS
+regression / classification model family.
 
 > **chemometrics4all does NOT ship any models.** PLS variants live in `pls4all`. This library focuses on the upstream/downstream layer: how you prepare spectra, partition samples, detect outliers, augment training data, convert signal types, and measure transfer-learning alignment.
 
@@ -13,7 +17,7 @@
 
 | Category | Count | Examples |
 |----------|------:|----------|
-| Preprocessings | 52 | SNV, MSC, EMSC, SavitzkyGolay, NorrisWilliams, AsLS, AirPLS, ArPLS, SNIP, Wavelet (Haar/db4/sym4/coif1), OSC, EPO, CARS, MCUVE, ToAbsorbance, KubelkaMunk, … |
+| Preprocessings | 52 | SNV, MSC, EMSC, SavitzkyGolay, NorrisWilliams, AsLS, AirPLS, ArPLS, SNIP, Wavelet (Haar/db4/sym4/coif1), OSC, EPO, ToAbsorbance, KubelkaMunk, … |
 | Augmentations | 39 | Gaussian/Multiplicative/Spike/Heteroscedastic noise, LinearBaselineDrift, WavelengthShift/Stretch, BandMasking, ChannelDropout, Mixup, ScatterSimulationMSC, BatchEffect, InstrumentalBroadening, DetectorRollOff, Spline_*, … |
 | Splitters | 9 | KennardStone, SPXY, SPXYFold, SPXYGFold, KMeans, KBinsStratified, BinnedStratifiedGroupKFold, SystematicCircular, SPlit (data twinning) |
 | Filters | 11 methods | YOutlier (iqr/zscore/mad/percentile), XOutlier (mahalanobis/robust_mahalanobis/pca_residual/pca_leverage/isolation_forest/lof), HighLeverage, SpectralQuality, Composite |
@@ -24,19 +28,19 @@ All operators are mirrored byte-bit-where-possible against [nirs4all](https://gi
 
 ---
 
-## Architecture (mirrored from pls4all)
+## Architecture
 
 - **C++17 core** in `cpp/src/core/` — internal headers + implementations, never directly exposed.
 - **Stable C ABI** in `cpp/include/chemometrics4all/c4a.h` — `c4a_*` symbols, opaque handles, error-buffer-per-context.
-- **Thin language bindings** (`bindings/`): Python (ctypes + sklearn-compatible classes), R (.Call), MATLAB (MEX), JS/WASM (Emscripten), and tier-1 stubs for Go/Rust/Julia/Ruby/.NET/Lua/Nim/JNI/Octave.
+- **Thin language bindings** (`bindings/`): Python (ctypes + sklearn-compatible classes) and R (.Call) are active; MATLAB and JS/WASM are next in the roadmap.
 - **Zero mandatory dependencies** — DIY linalg, RNG (PCG64 reimplementation for NumPy bit-exact parity), banded LDLT, FFT-free wavelet filter banks. Optional accelerated backends (BLAS, OpenMP) are gated by CMake presets.
 - **CMake ≥ 3.21** with 20+ presets in `CMakePresets.json` (dev-debug, dev-release, ci-*, blas-on, sanitizer-*).
-- **Parity-gated** — every operator is validated against pinned reference implementations (numpy 1.26.4, scipy 1.11.4, pywt 1.6.0, pybaselines 1.1.4, prospectr 0.2.7, …) with `parity/fixtures/*.json` + `parity/tolerances.md`.
+- **Parity-gated** — every operator is validated against pinned reference implementations (numpy 1.26.4, scipy 1.17.1, scikit-learn 1.8.0, pywt 1.8.0, pybaselines 1.2.1, selected nirs4all operators, …) with `parity/fixtures/*.json` + `parity/tolerances.md`.
 - **Codex+Opus review workflow** — each phase is reviewed by Codex (pre & post) and Opus (independent post-review); transcripts in `docs/reviews/phase-N/`.
 
 ---
 
-## Build (Phase 0 bootstrap)
+## Build
 
 ```bash
 cmake --preset dev-release
@@ -56,15 +60,10 @@ This repository is being built **phase by phase** with full Codex + Opus reviews
 
 | Phase | Status | Scope |
 |------:|:-------|-------|
-| 0 | 🟢 in progress | Bootstrap (clone pls4all template, strip PLS code, smoke build) |
-| 1 | ⚪ pending | Common infrastructure (PCG64 RNG, PCA helper, banded solver, wavelet kernels) |
-| 2–10 | ⚪ pending | 52 preprocessings across 9 phases |
-| 11 | ⚪ pending | 9 splitters |
-| 12–14 | ⚪ pending | 5 filter classes / 11 methods |
-| 15–18 | ⚪ pending | 39 augmentations across 4 phases |
-| 19–21 | ⚪ pending | NIRS utilities, transfer metrics, FCK |
-| 22–25 | ⚪ pending | Python / R / MATLAB / JS-WASM bindings |
-| 26 | ⚪ pending | Cross-binding benchmarks + GitHub Pages |
+| 0–21 | 🟢 implemented | C++ core operators, fixtures, C ABI, and C++ parity tests |
+| 22–23 | 🟢 implemented | Python and R bindings with binding parity |
+| 24–25 | ⚪ pending | MATLAB and JS/WASM bindings |
+| 26 | 🟡 scaffolded | Benchmark registry, reference lockfile, and placeholder dashboard; timing matrix not generated yet |
 
 ---
 

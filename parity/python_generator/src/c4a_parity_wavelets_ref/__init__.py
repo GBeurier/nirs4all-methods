@@ -3,10 +3,12 @@
 Frozen NumPy reference for the Phase 6 wavelets preprocessing operators
 (Wavelet, Haar, WaveletDenoise, WaveletFeatures, WaveletPCA, WaveletSVD).
 
-Validated once against ``PyWavelets==1.6.0`` (the parity-lock pin).  After
-validation these modules become the canonical parity floor for
+Validated once against ``PyWavelets==1.6.0`` as the historical oracle.
+After validation these modules become the canonical parity floor for
 chemometrics4all — pywt itself is no longer in the build path of the
 parity fixture generator.
+The current external PyWavelets pin is compared separately by the reference
+parity gate.
 
 Each module re-implements the requested transform in NumPy only, using
 filter banks vendored from PyWavelets 1.6.0 (haar / db4 / sym4 / coif1).

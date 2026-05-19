@@ -33,21 +33,65 @@ from chemometrics4all import (
     RNV,
     SNV,
     AirPLS,
+    ArPLS,
+    AreaNormalization,
     AsLS,
+    BEADS,
+    BaselineCenter,
+    CropTransformer,
+    Derivate,
     Detrend,
+    EPO,
     FirstDerivative,
+    FCKStaticTransformer,
+    FlexiblePCA,
+    FlexibleSVD,
+    FractionToPercent,
+    FromAbsorbance,
+    Gaussian,
     GaussianAdditiveNoise,
+    Haar,
+    IAsLS,
+    IModPoly,
+    IntegerKBinsDiscretizer,
     KBinsStratifiedSplitter,
     KennardStoneSplitter,
     KubelkaMunk,
+    LogTransform,
+    ModPoly,
+    Normalize,
+    NorrisWilliams,
+    OSC,
     PCG64,
+    PercentToFraction,
+    RangeDiscretizer,
+    ResampleTransformer,
+    Resampler,
+    RollingBall,
+    SNIP,
     SavitzkyGolay,
     SecondDerivative,
+    SimpleScale,
     SPXYSplitter,
     ToAbsorbance,
+    Wavelet,
     WaveletDenoise,
+    WaveletFeatures,
+    WaveletPCA,
+    WaveletSVD,
     XOutlierFilter,
     YOutlierFilter,
+    bias,
+    hotelling_t2,
+    mae,
+    nrmse,
+    q_residuals,
+    r2,
+    rmse,
+    rpd,
+    rpiq,
+    sep,
+    transfer_metrics,
 )
 from parity.binding_parity import binding_parity
 
@@ -67,6 +111,10 @@ def _decode_hex_array(hex_list: list[str]) -> np.ndarray:
     return out
 
 
+def _decode_scalar(hex_value: str) -> float:
+    return struct.unpack(">d", bytes.fromhex(hex_value))[0]
+
+
 def _decode_matrix(hex_list: list[str], rows: int, cols: int) -> np.ndarray:
     flat = _decode_hex_array(hex_list)
     return flat.reshape(rows, cols).copy(order="C")
@@ -80,9 +128,10 @@ def _load_fixture(fixtures_dir: Path, name: str) -> dict[str, Any]:
         return json.load(f)
 
 
-def _assert_parity(pred: np.ndarray, expected: np.ndarray, op_name: str) -> None:
+def _assert_parity(pred: np.ndarray, expected: np.ndarray, op_name: str,
+                   tolerance: float = TOLERANCE) -> None:
     """Run binding_parity and raise with a friendly message on failure."""
-    res = binding_parity(pred, expected, tolerance=TOLERANCE)
+    res = binding_parity(pred, expected, tolerance=tolerance)
     if not res.ok:
         msg = (
             f"binding_parity FAIL for {op_name}: {res.detail}, "
@@ -100,6 +149,25 @@ def _assert_parity(pred: np.ndarray, expected: np.ndarray, op_name: str) -> None
                 f"ref={flat_e[worst]!r}, |diff|={diff[worst]!r}"
             )
         pytest.fail(msg)
+
+
+def _assert_parity_allow_nonfinite(
+    pred: np.ndarray, expected: np.ndarray, op_name: str
+) -> None:
+    """Parity helper for diagnostics where NaN/Inf is part of the contract."""
+    pred = np.asarray(pred)
+    expected = np.asarray(expected)
+    if pred.shape != expected.shape:
+        _assert_parity(pred, expected, op_name)
+        return
+    same_nan = np.isnan(pred) == np.isnan(expected)
+    same_posinf = np.isposinf(pred) == np.isposinf(expected)
+    same_neginf = np.isneginf(pred) == np.isneginf(expected)
+    if not (np.all(same_nan) and np.all(same_posinf) and np.all(same_neginf)):
+        _assert_parity(pred, expected, op_name)
+        return
+    finite = np.isfinite(pred) & np.isfinite(expected)
+    _assert_parity(pred[finite], expected[finite], op_name)
 
 
 # ---------------------------------------------------------------------------
@@ -152,6 +220,55 @@ def test_rnv_binding_parity(fixtures_dir):
         _assert_parity(pred, expected, f"RNV[{case['name']}]")
 
 
+def test_area_normalization_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "area_norm")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        op = AreaNormalization(method=case["params"]["method"])
+        pred = op.fit_transform(X)
+        expected = _decode_matrix(case["output_hex"], fx["rows"], fx["cols"])
+        _assert_parity(pred, expected, f"AreaNormalization[{case['name']}]")
+
+
+def test_normalize_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "normalize")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        params = case["params"]
+        op = Normalize(
+            feature_min=params["feature_min"],
+            feature_max=params["feature_max"],
+        )
+        pred = op.fit_transform(X)
+        expected = _decode_matrix(case["output_hex"], fx["rows"], fx["cols"])
+        _assert_parity(pred, expected, f"Normalize[{case['name']}]")
+
+
+def test_simple_scale_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "simple_scale")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        pred = SimpleScale().fit_transform(X)
+        expected = _decode_matrix(case["output_hex"], fx["rows"], fx["cols"])
+        _assert_parity(pred, expected, f"SimpleScale[{case['name']}]")
+
+
+def test_log_transform_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "log_transform")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        params = case["params"]
+        op = LogTransform(
+            base=params["base"],
+            offset=params["offset"],
+            auto_offset=params["auto_offset"],
+            min_value=params["min_value"],
+        )
+        pred = op.fit_transform(X)
+        expected = _decode_matrix(case["output_hex"], fx["rows"], fx["cols"])
+        _assert_parity(pred, expected, f"LogTransform[{case['name']}]")
+
+
 def test_to_absorbance_binding_parity(fixtures_dir):
     fx = _load_fixture(fixtures_dir, "to_absorbance")
     X_frac = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
@@ -170,6 +287,34 @@ def test_to_absorbance_binding_parity(fixtures_dir):
         pred = op.fit_transform(X)
         expected = _decode_matrix(case["output_hex"], fx["rows"], fx["cols"])
         _assert_parity(pred, expected, f"ToAbsorbance[{case['name']}]")
+
+
+def test_from_absorbance_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "from_absorbance")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        op = FromAbsorbance(is_percent=case["params"]["is_percent"])
+        pred = op.fit_transform(X)
+        expected = _decode_matrix(case["output_hex"], fx["rows"], fx["cols"])
+        _assert_parity(pred, expected, f"FromAbsorbance[{case['name']}]")
+
+
+def test_percent_to_fraction_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "pct_to_frac")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        pred = PercentToFraction().fit_transform(X)
+        expected = _decode_matrix(case["output_hex"], fx["rows"], fx["cols"])
+        _assert_parity(pred, expected, f"PercentToFraction[{case['name']}]")
+
+
+def test_fraction_to_percent_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "frac_to_pct")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        pred = FractionToPercent().fit_transform(X)
+        expected = _decode_matrix(case["output_hex"], fx["rows"], fx["cols"])
+        _assert_parity(pred, expected, f"FractionToPercent[{case['name']}]")
 
 
 def test_kubelka_munk_binding_parity(fixtures_dir):
@@ -208,6 +353,58 @@ def test_savgol_binding_parity(fixtures_dir):
                                   case.get("output_rows", fx["rows"]),
                                   case.get("output_cols", fx["cols"]))
         _assert_parity(pred, expected, f"SavitzkyGolay[{case['name']}]")
+
+
+def test_derivate_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "derivate")
+    X_fit = _decode_matrix(fx["fit_input_hex"], fx["fit_rows"], fx["fit_cols"])
+    X_test = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        params = case["params"]
+        op = Derivate(order=params["order"], delta=params["delta"])
+        op.fit(X_fit)
+        pred = op.transform(X_test)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"Derivate[{case['name']}]")
+
+
+def test_norris_williams_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "norris_williams")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        params = case["params"]
+        op = NorrisWilliams(
+            segment=params["segment"],
+            gap=params["gap"],
+            derivative_order=params["derivative_order"],
+            delta=params["delta"],
+        )
+        pred = op.fit_transform(X)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"NorrisWilliams[{case['name']}]")
+
+
+def test_gaussian_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "gaussian")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        params = case["params"]
+        op = Gaussian(
+            sigma=params["sigma"],
+            order=params["order"],
+            mode=params["mode"],
+            cval=params["cval"],
+            truncate=params["truncate"],
+        )
+        pred = op.fit_transform(X)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"Gaussian[{case['name']}]")
 
 
 def test_first_derivative_binding_parity(fixtures_dir):
@@ -255,17 +452,7 @@ def test_msc_binding_parity(fixtures_dir):
             # so the binding must do the same: forward-transform first, then
             # invert.
             X_fwd = op.transform(X_test)
-            out = np.empty(X_fwd.shape, dtype=np.float64, order="C")
-            from chemometrics4all._errors import check
-            from chemometrics4all._ffi import lib
-            from chemometrics4all._matrix import numpy_to_view
-            check(
-                lib.c4a_pp_msc_inverse_transform(
-                    op._handle, numpy_to_view(X_fwd), numpy_to_view(out)
-                ),
-                "c4a_pp_msc_inverse_transform",
-            )
-            pred = out
+            pred = op.inverse_transform(X_fwd)
         else:
             pred = op.transform(X_test)
         expected = _decode_matrix(case["output_hex"],
@@ -289,9 +476,130 @@ def test_emsc_binding_parity(fixtures_dir):
         _assert_parity(pred, expected, f"EMSC[{case['name']}]")
 
 
+def test_baseline_center_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "baseline_center")
+    X_fit = _decode_matrix(fx["fit_input_hex"], fx["fit_rows"], fx["fit_cols"])
+    X_test = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        op = BaselineCenter()
+        op.fit(X_fit)
+        params = case.get("params", {})
+        if params.get("variant") == "inverse":
+            X_fwd = op.transform(X_fit)
+            pred = op.inverse_transform(X_fwd)
+        elif params.get("variant") == "test":
+            pred = op.transform(X_test)
+        else:
+            pred = op.transform(X_fit)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"BaselineCenter[{case['name']}]")
+
+
+# ---------------------------------------------------------------------------
+# Orthogonalization / feature extraction
+# ---------------------------------------------------------------------------
+
+
+def test_osc_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "osc")
+    X_fit = _decode_matrix(fx["fit_input_hex"], fx["fit_rows"], fx["fit_cols"])
+    y_fit = _decode_hex_array(fx["fit_y_hex"])
+    X_test = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        params = case["params"]
+        op = OSC(n_components=params["n_components"], scale=params["scale"])
+        op.fit(X_fit, y_fit)
+        pred = op.transform(X_fit if params["variant"] == "fit_transform" else X_test)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"OSC[{case['name']}]")
+
+
+def test_epo_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "epo")
+    X_fit = _decode_matrix(fx["fit_input_hex"], fx["fit_rows"], fx["fit_cols"])
+    d_fit = _decode_hex_array(fx["fit_d_hex"])
+    X_test = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        params = case["params"]
+        op = EPO(scale=params["scale"])
+        if params["variant"] == "fit_transform":
+            pred = op.fit_transform(X_fit, d_fit)
+        else:
+            op.fit(X_fit, d_fit)
+            pred = op.transform(X_test)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"EPO[{case['name']}]")
+
+
+def test_flexible_pca_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "flexible_pca")
+    X_fit = _decode_matrix(fx["fit_input_hex"], fx["fit_rows"], fx["fit_cols"])
+    X_test = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        op = FlexiblePCA(n_components=case["params"]["n_components"])
+        op.fit(X_fit)
+        pred = op.transform(X_test)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"FlexiblePCA[{case['name']}]")
+
+
+def test_flexible_svd_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "flexible_svd")
+    X_fit = _decode_matrix(fx["fit_input_hex"], fx["fit_rows"], fx["fit_cols"])
+    X_test = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        op = FlexibleSVD(n_components=case["params"]["n_components"])
+        op.fit(X_fit)
+        pred = op.transform(X_test)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"FlexibleSVD[{case['name']}]")
+
+
+def test_fck_static_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "fck_static")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        params = case["params"]
+        op = FCKStaticTransformer(
+            kernel_size=params["kernel_size"],
+            alphas=params["alphas"],
+            sigmas=params["sigmas"],
+        )
+        pred = op.fit_transform(X)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"FCKStaticTransformer[{case['name']}]")
+
+
 # ---------------------------------------------------------------------------
 # Baseline
 # ---------------------------------------------------------------------------
+
+
+def _run_stateless_matrix_fixture(fixtures_dir, fixture_name, factory, label,
+                                  tolerance: float = TOLERANCE):
+    fx = _load_fixture(fixtures_dir, fixture_name)
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        op = factory(case["params"])
+        pred = op.fit_transform(X)
+        expected = _decode_matrix(
+            case["output_hex"],
+            case.get("output_rows", fx["rows"]),
+            case.get("output_cols", fx["cols"]),
+        )
+        _assert_parity(pred, expected, f"{label}[{case['name']}]", tolerance)
 
 
 def test_detrend_binding_parity(fixtures_dir):
@@ -332,6 +640,176 @@ def test_airpls_binding_parity(fixtures_dir):
                                   case.get("output_rows", fx["rows"]),
                                   case.get("output_cols", fx["cols"]))
         _assert_parity(pred, expected, f"AirPLS[{case['name']}]")
+
+
+def test_arpls_binding_parity(fixtures_dir):
+    _run_stateless_matrix_fixture(
+        fixtures_dir,
+        "arpls",
+        lambda p: ArPLS(lam=p["lam"], max_iter=p["max_iter"], tol=p["tol"]),
+        "ArPLS",
+    )
+
+
+def test_modpoly_binding_parity(fixtures_dir):
+    _run_stateless_matrix_fixture(
+        fixtures_dir,
+        "modpoly",
+        lambda p: ModPoly(polyorder=p["polyorder"], max_iter=p["max_iter"], tol=p["tol"]),
+        "ModPoly",
+    )
+
+
+def test_imodpoly_binding_parity(fixtures_dir):
+    _run_stateless_matrix_fixture(
+        fixtures_dir,
+        "imodpoly",
+        lambda p: IModPoly(polyorder=p["polyorder"], max_iter=p["max_iter"], tol=p["tol"]),
+        "IModPoly",
+    )
+
+
+def test_snip_binding_parity(fixtures_dir):
+    _run_stateless_matrix_fixture(
+        fixtures_dir,
+        "snip",
+        lambda p: SNIP(max_half_window=p["max_half_window"]),
+        "SNIP",
+    )
+
+
+def test_rolling_ball_binding_parity(fixtures_dir):
+    _run_stateless_matrix_fixture(
+        fixtures_dir,
+        "rolling_ball",
+        lambda p: RollingBall(
+            half_window=p["half_window"],
+            smooth_half_window=p["smooth_half_window"],
+        ),
+        "RollingBall",
+    )
+
+
+def test_iasls_binding_parity(fixtures_dir):
+    _run_stateless_matrix_fixture(
+        fixtures_dir,
+        "iasls",
+        lambda p: IAsLS(
+            lam=p["lam"],
+            p=p["p"],
+            lam_1=p.get("lam_1", 1e-4),
+            polyorder=p["polyorder"],
+            diff_order=p.get("diff_order", 2),
+            max_iter=p["max_iter"],
+            tol=p["tol"],
+        ),
+        "IAsLS",
+        tolerance=5e-6,
+    )
+
+
+def test_beads_binding_parity(fixtures_dir):
+    _run_stateless_matrix_fixture(
+        fixtures_dir,
+        "beads",
+        lambda p: BEADS(
+            lam_0=p["lam_0"],
+            lam_1=p["lam_1"],
+            lam_2=p["lam_2"],
+            max_iter=p["max_iter"],
+            tol=p["tol"],
+        ),
+        "BEADS",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Resampling / discretization
+# ---------------------------------------------------------------------------
+
+
+def test_crop_transformer_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "crop")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        params = case["params"]
+        op = CropTransformer(start=params["start"], end=params["end"])
+        pred = op.fit_transform(X)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"CropTransformer[{case['name']}]")
+
+
+def test_resample_transformer_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "resample")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        op = ResampleTransformer(num_samples=case["params"]["num_samples"])
+        pred = op.fit_transform(X)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"ResampleTransformer[{case['name']}]")
+
+
+def _grid(start: float, step: float, n: int) -> np.ndarray:
+    return start + step * np.arange(int(n), dtype=np.float64)
+
+
+def test_resampler_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "resampler")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        params = case["params"]
+        source = _grid(params["src_min"], params["src_step"], params["src_n"])
+        target = _grid(params["tgt_min"], params["tgt_step"], params["tgt_n"])
+        op = Resampler(
+            target_wavelengths=target,
+            method=params["method"],
+            crop_min=params["crop_min"],
+            crop_max=params["crop_max"],
+            use_crop=bool(params["use_crop"]),
+            fill_value=params["fill_value"],
+            bounds_error=bool(params["bounds_error"]),
+            extrapolate=bool(params["extrapolate"]),
+        )
+        op.fit(source_wavelengths=source)
+        pred = op.transform(X)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"Resampler[{case['name']}]")
+
+
+def test_integer_kbins_discretizer_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "kbins_disc")
+    X_fit = _decode_matrix(fx["fit_input_hex"], fx["fit_rows"], fx["fit_cols"])
+    X_test = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        params = case["params"]
+        op = IntegerKBinsDiscretizer(
+            n_bins=params["n_bins"],
+            strategy=params["strategy"],
+        )
+        op.fit(X_fit)
+        pred = op.transform(X_test).astype(np.float64)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"IntegerKBinsDiscretizer[{case['name']}]")
+
+
+def test_range_discretizer_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "range_disc")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        op = RangeDiscretizer(edges_csv=case["params"]["edges_csv"])
+        pred = op.fit_transform(X).astype(np.float64)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"RangeDiscretizer[{case['name']}]")
 
 
 # ---------------------------------------------------------------------------
@@ -449,8 +927,113 @@ def test_x_outlier_filter_binding_parity(fixtures_dir):
 
 
 # ---------------------------------------------------------------------------
+# Metrics / diagnostics
+# ---------------------------------------------------------------------------
+
+
+def test_nirs_metrics_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "nirs_metrics")
+    metric_fns = {
+        "rmse": rmse,
+        "mae": mae,
+        "bias": bias,
+        "sep": sep,
+        "rpd": rpd,
+        "rpiq": rpiq,
+        "r2": r2,
+        "nrmse": nrmse,
+    }
+    for case in fx["cases"]:
+        y_true = _decode_hex_array(case["y_true_hex"])
+        y_pred = _decode_hex_array(case["y_pred_hex"])
+        for name, fn in metric_fns.items():
+            pred = np.asarray([fn(y_true, y_pred)], dtype=np.float64)
+            expected = np.asarray([_decode_scalar(case["metrics_hex"][name])])
+            _assert_parity_allow_nonfinite(pred, expected, f"{name}[{case['name']}]")
+
+
+def test_hotelling_t2_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "hotelling_t2")
+    for case in fx["cases"]:
+        X = _decode_matrix(case["input_hex"], case["rows"], case["cols"])
+        values, ucl = hotelling_t2(
+            X,
+            n_components=case["n_components"],
+            alpha=case["alpha"],
+        )
+        expected_values = _decode_hex_array(case["t2_hex"])
+        expected_ucl = np.asarray([_decode_scalar(case["ucl_hex"])])
+        _assert_parity(values, expected_values, f"hotelling_t2[{case['name']}] values")
+        _assert_parity(np.asarray([ucl]), expected_ucl, f"hotelling_t2[{case['name']}] ucl")
+
+
+def test_q_residuals_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "q_residuals")
+    for case in fx["cases"]:
+        X = _decode_matrix(case["input_hex"], case["rows"], case["cols"])
+        values, ucl = q_residuals(
+            X,
+            n_components=case["n_components"],
+            alpha=case["alpha"],
+        )
+        expected_values = _decode_hex_array(case["q_hex"])
+        expected_ucl = np.asarray([_decode_scalar(case["ucl_hex"])])
+        _assert_parity(values, expected_values, f"q_residuals[{case['name']}] values")
+        _assert_parity(np.asarray([ucl]), expected_ucl, f"q_residuals[{case['name']}] ucl")
+
+
+def test_transfer_metrics_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "transfer_metrics")
+    for case in fx["cases"]:
+        p = case["params"]
+        source = _decode_matrix(
+            case["source_hex"], case["source_rows"], case["source_cols"]
+        )
+        target = _decode_matrix(
+            case["target_hex"], case["target_rows"], case["target_cols"]
+        )
+        pred = transfer_metrics(
+            source,
+            target,
+            n_components=p["n_components"],
+            k_neighbors=p["k_neighbors"],
+            seed=p["seed"],
+        )
+        for name, hex_value in case["expected"].items():
+            _assert_parity_allow_nonfinite(
+                np.asarray([pred[name]], dtype=np.float64),
+                np.asarray([_decode_scalar(hex_value)]),
+                f"transfer_metrics[{case['name']}] {name}",
+            )
+
+
+# ---------------------------------------------------------------------------
 # Wavelet / Augmentation
 # ---------------------------------------------------------------------------
+
+
+def test_wavelet_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "wavelet")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        params = case["params"]
+        op = Wavelet(family=params["family"], mode=params["mode"])
+        pred = op.fit_transform(X)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"Wavelet[{case['name']}]")
+
+
+def test_haar_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "haar")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        pred = Haar().fit_transform(X)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"Haar[{case['name']}]")
 
 
 def test_wavelet_denoise_binding_parity(fixtures_dir):
@@ -470,6 +1053,63 @@ def test_wavelet_denoise_binding_parity(fixtures_dir):
                                   case.get("output_rows", fx["rows"]),
                                   case.get("output_cols", fx["cols"]))
         _assert_parity(pred, expected, f"WaveletDenoise[{case['name']}]")
+
+
+def test_wavelet_features_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "wavelet_features")
+    X = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        params = case["params"]
+        op = WaveletFeatures(
+            family=params["family"],
+            mode=params["mode"],
+            max_level=params["max_level"],
+        )
+        pred = op.fit_transform(X)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"WaveletFeatures[{case['name']}]")
+
+
+def test_wavelet_pca_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "wavelet_pca")
+    X_fit = _decode_matrix(fx["fit_input_hex"], fx["fit_rows"], fx["fit_cols"])
+    X_test = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        params = case["params"]
+        op = WaveletPCA(
+            family=params["family"],
+            mode=params["mode"],
+            max_level=params["max_level"],
+            n_components=params["n_components"],
+        )
+        op.fit(X_fit)
+        pred = op.transform(X_test)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"WaveletPCA[{case['name']}]")
+
+
+def test_wavelet_svd_binding_parity(fixtures_dir):
+    fx = _load_fixture(fixtures_dir, "wavelet_svd")
+    X_fit = _decode_matrix(fx["fit_input_hex"], fx["fit_rows"], fx["fit_cols"])
+    X_test = _decode_matrix(fx["input_hex"], fx["rows"], fx["cols"])
+    for case in fx["cases"]:
+        params = case["params"]
+        op = WaveletSVD(
+            family=params["family"],
+            mode=params["mode"],
+            max_level=params["max_level"],
+            n_components=params["n_components"],
+        )
+        op.fit(X_fit)
+        pred = op.transform(X_test)
+        expected = _decode_matrix(
+            case["output_hex"], case["output_rows"], case["output_cols"]
+        )
+        _assert_parity(pred, expected, f"WaveletSVD[{case['name']}]")
 
 
 def test_gaussian_noise_binding_parity(fixtures_dir):

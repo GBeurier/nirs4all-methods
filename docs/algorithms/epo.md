@@ -20,20 +20,23 @@ For a univariate external parameter `d` (length `n_samples`):
    for `j = 0..cols-1`.
 
 At fit time the c4a engine stores `X_mean`, `d_mean`, and `B`. The
-fit-time output `X − outer(d − d_mean, B)` is what nirs4all's
-`fit_transform` returns.
+training-time output `X - outer(d - d_mean, B)` is what nirs4all's
+`fit_transform(X, d)` returns.
 
-At transform time `d` is **not** available — the canonical EPO contract
-assumes the new samples sit at the calibration mean (`d = d_mean`,
-hence `d - d_mean = 0`), so the projection reduces to centering +
-uncentering — i.e. a pass-through (output == input). This matches the
-nirs4all 0.8.x reference exactly (see the long inline comment in
-`operators/transforms/orthogonalization.py::EPO.transform`).
+## Transform contracts
 
-The stored projection `B` can still be applied externally when the
-caller has `d` for the new samples — Phase 8 does not expose this path
-at the public ABI (we may add `c4a_pp_epo_transform_with_d` in a
-follow-up phase if there is demand).
+The core engine exposes two apply paths:
+
+* `apply(X)` has no `d` vector. It assumes the new samples sit at the
+  calibration mean (`d = d_mean`), so `d - d_mean = 0` and the projection is
+  an identity/pass-through.
+* `apply_with_d(X, d)` performs the actual EPO correction:
+  `X - outer(d - d_mean, B)`.
+
+Both contracts are public ABI. Use `c4a_pp_epo_transform(...)` when the
+external parameter is not available for new samples; use
+`c4a_pp_epo_transform_with_d(...)` for training-time projection or any
+inference batch where `d` is known.
 
 ## C ABI
 
@@ -48,6 +51,11 @@ C4A_API c4a_status_t c4a_pp_epo_fit(c4a_pp_epo_handle_t* h,
 C4A_API c4a_status_t c4a_pp_epo_transform(const c4a_pp_epo_handle_t* h,
                                            c4a_matrix_view_t X,
                                            c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_epo_transform_with_d(
+    const c4a_pp_epo_handle_t* h,
+    c4a_matrix_view_t X,
+    const double* d, int64_t d_len,
+    c4a_matrix_view_t out);
 C4A_API c4a_status_t c4a_pp_epo_inverse_transform(const c4a_pp_epo_handle_t* h,
                                                    c4a_matrix_view_t X,
                                                    c4a_matrix_view_t out);
@@ -61,6 +69,9 @@ removes the `d`-correlated subspace, which is lossy).
 
 `_fit` returns `C4A_ERR_NUMERICAL_FAILURE` when `d` has zero variance
 (the per-feature regression denominator vanishes).
+
+`_transform_with_d` returns `C4A_ERR_SHAPE_MISMATCH` when `d_len` does not
+match the number of rows in `X`.
 
 ## Parity tolerance
 

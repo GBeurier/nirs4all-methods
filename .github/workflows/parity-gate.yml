@@ -60,10 +60,12 @@ jobs:
         # The comparator (parity/binding_parity.py) is in place; the
         # actual smoke runner ships with each language binding (e.g.
         # bindings/python/tests/test_binding_parity.py for Phase 22).
-        # This step is a no-op until the Python binding ships.
         if: hashFiles('bindings/python/**/*.py') != ''
+        env:
+          CHEMOMETRICS4ALL_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libc4a.so.1.9.0
         run: |
-          python -m bindings.python.tests.test_binding_parity
+          python -m pip install -e "bindings/python[test]"
+          python -m pytest bindings/python/tests
 
       - name: Set up R toolchain (Phase 23)
         # R toolchain only needed when the R binding source tree exists.

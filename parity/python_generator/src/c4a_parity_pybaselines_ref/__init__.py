@@ -2,10 +2,12 @@
 """
 Frozen NumPy reference for the Phase 5a + 5b baseline correction operators.
 
-Validated once against ``pybaselines==1.1.4`` (as pinned in
-``parity/python_generator/pyproject.toml``).  After validation these
+Validated once against ``pybaselines==1.1.4`` as the historical oracle.
+After validation these
 modules become the canonical parity floor for chemometrics4all — pybaselines
 itself is no longer in the build path of the parity fixture generator.
+Current upstream pybaselines releases are compared separately by the reference
+parity gate and tracked through ``parity/divergences.json``.
 
 This insulation gives us two things:
 

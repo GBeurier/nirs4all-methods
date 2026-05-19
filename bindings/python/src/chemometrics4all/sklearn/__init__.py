@@ -1,51 +1,124 @@
 # SPDX-License-Identifier: CECILL-2.1
-"""Scikit-learn-style wrappers around libc4a operators.
-
-Twenty operators that are covered by Gate 1 (``binding_parity``) tests:
-
-* Preprocessings: SNV, LSNV, RNV, MSC, EMSC, SavitzkyGolay, FirstDerivative,
-  SecondDerivative, ToAbsorbance, KubelkaMunk.
-* Baseline: Detrend, AsLS, AirPLS.
-* Splitters: KennardStoneSplitter, SPXYSplitter, KBinsStratifiedSplitter.
-* Filters: YOutlierFilter, XOutlierFilter.
-* Misc: WaveletDenoise, GaussianAdditiveNoise.
-"""
-from .augmentation import GaussianAdditiveNoise, WaveletDenoise
-from .baseline import AirPLS, AsLS, Detrend
+"""Scikit-learn-style wrappers around libc4a operators."""
+from .augmentation import (
+    GaussianAdditiveNoise,
+    Haar,
+    Wavelet,
+    WaveletDenoise,
+    WaveletFeatures,
+    WaveletPCA,
+    WaveletSVD,
+)
+from .baseline import (
+    BEADS,
+    AirPLS,
+    ArPLS,
+    AsLS,
+    Detrend,
+    IAsLS,
+    IModPoly,
+    ModPoly,
+    RollingBall,
+    SNIP,
+)
 from .filters import XOutlierFilter, YOutlierFilter
+from .feature_extraction import (
+    EPO,
+    FCKStaticTransformer,
+    FlexiblePCA,
+    FlexibleSVD,
+    OSC,
+)
 from .preprocessing import (
+    AreaNormalization,
+    BaselineCenter,
+    Derivate,
     EMSC,
+    FractionToPercent,
+    FromAbsorbance,
+    Gaussian,
     LSNV,
+    LogTransform,
     MSC,
+    Normalize,
+    NorrisWilliams,
+    PercentToFraction,
     RNV,
     SNV,
     FirstDerivative,
     KubelkaMunk,
     SavitzkyGolay,
     SecondDerivative,
+    SimpleScale,
     ToAbsorbance,
+)
+from .resampling import (
+    Crop,
+    CropTransformer,
+    IntegerKBinsDiscretizer,
+    KBinsDiscretizer,
+    RangeDiscretizer,
+    Resample,
+    ResampleTransformer,
+    Resampler,
 )
 from .splitters import KBinsStratifiedSplitter, KennardStoneSplitter, SPXYSplitter
 
 __all__ = [
     "AirPLS",
+    "ArPLS",
+    "AreaNormalization",
     "AsLS",
+    "BEADS",
+    "BaselineCenter",
+    "Crop",
+    "CropTransformer",
+    "Derivate",
     "Detrend",
+    "EPO",
     "EMSC",
+    "FCKStaticTransformer",
     "FirstDerivative",
+    "FlexiblePCA",
+    "FlexibleSVD",
+    "FractionToPercent",
+    "FromAbsorbance",
+    "Gaussian",
     "GaussianAdditiveNoise",
+    "Haar",
+    "IAsLS",
+    "IModPoly",
+    "IntegerKBinsDiscretizer",
+    "KBinsDiscretizer",
     "KBinsStratifiedSplitter",
     "KennardStoneSplitter",
     "KubelkaMunk",
     "LSNV",
+    "LogTransform",
     "MSC",
+    "ModPoly",
+    "Normalize",
+    "NorrisWilliams",
+    "OSC",
+    "PercentToFraction",
+    "RangeDiscretizer",
     "RNV",
+    "Resample",
+    "ResampleTransformer",
+    "Resampler",
     "SNV",
     "SPXYSplitter",
+    "RollingBall",
+    "SNIP",
     "SavitzkyGolay",
     "SecondDerivative",
+    "SimpleScale",
     "ToAbsorbance",
+    "Wavelet",
     "WaveletDenoise",
+    "WaveletFeatures",
+    "WaveletPCA",
+    "WaveletSVD",
     "XOutlierFilter",
     "YOutlierFilter",
 ]

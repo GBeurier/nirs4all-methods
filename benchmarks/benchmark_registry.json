@@ -1,0 +1,83 @@
+{
+  "schema": "chemometrics4all.benchmark_registry.v0",
+  "status": "scaffold",
+  "generated_results": false,
+  "notes": [
+    "This registry is intentionally minimal and contains no timing or parity results.",
+    "PLS regression/classification methods are out of scope for chemometrics4all benchmarks."
+  ],
+  "methods": [
+    {
+      "method_id": "snv",
+      "label": "Standard normal variate",
+      "family": "preprocessing",
+      "operation": "transform",
+      "truth_sources": ["nirs4all_snv"],
+      "metrics": ["max_abs_diff", "shape_equal", "finite_output"],
+      "default_dataset": {"n_samples": 64, "n_features": 128, "seed": 1234567890}
+    },
+    {
+      "method_id": "msc",
+      "label": "Multiplicative scatter correction",
+      "family": "preprocessing",
+      "operation": "fit_transform",
+      "truth_sources": ["nirs4all_msc"],
+      "metrics": ["max_abs_diff", "shape_equal", "finite_output"],
+      "default_dataset": {"n_samples": 64, "n_features": 128, "seed": 1234567891}
+    },
+    {
+      "method_id": "savitzky_golay",
+      "label": "Savitzky-Golay smoothing and derivatives",
+      "family": "preprocessing",
+      "operation": "transform",
+      "truth_sources": ["scipy_savgol_filter", "nirs4all_savitzky_golay"],
+      "metrics": ["max_abs_diff", "shape_equal", "finite_output"],
+      "default_dataset": {"n_samples": 64, "n_features": 129, "seed": 1234567892}
+    },
+    {
+      "method_id": "asls",
+      "label": "Asymmetric least-squares baseline correction",
+      "family": "baseline",
+      "operation": "fit_transform",
+      "truth_sources": ["pybaselines_asls"],
+      "metrics": ["max_abs_diff", "shape_equal", "finite_output"],
+      "default_dataset": {"n_samples": 24, "n_features": 256, "seed": 1234567893}
+    },
+    {
+      "method_id": "airpls",
+      "label": "Adaptive iteratively reweighted penalized least squares",
+      "family": "baseline",
+      "operation": "fit_transform",
+      "truth_sources": ["pybaselines_airpls"],
+      "metrics": ["max_abs_diff", "shape_equal", "finite_output"],
+      "default_dataset": {"n_samples": 24, "n_features": 256, "seed": 1234567894}
+    },
+    {
+      "method_id": "arpls",
+      "label": "Asymmetrically reweighted penalized least squares",
+      "family": "baseline",
+      "operation": "fit_transform",
+      "truth_sources": ["pybaselines_arpls"],
+      "metrics": ["max_abs_diff", "shape_equal", "finite_output"],
+      "default_dataset": {"n_samples": 24, "n_features": 256, "seed": 1234567895}
+    },
+    {
+      "method_id": "kennard_stone",
+      "label": "Kennard-Stone splitter",
+      "family": "splitter",
+      "operation": "split",
+      "truth_sources": ["nirs4all_kennard_stone"],
+      "metrics": ["indices_equal", "coverage_equal", "deterministic"],
+      "default_dataset": {"n_samples": 80, "n_features": 32, "seed": 1234567896}
+    },
+    {
+      "method_id": "hotelling_t2",
+      "label": "Hotelling T2 diagnostic",
+      "family": "diagnostic",
+      "operation": "transform",
+      "truth_sources": ["numpy_svd", "scipy_f_distribution"],
+      "metrics": ["max_abs_diff", "shape_equal", "finite_output"],
+      "default_dataset": {"n_samples": 80, "n_features": 24, "seed": 1234567897}
+    }
+  ]
+}
