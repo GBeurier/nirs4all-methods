@@ -106,14 +106,14 @@ res <- detrend(X, polyorder = 1L)
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.nirs4all`** (Python · canonical) — `nirs4all.Detrend` · nirs4all@cd731a23+dirty
-- 📐 **`ref.scipy`** (Python · comparator) — `scipy.signal.detrend` · scipy 1.17.1
-- 📐 **`ref.r.stats`** (R · comparator) — `R stats`
+- ◆ **`ref.nirs4all`** (Python · canonical) — `nirs4all.Detrend` · nirs4all@cd731a23+dirty
+- ◆ **`ref.scipy`** (Python · comparator) — `scipy.signal.detrend` · scipy 1.17.1
+- ◆ **`ref.r.stats`** (R · comparator) — `R stats`
 :::
 
 ### Benchmarks
@@ -128,20 +128,20 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.011 ms</td><td class="ms ms-best">🏆 0.111 ms</td><td class="ms ms-best">🏆 0.608 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.012 ms</td><td class="ms ms-best">🏆 0.112 ms</td><td class="ms ms-best">🏆 0.604 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.016 ms</td><td class="ms">0.120 ms</td><td class="ms">0.735 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.017 ms</td><td class="ms">0.117 ms</td><td class="ms">0.645 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.031 ms</td><td class="ms">0.316 ms</td><td class="ms">1.766 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.032 ms</td><td class="ms">0.326 ms</td><td class="ms">1.938 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.Detrend · nirs4all@cd731a23+dirty — canonical">📐</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.082 ms</td><td class="ms">0.321 ms</td><td class="ms">4.155 ms</td></tr>
-<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): scipy.signal.detrend · scipy 1.17.1 — comparator">📐</span><code>ref.scipy</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.069 ms</td><td class="ms">0.298 ms</td><td class="ms">3.132 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.Detrend · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.083 ms</td><td class="ms">0.331 ms</td><td class="ms">3.438 ms</td></tr>
+<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): scipy.signal.detrend · scipy 1.17.1 — comparator">◆</span><code>ref.scipy</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.071 ms</td><td class="ms">0.278 ms</td><td class="ms">3.032 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · external</th></tr>
-<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (R): R stats · R stats — comparator">📐</span><code>ref.r.stats</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">1.508 ms</td><td class="ms">3.250 ms</td><td class="ms">12.500 ms</td></tr>
+<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (R): R stats · R stats — comparator">◆</span><code>ref.r.stats</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">1.547 ms</td><td class="ms">3.219 ms</td><td class="ms">13.250 ms</td></tr>
 </tbody>
 </table>
 </div>

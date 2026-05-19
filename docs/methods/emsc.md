@@ -150,12 +150,12 @@ res <- emsc(X, degree = 1L)
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.nirs4all`** (Python · canonical) — `nirs4all.ExtendedMultiplicativeScatterCorrection(scale=False)` · nirs4all@cd731a23+dirty
+- ◆ **`ref.nirs4all`** (Python · canonical) — `nirs4all.ExtendedMultiplicativeScatterCorrection(scale=False)` · nirs4all@cd731a23+dirty
 :::
 
 ### Benchmarks
@@ -170,16 +170,16 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.018 ms</td><td class="ms">0.129 ms</td><td class="ms ms-best">🏆 0.695 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.020 ms</td><td class="ms">0.138 ms</td><td class="ms">0.752 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.019 ms</td><td class="ms ms-best">🏆 0.128 ms</td><td class="ms">0.712 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.020 ms</td><td class="ms ms-best">🏆 0.136 ms</td><td class="ms ms-best">🏆 0.714 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.095 ms</td><td class="ms">0.523 ms</td><td class="ms">3.062 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.097 ms</td><td class="ms">0.551 ms</td><td class="ms">3.312 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.ExtendedMultiplicativeScatterCorrection(scale=False) · nirs4all@cd731a23+dirty — canonical">📐</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">1.157 ms</td><td class="ms">1.741 ms</td><td class="ms">4.463 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.ExtendedMultiplicativeScatterCorrection(scale=False) · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">1.158 ms</td><td class="ms">1.694 ms</td><td class="ms">4.422 ms</td></tr>
 </tbody>
 </table>
 </div>

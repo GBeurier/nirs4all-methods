@@ -88,7 +88,7 @@ c4a_status_t c4a_metric_sep (const double* y_true, const double* y_pred, int64_t
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs

@@ -2,17 +2,16 @@
 # SPDX-License-Identifier: CECILL-2.1
 """Generate Phase 21 parity fixtures for the FCKStaticTransformer operator.
 
-The FCK static bank takes (alphas, sigmas, kernel_size) and produces L =
+The FCK static bank takes (alphas, scales, kernel_size) and produces L =
 n_orders * n_scales convolutional kernels. For each input row of length p
 the operator emits L convolved bands of length p, concatenated along axis 1
 into shape (n_samples, L * p).
 
 The canonical Python reference is
-``nirs4all.operators.models.sklearn.fckpls.fractional_kernel_1d`` (the
-spatial-domain kernel construction; see docs/algorithms/fck_static.md for
-the formula). Convolution uses ``scipy.ndimage.convolve1d(X, kernel,
-axis=1, mode='reflect')`` so the resulting fixture is bit-identical when
-the C engine implements the same recipe.
+``nirs4all.operators.transforms.fck_static._build_kernel``. Convolution uses
+``scipy.ndimage.convolve1d(X, kernel, axis=1, mode='nearest')`` so the
+resulting fixture is bit-identical when the C engine implements the same
+recipe.
 """
 
 from __future__ import annotations
@@ -41,11 +40,11 @@ def _load(path: Path, name: str):
     return mod
 
 
-# Pull in fractional_kernel_1d from fckpls.py without importing the full
+# Pull in _build_kernel from fck_static.py without importing the full
 # nirs4all package (which would drag in TF / Torch / etc.).
-fckpls_mod = _load(NIRS4ALL_ROOT / "operators/models/sklearn/fckpls.py",
-                    "_n4a_fckpls_phase21")
-fractional_kernel_1d = fckpls_mod.fractional_kernel_1d
+fck_static_mod = _load(NIRS4ALL_ROOT / "operators/transforms/fck_static.py",
+                       "_n4a_fck_static_phase21")
+build_kernel = fck_static_mod._build_kernel
 
 
 # ---------------------------------------------------------------------------
@@ -100,11 +99,14 @@ def synthesize_spectra(seed: int) -> np.ndarray:
 
 def ref_fck_static(X: np.ndarray, *, kernel_size: int,
                     alphas: list[float], sigmas: list[float]) -> np.ndarray:
-    """Apply the FCK static bank: Cartesian product alphas x sigmas, alpha slowest.
+    """Apply the FCK static bank: Cartesian product alphas x scales, alpha slowest.
 
     Output shape: (n_samples, L * n_features), L = len(alphas) * len(sigmas),
     bands laid out as alpha-then-sigma, then convolution along axis=1 with
-    scipy.ndimage.convolve1d in mode='reflect'.
+    scipy.ndimage.convolve1d in mode='nearest'.
+
+    The fixture key remains ``sigmas`` for backwards compatibility with the
+    Python binding's historical constructor alias; the values are FCK scales.
     """
     n_samples, n_features = X.shape
     n_orders = len(alphas)
@@ -112,10 +114,14 @@ def ref_fck_static(X: np.ndarray, *, kernel_size: int,
     L = n_orders * n_scales
     out = np.empty((n_samples, L, n_features), dtype=np.float64)
     for a, alpha in enumerate(alphas):
-        for s, sigma in enumerate(sigmas):
-            kernel = fractional_kernel_1d(float(alpha), float(sigma),
-                                            int(kernel_size))
-            band = ndimage.convolve1d(X, kernel, axis=1, mode='reflect')
+        for s, scale in enumerate(sigmas):
+            kernel = build_kernel(
+                float(alpha),
+                float(scale),
+                int(kernel_size),
+                3.0,
+            )
+            band = ndimage.convolve1d(X, kernel, axis=1, mode='nearest')
             out[:, a * n_scales + s, :] = band
     return out.reshape(n_samples, L * n_features)
 
@@ -133,27 +139,27 @@ def fck_static_cases(X: np.ndarray):
                    p,
                    lambda X=X, p=p: ref_fck_static(X, **p)))
 
-    # Case 2: K=15, two alphas x two sigmas (4 bands).
+    # Case 2: K=15, two alphas x two scales (4 bands).
     p = {"kernel_size": 15, "alphas": [0.5, 1.5], "sigmas": [1.5, 3.0]}
     cases.append(("K15_a05_15_s15_30",
                    p,
                    lambda X=X, p=p: ref_fck_static(X, **p)))
 
-    # Case 3: K=21, single alpha (pure Gaussian), three sigmas.
+    # Case 3: K=21, single alpha (pure Gaussian), three scales.
     p = {"kernel_size": 21, "alphas": [0.0], "sigmas": [1.0, 2.5, 5.0]}
     cases.append(("K21_smooth_s1_25_5",
                    p,
                    lambda X=X, p=p: ref_fck_static(X, **p)))
 
-    # Case 4: K=13, 4 alphas x 2 sigmas (8 bands) — the "default-ish" bank.
+    # Case 4: K=13, 4 alphas x 2 scales (8 bands) — the "default-ish" bank.
     p = {"kernel_size": 13, "alphas": [0.0, 0.5, 1.0, 2.0],
          "sigmas": [2.0, 4.0]}
     cases.append(("K13_a0_05_1_2_s2_4",
                    p,
                    lambda X=X, p=p: ref_fck_static(X, **p)))
 
-    # Case 5: alpha in (1e-10, 0.1] — exercises the "frac kernel without
-    # zero-mean" branch.
+    # Case 5: alpha below 0.1 exercises the pure Gaussian branch with a
+    # non-zero alpha value.
     p = {"kernel_size": 11, "alphas": [0.05], "sigmas": [3.0]}
     cases.append(("K11_a005_s3",
                    p,

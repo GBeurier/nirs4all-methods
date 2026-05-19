@@ -106,12 +106,12 @@ res <- rolling_ball(X, half_window = 10L, smooth_half_window = 0L)
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.pybaselines`** (Python · canonical) — `pybaselines.rolling_ball` · pybaselines 1.2.1
+- ◆ **`ref.pybaselines`** (Python · canonical) — `pybaselines.rolling_ball` · pybaselines 1.2.1
 :::
 
 ### Benchmarks
@@ -126,16 +126,16 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.054 ms</td><td class="ms ms-best">🏆 0.631 ms</td><td class="ms">3.419 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.050 ms</td><td class="ms ms-best">🏆 0.497 ms</td><td class="ms ms-best">🏆 2.608 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.071 ms</td><td class="ms">0.677 ms</td><td class="ms ms-best">🏆 3.261 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.057 ms</td><td class="ms">0.519 ms</td><td class="ms">2.643 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.069 ms</td><td class="ms">0.688 ms</td><td class="ms">4.875 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.068 ms</td><td class="ms">0.719 ms</td><td class="ms">4.625 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.rolling_ball · pybaselines 1.2.1 — canonical">📐</span><code>ref.pybaselines</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">2.980 ms</td><td class="ms">3.635 ms</td><td class="ms">6.386 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.rolling_ball · pybaselines 1.2.1 — canonical">◆</span><code>ref.pybaselines</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">2.969 ms</td><td class="ms">3.839 ms</td><td class="ms">6.206 ms</td></tr>
 </tbody>
 </table>
 </div>

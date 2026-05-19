@@ -894,11 +894,9 @@ C4A_API c4a_status_t c4a_pp_arpls_transform(const c4a_pp_arpls_handle_t* handle,
  *                     1996) — min-then-max filter with window `half_window`.
  *   - IAsLS         : Improved AsLS (He 2014) — polynomial prefit followed by
  *                     AsLS-style banded reweighting.
- *   - BEADS         : Simplified Baseline Estimation And Denoising with
- *                     Sparsity (Ning & Selesnick 2014) using a banded
- *                     pentadiagonal LDLT with reweighted L2 sparsity surrogate.
- *                     The full BEADS algorithm (Chebyshev approximation of |.|
- *                     over a 7-diagonal system) is deferred to a later phase.
+ *   - BEADS         : Baseline Estimation And Denoising with Sparsity
+ *                     (Ning & Selesnick 2014), matching pybaselines' full
+ *                     banded BEADS contract for the exposed parameters.
  *
  * All six operators implement the `_create / _transform / _destroy` ABI
  * contract from §5 (stateless — no `_fit`). Each operator subtracts the
@@ -906,10 +904,9 @@ C4A_API c4a_status_t c4a_pp_arpls_transform(const c4a_pp_arpls_handle_t* handle,
  * semantics match Phase 5a: silently returns the last iterate at max_iter
  * exhaustion.
  *
- * Parity reference: frozen NumPy ref under
- *   parity/python_generator/src/c4a_parity_pybaselines_ref/
- * validated once against pybaselines==1.1.4. The simplified BEADS reference
- * is documented separately in docs/algorithms/beads.md.
+ * Parity reference: pybaselines snapshots stored under
+ *   benchmarks/reference_snapshots/cross_binding/
+ * and generated with reference-library metadata for reproducibility.
  */
 
 /* ---------- ModPoly (Lieber & Mahadevan-Jansen 2003) -------------------- */
@@ -942,8 +939,10 @@ C4A_API c4a_status_t c4a_pp_imodpoly_transform(
 
 /* ---------- SNIP (Ryan 1988, Morháč 1997) ------------------------------ */
 typedef struct c4a_pp_snip_handle_t c4a_pp_snip_handle_t;
-/* `max_half_window` >= 1 (default 20). The algorithm iterates window widths
- * w in [1, max_half_window] applying the LLS-transformed local-min clip. */
+/* `max_half_window` >= 1 (default 20). The algorithm matches
+ * pybaselines.smooth.snip's raw-data filter_order=2 contract: linear edge
+ * extrapolation, then simultaneous local-min clipping for each window width
+ * w in [1, max_half_window]. */
 C4A_API c4a_status_t c4a_pp_snip_create(c4a_pp_snip_handle_t** out,
                                          int32_t max_half_window);
 C4A_API void         c4a_pp_snip_destroy(c4a_pp_snip_handle_t* handle);
@@ -991,7 +990,7 @@ C4A_API c4a_status_t c4a_pp_iasls_transform(const c4a_pp_iasls_handle_t* handle,
                                              c4a_matrix_view_t X,
                                              c4a_matrix_view_t out);
 
-/* ---------- BEADS (simplified) — Ning & Selesnick 2014 ----------------- */
+/* ---------- BEADS — Ning & Selesnick 2014 ------------------------------ */
 typedef struct c4a_pp_beads_handle_t c4a_pp_beads_handle_t;
 /* `lam_0`    > 0 (default 1e2, sparsity weight on baseline residual).
  * `lam_1`    > 0 (default 0.5, banded 1st-difference smoothness weight).
@@ -999,9 +998,9 @@ typedef struct c4a_pp_beads_handle_t c4a_pp_beads_handle_t;
  * `max_iter` >= 0 (default 50).
  * `tol`      >= 0 (default 1e-3, relative L2 baseline change).
  *
- * NOTE: this is the simplified BEADS variant using a reweighted-L2 sparsity
- * surrogate over the pentadiagonal D_2^T D_2 + scaled D_1^T D_1 system.
- * See docs/algorithms/beads.md for the simplification and what is deferred. */
+ * Fixed BEADS options match pybaselines defaults for the public c4a surface:
+ * freq_cutoff=0.005, asymmetry=6, filter_type=1, cost_function=2,
+ * eps_0=eps_1=1e-6, fit_parabola=true. */
 C4A_API c4a_status_t c4a_pp_beads_create(c4a_pp_beads_handle_t** out,
                                           double lam_0, double lam_1,
                                           double lam_2,

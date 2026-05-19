@@ -117,12 +117,12 @@ res <- haar(X)
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.pywavelets`** (Python · canonical) — `PyWavelets.dwt(haar, periodization)` · pywt 1.8.0
+- ◆ **`ref.pywavelets`** (Python · canonical) — `PyWavelets.dwt(haar, periodization)` · pywt 1.8.0
 - ℹ **`ref.nirs4all`** (Python · context) — `nirs4all.Haar(detail-resampled)` · nirs4all@cd731a23+dirty — nirs4all returns resampled detail coefficients only; c4a/PyWavelets gate the concatenated approximation+detail coefficients
 :::
 
@@ -138,17 +138,17 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.002 ms</td><td class="ms ms-best">🏆 0.015 ms</td><td class="ms ms-best">🏆 0.080 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.002 ms</td><td class="ms ms-best">🏆 0.014 ms</td><td class="ms ms-best">🏆 0.087 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.008 ms</td><td class="ms">0.022 ms</td><td class="ms">0.093 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.008 ms</td><td class="ms">0.022 ms</td><td class="ms">0.096 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.021 ms</td><td class="ms">0.236 ms</td><td class="ms">1.469 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.022 ms</td><td class="ms">0.238 ms</td><td class="ms">1.297 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.Haar(detail-resampled) · nirs4all@cd731a23+dirty — context">📐</span><code>ref.nirs4all</code></td><td class="parity parity-context">≈ context</td><td class="ms">0.056 ms</td><td class="ms">0.288 ms</td><td class="ms">1.830 ms</td></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): PyWavelets.dwt(haar, periodization) · pywt 1.8.0 — canonical">📐</span><code>ref.pywavelets</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.013 ms</td><td class="ms">0.064 ms</td><td class="ms">0.347 ms</td></tr>
+<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.Haar(detail-resampled) · nirs4all@cd731a23+dirty — context">◆</span><code>ref.nirs4all</code></td><td class="parity parity-context">≈ context</td><td class="ms">0.057 ms</td><td class="ms">0.291 ms</td><td class="ms">2.036 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): PyWavelets.dwt(haar, periodization) · pywt 1.8.0 — canonical">◆</span><code>ref.pywavelets</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.013 ms</td><td class="ms">0.065 ms</td><td class="ms">0.367 ms</td></tr>
 </tbody>
 </table>
 </div>

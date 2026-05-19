@@ -205,8 +205,8 @@ void test_snip_smoke() {
     C4A_TEST_REQUIRE(c4a_pp_snip_transform(h, Xv, Yv) == C4A_OK);
     for (int i = 0; i < 10; ++i) {
         C4A_TEST_REQUIRE(std::isfinite(Y[i]));
-        // For a constant row, the LLS transform is constant and the clip
-        // does nothing -> baseline equals input -> detrended near zero.
+        // For a constant row, raw-data clipping leaves the baseline equal to
+        // the input -> detrended near zero.
         C4A_TEST_REQUIRE(std::fabs(Y[i]) < 1e-12);
     }
     c4a_pp_snip_destroy(h);

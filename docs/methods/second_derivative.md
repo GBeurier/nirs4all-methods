@@ -107,13 +107,13 @@ res <- second_derivative(X)
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.nirs4all`** (Python · canonical) — `nirs4all.SecondDerivative` · nirs4all@cd731a23+dirty
-- 📐 **`ref.numpy`** (Python · comparator) — `numpy.gradient` · numpy 2.3.5
+- ◆ **`ref.nirs4all`** (Python · canonical) — `nirs4all.SecondDerivative` · nirs4all@cd731a23+dirty
+- ◆ **`ref.numpy`** (Python · comparator) — `numpy.gradient` · numpy 2.3.5
 :::
 
 ### Benchmarks
@@ -128,17 +128,17 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.005 ms</td><td class="ms ms-best">🏆 0.044 ms</td><td class="ms ms-best">🏆 0.286 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.005 ms</td><td class="ms ms-best">🏆 0.047 ms</td><td class="ms ms-best">🏆 0.279 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.010 ms</td><td class="ms">0.052 ms</td><td class="ms">0.299 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.010 ms</td><td class="ms">0.052 ms</td><td class="ms">0.316 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.027 ms</td><td class="ms">0.270 ms</td><td class="ms">1.812 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.029 ms</td><td class="ms">0.297 ms</td><td class="ms">1.828 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.SecondDerivative · nirs4all@cd731a23+dirty — canonical">📐</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.038 ms</td><td class="ms">0.192 ms</td><td class="ms">1.004 ms</td></tr>
-<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): numpy.gradient · numpy 2.3.5 — comparator">📐</span><code>ref.numpy</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.033 ms</td><td class="ms">0.166 ms</td><td class="ms">0.977 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.SecondDerivative · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.038 ms</td><td class="ms">0.189 ms</td><td class="ms">1.147 ms</td></tr>
+<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): numpy.gradient · numpy 2.3.5 — comparator">◆</span><code>ref.numpy</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.034 ms</td><td class="ms">0.157 ms</td><td class="ms">0.911 ms</td></tr>
 </tbody>
 </table>
 </div>

@@ -80,8 +80,8 @@ Reference backends are registered in the benchmark matrix and stored as reproduc
 | C ABI | `c4a_split_kbins_stratified` | C/C++ | Stable libc4a entry point family. |
 | Python | `chemometrics4all.KBinsStratifiedSplitter` | Python | sklearn-style wrapper backed by ctypes. |
 | R | `kbins_stratified(Y, test_size = 0.25, seed = 0, n_bins = 5L, strategy = "uniform")` | R | Public package wrapper around the C ABI. |
-| ref.nirs4all | `nirs4all.KBinsStratifiedSplitter` | Python | canonical snapshot; c4a context; nirs4all/sklearn use StratifiedShuffleSplit RNG/index ordering; c4a uses its documented PCG64 per-bin shuffle |
-| ref.sklearn | `sklearn.model_selection.StratifiedShuffleSplit` | Python | context only; sklearn gives the same stratification counts here, but not the same deterministic split-index contract as c4a |
+| ref.nirs4all | `nirs4all.KBinsStratifiedSplitter` | Python | canonical/comparator |
+| ref.sklearn | `sklearn.model_selection.StratifiedShuffleSplit` | Python | canonical/comparator |
 
 ### Usage
 
@@ -130,13 +130,13 @@ res <- kbins_stratified(matrix(y, ncol = 1L), test_size = 0.25, seed = 17, n_bin
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.nirs4all`** (Python · canonical) — `nirs4all.KBinsStratifiedSplitter` · nirs4all@cd731a23+dirty — nirs4all/sklearn use StratifiedShuffleSplit RNG/index ordering; c4a uses its documented PCG64 per-bin shuffle
-- ℹ **`ref.sklearn`** (Python · context) — `sklearn.model_selection.StratifiedShuffleSplit` · sklearn 1.8.0 — sklearn gives the same stratification counts here, but not the same deterministic split-index contract as c4a
+- ◆ **`ref.nirs4all`** (Python · canonical) — `nirs4all.KBinsStratifiedSplitter` · nirs4all@cd731a23+dirty
+- ◆ **`ref.sklearn`** (Python · comparator) — `sklearn.model_selection.StratifiedShuffleSplit` · sklearn 1.8.0
 :::
 
 ### Benchmarks
@@ -151,17 +151,17 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-context">≈ context</td><td class="ms">0.010 ms</td><td class="ms">0.010 ms</td><td class="ms">0.010 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms">0.011 ms</td><td class="ms">0.011 ms</td><td class="ms">0.011 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.016 ms</td><td class="ms">0.016 ms</td><td class="ms">0.017 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.017 ms</td><td class="ms">0.017 ms</td><td class="ms">0.017 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">🏆 0.006 ms</td><td class="ms ms-best">🏆 0.006 ms</td><td class="ms ms-best">🏆 0.007 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">🏆 0.008 ms</td><td class="ms ms-best">🏆 0.007 ms</td><td class="ms ms-best">🏆 0.008 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.KBinsStratifiedSplitter · nirs4all@cd731a23+dirty — canonical">📐</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.580 ms</td><td class="ms">0.633 ms</td><td class="ms">0.698 ms</td></tr>
-<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): sklearn.model_selection.StratifiedShuffleSplit · sklearn 1.8.0 — context">📐</span><code>ref.sklearn</code></td><td class="parity parity-context">≈ context</td><td class="ms">0.401 ms</td><td class="ms">0.404 ms</td><td class="ms">0.438 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.KBinsStratifiedSplitter · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.602 ms</td><td class="ms">0.621 ms</td><td class="ms">0.731 ms</td></tr>
+<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): sklearn.model_selection.StratifiedShuffleSplit · sklearn 1.8.0 — comparator">◆</span><code>ref.sklearn</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.417 ms</td><td class="ms">0.417 ms</td><td class="ms">0.415 ms</td></tr>
 </tbody>
 </table>
 </div>

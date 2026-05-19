@@ -1583,8 +1583,6 @@ METHODS: tuple[MethodSpec, ...] = (
             "ref.pybaselines",
             "pybaselines.snip(raw)",
             ref_pybaselines("snip", max_half_window=10),
-            gate_c4a=False,
-            contract_note="pybaselines applies SNIP to raw data; c4a's current operator applies the Morhac log-log-square transform before clipping",
         ),
     )),
     MethodSpec("rolling_ball", "Rolling ball", "baseline", py_transform(c4a.RollingBall, half_window=10, smooth_half_window=0), c_same("c4a_pp_rolling_ball", ctypes.c_int32(10), ctypes.c_int32(0)), "rolling_ball(X, half_window = 10L, smooth_half_window = 0L)", (ReferenceSpec("ref.pybaselines", "pybaselines.rolling_ball", ref_pybaselines("rolling_ball", half_window=10, smooth_half_window=0)),)),
@@ -1593,9 +1591,7 @@ METHODS: tuple[MethodSpec, ...] = (
         ReferenceSpec(
             "ref.pybaselines",
             "pybaselines.beads(full)",
-            ref_pybaselines("beads", lam_0=100.0, lam_1=0.5, lam_2=0.5, max_iter=20),
-            gate_c4a=False,
-            contract_note="pybaselines.beads is the full BEADS algorithm; c4a currently ships the documented simplified reweighted-L2 variant",
+            ref_pybaselines("beads", lam_0=100.0, lam_1=0.5, lam_2=0.5, max_iter=20, tol=1e-3),
         ),
     )),
     MethodSpec(
@@ -1672,8 +1668,6 @@ METHODS: tuple[MethodSpec, ...] = (
         nirs_ref(
             "nirs4all.FCKStaticTransformer",
             ref_nirs_transform("nirs4all.operators.transforms.fck_static", "FCKStaticTransformer", alphas=[0.5, 1.0], scales=[1.0, 2.0], kernel_sizes=[5], sigma=3.0),
-            gate_c4a=False,
-            contract_note="nirs4all uses a scaled kernel bank and nearest-edge convolution; c4a currently uses its legacy sigma-bank reflect-convolution contract",
         ),
     )),
     MethodSpec("crop", "Crop", "resampling", py_crop, c_crop_factory, "{start <- ncol(X) %/% 8L; end <- ncol(X) - ncol(X) %/% 8L; crop_transform(X, start = start, end = end)}", (nirs_ref("nirs4all.CropTransformer", ref_nirs_crop),)),
@@ -1687,14 +1681,10 @@ METHODS: tuple[MethodSpec, ...] = (
         nirs_ref(
             "nirs4all.KBinsStratifiedSplitter",
             ref_nirs_split_kbins_stratified,
-            gate_c4a=False,
-            contract_note="nirs4all/sklearn use StratifiedShuffleSplit RNG/index ordering; c4a uses its documented PCG64 per-bin shuffle",
         ),
         sklearn_ref(
             "sklearn.model_selection.StratifiedShuffleSplit",
             ref_sklearn_kbins_stratified,
-            compare=False,
-            contract_note="sklearn gives the same stratification counts here, but not the same deterministic split-index contract as c4a",
         ),
     )),
     MethodSpec("y_outlier_iqr", "Y outlier IQR", "filter", py_y_outlier, lambda ctx: lambda: c_y_outlier_iqr(ctx), "y_outlier_filter(y, method = 'iqr')$mask", (nirs_ref("nirs4all.YOutlierFilter", ref_nirs_y_outlier),)),

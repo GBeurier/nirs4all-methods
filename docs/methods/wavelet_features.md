@@ -145,13 +145,13 @@ res <- wavelet_features(X, family = 'haar', boundary = 'symmetric', max_level = 
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.pywavelets`** (Python · canonical) — `PyWavelets.wavedec(haar, symmetric)+histogram band stats` · pywt 1.8.0
-- 📐 **`ref.nirs4all`** (Python · comparator) — `nirs4all.WaveletFeatures(n_coeffs_per_level=0)` · nirs4all@cd731a23+dirty
+- ◆ **`ref.pywavelets`** (Python · canonical) — `PyWavelets.wavedec(haar, symmetric)+histogram band stats` · pywt 1.8.0
+- ◆ **`ref.nirs4all`** (Python · comparator) — `nirs4all.WaveletFeatures(n_coeffs_per_level=0)` · nirs4all@cd731a23+dirty
 :::
 
 ### Benchmarks
@@ -166,17 +166,17 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.038 ms</td><td class="ms ms-best">🏆 0.213 ms</td><td class="ms ms-best">🏆 1.008 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.037 ms</td><td class="ms ms-best">🏆 0.213 ms</td><td class="ms ms-best">🏆 1.011 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.039 ms</td><td class="ms">0.218 ms</td><td class="ms">1.043 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.040 ms</td><td class="ms">0.218 ms</td><td class="ms">1.050 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.055 ms</td><td class="ms">0.330 ms</td><td class="ms">1.953 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.055 ms</td><td class="ms">0.342 ms</td><td class="ms">1.906 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.WaveletFeatures(n_coeffs_per_level=0) · nirs4all@cd731a23+dirty — comparator">📐</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">62.355 ms</td><td class="ms">63.615 ms</td><td class="ms">73.914 ms</td></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): PyWavelets.wavedec(haar, symmetric)+histogram band stats · pywt 1.8.0 — canonical">📐</span><code>ref.pywavelets</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">15.305 ms</td><td class="ms">16.024 ms</td><td class="ms">19.187 ms</td></tr>
+<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.WaveletFeatures(n_coeffs_per_level=0) · nirs4all@cd731a23+dirty — comparator">◆</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">59.182 ms</td><td class="ms">64.261 ms</td><td class="ms">72.768 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): PyWavelets.wavedec(haar, symmetric)+histogram band stats · pywt 1.8.0 — canonical">◆</span><code>ref.pywavelets</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">16.007 ms</td><td class="ms">16.919 ms</td><td class="ms">19.389 ms</td></tr>
 </tbody>
 </table>
 </div>

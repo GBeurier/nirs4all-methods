@@ -4,26 +4,27 @@ _Group_: **Baseline** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8` · _Sour
 
 ## Description
 
-Ning & Selesnick 2014 BEADS. **Phase 5b ships the simplified pentadiagonal variant**; see "Simplification" below for what is deferred.
+Ning & Selesnick 2014 BEADS, implemented against the
+`pybaselines.Baseline().beads` full banded contract for the public c4a
+parameter surface.
+
+The exposed options are:
+
+- `freq_cutoff = 0.005`
+- `asymmetry = 6`
+- `filter_type = 1`
+- `cost_function = 2`
+- `eps_0 = eps_1 = 1e-6`
+- `fit_parabola = true`
+- no derivative smoothing
 
 For each row `y` of length `n`:
 
-```
-w := ones(n)
-z := zeros(n)
-for iter in 0..max_iter:
-    A := diag(lam_0 * w) + (lam_1 + lam_2) * D_2^T D_2
-    rhs := lam_0 * w * y
-    z_new := A^{-1} rhs                              # pentadiagonal LDLT
-    d := y - z_new
-    w[i] := 1 / (|d[i]| + eps)                       # reweighted L2 sparsity
-    w := w * n / sum(w)                              # renormalise to mean 1
-    if rel_l2_diff(z, z_new) < tol: break
-    z := z_new
-out := y - z
-```
-
-`eps = 1e-3` prevents division by zero on perfectly matched residuals.
+1. Subtract pybaselines' endpoint parabola.
+2. Build the second-order high-pass filter matrices `A` and `B`.
+3. Iterate the 9-diagonal BEADS system with L1-v2 derivative weights,
+   asymmetric signal weights, and `lam_0 / lam_1 / lam_2`.
+4. Reconstruct the low-pass baseline and output `out = y - baseline`.
 
 From the `chemometrics4all.BEADS` Python wrapper docstring:
 
@@ -43,8 +44,10 @@ From the `chemometrics4all.BEADS` Python wrapper docstring:
 
 ### Bibliographic source
 
-- Ning, X., Selesnick, I. W. & Duval, L. (2014). "Chromatogram baseline estimation and denoising using sparsity (BEADS)." Chemometrics and Intelligent Laboratory Systems 139, 156-167.
-- Frozen Python reference (simplified variant): `parity/python_generator/src/c4a_parity_pybaselines_ref/beads.py`.
+- Ning, X., Selesnick, I. W. & Duval, L. (2014). "Chromatogram baseline
+  estimation and denoising using sparsity (BEADS)." Chemometrics and
+  Intelligent Laboratory Systems 139, 156-167.
+- Pybaselines BEADS reference: `pybaselines.misc.beads`.
 
 ### Mathematical principle
 
@@ -52,11 +55,12 @@ From the `chemometrics4all.BEADS` Python wrapper docstring:
 
 ### Implementation
 
-- Pentadiagonal LDLT (`core/common/banded_solver.h`) with row-scope `L` / `D` scratch buffers.
-- Penalty: `(lam_1 + lam_2) * D_2^T D_2` (the simplification — see below).
-- Convergence on `rel_l2_diff(z_old, z_new)`. Renormalising `w` to mean 1 keeps the effective lam_0 stable across iterations.
-- On `max_iter` reached without convergence: silently returns the last iterate.
-- Parity tolerance vs frozen NumPy reference: `1e-6 abs / 1e-7 rel`.
+- Full pybaselines-compatible banded formulation, specialized to
+  `filter_type=1`.
+- The iterative linear system has four lower and four upper diagonals.
+- On `max_iter` reached without convergence, the last iterate is returned.
+- External benchmark gate: `pybaselines.Baseline().beads` with the parameters
+  above and `tol=1e-3`.
 
 C ABI entry points used by the language bindings:
 
@@ -75,7 +79,7 @@ Reference backends are registered in the benchmark matrix and stored as reproduc
 | C ABI | `c4a_pp_beads` | C/C++ | Stable libc4a entry point family. |
 | Python | `chemometrics4all.BEADS` | Python | sklearn-style wrapper backed by ctypes. |
 | R | `beads(X, lam_0 = 100.0, lam_1 = 0.5, lam_2 = 0.5, max_iter = 50L, tol = 1e-3)` | R | Public package wrapper around the C ABI. |
-| ref.pybaselines | `pybaselines.beads(full)` | Python | canonical snapshot; c4a context; pybaselines.beads is the full BEADS algorithm; c4a currently ships the documented simplified reweighted-L2 variant |
+| ref.pybaselines | `pybaselines.beads(full)` | Python | canonical/comparator |
 
 ### Usage
 
@@ -124,12 +128,12 @@ res <- beads(X, max_iter = 20L)
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.pybaselines`** (Python · canonical) — `pybaselines.beads(full)` · pybaselines 1.2.1 — pybaselines.beads is the full BEADS algorithm; c4a currently ships the documented simplified reweighted-L2 variant
+- ◆ **`ref.pybaselines`** (Python · canonical) — `pybaselines.beads(full)` · pybaselines 1.2.1
 :::
 
 ### Benchmarks
@@ -144,16 +148,16 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-context">≈ context</td><td class="ms ms-best">🏆 0.118 ms</td><td class="ms ms-best">🏆 1.295 ms</td><td class="ms">6.952 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms">8.178 ms</td><td class="ms ms-best">🏆 84.687 ms</td><td class="ms ms-best">🏆 428.499 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.167 ms</td><td class="ms">1.341 ms</td><td class="ms ms-best">🏆 6.918 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">🏆 7.916 ms</td><td class="ms">85.049 ms</td><td class="ms">431.208 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.157 ms</td><td class="ms">1.523 ms</td><td class="ms">8.188 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">9.188 ms</td><td class="ms">96.500 ms</td><td class="ms">493.000 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.beads(full) · pybaselines 1.2.1 — canonical">📐</span><code>ref.pybaselines</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">210.784 ms</td><td class="ms">377.355 ms</td><td class="ms">1044.608 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.beads(full) · pybaselines 1.2.1 — canonical">◆</span><code>ref.pybaselines</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">214.991 ms</td><td class="ms">364.137 ms</td><td class="ms">1037.992 ms</td></tr>
 </tbody>
 </table>
 </div>

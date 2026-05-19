@@ -77,16 +77,16 @@ c4a_matrix_view_t make_rowmajor_view(double* data, std::int64_t rows,
 
 void test_fck_smoke() {
     // 1 row x 10 cols, two kernels (alpha=0.0 smoother + alpha=1.0
-    // derivative-like) at sigma=2.0.
+    // derivative-like) at scale=2.0.
     double X[10] = {1.0, 2.0, 4.0, 7.0, 11.0, 16.0, 22.0, 29.0, 37.0, 46.0};
     double Y[20] = {0};
 
     const double alphas[2] = {0.0, 1.0};
-    const double sigmas[1] = {2.0};
+    const double scales[1] = {2.0};
     c4a_pp_fck_static_handle_t* h = nullptr;
     C4A_TEST_REQUIRE(c4a_pp_fck_static_create(&h, /*K=*/5,
                                                 alphas, 2,
-                                                sigmas, 1) == C4A_OK);
+                                                scales, 1) == C4A_OK);
     C4A_TEST_REQUIRE(h != nullptr);
 
     // The output should be (1, 2 * 10) = (1, 20).
@@ -110,22 +110,22 @@ void test_fck_smoke() {
     // Invalid parameter rejection.
     c4a_pp_fck_static_handle_t* bad = nullptr;
     C4A_TEST_REQUIRE(c4a_pp_fck_static_create(&bad, /*K=*/0,
-                                                alphas, 2, sigmas, 1) ==
+                                                alphas, 2, scales, 1) ==
                      C4A_ERR_INVALID_ARGUMENT);
     C4A_TEST_REQUIRE(c4a_pp_fck_static_create(&bad, /*K=*/5,
-                                                alphas, 0, sigmas, 1) ==
+                                                alphas, 0, scales, 1) ==
                      C4A_ERR_INVALID_ARGUMENT);
-    const double zero_sigma[1] = {0.0};
+    const double zero_scale[1] = {0.0};
     C4A_TEST_REQUIRE(c4a_pp_fck_static_create(&bad, /*K=*/5,
-                                                alphas, 2, zero_sigma, 1) ==
+                                                alphas, 2, zero_scale, 1) ==
                      C4A_ERR_INVALID_ARGUMENT);
 
     // NULL out / pointers.
     C4A_TEST_REQUIRE(c4a_pp_fck_static_create(nullptr, 5, alphas, 2,
-                                                sigmas, 1) ==
+                                                scales, 1) ==
                      C4A_ERR_NULL_POINTER);
     C4A_TEST_REQUIRE(c4a_pp_fck_static_create(&bad, 5, nullptr, 2,
-                                                sigmas, 1) ==
+                                                scales, 1) ==
                      C4A_ERR_NULL_POINTER);
 
     // Shape-mismatch on transform.
@@ -159,12 +159,12 @@ void test_fck_smoke() {
 // ---------------------------------------------------------------------------
 
 void test_fck_kernel_properties() {
-    // We use a single (alpha, sigma) pair per case so the output has one
+    // We use a single (alpha, scale) pair per case so the output has one
     // kernel band per row. The input length must be large enough to keep
     // the kernel response away from the implicit-zero boundary (mode
     // "constant" in scipy.ndimage.convolve1d).
 
-    auto run_kernel_via_transform = [](double alpha, double sigma,
+    auto run_kernel_via_transform = [](double alpha, double scale,
                                         int32_t K, int64_t N,
                                         std::vector<double>& y_out) {
         const int64_t centre = N / 2;
@@ -173,11 +173,11 @@ void test_fck_kernel_properties() {
         y_out.assign(static_cast<std::size_t>(N), 0.0);
 
         const double alphas[1] = {alpha};
-        const double sigmas[1] = {sigma};
+        const double scales[1] = {scale};
         c4a_pp_fck_static_handle_t* h = nullptr;
         C4A_TEST_REQUIRE(c4a_pp_fck_static_create(&h, K,
                                                     alphas, 1,
-                                                    sigmas, 1) == C4A_OK);
+                                                    scales, 1) == C4A_OK);
         c4a_matrix_view_t Xv = make_rowmajor_view(x.data(), 1, N);
         c4a_matrix_view_t Yv = make_rowmajor_view(y_out.data(), 1, N);
         C4A_TEST_REQUIRE(c4a_pp_fck_static_transform(h, Xv, Yv) == C4A_OK);
@@ -213,12 +213,13 @@ void test_fck_kernel_properties() {
                 C4A_TEST_REQUIRE(std::fabs(at(y, i)) < 1e-15);
             }
         }
-        // L1 norm of the kernel (sum |y[c-half..c+half]|) == 1.
+        // L1 norm uses the nirs4all epsilon denominator:
+        // raw_sum / (raw_sum + 1e-8), so it is within epsilon of 1.
         double sum_abs = 0.0;
         for (int64_t d = -half; d <= half; ++d) {
             sum_abs += std::fabs(at(y, c + d));
         }
-        C4A_TEST_REQUIRE(std::fabs(sum_abs - 1.0) < 1e-13);
+        C4A_TEST_REQUIRE(std::fabs(sum_abs - 1.0) < 1e-8);
         // Peak at the centre.
         C4A_TEST_REQUIRE(at(y, c) >= at(y, c - half));
     }
@@ -242,10 +243,10 @@ void test_fck_kernel_properties() {
         for (int64_t d = -half; d <= half; ++d) mean += at(y, c + d);
         mean /= static_cast<double>(K);
         C4A_TEST_REQUIRE(std::fabs(mean) < 1e-13);
-        // L1 norm of the kernel taps == 1.
+        // L1 norm of the kernel taps is within the nirs4all epsilon of 1.
         double sum_abs = 0.0;
         for (int64_t d = -half; d <= half; ++d) sum_abs += std::fabs(at(y, c + d));
-        C4A_TEST_REQUIRE(std::fabs(sum_abs - 1.0) < 1e-13);
+        C4A_TEST_REQUIRE(std::fabs(sum_abs - 1.0) < 1e-8);
     }
 
     // Case C — alpha = 1.5 (zero-mean, still antisymmetric because sign(idx)
@@ -305,7 +306,8 @@ void test_fck_parity() {
     for (const auto& c : fx.cases) {
         const int32_t K = static_cast<int32_t>(
             ::c4a_testing::params_get_int(c.params_json, "kernel_size", 11));
-        // The fixture writes the alphas / sigmas vectors as JSON arrays.
+        // The fixture writes the alphas / sigmas vectors as JSON arrays. The
+        // historical fixture key "sigmas" now carries FCK scales.
         // Pull their slices out of the params blob with the same `find +
         // read_value_span` plumbing used for nested objects.
         auto extract_vec = [&](const std::string& key) {

@@ -863,12 +863,11 @@ def test_kbins_stratified_binding_parity(fixtures_dir):
         train, test = op.split(Y)
         expected_train = np.asarray(params["train_idx"], dtype=np.int64)
         expected_test = np.asarray(params["test_idx"], dtype=np.int64)
-        # KBinsStratified returns sorted indices; just compare directly.
-        _assert_parity(np.sort(train).astype(np.float64),
-                       np.sort(expected_train).astype(np.float64),
+        _assert_parity(train.astype(np.float64),
+                       expected_train.astype(np.float64),
                        f"KBinsStratified[{case['name']}] train_idx")
-        _assert_parity(np.sort(test).astype(np.float64),
-                       np.sort(expected_test).astype(np.float64),
+        _assert_parity(test.astype(np.float64),
+                       expected_test.astype(np.float64),
                        f"KBinsStratified[{case['name']}] test_idx")
 
 

@@ -4,13 +4,17 @@ _Group_: **Baseline** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8` · _Sour
 
 ## Description
 
-Ryan 1988 / Morháč 1997 baseline. Pure-arithmetic algorithm (no linear algebra). For each row `y` of length `n`:
+Ryan 1988 / Morháč 1997 baseline correction, implemented on the same public
+contract as `pybaselines.smooth.snip` with `filter_order=2`.
 
-1. **LLS transform**: `v[i] = log(log(sqrt(|y[i]| + 1) + 1) + 1)`.
-2. **Peak clipping** at growing half-windows: for each `w = 1, 2, .., max_half_window`, for `i in [w, n - w)`:
-   `v[i] = min(v[i], (v[i - w] + v[i + w]) / 2)`.
-3. **Inverse LLS**: `z = (exp(exp(v) - 1) - 1)^2 - 1`.
-4. Output: `out = y - z`.
+For each row `y` of length `n`:
+
+1. Clamp `max_half_window` to the largest valid half-window for the row.
+2. Linearly extrapolate `max_half_window` samples at both edges.
+3. For each `w = 1, 2, ..., max_half_window`, compute
+   `filters[i] = (baseline[i - w] + baseline[i + w]) / 2` for the whole valid
+   padded slice, then update `baseline[i] = min(baseline[i], filters[i])`.
+4. Output `out = y - baseline[unpadded]`.
 
 From the `chemometrics4all.SNIP` Python wrapper docstring:
 
@@ -26,9 +30,13 @@ From the `chemometrics4all.SNIP` Python wrapper docstring:
 
 ### Bibliographic source
 
-- Ryan, C. et al. (1988). "SNIP: A statistics-sensitive background treatment for the quantitative analysis of PIXE spectra in geoscience applications." Nuclear Instruments and Methods B34, 396-402.
-- Morháč, M. et al. (1997). "Background elimination methods for multidimensional coincidence γ-ray spectra." Nuclear Instruments and Methods A 401(1), 113-132.
-- Frozen Python reference: `parity/python_generator/src/c4a_parity_pybaselines_ref/snip.py`.
+- Ryan, C. et al. (1988). "SNIP: A statistics-sensitive background treatment
+  for the quantitative analysis of PIXE spectra in geoscience applications."
+  Nuclear Instruments and Methods B34, 396-402.
+- Morháč, M. et al. (1997). "Background elimination methods for
+  multidimensional coincidence γ-ray spectra." Nuclear Instruments and Methods
+  A 401(1), 113-132.
+- Pybaselines SNIP reference: `pybaselines.smooth.snip`.
 
 ### Mathematical principle
 
@@ -36,9 +44,9 @@ From the `chemometrics4all.SNIP` Python wrapper docstring:
 
 ### Implementation
 
-- Pure arithmetic; the clipping step is applied IN-PLACE so each window pass references just-updated neighbours (matches Morháč 1997 / pybaselines).
-- One scratch buffer per row (length `n` doubles).
-- Parity tolerance vs frozen NumPy reference: `1e-12 abs / 1e-13 rel`.
+- Pure arithmetic, row-wise.
+- Edge handling and per-window update order match `pybaselines.smooth.snip`.
+- External benchmark gate: `pybaselines.Baseline().snip`.
 
 C ABI entry points used by the language bindings:
 
@@ -57,7 +65,7 @@ Reference backends are registered in the benchmark matrix and stored as reproduc
 | C ABI | `c4a_pp_snip` | C/C++ | Stable libc4a entry point family. |
 | Python | `chemometrics4all.SNIP` | Python | sklearn-style wrapper backed by ctypes. |
 | R | `snip(X, max_half_window = 20L)` | R | Public package wrapper around the C ABI. |
-| ref.pybaselines | `pybaselines.snip(raw)` | Python | canonical snapshot; c4a context; pybaselines applies SNIP to raw data; c4a's current operator applies the Morhac log-log-square transform before clipping |
+| ref.pybaselines | `pybaselines.snip(raw)` | Python | canonical/comparator |
 
 ### Usage
 
@@ -106,12 +114,12 @@ res <- snip(X, max_half_window = 10L)
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.pybaselines`** (Python · canonical) — `pybaselines.snip(raw)` · pybaselines 1.2.1 — pybaselines applies SNIP to raw data; c4a's current operator applies the Morhac log-log-square transform before clipping
+- ◆ **`ref.pybaselines`** (Python · canonical) — `pybaselines.snip(raw)` · pybaselines 1.2.1
 :::
 
 ### Benchmarks
@@ -126,16 +134,16 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-context">≈ context</td><td class="ms ms-best">🏆 0.150 ms</td><td class="ms ms-best">🏆 2.282 ms</td><td class="ms">11.262 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms">0.123 ms</td><td class="ms ms-best">🏆 1.458 ms</td><td class="ms ms-best">🏆 7.110 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.155 ms</td><td class="ms">2.351 ms</td><td class="ms ms-best">🏆 11.249 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.122 ms</td><td class="ms">1.581 ms</td><td class="ms">7.258 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.157 ms</td><td class="ms">2.406 ms</td><td class="ms">13.750 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">🏆 0.119 ms</td><td class="ms">1.562 ms</td><td class="ms">8.938 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.snip(raw) · pybaselines 1.2.1 — canonical">📐</span><code>ref.pybaselines</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">18.099 ms</td><td class="ms">19.640 ms</td><td class="ms">27.789 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.snip(raw) · pybaselines 1.2.1 — canonical">◆</span><code>ref.pybaselines</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">19.872 ms</td><td class="ms">19.469 ms</td><td class="ms">25.489 ms</td></tr>
 </tbody>
 </table>
 </div>

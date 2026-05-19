@@ -175,6 +175,7 @@ table.docutils.parity-grouped td.ms.ms-best {
 /* Reference markers in generated method benchmark tables. */
 .truth-mark {
     margin-right: 4px;
+    color: #2563eb;
     opacity: 0.85;
     font-size: 0.9em;
     cursor: help;

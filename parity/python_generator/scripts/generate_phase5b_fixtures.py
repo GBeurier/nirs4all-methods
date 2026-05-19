@@ -6,12 +6,14 @@ Six operators, all stateless:
 
   * ModPoly      — Lieber & Mahadevan-Jansen 2003 modified polynomial.
   * IModPoly     — Gan, Ruan, Mo 2006 σ-stopping modified polynomial.
-  * SNIP         — Ryan 1988 / Morháč 1997 LLS-transformed peak-clipping.
+  * SNIP         — pybaselines smooth SNIP peak-clipping.
   * RollingBall  — Kneen & Annegarn 1996 min-then-max morphology.
   * IAsLS        — pybaselines-compatible He 2014 IAsLS (diff_order=2).
-  * BEADS (simp) — Ning & Selesnick 2014 simplified pentadiagonal variant.
+  * BEADS        — Ning & Selesnick 2014 pybaselines full banded variant.
 
-References come from the frozen ``c4a_parity_pybaselines_ref`` package.
+References execute the external pybaselines implementation through the
+``c4a_parity_pybaselines_ref`` adapter and record the pybaselines version in
+the fixture metadata.
 
 Shape: 40 rows × 60 cols (same generator as Phase 5a), so the same input
 matrix would round-trip through the c4a engine and the NumPy reference.
@@ -26,6 +28,7 @@ from struct import pack
 from typing import Any, Callable
 
 import numpy as np
+import pybaselines
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -202,7 +205,7 @@ def write_fixture(name: str, X: np.ndarray,
         "format": f"c4a_pp_{name}_v1",
         "numpy_version": np.__version__,
         "scipy_version": __import__("scipy").__version__,
-        "reference": "c4a_parity_pybaselines_ref (frozen against pybaselines==1.1.4)",
+        "reference": f"pybaselines=={pybaselines.__version__}",
         "encoding": "ieee754_binary64_be_hex",
         "rows": int(X.shape[0]),
         "cols": int(X.shape[1]),

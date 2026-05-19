@@ -134,13 +134,13 @@ res <- gaussian(X, sigma = 1.0)
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.nirs4all`** (Python · canonical) — `nirs4all.Gaussian` · nirs4all@cd731a23+dirty
-- 📐 **`ref.scipy`** (Python · comparator) — `scipy.ndimage.gaussian_filter1d` · scipy 1.17.1
+- ◆ **`ref.nirs4all`** (Python · canonical) — `nirs4all.Gaussian` · nirs4all@cd731a23+dirty
+- ◆ **`ref.scipy`** (Python · comparator) — `scipy.ndimage.gaussian_filter1d` · scipy 1.17.1
 :::
 
 ### Benchmarks
@@ -155,17 +155,17 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.010 ms</td><td class="ms ms-best">🏆 0.042 ms</td><td class="ms ms-best">🏆 0.180 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.010 ms</td><td class="ms ms-best">🏆 0.042 ms</td><td class="ms ms-best">🏆 0.188 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.017 ms</td><td class="ms">0.050 ms</td><td class="ms">0.201 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.016 ms</td><td class="ms">0.050 ms</td><td class="ms">0.202 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.037 ms</td><td class="ms">0.254 ms</td><td class="ms">1.547 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.036 ms</td><td class="ms">0.279 ms</td><td class="ms">1.656 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.Gaussian · nirs4all@cd731a23+dirty — canonical">📐</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.025 ms</td><td class="ms">0.137 ms</td><td class="ms">0.736 ms</td></tr>
-<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): scipy.ndimage.gaussian_filter1d · scipy 1.17.1 — comparator">📐</span><code>ref.scipy</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.019 ms</td><td class="ms">0.119 ms</td><td class="ms">0.625 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.Gaussian · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.024 ms</td><td class="ms">0.144 ms</td><td class="ms">0.862 ms</td></tr>
+<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): scipy.ndimage.gaussian_filter1d · scipy 1.17.1 — comparator">◆</span><code>ref.scipy</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.021 ms</td><td class="ms">0.118 ms</td><td class="ms">0.637 ms</td></tr>
 </tbody>
 </table>
 </div>

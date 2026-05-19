@@ -120,12 +120,12 @@ res <- x_outlier_filter(X, method = 'mahalanobis', n_components = min(5L, ncol(X
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.sklearn`** (Python · canonical) — `sklearn.PCA(full)+EmpiricalCovariance+chi2` · sklearn 1.8.0
+- ◆ **`ref.sklearn`** (Python · canonical) — `sklearn.PCA(full)+EmpiricalCovariance+chi2` · sklearn 1.8.0
 - ℹ **`ref.nirs4all`** (Python · context) — `nirs4all.XOutlierFilter(PCA auto)` · nirs4all@cd731a23+dirty — nirs4all leaves sklearn PCA on auto solver, which switches solver on wide matrices; c4a gates the full-SVD PCA contract
 :::
 
@@ -141,17 +141,17 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms">0.223 ms</td><td class="ms">1.977 ms</td><td class="ms ms-best">🏆 4.846 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms">0.250 ms</td><td class="ms">1.950 ms</td><td class="ms">4.926 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.218 ms</td><td class="ms">2.021 ms</td><td class="ms">4.920 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.242 ms</td><td class="ms ms-best">🏆 1.905 ms</td><td class="ms ms-best">🏆 4.920 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">🏆 0.209 ms</td><td class="ms ms-best">🏆 1.953 ms</td><td class="ms">5.375 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">🏆 0.209 ms</td><td class="ms">1.922 ms</td><td class="ms">5.312 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.XOutlierFilter(PCA auto) · nirs4all@cd731a23+dirty — context">📐</span><code>ref.nirs4all</code></td><td class="parity parity-context">≈ context</td><td class="ms">1.199 ms</td><td class="ms">3.554 ms</td><td class="ms">8.209 ms</td></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): sklearn.PCA(full)+EmpiricalCovariance+chi2 · sklearn 1.8.0 — canonical">📐</span><code>ref.sklearn</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">1.088 ms</td><td class="ms">3.905 ms</td><td class="ms">17.293 ms</td></tr>
+<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.XOutlierFilter(PCA auto) · nirs4all@cd731a23+dirty — context">◆</span><code>ref.nirs4all</code></td><td class="parity parity-context">≈ context</td><td class="ms">1.169 ms</td><td class="ms">3.972 ms</td><td class="ms">8.022 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): sklearn.PCA(full)+EmpiricalCovariance+chi2 · sklearn 1.8.0 — canonical">◆</span><code>ref.sklearn</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">1.046 ms</td><td class="ms">3.585 ms</td><td class="ms">15.541 ms</td></tr>
 </tbody>
 </table>
 </div>

@@ -694,13 +694,13 @@ def render_reference_card(m: Method, bench: dict[str, Any]) -> str:
         role = role or ("canonical" if ref.compare else "context")
         version = versions.get(ref.backend, "")
         version_text = f" · {version}" if version and version != ref.library else ""
-        icon = "📐" if ref.compare else "ℹ"
+        icon = "◆" if ref.compare else "ℹ"
         note = f" — {ref.note}" if ref.note else ""
         rows.append(
             f"- {icon} **`{ref.backend}`** ({ref.language} · {role}) — "
             f"`{ref.library}`{version_text}{note}"
         )
-    return "\n**Registry parity references** 📐\n\n:::{card}\n:class-card: external-refs\n\n" + "\n".join(rows) + "\n:::\n"
+    return "\n**Registry parity references** ◆\n\n:::{card}\n:class-card: external-refs\n\n" + "\n".join(rows) + "\n:::\n"
 
 
 def parity_icon(value: str) -> str:
@@ -778,7 +778,7 @@ def benchmark_truth_marker(cid: str, meta: dict[str, Any], cells: list[dict[str,
     if role:
         title += f" — {role}"
     klass = "truth-source-strict" if role == "canonical" else "truth-source-relaxed"
-    return (klass, f'<span class="truth-mark" title="{html.escape(title, quote=True)}">📐</span>')
+    return (klass, f'<span class="truth-mark" title="{html.escape(title, quote=True)}">◆</span>')
 
 
 def render_benchmarks(m: Method, bench: dict[str, Any]) -> str:

@@ -2125,7 +2125,7 @@ C4A_API c4a_status_t c4a_pp_iasls_transform(const c4a_pp_iasls_handle_t* h,
 }
 
 // ---------------------------------------------------------------------------
-// BEADS (Phase 5b stateless, simplified pentadiagonal variant)
+// BEADS (Phase 5b stateless, pybaselines-compatible full banded variant)
 // ---------------------------------------------------------------------------
 
 C4A_API c4a_status_t c4a_pp_beads_create(c4a_pp_beads_handle_t** out,

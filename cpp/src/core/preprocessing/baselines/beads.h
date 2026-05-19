@@ -1,32 +1,19 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 /*
- * BEADS (simplified) — Baseline Estimation And Denoising with Sparsity
- * (Ning & Selesnick 2014).
+ * BEADS — Baseline Estimation And Denoising with Sparsity
+ * (Ning & Selesnick 2014), matching pybaselines' full banded algorithm for
+ * the public c4a parameter surface.
  *
- * This is the simplified Phase 5b variant that uses a reweighted-L2
- * sparsity surrogate over a banded pentadiagonal system:
+ * For each row y of length n:
  *
- *   For each row y of length n:
- *     w := ones(n)
- *     for iter in 0..max_iter:
- *         A := diag(w) + lam_1 * D_2^T D_2 + lam_2 * D_2^T D_2
- *              (== diag(w) + (lam_1 + lam_2) * D_2^T D_2 in the simplified
- *               variant — see docs/algorithms/beads.md)
- *         rhs := lam_0 * (w * y)
- *         z := A^{-1} rhs
- *         d := y - z
- *         w_new[i] := 1 / (|d[i]| + eps)         # reweighted L2 step
- *         normalise so that sum(w_new) = n        # keep scale comparable
- *         if rel_l2_diff(z, z_old) < tol: break
- *         w := w_new
- *     out := y - z
+ *   1. subtract pybaselines' endpoint parabola;
+ *   2. build the second-order high-pass filter matrices A and B;
+ *   3. iteratively solve the 9-diagonal BEADS system with L1-v2 derivative
+ *      weights, asymmetric Huber-like signal weights, and lam_0/lam_1/lam_2;
+ *   4. reconstruct the low-pass baseline and return y - baseline.
  *
- * The full BEADS algorithm uses a 7-diagonal system combining 1st and 2nd
- * differences with a Chebyshev approximation of |·|. The simplified Phase 5b
- * version stays pentadiagonal so the existing banded5 LDLT solver applies
- * unchanged — see docs/algorithms/beads.md for the deferred variant.
- *
- * Frozen reference: parity/python_generator/src/c4a_parity_pybaselines_ref/beads.py
+ * Fixed pybaselines-compatible options: freq_cutoff=0.005, asymmetry=6,
+ * filter_type=1, cost_function=2, eps_0=eps_1=1e-6, fit_parabola=TRUE.
  */
 #ifndef CHEMOMETRICS4ALL_CORE_PREPROCESSING_BASELINES_BEADS_H
 #define CHEMOMETRICS4ALL_CORE_PREPROCESSING_BASELINES_BEADS_H

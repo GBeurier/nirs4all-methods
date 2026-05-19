@@ -5,20 +5,18 @@
  *
  * Reference: nirs4all.operators.splitters.KBinsStratifiedSplitter (which
  * delegates to KBinsDiscretizer + sklearn StratifiedShuffleSplit). The C
- * engine ships its own equivalent algorithm so that the parity fixture
- * (using NumPy default_rng = PCG64) reproduces byte-exact integer indices.
+ * engine mirrors that stack, including NumPy legacy RandomState(MT19937)
+ * shuffling, so byte-exact integer indices match the external reference.
  *
  * Strategies:
  *   * uniform  — equal-width bins from y.min() to y.max().
  *   * quantile — equal-frequency bins (quantile-based edges over a
  *                sorted-y reference).
  *
- * Stratified shuffle split: within each bin, shuffle the bin's samples
- * with PCG64-Fisher-Yates and take `round(n_bin * test_size)` as test
- * samples. The remaining samples form the bin's train set. Across bins
- * we concatenate train then test in ascending sample-index order to
- * stabilise the output (the published ordering is sample-index ascending,
- * matching how sklearn returns sorted indices for each side).
+ * Stratified shuffle split: allocate per-bin train/test counts with sklearn's
+ * `_approximate_mode`, shuffle each bin with RandomState.permutation, then
+ * apply the final train/test permutations. Output order intentionally matches
+ * sklearn; it is not sorted.
  */
 #ifndef CHEMOMETRICS4ALL_CORE_SPLITTERS_KBINS_STRATIFIED_H
 #define CHEMOMETRICS4ALL_CORE_SPLITTERS_KBINS_STRATIFIED_H

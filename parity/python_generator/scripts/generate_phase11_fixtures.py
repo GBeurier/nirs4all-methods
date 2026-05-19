@@ -9,7 +9,7 @@ Nine operators in the new ``c4a_split_*`` category:
   * SPXYFold               — k-fold alternating max-min on X + Y.
   * SPXYGFold              — group-aware k-fold (mean / median aggregation).
   * KMeans                 — k-means++ + Lloyd, PCG64-seeded.
-  * KBinsStratified        — bin y + per-bin Fisher-Yates shuffle.
+  * KBinsStratified        — sklearn KBinsDiscretizer + StratifiedShuffleSplit.
   * BinnedStratifiedGroupKFold — bin y + group-aware k-fold.
   * SystematicCircular     — argsort y, PCG64 rotation, take every n-th.
   * SPlit                  — data twinning (Vakayil & Joseph 2022) with
@@ -22,9 +22,11 @@ integer arrays for byte-exact comparison against the C engine.
 We deliberately re-implement each algorithm in pure NumPy here (instead of
 calling sklearn / nirs4all directly) because:
 
-  * The C engine uses PCG64 for all randomness; sklearn uses a different RNG
-    chain. Re-implementing locally lets us seed bit-exactly via
-    ``numpy.random.default_rng(seed)`` (which is PCG64 under the hood).
+  * Most C splitters use PCG64 for randomness. Re-implementing locally lets us
+    seed bit-exactly via ``numpy.random.default_rng(seed)`` (which is PCG64
+    under the hood).
+  * KBinsStratified is the exception: it intentionally mirrors nirs4all's
+    sklearn stack, including RandomState(MT19937) index ordering.
   * Some sklearn behaviour (e.g. StratifiedGroupKFold) carries complex
     constraint-satisfaction heuristics that the C engine simplifies. We
     document the simplification by matching it here.
@@ -390,54 +392,24 @@ def split_kmeans(X: np.ndarray, test_size: float, seed: int,
 
 def split_kbins_stratified(y: np.ndarray, test_size: float, seed: int,
                             n_bins: int, strategy: int) -> tuple[np.ndarray, np.ndarray]:
-    n = y.shape[0]
-    if strategy == 0:
-        ymin = y.min()
-        ymax = y.max()
-        span = ymax - ymin
-        if span <= 0.0:
-            bin_of = np.zeros(n, dtype=np.int32)
-        else:
-            inv_w = n_bins / span
-            bin_of = np.empty(n, dtype=np.int32)
-            for i in range(n):
-                b = int(floor((y[i] - ymin) * inv_w))
-                if b < 0: b = 0
-                if b >= n_bins: b = n_bins - 1
-                bin_of[i] = b
-    else:
-        # Quantile.
-        order = np.lexsort((np.arange(n), y))
-        bin_of = np.empty(n, dtype=np.int32)
-        for pos in range(n):
-            b = (pos * n_bins) // n
-            if b >= n_bins: b = n_bins - 1
-            bin_of[int(order[pos])] = b
+    from sklearn import model_selection, preprocessing
 
-    # Per-bin list + Fisher-Yates shuffle.
-    bin_lists: list[list[int]] = [[] for _ in range(n_bins)]
-    for i in range(n):
-        bin_lists[bin_of[i]].append(i)
-    rng = np.random.default_rng(seed)
-    in_test = np.zeros(n, dtype=bool)
-    for k in range(n_bins):
-        bn = len(bin_lists[k])
-        if bn == 0:
-            continue
-        arr = np.asarray(bin_lists[k], dtype=np.int64)
-        fisher_yates(arr, rng)
-        bn_test = int(floor(test_size * bn + 0.5))
-        if bn_test < 1 and bn >= 2:
-            bn_test = 1
-        if bn_test >= bn:
-            bn_test = bn - 1
-        if bn_test < 0:
-            bn_test = 0
-        for k2 in range(bn_test):
-            in_test[int(arr[k2])] = True
-    train = np.where(~in_test)[0].astype(np.int64)
-    test  = np.where(in_test)[0].astype(np.int64)
-    return train, test
+    y2 = np.asarray(y, dtype=np.float64).reshape(-1, 1)
+    X_dummy = np.zeros((y2.shape[0], 1), dtype=np.float64)
+    strategy_name = "uniform" if strategy == 0 else "quantile"
+    kwargs = {"n_bins": n_bins, "encode": "ordinal", "strategy": strategy_name}
+    try:
+        binner = preprocessing.KBinsDiscretizer(**kwargs, subsample=None)
+    except TypeError:
+        binner = preprocessing.KBinsDiscretizer(**kwargs)
+    y_disc = binner.fit_transform(y2).ravel()
+    splitter = model_selection.StratifiedShuffleSplit(
+        n_splits=1,
+        test_size=test_size,
+        random_state=seed,
+    )
+    train, test = next(splitter.split(X_dummy, y_disc))
+    return train.astype(np.int64), test.astype(np.int64)
 
 
 def split_bsgk(y: np.ndarray, groups: np.ndarray, n_splits: int,

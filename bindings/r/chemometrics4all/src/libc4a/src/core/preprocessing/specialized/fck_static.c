@@ -3,20 +3,19 @@
  * FCKStaticTransformer reference implementation.
  *
  * Builds L = n_orders * n_scales kernels at `_create` time, then applies them
- * row-by-row to the input matrix. For each (alpha_a, sigma_s) pair the kernel
- * is computed once via c4a_fck_kernel_1d; the L kernels are stored in a
+ * row-by-row to the input matrix. For each (alpha_a, scale_s) pair the kernel
+ * is computed once via c4a_fck_kernel_1d with sigma=3.0; the L kernels are stored in a
  * single contiguous (L, kernel_size) double buffer with row-major layout:
  *
  *   kernels[l * kernel_size + k]    where l = a * n_scales + s
  *
  * (i.e., alpha varies slowest, matching the typical nested-loop ordering
- * `for a in alphas: for s in sigmas: emit kernel(a, s, K)`.)
+ * `for a in alphas: for s in scales: emit kernel(a, s, K)`.)
  *
- * Convolution uses scipy.ndimage.convolve1d semantics with mode='reflect':
+ * Convolution uses scipy.ndimage.convolve1d semantics with mode='nearest':
  *   - The kernel is reversed (h_rev[k] = h[K - 1 - k]) so that the
  *     correlation we apply implements a true convolution.
- *   - Out-of-range source indices are reflected via c4a_pad_resolve_index
- *     with C4A_PAD_REFLECT (no edge-repeat reflection).
+ *   - Out-of-range source indices are clamped to the nearest edge.
  *
  * The output layout is (n_samples, n_kernels, n_features) flattened as
  * (n_samples, n_kernels * n_features) along the inner-axis-contiguous form
@@ -24,7 +23,7 @@
  *   out[i * (L * p) + l * p + j] = sum_{k=0}^{K-1} h_l_rev[k] *
  *                                     X[i * p + idx(j + k - lw)]
  *
- * where lw = (K - 1) / 2 and idx() applies the reflect padding.
+ * where lw = (K - 1) / 2 and idx() clamps to the nearest edge.
  */
 
 #include "fck_static.h"
@@ -33,7 +32,8 @@
 #include <string.h>
 
 #include "core/common/fck_kernel.h"
-#include "core/common/padding.h"
+
+#define C4A_FCK_STATIC_SIGMA 3.0
 
 struct c4a_pp_fck_static_state_t {
     int32_t kernel_size;     /* K */
@@ -44,9 +44,9 @@ struct c4a_pp_fck_static_state_t {
 c4a_pp_fck_static_state_t* c4a_pp_fck_static_state_new(
     int32_t kernel_size,
     const double* alphas, int32_t n_orders,
-    const double* sigmas, int32_t n_scales) {
+    const double* scales, int32_t n_scales) {
     if (kernel_size <= 0 || n_orders <= 0 || n_scales <= 0 ||
-        alphas == NULL || sigmas == NULL) {
+        alphas == NULL || scales == NULL) {
         return NULL;
     }
     const int64_t n_kernels64 = (int64_t)n_orders * (int64_t)n_scales;
@@ -81,8 +81,9 @@ c4a_pp_fck_static_state_t* c4a_pp_fck_static_state_new(
     for (int32_t a = 0; a < n_orders; ++a) {
         for (int32_t v = 0; v < n_scales; ++v) {
             const int32_t l = a * n_scales + v;
-            if (c4a_fck_kernel_1d(alphas[a], sigmas[v], kernel_size,
-                                   scratch) != 0) {
+            if (c4a_fck_kernel_1d(alphas[a], scales[v],
+                                   C4A_FCK_STATIC_SIGMA,
+                                   kernel_size, scratch) != 0) {
                 free(scratch);
                 free(s->kernels);
                 free(s);
@@ -144,13 +145,9 @@ int c4a_pp_fck_static_state_apply(const c4a_pp_fck_static_state_t* state,
                 double acc = 0.0;
                 for (int32_t k = 0; k < K; ++k) {
                     const int64_t src_idx = j + (int64_t)k - (int64_t)lw;
-                    int64_t resolved;
-                    if (src_idx >= 0 && src_idx < cols) {
-                        resolved = src_idx;
-                    } else {
-                        resolved = c4a_pad_resolve_index(src_idx, cols,
-                                                          C4A_PAD_REFLECT);
-                    }
+                    const int64_t resolved = src_idx < 0
+                        ? 0
+                        : (src_idx >= cols ? cols - 1 : src_idx);
                     acc += h_rev[k] * row_in[resolved];
                 }
                 out_band[j] = acc;

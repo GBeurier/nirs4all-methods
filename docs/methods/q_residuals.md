@@ -77,7 +77,7 @@ c4a_status_t c4a_util_q_residuals(c4a_matrix_view_t X, int32_t n_components, dou
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs

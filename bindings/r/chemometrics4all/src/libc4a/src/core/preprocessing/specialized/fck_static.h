@@ -8,15 +8,14 @@
  * are horizontally concatenated.
  *
  * Each kernel is built once in `_create` via c4a_fck_kernel_1d(alpha,
- * sigma, kernel_size) over the Cartesian product of the alphas vector
- * and the sigmas vector (alpha varies slowest in memory, matching the
+ * scale, sigma=3.0, kernel_size) over the Cartesian product of the alphas
+ * vector and the scale vector (alpha varies slowest in memory, matching the
  * (i_order, i_scale) flattening so that the output ordering is stable
  * and predictable).
  *
- * Convolution semantics match scipy.ndimage.convolve1d with mode='reflect'
- * (the Phase 4 padding helper's C4A_PAD_REFLECT mode — edge-repeat
- * reflection). The kernel is reversed before being applied as
- * cross-correlation, matching scipy's convolve1d contract:
+ * Convolution semantics match scipy.ndimage.convolve1d with mode='nearest'.
+ * The kernel is reversed before being applied as cross-correlation,
+ * matching scipy's convolve1d contract:
  *
  *   out[i, l, j] = sum_{k=0}^{K-1} reverse(h_l)[k] * X[i, j + k - lw]
  *
@@ -39,13 +38,13 @@ extern "C" {
 
 typedef struct c4a_pp_fck_static_state_t c4a_pp_fck_static_state_t;
 
-/* Build the bank from the Cartesian product of `alphas` and `sigmas`. Returns
+/* Build the bank from the Cartesian product of `alphas` and `scales`. Returns
  * NULL on allocation failure or on invalid parameters (caller is expected to
  * have already validated parameter ranges in the C ABI wrapper). */
 c4a_pp_fck_static_state_t* c4a_pp_fck_static_state_new(
     int32_t kernel_size,
     const double* alphas, int32_t n_orders,
-    const double* sigmas, int32_t n_scales);
+    const double* scales, int32_t n_scales);
 
 void c4a_pp_fck_static_state_free(c4a_pp_fck_static_state_t* state);
 

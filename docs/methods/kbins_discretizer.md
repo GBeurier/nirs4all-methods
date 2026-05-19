@@ -99,13 +99,13 @@ res <- kbins_discretizer(X, n_bins = 5L, strategy = 'uniform')
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.nirs4all`** (Python · canonical) — `nirs4all.IntegerKBinsDiscretizer` · nirs4all@cd731a23+dirty
-- 📐 **`ref.sklearn`** (Python · comparator) — `sklearn.preprocessing.KBinsDiscretizer` · sklearn 1.8.0
+- ◆ **`ref.nirs4all`** (Python · canonical) — `nirs4all.IntegerKBinsDiscretizer` · nirs4all@cd731a23+dirty
+- ◆ **`ref.sklearn`** (Python · comparator) — `sklearn.preprocessing.KBinsDiscretizer` · sklearn 1.8.0
 :::
 
 ### Benchmarks
@@ -120,17 +120,17 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.027 ms</td><td class="ms ms-best">🏆 0.305 ms</td><td class="ms ms-best">🏆 1.467 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms">0.027 ms</td><td class="ms">0.319 ms</td><td class="ms ms-best">🏆 1.428 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.029 ms</td><td class="ms">0.306 ms</td><td class="ms">1.549 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">🏆 0.026 ms</td><td class="ms ms-best">🏆 0.313 ms</td><td class="ms">1.521 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.069 ms</td><td class="ms">0.555 ms</td><td class="ms">3.188 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.074 ms</td><td class="ms">0.562 ms</td><td class="ms">3.406 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.IntegerKBinsDiscretizer · nirs4all@cd731a23+dirty — canonical">📐</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.499 ms</td><td class="ms">3.312 ms</td><td class="ms">16.108 ms</td></tr>
-<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): sklearn.preprocessing.KBinsDiscretizer · sklearn 1.8.0 — comparator">📐</span><code>ref.sklearn</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.436 ms</td><td class="ms">3.266 ms</td><td class="ms">16.391 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.IntegerKBinsDiscretizer · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.463 ms</td><td class="ms">3.402 ms</td><td class="ms">16.844 ms</td></tr>
+<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): sklearn.preprocessing.KBinsDiscretizer · sklearn 1.8.0 — comparator">◆</span><code>ref.sklearn</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.446 ms</td><td class="ms">3.422 ms</td><td class="ms">15.601 ms</td></tr>
 </tbody>
 </table>
 </div>

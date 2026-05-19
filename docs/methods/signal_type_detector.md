@@ -93,7 +93,7 @@ c4a_status_t c4a_signal_detect(c4a_matrix_view_t X, const double* wavelengths_op
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs

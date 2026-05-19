@@ -3,16 +3,16 @@
  * SNIP — Statistics-sensitive Non-linear Iterative Peak-clipping baseline
  * (Ryan 1988, Morháč 1997).
  *
- * Pure arithmetic algorithm (no linear algebra). For each row y of length n:
+ * Pure arithmetic algorithm (no linear algebra). For each row y of length n,
+ * this follows pybaselines.smooth.snip with filter_order=2:
  *
- *   1. v[i] := log(log(sqrt(|y[i]| + 1) + 1) + 1)        # LLS transform
+ *   1. linearly extrapolate max_half_window samples at both edges
  *   2. for w in 1..max_half_window:
- *        for i in [w, n - w]:
- *            v[i] := min(v[i], (v[i - w] + v[i + w]) / 2)
- *   3. inverse LLS: z[i] := (exp(exp(v[i]) - 1) - 1)^2 - 1
- *   4. out := original_y - z
+ *        filters[i] := (baseline[i - w] + baseline[i + w]) / 2
+ *        baseline[i] := min(baseline[i], filters[i]) for the whole slice
+ *   3. out := original_y - unpadded_baseline
  *
- * Frozen reference: parity/python_generator/src/c4a_parity_pybaselines_ref/snip.py
+ * Reference: pybaselines.Baseline().snip(..., filter_order=2)
  */
 #ifndef CHEMOMETRICS4ALL_CORE_PREPROCESSING_BASELINES_SNIP_H
 #define CHEMOMETRICS4ALL_CORE_PREPROCESSING_BASELINES_SNIP_H

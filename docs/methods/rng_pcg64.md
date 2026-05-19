@@ -70,7 +70,7 @@ c4a_status_t c4a_rng_pcg64_uint64_fill(c4a_rng_pcg64_state_t* rng, uint64_t* out
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs

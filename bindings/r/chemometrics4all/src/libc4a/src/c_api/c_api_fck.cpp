@@ -101,11 +101,11 @@ C4A_API c4a_status_t c4a_pp_fck_static_create(
     if (filter_orders == nullptr || filter_scales == nullptr) {
         return C4A_ERR_NULL_POINTER;
     }
-    if (kernel_size <= 0 || n_orders <= 0 || n_scales <= 0) {
+    if (kernel_size < 3 || (kernel_size % 2) == 0 ||
+        n_orders <= 0 || n_scales <= 0) {
         return C4A_ERR_INVALID_ARGUMENT;
     }
-    // Sigmas must be positive (the kernel builder floors to 1e-6, but a
-    // non-positive sigma is a user error worth surfacing).
+    // Scales must be positive, matching nirs4all.FCKStaticTransformer.
     for (int32_t i = 0; i < n_scales; ++i) {
         if (!(filter_scales[i] > 0.0)) {
             return C4A_ERR_INVALID_ARGUMENT;

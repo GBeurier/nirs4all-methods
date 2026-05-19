@@ -5,23 +5,13 @@
  *
  * Frozen reference: parity/python_generator/src/c4a_parity_pybaselines_ref/snip.py
  *
- * Algorithm: see snip.h. For Phase 5b parity we use the canonical "log of
- * log of sqrt" transform (LLS) — this is the Morháč 1997 dynamics-improving
- * variant, which is also what pybaselines.morphological.snip uses by default
- * (and the only flavour exercised in our reference fixtures).
- *
- * Important loop ordering: each width `w` from 1 to max_half_window is
- * applied IN-PLACE, and the local averages reference values from the same
- * pass that were just updated. This matches Morháč 1997 / pybaselines.
- *
- * Inverse LLS is the algebraic inverse of step 1:
- *   step  : a = |y| + 1; b = sqrt(a) + 1; c = log(b) + 1; v = log(c)
- *   inv.  : c = exp(v); b = exp(c - 1); a = (b - 1)^2; y = a - 1
+ * Algorithm: see snip.h. The benchmark reference is pybaselines.smooth.snip
+ * with its default raw-data filter_order=2 contract, including linear
+ * extrapolation padding at both edges.
  */
 
 #include "snip.h"
 
-#include <math.h>
 #include <stdlib.h>
 
 struct c4a_pp_snip_state_t {
@@ -43,6 +33,70 @@ void c4a_pp_snip_state_free(c4a_pp_snip_state_t* state) {
     free(state);
 }
 
+static void fit_line_and_predict_left(const double* y, int64_t n,
+                                      int32_t pad, double* out) {
+    int64_t win = (int64_t)pad;
+    if (win > n) win = n;
+    if (win <= 1) {
+        for (int32_t i = 0; i < pad; ++i) out[i] = y[0];
+        return;
+    }
+
+    double sum_x = 0.0;
+    double sum_y = 0.0;
+    for (int64_t k = 0; k < win; ++k) {
+        sum_x += (double)pad + (double)k;
+        sum_y += y[k];
+    }
+    const double mean_x = sum_x / (double)win;
+    const double mean_y = sum_y / (double)win;
+    double num = 0.0;
+    double den = 0.0;
+    for (int64_t k = 0; k < win; ++k) {
+        const double dx = (double)pad + (double)k - mean_x;
+        num += dx * (y[k] - mean_y);
+        den += dx * dx;
+    }
+    const double slope = den > 0.0 ? num / den : 0.0;
+    const double intercept = mean_y - slope * mean_x;
+    for (int32_t i = 0; i < pad; ++i) {
+        out[i] = intercept + slope * (double)i;
+    }
+}
+
+static void fit_line_and_predict_right(const double* y, int64_t n,
+                                       int32_t pad, double* out) {
+    int64_t win = (int64_t)pad;
+    if (win > n) win = n;
+    if (win <= 1) {
+        for (int32_t i = 0; i < pad; ++i) out[i] = y[n - 1];
+        return;
+    }
+
+    const int64_t start = n - win;
+    double sum_x = 0.0;
+    double sum_y = 0.0;
+    for (int64_t k = 0; k < win; ++k) {
+        sum_x += (double)pad + (double)start + (double)k;
+        sum_y += y[start + k];
+    }
+    const double mean_x = sum_x / (double)win;
+    const double mean_y = sum_y / (double)win;
+    double num = 0.0;
+    double den = 0.0;
+    for (int64_t k = 0; k < win; ++k) {
+        const double dx = (double)pad + (double)start + (double)k - mean_x;
+        num += dx * (y[start + k] - mean_y);
+        den += dx * dx;
+    }
+    const double slope = den > 0.0 ? num / den : 0.0;
+    const double intercept = mean_y - slope * mean_x;
+    for (int32_t i = 0; i < pad; ++i) {
+        const double x = (double)pad + (double)n + (double)i;
+        out[i] = intercept + slope * x;
+    }
+}
+
 c4a_status_t c4a_pp_snip_state_apply(const c4a_pp_snip_state_t* state,
                                       const double* X,
                                       int64_t rows, int64_t cols,
@@ -56,45 +110,50 @@ c4a_status_t c4a_pp_snip_state_apply(const c4a_pp_snip_state_t* state,
     if (rows == 0 || cols == 0) {
         return C4A_OK;
     }
-    const int32_t maxw = state->max_half_window;
+    int32_t maxw = state->max_half_window;
+    const int32_t max_effective = (int32_t)((cols - 1) / 2);
+    if (maxw > max_effective) maxw = max_effective;
+    if (maxw <= 0) {
+        for (int64_t i = 0; i < rows * cols; ++i) out[i] = 0.0;
+        return C4A_OK;
+    }
 
-    double* v = (double*)malloc((size_t)cols * sizeof(double));
-    if (v == NULL) {
+    const int64_t padded_cols = cols + 2 * (int64_t)maxw;
+    double* baseline = (double*)malloc((size_t)padded_cols * sizeof(double));
+    double* filters = (double*)malloc((size_t)padded_cols * sizeof(double));
+    if (baseline == NULL || filters == NULL) {
+        free(baseline);
+        free(filters);
         return C4A_ERR_OUT_OF_MEMORY;
     }
 
     for (int64_t r = 0; r < rows; ++r) {
         const double* y = X + (size_t)r * (size_t)cols;
-
-        /* 1. LLS transform. */
+        fit_line_and_predict_left(y, cols, maxw, baseline);
         for (int64_t i = 0; i < cols; ++i) {
-            const double a = fabs(y[i]) + 1.0;
-            const double b = sqrt(a) + 1.0;
-            const double c = log(b) + 1.0;
-            v[i] = log(c);
+            baseline[(int64_t)maxw + i] = y[i];
         }
+        fit_line_and_predict_right(y, cols, maxw,
+                                   baseline + (int64_t)maxw + cols);
 
-        /* 2. Iterative peak-clipping with growing half-windows. */
         for (int32_t w = 1; w <= maxw; ++w) {
             const int64_t lo = (int64_t)w;
-            const int64_t hi = cols - (int64_t)w;
+            const int64_t hi = padded_cols - (int64_t)w;
             for (int64_t i = lo; i < hi; ++i) {
-                const double avg = 0.5 * (v[i - w] + v[i + w]);
-                if (avg < v[i]) v[i] = avg;
+                filters[i] = 0.5 * (baseline[i - w] + baseline[i + w]);
+            }
+            for (int64_t i = lo; i < hi; ++i) {
+                if (filters[i] < baseline[i]) baseline[i] = filters[i];
             }
         }
 
-        /* 3. Inverse LLS. */
         double* orow = out + (size_t)r * (size_t)cols;
         for (int64_t i = 0; i < cols; ++i) {
-            const double c = exp(v[i]);
-            const double b = exp(c - 1.0);
-            const double a = (b - 1.0) * (b - 1.0);
-            const double z = a - 1.0;
-            orow[i] = y[i] - z;
+            orow[i] = y[i] - baseline[(int64_t)maxw + i];
         }
     }
 
-    free(v);
+    free(filters);
+    free(baseline);
     return C4A_OK;
 }

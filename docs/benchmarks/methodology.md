@@ -54,10 +54,8 @@ compared. They are marked `reference_role=context` and `parity=context`, with
 the CSV `reason` explaining the contract mismatch. Current context examples
 include Savitzky-Golay calls with different edge modes, nirs4all wavelet
 transforms that return resampled detail coefficients instead of c4a's
-approximation+detail layout, sklearn/nirs4all stratified splitters with a
-different RNG/index contract, pybaselines' full BEADS versus c4a's documented
-simplified BEADS, and nirs4all X-outlier filtering when sklearn PCA auto solver
-switches on wide matrices. For `nirs4all.WaveletFeatures`, the runner sets
+approximation+detail layout, and nirs4all X-outlier filtering when sklearn PCA
+auto solver switches on wide matrices. For `nirs4all.WaveletFeatures`, the runner sets
 `n_coeffs_per_level=0` and selects c4a's `histogram` entropy with `symmetric`
 boundary mode so the comparator row uses the same contract.
 
@@ -66,9 +64,8 @@ name is close. `pybaselines` baseline references are applied row-by-row because
 the public API is one-dimensional; `pybaselines.iasls` is now the c4a IAsLS
 contract, `pybaselines.imodpoly` is called with `mask_initial_peaks=False`, and
 both are gated like the other same-contract references. `pybaselines.snip(raw)`
-and `pybaselines.beads(full)` remain performance context rows because c4a gates
-SNIP against its frozen LLS reference and BEADS against its frozen simplified
-reference.
+and `pybaselines.beads(full)` are canonical same-contract references and are
+gated through stored snapshots.
 
 ## Parity tolerance
 

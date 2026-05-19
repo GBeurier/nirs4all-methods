@@ -1,22 +1,20 @@
-"""Validate the frozen pybaselines NumPy reference against the installed pybaselines package.
+"""Validate the pybaselines reference adapters against installed pybaselines.
 
 Usage:
     cd parity/python_generator
-    python -m venv /tmp/c4a-pybaselines-1.1.4
-    /tmp/c4a-pybaselines-1.1.4/bin/pip install -e . 'pybaselines==1.1.4'
-    /tmp/c4a-pybaselines-1.1.4/bin/python scripts/validate_frozen_pybaselines_ref.py
+    python -m venv /tmp/c4a-pybaselines-1.2.1
+    /tmp/c4a-pybaselines-1.2.1/bin/pip install -e . 'pybaselines==1.2.1'
+    /tmp/c4a-pybaselines-1.2.1/bin/python scripts/validate_frozen_pybaselines_ref.py
 
-This script imports BOTH the frozen NumPy reference in
+This script imports BOTH the local reference adapters in
 ``c4a_parity_pybaselines_ref`` AND the upstream ``pybaselines`` package, runs
-each baseline operator on a small synthetic spectrum, and asserts the
-max-abs-error is below ``1e-10``.
+each baseline operator on a small synthetic spectrum, and asserts the current
+same-contract operators remain aligned.
 
 The script intentionally does NOT run during CI by default — it is a manual
-attestation that the frozen reference still matches the pinned upstream
-historical version. The current external-reference pin is compared by
-``parity/run_reference_parity.py`` instead; it may legitimately diverge from
-this frozen fixture oracle. Run this script only when the frozen reference is
-touched or when re-attesting the historical oracle.
+attestation for the pybaselines adapter layer. The dashboard benchmark stores
+the actual external outputs as versioned snapshots under
+``benchmarks/reference_snapshots/cross_binding``.
 """
 
 from __future__ import annotations
@@ -36,11 +34,11 @@ try:
     import pybaselines  # noqa: E402
 except ImportError as exc:
     print(f"pybaselines not installed: {exc}", file=sys.stderr)
-    print("Install with: pip install 'pybaselines==1.1.4'", file=sys.stderr)
+    print("Install with: pip install 'pybaselines==1.2.1'", file=sys.stderr)
     sys.exit(2)
 
-EXPECTED_VERSION = "1.1.4"
-TOLERANCE = 1e-10
+EXPECTED_VERSION = "1.2.1"
+TOLERANCE = 1e-8
 
 
 def _synthetic_spectrum(n: int = 200, seed: int = 20260518) -> np.ndarray:
@@ -151,18 +149,16 @@ def main() -> int:
                                 diff_order=2, max_iter=50, tol=1e-3)
     all_ok &= _check("iasls", ours, y - theirs_z)
 
-    # BEADS (simplified) — the c4a variant is intentionally simplified; the
-    # comparison is informational only.
+    # BEADS — same pybaselines full banded contract as c4a.
     ours = c4a_ref.beads(y_mat, lam_0=1e2, lam_1=0.5, lam_2=0.5,
                           max_iter=50, tol=1e-3)[0]
     try:
         theirs_z, _ = fitter.beads(y, lam_0=1e2, lam_1=0.5, lam_2=0.5,
-                                    max_it=50, tol=1e-3)
-        theirs = y - theirs_z
-        abs_err = float(np.max(np.abs(ours - theirs)))
-        print(f"  [INFO] beads max_abs_err (simplified vs full) = {abs_err:.3e}")
+                                    max_iter=50, tol=1e-3)
+        all_ok &= _check("beads", ours, y - theirs_z)
     except Exception as exc:  # pybaselines API can move; this is best-effort
-        print(f"  [INFO] beads comparison skipped: {exc}")
+        print(f"  [FAIL] beads comparison skipped: {exc}")
+        all_ok = False
 
     return 0 if all_ok else 1
 

@@ -155,13 +155,13 @@ res <- flexible_pca(X, n_components = 5.0)
 ::::
 
 
-**Registry parity references** 📐
+**Registry parity references** ◆
 
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.nirs4all`** (Python · canonical) — `nirs4all.FlexiblePCA` · nirs4all@cd731a23+dirty
-- 📐 **`ref.sklearn`** (Python · comparator) — `sklearn.decomposition.PCA` · sklearn 1.8.0
+- ◆ **`ref.nirs4all`** (Python · canonical) — `nirs4all.FlexiblePCA` · nirs4all@cd731a23+dirty
+- ◆ **`ref.sklearn`** (Python · comparator) — `sklearn.decomposition.PCA` · sklearn 1.8.0
 :::
 
 ### Benchmarks
@@ -176,17 +176,17 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms">0.214 ms</td><td class="ms ms-best">🏆 1.907 ms</td><td class="ms ms-best">🏆 4.992 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms">0.233 ms</td><td class="ms ms-best">🏆 1.878 ms</td><td class="ms">5.232 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.220 ms</td><td class="ms">1.953 ms</td><td class="ms">5.152 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.237 ms</td><td class="ms">1.933 ms</td><td class="ms ms-best">🏆 4.907 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">🏆 0.211 ms</td><td class="ms">1.953 ms</td><td class="ms">5.219 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">🏆 0.205 ms</td><td class="ms">1.938 ms</td><td class="ms">5.094 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.FlexiblePCA · nirs4all@cd731a23+dirty — canonical">📐</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.680 ms</td><td class="ms">3.277 ms</td><td class="ms">20.428 ms</td></tr>
-<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): sklearn.decomposition.PCA · sklearn 1.8.0 — comparator">📐</span><code>ref.sklearn</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.567 ms</td><td class="ms">2.940 ms</td><td class="ms">17.032 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.FlexiblePCA · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.714 ms</td><td class="ms">3.250 ms</td><td class="ms">18.562 ms</td></tr>
+<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): sklearn.decomposition.PCA · sklearn 1.8.0 — comparator">◆</span><code>ref.sklearn</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.582 ms</td><td class="ms">2.834 ms</td><td class="ms">14.759 ms</td></tr>
 </tbody>
 </table>
 </div>
