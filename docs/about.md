@@ -11,6 +11,7 @@ page is a benchmark-status placeholder backed by the initial registry under
 
 - **Architecture** — [overview](architecture/overview.md) · [memory model](architecture/memory_model.md) · [error model](architecture/error_model.md) · [threading](architecture/threading.md) · [serialization](architecture/serialization.md)
 - **ABI** — [reference](abi/reference.md) · [stability policy](abi/stability_policy.md) · [changes log](abi/changes_log.md)
+- **Methods** — [catalogue](methods/index.md) · generated pages with signatures, bibliography, math, implementations, parity and timings
 - **Bindings** — [Python](bindings/python.md) · [R](bindings/r.md) · [MATLAB](bindings/matlab.md) · [JavaScript / WebAssembly](bindings/js.md) · [Android](bindings/android.md)
 - **Parity** — [methodology](parity/methodology.md) · {doc}`tolerances <parity/tolerances>`
 - **Benchmarks** — [index](benchmarks/index.md) · [overview](benchmarks/overview.md) · [methodology](benchmarks/methodology.md)
@@ -33,6 +34,7 @@ architecture/serialization
 benchmarks/index
 benchmarks/overview
 benchmarks/methodology
+methods/index
 algorithms/*
 bindings/python
 bindings/r
@@ -53,9 +55,10 @@ handoff/HANDOFF
 
 ## Benchmark status
 
-The benchmark registry currently covers a starter set of non-model operators:
-SNV, MSC, Savitzky-Golay, AsLS, AirPLS, ArPLS, Kennard-Stone, and Hotelling T2.
-It is a reference contract, not a result set.
+The benchmark dashboard is backed by committed cross-binding results and
+reference snapshots. Each method name links to a generated method page with
+the public signatures, mathematical contract, reference libraries, parity
+status, and timing rows.
 
 Run this local consistency check after editing the benchmark registry:
 

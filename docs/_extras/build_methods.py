@@ -1,2360 +1,970 @@
 #!/usr/bin/env python3
-"""Generate one markdown page per chemometrics4all method.
+"""Generate one chemometrics4all documentation page per public method.
 
-Reads three sources:
-  * `benchmarks/parity_timing/registry.py` (AST-parsed) — canonical method
-    list with descriptions, notes, parity-reference flags, parity tolerance.
-  * `bindings/_catalog/sklearn_tier2.yaml` — per-method binding catalog
-    (C function name, parameters with types/defaults, extras flags).
-  * `benchmarks/cross_binding/results/full_matrix.csv` — parity + timing
-    cells per method and per backend.
+The layout deliberately mirrors the generated pls4all method pages:
+title, description, parameter table, bibliography, mathematical principle,
+implementation notes, binding tabs, external reference card, and benchmark
+tables.
 
-Emits:
-  * `docs/methods/<name>.md`  — one page per method (71 total).
-  * `docs/methods/index.md`   — catalogue / index table.
-
-The script is idempotent — re-running it overwrites the generated pages
-without touching hand-written content.
-
-Usage:
-    python docs/_extras/build_methods.py
-    python docs/_extras/build_methods.py --strict      # fail on missing data
-    python docs/_extras/build_methods.py --no-bench    # skip parity tables
+Inputs are intentionally local and deterministic:
+  * benchmarks/cross_binding/orchestrator.py for benchmark MethodSpec entries;
+  * docs/algorithms/*.md for existing scientific explanations;
+  * cpp/include/chemometrics4all/c4a.h for C ABI signatures;
+  * bindings/python/src/chemometrics4all/sklearn/*.py for Python signatures;
+  * bindings/r/chemometrics4all/R/*.R for R signatures;
+  * docs/_static/bench-data.json for dashboard timing/parity rows.
 """
 from __future__ import annotations
 
 import argparse
 import ast
-import csv
+import html
 import json
 import re
 import textwrap
 from collections import defaultdict
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+
 ROOT = Path(__file__).resolve().parents[2]
-REGISTRY_PY = ROOT / "benchmarks" / "parity_timing" / "registry.py"
-CATALOG_YAML = ROOT / "bindings" / "_catalog" / "sklearn_tier2.yaml"
-CSV_PATH = ROOT / "benchmarks" / "cross_binding" / "results" / "full_matrix.csv"
+ORCHESTRATOR = ROOT / "benchmarks" / "cross_binding" / "orchestrator.py"
+ALGORITHMS_DIR = ROOT / "docs" / "algorithms"
 METHODS_DIR = ROOT / "docs" / "methods"
-
-# Source dirs scanned for docstrings to enrich per-method pages.
-PY_SKLEARN_DIR = (
-    ROOT / "bindings" / "python" / "src" / "chemometrics4all" / "sklearn")
+HEADER = ROOT / "cpp" / "include" / "chemometrics4all" / "c4a.h"
+PY_SKLEARN_DIR = ROOT / "bindings" / "python" / "src" / "chemometrics4all" / "sklearn"
 R_DIR = ROOT / "bindings" / "r" / "chemometrics4all" / "R"
-MATLAB_DIR = ROOT / "bindings" / "matlab" / "+chemometrics4all"
+BENCH_JSON = ROOT / "docs" / "_static" / "bench-data.json"
 
-# ---------------------------------------------------------------------------
-# Per-method bibliographic / math metadata.
-#
-# The full curated body of explanations lives in `methods_bibliography.py`
-# next to this file (kept separate so the generator file stays
-# legible). We import it and use it directly.
-# ---------------------------------------------------------------------------
 
-try:
-    from methods_bibliography import BIBLIOGRAPHY as _CURATED_BIB
-except ImportError:  # pragma: no cover - depends on import path
-    _CURATED_BIB = {}
+GROUP_LABELS = {
+    "preprocessing": "Preprocessing",
+    "baseline": "Baseline",
+    "wavelet": "Wavelet",
+    "feature_extraction": "Feature extraction",
+    "resampling": "Resampling",
+    "splitter": "Splitter",
+    "filter": "Filter",
+    "diagnostic": "Diagnostic",
+    "augmentation": "Augmentation",
+    "metric": "Metric",
+    "utility": "Utility",
+    "other": "Other",
+}
 
-try:
-    from method_param_docs import lookup as _param_doc_lookup
-except ImportError:  # pragma: no cover - depends on import path
-    def _param_doc_lookup(method: str, param: str) -> str:
+GROUP_ORDER = [
+    "preprocessing",
+    "baseline",
+    "wavelet",
+    "feature_extraction",
+    "resampling",
+    "splitter",
+    "filter",
+    "diagnostic",
+    "augmentation",
+    "metric",
+    "utility",
+    "other",
+]
+
+SOURCE_ALIASES = {
+    "area_norm": "area_normalization",
+    "frac_to_pct": "fraction_to_percent",
+    "pct_to_frac": "percent_to_fraction",
+    "x_outlier_mahalanobis": "x_outlier_filter",
+    "y_outlier_iqr": "y_outlier_filter",
+    "kennard_stone": "splitters",
+    "spxy": "splitters",
+    "kbins_stratified": "splitters",
+}
+
+PY_CLASS_OVERRIDES = {
+    "osc": "OSC",
+    "epo": "EPO",
+    "fck_static": "FCKStaticTransformer",
+    "crop": "CropTransformer",
+    "resample": "ResampleTransformer",
+    "resampler": "Resampler",
+    "range_discretizer": "RangeDiscretizer",
+    "kbins_discretizer": "IntegerKBinsDiscretizer",
+    "kennard_stone": "KennardStoneSplitter",
+    "spxy": "SPXYSplitter",
+    "kbins_stratified": "KBinsStratifiedSplitter",
+    "y_outlier_iqr": "YOutlierFilter",
+    "x_outlier_mahalanobis": "XOutlierFilter",
+}
+
+C_PREFIX_OVERRIDES = {
+    "osc": "c4a_pp_osc",
+    "epo": "c4a_pp_epo",
+    "flexible_pca": "c4a_pp_flex_pca",
+    "flexible_svd": "c4a_pp_flex_svd",
+    "fck_static": "c4a_pp_fck_static",
+    "crop": "c4a_pp_crop",
+    "resample": "c4a_pp_resample",
+    "resampler": "c4a_pp_resampler",
+    "range_discretizer": "c4a_pp_range_disc",
+    "kbins_discretizer": "c4a_pp_kbins_disc",
+    "kennard_stone": "c4a_split_kennard_stone",
+    "spxy": "c4a_split_spxy",
+    "kbins_stratified": "c4a_split_kbins_stratified",
+    "y_outlier_iqr": "c4a_filter_y_outlier",
+    "x_outlier_mahalanobis": "c4a_filter_x_outlier",
+    "hotelling_t2": "c4a_util_hotelling_t2",
+    "q_residuals": "c4a_util_q_residuals",
+    "transfer_metrics": "c4a_transfer_metrics_compute",
+    "nirs_metrics": "c4a_metric_",
+    "signal_type_detector": "c4a_signal_detect",
+    "rng_pcg64": "c4a_rng_pcg64",
+}
+
+REFERENCE_BACKENDS = {
+    "nirs_ref": ("ref.nirs4all", "Python"),
+    "sklearn_ref": ("ref.sklearn", "Python"),
+    "scipy_ref": ("ref.scipy", "Python"),
+    "pywavelets_ref": ("ref.pywavelets", "Python"),
+    "frozen_ref": ("ref.frozen", "Python"),
+    "r_base": ("ref.r.base", "R"),
+    "r_stats": ("ref.r.stats", "R"),
+}
+
+PARAM_NOTES = {
+    "X": "Input matrix with shape n_samples x n_features.",
+    "y": "Response vector or matrix used by supervised transforms and splitters.",
+    "d": "External disturbance vector used by EPO.",
+    "lam": "Smoothness penalty; larger values produce a smoother baseline.",
+    "p": "Asymmetry parameter in penalized least-squares baseline correction.",
+    "max_iter": "Maximum number of solver or reweighting iterations.",
+    "tol": "Convergence tolerance.",
+    "polyorder": "Polynomial order.",
+    "window_length": "Odd Savitzky-Golay window length.",
+    "deriv": "Derivative order.",
+    "delta": "Sample spacing along the wavelength axis.",
+    "mode": "Boundary handling mode.",
+    "sigma": "Gaussian standard deviation or kernel scale, depending on method.",
+    "n_components": "Number of latent components or projected columns.",
+    "scale": "Whether to standardize internal variables before fitting.",
+    "family": "Wavelet family.",
+    "level": "Wavelet decomposition level.",
+    "threshold_mode": "Wavelet thresholding rule.",
+    "noise_estimator": "Noise estimator used for denoising threshold.",
+    "kernel_size": "Convolution kernel width.",
+    "filter_orders": "Fractional derivative orders in the kernel bank.",
+    "filter_scales": "Scale factors in the kernel bank.",
+    "test_size": "Fraction of samples assigned to the test set.",
+    "seed": "Random seed for deterministic splitting or filtering.",
+    "n_bins": "Number of bins.",
+    "strategy": "Binning strategy.",
+    "method": "Algorithm variant selected by the wrapper.",
+    "threshold": "Outlier or quality threshold.",
+    "contamination": "Expected outlier fraction.",
+}
+
+
+@dataclass
+class Reference:
+    backend: str
+    library: str
+    language: str
+    compare: bool = True
+    note: str = ""
+
+
+@dataclass
+class Method:
+    method_id: str
+    label: str
+    family: str
+    r_expr: str = ""
+    py_class: str = ""
+    c_prefix: str = ""
+    refs: list[Reference] = field(default_factory=list)
+    source_slug: str = ""
+    source_title: str = ""
+    source_text: str = ""
+    benchmarked: bool = False
+
+
+def _call_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return ""
+
+
+def _literal_string(node: ast.AST | None) -> str:
+    return node.value if isinstance(node, ast.Constant) and isinstance(node.value, str) else ""
+
+
+def _literal_bool(node: ast.AST | None, default: bool) -> bool:
+    if isinstance(node, ast.Constant) and isinstance(node.value, bool):
+        return node.value
+    return default
+
+
+def _first_c_symbol(node: ast.AST | None) -> str:
+    if node is None:
         return ""
-
-BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
-    "pls": {
-        "group": "core",
-        "title": "PLS regression (SIMPLS)",
-        "paper": "de Jong, S. (1993). *SIMPLS: an alternative approach to "
-                 "partial least squares regression*. Chemometrics and "
-                 "Intelligent Laboratory Systems 18(3), 251–263.",
-        "principle": (
-            "Project X into a `k`-dimensional latent space chosen to "
-            "maximise covariance with `y`, then regress `y` on the latent "
-            "scores. SIMPLS computes loadings directly from the "
-            "cross-product matrix `X'y` without explicit deflation of X, "
-            "which is the variant most closely matching MATLAB's "
-            "`plsregress`."),
-        "implementation": (
-            "`c4a_pls_fit` in libc4a, dispatched through "
-            "`Algorithm.PLS_REGRESSION` + `Solver.SIMPLS`. Variants NIPALS, "
-            "SVD, power-iteration and randomized-SVD are also available "
-            "via the `Solver` enum."),
-    },
-    "pcr": {
-        "group": "core",
-        "title": "Principal Components Regression",
-        "paper": "Massy, W. F. (1965). *Principal Components Regression in "
-                 "Exploratory Statistical Research*. JASA 60(309), 234–256.",
-        "principle": (
-            "SVD on the (centred) X, retain the top `k` components, "
-            "regress `y` on the score matrix. The reference is "
-            "`PCA(n_components=k)` + `LinearRegression` from scikit-learn "
-            "and `pls::pcr` in R."),
-        "implementation": (
-            "`Algorithm.PCR` + `Solver.SVD` in libc4a, sharing the same "
-            "Model.fit / Model.predict surface as PLS."),
-    },
-    "opls": {
-        "group": "core",
-        "title": "Orthogonal PLS (OPLS)",
-        "paper": "Trygg, J. & Wold, S. (2002). *Orthogonal projections to "
-                 "latent structures (O-PLS)*. Journal of Chemometrics "
-                 "16(3), 119–128.",
-        "principle": (
-            "Decompose X into a predictive component aligned with y and a "
-            "set of Y-orthogonal components. The Y-orthogonal subspace "
-            "absorbs structural variation unrelated to the response, which "
-            "improves interpretability for spectroscopy."),
-        "implementation": (
-            "`Algorithm.OPLS` + `Solver.NIPALS` + `Deflation.ORTHOGONAL`. "
-            "The R reference is Bioconductor `ropls::opls`; "
-            "orthogonal-component conventions may differ across libraries."),
-    },
-    "sparse_simpls": {
-        "group": "sparse",
-        "title": "Sparse SIMPLS",
-        "paper": "Chun, H. & Keleş, S. (2010). *Sparse partial least "
-                 "squares regression for simultaneous dimension reduction "
-                 "and variable selection*. JRSS B 72(1), 3–25.",
-        "principle": (
-            "SIMPLS with an L1 soft-threshold applied to the loading "
-            "weights at each component. The penalty `sparsity_lambda` "
-            "trades off prediction accuracy against feature selection."),
-        "implementation": (
-            "`c4a_sparse_simpls_fit` — MethodResult entry point; "
-            "coefficients map back to original feature space. Reference: "
-            "R `spls` 2.3.2."),
-    },
-    "di_pls": {
-        "group": "calibration-transfer",
-        "title": "Domain-invariant PLS (di-PLS)",
-        "paper": "Nikzad-Langerodi, R., Zellinger, W., Saminger-Platz, S. "
-                 "& Moser, B. A. (2018). *Domain-invariant partial-least-"
-                 "squares regression*. Analytical Chemistry 90, "
-                 "6693–6701.",
-        "principle": (
-            "PLS with an extra penalty that pushes the score "
-            "distributions of a source and a target domain together. "
-            "Useful when measurement conditions drift between calibration "
-            "and prediction sets."),
-        "implementation": (
-            "`c4a_di_pls_fit` — needs `X_target` at fit time. Reference: "
-            "Python `diPLSlib.models.DIPLS` (B-Analytics)."),
-    },
-    "recursive_pls": {
-        "group": "core",
-        "title": "Recursive (moving-window) PLS",
-        "paper": "Helland, K., Berntsen, H. E., Borgen, O. S. & Martens, "
-                 "H. (1992). *Recursive algorithm for partial least "
-                 "squares regression*. Chemom. Intell. Lab. Syst. "
-                 "14, 129–137.",
-        "principle": (
-            "Update the PLS fit incrementally over a sliding window of "
-            "samples. Suitable for streaming / drifting processes."),
-        "implementation": (
-            "`c4a_recursive_pls_run`. References: sklearn rolling-window "
-            "PLS, R `pls` window refits."),
-    },
-    "cppls": {
-        "group": "core",
-        "title": "Powered PLS (CPPLS / Indahl)",
-        "paper": "Indahl, U. G. (2005). *A twist to partial least squares "
-                 "regression*. Journal of Chemometrics 19(1), 32–44.",
-        "principle": (
-            "PLS where the column inner products are powered by `γ` "
-            "before the projection step, which moves the latent direction "
-            "between PCA (`γ=0`) and PLS (`γ=1`)."),
-        "implementation": (
-            "`c4a_cppls_fit`. NOTE: R `pls::cppls` is **Liland 2009 "
-            "Canonical Powered PLS**, a different algorithm — same name, "
-            "different mathematics. Use the tier-1 reference only with "
-            "this caveat."),
-    },
-    "weighted_pls": {
-        "group": "robust",
-        "title": "Sample-weighted PLS",
-        "paper": "Martens, H. & Næs, T. (1989). *Multivariate "
-                 "Calibration*. Wiley. Chapter on weighted regression.",
-        "principle": (
-            "SIMPLS on `√w`-prescaled, centred data. Equivalent to "
-            "running a standard PLS on a weighted residual problem."),
-        "implementation": (
-            "`c4a_weighted_pls_fit` — in-sample only (no global coef "
-            "export). Needs a sample-weight vector at fit time."),
-    },
-    "robust_pls": {
-        "group": "robust",
-        "title": "Robust PLS (Huber IRLS over SIMPLS)",
-        "paper": "Serneels, S., Croux, C., Filzmoser, P. & Van Espen, "
-                 "P. J. (2005). *Partial Robust M-Regression*. Chemom. "
-                 "Intell. Lab. Syst. 79, 55–64.",
-        "principle": (
-            "Iteratively reweighted PLS with a Huber loss on the "
-            "residuals. Down-weights outliers without removing them."),
-        "implementation": (
-            "`c4a_robust_pls_fit`. Reference: R `chemometrics::prm`."),
-    },
-    "ridge_pls": {
-        "group": "regularized",
-        "title": "Ridge-augmented PLS",
-        "paper": "Hoerl, A. E. & Kennard, R. W. (1970). *Ridge "
-                 "regression: biased estimation for nonorthogonal "
-                 "problems*. Technometrics 12(1), 55–67.",
-        "principle": (
-            "Augment the PLS regression step with an L2 ridge penalty "
-            "on the latent-space coefficients. Useful when `k` is close "
-            "to the rank of X and the spectra are highly collinear."),
-        "implementation": "`c4a_ridge_pls_fit` (in-sample only).",
-    },
-    "continuum_regression": {
-        "group": "nonlinear",
-        "title": "Continuum regression",
-        "paper": "Stone, M. & Brooks, R. J. (1990). *Continuum "
-                 "regression: cross-validated sequentially constructed "
-                 "prediction embracing ordinary least squares, partial "
-                 "least squares and principal components regression*. "
-                 "JRSS B 52(2), 237–269.",
-        "principle": (
-            "A one-parameter family `τ ∈ [0, 1]` interpolating OLS "
-            "(`τ=0`), PLS (`τ=0.5`) and PCR (`τ=1`)."),
-        "implementation": "`c4a_continuum_regression_fit`.",
-    },
-    "n_pls": {
-        "group": "multi-block",
-        "title": "N-way PLS (Trilinear PLS)",
-        "paper": "Bro, R. (1996). *Multiway calibration. Multilinear "
-                 "PLS*. Journal of Chemometrics 10(1), 47–61.",
-        "principle": (
-            "Tensor-mode PLS for X arranged as an `n × j × k` tensor. "
-            "Decomposes X into rank-one tensor components."),
-        "implementation": (
-            "`c4a_n_pls_fit` — takes a flattened X plus `mode_j` and "
-            "`mode_k` shape parameters. Reference: `tensorly` and the "
-            "original Bro paper code."),
-    },
-    "kernel_pls_rbf": {
-        "group": "nonlinear",
-        "title": "Kernel PLS",
-        "paper": "Rosipal, R. & Trejo, L. J. (2001). *Kernel partial "
-                 "least squares regression in reproducing kernel Hilbert "
-                 "space*. JMLR 2, 97–123.",
-        "principle": (
-            "PLS in the feature space of an RBF / polynomial / linear "
-            "kernel. Captures nonlinear relationships between X and y."),
-        "implementation": (
-            "`c4a_kernel_pls_fit`. Predict-on-new-X is currently "
-            "in-sample-only in the Python sklearn wrapper because the "
-            "ABI does not yet export the kernel-centering."),
-    },
-    "o2pls": {
-        "group": "multi-block",
-        "title": "O2-PLS",
-        "paper": "Trygg, J. & Wold, S. (2003). *O2-PLS, a two-block "
-                 "(X–Y) latent variable regression*. Journal of "
-                 "Chemometrics 17(1), 53–64.",
-        "principle": (
-            "Symmetric two-block PLS that separates joint, X-orthogonal "
-            "and Y-orthogonal variation."),
-        "implementation": (
-            "`c4a_o2pls_fit`. Reference: CRAN `OmicsPLS` 2.1.0."),
-    },
-    "approximate_press": {
-        "group": "diagnostic",
-        "title": "Approximate PRESS",
-        "paper": "Allen, D. M. (1974). *The relationship between "
-                 "variable selection and data augmentation and a method "
-                 "for prediction*. Technometrics 16(1), 125–127.",
-        "principle": (
-            "An O(n) approximation of the predicted residual sum of "
-            "squares using the hat-matrix diagonal."),
-        "implementation": "`c4a_approximate_press_compute`.",
-    },
-    "pls_diagnostic_t2": {
-        "group": "diagnostic",
-        "title": "Hotelling T² score",
-        "paper": "Hotelling, H. (1931). *The generalization of "
-                 "Student's ratio*. Annals of Mathematical Statistics "
-                 "2(3), 360–378.",
-        "principle": (
-            "Sum of squared standardized PLS scores per sample. Flags "
-            "samples that are unusual in the latent space."),
-        "implementation": "`c4a_pls_diagnostics_compute` with stat=\"t2\".",
-    },
-    "pls_diagnostic_q": {
-        "group": "diagnostic",
-        "title": "Q residual (SPE)",
-        "paper": "Jackson, J. E. & Mudholkar, G. S. (1979). *Control "
-                 "procedures for residuals associated with principal "
-                 "component analysis*. Technometrics 21(3), 341–349.",
-        "principle": (
-            "Squared prediction error in feature space (X minus its "
-            "PLS reconstruction). Flags samples whose X is not well "
-            "represented by the model."),
-        "implementation": "`c4a_pls_diagnostics_compute` with stat=\"q\".",
-    },
-    "pls_monitoring": {
-        "group": "diagnostic",
-        "title": "PLS monitoring (T² + Q with alarms)",
-        "paper": "Kourti, T. & MacGregor, J. F. (1996). *Multivariate "
-                 "SPC methods for process and product monitoring*. "
-                 "Journal of Quality Technology 28(4), 409–428.",
-        "principle": (
-            "Combines T² and Q charts with control limits derived "
-            "from the calibration set. Returns per-sample alarms."),
-        "implementation": "`c4a_pls_monitoring_run`.",
-    },
-    "one_se_rule": {
-        "group": "diagnostic",
-        "title": "One-SE rule for component count",
-        "paper": "Hastie, T., Tibshirani, R. & Friedman, J. (2009). "
-                 "*The Elements of Statistical Learning*, 2nd ed., §7.10.",
-        "principle": (
-            "Pick the smallest `k` whose CV-RMSE is within one "
-            "standard error of the minimum. Reduces over-fitting."),
-        "implementation": "`c4a_one_se_rule_compute`.",
-    },
-    "so_pls": {
-        "group": "multi-block",
-        "title": "SO-PLS (Sequential and Orthogonalised PLS)",
-        "paper": "Næs, T., Tomic, O., Mevik, B.-H. & Martens, H. "
-                 "(2011). *Path modelling by sequential PLS regression*. "
-                 "Journal of Chemometrics 25(1), 28–40.",
-        "principle": (
-            "Fit PLS on the first block, then orthogonalise the "
-            "remaining blocks against the first block's scores and "
-            "iterate. Captures block-specific contributions."),
-        "implementation": (
-            "`c4a_so_pls_fit`. Reference: R `multiblock` package."),
-    },
-    "on_pls": {
-        "group": "multi-block",
-        "title": "OnPLS (Orthogonal-N PLS)",
-        "paper": "Löfstedt, T. & Trygg, J. (2011). *OnPLS — a "
-                 "novel multiblock method for the modelling of "
-                 "predictive and orthogonal variation*. Journal of "
-                 "Chemometrics 25(8), 441–455.",
-        "principle": (
-            "Multi-block extension of OPLS — separates joint and "
-            "unique components per block."),
-        "implementation": (
-            "`c4a_on_pls_fit`. The vendored `OnPLS` Python port is "
-            "carried in `bindings/python/vendor/OnPLS/` because the CRAN "
-            "package was archived."),
-    },
-    "rosa": {
-        "group": "multi-block",
-        "title": "ROSA (Response-oriented sequential alternation)",
-        "paper": "Liland, K. H. & Næs, T. (2016). *Response-oriented "
-                 "sequential alternation (ROSA): a fast multiblock "
-                 "regression algorithm*. Journal of Chemometrics 30(11), "
-                 "651–662.",
-        "principle": (
-            "At each component, ROSA picks the block whose addition "
-            "best explains y, in a forward greedy manner."),
-        "implementation": (
-            "`c4a_rosa_fit`. Reference: R `multiblock`."),
-    },
-    "vissa_select": {
-        "group": "selector",
-        "title": "VISSA — Variable Iterative Space-Shrinkage Approach",
-        "paper": "Deng, B. C. et al. (2014). *A new strategy to prevent "
-                 "over-fitting in partial least squares models based on "
-                 "model population analysis*. Anal. Chim. Acta 880, "
-                 "32–41.",
-        "principle": (
-            "Population of random subsets refined by Monte-Carlo "
-            "subsampling; variables in surviving subsets are retained."),
-        "implementation": "`c4a_vissa_select`.",
-    },
-    "pso_select": {
-        "group": "selector",
-        "title": "PSO variable selection",
-        "paper": "Kennedy, J. & Eberhart, R. (1995). *Particle swarm "
-                 "optimization*. IEEE ICNN, 1942–1948.",
-        "principle": (
-            "Wrap a particle-swarm optimiser around PLS cross-validated "
-            "RMSE; each particle's position encodes a subset of features."),
-        "implementation": (
-            "`c4a_pso_select`. Reference: Python `pyswarms`."),
-    },
-    "gpr_pls": {
-        "group": "nonlinear",
-        "title": "GPR-PLS (Gaussian Process Regression in PLS scores)",
-        "paper": "Bishop, C. M. (2006). *Pattern Recognition and "
-                 "Machine Learning*, §6.4 (Gaussian Processes).",
-        "principle": (
-            "Project X into the PLS latent space, then fit a GP on the "
-            "scores. Reference: sklearn's `GaussianProcessRegressor` "
-            "with an RBF kernel on the score matrix."),
-        "implementation": "`c4a_gpr_pls_fit`.",
-    },
-    "bagging_pls": {
-        "group": "ensemble",
-        "title": "Bagging PLS",
-        "paper": "Breiman, L. (1996). *Bagging predictors*. Machine "
-                 "Learning 24(2), 123–140.",
-        "principle": (
-            "Bootstrap-aggregated PLS — fit `n_estimators` PLS models "
-            "on bootstrap samples, average their predictions."),
-        "implementation": (
-            "`c4a_bagging_pls_fit`. Reference: R `enpls`."),
-    },
-    "boosting_pls": {
-        "group": "ensemble",
-        "title": "Boosting PLS",
-        "paper": "Friedman, J. H. (2001). *Greedy function "
-                 "approximation: a gradient boosting machine*. Annals "
-                 "of Statistics 29(5), 1189–1232.",
-        "principle": (
-            "Gradient boosting where each weak learner is a small PLS "
-            "model. The reference is R `mboost::glmboost` with a PLS "
-            "base learner."),
-        "implementation": "`c4a_boosting_pls_fit`.",
-    },
-    "random_subspace_pls": {
-        "group": "ensemble",
-        "title": "Random-subspace PLS",
-        "paper": "Ho, T. K. (1998). *The random subspace method for "
-                 "constructing decision forests*. IEEE TPAMI 20(8), "
-                 "832–844.",
-        "principle": (
-            "Each ensemble member trains on a random feature subset "
-            "of size `features_per_subspace`. Reduces variance for "
-            "high-dimensional spectra."),
-        "implementation": "`c4a_random_subspace_pls_fit`.",
-    },
-    "pls_glm": {
-        "group": "classification",
-        "title": "PLS-GLM (Gaussian / Poisson families)",
-        "paper": "Marx, B. D. (1996). *Iteratively reweighted partial "
-                 "least squares estimation for generalized linear "
-                 "regression*. Technometrics 38(4), 374–381.",
-        "principle": (
-            "Iteratively reweighted PLS fitting a GLM with Gaussian or "
-            "Poisson link. The reference is CRAN `plsRglm`."),
-        "implementation": "`c4a_pls_glm_fit`.",
-    },
-    "pls_qda": {
-        "group": "classification",
-        "title": "PLS-QDA",
-        "paper": "Pérez-Enciso, M. & Tenenhaus, M. (2003). *Prediction "
-                 "of clinical outcome with microarray data: a partial "
-                 "least squares discriminant analysis (PLS-DA) "
-                 "approach*. Human Genetics 112(5–6), 581–592.",
-        "principle": (
-            "Project X via PLS, then fit Quadratic Discriminant "
-            "Analysis on the latent scores. Class-specific covariances."),
-        "implementation": "`c4a_pls_qda_fit`.",
-    },
-    "pls_cox": {
-        "group": "classification",
-        "title": "PLS-Cox (survival)",
-        "paper": "Bastien, P., Bertrand, F., Meyer, N. & Maumy-"
-                 "Bertrand, M. (2015). *Deviance residuals-based "
-                 "sparse PLS and sparse kernel PLS for Cox model*. "
-                 "Bioinformatics 31(3), 397–404.",
-        "principle": (
-            "PLS on deviance residuals from a Cox proportional-hazards "
-            "model. Survival times + censoring indicators required."),
-        "implementation": (
-            "`c4a_pls_cox_fit`. Reference: CRAN `plsRcox`."),
-    },
-    "pds": {
-        "group": "calibration-transfer",
-        "title": "Piecewise Direct Standardisation",
-        "paper": "Wang, Y., Veltkamp, D. J. & Kowalski, B. R. (1991). "
-                 "*Multivariate instrument standardisation*. Analytical "
-                 "Chemistry 63(23), 2750–2756.",
-        "principle": (
-            "Map secondary-instrument spectra to the primary instrument "
-            "via a banded transfer matrix. Window of half-width `w`."),
-        "implementation": (
-            "`c4a_pds_fit` — TransformerMixin in tier 2. Reference: "
-            "R `prospectr::pds`."),
-    },
-    "ds": {
-        "group": "calibration-transfer",
-        "title": "Direct Standardisation",
-        "paper": "Wang, Y. et al. (1991), as above.",
-        "principle": (
-            "Single global transfer matrix between two instruments. "
-            "Simpler than PDS, sometimes higher variance."),
-        "implementation": "`c4a_ds_fit`. Reference: R `chemometrics::stdize`.",
-    },
-    "mir_pls": {
-        "group": "multi-block",
-        "title": "MIR-PLS (Mid-InfraRed PLS, regularised)",
-        "paper": "Custom kernel matching standard MIR conventions; "
-                 "see registry notes for the algorithm reference.",
-        "principle": (
-            "PLS with kernel regularisation tuned to mid-IR spectra. "
-            "In-tree sanctioned port; no widely installable library "
-            "equivalent."),
-        "implementation": "`c4a_mir_pls_fit`.",
-    },
-    "missing_aware_nipals": {
-        "group": "missing",
-        "title": "Missing-aware NIPALS",
-        "paper": "Walczak, B. & Massart, D. L. (2001). *Dealing with "
-                 "missing data*. Chemom. Intell. Lab. Syst. 58, 15–27.",
-        "principle": (
-            "NIPALS PLS that handles `NaN` entries by skipping them in "
-            "the inner-product and norm computations."),
-        "implementation": (
-            "`c4a_missing_aware_nipals_fit`. Reference: R `softImpute` "
-            "for the imputation step (sanctioned)."),
-    },
-    "sparse_pls_da": {
-        "group": "classification",
-        "title": "Sparse PLS-DA",
-        "paper": "Lê Cao, K.-A. et al. (2008). *A sparse PLS for "
-                 "variable selection when integrating omics data*. Stat. "
-                 "Appl. Genet. Mol. Biol. 7(1).",
-        "principle": (
-            "Sparse PLS-DA — soft-threshold loadings to select a "
-            "discriminative subset per component."),
-        "implementation": (
-            "`c4a_sparse_pls_da_fit`. Reference: Bioconductor `mixOmics::splsda`."),
-    },
-    "group_sparse_pls": {
-        "group": "sparse",
-        "title": "Group-sparse PLS",
-        "paper": "Liquet, B. et al. (2016). *Group and sparse group "
-                 "partial least squares*. Bioinformatics 32(1), 35–42.",
-        "principle": (
-            "Apply group-lasso style sparsity at the loading-weight "
-            "level — entire groups of features enter or leave together."),
-        "implementation": (
-            "`c4a_group_sparse_pls_fit`. Reference: CRAN `sgPLS`."),
-    },
-    "fused_sparse_pls": {
-        "group": "sparse",
-        "title": "Fused-sparse PLS",
-        "paper": "Tibshirani, R. et al. (2005). *Sparsity and "
-                 "smoothness via the fused lasso*. JRSS B 67(1), 91–108.",
-        "principle": (
-            "L1 + fused-L1 penalty on PLS loadings — neighbouring "
-            "features (along the wavelength axis) tend to share weights."),
-        "implementation": "`c4a_fused_sparse_pls_fit`.",
-    },
-    "pls_diagnostic_dmodx": {
-        "group": "diagnostic",
-        "title": "DModX (distance to the model)",
-        "paper": "Eriksson, L. et al. (2013). *Multi- and Megavariate "
-                 "Data Analysis*, Umetrics Academy, §4.7.",
-        "principle": (
-            "Per-sample residual sum of squares after PLS "
-            "reconstruction, normalised by the model's residual "
-            "degrees of freedom."),
-        "implementation": "`c4a_pls_diagnostics_compute` with stat=\"dmodx\".",
-    },
-    "mb_pls": {
-        "group": "multi-block",
-        "title": "MB-PLS (Multi-block PLS)",
-        "paper": "Westerhuis, J. A., Kourti, T. & MacGregor, J. F. "
-                 "(1998). *Analysis of multiblock and hierarchical PCA "
-                 "and PLS models*. Journal of Chemometrics 12(5), "
-                 "301–321.",
-        "principle": (
-            "Multi-block PLS with block-autoscaling and block weights, "
-            "mapping coefficients back to original feature space."),
-        "implementation": (
-            "`c4a_mb_pls_fit`. Reference: sanctioned git-pinned port "
-            "`nirs4all.operators.models.sklearn.mbpls`."),
-    },
-    "lw_pls": {
-        "group": "nonlinear",
-        "title": "Locally-Weighted PLS",
-        "paper": "Centner, V. & Massart, D. L. (1998). *Optimisation "
-                 "in locally weighted regression*. Analytical Chemistry "
-                 "70(19), 4206–4211.",
-        "principle": (
-            "For each prediction point, refit PLS on its k-nearest "
-            "neighbours in the calibration set."),
-        "implementation": (
-            "`c4a_lw_pls_fit`. Reference: sanctioned git-pinned port "
-            "`nirs4all.operators.models.sklearn.lwpls`."),
-    },
-    "pls_lda": {
-        "group": "classification",
-        "title": "PLS-LDA",
-        "paper": "Barker, M. & Rayens, W. (2003). *Partial least "
-                 "squares for discrimination*. Journal of Chemometrics "
-                 "17(3), 166–173.",
-        "principle": (
-            "Project X via PLS, then fit Linear Discriminant Analysis "
-            "on the latent scores."),
-        "implementation": "`c4a_pls_lda_fit`. Reference: composite (PLSRegression + LDA).",
-    },
-    "pls_logistic": {
-        "group": "classification",
-        "title": "PLS-logistic",
-        "paper": "Bastien, P., Esposito Vinzi, V. & Tenenhaus, M. "
-                 "(2005). *PLS generalised linear regression*. "
-                 "Computational Statistics & Data Analysis 48(1), "
-                 "17–46.",
-        "principle": (
-            "Iteratively reweighted PLS with a logit link function "
-            "for binary / multinomial classification."),
-        "implementation": "`c4a_pls_logistic_fit`. Reference: R `plsRglm`.",
-    },
-    "aom_preprocess": {
-        "group": "diagnostic",
-        "title": "AOM preprocessing bank",
-        "paper": "Bench oracle in "
-                 "`nirs4all.operators.models.sklearn.aom_pls`; "
-                 "AOM-PLS family.",
-        "principle": (
-            "An operator-mixture bank of preprocessing transforms with "
-            "soft (equal weights) or hard (first operator) gating. "
-            "Forms the building block of AOM-SIMPLS and POP-PLS."),
-        "implementation": "`c4a_aom_preprocess_fit`.",
-    },
-    "variable_select_vip": {
-        "group": "selector",
-        "title": "VIP variable selection",
-        "paper": "Wold, S., Sjöström, M. & Eriksson, L. (2001). *PLS-"
-                 "regression: a basic tool of chemometrics*. Chemom. "
-                 "Intell. Lab. Syst. 58(2), 109–130.",
-        "principle": (
-            "Variable Importance in Projection — weighted average of "
-            "loadings, normalised so a value `> 1` indicates an "
-            "important variable."),
-        "implementation": "`c4a_variable_select_rank` with metric=VIP.",
-    },
-    "variable_select_coef": {
-        "group": "selector",
-        "title": "Coefficient-magnitude selection",
-        "paper": "Standard chemometrics convention; see Martens & Næs "
-                 "(1989).",
-        "principle": (
-            "Rank features by the magnitude of their PLS regression "
-            "coefficient in the original feature scale."),
-        "implementation": "`c4a_variable_select_rank` with metric=COEF.",
-    },
-    "variable_select_sr": {
-        "group": "selector",
-        "title": "Selectivity ratio",
-        "paper": "Rajalahti, T. et al. (2009). *Biomarker discovery "
-                 "in mass spectral profiles by means of selectivity "
-                 "ratio plot*. Chemom. Intell. Lab. Syst. 95(1), 35–48.",
-        "principle": (
-            "Ratio of explained to residual variance per feature, "
-            "computed from the PLS target-projected coefficients."),
-        "implementation": "`c4a_variable_select_rank` with metric=SR.",
-    },
-    "interval_select": {
-        "group": "selector",
-        "title": "iPLS / Moving-window interval selection",
-        "paper": "Nørgaard, L., Saudland, A., Wagner, J., Nielsen, "
-                 "J. P., Munck, L. & Engelsen, S. B. (2000). *Interval "
-                 "partial least-squares regression (iPLS)*. Appl. "
-                 "Spectroscopy 54(3), 413–419.",
-        "principle": (
-            "Slide a fixed-width window across wavelengths; pick the "
-            "interval whose PLS CV-RMSE is lowest."),
-        "implementation": "`c4a_interval_select`. Reference: R `plsVarSel`.",
-    },
-    "bipls_select": {
-        "group": "selector",
-        "title": "Backward interval PLS (biPLS)",
-        "paper": "Leardi, R. & Nørgaard, L. (2004). *Sequential "
-                 "application of backward interval partial least squares "
-                 "and genetic algorithms for the selection of relevant "
-                 "spectral regions*. J. Chemom. 18(11), 486–497.",
-        "principle": (
-            "Start with all intervals and recursively eliminate the "
-            "weakest by CV-RMSE."),
-        "implementation": "`c4a_bipls_select`. Reference: R `plsVarSel`.",
-    },
-    "sipls_select": {
-        "group": "selector",
-        "title": "Synergy interval PLS (siPLS)",
-        "paper": "Nørgaard, L. et al. (2000), as for `interval_select`.",
-        "principle": (
-            "Exhaustively score every combination of `m` fixed-size "
-            "intervals; pick the combination with the lowest CV-RMSE."),
-        "implementation": "`c4a_sipls_select`. Reference: R `plsVarSel`.",
-    },
-    "stability_select": {
-        "group": "selector",
-        "title": "MC-UVE / Stability selection",
-        "paper": "Cai, W. et al. (2008). *A variable selection method "
-                 "based on uninformative variable elimination for "
-                 "multivariate calibration of near-infrared spectra*. "
-                 "Chemom. Intell. Lab. Syst. 90(2), 188–194.",
-        "principle": (
-            "Compute coefficient mean / std ratio over Monte-Carlo "
-            "subsamples; rank features by this ratio."),
-        "implementation": "`c4a_stability_select`. Reference: R `plsVarSel`.",
-    },
-    "uve_select": {
-        "group": "selector",
-        "title": "Uninformative variable elimination",
-        "paper": "Centner, V. et al. (1996). *Elimination of "
-                 "uninformative variables for multivariate calibration*. "
-                 "Analytical Chemistry 68(21), 3851–3858.",
-        "principle": (
-            "Augment X with deterministic artificial noise variables; "
-            "any real feature whose stability is below the noise "
-            "threshold is eliminated."),
-        "implementation": "`c4a_uve_select`. Reference: R `plsVarSel`.",
-    },
-    "spa_select": {
-        "group": "selector",
-        "title": "Successive Projections Algorithm (SPA)",
-        "paper": "Araújo, M. C. U. et al. (2001). *The successive "
-                 "projections algorithm for variable selection in "
-                 "spectroscopic multicomponent analysis*. Chemom. "
-                 "Intell. Lab. Syst. 57(2), 65–73.",
-        "principle": (
-            "Greedy projection-orthogonal forward selection seeded by "
-            "the coefficient with largest magnitude."),
-        "implementation": "`c4a_spa_select`.",
-    },
-    "cars_select": {
-        "group": "selector",
-        "title": "CARS — Competitive Adaptive Reweighted Sampling",
-        "paper": "Li, H., Liang, Y., Xu, Q. & Cao, D. (2009). "
-                 "*Key wavelengths screening using competitive adaptive "
-                 "reweighted sampling method for multivariate "
-                 "calibration*. Anal. Chim. Acta 648(1), 77–84.",
-        "principle": (
-            "Exponential-decay retention combined with weighted "
-            "sampling; iteratively retains only the strongest features."),
-        "implementation": "`c4a_cars_select`. Reference: R `enpls`.",
-    },
-    "random_frog_select": {
-        "group": "selector",
-        "title": "Random Frog",
-        "paper": "Li, H. et al. (2012). *Random frog: an efficient "
-                 "reversible jump Markov chain Monte Carlo-like approach "
-                 "for variable selection*. Anal. Chim. Acta 740, 20–26.",
-        "principle": (
-            "MCMC-like random walk through feature subsets; rank by "
-            "inclusion frequency."),
-        "implementation": "`c4a_random_frog_select`.",
-    },
-    "scars_select": {
-        "group": "selector",
-        "title": "Stability-CARS",
-        "paper": "Zheng, K. et al. (2012). *Stability competitive "
-                 "adaptive reweighted sampling (SCARS) and its "
-                 "applications to multivariate calibration of NIR*. "
-                 "Chemom. Intell. Lab. Syst. 112, 48–54.",
-        "principle": (
-            "CARS where the retention weights are stability-of-"
-            "coefficient-sign over Monte-Carlo subsamples."),
-        "implementation": "`c4a_scars_select`.",
-    },
-    "ga_select": {
-        "group": "selector",
-        "title": "GA-PLS — Genetic Algorithm variable selection",
-        "paper": "Leardi, R. (2000). *Application of genetic "
-                 "algorithm-PLS for feature selection in spectral data*. "
-                 "Journal of Chemometrics 14(5–6), 643–655.",
-        "principle": (
-            "Wrap a binary GA around PLS CV-RMSE; population evolves "
-            "via crossover, mutation, elitism."),
-        "implementation": "`c4a_ga_select`.",
-    },
-    "shaving_select": {
-        "group": "selector",
-        "title": "Shaving (recursive elimination)",
-        "paper": "Mehmood, T. et al. (2012). *A review of variable "
-                 "selection methods in partial least squares regression*. "
-                 "Chemom. Intell. Lab. Syst. 118, 62–69, §3.2.",
-        "principle": (
-            "Recursively shave away the lowest-scoring fraction of "
-            "features; pick the subset with lowest CV-RMSE."),
-        "implementation": "`c4a_shaving_select`.",
-    },
-    "bve_select": {
-        "group": "selector",
-        "title": "BVE — Backward Variable Elimination",
-        "paper": "Forina, M. et al. (2004). *Iterative predictor "
-                 "weighting (IPW) PLS — a technique for the elimination "
-                 "of useless predictors in regression problems*. J. "
-                 "Chemom. 18(2), 105–112, §2.",
-        "principle": (
-            "At each step greedily evaluate every one-variable "
-            "removal by CV-RMSE; remove the one whose loss is smallest."),
-        "implementation": "`c4a_bve_select`.",
-    },
-    "t2_select": {
-        "group": "selector",
-        "title": "Hotelling T² loading selection",
-        "paper": "Wold, S. et al. (2001), as for `variable_select_vip`.",
-        "principle": (
-            "Compute Hotelling T² on PLS loading weights, threshold by "
-            "an α-specific upper control limit, fall back to top-k."),
-        "implementation": "`c4a_t2_select`.",
-    },
-    "wvc_select": {
-        "group": "selector",
-        "title": "WVC — Weighted Variable Contribution",
-        "paper": "Andries, J. P. M. & Vander Heyden, Y. (2011). "
-                 "*Improved variable reduction in partial least "
-                 "squares modelling based on predictive-property-"
-                 "ranked variables and adaptation of partial least "
-                 "squares complexity*. Anal. Chim. Acta 705(1–2), "
-                 "292–305.",
-        "principle": (
-            "Normalised weighted-variable-contribution score from SVD "
-            "PLS components; deterministic top-k selection."),
-        "implementation": "`c4a_wvc_select`.",
-    },
-    "wvc_threshold_select": {
-        "group": "selector",
-        "title": "WVC-threshold selection",
-        "paper": "Andries & Vander Heyden (2011), as above.",
-        "principle": (
-            "Fixed-threshold and factor-of-mean rules over WVC scores; "
-            "minimum-selected fallback."),
-        "implementation": "`c4a_wvc_threshold_select`.",
-    },
-    "emcuve_select": {
-        "group": "selector",
-        "title": "EMCUVE — Ensemble MC-UVE",
-        "paper": "Cai, W. et al. (2008), as for `stability_select`.",
-        "principle": (
-            "Ensemble MC-UVE rounds with a deterministic vote rule; "
-            "robust against single-bag instability."),
-        "implementation": "`c4a_emcuve_select`.",
-    },
-    "randomization_select": {
-        "group": "selector",
-        "title": "Randomisation test (Y-permutation)",
-        "paper": "Westad, F. & Martens, H. (2000). *Variable selection "
-                 "in NIR based on significance testing in PLSR*. JNIRS "
-                 "8(2), 117–124.",
-        "principle": (
-            "Compare observed PLS coefficient scores against scores "
-            "from deterministic Y-permutations; empirical p-values."),
-        "implementation": "`c4a_randomization_select`.",
-    },
-    "rep_select": {
-        "group": "selector",
-        "title": "REP — Recursive Elimination of Predictors",
-        "paper": "Mehmood, T. et al. (2012), as for `shaving_select`.",
-        "principle": (
-            "Remove a fixed count of weak coefficient-score variables "
-            "per recursive step; keep the lowest-CV-error subset."),
-        "implementation": "`c4a_rep_select`.",
-    },
-    "ipw_select": {
-        "group": "selector",
-        "title": "IPW — Iterative Predictor Weighting",
-        "paper": "Forina, M. et al. (2004), as for `bve_select`.",
-        "principle": (
-            "Iteratively reweight coefficient scores; expose score "
-            "and weight paths; keep the lowest-CV-error top-k subset."),
-        "implementation": "`c4a_ipw_select`.",
-    },
-    "st_select": {
-        "group": "selector",
-        "title": "ST-PLS — Score-threshold selection",
-        "paper": "Mehmood, T. et al. (2012), as above.",
-        "principle": (
-            "Apply deterministic score thresholds with min-selected "
-            "fallbacks; keep the lowest-CV-error subset."),
-        "implementation": "`c4a_st_select`.",
-    },
-    "ecr": {
-        "group": "calibration-transfer",
-        "title": "ECR — Empirical Calibration-transfer Regression",
-        "paper": "Custom kernel for empirical calibration transfer; "
-                 "see registry notes.",
-        "principle": (
-            "Penalised regression matching empirical calibration "
-            "between two instruments, balanced by an α coefficient."),
-        "implementation": "`c4a_ecr_fit`.",
-    },
-    "iriv_select": {
-        "group": "selector",
-        "title": "IRIV — Iteratively Retaining Informative Variables",
-        "paper": "Yun, Y. H. et al. (2014). *A strategy that iteratively "
-                 "retains informative variables for selecting optimal "
-                 "variable subset in multivariate calibration*. Anal. "
-                 "Chim. Acta 807, 36–43.",
-        "principle": (
-            "Classify each variable as strongly / weakly informative / "
-            "uninformative / interfering across rounds; keep only "
-            "strongly + weakly informative."),
-        "implementation": "`c4a_iriv_select`.",
-    },
-    "irf_select": {
-        "group": "selector",
-        "title": "IRF — Iterative Random Forest variable selection",
-        "paper": "Basu, S. et al. (2018). *Iterative random forests "
-                 "to discover predictive and stable high-order "
-                 "interactions*. PNAS 115(8), 1943–1948.",
-        "principle": (
-            "Iteratively re-weight Random Forest feature-importances "
-            "and refit. Adapted for PLS prediction."),
-        "implementation": "`c4a_irf_select`.",
-    },
-    "vip_spa_select": {
-        "group": "selector",
-        "title": "VIP-seeded SPA",
-        "paper": "Hybrid heuristic combining VIP ranking and the "
-                 "Successive Projections Algorithm; see registry "
-                 "notes.",
-        "principle": (
-            "Use VIP scores to seed SPA's projection-orthogonal "
-            "forward selection."),
-        "implementation": "`c4a_vip_spa_select`.",
-    },
-}
+    for child in ast.walk(node):
+        if isinstance(child, ast.Constant) and isinstance(child.value, str):
+            if child.value.startswith("c4a_"):
+                return child.value
+    return ""
 
 
-# ---------------------------------------------------------------------------
-# Registry parser
-# ---------------------------------------------------------------------------
+def _first_c4a_class(node: ast.AST | None) -> str:
+    if node is None:
+        return ""
+    for child in ast.walk(node):
+        if isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name):
+            if child.value.id == "c4a":
+                return child.attr
+    return ""
 
-def parse_registry(path: Path) -> list[dict]:
-    """AST-parse benchmarks/parity_timing/registry.py and extract METHODS."""
-    tree = ast.parse(path.read_text())
-    out: list[dict] = []
+
+def _keyword(call: ast.Call, name: str) -> ast.AST | None:
+    for kw in call.keywords:
+        if kw.arg == name:
+            return kw.value
+    return None
+
+
+def _parse_reference(node: ast.AST) -> Reference | None:
+    if not isinstance(node, ast.Call):
+        return None
+    name = _call_name(node.func)
+    compare = _literal_bool(_keyword(node, "compare"), True)
+    note = _literal_string(_keyword(node, "contract_note"))
+    if name == "ReferenceSpec" and len(node.args) >= 2:
+        backend = _literal_string(node.args[0])
+        library = _literal_string(node.args[1])
+        language = _literal_string(node.args[4]) if len(node.args) > 4 else "Python"
+        return Reference(backend, library, language or "Python", compare, note)
+    if name in REFERENCE_BACKENDS:
+        backend, language = REFERENCE_BACKENDS[name]
+        if name in {"r_base", "r_stats"}:
+            library = "R base" if name == "r_base" else "R stats"
+        else:
+            library = _literal_string(node.args[0]) if node.args else backend
+        return Reference(backend, library, language, compare, note)
+    return None
+
+
+def parse_methods_from_orchestrator() -> list[Method]:
+    tree = ast.parse(ORCHESTRATOR.read_text(encoding="utf-8"))
+    out: list[Method] = []
     for node in ast.walk(tree):
-        value = None
-        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) \
-                and node.target.id == "METHODS":
-            value = node.value
-        elif isinstance(node, ast.Assign) and any(
-                isinstance(t, ast.Name) and t.id == "METHODS"
-                for t in node.targets):
-            value = node.value
-        if not isinstance(value, ast.List):
+        if not isinstance(node, ast.Call) or _call_name(node.func) != "MethodSpec":
             continue
-        for el in value.elts:
-            if not (isinstance(el, ast.Call) and getattr(el.func, "id", "")
-                     == "MethodSpec"):
-                continue
-            kw = {k.arg: k.value for k in el.keywords}
-
-            def lit(name: str, default: Any = None) -> Any:
-                v = kw.get(name)
-                if v is None:
-                    return default
-                if isinstance(v, ast.Constant):
-                    return v.value
-                try:
-                    return ast.literal_eval(v)
-                except Exception:
-                    return default
-
-            extra_refs: list[str] = []
-            ev = kw.get("extra_references")
-            if isinstance(ev, ast.Tuple):
-                for pair in ev.elts:
-                    if isinstance(pair, ast.Tuple) and pair.elts \
-                            and isinstance(pair.elts[0], ast.Constant):
-                        extra_refs.append(pair.elts[0].value)
-            cp = kw.get("cell_params")
-            cell_params: dict = {}
-            if isinstance(cp, ast.Dict):
-                try:
-                    cell_params = ast.literal_eval(cp)
-                except Exception:
-                    cell_params = {}
-            out.append({
-                "name": lit("name"),
-                "desc": lit("description") or "",
-                "notes": lit("notes", "") or "",
-                "paper_only": lit("paper_only", "") or "",
-                "prediction_key": lit("prediction_key", "predictions"),
-                "rmse_tol": lit("rmse_rel_tol", 5e-2),
-                "needs_x_target": lit("needs_x_target", False),
-                "needs_sample_weights": lit("needs_sample_weights", False),
-                "needs_labels": lit("needs_labels", False),
-                "needs_group_assignment": lit("needs_group_assignment", False),
-                "has_py_ref": (
-                    "python_reference" in kw and not
-                    (isinstance(kw["python_reference"], ast.Constant)
-                     and kw["python_reference"].value is None)),
-                "has_r_ref": (
-                    "r_reference" in kw and not
-                    (isinstance(kw["r_reference"], ast.Constant)
-                     and kw["r_reference"].value is None)),
-                "extra_refs": extra_refs,
-                "cell_params": cell_params,
-            })
-    return out
-
-
-# ---------------------------------------------------------------------------
-# Tier-2 catalog parser (sklearn_tier2.yaml)
-# ---------------------------------------------------------------------------
-
-def parse_catalog(path: Path) -> dict[str, dict]:
-    """Read the tier-2 YAML catalog. PyYAML isn't a hard doc dep, so do a
-    light hand-roll: each top-level section is a `*_:` followed by a list
-    of `- name: …` blocks. We only need (name → c_function, params, in_sample,
-    extras, category)."""
-    if not path.exists():
-        return {}
-    try:
-        import yaml  # type: ignore
-    except Exception:
-        return {}
-
-    # The catalog uses one anchor alias (`*pls_regression_params`) that isn't
-    # actually declared as a YAML anchor (it just reuses the named params via
-    # the comment hint). Pre-process so PyYAML doesn't choke.
-    text = path.read_text()
-    text = re.sub(r"params: \*pls_regression_params.*", "params: []", text)
-    doc = yaml.safe_load(text) or {}
-    out: dict[str, dict] = {}
-    sections = [
-        ("model_regressor",       "model_regressors"),
-        ("model_classifier",      "model_classifiers"),
-        ("method_result_regressor", "method_result_regressors"),
-        ("in_sample_regressor",   "in_sample_regressors"),
-        ("selector",              "selectors"),
-        ("transformer",           "transformers"),
-        ("classifier_extra",      "classifier_extras"),
-        ("diagnostic",            "diagnostics"),
-    ]
-    for category, key in sections:
-        for entry in doc.get(key, []) or []:
-            if not isinstance(entry, dict) or "name" not in entry:
-                continue
-            entry["category"] = category
-            out[entry["name"]] = entry
-    return out
-
-
-# ---------------------------------------------------------------------------
-# CSV parser — group rows per method
-# ---------------------------------------------------------------------------
-
-BACKEND_DISPLAY = {
-    "cpp":              "chemometrics4all.cpp",          # +build suffix
-    "registry_chemometrics4all": "chemometrics4all.registry",
-    "python_tier1":     "chemometrics4all.python",
-    "python_tier2":     "chemometrics4all.sklearn",
-    "r_tier1":          "chemometrics4all.R",
-    "r_tier2":          "chemometrics4all.R.formula",
-    "matlab_tier1":     "chemometrics4all.matlab",
-    "matlab_tier2":     "chemometrics4all.matlab.classdef",
-    "sklearn":          "sklearn",
-    "ikpls":            "ikpls",
-    "r_pls":            "pls",
-    "r_ropls":          "ropls",
-    "r_mixomics":       "mixOmics",
-    "matlab_pls":       "plsregress",
-}
-CPP_BUILD_SUFFIX = {
-    "dev-release": "ref",
-    "blas-on":     "blas",
-    "omp-on":      "omp",
-    "blas-omp":    "blas+omp",
-    "cuda-on":     "cuda",
-}
-
-
-def column_id(backend: str, build: str) -> str:
-    if backend == "cpp":
-        return f"chemometrics4all.cpp.{CPP_BUILD_SUFFIX.get(build, build)}"
-    if backend.startswith("ref_"):
-        return "ref." + backend[len("ref_"):]
-    return BACKEND_DISPLAY.get(backend, backend)
-
-
-def is_true(v: Any) -> bool:
-    return str(v).lower() == "true"
-
-
-def verdict(row: dict) -> str:
-    if not is_true(row.get("ok")):
-        reason = (row.get("reason") or "").lower()
-        if "timeout" in reason:
-            return "not_run"
-        if ("not implemented by" in reason or "unsupported algo" in reason
-                or "unsupported algorithm" in reason):
-            return "not_available"
-        if any(k in reason for k in (
-                "modulenotfounderror", "importerror", "notimplemented",
-                "error", "exception", "crash", "traceback", "segfault")):
-            return "error"
-        return "not_run"
-    if is_true(row.get("parity_ok")):
-        return "exact"
-    try:
-        d = float(row.get("parity_max_diff", "nan"))
-    except (TypeError, ValueError):
-        return "drift"
-    if d != d:
-        return "drift"
-    return "drift" if d < 1e-3 else "divergent"
-
-
-def fmt_ms(s: str) -> str:
-    try:
-        f = float(s)
-    except (TypeError, ValueError):
-        return "—"
-    if f >= 1000:
-        return f"{f / 1000:.1f} s"
-    if f >= 10:
-        return f"{f:.1f} ms"
-    return f"{f:.2f} ms"
-
-
-VERDICT_ICON = {
-    "exact": "✓", "drift": "≈", "divergent": "✗",
-    "not_available": "⊘", "not_run": "—", "error": "⚠",
-}
-
-
-def parse_csv(path: Path) -> dict[str, list[dict]]:
-    """Group CSV rows by algorithm."""
-    if not path.exists():
-        return {}
-    out: dict[str, list[dict]] = defaultdict(list)
-    with path.open() as f:
-        for r in csv.DictReader(f):
-            algo = r.get("algorithm")
-            if not algo:
-                continue
-            out[algo].append(r)
-    return dict(out)
-
-
-# ---------------------------------------------------------------------------
-# Python sklearn docstring + signature scanner
-# ---------------------------------------------------------------------------
-
-def parse_python_sklearn(directory: Path) -> dict[str, dict]:
-    """Return {ClassName: {docstring, init_params}} extracted from every
-    `_*.py` file in `bindings/python/src/chemometrics4all/sklearn/`."""
-    out: dict[str, dict] = {}
-    if not directory.exists():
-        return out
-    for py in sorted(directory.glob("_*.py")):
-        try:
-            tree = ast.parse(py.read_text())
-        except SyntaxError:
+        if len(node.args) < 6:
             continue
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.ClassDef):
-                continue
-            if node.name.startswith("_"):
-                continue
-            doc = ast.get_docstring(node) or ""
-            params: list[dict] = []
-            for child in node.body:
-                if (isinstance(child, ast.FunctionDef)
-                        and child.name == "__init__"):
-                    args = child.args
-                    defaults = args.defaults
-                    kwonly = args.kwonlyargs
-                    kwonly_defaults = args.kw_defaults
-                    n_args = len(args.args)
-                    # Skip `self`
-                    arg_names = [a.arg for a in args.args[1:]]
-                    arg_annots = [
-                        ast.unparse(a.annotation) if a.annotation else ""
-                        for a in args.args[1:]]
-                    # Positional defaults align to the tail of args.args
-                    pos_defaults = [None] * (len(arg_names) - len(defaults)) \
-                        + [_repr_default(d) for d in defaults]
-                    for n, t, d in zip(arg_names, arg_annots, pos_defaults):
-                        params.append({"name": n, "type": t, "default": d})
-                    for a, d in zip(kwonly, kwonly_defaults):
-                        params.append({
-                            "name": a.arg,
-                            "type": ast.unparse(a.annotation) if a.annotation
-                                else "",
-                            "default": _repr_default(d) if d is not None
-                                else "",
-                        })
-                    break
-            out[node.name] = {"docstring": doc, "init_params": params}
-    return out
+        method_id = _literal_string(node.args[0])
+        label = _literal_string(node.args[1])
+        family = _literal_string(node.args[2]) or "other"
+        if not method_id or not label:
+            continue
+        py_class = _first_c4a_class(node.args[3]) or PY_CLASS_OVERRIDES.get(method_id, "")
+        c_prefix = _first_c_symbol(node.args[4]) or C_PREFIX_OVERRIDES.get(method_id, "")
+        r_expr = _literal_string(node.args[5])
+        refs: list[Reference] = []
+        if len(node.args) >= 7:
+            ref_node = node.args[6]
+            items = ref_node.elts if isinstance(ref_node, ast.Tuple) else [ref_node]
+            for item in items:
+                ref = _parse_reference(item)
+                if ref:
+                    refs.append(ref)
+        out.append(Method(method_id, label, family, r_expr, py_class, c_prefix, refs, benchmarked=True))
+    return sorted(out, key=lambda m: m.method_id)
 
 
-def _repr_default(node: ast.AST | None) -> str:
+def _clean_title(raw: str) -> str:
+    title = raw.strip().lstrip("#").strip()
+    title = title.replace("`", "")
+    return title
+
+
+def _section(text: str, headings: tuple[str, ...]) -> str:
+    lines = text.splitlines()
+    start = None
+    level = None
+    heading_lc = {h.lower() for h in headings}
+    for i, line in enumerate(lines):
+        m = re.match(r"^(#{2,4})\s+(.+?)\s*$", line)
+        if not m:
+            continue
+        if m.group(2).strip().lower() in heading_lc:
+            start = i + 1
+            level = len(m.group(1))
+            break
+    if start is None:
+        return ""
+    end = len(lines)
+    for j in range(start, len(lines)):
+        m = re.match(r"^(#{2,4})\s+", lines[j])
+        if m and len(m.group(1)) <= int(level):
+            end = j
+            break
+    return "\n".join(lines[start:end]).strip()
+
+
+def _intro(text: str) -> str:
+    lines = text.splitlines()
+    if lines and lines[0].startswith("# "):
+        lines = lines[1:]
+    out = []
+    for line in lines:
+        if line.startswith("## "):
+            break
+        out.append(line)
+    return "\n".join(out).strip()
+
+
+def load_algorithm_pages() -> dict[str, dict[str, str]]:
+    pages: dict[str, dict[str, str]] = {}
+    for path in sorted(ALGORITHMS_DIR.glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        first = next((line for line in text.splitlines() if line.startswith("# ")), f"# {path.stem}")
+        pages[path.stem] = {
+            "title": _clean_title(first),
+            "text": text,
+            "intro": _intro(text),
+            "parameters": _section(text, ("parameters",)),
+            "algorithm": _section(text, ("algorithm", "mathematical principle", "principle")),
+            "contract": _section(text, ("numerical contract", "determinism", "lifecycle")),
+            "reference": _section(text, ("reference", "references", "bibliography")),
+        }
+    return pages
+
+
+def infer_family(slug: str, page: dict[str, str]) -> str:
+    title = page.get("title", "").lower()
+    if slug.startswith("aug_") or "augmenter" in title:
+        return "augmentation"
+    if "wavelet" in slug or "haar" in slug:
+        return "wavelet"
+    if "filter" in slug or "outlier" in slug or "quality" in slug or "leverage" in slug:
+        return "filter"
+    if "metric" in slug:
+        return "metric"
+    if slug in {"hotelling_t2", "q_residuals", "signal_type_detector"}:
+        return "diagnostic"
+    if slug in {"rng_pcg64"}:
+        return "utility"
+    if "baseline" in title or slug in {"asls", "airpls", "arpls", "modpoly", "imodpoly", "snip", "rolling_ball", "detrend"}:
+        return "baseline"
+    if slug in {"osc", "epo", "flexible_pca", "flexible_svd", "fck_static"}:
+        return "feature_extraction"
+    if "splitter" in title or "splitters" in slug:
+        return "splitter"
+    return "preprocessing"
+
+
+def enrich_with_sources(methods: list[Method], pages: dict[str, dict[str, str]]) -> list[Method]:
+    by_id = {m.method_id: m for m in methods}
+    used_sources: set[str] = set()
+    for m in methods:
+        slug = SOURCE_ALIASES.get(m.method_id, m.method_id)
+        page = pages.get(slug)
+        if page:
+            m.source_slug = slug
+            m.source_title = page["title"]
+            m.source_text = page["text"]
+            used_sources.add(slug)
+    for slug, page in pages.items():
+        if slug in by_id or slug in used_sources:
+            continue
+        method_id = slug
+        label = page["title"].split(" — ", 1)[0].split(" (", 1)[0]
+        extra = Method(
+            method_id=method_id,
+            label=label,
+            family=infer_family(slug, page),
+            py_class=PY_CLASS_OVERRIDES.get(method_id, ""),
+            c_prefix=C_PREFIX_OVERRIDES.get(method_id, ""),
+            source_slug=slug,
+            source_title=page["title"],
+            source_text=page["text"],
+            benchmarked=False,
+        )
+        methods.append(extra)
+    return sorted(methods, key=lambda m: (GROUP_ORDER.index(m.family) if m.family in GROUP_ORDER else 999, m.method_id))
+
+
+def _annotation(node: ast.AST | None) -> str:
     if node is None:
         return ""
     try:
-        if isinstance(node, ast.Constant):
-            return repr(node.value)
         return ast.unparse(node)
     except Exception:
         return ""
 
 
-# ---------------------------------------------------------------------------
-# R roxygen / signature scanner
-# ---------------------------------------------------------------------------
-
-R_DOCSTRING_RE = re.compile(
-    r"((?:^#'[^\n]*\n)+)\s*([a-zA-Z_.][a-zA-Z0-9_.]*) <- function\(([^)]*)\)",
-    re.MULTILINE,
-)
-
-
-def parse_r_signatures(directory: Path) -> dict[str, dict]:
-    """Return {fn_name: {roxygen, signature}} per R file."""
-    out: dict[str, dict] = {}
-    if not directory.exists():
-        return out
-    for r_file in sorted(directory.glob("*.R")):
-        text = r_file.read_text()
-        for m in R_DOCSTRING_RE.finditer(text):
-            roxy, name, args = m.group(1, 2, 3)
-            if name.startswith("."):
-                continue
-            roxy_lines = [
-                line[3:].rstrip() if line.startswith("#' ")
-                else line[2:].rstrip()
-                for line in roxy.strip().splitlines()
-            ]
-            out[name] = {
-                "roxygen": "\n".join(roxy_lines),
-                "signature": f"{name}({args.strip()})",
-                "file": r_file.name,
-            }
-    return out
-
-
-# ---------------------------------------------------------------------------
-# MATLAB classdef / function scanner
-# ---------------------------------------------------------------------------
-
-M_HEADER_RE = re.compile(
-    r"^(?:classdef\s+([A-Za-z]\w*)|function\s+(?:[^=]+=\s*)?([a-zA-Z_]\w*)"
-    r"\s*\(([^)]*)\))",
-    re.MULTILINE,
-)
-
-
-def parse_matlab(directory: Path) -> dict[str, dict]:
-    """Return {entity_name: {header_doc, signature}} for every classdef or
-    top-level function in `bindings/matlab/+chemometrics4all/`."""
-    out: dict[str, dict] = {}
-    if not directory.exists():
-        return out
-    for m_file in sorted(directory.glob("*.m")):
-        text = m_file.read_text()
-        # Pull the header doc — block of leading `%` lines after the
-        # classdef/function declaration.
-        lines = text.splitlines()
-        sig_idx = None
-        header = []
-        kind = None
-        name = None
-        signature = ""
-        for i, line in enumerate(lines):
-            stripped = line.strip()
-            if not stripped:
-                continue
-            if stripped.startswith("classdef "):
-                kind = "classdef"
-                name = stripped.split()[1]
-                signature = stripped
-                sig_idx = i
-                break
-            if stripped.startswith("function "):
-                kind = "function"
-                # function out = name(args)
-                m = re.match(
-                    r"function\s+(?:[^=]+=\s*)?([a-zA-Z_]\w*)"
-                    r"\s*\(([^)]*)\)", stripped)
-                if m:
-                    name = m.group(1)
-                    signature = stripped
-                sig_idx = i
-                break
-        if sig_idx is None or name is None:
-            continue
-        for line in lines[sig_idx + 1:]:
-            stripped = line.lstrip()
-            if stripped.startswith("%"):
-                header.append(stripped[1:].rstrip())
-            else:
-                break
-        out[name] = {
-            "kind": kind,
-            "signature": signature,
-            "header": "\n".join(header).strip(),
-            "file": m_file.name,
-        }
-    return out
-
-
-# ---------------------------------------------------------------------------
-# Registry method → binding entry-point lookup tables
-# ---------------------------------------------------------------------------
-
-# Registry method name → Python sklearn class name in `chemometrics4all.sklearn`.
-METHOD_TO_PY_SKLEARN: dict[str, str] = {
-    "pls": "PLSRegression",
-    "pcr": "PCR",
-    "opls": "OPLSRegression",
-    "sparse_simpls": "SparseSimplsRegression",
-    "di_pls": "DIPLSRegression",
-    "cppls": "CPPLSRegression",
-    "weighted_pls": "WeightedPLSRegression",
-    "robust_pls": "RobustPLSRegression",
-    "ridge_pls": "RidgePLSRegression",
-    "continuum_regression": "ContinuumRegression",
-    "n_pls": "NPLSRegression",
-    "kernel_pls_rbf": "KernelPLSRegression",
-    "o2pls": "O2PLSRegression",
-    "recursive_pls": "RecursivePLSRegression",
-    "mb_pls": "MBPLSRegression",
-    "lw_pls": "LWPLSRegression",
-    "mir_pls": "MIRPLSRegression",
-    "missing_aware_nipals": "MissingAwareNipalsRegression",
-    "ecr": "ECRegression",
-    "bagging_pls": "BaggingPLSRegression",
-    "boosting_pls": "BoostingPLSRegression",
-    "random_subspace_pls": "RandomSubspacePLSRegression",
-    "so_pls": "SOPLSRegression",
-    "rosa": "ROSARegression",
-    "group_sparse_pls": "GroupSparsePLSRegression",
-    "fused_sparse_pls": "FusedSparsePLSRegression",
-    "pls_glm": "PLSGLMRegressor",
-    "pls_cox": "PLSCoxRegressor",
-    "pls_lda": "PLSLDAClassifier",
-    "pls_qda": "PLSQDAClassifier",
-    "pls_logistic": "PLSLogisticClassifier",
-    "sparse_pls_da": "SparsePLSDAClassifier",
-    "pds": "PDSTransformer",
-    "ds": "DSTransformer",
-    # Selectors
-    "variable_select_vip": "VIPSelector",
-    "variable_select_coef": "CoefficientSelector",
-    "variable_select_sr": "SelectivityRatioSelector",
-    "spa_select": "SPASelector",
-    "stability_select": "StabilitySelector",
-    "uve_select": "UVESelector",
-    "cars_select": "CARSSelector",
-    "random_frog_select": "RandomFrogSelector",
-    "scars_select": "SCARSSelector",
-    "ga_select": "GASelector",
-    "pso_select": "PSOSelector",
-    "vissa_select": "VISSASelector",
-    "shaving_select": "ShavingSelector",
-    "bve_select": "BVESelector",
-    "rep_select": "REPSelector",
-    "ipw_select": "IPWSelector",
-    "st_select": "STSelector",
-    "interval_select": "IntervalSelector",
-    "bipls_select": "BiPLSSelector",
-    "sipls_select": "SiPLSSelector",
-    "t2_select": "T2Selector",
-    "wvc_select": "WVCSelector",
-    "wvc_threshold_select": "WVCThresholdSelector",
-    "emcuve_select": "EMCUVESelector",
-    "randomization_select": "RandomizationSelector",
-    "iriv_select": "IRIVSelector",
-    "irf_select": "IRFSelector",
-    "vip_spa_select": "VIPSPASelector",
-}
-
-# Diagnostics: registry name → module-level Python function name.
-METHOD_TO_PY_FN: dict[str, str] = {
-    "pls_diagnostic_t2": "t2_score",
-    "pls_diagnostic_q":  "q_score",
-    "pls_diagnostic_dmodx": "dmodx_score",
-    "approximate_press":  "approximate_press",
-    "one_se_rule":        "one_se_rule",
-    "pls_monitoring":     "pls_monitoring",
-}
-
-# Registry name → R tier-1 raw function (in methods.R / methods_extra.R
-# / selectors.R / diagnostics.R). After the May 2026 R-binding cleanup
-# the dispatcher `chemometrics4all_method(algo, X, Y, k, params=list(…))` covers
-# all 33 fits + 24 selectors + 4 diagnostics; per-algo helpers below are
-# the idiomatic tier-1 shortcuts.
-METHOD_TO_R_RAW: dict[str, str] = {
-    # methods.R / methods_extra.R — *_fit family
-    "sparse_simpls": "sparse_simpls_fit",
-    "cppls": "cppls_fit",
-    "weighted_pls": "weighted_pls_fit",
-    "mb_pls": "mb_pls_fit",
-    "pls_glm": "pls_glm_fit",
-    "mir_pls": "mir_pls_fit",
-    "ecr": "ecr_fit",
-    "di_pls": "di_pls_fit",
-    "robust_pls": "robust_pls_fit",
-    "ridge_pls": "ridge_pls_fit",
-    "continuum_regression": "continuum_regression_fit",
-    "recursive_pls": "recursive_pls_fit",
-    "n_pls": "n_pls_fit",
-    "kernel_pls_rbf": "kernel_pls_fit",
-    "sparse_pls_da": "sparse_pls_da_fit",
-    "group_sparse_pls": "group_sparse_pls_fit",
-    "fused_sparse_pls": "fused_sparse_pls_fit",
-    "so_pls": "so_pls_fit",
-    "on_pls": "on_pls_fit",
-    "rosa": "rosa_fit",
-    "bagging_pls": "bagging_pls_fit",
-    "boosting_pls": "boosting_pls_fit",
-    "random_subspace_pls": "random_subspace_pls_fit",
-    "gpr_pls": "gpr_pls_fit",
-    "pls_qda": "pls_qda_fit",
-    "pls_cox": "pls_cox_fit",
-    "pds": "pds_fit",
-    "ds": "ds_fit",
-    "missing_aware_nipals": "missing_aware_nipals_fit",
-    "lw_pls": "lw_pls_fit",
-    "pls_lda": "pls_lda_fit",
-    "pls_logistic": "pls_logistic_fit",
-    # selectors.R / methods_extra.R — *_select family
-    "variable_select_vip":  "vip_select",
-    "variable_select_coef": "coefficient_select",
-    "variable_select_sr":   "selectivity_ratio_select",
-    "spa_select":          "spa_select",
-    "cars_select":         "cars_select",
-    "stability_select":    "stability_select",
-    "uve_select":          "uve_select",
-    "interval_select":     "interval_select",
-    "random_frog_select":  "random_frog_select",
-    "scars_select":        "scars_select",
-    "ga_select":           "ga_select",
-    "pso_select":          "pso_select",
-    "vissa_select":        "vissa_select",
-    "shaving_select":      "shaving_select",
-    "bve_select":          "bve_select",
-    "wvc_select":          "wvc_select",
-    "wvc_threshold_select":"wvc_threshold_select",
-    "emcuve_select":       "emcuve_select",
-    "randomization_select":"randomization_select",
-    "bipls_select":        "bipls_select",
-    "sipls_select":        "sipls_select",
-    "rep_select":          "rep_select",
-    "ipw_select":          "ipw_select",
-    "st_select":           "st_select",
-    "iriv_select":         "iriv_select",
-    "irf_select":          "irf_select",
-    "vip_spa_select":      "vip_spa_select",
-    "t2_select":           "t2_select",
-    # diagnostics.R
-    "approximate_press":    "approximate_press",
-    "one_se_rule":          "one_se_rule",
-    "pls_monitoring":       "pls_monitoring",
-    "pls_diagnostic_t2":    "pls_diagnostics",
-    "pls_diagnostic_q":     "pls_diagnostics",
-    "pls_diagnostic_dmodx": "pls_diagnostics",
-}
-
-# Registry methods that are PLS-style regressors and therefore also
-# expose a parsnip engine (`pls_chemometrics4all_reg(num_comp, ..., engine_args =
-# list(algorithm = "<algo>"))`) and an mlr3 R6 learner
-# (`lrn("regr.chemometrics4all", algorithm = "<algo>")`).
-PARSNIP_MLR3_ALGOS = {
-    "pls", "pcr", "opls", "cppls", "sparse_simpls", "ridge_pls",
-    "weighted_pls", "robust_pls", "continuum_regression",
-    "recursive_pls", "kernel_pls_rbf", "lw_pls", "mb_pls",
-    "mir_pls", "ecr", "ds", "pds", "missing_aware_nipals",
-    "bagging_pls", "boosting_pls", "random_subspace_pls",
-    "gpr_pls", "di_pls",
-}
-
-# Registry name → R tier-2 formula function (sklearn.R, sklearn_methods.R,
-# sklearn_extra.R).
-METHOD_TO_R_FORMULA: dict[str, str] = {
-    "pls": "pls",
-    "sparse_simpls": "sparse_pls",
-    "cppls": "cppls",
-    "weighted_pls": "weighted_pls",
-    "mb_pls": "mb_pls",
-    "pls_glm": "pls_glm",
-    "mir_pls": "mir_pls",
-    "ecr": "ecr",
-    "robust_pls": "robust_pls",
-    "ridge_pls": "ridge_pls",
-    "continuum_regression": "continuum_regression",
-    "bagging_pls": "bagging_pls",
-    "boosting_pls": "boosting_pls",
-    "random_subspace_pls": "random_subspace_pls",
-    "missing_aware_nipals": "missing_aware_nipals",
-}
-
-# Registry name → MATLAB tier-2 classdef name.
-METHOD_TO_MATLAB_CLASS: dict[str, str] = {
-    "pls": "Regression",
-    "cppls": "CpplsRegression",
-    "sparse_simpls": "SparsePlsRegression",
-    "weighted_pls": "WeightedPlsRegression",
-    "mb_pls": "MbPlsRegression",
-    "ecr": "EcrRegression",
-    "robust_pls": "RobustPlsRegression",
-    "ridge_pls": "RidgePlsRegression",
-    "continuum_regression": "ContinuumRegression",
-    "n_pls": "NPlsRegression",
-    "kernel_pls_rbf": "KernelPlsRegression",
-    "o2pls": "O2plsRegression",
-    "bagging_pls": "BaggingPlsRegression",
-    "boosting_pls": "BoostingPlsRegression",
-    "mir_pls": "MirRegression",
-    "missing_aware_nipals": "MissingAwareNipalsRegression",
-    "recursive_pls": "RecursivePlsRegression",
-    "pls_glm": "GlmRegression",
-}
-
-# Registry name → MATLAB tier-1 function (.m file, snake_case).
-METHOD_TO_MATLAB_FN: dict[str, str] = {
-    name: name for name in (
-        "approximate_press", "bagging_pls", "bipls_select", "boosting_pls",
-        "bve_select", "cars_select", "continuum_regression", "cppls",
-        "di_pls", "ds", "ecr", "emcuve_select", "fused_sparse_pls",
-        "ga_select", "gpr_pls", "group_sparse_pls", "interval_select",
-        "ipw_select", "irf_select", "iriv_select", "kernel_pls",
-        "lw_pls", "mb_pls", "mir_pls", "missing_aware_nipals", "n_pls",
-        "o2pls", "on_pls", "one_se_rule", "pds", "pls_cox", "pls_glm",
-        "pls_lda", "pls_logistic", "pls_qda", "pso_select",
-        "random_frog_select", "random_subspace_pls",
-        "randomization_select", "recursive_pls", "rep_select",
-        "ridge_pls", "robust_pls", "rosa", "scars_select",
-        "shaving_select", "sipls_select", "so_pls", "spa_select",
-        "sparse_pls_da", "sparse_simpls", "st_select", "stability_select",
-        "t2_select", "uve_select", "vip_spa_select", "vissa_select",
-        "weighted_pls", "wvc_select", "wvc_threshold_select",
-    )
-}
-METHOD_TO_MATLAB_FN["kernel_pls_rbf"] = "kernel_pls"
-METHOD_TO_MATLAB_FN["pls"] = "pls_fit"
-
-
-# ---------------------------------------------------------------------------
-# Page renderers
-# ---------------------------------------------------------------------------
-
-GROUP_LABELS = {
-    "core":                 "Core PLS",
-    "ensemble":             "Ensemble",
-    "sparse":               "Sparse",
-    "robust":               "Robust / weighted",
-    "nonlinear":            "Nonlinear / local",
-    "multi-block":          "Multi-block / cross-modal",
-    "calibration-transfer": "Calibration transfer",
-    "classification":       "Classification & GLM",
-    "missing":              "Missing data",
-    "regularized":          "Regularised",
-    "diagnostic":           "Diagnostic",
-    "selector":             "Variable selector",
-    "other":                "Other",
-}
-
-# Heuristic group classification for methods absent from BIBLIOGRAPHY
-EXTRA_GROUPS = {
-    "pls": "core", "pcr": "core", "opls": "core", "cppls": "core",
-    "recursive_pls": "core",
-    "sparse_simpls": "sparse", "fused_sparse_pls": "sparse",
-    "group_sparse_pls": "sparse", "sparse_pls_da": "sparse",
-    "bagging_pls": "ensemble", "boosting_pls": "ensemble",
-    "random_subspace_pls": "ensemble",
-    "robust_pls": "robust", "weighted_pls": "robust",
-    "kernel_pls_rbf": "nonlinear", "lw_pls": "nonlinear",
-    "gpr_pls": "nonlinear", "continuum_regression": "nonlinear",
-    "mb_pls": "multi-block", "mir_pls": "multi-block",
-    "so_pls": "multi-block", "on_pls": "multi-block",
-    "rosa": "multi-block", "n_pls": "multi-block", "o2pls": "multi-block",
-    "di_pls": "calibration-transfer", "ds": "calibration-transfer",
-    "pds": "calibration-transfer", "ecr": "calibration-transfer",
-    "pls_lda": "classification", "pls_logistic": "classification",
-    "pls_qda": "classification", "pls_glm": "classification",
-    "pls_cox": "classification",
-    "missing_aware_nipals": "missing",
-    "ridge_pls": "regularized",
-    "approximate_press": "diagnostic", "pls_diagnostic_t2": "diagnostic",
-    "pls_diagnostic_q": "diagnostic", "pls_diagnostic_dmodx": "diagnostic",
-    "pls_monitoring": "diagnostic", "one_se_rule": "diagnostic",
-    "aom_preprocess": "diagnostic",
-}
-
-
-def method_group(name: str) -> str:
-    if name in BIBLIOGRAPHY:
-        return BIBLIOGRAPHY[name].get("group", EXTRA_GROUPS.get(name, "other"))
-    if name in EXTRA_GROUPS:
-        return EXTRA_GROUPS[name]
-    if name.endswith("_select"):
-        return "selector"
-    return "other"
-
-
-# ---------------------------------------------------------------------------
-# Language-band classification for the benchmark rows.
-#
-# Rendered in this order from top to bottom; the C++ native libc4a row
-# is always first, then the chemometrics4all language bindings, then external
-# reference libraries.
-# ---------------------------------------------------------------------------
-
-BAND_ORDER = [
-    ("cpp",            "C++ native · libc4a"),
-    ("python-chemometrics4all", "Python · chemometrics4all"),
-    ("r-chemometrics4all",      "R · chemometrics4all"),
-    ("matlab-chemometrics4all", "MATLAB · chemometrics4all"),
-    ("python-ext",     "Python · external"),
-    ("r-ext",          "R · external"),
-    ("matlab-ext",     "MATLAB · external"),
-    ("other",          "Other"),
-]
-BAND_LANG = {
-    "cpp": "cpp", "python-chemometrics4all": "python", "r-chemometrics4all": "r",
-    "matlab-chemometrics4all": "matlab", "python-ext": "python",
-    "r-ext": "r", "matlab-ext": "matlab", "other": "ext",
-}
-
-
-def _band_of(cid: str) -> str:
-    if cid.startswith("chemometrics4all.cpp."):
-        return "cpp"
-    if cid in ("chemometrics4all.python", "chemometrics4all.sklearn", "chemometrics4all.registry"):
-        return "python-chemometrics4all"
-    if cid in ("chemometrics4all.R", "chemometrics4all.R.formula"):
-        return "r-chemometrics4all"
-    if cid in ("chemometrics4all.matlab", "chemometrics4all.matlab.classdef"):
-        return "matlab-chemometrics4all"
-    if cid.startswith("ref.python_") or cid in ("sklearn", "ikpls"):
-        return "python-ext"
-    if (cid.startswith("ref.r_")
-            or cid in ("pls", "mixOmics", "ropls")):
-        return "r-ext"
-    if (cid.startswith("ref.matlab_")
-            or cid in ("plsregress",)):
-        return "matlab-ext"
-    return "other"
-
-
-def parity_table(method: str, rows: list[dict]) -> str:
-    """Build a parity + timing block grouped by language band.
-
-    Emits raw HTML so we can:
-      * insert language-section header rows,
-      * highlight the per-column fastest cell across all backends.
-    """
-    if not rows:
-        return "_No benchmark rows recorded for this method._"
-
-    cells: dict[tuple[str, int, int, int], dict] = {}
-    for r in rows:
-        try:
-            n = int(r["n"]); p = int(r["p"]); t = int(r["threads"])
-        except (KeyError, ValueError):
-            continue
-        cid = column_id(r["backend"], r.get("libc4a_build", ""))
-        cells[(cid, n, p, t)] = r
-
-    cids = sorted({c for (c, _, _, _) in cells.keys()})
-    sizes = sorted({(n, p) for (_, n, p, _) in cells.keys()})
-    threads = sorted({t for (_, _, _, t) in cells.keys()})
-
-    # Group cids into language bands, preserving the canonical band
-    # order. Within a band, sort by cid for determinism (cpp tiers will
-    # naturally sort by build suffix).
-    grouped: dict[str, list[str]] = {b: [] for b, _ in BAND_ORDER}
-    for cid in cids:
-        grouped[_band_of(cid)].append(cid)
-    for b in grouped:
-        grouped[b].sort()
-
-    def _row_verdict(r: dict | None) -> str:
-        return verdict(r) if r is not None else "not_run"
-
-    def _row_ms(r: dict | None) -> float:
-        if r is None:
-            return float("nan")
-        try:
-            return float(r.get("median_ms") or "nan")
-        except (TypeError, ValueError):
-            return float("nan")
-
-    lines: list[str] = []
-    lines.append("### Benchmarks\n")
-    lines.append(
-        "Median wall-clock per cell from "
-        "[`benchmarks/cross_binding/results/full_matrix.csv`]"
-        "(../benchmarks/overview.md). Verdict legend: ✓ exact · "
-        "≈ drift · ✗ divergent · ⊘ not available in lib · — not run · "
-        "⚠ error. The fastest backend per column is marked with a "
-        "🏆 medal.\n")
-
-    lines.append("::::{tab-set}\n:class: parity-tabs\n")
-    for t in threads:
-        sync = f"threads-{t}"
-        lines.append(_tab_open(
-            f"{t} thread{'s' if t != 1 else ''}", sync))
-
-        # Compute per-column best (lowest ms) across all valid backends
-        # for this thread count. "Valid" means the cell ran successfully
-        # (verdict ∈ {exact, drift}) — divergent / error / skip rows are
-        # not eligible for the medal.
-        column_min: dict[tuple[int, int], tuple[float, str]] = {}
-        for (n, p_) in sizes:
-            for cid in cids:
-                r = cells.get((cid, n, p_, t))
-                if r is None:
-                    continue
-                v = _row_verdict(r)
-                if v not in ("exact", "drift"):
-                    continue
-                ms = _row_ms(r)
-                if ms != ms:  # NaN
-                    continue
-                cur = column_min.get((n, p_))
-                if cur is None or ms < cur[0]:
-                    column_min[(n, p_)] = (ms, cid)
-
-        # Header
-        size_headers = "".join(
-            f'<th class="size-col" scope="col">{n}×{p_} (ms)</th>'
-            for (n, p_) in sizes
-        )
-        html: list[str] = [
-            '<table class="docutils parity-grouped">',
-            '<thead><tr>'
-            '<th scope="col">Backend</th>'
-            '<th scope="col">Parity</th>'
-            f'{size_headers}'
-            '</tr></thead>',
-        ]
-
-        for band_key, band_label in BAND_ORDER:
-            band_cids = [c for c in grouped[band_key]
-                         if any(cells.get((c, n, p_, t)) is not None
-                                for (n, p_) in sizes)]
-            if not band_cids:
-                continue
-            lang_tag = BAND_LANG[band_key]
-            ncols = 2 + len(sizes)
-            html.append(
-                f'<tbody class="lang-band lang-{lang_tag}">'
-                f'<tr class="lang-band-row" data-lang="{lang_tag}">'
-                f'<th colspan="{ncols}" scope="rowgroup">'
-                f'<span class="lang-band-dot"></span>{band_label}'
-                f'</th></tr>'
-            )
-            for cid in band_cids:
-                cells_in_row = [cells.get((cid, n, p_, t))
-                                for (n, p_) in sizes]
-                primary = next((r for r in cells_in_row if r is not None),
-                               None)
-                if primary is None:
-                    continue
-                v = _row_verdict(primary)
-                icon = VERDICT_ICON[v]
-                diff = primary.get("parity_max_diff") or ""
-                if v == "exact":
-                    p_cell = (f"{icon} ref"
-                              if not diff or diff in ("0", "0.0")
-                              else f"{icon} {float(diff):.0e}")
-                else:
-                    try:
-                        d = float(diff) if diff else float("nan")
-                        p_cell = (f"{icon} {d:+.0e}" if d == d else icon)
-                    except ValueError:
-                        p_cell = icon
-                p_class = f"parity parity-{v}"
-                row = [
-                    f'<tr class="bk-row">',
-                    f'<td class="bk-name"><code>{cid}</code></td>',
-                    f'<td class="{p_class}">{p_cell}</td>',
-                ]
-                for ((n, p_), r) in zip(sizes, cells_in_row):
-                    if r is None:
-                        row.append('<td class="ms ms-empty">—</td>')
-                        continue
-                    ms = _row_ms(r)
-                    fmt = fmt_ms(r.get("median_ms", "")) \
-                        if ms == ms else "—"
-                    best = column_min.get((n, p_))
-                    is_best = (best is not None and best[1] == cid)
-                    cls = "ms" + (" ms-best" if is_best else "")
-                    medal = '<span class="medal" title="fastest">🏆</span>' \
-                        if is_best else ""
-                    row.append(f'<td class="{cls}">{fmt}{medal}</td>')
-                row.append('</tr>')
-                html.append("".join(row))
-            html.append('</tbody>')
-        html.append('</table>')
-
-        # MyST passes raw HTML through. Wrap in a div so it gets the
-        # tab content padding consistently.
-        lines.append('<div class="parity-table-wrap">')
-        lines.append("\n".join(html))
-        lines.append('</div>')
-        lines.append("")
-        lines.append(_tab_close())
-    lines.append("::::\n")
-    return "\n".join(lines)
-
-
-def _tab_open(label: str, sync: str, cls: str = "") -> str:
-    """Open a sphinx-design tab-item with sync key + optional class."""
-    line = f":::{{tab-item}} {label}\n:sync: {sync}"
-    if cls:
-        line += f"\n:class-label: lang-{cls}"
-    return line + "\n"
-
-
-def _tab_close() -> str:
-    return ":::\n"
-
-
-def usage_section(method: str, spec: dict, cat: dict | None,
-                   py_docs: dict, r_docs: dict, m_docs: dict) -> str:
-    """Build the multi-binding usage section. Pulls real signatures from
-    the parsed Python sklearn classes, R roxygen blocks and MATLAB
-    headers when available; falls back to a generic template otherwise."""
-    name = method
-    nc = spec.get("cell_params", {}).get("n_components", 2)
-    needs_xt = spec.get("needs_x_target")
-    needs_sw = spec.get("needs_sample_weights")
-    needs_y = spec.get("needs_labels")
-    needs_g = spec.get("needs_group_assignment")
-
-    # ---- native (libc4a C ABI) ----
-    c_fn = (cat or {}).get("c_function") or f"{name}_fit"
-    native = textwrap.dedent(f"""\
-        ```c
-        /* C ABI — libc4a */
-        c4a_context_t* ctx = c4a_context_create();
-        c4a_config_t*  cfg = c4a_config_create();
-        c4a_method_result_t* res = NULL;
-        c4a_{c_fn}(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
-        /* … read coefficients / mask / scores via */
-        /* c4a_method_result_get_double_matrix / vector / scalar … */
-        c4a_method_result_destroy(res);
-        c4a_config_destroy(cfg);
-        c4a_context_destroy(ctx);
-        ```""")
-
-    # ---- chemometrics4all.python (tier-1) ----
-    py_kwargs = ""
-    extras = []
-    if needs_xt:
-        extras.append("X_target=X_target")
-    if needs_sw:
-        extras.append("sample_weights=sample_w")
-    if needs_y:
-        extras.append("y_labels=y_labels")
-    if needs_g:
-        extras.append("group_assignment=groups")
-    if "n_components" in spec.get("cell_params", {}):
-        py_kwargs = f"n_components={nc}"
-    args_str = ", ".join([a for a in [py_kwargs] + extras if a])
-    python_raw = textwrap.dedent(f"""\
-        ```python
-        import chemometrics4all
-        from chemometrics4all._methods import {c_fn}
-        with chemometrics4all.Context() as ctx, chemometrics4all.Config() as cfg:
-            res = {c_fn}(ctx, cfg, X, y{', ' + args_str if args_str else ''})
-        # then: res.matrix("predictions"), res.matrix("coefficients"),
-        # res.vector("mask"), res.scalar("intercept"), …
-        ```""")
-
-    # ---- chemometrics4all.sklearn (tier-2 Python) — pull real __init__ params ----
-    py_class = METHOD_TO_PY_SKLEARN.get(name)
-    py_fn = METHOD_TO_PY_FN.get(name)
-    if py_class and py_class in py_docs:
-        meta = py_docs[py_class]
-        params = meta.get("init_params") or []
-        rendered = []
-        for p in params:
-            d = p.get("default")
-            if d in (None, ""):
-                rendered.append(p["name"])
-            else:
-                rendered.append(f"{p['name']}={d}")
-        fit_args = ["X, y"]
-        if needs_xt:
-            fit_args.append("X_target=X_target")
-        if needs_sw:
-            fit_args.append("sample_weight=sample_w")
-        python_sklearn = textwrap.dedent(f"""\
-            ```python
-            from chemometrics4all.sklearn import {py_class}
-            mdl = {py_class}({', '.join(rendered) or 'n_components=' + str(nc)})
-            mdl.fit({', '.join(fit_args)})
-            y_hat = mdl.predict(X_test)
-            ```""")
-    elif py_fn:
-        python_sklearn = textwrap.dedent(f"""\
-            ```python
-            from chemometrics4all.sklearn import {py_fn}
-            result = {py_fn}(X, y, n_components={nc})
-            ```""")
-    else:
-        python_sklearn = (
-            "_No tier-2 sklearn-style class — exposed only via "
-            "`chemometrics4all._methods`._")
-
-    # ---- chemometrics4all.R (tier-1 dispatcher) ----
-    # Build params=list(...) for extra hyperparameters.
-    extra_params = []
-    for k, v in (spec.get("cell_params") or {}).items():
-        if k in ("n_samples", "n_features", "n_components"):
-            continue
-        if isinstance(v, str):
-            extra_params.append(f'{k} = "{v}"')
-        elif isinstance(v, float):
-            extra_params.append(f"{k} = {v}")
-        else:
-            extra_params.append(f"{k} = {v}L")
-    params_arg = (", params = list(" + ", ".join(extra_params) + ")") \
-        if extra_params else ""
-    r_raw = textwrap.dedent(f"""\
-        ```r
-        library(chemometrics4all)
-        # Unified low-level dispatcher (May 2026 R cleanup):
-        res <- chemometrics4all_method("{name}", X, y,
-                              n_components = {nc}L{params_arg})
-        # res is a named list with MethodResult arrays/scalars.
-        # selected_indices / top_k_intervals are 1-based.
-        ```""")
-
-    # ---- chemometrics4all.R (tier-1 raw function from methods.R/methods_extra.R) ----
-    r_raw_fn = METHOD_TO_R_RAW.get(name)
-    r_raw_block = None
-    if r_raw_fn and r_raw_fn in r_docs:
-        sig = r_docs[r_raw_fn]["signature"]
-        r_raw_block = textwrap.dedent(f"""\
-            ```r
-            library(chemometrics4all)
-            res  <- {sig}
-            yhat <- chemometrics4all_predict(res, X_test)
-            ```""")
-
-    # ---- chemometrics4all.R (tier-2 formula + S3) ----
-    r_formula_fn = METHOD_TO_R_FORMULA.get(name)
-    r_formula_block = None
-    if r_formula_fn and r_formula_fn in r_docs:
-        r_formula_block = textwrap.dedent(f"""\
-            ```r
-            library(chemometrics4all)
-            fit  <- {r_formula_fn}(y ~ ., data = train, ncomp = {nc}L)
-            yhat <- predict(fit, newdata = test)
-            summary(fit)
-            ```""")
-
-    # ---- chemometrics4all.matlab (tier-1 function) ----
-    m_fn = METHOD_TO_MATLAB_FN.get(name)
-    if m_fn and m_fn in m_docs:
-        # Use the actual signature header from the .m file.
-        sig = m_docs[m_fn]["signature"].replace("function ", "").strip()
-        matlab_tier1 = textwrap.dedent(f"""\
-            ```matlab
-            res = chemometrics4all.{m_fn}(X, y, {nc});
-            % see header of bindings/matlab/+chemometrics4all/{m_fn}.m for full
-            % parameter surface:
-            %   {sig}
-            yhat = predict(res, Xtest);
-            ```""")
-    else:
-        matlab_tier1 = textwrap.dedent(f"""\
-            ```matlab
-            res  = chemometrics4all.fit("{name}", X, y, "NumComponents", {nc});
-            yhat = predict(res, Xtest);
-            ```""")
-
-    # ---- chemometrics4all.matlab (tier-2 classdef) ----
-    m_class = METHOD_TO_MATLAB_CLASS.get(name)
-    if m_class:
-        matlab_tier2 = textwrap.dedent(f"""\
-            ```matlab
-            mdl  = chemometrics4all.fit("{name}", X, y, "NumComponents", {nc});
-            yhat = predict(mdl, Xtest);
-            ```""")
-    else:
-        matlab_tier2 = (
-            "_No idiomatic classdef wrapper — invoke "
-            f"`chemometrics4all.fit(\"{name}\", X, y, …)` directly from the unified "
-            "MEX factory._")
-
-    # ---- external references ----
-    py_ext: list[str] = []
-    if spec.get("has_py_ref"):
-        py_ext.append("`scikit-learn` (declared as `python_reference` in "
-                       "the registry)")
-    for r in spec.get("extra_refs", []):
-        if r in {"ikpls"}:
-            py_ext.append("`ikpls`")
-    if not py_ext:
-        py_ext.append("_No widely installable Python reference._")
-
-    r_ext: list[str] = []
-    if spec.get("has_r_ref"):
-        r_ext.append("CRAN / Bioconductor reference declared in the "
-                      "registry (see *Bibliographic source*).")
-    for r in spec.get("extra_refs", []):
-        if r in {"mixOmics", "ropls", "spls"}:
-            r_ext.append(f"`{r}`")
-    if not r_ext:
-        r_ext.append("_No R reference declared for this method._")
-
-    parts: list[str] = [
-        "### Usage\n",
-        "All four chemometrics4all bindings dispatch into the same C kernel; "
-        "the external libraries on the right are the parity references "
-        "registered in `benchmarks.parity_timing.registry`. Switch tabs "
-        "to read the same fit in your language.\n",
-    ]
-
-    # tab-set 1: chemometrics4all bindings -------------------------------------
-    parts.append("**chemometrics4all bindings**\n")
-    parts.append("::::{tab-set}\n:class: chemometrics4all-bindings\n")
-    parts.append(_tab_open("C ABI · libc4a", "c", "c"))
-    parts.append(native + "\n")
-    parts.append(_tab_close())
-    parts.append(_tab_open(
-        "Python · chemometrics4all (raw)", "python-raw", "python"))
-    parts.append(python_raw + "\n")
-    parts.append(_tab_close())
-    parts.append(_tab_open(
-        "Python · chemometrics4all.sklearn", "python-sklearn", "python"))
-    parts.append(python_sklearn + "\n")
-    parts.append(_tab_close())
-    parts.append(_tab_open(
-        "R · chemometrics4all_method()", "r-dispatcher", "r"))
-    parts.append(r_raw + "\n")
-    parts.append(_tab_close())
-    if r_raw_block:
-        parts.append(_tab_open(
-            "R · chemometrics4all (raw fn)", "r-raw", "r"))
-        parts.append(r_raw_block + "\n")
-        parts.append(_tab_close())
-    if r_formula_block:
-        parts.append(_tab_open(
-            "R · chemometrics4all (formula+S3)", "r-formula", "r"))
-        parts.append(r_formula_block + "\n")
-        parts.append(_tab_close())
-    if name in PARSNIP_MLR3_ALGOS:
-        parsnip_block = textwrap.dedent(f"""\
-            ```r
-            # parsnip / tidymodels
-            library(tidymodels)
-            chemometrics4all::register_parsnip()
-            spec <- pls_chemometrics4all_reg(num_comp = {nc}) %>%
-                set_engine("chemometrics4all", algorithm = "{name}") %>%
-                set_mode("regression")
-            wflow <- workflow() %>% add_model(spec) %>% add_recipe(rec)
-            fit <- fit(wflow, data = train)
-
-            # mlr3
-            library(mlr3)
-            chemometrics4all::register_mlr3()
-            lrn <- lrn("regr.chemometrics4all", algorithm = "{name}", n_components = {nc}L)
-            lrn$train(task)
-            ```""")
-        parts.append(_tab_open(
-            "R · parsnip / mlr3", "r-meta", "r"))
-        parts.append(parsnip_block + "\n")
-        parts.append(_tab_close())
-    parts.append(_tab_open(
-        "MATLAB · chemometrics4all (MEX)", "matlab-mex", "matlab"))
-    parts.append(matlab_tier1 + "\n")
-    parts.append(_tab_close())
-    parts.append(_tab_open(
-        "MATLAB · chemometrics4all (classdef)", "matlab-classdef", "matlab"))
-    parts.append(matlab_tier2 + "\n")
-    parts.append(_tab_close())
-    parts.append("::::\n")
-
-    # External-reference block (separate card, not tabbed) -----------
-    parts.append("\n**External parity references**\n")
-    parts.append(":::{card}\n:class-card: external-refs\n")
-    parts.append("- **Python** — " + "; ".join(py_ext))
-    parts.append("- **R** — " + "; ".join(r_ext))
-    parts.append(":::\n")
-    return "\n".join(parts)
-
-
-def parameters_section(method: str, spec: dict, cat: dict | None,
-                        py_docs: dict) -> str:
-    """Render the canonical parameters block (chemometrics4all native names).
-
-    Prefers the actual Python sklearn class __init__ signature (which
-    *is* the canonical chemometrics4all parameter surface) over the YAML catalog
-    or the registry's cell_params dict."""
-    rows: list[tuple[str, str, str, str]] = []
-    seen: set[str] = set()
-
-    def add(n: str, t: str, d: str, note: str) -> None:
-        if n and n not in seen:
-            seen.add(n)
-            rows.append((n, t, d, note))
-
-    # 1) Python sklearn class __init__ signature — most authoritative.
-    py_class = METHOD_TO_PY_SKLEARN.get(method)
-    if py_class and py_class in py_docs:
-        for p in py_docs[py_class].get("init_params") or []:
-            add(p["name"], p.get("type", "") or "—",
-                str(p.get("default", "")) or "—", "")
-
-    # 2) Fall back to YAML catalog
-    for p in (cat or {}).get("params", []) or []:
-        if isinstance(p, dict):
-            add(p.get("name", ""), str(p.get("type", "")) or "—",
-                str(p.get("default", "")) or "—",
-                p.get("notes", "") or "")
-    for e in (cat or {}).get("extras", []) or []:
-        if isinstance(e, dict):
-            req = "required" if e.get("required") else "optional"
-            add(e.get("name", ""),
-                f"{e.get('type', '')} ({req})", "",
-                "fit-time extra (not part of `__init__`)")
-
-    # 3) Registry cell_params — values used by the benchmark.
-    for k, v in (spec.get("cell_params") or {}).items():
-        if k in ("n_samples", "n_features"):
-            continue
-        add(k, type(v).__name__, str(v), "registry benchmark cell value")
-
-    if not rows:
-        return "_No tunable parameters declared at the binding level._"
-
-    # Backfill the Notes column from the central parameter catalog
-    # (docs/_extras/method_param_docs.py). Anything already populated by
-    # the YAML catalog or registry-cell fallback is preserved.
-    enriched: list[tuple[str, str, str, str]] = []
-    for (n, t, d, nt) in rows:
-        if not nt:
-            nt = _param_doc_lookup(method, n)
-        enriched.append((n, t, d, nt))
-
-    lines = ["### Parameters\n",
-              "| Name | Type | Default | Notes |",
-              "|------|------|---------|-------|"]
-    for (n, t, d, nt) in enriched:
-        # Markdown table cells can't contain raw newlines.
-        nt = (nt or "").replace("\n", " ").replace("|", "\\|")
-        d = d.replace("\n", " ")
-        lines.append(f"| `{n}` | `{t}` | `{d}` | {nt} |")
-    return "\n".join(lines)
-
-
-def _docstring_summary(doc: str) -> str:
-    """Take the first paragraph of a docstring, dropping Sphinx markers."""
-    if not doc:
+def _default_text(node: ast.AST | None) -> str:
+    if node is None:
         return ""
-    paragraphs = doc.strip().split("\n\n")
-    return paragraphs[0].strip().replace("\n    ", " ").replace("\n  ", " ")
+    try:
+        return ast.unparse(node)
+    except Exception:
+        if isinstance(node, ast.Constant):
+            return repr(node.value)
+        return ""
 
 
-def render_method_page(spec: dict, cat: dict | None,
-                       bench_rows: list[dict],
-                       py_docs: dict, r_docs: dict, m_docs: dict) -> str:
-    """Build the full markdown for one method."""
-    name = spec["name"]
-    bib = BIBLIOGRAPHY.get(name, {})
-    title = bib.get("title") or spec.get("desc") or name
-    grp = method_group(name)
-    grp_label = GROUP_LABELS.get(grp, grp.capitalize())
+def load_python_classes() -> dict[str, dict[str, Any]]:
+    classes: dict[str, dict[str, Any]] = {}
+    for path in sorted(PY_SKLEARN_DIR.glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in tree.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            init = next((n for n in node.body if isinstance(n, ast.FunctionDef) and n.name == "__init__"), None)
+            params = []
+            if init:
+                args = init.args.args[1:]
+                defaults = [None] * (len(args) - len(init.args.defaults)) + list(init.args.defaults)
+                for arg, default in zip(args, defaults, strict=False):
+                    params.append({
+                        "name": arg.arg,
+                        "type": _annotation(arg.annotation),
+                        "default": _default_text(default),
+                        "note": PARAM_NOTES.get(arg.arg, ""),
+                    })
+                for arg, default in zip(init.args.kwonlyargs, init.args.kw_defaults, strict=False):
+                    params.append({
+                        "name": arg.arg,
+                        "type": _annotation(arg.annotation),
+                        "default": _default_text(default),
+                        "note": PARAM_NOTES.get(arg.arg, ""),
+                    })
+            c_prefix = ""
+            for item in node.body:
+                if isinstance(item, ast.Assign):
+                    if any(isinstance(t, ast.Name) and t.id == "_C_PREFIX" for t in item.targets):
+                        c_prefix = _literal_string(item.value)
+            classes[node.name] = {
+                "doc": ast.get_docstring(node) or "",
+                "params": params,
+                "c_prefix": c_prefix,
+                "module": path.stem,
+            }
+    return classes
 
-    parts: list[str] = []
-    parts.append(f"# `{name}` — {title}\n")
-    parts.append(f"_Group_: **{grp_label}** · "
-                  f"_Registry tolerance_: `{spec.get('rmse_tol')}`")
-    if spec.get("paper_only"):
-        parts.append(f" · _Parity reference_: **paper-only** "
-                      f"({spec['paper_only']})")
-    parts.append("")
 
-    parts.append("## Description\n")
-    parts.append(f"{spec.get('desc') or '_No registry description._'}\n")
+def load_r_signatures() -> dict[str, str]:
+    text = "\n".join(p.read_text(encoding="utf-8") for p in sorted(R_DIR.glob("*.R")))
+    sigs: dict[str, str] = {}
+    pattern = re.compile(r"^([A-Za-z0-9_.]+)\s*<-\s*function\s*\((.*?)\)\s*\{", re.M | re.S)
+    for m in pattern.finditer(text):
+        name = m.group(1)
+        args = " ".join(m.group(2).split())
+        sigs[name] = f"{name}({args})"
+    return sigs
 
-    # Python sklearn class docstring — when richer than the registry desc,
-    # quote it.
-    py_class = METHOD_TO_PY_SKLEARN.get(name)
-    if py_class and py_class in py_docs:
-        doc = py_docs[py_class]["docstring"]
-        summary = _docstring_summary(doc)
-        if summary and summary.lower() not in (spec.get("desc") or "").lower():
-            parts.append(f"From the `chemometrics4all.sklearn.{py_class}` "
-                          f"docstring:\n\n> {summary}\n")
-        if doc and "----------" in doc:
-            # Full parameters block is typically below the summary —
-            # surface it verbatim in a collapsed code block.
-            parts.append("<details>\n<summary>Full Python "
-                          "<code>sklearn</code>-wrapper docstring</summary>\n")
-            parts.append("```text\n" + doc.strip() + "\n```\n")
-            parts.append("</details>\n")
 
-    if spec.get("notes"):
-        parts.append("> **Registry note** — " + spec["notes"].replace("\n", " ")
-                      + "\n")
+def load_c_prototypes() -> dict[str, list[str]]:
+    if not HEADER.exists():
+        return {}
+    prototypes: dict[str, list[str]] = defaultdict(list)
+    lines = HEADER.read_text(encoding="utf-8").splitlines()
+    buf: list[str] = []
+    active = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("C4A_API"):
+            active = True
+            buf = [stripped]
+            if ";" in stripped:
+                active = False
+        elif active:
+            buf.append(stripped)
+            if ";" in stripped:
+                active = False
+        else:
+            continue
+        if not active and buf:
+            proto = " ".join(buf)
+            proto = re.sub(r"\s+", " ", proto)
+            m = re.search(r"\b(c4a_[A-Za-z0-9_]+)\s*\(", proto)
+            if m:
+                prototypes[m.group(1)].append(proto.replace("C4A_API ", ""))
+            buf = []
+    return prototypes
 
-    parts.append(parameters_section(name, spec, cat, py_docs) + "\n")
 
-    parts.append("## Explanations\n")
-    parts.append("### Bibliographic source\n")
-    parts.append(bib.get("paper") or "_No curated reference; see registry "
-                  "notes and the [benchmark methodology](../benchmarks/methodology.md)._")
-    parts.append("\n### Mathematical principle\n")
-    parts.append(bib.get("principle") or
-                  "_Standard derivation — see the cited reference._")
-    parts.append("\n### Implementation\n")
-    parts.append(bib.get("implementation") or
-                  f"`c4a_{name}_fit` in libc4a.")
+def prototypes_for(prefix: str, prototypes: dict[str, list[str]]) -> list[str]:
+    if not prefix:
+        return []
+    if prefix.endswith("_"):
+        names = [n for n in prototypes if n.startswith(prefix)]
+    else:
+        names = [n for n in prototypes if n.startswith(prefix + "_") or n == prefix]
+    return [p for n in sorted(names) for p in prototypes[n]]
 
-    # R roxygen — pull the first paragraph of the formula-style wrapper
-    # if available; otherwise the raw-function one.
-    r_meta = None
-    for r_name in (METHOD_TO_R_FORMULA.get(name),
-                    METHOD_TO_R_RAW.get(name)):
-        if r_name and r_name in r_docs:
-            r_meta = r_docs[r_name]
-            break
-    if r_meta:
-        roxy = r_meta["roxygen"].strip()
-        # Keep only the first paragraph
-        first_para = roxy.split("\n\n")[0]
-        parts.append("\nR roxygen note (`" + r_meta["file"] + "::"
-                      + r_meta["signature"].split("(")[0] + "`):\n")
-        parts.append("> " + first_para.replace("\n", "\n> "))
 
-    # MATLAB classdef / function header — first 5 lines.
-    m_name = (METHOD_TO_MATLAB_CLASS.get(name)
-              or METHOD_TO_MATLAB_FN.get(name))
-    if m_name and m_name in m_docs:
-        header = m_docs[m_name]["header"].strip()
-        if header:
-            short = "\n".join(header.splitlines()[:6])
-            parts.append("\nMATLAB header (`bindings/matlab/+chemometrics4all/"
-                          + m_docs[m_name]["file"] + "`):\n")
-            parts.append("```text\n" + short + "\n```")
-    parts.append("")
+def load_bench() -> dict[str, Any]:
+    if not BENCH_JSON.exists():
+        return {"columns": [], "rows": [], "reference_by_algo": {}}
+    return json.loads(BENCH_JSON.read_text(encoding="utf-8"))
 
-    parts.append(usage_section(name, spec, cat, py_docs, r_docs, m_docs))
 
-    parts.append(parity_table(name, bench_rows))
-    parts.append("")
-    parts.append("---")
-    parts.append("\n_See also_: "
-                  "[benchmark overview](../benchmarks/overview.md) · "
-                  "[methods index](index.md) · "
-                  "[interactive dashboard](../landing/dashboard.md)")
+def esc_md(value: str) -> str:
+    return str(value).replace("|", "\\|").replace("\n", " ")
+
+
+def code(value: str) -> str:
+    return f"`{value}`" if value else "—"
+
+
+def method_description(m: Method, page: dict[str, str] | None, py_classes: dict[str, dict[str, Any]]) -> str:
+    parts = []
+    if page and page.get("intro"):
+        parts.append(page["intro"])
+    if m.py_class and m.py_class in py_classes and py_classes[m.py_class].get("doc"):
+        doc = py_classes[m.py_class]["doc"].strip()
+        doc_lines = doc.splitlines()
+        first_line = doc_lines[0] if doc_lines else doc
+        parts.append(
+            f"From the `chemometrics4all.{m.py_class}` Python wrapper docstring:\n\n"
+            f"> {first_line}"
+        )
+        if len(doc_lines) > 1:
+            parts.append(
+                "<details><summary>Full wrapper docstring</summary>\n\n"
+                "```text\n"
+                f"{doc}\n"
+                "```\n\n"
+                "</details>"
+            )
+    if not parts:
+        parts.append(
+            f"`{m.method_id}` is a chemometrics4all {m.family.replace('_', ' ')} method "
+            "exposed through the C ABI and the generated language bindings."
+        )
+    return "\n\n".join(parts)
+
+
+def render_parameters(m: Method, py_classes: dict[str, dict[str, Any]], page: dict[str, str] | None) -> str:
+    params = py_classes.get(m.py_class, {}).get("params", []) if m.py_class else []
+    if params:
+        out = ["### Parameters\n", "| Name | Type | Default | Notes |", "|------|------|---------|-------|"]
+        for p in params:
+            out.append(
+                f"| `{esc_md(p['name'])}` | `{esc_md(p.get('type') or 'object')}` | "
+                f"{code(esc_md(p.get('default') or 'required'))} | {esc_md(p.get('note') or '')} |"
+            )
+        return "\n".join(out) + "\n"
+    if page and page.get("parameters"):
+        return "### Parameters\n\n" + page["parameters"] + "\n"
+    return "### Parameters\n\nNo public constructor parameters are required for the documented default call.\n"
+
+
+def render_bibliography(m: Method, page: dict[str, str] | None) -> str:
+    if page and page.get("reference"):
+        return page["reference"]
+    if m.refs:
+        refs = [f"- `{ref.backend}` — {ref.library} ({ref.language})." for ref in m.refs]
+        return "\n".join(refs)
+    return (
+        "No separate external paper is registered in the local documentation. "
+        "The page documents the in-tree chemometrics4all implementation contract."
+    )
+
+
+def render_principle(m: Method, page: dict[str, str] | None) -> str:
+    if page and page.get("algorithm"):
+        return page["algorithm"]
+    family = m.family.replace("_", " ")
+    return (
+        f"`{m.method_id}` follows the standard {family} operator contract: "
+        "an input matrix $\\mathbf{X}\\in\\mathbb{R}^{n\\times p}$ is transformed, "
+        "scored, split, or filtered by the method-specific kernel while preserving "
+        "the parity contract recorded by the benchmark snapshots. The precise "
+        "numerical convention is the one exposed by the C ABI signatures and the "
+        "registered external references below."
+    )
+
+
+def render_implementation_text(m: Method, page: dict[str, str] | None, prototypes: list[str]) -> str:
+    parts = []
+    if page and page.get("contract"):
+        parts.append(page["contract"])
+    if prototypes:
+        parts.append("C ABI entry points used by the language bindings:\n\n```c\n" + "\n".join(prototypes[:12]) + "\n```")
+    elif m.c_prefix:
+        parts.append(f"C ABI prefix: `{m.c_prefix}`.")
+    if m.refs:
+        parts.append("Reference backends are registered in the benchmark matrix and stored as reproducible snapshots when they define the canonical contract.")
+    return "\n\n".join(parts) if parts else "Implementation details are defined by the public C ABI and the generated binding wrappers."
+
+
+def render_implementation_table(m: Method, py_classes: dict[str, dict[str, Any]], r_sigs: dict[str, str], c_protos: list[str]) -> str:
+    rows = []
+    c_entry = m.c_prefix or (c_protos[0].split("(", 1)[0].split()[-1] if c_protos else "")
+    rows.append(("C ABI", code(c_entry), "C/C++", "Stable libc4a entry point family."))
+    if m.py_class:
+        py = f"chemometrics4all.{m.py_class}"
+        rows.append(("Python", code(py), "Python", "sklearn-style wrapper backed by ctypes."))
+    r_name = ""
+    if m.r_expr:
+        r_name = re.match(r"\{?([A-Za-z0-9_]+)\(", m.r_expr.strip())
+        r_entry = r_name.group(1) if r_name else m.r_expr
+        rows.append(("R", code(r_sigs.get(r_entry, r_entry)), "R", "Public package wrapper around the C ABI."))
+    for ref in m.refs:
+        role = "canonical/comparator" if ref.compare else "context only"
+        rows.append((ref.backend, code(ref.library), ref.language, role + (f"; {ref.note}" if ref.note else "")))
+    out = ["### Implementations\n", "| Layer | Entry point | Language | Contract |", "|-------|-------------|----------|----------|"]
+    for layer, entry, lang, note in rows:
+        out.append(f"| {esc_md(layer)} | {entry} | {esc_md(lang)} | {esc_md(note)} |")
+    return "\n".join(out) + "\n"
+
+
+def _py_default_args(params: list[dict[str, str]]) -> str:
+    parts = []
+    for p in params:
+        default = p.get("default") or ""
+        if default and default != "required":
+            parts.append(f"{p['name']}={default}")
+    return ", ".join(parts[:6])
+
+
+def render_usage(m: Method, py_classes: dict[str, dict[str, Any]], c_protos: list[str]) -> str:
+    parts = [
+        "### Usage\n",
+        "Every chemometrics4all binding dispatches into the same C kernel. "
+        "The registry references are listed in the parity card below.\n",
+        "::::{tab-set}\n:class: chemometrics4all-bindings\n\n",
+    ]
+    c_body = "\n".join(c_protos[:10]) if c_protos else f"/* C ABI prefix */\n{m.c_prefix or 'c4a_*'}"
+    parts.append(":::{tab-item} C ABI · libc4a\n:sync: c\n:class-label: lang-c\n\n```c\n" + c_body + "\n```\n\n:::\n")
+    if m.py_class:
+        params = py_classes.get(m.py_class, {}).get("params", [])
+        args = _py_default_args(params)
+        call = f"{m.py_class}({args})" if args else f"{m.py_class}()"
+        if m.family == "splitter":
+            body = f"from chemometrics4all import {m.py_class}\n\nsplitter = {call}\ntrain_idx, test_idx = splitter.split(X)"
+        elif m.family == "filter":
+            body = f"from chemometrics4all import {m.py_class}\n\nflt = {call}\nmask, stats = flt.fit_apply(X)"
+        elif m.method_id in {"osc", "epo"}:
+            aux = "y" if m.method_id == "osc" else "d"
+            body = f"from chemometrics4all import {m.py_class}\n\nop = {call}\nXt = op.fit_transform(X, {aux})"
+        else:
+            body = f"from chemometrics4all import {m.py_class}\n\nop = {call}\nXt = op.fit_transform(X)"
+        parts.append(":::{tab-item} Python · chemometrics4all\n:sync: python\n:class-label: lang-python\n\n```python\n" + body + "\n```\n\n:::\n")
+    if m.r_expr:
+        body = "library(chemometrics4all)\nres <- " + m.r_expr
+        parts.append(":::{tab-item} R · chemometrics4all\n:sync: r\n:class-label: lang-r\n\n```r\n" + body + "\n```\n\n:::\n")
+    parts.append("::::\n")
     return "\n".join(parts)
 
 
-# ---------------------------------------------------------------------------
-# Index page
-# ---------------------------------------------------------------------------
+def reference_cells(m: Method, bench: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    cells: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in bench.get("rows", []):
+        if row.get("algo") != m.method_id:
+            continue
+        for backend, cell in row.get("cells", {}).items():
+            if cell:
+                cells[backend].append(cell)
+    return cells
 
-def render_index(methods: list[dict]) -> str:
-    by_group: dict[str, list[dict]] = defaultdict(list)
+
+def render_reference_card(m: Method, bench: dict[str, Any]) -> str:
+    versions = bench.get("versions", {})
+    cells_by_backend = reference_cells(m, bench)
+    rows = []
+    if not m.refs:
+        rows.append(
+            "- ℹ No external parity reference row is registered for this public helper; "
+            "the page is generated from the in-tree API and algorithm documentation."
+        )
+    for ref in m.refs:
+        cells = cells_by_backend.get(ref.backend, [])
+        role = next((cell.get("reference_role") for cell in cells if cell.get("reference_role")), "")
+        role = role or ("canonical" if ref.compare else "context")
+        version = versions.get(ref.backend, "")
+        version_text = f" · {version}" if version and version != ref.library else ""
+        icon = "📐" if ref.compare else "ℹ"
+        note = f" — {ref.note}" if ref.note else ""
+        rows.append(
+            f"- {icon} **`{ref.backend}`** ({ref.language} · {role}) — "
+            f"`{ref.library}`{version_text}{note}"
+        )
+    return "\n**Registry parity references** 📐\n\n:::{card}\n:class-card: external-refs\n\n" + "\n".join(rows) + "\n:::\n"
+
+
+def parity_icon(value: str) -> str:
+    return {
+        "exact": "✓",
+        "context": "≈",
+        "drift": "≈",
+        "divergent": "✗",
+        "error": "⚠",
+        "not_run": "—",
+        "not_available": "⊘",
+    }.get(value or "", "—")
+
+
+def registry_tolerance_label(m: Method) -> str:
+    if m.method_id == "iasls":
+        return "`rtol=1e-5`, `atol=5e-6`"
+    if m.method_id in {"flexible_pca", "flexible_svd"}:
+        return "sign-invariant `rtol=1e-5`, `atol=1e-8`"
+    return "`rtol=1e-5`, `atol=1e-8`"
+
+
+def benchmark_band(cid: str, meta: dict[str, Any]) -> tuple[int, str, str]:
+    group = str(meta.get("group") or "")
+    kind = str(meta.get("kind") or "")
+    lang = str(meta.get("lang") or "")
+    if kind == "chemometrics4all":
+        if group == "cpp":
+            return (0, "cpp", "C++ native · libc4a")
+        if group == "python":
+            return (1, "python", "Python · chemometrics4all")
+        if group == "r":
+            return (2, "r", "R · chemometrics4all")
+        return (3, "ext", "chemometrics4all")
+    if lang == "Python":
+        return (4, "python", "Python · external")
+    if lang == "R":
+        return (5, "r", "R · external")
+    if lang == "MATLAB":
+        return (6, "matlab", "MATLAB · external")
+    return (7, "ext", "Other")
+
+
+def benchmark_backend_label(cid: str, meta: dict[str, Any]) -> str:
+    if cid.startswith("ref."):
+        return cid
+    return str(meta.get("short") or cid)
+
+
+def benchmark_parity_label(cell: dict[str, Any] | None) -> tuple[str, str]:
+    if not cell:
+        return ("parity-not_run", "—")
+    parity = str(cell.get("parity") or "not_run")
+    gate = str(cell.get("gate") or "")
+    if cell.get("ok"):
+        if gate == "reference":
+            return (f"parity-{parity}", "✓ ref")
+        if gate == "binding":
+            return (f"parity-{parity}", "✓ bind")
+        if gate == "native" and parity == "exact":
+            return (f"parity-{parity}", "✓ exact")
+    return (f"parity-{parity}", f"{parity_icon(parity)} {parity}")
+
+
+def benchmark_truth_marker(cid: str, meta: dict[str, Any], cells: list[dict[str, Any]]) -> tuple[str, str]:
+    ref_cell = next((cell for cell in cells if cell.get("gate") == "reference"), None)
+    if not ref_cell:
+        return ("", "")
+    role = str(ref_cell.get("reference_role") or "canonical")
+    versions = meta.get("version_label") or meta.get("version") or ""
+    reference = str(ref_cell.get("reference") or meta.get("reference") or cid)
+    title = f"Registry parity reference ({meta.get('lang') or 'external'}): {reference}"
+    if versions:
+        title += f" · {versions}"
+    if role:
+        title += f" — {role}"
+    klass = "truth-source-strict" if role == "canonical" else "truth-source-relaxed"
+    return (klass, f'<span class="truth-mark" title="{html.escape(title, quote=True)}">📐</span>')
+
+
+def render_benchmarks(m: Method, bench: dict[str, Any]) -> str:
+    rows = [row for row in bench.get("rows", []) if row.get("algo") == m.method_id]
+    if not rows:
+        return (
+            "### Benchmarks\n\n"
+            "No cross-binding timing row is currently registered for this method. "
+            "The implementation table above is still generated from the public API surface.\n"
+        )
+    versions = bench.get("versions", {})
+    cols = {col["id"]: {**col, "version_label": versions.get(col["id"], "")} for col in bench.get("columns", [])}
+    by_thread: dict[int, list[dict]] = defaultdict(list)
+    for row in rows:
+        by_thread[int(row.get("threads", 0))].append(row)
+    parts = [
+        "### Benchmarks\n",
+        "Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). "
+        "Verdict legend: ✓ exact · ≈ context/drift · ✗ divergent · ⊘ not available · — not run · ⚠ error.\n",
+        "::::{tab-set}\n:class: parity-tabs\n\n",
+    ]
+    for thread in sorted(by_thread):
+        thread_rows = sorted(by_thread[thread], key=lambda r: (r.get("n", 0), r.get("p", 0)))
+        sizes = [(int(r["n"]), int(r["p"])) for r in thread_rows]
+        backends = sorted(
+            {cid for r in thread_rows for cid in r.get("cells", {})},
+            key=lambda cid: (benchmark_band(cid, cols.get(cid, {}))[0], benchmark_backend_label(cid, cols.get(cid, {}))),
+        )
+        best_by_size = []
+        for row in thread_rows:
+            vals = [
+                float(cell["ms"])
+                for cell in row.get("cells", {}).values()
+                if cell and cell.get("ok") and cell.get("ms") is not None
+            ]
+            best_by_size.append(min(vals) if vals else None)
+        parts.append(f":::" + f"{{tab-item}} {thread} thread{'s' if thread != 1 else ''}\n:sync: threads-{thread}\n\n")
+        parts.append('<div class="parity-table-wrap">\n<table class="docutils parity-grouped">\n')
+        parts.append("<thead><tr><th>Backend</th><th>Parity</th>")
+        for n, p in sizes:
+            parts.append(f"<th>{n}×{p}</th>")
+        parts.append("</tr></thead>\n")
+        current_band: tuple[str, str] | None = None
+        col_span = 2 + len(sizes)
+        for cid in backends:
+            meta = cols.get(cid, {})
+            _, band_tag, band_label = benchmark_band(cid, meta)
+            if current_band != (band_tag, band_label):
+                if current_band is not None:
+                    parts.append("</tbody>\n")
+                parts.append(
+                    f'<tbody class="lang-band lang-{html.escape(band_tag)}">'
+                    f'<tr class="lang-band-row" data-lang="{html.escape(band_tag)}">'
+                    f'<th colspan="{col_span}" scope="rowgroup">'
+                    f'<span class="lang-band-dot"></span>{html.escape(band_label)}</th></tr>\n'
+                )
+                current_band = (band_tag, band_label)
+            label = benchmark_backend_label(cid, meta)
+            cells = [r.get("cells", {}).get(cid) for r in thread_rows]
+            present = [c for c in cells if c]
+            parity_cls, parity_text = benchmark_parity_label(present[0] if present else None)
+            truth_cls, truth_mark = benchmark_truth_marker(cid, meta, present)
+            row_cls = f"bk-row {truth_cls}".strip()
+            parts.append(
+                f'<tr class="{html.escape(row_cls)}"><td class="bk-name">{truth_mark}'
+                f'<code>{html.escape(label)}</code></td>'
+                f'<td class="parity {html.escape(parity_cls)}">{html.escape(parity_text)}</td>'
+            )
+            for idx, c in enumerate(cells):
+                if c and c.get("ok") and c.get("ms") is not None:
+                    ms = float(c["ms"])
+                    best = best_by_size[idx]
+                    best_cls = " ms-best" if best is not None and abs(ms - best) <= max(1e-12, abs(best) * 1e-9) else ""
+                    fmt = str(c.get("fmt") or f"{ms:.3f} ms")
+                    medal = "🏆 " if best_cls else ""
+                    parts.append(f'<td class="ms{best_cls}">{medal}{html.escape(fmt)}</td>')
+                else:
+                    parts.append('<td class="ms">—</td>')
+            parts.append("</tr>\n")
+        if current_band is not None:
+            parts.append("</tbody>\n")
+        parts.append("</table>\n</div>\n\n:::\n")
+    parts.append("::::\n")
+    return "".join(parts)
+
+
+def render_page(
+    m: Method,
+    pages: dict[str, dict[str, str]],
+    py_classes: dict[str, dict[str, Any]],
+    r_sigs: dict[str, str],
+    c_prototypes: dict[str, list[str]],
+    bench: dict[str, Any],
+) -> str:
+    page = pages.get(m.source_slug or SOURCE_ALIASES.get(m.method_id, m.method_id))
+    if not m.c_prefix and m.py_class in py_classes:
+        m.c_prefix = py_classes[m.py_class].get("c_prefix", "")
+    c_protos = prototypes_for(m.c_prefix, c_prototypes)
+    title = m.label or (page["title"] if page else m.method_id)
+    group_label = GROUP_LABELS.get(m.family, m.family.replace("_", " ").title())
+    source = f" · _Source_: [`docs/algorithms/{m.source_slug}.md`](../algorithms/{m.source_slug}.md)" if m.source_slug else ""
+    parts = [
+        f"# `{m.method_id}` — {title}\n\n",
+        f"_Group_: **{group_label}** · _Registry tolerance_: {registry_tolerance_label(m)}{source}\n\n",
+        "## Description\n\n",
+        method_description(m, page, py_classes),
+        "\n\n",
+        render_parameters(m, py_classes, page),
+        "\n## Explanations\n\n",
+        "### Bibliographic source\n\n",
+        render_bibliography(m, page),
+        "\n\n### Mathematical principle\n\n",
+        render_principle(m, page),
+        "\n\n### Implementation\n\n",
+        render_implementation_text(m, page, c_protos),
+        "\n\n",
+        render_implementation_table(m, py_classes, r_sigs, c_protos),
+        "\n",
+        render_usage(m, py_classes, c_protos),
+        "\n",
+        render_reference_card(m, bench),
+        "\n",
+        render_benchmarks(m, bench),
+        "\n---\n\n",
+        "_See also_: [benchmark overview](../benchmarks/overview.md) · "
+        "[methods index](index.md) · [interactive dashboard](../landing/dashboard.md)\n",
+    ]
+    return "".join(parts)
+
+
+def render_index(methods: list[Method]) -> str:
+    by_group: dict[str, list[Method]] = defaultdict(list)
     for m in methods:
-        by_group[method_group(m["name"])].append(m)
-    out: list[str] = [
+        by_group[m.family].append(m)
+    out = [
         "# Methods catalogue\n",
-        "Every algorithm in `benchmarks.parity_timing.registry.METHODS` "
-        "documented with its parameters, bibliographic source, math "
-        "principle, every binding's signature, and its parity + timing "
-        "rows.\n",
+        "Every public chemometrics4all method documented with its parameters, "
+        "bibliographic source, mathematical principle, binding signatures, "
+        "external references, and benchmark rows when available.\n",
         f"_Total methods_: **{len(methods)}**. Grouped by family below.\n",
         "```{toctree}\n:hidden:\n:glob:\n:maxdepth: 1\n\n*\n```\n",
     ]
-    order = ["core", "sparse", "ensemble", "robust", "nonlinear",
-             "multi-block", "calibration-transfer", "classification",
-             "missing", "regularized", "diagnostic", "selector", "other"]
-    for g in order:
-        if g not in by_group:
+    for group in GROUP_ORDER:
+        entries = sorted(by_group.get(group, []), key=lambda m: m.method_id)
+        if not entries:
             continue
-        out.append(f"## {GROUP_LABELS[g]}\n")
-        out.append("| Method | Description | Tolerance | Refs |")
-        out.append("|--------|-------------|-----------|------|")
-        for m in sorted(by_group[g], key=lambda x: x["name"]):
-            n = m["name"]
-            refs = []
-            if m["has_py_ref"]:
-                refs.append("Py")
-            if m["has_r_ref"]:
-                refs.append("R")
-            for r in m["extra_refs"]:
-                refs.append(r)
-            ref_str = ", ".join(refs) if refs else "—"
-            desc = (m.get("desc") or "").replace("|", "\\|")
-            out.append(f"| [`{n}`]({n}.md) | {desc} | `{m['rmse_tol']}` | {ref_str} |")
+        out.append(f"## {GROUP_LABELS.get(group, group.title())}\n")
+        out.append("| Method | Name | Benchmark | References |")
+        out.append("|--------|------|-----------|------------|")
+        for m in entries:
+            refs = ", ".join(sorted({r.backend.replace("ref.", "") for r in m.refs})) if m.refs else "—"
+            out.append(
+                f"| [`{m.method_id}`]({m.method_id}.md) | {esc_md(m.label)} | "
+                f"{'yes' if m.benchmarked else 'no'} | {esc_md(refs)} |"
+            )
         out.append("")
-    out.append("---")
-    out.append("\nSee the [benchmark overview](../benchmarks/overview.md) "
-                "for how parity and timing are measured, and the "
-                "[GitHub Pages dashboard](../landing/dashboard.md) for an "
-                "interactive cross-method comparison.")
+    out.append("---\n")
+    out.append("See the [benchmark overview](../benchmarks/overview.md) and the [interactive dashboard](../landing/dashboard.md).")
     return "\n".join(out)
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=str(METHODS_DIR),
-                     help="output directory (default docs/methods)")
-    ap.add_argument("--no-bench", action="store_true",
-                     help="skip the parity + timing tables")
-    ap.add_argument("--strict", action="store_true",
-                     help="fail if registry / catalog / CSV missing")
+    ap.add_argument("--out", default=str(METHODS_DIR))
+    ap.add_argument("--strict", action="store_true")
     args = ap.parse_args()
+
+    missing = [p for p in (ORCHESTRATOR, ALGORITHMS_DIR, HEADER, PY_SKLEARN_DIR, R_DIR) if not p.exists()]
+    if missing and args.strict:
+        raise SystemExit("missing required inputs: " + ", ".join(str(p) for p in missing))
+
+    methods = parse_methods_from_orchestrator() if ORCHESTRATOR.exists() else []
+    pages = load_algorithm_pages() if ALGORITHMS_DIR.exists() else {}
+    methods = enrich_with_sources(methods, pages)
+    py_classes = load_python_classes() if PY_SKLEARN_DIR.exists() else {}
+    r_sigs = load_r_signatures() if R_DIR.exists() else {}
+    c_protos = load_c_prototypes()
+    bench = load_bench()
 
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
-
-    if not REGISTRY_PY.exists():
-        if args.strict:
-            raise SystemExit(f"missing registry: {REGISTRY_PY}")
-        return
-    methods = parse_registry(REGISTRY_PY)
-    cat = parse_catalog(CATALOG_YAML)
-    py_docs = parse_python_sklearn(PY_SKLEARN_DIR)
-    r_docs = parse_r_signatures(R_DIR)
-    m_docs = parse_matlab(MATLAB_DIR)
-
-    if args.no_bench or not CSV_PATH.exists():
-        if args.strict and not CSV_PATH.exists():
-            raise SystemExit(f"missing CSV: {CSV_PATH}")
-        bench_rows: dict[str, list[dict]] = {}
-    else:
-        bench_rows = parse_csv(CSV_PATH)
-
-    # Match registry-method to YAML catalog entry — used only as the
-    # secondary parameter source.
-    cat_by_cfn: dict[str, dict] = {}
-    for entry in cat.values():
-        cfn = entry.get("c_function", "")
-        if cfn:
-            cat_by_cfn[cfn] = entry
-    method_to_cat: dict[str, dict] = {}
+    for old in out_dir.glob("*.md"):
+        old.unlink()
     for m in methods:
-        n = m["name"]
-        for suffix in ("_fit", "_run", "_select", "_compute"):
-            if (n + suffix) in cat_by_cfn:
-                method_to_cat[n] = cat_by_cfn[n + suffix]
-                break
-        else:
-            for e in cat.values():
-                if e.get("name", "").lower().startswith(
-                        n.replace("_", "")):
-                    method_to_cat[n] = e
-                    break
-
-    # Render
-    for m in methods:
-        rows = bench_rows.get(m["name"], [])
-        page = render_method_page(
-            m, method_to_cat.get(m["name"]), rows,
-            py_docs, r_docs, m_docs)
-        (out_dir / f"{m['name']}.md").write_text(page, encoding="utf-8")
-
+        (out_dir / f"{m.method_id}.md").write_text(
+            render_page(m, pages, py_classes, r_sigs, c_protos, bench),
+            encoding="utf-8",
+        )
     (out_dir / "index.md").write_text(render_index(methods), encoding="utf-8")
-
-    print(f"wrote {len(methods)} method pages + index in {out_dir} "
-            f"(py docstrings: {len(py_docs)}, R sigs: {len(r_docs)}, "
-            f"MATLAB sigs: {len(m_docs)})")
+    print(
+        f"wrote {len(methods)} method pages + index in {out_dir} "
+        f"(benchmarked={sum(1 for m in methods if m.benchmarked)}, "
+        f"python classes={len(py_classes)}, R signatures={len(r_sigs)})"
+    )
 
 
 if __name__ == "__main__":
