@@ -799,6 +799,7 @@
     .cell-inner .reference-method-icon { margin-left: 0; }
     .parity { display: inline-block; min-width: 12px; text-align: center; margin-left: 0; font-weight: 600; font-family: var(--mono); }
     .p-exact   { color: var(--phosphor); }
+    .p-context { color: var(--fg-2); }
     .p-drift   { color: var(--amber); }
     .p-divergent { color: var(--crimson); }
     .p-error   { color: var(--crimson); }
@@ -910,7 +911,7 @@
     .info-card a:hover { text-decoration-color: var(--phosphor); }
     .info-card ul, .info-card ol { padding-left: 22px; margin: 10px 0; }
     .info-card li + li { margin-top: 6px; }
-    .info-card .p-exact, .info-card .p-drift, .info-card .p-divergent,
+    .info-card .p-exact, .info-card .p-context, .info-card .p-drift, .info-card .p-divergent,
     .info-card .p-error, .info-card .p-not_run, .info-card .p-not_available,
     .info-card .p-ok, .info-card .p-warn, .info-card .p-fail, .info-card .p-timeout {
       font-family: var(--mono); font-weight: 700; padding: 0 4px;
@@ -1068,6 +1069,7 @@
     </div>
     <div class="filter-chips" id="parity-chips" title="filter cells by parity verdict">
       <span class="chip active" data-parity="exact"><span class="ico p-exact">✓</span>exact</span>
+      <span class="chip active gray" data-parity="context"><span class="ico p-context">◇</span>context</span>
       <span class="chip active amber" data-parity="drift"><span class="ico p-drift">≈</span>drift</span>
       <span class="chip active crimson" data-parity="divergent"><span class="ico p-divergent">✗</span>divergent</span>
       <span class="chip active crimson" data-parity="error"><span class="ico p-error">!</span>error</span>
@@ -1164,6 +1166,7 @@
     <p>Internal binding rows compare against the direct C++ ABI. Reference gates compare native C++ and comparator rows against stored external-reference snapshots.</p>
     <ul>
       <li><span class="p-exact">✓</span> <b>exact</b> - result within tolerance</li>
+      <li><span class="p-context">◇</span> <b>context</b> - not parity-gated because the external method has a different contract</li>
       <li><span class="p-drift">≈</span> <b>drift</b> - result outside exact tolerance</li>
       <li><span class="p-divergent">✗</span> <b>divergent</b> - result outside drift threshold</li>
       <li><span class="p-error">!</span> <b>error</b> - dependency, runtime, crash or exception</li>
@@ -1193,7 +1196,7 @@ const DATA = JSON.parse(document.getElementById('bench-data').textContent);
 // ---------- state + url persistence ----------
 const URL_KEYS = ['algo','group','lang','libGroup','lib','size','threads','parity','search','cols','sort','density','viz'];
 const DENSITY_VALUES = ['comfortable', 'compact', 'ultra'];
-const PARITY_VALUES = ['exact', 'drift', 'divergent', 'error', 'not_run', 'not_available'];
+const PARITY_VALUES = ['exact', 'context', 'drift', 'divergent', 'error', 'not_run', 'not_available'];
 const PARITY_ALIASES = {
   ok: 'exact',
   covered: 'exact',
@@ -1201,6 +1204,7 @@ const PARITY_ALIASES = {
   reference_snapshot: 'exact',
   binding_ok: 'exact',
   external_ok: 'exact',
+  context: 'context',
   reference_snapshot_drift: 'drift',
   warn: 'drift',
   timing_only: 'error',
@@ -1364,6 +1368,7 @@ function toggleRowScoreColumns(key) {
 const $ = id => document.getElementById(id);
 const PARITY_ICON = {
   exact: '✓',
+  context: '◇',
   drift: '≈',
   divergent: '✗',
   error: '!',
@@ -2032,7 +2037,7 @@ function aggregateRowsBySize(rows, baselineId) {
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(r);
   }
-  const PARITY_RANK = { exact: 0, drift: 1, divergent: 2, error: 3, not_run: 4, not_available: 5 };
+  const PARITY_RANK = { exact: 0, context: 1, drift: 2, divergent: 3, error: 4, not_run: 5, not_available: 6 };
   const worstParity = (cells, fallback = 'not_available') => {
     let out = fallback;
     let seen = false;

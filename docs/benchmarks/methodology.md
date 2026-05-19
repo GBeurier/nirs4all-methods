@@ -39,34 +39,36 @@ row. For `nirs4all`, the runner inserts `/home/delete/nirs4all/nirs4all` ahead
 of installed packages and stores the git short SHA plus a dirty marker in
 `lib_build`.
 
-Each method has one canonical external reference row
-(`reference_role=canonical`). That row identifies the reference method and is
-not itself rendered as a pass/fail gate. For credible same-contract references,
-the benchmark runner stores the canonical external output in
-`benchmarks/reference_snapshots/cross_binding/` together with package version or
-git commit metadata. Native C++ rows carry the reference gate against that
-stored snapshot; non-canonical external rows carry comparator parity against the
-same snapshot; Python/R/MATLAB binding rows carry binding parity against the
-native C++ route.
+Each method has one canonical same-contract reference row
+(`reference_role=canonical`) when a credible reference exists. That row
+identifies the reference method and is not itself rendered as a pass/fail gate.
+For same-contract references, the benchmark runner stores the canonical output
+in `benchmarks/reference_snapshots/cross_binding/` together with package
+version or git commit metadata. Native C++ rows carry the reference gate against
+that stored snapshot; non-canonical same-contract external rows carry comparator
+parity against the same snapshot; Python/R/MATLAB binding rows carry binding
+parity against the native C++ route.
 
-Rows that are useful for performance but not identical in contract are still
-gated against the stored canonical snapshot. They therefore render as
-`exact`/`drift`/`divergent`/`error`, not as timing-only entries. Examples
-include wavelet transforms with different coefficient ordering/statistical
-contracts, Savitzky-Golay calls with different edge modes, and randomized
-splitters that do not share the same RNG contract. For
-`nirs4all.WaveletFeatures`, the runner sets `n_coeffs_per_level=0` and selects
-c4a's `histogram` entropy with `symmetric` boundary mode so the comparator row
-uses the same contract.
+Rows that are useful for performance but not identical in contract must not be
+compared. They are marked `reference_role=context` and `parity=context`, with
+the CSV `reason` explaining the contract mismatch. Current context examples
+include Savitzky-Golay calls with different edge modes, nirs4all wavelet
+transforms that return resampled detail coefficients instead of c4a's
+approximation+detail layout, sklearn/nirs4all stratified splitters with a
+different RNG/index contract, pybaselines' full BEADS versus c4a's documented
+simplified BEADS, and nirs4all X-outlier filtering when sklearn PCA auto solver
+switches on wide matrices. For `nirs4all.WaveletFeatures`, the runner sets
+`n_coeffs_per_level=0` and selects c4a's `histogram` entropy with `symmetric`
+boundary mode so the comparator row uses the same contract.
 
 Some external libraries expose a different computational surface even when the
 name is close. `pybaselines` baseline references are applied row-by-row because
 the public API is one-dimensional; `pybaselines.iasls` is now the c4a IAsLS
-contract, while `pybaselines.beads(full)` remains a full external algorithm and
-chemometrics4all still ships a compact NIRS-oriented BEADS variant.
-`pybaselines.imodpoly` is called with
-`mask_initial_peaks=False` to match chemometrics4all's disabled initial peak
-masking before the row is gated like the other references.
+contract, `pybaselines.imodpoly` is called with `mask_initial_peaks=False`, and
+both are gated like the other same-contract references. `pybaselines.snip(raw)`
+and `pybaselines.beads(full)` remain performance context rows because c4a gates
+SNIP against its frozen LLS reference and BEADS against its frozen simplified
+reference.
 
 ## Parity tolerance
 

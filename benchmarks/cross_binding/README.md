@@ -38,14 +38,15 @@ pls4all matrix: `100x50`, `100x500`, `100x2500`, `500x50`, `500x500`,
 `10000x500`.
 
 The current generated matrix covers 48 methods, 3 dataset sizes, 1 thread
-setting, and dashboard columns for `cpp`, `python`, `r`, `nirs4all`, NumPy,
-SciPy, scikit-learn, pybaselines, PyWavelets, R base, and R stats. Every
-registered method has direct C ABI, Python binding, and R binding timing.
-Every dashboard method now also has at least one external reference row.
-External rows are always surfaced with a parity verdict. When a comparator has
-a loose contract (different boundary convention, output shape, RNG contract, or
-dimensionality convention), it is still compared against the canonical snapshot
-and will render as divergent/error if the outputs do not match.
+setting, and dashboard columns for `cpp`, `python`, `r`, frozen c4a parity
+references, `nirs4all`, NumPy, SciPy, scikit-learn, pybaselines, PyWavelets,
+R base, and R stats. Every registered method has direct C ABI, Python binding,
+and R binding timing. Every dashboard method has a same-contract reference gate
+when a credible reference exists; methods whose only public namesakes expose a
+different contract use the repo's frozen parity reference as the canonical gate.
+External rows that are useful for performance context but invalid for exact
+parity are marked `reference_role=context` with `parity=context` and are never
+compared against a stored snapshot.
 `nirs4all.WaveletFeatures` is timed with `n_coeffs_per_level=0`, histogram
 entropy, and the symmetric boundary contract so its output feature count and
 contract match the chemometrics4all dashboard surface.
@@ -57,6 +58,8 @@ external contract is credible, the runner stores its output under
 version or git commit in metadata. Reference gates compare native C++ rows and
 non-canonical external comparator rows against that stored snapshot, not against
 freshly recomputed reference output.
+Context rows document why no comparison is made in the CSV `reason` field; they
+must not carry `reference_parity_ok`.
 
 Timing follows the pls4all cross-binding convention: each backend performs
 `max(1, min(3, repeat))` unmeasured warmup calls, then `repeat` measured calls.

@@ -30,6 +30,7 @@ FORBIDDEN_RAW_PARITIES = {
 }
 FORBIDDEN_DASHBOARD_PARITIES = {"not_compared"}
 CANONICAL_SNAPSHOT_PARITIES = {"reference_snapshot", "reference_snapshot_drift"}
+CONTEXT_PARITY = "context"
 
 
 def safe_slug(value: str) -> str:
@@ -85,6 +86,12 @@ def validate_csv(rows: list[dict[str, str]], snapshot_root: Path) -> list[str]:
                     f"{algorithm}/{backend}/{reference_library} n={n} p={p}"
                 )
 
+        if row.get("kind") == "external_reference" and row.get("reference_role") == "context":
+            if parity != CONTEXT_PARITY:
+                errors.append(f"CSV line {idx}: context reference has parity {parity!r}")
+            if row.get("reference_parity_ok", "").strip():
+                errors.append(f"CSV line {idx}: context reference must not carry reference_parity_ok")
+
     for idx, row in enumerate(rows, start=2):
         if row.get("backend") != "cpp" or not is_true(row.get("ok")):
             continue
@@ -135,6 +142,16 @@ def validate_json(path: Path, snapshot_root: Path) -> list[str]:
                     errors.append(
                         f"JSON row {algo}/{col_id}: missing committed reference snapshot "
                         f"for {reference} n={n} p={p}"
+                    )
+            if cell.get("reference_role") == "context":
+                if raw != CONTEXT_PARITY or parity != CONTEXT_PARITY:
+                    errors.append(
+                        f"JSON row {algo}/{col_id}: context reference has "
+                        f"parity={parity!r} raw={raw!r}"
+                    )
+                if cell.get("reference_parity_ok") is not None:
+                    errors.append(
+                        f"JSON row {algo}/{col_id}: context reference must not carry reference parity"
                     )
         if canonical_refs:
             for col_id, cell in (row.get("cells") or {}).items():

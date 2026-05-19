@@ -162,6 +162,7 @@ def _cell_parity(raw: dict, ok: bool) -> str:
         "reference_snapshot": "exact",
         "binding_ok": "exact",
         "external_ok": "exact",
+        "context": "context",
         "pass": "exact",
         "binding_mismatch": "divergent",
         "reference_diverged": "divergent",
@@ -199,6 +200,8 @@ def _column_version(raw: dict) -> str:
         return raw.get("lib_build") or "pybaselines"
     if backend == "ref.pywavelets":
         return raw.get("lib_build") or "PyWavelets"
+    if backend == "ref.frozen":
+        return raw.get("lib_build") or "c4a frozen reference"
     if backend == "ref.scipy":
         return raw.get("lib_build") or "scipy"
     if backend == "ref.numpy":
@@ -245,6 +248,7 @@ def _column_meta(cid: str, row: dict) -> dict:
             "ref.numpy": "numpy",
             "ref.pybaselines": "pybase",
             "ref.pywavelets": "pywt",
+            "ref.frozen": "frozen",
             "ref.r.base": "R base",
             "ref.r.stats": "R stats",
         }.get(backend, library or backend.replace("ref.", ""))
