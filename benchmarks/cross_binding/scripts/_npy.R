@@ -61,6 +61,15 @@ pls4all_bench_load_xy <- function(csv_dir, n, p, seed) {
          y = arr[, ncol(arr)])
 }
 
+pls4all_bench_load_x_target <- function(x_target_dir, n, p, seed) {
+    path <- file.path(x_target_dir, sprintf("xtarget_%dx%d_seed%.0f.csv",
+                                             n, p, seed))
+    if (!file.exists(path)) {
+        stop(sprintf("X_target sidecar not found: %s", path))
+    }
+    as.matrix(read.csv(path, header = FALSE))
+}
+
 # Timed runs (one unmeasured warmup, same convention as Python _common).
 pls4all_bench_time_runs <- function(fit_predict_seeded, runs, seed_base) {
     if (runs < 1L) {

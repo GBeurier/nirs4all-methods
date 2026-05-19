@@ -109,7 +109,9 @@ nc <- if (!is.null(params$n_components)) as.integer(params$n_components) else a$
 needs_labels       <- Sys.getenv("BENCH_R_NEEDS_LABELS", unset = "") == "1"
 needs_sw           <- Sys.getenv("BENCH_R_NEEDS_SAMPLE_WEIGHTS", unset = "") == "1"
 needs_groups       <- Sys.getenv("BENCH_R_NEEDS_GROUP_ASSIGNMENT", unset = "") == "1"
+needs_x_target     <- Sys.getenv("BENCH_R_NEEDS_X_TARGET", unset = "") == "1"
 x_target_path     <- Sys.getenv("BENCH_R_X_TARGET_PATH", unset = "")
+x_target_dir      <- Sys.getenv("BENCH_R_X_TARGET_DIR", unset = "")
 registry_pkey      <- Sys.getenv("BENCH_PREDICTION_KEY", unset = "predictions")
 
 fit_predict <- function(seed) {
@@ -141,6 +143,9 @@ fit_predict <- function(seed) {
             stop(sprintf("X_target sidecar not found: %s", x_target_path))
         }
         call_params$X_target <- read_npy_f64(x_target_path)
+    } else if (needs_x_target) {
+        call_params$X_target <- pls4all_bench_load_x_target(
+            x_target_dir, a$n, a$p, seed)
     }
 
     # Some methods (so_pls / on_pls) overload `n_components` semantics —

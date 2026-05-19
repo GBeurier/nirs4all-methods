@@ -5,9 +5,8 @@
 % wrappers wrap. Per-algo params arrive as a JSON string in env
 % `BENCH_MATLAB_PARAMS_JSON` (built by the orchestrator from the same
 % `adapted_params` helper Python uses). Deterministic extras
-% (labels / sample_weights / group_assignment) are reproduced from y / p
-% so we don't depend on Python's PCG64. X_target-needing methods
-% (di_pls / ds / pds) report a clear "needs X_target sidecar" failure.
+% (labels / sample_weights / group_assignment / X_target) are reproduced
+% from X / y / p / seed so we don't depend on Python's PCG64.
 
 algo       = getenv("BENCH_ALGO");
 csv_dir    = getenv("BENCH_CSV_DIR");
@@ -19,6 +18,7 @@ seed_base  = str2double(getenv("BENCH_SEED_BASE"));
 pred_path  = getenv("BENCH_PRED_PATH");
 threads    = str2double(getenv("BENCH_THREADS"));
 params_json= getenv("BENCH_MATLAB_PARAMS_JSON");
+x_target_dir = getenv("BENCH_R_X_TARGET_DIR");
 needs_x_target = strcmp(getenv("BENCH_R_NEEDS_X_TARGET"), "1");
 needs_labels   = strcmp(getenv("BENCH_R_NEEDS_LABELS"), "1");
 needs_sw       = strcmp(getenv("BENCH_R_NEEDS_SAMPLE_WEIGHTS"), "1");
@@ -34,11 +34,6 @@ if exist("maxNumCompThreads", "builtin") || exist("maxNumCompThreads", "file")
     catch
         % maxNumCompThreads may not honour > physical cores; ignore.
     end
-end
-
-if needs_x_target
-    error("pls4all:bench", ...
-        "matlab_tier1: %s needs X_target sidecar (not yet wired)", algo);
 end
 
 % Parse params from JSON env var.
@@ -141,8 +136,8 @@ end
 
 function preds = fit_predict(dispatch_algo, algo, csv_dir, n, p, nc, ...
                               params, seed, needs_labels, needs_sw, ...
-                              needs_groups, pkey, use_model_api, ...
-                              model_api_cls)
+                              needs_groups, needs_x_target, x_target_dir, ...
+                              pkey, use_model_api, model_api_cls)
     [X, y] = pls4all_bench_load_xy(csv_dir, n, p, seed);
 
     if use_model_api
@@ -171,6 +166,9 @@ function preds = fit_predict(dispatch_algo, algo, csv_dir, n, p, nc, ...
         width = max(1, ceil(p / n_groups));
         ga = min(int32(floor((0:p-1) / width)), int32(n_groups - 1));
         params.group_assignment = ga;
+    end
+    if needs_x_target
+        params.X_target = pls4all_bench_load_x_target(x_target_dir, n, p, seed);
     end
 
     cmps = {"pls_lda", "pls_logistic", "pls_qda", "sparse_pls_da", ...
@@ -257,10 +255,19 @@ function preds = fit_predict(dispatch_algo, algo, csv_dir, n, p, nc, ...
         "matlab_tier1: %s returned no '%s' field", algo, pkey);
 end
 
+function Xt = pls4all_bench_load_x_target(x_target_dir, n, p, seed)
+    path = fullfile(x_target_dir, sprintf("xtarget_%dx%d_seed%d.csv", n, p, seed));
+    if exist(path, "file") ~= 2
+        error("pls4all:bench", "X_target sidecar not found: %s", path);
+    end
+    Xt = dlmread(path, ",");
+end
+
 [stats, last_preds] = pls4all_bench_run( ...
     @(s) fit_predict(dispatch_algo, algo, csv_dir, n, p, nc, params, ...
                       s, needs_labels, needs_sw, needs_groups, ...
-                      registry_pkey, use_model_api, model_api_cls), ...
+                      needs_x_target, x_target_dir, registry_pkey, ...
+                      use_model_api, model_api_cls), ...
     runs, seed_base);
 
 versions = struct();

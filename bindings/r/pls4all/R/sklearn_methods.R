@@ -117,6 +117,24 @@ cppls <- function(formula, data, ncomp = 2L, gamma = 0.5,
                                 extra = list(gamma = gamma))
 }
 
+#' Domain-invariant PLS -- formula entry point.
+#' @param X_target Numeric matrix for the target domain.
+#' @param di_lambda Numeric DI-PLS penalty.
+#' @inheritParams pls
+#' @export
+di_pls <- function(formula, data, ncomp = 2L, X_target,
+                   di_lambda = 1.0, na.action = stats::na.omit) {
+    cl <- match.call()
+    if (missing(X_target))
+        stop("di_pls() requires an `X_target` matrix argument")
+    d <- .pls4all_method_design(formula, data, na.action)
+    res <- di_pls_fit(d$X, d$y, n_components = ncomp,
+                       X_target = X_target, di_lambda = di_lambda)
+    .pls4all_method_fit_object(formula, cl, d, res, ncomp,
+                                method = "di_pls",
+                                extra = list(di_lambda = di_lambda))
+}
+
 #' Sample-weighted PLS — formula entry point.
 #' @param weights Numeric vector of length nrow(data) with sample weights.
 #' @inheritParams pls

@@ -42,9 +42,11 @@ if str(REPO) not in sys.path:
 DATA_DIR = HERE / "data"
 PREDS_DIR = HERE / "data" / ".predictions"
 ORACLES_DIR = HERE / "data" / ".reference_oracles"
+X_TARGET_DIR = HERE / "data" / ".x_target"
 RESULTS_DIR = HERE / "results"
 SCRIPTS_DIR = HERE / "scripts"
-for d in (DATA_DIR, PREDS_DIR, ORACLES_DIR, RESULTS_DIR, SCRIPTS_DIR):
+for d in (DATA_DIR, PREDS_DIR, ORACLES_DIR, X_TARGET_DIR,
+          RESULTS_DIR, SCRIPTS_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
 from benchmarks.parity_timing.registry import (  # noqa: E402
@@ -156,6 +158,20 @@ def gen_dataset_csv(n: int, p: int, seed: int) -> Path:
     np.savetxt(csv_path, arr, delimiter=",", header=",".join(cols),
                 comments="", fmt="%.17g")
     return csv_path
+
+
+def gen_x_target_csv(n: int, p: int, seed: int) -> Path:
+    """Generate the NumPy/PCG X_target sidecar used by R/MATLAB cells."""
+    path = X_TARGET_DIR / f"xtarget_{n}x{p}_seed{seed}.csv"
+    if path.exists():
+        return path
+    csv_path = gen_dataset_csv(n, p, seed)
+    arr = np.loadtxt(csv_path, delimiter=",", skiprows=1, dtype=np.float64)
+    X = np.ascontiguousarray(arr[:, :-1])
+    rng = np.random.default_rng(seed)
+    X_target = X + 0.01 * rng.standard_normal(X.shape)
+    np.savetxt(path, X_target, delimiter=",", comments="", fmt="%.17g")
+    return path
 
 
 def predictions_path(algo: str, backend: str, n: int, p: int,
@@ -419,11 +435,10 @@ def run_backend(name: str, script: str, language: str, tier: str,
             if method.needs_group_assignment:
                 env["BENCH_R_NEEDS_GROUP_ASSIGNMENT"] = "1"
             if method.needs_x_target:
-                # Not yet implemented for R/MATLAB — would require per-seed
-                # .npy sidecars since Python's PCG64 isn't reproducible in
-                # other languages. The R/MATLAB script fails the cell with
-                # a clear reason when this flag is missing.
+                # R/MATLAB read per-seed NumPy/PCG sidecars so their
+                # X_target matches the Python registry exactly.
                 env["BENCH_R_NEEDS_X_TARGET"] = "1"
+                env["BENCH_R_X_TARGET_DIR"] = str(X_TARGET_DIR)
             # Tell R/MATLAB which field of the result struct matches the
             # registry's parity reference — otherwise classifiers return
             # integer labels where the registry expects `decision_scores`,
@@ -975,6 +990,13 @@ def main():
             # reread the CSV per run.
             for i in range(args.n_runs):
                 gen_dataset_csv(n, p, args.seed_base + i)
+            try:
+                method = get_method(algo)
+            except KeyError:
+                method = None
+            if method is not None and method.needs_x_target:
+                for i in range(args.n_runs):
+                    gen_x_target_csv(n, p, args.seed_base + i)
 
             for thr in threads:
                 for backend in algo_backends:

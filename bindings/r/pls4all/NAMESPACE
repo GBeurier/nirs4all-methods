@@ -100,6 +100,7 @@ S3method(print, summary.pls4all_fit)
 # Tier 2 — formula-based wrappers around MethodResult fits
 export(sparse_pls)
 export(cppls)
+export(di_pls)
 export(weighted_pls)
 export(mb_pls)
 export(pls_glm)

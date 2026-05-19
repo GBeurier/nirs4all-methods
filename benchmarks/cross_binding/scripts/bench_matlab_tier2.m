@@ -16,6 +16,7 @@ seed_base  = str2double(getenv("BENCH_SEED_BASE"));
 pred_path  = getenv("BENCH_PRED_PATH");
 threads    = str2double(getenv("BENCH_THREADS"));
 params_json= getenv("BENCH_MATLAB_PARAMS_JSON");
+x_target_dir = getenv("BENCH_R_X_TARGET_DIR");
 try
     maxNumCompThreads(threads);
 catch
@@ -24,6 +25,7 @@ end
 % Algos covered by pls4all.fit (classdef factory). Everything else is
 % reported as "not bound" — the dashboard shows that cell as `—`.
 SUPPORTED = {"pls", "pls_simpls", "simpls", "pcr", "opls", ...
+             "di_pls", ...
              "sparse_simpls", "cppls", ...
              "ecr", "weighted_pls", "robust_pls", "ridge_pls", ...
              "continuum_regression", "recursive_pls", "n_pls", ...
@@ -80,6 +82,9 @@ end
 if isfield(params, "alpha")
     nv = [nv, {"Alpha", double(params.alpha)}];
 end
+if isfield(params, "di_lambda")
+    nv = [nv, {"DiLambda", double(params.di_lambda)}];
+end
 if isfield(params, "tau")
     nv = [nv, {"Tau", double(params.tau)}];
 end
@@ -135,12 +140,16 @@ end
 % pls4all.fit doesn't accept Weights from JSON params (weighted_pls
 % derives sample_weights from y); we build it inline below.
 
-function preds = fit_predict(algo, csv_dir, n, p, nc, seed, nv)
+function preds = fit_predict(algo, csv_dir, n, p, nc, seed, nv, x_target_dir)
     [X, y] = pls4all_bench_load_xy(csv_dir, n, p, seed);
     % Reproduce the registry's per-method extras locally.
     if strcmp(algo, "weighted_pls")
         w = double(abs(y(:)) + 0.5);
         nv = [nv, {"Weights", w}];
+    end
+    if strcmp(algo, "di_pls")
+        nv = [nv, {"XTarget", ...
+                   pls4all_bench_load_x_target(x_target_dir, n, p, seed)}];
     end
     % kernel_pls_rbf is just kernel_pls with KernelType=1 (rbf in the
     % registry convention). Strip any earlier KernelType so we don't
@@ -171,8 +180,17 @@ function preds = fit_predict(algo, csv_dir, n, p, nc, seed, nv)
     preds = preds(:);
 end
 
+function Xt = pls4all_bench_load_x_target(x_target_dir, n, p, seed)
+    path = fullfile(x_target_dir, sprintf("xtarget_%dx%d_seed%d.csv", n, p, seed));
+    if exist(path, "file") ~= 2
+        error("pls4all:bench", "X_target sidecar not found: %s", path);
+    end
+    Xt = dlmread(path, ",");
+end
+
 [stats, last_preds] = pls4all_bench_run( ...
-    @(s) fit_predict(algo, csv_dir, n, p, nc, s, nv), runs, seed_base);
+    @(s) fit_predict(algo, csv_dir, n, p, nc, s, nv, x_target_dir), ...
+    runs, seed_base);
 
 versions = struct();
 versions.language = sprintf("Octave %s", OCTAVE_VERSION);

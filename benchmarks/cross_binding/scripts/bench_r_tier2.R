@@ -21,6 +21,7 @@ source(file.path(.script_dir(), "_npy.R"))
 a <- pls4all_bench_parse_args()
 
 params_env <- Sys.getenv("BENCH_R_PARAMS_JSON", unset = "")
+x_target_dir <- Sys.getenv("BENCH_R_X_TARGET_DIR", unset = "")
 if (nzchar(params_env)) {
     params <- fromJSON(params_env, simplifyVector = TRUE)
 } else {
@@ -55,6 +56,10 @@ fit_predict <- function(seed) {
     fit <- switch(a$algo,
         "pls" = sparse_pls(y ~ ., df, nc, sparsity_lambda = 0.0),
         "opls" = opls(y ~ ., df, nc),
+        "di_pls" = di_pls(y ~ ., df, nc,
+                            X_target = pls4all_bench_load_x_target(
+                                x_target_dir, a$n, a$p, seed),
+                            di_lambda = params$di_lambda %||% 1.0),
         "sparse_simpls" = sparse_pls(y ~ ., df, nc,
                                        params$sparsity_lambda %||% 0.05),
         "cppls" = cppls(y ~ ., df, nc, params$gamma %||% 0.5),
