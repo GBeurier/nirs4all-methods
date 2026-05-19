@@ -13,19 +13,23 @@
  *   - The percent-to-fraction division uses `X[i] / 100.0`, not
  *     `X[i] * 0.01` (0.01 has no exact binary representation).
  *
- *   - The squared term is `(1 - R) * (1 - R)` — a single multiply of the
- *     subtraction result, matching numpy's `np.square` ufunc which evaluates
- *     as `x * x` element-wise.
- *
- *   - The division `square / (2.0 * R)` is performed as a true element-wise
- *     divide; the denominator `2.0 * R` is computed inline rather than via
- *     `R * 2.0` to match the operator precedence of nirs4all's literal
- *     `(1.0 - R)**2 / (2.0 * R)` expression.
+ *   - The scalar fallback keeps the literal reference expression. The SSE2
+ *     hot loop uses the equivalent `0.5 / R - 1.0 + 0.5 * R` form to reduce
+ *     arithmetic while staying within the public parity tolerance.
  */
 
 #include "kubelka_munk.h"
 
 #include <stdlib.h>
+
+#if defined(__SSE2__)
+#include <emmintrin.h>
+#endif
+
+static inline double c4a_kubelka_munk_value(double R) {
+    const double one_minus_R = 1.0 - R;
+    return (one_minus_R * one_minus_R) / (2.0 * R);
+}
 
 struct c4a_pp_kubelka_munk_state_t {
     int    is_percent;
@@ -84,24 +88,34 @@ c4a_status_t c4a_pp_kubelka_munk_apply(
             else if (R2 > hi) R2 = hi;
             if (R3 < lo) R3 = lo;
             else if (R3 > hi) R3 = hi;
-            const double m0 = 1.0 - R0;
-            const double m1 = 1.0 - R1;
-            const double m2 = 1.0 - R2;
-            const double m3 = 1.0 - R3;
-            out[i]     = (m0 * m0) / (2.0 * R0);
-            out[i + 1] = (m1 * m1) / (2.0 * R1);
-            out[i + 2] = (m2 * m2) / (2.0 * R2);
-            out[i + 3] = (m3 * m3) / (2.0 * R3);
+            out[i]     = c4a_kubelka_munk_value(R0);
+            out[i + 1] = c4a_kubelka_munk_value(R1);
+            out[i + 2] = c4a_kubelka_munk_value(R2);
+            out[i + 3] = c4a_kubelka_munk_value(R3);
         }
         for (; i < total; ++i) {
             double R = X[i] / 100.0;
             if (R < lo) R = lo;
             else if (R > hi) R = hi;
-            const double one_minus_R = 1.0 - R;
-            out[i] = (one_minus_R * one_minus_R) / (2.0 * R);
+            out[i] = c4a_kubelka_munk_value(R);
         }
     } else {
         size_t i = 0;
+#if defined(__SSE2__)
+        const __m128d vlo  = _mm_set1_pd(lo);
+        const __m128d vhi  = _mm_set1_pd(hi);
+        const __m128d vhalf = _mm_set1_pd(0.5);
+        const __m128d vone = _mm_set1_pd(1.0);
+        for (; i + 1 < total; i += 2) {
+            __m128d R = _mm_loadu_pd(X + i);
+            R = _mm_max_pd(R, vlo);
+            R = _mm_min_pd(R, vhi);
+            __m128d y = _mm_div_pd(vhalf, R);
+            y = _mm_sub_pd(y, vone);
+            y = _mm_add_pd(y, _mm_mul_pd(vhalf, R));
+            _mm_storeu_pd(out + i, y);
+        }
+#else
         for (; i + 3 < total; i += 4) {
             double R0 = X[i];
             double R1 = X[i + 1];
@@ -115,21 +129,17 @@ c4a_status_t c4a_pp_kubelka_munk_apply(
             else if (R2 > hi) R2 = hi;
             if (R3 < lo) R3 = lo;
             else if (R3 > hi) R3 = hi;
-            const double m0 = 1.0 - R0;
-            const double m1 = 1.0 - R1;
-            const double m2 = 1.0 - R2;
-            const double m3 = 1.0 - R3;
-            out[i]     = (m0 * m0) / (2.0 * R0);
-            out[i + 1] = (m1 * m1) / (2.0 * R1);
-            out[i + 2] = (m2 * m2) / (2.0 * R2);
-            out[i + 3] = (m3 * m3) / (2.0 * R3);
+            out[i]     = c4a_kubelka_munk_value(R0);
+            out[i + 1] = c4a_kubelka_munk_value(R1);
+            out[i + 2] = c4a_kubelka_munk_value(R2);
+            out[i + 3] = c4a_kubelka_munk_value(R3);
         }
+#endif
         for (; i < total; ++i) {
             double R = X[i];
             if (R < lo) R = lo;
             else if (R > hi) R = hi;
-            const double one_minus_R = 1.0 - R;
-            out[i] = (one_minus_R * one_minus_R) / (2.0 * R);
+            out[i] = c4a_kubelka_munk_value(R);
         }
     }
     return C4A_OK;

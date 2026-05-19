@@ -7,8 +7,6 @@ non-F64 array; that copy lives only for the duration of the C call.
 """
 from __future__ import annotations
 
-import ctypes
-
 import numpy as np
 
 from ._types import Dtype, MatrixView
@@ -50,15 +48,16 @@ def numpy_to_view(arr: np.ndarray) -> MatrixView:
     """
     if arr.ndim != 2:
         raise ValueError(f"MatrixView requires a 2-D array, got ndim={arr.ndim}")
-    if not arr.flags["C_CONTIGUOUS"]:
+    if not arr.flags.c_contiguous:
         raise ValueError("MatrixView requires a C-contiguous array")
     dtype_id = _resolve_dtype(arr)
+    rows, cols = arr.shape
     view = MatrixView()
-    view.data = arr.ctypes.data_as(ctypes.c_void_p)
-    view.rows = arr.shape[0]
-    view.cols = arr.shape[1]
+    view.data = arr.ctypes.data
+    view.rows = rows
+    view.cols = cols
     # Row-major: col_stride = 1 element; row_stride = cols elements.
-    view.row_stride = arr.shape[1]
+    view.row_stride = cols
     view.col_stride = 1
     view.dtype = dtype_id
     view.reserved0 = 0

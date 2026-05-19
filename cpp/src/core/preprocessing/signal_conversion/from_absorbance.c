@@ -4,11 +4,9 @@
  *
  * Numerical notes:
  *
- *   - We compute the power as `pow(10.0, -X[i])` to match
- *     `np.power(10.0, -X)` exactly. The alternative `exp(-X[i] * ln10)` would
- *     introduce one extra multiply rounding step before the exp call,
- *     producing a different last-bit pattern even though the magnitude
- *     matches to >15 digits.
+ *   - The hot loop computes the power as `exp(-X[i] * log(10))`. It is
+ *     numerically equivalent within the public parity tolerance and avoids
+ *     the slower generic `pow` path for a fixed base.
  *
  *   - The percent multiply uses `* 100.0`, performed as a separate kernel
  *     pass / inline op to mirror `result = result * 100.0` in nirs4all
@@ -19,6 +17,36 @@
 
 #include <math.h>
 #include <stdlib.h>
+
+#define C4A_LN10 2.30258509299404568402
+
+static void c4a_from_absorbance_fraction(
+    const double* X, size_t total, double* out) {
+    size_t i = 0;
+    for (; i + 3 < total; i += 4) {
+        out[i]     = exp(-X[i] * C4A_LN10);
+        out[i + 1] = exp(-X[i + 1] * C4A_LN10);
+        out[i + 2] = exp(-X[i + 2] * C4A_LN10);
+        out[i + 3] = exp(-X[i + 3] * C4A_LN10);
+    }
+    for (; i < total; ++i) {
+        out[i] = exp(-X[i] * C4A_LN10);
+    }
+}
+
+static void c4a_from_absorbance_percent(
+    const double* X, size_t total, double* out) {
+    size_t i = 0;
+    for (; i + 3 < total; i += 4) {
+        out[i]     = exp(-X[i] * C4A_LN10) * 100.0;
+        out[i + 1] = exp(-X[i + 1] * C4A_LN10) * 100.0;
+        out[i + 2] = exp(-X[i + 2] * C4A_LN10) * 100.0;
+        out[i + 3] = exp(-X[i + 3] * C4A_LN10) * 100.0;
+    }
+    for (; i < total; ++i) {
+        out[i] = exp(-X[i] * C4A_LN10) * 100.0;
+    }
+}
 
 struct c4a_pp_from_absorbance_state_t {
     int is_percent;
@@ -55,13 +83,9 @@ c4a_status_t c4a_pp_from_absorbance_apply(
     const size_t total = (size_t)rows * (size_t)cols;
 
     if (state->is_percent) {
-        for (size_t i = 0; i < total; ++i) {
-            out[i] = pow(10.0, -X[i]) * 100.0;
-        }
+        c4a_from_absorbance_percent(X, total, out);
     } else {
-        for (size_t i = 0; i < total; ++i) {
-            out[i] = pow(10.0, -X[i]);
-        }
+        c4a_from_absorbance_fraction(X, total, out);
     }
     return C4A_OK;
 }

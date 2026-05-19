@@ -58,6 +58,7 @@ struct c4a_filter_x_outlier_state_t {
     double*  maha_mean;             /* (eff_dim,) — center in (reduced) space */
     double*  maha_cov_qr;           /* (eff_dim, eff_dim) Householder factor */
     double*  maha_cov_tau;          /* (eff_dim,) */
+    double*  maha_precision;        /* (eff_dim, eff_dim) inverse covariance */
     int64_t  maha_eff_dim;
     c4a_mcd_t* maha_mcd;           /* robust path only */
 
@@ -182,6 +183,7 @@ static void clear_fit(c4a_filter_x_outlier_state_t* s) {
     free(s->maha_mean);   s->maha_mean = NULL;
     free(s->maha_cov_qr); s->maha_cov_qr = NULL;
     free(s->maha_cov_tau); s->maha_cov_tau = NULL;
+    free(s->maha_precision); s->maha_precision = NULL;
     s->maha_eff_dim = 0;
     if (s->maha_mcd) { c4a_mcd_free(s->maha_mcd); s->maha_mcd = NULL; }
     if (s->pca_fit)  { c4a_pca_fit_free(s->pca_fit); free(s->pca_fit); s->pca_fit = NULL; }
@@ -235,6 +237,52 @@ static c4a_status_t mahal_distances(const double* X, int64_t rows, int64_t cols,
     return C4A_OK;
 }
 
+static c4a_status_t covariance_precision_from_qr(const double* M,
+                                                  const double* tau,
+                                                  int64_t cols,
+                                                  double* precision) {
+    double* tmp = (double*)malloc((size_t)cols * sizeof(double));
+    double* sol = (double*)malloc((size_t)cols * sizeof(double));
+    if (tmp == NULL || sol == NULL) {
+        free(tmp); free(sol);
+        return C4A_ERR_OUT_OF_MEMORY;
+    }
+    for (int64_t rhs = 0; rhs < cols; ++rhs) {
+        for (int64_t j = 0; j < cols; ++j) tmp[j] = 0.0;
+        tmp[rhs] = 1.0;
+        c4a_status_t st = c4a_apply_qt(M, cols, cols, tau, tmp);
+        if (st != C4A_OK) { free(tmp); free(sol); return st; }
+        st = c4a_back_solve_R(M, cols, cols, tmp, sol);
+        if (st != C4A_OK) { free(tmp); free(sol); return st; }
+        for (int64_t row = 0; row < cols; ++row) {
+            precision[(size_t)row * (size_t)cols + (size_t)rhs] = sol[row];
+        }
+    }
+    free(tmp); free(sol);
+    return C4A_OK;
+}
+
+static void mahal_distances_precision(const double* X, int64_t rows,
+                                       int64_t cols, const double* mean,
+                                       const double* precision,
+                                       double* dist_out) {
+    for (int64_t r = 0; r < rows; ++r) {
+        const double* row = X + (size_t)r * (size_t)cols;
+        double s = 0.0;
+        for (int64_t a = 0; a < cols; ++a) {
+            const double da = row[a] - mean[a];
+            double acc = 0.0;
+            const double* prow = precision + (size_t)a * (size_t)cols;
+            for (int64_t b = 0; b < cols; ++b) {
+                acc += prow[b] * (row[b] - mean[b]);
+            }
+            s += da * acc;
+        }
+        if (s < 0.0) s = 0.0;
+        dist_out[r] = sqrt(s);
+    }
+}
+
 /* ===========================================================================
  * Fitters per method.
  * ========================================================================= */
@@ -278,35 +326,23 @@ static c4a_status_t fit_mahalanobis(c4a_filter_x_outlier_state_t* s,
     }
 
     s->maha_eff_dim = cols_used;
-    double* dists = (double*)malloc((size_t)rows * sizeof(double));
-    if (dists == NULL) { free(scores); return C4A_ERR_OUT_OF_MEMORY; }
-
     c4a_status_t st = C4A_OK;
     if (robust) {
         s->maha_mcd = c4a_mcd_new();
         if (s->maha_mcd == NULL) {
-            free(scores); free(dists);
+            free(scores);
             return C4A_ERR_OUT_OF_MEMORY;
         }
         st = c4a_mcd_fit(s->maha_mcd, X_used, rows, cols_used, s->seed);
-        if (st != C4A_OK) { free(scores); free(dists); return st; }
-        /* Compute root-Mahalanobis distances for threshold. */
-        double* mahsq = (double*)malloc((size_t)rows * sizeof(double));
-        if (mahsq == NULL) { free(scores); free(dists); return C4A_ERR_OUT_OF_MEMORY; }
-        st = c4a_mcd_mahalanobis_sq(s->maha_mcd, X_used, rows, cols_used, mahsq);
-        if (st != C4A_OK) { free(mahsq); free(scores); free(dists); return st; }
-        for (int64_t i = 0; i < rows; ++i) {
-            const double v = mahsq[i];
-            dists[i] = (v > 0.0) ? sqrt(v) : 0.0;
-        }
-        free(mahsq);
+        if (st != C4A_OK) { free(scores); return st; }
     } else {
         s->maha_mean   = (double*)malloc((size_t)cols_used * sizeof(double));
         s->maha_cov_qr = (double*)malloc((size_t)cols_used * (size_t)cols_used * sizeof(double));
         s->maha_cov_tau= (double*)malloc((size_t)cols_used * sizeof(double));
+        s->maha_precision = (double*)malloc((size_t)cols_used * (size_t)cols_used * sizeof(double));
         if (s->maha_mean == NULL || s->maha_cov_qr == NULL ||
-            s->maha_cov_tau == NULL) {
-            free(scores); free(dists);
+            s->maha_cov_tau == NULL || s->maha_precision == NULL) {
+            free(scores);
             return C4A_ERR_OUT_OF_MEMORY;
         }
         for (int64_t j = 0; j < cols_used; ++j) {
@@ -342,10 +378,10 @@ static c4a_status_t fit_mahalanobis(c4a_filter_x_outlier_state_t* s,
         }
         st = c4a_householder_qr(s->maha_cov_qr, cols_used, cols_used,
                                   s->maha_cov_tau);
-        if (st != C4A_OK) { free(scores); free(dists); return st; }
-        st = mahal_distances(X_used, rows, cols_used, s->maha_mean,
-                                s->maha_cov_qr, s->maha_cov_tau, dists);
-        if (st != C4A_OK) { free(scores); free(dists); return st; }
+        if (st != C4A_OK) { free(scores); return st; }
+        st = covariance_precision_from_qr(s->maha_cov_qr, s->maha_cov_tau,
+                                          cols_used, s->maha_precision);
+        if (st != C4A_OK) { free(scores); return st; }
     }
 
     /* Threshold: sqrt(chi2_inv(0.975, eff_dim)) unless user-overridden. */
@@ -354,7 +390,7 @@ static c4a_status_t fit_mahalanobis(c4a_filter_x_outlier_state_t* s,
     } else {
         s->threshold_value = sqrt(chi2_inv_975((int)cols_used));
     }
-    free(scores); free(dists);
+    free(scores);
     return C4A_OK;
 }
 
@@ -566,8 +602,14 @@ static c4a_status_t apply_mahalanobis(const c4a_filter_x_outlier_state_t* s,
         }
         free(mahsq);
     } else {
-        st = mahal_distances(X_used, rows, cols_used, s->maha_mean,
-                              s->maha_cov_qr, s->maha_cov_tau, dist_out);
+        if (s->maha_precision != NULL) {
+            mahal_distances_precision(X_used, rows, cols_used, s->maha_mean,
+                                      s->maha_precision, dist_out);
+            st = C4A_OK;
+        } else {
+            st = mahal_distances(X_used, rows, cols_used, s->maha_mean,
+                                  s->maha_cov_qr, s->maha_cov_tau, dist_out);
+        }
     }
     free(scores);
     return st;

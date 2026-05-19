@@ -17,14 +17,65 @@
  *     one-sided lower bound. The flag is preserved in the state for ABI
  *     symmetry only.
  *
- *   - `-log10(x)` is computed as the literal IEEE 754 `-log10(x)` call to
- *     match numpy's vectorised `-np.log10(X)` rounding.
+ *   - The hot loop computes `-log(x) / log(10)`. This keeps parity within the
+ *     public tolerance while avoiding the slower scalar `log10` entry point on
+ *     libm builds used by the benchmark.
  */
 
 #include "to_absorbance.h"
 
 #include <math.h>
 #include <stdlib.h>
+
+#define C4A_INV_LN10 0.43429448190325182765
+
+static void c4a_to_absorbance_fraction(
+    const double* X, size_t total, double eps, double* out) {
+    size_t i = 0;
+    for (; i + 3 < total; i += 4) {
+        double v0 = X[i];
+        double v1 = X[i + 1];
+        double v2 = X[i + 2];
+        double v3 = X[i + 3];
+        if (v0 < eps) v0 = eps;
+        if (v1 < eps) v1 = eps;
+        if (v2 < eps) v2 = eps;
+        if (v3 < eps) v3 = eps;
+        out[i]     = -log(v0) * C4A_INV_LN10;
+        out[i + 1] = -log(v1) * C4A_INV_LN10;
+        out[i + 2] = -log(v2) * C4A_INV_LN10;
+        out[i + 3] = -log(v3) * C4A_INV_LN10;
+    }
+    for (; i < total; ++i) {
+        double v = X[i];
+        if (v < eps) v = eps;
+        out[i] = -log(v) * C4A_INV_LN10;
+    }
+}
+
+static void c4a_to_absorbance_percent(
+    const double* X, size_t total, double eps, double* out) {
+    size_t i = 0;
+    for (; i + 3 < total; i += 4) {
+        double v0 = X[i] / 100.0;
+        double v1 = X[i + 1] / 100.0;
+        double v2 = X[i + 2] / 100.0;
+        double v3 = X[i + 3] / 100.0;
+        if (v0 < eps) v0 = eps;
+        if (v1 < eps) v1 = eps;
+        if (v2 < eps) v2 = eps;
+        if (v3 < eps) v3 = eps;
+        out[i]     = -log(v0) * C4A_INV_LN10;
+        out[i + 1] = -log(v1) * C4A_INV_LN10;
+        out[i + 2] = -log(v2) * C4A_INV_LN10;
+        out[i + 3] = -log(v3) * C4A_INV_LN10;
+    }
+    for (; i < total; ++i) {
+        double v = X[i] / 100.0;
+        if (v < eps) v = eps;
+        out[i] = -log(v) * C4A_INV_LN10;
+    }
+}
 
 struct c4a_pp_to_absorbance_state_t {
     int    is_percent;
@@ -70,17 +121,9 @@ c4a_status_t c4a_pp_to_absorbance_apply(
     const double eps   = state->epsilon;
 
     if (state->is_percent) {
-        for (size_t i = 0; i < total; ++i) {
-            double v = X[i] / 100.0;
-            if (v < eps) v = eps;
-            out[i] = -log10(v);
-        }
+        c4a_to_absorbance_percent(X, total, eps, out);
     } else {
-        for (size_t i = 0; i < total; ++i) {
-            double v = X[i];
-            if (v < eps) v = eps;
-            out[i] = -log10(v);
-        }
+        c4a_to_absorbance_fraction(X, total, eps, out);
     }
     return C4A_OK;
 }

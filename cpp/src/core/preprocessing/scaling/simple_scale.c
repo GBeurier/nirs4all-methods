@@ -13,22 +13,23 @@
 
 #define C4A_PP_SIMPLE_SCALE_STACK_COLS 4096
 
+#if defined(__GNUC__) || defined(__clang__)
+#define C4A_RESTRICT __restrict__
+#else
+#define C4A_RESTRICT
+#endif
+
 struct c4a_pp_simple_scale_state_t {
     int _reserved;
 };
 
 c4a_pp_simple_scale_state_t* c4a_pp_simple_scale_state_new(void) {
-    c4a_pp_simple_scale_state_t* s =
-        (c4a_pp_simple_scale_state_t*)malloc(sizeof(*s));
-    if (s == NULL) {
-        return NULL;
-    }
-    s->_reserved = 0;
-    return s;
+    static c4a_pp_simple_scale_state_t state = {0};
+    return &state;
 }
 
 void c4a_pp_simple_scale_state_free(c4a_pp_simple_scale_state_t* state) {
-    free(state);
+    (void)state;
 }
 
 c4a_status_t c4a_pp_simple_scale_apply(const c4a_pp_simple_scale_state_t* state,
@@ -70,7 +71,7 @@ c4a_status_t c4a_pp_simple_scale_apply(const c4a_pp_simple_scale_state_t* state,
     /* Preserve the per-column left-to-right min/max order while reading the
      * matrix row-major. */
     for (int64_t i = 1; i < rows; ++i) {
-        const double* row = X + (size_t)i * n_cols;
+        const double* C4A_RESTRICT row = X + (size_t)i * n_cols;
         for (size_t j = 0; j < n_cols; ++j) {
             const double v = row[j];
             if (v < col_min[j]) col_min[j] = v;
@@ -78,13 +79,13 @@ c4a_status_t c4a_pp_simple_scale_apply(const c4a_pp_simple_scale_state_t* state,
         }
     }
     for (size_t j = 0; j < n_cols; ++j) {
-        col_range[j] -= col_min[j];
+        col_range[j] = 1.0 / (col_range[j] - col_min[j]);
     }
     for (int64_t i = 0; i < rows; ++i) {
-        const double* row_in = X + (size_t)i * n_cols;
-        double* row_out = out + (size_t)i * n_cols;
+        const double* C4A_RESTRICT row_in = X + (size_t)i * n_cols;
+        double* C4A_RESTRICT row_out = out + (size_t)i * n_cols;
         for (size_t j = 0; j < n_cols; ++j) {
-            row_out[j] = (row_in[j] - col_min[j]) / col_range[j];
+            row_out[j] = (row_in[j] - col_min[j]) * col_range[j];
         }
     }
     if (heap) {

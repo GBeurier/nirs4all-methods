@@ -28,6 +28,10 @@ c4a_pp_area_state_t* c4a_pp_area_state_new(c4a_pp_area_method_t method);
 
 void c4a_pp_area_state_free(c4a_pp_area_state_t* state);
 
+c4a_status_t c4a_pp_area_apply_method(c4a_pp_area_method_t method,
+                                      const double* X, int64_t rows,
+                                      int64_t cols, double* out);
+
 c4a_status_t c4a_pp_area_apply(const c4a_pp_area_state_t* state,
                                const double* X, int64_t rows, int64_t cols,
                                double* out);

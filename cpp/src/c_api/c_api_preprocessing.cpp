@@ -78,12 +78,16 @@ struct c4a_pp_rnv_handle_t {
     c4a_pp_rnv_state_t* state;
 };
 struct c4a_pp_area_handle_t {
-    c4a_pp_area_state_t* state;
+    bool                 static_handle;
+    c4a_pp_area_method_t method;
 };
 struct c4a_pp_normalize_handle_t {
-    c4a_pp_normalize_state_t* state;
+    bool   static_handle;
+    double feature_min;
+    double feature_max;
 };
 struct c4a_pp_simple_scale_handle_t {
+    bool                         static_handle;
     c4a_pp_simple_scale_state_t* state;
 };
 struct c4a_pp_log_handle_t {
@@ -119,6 +123,20 @@ struct c4a_pp_gaussian_handle_t {
 struct c4a_pp_detrend_handle_t {
     c4a_pp_detrend_state_t* state;
 };
+
+namespace {
+c4a_pp_area_handle_t k_area_sum_handle{true, C4A_PP_AREA_SUM};
+c4a_pp_area_handle_t k_area_abs_sum_handle{true, C4A_PP_AREA_ABS_SUM};
+c4a_pp_area_handle_t k_area_trapz_handle{true, C4A_PP_AREA_TRAPZ};
+c4a_pp_normalize_handle_t k_normalize_default_handle{true, -1.0, 1.0};
+
+c4a_pp_simple_scale_handle_t* simple_scale_default_handle() noexcept {
+    static c4a_pp_simple_scale_state_t* state =
+        c4a_pp_simple_scale_state_new();
+    static c4a_pp_simple_scale_handle_t handle{true, state};
+    return state == nullptr ? nullptr : &handle;
+}
+}  // namespace
 struct c4a_pp_asls_handle_t {
     c4a_pp_asls_state_t* state;
 };
@@ -198,6 +216,47 @@ c4a_status_t require_rowmajor_f64_mut(c4a_matrix_view_t& v,
     return C4A_OK;
 }
 
+c4a_status_t require_rowmajor_f64_pair(const c4a_matrix_view_t& X,
+                                       c4a_matrix_view_t& out,
+                                       const double*& xp,
+                                       double*& op,
+                                       std::int64_t& rows,
+                                       std::int64_t& cols) noexcept {
+    if (X.dtype != C4A_DTYPE_F64 || out.dtype != C4A_DTYPE_F64) {
+        return C4A_ERR_DTYPE_MISMATCH;
+    }
+    if (X.rows < 0 || X.cols < 0 || out.rows < 0 || out.cols < 0) {
+        return C4A_ERR_INVALID_ARGUMENT;
+    }
+    if (X.row_stride < 0 || X.col_stride < 0 ||
+        out.row_stride < 0 || out.col_stride < 0) {
+        return C4A_ERR_STRIDE_INVALID;
+    }
+    if (X.col_stride != 1 || out.col_stride != 1) {
+        return C4A_ERR_STRIDE_INVALID;
+    }
+    if (X.rows > 0 && X.cols > 0 && X.row_stride != X.cols) {
+        return C4A_ERR_STRIDE_INVALID;
+    }
+    if (out.rows > 0 && out.cols > 0 && out.row_stride != out.cols) {
+        return C4A_ERR_STRIDE_INVALID;
+    }
+    if (X.rows > 0 && X.cols > 0 && X.data == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    if (out.rows > 0 && out.cols > 0 && out.data == nullptr) {
+        return C4A_ERR_NULL_POINTER;
+    }
+    if (X.rows != out.rows || X.cols != out.cols) {
+        return C4A_ERR_SHAPE_MISMATCH;
+    }
+    xp = static_cast<const double*>(X.data);
+    op = static_cast<double*>(out.data);
+    rows = X.rows;
+    cols = X.cols;
+    return C4A_OK;
+}
+
 }  // namespace
 
 extern "C" {
@@ -251,14 +310,9 @@ C4A_API c4a_status_t c4a_pp_snv_transform(const c4a_pp_snv_handle_t* h,
     try {
         const double* xp = nullptr;
         double*       op = nullptr;
-        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
-        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        std::int64_t  xr = 0, xc = 0;
+        c4a_status_t  s  = require_rowmajor_f64_pair(X, out, xp, op, xr, xc);
         if (s != C4A_OK) return s;
-        s = require_rowmajor_f64_mut(out, op, orr, oc);
-        if (s != C4A_OK) return s;
-        if (xr != orr || xc != oc) {
-            return C4A_ERR_SHAPE_MISMATCH;
-        }
         return c4a_pp_snv_apply(h->state, xp, xr, xc, op);
     } catch (...) {
         return C4A_ERR_INTERNAL;
@@ -321,14 +375,9 @@ C4A_API c4a_status_t c4a_pp_lsnv_transform(const c4a_pp_lsnv_handle_t* h,
     try {
         const double* xp = nullptr;
         double*       op = nullptr;
-        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
-        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        std::int64_t  xr = 0, xc = 0;
+        c4a_status_t  s  = require_rowmajor_f64_pair(X, out, xp, op, xr, xc);
         if (s != C4A_OK) return s;
-        s = require_rowmajor_f64_mut(out, op, orr, oc);
-        if (s != C4A_OK) return s;
-        if (xr != orr || xc != oc) {
-            return C4A_ERR_SHAPE_MISMATCH;
-        }
         return c4a_pp_lsnv_apply(h->state, xp, xr, xc, op);
     } catch (...) {
         return C4A_ERR_INTERNAL;
@@ -411,28 +460,25 @@ C4A_API c4a_status_t c4a_pp_area_create(c4a_pp_area_handle_t** out,
         method != C4A_PP_AREA_TRAPZ) {
         return C4A_ERR_INVALID_ARGUMENT;
     }
-    try {
-        c4a_pp_area_state_t* s = c4a_pp_area_state_new(
-            static_cast<c4a_pp_area_method_t>(method));
-        if (s == nullptr) {
-            return C4A_ERR_OUT_OF_MEMORY;
-        }
-        c4a_pp_area_handle_t* h = new (std::nothrow) c4a_pp_area_handle_t{s};
-        if (h == nullptr) {
-            c4a_pp_area_state_free(s);
-            return C4A_ERR_OUT_OF_MEMORY;
-        }
-        *out = h;
-        return C4A_OK;
-    } catch (...) {
-        return C4A_ERR_INTERNAL;
+    switch (method) {
+        case C4A_PP_AREA_SUM:
+            *out = &k_area_sum_handle;
+            return C4A_OK;
+        case C4A_PP_AREA_ABS_SUM:
+            *out = &k_area_abs_sum_handle;
+            return C4A_OK;
+        case C4A_PP_AREA_TRAPZ:
+            *out = &k_area_trapz_handle;
+            return C4A_OK;
+        default:
+            return C4A_ERR_INVALID_ARGUMENT;
     }
 }
 
 C4A_API void c4a_pp_area_destroy(c4a_pp_area_handle_t* h) {
     if (h == nullptr) return;
     try {
-        c4a_pp_area_state_free(h->state);
+        if (h->static_handle) return;
         delete h;
     } catch (...) {
         // swallow
@@ -456,7 +502,7 @@ C4A_API c4a_status_t c4a_pp_area_transform(const c4a_pp_area_handle_t* h,
         if (xr != orr || xc != oc) {
             return C4A_ERR_SHAPE_MISMATCH;
         }
-        return c4a_pp_area_apply(h->state, xp, xr, xc, op);
+        return c4a_pp_area_apply_method(h->method, xp, xr, xc, op);
     } catch (...) {
         return C4A_ERR_INTERNAL;
     }
@@ -473,16 +519,15 @@ C4A_API c4a_status_t c4a_pp_normalize_create(c4a_pp_normalize_handle_t** out,
         return C4A_ERR_NULL_POINTER;
     }
     *out = nullptr;
+    if (feature_min == -1.0 && feature_max == 1.0) {
+        *out = &k_normalize_default_handle;
+        return C4A_OK;
+    }
     try {
-        c4a_pp_normalize_state_t* s =
-            c4a_pp_normalize_state_new(feature_min, feature_max);
-        if (s == nullptr) {
-            return C4A_ERR_OUT_OF_MEMORY;
-        }
         c4a_pp_normalize_handle_t* h =
-            new (std::nothrow) c4a_pp_normalize_handle_t{s};
+            new (std::nothrow) c4a_pp_normalize_handle_t{false, feature_min,
+                                                         feature_max};
         if (h == nullptr) {
-            c4a_pp_normalize_state_free(s);
             return C4A_ERR_OUT_OF_MEMORY;
         }
         *out = h;
@@ -495,7 +540,7 @@ C4A_API c4a_status_t c4a_pp_normalize_create(c4a_pp_normalize_handle_t** out,
 C4A_API void c4a_pp_normalize_destroy(c4a_pp_normalize_handle_t* h) {
     if (h == nullptr) return;
     try {
-        c4a_pp_normalize_state_free(h->state);
+        if (h->static_handle) return;
         delete h;
     } catch (...) {
         // swallow
@@ -520,7 +565,8 @@ C4A_API c4a_status_t c4a_pp_normalize_transform(
         if (xr != orr || xc != oc) {
             return C4A_ERR_SHAPE_MISMATCH;
         }
-        return c4a_pp_normalize_apply(h->state, xp, xr, xc, op);
+        return c4a_pp_normalize_apply_params(h->feature_min, h->feature_max,
+                                             xp, xr, xc, op);
     } catch (...) {
         return C4A_ERR_INTERNAL;
     }
@@ -535,28 +581,19 @@ C4A_API c4a_status_t c4a_pp_simple_scale_create(
     if (out == nullptr) {
         return C4A_ERR_NULL_POINTER;
     }
-    *out = nullptr;
-    try {
-        c4a_pp_simple_scale_state_t* s = c4a_pp_simple_scale_state_new();
-        if (s == nullptr) {
-            return C4A_ERR_OUT_OF_MEMORY;
-        }
-        c4a_pp_simple_scale_handle_t* h =
-            new (std::nothrow) c4a_pp_simple_scale_handle_t{s};
-        if (h == nullptr) {
-            c4a_pp_simple_scale_state_free(s);
-            return C4A_ERR_OUT_OF_MEMORY;
-        }
-        *out = h;
-        return C4A_OK;
-    } catch (...) {
-        return C4A_ERR_INTERNAL;
+    c4a_pp_simple_scale_handle_t* h = simple_scale_default_handle();
+    if (h == nullptr) {
+        *out = nullptr;
+        return C4A_ERR_OUT_OF_MEMORY;
     }
+    *out = h;
+    return C4A_OK;
 }
 
 C4A_API void c4a_pp_simple_scale_destroy(c4a_pp_simple_scale_handle_t* h) {
     if (h == nullptr) return;
     try {
+        if (h->static_handle) return;
         c4a_pp_simple_scale_state_free(h->state);
         delete h;
     } catch (...) {
@@ -574,14 +611,9 @@ C4A_API c4a_status_t c4a_pp_simple_scale_transform(
     try {
         const double* xp = nullptr;
         double*       op = nullptr;
-        std::int64_t  xr = 0, xc = 0, orr = 0, oc = 0;
-        c4a_status_t  s  = require_rowmajor_f64(X, xp, xr, xc);
+        std::int64_t  xr = 0, xc = 0;
+        c4a_status_t  s  = require_rowmajor_f64_pair(X, out, xp, op, xr, xc);
         if (s != C4A_OK) return s;
-        s = require_rowmajor_f64_mut(out, op, orr, oc);
-        if (s != C4A_OK) return s;
-        if (xr != orr || xc != oc) {
-            return C4A_ERR_SHAPE_MISMATCH;
-        }
         return c4a_pp_simple_scale_apply(h->state, xp, xr, xc, op);
     } catch (...) {
         return C4A_ERR_INTERNAL;

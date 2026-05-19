@@ -10,24 +10,17 @@
 
 #include "percent_to_fraction.h"
 
-#include <stdlib.h>
-
 struct c4a_pp_pct_to_frac_state_t {
     int _reserved;
 };
 
 c4a_pp_pct_to_frac_state_t* c4a_pp_pct_to_frac_state_new(void) {
-    c4a_pp_pct_to_frac_state_t* s =
-        (c4a_pp_pct_to_frac_state_t*)malloc(sizeof(*s));
-    if (s == NULL) {
-        return NULL;
-    }
-    s->_reserved = 0;
-    return s;
+    static c4a_pp_pct_to_frac_state_t state = {0};
+    return &state;
 }
 
 void c4a_pp_pct_to_frac_state_free(c4a_pp_pct_to_frac_state_t* state) {
-    free(state);
+    (void)state;
 }
 
 c4a_status_t c4a_pp_pct_to_frac_apply(

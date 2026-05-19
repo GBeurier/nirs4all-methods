@@ -42,6 +42,11 @@ c4a_pp_normalize_state_t* c4a_pp_normalize_state_new(double feature_min,
 
 void c4a_pp_normalize_state_free(c4a_pp_normalize_state_t* state);
 
+c4a_status_t c4a_pp_normalize_apply_params(double feature_min,
+                                           double feature_max,
+                                           const double* X, int64_t rows,
+                                           int64_t cols, double* out);
+
 c4a_status_t c4a_pp_normalize_apply(const c4a_pp_normalize_state_t* state,
                                     const double* X, int64_t rows, int64_t cols,
                                     double* out);

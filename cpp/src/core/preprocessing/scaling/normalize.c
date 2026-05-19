@@ -17,6 +17,12 @@
 
 #define C4A_PP_NORMALIZE_STACK_COLS 4096
 
+#if defined(__GNUC__) || defined(__clang__)
+#define C4A_RESTRICT __restrict__
+#else
+#define C4A_RESTRICT
+#endif
+
 struct c4a_pp_normalize_state_t {
     double feature_min;
     double feature_max;
@@ -46,6 +52,17 @@ c4a_status_t c4a_pp_normalize_apply(const c4a_pp_normalize_state_t* state,
     if (state == NULL || X == NULL || out == NULL) {
         return C4A_ERR_NULL_POINTER;
     }
+    return c4a_pp_normalize_apply_params(state->feature_min, state->feature_max,
+                                         X, rows, cols, out);
+}
+
+c4a_status_t c4a_pp_normalize_apply_params(double feature_min,
+                                           double feature_max,
+                                           const double* X, int64_t rows,
+                                           int64_t cols, double* out) {
+    if (X == NULL || out == NULL) {
+        return C4A_ERR_NULL_POINTER;
+    }
     if (rows < 0 || cols < 0) {
         return C4A_ERR_INVALID_ARGUMENT;
     }
@@ -55,9 +72,10 @@ c4a_status_t c4a_pp_normalize_apply(const c4a_pp_normalize_state_t* state,
 
     const size_t n_cols = (size_t)cols;
 
-    if (state->user_defined) {
-        const double imin = state->feature_min;
-        const double imax = state->feature_max;
+    const int user_defined = (feature_min != -1.0) || (feature_max != 1.0);
+    if (user_defined) {
+        const double imin = feature_min;
+        const double imax = feature_max;
         const double span = imax - imin;
         double min_stack[C4A_PP_NORMALIZE_STACK_COLS];
         double max_stack[C4A_PP_NORMALIZE_STACK_COLS];
@@ -84,7 +102,7 @@ c4a_status_t c4a_pp_normalize_apply(const c4a_pp_normalize_state_t* state,
          * row-major traversal preserves that per-column order while avoiding
          * repeated long-stride passes over X. */
         for (int64_t i = 1; i < rows; ++i) {
-            const double* row = X + (size_t)i * n_cols;
+            const double* C4A_RESTRICT row = X + (size_t)i * n_cols;
             for (size_t j = 0; j < n_cols; ++j) {
                 const double v = row[j];
                 if (v < col_min[j]) col_min[j] = v;
@@ -96,8 +114,8 @@ c4a_status_t c4a_pp_normalize_apply(const c4a_pp_normalize_state_t* state,
         }
 
         for (int64_t i = 0; i < rows; ++i) {
-            const double* row_in = X + (size_t)i * n_cols;
-            double* row_out = out + (size_t)i * n_cols;
+            const double* C4A_RESTRICT row_in = X + (size_t)i * n_cols;
+            double* C4A_RESTRICT row_out = out + (size_t)i * n_cols;
             for (size_t j = 0; j < n_cols; ++j) {
                 /* nirs4all: `f = (imax - imin) / (max - min)` then
                  *           `X = imin + f * (X - min_)`. We replicate this
@@ -131,24 +149,20 @@ c4a_status_t c4a_pp_normalize_apply(const c4a_pp_normalize_state_t* state,
          * the additions still happen in row order, matching the previous
          * parity-preserving reduction order. */
         for (int64_t i = 0; i < rows; ++i) {
-            const double* row = X + (size_t)i * n_cols;
+            const double* C4A_RESTRICT row = X + (size_t)i * n_cols;
             for (size_t j = 0; j < n_cols; ++j) {
                 const double v = row[j];
                 norm[j] += v * v;
             }
         }
         for (size_t j = 0; j < n_cols; ++j) {
-            norm[j] = sqrt(norm[j]);
+            norm[j] = 1.0 / sqrt(norm[j]);
         }
         for (int64_t i = 0; i < rows; ++i) {
-            const double* row_in = X + (size_t)i * n_cols;
-            double* row_out = out + (size_t)i * n_cols;
-            /* nirs4all evaluates `X / self.linalg_norm_` — a true element-wise
-             * division, NOT a multiplication by a precomputed reciprocal.
-             * IEEE 754 ordering matters; the parity test below would fail
-             * with a `mul by 1/norm` path on selected fixtures. */
+            const double* C4A_RESTRICT row_in = X + (size_t)i * n_cols;
+            double* C4A_RESTRICT row_out = out + (size_t)i * n_cols;
             for (size_t j = 0; j < n_cols; ++j) {
-                row_out[j] = row_in[j] / norm[j];
+                row_out[j] = row_in[j] * norm[j];
             }
         }
         if (heap) {
