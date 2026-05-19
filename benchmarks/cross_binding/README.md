@@ -85,6 +85,12 @@ Use them for targeted gate fixes such as a corrected oracle snapshot or a
 binding adapter repair, and regenerate the full matrix when publishing a
 new benchmark baseline.
 
+Refresh rows used for the dashboard must be produced by the current
+`warmup-v2` timing schema. Do not keep old `n_runs=1` cold-start refresh
+rows in these files: they measure import/process setup cost and can make
+fast C++ cells look hundreds of milliseconds slower than the actual warm
+fit/predict path.
+
 ## Result semantics
 
 - `ok=False` with a `reason` means no timing/prediction was produced for

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-19 00:12 UTC",
+  "generated_at": "2026-05-19 01:57 UTC",
   "host": {
     "os": "Linux 6.6.87.2-microsoft-standard-WSL2 (x86_64)",
     "python": "3.13.13",
@@ -1611,8 +1611,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 260.718,
-          "fmt": "260.7 ms",
+          "ms": 36.776,
+          "fmt": "36.8 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -1621,8 +1621,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 220.134,
-          "fmt": "220.1 ms",
+          "ms": 42.76,
+          "fmt": "42.8 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -1631,8 +1631,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 217.743,
-          "fmt": "217.7 ms",
+          "ms": 33.476,
+          "fmt": "33.5 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -1641,8 +1641,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 221.31,
-          "fmt": "221.3 ms",
+          "ms": 41.289,
+          "fmt": "41.3 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -1651,8 +1651,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 242.101,
-          "fmt": "242.1 ms",
+          "ms": 36.718,
+          "fmt": "36.7 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -1661,8 +1661,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 229.469,
-          "fmt": "229.5 ms",
+          "ms": 36.255,
+          "fmt": "36.3 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -1671,8 +1671,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 59.356,
-          "fmt": "59.4 ms",
+          "ms": 36.542,
+          "fmt": "36.5 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -1681,8 +1681,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 89.0,
-          "fmt": "89.0 ms",
+          "ms": 48.0,
+          "fmt": "48.0 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -1699,8 +1699,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 49.796,
-          "fmt": "49.8 ms",
+          "ms": 35.855,
+          "fmt": "35.9 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -1765,8 +1765,8 @@
           "reference_parity": "exact",
           "binding_parity": "drift",
           "ok": true,
-          "ms": 384.381,
-          "fmt": "384.4 ms",
+          "ms": 340.451,
+          "fmt": "340.5 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external",
           "is_canonical_reference": true
@@ -1778,8 +1778,8 @@
           "ref_of": "plsVarSel",
           "ref_lang": "R",
           "is_canonical_reference": true,
-          "ms": 384.381,
-          "fmt": "384.4 ms",
+          "ms": 340.451,
+          "fmt": "340.5 ms",
           "reference_kind": "external"
         }
       }
@@ -1979,7 +1979,7 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.049,
+          "ms": 1.048,
           "fmt": "1.05 ms",
           "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
@@ -1989,8 +1989,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.042,
-          "fmt": "1.04 ms",
+          "ms": 1.035,
+          "fmt": "1.03 ms",
           "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
@@ -1999,8 +1999,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.067,
-          "fmt": "1.07 ms",
+          "ms": 1.086,
+          "fmt": "1.09 ms",
           "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
@@ -2009,8 +2009,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.053,
-          "fmt": "1.05 ms",
+          "ms": 1.008,
+          "fmt": "1.01 ms",
           "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
@@ -2019,8 +2019,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.04,
-          "fmt": "1.04 ms",
+          "ms": 1.026,
+          "fmt": "1.03 ms",
           "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
@@ -2029,8 +2029,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.028,
-          "fmt": "1.03 ms",
+          "ms": 1.072,
+          "fmt": "1.07 ms",
           "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
@@ -2039,8 +2039,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.274,
-          "fmt": "1.27 ms",
+          "ms": 1.187,
+          "fmt": "1.19 ms",
           "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
@@ -2049,9 +2049,9 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 32.0,
-          "fmt": "32.0 ms",
-          "reference_parity_tolerance": 20.0,
+          "ms": 2.0,
+          "fmt": "2.00 ms",
+          "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -2059,9 +2059,9 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 22.0,
-          "fmt": "22.0 ms",
-          "reference_parity_tolerance": 20.0,
+          "ms": 6.0,
+          "fmt": "6.00 ms",
+          "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
         "pls4all.matlab": {
@@ -2069,9 +2069,9 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.444,
-          "fmt": "3.44 ms",
-          "reference_parity_tolerance": 20.0,
+          "ms": 1.587,
+          "fmt": "1.59 ms",
+          "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -2079,9 +2079,9 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 9.783,
-          "fmt": "9.78 ms",
-          "reference_parity_tolerance": 20.0,
+          "ms": 3.746,
+          "fmt": "3.75 ms",
+          "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
         "sklearn": {
@@ -2137,8 +2137,8 @@
           "reference_parity": "exact",
           "binding_parity": "drift",
           "ok": true,
-          "ms": 547.973,
-          "fmt": "548.0 ms",
+          "ms": 534.254,
+          "fmt": "534.3 ms",
           "reference_parity_tolerance": 0.2,
           "reference_kind": "external",
           "is_canonical_reference": true
@@ -2150,8 +2150,8 @@
           "ref_of": "JICO",
           "ref_lang": "R",
           "is_canonical_reference": true,
-          "ms": 547.973,
-          "fmt": "548.0 ms",
+          "ms": 534.254,
+          "fmt": "534.3 ms",
           "reference_kind": "external"
         }
       }
@@ -3775,8 +3775,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 179.72,
-          "fmt": "179.7 ms",
+          "ms": 1.519,
+          "fmt": "1.52 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -3785,8 +3785,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 172.714,
-          "fmt": "172.7 ms",
+          "ms": 1.428,
+          "fmt": "1.43 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -3795,8 +3795,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 198.635,
-          "fmt": "198.6 ms",
+          "ms": 1.523,
+          "fmt": "1.52 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -3805,8 +3805,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 172.98,
-          "fmt": "173.0 ms",
+          "ms": 1.569,
+          "fmt": "1.57 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -3815,8 +3815,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 185.64,
-          "fmt": "185.6 ms",
+          "ms": 1.357,
+          "fmt": "1.36 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -3825,8 +3825,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 211.195,
-          "fmt": "211.2 ms",
+          "ms": 1.497,
+          "fmt": "1.50 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -3835,8 +3835,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.429,
-          "fmt": "2.43 ms",
+          "ms": 1.484,
+          "fmt": "1.48 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -3845,8 +3845,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 33.0,
-          "fmt": "33.0 ms",
+          "ms": 4.0,
+          "fmt": "4.00 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -3863,8 +3863,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.781,
-          "fmt": "3.78 ms",
+          "ms": 1.962,
+          "fmt": "1.96 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -3929,8 +3929,8 @@
           "reference_parity": "exact",
           "binding_parity": "drift",
           "ok": true,
-          "ms": 646.595,
-          "fmt": "646.6 ms",
+          "ms": 592.921,
+          "fmt": "592.9 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external",
           "is_canonical_reference": true
@@ -3942,8 +3942,8 @@
           "ref_of": "mdatools",
           "ref_lang": "R",
           "is_canonical_reference": true,
-          "ms": 646.595,
-          "fmt": "646.6 ms",
+          "ms": 592.921,
+          "fmt": "592.9 ms",
           "reference_kind": "external"
         }
       }
@@ -4319,8 +4319,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 359.856,
-          "fmt": "359.9 ms",
+          "ms": 154.473,
+          "fmt": "154.5 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -4329,8 +4329,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 374.209,
-          "fmt": "374.2 ms",
+          "ms": 192.016,
+          "fmt": "192.0 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -4339,8 +4339,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 356.211,
-          "fmt": "356.2 ms",
+          "ms": 151.145,
+          "fmt": "151.1 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -4349,8 +4349,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 366.856,
-          "fmt": "366.9 ms",
+          "ms": 179.542,
+          "fmt": "179.5 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -4359,8 +4359,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 334.199,
-          "fmt": "334.2 ms",
+          "ms": 157.982,
+          "fmt": "158.0 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -4369,8 +4369,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 346.703,
-          "fmt": "346.7 ms",
+          "ms": 157.853,
+          "fmt": "157.9 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -4379,8 +4379,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 202.771,
-          "fmt": "202.8 ms",
+          "ms": 155.269,
+          "fmt": "155.3 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -4389,8 +4389,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 230.0,
-          "fmt": "230.0 ms",
+          "ms": 195.0,
+          "fmt": "195.0 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -4407,8 +4407,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 158.623,
-          "fmt": "158.6 ms",
+          "ms": 159.444,
+          "fmt": "159.4 ms",
           "reference_parity_tolerance": 1.0,
           "reference_kind": "external"
         },
@@ -4466,8 +4466,8 @@
           "binding_parity": "drift",
           "ok": true,
           "reference_parity_tolerance": 1.0,
-          "ms": 10334.318,
-          "fmt": "10.3 s",
+          "ms": 10555.415,
+          "fmt": "10.6 s",
           "is_canonical_reference": true,
           "reference_kind": "external"
         },
@@ -4478,8 +4478,8 @@
           "ref_of": "plsregress",
           "ref_lang": "MATLAB/Octave",
           "is_canonical_reference": true,
-          "ms": 10334.318,
-          "fmt": "10.3 s",
+          "ms": 10555.415,
+          "fmt": "10.6 s",
           "reference_kind": "external"
         }
       }
@@ -6299,8 +6299,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 180.048,
-          "fmt": "180.0 ms",
+          "ms": 1.827,
+          "fmt": "1.83 ms",
           "reference_parity_tolerance": 1e-06,
           "reference_kind": "external"
         },
@@ -6309,8 +6309,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 164.212,
-          "fmt": "164.2 ms",
+          "ms": 1.787,
+          "fmt": "1.79 ms",
           "reference_parity_tolerance": 1e-06,
           "reference_kind": "external"
         },
@@ -6319,8 +6319,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 198.078,
-          "fmt": "198.1 ms",
+          "ms": 1.769,
+          "fmt": "1.77 ms",
           "reference_parity_tolerance": 1e-06,
           "reference_kind": "external"
         },
@@ -6329,8 +6329,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 184.126,
-          "fmt": "184.1 ms",
+          "ms": 1.775,
+          "fmt": "1.78 ms",
           "reference_parity_tolerance": 1e-06,
           "reference_kind": "external"
         },
@@ -6339,8 +6339,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 175.003,
-          "fmt": "175.0 ms",
+          "ms": 1.758,
+          "fmt": "1.76 ms",
           "reference_parity_tolerance": 1e-06,
           "reference_kind": "external"
         },
@@ -6349,8 +6349,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 202.071,
-          "fmt": "202.1 ms",
+          "ms": 1.999,
+          "fmt": "2.00 ms",
           "reference_parity_tolerance": 1e-06,
           "reference_kind": "external"
         },
@@ -6359,8 +6359,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.027,
-          "fmt": "3.03 ms",
+          "ms": 2.145,
+          "fmt": "2.14 ms",
           "reference_parity_tolerance": 1e-06,
           "reference_kind": "external"
         },
@@ -6369,8 +6369,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 51.0,
-          "fmt": "51.0 ms",
+          "ms": 20.0,
+          "fmt": "20.0 ms",
           "reference_parity_tolerance": 1e-06,
           "reference_kind": "external"
         },
@@ -6379,8 +6379,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 36.0,
-          "fmt": "36.0 ms",
+          "ms": 20.0,
+          "fmt": "20.0 ms",
           "reference_parity_tolerance": 1e-06,
           "reference_kind": "external"
         },
@@ -6389,18 +6389,20 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 32.562,
-          "fmt": "32.6 ms",
+          "ms": 28.188,
+          "fmt": "28.2 ms",
           "reference_parity_tolerance": 1e-06,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
-          "parity": "not_available",
-          "reference_parity": "not_available",
-          "binding_parity": "not_available",
-          "ok": false,
+          "parity": "exact",
+          "reference_parity": "exact",
+          "binding_parity": "exact",
+          "ok": true,
+          "ms": 30.653,
+          "fmt": "30.7 ms",
           "reference_parity_tolerance": 1e-06,
-          "reason": "error: matlab_tier2: no pls4all.fit classdef entry for 'pcr'"
+          "reference_kind": "external"
         },
         "sklearn": {
           "parity": "drift",
@@ -6659,8 +6661,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.025,
-          "fmt": "1.03 ms",
+          "ms": 0.958,
+          "fmt": "0.96 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6669,8 +6671,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.018,
-          "fmt": "1.02 ms",
+          "ms": 0.983,
+          "fmt": "0.98 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6689,8 +6691,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 0.996,
-          "fmt": "1.00 ms",
+          "ms": 1.024,
+          "fmt": "1.02 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6699,8 +6701,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.009,
-          "fmt": "1.01 ms",
+          "ms": 1.019,
+          "fmt": "1.02 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6709,8 +6711,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.249,
-          "fmt": "1.25 ms",
+          "ms": 0.973,
+          "fmt": "0.97 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6719,8 +6721,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.192,
-          "fmt": "1.19 ms",
+          "ms": 1.224,
+          "fmt": "1.22 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6729,8 +6731,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 31.0,
-          "fmt": "31.0 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6739,8 +6741,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 22.0,
-          "fmt": "22.0 ms",
+          "ms": 6.0,
+          "fmt": "6.00 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6749,8 +6751,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.744,
-          "fmt": "3.74 ms",
+          "ms": 1.56,
+          "fmt": "1.56 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6759,8 +6761,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 9.889,
-          "fmt": "9.89 ms",
+          "ms": 3.712,
+          "fmt": "3.71 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -8451,8 +8453,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 190.402,
-          "fmt": "190.4 ms",
+          "ms": 4.802,
+          "fmt": "4.80 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -8461,8 +8463,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 187.546,
-          "fmt": "187.5 ms",
+          "ms": 5.799,
+          "fmt": "5.80 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -8471,8 +8473,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 183.306,
-          "fmt": "183.3 ms",
+          "ms": 4.619,
+          "fmt": "4.62 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -8481,8 +8483,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 192.045,
-          "fmt": "192.0 ms",
+          "ms": 5.867,
+          "fmt": "5.87 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -8491,8 +8493,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 180.055,
-          "fmt": "180.1 ms",
+          "ms": 4.873,
+          "fmt": "4.87 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -8501,8 +8503,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 193.494,
-          "fmt": "193.5 ms",
+          "ms": 4.819,
+          "fmt": "4.82 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -8511,8 +8513,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 7.076,
-          "fmt": "7.08 ms",
+          "ms": 5.135,
+          "fmt": "5.14 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -8521,8 +8523,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 38.0,
-          "fmt": "38.0 ms",
+          "ms": 7.0,
+          "fmt": "7.00 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -8539,8 +8541,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 7.288,
-          "fmt": "7.29 ms",
+          "ms": 5.448,
+          "fmt": "5.45 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external"
         },
@@ -8605,8 +8607,8 @@
           "reference_parity": "exact",
           "binding_parity": "drift",
           "ok": true,
-          "ms": 600.734,
-          "fmt": "600.7 ms",
+          "ms": 174.601,
+          "fmt": "174.6 ms",
           "reference_parity_tolerance": 1.4,
           "reference_kind": "external",
           "is_canonical_reference": true
@@ -8618,8 +8620,8 @@
           "ref_of": "pyswarms",
           "ref_lang": "Python",
           "is_canonical_reference": true,
-          "ms": 600.734,
-          "fmt": "600.7 ms",
+          "ms": 174.601,
+          "fmt": "174.6 ms",
           "reference_kind": "external"
         }
       }
@@ -11893,8 +11895,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 182.664,
-          "fmt": "182.7 ms",
+          "ms": 1.101,
+          "fmt": "1.10 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
@@ -11903,8 +11905,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 166.859,
-          "fmt": "166.9 ms",
+          "ms": 1.067,
+          "fmt": "1.07 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
@@ -11913,8 +11915,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 199.636,
-          "fmt": "199.6 ms",
+          "ms": 1.067,
+          "fmt": "1.07 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
@@ -11923,8 +11925,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 161.645,
-          "fmt": "161.6 ms",
+          "ms": 1.111,
+          "fmt": "1.11 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
@@ -11933,8 +11935,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 194.678,
-          "fmt": "194.7 ms",
+          "ms": 1.106,
+          "fmt": "1.11 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
@@ -11943,8 +11945,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 192.586,
-          "fmt": "192.6 ms",
+          "ms": 1.188,
+          "fmt": "1.19 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
@@ -11953,8 +11955,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.172,
-          "fmt": "2.17 ms",
+          "ms": 1.299,
+          "fmt": "1.30 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
@@ -11963,8 +11965,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 32.0,
-          "fmt": "32.0 ms",
+          "ms": 3.0,
+          "fmt": "3.00 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
@@ -11981,8 +11983,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 3.452,
-          "fmt": "3.45 ms",
+          "ms": 1.671,
+          "fmt": "1.67 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external"
         },
@@ -12047,8 +12049,8 @@
           "reference_parity": "exact",
           "binding_parity": "drift",
           "ok": true,
-          "ms": 415.698,
-          "fmt": "415.7 ms",
+          "ms": 362.617,
+          "fmt": "362.6 ms",
           "reference_parity_tolerance": 0.7,
           "reference_kind": "external",
           "is_canonical_reference": true
@@ -12060,8 +12062,8 @@
           "ref_of": "plsVarSel",
           "ref_lang": "R",
           "is_canonical_reference": true,
-          "ms": 415.698,
-          "fmt": "415.7 ms",
+          "ms": 362.617,
+          "fmt": "362.6 ms",
           "reference_kind": "external"
         }
       }
@@ -12793,8 +12795,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 199.977,
-          "fmt": "200.0 ms",
+          "ms": 16.245,
+          "fmt": "16.2 ms",
           "reference_parity_tolerance": 2.5,
           "reference_kind": "external"
         },
@@ -12803,8 +12805,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 187.819,
-          "fmt": "187.8 ms",
+          "ms": 18.877,
+          "fmt": "18.9 ms",
           "reference_parity_tolerance": 2.5,
           "reference_kind": "external"
         },
@@ -12813,8 +12815,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 216.313,
-          "fmt": "216.3 ms",
+          "ms": 15.513,
+          "fmt": "15.5 ms",
           "reference_parity_tolerance": 2.5,
           "reference_kind": "external"
         },
@@ -12823,8 +12825,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 175.147,
-          "fmt": "175.1 ms",
+          "ms": 17.527,
+          "fmt": "17.5 ms",
           "reference_parity_tolerance": 2.5,
           "reference_kind": "external"
         },
@@ -12833,8 +12835,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 200.265,
-          "fmt": "200.3 ms",
+          "ms": 15.851,
+          "fmt": "15.9 ms",
           "reference_parity_tolerance": 2.5,
           "reference_kind": "external"
         },
@@ -12843,8 +12845,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 235.306,
-          "fmt": "235.3 ms",
+          "ms": 15.787,
+          "fmt": "15.8 ms",
           "reference_parity_tolerance": 2.5,
           "reference_kind": "external"
         },
@@ -12853,8 +12855,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 22.27,
-          "fmt": "22.3 ms",
+          "ms": 16.171,
+          "fmt": "16.2 ms",
           "reference_parity_tolerance": 2.5,
           "reference_kind": "external"
         },
@@ -12863,8 +12865,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 51.0,
-          "fmt": "51.0 ms",
+          "ms": 21.0,
+          "fmt": "21.0 ms",
           "reference_parity_tolerance": 2.5,
           "reference_kind": "external"
         },
@@ -12881,8 +12883,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 17.938,
-          "fmt": "17.9 ms",
+          "ms": 16.796,
+          "fmt": "16.8 ms",
           "reference_parity_tolerance": 2.5,
           "reference_kind": "external"
         },
@@ -12947,8 +12949,8 @@
           "reference_parity": "exact",
           "binding_parity": "drift",
           "ok": true,
-          "ms": 2173.812,
-          "fmt": "2.2 s",
+          "ms": 1649.722,
+          "fmt": "1.6 s",
           "reference_parity_tolerance": 2.5,
           "reference_kind": "external",
           "is_canonical_reference": true
@@ -12960,8 +12962,8 @@
           "ref_of": "auswahl",
           "ref_lang": "Python",
           "is_canonical_reference": true,
-          "ms": 2173.812,
-          "fmt": "2.2 s",
+          "ms": 1649.722,
+          "fmt": "1.6 s",
           "reference_kind": "external"
         }
       }
@@ -13523,10 +13525,10 @@
     "pls4all.cpp.blas+omp": "language=C++ (via ctypes bridge) (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1; libp4a=0.97.0+abi.1.16.0; numpy=2.3.5; registry_method=pls; timing_schema=warmup-v2",
     "pls4all.python": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1; pls4all=0.97.0; numpy=2.3.5; registry_method=pls; timing_schema=warmup-v2",
     "pls4all.sklearn": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; pls4all=0.97.0; numpy=2.3.5; sklearn_class=PLSRegression; timing_schema=warmup-v2",
-    "pls4all.R": "language=R 4.3.3; pls4all=0.97.0; registry_method=pls; blas=linked-BLAS",
-    "pls4all.R.formula": "language=R 4.3.3; pls4all=0.97.0; registry_method=pls; blas=linked-BLAS",
-    "pls4all.matlab": "language=Octave 10.3.0; pls4all=from libp4a-linked MEX; registry_method=pls; blas=linked-BLAS",
-    "pls4all.matlab.classdef": "language=Octave 10.3.0; pls4all=from libp4a-linked MEX + classdefs; registry_method=pls; blas=linked-BLAS",
+    "pls4all.R": "language=R 4.3.3; pls4all=0.97.0; registry_method=pls; blas=linked-BLAS; timing_schema=warmup-v2",
+    "pls4all.R.formula": "language=R 4.3.3; pls4all=0.97.0; registry_method=pls; blas=linked-BLAS; timing_schema=warmup-v2",
+    "pls4all.matlab": "language=Octave 10.3.0; pls4all=from libp4a-linked MEX; registry_method=pls; blas=linked-BLAS; timing_schema=warmup-v2",
+    "pls4all.matlab.classdef": "language=Octave 10.3.0; pls4all=from libp4a-linked MEX + classdefs; registry_method=pls; blas=linked-BLAS; timing_schema=warmup-v2",
     "sklearn": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; sklearn=1.8.0; numpy=2.3.5; timing_schema=warmup-v2",
     "ikpls": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; ikpls=4.0.1.post1; numpy=2.3.5",
     "pls": "language=R 4.3.3; pls=2.8.5",
@@ -13543,8 +13545,8 @@
     "mdatools": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_mdatools; reference_library=mdatools; reference_version=0.15.0",
     "multiblock": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_multiblock; reference_library=multiblock; reference_version=0.8.10",
     "onpls": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=python_onpls; reference_library=OnPLS; reference_version=github tomlof/OnPLS",
-    "auswahl": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_auswahl; reference_library=auswahl; reference_version=0.9.0",
-    "pyswarms": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_pyswarms; reference_library=pyswarms; reference_version=1.3.0",
+    "auswahl": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_auswahl; reference_library=auswahl; reference_version=0.9.0; timing_schema=warmup-v2",
+    "pyswarms": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_pyswarms; reference_library=pyswarms; reference_version=1.3.0; timing_schema=warmup-v2",
     "mboost": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_mboost; reference_library=mboost; reference_version=2.9-11",
     "plsRglm": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_plsrglm; reference_library=plsRglm; reference_version=1.5.1",
     "plsRcox": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_plsrcox; reference_library=plsRcox; reference_version=1.8.2",
@@ -13785,7 +13787,7 @@
       1
     ],
     "rows": 71,
-    "cells": 706,
-    "ok": 648
+    "cells": 707,
+    "ok": 649
   }
 }

@@ -248,6 +248,10 @@ fit_predict <- function(seed) {
             if (length(idx) > 0L) mask[1, idx] <- 1.0
             return(mask)
         }
+        # Empty selector outputs are represented by some R dispatch paths as
+        # an empty result list. For registry mask cells that is a valid
+        # all-zero mask, not a backend failure.
+        return(matrix(0.0, nrow = 1, ncol = a$p))
     }
     if (pkey == "decision_scores" && !is.null(res$decision_scores)) {
         return(res$decision_scores)
