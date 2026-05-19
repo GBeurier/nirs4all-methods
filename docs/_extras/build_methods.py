@@ -2017,33 +2017,45 @@ def _row_worst_diff(cells_in_row, cid):
     return basis, worst_str
 
 
-# Verdict severity ladder — higher rank wins so that one bad cell in a
-# multi-size row promotes the row's badge to its worst outcome. The
-# previous code picked the first non-None cell's verdict and could
-# silently hide a downstream divergence.
-_VERDICT_RANK = {
-    "exact":         0,
-    "drift":         1,
-    "not_run":       2,
-    "not_available": 3,
-    "error":         4,
-    "divergent":     5,
+# Verdict severity ladder for REAL outcomes only (test ran, has a
+# result). `not_run` and `not_available` are absence-of-data, not
+# failure modes — they must NOT outrank an "exact" pass on another
+# size for the same row. Otherwise a row that passed at 100×50 and
+# wasn't measured at 100×500 would render as "not run", erasing the
+# real verdict.
+_REAL_VERDICT_RANK = {
+    "exact":      0,
+    "drift":      1,
+    "error":      4,
+    "divergent":  5,
 }
 
 
 def _row_worst_verdict(cells_in_row, cid):
-    """Return the worst-severity verdict across visible sizes."""
-    worst_v = "not_available"
-    worst_rank = -1
+    """Worst-severity verdict across visible sizes.
+
+    Prefers the worst REAL outcome (exact/drift/divergent/error) so a
+    row with any real result is judged by its weakest cell. Falls back
+    to the first cell's absence-of-data verdict only when no size has
+    a real outcome.
+    """
+    real_worst = None
+    real_rank = -1
+    fallback = "not_available"
+    fallback_set = False
     for r in cells_in_row:
         if r is None:
             continue
         v = verdict(r, cid)
-        rank = _VERDICT_RANK.get(v, 0)
-        if rank > worst_rank:
-            worst_rank = rank
-            worst_v = v
-    return worst_v
+        if not fallback_set:
+            fallback = v
+            fallback_set = True
+        if v in _REAL_VERDICT_RANK:
+            rk = _REAL_VERDICT_RANK[v]
+            if rk > real_rank:
+                real_rank = rk
+                real_worst = v
+    return real_worst if real_worst is not None else fallback
 
 
 def _parity_badge_html(verdict_, basis, diff, quality, is_self):
@@ -2282,7 +2294,7 @@ def parity_table(method: str, rows: list[dict],
                 f"this method (see the MethodSpec notes); the "
                 f"`rmse_rel_tol ≤ {method_tol:.0e}` budget is set "
                 f"wide on purpose. Treat ~ shape as *“we ran both, "
-                f"both finished”*, not as agreement.",
+                f"both finished”*, not as numerical agreement.",
             ]
     if truth_sources:
         legend_lines += [
@@ -2339,16 +2351,19 @@ def parity_table(method: str, rows: list[dict],
         ]
 
         # Pre-scan rows so we can drop backends that don't implement
-        # this method (verdict == "not_available" across every size).
-        # Showing those as `⊘ —` is visual noise — they are not part
-        # of the parity comparison, they're just libraries that don't
-        # cover the algorithm.
+        # this method (or that simply didn't run any size). A row is
+        # "present" only when at least one of its visible cells has a
+        # REAL outcome — exact/drift/divergent/error. Cells whose
+        # verdict is `not_available` (library doesn't ship the method)
+        # or `not_run` (size deferred / timeout / not scheduled) are
+        # absence-of-data, not evidence of presence.
+        _PRESENCE_VERDICTS = {"exact", "drift", "divergent", "error"}
         def _row_is_present(cid: str) -> bool:
             for (n, p_) in sizes:
                 r = cells.get((cid, n, p_, t))
                 if r is None:
                     continue
-                if _row_verdict(r, cid) != "not_available":
+                if _row_verdict(r, cid) in _PRESENCE_VERDICTS:
                     return True
             return False
 

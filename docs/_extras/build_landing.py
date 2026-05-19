@@ -398,8 +398,10 @@ def divergence_fields(row: dict) -> dict:
             "divergence_quality": "binding",
         }
     if kind in ("pls4all_core", "external"):
-        diff = _float_or_none(row.get("reference_parity_rmse_rel")
-                              or row.get("reference_parity_rmse_abs"))
+        # rmse_rel only — the tooltip says "rmse_rel" so falling back to
+        # rmse_abs (different units, very different magnitude scale)
+        # would be a silent lie about what the number means.
+        diff = _float_or_none(row.get("reference_parity_rmse_rel"))
         tol = reference_tolerance(row)
         return {
             "divergence": diff,
@@ -907,11 +909,14 @@ def build_payload(results_dir: Path) -> dict:
                     # (e.g. ref_python_scikit_learn → sklearn), the
                     # divergence value the user wants is the ref-gate
                     # self-comparison from the alias row, not the legacy
-                    # row's binding diff.
-                    for k in ("divergence", "divergence_fmt",
-                              "divergence_basis", "divergence_quality"):
-                        if k in cell:
-                            existing[k] = cell[k]
+                    # row's binding diff. Only copy if the alias actually
+                    # ran — a failed canonical ref must not falsely tag
+                    # the merged cell as "source" (basis=self).
+                    if incoming_ok:
+                        for k in ("divergence", "divergence_fmt",
+                                  "divergence_basis", "divergence_quality"):
+                            if k in cell:
+                                existing[k] = cell[k]
                 if cell.get("reference_kind") and not existing.get("reference_kind"):
                     existing["reference_kind"] = cell["reference_kind"]
                 if cell.get("reference_parity_tolerance") is not None:

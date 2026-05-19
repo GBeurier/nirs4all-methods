@@ -913,6 +913,12 @@
     .cell-value.div-qualitative { color: var(--fg-2);     font-weight: 500; font-family: var(--mono); }
     .cell-value.div-unknown     { color: var(--fg-3);     font-family: var(--mono); font-style: italic; }
     .cell-value.div-self        { color: var(--fg-2);     font-style: italic; }
+    /* failure verdicts override the tolerance-band tint so a
+       drift/divergent/error cell never reads as a calm "qualitative
+       pass" even when the method's gate is qualitative. */
+    .cell-value.div-drift       { color: var(--amber);    font-weight: 600; font-family: var(--mono); }
+    .cell-value.div-divergent,
+    .cell-value.div-error       { color: var(--crimson);  font-weight: 700; font-family: var(--mono); }
 
     /* density: compact — slightly tighter sticky widths */
     body.density-compact {
@@ -1940,13 +1946,21 @@ function sortRows(rows, cols) {
     // Cell-value sort: empty / non-numeric cells ALWAYS sink to the
     // bottom (regardless of direction). Direction only flips the order
     // among numerically-valid cells.
+    //
+    // The sort key follows the active viz: divergence mode sorts by δ
+    // (absolute value, so 0 is the smallest), every other mode sorts
+    // by raw ms. Users expect the value they're looking at to be the
+    // one that orders the rows.
     const ca = a.cells[col]; const cb = b.cells[col];
-    const aValid = ca && Number.isFinite(ca.ms);
-    const bValid = cb && Number.isFinite(cb.ms);
-    if (!aValid && !bValid) return 0;
-    if (!aValid) return 1;
-    if (!bValid) return -1;
-    return dir * (ca.ms - cb.ms);
+    const sortBy = state.viz === 'divergence' ? 'divergence' : 'ms';
+    const aRaw = ca ? ca[sortBy] : null;
+    const bRaw = cb ? cb[sortBy] : null;
+    const aVal = Number.isFinite(aRaw) ? Math.abs(aRaw) : null;
+    const bVal = Number.isFinite(bRaw) ? Math.abs(bRaw) : null;
+    if (aVal === null && bVal === null) return 0;
+    if (aVal === null) return 1;
+    if (bVal === null) return -1;
+    return dir * (aVal - bVal);
   });
   return r;
 }
@@ -2210,7 +2224,7 @@ function renderTable() {
   const speedupMode = state.viz === 'speedup' || state.viz === 'avg-speedup';
   const durationPctMode = state.viz === 'duration-pct'
                         || state.viz === 'avg-duration-pct';
-  // Both modes use NATIVE_COL_ID (pls4all.cpp.ref) as their baseline.
+  // Both modes use NATIVE_COL_ID (pls4all.cpp.native) as their baseline.
   const baselineId = (speedupMode || durationPctMode) && NATIVE_COL_ID
                       ? NATIVE_COL_ID : null;
   if (!rows.length) {
@@ -2282,22 +2296,41 @@ function renderTable() {
         }
         // build value (wrapped in .cell-value so per-language tint can target text only)
         let display;
-        const fastCls = (canHighlight && id === fastestId) ? 'cell-fastest' : '';
+        const baselineDrivenViz = speedupMode || durationPctMode
+                                || state.viz === 'divergence';
+        // For baseline-driven viz modes (speedup/duration-%/divergence)
+        // the cell's value has its OWN colour meaning — don't layer
+        // fastest/score-bucket tints on top (they'd override our intent
+        // via higher-specificity .cell-value.score-* rules).
+        const fastCls  = (!baselineDrivenViz && canHighlight && id === fastestId)
+                          ? 'cell-fastest' : '';
         const langSlug = meta ? colLangSlug(meta) : '';
         const langWinner = langSlug ? langWinners[langSlug] : null;
-        const scoreCls = scoreClass(id, c.ms, fastestId, langWinner);
+        const scoreCls = baselineDrivenViz
+                          ? ''
+                          : scoreClass(id, c.ms, fastestId, langWinner);
         if (state.viz === 'divergence') {
           // Divergence-δ mode: show the binding diff vs C++ baseline
           // for pls4all bindings, the reference-gate rmse_rel vs the
           // MethodSpec reference for externals/pls4all_core, and
           // "source" for the row's canonical reference.
-          const dq = c.divergence_quality || 'unknown';
+          //
+          // A failure verdict on the active gate must override the
+          // tolerance-band class. Otherwise a drift/divergent/error
+          // qualitative cell would render in calm grey ("~ shape" band)
+          // when it should clearly look bad.
+          let dq = c.divergence_quality || 'unknown';
           const dFmt = c.divergence_fmt || '—';
           const basis = c.divergence_basis || 'unknown';
+          const cellVerdict = effectiveParity(c, meta);
+          if (cellVerdict === 'divergent' || cellVerdict === 'error'
+              || cellVerdict === 'drift') {
+            dq = cellVerdict;
+          }
           const divTitle = basis === 'binding'
             ? `binding diff vs C++ baseline (gate 1): ${dFmt}`
             : basis === 'reference'
-              ? `reference-gate rmse_rel vs ${c.reference_kind || 'external ref'} (gate 2, ${dq}): ${dFmt}`
+              ? `reference-gate rmse_rel vs ${c.reference_kind || 'external ref'} (gate 2, ${c.divergence_quality || dq}): ${dFmt}`
               : basis === 'self'
                 ? `this row is the canonical reference for this method`
                 : 'no divergence recorded';
@@ -2340,7 +2373,14 @@ function renderTable() {
         const markerTitle = usesRefGate
           ? `reference parity vs canonical external reference (${c.reference_kind || 'external'})`
           : 'binding parity vs cpp';
-        const parityHtml = c.is_canonical_reference
+        // In divergence-δ mode the cell value already encodes the gate
+        // verdict (colour + numeric). Adding the green/amber/red glyph
+        // next to it competes with that signal — suppress it.
+        const parityHtml = state.viz === 'divergence'
+          ? (c.is_canonical_reference
+              ? `<span class="reference-mark" title="canonical reference">${REFERENCE_ICON}</span>`
+              : '')
+          : c.is_canonical_reference
           ? `<span class="reference-mark" title="canonical reference">${REFERENCE_ICON}</span>`
           : markerParity !== 'not_available'
           ? `<span class="parity p-${markerParity}" title="${escAttr(markerTitle)}">${PARITY_ICON[markerParity] || ''}</span>`
