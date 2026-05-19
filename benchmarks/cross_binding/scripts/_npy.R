@@ -121,3 +121,38 @@ pls4all_bench_parse_args <- function() {
         pred_path  = argv[[8]]
     )
 }
+
+pls4all_bench_params <- function() {
+    raw <- Sys.getenv("BENCH_R_PARAMS_JSON", unset = "")
+    if (!nzchar(raw)) {
+        return(list())
+    }
+    suppressMessages(library(jsonlite))
+    fromJSON(raw, simplifyVector = FALSE)
+}
+
+pls4all_bench_param_value <- function(params, name, default) {
+    value <- params[[name]]
+    if (is.null(value)) {
+        return(default)
+    }
+    unlist(value, use.names = FALSE)[[1]]
+}
+
+pls4all_bench_param_int <- function(params, name, default) {
+    as.integer(pls4all_bench_param_value(params, name, default))
+}
+
+pls4all_bench_param_num <- function(params, name, default) {
+    as.numeric(pls4all_bench_param_value(params, name, default))
+}
+
+pls4all_bench_labels <- function(y, n_classes) {
+    y <- as.numeric(y)
+    n <- length(y)
+    n_classes <- as.integer(max(2L, n_classes))
+    labels <- integer(n)
+    order_idx <- order(y)
+    labels[order_idx] <- (seq_len(n) - 1L) %% n_classes
+    labels
+}

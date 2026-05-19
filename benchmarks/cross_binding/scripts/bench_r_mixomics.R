@@ -9,6 +9,10 @@ suppressMessages(library(mixOmics))
 source(file.path(.script_dir(), "_npy.R"))
 
 a <- pls4all_bench_parse_args()
+params <- pls4all_bench_params()
+nc <- pls4all_bench_param_int(params, "n_components", a$nc)
+n_classes <- pls4all_bench_param_int(params, "n_classes", 2L)
+sparsity_lambda <- pls4all_bench_param_num(params, "sparsity_lambda", 0.05)
 
 supported <- c("pls", "sparse_simpls", "sparse_pls_da", "pls_da")
 if (!(a$algo %in% supported)) {
@@ -23,28 +27,47 @@ if (!(a$algo %in% supported)) {
     quit(save = "no")
 }
 
+class_factor <- function(y) {
+    labels <- pls4all_bench_labels(y, n_classes)
+    factor(labels, levels = seq.int(0L, n_classes - 1L),
+           labels = paste0("c", seq.int(0L, n_classes - 1L)))
+}
+
+one_hot <- function(pred, levels_ref) {
+    idx <- match(as.character(pred), levels_ref)
+    out <- matrix(0.0, nrow = length(idx), ncol = length(levels_ref))
+    ok <- !is.na(idx)
+    if (any(ok)) {
+        out[cbind(which(ok), idx[ok])] <- 1.0
+    }
+    out
+}
+
 fit_predict <- function(seed) {
     xy <- pls4all_bench_load_xy(a$csv_dir, a$n, a$p, seed)
     if (a$algo == "pls") {
-        fit <- mixOmics::pls(xy$X, xy$y, ncomp = a$nc, scale = FALSE,
+        fit <- mixOmics::pls(xy$X, xy$y, ncomp = nc, scale = FALSE,
                               mode = "regression")
-        as.numeric(predict(fit, newdata = xy$X)$predict[, , a$nc])
+        as.numeric(predict(fit, newdata = xy$X)$predict[, , nc])
     } else if (a$algo == "sparse_simpls") {
-        keep <- rep(max(2L, floor(a$p / 4L)), a$nc)
-        fit <- mixOmics::spls(xy$X, xy$y, ncomp = a$nc, keepX = keep,
+        keep_size <- max(2L, min(a$p, floor(a$p * max(0.05, 1.0 - sparsity_lambda))))
+        keep <- rep(keep_size, nc)
+        fit <- mixOmics::spls(xy$X, xy$y, ncomp = nc, keepX = keep,
                                 scale = FALSE, mode = "regression")
-        as.numeric(predict(fit, newdata = xy$X)$predict[, , a$nc])
+        as.numeric(predict(fit, newdata = xy$X)$predict[, , nc])
     } else if (a$algo == "pls_da") {
-        # Binary classification from y > 0.
-        y_cls <- factor(ifelse(xy$y > 0, "pos", "neg"))
-        fit <- mixOmics::plsda(xy$X, y_cls, ncomp = a$nc, scale = FALSE)
-        as.numeric(as.integer(predict(fit, newdata = xy$X)$class$max.dist[, a$nc]))
+        y_cls <- class_factor(xy$y)
+        fit <- mixOmics::plsda(xy$X, y_cls, ncomp = nc, scale = FALSE)
+        pred <- predict(fit, newdata = xy$X)$class$max.dist[, nc]
+        one_hot(pred, levels(y_cls))
     } else {  # sparse_pls_da
-        y_cls <- factor(ifelse(xy$y > 0, "pos", "neg"))
-        keep <- rep(max(2L, floor(a$p / 4L)), a$nc)
-        fit <- mixOmics::splsda(xy$X, y_cls, ncomp = a$nc, keepX = keep,
+        y_cls <- class_factor(xy$y)
+        keep_size <- max(2L, min(a$p, floor(a$p * max(0.05, 1.0 - sparsity_lambda))))
+        keep <- rep(keep_size, nc)
+        fit <- mixOmics::splsda(xy$X, y_cls, ncomp = nc, keepX = keep,
                                   scale = FALSE)
-        as.numeric(as.integer(predict(fit, newdata = xy$X)$class$max.dist[, a$nc]))
+        pred <- predict(fit, newdata = xy$X)$class$max.dist[, nc]
+        one_hot(pred, levels(y_cls))
     }
 }
 

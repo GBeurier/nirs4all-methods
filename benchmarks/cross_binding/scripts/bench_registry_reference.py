@@ -98,14 +98,31 @@ def _selector_body(reference, x_path: Path, y_path: Path,
         )
     if cls in {"_IplsForwardReference", "_IplsBackwardReference"}:
         method = "backward" if cls == "_IplsBackwardReference" else "forward"
-        n_intervals = max(2, p // int(reference._w))
+        if cls == "_IplsForwardReference":
+            interval_setup = (
+                f"starts <- seq(1L, ncol(X) - {int(reference._w)} + 1L, "
+                f"by={int(reference._step)})\n"
+                f"limits <- cbind(starts, starts + {int(reference._w)} - 1L)\n"
+                "extra_args <- list()\n"
+            )
+        else:
+            min_intervals = int(getattr(reference, "_min_intervals", 1))
+            interval_setup = (
+                f"starts <- seq(1L, ncol(X), by={int(reference._w)})\n"
+                f"limits <- cbind(starts, pmin(starts + {int(reference._w)} - 1L, ncol(X)))\n"
+                f"extra_args <- list(int.niter=max(1L, nrow(limits) - {min_intervals}), "
+                "full=TRUE)\n"
+            )
         return (
             "local({\n"
             "suppressPackageStartupMessages(library(mdatools))\n"
             f"X <- as.matrix(read.csv({xq}, header=FALSE))\n"
             f"y <- as.numeric(scan({yq}, quiet=TRUE))\n"
-            f"res <- ipls(X, y, glob.ncomp={int(reference._k)}, "
-            f"int.num={n_intervals}, method='{method}', silent=TRUE)\n"
+            f"{interval_setup}"
+            f"args <- c(list(x=X, y=y, glob.ncomp={int(reference._k)}, "
+            f"int.limits=limits, method='{method}', "
+            "cv=list('ven', 3), silent=TRUE), extra_args)\n"
+            "res <- do.call(ipls, args)\n"
             "selected <- as.integer(res$var.selected)\n"
             f"write.table(matrix(selected, ncol=1), file={iq}, sep=',', "
             "row.names=FALSE, col.names=FALSE)\n"

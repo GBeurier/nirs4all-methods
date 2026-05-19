@@ -670,7 +670,7 @@ for (i in (window_size + 1):n) {{
   Xw <- X[(i - window_size):(i - 1), , drop=FALSE]
   Yw <- Y[(i - window_size):(i - 1), , drop=FALSE]
   df <- data.frame(Y=I(Yw), X=I(Xw))
-  fit <- plsr(Y ~ X, data=df, ncomp=k, scale=FALSE)
+  fit <- plsr(Y ~ X, data=df, ncomp=k, method='simpls', scale=FALSE)
   pred <- predict(fit, ncomp=k, newdata=data.frame(X=I(Xn[i, , drop=FALSE])))
   out[i, ] <- as.numeric(pred)
 }}
@@ -1145,32 +1145,42 @@ class PsoSelectPyswarmsReference(ReferenceAdapter):
     library_name = "pyswarms"
     library_version = "1.3.0"
     language = "python"
-    notes = ("pyswarms Binary PSO with PLS-CV fitness. RNG diverges from "
-             "pls4all's splitmix64; parity is on algorithm family, not "
-             "bit-exact masks. Mask RMSE-rel ~0 = perfect, ~1 = half "
-             "disagree.")
+    notes = ("pyswarms Binary PSO with the same coefficients, velocity "
+             "clamp, and 3 contiguous CV folds as pls4all. RNG diverges "
+             "from pls4all's splitmix64, so parity is on algorithm "
+             "family, not bit-exact masks. Mask RMSE-rel ~0 = perfect, "
+             "~1 = half disagree.")
 
     def __init__(self, n_components: int, n_swarm: int, n_iterations: int,
-                  w: float, c1: float, c2: float, seed: int, **_) -> None:
+                  w: float, c1: float, c2: float, v_max: float,
+                  seed: int, **_) -> None:
         self._k = int(n_components)
         self._n_swarm = int(n_swarm)
         self._n_iterations = int(n_iterations)
         self._w = float(w)
         self._c1 = float(c1)
         self._c2 = float(c2)
+        self._v_max = float(v_max)
         self._seed = int(seed)
 
     def fit(self, X, Y, **_kwargs):
         import pyswarms.discrete as _ps
         from sklearn.cross_decomposition import PLSRegression
-        from sklearn.model_selection import KFold
         X = np.ascontiguousarray(X, dtype=np.float64)
         Y = np.ascontiguousarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
         self._n_features = int(X.shape[1])
+        fold_size = max(1, X.shape[0] // 3)
+        splits = []
+        rows = np.arange(X.shape[0])
+        for fold in range(3):
+            start = fold * fold_size
+            end = (fold + 1) * fold_size if fold < 2 else X.shape[0]
+            test = rows[start:end]
+            train = np.concatenate((rows[:start], rows[end:]))
+            splits.append((train, test))
 
         def _fitness(particles):  # particles: (n_swarm, n_features) 0/1
             costs = np.empty(particles.shape[0], dtype=np.float64)
-            kf = KFold(n_splits=3, shuffle=True, random_state=self._seed)
             for i, mask in enumerate(particles):
                 idx = np.where(mask > 0.5)[0]
                 if idx.size < self._k:
@@ -1178,7 +1188,7 @@ class PsoSelectPyswarmsReference(ReferenceAdapter):
                     continue
                 Xs = X[:, idx]
                 preds = np.zeros_like(Y)
-                for tr, te in kf.split(Xs):
+                for tr, te in splits:
                     est = PLSRegression(n_components=min(self._k, Xs.shape[1] - 1),
                                          scale=False)
                     est.fit(Xs[tr], Y[tr])
@@ -1191,7 +1201,8 @@ class PsoSelectPyswarmsReference(ReferenceAdapter):
                     "k": min(3, self._n_swarm), "p": 2}
         opt = _ps.BinaryPSO(n_particles=self._n_swarm,
                               dimensions=self._n_features,
-                              options=options)
+                              options=options,
+                              velocity_clamp=(-self._v_max, self._v_max))
         # pyswarms 1.3 verbose default writes to stderr; suppress.
         _cost, best_pos = opt.optimize(
             _fitness, iters=self._n_iterations, verbose=False)
@@ -2684,13 +2695,14 @@ class _IplsForwardReference(_MaskReferenceAdapter):
         idx_path = tmp / "selected_indices.csv"
         np.savetxt(x_path, X, delimiter=",")
         np.savetxt(y_path, Y2[:, 0], delimiter=",")
-        n_intervals = max(2, p // self._w)
         body = f"""
 suppressPackageStartupMessages(library(mdatools))
 X <- as.matrix(read.csv('{x_path}', header=FALSE))
 y <- as.numeric(scan('{y_path}', quiet=TRUE))
-res <- ipls(X, y, glob.ncomp={self._k}, int.num={n_intervals},
-            method='forward', silent=TRUE)
+starts <- seq(1L, ncol(X) - {self._w} + 1L, by={self._step})
+limits <- cbind(starts, starts + {self._w} - 1L)
+res <- ipls(X, y, glob.ncomp={self._k}, int.limits=limits,
+            method='forward', cv=list('ven', 3), silent=TRUE)
 selected <- as.integer(res$var.selected)
 write.table(matrix(selected, ncol=1), file='{idx_path}', sep=',',
             row.names=FALSE, col.names=FALSE)
@@ -2717,6 +2729,13 @@ class _IplsBackwardReference(_IplsForwardReference):
              "elimination. Returns variables from intervals that survive "
              "the backward sweep.")
 
+    def __init__(self, n_components: int, interval_width: int,
+                 min_intervals: int) -> None:
+        super().__init__(n_components=n_components,
+                         interval_width=interval_width,
+                         interval_step=interval_width)
+        self._min_intervals = int(min_intervals)
+
     def _compute_indices(self, X, Y, **kwargs):
         if not _R_HAS.get("mdatools", False):
             raise RuntimeError("mdatools is not installed")
@@ -2728,13 +2747,16 @@ class _IplsBackwardReference(_IplsForwardReference):
         idx_path = tmp / "selected_indices.csv"
         np.savetxt(x_path, X, delimiter=",")
         np.savetxt(y_path, Y2[:, 0], delimiter=",")
-        n_intervals = max(2, p // self._w)
         body = f"""
 suppressPackageStartupMessages(library(mdatools))
 X <- as.matrix(read.csv('{x_path}', header=FALSE))
 y <- as.numeric(scan('{y_path}', quiet=TRUE))
-res <- ipls(X, y, glob.ncomp={self._k}, int.num={n_intervals},
-            method='backward', silent=TRUE)
+starts <- seq(1L, ncol(X), by={self._w})
+limits <- cbind(starts, pmin(starts + {self._w} - 1L, ncol(X)))
+int_niter <- max(1L, nrow(limits) - {self._min_intervals})
+res <- ipls(X, y, glob.ncomp={self._k}, int.limits=limits,
+            int.niter=int_niter, method='backward', full=TRUE,
+            cv=list('ven', 3), silent=TRUE)
 selected <- as.integer(res$var.selected)
 write.table(matrix(selected, ncol=1), file='{idx_path}', sep=',',
             row.names=FALSE, col.names=FALSE)
@@ -3259,7 +3281,9 @@ class _OplsRoplsReference(RAdapter):
 
     library_name = "ropls"
     library_version = "Bioc"
-    notes = "Bioconductor `ropls::opls` — OPLS / OPLS-DA reference."
+    notes = ("Bioconductor `ropls::opls` — OPLS reference. Permutations "
+             "and plotting are disabled in benchmark timing; ropls still "
+             "requires crossvalI >= 1 for a finite Q2 path.")
 
     def __init__(self, n_components: int, n_orthogonal: int) -> None:
         super().__init__()
@@ -3275,7 +3299,8 @@ Xn <- as.matrix(read.csv('{x_predict_path}', header=FALSE))
 fit <- suppressMessages(suppressWarnings(
   invisible(capture.output(
     mod <- opls(X, Y[, 1], predI={self._k}, orthoI={self._n_ortho},
-                scaleC='center')
+                scaleC='center', crossvalI=1, permI=0,
+                fig.pdfC='none', info.txtC='none', plotSubC='none')
   ))
 ))
 fit <- mod
@@ -3596,9 +3621,10 @@ class _RandomSubspacePlsSklearnReference(ReferenceAdapter):
     library_name = "scikit-learn"
     library_version = "1.8.0"
     language = "python"
-    notes = ("sklearn `BaggingRegressor(PLSRegression(), max_features=…)`. "
-             "Random-feature-subspace bagging with PLS weak learners. RNG "
-             "differs from pls4all; qualitative parity.")
+    notes = ("sklearn `BaggingRegressor(PLSRegression(), max_features=…, "
+             "bootstrap=False)`. Random feature subspaces with full sample "
+             "rows, matching pls4all's sampling shape. RNG differs from "
+             "pls4all; qualitative parity.")
 
     def __init__(self, n_components: int, n_estimators: int,
                   features_per_subspace: int, seed: int, **_) -> None:
@@ -3616,6 +3642,8 @@ class _RandomSubspacePlsSklearnReference(ReferenceAdapter):
         self._est = BaggingRegressor(
             base, n_estimators=self._n_estimators,
             max_features=min(self._features, X.shape[1]),
+            max_samples=1.0,
+            bootstrap=False,
             bootstrap_features=False,
             random_state=self._seed)
         self._est.fit(X, Y)
@@ -5114,7 +5142,7 @@ METHODS: list[MethodSpec] = [
             n_swarm=kw["n_swarm"],
             n_iterations=kw["n_iterations"],
             w=kw["w"], c1=kw["c1"], c2=kw["c2"],
-            seed=kw["seed"]),
+            v_max=kw["v_max"], seed=kw["seed"]),
         r_reference=None,
         prediction_key="mask",
         # Mask RMSE-rel ~0 = perfect, ~1 = half disagree, ~1.41 = disjoint.
@@ -5122,9 +5150,11 @@ METHODS: list[MethodSpec] = [
         # splitmix64 — algorithm parity, not bit-exact. tol=1.4 accepts up
         # to ~disjoint while still rejecting "all-zeros" or "all-ones".
         rmse_rel_tol=1.4,  # investigate: RNG-induced divergence; same algo family
-        notes=("Python `pyswarms 1.3.0` Binary PSO with PLS-CV-RMSE "
-               "fitness. RNG diverges from pls4all splitmix64; parity is "
-               "on algorithm family, not bit-exact selection."),
+        notes=("Python `pyswarms 1.3.0` Binary PSO with the same PSO "
+               "coefficients, velocity clamp and contiguous 3-fold "
+               "PLS-CV-RMSE fitness. RNG diverges from pls4all "
+               "splitmix64; parity is on algorithm family, not bit-exact "
+               "selection."),
     ),
     MethodSpec(
         name="gpr_pls",
@@ -5195,8 +5225,9 @@ METHODS: list[MethodSpec] = [
         r_reference=None,
         rmse_rel_tol=2.0,
         notes=("sklearn `BaggingRegressor(PLSRegression(), "
-               "max_features=k)`. RNG/feature-subset conventions diverge "
-               "from pls4all; qualitative parity."),
+               "max_features=k, bootstrap=False)`. Same full-row random "
+               "subspace shape as pls4all; RNG/feature-subset order still "
+               "differs, so parity is qualitative."),
     ),
     MethodSpec(
         name="pls_glm",
@@ -5599,9 +5630,9 @@ METHODS: list[MethodSpec] = [
             interval_step=kw["interval_step"])
             if _R_HAS.get("mdatools", False) else None),
         prediction_key="mask",
-        # investigate: rmse_rel=0.91 — interval scoring criteria differ
-        # (pls4all fold-RMSE on a fixed ValidationPlan vs mdatools 10-fold
-        # CV). A real alignment would require unifying the CV plan.
+        # mdatools can receive the same interval limits and fold count, but
+        # exposes venetian/random CV rather than pls4all's exact contiguous
+        # ValidationPlan. Keep this as a qualitative mask-overlap gate.
         rmse_rel_tol=1.0,
         notes=("R `mdatools::ipls(method='forward')`. Mask RMSE-rel "
                "~0=perfect, ~1=half disagree, ~1.41=disjoint; tolerance "
@@ -5620,7 +5651,7 @@ METHODS: list[MethodSpec] = [
         r_reference=(lambda **kw: _IplsBackwardReference(
             n_components=kw["n_components"],
             interval_width=kw["interval_width"],
-            interval_step=1)
+            min_intervals=kw["min_intervals"])
             if _R_HAS.get("mdatools", False) else None),
         prediction_key="mask",
         rmse_rel_tol=0.7,
