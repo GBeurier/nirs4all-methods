@@ -13,7 +13,9 @@ documentation page for that algorithm.
 ## What you see at first load
 
 A table with one row per `(algorithm, n, p, threads)` cell and one
-column per backend. Each timed cell should show:
+column per backend. The first four columns are frozen in this order:
+`algorithm`, `size`, `t`, then the synthetic `reference` column naming
+the canonical oracle for that method. Each timed cell should show:
 
 - one parity marker: **reference parity** for C++ and external libraries,
   or **binding parity** for internal pls4all bindings;
@@ -34,15 +36,16 @@ Above the table you'll find:
 
 ## Columns
 
-Columns are grouped into language bands and tier groups:
+Backend columns are grouped into language bands and tier groups. The
+synthetic `reference` column is pinned before those backend bands:
 
 | Group key | Display label | What's in it |
 |---|---|---|
+| `reference` | canonical reference          | Synthetic provenance column naming the oracle for each method. |
 | `cpp`     | pls4all · C++ (libp4a)        | `pls4all.cpp.ref`, `pls4all.cpp.blas`, `pls4all.cpp.omp`, `pls4all.cpp.blas+omp`, `pls4all.cpp.cuda` |
 | `python`  | pls4all · Python               | `pls4all.python` (tier-1 ctypes), `pls4all.sklearn` (tier-2 BaseEstimator), `pls4all.registry` (canonical entry point) |
 | `r`       | pls4all · R                    | `pls4all.R` (tier-1 dispatcher), `pls4all.R.formula` (tier-2 formula + S3) |
 | `matlab`  | pls4all · MATLAB/Octave        | `pls4all.matlab` (tier-1 MEX dispatcher), `pls4all.matlab.classdef` (tier-2 classdef) |
-| `reference` | canonical reference          | Synthetic provenance column naming the oracle for each method. |
 | `ext-py`  | external · Python              | `sklearn`, `ikpls`, registry-declared `ref.python_*` libs |
 | `ext-r`   | external · R                   | `pls`, `mixOmics`, `ropls`, registry-declared `ref.r_*` libs |
 | `ext-ml`  | external · MATLAB/Octave       | `plsregress`, registry-declared `ref.matlab_*` libs |
