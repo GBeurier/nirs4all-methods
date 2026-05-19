@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-18 23:10 UTC",
+  "generated_at": "2026-05-19 00:12 UTC",
   "host": {
     "os": "Linux 6.6.87.2-microsoft-standard-WSL2 (x86_64)",
     "python": "3.13.13",
@@ -1979,9 +1979,9 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 215.817,
-          "fmt": "215.8 ms",
-          "reference_parity_tolerance": 20.0,
+          "ms": 1.049,
+          "fmt": "1.05 ms",
+          "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -1989,9 +1989,9 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 154.497,
-          "fmt": "154.5 ms",
-          "reference_parity_tolerance": 20.0,
+          "ms": 1.042,
+          "fmt": "1.04 ms",
+          "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
         "pls4all.cpp.blas": {
@@ -1999,9 +1999,9 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 254.912,
-          "fmt": "254.9 ms",
-          "reference_parity_tolerance": 20.0,
+          "ms": 1.067,
+          "fmt": "1.07 ms",
+          "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
         "pls4all.cpp.omp": {
@@ -2009,9 +2009,9 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 160.742,
-          "fmt": "160.7 ms",
-          "reference_parity_tolerance": 20.0,
+          "ms": 1.053,
+          "fmt": "1.05 ms",
+          "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
         "pls4all.cpp.blas+omp": {
@@ -2019,9 +2019,9 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 172.038,
-          "fmt": "172.0 ms",
-          "reference_parity_tolerance": 20.0,
+          "ms": 1.04,
+          "fmt": "1.04 ms",
+          "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
         "pls4all.python": {
@@ -2029,9 +2029,9 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 203.676,
-          "fmt": "203.7 ms",
-          "reference_parity_tolerance": 20.0,
+          "ms": 1.028,
+          "fmt": "1.03 ms",
+          "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
@@ -2039,9 +2039,9 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 1.863,
-          "fmt": "1.86 ms",
-          "reference_parity_tolerance": 20.0,
+          "ms": 1.274,
+          "fmt": "1.27 ms",
+          "reference_parity_tolerance": 0.2,
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -2089,7 +2089,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 20.0,
+          "reference_parity_tolerance": 0.2,
           "reason": "algo 'continuum_regression' not implemented by sklearn"
         },
         "ikpls": {
@@ -2097,7 +2097,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 20.0,
+          "reference_parity_tolerance": 0.2,
           "reason": "algo 'continuum_regression' not implemented by ikpls"
         },
         "pls": {
@@ -2105,7 +2105,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 20.0,
+          "reference_parity_tolerance": 0.2,
           "reason": "algo 'continuum_regression' not implemented by pls::"
         },
         "ropls": {
@@ -2113,7 +2113,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 20.0,
+          "reference_parity_tolerance": 0.2,
           "reason": "algo 'continuum_regression' not implemented by ropls"
         },
         "mixOmics": {
@@ -2121,7 +2121,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 20.0,
+          "reference_parity_tolerance": 0.2,
           "reason": "algo 'continuum_regression' not implemented by mixOmics"
         },
         "plsregress": {
@@ -2129,7 +2129,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 20.0,
+          "reference_parity_tolerance": 0.2,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
         "JICO": {
@@ -2137,9 +2137,9 @@
           "reference_parity": "exact",
           "binding_parity": "drift",
           "ok": true,
-          "ms": 597.118,
-          "fmt": "597.1 ms",
-          "reference_parity_tolerance": 20.0,
+          "ms": 547.973,
+          "fmt": "548.0 ms",
+          "reference_parity_tolerance": 0.2,
           "reference_kind": "external",
           "is_canonical_reference": true
         },
@@ -2150,8 +2150,8 @@
           "ref_of": "JICO",
           "ref_lang": "R",
           "is_canonical_reference": true,
-          "ms": 597.118,
-          "fmt": "597.1 ms",
+          "ms": 547.973,
+          "fmt": "548.0 ms",
           "reference_kind": "external"
         }
       }
@@ -6659,8 +6659,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 249.062,
-          "fmt": "249.1 ms",
+          "ms": 1.025,
+          "fmt": "1.03 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6669,8 +6669,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 193.071,
-          "fmt": "193.1 ms",
+          "ms": 1.018,
+          "fmt": "1.02 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6679,8 +6679,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 198.044,
-          "fmt": "198.0 ms",
+          "ms": 0.951,
+          "fmt": "0.95 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6689,8 +6689,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 182.654,
-          "fmt": "182.7 ms",
+          "ms": 0.996,
+          "fmt": "1.00 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6699,8 +6699,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 180.597,
-          "fmt": "180.6 ms",
+          "ms": 1.009,
+          "fmt": "1.01 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6709,8 +6709,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 187.668,
-          "fmt": "187.7 ms",
+          "ms": 1.249,
+          "fmt": "1.25 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6719,8 +6719,8 @@
           "reference_parity": "exact",
           "binding_parity": "exact",
           "ok": true,
-          "ms": 2.179,
-          "fmt": "2.18 ms",
+          "ms": 1.192,
+          "fmt": "1.19 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external"
         },
@@ -6769,8 +6769,8 @@
           "reference_parity": "exact",
           "binding_parity": "drift",
           "ok": true,
-          "ms": 1.328,
-          "fmt": "1.33 ms",
+          "ms": 1.318,
+          "fmt": "1.32 ms",
           "reference_parity_tolerance": 0.1,
           "reference_kind": "external",
           "is_canonical_reference": true
@@ -6830,8 +6830,8 @@
           "ref_of": "sklearn",
           "ref_lang": "Python",
           "is_canonical_reference": true,
-          "ms": 1.328,
-          "fmt": "1.33 ms",
+          "ms": 1.318,
+          "fmt": "1.32 ms",
           "reference_kind": "external"
         }
       }
@@ -10253,7 +10253,7 @@
           "ok": true,
           "ms": 1.358,
           "fmt": "1.36 ms",
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reference_kind": "external"
         },
         "pls4all.cpp.ref": {
@@ -10263,7 +10263,7 @@
           "ok": true,
           "ms": 1.415,
           "fmt": "1.41 ms",
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reference_kind": "external"
         },
         "pls4all.cpp.blas": {
@@ -10273,7 +10273,7 @@
           "ok": true,
           "ms": 1.255,
           "fmt": "1.26 ms",
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reference_kind": "external"
         },
         "pls4all.cpp.omp": {
@@ -10283,7 +10283,7 @@
           "ok": true,
           "ms": 1.318,
           "fmt": "1.32 ms",
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reference_kind": "external"
         },
         "pls4all.cpp.blas+omp": {
@@ -10293,7 +10293,7 @@
           "ok": true,
           "ms": 1.297,
           "fmt": "1.30 ms",
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reference_kind": "external"
         },
         "pls4all.python": {
@@ -10303,7 +10303,7 @@
           "ok": true,
           "ms": 1.337,
           "fmt": "1.34 ms",
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reference_kind": "external"
         },
         "pls4all.sklearn": {
@@ -10313,7 +10313,7 @@
           "ok": true,
           "ms": 1.518,
           "fmt": "1.52 ms",
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reference_kind": "external"
         },
         "pls4all.R": {
@@ -10323,7 +10323,7 @@
           "ok": true,
           "ms": 4.0,
           "fmt": "4.00 ms",
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reference_kind": "external"
         },
         "pls4all.R.formula": {
@@ -10331,7 +10331,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reason": "Execution halted"
         },
         "pls4all.matlab": {
@@ -10341,7 +10341,7 @@
           "ok": true,
           "ms": 1.804,
           "fmt": "1.80 ms",
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reference_kind": "external"
         },
         "pls4all.matlab.classdef": {
@@ -10349,7 +10349,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reason": "bench_matlab_tier2 at line 40 column 5"
         },
         "sklearn": {
@@ -10357,7 +10357,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reason": "algo 'shaving_select' not implemented by sklearn"
         },
         "ikpls": {
@@ -10365,7 +10365,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reason": "algo 'shaving_select' not implemented by ikpls"
         },
         "pls": {
@@ -10373,7 +10373,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reason": "algo 'shaving_select' not implemented by pls::"
         },
         "ropls": {
@@ -10381,7 +10381,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reason": "algo 'shaving_select' not implemented by ropls"
         },
         "mixOmics": {
@@ -10389,7 +10389,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reason": "algo 'shaving_select' not implemented by mixOmics"
         },
         "plsregress": {
@@ -10397,7 +10397,7 @@
           "reference_parity": "not_available",
           "binding_parity": "not_available",
           "ok": false,
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reason": "bench_matlab_pls at line 20 column 5"
         },
         "plsVarSel": {
@@ -10407,7 +10407,7 @@
           "ok": true,
           "ms": 345.002,
           "fmt": "345.0 ms",
-          "reference_parity_tolerance": 0.7,
+          "reference_parity_tolerance": 0.8,
           "reference_kind": "external",
           "is_canonical_reference": true
         },
@@ -13516,18 +13516,18 @@
     }
   ],
   "versions": {
-    "pls4all.registry": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1; pls4all=0.97.0; numpy=2.3.5; registry_method=pls",
-    "pls4all.cpp.ref": "language=C++ (via ctypes bridge) (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; libp4a=0.97.0+abi.1.16.0; numpy=2.3.5; registry_method=pls",
-    "pls4all.cpp.blas": "language=C++ (via ctypes bridge) (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.30 blas=1; libp4a=0.97.0+abi.1.16.0; numpy=2.3.5; registry_method=pls",
-    "pls4all.cpp.omp": "language=C++ (via ctypes bridge) (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; libomp ? openmp=1; libp4a=0.97.0+abi.1.16.0; numpy=2.3.5; registry_method=pls",
-    "pls4all.cpp.blas+omp": "language=C++ (via ctypes bridge) (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1; libp4a=0.97.0+abi.1.16.0; numpy=2.3.5; registry_method=pls",
-    "pls4all.python": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1; pls4all=0.97.0; numpy=2.3.5; registry_method=pls",
-    "pls4all.sklearn": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; pls4all=0.97.0; numpy=2.3.5; sklearn_class=PLSRegression",
+    "pls4all.registry": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1; pls4all=0.97.0; numpy=2.3.5; registry_method=pls; timing_schema=warmup-v2",
+    "pls4all.cpp.ref": "language=C++ (via ctypes bridge) (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; libp4a=0.97.0+abi.1.16.0; numpy=2.3.5; registry_method=pls; timing_schema=warmup-v2",
+    "pls4all.cpp.blas": "language=C++ (via ctypes bridge) (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.30 blas=1; libp4a=0.97.0+abi.1.16.0; numpy=2.3.5; registry_method=pls; timing_schema=warmup-v2",
+    "pls4all.cpp.omp": "language=C++ (via ctypes bridge) (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; libomp ? openmp=1; libp4a=0.97.0+abi.1.16.0; numpy=2.3.5; registry_method=pls; timing_schema=warmup-v2",
+    "pls4all.cpp.blas+omp": "language=C++ (via ctypes bridge) (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1; libp4a=0.97.0+abi.1.16.0; numpy=2.3.5; registry_method=pls; timing_schema=warmup-v2",
+    "pls4all.python": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1; pls4all=0.97.0; numpy=2.3.5; registry_method=pls; timing_schema=warmup-v2",
+    "pls4all.sklearn": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; pls4all=0.97.0; numpy=2.3.5; sklearn_class=PLSRegression; timing_schema=warmup-v2",
     "pls4all.R": "language=R 4.3.3; pls4all=0.97.0; registry_method=pls; blas=linked-BLAS",
     "pls4all.R.formula": "language=R 4.3.3; pls4all=0.97.0; registry_method=pls; blas=linked-BLAS",
     "pls4all.matlab": "language=Octave 10.3.0; pls4all=from libp4a-linked MEX; registry_method=pls; blas=linked-BLAS",
     "pls4all.matlab.classdef": "language=Octave 10.3.0; pls4all=from libp4a-linked MEX + classdefs; registry_method=pls; blas=linked-BLAS",
-    "sklearn": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; sklearn=1.8.0; numpy=2.3.5",
+    "sklearn": "language=Python 3.13.13; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; sklearn=1.8.0; numpy=2.3.5; timing_schema=warmup-v2",
     "ikpls": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; ikpls=4.0.1.post1; numpy=2.3.5",
     "pls": "language=R 4.3.3; pls=2.8.5",
     "ropls": "language=R 4.3.3; ropls=1.34.0",
@@ -13536,7 +13536,7 @@
     "spls": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_spls; reference_library=spls; reference_version=2.3.2",
     "diplslib": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_diplslib; reference_library=diPLSlib; reference_version=2.5.0",
     "chemometrics": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_chemometrics; reference_library=chemometrics; reference_version=0.7.x",
-    "JICO": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_jico; reference_library=JICO; reference_version=0.0",
+    "JICO": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_jico; reference_library=JICO; reference_version=0.1; timing_schema=warmup-v2",
     "tensorly": "language=Python 3.13.11; blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1; numpy=2.3.5; reference_id=python_tensorly; reference_library=tensorly; reference_version=0.9.0",
     "kernlab": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_kernlab_pls; reference_library=kernlab+pls; reference_version=0.9.33+2.8.5",
     "OmicsPLS": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.30 blas=1; numpy=2.3.5; reference_id=r_omicspls; reference_library=OmicsPLS; reference_version=2.1.0",

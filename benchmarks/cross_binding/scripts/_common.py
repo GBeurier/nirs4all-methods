@@ -7,7 +7,7 @@ The new (parity + timing + versions) cell convention:
 
 Each script:
   - loads / regenerates the deterministic dataset per run (seed_base+i)
-  - runs `fit_predict(seed)` n_runs times, discarding the first as warmup
+  - runs one unmeasured warmup, then `fit_predict(seed)` n_runs timed times
   - saves the LAST run's predictions as a .npy file under
     <predictions_path> so the orchestrator can compute parity post-hoc
   - emits a JSON record on the LAST stdout line with timing + versions
@@ -72,19 +72,25 @@ def load_dataset(csv_dir: Path, n: int, p: int, seed: int):
 # ----------------------------------------------------------------------
 
 def time_runs_seeded(fit_predict_seeded, n_runs: int, seed_base: int):
-    """Run `fit_predict_seeded(seed)` for seed in [base, base+1, …, base+n_runs-1].
+    """Run one warmup, then timed seeds [base, base+1, …, base+n_runs-1].
 
     Returns:
       (stats_dict, last_predictions_array)
-      - stats_dict: ok / n_runs / median_ms / min_ms / max_ms (warmup
-        discarded when n_runs >= 3)
+      - stats_dict: ok / n_runs / median_ms / min_ms / max_ms for timed
+        samples only
       - last_predictions_array: the predictions array from the LAST
         timed run (seed_base + n_runs - 1). The caller persists it to
         the predictions file for post-hoc parity computation.
 
-    `fit_predict_seeded(seed)` must return a numpy.ndarray of predictions
-    (any shape, will be flattened for parity comparison).
+      `fit_predict_seeded(seed)` must return a numpy.ndarray of predictions
+      (any shape, will be flattened for parity comparison).
     """
+    if n_runs < 1:
+        raise ValueError("n_runs must be >= 1")
+    # Keep import, dynamic linker, allocator, and first-call kernel setup out
+    # of the measurement window. Reusing seed_base preserves the prediction
+    # seed contract: the last timed run is still seed_base + n_runs - 1.
+    fit_predict_seeded(seed_base)
     samples = []
     last_preds = None
     for i in range(n_runs):
@@ -92,16 +98,12 @@ def time_runs_seeded(fit_predict_seeded, n_runs: int, seed_base: int):
         t0 = time.perf_counter()
         last_preds = fit_predict_seeded(seed)
         samples.append((time.perf_counter() - t0) * 1000.0)
-    if n_runs >= 3:
-        timed = samples[1:]
-    else:
-        timed = samples
     return {
         "ok": True,
-        "n_runs": len(timed),
-        "median_ms": statistics.median(timed),
-        "min_ms": min(timed),
-        "max_ms": max(timed),
+        "n_runs": len(samples),
+        "median_ms": statistics.median(samples),
+        "min_ms": min(samples),
+        "max_ms": max(samples),
     }, last_preds
 
 

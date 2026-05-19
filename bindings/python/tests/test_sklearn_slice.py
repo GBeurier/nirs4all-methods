@@ -83,7 +83,7 @@ def test_pls_regression_bit_exact_against_raw(regression_data):
     preds_raw = _raw_fit_predict(
         X, y[:, None],
         algorithm=Algorithm.PLS_REGRESSION,
-        solver=Solver.NIPALS,
+        solver=Solver.SIMPLS,
         deflation=Deflation.REGRESSION,
         n_components=5,
     )
@@ -115,7 +115,7 @@ def test_plsda_classifier_bit_exact_decision_function(classification_data):
     scores_raw = _raw_fit_predict(
         X, Y_dummy,
         algorithm=Algorithm.PLS_DA,
-        solver=Solver.NIPALS,
+        solver=Solver.SIMPLS,
         deflation=Deflation.REGRESSION,
         n_components=3,
     )
@@ -129,7 +129,7 @@ def test_vip_selector_bit_exact_against_raw(regression_data):
     ctx = Context()
     cfg = Config()
     cfg.algorithm = Algorithm.PLS_REGRESSION
-    cfg.solver = Solver.NIPALS
+    cfg.solver = Solver.SIMPLS
     cfg.deflation = Deflation.REGRESSION
     cfg.n_components = 4
     cfg.center_x = cfg.scale_x = cfg.center_y = True

@@ -31,7 +31,7 @@ Each cell shows `<median_ms> <gate>`. C++ and external library cells use Gate 2,
 
 **Bold** = fastest cell on the row, **counted only among cells whose relevant gate is ✓**. For internal bindings that is Gate 1; for C++ and external libraries it is Gate 2. Drift / divergent / empty cells never carry the bold.
 
-Timing is the **median of 4 run(s)**; the first run is discarded as warmup when `n_runs >= 3`. All backends in a single cell read the same orchestrator-generated CSV dataset. See [methodology.md](methodology.md) for the full details.
+Timing is the **median of 4 timed run(s)** after one unmeasured warmup. All backends in a single cell read the same orchestrator-generated CSV dataset. See [methodology.md](methodology.md) for the full details.
 
 
 ## Why a cell is empty (`—`)
@@ -659,7 +659,7 @@ Each column in the per-algorithm tables above is one of the entries below. Colum
 - Gate 2 reference: the registry-declared canonical external reference for the method
 - Gate 1 tolerance: 1e-6 max-abs-diff; Gate 2 tolerance: `MethodSpec.rmse_rel_tol` (also emitted as `reference_parity_tolerance` by newer CSVs)
 - All backends read the same orchestrator-generated CSV dataset (`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`)
-- 4 run(s) per cell, first discarded as warmup when `n_runs >= 3`, median reported
+- 4 timed run(s) per cell after one unmeasured warmup, median reported
 - Per-cell timeout: 300 s
 - Thread control via `OMP_NUM_THREADS = OPENBLAS_NUM_THREADS = MKL_NUM_THREADS = BLIS_NUM_THREADS` set in the subprocess env, plus `Context.num_threads` for Python pls4all and `maxNumCompThreads()` for Octave
 - pls4all libp4a build: `build/blas-omp/cpp/src/libp4a.so` (BLAS + OpenMP enabled)

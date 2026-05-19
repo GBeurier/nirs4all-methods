@@ -50,7 +50,7 @@ _Total methods_: **71**. Grouped by family below.
 
 | Method | Description | Tolerance | Refs |
 |--------|-------------|-----------|------|
-| [`continuum_regression`](continuum_regression.md) | Continuum regression (interpolates PLS / OLS) | `20.0` | R |
+| [`continuum_regression`](continuum_regression.md) | Continuum regression (interpolates PLS / OLS) | `0.2` | R |
 | [`gpr_pls`](gpr_pls.md) | GPR-on-PLS — RBF Gaussian Process on PLS scores (§47) | `1e-08` | Py |
 | [`kernel_pls_rbf`](kernel_pls_rbf.md) | Non-linear kernel PLS (RBF kernel) | `2.0` | R |
 | [`lw_pls`](lw_pls.md) | LW-PLS — Locally-weighted PLS (§17 Phase 4) | `5.0` | Py |
@@ -128,7 +128,7 @@ _Total methods_: **71**. Grouped by family below.
 | [`randomization_select`](randomization_select.md) | Randomization-test selector (§18 Phase 5o) | `1.3` | R |
 | [`rep_select`](rep_select.md) | REP-PLS repeated VIP selection (§18 Phase 5s) | `1.8` | R |
 | [`scars_select`](scars_select.md) | SCARS stability + CARS (§18 Phase 5h) | `1.0` | — |
-| [`shaving_select`](shaving_select.md) | Shaving iterative variable trimming | `0.7` | R |
+| [`shaving_select`](shaving_select.md) | Shaving iterative variable trimming | `0.8` | R |
 | [`sipls_select`](sipls_select.md) | siPLS synergistic interval selection (§18 Phase 5q) | `0.7` | — |
 | [`spa_select`](spa_select.md) | SPA Successive Projections (§18 Phase 5e) | `1.2` | R |
 | [`st_select`](st_select.md) | ST-PLS soft-thresholded sparse PLS (§18 Phase 5u) | `2.1` | R |

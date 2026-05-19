@@ -21,10 +21,11 @@ from bench_registry_common import (adapted_params, benchmark_inputs,
 
 def main():
     algo, csv_dir, n, p, nc, runs, seed_base, pred_path = parse_args()
+    import pls4all
+
     method = load_method(algo)
 
     def fit_predict(seed: int) -> np.ndarray:
-        import pls4all
         X, y = load_dataset(csv_dir, n, p, seed)
         params = adapted_params(method, n, p, nc)
         Y, extras = benchmark_inputs(method, X, y, params, seed)
@@ -47,7 +48,6 @@ def main():
                 result.close()
 
     stats, last_preds = time_runs_seeded(fit_predict, runs, seed_base)
-    import pls4all
     versions = collect_versions("Python",
                                   pls4all=getattr(pls4all, "__version__", "?"),
                                   numpy=_safe_version("numpy"),

@@ -494,10 +494,29 @@ def build_payload(results_dir: Path) -> dict:
         generated_at = dt.datetime.fromtimestamp(
             latest_source, dt.timezone.utc
         ).strftime("%Y-%m-%d %H:%M UTC")
-    for p in csv_paths:
-        rows_in.extend(csv.DictReader(p.open()))
+    for source_index, path in enumerate(csv_paths):
+        source_mtime = path.stat().st_mtime
+        for row in csv.DictReader(path.open()):
+            row["_source_index"] = source_index
+            row["_source_mtime"] = source_mtime
+            rows_in.append(row)
 
-    # Dedupe: same (algo, backend, build, n, p, threads) — keep last seen.
+    def _timing_schema(row: dict) -> str:
+        try:
+            versions = json.loads(row.get("versions_json") or "{}")
+        except json.JSONDecodeError:
+            return ""
+        return str(versions.get("timing_schema") or "")
+
+    def _row_rank(row: dict) -> tuple:
+        return (
+            1 if _timing_schema(row) == "warmup-v2" else 0,
+            float(row.get("_source_mtime") or 0.0),
+            int(row.get("_source_index") or 0),
+        )
+
+    # Dedupe: same (algo, backend, build, n, p, threads). Prefer the current
+    # warmup-v2 timing schema over legacy cold-run CSV rows, then newest file.
     seen: dict[tuple, dict] = {}
     for r in rows_in:
         if not r.get("algorithm"):
@@ -507,7 +526,8 @@ def build_payload(results_dir: Path) -> dict:
         except (ValueError, KeyError):
             continue
         key = (r["algorithm"], r["backend"], r.get("libp4a_build", ""), n, p_, t)
-        seen[key] = r
+        if key not in seen or _row_rank(r) >= _row_rank(seen[key]):
+            seen[key] = r
 
     # Non-C++ dashboard columns are unique even when the CSV contains one
     # row per libp4a build sweep. Prefer the production `blas-omp` row so

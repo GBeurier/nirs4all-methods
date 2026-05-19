@@ -135,9 +135,9 @@ loaded = pls4all.load("model.n4a");
 yhat   = predict(loaded, Xtest);
 ```
 
-Bytes round-trip exactly. The bundle carries pls4all version + ABI
-version so a stale file fails loudly rather than producing wrong
-predictions.
+The bundle carries pls4all version + ABI version so a stale file fails
+loudly rather than producing wrong predictions; numerical parity is
+checked by the benchmark gates.
 
 ## Next steps
 

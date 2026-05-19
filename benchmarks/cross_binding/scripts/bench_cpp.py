@@ -35,10 +35,11 @@ def main():
     so.p4a_get_version_string.restype = ctypes.c_char_p
     libp4a_v = so.p4a_get_version_string().decode()
 
+    import pls4all
+
     method = load_method(algo)
 
     def fit_predict(seed: int) -> np.ndarray:
-        import pls4all
         X, y = load_dataset(csv_dir, n, p, seed)
         params = adapted_params(method, n, p, nc)
         Y, extras = benchmark_inputs(method, X, y, params, seed)

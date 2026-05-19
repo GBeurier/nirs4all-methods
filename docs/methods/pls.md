@@ -28,7 +28,7 @@ Parameters
 ----------
 n_components : int, default=2
     Number of latent components.
-solver : str, default='nipals'
+solver : str, default='simpls'
     One of 'nipals', 'simpls', 'orthogonal-scores', 'kernel',
     'wide-kernel', 'svd', 'power', 'randomized-svd'.
 center_x, scale_x : bool, default=True
@@ -54,7 +54,7 @@ store_scores : bool, default=False
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
 | `n_components` | `int` | `2` | Number of latent components extracted (k). |
-| `solver` | `str` | `'nipals'` | Inner algorithm: 'nipals', 'simpls', 'svd', 'kernel', 'orthogonal-scores', 'power', 'randomized-svd', 'wide-kernel'. |
+| `solver` | `str` | `'simpls'` | Inner algorithm: 'nipals', 'simpls', 'svd', 'kernel', 'orthogonal-scores', 'power', 'randomized-svd', 'wide-kernel'. |
 | `center_x` | `bool` | `True` | Subtract the column mean of X before fitting. |
 | `scale_x` | `bool` | `True` | Standardize X columns to unit variance before fitting. |
 | `center_y` | `bool` | `True` | Subtract the column mean of y before fitting. |
@@ -147,7 +147,7 @@ with pls4all.Context() as ctx, pls4all.Config() as cfg:
 
 ```python
 from pls4all.sklearn import PLSRegression
-mdl = PLSRegression(n_components=2, solver='nipals', center_x=True, scale_x=True, center_y=True, scale_y=False, tol=1e-06, max_iter=500, store_scores=False)
+mdl = PLSRegression(n_components=2, solver='simpls', center_x=True, scale_x=True, center_y=True, scale_y=False, tol=1e-06, max_iter=500, store_scores=False)
 mdl.fit(X, y)
 y_hat = mdl.predict(X_test)
 ```
@@ -246,7 +246,7 @@ yhat = predict(mdl, Xtest);
 
 ### Benchmarks
 
-Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.csv`](../benchmarks/overview.md). Verdict legend: ✓ exact · ≈ drift · ✗ divergent · ⊘ not available in lib · — not run · ⚠ error. The fastest backend per column is marked with a 🏆 medal. Rows tagged with **📐** are *also* declared in [`benchmarks/parity_timing/registry.py`](../benchmarks/methodology.md) as the canonical parity references for this method (`python_reference` / `r_reference` / `extra_references`). Cell parity in this table is measured against the cross-binding reference (`pls4all.cpp` blas-omp, 1 thread); the 📐 icon points at the *library-of-record* the parity gate ultimately answers to. Hover the icon to see the role and tolerance band.
+Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.csv`](../benchmarks/overview.md). Verdict legend: ✓ exact · ≈ drift · ✗ divergent · ⊘ not available in lib · — not run · ⚠ error. The fastest backend per column is marked with a 🏆 medal. Rows tagged with **📐** are *also* declared in [`benchmarks/parity_timing/registry.py`](../benchmarks/methodology.md) as the canonical parity references for this method (`python_reference` / `r_reference` / `extra_references`). C++ and external rows show reference parity; pls4all language bindings show binding parity against the C++ backend. The 📐 icon points at the *library-of-record* the parity gate ultimately answers to. Hover the icon to see the role and tolerance band.
 
 ::::{tab-set}
 :class: parity-tabs
@@ -256,41 +256,41 @@ Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.c
 
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">100×50 (ms)</th><th class="size-col" scope="col">200×50 (ms)</th><th class="size-col" scope="col">500×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libp4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas</code></td><td class="parity parity-drift">≈</td><td class="ms ms-best">0.87 ms<span class="medal" title="fastest">🏆</span></td><td class="ms ms-empty">—</td><td class="ms">4.22 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-drift">≈</td><td class="ms">0.94 ms</td><td class="ms ms-empty">—</td><td class="ms ms-best">4.07 ms<span class="medal" title="fastest">🏆</span></td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.omp</code></td><td class="parity parity-drift">≈</td><td class="ms">0.90 ms</td><td class="ms ms-empty">—</td><td class="ms">4.12 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.ref</code></td><td class="parity parity-drift">≈</td><td class="ms">1.32 ms</td><td class="ms ms-empty">—</td><td class="ms">4.20 ms</td></tr>
+<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">100×50 (ms)</th></tr></thead>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libp4a</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas</code></td><td class="parity parity-exact">✓ 9e-16</td><td class="ms ms-best">0.95 ms<span class="medal" title="fastest">🏆</span></td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-exact">✓ 9e-16</td><td class="ms">1.01 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.omp</code></td><td class="parity parity-exact">✓ 1e-15</td><td class="ms">1.00 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.ref</code></td><td class="parity parity-exact">✓ 1e-15</td><td class="ms">1.02 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-drift">≈</td><td class="ms">0.90 ms</td><td class="ms ms-empty">—</td><td class="ms">5.75 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.registry</code></td><td class="parity parity-drift">≈</td><td class="ms">1.04 ms</td><td class="ms">200.3 ms</td><td class="ms">4.72 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-drift">≈</td><td class="ms">1.35 ms</td><td class="ms ms-empty">—</td><td class="ms">4.76 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.25 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.registry</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.03 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.19 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-drift">≈</td><td class="ms">6.00 ms</td><td class="ms ms-empty">—</td><td class="ms">20.0 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-drift">≈</td><td class="ms">6.00 ms</td><td class="ms ms-empty">—</td><td class="ms">22.5 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ 4e-15</td><td class="ms">31.0 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-exact">✓ 4e-15</td><td class="ms">22.0 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-matlab"><tr class="lang-band-row" data-lang="matlab"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>MATLAB · pls4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.matlab</code></td><td class="parity parity-drift">≈</td><td class="ms">1.69 ms</td><td class="ms ms-empty">—</td><td class="ms">8.17 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.matlab.classdef</code></td><td class="parity parity-drift">≈</td><td class="ms">5.96 ms</td><td class="ms ms-empty">—</td><td class="ms">13.9 ms</td></tr>
+<tbody class="lang-band lang-matlab"><tr class="lang-band-row" data-lang="matlab"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>MATLAB · pls4all</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.matlab</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">3.74 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls4all.matlab.classdef</code></td><td class="parity parity-exact">✓ 4e-15</td><td class="ms">9.89 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ikpls</code></td><td class="parity parity-drift">≈</td><td class="ms">2.51 ms</td><td class="ms ms-empty">—</td><td class="ms">5.70 ms</td></tr>
-<tr class="bk-row truth-source truth-source-qualitative"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (ikpls): ikpls 4.0.1.post1 — qualitative (rmse_rel ≤ 1e-01)">📐</span><code>ref.python_ikpls</code></td><td class="parity parity-drift">≈</td><td class="ms">1.29 ms</td><td class="ms">853.6 ms</td><td class="ms">5.09 ms</td></tr>
-<tr class="bk-row truth-source truth-source-qualitative"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (python): scikit-learn 1.8.0 — qualitative (rmse_rel ≤ 1e-01)">📐</span><code>ref.python_scikit_learn</code></td><td class="parity parity-drift">≈</td><td class="ms">1.84 ms</td><td class="ms">546.2 ms</td><td class="ms">5.60 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>sklearn</code></td><td class="parity parity-drift">≈</td><td class="ms">1.55 ms</td><td class="ms ms-empty">—</td><td class="ms">5.48 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>ikpls</code></td><td class="parity parity-exact">✓ 2e-02</td><td class="ms">1.08 ms</td></tr>
+<tr class="bk-row truth-source truth-source-qualitative"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (ikpls): ikpls 4.0.1.post1 — qualitative (rmse_rel ≤ 1e-01)">📐</span><code>ref.python_ikpls</code></td><td class="parity parity-exact">✓ 1e-02</td><td class="ms">535.3 ms</td></tr>
+<tr class="bk-row truth-source truth-source-qualitative"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (python): scikit-learn 1.8.0 — qualitative (rmse_rel ≤ 1e-01)">📐</span><code>ref.python_scikit_learn</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">1.52 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>sklearn</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">1.32 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>mixOmics</code></td><td class="parity parity-drift">≈</td><td class="ms">12.0 ms</td><td class="ms ms-empty">—</td><td class="ms">33.0 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls</code></td><td class="parity parity-drift">≈</td><td class="ms">8.50 ms</td><td class="ms ms-empty">—</td><td class="ms">23.5 ms</td></tr>
-<tr class="bk-row truth-source truth-source-qualitative"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (mixOmics): mixOmics 6.26.0 — qualitative (rmse_rel ≤ 1e-01)">📐</span><code>ref.r_mixomics</code></td><td class="parity parity-drift">≈</td><td class="ms">1.4 s</td><td class="ms">1.1 s</td><td class="ms">1.5 s</td></tr>
-<tr class="bk-row truth-source truth-source-qualitative"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (r): pls 2.8.5 — qualitative (rmse_rel ≤ 1e-01)">📐</span><code>ref.r_pls</code></td><td class="parity parity-drift">≈</td><td class="ms">167.6 ms</td><td class="ms ms-best">130.6 ms<span class="medal" title="fastest">🏆</span></td><td class="ms">200.0 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>ropls</code></td><td class="parity parity-not_available">⊘</td><td class="ms">—</td><td class="ms ms-empty">—</td><td class="ms">—</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · external</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>mixOmics</code></td><td class="parity parity-exact">✓ 6e-16</td><td class="ms">7.50 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>pls</code></td><td class="parity parity-exact">✓ 1e-15</td><td class="ms">5.50 ms</td></tr>
+<tr class="bk-row truth-source truth-source-qualitative"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (mixOmics): mixOmics 6.26.0 — qualitative (rmse_rel ≤ 1e-01)">📐</span><code>ref.r_mixomics</code></td><td class="parity parity-exact">✓ 2e-15</td><td class="ms">1.1 s</td></tr>
+<tr class="bk-row truth-source truth-source-qualitative"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (r): pls 2.8.5 — qualitative (rmse_rel ≤ 1e-01)">📐</span><code>ref.r_pls</code></td><td class="parity parity-exact">✓ 3e-15</td><td class="ms">125.8 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>ropls</code></td><td class="parity parity-not_available">⊘</td><td class="ms">—</td></tr>
 </tbody>
-<tbody class="lang-band lang-matlab"><tr class="lang-band-row" data-lang="matlab"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>MATLAB · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>plsregress</code></td><td class="parity parity-drift">≈</td><td class="ms">2.56 ms</td><td class="ms ms-empty">—</td><td class="ms">8.71 ms</td></tr>
+<tbody class="lang-band lang-matlab"><tr class="lang-band-row" data-lang="matlab"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>MATLAB · external</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>plsregress</code></td><td class="parity parity-exact">✓ 7e-15</td><td class="ms">2.21 ms</td></tr>
 </tbody>
 </table>
 </div>

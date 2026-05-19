@@ -1131,7 +1131,7 @@ def is_true(v: Any) -> bool:
     return str(v).lower() == "true"
 
 
-def verdict(row: dict) -> str:
+def _failure_verdict(row: dict) -> str:
     if not is_true(row.get("ok")):
         reason = (row.get("reason") or "").lower()
         if "timeout" in reason:
@@ -1144,15 +1144,66 @@ def verdict(row: dict) -> str:
                 "error", "exception", "crash", "traceback", "segfault")):
             return "error"
         return "not_run"
-    if is_true(row.get("parity_ok")):
+    return ""
+
+
+def _uses_reference_parity(row: dict, cid: str) -> bool:
+    return (
+        cid.startswith("pls4all.cpp.")
+        or cid.startswith("ref.")
+        or row.get("kind") == "external"
+    )
+
+
+def verdict(row: dict, cid: str = "") -> str:
+    failure = _failure_verdict(row)
+    if failure:
+        return failure
+    if _uses_reference_parity(row, cid):
+        kind = (row.get("reference_kind") or "").lower()
+        if kind == "paper_only":
+            return "not_available"
+        ref_ok = row.get("reference_parity_ok")
+        if ref_ok in (None, "", "None"):
+            return "not_available"
+        if is_true(ref_ok):
+            return "exact"
+        try:
+            d = float(row.get("reference_parity_rmse_rel", "nan"))
+            tol = float(row.get("reference_parity_tolerance", "nan"))
+        except (TypeError, ValueError):
+            return "drift"
+        if d != d or tol != tol:
+            return "drift"
+        return "drift" if d < 10 * tol else "divergent"
+
+    parity_ok = row.get("binding_parity_ok", row.get("parity_ok"))
+    if is_true(parity_ok):
         return "exact"
     try:
-        d = float(row.get("parity_max_diff", "nan"))
+        d = float(row.get("binding_parity_max_diff",
+                          row.get("parity_max_diff", "nan")))
     except (TypeError, ValueError):
         return "drift"
     if d != d:
         return "drift"
     return "drift" if d < 1e-3 else "divergent"
+
+
+def parity_metric(row: dict, cid: str) -> tuple[str, str]:
+    if _uses_reference_parity(row, cid):
+        return (
+            "reference",
+            row.get("reference_parity_rmse_rel")
+            or row.get("reference_parity_rmse_abs")
+            or "",
+        )
+    return (
+        "binding",
+        row.get("binding_parity_max_diff")
+        or row.get("parity_max_diff")
+        or "",
+    )
 
 
 def fmt_ms(s: str) -> str:
@@ -1173,17 +1224,63 @@ VERDICT_ICON = {
 }
 
 
+def _timing_schema(row: dict) -> str:
+    try:
+        versions = json.loads(row.get("versions_json") or "{}")
+    except json.JSONDecodeError:
+        return ""
+    return str(versions.get("timing_schema") or "")
+
+
 def parse_csv(path: Path) -> dict[str, list[dict]]:
-    """Group CSV rows by algorithm."""
+    """Group benchmark CSV rows by algorithm.
+
+    Method pages should agree with the dashboard: `full_matrix.csv` is the
+    baseline, while `dashboard_refresh_*.csv` files can supersede stale cells.
+    Prefer warmup-v2 timings over old cold-run rows, then the newest source
+    file. Non-C++ bindings collapse to the production blas-omp row for their
+    displayed column.
+    """
     if not path.exists():
         return {}
+    paths = [path]
+    if path.name == "full_matrix.csv":
+        paths.extend(sorted(path.parent.glob("dashboard_refresh_*.csv")))
+
+    seen: dict[tuple, dict] = {}
+    for source_index, csv_path in enumerate(paths):
+        if not csv_path.exists():
+            continue
+        source_mtime = csv_path.stat().st_mtime
+        with csv_path.open() as f:
+            for r in csv.DictReader(f):
+                algo = r.get("algorithm")
+                if not algo:
+                    continue
+                try:
+                    n = int(r["n"]); p = int(r["p"]); t = int(r["threads"])
+                except (KeyError, TypeError, ValueError):
+                    continue
+                cid = column_id(r.get("backend", ""),
+                                r.get("libp4a_build", ""))
+                key = (algo, cid, n, p, t)
+                build = r.get("libp4a_build", "")
+                rank = (
+                    1 if _timing_schema(r) == "warmup-v2" else 0,
+                    1 if build == "blas-omp" else 0,
+                    float(source_mtime),
+                    int(source_index),
+                )
+                old = seen.get(key)
+                if old is None or rank >= old["_rank"]:
+                    row = dict(r)
+                    row["_rank"] = rank
+                    seen[key] = row
+
     out: dict[str, list[dict]] = defaultdict(list)
-    with path.open() as f:
-        for r in csv.DictReader(f):
-            algo = r.get("algorithm")
-            if not algo:
-                continue
-            out[algo].append(r)
+    for r in seen.values():
+        r.pop("_rank", None)
+        out[r["algorithm"]].append(r)
     return dict(out)
 
 
@@ -1763,8 +1860,8 @@ def parity_table(method: str, rows: list[dict],
     for b in grouped:
         grouped[b].sort()
 
-    def _row_verdict(r: dict | None) -> str:
-        return verdict(r) if r is not None else "not_run"
+    def _row_verdict(r: dict | None, cid: str = "") -> str:
+        return verdict(r, cid) if r is not None else "not_run"
 
     def _row_ms(r: dict | None) -> float:
         if r is None:
@@ -1791,9 +1888,9 @@ def parity_table(method: str, rows: list[dict],
             "(../benchmarks/methodology.md) as the canonical parity "
             "references for this method "
             "(`python_reference` / `r_reference` / `extra_references`). "
-            "Cell parity in this table is measured against the "
-            "cross-binding reference (`pls4all.cpp` blas-omp, 1 thread); "
-            f"the {TRUTH_SOURCE_ICON} icon points at the *library-of-record* "
+            "C++ and external rows show reference parity; pls4all language "
+            "bindings show binding parity against the C++ backend. "
+            f"The {TRUTH_SOURCE_ICON} icon points at the *library-of-record* "
             "the parity gate ultimately answers to. Hover the icon to "
             "see the role and tolerance band."
         )
@@ -1816,7 +1913,7 @@ def parity_table(method: str, rows: list[dict],
                 r = cells.get((cid, n, p_, t))
                 if r is None:
                     continue
-                v = _row_verdict(r)
+                v = _row_verdict(r, cid)
                 if v not in ("exact", "drift"):
                     continue
                 ms = _row_ms(r)
@@ -1862,11 +1959,12 @@ def parity_table(method: str, rows: list[dict],
                                None)
                 if primary is None:
                     continue
-                v = _row_verdict(primary)
+                v = _row_verdict(primary, cid)
                 icon = VERDICT_ICON[v]
-                diff = primary.get("parity_max_diff") or ""
+                basis, diff = parity_metric(primary, cid)
                 if v == "exact":
-                    p_cell = (f"{icon} ref"
+                    label = "ref" if basis == "reference" else "bind"
+                    p_cell = (f"{icon} {label}"
                               if not diff or diff in ("0", "0.0")
                               else f"{icon} {float(diff):.0e}")
                 else:

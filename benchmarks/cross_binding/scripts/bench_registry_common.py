@@ -53,6 +53,14 @@ def adapted_params(method, n: int, p: int, n_components: int) -> dict:
                                             max(1, n_classes - 1)))
     if "max_components" in params:
         params["max_components"] = _cap_components(params["max_components"], n, p)
+    if (method.name in {"ipw_select", "rep_select", "shaving_select"}
+            and not use_registry_components):
+        # These selectors are compared to compact plsVarSel survivor sets.
+        # Keep their registry-tuned component counts during size sweeps instead
+        # of inheriting the global dashboard n_components value.
+        params["n_components"] = _cap_components(
+            method.cell_params.get("n_components", params.get("n_components", n_components)),
+            n, p)
     if "n_predictive" in params:
         params["n_predictive"] = _cap_components(
             min(params["n_predictive"], n_components), n, p)

@@ -83,7 +83,8 @@ The build axis appears explicitly in the
 ## 4. Determinism and reference policy
 
 Every algorithm has a *parity reference* — the external library whose
-implementation pls4all reproduces bit-exactly within tolerance:
+implementation pls4all reproduces within the method's numerical
+tolerance:
 
 | Algorithm family | Reference library | Language |
 |---|---|---|

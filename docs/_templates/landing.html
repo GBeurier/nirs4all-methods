@@ -1292,7 +1292,7 @@
       <li>Reference: <code>pls4all.cpp</code> native column <span id="parity-ref-name">(resolved from data)</span></li>
       <li>Parity tolerance: 1e-6 exact, 1e-3 drift threshold</li>
       <li>Every backend reads the <b>same</b> orchestrator-generated CSV dataset</li>
-      <li>5 runs per cell, first discarded as warmup, median reported</li>
+      <li>5 timed runs per cell after one unmeasured warmup, median reported</li>
       <li>Per-cell timeout: 300s</li>
       <li>Thread control via <code>OMP_NUM_THREADS</code> · <code>OPENBLAS_NUM_THREADS</code> · <code>MKL_NUM_THREADS</code> · <code>BLIS_NUM_THREADS</code> + binding-specific thread controls</li>
     </ul>

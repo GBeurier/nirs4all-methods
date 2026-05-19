@@ -73,7 +73,7 @@ class _BasePls4allSelector(SelectorMixin, BaseEstimator):
     # knobs; expose them anyway so power users can tune.
 
     def _resolve_solver_(self):
-        return _resolve_solver(getattr(self, "solver", "nipals"))
+        return _resolve_solver(getattr(self, "solver", "simpls"))
 
     def _make_config(self, *, store_scores: bool = False):
         return _config_from_params(
@@ -161,7 +161,7 @@ class VIPSelector(_RankerSelector):
     _rank_method = 0
 
     def __init__(self, top_k: int, *, n_components: int = 2,
-                  solver: str = "nipals",
+                  solver: str = "simpls",
                   center_x: bool = True, scale_x: bool = True,
                   tol: float = 1e-6, max_iter: int = 500) -> None:
         self.top_k = top_k
@@ -185,7 +185,7 @@ class CoefficientSelector(_RankerSelector):
     _rank_method = 1
 
     def __init__(self, top_k: int, *, n_components: int = 2,
-                  solver: str = "nipals",
+                  solver: str = "simpls",
                   center_x: bool = True, scale_x: bool = True,
                   tol: float = 1e-6, max_iter: int = 500) -> None:
         self.top_k = top_k
@@ -202,7 +202,7 @@ class SelectivityRatioSelector(_RankerSelector):
     _rank_method = 2
 
     def __init__(self, top_k: int, *, n_components: int = 2,
-                  solver: str = "nipals",
+                  solver: str = "simpls",
                   center_x: bool = True, scale_x: bool = True,
                   tol: float = 1e-6, max_iter: int = 500) -> None:
         self.top_k = top_k

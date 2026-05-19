@@ -61,8 +61,12 @@ pls4all_bench_load_xy <- function(csv_dir, n, p, seed) {
          y = arr[, ncol(arr)])
 }
 
-# Timed runs (warmup-aware median, same convention as Python _common).
+# Timed runs (one unmeasured warmup, same convention as Python _common).
 pls4all_bench_time_runs <- function(fit_predict_seeded, runs, seed_base) {
+    if (runs < 1L) {
+        stop("runs must be >= 1")
+    }
+    fit_predict_seeded(seed_base)
     samples <- numeric(runs)
     last_preds <- NULL
     for (i in seq_len(runs)) {
@@ -70,13 +74,12 @@ pls4all_bench_time_runs <- function(fit_predict_seeded, runs, seed_base) {
         last_preds <- fit_predict_seeded(seed_base + (i - 1L))
         samples[i] <- (proc.time()[["elapsed"]] - t0) * 1000
     }
-    timed <- if (runs >= 3L) samples[-1L] else samples
     list(stats = list(
             ok = TRUE,
-            n_runs = length(timed),
-            median_ms = median(timed),
-            min_ms = min(timed),
-            max_ms = max(timed)
+            n_runs = length(samples),
+            median_ms = median(samples),
+            min_ms = min(samples),
+            max_ms = max(samples)
          ),
          last_preds = last_preds)
 }

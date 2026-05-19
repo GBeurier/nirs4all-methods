@@ -420,8 +420,8 @@ def render(csv_path: Path, out_path: Path,
                 "it is Gate 2. Drift / divergent / empty cells never carry "
                 "the bold.\n")
 
-    out.append(f"Timing is the **median of {run_text} run(s)**; the first "
-                "run is discarded as warmup when `n_runs >= 3`. All "
+    out.append(f"Timing is the **median of {run_text} timed run(s)** after "
+                "one unmeasured warmup. All "
                 "backends in a single cell read the same "
                 "orchestrator-generated CSV dataset. See "
                 "[methodology.md](methodology.md) for the full details.\n")
@@ -643,8 +643,8 @@ def render(csv_path: Path, out_path: Path,
                 "`reference_parity_tolerance` by newer CSVs)")
     out.append("- All backends read the same orchestrator-generated CSV dataset "
                 "(`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`)")
-    out.append(f"- {run_text} run(s) per cell, first discarded as warmup "
-                "when `n_runs >= 3`, median reported")
+    out.append(f"- {run_text} timed run(s) per cell after one unmeasured "
+               "warmup, median reported")
     out.append("- Per-cell timeout: 300 s")
     out.append("- Thread control via `OMP_NUM_THREADS = OPENBLAS_NUM_THREADS = "
                 "MKL_NUM_THREADS = BLIS_NUM_THREADS` set in the subprocess env, "

@@ -71,6 +71,7 @@ DEFAULT_SIZES = [
 
 # Per-cell wall-clock timeout (seconds).
 DEFAULT_TIMEOUT_S = 300
+TIMING_SCHEMA = "warmup-v2"
 
 # (name, script, language, tier, kind)
 #   kind ∈ {"pls4all_core", "pls4all_binding", "external"}
@@ -473,6 +474,11 @@ def run_backend(name: str, script: str, language: str, tier: str,
     except json.JSONDecodeError:
         return {"backend": name, "ok": False,
                  "reason": "non-json output", "tail": last[:200]}
+    versions = rec.get("versions")
+    if not isinstance(versions, dict):
+        versions = {}
+    versions["timing_schema"] = TIMING_SCHEMA
+    rec["versions"] = versions
     rec["backend"] = name
     rec["subprocess_s"] = elapsed
     rec.setdefault("ok", True)
@@ -756,12 +762,18 @@ def planned_keys(algo: str, backend_name: str, n: int, p: int,
                  threads: int, build: str, seed_base: int,
                  n_runs: int) -> tuple[tuple, tuple]:
     slot = (algo, backend_name, n, p, threads, build)
-    # Bench scripts emit n_runs = number of TIMED samples (warmup discarded
-    # when input n_runs >= 3). Resume must match against that value, not
-    # the input. See _common.time_runs_seeded.
-    measured = n_runs - 1 if n_runs >= 3 else n_runs
-    strict = (*slot, seed_base, measured)
+    # Bench scripts emit n_runs = number of timed samples. Warmup is always
+    # unmeasured; see scripts/_common.py::time_runs_seeded.
+    strict = (*slot, seed_base, n_runs)
     return slot, strict
+
+
+def record_timing_schema(record: dict) -> str | None:
+    versions = record.get("versions")
+    if isinstance(versions, dict):
+        value = versions.get("timing_schema")
+        return str(value) if value else None
+    return None
 
 
 def write_records(csv_out: Path, records: list[dict]) -> None:
@@ -821,7 +833,7 @@ def main():
                               "blas + omp + blasomp; 'all' = the full "
                               "5-build sweep including cuda-on.")
     parser.add_argument("--n-runs", type=int, default=5,
-                         help="Runs per cell (first discarded as warmup if >= 3)")
+                         help="Timed runs per cell; one extra warmup is unmeasured")
     parser.add_argument("--n-components", type=int, default=5)
     parser.add_argument("--seed-base", type=int, default=DEFAULT_SEED_BASE)
     parser.add_argument("--only-pls4all", action="store_true",
@@ -970,15 +982,15 @@ def main():
                         slot, strict = planned_keys(
                             algo, name, n, p, thr, build,
                             args.seed_base, args.n_runs)
-                        # Accept both warmup-discarded (n_runs - 1) and raw
-                        # input (n_runs) recorded values — bench scripts emit
-                        # the timed-sample count on success but legacy/failed
-                        # rows may have the input value.
+                        # Accept the raw input count for current rows. The
+                        # timing_schema guard keeps legacy cold-run CSV rows
+                        # from being reused under --resume-existing.
                         strict_alt = (*slot, args.seed_base, args.n_runs)
                         planned_slots.add(slot)
                         existing = existing_by_slot.get(slot)
                         if (args.resume_existing and not args.force
                                 and existing is not None
+                                and record_timing_schema(existing) == TIMING_SCHEMA
                                 and strict_key(existing) in (strict, strict_alt)
                                 and (existing.get("ok") or not args.rerun_failed)):
                             records.append(existing)

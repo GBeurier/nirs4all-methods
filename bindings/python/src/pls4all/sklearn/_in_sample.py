@@ -312,6 +312,31 @@ class BaggingPLSRegression(_InSampleOnlyRegressor):
             cfg.close()
 
 
+class GPRPLSRegression(_InSampleOnlyRegressor):
+    """Gaussian-process head on SIMPLS training scores."""
+
+    def __init__(self, n_components: int = 2,
+                  *, length_scale: float = 1.0,
+                  noise_level: float = 1e-3,
+                  seed: int = 0) -> None:
+        self.n_components = n_components
+        self.length_scale = length_scale
+        self.noise_level = noise_level
+        self.seed = seed
+
+    def _run_fit(self, ctx, X, y):
+        cfg = _basic_cfg(self.n_components)
+        try:
+            return _methods.gpr_pls_fit(
+                ctx, cfg, X, y,
+                n_components=int(self.n_components),
+                length_scale=float(self.length_scale),
+                noise_level=float(self.noise_level),
+                seed=int(self.seed))
+        finally:
+            cfg.close()
+
+
 class BoostingPLSRegression(_InSampleOnlyRegressor):
     """Boosted PLS regression."""
 
@@ -434,6 +459,7 @@ __all__ = [
     "GroupSparsePLSRegression",
     "FusedSparsePLSRegression",
     "BaggingPLSRegression",
+    "GPRPLSRegression",
     "BoostingPLSRegression",
     "RandomSubspacePLSRegression",
     "SOPLSRegression",

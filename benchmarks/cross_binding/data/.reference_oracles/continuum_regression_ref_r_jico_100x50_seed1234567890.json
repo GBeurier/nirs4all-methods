@@ -13,6 +13,7 @@
     "numpy": "2.3.5",
     "reference_id": "r_jico",
     "reference_library": "JICO",
-    "reference_version": "0.0"
+    "reference_version": "0.1",
+    "timing_schema": "warmup-v2"
   }
 }

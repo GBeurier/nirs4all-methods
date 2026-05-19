@@ -31,14 +31,14 @@ each language's idiomatic API on top.
 
 The benefits stack:
 
-- **Determinism across languages.** Same kernel, same random stream,
-  same output bytes. This is enforced by a cross-binding parity gate
-  that runs on every PR.
+- **Determinism across languages.** Same kernel and same generated
+  datasets, with numerical parity checked by explicit gates instead of
+  claiming byte-identical outputs.
 - **Performance** — BLAS / OpenMP / CUDA accelerated tiers, with a
   scalar reference tier kept around as the parity anchor.
 - **Reproducibility** — every binding ships a `.n4a` bundle format
-  that round-trips through the C ABI; a model trained in Python
-  loads bit-for-bit in R or MATLAB.
+  that round-trips through the C ABI; a model trained in Python can be
+  loaded and parity-checked in R or MATLAB.
 - **Auditability** — the parity gate compares pls4all predictions to
   the external reference library that "owns" each algorithm
   (sklearn for PLS, ropls for OPLS, spls for sparse PLS, …) and

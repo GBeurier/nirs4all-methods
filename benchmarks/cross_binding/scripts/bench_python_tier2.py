@@ -51,7 +51,7 @@ _SKLEARN_CLASS: dict[str, str | None] = {
     "fused_sparse_pls":       "FusedSparsePLSRegression",
     "group_sparse_pls":       "GroupSparsePLSRegression",
     "lw_pls":                 "LWPLSRegression",
-    "gpr_pls":                None,   # no idiomatic class yet
+    "gpr_pls":                "GPRPLSRegression",
     "pls_glm":                "PLSGLMRegressor",
     "pls_cox":                "PLSCoxRegressor",
     "pls_lda":                "PLSLDAClassifier",
@@ -98,6 +98,17 @@ _SKLEARN_CLASS: dict[str, str | None] = {
     "variable_select_vip":    "VIPSelector",
     "wvc_select":             "WVCSelector",
     "wvc_threshold_select":   "WVCThresholdSelector",
+}
+
+_FUNCTION_BINDINGS = {
+    "aom_preprocess": "aom_preprocess",
+    "approximate_press": "approximate_press",
+    "one_se_rule": "one_se_rule",
+    "on_pls": "on_pls",
+    "pls_diagnostic_dmodx": "dmodx_score",
+    "pls_diagnostic_q": "q_score",
+    "pls_diagnostic_t2": "t2_score",
+    "pls_monitoring": "pls_monitoring",
 }
 
 
@@ -175,10 +186,69 @@ def _fit_kwargs(cls, extras: dict) -> dict:
     return out
 
 
+def _fit_simpls_model(p4a_sklearn, X, Y, n_components: int):
+    yarg = Y if Y.shape[1] > 1 else Y.ravel()
+    est = p4a_sklearn.PLSRegression(
+        n_components=int(n_components),
+        solver="simpls",
+        center_x=True,
+        scale_x=False,
+        center_y=True,
+        scale_y=False,
+        store_scores=True,
+    )
+    est.fit(X, yarg)
+    return est._ensure_model_handle()
+
+
+def _run_function_binding(algo: str, p4a_sklearn, X, y, Y, params: dict,
+                          prediction_key: str) -> np.ndarray:
+    if algo == "aom_preprocess":
+        return np.asarray(p4a_sklearn.aom_preprocess(
+            X, Y,
+            n_operators=int(params["n_operators"]),
+            gating_mode=int(params["gating_mode"])))
+    if algo == "approximate_press":
+        return np.asarray(p4a_sklearn.approximate_press(
+            X, Y, max_components=int(params["max_components"]))).reshape(1, -1)
+    if algo == "one_se_rule":
+        rng = np.random.default_rng(11)
+        fold_rmse = rng.uniform(
+            0.5, 1.0,
+            size=(int(params["max_components"]), int(params["n_folds"])))
+        result = p4a_sklearn.one_se_rule(
+            fold_rmse,
+            max_components=int(params["max_components"]),
+            n_folds=int(params["n_folds"]),
+            return_curve=True)
+        return np.asarray(result[prediction_key], dtype=np.float64).reshape(1, -1)
+    if algo in {"pls_diagnostic_dmodx", "pls_diagnostic_q", "pls_diagnostic_t2"}:
+        _ctx, model = _fit_simpls_model(
+            p4a_sklearn, X, Y, int(params["n_components"]))
+        fn = getattr(p4a_sklearn, _FUNCTION_BINDINGS[algo])
+        return np.asarray(fn(model, X), dtype=np.float64).reshape(1, -1)
+    if algo == "pls_monitoring":
+        split = X.shape[0] // 2
+        _ctx, model = _fit_simpls_model(
+            p4a_sklearn, X[:split], Y[:split], int(params["n_components"]))
+        result = p4a_sklearn.pls_monitoring(
+            model, X[:split], X[split:],
+            alpha=1.0 - float(params["alpha"]))
+        return np.asarray(result[prediction_key], dtype=np.float64).reshape(1, -1)
+    if algo == "on_pls":
+        result = p4a_sklearn.on_pls(
+            X,
+            n_blocks=int(params["n_blocks"]),
+            n_joint=int(params["n_joint"]),
+            n_unique_per_block=params["n_unique_per_block"])
+        return np.asarray(result[prediction_key], dtype=np.float64)
+    raise RuntimeError(f"python_tier2: no function binding for {algo}")
+
+
 def main():
     algo, csv_dir, n, p, nc, runs, seed_base, pred_path = parse_args()
     class_name = _SKLEARN_CLASS.get(algo, ...)
-    if class_name is None:
+    if class_name is None and algo not in _FUNCTION_BINDINGS:
         # Honest miss: no idiomatic sklearn class is wired for this algo.
         raise RuntimeError(
             f"python_tier2: no sklearn estimator for '{algo}' "
@@ -190,10 +260,12 @@ def main():
     from pls4all import sklearn as p4a_sklearn
     from pls4all._context import Context
 
-    cls = getattr(p4a_sklearn, class_name, None)
-    if cls is None:
-        raise RuntimeError(
-            f"python_tier2: pls4all.sklearn.{class_name} missing for '{algo}'")
+    cls = None
+    if class_name is not None:
+        cls = getattr(p4a_sklearn, class_name, None)
+        if cls is None:
+            raise RuntimeError(
+                f"python_tier2: pls4all.sklearn.{class_name} missing for '{algo}'")
 
     method = load_method(algo)
 
@@ -201,6 +273,9 @@ def main():
         X, y = load_dataset(csv_dir, n, p, seed)
         params = adapted_params(method, n, p, nc)
         Y, extras = benchmark_inputs(method, X, y, params, seed)
+        if algo in _FUNCTION_BINDINGS:
+            return _run_function_binding(
+                algo, p4a_sklearn, X, y, Y, params, method.prediction_key)
         # Some array extras (group_assignment, block_sizes) are
         # constructor kwargs on the sklearn class, not fit kwargs.
         ctor_kwargs = _constructor_kwargs(algo, cls, params)
@@ -333,7 +408,7 @@ def main():
     versions = collect_versions("Python",
                                   pls4all=getattr(pls4all, "__version__", "?"),
                                   numpy=_safe_version("numpy"),
-                                  sklearn_class=class_name)
+                                  sklearn_class=class_name or _FUNCTION_BINDINGS.get(algo, algo))
     emit_record(stats, last_preds, pred_path, versions)
 
 

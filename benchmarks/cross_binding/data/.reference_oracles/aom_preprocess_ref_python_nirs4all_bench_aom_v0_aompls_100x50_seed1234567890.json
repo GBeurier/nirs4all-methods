@@ -1,0 +1,19 @@
+{
+  "algorithm": "aom_preprocess",
+  "backend": "ref_python_nirs4all_bench_aom_v0_aompls",
+  "n": 100,
+  "n_runs": 1,
+  "p": 50,
+  "prediction_seed": 1234567890,
+  "seed_base": 1234567890,
+  "source_predictions_path": "/home/delete/nirs4all/pls4all/benchmarks/cross_binding/data/.predictions/aom_preprocess_ref_python_nirs4all_bench_aom_v0_aompls_100x50_t1_blas-omp.npy",
+  "versions": {
+    "blas": "libscipy_openblas 0.3.30 blas=1",
+    "language": "Python 3.13.13",
+    "numpy": "2.3.5",
+    "reference_id": "python_nirs4all_bench_aom_v0_aompls",
+    "reference_library": "nirs4all.bench.AOM_v0.aompls",
+    "reference_version": "in-tree-oracle",
+    "timing_schema": "warmup-v2"
+  }
+}

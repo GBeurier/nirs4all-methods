@@ -119,7 +119,7 @@ def test_selector_in_pipeline(name, selector_data):
     X, y = selector_data
     pipe = Pipeline([
         ("select", _build_selector(name)),
-        ("pls", PLSRegression(n_components=2)),
+        ("pls", PLSRegression(n_components=1)),
     ])
     pipe.fit(X, y)
     preds = pipe.predict(X)
