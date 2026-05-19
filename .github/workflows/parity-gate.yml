@@ -53,7 +53,7 @@ jobs:
           python - <<'PY'
           import pls4all
 
-          assert pls4all.version().startswith("0.97.1")
+          assert pls4all.version().startswith("0.97.2")
           with pls4all.Context() as ctx, pls4all.Config() as cfg:
               cfg.n_components = 3
               cfg.algorithm = pls4all.Algorithm.PCR

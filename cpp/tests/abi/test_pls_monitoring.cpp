@@ -98,8 +98,13 @@ TEST(pls_monitoring_phase11, thresholds_match_quantile_of_reference) {
     // since position = 0.9 * 7 = 6.3).
     std::vector<double> sorted_t2 = thresholds.t2_reference;
     std::sort(sorted_t2.begin(), sorted_t2.end());
+    if (sorted_t2.size() < 8U) {
+        ++failures;
+        std::fprintf(stderr, "  FAIL expected at least 8 T2 references\n");
+        return;
+    }
     const double expected =
-        sorted_t2[6] + 0.3 * (sorted_t2[7] - sorted_t2[6]);
+        sorted_t2.at(6) + 0.3 * (sorted_t2.at(7) - sorted_t2.at(6));
     if (std::fabs(thresholds.t2_threshold - expected) > 1e-12) {
         ++failures;
         std::fprintf(stderr,
