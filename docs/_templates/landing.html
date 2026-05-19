@@ -803,7 +803,6 @@
     .p-divergent { color: var(--crimson); }
     .p-error   { color: var(--crimson); }
     .p-not_run { color: var(--indigo); }
-    .p-not_compared { color: var(--fg-2); }
     .p-not_available { color: var(--fg-3); }
     .p-ok      { color: var(--phosphor); }
     .p-warn    { color: var(--amber); }
@@ -912,7 +911,7 @@
     .info-card ul, .info-card ol { padding-left: 22px; margin: 10px 0; }
     .info-card li + li { margin-top: 6px; }
     .info-card .p-exact, .info-card .p-drift, .info-card .p-divergent,
-    .info-card .p-error, .info-card .p-not_run, .info-card .p-not_compared, .info-card .p-not_available,
+    .info-card .p-error, .info-card .p-not_run, .info-card .p-not_available,
     .info-card .p-ok, .info-card .p-warn, .info-card .p-fail, .info-card .p-timeout {
       font-family: var(--mono); font-weight: 700; padding: 0 4px;
     }
@@ -1072,7 +1071,6 @@
       <span class="chip active amber" data-parity="drift"><span class="ico p-drift">≈</span>drift</span>
       <span class="chip active crimson" data-parity="divergent"><span class="ico p-divergent">✗</span>divergent</span>
       <span class="chip active crimson" data-parity="error"><span class="ico p-error">!</span>error</span>
-      <span class="chip active gray" data-parity="not_compared"><span class="ico p-not_compared">○</span>timing only</span>
       <span class="chip active gray" data-parity="not_run"><span class="ico p-not_run">·</span>not run</span>
       <span class="chip active gray" data-parity="not_available"><span class="ico p-not_available">∅</span>not available</span>
     </div>
@@ -1169,7 +1167,6 @@
       <li><span class="p-drift">≈</span> <b>drift</b> - result outside exact tolerance</li>
       <li><span class="p-divergent">✗</span> <b>divergent</b> - result outside drift threshold</li>
       <li><span class="p-error">!</span> <b>error</b> - dependency, runtime, crash or exception</li>
-      <li><span class="p-not_compared">○</span> <b>timing only</b> - timing exists, but exact parity is not comparable</li>
       <li><span class="p-not_run">·</span> <b>not run</b> - no timing was produced</li>
       <li><span class="p-not_available">∅</span> <b>not available in lib</b> - the library does not expose that operator</li>
     </ul>
@@ -1196,7 +1193,7 @@ const DATA = JSON.parse(document.getElementById('bench-data').textContent);
 // ---------- state + url persistence ----------
 const URL_KEYS = ['algo','group','lang','libGroup','lib','size','threads','parity','search','cols','sort','density','viz'];
 const DENSITY_VALUES = ['comfortable', 'compact', 'ultra'];
-const PARITY_VALUES = ['exact', 'drift', 'divergent', 'error', 'not_compared', 'not_run', 'not_available'];
+const PARITY_VALUES = ['exact', 'drift', 'divergent', 'error', 'not_run', 'not_available'];
 const PARITY_ALIASES = {
   ok: 'exact',
   covered: 'exact',
@@ -1206,15 +1203,15 @@ const PARITY_ALIASES = {
   external_ok: 'exact',
   reference_snapshot_drift: 'drift',
   warn: 'drift',
-  timing_only: 'not_compared',
-  reference_snapshot_missing: 'not_compared',
-  reference_not_compared: 'not_compared',
+  timing_only: 'error',
+  reference_snapshot_missing: 'error',
+  reference_not_compared: 'error',
   binding_mismatch: 'divergent',
   reference_diverged: 'divergent',
   external_diverged: 'divergent',
   fail: 'error',
   error: 'error',
-  external_not_compared: 'not_compared',
+  external_not_compared: 'error',
   timeout: 'not_run',
   not_run: 'not_run',
   not_available: 'not_available',
@@ -1370,7 +1367,6 @@ const PARITY_ICON = {
   drift: '≈',
   divergent: '✗',
   error: '!',
-  not_compared: '○',
   not_run: '·',
   not_available: '∅',
   ok: '✓',
@@ -2036,7 +2032,7 @@ function aggregateRowsBySize(rows, baselineId) {
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(r);
   }
-  const PARITY_RANK = { exact: 0, drift: 1, not_compared: 2, divergent: 3, error: 4, not_run: 5, not_available: 6 };
+  const PARITY_RANK = { exact: 0, drift: 1, divergent: 2, error: 3, not_run: 4, not_available: 5 };
   const worstParity = (cells, fallback = 'not_available') => {
     let out = fallback;
     let seen = false;

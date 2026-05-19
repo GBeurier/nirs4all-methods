@@ -49,14 +49,15 @@ stored snapshot; non-canonical external rows carry comparator parity against the
 same snapshot; Python/R/MATLAB binding rows carry binding parity against the
 native C++ route.
 
-Rows that are useful for performance but not credible for exact numerical
-parity are kept as `timing_only`/`reference_not_compared`. Examples include
-SciPy Fourier resampling when the operator is linear interpolation, wavelet
-transforms with different coefficient ordering/statistical contracts,
-Savitzky-Golay calls with different edge modes, and randomized splitters that
-do not share the same RNG contract. For `nirs4all.WaveletFeatures`, the runner
-sets `n_coeffs_per_level=0` and selects c4a's `histogram` entropy with
-`symmetric` boundary mode so the comparator row uses the same contract.
+Rows that are useful for performance but not identical in contract are still
+gated against the stored canonical snapshot. They therefore render as
+`exact`/`drift`/`divergent`/`error`, not as timing-only entries. Examples
+include wavelet transforms with different coefficient ordering/statistical
+contracts, Savitzky-Golay calls with different edge modes, and randomized
+splitters that do not share the same RNG contract. For
+`nirs4all.WaveletFeatures`, the runner sets `n_coeffs_per_level=0` and selects
+c4a's `histogram` entropy with `symmetric` boundary mode so the comparator row
+uses the same contract.
 
 Some external libraries expose a different computational surface even when the
 name is close. `pybaselines` baseline references are applied row-by-row because
@@ -65,7 +66,7 @@ contract, while `pybaselines.beads(full)` remains a full external algorithm and
 chemometrics4all still ships a compact NIRS-oriented BEADS variant.
 `pybaselines.imodpoly` is called with
 `mask_initial_peaks=False` to match chemometrics4all's disabled initial peak
-masking before the row is kept as timing-only.
+masking before the row is gated like the other references.
 
 ## Parity tolerance
 

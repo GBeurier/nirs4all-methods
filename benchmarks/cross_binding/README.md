@@ -42,13 +42,13 @@ setting, and dashboard columns for `cpp`, `python`, `r`, `nirs4all`, NumPy,
 SciPy, scikit-learn, pybaselines, PyWavelets, R base, and R stats. Every
 registered method has direct C ABI, Python binding, and R binding timing.
 Every dashboard method now also has at least one external reference row.
-External rows are compared only when the operator contract is actually the same
-(same boundary convention, same output shape, deterministic RNG contract, and
-same dimensionality convention). Otherwise the row remains a timing-only
-external comparator. `nirs4all.WaveletFeatures` is timed with
-`n_coeffs_per_level=0` so its output feature count matches the chemometrics4all
-four-statistics-per-band contract; it stays timing-only because the entropy
-definition is not the same as the PyWavelets snapshot reference.
+External rows are always surfaced with a parity verdict. When a comparator has
+a loose contract (different boundary convention, output shape, RNG contract, or
+dimensionality convention), it is still compared against the canonical snapshot
+and will render as divergent/error if the outputs do not match.
+`nirs4all.WaveletFeatures` is timed with `n_coeffs_per_level=0`, histogram
+entropy, and the symmetric boundary contract so its output feature count and
+contract match the chemometrics4all dashboard surface.
 
 Canonical reference rows are marked with `reference_role=canonical` and render
 with a reference-method icon, not a pass/fail gate icon. When a canonical
@@ -79,5 +79,4 @@ revision and dirty marker in `lib_build`, for example `nirs4all@<sha>+dirty`.
 ## EPO
 
 The `epo` C++ timing row uses `c4a_pp_epo_transform_with_d(...)`, so it is a
-real binding-parity baseline for Python `EPO.fit_transform(X, d)` rather than a
-timing-only no-`d` transform.
+real binding-parity baseline for Python `EPO.fit_transform(X, d)`.

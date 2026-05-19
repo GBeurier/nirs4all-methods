@@ -19,6 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate committed benchmark dashboard payload
+        run: python benchmarks/cross_binding/validate_dashboard_payload.py
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:

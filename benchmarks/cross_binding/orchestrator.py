@@ -1831,42 +1831,39 @@ def benchmark_spec(
     if canonical_ref is not None:
         try:
             median_ms, reference_output, reference_samples, reference_batch_loops = time_reference(canonical_ref, ctx, repeat)
-            if canonical_ref.compare:
-                try:
-                    snapshot = get_reference_snapshot(
-                        spec,
-                        canonical_ref,
-                        ctx,
-                        reference_output,
-                        write_snapshots=write_reference_snapshots,
+            try:
+                snapshot = get_reference_snapshot(
+                    spec,
+                    canonical_ref,
+                    ctx,
+                    reference_output,
+                    write_snapshots=write_reference_snapshots,
+                )
+                reference_snapshot_output = snapshot.output
+                snapshot_ok, snapshot_reason = compare_outputs(spec, reference_output, snapshot.output)
+                action = "updated" if write_reference_snapshots else "loaded"
+                contract_note = "" if canonical_ref.compare else "; loose-contract reference still gated"
+                if snapshot_ok:
+                    parity = "reference_snapshot"
+                    reason = (
+                        f"canonical external reference method{contract_note}; {action} stored snapshot "
+                        f"{_rel(snapshot.path)} ({snapshot.metadata.get('reference_version', 'version unknown')}): "
+                        f"{snapshot_reason}"
                     )
-                    reference_snapshot_output = snapshot.output
-                    snapshot_ok, snapshot_reason = compare_outputs(spec, reference_output, snapshot.output)
-                    action = "updated" if write_reference_snapshots else "loaded"
-                    if snapshot_ok:
-                        parity = "reference_snapshot"
-                        reason = (
-                            f"canonical external reference method; {action} stored snapshot "
-                            f"{_rel(snapshot.path)} ({snapshot.metadata.get('reference_version', 'version unknown')}): "
-                            f"{snapshot_reason}"
-                        )
-                    else:
-                        parity = "reference_snapshot_drift"
-                        reason = (
-                            f"canonical external reference method; current output differs from stored snapshot "
-                            f"{_rel(snapshot.path)} ({snapshot.metadata.get('reference_version', 'version unknown')}): "
-                            f"{snapshot_reason}"
-                        )
-                        reference_snapshot_error = reason
-                except Exception as snapshot_exc:  # noqa: BLE001
-                    parity = "reference_snapshot_missing"
-                    reference_snapshot_error = str(snapshot_exc)
-                    reason = f"canonical external reference method; reference snapshot unavailable: {reference_snapshot_error}"
-            else:
-                parity = "timing_only"
+                else:
+                    parity = "reference_snapshot_drift"
+                    reason = (
+                        f"canonical external reference method{contract_note}; current output differs from stored snapshot "
+                        f"{_rel(snapshot.path)} ({snapshot.metadata.get('reference_version', 'version unknown')}): "
+                        f"{snapshot_reason}"
+                    )
+                    reference_snapshot_error = reason
+            except Exception as snapshot_exc:  # noqa: BLE001
+                parity = "fail"
+                reference_snapshot_error = str(snapshot_exc)
                 reason = (
-                    "canonical external reference method; reference gate disabled because "
-                    "the external contract is not equivalent for exact parity"
+                    "canonical external reference method; reference snapshot unavailable: "
+                    f"{reference_snapshot_error}"
                 )
             rows.append(csv_row(
                 spec,
@@ -1937,19 +1934,16 @@ def benchmark_spec(
             if spec.compare_internal:
                 native_output = cpp_output
             reference_ok: bool | None = None
-            if canonical_ref is not None and reference_snapshot_output is not None and canonical_ref.compare and spec.compare_internal:
+            if canonical_ref is not None and reference_snapshot_output is not None and spec.compare_internal:
                 reference_ok, reference_reason = compare_outputs(spec, cpp_output, reference_snapshot_output)
                 parity = "reference_ok" if reference_ok else "reference_diverged"
                 reason = f"timed direct libc4a C ABI; reference gate vs stored {canonical_ref.library} snapshot: {reference_reason}"
-            elif canonical_ref is not None and reference_output is not None and not canonical_ref.compare:
-                parity = "reference_not_compared"
-                reason = f"timed direct libc4a C ABI; reference gate not run: {canonical_ref.library} is timing-only"
-            elif canonical_ref is not None and canonical_ref.compare and reference_snapshot_output is None:
-                parity = "reference_not_compared"
+            elif canonical_ref is not None and reference_snapshot_output is None:
+                parity = "fail"
                 reason = f"timed direct libc4a C ABI; reference gate not run: {reference_snapshot_error or reference_error or 'reference snapshot unavailable'}"
             else:
                 parity = "ok"
-                reason = "timed direct libc4a C ABI" if spec.compare_internal else "timed direct libc4a C ABI; timing-only ABI contract"
+                reason = "timed direct libc4a C ABI" if spec.compare_internal else "timed direct libc4a C ABI; internal binding gate disabled"
             rows.append(csv_row(
                 spec,
                 backend="cpp",
@@ -2087,20 +2081,19 @@ def benchmark_spec(
                 continue
             try:
                 median_ms, ref_output, ref_samples, ref_batch_loops = time_reference(ref, ctx, repeat)
-                if not ref.compare:
-                    reference_ok, reference_reason = None, "timing-only external reference; exact parity contract not equivalent"
-                    parity = "timing_only"
-                elif reference_snapshot_output is None:
+                if reference_snapshot_output is None:
                     reference_ok = None
                     reference_reason = reference_snapshot_error or reference_error or "reference snapshot unavailable"
-                    parity = "external_not_compared"
-                elif canonical_ref is None or canonical_ref.compare:
+                    parity = "fail"
+                elif canonical_ref is not None:
                     reference_ok, reference_reason = compare_outputs(spec, ref_output, reference_snapshot_output)
                     parity = "external_ok" if reference_ok else "external_diverged"
-                    reference_reason = f"comparator gate vs stored reference snapshot: {reference_reason}"
+                    contract_note = "" if ref.compare else "; loose-contract comparator still gated"
+                    reference_reason = f"comparator gate vs stored reference snapshot{contract_note}: {reference_reason}"
                 else:
-                    reference_ok, reference_reason = None, "timing-only external reference; canonical reference is not exact-comparable"
-                    parity = "timing_only"
+                    reference_ok = None
+                    reference_reason = "reference snapshot unavailable"
+                    parity = "fail"
                 rows.append(csv_row(
                     spec,
                     backend=ref.backend,

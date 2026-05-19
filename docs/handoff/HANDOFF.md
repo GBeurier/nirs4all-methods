@@ -143,7 +143,7 @@ Via Emscripten:
 - Dashboard payload: `python docs/_extras/build_landing.py --results benchmarks/cross_binding/results --out docs/_static/bench-data.json`
 - Current dashboard: 48 methods, 3 sizes, 1 thread setting; generated locally from the current cross-binding CSV
 - Canonical external reference rows use `reference_role=canonical` and render with a reference-method icon, not a gate icon; `cpp` carries the reference gate vs the stored canonical external snapshot, and non-canonical externals carry comparator parity vs that same snapshot
-- Exact comparator rows are now restricted to credible same-contract comparisons. Timing-only rows are used for useful but non-parity-compatible externals such as nirs4all Savitzky-Golay edge-mode mismatch, nirs4all wavelet output-shape mismatch, nirs4all FCK convention drift, sklearn/nirs4all K-bins RNG/index-order mismatch, and SciPy APIs with different semantics.
+- Exact comparator rows are now restricted to credible same-contract comparisons, but every timed reference row still receives a parity verdict. Loose-contract externals such as nirs4all Savitzky-Golay edge-mode mismatch, nirs4all wavelet output-shape mismatch, nirs4all FCK convention drift, sklearn/nirs4all K-bins RNG/index-order mismatch, and SciPy APIs with different semantics are gated against the stored canonical snapshot and surface as divergent/error when they do not match.
 - Timing now follows the pls4all warmup convention: unmeasured warmup calls, then `repeat` timed calls with median per-call wall time; default `repeat=5`.
 - `bench-nightly.yml` workflow weekly cron avec >20% regression gate
 - Docs Sphinx auto-deployed to `https://gbeurier.github.io/chemometrics4all/`

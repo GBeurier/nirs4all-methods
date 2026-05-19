@@ -66,8 +66,8 @@ the same feature contract.
 external comparator. Its default surface adds top-K retained coefficients per
 band; the benchmark calls it with `n_coeffs_per_level=0` so its output has the
 same feature count as chemometrics4all. The benchmark selects the same
-histogram entropy and symmetric boundary contract, so this row now carries an
-external comparator parity gate instead of timing-only status.
+histogram entropy and symmetric boundary contract, so this row carries an
+external comparator parity gate.
 
 chemometrics4all reduces the nirs4all surface to the four canonical statistics
 in v1; top-K coefficient retention is omitted to keep the ABI and parity
