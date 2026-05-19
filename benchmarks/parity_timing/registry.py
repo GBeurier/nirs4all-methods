@@ -6378,9 +6378,17 @@ def truth_source_lockfile_entries() -> list[dict]:
     entries: list[dict] = []
     for method in METHODS:
         extra_roles = [role for role, _factory in method.extra_references]
+        has_any_ref = (
+            method.python_reference is not None
+            or method.r_reference is not None
+            or bool(method.extra_references)
+        )
         entries.append({
             "name": method.name,
-            "paper_only": bool(method.paper_only),
+            # Some methods keep `paper_only` as a host-dependent fallback
+            # citation while still declaring a conditional executable
+            # reference factory. The lockfile tracks structure only.
+            "paper_only": bool(method.paper_only) and not has_any_ref,
             "has_python_reference": method.python_reference is not None,
             "has_r_reference": method.r_reference is not None,
             "extra_reference_roles": sorted(extra_roles),

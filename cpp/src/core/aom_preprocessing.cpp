@@ -99,12 +99,18 @@ namespace {
 
 [[nodiscard]] std::vector<double> gating_weights(p4a_gating_mode_t mode,
                                                  std::size_t n_operators) {
-    std::vector<double> weights(n_operators, 0.0);
+    if (n_operators == 0U) {
+        return {};
+    }
     if (mode == P4A_GATING_HARD) {
-        weights[0] = 1.0;
+        std::vector<double> weights;
+        weights.reserve(n_operators);
+        weights.push_back(1.0);
+        weights.resize(n_operators, 0.0);
         return weights;
     }
     const double weight = 1.0 / static_cast<double>(n_operators);
+    std::vector<double> weights(n_operators, 0.0);
     std::fill(weights.begin(), weights.end(), weight);
     return weights;
 }
