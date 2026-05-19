@@ -1977,7 +1977,7 @@ function renderTable() {
       const focusActive = rowColumnFocus && rowColumnFocus.key === rKey;
       const focusTitle = focusActive ? 'restore previous column selection' : `show only columns with a timing for this row (${scoreCols})`;
       const algoTitle = `open method documentation for ${row.algo}`;
-      let tr = `<tr><td class="algo-cell"><span class="algo-cell-inner"><span class="algo-label" title="${escAttr(algoTitle)}"><a class="algo-doc-link" href="${escAttr(methodUrl(row.algo))}">${esc(row.algo)}</a></span><button class="row-score-cols${focusActive ? ' active' : ''}" type="button" data-row-key="${escAttr(rKey)}" title="${escAttr(focusTitle)}">▥</button></span></td><td class="${refCls}" title="${escAttr(referenceTitle(row.algo))}"><span class="ref-badge">${refText}</span></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
+      let tr = `<tr><td class="algo-cell"><span class="algo-cell-inner"><span class="algo-label" title="${escAttr(algoTitle)}"><a class="algo-doc-link" href="${escAttr(methodUrl(row.algo))}">${escAttr(row.algo)}</a></span><button class="row-score-cols${focusActive ? ' active' : ''}" type="button" data-row-key="${escAttr(rKey)}" title="${escAttr(focusTitle)}">▥</button></span></td><td class="${refCls}" title="${escAttr(referenceTitle(row.algo))}"><span class="ref-badge">${refText}</span></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
       for (const id of cols) {
         const meta = colsById[id];
         const lcls = meta ? langCls(meta).replace('native-col', 'native-cell') : '';
