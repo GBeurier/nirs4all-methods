@@ -490,6 +490,10 @@ def run_backend(name: str, script: str, language: str, tier: str,
     try:
         out = subprocess.run(cmd, env=env, capture_output=True, text=True,
                               timeout=timeout)
+    except FileNotFoundError:
+        return {"backend": name, "ok": False,
+                 "reason": f"command not found: {cmd[0]}",
+                 "subprocess_s": 0.0}
     except subprocess.TimeoutExpired:
         return {"backend": name, "ok": False, "reason": "timeout",
                  "subprocess_s": timeout}

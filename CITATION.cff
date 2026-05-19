@@ -16,8 +16,8 @@ authors:
 repository-code: "https://github.com/GBeurier/pls4all"
 url: "https://github.com/GBeurier/pls4all"
 license: "CECILL-2.1"
-version: 0.97.0
-date-released: "2026-05-14"
+version: 0.97.1
+date-released: "2026-05-19"
 keywords:
   - partial-least-squares
   - PLS

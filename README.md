@@ -304,7 +304,7 @@ recognised by French law).
   title   = {pls4all: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/pls4all},
-  version = {0.97.0}
+  version = {0.97.1}
 }
 ```
 

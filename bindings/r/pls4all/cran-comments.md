@@ -3,7 +3,7 @@
 ## Submission summary
 
 * This is a **new submission** to CRAN.
-* `pls4all` 0.97.0 — a portable Partial Least Squares (PLS) and
+* `pls4all` 0.97.1 — a portable Partial Least Squares (PLS) and
   Near-Infrared Spectroscopy (NIRS) engine. The C++17 numerical core is
   vendored under `src/libp4a/` and compiled from source at install time.
   No external system library is required.
@@ -17,8 +17,8 @@
 ## Test environments
 
 * local Ubuntu 22.04, R 4.6.0, GCC 15.2 (conda-forge): `R CMD check
-  --as-cran` → **0 errors, 0 warnings, 3 notes** (see "Known notes"
-  below for the remaining notes).
+  --as-cran --no-manual` → **0 errors, 0 warnings, 2 notes** (see
+  "Known notes" below for the remaining notes).
 * GitHub Actions CI (`.github/workflows/release-r.yml`):
   - Ubuntu 22.04 (R release + devel)
   - macOS 14 (R release, arm64)
@@ -39,9 +39,6 @@
 * **Compilation flags** — local conda-forge R sets `-march=nocona`;
   this comes from R's own Makeconf, not from the package's Makevars.
   Not present in CRAN-farm builds.
-* **HTML tidy unavailable locally** — the local check host does not
-  have the optional `tidy` executable, so HTML validation is skipped.
-  The package manual and PDF manual both build successfully.
 
 ## Compile time
 

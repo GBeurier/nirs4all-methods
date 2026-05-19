@@ -363,22 +363,30 @@ def parity_code(row: dict) -> str:
         if backend == "matlab_tier2" and algo not in MATLAB_TIER2_SUPPORTED:
             return "not_available"
         reason = (row.get("reason") or "").lower()
-        if "timeout" in reason:
-            return "not_run"
-        if ("not implemented by" in reason or
-                "no sklearn estimator" in reason or
-                "no formula wrapper" in reason or
-                "no pls4all.fit classdef entry" in reason or
-                "formula api limitation" in reason or
-                "only accepts 1-d y" in reason or
-                "unsupported algo" in reason or
-                "unsupported algorithm" in reason):
+        unavailable_markers = (
+            "not implemented by",
+            "not implemented",
+            "notimplemented",
+            "no sklearn estimator",
+            "no formula wrapper",
+            "no pls4all.fit classdef entry",
+            "formula api limitation",
+            "only accepts 1-d y",
+            "unsupported algo",
+            "unsupported algorithm",
+            "unsupported method",
+            "not available",
+            "does not expose",
+        )
+        if any(k in reason for k in unavailable_markers):
             return "not_available"
+        if "timeout" in reason:
+            return "error"
         if any(k in reason for k in (
-                "modulenotfounderror", "importerror", "notimplemented",
+                "modulenotfounderror", "importerror",
                 "error", "exception", "crash", "traceback", "segfault")):
             return "error"
-        return "not_run"
+        return "error"
     parity_ok = row.get("binding_parity_ok", row.get("parity_ok"))
     if is_true(parity_ok):
         return "exact"
@@ -403,7 +411,9 @@ def reference_parity_code(row: dict) -> str:
       drift          — finite but above tolerance, < 10× method tolerance.
       divergent      — >= 10× method tolerance.
       not_available  — `reference_kind=paper_only` (no executable truth).
-      not_run        — backend didn't produce a prediction at all.
+      not_run        — legacy value only; new builds classify missing
+                       implementations as not_available and runtime
+                       failures as error.
       error          — runtime error path (delegated to gate 1's
                        classifier, kept here so the two columns line up).
     """
