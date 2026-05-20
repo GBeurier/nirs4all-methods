@@ -31,7 +31,7 @@ The composite never frees the sub-filter handles.
 
 ```c
 c4a_status_t c4a_filter_composite_create(c4a_filter_composite_handle_t** out,
-                                          c4a_composite_mode_t mode);
+                                          int32_t mode);
 void         c4a_filter_composite_destroy(c4a_filter_composite_handle_t* h);
 
 c4a_status_t c4a_filter_composite_add_leverage(c4a_filter_composite_handle_t* h,

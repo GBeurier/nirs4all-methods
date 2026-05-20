@@ -64,7 +64,7 @@ typedef struct c4a_filter_stats_t {
 typedef struct c4a_filter_y_outlier_handle_t c4a_filter_y_outlier_handle_t;
 
 c4a_status_t c4a_filter_y_outlier_create(c4a_filter_y_outlier_handle_t** out,
-                                          c4a_y_outlier_method_t method,
+                                          int32_t method,
                                           double threshold,
                                           double lower_pct, double upper_pct);
 void         c4a_filter_y_outlier_destroy(c4a_filter_y_outlier_handle_t* h);

@@ -66,7 +66,7 @@ C ABI entry points used by the language bindings:
 
 ```c
 c4a_status_t c4a_filter_y_outlier_apply( const c4a_filter_y_outlier_handle_t* handle, const double* y, int64_t n, uint8_t* mask_out, c4a_filter_stats_t* stats_out);
-c4a_status_t c4a_filter_y_outlier_create( c4a_filter_y_outlier_handle_t** out, c4a_y_outlier_method_t method, double threshold, double lower_pct, double upper_pct);
+c4a_status_t c4a_filter_y_outlier_create( c4a_filter_y_outlier_handle_t** out, int32_t method, double threshold, double lower_pct, double upper_pct);
 void c4a_filter_y_outlier_destroy( c4a_filter_y_outlier_handle_t* handle);
 c4a_status_t c4a_filter_y_outlier_fit( c4a_filter_y_outlier_handle_t* handle, const double* y, int64_t n);
 c4a_status_t c4a_filter_y_outlier_is_fitted( const c4a_filter_y_outlier_handle_t* handle, int* out);
@@ -98,7 +98,7 @@ Every chemometrics4all binding dispatches into the same C kernel. Registered com
 
 ```c
 c4a_status_t c4a_filter_y_outlier_apply( const c4a_filter_y_outlier_handle_t* handle, const double* y, int64_t n, uint8_t* mask_out, c4a_filter_stats_t* stats_out);
-c4a_status_t c4a_filter_y_outlier_create( c4a_filter_y_outlier_handle_t** out, c4a_y_outlier_method_t method, double threshold, double lower_pct, double upper_pct);
+c4a_status_t c4a_filter_y_outlier_create( c4a_filter_y_outlier_handle_t** out, int32_t method, double threshold, double lower_pct, double upper_pct);
 void c4a_filter_y_outlier_destroy( c4a_filter_y_outlier_handle_t* handle);
 c4a_status_t c4a_filter_y_outlier_fit( c4a_filter_y_outlier_handle_t* handle, const double* y, int64_t n);
 c4a_status_t c4a_filter_y_outlier_is_fitted( const c4a_filter_y_outlier_handle_t* handle, int* out);

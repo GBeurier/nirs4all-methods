@@ -1447,7 +1447,7 @@ typedef enum c4a_y_outlier_method_t {
 typedef struct c4a_filter_y_outlier_handle_t c4a_filter_y_outlier_handle_t;
 C4A_API c4a_status_t c4a_filter_y_outlier_create(
     c4a_filter_y_outlier_handle_t** out,
-    c4a_y_outlier_method_t method,
+    int32_t method,
     double threshold, double lower_pct, double upper_pct);
 C4A_API void         c4a_filter_y_outlier_destroy(
     c4a_filter_y_outlier_handle_t* handle);
@@ -1527,7 +1527,7 @@ typedef enum c4a_composite_mode_t {
 
 typedef struct c4a_filter_composite_handle_t c4a_filter_composite_handle_t;
 C4A_API c4a_status_t c4a_filter_composite_create(
-    c4a_filter_composite_handle_t** out, c4a_composite_mode_t mode);
+    c4a_filter_composite_handle_t** out, int32_t mode);
 C4A_API void         c4a_filter_composite_destroy(
     c4a_filter_composite_handle_t* handle);
 C4A_API c4a_status_t c4a_filter_composite_add_leverage(

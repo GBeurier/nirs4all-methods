@@ -74,17 +74,17 @@ extern "C" {
 
 C4A_API c4a_status_t c4a_filter_y_outlier_create(
     c4a_filter_y_outlier_handle_t** out,
-    c4a_y_outlier_method_t method,
+    int32_t method,
     double threshold,
     double lower_pct, double upper_pct) {
     if (out == nullptr) {
         return C4A_ERR_NULL_POINTER;
     }
     *out = nullptr;
-    if (method != C4A_Y_OUTLIER_IQR    &&
-        method != C4A_Y_OUTLIER_ZSCORE &&
-        method != C4A_Y_OUTLIER_PERCENTILE &&
-        method != C4A_Y_OUTLIER_MAD) {
+    if (method != static_cast<int32_t>(C4A_Y_OUTLIER_IQR)    &&
+        method != static_cast<int32_t>(C4A_Y_OUTLIER_ZSCORE) &&
+        method != static_cast<int32_t>(C4A_Y_OUTLIER_PERCENTILE) &&
+        method != static_cast<int32_t>(C4A_Y_OUTLIER_MAD)) {
         return C4A_ERR_INVALID_ARGUMENT;
     }
     if (threshold <= 0.0) {
@@ -95,7 +95,7 @@ C4A_API c4a_status_t c4a_filter_y_outlier_create(
     }
     try {
         c4a_filter_y_outlier_state_t* s = c4a_filter_y_outlier_state_new(
-            static_cast<std::int32_t>(method), threshold, lower_pct, upper_pct);
+            method, threshold, lower_pct, upper_pct);
         if (s == nullptr) {
             return C4A_ERR_OUT_OF_MEMORY;
         }

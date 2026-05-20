@@ -455,21 +455,10 @@ void test_y_outlier_mad_smoke() {
 
 void test_y_outlier_create_param_validation() {
     c4a_filter_y_outlier_handle_t* h = nullptr;
-    // Unknown method. Cast a known-bad integer code through the enum type
-    // (well-defined per C++17 [expr.static.cast] for unscoped enums whose
-    // underlying type contains the bit pattern). -Wconversion is silenced
-    // locally because we are intentionally feeding an out-of-range value to
-    // verify the create() rejection path.
-#if defined(__GNUC__) && !defined(__clang__)
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wconversion"
-#endif
+    // Unknown method code.
     FILTER_REQUIRE(c4a_filter_y_outlier_create(
-        &h, static_cast<c4a_y_outlier_method_t>(99),
+        &h, 99,
         1.5, 1.0, 99.0) == C4A_ERR_INVALID_ARGUMENT);
-#if defined(__GNUC__) && !defined(__clang__)
-#  pragma GCC diagnostic pop
-#endif
     FILTER_REQUIRE(h == nullptr);
     // Non-positive threshold.
     FILTER_REQUIRE(c4a_filter_y_outlier_create(&h, C4A_Y_OUTLIER_IQR,

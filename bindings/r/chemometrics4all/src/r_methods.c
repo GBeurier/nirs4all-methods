@@ -1418,7 +1418,7 @@ static SEXP r_c4a_filter_y_outlier_fit_apply(SEXP y, SEXP method,
 
     c4a_filter_y_outlier_handle_t *h = NULL;
     c4a_status_t s = c4a_filter_y_outlier_create(
-        &h, (c4a_y_outlier_method_t)INTEGER(method)[0],
+        &h, (int32_t)INTEGER(method)[0],
         REAL(threshold)[0], REAL(lower_pct)[0], REAL(upper_pct)[0]);
     if (s != C4A_OK) c4a_throw(s, "c4a_filter_y_outlier_create");
 

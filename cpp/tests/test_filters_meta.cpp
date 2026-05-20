@@ -251,14 +251,7 @@ void test_composite_smoke() {
     c4a_filter_leverage_destroy(lev);
     c4a_filter_quality_destroy(q);
 
-    // Invalid mode rejection is delegated to the engine layer; the public
-    // surface enforces the enum at the type system. The two-value enum
-    // doesn't admit other named members, so we round-trip a memcpy to
-    // build an out-of-range pattern without triggering -Wconversion.
-    c4a_composite_mode_t bad_mode = C4A_COMPOSITE_ANY;
-    int bad_raw = 2;
-    std::memcpy(&bad_mode, &bad_raw, sizeof(bad_mode));
-    C4A_TEST_REQUIRE(c4a_filter_composite_create(&comp, bad_mode)
+    C4A_TEST_REQUIRE(c4a_filter_composite_create(&comp, 2)
         == C4A_ERR_INVALID_ARGUMENT);
 
     // Empty composite keeps every sample.

@@ -288,12 +288,13 @@ C4A_API c4a_status_t c4a_filter_quality_apply(
 
 C4A_API c4a_status_t c4a_filter_composite_create(
     c4a_filter_composite_handle_t** out,
-    c4a_composite_mode_t mode) {
+    int32_t mode) {
     if (out == nullptr) {
         return C4A_ERR_NULL_POINTER;
     }
     *out = nullptr;
-    if (mode != C4A_COMPOSITE_ANY && mode != C4A_COMPOSITE_ALL) {
+    if (mode != static_cast<int32_t>(C4A_COMPOSITE_ANY)
+        && mode != static_cast<int32_t>(C4A_COMPOSITE_ALL)) {
         return C4A_ERR_INVALID_ARGUMENT;
     }
     try {
