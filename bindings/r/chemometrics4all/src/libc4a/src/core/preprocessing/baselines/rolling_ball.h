@@ -9,7 +9,7 @@
  *   4. out := y - z
  *
  * Edges use a centred window clipped to [0, n-1] (no reflection / padding).
- * Frozen reference: parity/python_generator/src/c4a_parity_pybaselines_ref/rolling_ball.py
+ * Internal parity fixture: parity/python_generator/src/c4a_parity_pybaselines_ref/rolling_ball.py
  */
 #ifndef CHEMOMETRICS4ALL_CORE_PREPROCESSING_BASELINES_ROLLING_BALL_H
 #define CHEMOMETRICS4ALL_CORE_PREPROCESSING_BASELINES_ROLLING_BALL_H

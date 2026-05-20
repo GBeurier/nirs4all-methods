@@ -70,20 +70,21 @@ void c4a_pp_beads_destroy(c4a_pp_beads_handle_t* handle);
 c4a_status_t c4a_pp_beads_transform(const c4a_pp_beads_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
 ```
 
-Reference backends are registered in the benchmark matrix and stored as reproducible snapshots when they define the canonical contract.
+Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
 
 ### Implementations
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
 | C ABI | `c4a_pp_beads` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.BEADS` | Python | sklearn-style wrapper backed by ctypes. |
+| Python | `chemometrics4all.python.beads` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `chemometrics4all.sklearn.BEADS` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `beads(X, lam_0 = 100.0, lam_1 = 0.5, lam_2 = 0.5, max_iter = 50L, tol = 1e-3)` | R | Public package wrapper around the C ABI. |
 | ref.pybaselines | `pybaselines.beads(full)` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. The registry references are listed in the parity card below.
+Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
 :class: chemometrics4all-bindings
@@ -101,12 +102,24 @@ c4a_status_t c4a_pp_beads_transform(const c4a_pp_beads_handle_t* handle, c4a_mat
 
 :::
 
-:::{tab-item} Python · chemometrics4all
-:sync: python
+:::{tab-item} Python ABI · chemometrics4all.python
+:sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import BEADS
+from chemometrics4all import python as c4a
+
+Xt = c4a.beads(X)
+```
+
+:::
+
+:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:sync: python-sklearn
+:class-label: lang-python
+
+```python
+from chemometrics4all.sklearn import BEADS
 
 op = BEADS(lam_0=100.0, lam_1=0.5, lam_2=0.5, max_iter=50, tol=0.001)
 Xt = op.fit_transform(X)
@@ -128,7 +141,7 @@ res <- beads(X, max_iter = 20L)
 ::::
 
 
-**Registry parity references** ◆
+**Benchmark Comparators And Sources** ◆
 
 :::{card}
 :class-card: external-refs
@@ -136,8 +149,20 @@ res <- beads(X, max_iter = 20L)
 - ◆ **`ref.pybaselines`** (Python · canonical) — `pybaselines.beads(full)` · pybaselines 1.2.1
 :::
 
+### Validation contract
+
+- Operation: `cross_binding_callable` · comparator: `default_allclose` · tolerance: `rtol=1e-05`, `atol=1e-08` · quality: **strict**
+- Default validation dataset: `100×50` · seed `20260556`
+- Suites: smoke `3` cells; benchmark `11` cells · Default C/Python/reference parity comparator.
+- Metrics: `max_abs_diff`, `rel_l2_diff`, `rms_diff`, `shape_equal`
+- Truth sources: cross-binding references declared directly in `benchmarks/cross_binding/orchestrator.py`.
+
+| Backend | Library | Gate | Comparator | Note |
+|---------|---------|------|------------|------|
+| `ref.pybaselines` | `pybaselines.beads(full)` | Python / parity | `default_allclose` |  |
+
 ### Benchmarks
-Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Verdict legend: ✓ exact · ≈ context/drift · ✗ divergent · ⊘ not available · — not run · ⚠ error.
+Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Divergence is the worst finite value over the visible sizes for each backend, preferring reference max-abs difference and falling back to binding max-abs difference when no reference comparison is recorded. Rows without a recorded comparison show `—`; the fastest backend per column is marked 🏆.
 ::::{tab-set}
 :class: parity-tabs
 
@@ -146,18 +171,19 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
-<thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
+<thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms">8.178 ms</td><td class="ms ms-best">🏆 84.687 ms</td><td class="ms ms-best">🏆 428.499 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.4e-11</td><td class="ms ms-best">🏆 7.877 ms</td><td class="ms ms-best">🏆 83.909 ms</td><td class="ms">434.408 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">🏆 7.916 ms</td><td class="ms">85.049 ms</td><td class="ms">431.208 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.4e-11</td><td class="ms">7.902 ms</td><td class="ms">84.792 ms</td><td class="ms">433.779 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.4e-11</td><td class="ms">8.146 ms</td><td class="ms">84.481 ms</td><td class="ms ms-best">🏆 429.513 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">9.188 ms</td><td class="ms">96.500 ms</td><td class="ms">493.000 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.4e-11</td><td class="ms">9.188 ms</td><td class="ms">96.500 ms</td><td class="ms">496.000 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.beads(full) · pybaselines 1.2.1 — canonical">◆</span><code>ref.pybaselines</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">214.991 ms</td><td class="ms">364.137 ms</td><td class="ms">1037.992 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.beads(full) · pybaselines 1.2.1 — canonical">◆</span><code>ref.pybaselines</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">210.261 ms</td><td class="ms">364.072 ms</td><td class="ms">1031.389 ms</td></tr>
 </tbody>
 </table>
 </div>

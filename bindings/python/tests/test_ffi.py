@@ -16,7 +16,7 @@ def test_library_loads():
     # All declared symbols must be present on the loaded library.
     missing = [name for name, _, _ in SYMBOLS if not hasattr(lib, name)]
     assert not missing, f"Missing symbols: {missing[:5]} (and {len(missing) - 5} more)"
-    assert len(SYMBOLS) == 403
+    assert len(SYMBOLS) == 498
 
 
 def test_abi_version_matches():
@@ -85,3 +85,114 @@ def test_matrix_view_round_trip():
     assert view.cols == 5
     assert view.row_stride == 5
     assert view.col_stride == 1
+
+
+# The 32 cross-binding method IDs maintained by the benchmark orchestrator.
+# Each entry maps a method id -> the corresponding ``c4a.python`` callable name.
+_CROSS_BINDING_PYTHON_NAMES: dict[str, str] = {
+    "log_transform": "log_transform",
+    "derivate": "derivate",
+    "wavelet_pca": "wavelet_pca",
+    "wavelet_svd": "wavelet_svd",
+    "aug_gaussian_noise": "aug_gaussian_noise",
+    "aug_multiplicative_noise": "aug_multiplicative_noise",
+    "aug_spike_noise": "aug_spike_noise",
+    "aug_hetero_noise": "aug_hetero_noise",
+    "aug_linear_drift": "aug_linear_drift",
+    "aug_poly_drift": "aug_poly_drift",
+    "aug_path_length": "aug_path_length",
+    "aug_wavelength_spectral": "aug_wavelength_spectral",
+    "aug_mixup": "aug_mixup",
+    "aug_local_mixup": "aug_local_mixup",
+    "aug_scatter_sim": "aug_scatter_sim",
+    "aug_particle_size": "aug_particle_size",
+    "aug_emsc_distort": "aug_emsc_distort",
+    "aug_batch_effect": "aug_batch_effect",
+    "aug_instrument_broaden": "aug_instrument_broaden",
+    "aug_dead_band": "aug_dead_band",
+    "aug_temperature": "aug_temperature",
+    "aug_moisture": "aug_moisture",
+    "high_leverage": "high_leverage_filter",
+    "spectral_quality": "spectral_quality_filter",
+    "composite_filter": "composite_filter",
+    "hotelling_t2": "hotelling_t2",
+    "q_residuals": "q_residuals",
+    "nirs_metrics": "nirs_metrics",
+    "signal_type_detector": "signal_type_detector",
+    "transfer_metrics": "transfer_metrics",
+    "rng_pcg64": "rng_pcg64",
+}
+
+
+def test_cross_binding_methods_present_in_python_surface():
+    """All cross-binding method IDs must resolve on ``chemometrics4all.python``."""
+    from chemometrics4all import python as c4a_python
+
+    missing = [
+        mid
+        for mid, name in _CROSS_BINDING_PYTHON_NAMES.items()
+        if not callable(getattr(c4a_python, name, None))
+    ]
+    assert not missing, f"missing c4a.python callables: {missing}"
+    assert len(_CROSS_BINDING_PYTHON_NAMES) == 31
+
+
+@pytest.mark.parametrize(
+    "method_id",
+    [
+        "log_transform",
+        "derivate",
+        "aug_gaussian_noise",
+        "aug_wavelength_spectral",
+        "high_leverage",
+        "spectral_quality",
+        "composite_filter",
+        "nirs_metrics",
+        "signal_type_detector",
+        "transfer_metrics",
+        "rng_pcg64",
+    ],
+)
+def test_cross_binding_python_surface_runs_smoke(method_id):
+    """Execute a representative cheap subset of the 32 cross-binding methods."""
+    from chemometrics4all import python as c4a_python
+
+    rng = np.random.default_rng(2026)
+    x = rng.uniform(0.1, 0.9, size=(40, 24)).astype(np.float64)
+    wl = np.linspace(1100.0, 1600.0, 24)
+    func = getattr(c4a_python, _CROSS_BINDING_PYTHON_NAMES[method_id])
+
+    if method_id == "nirs_metrics":
+        y = np.arange(8, dtype=np.float64)
+        out = func(y, y + 0.05)
+        assert out.shape == (8,)
+        assert np.isfinite(out).all()
+        return
+    if method_id == "transfer_metrics":
+        out = func(x, x, n_components=3, k_neighbors=4, seed=1)
+        assert out.ndim == 1
+        return
+    if method_id == "rng_pcg64":
+        out = func(seed=1, n=64)
+        assert out.shape == (64,)
+        return
+    if method_id == "signal_type_detector":
+        out = func(x, wavelengths=wl)
+        assert out.shape == (2,)
+        return
+    if method_id in {"high_leverage", "spectral_quality", "composite_filter"}:
+        mask = func(x)
+        assert mask.shape == (x.shape[0],)
+        return
+    if method_id == "aug_wavelength_spectral":
+        out = func(x, wavelengths=wl, seed=1)
+    elif method_id == "aug_gaussian_noise":
+        out = func(x, seed=1)
+    elif method_id == "derivate":
+        out = func(x, order=1)
+        assert out.shape[1] == x.shape[1] - 1
+        return
+    else:
+        out = func(x)
+    assert out.shape[0] == x.shape[0]
+    assert np.isfinite(out).all()

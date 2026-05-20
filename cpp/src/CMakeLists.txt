@@ -171,7 +171,27 @@ chemometrics4all_add_warnings(chemometrics4all_core)
 # chemometrics4all_c — public C ABI shared library (libc4a.{so,dll,dylib}).
 # chemometrics4all_c_static is the same surface, statically linked.
 # ---------------------------------------------------------------------------
+set(_chemometrics4all_fitpack_sources
+    core/common/_vendored/fitpack/curfit.f
+    core/common/_vendored/fitpack/fpback.f
+    core/common/_vendored/fitpack/fpbspl.f
+    core/common/_vendored/fitpack/fpchec.f
+    core/common/_vendored/fitpack/fpcurf.f
+    core/common/_vendored/fitpack/fpdisc.f
+    core/common/_vendored/fitpack/fpgivs.f
+    core/common/_vendored/fitpack/fpknot.f
+    core/common/_vendored/fitpack/fprati.f
+    core/common/_vendored/fitpack/fprota.f
+    core/common/_vendored/fitpack/splev.f)
+
+add_library(chemometrics4all_fitpack OBJECT ${_chemometrics4all_fitpack_sources})
+set_target_properties(chemometrics4all_fitpack PROPERTIES POSITION_INDEPENDENT_CODE ON)
+if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
+    target_compile_options(chemometrics4all_fitpack PRIVATE -w)
+endif()
+
 set(_chemometrics4all_c_sources
+    c_api/c_api_advanced.cpp
     c_api/c_api_augmenters.cpp
     c_api/c_api_augmenters_edge_splines_random.cpp
     c_api/c_api_augmenters_mixup_physical.cpp
@@ -196,7 +216,9 @@ set(_chemometrics4all_c_sources
     c_api/c_api_wavelets.cpp)
 
 function(chemometrics4all_apply_c_target target)
-    target_sources(${target} PRIVATE $<TARGET_OBJECTS:chemometrics4all_core>)
+    target_sources(${target} PRIVATE
+        $<TARGET_OBJECTS:chemometrics4all_core>
+        $<TARGET_OBJECTS:chemometrics4all_fitpack>)
     target_include_directories(${target}
         PUBLIC  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/cpp/include>
                 $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/generated>

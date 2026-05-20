@@ -194,8 +194,9 @@ class LogTransform(StatefulOperator):
 class MSC(StatefulOperator):
     """Multiplicative Scatter Correction.
 
-    Fit learns the per-column linear coefficients against the per-row mean of
-    the training matrix.
+    Fit learns the mean reference spectrum from the training matrix. Transform
+    regresses each row against that reference and applies the conventional
+    row-wise MSC correction used by prospectr and pls.
     """
 
     _C_PREFIX = "c4a_pp_msc"

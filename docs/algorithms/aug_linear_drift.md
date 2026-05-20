@@ -31,5 +31,5 @@ c4a_status_t c4a_aug_linear_drift_apply(
 ```
 
 ## Reference
-- Frozen Python: `parity/python_generator/src/c4a_parity_augmenters_ref/linear_drift.py`.
+- Internal parity fixture: `parity/python_generator/src/c4a_parity_augmenters_ref/linear_drift.py`.
 - Parity tolerance: 1e-15 abs.

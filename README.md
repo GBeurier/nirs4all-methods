@@ -11,6 +11,10 @@ regression / classification model family.
 
 > **chemometrics4all does NOT ship any models.** PLS variants live in `pls4all`. This library focuses on the upstream/downstream layer: how you prepare spectra, partition samples, detect outliers, augment training data, convert signal types, and measure transfer-learning alignment.
 
+**Documentation / dashboard**:
+[`https://gbeurier.github.io/chemometrics4all/`](https://gbeurier.github.io/chemometrics4all/)
+· local source under [`docs/`](docs/).
+
 ---
 
 ## Scope
@@ -36,7 +40,19 @@ All operators are mirrored byte-bit-where-possible against [nirs4all](https://gi
 - **Zero mandatory dependencies** — DIY linalg, RNG (PCG64 reimplementation for NumPy bit-exact parity), banded LDLT, FFT-free wavelet filter banks. Optional accelerated backends (BLAS, OpenMP) are gated by CMake presets.
 - **CMake ≥ 3.21** with 20+ presets in `CMakePresets.json` (dev-debug, dev-release, ci-*, blas-on, sanitizer-*).
 - **Parity-gated** — every operator is validated against pinned reference implementations (numpy 1.26.4, scipy 1.17.1, scikit-learn 1.8.0, pywt 1.8.0, pybaselines 1.2.1, selected nirs4all operators, …) with `parity/fixtures/*.json` + `parity/tolerances.md`.
+- **Benchmark + validation docs** — generated method pages and the interactive matrix consume the same committed benchmark payload (`docs/_static/bench-data.json`) and validation contracts (`benchmarks/validation/registry/`).
 - **Codex+Opus review workflow** — each phase is reviewed by Codex (pre & post) and Opus (independent post-review); transcripts in `docs/reviews/phase-N/`.
+
+---
+
+## Documentation
+
+- 🌐 **[Sphinx site + interactive benchmark dashboard](https://gbeurier.github.io/chemometrics4all/)** — public GitHub Pages build from [`docs/`](docs/)
+- 📚 **[Method catalogue](docs/methods/index.md)** — generated pages with signatures, math, bibliography, parity contracts, divergences, and timings
+- 📊 **[Benchmark overview](docs/benchmarks/overview.md)** — cross-binding timing/parity payload and dashboard data model
+- 🔬 **[Benchmark methodology](docs/benchmarks/methodology.md)** — reference policy, tolerances, datasets, and reproducibility notes
+- 📜 **[ABI reference](docs/abi/reference.md)** — stable `c4a_*` C ABI, handles, errors, and exported symbols
+- 🔌 **Bindings** — [Python](docs/bindings/python.md) · [R](docs/bindings/r.md) · [MATLAB](docs/bindings/matlab.md) · [JS / WASM](docs/bindings/js.md) · [Android](docs/bindings/android.md)
 
 ---
 
@@ -63,7 +79,7 @@ This repository is being built **phase by phase** with full Codex + Opus reviews
 | 0–21 | 🟢 implemented | C++ core operators, fixtures, C ABI, and C++ parity tests |
 | 22–23 | 🟢 implemented | Python and R bindings with binding parity |
 | 24–25 | ⚪ pending | MATLAB and JS/WASM bindings |
-| 26 | 🟡 scaffolded | Benchmark registry, reference lockfile, and placeholder dashboard; timing matrix not generated yet |
+| 26 | 🟢 implemented | Benchmark registry, validation snapshot, generated method docs, and interactive matrix/dashboard payload |
 
 ---
 

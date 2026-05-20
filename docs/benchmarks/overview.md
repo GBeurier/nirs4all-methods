@@ -24,9 +24,13 @@ Each method entry records:
 
 The lockfile distinguishes:
 
-- package references such as NumPy, SciPy, and pybaselines;
-- project references such as nirs4all modules;
-- local frozen references under the existing parity generator tree.
+- external package references such as SciPy, scikit-learn, PyWavelets, and pybaselines;
+- project comparators such as pinned nirs4all modules;
+- literature sources for methods that have no credible external executable comparator.
+
+Internal fixtures under `parity/python_generator/src/c4a_parity_*_ref/` are
+development oracles for deterministic C/binding parity. They are not external
+benchmark references and must not appear as `ref.*` benchmark backends.
 
 The lockfile is not a benchmark result. It is a source-of-truth inventory used
 to prevent untraceable dashboard claims.

@@ -35,8 +35,8 @@ c4a_status_t c4a_pp_airpls_transform(const c4a_pp_airpls_handle_t* h,
 - Pentadiagonal symmetric LDLT solver.
 - Exp argument clipped to `[0, log(DBL_MAX) - spacing(log(DBL_MAX))]` to avoid `+inf` from large iterates (matches pybaselines `_airpls_loop` overflow guard).
 - Convergence metric `sum(d_neg) / ||y||_1` evaluated BEFORE weight update (matches pybaselines).
-- Parity tolerance vs frozen NumPy reference: `1e-7 abs / 1e-8 rel` for typical regularisation; `1e-6 abs / 1e-7 rel` for stiff regularisation (`lam >= 1e7`) where LDLT-vs-spsolve ULP differences compound across iterations.
+- Parity tolerance vs internal parity fixture: `1e-7 abs / 1e-8 rel` for typical regularisation; `1e-6 abs / 1e-7 rel` for stiff regularisation (`lam >= 1e7`) where LDLT-vs-spsolve ULP differences compound across iterations.
 
 ## Reference
 - Zhang, Z.-M.; Chen, S.; Liang, Y.-Z. (2010). "Baseline Correction Using Adaptive Iteratively Reweighted Penalized Least Squares." *Analyst*, 135 (5), 1138–1146.
-- Frozen Python reference: `parity/python_generator/src/c4a_parity_pybaselines_ref/airpls.py`.
+- Internal parity fixture: `parity/python_generator/src/c4a_parity_pybaselines_ref/airpls.py`.

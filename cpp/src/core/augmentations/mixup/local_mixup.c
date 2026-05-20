@@ -19,6 +19,7 @@
 #include <stdlib.h>
 
 #include "core/augmentations/aug_rng_utils.h"
+#include "core/augmentations/spectral/spectral_common.h"
 
 struct c4a_aug_local_mixup_state_t {
     double  alpha;
@@ -113,6 +114,9 @@ c4a_status_t c4a_aug_local_mixup_apply_impl(
         dest = tmp;
     }
 
+    c4a_aug_randint_state_t randint_state;
+    c4a_aug_randint_state_reset(&randint_state, rng);
+
     /* For each row, find the k+1 nearest neighbors (including self at idx 0). */
     for (int64_t i = 0; i < rows; ++i) {
         for (int64_t j = 0; j < rows; ++j) {
@@ -126,8 +130,8 @@ c4a_status_t c4a_aug_local_mixup_apply_impl(
          * over the k non-self neighbors. NumPy's
          * `rng.choice(indices[i, 1:])` advances the bit stream by one
          * integers(0, k) call. */
-        const uint64_t pick = c4a_aug_rng_integers(rng, (uint64_t)k);
-        const int64_t  neighbor_idx = idx[1 + (int64_t)pick];
+        const int64_t pick = c4a_aug_randint(&randint_state, 0, k);
+        const int64_t neighbor_idx = idx[1 + pick];
 
         const double lam = c4a_aug_rng_beta(rng, state->alpha, state->alpha);
         const double cl  = 1.0 - lam;

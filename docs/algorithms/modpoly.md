@@ -29,8 +29,8 @@ c4a_status_t c4a_pp_modpoly_transform(const c4a_pp_modpoly_handle_t* h,
 - Per-row Householder QR factorisation of the `(n, polyorder + 1)` Vandermonde matrix in descending powers (shared with `Detrend` / `IModPoly` / `IAsLS` via `core/common/linalg.{c,h}`). Factor once per row; re-apply `Q^T` against the clipped y at each iteration.
 - Convergence uses `relative_difference(z_old, z_new)` from `banded_solver.h` (L2 norms, `max(||z_old||, DBL_MIN)` denominator).
 - On `max_iter` reached without convergence: silently returns the last iterate.
-- Parity tolerance vs frozen NumPy reference: `1e-9 abs / 1e-10 rel`.
+- Parity tolerance vs internal parity fixture: `1e-9 abs / 1e-10 rel`.
 
 ## Reference
 - Lieber, C. A. & Mahadevan-Jansen, A. (2003). "Automated method for subtraction of fluorescence from biological raman spectra." Applied Spectroscopy 57(11), 1363-1367.
-- Frozen Python reference: `parity/python_generator/src/c4a_parity_pybaselines_ref/modpoly.py`.
+- Internal parity fixture: `parity/python_generator/src/c4a_parity_pybaselines_ref/modpoly.py`.

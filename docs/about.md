@@ -34,6 +34,7 @@ architecture/serialization
 benchmarks/index
 benchmarks/overview
 benchmarks/methodology
+benchmarks/external_reference_audit
 methods/index
 algorithms/*
 bindings/python

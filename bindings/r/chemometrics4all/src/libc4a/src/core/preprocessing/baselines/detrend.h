@@ -8,7 +8,7 @@
  *   out      = x - baseline
  *
  * Matches numpy: np.polyfit / np.polyval at the small QR-vs-SVD rounding
- * level (the frozen reference uses np.polyfit which goes through np.linalg.lstsq;
+ * level (the internal parity fixture uses np.polyfit which goes through np.linalg.lstsq;
  * we use Householder QR through c4a_householder_qr).
  */
 #ifndef CHEMOMETRICS4ALL_CORE_PREPROCESSING_BASELINES_DETREND_H

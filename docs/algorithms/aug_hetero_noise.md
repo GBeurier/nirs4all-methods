@@ -27,5 +27,5 @@ c4a_status_t c4a_aug_hetero_noise_apply(
 ```
 
 ## Reference
-- Frozen Python: `parity/python_generator/src/c4a_parity_augmenters_ref/hetero_noise.py`.
+- Internal parity fixture: `parity/python_generator/src/c4a_parity_augmenters_ref/hetero_noise.py`.
 - Parity tolerance: 1e-15 abs.

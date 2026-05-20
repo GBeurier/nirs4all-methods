@@ -3,9 +3,10 @@
  * SNIP — Ryan 1988 / Morháč 1997 statistics-sensitive non-linear iterative
  * peak-clipping baseline.
  *
- * Frozen reference: parity/python_generator/src/c4a_parity_pybaselines_ref/snip.py
+ * Internal parity fixture:
+ * parity/python_generator/src/c4a_parity_pybaselines_ref/snip.py
  *
- * Algorithm: see snip.h. The benchmark reference is pybaselines.smooth.snip
+ * Algorithm: see snip.h. The benchmark comparator is pybaselines.smooth.snip
  * with its default raw-data filter_order=2 contract, including linear
  * extrapolation padding at both edges.
  */

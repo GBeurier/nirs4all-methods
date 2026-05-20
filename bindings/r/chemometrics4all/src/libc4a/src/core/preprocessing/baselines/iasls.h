@@ -10,7 +10,7 @@
  *         `lam * D_2^T D_2 + lam_1 * D_1^T D_1`, with squared AsLS weights
  *         and the first-derivative residual term on the right-hand side.
  *
- * Frozen reference: parity/python_generator/src/c4a_parity_pybaselines_ref/iasls.py
+ * Internal parity fixture: parity/python_generator/src/c4a_parity_pybaselines_ref/iasls.py
  */
 #ifndef CHEMOMETRICS4ALL_CORE_PREPROCESSING_BASELINES_IASLS_H
 #define CHEMOMETRICS4ALL_CORE_PREPROCESSING_BASELINES_IASLS_H

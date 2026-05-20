@@ -4,26 +4,20 @@
  * preprocessing operator. The public C ABI lives in c4a.h and is implemented
  * in c_api/c_api_preprocessing.cpp which wraps this engine.
  *
- * Reference: nirs4all.operators.transforms.nirs.MultiplicativeScatterCorrection
- * with `scale=False`.
+ * Reference: prospectr::msc / pls::msc.
  *
  * Algorithm:
  *   fit(X):
- *       reference[i] = mean(X[i, :])           # per-row mean, length n
- *       for j in 0..p-1:
- *           a[j], b[j] = polyfit(reference, X[:, j], deg=1)
+ *       reference[j] = mean(X[:, j])           # reference spectrum, length p
  *
  *   transform(X):
- *       out[i, j] = (X[i, j] - b[j]) / a[j]
+ *       offset[i], slope[i] = ols(X[i, :] ~ 1 + reference)
+ *       out[i, j] = (X[i, j] - offset[i]) / slope[i]
  *
  *   inverse_transform(X):
- *       out[i, j] = X[i, j] * a[j] + b[j]
- *
- * For deg=1, polyfit returns (slope, intercept). The closed-form least-
- * squares formula on the n training rows is:
- *   slope     = sum((ref - ref_mean) * (col - col_mean))
- *             / sum((ref - ref_mean)^2)
- *   intercept = col_mean - slope * ref_mean
+ *       Uses the row coefficients from the last transform call on the same
+ *       handle. This preserves the legacy inverse-transform API while the
+ *       forward MSC contract matches external implementations.
  */
 #ifndef CHEMOMETRICS4ALL_CORE_PP_SCATTER_MSC_H
 #define CHEMOMETRICS4ALL_CORE_PP_SCATTER_MSC_H
@@ -46,12 +40,11 @@ void c4a_pp_msc_state_free(c4a_pp_msc_state_t* state);
  * otherwise. NULL-safe (returns 0 on NULL). */
 int c4a_pp_msc_state_is_fitted(const c4a_pp_msc_state_t* state);
 
-/* Fit on X (rows x cols). Requires rows >= 2 and cols >= 1. Replaces any
+/* Fit on X (rows x cols). Requires rows >= 1 and cols >= 2. Replaces any
  * prior fitted state. Returns C4A_OK on success, C4A_ERR_NULL_POINTER for
  * NULL state / X, C4A_ERR_INVALID_ARGUMENT for invalid shape,
- * C4A_ERR_NUMERICAL_FAILURE when the per-row means form a constant vector
- * (zero variance — slope undefined), and C4A_ERR_OUT_OF_MEMORY on alloc
- * failure. */
+ * C4A_ERR_NUMERICAL_FAILURE when the reference spectrum has zero variance
+ * (row-wise slopes undefined), and C4A_ERR_OUT_OF_MEMORY on alloc failure. */
 c4a_status_t c4a_pp_msc_state_fit(c4a_pp_msc_state_t* state,
                                    const double* X,
                                    int64_t rows, int64_t cols);
@@ -59,7 +52,7 @@ c4a_status_t c4a_pp_msc_state_fit(c4a_pp_msc_state_t* state,
 /* Apply the fitted operator on `X` (rows x cols), writing the result to
  * `out` (same shape, may overlap with X). Returns C4A_ERR_NOT_FITTED if the
  * state has not yet been fitted. */
-c4a_status_t c4a_pp_msc_state_apply(const c4a_pp_msc_state_t* state,
+c4a_status_t c4a_pp_msc_state_apply(c4a_pp_msc_state_t* state,
                                      const double* X,
                                      int64_t rows, int64_t cols,
                                      double* out);

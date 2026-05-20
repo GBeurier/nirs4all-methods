@@ -772,7 +772,7 @@ C4A_API c4a_status_t c4a_pp_msc_fit(c4a_pp_msc_handle_t* h,
     }
 }
 
-C4A_API c4a_status_t c4a_pp_msc_transform(const c4a_pp_msc_handle_t* h,
+C4A_API c4a_status_t c4a_pp_msc_transform(c4a_pp_msc_handle_t* h,
                                            c4a_matrix_view_t X,
                                            c4a_matrix_view_t out) {
     if (h == nullptr) {

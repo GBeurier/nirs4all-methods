@@ -2,7 +2,7 @@
 /*
  * RollingBall — Kneen & Annegarn 1996 morphological baseline.
  *
- * Frozen reference: parity/python_generator/src/c4a_parity_pybaselines_ref/rolling_ball.py
+ * Internal parity fixture: parity/python_generator/src/c4a_parity_pybaselines_ref/rolling_ball.py
  *
  * Implementation: O(n * w) scan with centred windows clipped at the array
  * boundaries. The pybaselines variant uses scipy.ndimage.{minimum,maximum}_filter

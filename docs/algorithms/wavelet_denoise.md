@@ -54,7 +54,7 @@ input shape.
 
 - `_transform` requires the output matrix to have the same shape as
   the input; otherwise returns `C4A_ERR_SHAPE_MISMATCH`.
-- Parity tolerance against the frozen NumPy reference: `1e-9` absolute /
+- Parity tolerance against the internal parity fixture: `1e-9` absolute /
   `1e-10` relative (multi-level DWT + sort-based median + soft / hard
   thresholding accumulate slightly more floating-point noise than a
   single-level transform).

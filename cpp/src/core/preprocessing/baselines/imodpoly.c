@@ -2,7 +2,7 @@
 /*
  * IModPoly — Gan, Ruan, Mo 2006 improved modified polynomial baseline.
  *
- * Frozen reference: parity/python_generator/src/c4a_parity_pybaselines_ref/imodpoly.py
+ * Internal parity fixture: parity/python_generator/src/c4a_parity_pybaselines_ref/imodpoly.py
  *
  * For each row y of length n:
  *

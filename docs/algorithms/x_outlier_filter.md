@@ -151,7 +151,7 @@ implementation at the contamination boundary.
 
 ## Reference
 
-The frozen Python reference lives at
+The internal parity fixture lives at
 `parity/python_generator/src/c4a_parity_filters_ref/x_outlier.py`. It
 imports sklearn's `EmpiricalCovariance`, `MinCovDet`, `PCA`,
 `IsolationForest`, and `LocalOutlierFactor` directly and is validated

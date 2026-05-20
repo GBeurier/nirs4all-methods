@@ -72,7 +72,7 @@ Stateful: `_create / _fit / _transform / _destroy` with companion
 - `_transform` returns `C4A_ERR_SHAPE_MISMATCH` if the output column
   count is not exactly `n_components_learned`, or the input column count
   is not exactly `n_features_in`.
-- Tolerance against the frozen NumPy reference: 1e-10 absolute / 1e-11
+- Tolerance against the internal parity fixture: 1e-10 absolute / 1e-11
   relative — same as `FlexiblePCA`.
 
 ## Reference

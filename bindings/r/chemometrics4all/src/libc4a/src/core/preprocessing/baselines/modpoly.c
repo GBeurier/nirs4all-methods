@@ -2,7 +2,7 @@
 /*
  * ModPoly — Lieber & Mahadevan-Jansen 2003 modified polynomial baseline.
  *
- * Frozen reference: parity/python_generator/src/c4a_parity_pybaselines_ref/modpoly.py
+ * Internal parity fixture: parity/python_generator/src/c4a_parity_pybaselines_ref/modpoly.py
  *
  * For each row y of length n:
  *

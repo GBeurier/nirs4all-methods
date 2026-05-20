@@ -3,7 +3,7 @@
 
 The layout deliberately mirrors the generated pls4all method pages:
 title, description, parameter table, bibliography, mathematical principle,
-implementation notes, binding tabs, external reference card, and benchmark
+implementation notes, binding tabs, benchmark comparator card, and benchmark
 tables.
 
 Inputs are intentionally local and deterministic:
@@ -21,7 +21,6 @@ import ast
 import html
 import json
 import re
-import textwrap
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -74,6 +73,26 @@ SOURCE_ALIASES = {
     "pct_to_frac": "percent_to_fraction",
     "x_outlier_mahalanobis": "x_outlier_filter",
     "y_outlier_iqr": "y_outlier_filter",
+    "aug_wavelength_shift": "aug_wavelength_spectral",
+    "aug_wavelength_stretch": "aug_wavelength_spectral",
+    "aug_local_warp": "aug_wavelength_spectral",
+    "aug_band_perturb": "aug_wavelength_spectral",
+    "aug_band_mask": "aug_wavelength_spectral",
+    "aug_channel_dropout": "aug_wavelength_spectral",
+    "aug_gauss_jitter": "aug_wavelength_spectral",
+    "aug_unsharp_mask": "aug_wavelength_spectral",
+    "aug_magnitude_warp": "aug_wavelength_spectral",
+    "aug_local_clip": "aug_wavelength_spectral",
+    "aug_detector_rolloff": "aug_edge_spline_random",
+    "aug_stray_light": "aug_edge_spline_random",
+    "aug_edge_curve": "aug_edge_spline_random",
+    "aug_truncated_peak": "aug_edge_spline_random",
+    "aug_edge_artifacts": "aug_edge_spline_random",
+    "aug_spline_smooth": "aug_edge_spline_random",
+    "aug_spline_x_perturb": "aug_edge_spline_random",
+    "aug_spline_y_perturb": "aug_edge_spline_random",
+    "aug_rotate_translate": "aug_edge_spline_random",
+    "aug_random_x_op": "aug_edge_spline_random",
     "kennard_stone": "splitters",
     "spxy": "splitters",
     "kbins_stratified": "splitters",
@@ -123,9 +142,12 @@ REFERENCE_BACKENDS = {
     "nirs_ref": ("ref.nirs4all", "Python"),
     "sklearn_ref": ("ref.sklearn", "Python"),
     "scipy_ref": ("ref.scipy", "Python"),
+    "numpy_ref": ("ref.numpy", "Python"),
     "pywavelets_ref": ("ref.pywavelets", "Python"),
-    "r_base": ("ref.r.base", "R"),
-    "r_stats": ("ref.r.stats", "R"),
+    "pycaltransfer_ref": ("ref.pycaltransfer", "Python"),
+    "statsmodels_ref": ("ref.statsmodels", "Python"),
+    "cowarp_ref": ("ref.cowarp", "Python"),
+    "r_prospectr_ref": ("ref.r.prospectr", "R"),
 }
 
 PARAM_NOTES = {
@@ -235,8 +257,10 @@ def _parse_reference(node: ast.AST) -> Reference | None:
     if not isinstance(node, ast.Call):
         return None
     name = _call_name(node.func)
-    compare = _literal_bool(_keyword(node, "compare"), True)
-    gate_c4a = _literal_bool(_keyword(node, "gate_c4a"), True)
+    default_compare = False if name == "r_prospectr_ref" else True
+    default_gate_c4a = False if name == "r_prospectr_ref" else True
+    compare = _literal_bool(_keyword(node, "compare"), default_compare)
+    gate_c4a = _literal_bool(_keyword(node, "gate_c4a"), default_gate_c4a)
     note = _literal_string(_keyword(node, "contract_note"))
     if name == "ReferenceSpec" and len(node.args) >= 2:
         backend = _literal_string(node.args[0])
@@ -247,10 +271,7 @@ def _parse_reference(node: ast.AST) -> Reference | None:
         return Reference(backend, library, language or "Python", compare, gate_c4a, note)
     if name in REFERENCE_BACKENDS:
         backend, language = REFERENCE_BACKENDS[name]
-        if name in {"r_base", "r_stats"}:
-            library = "R base" if name == "r_base" else "R stats"
-        else:
-            library = _literal_string(node.args[0]) if node.args else backend
+        library = _literal_string(node.args[0]) if node.args else backend
         return Reference(backend, library, language, compare, gate_c4a, note)
     return None
 
@@ -325,10 +346,33 @@ def _intro(text: str) -> str:
     return "\n".join(out).strip()
 
 
+def _label_internal_parity_fixtures(text: str) -> str:
+    """Avoid presenting in-repo fixture generators as external references."""
+    replacements = {
+        "Frozen Python reference": "Internal parity fixture",
+        "Frozen Python": "Internal parity fixture",
+        "Frozen NumPy reference": "Internal parity fixture",
+        "Frozen NumPy ref": "Internal parity fixture",
+        "frozen Python reference": "internal parity fixture",
+        "frozen Python": "internal parity fixture",
+        "frozen NumPy reference": "internal parity fixture",
+        "frozen NumPy ref": "internal parity fixture",
+        "frozen reference": "internal parity fixture",
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    text = re.sub(
+        r"(?m)^-\s+Reference:\s+(`parity/python_generator/src/c4a_parity_[^`]+`)",
+        r"- Internal parity fixture: \1",
+        text,
+    )
+    return text
+
+
 def load_algorithm_pages() -> dict[str, dict[str, str]]:
     pages: dict[str, dict[str, str]] = {}
     for path in sorted(ALGORITHMS_DIR.glob("*.md")):
-        text = path.read_text(encoding="utf-8")
+        text = _label_internal_parity_fixtures(path.read_text(encoding="utf-8"))
         first = next((line for line in text.splitlines() if line.startswith("# ")), f"# {path.stem}")
         pages[path.stem] = {
             "title": _clean_title(first),
@@ -513,6 +557,15 @@ def load_bench() -> dict[str, Any]:
     return json.loads(BENCH_JSON.read_text(encoding="utf-8"))
 
 
+def load_validation_snapshot():
+    try:
+        from validation_registry import load_snapshot
+
+        return load_snapshot()
+    except Exception:
+        return None
+
+
 def esc_md(value: str) -> str:
     return str(value).replace("|", "\\|").replace("\n", " ")
 
@@ -599,7 +652,7 @@ def render_implementation_text(m: Method, page: dict[str, str] | None, prototype
     elif m.c_prefix:
         parts.append(f"C ABI prefix: `{m.c_prefix}`.")
     if m.refs:
-        parts.append("Reference backends are registered in the benchmark matrix and stored as reproducible snapshots when they define the canonical contract.")
+        parts.append("Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.")
     return "\n\n".join(parts) if parts else "Implementation details are defined by the public C ABI and the generated binding wrappers."
 
 
@@ -607,9 +660,15 @@ def render_implementation_table(m: Method, py_classes: dict[str, dict[str, Any]]
     rows = []
     c_entry = m.c_prefix or (c_protos[0].split("(", 1)[0].split()[-1] if c_protos else "")
     rows.append(("C ABI", code(c_entry), "C/C++", "Stable libc4a entry point family."))
+    rows.append((
+        "Python",
+        code(f"chemometrics4all.python.{m.method_id}"),
+        "Python",
+        "ABI-close function backed by ctypes.",
+    ))
     if m.py_class:
-        py = f"chemometrics4all.{m.py_class}"
-        rows.append(("Python", code(py), "Python", "sklearn-style wrapper backed by ctypes."))
+        py = f"chemometrics4all.sklearn.{m.py_class}"
+        rows.append(("Python sklearn", code(py), "Python", "scikit-learn-compatible estimator backed by ctypes."))
     r_name = ""
     if m.r_expr:
         r_name = re.match(r"\{?([A-Za-z0-9_]+)\(", m.r_expr.strip())
@@ -638,29 +697,71 @@ def _py_default_args(params: list[dict[str, str]]) -> str:
     return ", ".join(parts[:6])
 
 
+def _python_abi_usage(m: Method) -> str:
+    fn = f"c4a.{m.method_id}"
+    if m.method_id in {"direct_standardization", "robust_direct_standardization", "piecewise_direct_standardization", "score_augmented_projection_standardization", "local_centering"}:
+        return f"from chemometrics4all import python as c4a\n\nXt = {fn}(X_source, X_target, X)"
+    if m.method_id == "slope_bias_correction":
+        return "from chemometrics4all import python as c4a\n\ny_corr = c4a.slope_bias_correction(y_source, y_target, y)"
+    if m.method_id == "osc":
+        return "from chemometrics4all import python as c4a\n\nXt = c4a.osc(X, y)"
+    if m.method_id == "epo":
+        return "from chemometrics4all import python as c4a\n\nXt = c4a.epo(X, d)"
+    if m.method_id == "fck_static":
+        return "from chemometrics4all import python as c4a\n\nXt = c4a.fck_static(X, kernel_size=5, alphas=[0.5, 1.0], sigmas=[1.0, 2.0])"
+    if m.method_id == "kennard_stone":
+        return "from chemometrics4all import python as c4a\n\ntrain_idx, test_idx = c4a.kennard_stone(X)"
+    if m.method_id == "spxy":
+        return "from chemometrics4all import python as c4a\n\ntrain_idx, test_idx = c4a.spxy(X, y)"
+    if m.method_id == "kbins_stratified":
+        return "from chemometrics4all import python as c4a\n\ntrain_idx, test_idx = c4a.kbins_stratified(y)"
+    if m.method_id == "y_outlier_iqr":
+        return "from chemometrics4all import python as c4a\n\nmask, stats = c4a.y_outlier_filter(y)"
+    if m.method_id == "x_outlier_mahalanobis":
+        return "from chemometrics4all import python as c4a\n\nmask, stats = c4a.x_outlier_filter(X)"
+    if m.method_id == "correlation_filter":
+        return "from chemometrics4all import python as c4a\n\nXt = c4a.correlation_filter(X, y, top_k=5)"
+    if m.method_id == "variance_filter":
+        return "from chemometrics4all import python as c4a\n\nXt = c4a.variance_filter(X, top_k=5)"
+    if m.method_id == "interval_generator":
+        return "from chemometrics4all import python as c4a\n\nblocks = c4a.interval_generator(X, interval_size=16, step=8)"
+    if m.method_id == "crop":
+        return "from chemometrics4all import python as c4a\n\nXt = c4a.crop(X, start=5, end=50)"
+    if m.method_id == "resample":
+        return "from chemometrics4all import python as c4a\n\nXt = c4a.resample(X, num_samples=128)"
+    if m.method_id == "resampler":
+        return "from chemometrics4all import python as c4a\n\nXt = c4a.resampler(X, source_wavelengths, target_wavelengths)"
+    if m.method_id == "range_discretizer":
+        return "from chemometrics4all import python as c4a\n\nXi = c4a.range_discretizer(X, edges=[0.0, 0.25, 0.5, 1.0])"
+    if m.method_id == "weighted_snv":
+        return "from chemometrics4all import python as c4a\n\nXt = c4a.weighted_snv(X, weights=weights)"
+    return f"from chemometrics4all import python as c4a\n\nXt = {fn}(X)"
+
+
 def render_usage(m: Method, py_classes: dict[str, dict[str, Any]], c_protos: list[str]) -> str:
     parts = [
         "### Usage\n",
         "Every chemometrics4all binding dispatches into the same C kernel. "
-        "The registry references are listed in the parity card below.\n",
+        "Registered comparator/source rows are listed in the benchmark card below.\n",
         "::::{tab-set}\n:class: chemometrics4all-bindings\n\n",
     ]
     c_body = "\n".join(c_protos[:10]) if c_protos else f"/* C ABI prefix */\n{m.c_prefix or 'c4a_*'}"
     parts.append(":::{tab-item} C ABI · libc4a\n:sync: c\n:class-label: lang-c\n\n```c\n" + c_body + "\n```\n\n:::\n")
+    parts.append(":::{tab-item} Python ABI · chemometrics4all.python\n:sync: python-abi\n:class-label: lang-python\n\n```python\n" + _python_abi_usage(m) + "\n```\n\n:::\n")
     if m.py_class:
         params = py_classes.get(m.py_class, {}).get("params", [])
         args = _py_default_args(params)
         call = f"{m.py_class}({args})" if args else f"{m.py_class}()"
         if m.family == "splitter":
-            body = f"from chemometrics4all import {m.py_class}\n\nsplitter = {call}\ntrain_idx, test_idx = splitter.split(X)"
+            body = f"from chemometrics4all.sklearn import {m.py_class}\n\nsplitter = {call}\ntrain_idx, test_idx = splitter.split(X)"
         elif m.family == "filter":
-            body = f"from chemometrics4all import {m.py_class}\n\nflt = {call}\nmask, stats = flt.fit_apply(X)"
+            body = f"from chemometrics4all.sklearn import {m.py_class}\n\nflt = {call}\nmask, stats = flt.fit_apply(X)"
         elif m.method_id in {"osc", "epo"}:
             aux = "y" if m.method_id == "osc" else "d"
-            body = f"from chemometrics4all import {m.py_class}\n\nop = {call}\nXt = op.fit_transform(X, {aux})"
+            body = f"from chemometrics4all.sklearn import {m.py_class}\n\nop = {call}\nXt = op.fit_transform(X, {aux})"
         else:
-            body = f"from chemometrics4all import {m.py_class}\n\nop = {call}\nXt = op.fit_transform(X)"
-        parts.append(":::{tab-item} Python · chemometrics4all\n:sync: python\n:class-label: lang-python\n\n```python\n" + body + "\n```\n\n:::\n")
+            body = f"from chemometrics4all.sklearn import {m.py_class}\n\nop = {call}\nXt = op.fit_transform(X)"
+        parts.append(":::{tab-item} Python sklearn · chemometrics4all.sklearn\n:sync: python-sklearn\n:class-label: lang-python\n\n```python\n" + body + "\n```\n\n:::\n")
     if m.r_expr:
         body = "library(chemometrics4all)\nres <- " + m.r_expr
         parts.append(":::{tab-item} R · chemometrics4all\n:sync: r\n:class-label: lang-r\n\n```r\n" + body + "\n```\n\n:::\n")
@@ -684,10 +785,26 @@ def render_reference_card(m: Method, bench: dict[str, Any]) -> str:
     cells_by_backend = reference_cells(m, bench)
     rows = []
     if not m.refs:
-        rows.append(
-            "- ℹ No external parity reference row is registered for this public helper; "
-            "the page is generated from the in-tree API and algorithm documentation."
-        )
+        for backend, cells in sorted(cells_by_backend.items()):
+            candidate = next((cell for cell in cells if cell.get("gate") == "candidate_reference"), None)
+            if not candidate:
+                continue
+            role = str(candidate.get("reference_role") or "candidate")
+            parity = str(candidate.get("parity") or "")
+            icon = "⊘" if parity == "reference_needed" else "?"
+            reference = str(candidate.get("reference") or backend)
+            version = versions.get(backend, "")
+            version_text = f" · {version}" if version and version != reference else ""
+            note = f" — {candidate.get('reason')}" if candidate.get("reason") else ""
+            rows.append(
+                f"- {icon} **`{backend}`** ({role}) — "
+                f"`{reference}`{version_text}{note}"
+            )
+        if not rows:
+            rows.append(
+                "- ℹ No external benchmark comparator row is registered for this public helper; "
+                "the page is generated from the in-tree API and algorithm documentation."
+            )
     for ref in m.refs:
         cells = cells_by_backend.get(ref.backend, [])
         role = next((cell.get("reference_role") for cell in cells if cell.get("reference_role")), "")
@@ -700,13 +817,127 @@ def render_reference_card(m: Method, bench: dict[str, Any]) -> str:
             f"- {icon} **`{ref.backend}`** ({ref.language} · {role}) — "
             f"`{ref.library}`{version_text}{note}"
         )
-    return "\n**Registry parity references** ◆\n\n:::{card}\n:class-card: external-refs\n\n" + "\n".join(rows) + "\n:::\n"
+    return "\n**Benchmark Comparators And Sources** ◆\n\n:::{card}\n:class-card: external-refs\n\n" + "\n".join(rows) + "\n:::\n"
+
+
+def _fmt_float(value: Any) -> str:
+    if value is None or value == "":
+        return "—"
+    try:
+        return f"{float(value):.3g}"
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def _dataset_label(dataset: dict[str, Any]) -> str:
+    if not dataset:
+        return "—"
+    if "n" in dataset and "p" in dataset:
+        return f"{dataset.get('n')}×{dataset.get('p')}"
+    if "n_samples" in dataset and "n_features" in dataset:
+        return f"{dataset.get('n_samples')}×{dataset.get('n_features')}"
+    return "—"
+
+
+def _truth_source_label(source_id: str, detail: dict[str, Any]) -> str:
+    if not detail:
+        return f"`{source_id}`"
+    title = detail.get("title") or detail.get("reference_path") or detail.get("package") or detail.get("project") or source_id
+    doi = detail.get("doi")
+    package = detail.get("package")
+    version = detail.get("version") or detail.get("version_policy")
+    suffix = []
+    if package:
+        suffix.append(str(package))
+    if version:
+        suffix.append(str(version))
+    if doi:
+        suffix.append(f"doi:{doi}")
+    suffix_text = f" ({', '.join(suffix)})" if suffix else ""
+    return f"`{source_id}` — {esc_md(title)}{suffix_text}"
+
+
+def render_validation_contract(m: Method, contract: dict[str, Any] | None) -> str:
+    if not contract:
+        return (
+            "### Validation contract\n\n"
+            "No deterministic validation-registry contract is currently "
+            "available for this method. Run "
+            "`python -m benchmarks.validation.export_registry --write` "
+            "and rebuild the docs.\n"
+        )
+
+    comparator = contract.get("comparator") or "default_allclose"
+    comparator_detail = contract.get("comparator_detail", {})
+    default_dataset = contract.get("default_dataset", {})
+    smoke = next((s for s in contract.get("suites", []) if s.get("id") == "smoke"), {})
+    benchmark = next((s for s in contract.get("suites", []) if s.get("id") == "benchmark"), {})
+    truth_sources = contract.get("truth_sources", [])
+    truth_details = contract.get("truth_source_details", {})
+
+    parts = [
+        "### Validation contract\n\n",
+        "- Operation: ",
+        code(str(contract.get("operation") or "cross_binding_callable")),
+        " · comparator: ",
+        code(str(comparator)),
+        " · tolerance: ",
+        f"`rtol={_fmt_float(contract.get('reference_rtol'))}`, ",
+        f"`atol={_fmt_float(contract.get('reference_atol'))}`",
+        f" · quality: **{esc_md(contract.get('tolerance_quality') or 'n/a')}**\n",
+        "- Default validation dataset: ",
+        code(_dataset_label(default_dataset)),
+    ]
+    if default_dataset.get("seed") is not None:
+        parts.append(f" · seed `{default_dataset.get('seed')}`")
+    parts.append("\n")
+    parts.append(
+        f"- Suites: smoke `{len(smoke.get('datasets', []))}` cells; "
+        f"benchmark `{len(benchmark.get('datasets', []))}` cells"
+    )
+    if comparator_detail.get("contract_note"):
+        parts.append(f" · {esc_md(comparator_detail.get('contract_note'))}")
+    parts.append("\n")
+
+    metrics = contract.get("metrics", [])
+    if metrics:
+        parts.append("- Metrics: " + ", ".join(f"`{m}`" for m in metrics) + "\n")
+
+    if truth_sources:
+        parts.append("- Truth sources:\n")
+        for source_id in truth_sources:
+            parts.append(
+                f"  - {_truth_source_label(str(source_id), truth_details.get(source_id, {}))}\n"
+            )
+    else:
+        parts.append(
+            "- Truth sources: cross-binding references declared directly in "
+            "`benchmarks/cross_binding/orchestrator.py`.\n"
+        )
+
+    refs = contract.get("references", [])
+    if refs:
+        parts.append("\n| Backend | Library | Gate | Comparator | Note |\n")
+        parts.append("|---------|---------|------|------------|------|\n")
+        for ref in refs:
+            gate = "parity" if ref.get("compare") and ref.get("gate_c4a") else "context"
+            note = ref.get("contract_note") or ""
+            parts.append(
+                f"| `{esc_md(ref.get('backend', ''))}` "
+                f"| `{esc_md(ref.get('library', ''))}` "
+                f"| {esc_md(ref.get('language', ''))} / {gate} "
+                f"| `{esc_md(ref.get('comparator') or comparator)}` "
+                f"| {esc_md(note)} |\n"
+            )
+    return "".join(parts)
 
 
 def parity_icon(value: str) -> str:
     return {
         "exact": "✓",
         "context": "≈",
+        "candidate": "?",
+        "reference_needed": "⊘",
         "drift": "≈",
         "divergent": "✗",
         "error": "⚠",
@@ -739,7 +970,7 @@ def benchmark_band(cid: str, meta: dict[str, Any]) -> tuple[int, str, str]:
         return (4, "python", "Python · external")
     if lang == "R":
         return (5, "r", "R · external")
-    if lang == "MATLAB":
+    if lang in {"MATLAB", "MATLAB/Octave"}:
         return (6, "matlab", "MATLAB · external")
     return (7, "ext", "Other")
 
@@ -763,6 +994,101 @@ def benchmark_parity_label(cell: dict[str, Any] | None) -> tuple[str, str]:
         if gate == "native" and parity == "exact":
             return (f"parity-{parity}", "✓ exact")
     return (f"parity-{parity}", f"{parity_icon(parity)} {parity}")
+
+
+_PARITY_RANK = {
+    "not_run": 0,
+    "not_available": 0,
+    "reference_needed": 0,
+    "exact": 1,
+    "candidate": 2,
+    "context": 2,
+    "drift": 3,
+    "divergent": 4,
+    "error": 5,
+}
+
+
+def _finite_float(value: Any) -> float | None:
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return None
+    if f != f:
+        return None
+    return f
+
+
+def _format_benchmark_divergence(value: float | None) -> str:
+    if value is None:
+        return ""
+    v = abs(value)
+    if v == 0:
+        return "0"
+    if v < 1e-3:
+        return f"{v:.1e}"
+    if v < 1:
+        return f"{v:.3g}"
+    if v < 1000:
+        return f"{v:.4g}"
+    return f"{v:.2e}"
+
+
+def _row_worst_parity(cells: list[dict[str, Any] | None]) -> str:
+    fallback = "not_run"
+    fallback_set = False
+    worst = ""
+    worst_rank = -1
+    for cell in cells:
+        if not cell:
+            continue
+        parity = str(cell.get("parity") or "not_run")
+        if not fallback_set:
+            fallback = parity
+            fallback_set = True
+        rank = _PARITY_RANK.get(parity, 1)
+        if rank > worst_rank:
+            worst = parity
+            worst_rank = rank
+    return worst if worst else fallback
+
+
+def _cell_divergence_value(cell: dict[str, Any] | None) -> tuple[float | None, str]:
+    if not cell:
+        return None, ""
+    for key, label in (
+        ("reference_max_abs_diff", "reference max abs diff"),
+        ("binding_max_abs_diff", "binding max abs diff"),
+        ("reference_rel_l2_diff", "reference rel L2 diff"),
+        ("binding_rel_l2_diff", "binding rel L2 diff"),
+        ("reference_rms_diff", "reference RMS diff"),
+        ("binding_rms_diff", "binding RMS diff"),
+    ):
+        value = _finite_float(cell.get(key))
+        if value is not None:
+            return value, label
+    return None, ""
+
+
+def benchmark_divergence_label(cells: list[dict[str, Any] | None]) -> tuple[str, str, str]:
+    parity = _row_worst_parity(cells)
+    worst_value: float | None = None
+    worst_label = ""
+    for cell in cells:
+        value, label = _cell_divergence_value(cell)
+        if value is None:
+            continue
+        if worst_value is None or abs(value) > abs(worst_value):
+            worst_value = value
+            worst_label = label
+
+    if worst_value is None:
+        return (f"parity-{parity}", "—", "no divergence recorded")
+    return (
+        f"parity-{parity}",
+        _format_benchmark_divergence(worst_value),
+        f"worst {worst_label} over visible sizes",
+    )
 
 
 def benchmark_truth_marker(cid: str, meta: dict[str, Any], cells: list[dict[str, Any]]) -> tuple[str, str]:
@@ -797,7 +1123,10 @@ def render_benchmarks(m: Method, bench: dict[str, Any]) -> str:
     parts = [
         "### Benchmarks\n",
         "Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). "
-        "Verdict legend: ✓ exact · ≈ context/drift · ✗ divergent · ⊘ not available · — not run · ⚠ error.\n",
+        "Divergence is the worst finite value over the visible sizes for each backend, "
+        "preferring reference max-abs difference and falling back to binding max-abs "
+        "difference when no reference comparison is recorded. Rows without a recorded "
+        "comparison show `—`; the fastest backend per column is marked 🏆.\n",
         "::::{tab-set}\n:class: parity-tabs\n\n",
     ]
     for thread in sorted(by_thread):
@@ -815,9 +1144,9 @@ def render_benchmarks(m: Method, bench: dict[str, Any]) -> str:
                 if cell and cell.get("ok") and cell.get("ms") is not None
             ]
             best_by_size.append(min(vals) if vals else None)
-        parts.append(f":::" + f"{{tab-item}} {thread} thread{'s' if thread != 1 else ''}\n:sync: threads-{thread}\n\n")
+        parts.append(":::" + f"{{tab-item}} {thread} thread{'s' if thread != 1 else ''}\n:sync: threads-{thread}\n\n")
         parts.append('<div class="parity-table-wrap">\n<table class="docutils parity-grouped">\n')
-        parts.append("<thead><tr><th>Backend</th><th>Parity</th>")
+        parts.append("<thead><tr><th>Backend</th><th>Divergence</th>")
         for n, p in sizes:
             parts.append(f"<th>{n}×{p}</th>")
         parts.append("</tr></thead>\n")
@@ -839,13 +1168,15 @@ def render_benchmarks(m: Method, bench: dict[str, Any]) -> str:
             label = benchmark_backend_label(cid, meta)
             cells = [r.get("cells", {}).get(cid) for r in thread_rows]
             present = [c for c in cells if c]
-            parity_cls, parity_text = benchmark_parity_label(present[0] if present else None)
+            parity_cls, divergence_text, divergence_title = benchmark_divergence_label(cells)
             truth_cls, truth_mark = benchmark_truth_marker(cid, meta, present)
             row_cls = f"bk-row {truth_cls}".strip()
             parts.append(
                 f'<tr class="{html.escape(row_cls)}"><td class="bk-name">{truth_mark}'
                 f'<code>{html.escape(label)}</code></td>'
-                f'<td class="parity {html.escape(parity_cls)}">{html.escape(parity_text)}</td>'
+                f'<td class="parity parity-divergence {html.escape(parity_cls)}" '
+                f'title="{html.escape(divergence_title, quote=True)}">'
+                f'{html.escape(divergence_text)}</td>'
             )
             for idx, c in enumerate(cells):
                 if c and c.get("ok") and c.get("ms") is not None:
@@ -872,6 +1203,7 @@ def render_page(
     r_sigs: dict[str, str],
     c_prototypes: dict[str, list[str]],
     bench: dict[str, Any],
+    validation_contract: dict[str, Any] | None = None,
 ) -> str:
     page = pages.get(m.source_slug or SOURCE_ALIASES.get(m.method_id, m.method_id))
     if not m.c_prefix and m.py_class in py_classes:
@@ -901,6 +1233,8 @@ def render_page(
         "\n",
         render_reference_card(m, bench),
         "\n",
+        render_validation_contract(m, validation_contract),
+        "\n",
         render_benchmarks(m, bench),
         "\n---\n\n",
         "_See also_: [benchmark overview](../benchmarks/overview.md) · "
@@ -917,7 +1251,7 @@ def render_index(methods: list[Method]) -> str:
         "# Methods catalogue\n",
         "Every public chemometrics4all method documented with its parameters, "
         "bibliographic source, mathematical principle, binding signatures, "
-        "external references, and benchmark rows when available.\n",
+        "benchmark comparators/sources, and benchmark rows when available.\n",
         f"_Total methods_: **{len(methods)}**. Grouped by family below.\n",
         "```{toctree}\n:hidden:\n:glob:\n:maxdepth: 1\n\n*\n```\n",
     ]
@@ -957,6 +1291,7 @@ def main() -> None:
     r_sigs = load_r_signatures() if R_DIR.exists() else {}
     c_protos = load_c_prototypes()
     bench = load_bench()
+    validation_snapshot = load_validation_snapshot()
 
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -964,7 +1299,19 @@ def main() -> None:
         old.unlink()
     for m in methods:
         (out_dir / f"{m.method_id}.md").write_text(
-            render_page(m, pages, py_classes, r_sigs, c_protos, bench),
+            render_page(
+                m,
+                pages,
+                py_classes,
+                r_sigs,
+                c_protos,
+                bench,
+                (
+                    validation_snapshot.method_contract(m.method_id)
+                    if validation_snapshot is not None
+                    else None
+                ),
+            ),
             encoding="utf-8",
         )
     (out_dir / "index.md").write_text(render_index(methods), encoding="utf-8")

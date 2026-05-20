@@ -29,5 +29,5 @@ c4a_status_t c4a_aug_path_length_apply(
 ```
 
 ## Reference
-- Frozen Python: `parity/python_generator/src/c4a_parity_augmenters_ref/path_length.py`.
+- Internal parity fixture: `parity/python_generator/src/c4a_parity_augmenters_ref/path_length.py`.
 - Parity tolerance: 1e-15 abs.

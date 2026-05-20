@@ -84,9 +84,9 @@ void register_augmenters_wavelength_spectral_tests(c4a_testing::Runner& r);
 // test_augmenters_phase17.cpp.
 void register_augmenters_phase17_tests(c4a_testing::Runner& r);
 
-// Phase 18 — edge artifacts + splines + random augmenter parity tests live in
-// test_augmenters_phase18.cpp.
-void register_augmenters_phase18_tests(c4a_testing::Runner& r);
+// Edge artifacts + splines + random augmenter parity tests live in
+// test_augmenters_edge_splines_random.cpp.
+void register_augmenters_edge_splines_random_tests(c4a_testing::Runner& r);
 
 namespace {
 
@@ -174,6 +174,6 @@ int main() {
     register_augmenters_noise_drift_tests(r);
     register_augmenters_wavelength_spectral_tests(r);
     register_augmenters_phase17_tests(r);
-    register_augmenters_phase18_tests(r);
+    register_augmenters_edge_splines_random_tests(r);
     return r.finalize();
 }

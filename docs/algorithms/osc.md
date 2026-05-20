@@ -90,9 +90,9 @@ matrices.
 
 | Reference | Abs tol | Rel tol |
 |-----------|---------|---------|
-| Frozen NumPy ref (`c4a_parity_orthog_ref.osc`) | 1e-9 | 1e-10 |
+| Internal parity fixture (`c4a_parity_orthog_ref.osc`) | 1e-9 | 1e-10 |
 
-The frozen NumPy reference matches nirs4all 0.8.x bit-for-bit (≤ 2 ULPs)
+The internal parity fixture matches nirs4all 0.8.x bit-for-bit (≤ 2 ULPs)
 across the four parameter combinations covered in `osc_v1.json`.
 
 ## References

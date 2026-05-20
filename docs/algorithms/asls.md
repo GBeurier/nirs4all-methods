@@ -31,8 +31,8 @@ c4a_status_t c4a_pp_asls_transform(const c4a_pp_asls_handle_t* h,
 - Per-row scratch buffers reused across all iterations to minimize allocator churn.
 - Convergence uses `relative_difference(w, new_w)` matching pybaselines's `_safe_relative_difference` (L2 norms with `max(||w||, DBL_MIN)` denominator).
 - On `max_iter` reached without convergence: silently returns the last iterate (matches pybaselines behaviour).
-- Parity tolerance vs frozen NumPy reference: `1e-7 abs / 1e-8 rel`.
+- Parity tolerance vs internal parity fixture: `1e-7 abs / 1e-8 rel`.
 
 ## Reference
 - Eilers, P. H. C. & Boelens, H. F. M. (2005). "Baseline Correction with Asymmetric Least Squares Smoothing." Leiden University Medical Centre Report.
-- Frozen Python reference: `parity/python_generator/src/c4a_parity_pybaselines_ref/asls.py` (historically validated against `pybaselines==1.1.4`); current upstream `pybaselines` drift is tracked by the reference parity gate.
+- Internal parity fixture: `parity/python_generator/src/c4a_parity_pybaselines_ref/asls.py` (historically validated against `pybaselines==1.1.4`); current upstream `pybaselines` drift is tracked by the reference parity gate.

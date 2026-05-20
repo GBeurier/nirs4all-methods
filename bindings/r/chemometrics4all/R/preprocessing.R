@@ -101,26 +101,56 @@ simple_scale <- function(X) {
 
 #' Multiplicative Scatter Correction (MSC).
 #'
-#' Fits per-column slope/intercept on `X_fit` and applies the correction.
+#' Fits the reference spectrum from `X_fit`, regresses each row of `X` against
+#' that reference, and applies the conventional MSC correction.
 #'
 #' @param X numeric matrix to transform.
 #' @param X_fit numeric matrix used for fitting. Defaults to `X` (in-sample fit).
 #' @return numeric matrix with the same shape as `X`.
 #' @export
 msc <- function(X, X_fit = X) {
-  c4a_pp_msc_fit_transform(X_fit, X)
+  out <- c4a_pp_msc_fit_transform(X_fit, X)
+
+  X_mat <- as.matrix(X)
+  X_fit_mat <- as.matrix(X_fit)
+  reference <- colMeans(X_fit_mat)
+  ref_centered <- reference - mean(reference)
+  ref_den <- sum(ref_centered * ref_centered)
+  row_mean <- rowMeans(X_mat)
+  slopes <- as.vector((X_mat - row_mean) %*% ref_centered / ref_den)
+  offsets <- row_mean - slopes * mean(reference)
+  attr(out, "c4a_msc_offsets") <- offsets
+  attr(out, "c4a_msc_slopes") <- slopes
+  out
 }
 
 #' Inverse Multiplicative Scatter Correction (MSC).
 #'
-#' Applies the inverse of an MSC fit learned from `X_fit`.
+#' Applies the inverse of an MSC transform produced by `msc()`. Conventional
+#' MSC inverse needs the row coefficients from the forward transform; the R
+#' wrapper stores them as attributes on the matrix returned by `msc()`.
 #'
 #' @param X numeric matrix in MSC-corrected space.
 #' @param X_fit numeric matrix used for fitting. Defaults to `X`.
 #' @return numeric matrix with the same shape as `X`.
 #' @export
 msc_inverse_transform <- function(X, X_fit = X) {
-  c4a_pp_msc_fit_inverse_transform(X_fit, X)
+  offsets <- attr(X, "c4a_msc_offsets", exact = TRUE)
+  slopes <- attr(X, "c4a_msc_slopes", exact = TRUE)
+  if (!is.null(offsets) && !is.null(slopes)) {
+    X_mat <- as.matrix(X)
+    if (length(offsets) != nrow(X_mat) || length(slopes) != nrow(X_mat)) {
+      stop("msc_inverse_transform: stored MSC row coefficients do not match X",
+           call. = FALSE)
+    }
+    out <- sweep(X_mat, 1L, slopes, `*`)
+    sweep(out, 1L, offsets, `+`)
+  } else {
+    stop("msc_inverse_transform requires an object returned by msc(); ",
+         "conventional MSC inverse depends on row coefficients from the ",
+         "forward transform.",
+         call. = FALSE)
+  }
 }
 
 #' Extended Multiplicative Scatter Correction (EMSC).

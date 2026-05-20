@@ -51,7 +51,7 @@ Stateless: `_create / _transform / _destroy` plus `_output_cols`.
 - The output column count depends on the input column count (because
   `max_level` is clamped to `dwt_max_level(cols, family)`); callers
   must size the output buffer with `_output_cols`.
-- Parity tolerance against the frozen NumPy reference: `1e-12`
+- Parity tolerance against the internal parity fixture: `1e-12`
   absolute / `1e-13` relative (closed-form arithmetic on a small set of
   summary statistics).
 

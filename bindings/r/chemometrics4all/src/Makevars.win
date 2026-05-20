@@ -10,10 +10,15 @@ LIBC4A_CORE_CPP  = $(wildcard $(LIBC4A_DIR)/src/core/*.cpp)
 LIBC4A_CORE_C    = $(wildcard $(LIBC4A_DIR)/src/core/*.c) \
                    $(wildcard $(LIBC4A_DIR)/src/core/*/*.c) \
                    $(wildcard $(LIBC4A_DIR)/src/core/*/*/*.c)
+LIBC4A_CORE_F    = $(wildcard $(LIBC4A_DIR)/src/core/*.f) \
+                   $(wildcard $(LIBC4A_DIR)/src/core/*/*.f) \
+                   $(wildcard $(LIBC4A_DIR)/src/core/*/*/*.f) \
+                   $(wildcard $(LIBC4A_DIR)/src/core/*/*/*/*.f)
 
 LIBC4A_OBJECTS = $(LIBC4A_C_API_CPP:.cpp=.o) \
                  $(LIBC4A_CORE_CPP:.cpp=.o) \
-                 $(LIBC4A_CORE_C:.c=.o)
+                 $(LIBC4A_CORE_C:.c=.o) \
+                 $(LIBC4A_CORE_F:.f=.o)
 
 R_C_SOURCES = r_methods.c
 R_C_OBJECTS = $(R_C_SOURCES:.c=.o)

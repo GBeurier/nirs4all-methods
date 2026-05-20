@@ -128,6 +128,40 @@ static void prepare_same_shape_matrix(SEXP x,
     if (s != C4A_OK) c4a_throw(s, op);
 }
 
+static double r_aug_param(SEXP params, int idx, const char *op) {
+    if (TYPEOF(params) != REALSXP || Rf_length(params) <= idx) {
+        Rf_error("chemometrics4all: %s missing numeric parameter %d", op, idx);
+    }
+    return REAL(params)[idx];
+}
+
+static int32_t r_aug_param_i32(SEXP params, int idx, const char *op) {
+    return (int32_t)r_aug_param(params, idx, op);
+}
+
+static int r_aug_param_int(SEXP params, int idx, const char *op) {
+    return (int)r_aug_param(params, idx, op);
+}
+
+static c4a_rng_pcg64_state_t *r_create_rng(SEXP seed, const char *op) {
+    c4a_rng_pcg64_state_t *rng = NULL;
+    c4a_status_t s = c4a_rng_pcg64_create((uint64_t)REAL(seed)[0], &rng);
+    if (s != C4A_OK) c4a_throw(s, op);
+    return rng;
+}
+
+static double *r_wavelengths_to_rowmajor(SEXP wavelengths, int64_t cols,
+                                         const char *op) {
+    if (wavelengths == R_NilValue || TYPEOF(wavelengths) != REALSXP ||
+        Rf_length(wavelengths) != cols) {
+        Rf_error("chemometrics4all: %s requires numeric wavelengths with length ncol(X)",
+                 op);
+    }
+    double *wl = (double *)R_alloc((size_t)cols, sizeof(double));
+    memcpy(wl, REAL(wavelengths), (size_t)cols * sizeof(double));
+    return wl;
+}
+
 /* ------------------------------------------------------------------ */
 /* Library / ABI helpers                                               */
 /* ------------------------------------------------------------------ */
@@ -1466,6 +1500,935 @@ static SEXP r_c4a_filter_x_outlier_fit_apply(SEXP x, SEXP method,
 }
 
 /* ------------------------------------------------------------------ */
+/* Advanced chemometric wrappers                                       */
+/* ------------------------------------------------------------------ */
+
+static void ensure_same_cols(int64_t a, int64_t b, const char *lhs,
+                             const char *rhs) {
+    if (a != b) {
+        Rf_error("chemometrics4all: %s and %s must have the same number of columns",
+                 lhs, rhs);
+    }
+}
+
+static const double *optional_real_vector(SEXP x, int64_t *n,
+                                          const char *name) {
+    if (x == R_NilValue || Rf_length(x) == 0) {
+        *n = 0;
+        return NULL;
+    }
+    if (!Rf_isReal(x)) {
+        Rf_error("chemometrics4all: %s must be a numeric vector", name);
+    }
+    *n = (int64_t)Rf_length(x);
+    return REAL(x);
+}
+
+static SEXP r_c4a_pp_direct_standardization_fit_transform(
+    SEXP source, SEXP target, SEXP x, SEXP fit_intercept, SEXP ridge) {
+    int64_t sr, sc, tr, tc, rows, cols;
+    double *source_in = r_matrix_to_rowmajor(source, &sr, &sc);
+    double *target_in = r_matrix_to_rowmajor(target, &tr, &tc);
+    double *in = r_matrix_to_rowmajor(x, &rows, &cols);
+    ensure_same_cols(sc, tc, "source", "target");
+    ensure_same_cols(sc, cols, "source", "X");
+    double *out_buf = (double *)R_alloc((size_t)(rows * cols), sizeof(double));
+
+    c4a_pp_direct_standardization_handle_t *h = NULL;
+    c4a_status_t s = c4a_pp_direct_standardization_create(
+        &h, LOGICAL(fit_intercept)[0], REAL(ridge)[0]);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_direct_standardization_create");
+
+    c4a_matrix_view_t Sv, Tv, Xv, Yv;
+    init_view_rowmajor(&Sv, source_in, sr, sc);
+    init_view_rowmajor(&Tv, target_in, tr, tc);
+    init_view_rowmajor(&Xv, in, rows, cols);
+    init_view_rowmajor(&Yv, out_buf, rows, cols);
+    s = c4a_pp_direct_standardization_fit(h, Sv, Tv);
+    if (s != C4A_OK) {
+        c4a_pp_direct_standardization_destroy(h);
+        c4a_throw(s, "c4a_pp_direct_standardization_fit");
+    }
+    s = c4a_pp_direct_standardization_transform(h, Xv, Yv);
+    c4a_pp_direct_standardization_destroy(h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_direct_standardization_transform");
+    return rowmajor_to_R_matrix(out_buf, rows, cols);
+}
+
+static SEXP r_c4a_pp_robust_direct_standardization_fit_transform(
+    SEXP source, SEXP target, SEXP x, SEXP fit_intercept, SEXP ridge,
+    SEXP trim_quantile, SEXP max_iter) {
+    int64_t sr, sc, tr, tc, rows, cols;
+    double *source_in = r_matrix_to_rowmajor(source, &sr, &sc);
+    double *target_in = r_matrix_to_rowmajor(target, &tr, &tc);
+    double *in = r_matrix_to_rowmajor(x, &rows, &cols);
+    ensure_same_cols(sc, tc, "source", "target");
+    ensure_same_cols(sc, cols, "source", "X");
+    double *out_buf = (double *)R_alloc((size_t)(rows * cols), sizeof(double));
+
+    c4a_pp_robust_direct_standardization_handle_t *h = NULL;
+    c4a_status_t s = c4a_pp_robust_direct_standardization_create(
+        &h, LOGICAL(fit_intercept)[0], REAL(ridge)[0],
+        REAL(trim_quantile)[0], INTEGER(max_iter)[0]);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_robust_direct_standardization_create");
+
+    c4a_matrix_view_t Sv, Tv, Xv, Yv;
+    init_view_rowmajor(&Sv, source_in, sr, sc);
+    init_view_rowmajor(&Tv, target_in, tr, tc);
+    init_view_rowmajor(&Xv, in, rows, cols);
+    init_view_rowmajor(&Yv, out_buf, rows, cols);
+    s = c4a_pp_robust_direct_standardization_fit(h, Sv, Tv);
+    if (s != C4A_OK) {
+        c4a_pp_robust_direct_standardization_destroy(h);
+        c4a_throw(s, "c4a_pp_robust_direct_standardization_fit");
+    }
+    s = c4a_pp_robust_direct_standardization_transform(h, Xv, Yv);
+    c4a_pp_robust_direct_standardization_destroy(h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_robust_direct_standardization_transform");
+    return rowmajor_to_R_matrix(out_buf, rows, cols);
+}
+
+static SEXP r_c4a_pp_piecewise_direct_standardization_fit_transform(
+    SEXP source, SEXP target, SEXP x, SEXP window_size,
+    SEXP fit_intercept, SEXP ridge) {
+    int64_t sr, sc, tr, tc, rows, cols;
+    double *source_in = r_matrix_to_rowmajor(source, &sr, &sc);
+    double *target_in = r_matrix_to_rowmajor(target, &tr, &tc);
+    double *in = r_matrix_to_rowmajor(x, &rows, &cols);
+    ensure_same_cols(sc, tc, "source", "target");
+    ensure_same_cols(sc, cols, "source", "X");
+    double *out_buf = (double *)R_alloc((size_t)(rows * cols), sizeof(double));
+
+    c4a_pp_piecewise_direct_standardization_handle_t *h = NULL;
+    c4a_status_t s = c4a_pp_piecewise_direct_standardization_create(
+        &h, INTEGER(window_size)[0], LOGICAL(fit_intercept)[0], REAL(ridge)[0]);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_piecewise_direct_standardization_create");
+
+    c4a_matrix_view_t Sv, Tv, Xv, Yv;
+    init_view_rowmajor(&Sv, source_in, sr, sc);
+    init_view_rowmajor(&Tv, target_in, tr, tc);
+    init_view_rowmajor(&Xv, in, rows, cols);
+    init_view_rowmajor(&Yv, out_buf, rows, cols);
+    s = c4a_pp_piecewise_direct_standardization_fit(h, Sv, Tv);
+    if (s != C4A_OK) {
+        c4a_pp_piecewise_direct_standardization_destroy(h);
+        c4a_throw(s, "c4a_pp_piecewise_direct_standardization_fit");
+    }
+    s = c4a_pp_piecewise_direct_standardization_transform(h, Xv, Yv);
+    c4a_pp_piecewise_direct_standardization_destroy(h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_piecewise_direct_standardization_transform");
+    return rowmajor_to_R_matrix(out_buf, rows, cols);
+}
+
+static SEXP r_c4a_pp_saps_fit_transform(
+    SEXP source, SEXP target, SEXP x, SEXP n_components, SEXP score_weight,
+    SEXP fit_intercept, SEXP ridge) {
+    int64_t sr, sc, tr, tc, rows, cols;
+    double *source_in = r_matrix_to_rowmajor(source, &sr, &sc);
+    double *target_in = r_matrix_to_rowmajor(target, &tr, &tc);
+    double *in = r_matrix_to_rowmajor(x, &rows, &cols);
+    ensure_same_cols(sc, tc, "source", "target");
+    ensure_same_cols(sc, cols, "source", "X");
+    double *out_buf = (double *)R_alloc((size_t)(rows * cols), sizeof(double));
+
+    c4a_pp_saps_handle_t *h = NULL;
+    c4a_status_t s = c4a_pp_saps_create(
+        &h, INTEGER(n_components)[0], REAL(score_weight)[0],
+        LOGICAL(fit_intercept)[0], REAL(ridge)[0]);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_saps_create");
+
+    c4a_matrix_view_t Sv, Tv, Xv, Yv;
+    init_view_rowmajor(&Sv, source_in, sr, sc);
+    init_view_rowmajor(&Tv, target_in, tr, tc);
+    init_view_rowmajor(&Xv, in, rows, cols);
+    init_view_rowmajor(&Yv, out_buf, rows, cols);
+    s = c4a_pp_saps_fit(h, Sv, Tv);
+    if (s != C4A_OK) {
+        c4a_pp_saps_destroy(h);
+        c4a_throw(s, "c4a_pp_saps_fit");
+    }
+    s = c4a_pp_saps_transform(h, Xv, Yv);
+    c4a_pp_saps_destroy(h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_saps_transform");
+    return rowmajor_to_R_matrix(out_buf, rows, cols);
+}
+
+static SEXP r_c4a_pp_slope_bias_fit_transform(SEXP source, SEXP target, SEXP y) {
+    R_xlen_t n_source = Rf_length(source);
+    R_xlen_t n_target = Rf_length(target);
+    R_xlen_t n_y = Rf_length(y);
+    if (n_source != n_target) {
+        Rf_error("chemometrics4all: source and target must have the same length");
+    }
+    SEXP out = PROTECT(Rf_allocVector(REALSXP, n_y));
+    c4a_pp_slope_bias_handle_t *h = NULL;
+    c4a_status_t s = c4a_pp_slope_bias_create(&h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_slope_bias_create");
+    s = c4a_pp_slope_bias_fit(h, REAL(source), REAL(target), (int64_t)n_source);
+    if (s != C4A_OK) {
+        c4a_pp_slope_bias_destroy(h);
+        c4a_throw(s, "c4a_pp_slope_bias_fit");
+    }
+    s = c4a_pp_slope_bias_transform(h, REAL(y), (int64_t)n_y, REAL(out));
+    c4a_pp_slope_bias_destroy(h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_slope_bias_transform");
+    UNPROTECT(1);
+    return out;
+}
+
+static SEXP r_c4a_pp_local_centering_fit_transform(SEXP source, SEXP target, SEXP x) {
+    int64_t sr, sc, tr, tc, rows, cols;
+    double *source_in = r_matrix_to_rowmajor(source, &sr, &sc);
+    double *target_in = r_matrix_to_rowmajor(target, &tr, &tc);
+    double *in = r_matrix_to_rowmajor(x, &rows, &cols);
+    ensure_same_cols(sc, tc, "source", "target");
+    ensure_same_cols(sc, cols, "source", "X");
+    double *out_buf = (double *)R_alloc((size_t)(rows * cols), sizeof(double));
+
+    c4a_pp_local_centering_handle_t *h = NULL;
+    c4a_status_t s = c4a_pp_local_centering_create(&h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_local_centering_create");
+    c4a_matrix_view_t Sv, Tv, Xv, Yv;
+    init_view_rowmajor(&Sv, source_in, sr, sc);
+    init_view_rowmajor(&Tv, target_in, tr, tc);
+    init_view_rowmajor(&Xv, in, rows, cols);
+    init_view_rowmajor(&Yv, out_buf, rows, cols);
+    s = c4a_pp_local_centering_fit(h, Sv, Tv);
+    if (s != C4A_OK) {
+        c4a_pp_local_centering_destroy(h);
+        c4a_throw(s, "c4a_pp_local_centering_fit");
+    }
+    s = c4a_pp_local_centering_transform(h, Xv, Yv);
+    c4a_pp_local_centering_destroy(h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_local_centering_transform");
+    return rowmajor_to_R_matrix(out_buf, rows, cols);
+}
+
+static SEXP r_c4a_pp_weighted_snv_fit_transform(SEXP x, SEXP weights,
+                                                SEXP ddof, SEXP eps) {
+    int64_t rows, cols, n_weights;
+    double *in, *out_buf;
+    c4a_matrix_view_t Xv, Yv;
+    const double *w = optional_real_vector(weights, &n_weights, "weights");
+    prepare_same_shape_matrix(x, &rows, &cols, &in, &out_buf, &Xv, &Yv,
+                              "c4a_pp_weighted_snv_matrix");
+    c4a_pp_weighted_snv_handle_t *h = NULL;
+    c4a_status_t s = c4a_pp_weighted_snv_create(
+        &h, w, n_weights, INTEGER(ddof)[0], REAL(eps)[0]);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_weighted_snv_create");
+    s = c4a_pp_weighted_snv_fit(h, Xv);
+    if (s != C4A_OK) {
+        c4a_pp_weighted_snv_destroy(h);
+        c4a_throw(s, "c4a_pp_weighted_snv_fit");
+    }
+    s = c4a_pp_weighted_snv_transform(h, Xv, Yv);
+    c4a_pp_weighted_snv_destroy(h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_weighted_snv_transform");
+    return rowmajor_to_R_matrix(out_buf, rows, cols);
+}
+
+static SEXP r_c4a_pp_vsn_fit_transform(SEXP x, SEXP eps) {
+    int64_t rows, cols;
+    double *in, *out_buf;
+    c4a_matrix_view_t Xv, Yv;
+    prepare_same_shape_matrix(x, &rows, &cols, &in, &out_buf, &Xv, &Yv,
+                              "c4a_pp_vsn_matrix");
+    c4a_pp_vsn_handle_t *h = NULL;
+    c4a_status_t s = c4a_pp_vsn_create(&h, REAL(eps)[0]);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_vsn_create");
+    s = c4a_pp_vsn_fit(h, Xv);
+    if (s != C4A_OK) {
+        c4a_pp_vsn_destroy(h);
+        c4a_throw(s, "c4a_pp_vsn_fit");
+    }
+    s = c4a_pp_vsn_transform(h, Xv, Yv);
+    c4a_pp_vsn_destroy(h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_vsn_transform");
+    return rowmajor_to_R_matrix(out_buf, rows, cols);
+}
+
+static SEXP r_c4a_pp_piecewise_snv_fit_transform(SEXP x, SEXP window,
+                                                 SEXP ddof, SEXP eps) {
+    int64_t rows, cols;
+    double *in, *out_buf;
+    c4a_matrix_view_t Xv, Yv;
+    prepare_same_shape_matrix(x, &rows, &cols, &in, &out_buf, &Xv, &Yv,
+                              "c4a_pp_piecewise_snv_matrix");
+    c4a_pp_piecewise_snv_handle_t *h = NULL;
+    c4a_status_t s = c4a_pp_piecewise_snv_create(
+        &h, INTEGER(window)[0], INTEGER(ddof)[0], REAL(eps)[0]);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_piecewise_snv_create");
+    s = c4a_pp_piecewise_snv_fit(h, Xv);
+    if (s != C4A_OK) {
+        c4a_pp_piecewise_snv_destroy(h);
+        c4a_throw(s, "c4a_pp_piecewise_snv_fit");
+    }
+    s = c4a_pp_piecewise_snv_transform(h, Xv, Yv);
+    c4a_pp_piecewise_snv_destroy(h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_piecewise_snv_transform");
+    return rowmajor_to_R_matrix(out_buf, rows, cols);
+}
+
+static SEXP r_c4a_pp_piecewise_msc_fit_transform(SEXP x, SEXP reference,
+                                                 SEXP window, SEXP eps) {
+    int64_t rows, cols, n_ref;
+    double *in, *out_buf;
+    c4a_matrix_view_t Xv, Yv;
+    const double *ref = optional_real_vector(reference, &n_ref, "reference");
+    prepare_same_shape_matrix(x, &rows, &cols, &in, &out_buf, &Xv, &Yv,
+                              "c4a_pp_piecewise_msc_matrix");
+    c4a_pp_piecewise_msc_handle_t *h = NULL;
+    c4a_status_t s = c4a_pp_piecewise_msc_create(
+        &h, ref, n_ref, INTEGER(window)[0], REAL(eps)[0]);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_piecewise_msc_create");
+    s = c4a_pp_piecewise_msc_fit(h, Xv);
+    if (s != C4A_OK) {
+        c4a_pp_piecewise_msc_destroy(h);
+        c4a_throw(s, "c4a_pp_piecewise_msc_fit");
+    }
+    s = c4a_pp_piecewise_msc_transform(h, Xv, Yv);
+    c4a_pp_piecewise_msc_destroy(h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_piecewise_msc_transform");
+    return rowmajor_to_R_matrix(out_buf, rows, cols);
+}
+
+static SEXP r_c4a_pp_localized_msc_fit_transform(SEXP x, SEXP reference,
+                                                 SEXP window, SEXP eps) {
+    int64_t rows, cols, n_ref;
+    double *in, *out_buf;
+    c4a_matrix_view_t Xv, Yv;
+    const double *ref = optional_real_vector(reference, &n_ref, "reference");
+    prepare_same_shape_matrix(x, &rows, &cols, &in, &out_buf, &Xv, &Yv,
+                              "c4a_pp_localized_msc_matrix");
+    c4a_pp_localized_msc_handle_t *h = NULL;
+    c4a_status_t s = c4a_pp_localized_msc_create(
+        &h, ref, n_ref, INTEGER(window)[0], REAL(eps)[0]);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_localized_msc_create");
+    s = c4a_pp_localized_msc_fit(h, Xv);
+    if (s != C4A_OK) {
+        c4a_pp_localized_msc_destroy(h);
+        c4a_throw(s, "c4a_pp_localized_msc_fit");
+    }
+    s = c4a_pp_localized_msc_transform(h, Xv, Yv);
+    c4a_pp_localized_msc_destroy(h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_pp_localized_msc_transform");
+    return rowmajor_to_R_matrix(out_buf, rows, cols);
+}
+
+#define DEFINE_ALIGN_WRAPPER(RNAME, HANDLE_T, CREATE_F, FIT_F, TRANSFORM_F, DESTROY_F) \
+static SEXP r_ ## RNAME(SEXP x, SEXP reference, SEXP interval_size, SEXP max_shift) { \
+    int64_t rows, cols, n_ref; \
+    double *in, *out_buf; \
+    c4a_matrix_view_t Xv, Yv; \
+    const double *ref = optional_real_vector(reference, &n_ref, "reference"); \
+    prepare_same_shape_matrix(x, &rows, &cols, &in, &out_buf, &Xv, &Yv, #RNAME "_matrix"); \
+    HANDLE_T *h = NULL; \
+    c4a_status_t s = CREATE_F(&h, ref, n_ref, INTEGER(interval_size)[0], INTEGER(max_shift)[0]); \
+    if (s != C4A_OK) c4a_throw(s, #CREATE_F); \
+    s = FIT_F(h, Xv); \
+    if (s != C4A_OK) { DESTROY_F(h); c4a_throw(s, #FIT_F); } \
+    s = TRANSFORM_F(h, Xv, Yv); \
+    DESTROY_F(h); \
+    if (s != C4A_OK) c4a_throw(s, #TRANSFORM_F); \
+    return rowmajor_to_R_matrix(out_buf, rows, cols); \
+}
+
+DEFINE_ALIGN_WRAPPER(c4a_pp_xcorr_align_fit_transform,
+                     c4a_pp_xcorr_align_handle_t,
+                     c4a_pp_xcorr_align_create,
+                     c4a_pp_xcorr_align_fit,
+                     c4a_pp_xcorr_align_transform,
+                     c4a_pp_xcorr_align_destroy)
+DEFINE_ALIGN_WRAPPER(c4a_pp_icoshift_align_fit_transform,
+                     c4a_pp_icoshift_align_handle_t,
+                     c4a_pp_icoshift_align_create,
+                     c4a_pp_icoshift_align_fit,
+                     c4a_pp_icoshift_align_transform,
+                     c4a_pp_icoshift_align_destroy)
+DEFINE_ALIGN_WRAPPER(c4a_pp_dtw_align_fit_transform,
+                     c4a_pp_dtw_align_handle_t,
+                     c4a_pp_dtw_align_create,
+                     c4a_pp_dtw_align_fit,
+                     c4a_pp_dtw_align_transform,
+                     c4a_pp_dtw_align_destroy)
+DEFINE_ALIGN_WRAPPER(c4a_pp_cow_align_fit_transform,
+                     c4a_pp_cow_align_handle_t,
+                     c4a_pp_cow_align_create,
+                     c4a_pp_cow_align_fit,
+                     c4a_pp_cow_align_transform,
+                     c4a_pp_cow_align_destroy)
+
+static SEXP r_c4a_filter_variance_fit_transform(SEXP x, SEXP threshold,
+                                                SEXP top_k) {
+    int64_t rows, cols, out_cols = 0;
+    double *in = r_matrix_to_rowmajor(x, &rows, &cols);
+    c4a_matrix_view_t Xv;
+    init_view_rowmajor(&Xv, in, rows, cols);
+    c4a_filter_variance_handle_t *h = NULL;
+    c4a_status_t s = c4a_filter_variance_create(&h, REAL(threshold)[0],
+                                                INTEGER(top_k)[0]);
+    if (s != C4A_OK) c4a_throw(s, "c4a_filter_variance_create");
+    s = c4a_filter_variance_fit(h, Xv);
+    if (s != C4A_OK) {
+        c4a_filter_variance_destroy(h);
+        c4a_throw(s, "c4a_filter_variance_fit");
+    }
+    s = c4a_filter_variance_output_cols(h, &out_cols);
+    if (s != C4A_OK) {
+        c4a_filter_variance_destroy(h);
+        c4a_throw(s, "c4a_filter_variance_output_cols");
+    }
+    double *out_buf = (double *)R_alloc((size_t)(rows * out_cols), sizeof(double));
+    c4a_matrix_view_t Yv;
+    init_view_rowmajor(&Yv, out_buf, rows, out_cols);
+    s = c4a_filter_variance_transform(h, Xv, Yv);
+    c4a_filter_variance_destroy(h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_filter_variance_transform");
+    return rowmajor_to_R_matrix(out_buf, rows, out_cols);
+}
+
+static SEXP r_c4a_filter_correlation_fit_transform(SEXP x, SEXP y,
+                                                   SEXP threshold,
+                                                   SEXP top_k) {
+    int64_t rows, cols, out_cols = 0;
+    double *in = r_matrix_to_rowmajor(x, &rows, &cols);
+    if (Rf_length(y) != rows) {
+        Rf_error("chemometrics4all: y length must match nrow(X)");
+    }
+    c4a_matrix_view_t Xv;
+    init_view_rowmajor(&Xv, in, rows, cols);
+    c4a_filter_correlation_handle_t *h = NULL;
+    c4a_status_t s = c4a_filter_correlation_create(&h, REAL(threshold)[0],
+                                                   INTEGER(top_k)[0]);
+    if (s != C4A_OK) c4a_throw(s, "c4a_filter_correlation_create");
+    s = c4a_filter_correlation_fit(h, Xv, REAL(y), rows);
+    if (s != C4A_OK) {
+        c4a_filter_correlation_destroy(h);
+        c4a_throw(s, "c4a_filter_correlation_fit");
+    }
+    s = c4a_filter_correlation_output_cols(h, &out_cols);
+    if (s != C4A_OK) {
+        c4a_filter_correlation_destroy(h);
+        c4a_throw(s, "c4a_filter_correlation_output_cols");
+    }
+    double *out_buf = (double *)R_alloc((size_t)(rows * out_cols), sizeof(double));
+    c4a_matrix_view_t Yv;
+    init_view_rowmajor(&Yv, out_buf, rows, out_cols);
+    s = c4a_filter_correlation_transform(h, Xv, Yv);
+    c4a_filter_correlation_destroy(h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_filter_correlation_transform");
+    return rowmajor_to_R_matrix(out_buf, rows, out_cols);
+}
+
+static SEXP r_c4a_interval_generator_fit_transform(SEXP x, SEXP interval_size,
+                                                   SEXP step) {
+    int64_t rows, cols, out_cols = 0;
+    double *in = r_matrix_to_rowmajor(x, &rows, &cols);
+    c4a_matrix_view_t Xv;
+    init_view_rowmajor(&Xv, in, rows, cols);
+    c4a_interval_generator_handle_t *h = NULL;
+    c4a_status_t s = c4a_interval_generator_create(
+        &h, INTEGER(interval_size)[0], INTEGER(step)[0]);
+    if (s != C4A_OK) c4a_throw(s, "c4a_interval_generator_create");
+    s = c4a_interval_generator_fit(h, Xv);
+    if (s != C4A_OK) {
+        c4a_interval_generator_destroy(h);
+        c4a_throw(s, "c4a_interval_generator_fit");
+    }
+    s = c4a_interval_generator_output_cols(h, &out_cols);
+    if (s != C4A_OK) {
+        c4a_interval_generator_destroy(h);
+        c4a_throw(s, "c4a_interval_generator_output_cols");
+    }
+    double *out_buf = (double *)R_alloc((size_t)(rows * out_cols), sizeof(double));
+    c4a_matrix_view_t Yv;
+    init_view_rowmajor(&Yv, out_buf, rows, out_cols);
+    s = c4a_interval_generator_transform(h, Xv, Yv);
+    c4a_interval_generator_destroy(h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_interval_generator_transform");
+    return rowmajor_to_R_matrix(out_buf, rows, out_cols);
+}
+
+/* ------------------------------------------------------------------ */
+/* Augmentation and spectral-quality wrappers                          */
+/* ------------------------------------------------------------------ */
+
+#define R_AUG_DONE() do {                                                   \
+    c4a_rng_pcg64_destroy(rng);                                             \
+    if (s != C4A_OK) c4a_throw(s, op);                                      \
+    return rowmajor_to_R_matrix(out_buf, rows, cols);                       \
+} while (0)
+
+#define R_AUG_APPLY0(TYPE, CREATE, APPLY, DESTROY) do {                     \
+    TYPE *h = NULL;                                                         \
+    s = CREATE(&h, rng);                                                    \
+    if (s == C4A_OK) s = APPLY(h, Xv, Yv);                                  \
+    DESTROY(h);                                                             \
+    R_AUG_DONE();                                                           \
+} while (0)
+
+#define R_AUG_APPLY(TYPE, CREATE, APPLY, DESTROY, ...) do {                 \
+    TYPE *h = NULL;                                                         \
+    s = CREATE(&h, rng, __VA_ARGS__);                                       \
+    if (s == C4A_OK) s = APPLY(h, Xv, Yv);                                  \
+    DESTROY(h);                                                             \
+    R_AUG_DONE();                                                           \
+} while (0)
+
+#define R_AUG_APPLY_WITH_WL(TYPE, CREATE, APPLY, DESTROY, ...) do {         \
+    double *wl = r_wavelengths_to_rowmajor(wavelengths, cols, op);          \
+    c4a_matrix_view_t Wv;                                                   \
+    s = init_view_rowmajor(&Wv, wl, 1, cols);                               \
+    if (s != C4A_OK) R_AUG_DONE();                                          \
+    TYPE *h = NULL;                                                         \
+    s = CREATE(&h, rng, __VA_ARGS__);                                       \
+    if (s == C4A_OK) s = APPLY(h, Xv, Wv, Yv);                              \
+    DESTROY(h);                                                             \
+    R_AUG_DONE();                                                           \
+} while (0)
+
+#define R_AUG_CREATE_WL(TYPE, CREATE, APPLY, DESTROY, ...) do {             \
+    double *wl = r_wavelengths_to_rowmajor(wavelengths, cols, op);          \
+    TYPE *h = NULL;                                                         \
+    s = CREATE(&h, rng, __VA_ARGS__, wl, cols);                             \
+    if (s == C4A_OK) s = APPLY(h, Xv, Yv);                                  \
+    DESTROY(h);                                                             \
+    R_AUG_DONE();                                                           \
+} while (0)
+
+static SEXP r_c4a_aug_apply(SEXP name, SEXP x, SEXP wavelengths, SEXP seed,
+                            SEXP params) {
+    if (TYPEOF(name) != STRSXP || Rf_length(name) < 1) {
+        Rf_error("chemometrics4all: augmenter name must be a character scalar");
+    }
+    const char *op = CHAR(STRING_ELT(name, 0));
+    int64_t rows, cols;
+    double *in, *out_buf;
+    c4a_matrix_view_t Xv, Yv;
+    prepare_same_shape_matrix(x, &rows, &cols, &in, &out_buf, &Xv, &Yv, op);
+    c4a_rng_pcg64_state_t *rng = r_create_rng(seed, "c4a_rng_pcg64_create");
+    c4a_status_t s = C4A_OK;
+
+    if (strcmp(op, "gaussian_noise") == 0) {
+        R_AUG_APPLY(c4a_aug_gaussian_noise_handle_t,
+                    c4a_aug_gaussian_noise_create,
+                    c4a_aug_gaussian_noise_apply,
+                    c4a_aug_gaussian_noise_destroy,
+                    r_aug_param(params, 0, op));
+    }
+    if (strcmp(op, "multiplicative_noise") == 0) {
+        R_AUG_APPLY(c4a_aug_multiplicative_noise_handle_t,
+                    c4a_aug_multiplicative_noise_create,
+                    c4a_aug_multiplicative_noise_apply,
+                    c4a_aug_multiplicative_noise_destroy,
+                    r_aug_param(params, 0, op));
+    }
+    if (strcmp(op, "spike_noise") == 0) {
+        R_AUG_APPLY(c4a_aug_spike_noise_handle_t,
+                    c4a_aug_spike_noise_create,
+                    c4a_aug_spike_noise_apply,
+                    c4a_aug_spike_noise_destroy,
+                    r_aug_param_i32(params, 0, op),
+                    r_aug_param_i32(params, 1, op),
+                    r_aug_param(params, 2, op),
+                    r_aug_param(params, 3, op));
+    }
+    if (strcmp(op, "hetero_noise") == 0) {
+        R_AUG_APPLY(c4a_aug_hetero_noise_handle_t,
+                    c4a_aug_hetero_noise_create,
+                    c4a_aug_hetero_noise_apply,
+                    c4a_aug_hetero_noise_destroy,
+                    r_aug_param(params, 0, op),
+                    r_aug_param(params, 1, op));
+    }
+    if (strcmp(op, "linear_drift") == 0) {
+        R_AUG_APPLY(c4a_aug_linear_drift_handle_t,
+                    c4a_aug_linear_drift_create,
+                    c4a_aug_linear_drift_apply,
+                    c4a_aug_linear_drift_destroy,
+                    r_aug_param(params, 0, op),
+                    r_aug_param(params, 1, op),
+                    r_aug_param(params, 2, op),
+                    r_aug_param(params, 3, op));
+    }
+    if (strcmp(op, "poly_drift") == 0) {
+        const int32_t degree = r_aug_param_i32(params, 0, op);
+        const int64_t n_coeffs = (int64_t)degree + 1;
+        double *lo = (double *)R_alloc((size_t)n_coeffs, sizeof(double));
+        double *hi = (double *)R_alloc((size_t)n_coeffs, sizeof(double));
+        for (int64_t i = 0; i < n_coeffs; ++i) {
+            lo[i] = r_aug_param(params, 1, op);
+            hi[i] = r_aug_param(params, 2, op);
+        }
+        R_AUG_APPLY(c4a_aug_poly_drift_handle_t,
+                    c4a_aug_poly_drift_create,
+                    c4a_aug_poly_drift_apply,
+                    c4a_aug_poly_drift_destroy,
+                    degree, lo, hi);
+    }
+    if (strcmp(op, "path_length") == 0) {
+        R_AUG_APPLY(c4a_aug_path_length_handle_t,
+                    c4a_aug_path_length_create,
+                    c4a_aug_path_length_apply,
+                    c4a_aug_path_length_destroy,
+                    r_aug_param(params, 0, op),
+                    r_aug_param(params, 1, op));
+    }
+    if (strcmp(op, "wavelength_shift") == 0) {
+        R_AUG_CREATE_WL(c4a_aug_wavelength_shift_handle_t,
+                        c4a_aug_wavelength_shift_create,
+                        c4a_aug_wavelength_shift_apply,
+                        c4a_aug_wavelength_shift_destroy,
+                        r_aug_param(params, 0, op),
+                        r_aug_param(params, 1, op));
+    }
+    if (strcmp(op, "wavelength_stretch") == 0) {
+        R_AUG_CREATE_WL(c4a_aug_wavelength_stretch_handle_t,
+                        c4a_aug_wavelength_stretch_create,
+                        c4a_aug_wavelength_stretch_apply,
+                        c4a_aug_wavelength_stretch_destroy,
+                        r_aug_param(params, 0, op),
+                        r_aug_param(params, 1, op));
+    }
+    if (strcmp(op, "local_warp") == 0) {
+        R_AUG_CREATE_WL(c4a_aug_local_warp_handle_t,
+                        c4a_aug_local_warp_create,
+                        c4a_aug_local_warp_apply,
+                        c4a_aug_local_warp_destroy,
+                        r_aug_param_i32(params, 0, op),
+                        r_aug_param(params, 1, op));
+    }
+    if (strcmp(op, "band_perturb") == 0) {
+        R_AUG_APPLY(c4a_aug_band_perturb_handle_t,
+                    c4a_aug_band_perturb_create,
+                    c4a_aug_band_perturb_apply,
+                    c4a_aug_band_perturb_destroy,
+                    r_aug_param_i32(params, 0, op),
+                    r_aug_param_i32(params, 1, op),
+                    r_aug_param_i32(params, 2, op),
+                    r_aug_param(params, 3, op),
+                    r_aug_param(params, 4, op),
+                    r_aug_param(params, 5, op),
+                    r_aug_param(params, 6, op));
+    }
+    if (strcmp(op, "band_mask") == 0) {
+        R_AUG_APPLY(c4a_aug_band_mask_handle_t,
+                    c4a_aug_band_mask_create,
+                    c4a_aug_band_mask_apply,
+                    c4a_aug_band_mask_destroy,
+                    r_aug_param_i32(params, 0, op),
+                    r_aug_param_i32(params, 1, op),
+                    r_aug_param_i32(params, 2, op),
+                    r_aug_param_i32(params, 3, op),
+                    r_aug_param_i32(params, 4, op));
+    }
+    if (strcmp(op, "channel_dropout") == 0) {
+        R_AUG_APPLY(c4a_aug_channel_dropout_handle_t,
+                    c4a_aug_channel_dropout_create,
+                    c4a_aug_channel_dropout_apply,
+                    c4a_aug_channel_dropout_destroy,
+                    r_aug_param(params, 0, op),
+                    r_aug_param_i32(params, 1, op));
+    }
+    if (strcmp(op, "gauss_jitter") == 0) {
+        R_AUG_APPLY(c4a_aug_gauss_jitter_handle_t,
+                    c4a_aug_gauss_jitter_create,
+                    c4a_aug_gauss_jitter_apply,
+                    c4a_aug_gauss_jitter_destroy,
+                    r_aug_param(params, 0, op),
+                    r_aug_param(params, 1, op),
+                    r_aug_param_i32(params, 2, op));
+    }
+    if (strcmp(op, "unsharp_mask") == 0) {
+        R_AUG_APPLY(c4a_aug_unsharp_mask_handle_t,
+                    c4a_aug_unsharp_mask_create,
+                    c4a_aug_unsharp_mask_apply,
+                    c4a_aug_unsharp_mask_destroy,
+                    r_aug_param(params, 0, op),
+                    r_aug_param(params, 1, op),
+                    r_aug_param(params, 2, op),
+                    r_aug_param_i32(params, 3, op));
+    }
+    if (strcmp(op, "magnitude_warp") == 0) {
+        R_AUG_CREATE_WL(c4a_aug_magnitude_warp_handle_t,
+                        c4a_aug_magnitude_warp_create,
+                        c4a_aug_magnitude_warp_apply,
+                        c4a_aug_magnitude_warp_destroy,
+                        r_aug_param_i32(params, 0, op),
+                        r_aug_param(params, 1, op),
+                        r_aug_param(params, 2, op));
+    }
+    if (strcmp(op, "local_clip") == 0) {
+        R_AUG_APPLY(c4a_aug_local_clip_handle_t,
+                    c4a_aug_local_clip_create,
+                    c4a_aug_local_clip_apply,
+                    c4a_aug_local_clip_destroy,
+                    r_aug_param_i32(params, 0, op),
+                    r_aug_param_i32(params, 1, op),
+                    r_aug_param_i32(params, 2, op));
+    }
+    if (strcmp(op, "mixup") == 0) {
+        R_AUG_APPLY(c4a_aug_mixup_handle_t,
+                    c4a_aug_mixup_create,
+                    c4a_aug_mixup_apply,
+                    c4a_aug_mixup_destroy,
+                    r_aug_param(params, 0, op));
+    }
+    if (strcmp(op, "local_mixup") == 0) {
+        R_AUG_APPLY(c4a_aug_local_mixup_handle_t,
+                    c4a_aug_local_mixup_create,
+                    c4a_aug_local_mixup_apply,
+                    c4a_aug_local_mixup_destroy,
+                    r_aug_param(params, 0, op),
+                    r_aug_param_i32(params, 1, op));
+    }
+    if (strcmp(op, "scatter_sim") == 0) {
+        R_AUG_APPLY(c4a_aug_scatter_sim_handle_t,
+                    c4a_aug_scatter_sim_create,
+                    c4a_aug_scatter_sim_apply,
+                    c4a_aug_scatter_sim_destroy,
+                    r_aug_param(params, 0, op),
+                    r_aug_param(params, 1, op),
+                    r_aug_param(params, 2, op),
+                    r_aug_param(params, 3, op));
+    }
+    if (strcmp(op, "particle_size") == 0) {
+        R_AUG_CREATE_WL(c4a_aug_particle_size_handle_t,
+                        c4a_aug_particle_size_create,
+                        c4a_aug_particle_size_apply,
+                        c4a_aug_particle_size_destroy,
+                        r_aug_param(params, 0, op),
+                        r_aug_param(params, 1, op),
+                        r_aug_param_int(params, 2, op),
+                        r_aug_param(params, 3, op),
+                        r_aug_param(params, 4, op),
+                        r_aug_param(params, 5, op),
+                        r_aug_param(params, 6, op),
+                        r_aug_param(params, 7, op),
+                        r_aug_param_int(params, 8, op),
+                        r_aug_param(params, 9, op));
+    }
+    if (strcmp(op, "emsc_distort") == 0) {
+        R_AUG_CREATE_WL(c4a_aug_emsc_distort_handle_t,
+                        c4a_aug_emsc_distort_create,
+                        c4a_aug_emsc_distort_apply,
+                        c4a_aug_emsc_distort_destroy,
+                        r_aug_param(params, 0, op),
+                        r_aug_param(params, 1, op),
+                        r_aug_param(params, 2, op),
+                        r_aug_param(params, 3, op),
+                        r_aug_param_i32(params, 4, op),
+                        r_aug_param(params, 5, op),
+                        r_aug_param(params, 6, op));
+    }
+    if (strcmp(op, "batch_effect") == 0) {
+        R_AUG_CREATE_WL(c4a_aug_batch_effect_handle_t,
+                        c4a_aug_batch_effect_create,
+                        c4a_aug_batch_effect_apply,
+                        c4a_aug_batch_effect_destroy,
+                        r_aug_param(params, 0, op),
+                        r_aug_param(params, 1, op),
+                        r_aug_param(params, 2, op),
+                        r_aug_param_i32(params, 3, op));
+    }
+    if (strcmp(op, "instrument_broaden") == 0) {
+        R_AUG_CREATE_WL(c4a_aug_instrument_broaden_handle_t,
+                        c4a_aug_instrument_broaden_create,
+                        c4a_aug_instrument_broaden_apply,
+                        c4a_aug_instrument_broaden_destroy,
+                        r_aug_param(params, 0, op),
+                        r_aug_param_int(params, 1, op),
+                        r_aug_param(params, 2, op),
+                        r_aug_param(params, 3, op),
+                        r_aug_param_i32(params, 4, op));
+    }
+    if (strcmp(op, "dead_band") == 0) {
+        R_AUG_APPLY(c4a_aug_dead_band_handle_t,
+                    c4a_aug_dead_band_create,
+                    c4a_aug_dead_band_apply,
+                    c4a_aug_dead_band_destroy,
+                    r_aug_param_i32(params, 0, op),
+                    r_aug_param_i32(params, 1, op),
+                    r_aug_param_i32(params, 2, op),
+                    r_aug_param(params, 3, op),
+                    r_aug_param(params, 4, op),
+                    r_aug_param_i32(params, 5, op));
+    }
+    if (strcmp(op, "temperature") == 0) {
+        R_AUG_CREATE_WL(c4a_aug_temperature_handle_t,
+                        c4a_aug_temperature_create,
+                        c4a_aug_temperature_apply,
+                        c4a_aug_temperature_destroy,
+                        r_aug_param(params, 0, op),
+                        r_aug_param_int(params, 1, op),
+                        r_aug_param(params, 2, op),
+                        r_aug_param(params, 3, op),
+                        r_aug_param_int(params, 4, op),
+                        r_aug_param_int(params, 5, op),
+                        r_aug_param_int(params, 6, op),
+                        r_aug_param_int(params, 7, op));
+    }
+    if (strcmp(op, "moisture") == 0) {
+        R_AUG_CREATE_WL(c4a_aug_moisture_handle_t,
+                        c4a_aug_moisture_create,
+                        c4a_aug_moisture_apply,
+                        c4a_aug_moisture_destroy,
+                        r_aug_param(params, 0, op),
+                        r_aug_param_int(params, 1, op),
+                        r_aug_param(params, 2, op),
+                        r_aug_param(params, 3, op),
+                        r_aug_param(params, 4, op),
+                        r_aug_param(params, 5, op),
+                        r_aug_param(params, 6, op),
+                        r_aug_param(params, 7, op),
+                        r_aug_param_int(params, 8, op),
+                        r_aug_param_int(params, 9, op));
+    }
+    if (strcmp(op, "detector_rolloff") == 0) {
+        R_AUG_APPLY_WITH_WL(c4a_aug_detector_rolloff_handle_t,
+                            c4a_aug_detector_rolloff_create,
+                            c4a_aug_detector_rolloff_apply,
+                            c4a_aug_detector_rolloff_destroy,
+                            r_aug_param_i32(params, 0, op),
+                            r_aug_param(params, 1, op),
+                            r_aug_param(params, 2, op),
+                            r_aug_param_i32(params, 3, op));
+    }
+    if (strcmp(op, "stray_light") == 0) {
+        R_AUG_APPLY_WITH_WL(c4a_aug_stray_light_handle_t,
+                            c4a_aug_stray_light_create,
+                            c4a_aug_stray_light_apply,
+                            c4a_aug_stray_light_destroy,
+                            r_aug_param(params, 0, op),
+                            r_aug_param(params, 1, op),
+                            r_aug_param(params, 2, op),
+                            r_aug_param_i32(params, 3, op));
+    }
+    if (strcmp(op, "edge_curve") == 0) {
+        R_AUG_APPLY_WITH_WL(c4a_aug_edge_curve_handle_t,
+                            c4a_aug_edge_curve_create,
+                            c4a_aug_edge_curve_apply,
+                            c4a_aug_edge_curve_destroy,
+                            r_aug_param(params, 0, op),
+                            r_aug_param_i32(params, 1, op),
+                            r_aug_param(params, 2, op),
+                            r_aug_param(params, 3, op));
+    }
+    if (strcmp(op, "truncated_peak") == 0) {
+        R_AUG_APPLY_WITH_WL(c4a_aug_truncated_peak_handle_t,
+                            c4a_aug_truncated_peak_create,
+                            c4a_aug_truncated_peak_apply,
+                            c4a_aug_truncated_peak_destroy,
+                            r_aug_param(params, 0, op),
+                            r_aug_param(params, 1, op),
+                            r_aug_param(params, 2, op),
+                            r_aug_param(params, 3, op),
+                            r_aug_param(params, 4, op),
+                            r_aug_param_i32(params, 5, op),
+                            r_aug_param_i32(params, 6, op));
+    }
+    if (strcmp(op, "edge_artifacts") == 0) {
+        R_AUG_APPLY_WITH_WL(c4a_aug_edge_artifacts_handle_t,
+                            c4a_aug_edge_artifacts_create,
+                            c4a_aug_edge_artifacts_apply,
+                            c4a_aug_edge_artifacts_destroy,
+                            r_aug_param_i32(params, 0, op),
+                            r_aug_param(params, 1, op),
+                            r_aug_param_i32(params, 2, op));
+    }
+    if (strcmp(op, "spline_smooth") == 0) {
+        R_AUG_APPLY0(c4a_aug_spline_smooth_handle_t,
+                     c4a_aug_spline_smooth_create,
+                     c4a_aug_spline_smooth_apply,
+                     c4a_aug_spline_smooth_destroy);
+    }
+    if (strcmp(op, "spline_x_perturb") == 0) {
+        R_AUG_APPLY(c4a_aug_spline_x_perturb_handle_t,
+                    c4a_aug_spline_x_perturb_create,
+                    c4a_aug_spline_x_perturb_apply,
+                    c4a_aug_spline_x_perturb_destroy,
+                    r_aug_param_i32(params, 0, op),
+                    r_aug_param(params, 1, op),
+                    r_aug_param(params, 2, op),
+                    r_aug_param(params, 3, op));
+    }
+    if (strcmp(op, "spline_y_perturb") == 0) {
+        R_AUG_APPLY(c4a_aug_spline_y_perturb_handle_t,
+                    c4a_aug_spline_y_perturb_create,
+                    c4a_aug_spline_y_perturb_apply,
+                    c4a_aug_spline_y_perturb_destroy,
+                    r_aug_param_i32(params, 0, op),
+                    r_aug_param(params, 1, op));
+    }
+    if (strcmp(op, "rotate_translate") == 0) {
+        R_AUG_APPLY(c4a_aug_rotate_translate_handle_t,
+                    c4a_aug_rotate_translate_create,
+                    c4a_aug_rotate_translate_apply,
+                    c4a_aug_rotate_translate_destroy,
+                    r_aug_param(params, 0, op),
+                    r_aug_param(params, 1, op));
+    }
+    if (strcmp(op, "random_x_op") == 0) {
+        R_AUG_APPLY(c4a_aug_random_x_op_handle_t,
+                    c4a_aug_random_x_op_create,
+                    c4a_aug_random_x_op_apply,
+                    c4a_aug_random_x_op_destroy,
+                    r_aug_param_i32(params, 0, op),
+                    r_aug_param(params, 1, op),
+                    r_aug_param(params, 2, op));
+    }
+
+    c4a_rng_pcg64_destroy(rng);
+    Rf_error("chemometrics4all: unknown augmenter '%s'", op);
+}
+
+#undef R_AUG_CREATE_WL
+#undef R_AUG_APPLY_WITH_WL
+#undef R_AUG_APPLY
+#undef R_AUG_APPLY0
+#undef R_AUG_DONE
+
+static SEXP r_c4a_filter_quality_apply(SEXP x, SEXP max_nan_ratio,
+                                       SEXP max_zero_ratio,
+                                       SEXP min_variance,
+                                       SEXP use_max,
+                                       SEXP max_value,
+                                       SEXP use_min,
+                                       SEXP min_value,
+                                       SEXP check_inf) {
+    int64_t rows, cols;
+    double *in = r_matrix_to_rowmajor(x, &rows, &cols);
+    c4a_matrix_view_t Xv;
+    c4a_status_t s = init_view_rowmajor(&Xv, in, rows, cols);
+    if (s != C4A_OK) c4a_throw(s, "c4a_filter_quality_matrix");
+
+    c4a_filter_quality_handle_t *h = NULL;
+    s = c4a_filter_quality_create(&h,
+                                  REAL(max_nan_ratio)[0],
+                                  REAL(max_zero_ratio)[0],
+                                  REAL(min_variance)[0],
+                                  LOGICAL(use_max)[0],
+                                  REAL(max_value)[0],
+                                  LOGICAL(use_min)[0],
+                                  REAL(min_value)[0],
+                                  LOGICAL(check_inf)[0]);
+    if (s != C4A_OK) c4a_throw(s, "c4a_filter_quality_create");
+
+    uint8_t *mask = (uint8_t *)R_alloc((size_t)rows, sizeof(uint8_t));
+    c4a_filter_stats_t stats = {0};
+    s = c4a_filter_quality_apply(h, Xv, mask, &stats);
+    c4a_filter_quality_destroy(h);
+    if (s != C4A_OK) c4a_throw(s, "c4a_filter_quality_apply");
+
+    SEXP mask_R = PROTECT(Rf_allocVector(LGLSXP, (R_xlen_t)rows));
+    for (int64_t i = 0; i < rows; ++i) {
+        LOGICAL(mask_R)[i] = mask[i] ? TRUE : FALSE;
+    }
+    UNPROTECT(1);
+    return mask_R;
+}
+
+/* ------------------------------------------------------------------ */
 /* Method registration                                                 */
 /* ------------------------------------------------------------------ */
 
@@ -1533,6 +2496,27 @@ static const R_CallMethodDef R_CallEntries[] = {
 
     CDEF(c4a_filter_y_outlier_fit_apply, 5),      /* y, method, threshold, lo, hi */
     CDEF(c4a_filter_x_outlier_fit_apply, 9),      /* X, method, threshold mode, params */
+
+    CDEF(c4a_pp_direct_standardization_fit_transform, 5),
+    CDEF(c4a_pp_robust_direct_standardization_fit_transform, 7),
+    CDEF(c4a_pp_piecewise_direct_standardization_fit_transform, 6),
+    CDEF(c4a_pp_saps_fit_transform, 7),
+    CDEF(c4a_pp_slope_bias_fit_transform, 3),
+    CDEF(c4a_pp_local_centering_fit_transform, 3),
+    CDEF(c4a_pp_weighted_snv_fit_transform, 4),
+    CDEF(c4a_pp_vsn_fit_transform, 2),
+    CDEF(c4a_pp_piecewise_snv_fit_transform, 4),
+    CDEF(c4a_pp_piecewise_msc_fit_transform, 4),
+    CDEF(c4a_pp_localized_msc_fit_transform, 4),
+    CDEF(c4a_pp_xcorr_align_fit_transform, 4),
+    CDEF(c4a_pp_icoshift_align_fit_transform, 4),
+    CDEF(c4a_pp_dtw_align_fit_transform, 4),
+    CDEF(c4a_pp_cow_align_fit_transform, 4),
+    CDEF(c4a_filter_variance_fit_transform, 3),
+    CDEF(c4a_filter_correlation_fit_transform, 4),
+    CDEF(c4a_interval_generator_fit_transform, 3),
+    CDEF(c4a_aug_apply, 5),                       /* name, X, wavelengths, seed, params */
+    CDEF(c4a_filter_quality_apply, 9),            /* X, quality thresholds/options */
 
     {NULL, NULL, 0}
 };

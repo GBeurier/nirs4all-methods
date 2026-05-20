@@ -1,19 +1,21 @@
-# `wavelet_svd` — WaveletSVD
+# `wavelet_svd` — Wavelet SVD
 
 _Group_: **Wavelet** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8` · _Source_: [`docs/algorithms/wavelet_svd.md`](../algorithms/wavelet_svd.md)
 
 ## Description
 
-`wavelet_svd` is a chemometrics4all wavelet method exposed through the C ABI and the generated language bindings.
+From the `chemometrics4all.WaveletSVD` Python wrapper docstring:
+
+> DWT coefficient projection through SVD scores.
 
 ### Parameters
 
-| Parameter      | Default       | Meaning                                  |
-| -------------- | ------------- | ---------------------------------------- |
-| `family`       | (db4)         | Wavelet family                           |
-| `mode`         | (per.)        | Boundary mode                            |
-| `max_level`    | 4             | Maximum decomposition depth             |
-| `n_components` | —             | Flexible count or variance-ratio specifier |
+| Name | Type | Default | Notes |
+|------|------|---------|-------|
+| `family` | `str` | `'haar'` | Wavelet family. |
+| `mode` | `str` | `'periodization'` | Boundary handling mode. |
+| `max_level` | `int` | `2` |  |
+| `n_components` | `float` | `5.0` | Number of latent components or projected columns. |
 
 ## Explanations
 
@@ -48,15 +50,32 @@ projects them through $F_{\text{new}} V^{\top \top}_{[:k', :]}$.
 Stateful: `_create / _fit / _transform / _destroy` plus `_is_fitted`
 and `_output_cols`.  Same lifecycle and shape rules as `WaveletPCA`.
 
+C ABI entry points used by the language bindings:
+
+```c
+c4a_status_t c4a_pp_wavelet_svd_create( c4a_pp_wavelet_svd_handle_t** out, c4a_pp_wavelet_family_t family, c4a_pp_wavelet_boundary_t mode, int32_t max_level, double n_components);
+void c4a_pp_wavelet_svd_destroy( c4a_pp_wavelet_svd_handle_t* handle);
+c4a_status_t c4a_pp_wavelet_svd_fit( c4a_pp_wavelet_svd_handle_t* handle, c4a_matrix_view_t X);
+c4a_status_t c4a_pp_wavelet_svd_is_fitted( const c4a_pp_wavelet_svd_handle_t* handle, int* out_fitted);
+c4a_status_t c4a_pp_wavelet_svd_output_cols( const c4a_pp_wavelet_svd_handle_t* handle, int64_t* out_cols);
+c4a_status_t c4a_pp_wavelet_svd_transform( const c4a_pp_wavelet_svd_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+```
+
+Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
+
 ### Implementations
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | — | C/C++ | Stable libc4a entry point family. |
+| C ABI | `c4a_pp_wavelet_svd` | C/C++ | Stable libc4a entry point family. |
+| Python | `chemometrics4all.python.wavelet_svd` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `chemometrics4all.sklearn.WaveletSVD` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| ref.pywavelets | `PyWavelets.wavedec(haar, periodization)+sklearn.TruncatedSVD` | Python | canonical/comparator |
+| ref.nirs4all | `nirs4all.WaveletSVD(per-level contract)` | Python | context only; nirs4all fits per-level SVD blocks; c4a gates the flattened-DWT SVD contract with PyWavelets+sklearn |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. The registry references are listed in the parity card below.
+Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
 :class: chemometrics4all-bindings
@@ -67,8 +86,37 @@ Every chemometrics4all binding dispatches into the same C kernel. The registry r
 :class-label: lang-c
 
 ```c
-/* C ABI prefix */
-c4a_*
+c4a_status_t c4a_pp_wavelet_svd_create( c4a_pp_wavelet_svd_handle_t** out, c4a_pp_wavelet_family_t family, c4a_pp_wavelet_boundary_t mode, int32_t max_level, double n_components);
+void c4a_pp_wavelet_svd_destroy( c4a_pp_wavelet_svd_handle_t* handle);
+c4a_status_t c4a_pp_wavelet_svd_fit( c4a_pp_wavelet_svd_handle_t* handle, c4a_matrix_view_t X);
+c4a_status_t c4a_pp_wavelet_svd_is_fitted( const c4a_pp_wavelet_svd_handle_t* handle, int* out_fitted);
+c4a_status_t c4a_pp_wavelet_svd_output_cols( const c4a_pp_wavelet_svd_handle_t* handle, int64_t* out_cols);
+c4a_status_t c4a_pp_wavelet_svd_transform( const c4a_pp_wavelet_svd_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+```
+
+:::
+
+:::{tab-item} Python ABI · chemometrics4all.python
+:sync: python-abi
+:class-label: lang-python
+
+```python
+from chemometrics4all import python as c4a
+
+Xt = c4a.wavelet_svd(X)
+```
+
+:::
+
+:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:sync: python-sklearn
+:class-label: lang-python
+
+```python
+from chemometrics4all.sklearn import WaveletSVD
+
+op = WaveletSVD(family='haar', mode='periodization', max_level=2, n_components=5.0)
+Xt = op.fit_transform(X)
 ```
 
 :::
@@ -76,17 +124,55 @@ c4a_*
 ::::
 
 
-**Registry parity references** ◆
+**Benchmark Comparators And Sources** ◆
 
 :::{card}
 :class-card: external-refs
 
-- ℹ No external parity reference row is registered for this public helper; the page is generated from the in-tree API and algorithm documentation.
+- ◆ **`ref.pywavelets`** (Python · canonical) — `PyWavelets.wavedec(haar, periodization)+sklearn.TruncatedSVD` · PyWavelets 1.9.0
+- ℹ **`ref.nirs4all`** (Python · context) — `nirs4all.WaveletSVD(per-level contract)` · nirs4all@cd731a23+dirty — nirs4all fits per-level SVD blocks; c4a gates the flattened-DWT SVD contract with PyWavelets+sklearn
 :::
 
-### Benchmarks
+### Validation contract
 
-No cross-binding timing row is currently registered for this method. The implementation table above is still generated from the public API surface.
+- Operation: `cross_binding_callable` · comparator: `sign_invariant_columns` · tolerance: `rtol=1e-05`, `atol=1e-08` · quality: **contract-specific**
+- Default validation dataset: `100×50` · seed `20260556`
+- Suites: smoke `3` cells; benchmark `11` cells · Used by component projection methods.
+- Metrics: `max_abs_diff`, `rel_l2_diff`, `rms_diff`, `shape_equal`
+- Truth sources: cross-binding references declared directly in `benchmarks/cross_binding/orchestrator.py`.
+
+| Backend | Library | Gate | Comparator | Note |
+|---------|---------|------|------------|------|
+| `ref.pywavelets` | `PyWavelets.wavedec(haar, periodization)+sklearn.TruncatedSVD` | Python / parity | `sign_invariant_columns` |  |
+| `ref.nirs4all` | `nirs4all.WaveletSVD(per-level contract)` | Python / context | `sign_invariant_columns` | nirs4all fits per-level SVD blocks; c4a gates the flattened-DWT SVD contract with PyWavelets+sklearn |
+
+### Benchmarks
+Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Divergence is the worst finite value over the visible sizes for each backend, preferring reference max-abs difference and falling back to binding max-abs difference when no reference comparison is recorded. Rows without a recorded comparison show `—`; the fastest backend per column is marked 🏆.
+::::{tab-set}
+:class: parity-tabs
+
+:::{tab-item} 1 thread
+:sync: threads-1
+
+<div class="parity-table-wrap">
+<table class="docutils parity-grouped">
+<thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th></tr></thead>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">3.2e-14</td><td class="ms">1.653 ms</td></tr>
+</tbody>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">3.2e-14</td><td class="ms ms-best">🏆 1.636 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">3.2e-14</td><td class="ms">1.642 ms</td></tr>
+</tbody>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
+<tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.WaveletSVD(per-level contract) · nirs4all@cd731a23+dirty — context">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-context" title="no divergence recorded">—</td><td class="ms">11.709 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): PyWavelets.wavedec(haar, periodization)+sklearn.TruncatedSVD · PyWavelets 1.9.0 — canonical">◆</span><code>ref.pywavelets</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">1.990 ms</td></tr>
+</tbody>
+</table>
+</div>
+
+:::
+::::
 
 ---
 

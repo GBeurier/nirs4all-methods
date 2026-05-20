@@ -78,20 +78,21 @@ void c4a_split_kennard_stone_destroy(c4a_split_kennard_stone_handle_t* h);
 c4a_status_t c4a_split_kennard_stone_split( const c4a_split_kennard_stone_handle_t* h, c4a_matrix_view_t X, c4a_split_result_t* out);
 ```
 
-Reference backends are registered in the benchmark matrix and stored as reproducible snapshots when they define the canonical contract.
+Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
 
 ### Implementations
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
 | C ABI | `c4a_split_kennard_stone` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.KennardStoneSplitter` | Python | sklearn-style wrapper backed by ctypes. |
+| Python | `chemometrics4all.python.kennard_stone` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `chemometrics4all.sklearn.KennardStoneSplitter` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `kennard_stone(X, test_size = 0.25)` | R | Public package wrapper around the C ABI. |
 | ref.nirs4all | `nirs4all.KennardStoneSplitter` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. The registry references are listed in the parity card below.
+Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
 :class: chemometrics4all-bindings
@@ -109,12 +110,24 @@ c4a_status_t c4a_split_kennard_stone_split( const c4a_split_kennard_stone_handle
 
 :::
 
-:::{tab-item} Python · chemometrics4all
-:sync: python
+:::{tab-item} Python ABI · chemometrics4all.python
+:sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import KennardStoneSplitter
+from chemometrics4all import python as c4a
+
+train_idx, test_idx = c4a.kennard_stone(X)
+```
+
+:::
+
+:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:sync: python-sklearn
+:class-label: lang-python
+
+```python
+from chemometrics4all.sklearn import KennardStoneSplitter
 
 splitter = KennardStoneSplitter(test_size=0.25)
 train_idx, test_idx = splitter.split(X)
@@ -136,7 +149,7 @@ res <- kennard_stone(X)
 ::::
 
 
-**Registry parity references** ◆
+**Benchmark Comparators And Sources** ◆
 
 :::{card}
 :class-card: external-refs
@@ -144,8 +157,21 @@ res <- kennard_stone(X)
 - ◆ **`ref.nirs4all`** (Python · canonical) — `nirs4all.KennardStoneSplitter` · nirs4all@cd731a23+dirty
 :::
 
+### Validation contract
+
+- Operation: `split` · comparator: `default_allclose` · tolerance: `rtol=1e-05`, `atol=1e-08` · quality: **strict**
+- Default validation dataset: `80×32` · seed `1234567896`
+- Suites: smoke `3` cells; benchmark `11` cells · Default C/Python/reference parity comparator.
+- Metrics: `coverage_equal`, `deterministic`, `indices_equal`
+- Truth sources:
+  - `nirs4all_kennard_stone` — nirs4all.operators.split.kennard_stone (nirs4all, git-pinned by benchmark environment)
+
+| Backend | Library | Gate | Comparator | Note |
+|---------|---------|------|------------|------|
+| `ref.nirs4all` | `nirs4all.KennardStoneSplitter` | Python / parity | `default_allclose` |  |
+
 ### Benchmarks
-Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Verdict legend: ✓ exact · ≈ context/drift · ✗ divergent · ⊘ not available · — not run · ⚠ error.
+Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Divergence is the worst finite value over the visible sizes for each backend, preferring reference max-abs difference and falling back to binding max-abs difference when no reference comparison is recorded. Rows without a recorded comparison show `—`; the fastest backend per column is marked 🏆.
 ::::{tab-set}
 :class: parity-tabs
 
@@ -154,18 +180,19 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
-<thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
+<thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.089 ms</td><td class="ms ms-best">🏆 1.011 ms</td><td class="ms">5.514 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.089 ms</td><td class="ms ms-best">🏆 0.975 ms</td><td class="ms ms-best">🏆 5.275 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.097 ms</td><td class="ms">1.016 ms</td><td class="ms ms-best">🏆 5.400 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.097 ms</td><td class="ms">1.044 ms</td><td class="ms">5.311 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.097 ms</td><td class="ms">1.031 ms</td><td class="ms">5.335 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.102 ms</td><td class="ms">1.078 ms</td><td class="ms">5.750 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.113 ms</td><td class="ms">1.227 ms</td><td class="ms">6.125 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.KennardStoneSplitter · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.698 ms</td><td class="ms">1.663 ms</td><td class="ms">6.263 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.KennardStoneSplitter · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.660 ms</td><td class="ms">1.750 ms</td><td class="ms">6.125 ms</td></tr>
 </tbody>
 </table>
 </div>

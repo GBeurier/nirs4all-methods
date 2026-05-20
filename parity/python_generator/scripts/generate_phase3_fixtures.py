@@ -4,8 +4,9 @@
 
 The four Phase 3 operators implement the `_fit/_transform` ABI contract:
 
-  * MSC      — Multiplicative Scatter Correction with column-wise (a, b)
-               fit against the per-row mean. Invertible.
+  * MSC      — Multiplicative Scatter Correction using the conventional
+               row-wise reference-spectrum contract. Inverse is checked
+               immediately after a forward transform on the same handle.
   * EMSC     — Extended MSC with polynomial wavelength terms (degree=1, 2, 3).
                Not invertible.
   * Baseline — Per-column mean centering (sklearn's StandardScaler
@@ -135,9 +136,9 @@ def synthesize_spectra(seed: int) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # Reference implementations matching the C engines.
 #
-# MSC: nirs4all's MultiplicativeScatterCorrection with scale=False. After
-#      fit, the (a, b) per-column arrays are stored and applied at transform
-#      time.
+# MSC: conventional row-wise reference-spectrum correction, matching
+#      prospectr::msc / pls::msc. The C engine stores the row coefficients from
+#      the last transform so inverse_transform(transform(X)) remains covered.
 # EMSC: nirs4all's ExtendedMultiplicativeScatterCorrection with scale=False.
 #       Reference and integer wavelengths are stored at fit time; the
 #       polynomial + reference basis is re-fit per row at transform time.
@@ -152,17 +153,25 @@ def synthesize_spectra(seed: int) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 def ref_msc(fit_X: np.ndarray, transform_X: np.ndarray, **_: Any) -> np.ndarray:
-    """MSC parity reference matching the c4a engine algorithm exactly."""
-    op = nirs_mod.MultiplicativeScatterCorrection(scale=False)
-    op.fit(fit_X.copy())
-    return op.transform(transform_X.copy())
+    reference = np.mean(fit_X, axis=0)
+    ref_mean = np.mean(reference)
+    ref_centered = reference - ref_mean
+    denom = float(np.sum(ref_centered * ref_centered))
+    if denom <= 0.0:
+        raise ValueError("MSC reference spectrum has zero variance")
+    out = np.empty_like(transform_X, dtype=np.float64)
+    for idx, row in enumerate(transform_X):
+        row_mean = np.mean(row)
+        slope = float(np.sum((row - row_mean) * ref_centered) / denom)
+        intercept = row_mean - slope * ref_mean
+        out[idx] = (row - intercept) / slope
+    return out
 
 
 def ref_msc_inverse(fit_X: np.ndarray, transform_X: np.ndarray,
                     **_: Any) -> np.ndarray:
-    op = nirs_mod.MultiplicativeScatterCorrection(scale=False)
-    op.fit(fit_X.copy())
-    return op.inverse_transform(transform_X.copy())
+    _ = fit_X
+    return np.array(transform_X, copy=True)
 
 
 def ref_emsc(fit_X: np.ndarray, transform_X: np.ndarray, *,
@@ -205,7 +214,7 @@ def msc_cases(fit_X: np.ndarray, test_X: np.ndarray):
         ("fit_train_transform_test", {},
          lambda: ref_msc(fit_X, test_X)),
         ("fit_train_inverse_test", {"variant": "inverse"},
-         lambda: ref_msc_inverse(fit_X, ref_msc(fit_X, test_X))),
+         lambda: ref_msc_inverse(fit_X, test_X)),
     ]
 
 

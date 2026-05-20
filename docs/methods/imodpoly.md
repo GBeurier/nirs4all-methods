@@ -33,7 +33,7 @@ From the `chemometrics4all.IModPoly` Python wrapper docstring:
 ### Bibliographic source
 
 - Gan, F., Ruan, G. & Mo, J. (2006). "Baseline correction by improved iterative polynomial fitting with automatic threshold." Chemometrics and Intelligent Laboratory Systems 82(1-2), 59-65.
-- Frozen Python reference: `parity/python_generator/src/c4a_parity_pybaselines_ref/imodpoly.py`.
+- Internal parity fixture: `parity/python_generator/src/c4a_parity_pybaselines_ref/imodpoly.py`.
 
 ### Mathematical principle
 
@@ -45,7 +45,7 @@ From the `chemometrics4all.IModPoly` Python wrapper docstring:
 - Residual stdev uses ddof = 0 (population); the convergence check protects the denominator with `max(devr_new, DBL_MIN)`.
 - `mask_initial_peaks` (pybaselines' optional pre-threshold step) is disabled; this matches `num_std = 1` default behaviour on clean spectra and keeps the parity surface compact.
 - On `max_iter` reached without convergence: silently returns the last iterate.
-- Parity tolerance vs frozen NumPy reference: `1e-9 abs / 1e-10 rel`.
+- Parity tolerance vs internal parity fixture: `1e-9 abs / 1e-10 rel`.
 
 C ABI entry points used by the language bindings:
 
@@ -55,20 +55,21 @@ void c4a_pp_imodpoly_destroy(c4a_pp_imodpoly_handle_t* handle);
 c4a_status_t c4a_pp_imodpoly_transform( const c4a_pp_imodpoly_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
 ```
 
-Reference backends are registered in the benchmark matrix and stored as reproducible snapshots when they define the canonical contract.
+Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
 
 ### Implementations
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
 | C ABI | `c4a_pp_imodpoly` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.IModPoly` | Python | sklearn-style wrapper backed by ctypes. |
+| Python | `chemometrics4all.python.imodpoly` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `chemometrics4all.sklearn.IModPoly` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `imodpoly(X, polyorder = 2L, max_iter = 250L, tol = 1e-3)` | R | Public package wrapper around the C ABI. |
 | ref.pybaselines | `pybaselines.imodpoly(mask_initial_peaks=False)` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. The registry references are listed in the parity card below.
+Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
 :class: chemometrics4all-bindings
@@ -86,12 +87,24 @@ c4a_status_t c4a_pp_imodpoly_transform( const c4a_pp_imodpoly_handle_t* handle, 
 
 :::
 
-:::{tab-item} Python · chemometrics4all
-:sync: python
+:::{tab-item} Python ABI · chemometrics4all.python
+:sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import IModPoly
+from chemometrics4all import python as c4a
+
+Xt = c4a.imodpoly(X)
+```
+
+:::
+
+:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:sync: python-sklearn
+:class-label: lang-python
+
+```python
+from chemometrics4all.sklearn import IModPoly
 
 op = IModPoly(polyorder=2, max_iter=250, tol=0.001)
 Xt = op.fit_transform(X)
@@ -113,7 +126,7 @@ res <- imodpoly(X, polyorder = 2L, max_iter = 50L)
 ::::
 
 
-**Registry parity references** ◆
+**Benchmark Comparators And Sources** ◆
 
 :::{card}
 :class-card: external-refs
@@ -121,8 +134,20 @@ res <- imodpoly(X, polyorder = 2L, max_iter = 50L)
 - ◆ **`ref.pybaselines`** (Python · canonical) — `pybaselines.imodpoly(mask_initial_peaks=False)` · pybaselines 1.2.1
 :::
 
+### Validation contract
+
+- Operation: `cross_binding_callable` · comparator: `default_allclose` · tolerance: `rtol=1e-05`, `atol=1e-08` · quality: **strict**
+- Default validation dataset: `100×50` · seed `20260556`
+- Suites: smoke `3` cells; benchmark `11` cells · Default C/Python/reference parity comparator.
+- Metrics: `max_abs_diff`, `rel_l2_diff`, `rms_diff`, `shape_equal`
+- Truth sources: cross-binding references declared directly in `benchmarks/cross_binding/orchestrator.py`.
+
+| Backend | Library | Gate | Comparator | Note |
+|---------|---------|------|------------|------|
+| `ref.pybaselines` | `pybaselines.imodpoly(mask_initial_peaks=False)` | Python / parity | `default_allclose` |  |
+
 ### Benchmarks
-Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Verdict legend: ✓ exact · ≈ context/drift · ✗ divergent · ⊘ not available · — not run · ⚠ error.
+Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Divergence is the worst finite value over the visible sizes for each backend, preferring reference max-abs difference and falling back to binding max-abs difference when no reference comparison is recorded. Rows without a recorded comparison show `—`; the fastest backend per column is marked 🏆.
 ::::{tab-set}
 :class: parity-tabs
 
@@ -131,18 +156,19 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
-<thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
+<thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms">0.605 ms</td><td class="ms ms-best">🏆 4.874 ms</td><td class="ms ms-best">🏆 25.159 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.3e-14</td><td class="ms ms-best">🏆 0.531 ms</td><td class="ms ms-best">🏆 4.941 ms</td><td class="ms">25.764 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.584 ms</td><td class="ms">4.952 ms</td><td class="ms">25.388 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.3e-14</td><td class="ms">0.558 ms</td><td class="ms">5.017 ms</td><td class="ms">25.931 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.3e-14</td><td class="ms">0.546 ms</td><td class="ms">5.080 ms</td><td class="ms ms-best">🏆 25.567 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">🏆 0.582 ms</td><td class="ms">5.125 ms</td><td class="ms">27.250 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.3e-14</td><td class="ms">0.609 ms</td><td class="ms">5.188 ms</td><td class="ms">27.500 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.imodpoly(mask_initial_peaks=False) · pybaselines 1.2.1 — canonical">◆</span><code>ref.pybaselines</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">28.109 ms</td><td class="ms">31.647 ms</td><td class="ms">43.758 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.imodpoly(mask_initial_peaks=False) · pybaselines 1.2.1 — canonical">◆</span><code>ref.pybaselines</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">26.417 ms</td><td class="ms">29.760 ms</td><td class="ms">44.267 ms</td></tr>
 </tbody>
 </table>
 </div>

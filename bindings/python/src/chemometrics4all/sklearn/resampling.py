@@ -11,6 +11,7 @@ from .._errors import check
 from .._ffi import lib
 from .._matrix import as_f64_2d, empty_like_i32, numpy_to_view
 from ._base import StatefulOperator, StatelessOperator
+from ._compat import BaseEstimator, TransformerMixin
 
 
 class CropTransformer(StatelessOperator):
@@ -70,7 +71,7 @@ class ResampleTransformer(StatelessOperator):
         return self._call_transform(X, (X.shape[0], out_cols))
 
 
-class Resampler:
+class Resampler(BaseEstimator, TransformerMixin):
     """Interpolate spectra from a fitted source wavelength grid to a target grid."""
 
     _C_PREFIX = "c4a_pp_resampler"

@@ -29,7 +29,7 @@ From the `chemometrics4all.RollingBall` Python wrapper docstring:
 ### Bibliographic source
 
 - Kneen, M. A. & Annegarn, H. J. (1996). "Algorithm for fitting XRF, SEM and PIXE X-ray spectra backgrounds." Nuclear Instruments and Methods B109/110, 209-213.
-- Frozen Python reference: `parity/python_generator/src/c4a_parity_pybaselines_ref/rolling_ball.py`.
+- Internal parity fixture: `parity/python_generator/src/c4a_parity_pybaselines_ref/rolling_ball.py`.
 
 ### Mathematical principle
 
@@ -38,7 +38,7 @@ From the `chemometrics4all.RollingBall` Python wrapper docstring:
 ### Implementation
 
 - Two scratch buffers per row (length `n` doubles). No linear algebra.
-- Parity tolerance vs frozen NumPy reference: `1e-12 abs / 1e-13 rel`.
+- Parity tolerance vs internal parity fixture: `1e-12 abs / 1e-13 rel`.
 
 C ABI entry points used by the language bindings:
 
@@ -48,20 +48,21 @@ void c4a_pp_rolling_ball_destroy( c4a_pp_rolling_ball_handle_t* handle);
 c4a_status_t c4a_pp_rolling_ball_transform( const c4a_pp_rolling_ball_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
 ```
 
-Reference backends are registered in the benchmark matrix and stored as reproducible snapshots when they define the canonical contract.
+Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
 
 ### Implementations
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
 | C ABI | `c4a_pp_rolling_ball` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.RollingBall` | Python | sklearn-style wrapper backed by ctypes. |
+| Python | `chemometrics4all.python.rolling_ball` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `chemometrics4all.sklearn.RollingBall` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `rolling_ball(X, half_window = 20L, smooth_half_window = 0L)` | R | Public package wrapper around the C ABI. |
 | ref.pybaselines | `pybaselines.rolling_ball` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. The registry references are listed in the parity card below.
+Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
 :class: chemometrics4all-bindings
@@ -79,12 +80,24 @@ c4a_status_t c4a_pp_rolling_ball_transform( const c4a_pp_rolling_ball_handle_t* 
 
 :::
 
-:::{tab-item} Python · chemometrics4all
-:sync: python
+:::{tab-item} Python ABI · chemometrics4all.python
+:sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import RollingBall
+from chemometrics4all import python as c4a
+
+Xt = c4a.rolling_ball(X)
+```
+
+:::
+
+:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:sync: python-sklearn
+:class-label: lang-python
+
+```python
+from chemometrics4all.sklearn import RollingBall
 
 op = RollingBall(half_window=20, smooth_half_window=0)
 Xt = op.fit_transform(X)
@@ -106,7 +119,7 @@ res <- rolling_ball(X, half_window = 10L, smooth_half_window = 0L)
 ::::
 
 
-**Registry parity references** ◆
+**Benchmark Comparators And Sources** ◆
 
 :::{card}
 :class-card: external-refs
@@ -114,8 +127,20 @@ res <- rolling_ball(X, half_window = 10L, smooth_half_window = 0L)
 - ◆ **`ref.pybaselines`** (Python · canonical) — `pybaselines.rolling_ball` · pybaselines 1.2.1
 :::
 
+### Validation contract
+
+- Operation: `cross_binding_callable` · comparator: `default_allclose` · tolerance: `rtol=1e-05`, `atol=1e-08` · quality: **strict**
+- Default validation dataset: `100×50` · seed `20260556`
+- Suites: smoke `3` cells; benchmark `11` cells · Default C/Python/reference parity comparator.
+- Metrics: `max_abs_diff`, `rel_l2_diff`, `rms_diff`, `shape_equal`
+- Truth sources: cross-binding references declared directly in `benchmarks/cross_binding/orchestrator.py`.
+
+| Backend | Library | Gate | Comparator | Note |
+|---------|---------|------|------------|------|
+| `ref.pybaselines` | `pybaselines.rolling_ball` | Python / parity | `default_allclose` |  |
+
 ### Benchmarks
-Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Verdict legend: ✓ exact · ≈ context/drift · ✗ divergent · ⊘ not available · — not run · ⚠ error.
+Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Divergence is the worst finite value over the visible sizes for each backend, preferring reference max-abs difference and falling back to binding max-abs difference when no reference comparison is recorded. Rows without a recorded comparison show `—`; the fastest backend per column is marked 🏆.
 ::::{tab-set}
 :class: parity-tabs
 
@@ -124,18 +149,19 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
-<thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
+<thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.050 ms</td><td class="ms ms-best">🏆 0.497 ms</td><td class="ms ms-best">🏆 2.608 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.052 ms</td><td class="ms ms-best">🏆 0.631 ms</td><td class="ms ms-best">🏆 3.300 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.057 ms</td><td class="ms">0.519 ms</td><td class="ms">2.643 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.072 ms</td><td class="ms">0.690 ms</td><td class="ms">3.715 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.075 ms</td><td class="ms">0.685 ms</td><td class="ms">3.616 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.068 ms</td><td class="ms">0.719 ms</td><td class="ms">4.625 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.0e-16</td><td class="ms">0.080 ms</td><td class="ms">0.758 ms</td><td class="ms">4.938 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.rolling_ball · pybaselines 1.2.1 — canonical">◆</span><code>ref.pybaselines</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">2.969 ms</td><td class="ms">3.839 ms</td><td class="ms">6.206 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.rolling_ball · pybaselines 1.2.1 — canonical">◆</span><code>ref.pybaselines</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">2.902 ms</td><td class="ms">3.947 ms</td><td class="ms">7.037 ms</td></tr>
 </tbody>
 </table>
 </div>

@@ -2,7 +2,7 @@
 /*
  * ArPLS — Baek 2015.
  *
- * Frozen reference: parity/python_generator/src/c4a_parity_pybaselines_ref/arpls.py
+ * Internal parity fixture: parity/python_generator/src/c4a_parity_pybaselines_ref/arpls.py
  *
  * Iterative loop:
  *

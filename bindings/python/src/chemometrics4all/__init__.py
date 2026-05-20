@@ -1,13 +1,19 @@
 # SPDX-License-Identifier: CECILL-2.1
 """Python binding for libc4a.
 
-Top-level imports re-export the sklearn-style operator classes so that the
-public surface mirrors what users see in scikit-learn pipelines::
+The package exposes two public operator surfaces:
+
+* ``chemometrics4all.python``: ABI-close NumPy functions over ``libc4a``;
+* ``chemometrics4all.sklearn``: scikit-learn-compatible estimators.
+
+Top-level imports still re-export the sklearn estimator classes for backwards
+compatibility::
 
     from chemometrics4all import SNV, SavitzkyGolay
 """
 import ctypes
 
+from . import python, sklearn
 from ._errors import Chemometrics4allError
 from ._ffi import (
     ABI_VERSION_MAJOR,
@@ -30,6 +36,11 @@ from .metrics import (
     rpiq,
     sep,
     transfer_metrics,
+)
+from .sklearn import (
+    aug_wavelength_spectral,
+    nirs_metrics,
+    signal_type_detector,
 )
 from .sklearn import (
     EMSC,
@@ -89,6 +100,8 @@ from .sklearn import (
     XOutlierFilter,
     YOutlierFilter,
 )
+from .sklearn import *  # noqa: F403 - re-export full sklearn-style surface
+from .sklearn import __all__ as _sklearn_all
 
 __version__ = "0.1.0"
 
@@ -153,6 +166,7 @@ __all__ = [
     "OSC",
     "PCG64",
     "PercentToFraction",
+    "python",
     "RangeDiscretizer",
     "RNV",
     "Resample",
@@ -165,6 +179,7 @@ __all__ = [
     "SavitzkyGolay",
     "SecondDerivative",
     "SimpleScale",
+    "sklearn",
     "ToAbsorbance",
     "Wavelet",
     "WaveletDenoise",
@@ -175,10 +190,12 @@ __all__ = [
     "YOutlierFilter",
     "__version__",
     "abi_version",
+    "aug_wavelength_spectral",
     "bias",
     "hotelling_t2",
     "library_path",
     "mae",
+    "nirs_metrics",
     "nrmse",
     "q_residuals",
     "r2",
@@ -186,6 +203,9 @@ __all__ = [
     "rpd",
     "rpiq",
     "sep",
+    "signal_type_detector",
     "transfer_metrics",
     "version",
 ]
+
+__all__ = sorted(set(__all__) | set(_sklearn_all))

@@ -48,9 +48,10 @@ void c4a_aug_gauss_kernel_build(double sigma, int32_t width, double* out) {
     }
 }
 
-c4a_status_t c4a_aug_convolve_reflect(
+static c4a_status_t c4a_aug_convolve_with_mode(
     const double* X, int64_t rows, int64_t cols,
     const double* kernel, int64_t klen,
+    c4a_pad_mode_t pad_mode,
     double* out) {
     if (X == NULL || kernel == NULL || out == NULL) {
         return C4A_ERR_NULL_POINTER;
@@ -81,7 +82,7 @@ c4a_status_t c4a_aug_convolve_reflect(
                     v = row_in[src];
                 } else {
                     const int64_t resolved =
-                        c4a_pad_resolve_index(src, cols, C4A_PAD_REFLECT);
+                        c4a_pad_resolve_index(src, cols, pad_mode);
                     v = row_in[resolved];
                 }
                 acc += kernel[k] * v;
@@ -92,6 +93,22 @@ c4a_status_t c4a_aug_convolve_reflect(
     }
     free(scratch);
     return C4A_OK;
+}
+
+c4a_status_t c4a_aug_convolve_reflect(
+    const double* X, int64_t rows, int64_t cols,
+    const double* kernel, int64_t klen,
+    double* out) {
+    return c4a_aug_convolve_with_mode(X, rows, cols, kernel, klen,
+                                      C4A_PAD_REFLECT, out);
+}
+
+c4a_status_t c4a_aug_convolve_mirror(
+    const double* X, int64_t rows, int64_t cols,
+    const double* kernel, int64_t klen,
+    double* out) {
+    return c4a_aug_convolve_with_mode(X, rows, cols, kernel, klen,
+                                      C4A_PAD_MIRROR, out);
 }
 
 double c4a_aug_uniform(c4a_rng_pcg64* rng, double lo, double hi) {

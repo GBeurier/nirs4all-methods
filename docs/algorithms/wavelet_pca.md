@@ -54,7 +54,7 @@ and `_output_cols`.  Calling `_transform` or `_output_cols` before
 - `_fit` requires `rows >= 2` and `cols >= 1`.
 - `_transform` requires `out.cols == n_components_learned` and
   `X.cols == n_features_in_at_fit_time`.
-- Parity tolerance against the frozen NumPy reference: `1e-10` absolute
+- Parity tolerance against the internal parity fixture: `1e-10` absolute
   / `1e-11` relative (DWT is closed-form; the SVD gap against LAPACK
   `gesdd` is the dominant source of ULP-level noise).
 

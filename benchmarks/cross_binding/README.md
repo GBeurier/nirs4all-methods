@@ -7,12 +7,14 @@ It follows the same broad contract as pls4all:
 * `median_ms` is wall-clock median over timed runs after an unmeasured warmup;
   `warmup_runs`, `timed_runs`, and `samples_ms` expose the exact protocol and
   raw per-run samples used for each cell;
-* internal rows cover direct libc4a C ABI (`cpp`), Python sklearn-style
-  bindings (`python`), and installed public R bindings (`r`);
+* internal rows cover direct libc4a C ABI (`cpp`), ABI-close public Python
+  functions (`python`), scikit-learn-compatible Python estimators
+  (`sklearn`), and installed public R bindings (`r`);
 * external rows cover the local git checkout of `nirs4all`, NumPy, SciPy
   (`scipy.signal` and `scipy.ndimage` where appropriate), scikit-learn,
-  pybaselines, R base, and R stats comparators where a credible reference
-  exists;
+  pybaselines, PyWavelets, `pycaltransfer`, `statsmodels`, `dtw-python`,
+  `cowarp`, R base, R stats, and R `prospectr` comparators where a credible
+  reference exists;
 * `binding_parity_ok` records whether the method is covered by the binding
   parity suite and whether the binding output matched the direct ABI output;
 * `reference_parity_ok` compares native C++ and comparator rows against the
@@ -37,17 +39,24 @@ pls4all matrix: `100x50`, `100x500`, `100x2500`, `500x50`, `500x500`,
 `500x2500`, `2500x50`, `2500x500`, `2500x2500`, `10000x50`, and
 `10000x500`.
 
-The current generated matrix covers 48 methods, 3 dataset sizes, 1 thread
-setting, and dashboard columns for `cpp`, `python`, `r`, `nirs4all`, NumPy,
-SciPy, scikit-learn, pybaselines, PyWavelets, R base, and R stats. Every
-registered method has direct C ABI, Python binding, and R binding timing. Every
-dashboard method has an external reference method when a credible public
-implementation exists. When that implementation exposes the same numerical
-contract, C++ rows are parity-gated against the stored external snapshot. When
-the only credible public implementation exposes a different documented contract,
-the external snapshot is still stored as the canonical external run, but the
-C++ row is marked `parity=context` with the contract reason instead of running
-an invalid comparison.
+The current generated matrix covers 118 methods, 3 dataset sizes, 1 thread
+setting, and dashboard columns for `cpp`, `python`, `sklearn`, `r`,
+`nirs4all`, NumPy, SciPy, scikit-learn, pybaselines, PyWavelets,
+`pycaltransfer`, `statsmodels`, `dtw-python`, `cowarp`, and R `prospectr`.
+Additional reference backends declared in the orchestrator (for example
+`ref.numpy`) appear automatically once a `MethodSpec` registers them; the docs
+generators in `docs/_extras/build_landing.py` and `docs/_extras/build_methods.py`
+already carry their display label/short tag/version mapping so they are listed
+as external references rather than collapsing into a generic column. Every
+registered method has direct C ABI, ABI-close Python, scikit-learn-compatible
+Python, and R binding timing when the binding exists. Methods without an
+executable external reference remain visible as `reference_needed` instead of
+disappearing from the matrix.
+Dense diagnostic and wavelet-composite methods that scale with large
+feature-space decompositions are capped to the small or medium dashboard
+shards through their `MethodSpec.max_cols` guard; they remain present in the
+matrix with measured parity rows instead of forcing the whole dashboard run to
+wait on wide `p=2500` algebra.
 `nirs4all.WaveletFeatures` is timed with `n_coeffs_per_level=0`, histogram
 entropy, and the symmetric boundary contract so its output feature count and
 contract match the chemometrics4all dashboard surface.
@@ -59,6 +68,12 @@ external contract is credible, the runner stores its output under
 version or git commit in metadata. Reference gates compare native C++ rows and
 non-canonical external comparator rows against that stored snapshot, not against
 freshly recomputed reference output.
+When multiple external references cover the same contract, the canonical row
+must prefer an independent public implementation such as scikit-learn, SciPy,
+prospectr, pybaselines, PyWavelets, or statsmodels. `nirs4all` is a valid
+external tier, but it is canonical only when no more established external
+implementation covers the same contract or when nirs4all is the method's
+defining external implementation.
 Context rows document why no comparison is made in the CSV `reason` field; they
 must not carry `reference_parity_ok`.
 

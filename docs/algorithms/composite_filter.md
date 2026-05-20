@@ -49,7 +49,7 @@ Phase 12 extends this list with `add_y_outlier`, `add_x_outlier`, `add_metadata`
 
 ## Numerical contract
 
-Composite is purely a boolean aggregator over already-computed sub-filter masks. The output is exact (mask equality with the frozen reference) since no float arithmetic is involved.
+Composite is purely a boolean aggregator over already-computed sub-filter masks. The output is exact (mask equality with the internal parity fixture) since no float arithmetic is involved.
 
 ## Reference
 

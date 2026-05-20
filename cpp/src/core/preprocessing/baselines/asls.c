@@ -2,7 +2,7 @@
 /*
  * AsLS — Asymmetric Least Squares (Eilers & Boelens 2005).
  *
- * Frozen reference: parity/python_generator/src/c4a_parity_pybaselines_ref/asls.py
+ * Internal parity fixture: parity/python_generator/src/c4a_parity_pybaselines_ref/asls.py
  *
  * For each row y of length N:
  *

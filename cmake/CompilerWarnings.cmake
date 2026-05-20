@@ -59,16 +59,16 @@ function(chemometrics4all_add_warnings target)
     endif()
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
         target_compile_options(${target} PRIVATE
-            ${_chemometrics4all_gnu_clang_warnings_common}
+            "$<$<COMPILE_LANGUAGE:C,CXX>:${_chemometrics4all_gnu_clang_warnings_common}>"
             "$<$<COMPILE_LANGUAGE:CXX>:${_chemometrics4all_gnu_clang_warnings_cxx_only}>"
-            ${_chemometrics4all_gnu_clang_disables})
+            "$<$<COMPILE_LANGUAGE:C,CXX>:${_chemometrics4all_gnu_clang_disables}>")
     elseif(MSVC)
         target_compile_options(${target} PRIVATE ${_chemometrics4all_msvc_warnings})
     endif()
 
     if(CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS)
         if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-            target_compile_options(${target} PRIVATE -Werror)
+            target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:-Werror>")
         elseif(MSVC)
             target_compile_options(${target} PRIVATE /WX)
         endif()

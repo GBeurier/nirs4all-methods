@@ -4,7 +4,7 @@
  *
  * Adds a small number of spike values at random wavelengths per sample.
  *
- * Reference algorithm — bit-identical to the frozen Python reference
+ * Internal parity algorithm — bit-identical to the internal parity fixture
  * `c4a_parity_augmenters_ref.spike_noise`, which mirrors
  * `nirs4all.operators.augmentation.spectral.SpikeNoise` with uniform
  * `int(floor(u * range))` mapping in place of `rng.integers` (so we can

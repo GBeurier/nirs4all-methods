@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/augmentations/spectral/spectral_common.h"
 #include "../../common/rng_pcg64.h"
 
 struct c4a_aug_edge_curvature_state_t {
@@ -76,16 +77,15 @@ c4a_status_t c4a_aug_edge_curvature_state_apply(
     const double focus_power = 2.0 + 2.0 * state->edge_focus;
     double* curv = (double*)malloc((size_t)cols * sizeof(double));
     if (curv == NULL) { free(wl_norm); return C4A_ERR_OUT_OF_MEMORY; }
+    c4a_aug_randint_state_t randint_state;
+    c4a_aug_randint_state_reset(&randint_state, rng);
     for (int64_t i = 0; i < rows; ++i) {
         const double* xrow = X + i * cols;
         double* orow = out + i * cols;
         /* Determine ctype for this sample. */
         int32_t ctype = state->curvature_type;
         if (ctype == C4A_AUG_EDGE_CURVATURE_RANDOM) {
-            const double u = c4a_pcg64_engine_next_double(rng);
-            if (u < 1.0 / 3.0) ctype = C4A_AUG_EDGE_CURVATURE_SMILE;
-            else if (u < 2.0 / 3.0) ctype = C4A_AUG_EDGE_CURVATURE_FROWN;
-            else ctype = C4A_AUG_EDGE_CURVATURE_ASYMMETRIC;
+            ctype = (int32_t)c4a_aug_randint(&randint_state, 0, 3) + 1;
         }
         if (ctype == C4A_AUG_EDGE_CURVATURE_SMILE) {
             for (int64_t j = 0; j < cols; ++j) {
@@ -101,8 +101,7 @@ c4a_status_t c4a_aug_edge_curvature_state_apply(
             }
         } else {
             /* Asymmetric: jitter asymmetry by U(-0.2, 0.2). */
-            const double jitter = (c4a_pcg64_engine_next_double(rng) - 0.5)
-                                   * 0.4;
+            const double jitter = c4a_aug_uniform(rng, -0.2, 0.2);
             double asym = state->asymmetry + jitter;
             asym = clamp_d(asym, -1.0, 1.0);
             const double left  = 1.0 + asym;
@@ -115,8 +114,8 @@ c4a_status_t c4a_aug_edge_curvature_state_apply(
                     curv[j] = pow(fabs(xc), focus_power) * right;
                 }
             }
-            const double u2 = c4a_pcg64_engine_next_double(rng);
-            const double sign = (u2 < 0.5) ? -1.0 : 1.0;
+            const int64_t sign_idx = c4a_aug_randint(&randint_state, 0, 2);
+            const double sign = (sign_idx == 0) ? -1.0 : 1.0;
             for (int64_t j = 0; j < cols; ++j) {
                 curv[j] = sign * curv[j] * state->curvature_strength;
             }

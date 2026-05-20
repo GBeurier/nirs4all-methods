@@ -1,0 +1,82 @@
+{
+  "datasets": [
+    {
+      "id": "100x50",
+      "in_smoke_preset": true,
+      "n": 100,
+      "p": 50,
+      "seed_base": 20260519
+    },
+    {
+      "id": "100x500",
+      "in_smoke_preset": true,
+      "n": 100,
+      "p": 500,
+      "seed_base": 20260519
+    },
+    {
+      "id": "100x2500",
+      "in_smoke_preset": true,
+      "n": 100,
+      "p": 2500,
+      "seed_base": 20260519
+    },
+    {
+      "id": "500x50",
+      "in_smoke_preset": false,
+      "n": 500,
+      "p": 50,
+      "seed_base": 20260519
+    },
+    {
+      "id": "500x500",
+      "in_smoke_preset": false,
+      "n": 500,
+      "p": 500,
+      "seed_base": 20260519
+    },
+    {
+      "id": "500x2500",
+      "in_smoke_preset": false,
+      "n": 500,
+      "p": 2500,
+      "seed_base": 20260519
+    },
+    {
+      "id": "2500x50",
+      "in_smoke_preset": false,
+      "n": 2500,
+      "p": 50,
+      "seed_base": 20260519
+    },
+    {
+      "id": "2500x500",
+      "in_smoke_preset": false,
+      "n": 2500,
+      "p": 500,
+      "seed_base": 20260519
+    },
+    {
+      "id": "2500x2500",
+      "in_smoke_preset": false,
+      "n": 2500,
+      "p": 2500,
+      "seed_base": 20260519
+    },
+    {
+      "id": "10000x50",
+      "in_smoke_preset": false,
+      "n": 10000,
+      "p": 50,
+      "seed_base": 20260519
+    },
+    {
+      "id": "10000x500",
+      "in_smoke_preset": false,
+      "n": 10000,
+      "p": 500,
+      "seed_base": 20260519
+    }
+  ],
+  "schema_version": 1
+}

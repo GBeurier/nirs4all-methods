@@ -7,7 +7,7 @@
  * peaks but keep the threshold devr); convergence is on the relative change
  * of devr between iterations.
  *
- * Frozen reference: parity/python_generator/src/c4a_parity_pybaselines_ref/imodpoly.py
+ * Internal parity fixture: parity/python_generator/src/c4a_parity_pybaselines_ref/imodpoly.py
  */
 #ifndef CHEMOMETRICS4ALL_CORE_PREPROCESSING_BASELINES_IMODPOLY_H
 #define CHEMOMETRICS4ALL_CORE_PREPROCESSING_BASELINES_IMODPOLY_H

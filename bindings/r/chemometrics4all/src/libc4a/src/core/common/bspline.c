@@ -35,6 +35,7 @@
 
 #include "bspline.h"
 
+#include <math.h>
 #include <stddef.h>
 #include <stdlib.h>
 
@@ -321,4 +322,204 @@ void c4a_bspline_eval_array(const double* knots, const double* coef,
                  ((a3 - a) * Mk + (b3 - b) * Mk1) * (h * h) / 6.0;
     }
     free(M_arr); free(c_scratch); free(d_scratch);
+}
+
+static int32_t deboor_find_span(const double* t, int32_t n_coeff,
+                                int32_t degree, double xq) {
+    if (xq <= t[degree]) return degree;
+    if (xq >= t[n_coeff]) return n_coeff - 1;
+    int32_t lo = degree;
+    int32_t hi = n_coeff;
+    while (hi - lo > 1) {
+        const int32_t mid = (lo + hi) >> 1;
+        if (t[mid] <= xq) lo = mid;
+        else hi = mid;
+    }
+    return lo;
+}
+
+static void cubic_basis_funs(const double* t, int32_t span, double xq,
+                             double* N) {
+    double left[4];
+    double right[4];
+    N[0] = 1.0;
+    for (int32_t j = 1; j <= 3; ++j) {
+        left[j] = xq - t[span + 1 - j];
+        right[j] = t[span + j] - xq;
+        double saved = 0.0;
+        for (int32_t r = 0; r < j; ++r) {
+            const double denom = right[r + 1] + left[j - r];
+            const double temp = (denom != 0.0) ? (N[r] / denom) : 0.0;
+            N[r] = saved + right[r + 1] * temp;
+            saved = left[j - r] * temp;
+        }
+        N[j] = saved;
+    }
+}
+
+static double* band_slot(double* A, int32_t n, int32_t lower, int32_t upper,
+                         int32_t i, int32_t j) {
+    const int32_t offset = j - i;
+    if (i < 0 || i >= n || j < 0 || j >= n ||
+        offset < -lower || offset > upper) {
+        return NULL;
+    }
+    return &A[(size_t)i * (size_t)(lower + upper + 1) +
+              (size_t)(offset + lower)];
+}
+
+static double band_get(const double* A, int32_t n, int32_t lower,
+                       int32_t upper, int32_t i, int32_t j) {
+    const int32_t offset = j - i;
+    if (i < 0 || i >= n || j < 0 || j >= n ||
+        offset < -lower || offset > upper) {
+        return 0.0;
+    }
+    return A[(size_t)i * (size_t)(lower + upper + 1) +
+             (size_t)(offset + lower)];
+}
+
+static void band_set(double* A, int32_t n, int32_t lower, int32_t upper,
+                     int32_t i, int32_t j, double value) {
+    double* slot = band_slot(A, n, lower, upper, i, j);
+    if (slot != NULL) *slot = value;
+}
+
+static int band_lu_factor(double* A, int32_t n, int32_t lower,
+                          int32_t upper) {
+    for (int32_t k = 0; k < n; ++k) {
+        const double pivot = band_get(A, n, lower, upper, k, k);
+        if (fabs(pivot) <= 1e-14) return 1;
+        const int32_t i_max = (k + lower < n - 1) ? k + lower : n - 1;
+        const int32_t j_max = (k + upper < n - 1) ? k + upper : n - 1;
+        for (int32_t i = k + 1; i <= i_max; ++i) {
+            const double aik = band_get(A, n, lower, upper, i, k);
+            if (aik == 0.0) continue;
+            const double factor = aik / pivot;
+            band_set(A, n, lower, upper, i, k, factor);
+            for (int32_t j = k + 1; j <= j_max; ++j) {
+                const double updated =
+                    band_get(A, n, lower, upper, i, j) -
+                    factor * band_get(A, n, lower, upper, k, j);
+                band_set(A, n, lower, upper, i, j, updated);
+            }
+        }
+    }
+    return 0;
+}
+
+static int band_lu_solve(const double* LU, int32_t n, int32_t lower,
+                         int32_t upper, const double* rhs, double* x,
+                         double* y) {
+    for (int32_t i = 0; i < n; ++i) {
+        double acc = rhs[i];
+        const int32_t j0 = (i > lower) ? i - lower : 0;
+        for (int32_t j = j0; j < i; ++j) {
+            acc -= band_get(LU, n, lower, upper, i, j) * y[j];
+        }
+        y[i] = acc;
+    }
+    for (int32_t ii = 0; ii < n; ++ii) {
+        const int32_t i = n - 1 - ii;
+        double acc = y[i];
+        const int32_t j1 = (i + upper < n - 1) ? i + upper : n - 1;
+        for (int32_t j = i + 1; j <= j1; ++j) {
+            acc -= band_get(LU, n, lower, upper, i, j) * x[j];
+        }
+        const double diag = band_get(LU, n, lower, upper, i, i);
+        if (fabs(diag) <= 1e-14) return 1;
+        x[i] = acc / diag;
+    }
+    return 0;
+}
+
+int c4a_bspline_build_not_a_knot_cubic(const double* x, const double* y,
+                                       int32_t n, double* knots_out,
+                                       double* coef_out) {
+    if (x == NULL || y == NULL || knots_out == NULL || coef_out == NULL) {
+        return 1;
+    }
+    if (n < 4) return 2;
+    for (int32_t i = 1; i < n; ++i) {
+        if (!(x[i] > x[i - 1])) return 3;
+    }
+
+    for (int32_t i = 0; i < 4; ++i) knots_out[i] = x[0];
+    for (int32_t i = 0; i < n - 4; ++i) knots_out[4 + i] = x[2 + i];
+    for (int32_t i = 0; i < 4; ++i) knots_out[n + i] = x[n - 1];
+
+    enum { LOWER = 3, UPPER = 6 };
+    const size_t width = (size_t)(LOWER + UPPER + 1);
+    double* A = (double*)calloc((size_t)n * width, sizeof(double));
+    double* work = (double*)malloc((size_t)n * sizeof(double));
+    if (A == NULL || work == NULL) {
+        free(A); free(work);
+        return 4;
+    }
+
+    for (int32_t i = 0; i < n; ++i) {
+        const int32_t span = deboor_find_span(knots_out, n, 3, x[i]);
+        const int32_t first = span - 3;
+        double N[4] = {0.0, 0.0, 0.0, 0.0};
+        cubic_basis_funs(knots_out, span, x[i], N);
+        for (int32_t r = 0; r < 4; ++r) {
+            const int32_t col = first + r;
+            if (col >= 0 && col < n) {
+                band_set(A, n, LOWER, UPPER, i, col, N[r]);
+            }
+        }
+    }
+
+    if (band_lu_factor(A, n, LOWER, UPPER) != 0 ||
+        band_lu_solve(A, n, LOWER, UPPER, y, coef_out, work) != 0) {
+        free(A); free(work);
+        return 5;
+    }
+    for (int32_t i = 0; i < 4; ++i) coef_out[n + i] = 0.0;
+    free(A); free(work);
+    return 0;
+}
+
+double c4a_bspline_deboor_eval(const double* knots, const double* coef,
+                               int32_t n_coeff, int32_t degree, double xq,
+                               int extrapolate) {
+    if (knots == NULL || coef == NULL || n_coeff <= degree || degree < 0 ||
+        degree > 7) {
+        return 0.0;
+    }
+    const double left = knots[degree];
+    const double right = knots[n_coeff];
+    if (!extrapolate && (xq < left || xq > right)) {
+        return 0.0;
+    }
+    const int32_t span = deboor_find_span(knots, n_coeff, degree, xq);
+    double d[8];
+    for (int32_t j = 0; j <= degree; ++j) {
+        const int32_t idx = span - degree + j;
+        d[j] = (idx >= 0 && idx < n_coeff) ? coef[idx] : 0.0;
+    }
+    for (int32_t r = 1; r <= degree; ++r) {
+        for (int32_t j = degree; j >= r; --j) {
+            const int32_t i = span - degree + j;
+            const double denom = knots[i + degree + 1 - r] - knots[i];
+            const double alpha = (denom != 0.0) ? ((xq - knots[i]) / denom)
+                                                 : 0.0;
+            d[j] = (1.0 - alpha) * d[j - 1] + alpha * d[j];
+        }
+    }
+    return d[degree];
+}
+
+void c4a_bspline_deboor_eval_array(const double* knots, const double* coef,
+                                   int32_t n_coeff, int32_t degree,
+                                   const double* xq, int32_t nq,
+                                   int extrapolate, double* out) {
+    if (knots == NULL || coef == NULL || xq == NULL || out == NULL ||
+        nq < 1) {
+        return;
+    }
+    for (int32_t i = 0; i < nq; ++i) {
+        out[i] = c4a_bspline_deboor_eval(knots, coef, n_coeff, degree, xq[i],
+                                         extrapolate);
+    }
 }

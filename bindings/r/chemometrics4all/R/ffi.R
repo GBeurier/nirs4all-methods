@@ -117,8 +117,9 @@ c4a_pp_simple_scale_transform <- function(X) {
 
 #' Apply Multiplicative Scatter Correction (MSC).
 #'
-#' Stateful — fit on training matrix `X_fit`, then transform `X` with the
-#' learned per-column slope/intercept.
+#' Stateful: fit the mean reference spectrum on `X_fit`, then regress each row
+#' of `X` against that reference and apply the conventional row-wise MSC
+#' correction.
 #'
 #' @param X_fit numeric matrix used for fitting (training set).
 #' @param X numeric matrix to transform (may equal `X_fit`).
@@ -135,6 +136,10 @@ c4a_pp_msc_fit_transform <- function(X_fit, X) {
 
 #' Fit MSC and apply inverse transform.
 #'
+#' The C ABI inverse requires the row coefficients cached by the previous
+#' transform on the same handle. The high-level `msc_inverse_transform()`
+#' wrapper preserves those coefficients as R matrix attributes.
+#'
 #' @param X_fit numeric matrix used for fitting.
 #' @param X numeric matrix in MSC-corrected space.
 #' @return numeric matrix with the same shape as `X`.
@@ -145,7 +150,10 @@ c4a_pp_msc_fit_inverse_transform <- function(X_fit, X) {
   if (ncol(X_fit) != ncol(X)) {
     stop("X_fit and X must have the same number of columns", call. = FALSE)
   }
-  .Call(C_c4a_pp_msc_fit_inverse_transform, X_fit, X)
+  stop("c4a_pp_msc_fit_inverse_transform cannot reconstruct conventional ",
+       "MSC without row coefficients from the forward transform. Use ",
+       "msc_inverse_transform(msc(X, X_fit = X_fit)) instead.",
+       call. = FALSE)
 }
 
 #' Apply Extended Multiplicative Scatter Correction (EMSC).
@@ -844,4 +852,150 @@ c4a_filter_x_outlier_fit_apply <- function(X, method = 0L,
         as.double(threshold)[1L], as.integer(n_components)[1L],
         as.double(contamination)[1L], as.double(seed)[1L],
         as.integer(n_estimators)[1L], as.double(max_samples)[1L])
+}
+
+c4a_pp_direct_standardization_fit_transform <- function(source, target, X = source,
+                                                        fit_intercept = TRUE,
+                                                        ridge = 0.0) {
+  source <- .c4a_check_matrix(source, "source")
+  target <- .c4a_check_matrix(target, "target")
+  X <- .c4a_check_matrix(X, "X")
+  .Call(C_c4a_pp_direct_standardization_fit_transform, source, target, X,
+        as.logical(fit_intercept)[1L], as.double(ridge)[1L])
+}
+
+c4a_pp_robust_direct_standardization_fit_transform <- function(source, target, X = source,
+                                                               fit_intercept = TRUE,
+                                                               ridge = 0.0,
+                                                               trim_quantile = 0.1,
+                                                               max_iter = 5L) {
+  source <- .c4a_check_matrix(source, "source")
+  target <- .c4a_check_matrix(target, "target")
+  X <- .c4a_check_matrix(X, "X")
+  .Call(C_c4a_pp_robust_direct_standardization_fit_transform, source, target, X,
+        as.logical(fit_intercept)[1L], as.double(ridge)[1L],
+        as.double(trim_quantile)[1L], as.integer(max_iter)[1L])
+}
+
+c4a_pp_piecewise_direct_standardization_fit_transform <- function(source, target, X = source,
+                                                                  window_size = 5L,
+                                                                  fit_intercept = TRUE,
+                                                                  ridge = 0.0) {
+  source <- .c4a_check_matrix(source, "source")
+  target <- .c4a_check_matrix(target, "target")
+  X <- .c4a_check_matrix(X, "X")
+  .Call(C_c4a_pp_piecewise_direct_standardization_fit_transform, source, target, X,
+        as.integer(window_size)[1L], as.logical(fit_intercept)[1L],
+        as.double(ridge)[1L])
+}
+
+c4a_pp_saps_fit_transform <- function(source, target, X = source,
+                                      n_components = 2L, score_weight = 1.0,
+                                      fit_intercept = TRUE, ridge = 1e-8) {
+  source <- .c4a_check_matrix(source, "source")
+  target <- .c4a_check_matrix(target, "target")
+  X <- .c4a_check_matrix(X, "X")
+  .Call(C_c4a_pp_saps_fit_transform, source, target, X,
+        as.integer(n_components)[1L], as.double(score_weight)[1L],
+        as.logical(fit_intercept)[1L], as.double(ridge)[1L])
+}
+
+c4a_pp_slope_bias_fit_transform <- function(source, target, y = source) {
+  .Call(C_c4a_pp_slope_bias_fit_transform, as.double(source),
+        as.double(target), as.double(y))
+}
+
+c4a_pp_local_centering_fit_transform <- function(source, target, X = source) {
+  source <- .c4a_check_matrix(source, "source")
+  target <- .c4a_check_matrix(target, "target")
+  X <- .c4a_check_matrix(X, "X")
+  .Call(C_c4a_pp_local_centering_fit_transform, source, target, X)
+}
+
+c4a_pp_weighted_snv_fit_transform <- function(X, weights = NULL,
+                                              ddof = 0L, eps = 1e-12) {
+  X <- .c4a_check_matrix(X, "X")
+  if (!is.null(weights)) weights <- as.double(weights)
+  .Call(C_c4a_pp_weighted_snv_fit_transform, X, weights,
+        as.integer(ddof)[1L], as.double(eps)[1L])
+}
+
+c4a_pp_vsn_fit_transform <- function(X, eps = 1e-12) {
+  X <- .c4a_check_matrix(X, "X")
+  .Call(C_c4a_pp_vsn_fit_transform, X, as.double(eps)[1L])
+}
+
+c4a_pp_piecewise_snv_fit_transform <- function(X, window = 16L,
+                                               ddof = 0L, eps = 1e-12) {
+  X <- .c4a_check_matrix(X, "X")
+  .Call(C_c4a_pp_piecewise_snv_fit_transform, X, as.integer(window)[1L],
+        as.integer(ddof)[1L], as.double(eps)[1L])
+}
+
+c4a_pp_piecewise_msc_fit_transform <- function(X, reference = NULL,
+                                               window = 16L, eps = 1e-12) {
+  X <- .c4a_check_matrix(X, "X")
+  if (!is.null(reference)) reference <- as.double(reference)
+  .Call(C_c4a_pp_piecewise_msc_fit_transform, X, reference,
+        as.integer(window)[1L], as.double(eps)[1L])
+}
+
+c4a_pp_localized_msc_fit_transform <- function(X, reference = NULL,
+                                               window = 16L, eps = 1e-12) {
+  X <- .c4a_check_matrix(X, "X")
+  if (!is.null(reference)) reference <- as.double(reference)
+  .Call(C_c4a_pp_localized_msc_fit_transform, X, reference,
+        as.integer(window)[1L], as.double(eps)[1L])
+}
+
+c4a_pp_xcorr_align_fit_transform <- function(X, reference = NULL,
+                                             interval_size = 16L, max_shift = 3L) {
+  X <- .c4a_check_matrix(X, "X")
+  if (!is.null(reference)) reference <- as.double(reference)
+  .Call(C_c4a_pp_xcorr_align_fit_transform, X, reference,
+        as.integer(interval_size)[1L], as.integer(max_shift)[1L])
+}
+
+c4a_pp_icoshift_align_fit_transform <- function(X, reference = NULL,
+                                                interval_size = 16L, max_shift = 3L) {
+  X <- .c4a_check_matrix(X, "X")
+  if (!is.null(reference)) reference <- as.double(reference)
+  .Call(C_c4a_pp_icoshift_align_fit_transform, X, reference,
+        as.integer(interval_size)[1L], as.integer(max_shift)[1L])
+}
+
+c4a_pp_dtw_align_fit_transform <- function(X, reference = NULL,
+                                           interval_size = 16L, max_shift = 3L) {
+  X <- .c4a_check_matrix(X, "X")
+  if (!is.null(reference)) reference <- as.double(reference)
+  .Call(C_c4a_pp_dtw_align_fit_transform, X, reference,
+        as.integer(interval_size)[1L], as.integer(max_shift)[1L])
+}
+
+c4a_pp_cow_align_fit_transform <- function(X, reference = NULL,
+                                           interval_size = 16L, max_shift = 3L) {
+  X <- .c4a_check_matrix(X, "X")
+  if (!is.null(reference)) reference <- as.double(reference)
+  .Call(C_c4a_pp_cow_align_fit_transform, X, reference,
+        as.integer(interval_size)[1L], as.integer(max_shift)[1L])
+}
+
+c4a_filter_variance_fit_transform <- function(X, threshold = 0.0, top_k = 0L) {
+  X <- .c4a_check_matrix(X, "X")
+  .Call(C_c4a_filter_variance_fit_transform, X,
+        as.double(threshold)[1L], as.integer(top_k)[1L])
+}
+
+c4a_filter_correlation_fit_transform <- function(X, y, threshold = 0.0,
+                                                 top_k = 0L) {
+  X <- .c4a_check_matrix(X, "X")
+  .Call(C_c4a_filter_correlation_fit_transform, X, as.double(y),
+        as.double(threshold)[1L], as.integer(top_k)[1L])
+}
+
+c4a_interval_generator_fit_transform <- function(X, interval_size = 16L,
+                                                 step = interval_size) {
+  X <- .c4a_check_matrix(X, "X")
+  .Call(C_c4a_interval_generator_fit_transform, X,
+        as.integer(interval_size)[1L], as.integer(step)[1L])
 }

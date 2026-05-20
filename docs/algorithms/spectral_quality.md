@@ -13,7 +13,7 @@ A row is KEPT if and only if every enabled check passes:
 5. **Max value** `<= max_value` (when `use_max != 0`) — `np.nanmax(row) <= max_value`.
 6. **Min value** `>= min_value` (when `use_min != 0`) — `np.nanmin(row) >= min_value`.
 
-The mask is exact (mask equality with the frozen reference, no float tolerance) because every check is a single threshold comparison on a deterministic statistic.
+The mask is exact (mask equality with the internal parity fixture, no float tolerance) because every check is a single threshold comparison on a deterministic statistic.
 
 ## Numerical contract
 

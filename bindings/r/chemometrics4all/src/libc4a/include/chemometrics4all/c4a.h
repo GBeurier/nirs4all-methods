@@ -522,27 +522,27 @@ C4A_API c4a_status_t c4a_pp_log_transform(const c4a_pp_log_handle_t* handle,
 
 /* ---------- MSC (Multiplicative Scatter Correction) ---------------------- */
 /*
- * Per-column scatter correction calibrated against the per-row mean of the
- * training matrix. For each column j of the training X:
- *   reference[i] = mean(X[i, :])              # length n_samples
- *   (a[j], b[j]) = polyfit(reference, X[:, j], deg=1)
- * Transform divides each column by its slope and subtracts the intercept:
- *   X'[:, j] = (X[:, j] - b[j]) / a[j]
- * Inverse:   X[:, j] = X'[:, j] * a[j] + b[j]
+ * Conventional row-wise scatter correction calibrated against the mean
+ * spectrum of the training matrix:
+ *   reference[j] = mean(X[:, j])              # length n_features
+ *   (offset[i], slope[i]) = ols(X[i, :] ~ 1 + reference)
+ *   X'[i, j] = (X[i, j] - offset[i]) / slope[i]
+ * Inverse uses the row coefficients stored by the last `_transform` call on
+ * the same handle:
+ *   X[i, j] = X'[i, j] * slope[i] + offset[i]
  *
- * Matches `nirs4all.operators.transforms.nirs.MultiplicativeScatterCorrection`
- * with `scale=False` (no pre-centering by column means before computing the
- * reference). The `scale=True` flavour is deferred — it adds a column-mean
- * pre-centering step that we do not yet need for the supported pipelines.
+ * Matches `prospectr::msc` / `pls::msc` for the default reference-spectrum
+ * contract. The historical nirs4all column-regression variant is intentionally
+ * not the validation target for this ABI.
  *
- * `_fit` requires `X.rows >= 2` (least-squares fit needs >= 2 points).
+ * `_fit` requires at least one row and at least two columns.
  */
 typedef struct c4a_pp_msc_handle_t c4a_pp_msc_handle_t;
 C4A_API c4a_status_t c4a_pp_msc_create(c4a_pp_msc_handle_t** out);
 C4A_API void         c4a_pp_msc_destroy(c4a_pp_msc_handle_t* handle);
 C4A_API c4a_status_t c4a_pp_msc_fit(c4a_pp_msc_handle_t* handle,
                                      c4a_matrix_view_t X);
-C4A_API c4a_status_t c4a_pp_msc_transform(const c4a_pp_msc_handle_t* handle,
+C4A_API c4a_status_t c4a_pp_msc_transform(c4a_pp_msc_handle_t* handle,
                                            c4a_matrix_view_t X,
                                            c4a_matrix_view_t out);
 C4A_API c4a_status_t c4a_pp_msc_inverse_transform(
@@ -2493,6 +2493,258 @@ C4A_API c4a_status_t c4a_aug_random_x_op_apply(
     c4a_matrix_view_t X, c4a_matrix_view_t out);
 C4A_API void c4a_aug_random_x_op_destroy(
     c4a_aug_random_x_op_handle_t* handle);
+
+/* ============================================================================
+ * 28. Advanced chemometric operators
+ * ========================================================================== */
+
+typedef struct c4a_pp_direct_standardization_handle_t
+    c4a_pp_direct_standardization_handle_t;
+C4A_API c4a_status_t c4a_pp_direct_standardization_create(
+    c4a_pp_direct_standardization_handle_t** out, int fit_intercept, double ridge);
+C4A_API void c4a_pp_direct_standardization_destroy(
+    c4a_pp_direct_standardization_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_direct_standardization_fit(
+    c4a_pp_direct_standardization_handle_t* handle,
+    c4a_matrix_view_t source, c4a_matrix_view_t target);
+C4A_API c4a_status_t c4a_pp_direct_standardization_transform(
+    const c4a_pp_direct_standardization_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_direct_standardization_is_fitted(
+    const c4a_pp_direct_standardization_handle_t* handle, int* out_fitted);
+
+typedef struct c4a_pp_robust_direct_standardization_handle_t
+    c4a_pp_robust_direct_standardization_handle_t;
+C4A_API c4a_status_t c4a_pp_robust_direct_standardization_create(
+    c4a_pp_robust_direct_standardization_handle_t** out, int fit_intercept,
+    double ridge, double trim_quantile, int32_t max_iter);
+C4A_API void c4a_pp_robust_direct_standardization_destroy(
+    c4a_pp_robust_direct_standardization_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_robust_direct_standardization_fit(
+    c4a_pp_robust_direct_standardization_handle_t* handle,
+    c4a_matrix_view_t source, c4a_matrix_view_t target);
+C4A_API c4a_status_t c4a_pp_robust_direct_standardization_transform(
+    const c4a_pp_robust_direct_standardization_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_robust_direct_standardization_is_fitted(
+    const c4a_pp_robust_direct_standardization_handle_t* handle, int* out_fitted);
+
+typedef struct c4a_pp_piecewise_direct_standardization_handle_t
+    c4a_pp_piecewise_direct_standardization_handle_t;
+C4A_API c4a_status_t c4a_pp_piecewise_direct_standardization_create(
+    c4a_pp_piecewise_direct_standardization_handle_t** out,
+    int32_t window_size, int fit_intercept, double ridge);
+C4A_API void c4a_pp_piecewise_direct_standardization_destroy(
+    c4a_pp_piecewise_direct_standardization_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_piecewise_direct_standardization_fit(
+    c4a_pp_piecewise_direct_standardization_handle_t* handle,
+    c4a_matrix_view_t source, c4a_matrix_view_t target);
+C4A_API c4a_status_t c4a_pp_piecewise_direct_standardization_transform(
+    const c4a_pp_piecewise_direct_standardization_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_piecewise_direct_standardization_is_fitted(
+    const c4a_pp_piecewise_direct_standardization_handle_t* handle,
+    int* out_fitted);
+
+typedef struct c4a_pp_saps_handle_t c4a_pp_saps_handle_t;
+C4A_API c4a_status_t c4a_pp_saps_create(
+    c4a_pp_saps_handle_t** out, int32_t n_components, double score_weight,
+    int fit_intercept, double ridge);
+C4A_API void c4a_pp_saps_destroy(c4a_pp_saps_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_saps_fit(
+    c4a_pp_saps_handle_t* handle, c4a_matrix_view_t source,
+    c4a_matrix_view_t target);
+C4A_API c4a_status_t c4a_pp_saps_transform(
+    const c4a_pp_saps_handle_t* handle, c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_saps_is_fitted(
+    const c4a_pp_saps_handle_t* handle, int* out_fitted);
+
+typedef struct c4a_pp_slope_bias_handle_t c4a_pp_slope_bias_handle_t;
+C4A_API c4a_status_t c4a_pp_slope_bias_create(
+    c4a_pp_slope_bias_handle_t** out);
+C4A_API void c4a_pp_slope_bias_destroy(c4a_pp_slope_bias_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_slope_bias_fit(
+    c4a_pp_slope_bias_handle_t* handle,
+    const double* source, const double* target, int64_t n);
+C4A_API c4a_status_t c4a_pp_slope_bias_transform(
+    const c4a_pp_slope_bias_handle_t* handle,
+    const double* y, int64_t n, double* out);
+C4A_API c4a_status_t c4a_pp_slope_bias_is_fitted(
+    const c4a_pp_slope_bias_handle_t* handle, int* out_fitted);
+
+typedef struct c4a_pp_local_centering_handle_t c4a_pp_local_centering_handle_t;
+C4A_API c4a_status_t c4a_pp_local_centering_create(
+    c4a_pp_local_centering_handle_t** out);
+C4A_API void c4a_pp_local_centering_destroy(
+    c4a_pp_local_centering_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_local_centering_fit(
+    c4a_pp_local_centering_handle_t* handle,
+    c4a_matrix_view_t source, c4a_matrix_view_t target);
+C4A_API c4a_status_t c4a_pp_local_centering_transform(
+    const c4a_pp_local_centering_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_local_centering_is_fitted(
+    const c4a_pp_local_centering_handle_t* handle, int* out_fitted);
+
+typedef struct c4a_pp_weighted_snv_handle_t c4a_pp_weighted_snv_handle_t;
+C4A_API c4a_status_t c4a_pp_weighted_snv_create(
+    c4a_pp_weighted_snv_handle_t** out, const double* weights,
+    int64_t n_weights, int32_t ddof, double eps);
+C4A_API void c4a_pp_weighted_snv_destroy(c4a_pp_weighted_snv_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_weighted_snv_fit(
+    c4a_pp_weighted_snv_handle_t* handle, c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_weighted_snv_transform(
+    const c4a_pp_weighted_snv_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_weighted_snv_is_fitted(
+    const c4a_pp_weighted_snv_handle_t* handle, int* out_fitted);
+
+typedef struct c4a_pp_vsn_handle_t c4a_pp_vsn_handle_t;
+C4A_API c4a_status_t c4a_pp_vsn_create(c4a_pp_vsn_handle_t** out, double eps);
+C4A_API void c4a_pp_vsn_destroy(c4a_pp_vsn_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_vsn_fit(c4a_pp_vsn_handle_t* handle,
+                                    c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_vsn_transform(
+    const c4a_pp_vsn_handle_t* handle, c4a_matrix_view_t X,
+    c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_vsn_is_fitted(
+    const c4a_pp_vsn_handle_t* handle, int* out_fitted);
+
+typedef struct c4a_pp_piecewise_snv_handle_t c4a_pp_piecewise_snv_handle_t;
+C4A_API c4a_status_t c4a_pp_piecewise_snv_create(
+    c4a_pp_piecewise_snv_handle_t** out, int32_t window,
+    int32_t ddof, double eps);
+C4A_API void c4a_pp_piecewise_snv_destroy(c4a_pp_piecewise_snv_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_piecewise_snv_fit(
+    c4a_pp_piecewise_snv_handle_t* handle, c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_piecewise_snv_transform(
+    const c4a_pp_piecewise_snv_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_piecewise_snv_is_fitted(
+    const c4a_pp_piecewise_snv_handle_t* handle, int* out_fitted);
+
+typedef struct c4a_pp_piecewise_msc_handle_t c4a_pp_piecewise_msc_handle_t;
+typedef struct c4a_pp_localized_msc_handle_t c4a_pp_localized_msc_handle_t;
+C4A_API c4a_status_t c4a_pp_piecewise_msc_create(
+    c4a_pp_piecewise_msc_handle_t** out, const double* reference,
+    int64_t n_reference, int32_t window, double eps);
+C4A_API void c4a_pp_piecewise_msc_destroy(
+    c4a_pp_piecewise_msc_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_piecewise_msc_fit(
+    c4a_pp_piecewise_msc_handle_t* handle, c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_piecewise_msc_transform(
+    const c4a_pp_piecewise_msc_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_piecewise_msc_is_fitted(
+    const c4a_pp_piecewise_msc_handle_t* handle, int* out_fitted);
+C4A_API c4a_status_t c4a_pp_localized_msc_create(
+    c4a_pp_localized_msc_handle_t** out, const double* reference,
+    int64_t n_reference, int32_t window, double eps);
+C4A_API void c4a_pp_localized_msc_destroy(
+    c4a_pp_localized_msc_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_localized_msc_fit(
+    c4a_pp_localized_msc_handle_t* handle, c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_localized_msc_transform(
+    const c4a_pp_localized_msc_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_localized_msc_is_fitted(
+    const c4a_pp_localized_msc_handle_t* handle, int* out_fitted);
+
+typedef struct c4a_pp_xcorr_align_handle_t c4a_pp_xcorr_align_handle_t;
+typedef struct c4a_pp_icoshift_align_handle_t c4a_pp_icoshift_align_handle_t;
+typedef struct c4a_pp_dtw_align_handle_t c4a_pp_dtw_align_handle_t;
+typedef struct c4a_pp_cow_align_handle_t c4a_pp_cow_align_handle_t;
+C4A_API c4a_status_t c4a_pp_xcorr_align_create(
+    c4a_pp_xcorr_align_handle_t** out, const double* reference,
+    int64_t n_reference, int32_t interval_size, int32_t max_shift);
+C4A_API void c4a_pp_xcorr_align_destroy(c4a_pp_xcorr_align_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_xcorr_align_fit(
+    c4a_pp_xcorr_align_handle_t* handle, c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_xcorr_align_transform(
+    const c4a_pp_xcorr_align_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_xcorr_align_is_fitted(
+    const c4a_pp_xcorr_align_handle_t* handle, int* out_fitted);
+C4A_API c4a_status_t c4a_pp_icoshift_align_create(
+    c4a_pp_icoshift_align_handle_t** out, const double* reference,
+    int64_t n_reference, int32_t interval_size, int32_t max_shift);
+C4A_API void c4a_pp_icoshift_align_destroy(
+    c4a_pp_icoshift_align_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_icoshift_align_fit(
+    c4a_pp_icoshift_align_handle_t* handle, c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_icoshift_align_transform(
+    const c4a_pp_icoshift_align_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_icoshift_align_is_fitted(
+    const c4a_pp_icoshift_align_handle_t* handle, int* out_fitted);
+C4A_API c4a_status_t c4a_pp_dtw_align_create(
+    c4a_pp_dtw_align_handle_t** out, const double* reference,
+    int64_t n_reference, int32_t interval_size, int32_t max_shift);
+C4A_API void c4a_pp_dtw_align_destroy(c4a_pp_dtw_align_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_dtw_align_fit(
+    c4a_pp_dtw_align_handle_t* handle, c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_dtw_align_transform(
+    const c4a_pp_dtw_align_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_dtw_align_is_fitted(
+    const c4a_pp_dtw_align_handle_t* handle, int* out_fitted);
+C4A_API c4a_status_t c4a_pp_cow_align_create(
+    c4a_pp_cow_align_handle_t** out, const double* reference,
+    int64_t n_reference, int32_t interval_size, int32_t max_shift);
+C4A_API void c4a_pp_cow_align_destroy(c4a_pp_cow_align_handle_t* handle);
+C4A_API c4a_status_t c4a_pp_cow_align_fit(
+    c4a_pp_cow_align_handle_t* handle, c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_pp_cow_align_transform(
+    const c4a_pp_cow_align_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_pp_cow_align_is_fitted(
+    const c4a_pp_cow_align_handle_t* handle, int* out_fitted);
+
+typedef struct c4a_filter_variance_handle_t c4a_filter_variance_handle_t;
+C4A_API c4a_status_t c4a_filter_variance_create(
+    c4a_filter_variance_handle_t** out, double threshold, int32_t top_k);
+C4A_API void c4a_filter_variance_destroy(c4a_filter_variance_handle_t* handle);
+C4A_API c4a_status_t c4a_filter_variance_fit(
+    c4a_filter_variance_handle_t* handle, c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_filter_variance_transform(
+    const c4a_filter_variance_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_filter_variance_output_cols(
+    const c4a_filter_variance_handle_t* handle, int64_t* out_cols);
+C4A_API c4a_status_t c4a_filter_variance_is_fitted(
+    const c4a_filter_variance_handle_t* handle, int* out_fitted);
+
+typedef struct c4a_filter_correlation_handle_t c4a_filter_correlation_handle_t;
+C4A_API c4a_status_t c4a_filter_correlation_create(
+    c4a_filter_correlation_handle_t** out, double threshold, int32_t top_k);
+C4A_API void c4a_filter_correlation_destroy(
+    c4a_filter_correlation_handle_t* handle);
+C4A_API c4a_status_t c4a_filter_correlation_fit(
+    c4a_filter_correlation_handle_t* handle,
+    c4a_matrix_view_t X, const double* y, int64_t n_y);
+C4A_API c4a_status_t c4a_filter_correlation_transform(
+    const c4a_filter_correlation_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_filter_correlation_output_cols(
+    const c4a_filter_correlation_handle_t* handle, int64_t* out_cols);
+C4A_API c4a_status_t c4a_filter_correlation_is_fitted(
+    const c4a_filter_correlation_handle_t* handle, int* out_fitted);
+
+typedef struct c4a_interval_generator_handle_t c4a_interval_generator_handle_t;
+C4A_API c4a_status_t c4a_interval_generator_create(
+    c4a_interval_generator_handle_t** out, int32_t interval_size, int32_t step);
+C4A_API void c4a_interval_generator_destroy(
+    c4a_interval_generator_handle_t* handle);
+C4A_API c4a_status_t c4a_interval_generator_fit(
+    c4a_interval_generator_handle_t* handle, c4a_matrix_view_t X);
+C4A_API c4a_status_t c4a_interval_generator_transform(
+    const c4a_interval_generator_handle_t* handle,
+    c4a_matrix_view_t X, c4a_matrix_view_t out);
+C4A_API c4a_status_t c4a_interval_generator_output_cols(
+    const c4a_interval_generator_handle_t* handle, int64_t* out_cols);
+C4A_API c4a_status_t c4a_interval_generator_is_fitted(
+    const c4a_interval_generator_handle_t* handle, int* out_fitted);
 
 #ifdef __cplusplus
 }  /* extern "C" */

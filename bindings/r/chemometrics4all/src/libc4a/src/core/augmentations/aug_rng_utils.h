@@ -51,7 +51,8 @@ void c4a_aug_rng_normal_fill(c4a_rng_pcg64* rng,
 uint64_t c4a_aug_rng_integers(c4a_rng_pcg64* rng, uint64_t n);
 
 /* Returns one Beta(a, b) draw matching NumPy's `Generator.beta(a, b)`.
- * For a == b == 1 this is exactly `next_double()`. */
+ * The a <= 1 and b <= 1 path intentionally uses Joehnk rejection even for
+ * a == b == 1 to match NumPy's RNG state advancement and output sequence. */
 double c4a_aug_rng_beta(c4a_rng_pcg64* rng, double a, double b);
 
 /* In-place Fisher-Yates permutation. `out[i] = i` initially, then the

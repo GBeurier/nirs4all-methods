@@ -9,7 +9,7 @@
  *
  * Output: original_y - z_final (baseline-subtracted spectrum).
  *
- * Frozen reference: parity/python_generator/src/c4a_parity_pybaselines_ref/modpoly.py
+ * Internal parity fixture: parity/python_generator/src/c4a_parity_pybaselines_ref/modpoly.py
  */
 #ifndef CHEMOMETRICS4ALL_CORE_PREPROCESSING_BASELINES_MODPOLY_H
 #define CHEMOMETRICS4ALL_CORE_PREPROCESSING_BASELINES_MODPOLY_H

@@ -71,7 +71,7 @@ c4a_status_t c4a_aug_gauss_jitter_state_apply(
      * helper is reused with rows=1. */
     for (int64_t i = 0; i < rows; ++i) {
         c4a_aug_gauss_kernel_build(sigmas[i], w, kernel);
-        const c4a_status_t st = c4a_aug_convolve_reflect(
+        const c4a_status_t st = c4a_aug_convolve_mirror(
             X + (size_t)i * (size_t)cols, 1, cols,
             kernel, w,
             out + (size_t)i * (size_t)cols);

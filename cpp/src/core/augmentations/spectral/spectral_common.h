@@ -56,6 +56,15 @@ c4a_status_t c4a_aug_convolve_reflect(
     const double* kernel, int64_t klen,
     double* out);
 
+/* Same convolution as above, but with NumPy `np.pad(..., mode="reflect")`
+ * no-edge-repeat boundaries. nirs4all's GaussianSmoothingJitter uses this
+ * path through `_convolve_1d`, while other spectral smoothers use ndimage
+ * reflect via `c4a_aug_convolve_reflect`. */
+c4a_status_t c4a_aug_convolve_mirror(
+    const double* X, int64_t rows, int64_t cols,
+    const double* kernel, int64_t klen,
+    double* out);
+
 /* Draw a uniform double in [lo, hi) from PCG64. Equivalent to
  * `rng.uniform(lo, hi)` on NumPy 1.26.4. */
 double c4a_aug_uniform(c4a_rng_pcg64* rng, double lo, double hi);

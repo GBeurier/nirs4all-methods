@@ -17,6 +17,7 @@
 #include <stdlib.h>
 
 #include "core/augmentations/aug_rng_utils.h"
+#include "core/augmentations/spectral/spectral_common.h"
 
 struct c4a_aug_mixup_state_t {
     double alpha;
@@ -37,6 +38,32 @@ c4a_aug_mixup_state_t* c4a_aug_mixup_state_new(double alpha) {
 
 void c4a_aug_mixup_state_free(c4a_aug_mixup_state_t* s) {
     free(s);
+}
+
+static uint32_t mixup_next_uint32(c4a_aug_randint_state_t* state) {
+    if (state->buf_has_high) {
+        state->buf_has_high = 0;
+        return (uint32_t)(state->buf_value >> 32);
+    }
+    state->buf_value = c4a_pcg64_engine_next_uint64(state->rng);
+    state->buf_has_high = 1;
+    return (uint32_t)(state->buf_value & 0xFFFFFFFFu);
+}
+
+static int64_t mixup_permutation_index(c4a_aug_randint_state_t* state,
+                                       int64_t high) {
+    uint32_t mask = (uint32_t)(high - 1);
+    mask |= mask >> 1;
+    mask |= mask >> 2;
+    mask |= mask >> 4;
+    mask |= mask >> 8;
+    mask |= mask >> 16;
+    for (;;) {
+        const uint32_t r = mixup_next_uint32(state) & mask;
+        if ((int64_t)r < high) {
+            return (int64_t)r;
+        }
+    }
 }
 
 c4a_status_t c4a_aug_mixup_apply_impl(const c4a_aug_mixup_state_t* state,
@@ -61,7 +88,17 @@ c4a_status_t c4a_aug_mixup_apply_impl(const c4a_aug_mixup_state_t* state,
     }
 
     /* Match nirs4all reference draw order: permutation first, then beta. */
-    c4a_aug_rng_permutation(rng, indices, rows);
+    for (int64_t i = 0; i < rows; ++i) {
+        indices[i] = i;
+    }
+    c4a_aug_randint_state_t randint_state;
+    c4a_aug_randint_state_reset(&randint_state, rng);
+    for (int64_t i = rows - 1; i > 0; --i) {
+        const int64_t j = mixup_permutation_index(&randint_state, i + 1);
+        const int64_t tmp = indices[i];
+        indices[i] = indices[j];
+        indices[j] = tmp;
+    }
     for (int64_t i = 0; i < rows; ++i) {
         lam[i] = c4a_aug_rng_beta(rng, state->alpha, state->alpha);
     }

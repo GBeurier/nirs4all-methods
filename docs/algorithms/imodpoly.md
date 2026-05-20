@@ -32,8 +32,8 @@ c4a_status_t c4a_pp_imodpoly_transform(const c4a_pp_imodpoly_handle_t* h,
 - Residual stdev uses ddof = 0 (population); the convergence check protects the denominator with `max(devr_new, DBL_MIN)`.
 - `mask_initial_peaks` (pybaselines' optional pre-threshold step) is disabled; this matches `num_std = 1` default behaviour on clean spectra and keeps the parity surface compact.
 - On `max_iter` reached without convergence: silently returns the last iterate.
-- Parity tolerance vs frozen NumPy reference: `1e-9 abs / 1e-10 rel`.
+- Parity tolerance vs internal parity fixture: `1e-9 abs / 1e-10 rel`.
 
 ## Reference
 - Gan, F., Ruan, G. & Mo, J. (2006). "Baseline correction by improved iterative polynomial fitting with automatic threshold." Chemometrics and Intelligent Laboratory Systems 82(1-2), 59-65.
-- Frozen Python reference: `parity/python_generator/src/c4a_parity_pybaselines_ref/imodpoly.py`.
+- Internal parity fixture: `parity/python_generator/src/c4a_parity_pybaselines_ref/imodpoly.py`.

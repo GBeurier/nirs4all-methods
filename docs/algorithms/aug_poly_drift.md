@@ -31,5 +31,5 @@ c4a_status_t c4a_aug_poly_drift_apply(
 The state copies `coeff_min` / `coeff_max` into internal storage; caller retains ownership of the original arrays.
 
 ## Reference
-- Frozen Python: `parity/python_generator/src/c4a_parity_augmenters_ref/poly_drift.py`.
+- Internal parity fixture: `parity/python_generator/src/c4a_parity_augmenters_ref/poly_drift.py`.
 - Parity tolerance: 1e-15 abs.

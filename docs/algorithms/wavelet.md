@@ -46,7 +46,7 @@ Stateless: `_create / _transform / _destroy` plus the
 
 - `_transform` requires `out.cols == 2 * m` and `out.rows == X.rows`,
   otherwise returns `C4A_ERR_SHAPE_MISMATCH`.
-- Parity tolerance against the frozen NumPy reference: `1e-10`
+- Parity tolerance against the internal parity fixture: `1e-10`
   absolute / `1e-11` relative.
 
 ## Reference

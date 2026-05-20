@@ -72,6 +72,30 @@ void c4a_bspline_eval_array(const double* knots, const double* coef,
                             int32_t n, const double* xq, int32_t nq,
                             int extrapolate, double* out);
 
+/* Build the cubic not-a-knot B-spline interpolant used by
+ * scipy.interpolate.splrep(x, y, s=0, k=3).
+ *
+ * Buffers:
+ *   - knots_out length n + 4
+ *   - coef_out  length n + 4; the first n entries are active coefficients and
+ *     the final 4 entries are zero padding, matching SciPy's returned c array.
+ */
+int c4a_bspline_build_not_a_knot_cubic(const double* x, const double* y,
+                                       int32_t n, double* knots_out,
+                                       double* coef_out);
+
+/* Evaluate a B-spline in De Boor form. n_coeff is the number of active
+ * coefficients, not the padded SciPy coefficient length. For cubic splrep
+ * output this is the original input length n. */
+double c4a_bspline_deboor_eval(const double* knots, const double* coef,
+                               int32_t n_coeff, int32_t degree, double xq,
+                               int extrapolate);
+
+void c4a_bspline_deboor_eval_array(const double* knots, const double* coef,
+                                   int32_t n_coeff, int32_t degree,
+                                   const double* xq, int32_t nq,
+                                   int extrapolate, double* out);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif

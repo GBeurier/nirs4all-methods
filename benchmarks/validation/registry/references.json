@@ -1,0 +1,216 @@
+{
+  "references": [
+    {
+      "backend": "ref.cowarp",
+      "language": "Python",
+      "methods": [
+        "correlation_optimized_warping"
+      ]
+    },
+    {
+      "backend": "ref.dtw_python",
+      "language": "Python",
+      "methods": [
+        "dynamic_time_warping_alignment"
+      ]
+    },
+    {
+      "backend": "ref.nirs4all",
+      "language": "Python",
+      "methods": [
+        "area_norm",
+        "aug_band_mask",
+        "aug_band_perturb",
+        "aug_batch_effect",
+        "aug_channel_dropout",
+        "aug_dead_band",
+        "aug_detector_rolloff",
+        "aug_edge_artifacts",
+        "aug_edge_curve",
+        "aug_emsc_distort",
+        "aug_gauss_jitter",
+        "aug_gaussian_noise",
+        "aug_hetero_noise",
+        "aug_instrument_broaden",
+        "aug_linear_drift",
+        "aug_local_clip",
+        "aug_local_mixup",
+        "aug_local_warp",
+        "aug_magnitude_warp",
+        "aug_mixup",
+        "aug_moisture",
+        "aug_multiplicative_noise",
+        "aug_particle_size",
+        "aug_path_length",
+        "aug_poly_drift",
+        "aug_random_x_op",
+        "aug_rotate_translate",
+        "aug_scatter_sim",
+        "aug_spike_noise",
+        "aug_spline_smooth",
+        "aug_spline_x_perturb",
+        "aug_spline_y_perturb",
+        "aug_stray_light",
+        "aug_temperature",
+        "aug_truncated_peak",
+        "aug_unsharp_mask",
+        "aug_wavelength_shift",
+        "aug_wavelength_spectral",
+        "aug_wavelength_stretch",
+        "baseline_center",
+        "composite_filter",
+        "crop",
+        "derivate",
+        "detrend",
+        "emsc",
+        "epo",
+        "fck_static",
+        "first_derivative",
+        "flexible_pca",
+        "flexible_svd",
+        "frac_to_pct",
+        "from_absorbance",
+        "gaussian",
+        "haar",
+        "high_leverage",
+        "kbins_discretizer",
+        "kbins_stratified",
+        "kennard_stone",
+        "kubelka_munk",
+        "log_transform",
+        "lsnv",
+        "msc",
+        "normalize",
+        "norris_williams",
+        "osc",
+        "pct_to_frac",
+        "piecewise_snv",
+        "range_discretizer",
+        "resample",
+        "resampler",
+        "rnv",
+        "savitzky_golay",
+        "second_derivative",
+        "signal_type_detector",
+        "simple_scale",
+        "snv",
+        "spectral_quality",
+        "spxy",
+        "to_absorbance",
+        "transfer_metrics",
+        "wavelet",
+        "wavelet_denoise",
+        "wavelet_features",
+        "wavelet_pca",
+        "wavelet_svd",
+        "x_outlier_mahalanobis",
+        "y_outlier_iqr"
+      ]
+    },
+    {
+      "backend": "ref.numpy",
+      "language": "Python",
+      "methods": [
+        "derivate",
+        "log_transform",
+        "nirs_metrics",
+        "rng_pcg64"
+      ]
+    },
+    {
+      "backend": "ref.pybaselines",
+      "language": "Python",
+      "methods": [
+        "airpls",
+        "arpls",
+        "asls",
+        "beads",
+        "iasls",
+        "imodpoly",
+        "modpoly",
+        "rolling_ball",
+        "snip"
+      ]
+    },
+    {
+      "backend": "ref.pycaltransfer",
+      "language": "Python",
+      "methods": [
+        "direct_standardization",
+        "piecewise_direct_standardization",
+        "slope_bias_correction"
+      ]
+    },
+    {
+      "backend": "ref.pywavelets",
+      "language": "Python",
+      "methods": [
+        "haar",
+        "wavelet",
+        "wavelet_denoise",
+        "wavelet_features",
+        "wavelet_pca",
+        "wavelet_svd"
+      ]
+    },
+    {
+      "backend": "ref.r.prospectr",
+      "language": "R",
+      "methods": [
+        "detrend",
+        "localized_msc",
+        "msc",
+        "piecewise_msc",
+        "savitzky_golay",
+        "snv"
+      ]
+    },
+    {
+      "backend": "ref.scipy",
+      "language": "Python",
+      "methods": [
+        "cross_correlation_alignment",
+        "detrend",
+        "gaussian",
+        "icoshift_alignment",
+        "localized_msc",
+        "resample",
+        "savitzky_golay"
+      ]
+    },
+    {
+      "backend": "ref.sklearn",
+      "language": "Python",
+      "methods": [
+        "correlation_filter",
+        "direct_standardization",
+        "flexible_pca",
+        "flexible_svd",
+        "hotelling_t2",
+        "interval_generator",
+        "kbins_discretizer",
+        "kbins_stratified",
+        "local_centering",
+        "localized_msc",
+        "piecewise_direct_standardization",
+        "piecewise_msc",
+        "q_residuals",
+        "robust_direct_standardization",
+        "score_augmented_projection_standardization",
+        "simple_scale",
+        "slope_bias_correction",
+        "variance_filter",
+        "x_outlier_mahalanobis"
+      ]
+    },
+    {
+      "backend": "ref.statsmodels",
+      "language": "Python",
+      "methods": [
+        "variable_sorting_normalization",
+        "weighted_snv"
+      ]
+    }
+  ],
+  "schema_version": 1
+}

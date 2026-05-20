@@ -93,10 +93,10 @@ been called. The mask and stats buffers are caller-allocated.
 - Bounds use NumPy linear-interpolation percentiles (closed-form).
 - Z-score uses the biased (`ddof=0`) standard deviation.
 - MAD uses the unbiased median of `|y - median(y)|`, scaled by `1.4826`.
-- Parity tolerance vs the frozen NumPy reference: **exact** equality for the
+- Parity tolerance vs the internal parity fixture: **exact** equality for the
   mask bytes and integer counts (`n_samples`, `n_kept`, `n_excluded`),
   **1e-12 abs** for the `exclusion_rate` (single division by `n`).
-- Reference: `parity/python_generator/src/c4a_parity_filters_ref/y_outlier.py`.
+- Internal parity fixture: `parity/python_generator/src/c4a_parity_filters_ref/y_outlier.py`.
 
 ## Reference
 

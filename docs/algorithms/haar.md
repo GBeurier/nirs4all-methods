@@ -37,7 +37,7 @@ returns the row width $2m$.
 ## Numerical contract
 
 Same as Wavelet: parity tolerance `1e-10` absolute / `1e-11` relative
-against the frozen NumPy reference.
+against the internal parity fixture.
 
 ## Reference
 

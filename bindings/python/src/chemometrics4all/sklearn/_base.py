@@ -15,9 +15,10 @@ import numpy as np
 from .._errors import check
 from .._ffi import lib
 from .._matrix import as_f64_2d, empty_like_f64, numpy_to_view
+from ._compat import BaseEstimator, TransformerMixin
 
 
-class _HandleEstimator:
+class _HandleEstimator(BaseEstimator, TransformerMixin):
     """Lifecycle scaffolding for an operator backed by a libc4a handle.
 
     Subclasses set ``_C_PREFIX`` and override :meth:`_create_handle` to invoke

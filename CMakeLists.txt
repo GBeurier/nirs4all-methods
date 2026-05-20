@@ -56,11 +56,20 @@ if(NOT "${CMAKE_MATCH_2}" STREQUAL "${C4A_PROJECT_VERSION}")
         "scripts/bump_version.sh to re-sync.")
 endif()
 
+if(NOT DEFINED CMAKE_Fortran_COMPILER)
+    find_program(_c4a_fortran_compiler
+        NAMES gfortran x86_64-conda-linux-gnu-gfortran flang ifort ifx)
+    if(_c4a_fortran_compiler)
+        set(CMAKE_Fortran_COMPILER "${_c4a_fortran_compiler}" CACHE FILEPATH
+            "Fortran compiler used for the vendored FITPACK spline smoother")
+    endif()
+endif()
+
 project(chemometrics4all
     VERSION ${C4A_PROJECT_VERSION}
     DESCRIPTION "Portable NIRS chemometrics engine: preprocessings, splitters, filters, augmentations, transfer metrics"
     HOMEPAGE_URL "https://github.com/GBeurier/chemometrics4all"
-    LANGUAGES C CXX)
+    LANGUAGES C CXX Fortran)
 
 # ============================================================================
 # Language and visibility defaults
@@ -72,6 +81,18 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# The vendored FITPACK subset is plain numerical Fortran 77 and does not call
+# the Fortran runtime. Keeping the implicit gfortran runtime off avoids leaking
+# a compiler-runtime dependency into libc4a for this tiny source subset.
+if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
+    set(CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES "")
+    set(CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES "")
+    set(CMAKE_Fortran_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "")
+    set(CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES "" CACHE STRING "" FORCE)
+    set(CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES "" CACHE STRING "" FORCE)
+    set(CMAKE_Fortran_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "" CACHE STRING "" FORCE)
+endif()
 
 # Hidden by default — only C4A_API-decorated symbols escape chemometrics4all_c.
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)

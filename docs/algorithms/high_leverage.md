@@ -25,7 +25,7 @@ A sample i is KEPT iff `leverage[i] <= threshold`. The `apply` entry point requi
 - Tikhonov regularisation: `reg = 1e-10 * trace(X_c^T X_c) / cols`. Identical to the nirs4all reference.
 - Hat path: Householder QR factorisation of `X_c^T X_c + reg * I` via the shared `c4a_householder_qr` helper; per-row leverage computed by `(R^{-1} Q^T x_i) . x_i` (back-substitution, no explicit inverse).
 - PCA path: cyclic Jacobi eigendecomposition of `X_c^T X_c` (no scipy dependency). Sign convention matches sklearn (each component's maximum-absolute element is non-negative).
-- Parity tolerance: `1e-9 abs / 1e-10 rel` against the frozen NumPy reference. Mask equality is exact at the contracted tolerance because the threshold lies far from any data point in the fixture.
+- Parity tolerance: `1e-9 abs / 1e-10 rel` against the internal parity fixture. Mask equality is exact at the contracted tolerance because the threshold lies far from any data point in the fixture.
 
 ## ABI
 

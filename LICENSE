@@ -41,12 +41,17 @@ implied. See the CeCILL-2.1 text for the complete legal terms.
 
 ---
 
-Vendored third-party components (test-only or build-only — not linked
-into the public `libc4a` shared library):
+Vendored third-party components:
 
 * doctest (cpp/tests/doctest/doctest.h) — MIT License
   Copyright (c) 2016-2024 Viktor Kirilov
   Used to compile the test executable. Not part of any shipped artefact.
+
+* FITPACK subset from SciPy 1.17.1
+  (cpp/src/core/common/_vendored/fitpack and the mirrored R vendored tree) —
+  BSD-3-Clause License, Copyright (c) 2001-2002 Enthought, Inc. and
+  2003 SciPy Developers. Used by the public `libc4a` spline smoothing
+  augmenter to match SciPy/nirs4all parity.
 
 Additional vendored components will be listed here as they are added,
 each with their license and the path within the repository.

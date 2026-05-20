@@ -25,8 +25,8 @@ c4a_status_t c4a_pp_rolling_ball_transform(const c4a_pp_rolling_ball_handle_t* h
 
 ## Numerical contract
 - Two scratch buffers per row (length `n` doubles). No linear algebra.
-- Parity tolerance vs frozen NumPy reference: `1e-12 abs / 1e-13 rel`.
+- Parity tolerance vs internal parity fixture: `1e-12 abs / 1e-13 rel`.
 
 ## Reference
 - Kneen, M. A. & Annegarn, H. J. (1996). "Algorithm for fitting XRF, SEM and PIXE X-ray spectra backgrounds." Nuclear Instruments and Methods B109/110, 209-213.
-- Frozen Python reference: `parity/python_generator/src/c4a_parity_pybaselines_ref/rolling_ball.py`.
+- Internal parity fixture: `parity/python_generator/src/c4a_parity_pybaselines_ref/rolling_ball.py`.

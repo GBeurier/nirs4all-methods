@@ -811,6 +811,8 @@
     .parity { display: inline-block; min-width: 12px; text-align: center; margin-left: 0; font-weight: 600; font-family: var(--mono); }
     .p-exact   { color: var(--phosphor); }
     .p-context { color: var(--fg-2); }
+    .p-candidate { color: var(--amber); }
+    .p-reference_needed { color: var(--fg-3); }
     .p-drift   { color: var(--amber); }
     .p-divergent { color: var(--crimson); }
     .p-error   { color: var(--crimson); }
@@ -927,8 +929,8 @@
     .info-card a:hover { text-decoration-color: var(--phosphor); }
     .info-card ul, .info-card ol { padding-left: 22px; margin: 10px 0; }
     .info-card li + li { margin-top: 6px; }
-    .info-card .p-exact, .info-card .p-context, .info-card .p-drift, .info-card .p-divergent,
-    .info-card .p-error, .info-card .p-not_run, .info-card .p-not_available,
+    .info-card .p-exact, .info-card .p-context, .info-card .p-candidate, .info-card .p-reference_needed,
+    .info-card .p-drift, .info-card .p-divergent, .info-card .p-error, .info-card .p-not_run, .info-card .p-not_available,
     .info-card .p-ok, .info-card .p-warn, .info-card .p-fail, .info-card .p-timeout {
       font-family: var(--mono); font-weight: 700; padding: 0 4px;
     }
@@ -1086,6 +1088,8 @@
     <div class="filter-chips" id="parity-chips" title="filter cells by parity verdict">
       <span class="chip active" data-parity="exact"><span class="ico p-exact">✓</span>exact</span>
       <span class="chip active gray" data-parity="context"><span class="ico p-context">◇</span>context</span>
+      <span class="chip active amber" data-parity="candidate"><span class="ico p-candidate">?</span>candidate</span>
+      <span class="chip active gray" data-parity="reference_needed"><span class="ico p-reference_needed">⊘</span>ref needed</span>
       <span class="chip active amber" data-parity="drift"><span class="ico p-drift">≈</span>drift</span>
       <span class="chip active crimson" data-parity="divergent"><span class="ico p-divergent">✗</span>divergent</span>
       <span class="chip active crimson" data-parity="error"><span class="ico p-error">!</span>error</span>
@@ -1131,6 +1135,8 @@
 <div class="table-shell reveal reveal-3">
   <div class="legend">
     <span class="legend-item"><span class="ico p-exact">✓</span> parity ok</span>
+    <span class="legend-item"><span class="ico p-candidate">?</span> candidate reference</span>
+    <span class="legend-item"><span class="ico p-reference_needed">⊘</span> reference needed</span>
     <span class="legend-item"><span class="ico p-drift">≈</span> drift</span>
     <span class="legend-item"><span class="ico p-divergent">✗</span> divergent</span>
     <span class="legend-item"><span class="ico p-error">!</span> error</span>
@@ -1185,6 +1191,8 @@
     <ul>
       <li><span class="p-exact">✓</span> <b>exact</b> - result within tolerance</li>
       <li><span class="p-context">◇</span> <b>context</b> - not parity-gated because the external method has a different contract</li>
+      <li><span class="p-candidate">?</span> <b>candidate</b> - external implementation identified, but a same-contract adapter is still blocked</li>
+      <li><span class="p-reference_needed">⊘</span> <b>reference needed</b> - no executable same-contract external reference has been found yet</li>
       <li><span class="p-drift">≈</span> <b>drift</b> - result outside exact tolerance</li>
       <li><span class="p-divergent">✗</span> <b>divergent</b> - result outside drift threshold</li>
       <li><span class="p-error">!</span> <b>error</b> - dependency, runtime, crash or exception</li>
@@ -1210,11 +1218,12 @@
 'use strict';
 
 const DATA = JSON.parse(document.getElementById('bench-data').textContent);
+const COLUMN_BY_ID = Object.fromEntries((DATA.columns || []).map(c => [c.id, c]));
 
 // ---------- state + url persistence ----------
 const URL_KEYS = ['algo','group','lang','libGroup','lib','size','threads','parity','search','cols','sort','density','viz'];
 const DENSITY_VALUES = ['comfortable', 'compact', 'ultra'];
-const PARITY_VALUES = ['exact', 'context', 'drift', 'divergent', 'error', 'not_run', 'not_available'];
+const PARITY_VALUES = ['exact', 'context', 'candidate', 'reference_needed', 'drift', 'divergent', 'error', 'not_run', 'not_available'];
 const PARITY_ALIASES = {
   ok: 'exact',
   covered: 'exact',
@@ -1223,6 +1232,11 @@ const PARITY_ALIASES = {
   binding_ok: 'exact',
   external_ok: 'exact',
   context: 'context',
+  candidate: 'candidate',
+  candidate_reference: 'candidate',
+  reference_candidate: 'candidate',
+  reference_needed: 'reference_needed',
+  missing_reference: 'reference_needed',
   reference_snapshot_drift: 'drift',
   warn: 'drift',
   timing_only: 'error',
@@ -1387,6 +1401,8 @@ const $ = id => document.getElementById(id);
 const PARITY_ICON = {
   exact: '✓',
   context: '◇',
+  candidate: '?',
+  reference_needed: '⊘',
   drift: '≈',
   divergent: '✗',
   error: '!',
@@ -1646,7 +1662,7 @@ function sortRows(rows, cols) {
   const r = [...rows];
   r.sort((a, b) => {
     if (col === '__algo')    return dir * a.algo.localeCompare(b.algo);
-    if (col === '__reference') return dir * referenceLabel(a.algo).localeCompare(referenceLabel(b.algo));
+    if (col === '__reference') return dir * referenceLabel(a).localeCompare(referenceLabel(b));
     if (col === '__size') {
       // avg relative-duration rows have no concrete size — keep them adjacent at
       // the same rank regardless of direction.
@@ -1853,7 +1869,32 @@ function referenceInfo(algo) {
   return (DATA.reference_by_algo || {})[algo] || null;
 }
 
-function referenceLabel(algo) {
+function shortReferenceLabel(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  return text.replace(/^ref\./, '').split(/[.(\s]/, 1)[0];
+}
+
+function rowReferenceLabels(row) {
+  if (!row || !row.cells) return [];
+  const labels = [];
+  for (const [id, cell] of Object.entries(row.cells)) {
+    const meta = COLUMN_BY_ID[id] || {};
+    const isExternal = id.startsWith('ref.') || meta.kind === 'external_reference' || cell.gate === 'reference';
+    if (!isExternal) continue;
+    const label = meta.short || shortReferenceLabel(cell.reference || meta.reference || id);
+    if (label && !labels.includes(label)) labels.push(label);
+  }
+  return labels;
+}
+
+function referenceLabel(rowOrAlgo) {
+  if (rowOrAlgo && typeof rowOrAlgo === 'object') {
+    const labels = rowReferenceLabels(rowOrAlgo);
+    if (labels.length) return labels.slice(0, 3).join(' / ') + (labels.length > 3 ? ` +${labels.length - 3}` : '');
+    return '—';
+  }
+  const algo = rowOrAlgo;
   const ref = referenceInfo(algo);
   return ref && ref.label ? ref.label : '—';
 }
@@ -1862,7 +1903,13 @@ function methodUrl(algo) {
   return `methods/${encodeURIComponent(algo)}.html`;
 }
 
-function referenceTitle(algo) {
+function referenceTitle(rowOrAlgo) {
+  if (rowOrAlgo && typeof rowOrAlgo === 'object') {
+    const labels = rowReferenceLabels(rowOrAlgo);
+    if (!labels.length) return 'no external reference registered for this row/size';
+    return labels.join('\n');
+  }
+  const algo = rowOrAlgo;
   const ref = referenceInfo(algo);
   if (!ref || !ref.libraries || !ref.libraries.length) return 'no external reference registered';
   const lines = [];
@@ -1922,7 +1969,7 @@ function cellTitle(row, id, cell, meta) {
       'role: reference method',
       `status: ${cell.ok ? 'available' : 'unavailable'}`,
     ];
-    const ref = cell.reference || referenceLabel(row.algo);
+    const ref = cell.reference || referenceLabel(row);
     if (ref && ref !== '—') parts.push(`reference: ${ref}`);
     if (cell.timed_runs) {
       const batch = cell.batch_loops && cell.batch_loops > 1 ? `; batch ${cell.batch_loops}x/sample` : '';
@@ -1944,7 +1991,7 @@ function cellTitle(row, id, cell, meta) {
     `binding parity: ${triLabel(cell.binding_parity_ok)}`,
     `reference parity: ${triLabel(cell.reference_parity_ok)}`,
   ];
-  const ref = cell.reference || referenceLabel(row.algo);
+  const ref = cell.reference || referenceLabel(row);
   if (ref && ref !== '—') parts.push(`reference: ${ref}`);
   if (cell.timed_runs) {
     const batch = cell.batch_loops && cell.batch_loops > 1 ? `; batch ${cell.batch_loops}x/sample` : '';
@@ -2057,7 +2104,7 @@ function renderTable() {
       const sizeHtml = row.isAvg
         ? `<span class="size-avg" title="geomean across ${row.sizesCount} size${row.sizesCount === 1 ? '' : 's'}">avg · ${row.sizesCount}</span>`
         : `${row.n}×${row.p}`;
-      const refText = referenceLabel(row.algo);
+      const refText = referenceLabel(row);
       const hasRef = refText && refText !== '—';
       const refCls = hasRef ? 'ref-cell has-ref' : 'ref-cell no-ref';
       const rKey = rowKey(row);
@@ -2065,7 +2112,7 @@ function renderTable() {
       const focusActive = rowColumnFocus && rowColumnFocus.key === rKey;
       const focusTitle = focusActive ? 'restore previous column selection' : `show only columns with a timing for this row (${scoreCols})`;
       const algoTitle = `open method documentation for ${row.algo}`;
-      let tr = `<tr><td class="algo-cell"><span class="algo-cell-inner"><span class="algo-label" title="${escAttr(algoTitle)}"><a class="algo-doc-link" href="${escAttr(methodUrl(row.algo))}">${escAttr(row.algo)}</a></span><button class="row-score-cols${focusActive ? ' active' : ''}" type="button" data-row-key="${escAttr(rKey)}" title="${escAttr(focusTitle)}">▥</button></span></td><td class="${refCls}" title="${escAttr(referenceTitle(row.algo))}"><span class="ref-badge">${refText}</span></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
+      let tr = `<tr><td class="algo-cell"><span class="algo-cell-inner"><span class="algo-label" title="${escAttr(algoTitle)}"><a class="algo-doc-link" href="${escAttr(methodUrl(row.algo))}">${escAttr(row.algo)}</a></span><button class="row-score-cols${focusActive ? ' active' : ''}" type="button" data-row-key="${escAttr(rKey)}" title="${escAttr(focusTitle)}">▥</button></span></td><td class="${refCls}" title="${escAttr(referenceTitle(row))}"><span class="ref-badge">${refText}</span></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
       for (const id of cols) {
         const meta = colsById[id];
         const lcls = meta ? langCls(meta).replace('native-col', 'native-cell') : '';
@@ -2134,7 +2181,7 @@ function renderTable() {
   $('visible-count').textContent = `${rows.length} row${rows.length === 1 ? '' : 's'} · ${cols.length} cols`;
   $('table-meta-left').textContent = `${DATA.rows.length} rows · ${DATA.stats.cells.toLocaleString()} cells total`;
   if (divergenceMode) {
-    $('table-meta-right').textContent = `reference divergence · max abs diff vs stored canonical external-reference snapshot`;
+    $('table-meta-right').textContent = `reference divergence · max abs diff vs canonical external reference`;
   } else if (state.viz === 'avg-speedup' && baselineId) {
     $('table-meta-right').textContent = `geomean duration % · ${baselineId} shows geomean time · sizes collapsed`;
   } else if (baselineId) {
@@ -2156,7 +2203,7 @@ function aggregateRowsByDurationRatio(rows, baselineId) {
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(r);
   }
-  const PARITY_RANK = { exact: 0, context: 1, drift: 2, divergent: 3, error: 4, not_run: 5, not_available: 6 };
+  const PARITY_RANK = { exact: 0, context: 1, candidate: 2, reference_needed: 3, drift: 4, divergent: 5, error: 6, not_run: 7, not_available: 8 };
   const worstParity = (cells, fallback = 'not_available') => {
     let out = fallback;
     let seen = false;

@@ -34,8 +34,8 @@ c4a_status_t c4a_pp_arpls_transform(const c4a_pp_arpls_handle_t* h,
 - Sample std uses `ddof=1` (matches `numpy.std(d_neg, ddof=1)`).
 - Std clamped to `DBL_MIN` to avoid divide-by-zero on degenerate cases (all-zero residuals).
 - Logistic stabilised via two-branch computation: for `arg >= 0` use `exp(-arg) / (1 + exp(-arg))`; for `arg < 0` use `1 / (1 + exp(arg))`. Avoids overflow for `|arg| >> 700`.
-- Parity tolerance vs frozen NumPy reference: `1e-7 abs / 1e-8 rel`.
+- Parity tolerance vs internal parity fixture: `1e-7 abs / 1e-8 rel`.
 
 ## Reference
 - Baek, S.-J.; Park, A.; Ahn, Y.-J.; Choo, J. (2015). "Baseline Correction Using Asymmetrically Reweighted Penalized Least Squares Smoothing." *Analyst*, 140 (1), 250–257.
-- Frozen Python reference: `parity/python_generator/src/c4a_parity_pybaselines_ref/arpls.py`.
+- Internal parity fixture: `parity/python_generator/src/c4a_parity_pybaselines_ref/arpls.py`.

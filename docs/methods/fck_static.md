@@ -135,20 +135,21 @@ c4a_status_t c4a_pp_fck_static_output_cols(int32_t n_kernels, int32_t n_features
 c4a_status_t c4a_pp_fck_static_transform( const c4a_pp_fck_static_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
 ```
 
-Reference backends are registered in the benchmark matrix and stored as reproducible snapshots when they define the canonical contract.
+Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
 
 ### Implementations
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
 | C ABI | `c4a_pp_fck_static` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.FCKStaticTransformer` | Python | sklearn-style wrapper backed by ctypes. |
+| Python | `chemometrics4all.python.fck_static` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `chemometrics4all.sklearn.FCKStaticTransformer` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `fck_static(X, kernel_size = 5L, filter_orders = c(0.5, 1.0), filter_scales = c(1.0, 2.0))` | R | Public package wrapper around the C ABI. |
 | ref.nirs4all | `nirs4all.FCKStaticTransformer` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. The registry references are listed in the parity card below.
+Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
 :class: chemometrics4all-bindings
@@ -167,12 +168,24 @@ c4a_status_t c4a_pp_fck_static_transform( const c4a_pp_fck_static_handle_t* hand
 
 :::
 
-:::{tab-item} Python · chemometrics4all
-:sync: python
+:::{tab-item} Python ABI · chemometrics4all.python
+:sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import FCKStaticTransformer
+from chemometrics4all import python as c4a
+
+Xt = c4a.fck_static(X, kernel_size=5, alphas=[0.5, 1.0], sigmas=[1.0, 2.0])
+```
+
+:::
+
+:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:sync: python-sklearn
+:class-label: lang-python
+
+```python
+from chemometrics4all.sklearn import FCKStaticTransformer
 
 op = FCKStaticTransformer(alphas=None, sigmas=None, filter_orders=None, filter_scales=None)
 Xt = op.fit_transform(X)
@@ -194,7 +207,7 @@ res <- fck_static(X, kernel_size = 5L, filter_orders = c(0.5, 1.0), filter_scale
 ::::
 
 
-**Registry parity references** ◆
+**Benchmark Comparators And Sources** ◆
 
 :::{card}
 :class-card: external-refs
@@ -202,8 +215,20 @@ res <- fck_static(X, kernel_size = 5L, filter_orders = c(0.5, 1.0), filter_scale
 - ◆ **`ref.nirs4all`** (Python · canonical) — `nirs4all.FCKStaticTransformer` · nirs4all@cd731a23+dirty
 :::
 
+### Validation contract
+
+- Operation: `cross_binding_callable` · comparator: `default_allclose` · tolerance: `rtol=1e-05`, `atol=1e-08` · quality: **strict**
+- Default validation dataset: `100×50` · seed `20260556`
+- Suites: smoke `3` cells; benchmark `11` cells · Default C/Python/reference parity comparator.
+- Metrics: `max_abs_diff`, `rel_l2_diff`, `rms_diff`, `shape_equal`
+- Truth sources: cross-binding references declared directly in `benchmarks/cross_binding/orchestrator.py`.
+
+| Backend | Library | Gate | Comparator | Note |
+|---------|---------|------|------------|------|
+| `ref.nirs4all` | `nirs4all.FCKStaticTransformer` | Python / parity | `default_allclose` |  |
+
 ### Benchmarks
-Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Verdict legend: ✓ exact · ≈ context/drift · ✗ divergent · ⊘ not available · — not run · ⚠ error.
+Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Divergence is the worst finite value over the visible sizes for each backend, preferring reference max-abs difference and falling back to binding max-abs difference when no reference comparison is recorded. Rows without a recorded comparison show `—`; the fastest backend per column is marked 🏆.
 ::::{tab-set}
 :class: parity-tabs
 
@@ -212,18 +237,19 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
-<thead><tr><th>Backend</th><th>Parity</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
+<thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-exact">✓ exact</td><td class="ms ms-best">🏆 0.058 ms</td><td class="ms ms-best">🏆 0.455 ms</td><td class="ms ms-best">🏆 2.261 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">8.5e-17</td><td class="ms ms-best">🏆 0.058 ms</td><td class="ms ms-best">🏆 0.448 ms</td><td class="ms ms-best">🏆 2.252 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.062 ms</td><td class="ms">0.457 ms</td><td class="ms">2.298 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">8.5e-17</td><td class="ms">0.059 ms</td><td class="ms">0.462 ms</td><td class="ms">2.263 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">8.5e-17</td><td class="ms">0.062 ms</td><td class="ms">0.454 ms</td><td class="ms">2.310 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">0.097 ms</td><td class="ms">0.977 ms</td><td class="ms">6.562 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.2e-16</td><td class="ms">0.104 ms</td><td class="ms">1.078 ms</td><td class="ms">6.625 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.FCKStaticTransformer · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-exact">✓ ref</td><td class="ms">0.150 ms</td><td class="ms">0.619 ms</td><td class="ms">2.939 ms</td></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.FCKStaticTransformer · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.157 ms</td><td class="ms">0.563 ms</td><td class="ms">2.993 ms</td></tr>
 </tbody>
 </table>
 </div>

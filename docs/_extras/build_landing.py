@@ -16,6 +16,24 @@ from pathlib import Path
 PLACEHOLDER_COLUMN = "chemometrics4all.reference-registry"
 
 
+def _validation_payload() -> dict:
+    try:
+        from validation_registry import load_snapshot
+
+        return load_snapshot().dashboard_payload()
+    except Exception as exc:  # pragma: no cover - defensive docs fallback
+        return {
+            "schema_version": 0,
+            "available": False,
+            "errors": [str(exc)],
+            "methods": {},
+            "comparators": {},
+            "datasets": {},
+            "references": {},
+            "suites": [],
+        }
+
+
 def host_info() -> dict:
     info = {
         "os": f"{platform.system()} {platform.release()} ({platform.machine()})",
@@ -117,6 +135,7 @@ def placeholder_payload(generated_at: str | None = None) -> dict:
             "cells": 1,
             "ok": 0,
         },
+        "validation": _validation_payload(),
     }
     return {
         "payload": payload,
@@ -188,6 +207,11 @@ def _cell_parity(raw: dict, ok: bool) -> str:
         "fail": "error",
         "error": "error",
         "external_not_compared": "error",
+        "candidate": "candidate",
+        "candidate_reference": "candidate",
+        "reference_candidate": "candidate",
+        "reference_needed": "reference_needed",
+        "missing_reference": "reference_needed",
         "timeout": "not_run",
         "not_run": "not_run",
         "not_available": "not_available",
@@ -210,14 +234,22 @@ def _column_version(raw: dict) -> str:
         return raw.get("lib_build") or "pybaselines"
     if backend == "ref.pywavelets":
         return raw.get("lib_build") or "PyWavelets"
-    if backend == "ref.scipy":
-        return raw.get("lib_build") or "scipy"
     if backend == "ref.numpy":
         return raw.get("lib_build") or "numpy"
-    if backend == "ref.r.base":
-        return raw.get("lib_build") or "R base"
-    if backend == "ref.r.stats":
-        return raw.get("lib_build") or "R stats"
+    if backend == "ref.scipy":
+        return raw.get("lib_build") or "scipy"
+    if backend == "ref.pycaltransfer":
+        return raw.get("lib_build") or "pycaltransfer"
+    if backend == "ref.dtw_python":
+        return raw.get("lib_build") or "dtw-python"
+    if backend == "ref.statsmodels":
+        return raw.get("lib_build") or "statsmodels"
+    if backend == "ref.cowarp":
+        return raw.get("lib_build") or "cowarp"
+    if backend == "ref.icoshift":
+        return raw.get("lib_build") or "Icoshift"
+    if backend == "ref.reference_needed":
+        return raw.get("lib_build") or "reference needed"
     return raw.get("lib_build") or raw.get("reference_library") or "not reported"
 
 
@@ -229,10 +261,15 @@ def _reference_display_name(raw: dict) -> str:
         "ref.sklearn": "sklearn",
         "ref.pybaselines": "pybaselines",
         "ref.pywavelets": "PyWavelets",
+        "ref.numpy": "NumPy",
         "ref.scipy": "scipy",
-        "ref.numpy": "numpy",
-        "ref.r.base": "R base",
-        "ref.r.stats": "R stats",
+        "ref.pycaltransfer": "pycaltransfer",
+        "ref.r.prospectr": "prospectr",
+        "ref.dtw_python": "dtw-python",
+        "ref.statsmodels": "statsmodels",
+        "ref.cowarp": "cowarp",
+        "ref.icoshift": "Icoshift",
+        "ref.reference_needed": "reference needed",
     }
     if backend in by_backend:
         return by_backend[backend]
@@ -273,11 +310,16 @@ def _column_meta(cid: str, row: dict) -> dict:
             "ref.nirs4all": "nirs4all",
             "ref.sklearn": "sklearn",
             "ref.scipy": "scipy",
-            "ref.numpy": "numpy",
             "ref.pybaselines": "pybase",
             "ref.pywavelets": "pywt",
-            "ref.r.base": "R base",
-            "ref.r.stats": "R stats",
+            "ref.numpy": "numpy",
+            "ref.pycaltransfer": "pycal",
+            "ref.r.prospectr": "prospectr",
+            "ref.dtw_python": "dtw",
+            "ref.statsmodels": "stats",
+            "ref.cowarp": "cowarp",
+            "ref.icoshift": "icoshift",
+            "ref.reference_needed": "needed",
         }.get(backend, library or backend.replace("ref.", ""))
         return {
             "id": cid,
@@ -294,12 +336,14 @@ def _column_meta(cid: str, row: dict) -> dict:
     group = {
         "cpp": "cpp",
         "python": "python",
+        "sklearn": "python",
         "r": "r",
         "matlab": "matlab",
     }.get(backend, backend)
     short = {
         "cpp": "C4A.cpp",
-        "python": "C4A.sklearn",
+        "python": "C4A.python",
+        "sklearn": "C4A.sklearn",
         "r": "C4A.R",
         "matlab": "C4A.MATLAB",
     }.get(backend, backend)
@@ -330,7 +374,11 @@ _LANG_ORDER = {
     "Rust": 6,
     "Go": 7,
     "Java": 8,
+    "External": 9,
 }
+
+
+CANDIDATE_REFERENCE_ROWS = {}
 
 
 def _column_sort_key(col: dict) -> tuple:
@@ -368,19 +416,68 @@ def _load_registry_groups(repo_root: Path) -> tuple[dict[str, str], list[dict]]:
     return algo_to_group, groups
 
 
+def _result_csv_paths(results_dir: Path) -> list[Path]:
+    """Return CSV sources that define the dashboard state.
+
+    ``full_matrix.csv`` is the canonical snapshot. Additional generated
+    benchmark shards can refresh subsets of it without requiring a manual
+    merge step; temporary probe/check CSVs are intentionally ignored.
+    """
+    if not results_dir.exists():
+        return []
+    names = ["full_matrix.csv"]
+    paths = [results_dir / name for name in names if (results_dir / name).exists()]
+    paths.extend(sorted(results_dir.glob("dashboard_refresh_*.csv")))
+    return paths
+
+
 def build_payload(results_dir: Path) -> dict:
-    """Read a chemometrics4all cross-binding CSV and build dashboard payload."""
-    full_matrix = results_dir / "full_matrix.csv"
-    if not full_matrix.exists():
+    """Read chemometrics4all cross-binding CSVs and build dashboard payload."""
+    csv_paths = _result_csv_paths(results_dir)
+    if not csv_paths:
         return placeholder_payload()
 
-    rows_in = list(csv.DictReader(full_matrix.open(encoding="utf-8")))
+    rows_in: list[dict] = []
+    latest_source = max(path.stat().st_mtime for path in csv_paths)
+    for source_index, path in enumerate(csv_paths):
+        source_mtime = path.stat().st_mtime
+        with path.open(encoding="utf-8") as handle:
+            for row in csv.DictReader(handle):
+                row["_source_index"] = source_index
+                row["_source_mtime"] = source_mtime
+                rows_in.append(row)
     if not rows_in:
         return placeholder_payload()
 
-    generated_at = dt.datetime.fromtimestamp(
-        full_matrix.stat().st_mtime, dt.timezone.utc
-    ).strftime("%Y-%m-%d %H:%M UTC")
+    generated_at = dt.datetime.fromtimestamp(latest_source, dt.timezone.utc).strftime(
+        "%Y-%m-%d %H:%M UTC"
+    )
+
+    seen: dict[tuple, dict] = {}
+    for raw in rows_in:
+        try:
+            n = int(raw.get("n", "0"))
+            p = int(raw.get("p", "0"))
+            threads = int(raw.get("threads", "0"))
+        except ValueError:
+            continue
+        algo = raw.get("algorithm", "").strip()
+        backend = raw.get("backend", "").strip()
+        if not algo or not backend:
+            continue
+        key = (algo, backend, raw.get("lib_build", "").strip(), n, p, threads)
+        rank = (
+            float(raw.get("_source_mtime") or 0.0),
+            int(raw.get("_source_index") or 0),
+        )
+        old = seen.get(key)
+        old_rank = (
+            float(old.get("_source_mtime") or 0.0),
+            int(old.get("_source_index") or 0),
+        ) if old is not None else None
+        if old is None or rank >= old_rank:
+            seen[key] = raw
+    rows_in = list(seen.values())
 
     columns: dict[str, dict] = {}
     versions: dict[str, str] = {}
@@ -429,7 +526,7 @@ def build_payload(results_dir: Path) -> dict:
                 ref_info["primary"] = ref_label
                 ref_info["raw_primary"] = raw_ref_label
         gate = "reference" if (backend.startswith("ref.") or kind == "external_reference") else (
-            "binding" if backend in {"python", "r", "matlab"} else "native"
+            "binding" if backend in {"python", "sklearn", "r", "matlab"} else "native"
         )
         key = (algo, n, p, threads)
         row = by_row.setdefault(key, {
@@ -462,6 +559,61 @@ def build_payload(results_dir: Path) -> dict:
             "binding_rms_diff": _float_or_none(raw.get("binding_rms_diff")),
             "binding_rel_l2_diff": _float_or_none(raw.get("binding_rel_l2_diff")),
         }
+
+    for algo, refs in CANDIDATE_REFERENCE_ROWS.items():
+        matching_rows = [row for row in by_row.values() if row.get("algo") == algo]
+        if not matching_rows:
+            continue
+        for ref in refs:
+            raw = {
+                "backend": ref["backend"],
+                "language": ref["language"],
+                "tier": "candidate_reference",
+                "kind": "external_reference",
+                "reference_library": ref["library"],
+                "lib_build": ref["build"],
+            }
+            cid = _column_id(raw)
+            columns.setdefault(cid, _column_meta(cid, raw))
+            versions.setdefault(cid, _column_version(raw))
+            ref_label = _reference_display_name(raw)
+            ref_info = references_by_algo.setdefault(
+                algo,
+                {"primary": "", "libraries": [], "raw_primary": "", "raw_libraries": []},
+            )
+            refs_list = ref_info["libraries"]
+            if isinstance(refs_list, list) and ref_label and ref_label not in refs_list:
+                refs_list.append(ref_label)
+            raw_refs = ref_info["raw_libraries"]
+            if isinstance(raw_refs, list) and ref["library"] not in raw_refs:
+                raw_refs.append(ref["library"])
+            if not ref_info.get("primary"):
+                ref_info["primary"] = ref_label
+                ref_info["raw_primary"] = ref["library"]
+            for row in matching_rows:
+                row["cells"].setdefault(cid, {
+                    "ok": False,
+                    "ms": None,
+                    "fmt": "—",
+                    "warmup_runs": 0,
+                    "timed_runs": 0,
+                    "batch_loops": 1,
+                    "samples_ms": [],
+                    "parity": ref["parity"],
+                    "raw_parity": ref["parity"],
+                    "gate": "candidate_reference",
+                    "reason": ref["reason"],
+                    "reference": ref["library"],
+                    "reference_role": "candidate" if ref["parity"] == "candidate" else "reference_needed",
+                    "binding_parity_ok": None,
+                    "reference_parity_ok": None,
+                    "reference_max_abs_diff": None,
+                    "reference_rms_diff": None,
+                    "reference_rel_l2_diff": None,
+                    "binding_max_abs_diff": None,
+                    "binding_rms_diff": None,
+                    "binding_rel_l2_diff": None,
+                })
 
     repo_root = Path(__file__).resolve().parents[2]
     algo_to_group, _registry_groups = _load_registry_groups(repo_root)
@@ -528,6 +680,7 @@ def build_payload(results_dir: Path) -> dict:
             "cells": sum(len(row["cells"]) for row in rows),
             "ok": ok_cells,
         },
+        "validation": _validation_payload(),
     }
     return {
         "payload": payload,

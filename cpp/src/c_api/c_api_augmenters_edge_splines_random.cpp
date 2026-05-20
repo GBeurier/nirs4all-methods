@@ -29,6 +29,7 @@
 #include "core/augmentations/edge_artifacts/truncated_peak.h"
 #include "core/augmentations/random/random_x_op.h"
 #include "core/augmentations/random/rotate_translate.h"
+#include "core/augmentations/spectral/spectral_common.h"
 #include "core/augmentations/splines/spline_curve_simplification.h"
 #include "core/augmentations/splines/spline_smoothing.h"
 #include "core/augmentations/splines/spline_x_perturbations.h"
@@ -130,6 +131,10 @@ struct c4a_aug_edge_artifacts_handle_t {
     c4a_aug_edge_curvature_state_t*    curve_state;
     c4a_aug_truncated_peak_state_t*    truncated_state;
     c4a_rng_pcg64_state_t*             rng;
+    c4a_rng_pcg64                      detector_rng;
+    c4a_rng_pcg64                      stray_rng;
+    c4a_rng_pcg64                      curve_rng;
+    c4a_rng_pcg64                      truncated_rng;
 };
 struct c4a_aug_spline_smooth_handle_t {
     c4a_aug_spline_smooth_state_t* state;
@@ -437,9 +442,14 @@ C4A_API c4a_status_t c4a_aug_edge_artifacts_create(
         h->curve_state       = nullptr;
         h->truncated_state   = nullptr;
         h->rng               = rng;
+        c4a_aug_randint_state_t seed_state;
+        c4a_aug_randint_state_reset(&seed_state, rng_engine(rng));
         // Build sub-states with Python-reference defaults scaled by
         // overall_strength.
         if (enabled_flags & C4A_AUG_EDGE_ARTIFACTS_DETECTOR_ROLL_OFF) {
+            const auto seed = static_cast<uint64_t>(
+                c4a_aug_randint(&seed_state, 0, 2147483648LL));
+            c4a_pcg64_engine_seed(&h->detector_rng, seed);
             h->detector_state = c4a_aug_detector_rolloff_state_new(
                 detector_model, overall_strength,
                 /*noise_amp=*/0.02, /*baseline=*/1);
@@ -449,6 +459,9 @@ C4A_API c4a_status_t c4a_aug_edge_artifacts_create(
             }
         }
         if (enabled_flags & C4A_AUG_EDGE_ARTIFACTS_STRAY_LIGHT) {
+            const auto seed = static_cast<uint64_t>(
+                c4a_aug_randint(&seed_state, 0, 2147483648LL));
+            c4a_pcg64_engine_seed(&h->stray_rng, seed);
             h->stray_state = c4a_aug_stray_light_state_new(
                 /*fraction=*/0.001 * overall_strength,
                 /*edge_enh=*/2.0, /*edge_width=*/0.1,
@@ -460,6 +473,9 @@ C4A_API c4a_status_t c4a_aug_edge_artifacts_create(
             }
         }
         if (enabled_flags & C4A_AUG_EDGE_ARTIFACTS_EDGE_CURVATURE) {
+            const auto seed = static_cast<uint64_t>(
+                c4a_aug_randint(&seed_state, 0, 2147483648LL));
+            c4a_pcg64_engine_seed(&h->curve_rng, seed);
             h->curve_state = c4a_aug_edge_curvature_state_new(
                 /*strength=*/0.02 * overall_strength,
                 /*type=*/0, /*asym=*/0.0, /*focus=*/0.7);
@@ -471,6 +487,9 @@ C4A_API c4a_status_t c4a_aug_edge_artifacts_create(
             }
         }
         if (enabled_flags & C4A_AUG_EDGE_ARTIFACTS_TRUNCATED_PEAKS) {
+            const auto seed = static_cast<uint64_t>(
+                c4a_aug_randint(&seed_state, 0, 2147483648LL));
+            c4a_pcg64_engine_seed(&h->truncated_rng, seed);
             h->truncated_state = c4a_aug_truncated_peak_state_new(
                 /*prob=*/0.3,
                 /*amp=*/0.01 * overall_strength, 0.1 * overall_strength,
@@ -526,22 +545,26 @@ C4A_API c4a_status_t c4a_aug_edge_artifacts_apply(
         }
         if (h->truncated_state != nullptr) {
             const c4a_status_t st = c4a_aug_truncated_peak_state_apply(
-                h->truncated_state, rng_engine(h->rng), op, xr, xc, wlp, op);
+                h->truncated_state, const_cast<c4a_rng_pcg64*>(&h->truncated_rng),
+                op, xr, xc, wlp, op);
             if (st != C4A_OK) return st;
         }
         if (h->curve_state != nullptr) {
             const c4a_status_t st = c4a_aug_edge_curvature_state_apply(
-                h->curve_state, rng_engine(h->rng), op, xr, xc, wlp, op);
+                h->curve_state, const_cast<c4a_rng_pcg64*>(&h->curve_rng),
+                op, xr, xc, wlp, op);
             if (st != C4A_OK) return st;
         }
         if (h->stray_state != nullptr) {
             const c4a_status_t st = c4a_aug_stray_light_state_apply(
-                h->stray_state, rng_engine(h->rng), op, xr, xc, wlp, op);
+                h->stray_state, const_cast<c4a_rng_pcg64*>(&h->stray_rng),
+                op, xr, xc, wlp, op);
             if (st != C4A_OK) return st;
         }
         if (h->detector_state != nullptr) {
             const c4a_status_t st = c4a_aug_detector_rolloff_state_apply(
-                h->detector_state, rng_engine(h->rng), op, xr, xc, wlp, op);
+                h->detector_state, const_cast<c4a_rng_pcg64*>(&h->detector_rng),
+                op, xr, xc, wlp, op);
             if (st != C4A_OK) return st;
         }
         return C4A_OK;

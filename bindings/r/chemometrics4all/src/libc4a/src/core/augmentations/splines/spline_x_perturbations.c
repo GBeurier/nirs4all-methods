@@ -43,6 +43,23 @@ static double uniform(c4a_rng_pcg64* rng, double lo, double hi) {
     return lo + (hi - lo) * c4a_pcg64_engine_next_double(rng);
 }
 
+static double interp_linear(const double* xp, const double* fp, int64_t n,
+                            double x) {
+    if (n <= 1) return (n == 1) ? fp[0] : 0.0;
+    if (x <= xp[0]) return fp[0];
+    if (x >= xp[n - 1]) return fp[n - 1];
+    int64_t lo = 0;
+    int64_t hi = n - 1;
+    while (hi - lo > 1) {
+        const int64_t mid = (lo + hi) >> 1;
+        if (xp[mid] <= x) lo = mid;
+        else hi = mid;
+    }
+    const double dx = xp[lo + 1] - xp[lo];
+    const double w = (dx > 0.0) ? ((x - xp[lo]) / dx) : 0.0;
+    return fp[lo] + w * (fp[lo + 1] - fp[lo]);
+}
+
 c4a_status_t c4a_aug_spline_x_perturb_state_apply(
     const c4a_aug_spline_x_perturb_state_t* state,
     void* rng_void,
@@ -61,12 +78,12 @@ c4a_status_t c4a_aug_spline_x_perturb_state_apply(
         return C4A_OK;
     }
     c4a_rng_pcg64* rng = (c4a_rng_pcg64*)rng_void;
-    /* Sizing: mimic Python — len(t) ~ cols + 4 (degree+1 trailing knots
-     * in scipy's natural-cubic representation). We use cols as the rough
-     * proxy. */
+    /* Sizing: mimic Python splrep(..., s=0, k=3), whose knot vector length is
+     * cols + 4. nearbyint follows the default half-even mode used by
+     * numpy.around. */
     const int64_t knots_proxy = cols + 4;
-    int64_t delta_size = (int64_t)round((double)knots_proxy *
-                                          state->perturbation_density);
+    int64_t delta_size = (int64_t)nearbyint((double)knots_proxy *
+                                            state->perturbation_density);
     if (delta_size < 2) delta_size = 2;
     /* delta_x are anchor positions for the perturbation field, on
      * [0, cols-1]. */
@@ -79,13 +96,13 @@ c4a_status_t c4a_aug_spline_x_perturb_state_apply(
     }
     /* Build x[i] = (double)i. */
     double* x = (double*)malloc((size_t)cols * sizeof(double));
-    double* knots = (double*)malloc((size_t)(cols + 6) * sizeof(double));
-    double* coef  = (double*)malloc((size_t)(cols + 2) * sizeof(double));
-    double* xq    = (double*)malloc((size_t)cols * sizeof(double));
+    double* knots = (double*)malloc((size_t)(cols + 4) * sizeof(double));
+    double* coef  = (double*)malloc((size_t)(cols + 4) * sizeof(double));
+    double* t_perturbed = (double*)malloc((size_t)(cols + 4) * sizeof(double));
     double* delta_y = (double*)malloc((size_t)delta_size * sizeof(double));
-    if (x == NULL || knots == NULL || coef == NULL || xq == NULL ||
+    if (x == NULL || knots == NULL || coef == NULL || t_perturbed == NULL ||
         delta_y == NULL) {
-        free(x); free(knots); free(coef); free(xq); free(delta_y);
+        free(x); free(knots); free(coef); free(t_perturbed); free(delta_y);
         free(delta_x);
         return C4A_ERR_OUT_OF_MEMORY;
     }
@@ -98,43 +115,21 @@ c4a_status_t c4a_aug_spline_x_perturb_state_apply(
             delta_y[k] = uniform(rng, state->perturbation_range_min,
                                   state->perturbation_range_max);
         }
-        /* Build a natural cubic spline through (x, xrow). */
-        const int rc = c4a_bspline_build_natural(x, xrow, (int32_t)cols,
-                                                  knots, coef);
+        const int rc = c4a_bspline_build_not_a_knot_cubic(
+            x, xrow, (int32_t)cols, knots, coef);
         if (rc != 0) {
             memcpy(orow, xrow, (size_t)cols * sizeof(double));
             continue;
         }
-        /* xq[j] = x[j] + linear-interp of delta_y over delta_x at x[j]. */
-        for (int64_t j = 0; j < cols; ++j) {
-            const double xj = x[j];
-            /* Find the segment in delta_x containing xj. */
-            double dy = 0.0;
-            if (delta_size == 1) {
-                dy = delta_y[0];
-            } else if (xj <= delta_x[0]) {
-                dy = delta_y[0];
-            } else if (xj >= delta_x[delta_size - 1]) {
-                dy = delta_y[delta_size - 1];
-            } else {
-                int64_t lo = 0;
-                int64_t hi = delta_size - 1;
-                while (hi - lo > 1) {
-                    const int64_t mid = (lo + hi) >> 1;
-                    if (delta_x[mid] <= xj) lo = mid;
-                    else hi = mid;
-                }
-                const double dxs = delta_x[lo + 1] - delta_x[lo];
-                const double w = (dxs > 0.0) ? ((xj - delta_x[lo]) / dxs)
-                                                 : 0.0;
-                dy = delta_y[lo] + w * (delta_y[lo + 1] - delta_y[lo]);
-            }
-            xq[j] = xj + dy;
+        for (int64_t j = 0; j < cols + 4; ++j) {
+            t_perturbed[j] = knots[j] +
+                interp_linear(delta_x, delta_y, delta_size, knots[j]);
         }
-        c4a_bspline_eval_array(knots, coef, (int32_t)cols, xq, (int32_t)cols,
-                                /*extrapolate=*/1, orow);
+        c4a_bspline_deboor_eval_array(
+            t_perturbed, coef, (int32_t)cols, /*degree=*/3,
+            x, (int32_t)cols, /*extrapolate=*/1, orow);
     }
-    free(x); free(knots); free(coef); free(xq); free(delta_y);
+    free(x); free(knots); free(coef); free(t_perturbed); free(delta_y);
     free(delta_x);
     return C4A_OK;
 }

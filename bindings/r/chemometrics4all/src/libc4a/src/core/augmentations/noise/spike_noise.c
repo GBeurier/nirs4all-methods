@@ -13,9 +13,10 @@
 
 #include "spike_noise.h"
 
-#include <math.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "core/augmentations/spectral/spectral_common.h"
 
 struct c4a_aug_spike_noise_state_t {
     c4a_rng_pcg64* rng;   /* borrowed; not owned. */
@@ -78,18 +79,22 @@ c4a_status_t c4a_aug_spike_noise_state_apply(
     const double  amp_lo = state->amplitude_min;
     const double  amp_hi = state->amplitude_max;
     const double  amp_span = amp_hi - amp_lo;
-    const int32_t n_choice = n_max - n_min + 1;
+    c4a_aug_randint_state_t randint_state;
+    c4a_aug_randint_state_reset(&randint_state, state->rng);
 
     /* 1. Per-row spike count. */
     int32_t* n_spikes_per_sample =
         (int32_t*)malloc((size_t)rows * sizeof(int32_t));
     if (n_spikes_per_sample == NULL) return C4A_ERR_OUT_OF_MEMORY;
-    for (int64_t i = 0; i < rows; ++i) {
-        const double u = c4a_pcg64_engine_next_double(state->rng);
-        int32_t k = n_min + (int32_t)floor(u * (double)n_choice);
-        if (k > n_max) k = n_max;            /* defence vs. floating edges */
-        if (k < n_min) k = n_min;
-        n_spikes_per_sample[(size_t)i] = k;
+    if (n_min == n_max) {
+        for (int64_t i = 0; i < rows; ++i) {
+            n_spikes_per_sample[(size_t)i] = n_min;
+        }
+    } else {
+        for (int64_t i = 0; i < rows; ++i) {
+            n_spikes_per_sample[(size_t)i] =
+                (int32_t)c4a_aug_randint(&randint_state, n_min, (int64_t)n_max + 1);
+        }
     }
 
     /* 2. Candidate indices (rows * n_max draws). */
@@ -104,11 +109,8 @@ c4a_status_t c4a_aug_spike_noise_state_apply(
     }
     for (int64_t i = 0; i < rows; ++i) {
         for (int32_t k = 0; k < n_max; ++k) {
-            const double u = c4a_pcg64_engine_next_double(state->rng);
-            int64_t idx = (int64_t)floor(u * (double)cols);
-            if (idx >= cols) idx = cols - 1;  /* defence vs. u == nextafter(1.0) */
-            if (idx < 0)     idx = 0;
-            all_indices[(size_t)i * (size_t)n_max + (size_t)k] = idx;
+            all_indices[(size_t)i * (size_t)n_max + (size_t)k] =
+                c4a_aug_randint(&randint_state, 0, cols);
         }
     }
 

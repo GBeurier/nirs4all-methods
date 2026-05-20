@@ -5,15 +5,21 @@ chemometrics4all.
 
 ## Tiers
 
-* **Tier 1 (`chemometrics4all._ffi`)** — raw `ctypes.CDLL` access to the 403
+* **Tier 1 (`chemometrics4all._ffi`)** — raw `ctypes.CDLL` access to the 498
   `c4a_*` symbols. Loads the shared library from
   `CHEMOMETRICS4ALL_LIB_PATH`, the wheel's bundled `lib/` directory, or the
   development build tree (`build/dev-debug/cpp/src/`).
 
-* **Tier 2 (`chemometrics4all.sklearn`)** — hand-written scikit-learn–style
-  wrappers (`fit`, `transform`, `fit_transform`, and `inverse_transform`
+* **Tier 2 (`chemometrics4all.python`)** — ABI-close NumPy functions that
+  allocate the matching `c4a_*` handle, run the public C ABI call, return NumPy
+  arrays, and destroy the handle. This is the dashboard `C4A.python` backend.
+
+* **Tier 3 (`chemometrics4all.sklearn`)** — hand-written
+  scikit-learn-compatible wrappers (`BaseEstimator`, `TransformerMixin`,
+  `fit`, `transform`, `fit_transform`, and `inverse_transform`
   where the C ABI exposes a real inverse) over the main non-model NIRS
-  operators already present in the C ABI:
+  operators already present in the C ABI. This is the dashboard
+  `C4A.sklearn` backend:
 
   | Family           | Classes                                                              |
   | ---------------- | -------------------------------------------------------------------- |
@@ -29,9 +35,17 @@ chemometrics4all.
   |                  | `IntegerKBinsDiscretizer`, `RangeDiscretizer`                        |
   | Wavelets         | `Wavelet`, `Haar`, `WaveletDenoise`, `WaveletFeatures`,              |
   |                  | `WaveletPCA`, `WaveletSVD`                                           |
-  | Splitters        | `KennardStoneSplitter`, `SPXYSplitter`, `KBinsStratifiedSplitter`    |
-  | Filters          | `YOutlierFilter`, `XOutlierFilter`                                   |
-  | Augmentation     | `GaussianAdditiveNoise`                                              |
+  | Splitters        | `KennardStoneSplitter`, `SPXYSplitter`, `SPXYFoldSplitter`,          |
+  |                  | `SPXYGroupFoldSplitter`, `KMeansSplitter`, `KBinsStratifiedSplitter`,|
+  |                  | `BinnedStratifiedGroupKFoldSplitter`, `SystematicCircularSplitter`,  |
+  |                  | `SPlitSplitter`                                                      |
+  | Filters          | `YOutlierFilter`, `XOutlierFilter`, `HighLeverageFilter`,            |
+  |                  | `SpectralQualityFilter`, `CompositeFilter`                           |
+  | Augmentation     | Full `c4a_aug_*` surface from noise/drift, wavelength/spectral,      |
+  |                  | mixup/physical/environmental, edge/spline/random phases              |
+  | Advanced         | `DirectStandardization`, `PiecewiseDirectStandardization`,           |
+  |                  | `WeightedSNV`, `VariableSortingNormalization`, alignment helpers,    |
+  |                  | and lightweight feature selectors backed by C ABI handles            |
   | Metrics          | `rmse`, `mae`, `bias`, `sep`, `rpd`, `rpiq`, `r2`, `nrmse`,          |
   |                  | `hotelling_t2`, `q_residuals`, `transfer_metrics`                    |
 

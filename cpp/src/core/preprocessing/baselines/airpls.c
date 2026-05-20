@@ -2,7 +2,7 @@
 /*
  * AirPLS — Zhang 2010.
  *
- * Frozen reference: parity/python_generator/src/c4a_parity_pybaselines_ref/airpls.py
+ * Internal parity fixture: parity/python_generator/src/c4a_parity_pybaselines_ref/airpls.py
  *
  * Iterative loop:
  *

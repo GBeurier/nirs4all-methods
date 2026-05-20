@@ -64,8 +64,8 @@ c4a_status_t c4a_aug_spline_y_perturb_state_apply(
     /* Anchor x positions on [0, cols]. */
     double* x_pts = (double*)malloc((size_t)nb_pts * sizeof(double));
     double* y_pts = (double*)malloc((size_t)nb_pts * sizeof(double));
-    double* knots = (double*)malloc((size_t)(nb_pts + 6) * sizeof(double));
-    double* coef  = (double*)malloc((size_t)(nb_pts + 2) * sizeof(double));
+    double* knots = (double*)malloc((size_t)(nb_pts + 4) * sizeof(double));
+    double* coef  = (double*)malloc((size_t)(nb_pts + 4) * sizeof(double));
     double* xq    = (double*)malloc((size_t)cols * sizeof(double));
     if (x_pts == NULL || y_pts == NULL || knots == NULL || coef == NULL ||
         xq == NULL) {
@@ -83,8 +83,8 @@ c4a_status_t c4a_aug_spline_y_perturb_state_apply(
         for (int32_t k = 0; k < nb_pts; ++k) {
             y_pts[k] = uniform(rng, interval_min, interval_max);
         }
-        const int rc = c4a_bspline_build_natural(x_pts, y_pts, nb_pts,
-                                                  knots, coef);
+        const int rc = c4a_bspline_build_not_a_knot_cubic(
+            x_pts, y_pts, nb_pts, knots, coef);
         if (rc != 0) {
             memcpy(orow, xrow, (size_t)cols * sizeof(double));
             continue;
@@ -92,8 +92,9 @@ c4a_status_t c4a_aug_spline_y_perturb_state_apply(
         /* distor[j] = spline(xq[j]) with extrapolate=False (=> 0 outside). */
         double distor;
         for (int64_t j = 0; j < cols; ++j) {
-            distor = c4a_bspline_eval(knots, coef, nb_pts, xq[j],
-                                       /*extrapolate=*/0);
+            distor = c4a_bspline_deboor_eval(
+                knots, coef, nb_pts, /*degree=*/3, xq[j],
+                /*extrapolate=*/0);
             orow[j] = xrow[j] + distor;
         }
     }

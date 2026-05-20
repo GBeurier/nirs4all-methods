@@ -7,7 +7,7 @@ add_executable(chemometrics4all_tests
     main.cpp
     test_augmenters_noise_drift.cpp
     test_augmenters_phase17.cpp
-    test_augmenters_phase18.cpp
+    test_augmenters_edge_splines_random.cpp
     test_augmenters_wavelength_spectral.cpp
     test_fck.cpp
     test_filter_x_outlier.cpp

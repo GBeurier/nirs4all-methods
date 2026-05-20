@@ -26,5 +26,5 @@ c4a_status_t c4a_aug_multiplicative_noise_apply(
 ```
 
 ## Reference
-- Frozen Python: `parity/python_generator/src/c4a_parity_augmenters_ref/multiplicative_noise.py`.
+- Internal parity fixture: `parity/python_generator/src/c4a_parity_augmenters_ref/multiplicative_noise.py`.
 - Parity tolerance: 1e-15 abs.

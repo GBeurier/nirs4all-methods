@@ -1,15 +1,16 @@
 # Parity tolerances
 
 Per-category tolerances enforced by `chemometrics4all_tests` against the
-frozen Python reference fixtures under `parity/fixtures/`. Each row pairs a
-reference implementation (frozen NumPy / SciPy / scikit-learn / PyWavelets /
+internal Python parity fixtures under `parity/fixtures/`. These fixtures are
+development parity oracles, not external benchmark references. Each row pairs a
+fixture source (frozen NumPy / SciPy / scikit-learn / PyWavelets /
 pybaselines / selected `nirs4all` operator references, version-pinned via
 `parity/python_generator/requirements-lock.txt`) with the corresponding
 chemometrics4all C kernel.
 
 Numbers in **bold** are the relaxations applied after Opus / Codex review.
 
-`reference_tol` rows are the Stage-3 (C++ vs frozen Python fixtures)
+`reference_tol` rows are the Stage-3 (C++ vs internal Python parity fixtures)
 tolerances. `binding_tol` is the Stage-4 (binding-vs-libc4a, bit-exact)
 tolerance — `1e-6` is the project-wide default
 (see `parity/binding_parity.py`). Bindings are expected to forward the
@@ -21,13 +22,13 @@ Stage 2 reference parity has its own executable policy in
 zones are recorded in `parity/divergences.json`; an unlisted skip is a gate
 failure.
 
-| Row key | Reference (A) | chemometrics4all (B) | Operators / kernels | abs_tol | rel_tol | binding_tol | Comparison set | Notes |
+| Row key | Fixture source (A) | chemometrics4all (B) | Operators / kernels | abs_tol | rel_tol | binding_tol | Comparison set | Notes |
 |---|---|---|---|---|---|---|---|---|
 | `c4a-scatter-preprocessing-stateless`            | NumPy / scikit-learn 1.8.0 stateless preprocessing reference | `c4a_pp_*_apply` (stateless ops) | identity / center / normalize / SNV / RNV / area / LSNV / log_transform | 1e-12 | 1e-12 | 1e-6 | transform outputs | operator parity |
 | `c4a-scatter-preprocessing-stateful`             | NumPy / scikit-learn 1.8.0 stateful preprocessing reference | `c4a_pp_*_fit` + `_transform` | baseline-center / MSC / EMSC / Pareto / simple-scale (stateful family) | 1e-12 | 1e-12 | 1e-6 | transform outputs | stateful operator parity |
 | `c4a-derivatives-smoothing`                      | NumPy / SciPy 1.17.1 reference | `c4a_pp_derivate_*`, `c4a_pp_savgol_*`, `c4a_pp_gaussian_*`, `c4a_pp_norris_williams_*` | derivate (1st / 2nd) / Savitzky-Golay / Gaussian filter / Norris-Williams | 1e-12 | 1e-12 | 1e-6 | transform outputs | smoothing parity |
 | `c4a-baselines-asls-family`                      | Frozen pybaselines-derived reference; current upstream comparator pybaselines 1.2.1 | `c4a_pp_{asls,airpls,arpls,iasls,beads}_*` | AsLS / AirPLS / ArPLS / IAsLS / BEADS | **1e-11** | **1e-10** | 1e-6 | transform outputs | LDLT vs SuperLU pivot differences (Phase 5a/5b) |
-| `c4a-baselines-polynomial`                       | Frozen NumPy / pybaselines reference | `c4a_pp_{detrend,modpoly,imodpoly,snip,rolling_ball}_*` | Detrend / ModPoly / IModPoly / SNIP / RollingBall | 1e-12 | 1e-12 | 1e-6 | transform outputs | polynomial baseline parity |
+| `c4a-baselines-polynomial`                       | Internal NumPy/pybaselines-derived fixture | `c4a_pp_{detrend,modpoly,imodpoly,snip,rolling_ball}_*` | Detrend / ModPoly / IModPoly / SNIP / RollingBall | 1e-12 | 1e-12 | 1e-6 | transform outputs | polynomial baseline parity |
 | `c4a-signal-conversion`                          | NumPy reference (Beer-Lambert / Kubelka-Munk / percent ↔ fraction) | `c4a_pp_{to_absorbance,from_absorbance,kubelka_munk,pct_to_frac,frac_to_pct}_apply` | A↔R conversion / Kubelka-Munk / unit scaling | 1e-12 | 1e-12 | 1e-6 | transform outputs | signal-conversion parity (Phase 7) |
 | `c4a-orthogonalization`                          | NumPy reference port of nirs4all OSC / EPO | `c4a_pp_{osc,epo}_*` | Orthogonal Signal Correction / External Parameter Orthogonalisation | 1e-10 | 1e-10 | 1e-6 | transform outputs | orthogonalisation parity (Phase 8) |
 | `c4a-feature-selection-pca`                      | scikit-learn 1.8.0 / NumPy thin-SVD reference | `c4a_pp_{flexible_pca,flexible_svd}_*` | PCA (auto / svd / eigh) / thin SVD | 1e-10 | 1e-10 | 1e-6 | transform outputs, component vectors | feature-selection parity (Phase 9) |
@@ -44,8 +45,8 @@ failure.
 ## Conventions
 
 * The `abs_tol` and `rel_tol` columns are Stage-3 tolerances (C++ vs
-  frozen Python fixtures); they are sized so the chemometrics4all C kernel
-  passes against the frozen reference under the locked dependency set
+  internal Python parity fixtures); they are sized so the chemometrics4all C kernel
+  passes against the internal parity fixture under the locked dependency set
   (`parity/python_generator/requirements-lock.txt`). Bumping a reference
   package may require relaxing the corresponding row — that bump must be
   driven by the parity gate (`run_parity_gate.py`), not by editing this

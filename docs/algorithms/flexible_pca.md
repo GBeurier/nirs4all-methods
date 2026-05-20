@@ -48,7 +48,7 @@ $$
 The c4a engine uses a one-sided Jacobi SVD (``cpp/src/core/common/svd.c``)
 which agrees with ``np.linalg.svd`` to within a few ULPs on the singular
 values; the resulting transform parity tolerance is ``1e-10`` absolute /
-``1e-11`` relative against the frozen NumPy reference.
+``1e-11`` relative against the internal parity fixture.
 
 ## Parameters
 
@@ -74,7 +74,7 @@ learned $k'$ off the fitted state. Calling `_transform` or
 - `_transform` returns `C4A_ERR_SHAPE_MISMATCH` if the output column
   count is not exactly `n_components_learned`, or the input column count
   is not exactly `n_features_in`.
-- Tolerance against the frozen NumPy reference: 1e-10 absolute / 1e-11
+- Tolerance against the internal parity fixture: 1e-10 absolute / 1e-11
   relative — within the structural gap between Jacobi SVD and LAPACK
   gesdd on well-conditioned NIR matrices.
 

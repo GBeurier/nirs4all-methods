@@ -63,7 +63,7 @@ Two operators differ from the nirs4all reference path:
   `nirs4all.operators.augmentation.spectral` path uses
   `scipy.interpolate.splrep / splev` (cubic spline). The linear variant
   is chosen because cubic splines are non-trivial to reproduce
-  bit-exactly across C/Python. The frozen NumPy reference under
+  bit-exactly across C/Python. The internal parity fixture under
   `parity/python_generator/src/c4a_parity_aug_spectral_ref/` mirrors
   the linear path, so the C engine matches at the 1e-15 PCG64 contract.
 
@@ -101,7 +101,7 @@ breaking the chemometrics4all parity gates.
   10 smoke tests + 10 parity tests in the
   `chemometrics4all_tests_aug` executable.
 - Fixtures: `parity/fixtures/aug_<name>_v1.json` (10 files, 2 cases each).
-- Reference: `parity/python_generator/src/c4a_parity_aug_spectral_ref/`.
+- Internal parity fixture: `parity/python_generator/src/c4a_parity_aug_spectral_ref/`.
 - Generator: `parity/python_generator/scripts/generate_phase16_fixtures.py`.
 
 ## ABI symbols added

@@ -11,7 +11,7 @@
 |---|---|
 | Project version | 0.1.0 |
 | ABI version | **1.9.0** |
-| ABI symbols exported | **403** |
+| ABI symbols exported | **498** |
 | C++ tests | local tests build `build/local-tests`: **266 PASS / 0 FAIL** |
 | Reference parity gate (Gate 2) | **76 PASS / 0 FAIL / 27 SKIP** |
 | Binding parity Python (Gate 1) | **57 binding-parity suites PASS** @ tol 1e-6; full Python tests **64 PASS** |
@@ -104,7 +104,7 @@ python parity/python_generator/scripts/run_parity_gate.py
    - Implémentés en `parity/binding_parity.py` + `parity/reference_parity.py`
 2. **27 SKIPs en Gate 2** mis de côté (à rediscuter): 5 wavelet layout + 5 splitter PCG64 stochastic + 17 augmenter stochastic
 3. **Pas de matrix de workflow multi-binding** — un seul `parity-gate.yml` avec Stage 4 conditionnels per binding (présence du dir)
-4. **Frozen NumPy refs** (`parity/python_generator/src/c4a_parity_*_ref/`) restent comme insulation layer (contrat origine, pas remplacés par Gate 2)
+4. **Internal NumPy fixtures** (`parity/python_generator/src/c4a_parity_*_ref/`) restent des fixtures internes de parité, pas des références externes de benchmark
 5. **Stratégie batch parallèle**: phases indépendantes lancées en parallèle via git worktrees, intégrées en commit unique. A bien marché pour Phases 7-21 + Phases 6,13,15-18.
 6. **R/CRAN**: le package R vendore `src/libc4a` et compile statiquement dans `chemometrics4all.so`; ne dépend plus de `CHEMOMETRICS4ALL_LIB_PATH`.
 7. **EPO d-aware ABI**: `c4a_pp_epo_transform_with_d(handle, X, d, d_len, out)` est exporté et utilisé par Python `EPO.fit_transform(X, d)` et par la ligne benchmark C++ `epo`. `c4a_pp_epo_transform(handle, X, out)` reste le contrat sans `d` et donc pass-through à `d = d_mean`.
@@ -156,7 +156,7 @@ Via Emscripten:
 | `cpp/include/chemometrics4all/c4a_version.h` | ABI 1.9.0 / project 0.1.0 |
 | `cpp/src/core/` | Engines C internes (preprocessing/, augmentations/, splitters/, filters/, utilities/, common/) |
 | `cpp/src/c_api/` | extern "C" wrappers |
-| `cpp/abi/expected_symbols_*.txt` | 403 symboles ABI |
+| `cpp/abi/expected_symbols_*.txt` | 498 symboles ABI |
 | `parity/fixtures/*_v1.json` | 104 fixtures parity |
 | `parity/binding_parity.py` | Gate 1 comparator |
 | `parity/reference_parity.py` | Gate 2 comparator |

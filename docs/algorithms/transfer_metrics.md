@@ -32,7 +32,7 @@ The utility mirrors `nirs4all.analysis.transfer_metrics.TransferMetricsComputer`
 The `spread_distance` subsampling step uses a deterministic Fisher-Yates permutation driven by SplitMix64 keyed on `seed`. This is **not** bit-identical to `numpy.random.RandomState(seed).choice` — we mirror SplitMix64 instead because:
 
 1. The C ABI already exposes PCG64 (Phase 1); replicating NumPy's legacy Mersenne-Twister stream would add a maintenance liability without parity benefit.
-2. The frozen Python reference under `parity/python_generator/src/c4a_parity_transfer_ref/` uses the same SplitMix64 helper, so the parity fixtures encode the SplitMix64 behaviour rather than NumPy's MT19937.
+2. The internal parity fixture under `parity/python_generator/src/c4a_parity_transfer_ref/` uses the same SplitMix64 helper, so the parity fixtures encode the SplitMix64 behaviour rather than NumPy's MT19937.
 3. The downstream metric (a mean of two min-distance scalars over a 100-sample subsample) is statistically robust to the choice of seed regardless.
 
 ## Parameters
@@ -104,6 +104,6 @@ These are consistent with the LDLT-iterative baseline operators (Phase 5) and re
 - `cpp/src/c_api/c_api_transfer_metrics.cpp` — extern "C" wrapper.
 - `cpp/src/c_api/c_api_transfer_metrics_decl.h` — worktree-local declaration (moves to `c4a.h §13` at merge time).
 - `cpp/tests/test_transfer_metrics.cpp` — smoke + invalid-args + parity tests.
-- `parity/python_generator/src/c4a_parity_transfer_ref/transfer_metrics.py` — frozen Python reference.
+- `parity/python_generator/src/c4a_parity_transfer_ref/transfer_metrics.py` — internal parity fixture.
 - `parity/python_generator/scripts/generate_phase20_fixtures.py` — fixture generator.
 - `parity/fixtures/transfer_metrics_v1.json` — 5 parity cases.

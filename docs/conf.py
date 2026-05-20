@@ -51,6 +51,7 @@ extensions = [
     "sphinx_design",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.viewcode",
+    "sphinx.ext.mathjax",
 ]
 
 # myst-parser: enable the optional features we actually use.
@@ -62,6 +63,8 @@ myst_enable_extensions = [
     "substitution",
     "tasklist",
     "attrs_inline",
+    "dollarmath",           # $...$ inline and $$...$$ block math
+    "amsmath",              # \begin{align}...\end{align} environments
 ]
 myst_heading_anchors = 3
 # Some long titles in benchmarks; allow.
@@ -104,10 +107,10 @@ html_theme_options = {
                     "JavaScript, Android, Go, Rust, Julia, Ruby, .NET, Lua, Nim.",
     "github_user": "GBeurier",
     "github_repo": "chemometrics4all",
-    "github_button": True,
+    "github_button": False,
     "fixed_sidebar": True,
-    "sidebar_width": "260px",
-    "page_width": "1200px",
+    "sidebar_width": "280px",
+    "page_width": "1380px",
     "show_relbars": True,
 }
 
@@ -122,9 +125,9 @@ html_sidebars = {
 # Static assets dir.
 html_static_path = ["_static"]
 
-# Narrow technical font + tighter tables for the benchmark pages.
-html_css_files = ["custom.css"]
-html_js_files = ["tab-combo.js"]
+# Alabaster auto-injects _static/custom.css via its layout, so
+# listing it again in html_css_files would duplicate the <link>.
+html_js_files = ["tab-combo.js", "sidebar-scroll.js"]
 
 # Templates dir — Sphinx auto-discovers `_templates/`, but list it
 # explicitly so the custom landing.html template is picked up.
@@ -136,33 +139,61 @@ html_additional_pages = {"index": "landing.html"}
 
 
 def setup(app):
-    """Inject the benchmark JSON payload into html_context.
+    """Inject dashboard data and refresh per-method benchmark tables.
 
-    Strategy:
-      1. If a future benchmark runner writes a supported payload, this hook can
-         be extended to publish it.
-      2. Until then, use the committed placeholder payload or regenerate the
-         same scaffold via `_extras/build_landing.py`.
-
-    Either way, the landing.html template receives `bench_data_json` +
-    `generated_at` via Jinja2 substitution.
+    Live benchmark CSVs win over the committed JSON snapshot. The same payload
+    drives the landing dashboard and the ``### Benchmarks`` sections in
+    ``docs/methods/*.md`` via a Sphinx ``source-read`` hook.
     """
     import json as _json
-    from build_landing import build_payload
+    from build_landing import build_payload, _result_csv_paths, _validation_payload
+    from method_benchmark_tables import load_or_build_blocks, install_sphinx_hook
 
     here = _Path(__file__).parent
     results_dir = here.parent / "benchmarks" / "cross_binding" / "results"
     static_json = here / "_static" / "bench-data.json"
 
-    if static_json.exists():
+    csvs_present = bool(_result_csv_paths(results_dir))
+
+    if csvs_present:
+        payload = build_payload(results_dir)
+        static_json.parent.mkdir(parents=True, exist_ok=True)
+        static_json.write_text(
+            _json.dumps(payload["payload"], indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        bench_json = payload["json"]
+        generated_at = payload["generated_at"]
+        bench_payload = payload["payload"]
+    elif static_json.exists():
         raw = _json.loads(static_json.read_text())
+        raw.setdefault("validation", _validation_payload())
         bench_json = _json.dumps(raw, separators=(",", ":"))
         generated_at = raw.get("generated_at", "unknown")
+        bench_payload = raw
     else:
         payload = build_payload(results_dir)
         bench_json = payload["json"]
         generated_at = payload["generated_at"]
+        bench_payload = payload["payload"]
 
     app.config.html_context = dict(app.config.html_context or {})
     app.config.html_context["bench_data_json"] = bench_json
     app.config.html_context["generated_at"] = generated_at
+
+    from sphinx.util import logging as _sphinx_logging
+
+    _docs_log = _sphinx_logging.getLogger("chemometrics4all-docs")
+    method_blocks, method_blocks_source = load_or_build_blocks(bench_payload)
+    if method_blocks_source == "none":
+        _docs_log.warning(
+            "method benchmark blocks: no CSV, JSON, or snapshot found; "
+            "method pages will keep their committed ### Benchmarks sections."
+        )
+    else:
+        _docs_log.info(
+            "method benchmark blocks: %d from %s",
+            len(method_blocks),
+            method_blocks_source,
+        )
+    install_sphinx_hook(app, method_blocks)
