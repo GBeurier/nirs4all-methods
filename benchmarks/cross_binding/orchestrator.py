@@ -1877,7 +1877,9 @@ for (i in seq_len({repeat})) {{
   for (j in seq_len(batch_loops)) out <- c4a_run_once()
   times[[i]] <- (c4a_now_ms() - t0) / batch_loops
 }}
-if (is.list(out)) {{
+if (is.list(out) && all(c("train_idx", "test_idx") %in% names(out))) {{
+  out <- c(out$train_idx - 1L, out$test_idx - 1L)
+}} else if (is.list(out)) {{
   out <- unlist(out, recursive = TRUE, use.names = FALSE)
 }}
 if (is.logical(out)) {{
