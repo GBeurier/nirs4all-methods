@@ -31,8 +31,8 @@ separately by the reference parity gate.
 
 | Parameter | Type                       | Meaning                                  |
 | --------- | -------------------------- | ---------------------------------------- |
-| `family`  | enum `c4a_pp_wavelet_family_t`   | Wavelet family identifier          |
-| `mode`    | enum `c4a_pp_wavelet_boundary_t` | Boundary extension mode            |
+| `family`  | enum `n4m_pp_wavelet_family_t`   | Wavelet family identifier          |
+| `mode`    | enum `n4m_pp_wavelet_boundary_t` | Boundary extension mode            |
 
 `_output_cols(input_cols)` returns the row width $2m$ used by the
 caller to size the output matrix.
@@ -45,13 +45,13 @@ Stateless: `_create / _transform / _destroy` plus the
 ## Numerical contract
 
 - `_transform` requires `out.cols == 2 * m` and `out.rows == X.rows`,
-  otherwise returns `C4A_ERR_SHAPE_MISMATCH`.
+  otherwise returns `N4M_ERR_SHAPE_MISMATCH`.
 - Parity tolerance against the internal parity fixture: `1e-10`
   absolute / `1e-11` relative.
 
 ## Reference
 
 `nirs4all.operators.transforms.nirs.Wavelet` (single-level DWT;
-chemometrics4all returns both `cA` and `cD` instead of resampling the
+nirs4all-methods returns both `cA` and `cD` instead of resampling the
 detail band). Filter banks: frozen PyWavelets 1.6.0 oracle, with current
 upstream comparison handled by reference parity.

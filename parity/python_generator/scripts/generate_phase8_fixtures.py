@@ -11,7 +11,7 @@ Both operators implement the `_fit / _transform` ABI contract:
           external parameter d (length n_samples).  transform(X) returns
           the input matrix unchanged (the `d = d_mean` contract), since d
           is not available at transform time.  The fit_transform path is
-          covered separately by a `_apply_with_d` smoke test in the c4a
+          covered separately by a `_apply_with_d` smoke test in the n4m
           test suite.
 
 Fixture schema extension (additive over Phase 3): adds optional
@@ -37,7 +37,7 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "parity" / "python_generator" / "src"))
 
-from c4a_parity_orthog_ref import (  # noqa: E402
+from n4m_parity_orthog_ref import (  # noqa: E402
     epo as epo_ref,
     epo_fit_transform,
     osc as osc_ref,
@@ -147,9 +147,9 @@ def write_fixture(op_id: str,
                    cases: list[tuple[str, dict, Callable[[], np.ndarray]]],
                    out_dir: Path) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_pp_{op_id}_v1",
+        "format": f"n4m_pp_{op_id}_v1",
         "numpy_version": np.__version__,
-        "reference": "c4a_parity_orthog_ref (frozen against nirs4all==0.8.x)",
+        "reference": "n4m_parity_orthog_ref (frozen against nirs4all==0.8.x)",
         "encoding": "ieee754_binary64_be_hex",
         "fit_rows": int(fit_X.shape[0]),
         "fit_cols": int(fit_X.shape[1]),

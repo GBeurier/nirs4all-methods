@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: CECILL-2.1
-"""pytest fixtures for the chemometrics4all binding test suite."""
+"""pytest fixtures for the nirs4all-methods binding test suite."""
 from __future__ import annotations
 
 import os

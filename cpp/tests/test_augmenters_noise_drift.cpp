@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
-// Parity tests for the Phase 15 augmenters (`c4a_aug_*` -- 7 operators,
+// Parity tests for the Phase 15 augmenters (`n4m_aug_*` -- 7 operators,
 // 21 ABI symbols). For each operator we register one smoke test (basic
 // shape sanity + RNG-determinism check) and one parity test that loads the
 // corresponding fixture under ``parity/fixtures/aug_<NAME>_v1.json`` and
 // asserts bit-exact equality (1e-15 absolute tolerance) against the frozen
-// Python reference in ``c4a_parity_augmenters_ref``.
+// Python reference in ``n4m_parity_augmenters_ref``.
 
 #include <cmath>
 #include <cstddef>
@@ -20,17 +20,17 @@
 #include <utility>
 #include <vector>
 
-#include "chemometrics4all/c4a.h"
+#include "n4m/n4m.h"
 
-#ifndef C4A_PARITY_FIXTURE_DIR
-#  error "C4A_PARITY_FIXTURE_DIR must be defined to locate the fixture files"
+#ifndef N4M_PARITY_FIXTURE_DIR
+#  error "N4M_PARITY_FIXTURE_DIR must be defined to locate the fixture files"
 #endif
 
 #include "harness.hpp"
 
 namespace {
 
-#define AUG_REQUIRE(cond) C4A_TEST_REQUIRE(cond)
+#define AUG_REQUIRE(cond) N4M_TEST_REQUIRE(cond)
 
 constexpr double kParityTol = 1e-15;
 
@@ -375,19 +375,19 @@ void compare_matrices(const std::string& tag,
     }
 }
 
-c4a_matrix_view_t make_rowmajor_f64(double* data, std::int64_t rows,
+n4m_matrix_view_t make_rowmajor_f64(double* data, std::int64_t rows,
                                      std::int64_t cols) {
-    c4a_matrix_view_t v{};
-    c4a_matrix_view_init_rowmajor(&v, data, rows, cols, C4A_DTYPE_F64);
+    n4m_matrix_view_t v{};
+    n4m_matrix_view_init_rowmajor(&v, data, rows, cols, N4M_DTYPE_F64);
     return v;
 }
 
-c4a_matrix_view_t make_rowmajor_f64_const(const double* data,
+n4m_matrix_view_t make_rowmajor_f64_const(const double* data,
                                            std::int64_t rows,
                                            std::int64_t cols) {
-    c4a_matrix_view_t v{};
-    c4a_matrix_view_init_rowmajor(&v, const_cast<double*>(data), rows, cols,
-                                    C4A_DTYPE_F64);
+    n4m_matrix_view_t v{};
+    n4m_matrix_view_init_rowmajor(&v, const_cast<double*>(data), rows, cols,
+                                    N4M_DTYPE_F64);
     return v;
 }
 
@@ -414,20 +414,20 @@ void run_determinism_smoke(Create create_fn, Apply apply_fn,
     double out1[R * C] = {0};
     double out2[R * C] = {0};
 
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    AUG_REQUIRE(c4a_rng_pcg64_create(seed, &rng) == C4A_OK);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    AUG_REQUIRE(n4m_rng_pcg64_create(seed, &rng) == N4M_OK);
     auto* h = create_fn(rng);
     AUG_REQUIRE(h != nullptr);
-    AUG_REQUIRE(apply_fn(h, X_arr, out1, R, C) == C4A_OK);
+    AUG_REQUIRE(apply_fn(h, X_arr, out1, R, C) == N4M_OK);
     destroy_fn(h);
 
     // Re-seed and re-apply: the result must be byte-identical.
-    AUG_REQUIRE(c4a_rng_pcg64_set_seed(rng, seed) == C4A_OK);
+    AUG_REQUIRE(n4m_rng_pcg64_set_seed(rng, seed) == N4M_OK);
     h = create_fn(rng);
     AUG_REQUIRE(h != nullptr);
-    AUG_REQUIRE(apply_fn(h, X_arr, out2, R, C) == C4A_OK);
+    AUG_REQUIRE(apply_fn(h, X_arr, out2, R, C) == N4M_OK);
     destroy_fn(h);
-    c4a_rng_pcg64_destroy(rng);
+    n4m_rng_pcg64_destroy(rng);
 
     for (std::int64_t i = 0; i < R * C; ++i) {
         AUG_REQUIRE(out1[i] == out2[i]);
@@ -436,116 +436,116 @@ void run_determinism_smoke(Create create_fn, Apply apply_fn,
 
 void test_gaussian_noise_smoke() {
     run_determinism_smoke(
-        [](c4a_rng_pcg64_state_t* rng) {
-            c4a_aug_gaussian_noise_handle_t* h = nullptr;
-            (void)c4a_aug_gaussian_noise_create(&h, rng, 0.05);
+        [](n4m_rng_pcg64_state_t* rng) {
+            n4m_aug_gaussian_noise_handle_t* h = nullptr;
+            (void)n4m_aug_gaussian_noise_create(&h, rng, 0.05);
             return h;
         },
-        [](const c4a_aug_gaussian_noise_handle_t* h, const double* X,
+        [](const n4m_aug_gaussian_noise_handle_t* h, const double* X,
             double* out, std::int64_t R, std::int64_t C) {
-            return c4a_aug_gaussian_noise_apply(
+            return n4m_aug_gaussian_noise_apply(
                 h, make_rowmajor_f64_const(X, R, C),
                 make_rowmajor_f64(out, R, C));
         },
-        c4a_aug_gaussian_noise_destroy, /*seed=*/42u);
+        n4m_aug_gaussian_noise_destroy, /*seed=*/42u);
 }
 
 void test_multiplicative_noise_smoke() {
     run_determinism_smoke(
-        [](c4a_rng_pcg64_state_t* rng) {
-            c4a_aug_multiplicative_noise_handle_t* h = nullptr;
-            (void)c4a_aug_multiplicative_noise_create(&h, rng, 0.1);
+        [](n4m_rng_pcg64_state_t* rng) {
+            n4m_aug_multiplicative_noise_handle_t* h = nullptr;
+            (void)n4m_aug_multiplicative_noise_create(&h, rng, 0.1);
             return h;
         },
-        [](const c4a_aug_multiplicative_noise_handle_t* h, const double* X,
+        [](const n4m_aug_multiplicative_noise_handle_t* h, const double* X,
             double* out, std::int64_t R, std::int64_t C) {
-            return c4a_aug_multiplicative_noise_apply(
+            return n4m_aug_multiplicative_noise_apply(
                 h, make_rowmajor_f64_const(X, R, C),
                 make_rowmajor_f64(out, R, C));
         },
-        c4a_aug_multiplicative_noise_destroy, /*seed=*/42u);
+        n4m_aug_multiplicative_noise_destroy, /*seed=*/42u);
 }
 
 void test_spike_noise_smoke() {
     run_determinism_smoke(
-        [](c4a_rng_pcg64_state_t* rng) {
-            c4a_aug_spike_noise_handle_t* h = nullptr;
-            (void)c4a_aug_spike_noise_create(&h, rng, 1, 3, -0.5, 0.5);
+        [](n4m_rng_pcg64_state_t* rng) {
+            n4m_aug_spike_noise_handle_t* h = nullptr;
+            (void)n4m_aug_spike_noise_create(&h, rng, 1, 3, -0.5, 0.5);
             return h;
         },
-        [](const c4a_aug_spike_noise_handle_t* h, const double* X,
+        [](const n4m_aug_spike_noise_handle_t* h, const double* X,
             double* out, std::int64_t R, std::int64_t C) {
-            return c4a_aug_spike_noise_apply(
+            return n4m_aug_spike_noise_apply(
                 h, make_rowmajor_f64_const(X, R, C),
                 make_rowmajor_f64(out, R, C));
         },
-        c4a_aug_spike_noise_destroy, /*seed=*/42u);
+        n4m_aug_spike_noise_destroy, /*seed=*/42u);
 }
 
 void test_hetero_noise_smoke() {
     run_determinism_smoke(
-        [](c4a_rng_pcg64_state_t* rng) {
-            c4a_aug_hetero_noise_handle_t* h = nullptr;
-            (void)c4a_aug_hetero_noise_create(&h, rng, 1e-3, 5e-3);
+        [](n4m_rng_pcg64_state_t* rng) {
+            n4m_aug_hetero_noise_handle_t* h = nullptr;
+            (void)n4m_aug_hetero_noise_create(&h, rng, 1e-3, 5e-3);
             return h;
         },
-        [](const c4a_aug_hetero_noise_handle_t* h, const double* X,
+        [](const n4m_aug_hetero_noise_handle_t* h, const double* X,
             double* out, std::int64_t R, std::int64_t C) {
-            return c4a_aug_hetero_noise_apply(
+            return n4m_aug_hetero_noise_apply(
                 h, make_rowmajor_f64_const(X, R, C),
                 make_rowmajor_f64(out, R, C));
         },
-        c4a_aug_hetero_noise_destroy, /*seed=*/42u);
+        n4m_aug_hetero_noise_destroy, /*seed=*/42u);
 }
 
 void test_linear_drift_smoke() {
     run_determinism_smoke(
-        [](c4a_rng_pcg64_state_t* rng) {
-            c4a_aug_linear_drift_handle_t* h = nullptr;
-            (void)c4a_aug_linear_drift_create(&h, rng, -0.1, 0.1, -0.001, 0.001);
+        [](n4m_rng_pcg64_state_t* rng) {
+            n4m_aug_linear_drift_handle_t* h = nullptr;
+            (void)n4m_aug_linear_drift_create(&h, rng, -0.1, 0.1, -0.001, 0.001);
             return h;
         },
-        [](const c4a_aug_linear_drift_handle_t* h, const double* X,
+        [](const n4m_aug_linear_drift_handle_t* h, const double* X,
             double* out, std::int64_t R, std::int64_t C) {
-            return c4a_aug_linear_drift_apply(
+            return n4m_aug_linear_drift_apply(
                 h, make_rowmajor_f64_const(X, R, C),
                 make_rowmajor_f64(out, R, C));
         },
-        c4a_aug_linear_drift_destroy, /*seed=*/42u);
+        n4m_aug_linear_drift_destroy, /*seed=*/42u);
 }
 
 void test_poly_drift_smoke() {
     const double lo[3] = {-0.1, -0.05, -0.033};
     const double hi[3] = { 0.1,  0.05,  0.033};
     run_determinism_smoke(
-        [&lo, &hi](c4a_rng_pcg64_state_t* rng) {
-            c4a_aug_poly_drift_handle_t* h = nullptr;
-            (void)c4a_aug_poly_drift_create(&h, rng, 2, lo, hi);
+        [&lo, &hi](n4m_rng_pcg64_state_t* rng) {
+            n4m_aug_poly_drift_handle_t* h = nullptr;
+            (void)n4m_aug_poly_drift_create(&h, rng, 2, lo, hi);
             return h;
         },
-        [](const c4a_aug_poly_drift_handle_t* h, const double* X,
+        [](const n4m_aug_poly_drift_handle_t* h, const double* X,
             double* out, std::int64_t R, std::int64_t C) {
-            return c4a_aug_poly_drift_apply(
+            return n4m_aug_poly_drift_apply(
                 h, make_rowmajor_f64_const(X, R, C),
                 make_rowmajor_f64(out, R, C));
         },
-        c4a_aug_poly_drift_destroy, /*seed=*/42u);
+        n4m_aug_poly_drift_destroy, /*seed=*/42u);
 }
 
 void test_path_length_smoke() {
     run_determinism_smoke(
-        [](c4a_rng_pcg64_state_t* rng) {
-            c4a_aug_path_length_handle_t* h = nullptr;
-            (void)c4a_aug_path_length_create(&h, rng, 0.05, 0.5);
+        [](n4m_rng_pcg64_state_t* rng) {
+            n4m_aug_path_length_handle_t* h = nullptr;
+            (void)n4m_aug_path_length_create(&h, rng, 0.05, 0.5);
             return h;
         },
-        [](const c4a_aug_path_length_handle_t* h, const double* X,
+        [](const n4m_aug_path_length_handle_t* h, const double* X,
             double* out, std::int64_t R, std::int64_t C) {
-            return c4a_aug_path_length_apply(
+            return n4m_aug_path_length_apply(
                 h, make_rowmajor_f64_const(X, R, C),
                 make_rowmajor_f64(out, R, C));
         },
-        c4a_aug_path_length_destroy, /*seed=*/42u);
+        n4m_aug_path_length_destroy, /*seed=*/42u);
 }
 
 // ---------------------------------------------------------------------------
@@ -558,29 +558,29 @@ template <typename CreateFromParams>
 void verify_parity(const std::string& fixture_filename,
                     CreateFromParams create_from_params,
                     void (*destroy_fn)(void*),
-                    c4a_status_t (*apply_fn)(const void* h,
-                                              c4a_matrix_view_t,
-                                              c4a_matrix_view_t)) {
+                    n4m_status_t (*apply_fn)(const void* h,
+                                              n4m_matrix_view_t,
+                                              n4m_matrix_view_t)) {
     const Fixture fx = load_fixture(
-        std::string(C4A_PARITY_FIXTURE_DIR) + "/" + fixture_filename);
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/" + fixture_filename);
     AUG_REQUIRE(static_cast<std::int64_t>(fx.X.size())
                  == fx.rows * fx.cols);
 
     std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols), 0.0);
 
     for (const auto& c : fx.cases) {
-        c4a_rng_pcg64_state_t* rng = nullptr;
-        AUG_REQUIRE(c4a_rng_pcg64_create(c.seed, &rng) == C4A_OK);
+        n4m_rng_pcg64_state_t* rng = nullptr;
+        AUG_REQUIRE(n4m_rng_pcg64_create(c.seed, &rng) == N4M_OK);
         void* h = create_from_params(rng, c.params_json);
         AUG_REQUIRE(h != nullptr);
 
-        c4a_matrix_view_t Xv = make_rowmajor_f64_const(
+        n4m_matrix_view_t Xv = make_rowmajor_f64_const(
             fx.X.data(), fx.rows, fx.cols);
-        c4a_matrix_view_t Ov = make_rowmajor_f64(
+        n4m_matrix_view_t Ov = make_rowmajor_f64(
             out.data(), fx.rows, fx.cols);
-        AUG_REQUIRE(apply_fn(h, Xv, Ov) == C4A_OK);
+        AUG_REQUIRE(apply_fn(h, Xv, Ov) == N4M_OK);
         destroy_fn(h);
-        c4a_rng_pcg64_destroy(rng);
+        n4m_rng_pcg64_destroy(rng);
 
         compare_matrices(fixture_filename + "/" + c.name, out, c.expected_out);
     }
@@ -589,139 +589,139 @@ void verify_parity(const std::string& fixture_filename,
 // Per-operator parity wrappers. Each builds the handle from the
 // fixture-encoded params and forwards apply/destroy through `void*` shims.
 
-c4a_status_t gaussian_noise_apply_void(const void* h, c4a_matrix_view_t X,
-                                        c4a_matrix_view_t out) {
-    return c4a_aug_gaussian_noise_apply(
-        static_cast<const c4a_aug_gaussian_noise_handle_t*>(h), X, out);
+n4m_status_t gaussian_noise_apply_void(const void* h, n4m_matrix_view_t X,
+                                        n4m_matrix_view_t out) {
+    return n4m_aug_gaussian_noise_apply(
+        static_cast<const n4m_aug_gaussian_noise_handle_t*>(h), X, out);
 }
 void gaussian_noise_destroy_void(void* h) {
-    c4a_aug_gaussian_noise_destroy(
-        static_cast<c4a_aug_gaussian_noise_handle_t*>(h));
+    n4m_aug_gaussian_noise_destroy(
+        static_cast<n4m_aug_gaussian_noise_handle_t*>(h));
 }
 
 void test_gaussian_noise_parity() {
     verify_parity("aug_gaussian_noise_v1.json",
-        [](c4a_rng_pcg64_state_t* rng,
+        [](n4m_rng_pcg64_state_t* rng,
             const std::string& params) -> void* {
             const double sigma = params_get_double(params, "sigma");
-            c4a_aug_gaussian_noise_handle_t* h = nullptr;
-            AUG_REQUIRE(c4a_aug_gaussian_noise_create(&h, rng, sigma) == C4A_OK);
+            n4m_aug_gaussian_noise_handle_t* h = nullptr;
+            AUG_REQUIRE(n4m_aug_gaussian_noise_create(&h, rng, sigma) == N4M_OK);
             return h;
         },
         gaussian_noise_destroy_void, gaussian_noise_apply_void);
 }
 
-c4a_status_t multiplicative_noise_apply_void(const void* h,
-                                               c4a_matrix_view_t X,
-                                               c4a_matrix_view_t out) {
-    return c4a_aug_multiplicative_noise_apply(
-        static_cast<const c4a_aug_multiplicative_noise_handle_t*>(h), X, out);
+n4m_status_t multiplicative_noise_apply_void(const void* h,
+                                               n4m_matrix_view_t X,
+                                               n4m_matrix_view_t out) {
+    return n4m_aug_multiplicative_noise_apply(
+        static_cast<const n4m_aug_multiplicative_noise_handle_t*>(h), X, out);
 }
 void multiplicative_noise_destroy_void(void* h) {
-    c4a_aug_multiplicative_noise_destroy(
-        static_cast<c4a_aug_multiplicative_noise_handle_t*>(h));
+    n4m_aug_multiplicative_noise_destroy(
+        static_cast<n4m_aug_multiplicative_noise_handle_t*>(h));
 }
 
 void test_multiplicative_noise_parity() {
     verify_parity("aug_multiplicative_noise_v1.json",
-        [](c4a_rng_pcg64_state_t* rng, const std::string& params) -> void* {
+        [](n4m_rng_pcg64_state_t* rng, const std::string& params) -> void* {
             const double sigma_gain = params_get_double(params, "sigma_gain");
-            c4a_aug_multiplicative_noise_handle_t* h = nullptr;
-            AUG_REQUIRE(c4a_aug_multiplicative_noise_create(&h, rng, sigma_gain)
-                         == C4A_OK);
+            n4m_aug_multiplicative_noise_handle_t* h = nullptr;
+            AUG_REQUIRE(n4m_aug_multiplicative_noise_create(&h, rng, sigma_gain)
+                         == N4M_OK);
             return h;
         },
         multiplicative_noise_destroy_void, multiplicative_noise_apply_void);
 }
 
-c4a_status_t spike_noise_apply_void(const void* h, c4a_matrix_view_t X,
-                                      c4a_matrix_view_t out) {
-    return c4a_aug_spike_noise_apply(
-        static_cast<const c4a_aug_spike_noise_handle_t*>(h), X, out);
+n4m_status_t spike_noise_apply_void(const void* h, n4m_matrix_view_t X,
+                                      n4m_matrix_view_t out) {
+    return n4m_aug_spike_noise_apply(
+        static_cast<const n4m_aug_spike_noise_handle_t*>(h), X, out);
 }
 void spike_noise_destroy_void(void* h) {
-    c4a_aug_spike_noise_destroy(
-        static_cast<c4a_aug_spike_noise_handle_t*>(h));
+    n4m_aug_spike_noise_destroy(
+        static_cast<n4m_aug_spike_noise_handle_t*>(h));
 }
 
 void test_spike_noise_parity() {
     verify_parity("aug_spike_noise_v1.json",
-        [](c4a_rng_pcg64_state_t* rng, const std::string& params) -> void* {
+        [](n4m_rng_pcg64_state_t* rng, const std::string& params) -> void* {
             const std::int32_t n_min = static_cast<std::int32_t>(
                 params_get_int64(params, "n_spikes_min"));
             const std::int32_t n_max = static_cast<std::int32_t>(
                 params_get_int64(params, "n_spikes_max"));
             const double amp_lo = params_get_double(params, "amplitude_min");
             const double amp_hi = params_get_double(params, "amplitude_max");
-            c4a_aug_spike_noise_handle_t* h = nullptr;
-            AUG_REQUIRE(c4a_aug_spike_noise_create(
-                          &h, rng, n_min, n_max, amp_lo, amp_hi) == C4A_OK);
+            n4m_aug_spike_noise_handle_t* h = nullptr;
+            AUG_REQUIRE(n4m_aug_spike_noise_create(
+                          &h, rng, n_min, n_max, amp_lo, amp_hi) == N4M_OK);
             return h;
         },
         spike_noise_destroy_void, spike_noise_apply_void);
 }
 
-c4a_status_t hetero_noise_apply_void(const void* h, c4a_matrix_view_t X,
-                                       c4a_matrix_view_t out) {
-    return c4a_aug_hetero_noise_apply(
-        static_cast<const c4a_aug_hetero_noise_handle_t*>(h), X, out);
+n4m_status_t hetero_noise_apply_void(const void* h, n4m_matrix_view_t X,
+                                       n4m_matrix_view_t out) {
+    return n4m_aug_hetero_noise_apply(
+        static_cast<const n4m_aug_hetero_noise_handle_t*>(h), X, out);
 }
 void hetero_noise_destroy_void(void* h) {
-    c4a_aug_hetero_noise_destroy(
-        static_cast<c4a_aug_hetero_noise_handle_t*>(h));
+    n4m_aug_hetero_noise_destroy(
+        static_cast<n4m_aug_hetero_noise_handle_t*>(h));
 }
 
 void test_hetero_noise_parity() {
     verify_parity("aug_hetero_noise_v1.json",
-        [](c4a_rng_pcg64_state_t* rng, const std::string& params) -> void* {
+        [](n4m_rng_pcg64_state_t* rng, const std::string& params) -> void* {
             const double base = params_get_double(params, "noise_base");
             const double dep  = params_get_double(params, "noise_signal_dep");
-            c4a_aug_hetero_noise_handle_t* h = nullptr;
-            AUG_REQUIRE(c4a_aug_hetero_noise_create(&h, rng, base, dep)
-                         == C4A_OK);
+            n4m_aug_hetero_noise_handle_t* h = nullptr;
+            AUG_REQUIRE(n4m_aug_hetero_noise_create(&h, rng, base, dep)
+                         == N4M_OK);
             return h;
         },
         hetero_noise_destroy_void, hetero_noise_apply_void);
 }
 
-c4a_status_t linear_drift_apply_void(const void* h, c4a_matrix_view_t X,
-                                       c4a_matrix_view_t out) {
-    return c4a_aug_linear_drift_apply(
-        static_cast<const c4a_aug_linear_drift_handle_t*>(h), X, out);
+n4m_status_t linear_drift_apply_void(const void* h, n4m_matrix_view_t X,
+                                       n4m_matrix_view_t out) {
+    return n4m_aug_linear_drift_apply(
+        static_cast<const n4m_aug_linear_drift_handle_t*>(h), X, out);
 }
 void linear_drift_destroy_void(void* h) {
-    c4a_aug_linear_drift_destroy(
-        static_cast<c4a_aug_linear_drift_handle_t*>(h));
+    n4m_aug_linear_drift_destroy(
+        static_cast<n4m_aug_linear_drift_handle_t*>(h));
 }
 
 void test_linear_drift_parity() {
     verify_parity("aug_linear_drift_v1.json",
-        [](c4a_rng_pcg64_state_t* rng, const std::string& params) -> void* {
+        [](n4m_rng_pcg64_state_t* rng, const std::string& params) -> void* {
             const double off_lo = params_get_double(params, "offset_min");
             const double off_hi = params_get_double(params, "offset_max");
             const double sl_lo  = params_get_double(params, "slope_min");
             const double sl_hi  = params_get_double(params, "slope_max");
-            c4a_aug_linear_drift_handle_t* h = nullptr;
-            AUG_REQUIRE(c4a_aug_linear_drift_create(
-                          &h, rng, off_lo, off_hi, sl_lo, sl_hi) == C4A_OK);
+            n4m_aug_linear_drift_handle_t* h = nullptr;
+            AUG_REQUIRE(n4m_aug_linear_drift_create(
+                          &h, rng, off_lo, off_hi, sl_lo, sl_hi) == N4M_OK);
             return h;
         },
         linear_drift_destroy_void, linear_drift_apply_void);
 }
 
-c4a_status_t poly_drift_apply_void(const void* h, c4a_matrix_view_t X,
-                                     c4a_matrix_view_t out) {
-    return c4a_aug_poly_drift_apply(
-        static_cast<const c4a_aug_poly_drift_handle_t*>(h), X, out);
+n4m_status_t poly_drift_apply_void(const void* h, n4m_matrix_view_t X,
+                                     n4m_matrix_view_t out) {
+    return n4m_aug_poly_drift_apply(
+        static_cast<const n4m_aug_poly_drift_handle_t*>(h), X, out);
 }
 void poly_drift_destroy_void(void* h) {
-    c4a_aug_poly_drift_destroy(
-        static_cast<c4a_aug_poly_drift_handle_t*>(h));
+    n4m_aug_poly_drift_destroy(
+        static_cast<n4m_aug_poly_drift_handle_t*>(h));
 }
 
 void test_poly_drift_parity() {
     verify_parity("aug_poly_drift_v1.json",
-        [](c4a_rng_pcg64_state_t* rng, const std::string& params) -> void* {
+        [](n4m_rng_pcg64_state_t* rng, const std::string& params) -> void* {
             const std::int32_t degree = static_cast<std::int32_t>(
                 params_get_int64(params, "degree"));
             const std::vector<double> lo =
@@ -730,32 +730,32 @@ void test_poly_drift_parity() {
                 params_get_double_array(params, "coeff_max");
             AUG_REQUIRE(static_cast<std::int32_t>(lo.size()) == degree + 1);
             AUG_REQUIRE(static_cast<std::int32_t>(hi.size()) == degree + 1);
-            c4a_aug_poly_drift_handle_t* h = nullptr;
-            AUG_REQUIRE(c4a_aug_poly_drift_create(
-                          &h, rng, degree, lo.data(), hi.data()) == C4A_OK);
+            n4m_aug_poly_drift_handle_t* h = nullptr;
+            AUG_REQUIRE(n4m_aug_poly_drift_create(
+                          &h, rng, degree, lo.data(), hi.data()) == N4M_OK);
             return h;
         },
         poly_drift_destroy_void, poly_drift_apply_void);
 }
 
-c4a_status_t path_length_apply_void(const void* h, c4a_matrix_view_t X,
-                                      c4a_matrix_view_t out) {
-    return c4a_aug_path_length_apply(
-        static_cast<const c4a_aug_path_length_handle_t*>(h), X, out);
+n4m_status_t path_length_apply_void(const void* h, n4m_matrix_view_t X,
+                                      n4m_matrix_view_t out) {
+    return n4m_aug_path_length_apply(
+        static_cast<const n4m_aug_path_length_handle_t*>(h), X, out);
 }
 void path_length_destroy_void(void* h) {
-    c4a_aug_path_length_destroy(
-        static_cast<c4a_aug_path_length_handle_t*>(h));
+    n4m_aug_path_length_destroy(
+        static_cast<n4m_aug_path_length_handle_t*>(h));
 }
 
 void test_path_length_parity() {
     verify_parity("aug_path_length_v1.json",
-        [](c4a_rng_pcg64_state_t* rng, const std::string& params) -> void* {
+        [](n4m_rng_pcg64_state_t* rng, const std::string& params) -> void* {
             const double std_ = params_get_double(params, "path_length_std");
             const double min_ = params_get_double(params, "min_path_length");
-            c4a_aug_path_length_handle_t* h = nullptr;
-            AUG_REQUIRE(c4a_aug_path_length_create(&h, rng, std_, min_)
-                         == C4A_OK);
+            n4m_aug_path_length_handle_t* h = nullptr;
+            AUG_REQUIRE(n4m_aug_path_length_create(&h, rng, std_, min_)
+                         == N4M_OK);
             return h;
         },
         path_length_destroy_void, path_length_apply_void);
@@ -763,8 +763,8 @@ void test_path_length_parity() {
 
 }  // namespace
 
-void register_augmenters_noise_drift_tests(c4a_testing::Runner& r);
-void register_augmenters_noise_drift_tests(c4a_testing::Runner& r) {
+void register_augmenters_noise_drift_tests(n4m_testing::Runner& r);
+void register_augmenters_noise_drift_tests(n4m_testing::Runner& r) {
     r.run("aug_gaussian_noise_smoke",         test_gaussian_noise_smoke);
     r.run("aug_multiplicative_noise_smoke",   test_multiplicative_noise_smoke);
     r.run("aug_spike_noise_smoke",            test_spike_noise_smoke);

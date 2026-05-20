@@ -22,7 +22,7 @@ ties broken by smallest index). This is the same `u_based_decision=True`
 convention used by `FlexiblePCA`, deliberately diverging from
 `sklearn.decomposition.TruncatedSVD` (which uses
 `u_based_decision=False` because it has no centring step). The frozen
-NumPy reference matches the c4a convention; sklearn does not.
+NumPy reference matches the n4m convention; sklearn does not.
 
 Explained variance and the cumulative-variance ratio are computed
 following sklearn's TruncatedSVD recipe (which is variance of the
@@ -57,7 +57,7 @@ $$
 | `n_components` | —       | Flexible count or variance-ratio specifier |
 
 The constructor rejects values `<= 0` or `NaN` with
-`C4A_ERR_INVALID_ARGUMENT`.
+`N4M_ERR_INVALID_ARGUMENT`.
 
 ## Lifecycle
 
@@ -68,8 +68,8 @@ Stateful: `_create / _fit / _transform / _destroy` with companion
 ## Numerical contract
 
 - `_fit` requires `rows >= 2` and `cols >= 1`. Returns
-  `C4A_ERR_INVALID_ARGUMENT` otherwise.
-- `_transform` returns `C4A_ERR_SHAPE_MISMATCH` if the output column
+  `N4M_ERR_INVALID_ARGUMENT` otherwise.
+- `_transform` returns `N4M_ERR_SHAPE_MISMATCH` if the output column
   count is not exactly `n_components_learned`, or the input column count
   is not exactly `n_features_in`.
 - Tolerance against the internal parity fixture: 1e-10 absolute / 1e-11

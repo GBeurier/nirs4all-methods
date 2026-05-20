@@ -2,7 +2,7 @@
 
 ## Goal
 
-Ship the first specialised feature-extraction operator in chemometrics4all: a
+Ship the first specialised feature-extraction operator in nirs4all-methods: a
 small, fixed bank of fractional convolutional kernels applied as 1-D
 convolutions across the wavelength axis. The bank is the Cartesian product of
 a list of fractional orders (`alphas`) and Gaussian widths (`sigmas`) at a
@@ -22,7 +22,7 @@ constructor hyperparameters.
   reference — see `fck_static.py`).
 - `nirs4all.operators.models.sklearn.fckpls.fractional_kernel_1d` (canonical
   spatial-domain kernel construction — mirrored bit-exactly by
-  `c4a_fck_kernel_1d`).
+  `n4m_fck_kernel_1d`).
 
 The C ABI follows the simpler `(alpha, sigma, K)` interface of
 `fractional_kernel_1d` rather than the Python transformer's
@@ -37,29 +37,29 @@ deterministic at `n_orders * n_scales` and the per-kernel storage uniform.
 4 new symbols (3 wrappers + 1 shape-helper):
 
 ```c
-/* New public header — split off from c4a.h to keep the canonical
- * preprocessing surface compact. Include alongside c4a.h. */
-#include "chemometrics4all/c4a_fck.h"
+/* New public header — split off from n4m.h to keep the canonical
+ * preprocessing surface compact. Include alongside n4m.h. */
+#include "n4m/n4m_fck.h"
 
-typedef struct c4a_pp_fck_static_handle_t c4a_pp_fck_static_handle_t;
+typedef struct n4m_pp_fck_static_handle_t n4m_pp_fck_static_handle_t;
 
-C4A_API c4a_status_t c4a_pp_fck_static_create(
-    c4a_pp_fck_static_handle_t** out,
+N4M_API n4m_status_t n4m_pp_fck_static_create(
+    n4m_pp_fck_static_handle_t** out,
     int32_t kernel_size,
     const double* filter_orders,   /* alphas, length n_orders */
     int32_t n_orders,
     const double* filter_scales,   /* sigmas, length n_scales */
     int32_t n_scales);
 
-C4A_API void c4a_pp_fck_static_destroy(c4a_pp_fck_static_handle_t* h);
+N4M_API void n4m_pp_fck_static_destroy(n4m_pp_fck_static_handle_t* h);
 
-C4A_API c4a_status_t c4a_pp_fck_static_transform(
-    const c4a_pp_fck_static_handle_t* h,
-    c4a_matrix_view_t X,
-    c4a_matrix_view_t out);
+N4M_API n4m_status_t n4m_pp_fck_static_transform(
+    const n4m_pp_fck_static_handle_t* h,
+    n4m_matrix_view_t X,
+    n4m_matrix_view_t out);
 
 /* Helper: output_cols = n_kernels * n_features, with int32_t overflow check. */
-C4A_API c4a_status_t c4a_pp_fck_static_output_cols(int32_t n_kernels,
+N4M_API n4m_status_t n4m_pp_fck_static_output_cols(int32_t n_kernels,
                                                     int32_t n_features,
                                                     int32_t* out);
 ```
@@ -68,7 +68,7 @@ Total: 126 → **130 symbols**.
 
 ## Internal helpers added
 
-- `cpp/src/core/common/fck_kernel.{c,h}` — `c4a_fck_kernel_1d(alpha, sigma,
+- `cpp/src/core/common/fck_kernel.{c,h}` — `n4m_fck_kernel_1d(alpha, sigma,
   kernel_size, out)`. Pure C; constructs the spatial-domain kernel
   (Gaussian × signed fractional power × optional zero-mean × L1
   normalisation) directly without any FFT/DFT. No external dependency.
@@ -80,12 +80,12 @@ Total: 126 → **130 symbols**.
 
 ## Test surface added
 
-A new standalone test executable `chemometrics4all_tests_fck` (registered as
-the second ctest binary alongside `chemometrics4all_tests`) covers:
+A new standalone test executable `n4m_tests_fck` (registered as
+the second ctest binary alongside `n4m_tests`) covers:
 
 1. `fck_smoke` — `_create / _transform / _destroy` lifecycle, shape helper,
    argument-validation error paths, NULL handling.
-2. `fck_kernel_direct` — exercises `c4a_fck_kernel_1d` for the
+2. `fck_kernel_direct` — exercises `n4m_fck_kernel_1d` for the
    `alpha=0` (pure Gaussian, even-symmetric), `alpha=1.0` (zero-mean,
    antisymmetric), and `alpha=1.5` (zero-mean, antisymmetric) branches;
    verifies symmetry, zero-mean, L1 normalisation contracts.
@@ -96,9 +96,9 @@ the second ctest binary alongside `chemometrics4all_tests`) covers:
    reference.
 
 The new executable bundles `cpp/src/core/common/fck_kernel.c` so the
-kernel-construction-direct test can reach `c4a_fck_kernel_1d` without
+kernel-construction-direct test can reach `n4m_fck_kernel_1d` without
 exposing the helper on the public ABI (it stays `hidden` visibility in
-`libc4a`).
+`libn4m`).
 
 ## Parity tolerances
 
@@ -108,7 +108,7 @@ exposing the helper on the public ABI (it stays `hidden` visibility in
 
 ## Boundary mode
 
-Default and only mode: `C4A_PAD_REFLECT` (matches
+Default and only mode: `N4M_PAD_REFLECT` (matches
 `scipy.ndimage.convolve1d(..., mode='reflect')`). Other boundary modes are
 intentionally out of scope for the first FCK landing — they can be added in
 a follow-up if a user needs them.
@@ -116,7 +116,7 @@ a follow-up if a user needs them.
 ## Files created (Phase 21)
 
 ```
-cpp/include/chemometrics4all/c4a_fck.h
+cpp/include/n4m/n4m_fck.h
 cpp/src/core/common/fck_kernel.{c,h}
 cpp/src/core/preprocessing/specialized/fck_static.{c,h}
 cpp/src/c_api/c_api_fck.cpp
@@ -129,18 +129,18 @@ roadmap/phase-21-fck-static.md   (this file)
 
 ## Constraints honoured (worktree isolation)
 
-- **Did not modify**: `cpp/include/chemometrics4all/c4a.h`,
-  `cpp/include/chemometrics4all/c4a_version.h`, top-level `CMakeLists.txt`,
+- **Did not modify**: `cpp/include/n4m/n4m.h`,
+  `cpp/include/n4m/n4m_version.h`, top-level `CMakeLists.txt`,
   `cpp/tests/main.cpp`, `cpp/abi/expected_symbols_*.txt`.
 - **Did modify**: `cpp/src/CMakeLists.txt` (added 3 new source files
   to the source lists), `cpp/tests/CMakeLists.txt` (added the new
-  `chemometrics4all_tests_fck` executable + ctest registration), and
+  `n4m_tests_fck` executable + ctest registration), and
   `CHANGELOG.md` (Phase 21 entry).
 
 The parent project's merger needs to:
 1. Append the 4 new symbols to `cpp/abi/expected_symbols_{linux,macos,windows}.txt`.
-2. Optionally fold `c4a_fck.h` into `c4a.h` §13 if a single-header surface is
+2. Optionally fold `n4m_fck.h` into `n4m.h` §13 if a single-header surface is
    preferred (the current split keeps the two files independent).
-3. Bump `C4A_ABI_VERSION_MINOR` from 6 to 7 (additive change, no
+3. Bump `N4M_ABI_VERSION_MINOR` from 6 to 7 (additive change, no
    compatibility break).
 4. Update `docs/reviews/PHASES.md` row 21 with the post-review verdict.

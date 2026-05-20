@@ -15,16 +15,16 @@ methods are supported (Phase 13):
 | `isolation_forest` | Tree-ensemble isolation depth (vendored mini-IF) | Contamination quantile of training scores |
 | `lof` | Local Outlier Factor with `k = min(20, n-1)` | Contamination quantile of training scores |
 
-All six methods reuse the shared `c4a_filter_stats_t` struct and the
+All six methods reuse the shared `n4m_filter_stats_t` struct and the
 "fit + apply" pattern that the HighLeverage filter introduced in Phase 14.
 
 ## C ABI surface
 
 ```c
-typedef struct c4a_filter_x_outlier_handle_t c4a_filter_x_outlier_handle_t;
+typedef struct n4m_filter_x_outlier_handle_t n4m_filter_x_outlier_handle_t;
 
-c4a_status_t c4a_filter_x_outlier_create(
-    c4a_filter_x_outlier_handle_t** out,
+n4m_status_t n4m_filter_x_outlier_create(
+    n4m_filter_x_outlier_handle_t** out,
     int32_t  method,                // 0..5
     int      use_threshold,         // 0 = method default, 1 = override
     double   threshold,
@@ -33,15 +33,15 @@ c4a_status_t c4a_filter_x_outlier_create(
     uint64_t seed,                  // PCG64 seed (iforest / robust_mahalanobis)
     int32_t  n_estimators,          // iforest tree count (default 100)
     int64_t  max_samples);          // iforest sub-sample size (default 256)
-void         c4a_filter_x_outlier_destroy(c4a_filter_x_outlier_handle_t*);
-c4a_status_t c4a_filter_x_outlier_fit(
-    c4a_filter_x_outlier_handle_t* h, c4a_matrix_view_t X);
-c4a_status_t c4a_filter_x_outlier_is_fitted(
-    const c4a_filter_x_outlier_handle_t* h, int* out_fitted);
-c4a_status_t c4a_filter_x_outlier_apply(
-    const c4a_filter_x_outlier_handle_t* h,
-    c4a_matrix_view_t X,
-    uint8_t* mask_out, c4a_filter_stats_t* stats_out);
+void         n4m_filter_x_outlier_destroy(n4m_filter_x_outlier_handle_t*);
+n4m_status_t n4m_filter_x_outlier_fit(
+    n4m_filter_x_outlier_handle_t* h, n4m_matrix_view_t X);
+n4m_status_t n4m_filter_x_outlier_is_fitted(
+    const n4m_filter_x_outlier_handle_t* h, int* out_fitted);
+n4m_status_t n4m_filter_x_outlier_apply(
+    const n4m_filter_x_outlier_handle_t* h,
+    n4m_matrix_view_t X,
+    uint8_t* mask_out, n4m_filter_stats_t* stats_out);
 ```
 
 `mask_out[i] == 1` keeps sample `i`; `0` excludes it. The mask buffer is
@@ -107,7 +107,7 @@ a random split value in `[min, max]` of the current partition. Path
 length is averaged across trees, normalised by `c(max_samples)`.
 Threshold = contamination quantile of training mean-path lengths.
 
-sklearn's `IsolationForest` uses `np.random.RandomState`; c4a uses
+sklearn's `IsolationForest` uses `np.random.RandomState`; n4m uses
 PCG64, so masks differ by 5-8 samples per fixture even on identical
 seeds (the bit-stream differs). The mask shape and contamination rate
 match within tolerance.
@@ -119,7 +119,7 @@ Brute-force k-NN with `k = min(20, n - 1)`. Local reachability density
 Threshold = `(1 - contamination)` quantile of training LOF.
 
 `LOF` is fully deterministic; the small parity tolerance comes from the
-percentile interpolation difference between NumPy and the c4a `linear`
+percentile interpolation difference between NumPy and the n4m `linear`
 implementation at the contamination boundary.
 
 ## Parity tolerances summary
@@ -140,7 +140,7 @@ implementation at the contamination boundary.
   simplified implementation uses a single start. Robustness is
   asymptotically equivalent but the per-run mask can flip by O(8)
   samples. Tracked for a follow-up phase that adds the ensemble loop.
-* **Bit-exact sklearn IsolationForest.** The c4a implementation uses
+* **Bit-exact sklearn IsolationForest.** The n4m implementation uses
   PCG64 with the same algorithm; sklearn uses NumPy RandomState. Bit
   equivalence would require re-seeding through RandomState's tree-style
   hash, which conflicts with the project-wide PCG64 mandate. Counts
@@ -152,7 +152,7 @@ implementation at the contamination boundary.
 ## Reference
 
 The internal parity fixture lives at
-`parity/python_generator/src/c4a_parity_filters_ref/x_outlier.py`. It
+`parity/python_generator/src/n4m_parity_filters_ref/x_outlier.py`. It
 imports sklearn's `EmpiricalCovariance`, `MinCovDet`, `PCA`,
 `IsolationForest`, and `LocalOutlierFactor` directly and is validated
 once against nirs4all 0.8.x — subsequent nirs4all releases can drift

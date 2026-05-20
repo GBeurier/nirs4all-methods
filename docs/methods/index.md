@@ -1,6 +1,6 @@
 # Methods catalogue
 
-Every public chemometrics4all method documented with its parameters, bibliographic source, mathematical principle, binding signatures, benchmark comparators/sources, and benchmark rows when available.
+Every public nirs4all-methods method documented with its parameters, bibliographic source, mathematical principle, binding signatures, benchmark comparators/sources, and benchmark rows when available.
 
 _Total methods_: **117**. Grouped by family below.
 

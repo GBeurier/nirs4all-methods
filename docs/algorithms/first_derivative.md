@@ -26,7 +26,7 @@ $$
 
 ## Numerical contract
 
-- `_create` returns `C4A_ERR_INVALID_ARGUMENT` for $\delta = 0$ or an
+- `_create` returns `N4M_ERR_INVALID_ARGUMENT` for $\delta = 0$ or an
   edge order outside $\{1, 2\}$.
 - `_transform` requires `cols >= 3` for `edge_order = 2` and `cols >= 2`
   for `edge_order = 1`.

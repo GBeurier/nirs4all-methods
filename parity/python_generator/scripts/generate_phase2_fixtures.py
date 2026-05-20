@@ -11,7 +11,7 @@ byte-for-byte equality (1e-12 abs / 1e-13 rel) against the C engine.
 
 The synthetic spectra are generated from a PCG64 stream (seed=20260518) — the
 same seed convention as the Phase 1 RNG fixture, so the input arrays are
-reproducible from the c4a side too.
+reproducible from the n4m side too.
 
 Output: ``parity/fixtures/{snv,lsnv,rnv,area_norm,normalize,simple_scale,log_transform}_v1.json``.
 
@@ -19,7 +19,7 @@ Each fixture has the schema:
 
 ```json
 {
-  "format": "c4a_pp_<op>_v1",
+  "format": "n4m_pp_<op>_v1",
   "numpy_version": "1.26.4",
   "nirs4all_version": "0.8.x",
   "encoding": "ieee754_binary64_be_hex",
@@ -256,7 +256,7 @@ def write_fixture(name: str, op_id: str,
                   X: np.ndarray, out_dir: Path,
                   nirs4all_version: str) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_pp_{op_id}_v1",
+        "format": f"n4m_pp_{op_id}_v1",
         "numpy_version": np.__version__,
         "nirs4all_version": nirs4all_version,
         "encoding": "ieee754_binary64_be_hex",

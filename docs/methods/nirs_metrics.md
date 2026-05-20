@@ -9,14 +9,14 @@ length `n`. Mirrors `nirs4all.core.metrics._eval_single`.
 
 | Metric | Formula | ABI |
 |--------|---------|-----|
-| **RMSE**  | `sqrt(mean((y_true - y_pred)²))`                    | `c4a_metric_rmse(y_true, y_pred, n, *out)` |
-| **MAE**   | `mean(|y_true - y_pred|)`                           | `c4a_metric_mae(y_true, y_pred, n, *out)` |
-| **Bias**  | `mean(y_pred - y_true)`                             | `c4a_metric_bias(y_true, y_pred, n, *out)` |
-| **SEP**   | `std(y_pred - y_true)` (ddof = 0)                   | `c4a_metric_sep(y_true, y_pred, n, *out)` |
-| **RPD**   | `std(y_true) / SEP`                                  | `c4a_metric_rpd(y_true, y_pred, n, *out)` |
-| **RPIQ**  | `IQR(y_true) / RMSE` (linear interp Q1, Q3)         | `c4a_metric_rpiq(y_true, y_pred, n, *out)` |
-| **R²**    | `1 - SSE / SST` (SST = `Σ(y_true - mean(y_true))²`) | `c4a_metric_r2(y_true, y_pred, n, *out)` |
-| **NRMSE** | `RMSE / mean(y_true)`                                | `c4a_metric_nrmse(y_true, y_pred, n, *out)` |
+| **RMSE**  | `sqrt(mean((y_true - y_pred)²))`                    | `n4m_metric_rmse(y_true, y_pred, n, *out)` |
+| **MAE**   | `mean(|y_true - y_pred|)`                           | `n4m_metric_mae(y_true, y_pred, n, *out)` |
+| **Bias**  | `mean(y_pred - y_true)`                             | `n4m_metric_bias(y_true, y_pred, n, *out)` |
+| **SEP**   | `std(y_pred - y_true)` (ddof = 0)                   | `n4m_metric_sep(y_true, y_pred, n, *out)` |
+| **RPD**   | `std(y_true) / SEP`                                  | `n4m_metric_rpd(y_true, y_pred, n, *out)` |
+| **RPIQ**  | `IQR(y_true) / RMSE` (linear interp Q1, Q3)         | `n4m_metric_rpiq(y_true, y_pred, n, *out)` |
+| **R²**    | `1 - SSE / SST` (SST = `Σ(y_true - mean(y_true))²`) | `n4m_metric_r2(y_true, y_pred, n, *out)` |
+| **NRMSE** | `RMSE / mean(y_true)`                                | `n4m_metric_nrmse(y_true, y_pred, n, *out)` |
 
 ### Parameters
 
@@ -44,14 +44,14 @@ No public constructor parameters are required for the documented default call.
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_metric_bias (const double* y_true, const double* y_pred, int64_t n, double* out);
-c4a_status_t c4a_metric_mae (const double* y_true, const double* y_pred, int64_t n, double* out);
-c4a_status_t c4a_metric_nrmse(const double* y_true, const double* y_pred, int64_t n, double* out);
-c4a_status_t c4a_metric_r2 (const double* y_true, const double* y_pred, int64_t n, double* out);
-c4a_status_t c4a_metric_rmse (const double* y_true, const double* y_pred, int64_t n, double* out);
-c4a_status_t c4a_metric_rpd (const double* y_true, const double* y_pred, int64_t n, double* out);
-c4a_status_t c4a_metric_rpiq (const double* y_true, const double* y_pred, int64_t n, double* out);
-c4a_status_t c4a_metric_sep (const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_bias (const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_mae (const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_nrmse(const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_r2 (const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_rmse (const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_rpd (const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_rpiq (const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_sep (const double* y_true, const double* y_pred, int64_t n, double* out);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -60,43 +60,43 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_metric_` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.nirs_metrics` | Python | ABI-close function backed by ctypes. |
+| C ABI | `n4m_metric_` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.nirs_metrics` | Python | ABI-close function backed by ctypes. |
 | ref.numpy | `NumPy regression metric formulae` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_metric_bias (const double* y_true, const double* y_pred, int64_t n, double* out);
-c4a_status_t c4a_metric_mae (const double* y_true, const double* y_pred, int64_t n, double* out);
-c4a_status_t c4a_metric_nrmse(const double* y_true, const double* y_pred, int64_t n, double* out);
-c4a_status_t c4a_metric_r2 (const double* y_true, const double* y_pred, int64_t n, double* out);
-c4a_status_t c4a_metric_rmse (const double* y_true, const double* y_pred, int64_t n, double* out);
-c4a_status_t c4a_metric_rpd (const double* y_true, const double* y_pred, int64_t n, double* out);
-c4a_status_t c4a_metric_rpiq (const double* y_true, const double* y_pred, int64_t n, double* out);
-c4a_status_t c4a_metric_sep (const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_bias (const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_mae (const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_nrmse(const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_r2 (const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_rmse (const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_rpd (const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_rpiq (const double* y_true, const double* y_pred, int64_t n, double* out);
+n4m_status_t n4m_metric_sep (const double* y_true, const double* y_pred, int64_t n, double* out);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.nirs_metrics(X)
+Xt = n4m.nirs_metrics(X)
 ```
 
 :::
@@ -135,12 +135,12 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">7.1e-15</td><td class="ms ms-best">🏆 0.036 ms</td><td class="ms">0.040 ms</td><td class="ms">0.041 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">7.1e-15</td><td class="ms ms-best">🏆 0.036 ms</td><td class="ms">0.040 ms</td><td class="ms">0.041 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">7.1e-15</td><td class="ms">0.038 ms</td><td class="ms ms-best">🏆 0.038 ms</td><td class="ms ms-best">🏆 0.040 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">7.1e-15</td><td class="ms">0.045 ms</td><td class="ms">0.045 ms</td><td class="ms">0.047 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">7.1e-15</td><td class="ms">0.038 ms</td><td class="ms ms-best">🏆 0.038 ms</td><td class="ms ms-best">🏆 0.040 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">7.1e-15</td><td class="ms">0.045 ms</td><td class="ms">0.045 ms</td><td class="ms">0.047 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): NumPy regression metric formulae · numpy 2.3.5 — canonical">◆</span><code>ref.numpy</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.055 ms</td><td class="ms">0.062 ms</td><td class="ms">0.060 ms</td></tr>

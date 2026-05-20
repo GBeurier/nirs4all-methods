@@ -274,7 +274,7 @@ def write_fixture(name: str, op_id: str, X: np.ndarray,
                   cases: list[tuple[str, dict, Callable[[], np.ndarray]]],
                   out_dir: Path, nirs4all_version: str) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_pp_{op_id}_v1",
+        "format": f"n4m_pp_{op_id}_v1",
         "numpy_version": np.__version__,
         "scipy_version": __import__("scipy").__version__,
         "nirs4all_version": nirs4all_version,

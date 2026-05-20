@@ -17,7 +17,7 @@ differ between cases when variance-ratio mode picks a different k'):
 
 ```json
 {
-  "format": "c4a_pp_<op>_v1",
+  "format": "n4m_pp_<op>_v1",
   "numpy_version": "1.26.4",
   "nirs4all_version": "0.8.x",
   "encoding": "ieee754_binary64_be_hex",
@@ -57,7 +57,7 @@ from parity.nirs4all_source import find_nirs4all_root, get_nirs4all_version  # n
 PKG_ROOT = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(PKG_ROOT))
 
-from c4a_parity_orthog_ref import (  # noqa: E402
+from n4m_parity_orthog_ref import (  # noqa: E402
     flexible_pca_fit_transform,
     flexible_svd_fit_transform,
 )
@@ -140,7 +140,7 @@ def write_fixture(name: str, op_id: str,
                   cases: list[tuple[str, dict, Callable[[], tuple[np.ndarray, int]]]],
                   out_dir: Path, nirs4all_version: str) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_pp_{op_id}_v1",
+        "format": f"n4m_pp_{op_id}_v1",
         "numpy_version": np.__version__,
         "nirs4all_version": nirs4all_version,
         "encoding": "ieee754_binary64_be_hex",

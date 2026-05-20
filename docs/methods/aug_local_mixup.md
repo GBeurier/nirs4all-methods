@@ -4,7 +4,7 @@ _Group_: **Augmentation** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8` · _
 
 ## Description
 
-From the `chemometrics4all.LocalMixupAugmenter` Python wrapper docstring:
+From the `n4m.LocalMixupAugmenter` Python wrapper docstring:
 
 > Neighbor-constrained mixup augmentation.
 
@@ -28,7 +28,7 @@ parameters (brute force, Euclidean distance), then
 
 ### Mathematical principle
 
-`c4a_aug_local_mixup` is a neighborhood-aware variant of mixup. For each
+`n4m_aug_local_mixup` is a neighborhood-aware variant of mixup. For each
 sample, it draws a random neighbor among the $k$ nearest non-self rows and
 mixes the two with a $\mathrm{Beta}(\alpha, \alpha)$ weight.
 
@@ -48,9 +48,9 @@ For each $i \in \{0, \dots, n-1\}$:
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_aug_local_mixup_apply(const c4a_aug_local_mixup_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_local_mixup_create(c4a_aug_local_mixup_handle_t** out, c4a_rng_pcg64_state_t* rng, double alpha, int32_t k_neighbors);
-void c4a_aug_local_mixup_destroy(c4a_aug_local_mixup_handle_t* handle);
+n4m_status_t n4m_aug_local_mixup_apply(const n4m_aug_local_mixup_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_local_mixup_create(n4m_aug_local_mixup_handle_t** out, n4m_rng_pcg64_state_t* rng, double alpha, int32_t k_neighbors);
+void n4m_aug_local_mixup_destroy(n4m_aug_local_mixup_handle_t* handle);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -59,50 +59,50 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_aug_local_mixup` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.aug_local_mixup` | Python | ABI-close function backed by ctypes. |
-| Python sklearn | `chemometrics4all.sklearn.LocalMixupAugmenter` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| C ABI | `n4m_aug_local_mixup` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.aug_local_mixup` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `n4m.sklearn.LocalMixupAugmenter` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `aug_local_mixup(X, alpha = 1.0, k_neighbors = 5L, seed = 17)` | R | Public package wrapper around the C ABI. |
 | ref.nirs4all | `nirs4all.LocalMixupAugmenter` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_aug_local_mixup_apply(const c4a_aug_local_mixup_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_local_mixup_create(c4a_aug_local_mixup_handle_t** out, c4a_rng_pcg64_state_t* rng, double alpha, int32_t k_neighbors);
-void c4a_aug_local_mixup_destroy(c4a_aug_local_mixup_handle_t* handle);
+n4m_status_t n4m_aug_local_mixup_apply(const n4m_aug_local_mixup_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_local_mixup_create(n4m_aug_local_mixup_handle_t** out, n4m_rng_pcg64_state_t* rng, double alpha, int32_t k_neighbors);
+void n4m_aug_local_mixup_destroy(n4m_aug_local_mixup_handle_t* handle);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.aug_local_mixup(X)
+Xt = n4m.aug_local_mixup(X)
 ```
 
 :::
 
-:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:::{tab-item} Python sklearn · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from chemometrics4all.sklearn import LocalMixupAugmenter
+from n4m.sklearn import LocalMixupAugmenter
 
 op = LocalMixupAugmenter(alpha=0.2, k_neighbors=5, rng=None, seed=0)
 Xt = op.fit_transform(X)
@@ -110,12 +110,12 @@ Xt = op.fit_transform(X)
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- aug_local_mixup(X)
 ```
 
@@ -155,15 +155,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.173 ms</td><td class="ms">2.011 ms</td><td class="ms">10.602 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.173 ms</td><td class="ms">2.011 ms</td><td class="ms">10.602 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst binding max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.166 ms</td><td class="ms">1.928 ms</td><td class="ms">10.048 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst binding max abs diff over visible sizes">0</td><td class="ms">0.171 ms</td><td class="ms">1.906 ms</td><td class="ms">10.725 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst binding max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.166 ms</td><td class="ms">1.928 ms</td><td class="ms">10.048 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst binding max abs diff over visible sizes">0</td><td class="ms">0.171 ms</td><td class="ms">1.906 ms</td><td class="ms">10.725 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">0.273 ms</td><td class="ms">2.219 ms</td><td class="ms">12.000 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">0.273 ms</td><td class="ms">2.219 ms</td><td class="ms">12.000 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.LocalMixupAugmenter · nirs4all@cd731a23+dirty — context">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-context" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.821 ms</td><td class="ms ms-best">🏆 1.092 ms</td><td class="ms ms-best">🏆 2.309 ms</td></tr>

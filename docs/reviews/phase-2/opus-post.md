@@ -13,8 +13,8 @@ Reviewer praised the bit-exact NumPy parity discipline (true division vs recipro
 
 | # | Issue | Resolution |
 |---|-------|------------|
-| 1 | LogTransform misclassified as stateless; recomputes offset on every transform | **Documented** the per-call recomputation behaviour in c4a.h (`auto_offset` semantics now explicit). Proper `_fit/_transform` split deferred to Phase 3 when stateful-operator ABI lands. |
-| 2 | Public ABI missing enum constants (`c4a_pp_lsnv_pad_mode_t`, `c4a_pp_area_method_t` only declared in internal headers) | **Hoisted** both enums into `cpp/include/chemometrics4all/c4a.h` with proper enum tags `C4A_PP_LSNV_PAD_{REFLECT,EDGE,CONSTANT}` and `C4A_PP_AREA_{SUM,ABS_SUM,TRAPZ}`. Internal headers now reference the public declaration. |
+| 1 | LogTransform misclassified as stateless; recomputes offset on every transform | **Documented** the per-call recomputation behaviour in n4m.h (`auto_offset` semantics now explicit). Proper `_fit/_transform` split deferred to Phase 3 when stateful-operator ABI lands. |
+| 2 | Public ABI missing enum constants (`n4m_pp_lsnv_pad_mode_t`, `n4m_pp_area_method_t` only declared in internal headers) | **Hoisted** both enums into `cpp/include/n4m/n4m.h` with proper enum tags `N4M_PP_LSNV_PAD_{REFLECT,EDGE,CONSTANT}` and `N4M_PP_AREA_{SUM,ABS_SUM,TRAPZ}`. Internal headers now reference the public declaration. |
 | 3 | SNV flat-row threshold `s >= 1e-15` diverges from nirs4all's `std[std==0] = 1.0` | **Fixed**: changed to `s != 0.0` to match nirs4all exactly. "Bit-exact" claim now genuine. |
 
 ## Medium-confidence — deferred with tracking
@@ -22,12 +22,12 @@ Reviewer praised the bit-exact NumPy parity discipline (true division vs recipro
 - **#4** Missing parity coverage for `(with_mean=False, with_std=False)` SNV identity case, flat-row case, `cols=1` LSNV case — tracked for Phase 3 opener (fixture sweep extension).
 - **#5** AreaNormalization degenerate row lengths — covered by existing guard, parity-tested implicitly. Add explicit `trapz_single_col` fixture in Phase 3.
 - **#6** LogTransform doc claimed "fit-time" semantics but engine is per-call — addressed via #1 above.
-- **#7** `c4a_pp_log_min_value <= 0` validation lives only in C wrapper, not internal `_state_new` — symmetry fix deferred to Phase 3.
+- **#7** `n4m_pp_log_min_value <= 0` validation lives only in C wrapper, not internal `_state_new` — symmetry fix deferred to Phase 3.
 
 ## Low-priority deferrals
 
-- **#8** Symbol export filter — addressed via Codex R5 below (`c4a_linux.map` added).
-- **#9** `c4a_array_t` orphan declarations — Codex recommends delete; will be handled in Phase 3 opener.
+- **#8** Symbol export filter — addressed via Codex R5 below (`n4m_linux.map` added).
+- **#9** `n4m_array_t` orphan declarations — Codex recommends delete; will be handled in Phase 3 opener.
 - **#10** Fixture generator uses absolute path `NIRS4ALL_ROOT = /home/delete/...` — addressed via Codex R2 (parity pyproject.toml).
 - **#11** Smoke tests don't assert numerical output — tracked.
 - **#12** LSNV reflect padding on `cols=1` — divergence documented; tracked for Phase 3.

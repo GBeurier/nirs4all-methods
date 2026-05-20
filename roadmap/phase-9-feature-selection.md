@@ -2,7 +2,7 @@
 
 ## Goal
 
-Add SVD-based dimensionality-reduction operators to the c4a preprocessing
+Add SVD-based dimensionality-reduction operators to the n4m preprocessing
 toolkit, alongside a portable in-process SVD primitive that other phases
 (Phase 8 OSC, Phase 19 T²/Q-residuals) can share.
 
@@ -39,13 +39,13 @@ of each `U[:, j]` column is positive (sklearn ``svd_flip`` with
 ``u_based_decision=True``).
 
 Note this differs from sklearn's ``TruncatedSVD`` which uses
-``u_based_decision=False``: the c4a engine uses the U-based decision
+``u_based_decision=False``: the n4m engine uses the U-based decision
 uniformly across FlexiblePCA and FlexibleSVD so the same SVD primitive
-can serve both. The frozen NumPy reference matches the c4a convention.
+can serve both. The frozen NumPy reference matches the n4m convention.
 
 ## SVD primitive
 
-`cpp/src/core/common/svd.c` exposes `c4a_svd_compact(A, m, n, U, S, Vt)`
+`cpp/src/core/common/svd.c` exposes `n4m_svd_compact(A, m, n, U, S, Vt)`
 — a one-sided Jacobi SVD with these properties:
 
 - pure C, no LAPACK / BLAS dependency,
@@ -58,7 +58,7 @@ can serve both. The frozen NumPy reference matches the c4a convention.
 
 Other agents working on Phase 8 (OSC) or Phase 19 (T²/Q residuals) may
 also need an SVD helper. The API contract is the function signature
-`c4a_svd_compact(A, m, n, U, S, Vt)`; conflicts will be resolved at
+`n4m_svd_compact(A, m, n, U, S, Vt)`; conflicts will be resolved at
 merge time by keeping the most general implementation.
 
 ## C ABI surface added
@@ -66,25 +66,25 @@ merge time by keeping the most general implementation.
 Per-operator (using FlexiblePCA as example):
 
 ```c
-typedef struct c4a_pp_flex_pca_handle_t c4a_pp_flex_pca_handle_t;
-C4A_API c4a_status_t c4a_pp_flex_pca_create(c4a_pp_flex_pca_handle_t** out,
+typedef struct n4m_pp_flex_pca_handle_t n4m_pp_flex_pca_handle_t;
+N4M_API n4m_status_t n4m_pp_flex_pca_create(n4m_pp_flex_pca_handle_t** out,
                                              double n_components);
-C4A_API void         c4a_pp_flex_pca_destroy(c4a_pp_flex_pca_handle_t* h);
-C4A_API c4a_status_t c4a_pp_flex_pca_fit(c4a_pp_flex_pca_handle_t* h,
-                                          c4a_matrix_view_t X);
-C4A_API c4a_status_t c4a_pp_flex_pca_transform(
-    const c4a_pp_flex_pca_handle_t* h,
-    c4a_matrix_view_t X,
-    c4a_matrix_view_t out);
-C4A_API c4a_status_t c4a_pp_flex_pca_is_fitted(
-    const c4a_pp_flex_pca_handle_t* h, int* out_fitted);
-C4A_API c4a_status_t c4a_pp_flex_pca_output_cols(
-    const c4a_pp_flex_pca_handle_t* h, int64_t* out_cols);
+N4M_API void         n4m_pp_flex_pca_destroy(n4m_pp_flex_pca_handle_t* h);
+N4M_API n4m_status_t n4m_pp_flex_pca_fit(n4m_pp_flex_pca_handle_t* h,
+                                          n4m_matrix_view_t X);
+N4M_API n4m_status_t n4m_pp_flex_pca_transform(
+    const n4m_pp_flex_pca_handle_t* h,
+    n4m_matrix_view_t X,
+    n4m_matrix_view_t out);
+N4M_API n4m_status_t n4m_pp_flex_pca_is_fitted(
+    const n4m_pp_flex_pca_handle_t* h, int* out_fitted);
+N4M_API n4m_status_t n4m_pp_flex_pca_output_cols(
+    const n4m_pp_flex_pca_handle_t* h, int64_t* out_cols);
 ```
 
 Twelve symbols total (six per operator). These live in
 `cpp/src/c_api/c_api_feature_selection.cpp`; declarations move to
-`c4a.h` §9.x at integration time.
+`n4m.h` §9.x at integration time.
 
 ## n_components encoding
 
@@ -93,12 +93,12 @@ Both operators take a single `double n_components`:
 - `>= 1.0` → integer count mode (truncated)
 - `(0, 1)` → variance-ratio mode
 
-Values `<= 0` or `NaN` are rejected with `C4A_ERR_INVALID_ARGUMENT`.
+Values `<= 0` or `NaN` are rejected with `N4M_ERR_INVALID_ARGUMENT`.
 
 ## Parity
 
 Frozen NumPy reference under
-`parity/python_generator/src/c4a_parity_orthog_ref/` — independent of
+`parity/python_generator/src/n4m_parity_orthog_ref/` — independent of
 sklearn so upstream changes can't drift the fixture. Tolerance budget:
 `1e-10` absolute / `1e-11` relative (per brief), accommodating the
 Jacobi vs LAPACK gesdd ULP gap on mid-to-low singular values.

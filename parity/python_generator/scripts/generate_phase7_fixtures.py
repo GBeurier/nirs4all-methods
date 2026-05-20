@@ -15,7 +15,7 @@ Fixture schema (Phase 2 schema, one input matrix per fixture):
 
 ```json
 {
-  "format": "c4a_pp_<op>_v1",
+  "format": "n4m_pp_<op>_v1",
   "numpy_version": "...",
   "nirs4all_version": "0.8.x",
   "encoding": "ieee754_binary64_be_hex",
@@ -35,7 +35,7 @@ matrix as well. The scale-by-100 is bit-exact (100.0 is exactly
 representable in binary64), so this is byte-identical to using a separate
 percent-domain matrix.
 
-The c4a side decodes the hex back to f64 and compares with a 1e-12 abs /
+The n4m side decodes the hex back to f64 and compares with a 1e-12 abs /
 1e-13 rel tolerance because every operator here is closed-form pure
 arithmetic.
 """
@@ -166,7 +166,7 @@ def synthesize_absorbance(seed: int) -> np.ndarray:
 #
 # Each case carries:
 #   - a name (used in test labels),
-#   - a params dict (forwarded to the c4a wrapper as integer / double flags),
+#   - a params dict (forwarded to the n4m wrapper as integer / double flags),
 #   - a Callable producing the reference output.
 #
 # Parameter schemas mirror the wrapper signatures exactly:
@@ -274,7 +274,7 @@ def write_fixture(name: str, X: np.ndarray,
                   cases: list[tuple[str, dict, Callable[[], np.ndarray]]],
                   out_dir: Path, nirs4all_version: str) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_pp_{name}_v1",
+        "format": f"n4m_pp_{name}_v1",
         "numpy_version": np.__version__,
         "nirs4all_version": nirs4all_version,
         "encoding": "ieee754_binary64_be_hex",

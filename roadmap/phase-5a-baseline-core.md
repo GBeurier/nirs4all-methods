@@ -5,8 +5,8 @@
 1. **Phase 5 opener cleanup** (per Codex Phases 3+4 review M1, P2):
    - Extract Householder QR → `cpp/src/core/common/linalg.{c,h}` (used by EMSC, SavitzkyGolay, SG-edge — 3 copies today).
    - Extract JSON fixture parser → `cpp/tests/fixture_parser.hpp` (3 copies × ~270 LOC today).
-   - Vendor frozen `pybaselines==1.1.4` NumPy reference → `parity/python_generator/src/c4a_parity_pybaselines_ref/` (~500 LOC + algorithm comments).
-   - Fix `c4a_pp_derivate_*` documentation in c4a.h §9 (engine stores `cols` at fit time — banner currently claims no-op).
+   - Vendor frozen `pybaselines==1.1.4` NumPy reference → `parity/python_generator/src/n4m_parity_pybaselines_ref/` (~500 LOC + algorithm comments).
+   - Fix `n4m_pp_derivate_*` documentation in n4m.h §9 (engine stores `cols` at fit time — banner currently claims no-op).
 2. **Implement 4 baseline operators**: Detrend, AsLS, AirPLS, ArPLS.
 3. **Native banded LDLT solver** for 2nd-order penalty matrices in `cpp/src/core/common/banded_solver.{c,h}`.
 
@@ -59,24 +59,24 @@ LDLT of a symmetric pentadiagonal matrix: O(n) flops per factorization, O(n) per
 ### API
 
 ```c
-typedef struct c4a_banded5_t {
+typedef struct n4m_banded5_t {
     int64_t n;
     double* L;  /* (n, 2) — sub-diagonals of L, row-major */
     double* D;  /* (n,) — diagonal */
-} c4a_banded5_t;
+} n4m_banded5_t;
 
-c4a_status_t c4a_banded5_factor(const double* main_diag,
+n4m_status_t n4m_banded5_factor(const double* main_diag,
                                 const double* super1, const double* super2,
-                                int64_t n, c4a_banded5_t* out);
-c4a_status_t c4a_banded5_solve(const c4a_banded5_t* fact, const double* b, double* x);
-void         c4a_banded5_free(c4a_banded5_t* fact);
+                                int64_t n, n4m_banded5_t* out);
+n4m_status_t n4m_banded5_solve(const n4m_banded5_t* fact, const double* b, double* x);
+void         n4m_banded5_free(n4m_banded5_t* fact);
 ```
 
-These are INTERNAL helpers (not in c4a.h public surface). Live under `cpp/src/core/common/banded_solver.{c,h}`.
+These are INTERNAL helpers (not in n4m.h public surface). Live under `cpp/src/core/common/banded_solver.{c,h}`.
 
 ## Pybaselines reference vendoring
 
-Pinned `pybaselines==1.1.4` per `parity/python_generator/pyproject.toml`. To insulate the parity floor from upstream churn, vendor a frozen NumPy reference under `parity/python_generator/src/c4a_parity_pybaselines_ref/`:
+Pinned `pybaselines==1.1.4` per `parity/python_generator/pyproject.toml`. To insulate the parity floor from upstream churn, vendor a frozen NumPy reference under `parity/python_generator/src/n4m_parity_pybaselines_ref/`:
 
 - `asls.py`: explicit AsLS algorithm (Eilers 2005 paper formulation) in ~80 LOC of pure NumPy + scipy.sparse.
 - `airpls.py`: AirPLS (Zhang 2010 paper) in ~80 LOC.
@@ -108,18 +108,18 @@ These are imported by `parity/python_generator/scripts/generate_phase5a_fixtures
 - `docs/reviews/phase-5a/` — Opus + Codex transcripts
 
 ### Vendored references
-- `parity/python_generator/src/c4a_parity_pybaselines_ref/{__init__,asls,airpls,arpls,detrend,_banded}.py`
+- `parity/python_generator/src/n4m_parity_pybaselines_ref/{__init__,asls,airpls,arpls,detrend,_banded}.py`
 
 ## Files to modify
 
-- `cpp/src/core/preprocessing/scatter/emsc.c` — replace local QR with `c4a_householder_qr` calls.
+- `cpp/src/core/preprocessing/scatter/emsc.c` — replace local QR with `n4m_householder_qr` calls.
 - `cpp/src/core/preprocessing/derivatives/savitzky_golay.c` — same.
 - `cpp/tests/test_preprocessing_{stateless,stateful,smoothing}.cpp` — replace per-file JSON parser with `#include "fixture_parser.hpp"`.
-- `cpp/include/chemometrics4all/c4a.h` — append §11 "Phase 5a — Baseline correction" (12 new symbols = 4 ops × 3); fix Derivate banner in §9 to honestly state input-shape memoization.
+- `cpp/include/n4m/n4m.h` — append §11 "Phase 5a — Baseline correction" (12 new symbols = 4 ops × 3); fix Derivate banner in §9 to honestly state input-shape memoization.
 - `cpp/src/c_api/c_api_preprocessing.cpp` — append 12 wrappers.
 - `cpp/src/CMakeLists.txt` — add new source files (4 ops + linalg + banded_solver).
 - `cpp/tests/{main.cpp, CMakeLists.txt}` — register `register_preprocessing_baselines_tests`.
-- `cpp/include/chemometrics4all/c4a_version.h` — bump MINOR 4 → 5.
+- `cpp/include/n4m/n4m_version.h` — bump MINOR 4 → 5.
 - `cpp/abi/expected_symbols_{linux,macos,windows}.txt` — regenerate (94 → 106).
 - `CHANGELOG.md` — Phase 5a section.
 
@@ -127,42 +127,42 @@ These are imported by `parity/python_generator/scripts/generate_phase5a_fixtures
 
 ```c
 /* §11 - Phase 5a Baseline correction (4 ops, 12 symbols) */
-typedef struct c4a_pp_detrend_handle_t c4a_pp_detrend_handle_t;
-C4A_API c4a_status_t c4a_pp_detrend_create(c4a_pp_detrend_handle_t** out,
+typedef struct n4m_pp_detrend_handle_t n4m_pp_detrend_handle_t;
+N4M_API n4m_status_t n4m_pp_detrend_create(n4m_pp_detrend_handle_t** out,
                                             int32_t polyorder);
-C4A_API void         c4a_pp_detrend_destroy(c4a_pp_detrend_handle_t* h);
-C4A_API c4a_status_t c4a_pp_detrend_transform(const c4a_pp_detrend_handle_t* h,
-                                               c4a_matrix_view_t X,
-                                               c4a_matrix_view_t out);
+N4M_API void         n4m_pp_detrend_destroy(n4m_pp_detrend_handle_t* h);
+N4M_API n4m_status_t n4m_pp_detrend_transform(const n4m_pp_detrend_handle_t* h,
+                                               n4m_matrix_view_t X,
+                                               n4m_matrix_view_t out);
 
 /* AsLS, AirPLS, ArPLS — same shape, 3 symbols each */
-typedef struct c4a_pp_asls_handle_t   c4a_pp_asls_handle_t;
-typedef struct c4a_pp_airpls_handle_t c4a_pp_airpls_handle_t;
-typedef struct c4a_pp_arpls_handle_t  c4a_pp_arpls_handle_t;
+typedef struct n4m_pp_asls_handle_t   n4m_pp_asls_handle_t;
+typedef struct n4m_pp_airpls_handle_t n4m_pp_airpls_handle_t;
+typedef struct n4m_pp_arpls_handle_t  n4m_pp_arpls_handle_t;
 
-C4A_API c4a_status_t c4a_pp_asls_create(c4a_pp_asls_handle_t** out,
+N4M_API n4m_status_t n4m_pp_asls_create(n4m_pp_asls_handle_t** out,
                                          double lam, double p,
                                          int32_t max_iter, double tol);
-C4A_API void         c4a_pp_asls_destroy(c4a_pp_asls_handle_t* h);
-C4A_API c4a_status_t c4a_pp_asls_transform(const c4a_pp_asls_handle_t* h,
-                                            c4a_matrix_view_t X,
-                                            c4a_matrix_view_t out);
+N4M_API void         n4m_pp_asls_destroy(n4m_pp_asls_handle_t* h);
+N4M_API n4m_status_t n4m_pp_asls_transform(const n4m_pp_asls_handle_t* h,
+                                            n4m_matrix_view_t X,
+                                            n4m_matrix_view_t out);
 
-C4A_API c4a_status_t c4a_pp_airpls_create(c4a_pp_airpls_handle_t** out,
+N4M_API n4m_status_t n4m_pp_airpls_create(n4m_pp_airpls_handle_t** out,
                                            double lam,
                                            int32_t max_iter, double tol);
-C4A_API void         c4a_pp_airpls_destroy(c4a_pp_airpls_handle_t* h);
-C4A_API c4a_status_t c4a_pp_airpls_transform(const c4a_pp_airpls_handle_t* h,
-                                              c4a_matrix_view_t X,
-                                              c4a_matrix_view_t out);
+N4M_API void         n4m_pp_airpls_destroy(n4m_pp_airpls_handle_t* h);
+N4M_API n4m_status_t n4m_pp_airpls_transform(const n4m_pp_airpls_handle_t* h,
+                                              n4m_matrix_view_t X,
+                                              n4m_matrix_view_t out);
 
-C4A_API c4a_status_t c4a_pp_arpls_create(c4a_pp_arpls_handle_t** out,
+N4M_API n4m_status_t n4m_pp_arpls_create(n4m_pp_arpls_handle_t** out,
                                           double lam,
                                           int32_t max_iter, double tol);
-C4A_API void         c4a_pp_arpls_destroy(c4a_pp_arpls_handle_t* h);
-C4A_API c4a_status_t c4a_pp_arpls_transform(const c4a_pp_arpls_handle_t* h,
-                                             c4a_matrix_view_t X,
-                                             c4a_matrix_view_t out);
+N4M_API void         n4m_pp_arpls_destroy(n4m_pp_arpls_handle_t* h);
+N4M_API n4m_status_t n4m_pp_arpls_transform(const n4m_pp_arpls_handle_t* h,
+                                             n4m_matrix_view_t X,
+                                             n4m_matrix_view_t out);
 ```
 
 12 new symbols. Total: 94 → **106**. ABI bump 1.4.0 → 1.5.0.
@@ -190,11 +190,11 @@ C4A_API c4a_status_t c4a_pp_arpls_transform(const c4a_pp_arpls_handle_t* h,
 ## Verification
 
 ```bash
-cd /home/delete/nirs4all/chemometrics4all
+cd /home/delete/nirs4all/nirs4all-methods
 cmake --build --preset dev-debug
-./build/dev-debug/cpp/tests/chemometrics4all_tests       # 69/69 pass
-./build/dev-debug/cpp/cli/chemometrics4all_cli --selfcheck
-nm -D --defined-only build/dev-debug/cpp/src/libc4a.so.1.5.0 | awk '$2=="T" {print $3}' | sort -u | wc -l   # 106
+./build/dev-debug/cpp/tests/n4m_tests       # 69/69 pass
+./build/dev-debug/cpp/cli/n4m_cli --selfcheck
+nm -D --defined-only build/dev-debug/cpp/src/libn4m.so.1.5.0 | awk '$2=="T" {print $3}' | sort -u | wc -l   # 106
 ```
 
 ## Next phase

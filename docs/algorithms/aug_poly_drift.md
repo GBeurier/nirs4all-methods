@@ -1,4 +1,4 @@
-# PolynomialBaselineDrift — `c4a_aug_poly_drift_*`
+# PolynomialBaselineDrift — `n4m_aug_poly_drift_*`
 
 Adds a per-sample polynomial baseline drift of configurable degree to spectra.
 
@@ -17,19 +17,19 @@ The polynomial accumulation uses the `lj_pow *= lj` recurrence rather than `np.p
 
 ## ABI
 ```c
-c4a_status_t c4a_aug_poly_drift_create(
-    c4a_aug_poly_drift_handle_t** out,
-    c4a_rng_pcg64_state_t* rng,
+n4m_status_t n4m_aug_poly_drift_create(
+    n4m_aug_poly_drift_handle_t** out,
+    n4m_rng_pcg64_state_t* rng,
     int32_t degree,
     const double* coeff_min, const double* coeff_max);
-void         c4a_aug_poly_drift_destroy(c4a_aug_poly_drift_handle_t* h);
-c4a_status_t c4a_aug_poly_drift_apply(
-    const c4a_aug_poly_drift_handle_t* h,
-    c4a_matrix_view_t X, c4a_matrix_view_t out);
+void         n4m_aug_poly_drift_destroy(n4m_aug_poly_drift_handle_t* h);
+n4m_status_t n4m_aug_poly_drift_apply(
+    const n4m_aug_poly_drift_handle_t* h,
+    n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 The state copies `coeff_min` / `coeff_max` into internal storage; caller retains ownership of the original arrays.
 
 ## Reference
-- Internal parity fixture: `parity/python_generator/src/c4a_parity_augmenters_ref/poly_drift.py`.
+- Internal parity fixture: `parity/python_generator/src/n4m_parity_augmenters_ref/poly_drift.py`.
 - Parity tolerance: 1e-15 abs.

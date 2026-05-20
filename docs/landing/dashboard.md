@@ -7,20 +7,20 @@ from `docs/_static/bench-data.json`.
 
 - Rows are `algorithm x dataset size x thread count`.
 - Columns include the direct C++ ABI, the ABI-close Python function layer
-  (`C4A.python`), the scikit-learn-compatible estimator layer
-  (`C4A.sklearn`), public R bindings, and external reference libraries.
+  (`N4M.python`), the scikit-learn-compatible estimator layer
+  (`N4M.sklearn`), public R bindings, and external reference libraries.
 - A sticky `reference` column lists the external reference used for each
   method when one is registered.
 - Internal binding cells report binding parity against the C++ ABI.
 - External reference cells report reference parity against the native
-  chemometrics4all output.
+  nirs4all-methods output.
 - Candidate external references are visible as `? candidate` cells when a
   library or paper implementation exists but the parity contract is not aligned.
 - Methods without an executable external reference are visible as
   `⊘ reference needed` cells instead of disappearing from the external view.
 - Cell tooltips expose the raw parity token, gate type, binding parity,
   reference parity, reference library, and reason.
-- Presets expose `All`, `chemometrics4all`, and `externals` views; library
+- Presets expose `All`, `nirs4all-methods`, and `externals` views; library
   groups separate internal C++/Python/R bindings from external Python and
   external R.
 
@@ -38,7 +38,7 @@ from `docs/_static/bench-data.json`.
 
 ```bash
 PYTHONPATH=bindings/python/src \
-CHEMOMETRICS4ALL_LIB_PATH=build/dev-release/cpp/src/libc4a.so \
+N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so \
 python benchmarks/cross_binding/orchestrator.py \
   --repeat 3 --sizes 32x64 128x256 --threads 1 4
 

@@ -4,7 +4,7 @@ _Group_: **Feature Selection** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8`
 
 ## Description
 
-`interval_generator` is a chemometrics4all feature selection method exposed through the C ABI and the generated language bindings.
+`interval_generator` is a nirs4all-methods feature selection method exposed through the C ABI and the generated language bindings.
 
 ### Parameters
 
@@ -28,48 +28,48 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | — | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.interval_generator` | Python | ABI-close function backed by ctypes. |
+| C ABI | — | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.interval_generator` | Python | ABI-close function backed by ctypes. |
 | R | `interval_generator(X, interval_size = 16L, step = interval_size)` | R | Public package wrapper around the C ABI. |
-| ref.sklearn | `sklearn.compose.ColumnTransformer(passthrough intervals)` | Python | canonical/comparator; sklearn supplies the column-selection transformer; the adapter returns C4A's list-of-intervals contract |
+| ref.sklearn | `sklearn.compose.ColumnTransformer(passthrough intervals)` | Python | canonical/comparator; sklearn supplies the column-selection transformer; the adapter returns N4M's list-of-intervals contract |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
 /* C ABI prefix */
-c4a_*
+n4m_*
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-blocks = c4a.interval_generator(X, interval_size=16, step=8)
+blocks = n4m.interval_generator(X, interval_size=16, step=8)
 ```
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- interval_generator(X, interval_size = 16L, step = 8L)
 ```
 
@@ -83,7 +83,7 @@ res <- interval_generator(X, interval_size = 16L, step = 8L)
 :::{card}
 :class-card: external-refs
 
-- ◆ **`ref.sklearn`** (Python · canonical) — `sklearn.compose.ColumnTransformer(passthrough intervals)` · scikit-learn 1.8.0 — sklearn supplies the column-selection transformer; the adapter returns C4A's list-of-intervals contract
+- ◆ **`ref.sklearn`** (Python · canonical) — `sklearn.compose.ColumnTransformer(passthrough intervals)` · scikit-learn 1.8.0 — sklearn supplies the column-selection transformer; the adapter returns N4M's list-of-intervals contract
 :::
 
 ### Validation contract
@@ -97,7 +97,7 @@ res <- interval_generator(X, interval_size = 16L, step = 8L)
 
 | Backend | Library | Gate | Comparator | Note |
 |---------|---------|------|------------|------|
-| `ref.sklearn` | `sklearn.compose.ColumnTransformer(passthrough intervals)` | Python / parity | `default_allclose` | sklearn supplies the column-selection transformer; the adapter returns C4A's list-of-intervals contract |
+| `ref.sklearn` | `sklearn.compose.ColumnTransformer(passthrough intervals)` | Python / parity | `default_allclose` | sklearn supplies the column-selection transformer; the adapter returns N4M's list-of-intervals contract |
 
 ### Benchmarks
 Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Divergence is the worst finite value over the visible sizes for each backend, preferring reference max-abs difference and falling back to binding max-abs difference when no reference comparison is recorded. Rows without a recorded comparison show `—`; the fastest backend per column is marked 🏆.
@@ -110,15 +110,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.015 ms</td><td class="ms ms-best">🏆 0.109 ms</td><td class="ms ms-best">🏆 1.053 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.015 ms</td><td class="ms ms-best">🏆 0.109 ms</td><td class="ms ms-best">🏆 1.053 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.016 ms</td><td class="ms">0.119 ms</td><td class="ms">1.118 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.018 ms</td><td class="ms">0.125 ms</td><td class="ms">1.387 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.016 ms</td><td class="ms">0.119 ms</td><td class="ms">1.118 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.018 ms</td><td class="ms">0.125 ms</td><td class="ms">1.387 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">0.072 ms</td><td class="ms">0.695 ms</td><td class="ms">5.312 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">0.072 ms</td><td class="ms">0.695 ms</td><td class="ms">5.312 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): sklearn.compose.ColumnTransformer(passthrough intervals) · scikit-learn 1.8.0 — canonical">◆</span><code>ref.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">1.253 ms</td><td class="ms">10.715 ms</td><td class="ms">45.971 ms</td></tr>

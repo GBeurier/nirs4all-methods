@@ -27,7 +27,7 @@ Testing/
 compile_commands.json
 
 # Generated headers (CMake configure-time)
-cpp/include/chemometrics4all/c4a_export.h
+cpp/include/n4m/n4m_export.h
 
 # ============================================================
 # Python (bindings + parity generator)
@@ -55,14 +55,14 @@ wheels/
 # ============================================================
 # R (binding + parity generator)
 # ============================================================
-bindings/r/chemometrics4all/src/*.o
-bindings/r/chemometrics4all/src/*.so
-bindings/r/chemometrics4all/src/*.dll
-bindings/r/chemometrics4all/src/symbols.rds
-bindings/r/chemometrics4all/inst/include/
+bindings/r/n4m/src/*.o
+bindings/r/n4m/src/*.so
+bindings/r/n4m/src/*.dll
+bindings/r/n4m/src/symbols.rds
+bindings/r/n4m/inst/include/
 parity/r_generator/*.Rcheck/
-chemometrics4all_*.tar.gz
-chemometrics4all.Rcheck/
+n4m_*.tar.gz
+n4m.Rcheck/
 .Rhistory
 .RData
 .Ruserdata

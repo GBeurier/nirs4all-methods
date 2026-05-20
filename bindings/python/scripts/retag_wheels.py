@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: CECILL-2.1
 """Rewrite cibuildwheel/auditwheel-tagged wheels to ``py3-none-${platform}``.
 
-The chemometrics4all Python binding is ctypes-only: no CPython extension is
-compiled, but the wheel embeds the native ``libc4a`` runtime. Setuptools first
+The nirs4all-methods Python binding is ctypes-only: no CPython extension is
+compiled, but the wheel embeds the native ``libn4m`` runtime. Setuptools first
 emits a platform wheel with a CPython ABI tag so repair tools run; this script
 then rewrites the filename, WHEEL metadata and RECORD hash to the canonical
 ``py3-none-${platform}`` form.

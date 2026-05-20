@@ -4,9 +4,9 @@
 
 Historical once-only validation used PyWavelets 1.6.0. This script confirms
 that the pure-NumPy reference under
-``c4a_parity_wavelets_ref`` matches ``pywt`` exactly for the supported
+``n4m_parity_wavelets_ref`` matches ``pywt`` exactly for the supported
 (family, mode) pairs.  After this script passes, the frozen reference
-becomes the canonical parity floor for chemometrics4all and pywt is
+becomes the canonical parity floor for nirs4all-methods and pywt is
 no longer required in the parity-fixture pipeline.
 """
 
@@ -20,7 +20,7 @@ import numpy as np
 PKG_ROOT = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(PKG_ROOT))
 
-from c4a_parity_wavelets_ref import (  # noqa: E402
+from n4m_parity_wavelets_ref import (  # noqa: E402
     haar_transform,
     wavelet_denoise_transform,
     wavelet_features_transform,
@@ -28,7 +28,7 @@ from c4a_parity_wavelets_ref import (  # noqa: E402
     wavelet_svd_fit_transform,
     wavelet_transform,
 )
-from c4a_parity_wavelets_ref.dwt import (  # noqa: E402
+from n4m_parity_wavelets_ref.dwt import (  # noqa: E402
     dwt_1d,
     idwt_1d,
     wavedec_1d,

@@ -3,7 +3,7 @@
 """Generate Phase 14 parity fixtures for the meta sample filters.
 
 Three filters, all written against the frozen NumPy reference under
-``parity/python_generator/src/c4a_parity_filters_ref/``:
+``parity/python_generator/src/n4m_parity_filters_ref/``:
 
   * HighLeverageFilter   — hat-matrix + PCA leverage variants.
   * SpectralQualityFilter — multi-criteria per-row quality checks.
@@ -37,7 +37,7 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "parity" / "python_generator" / "src"))
 
-from c4a_parity_filters_ref import (  # noqa: E402
+from n4m_parity_filters_ref import (  # noqa: E402
     composite_mask,
     high_leverage_mask,
     spectral_quality_mask,
@@ -239,9 +239,9 @@ def write_leverage_fixture(out_dir: Path,
         rows, cols = shape
         X = sublist[0][3]  # every case in a bucket shares the same X
         fixture: dict[str, Any] = {
-            "format": "c4a_filter_leverage_v1",
+            "format": "n4m_filter_leverage_v1",
             "numpy_version": np.__version__,
-            "reference": "c4a_parity_filters_ref (validated against nirs4all 0.8.x)",
+            "reference": "n4m_parity_filters_ref (validated against nirs4all 0.8.x)",
             "encoding": "ieee754_binary64_be_hex",
             "rows": rows,
             "cols": cols,
@@ -267,9 +267,9 @@ def write_mask_fixture(name: str, X: np.ndarray,
                         cases: list[tuple[str, dict, Callable[[], np.ndarray]]],
                         out_dir: Path) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_filter_{name}_v1",
+        "format": f"n4m_filter_{name}_v1",
         "numpy_version": np.__version__,
-        "reference": "c4a_parity_filters_ref",
+        "reference": "n4m_parity_filters_ref",
         "encoding": "ieee754_binary64_be_hex",
         "rows": int(X.shape[0]),
         "cols": int(X.shape[1]),

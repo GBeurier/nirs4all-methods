@@ -4,7 +4,7 @@ _Group_: **Preprocessing** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8` · 
 
 ## Description
 
-From the `chemometrics4all.SavitzkyGolay` Python wrapper docstring:
+From the `n4m.SavitzkyGolay` Python wrapper docstring:
 
 > scipy.signal.savgol_filter parity.
 
@@ -63,19 +63,19 @@ per-row work at transform time.
 
 ### Implementation
 
-- `_create` validates parameters; returns `C4A_ERR_INVALID_ARGUMENT` for
+- `_create` validates parameters; returns `N4M_ERR_INVALID_ARGUMENT` for
   even windows, $p \geq w$, $d < 0$, $\delta = 0$, or an unknown mode.
 - `_transform` requires `cols >= window_length`; otherwise
-  `C4A_ERR_INVALID_ARGUMENT`.
+  `N4M_ERR_INVALID_ARGUMENT`.
 - Tolerance vs scipy: $10^{-9}$ absolute / $10^{-10}$ relative.  The gap is
   structural to the QR-vs-SVD lstsq comparison on the Vandermonde matrix.
 
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_pp_savgol_create(c4a_pp_savgol_handle_t** out, int32_t window_length, int32_t polyorder, int32_t deriv, double delta, c4a_pp_savgol_mode_t mode, double cval);
-void c4a_pp_savgol_destroy(c4a_pp_savgol_handle_t* handle);
-c4a_status_t c4a_pp_savgol_transform( const c4a_pp_savgol_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_pp_savgol_create(n4m_pp_savgol_handle_t** out, int32_t window_length, int32_t polyorder, int32_t deriv, double delta, n4m_pp_savgol_mode_t mode, double cval);
+void n4m_pp_savgol_destroy(n4m_pp_savgol_handle_t* handle);
+n4m_status_t n4m_pp_savgol_transform( const n4m_pp_savgol_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -84,52 +84,52 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_pp_savgol` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.savitzky_golay` | Python | ABI-close function backed by ctypes. |
-| Python sklearn | `chemometrics4all.sklearn.SavitzkyGolay` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| C ABI | `n4m_pp_savgol` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.savitzky_golay` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `n4m.sklearn.SavitzkyGolay` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `savitzky_golay(X, window_length, polyorder, deriv = 0L, delta = 1.0, mode = "mirror", cval = 0.0)` | R | Public package wrapper around the C ABI. |
 | ref.scipy | `scipy.signal.savgol_filter` | Python | canonical/comparator |
 | ref.r.prospectr | `prospectr.savitzkyGolay` | R | canonical/comparator; prospectr drops boundary columns; parity compares the shared valid interior window |
-| ref.nirs4all | `nirs4all.SavitzkyGolay(default edge mode)` | Python | context only; nirs4all does not expose c4a's mirror edge mode; the default scipy edge contract changes boundary samples |
+| ref.nirs4all | `nirs4all.SavitzkyGolay(default edge mode)` | Python | context only; nirs4all does not expose n4m's mirror edge mode; the default scipy edge contract changes boundary samples |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_pp_savgol_create(c4a_pp_savgol_handle_t** out, int32_t window_length, int32_t polyorder, int32_t deriv, double delta, c4a_pp_savgol_mode_t mode, double cval);
-void c4a_pp_savgol_destroy(c4a_pp_savgol_handle_t* handle);
-c4a_status_t c4a_pp_savgol_transform( const c4a_pp_savgol_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_pp_savgol_create(n4m_pp_savgol_handle_t** out, int32_t window_length, int32_t polyorder, int32_t deriv, double delta, n4m_pp_savgol_mode_t mode, double cval);
+void n4m_pp_savgol_destroy(n4m_pp_savgol_handle_t* handle);
+n4m_status_t n4m_pp_savgol_transform( const n4m_pp_savgol_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.savitzky_golay(X)
+Xt = n4m.savitzky_golay(X)
 ```
 
 :::
 
-:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:::{tab-item} Python sklearn · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from chemometrics4all.sklearn import SavitzkyGolay
+from n4m.sklearn import SavitzkyGolay
 
 op = SavitzkyGolay(window_length=5, polyorder=2, deriv=0, delta=1.0, mode='mirror', cval=0.0)
 Xt = op.fit_transform(X)
@@ -137,12 +137,12 @@ Xt = op.fit_transform(X)
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- savitzky_golay(X, window_length = 11L, polyorder = 2L, mode = 'mirror')
 ```
 
@@ -158,7 +158,7 @@ res <- savitzky_golay(X, window_length = 11L, polyorder = 2L, mode = 'mirror')
 
 - ◆ **`ref.scipy`** (Python · canonical) — `scipy.signal.savgol_filter` · scipy 1.17.1
 - ◆ **`ref.r.prospectr`** (R · comparator) — `prospectr.savitzkyGolay` · prospectr 0.2.8 — prospectr drops boundary columns; parity compares the shared valid interior window
-- ℹ **`ref.nirs4all`** (Python · context) — `nirs4all.SavitzkyGolay(default edge mode)` · nirs4all@cd731a23+dirty — nirs4all does not expose c4a's mirror edge mode; the default scipy edge contract changes boundary samples
+- ℹ **`ref.nirs4all`** (Python · context) — `nirs4all.SavitzkyGolay(default edge mode)` · nirs4all@cd731a23+dirty — nirs4all does not expose n4m's mirror edge mode; the default scipy edge contract changes boundary samples
 :::
 
 ### Validation contract
@@ -175,7 +175,7 @@ res <- savitzky_golay(X, window_length = 11L, polyorder = 2L, mode = 'mirror')
 |---------|---------|------|------------|------|
 | `ref.scipy` | `scipy.signal.savgol_filter` | Python / parity | `default_allclose` |  |
 | `ref.r.prospectr` | `prospectr.savitzkyGolay` | R / parity | `savgol_valid_window` | prospectr drops boundary columns; parity compares the shared valid interior window |
-| `ref.nirs4all` | `nirs4all.SavitzkyGolay(default edge mode)` | Python / context | `default_allclose` | nirs4all does not expose c4a's mirror edge mode; the default scipy edge contract changes boundary samples |
+| `ref.nirs4all` | `nirs4all.SavitzkyGolay(default edge mode)` | Python / context | `default_allclose` | nirs4all does not expose n4m's mirror edge mode; the default scipy edge contract changes boundary samples |
 
 ### Benchmarks
 Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Divergence is the worst finite value over the visible sizes for each backend, preferring reference max-abs difference and falling back to binding max-abs difference when no reference comparison is recorded. Rows without a recorded comparison show `—`; the fastest backend per column is marked 🏆.
@@ -188,15 +188,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.3e-15</td><td class="ms ms-best">🏆 0.013 ms</td><td class="ms ms-best">🏆 0.051 ms</td><td class="ms ms-best">🏆 0.218 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.3e-15</td><td class="ms ms-best">🏆 0.013 ms</td><td class="ms ms-best">🏆 0.051 ms</td><td class="ms ms-best">🏆 0.218 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.3e-15</td><td class="ms">0.021 ms</td><td class="ms">0.060 ms</td><td class="ms">0.258 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.3e-15</td><td class="ms">0.022 ms</td><td class="ms">0.067 ms</td><td class="ms">0.265 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.3e-15</td><td class="ms">0.021 ms</td><td class="ms">0.060 ms</td><td class="ms">0.258 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.3e-15</td><td class="ms">0.022 ms</td><td class="ms">0.067 ms</td><td class="ms">0.265 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.7e-15</td><td class="ms">0.055 ms</td><td class="ms">0.287 ms</td><td class="ms">1.719 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.7e-15</td><td class="ms">0.055 ms</td><td class="ms">0.287 ms</td><td class="ms">1.719 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.SavitzkyGolay(default edge mode) · nirs4all@cd731a23+dirty — context">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-context" title="no divergence recorded">—</td><td class="ms">0.266 ms</td><td class="ms">0.449 ms</td><td class="ms">1.215 ms</td></tr>

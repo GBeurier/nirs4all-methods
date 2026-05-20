@@ -1,4 +1,4 @@
-"""Sphinx config for chemometrics4all docs.
+"""Sphinx config for nirs4all-methods docs.
 
 Root document is `about.md` (the project info page). The actual landing
 page at `/index.html` is a custom benchmark-status page generated from
@@ -24,20 +24,20 @@ _sys.path.insert(0, str(_Path(__file__).parent / "_extras"))
 
 # ---- project --------------------------------------------------------
 
-project = "chemometrics4all"
+project = "nirs4all-methods"
 author = "G. Beurier and contributors"
 copyright = f"{_dt.datetime.now().year}, {author}"
 
 # Read version from cpp version header when available, else fallback.
 def _parse_version() -> tuple[str, str]:
-    header = _Path(__file__).parent.parent / "cpp" / "include" / "chemometrics4all" / "c4a_version.h"
+    header = _Path(__file__).parent.parent / "cpp" / "include" / "n4m" / "n4m_version.h"
     if not header.is_file():
         return "0.1.0", "0.1"
     text = header.read_text(encoding="utf-8")
     import re
-    major = re.search(r"#\s*define\s+C4A_PROJECT_VERSION_MAJOR\s+(\d+)", text)
-    minor = re.search(r"#\s*define\s+C4A_PROJECT_VERSION_MINOR\s+(\d+)", text)
-    patch = re.search(r"#\s*define\s+C4A_PROJECT_VERSION_PATCH\s+(\d+)", text)
+    major = re.search(r"#\s*define\s+N4M_PROJECT_VERSION_MAJOR\s+(\d+)", text)
+    minor = re.search(r"#\s*define\s+N4M_PROJECT_VERSION_MINOR\s+(\d+)", text)
+    patch = re.search(r"#\s*define\s+N4M_PROJECT_VERSION_PATCH\s+(\d+)", text)
     if not (major and minor and patch):
         return "0.1.0", "0.1"
     return f"{major.group(1)}.{minor.group(1)}.{patch.group(1)}", f"{major.group(1)}.{minor.group(1)}"
@@ -97,8 +97,8 @@ autosectionlabel_prefix_document = True
 # ---- html theme -----------------------------------------------------
 
 html_theme = "alabaster"  # ships with sphinx, no extra dep
-html_title = "chemometrics4all"
-html_short_title = "chemometrics4all"
+html_title = "nirs4all-methods"
+html_short_title = "nirs4all-methods"
 html_show_sourcelink = True
 
 html_theme_options = {
@@ -106,7 +106,7 @@ html_theme_options = {
                     "with a stable C ABI and thin first-class bindings for Python, R, MATLAB, "
                     "JavaScript, Android, Go, Rust, Julia, Ruby, .NET, Lua, Nim.",
     "github_user": "GBeurier",
-    "github_repo": "chemometrics4all",
+    "github_repo": "nirs4all-methods",
     "github_button": False,
     "fixed_sidebar": True,
     "sidebar_width": "280px",
@@ -183,7 +183,7 @@ def setup(app):
 
     from sphinx.util import logging as _sphinx_logging
 
-    _docs_log = _sphinx_logging.getLogger("chemometrics4all-docs")
+    _docs_log = _sphinx_logging.getLogger("nirs4all-methods-docs")
     method_blocks, method_blocks_source = load_or_build_blocks(bench_payload)
     if method_blocks_source == "none":
         _docs_log.warning(

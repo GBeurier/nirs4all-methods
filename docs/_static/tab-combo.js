@@ -1,4 +1,4 @@
-/* chemometrics4all — convert sphinx-design tab-sets to a <select> dropdown.
+/* nirs4all-methods — convert sphinx-design tab-sets to a <select> dropdown.
  *
  * sphinx-design emits each tab-set as a flex container of
  * <input type="radio"> + <label> + <div class="sd-tab-content"> triples.

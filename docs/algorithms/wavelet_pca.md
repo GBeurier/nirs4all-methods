@@ -47,7 +47,7 @@ and projects them through $(F_{\text{new}} - \mu) V^{\top \top}_{[:k', :]}$.
 
 Stateful: `_create / _fit / _transform / _destroy` plus `_is_fitted`
 and `_output_cols`.  Calling `_transform` or `_output_cols` before
-`_fit` returns `C4A_ERR_NOT_FITTED`.
+`_fit` returns `N4M_ERR_NOT_FITTED`.
 
 ## Numerical contract
 
@@ -63,6 +63,6 @@ and `_output_cols`.  Calling `_transform` or `_output_cols` before
 `nirs4all.operators.transforms.nirs.WaveletPCA` (Trygg & Wold 1998,
 "PLS regression on wavelet compressed NIR spectra").  The nirs4all
 reference fits a separate `sklearn.decomposition.PCA` per level;
-chemometrics4all fits a single PCA on the concatenated coefficient
+nirs4all-methods fits a single PCA on the concatenated coefficient
 stack, matching the simpler "flatten + PCA" path documented in the
 v1 brief.

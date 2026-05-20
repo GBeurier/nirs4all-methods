@@ -10,8 +10,8 @@ import pytest
 
 def test_library_loads():
     """Loading the package binds all declared ABI symbols."""
-    from chemometrics4all._ffi import lib
-    from chemometrics4all._ffi_decls import SYMBOLS
+    from n4m._ffi import lib
+    from n4m._ffi_decls import SYMBOLS
 
     # All declared symbols must be present on the loaded library.
     missing = [name for name, _, _ in SYMBOLS if not hasattr(lib, name)]
@@ -20,34 +20,34 @@ def test_library_loads():
 
 
 def test_abi_version_matches():
-    """The header version reported by libc4a matches our constants."""
-    from chemometrics4all._ffi import (
+    """The header version reported by libn4m matches our constants."""
+    from n4m._ffi import (
         ABI_VERSION_MAJOR,
         ABI_VERSION_MINOR,
         ABI_VERSION_PATCH,
         lib,
     )
 
-    assert lib.c4a_get_abi_version_major() == ABI_VERSION_MAJOR
-    assert lib.c4a_get_abi_version_minor() == ABI_VERSION_MINOR
-    assert lib.c4a_get_abi_version_patch() == ABI_VERSION_PATCH
+    assert lib.n4m_get_abi_version_major() == ABI_VERSION_MAJOR
+    assert lib.n4m_get_abi_version_minor() == ABI_VERSION_MINOR
+    assert lib.n4m_get_abi_version_patch() == ABI_VERSION_PATCH
 
 
 def test_public_version_api():
     """Top-level version helpers expose package and ABI versions."""
-    import chemometrics4all
+    import n4m
 
-    assert chemometrics4all.__version__ == "0.1.0"
-    assert chemometrics4all.abi_version() == (1, 9, 0)
-    assert chemometrics4all.version().startswith("0.1.0+abi.1.9.0")
+    assert n4m.__version__ == "0.1.0"
+    assert n4m.abi_version() == (1, 9, 0)
+    assert n4m.version().startswith("0.1.0+abi.1.9.0")
 
 
 def test_status_to_string():
-    """c4a_status_to_string returns a static C string."""
-    from chemometrics4all._ffi import lib
-    from chemometrics4all._types import Status
+    """n4m_status_to_string returns a static C string."""
+    from n4m._ffi import lib
+    from n4m._types import Status
 
-    s = ctypes.c_char_p(lib.c4a_status_to_string(Status.OK)).value
+    s = ctypes.c_char_p(lib.n4m_status_to_string(Status.OK)).value
     assert s is not None
     # Should contain "ok" (case-insensitive) for status code 0.
     assert b"ok" in s.lower()
@@ -55,7 +55,7 @@ def test_status_to_string():
 
 def test_context_lifecycle():
     """A context can be created and destroyed without leaks."""
-    from chemometrics4all._context import Context
+    from n4m._context import Context
 
     ctx = Context()
     assert ctx.handle.value
@@ -65,7 +65,7 @@ def test_context_lifecycle():
 
 def test_pcg64_lifecycle():
     """The PCG64 RNG wrapper can be created and destroyed."""
-    from chemometrics4all._rng import PCG64
+    from n4m._rng import PCG64
 
     rng = PCG64(seed=20260518)
     assert rng.handle.value
@@ -73,13 +73,13 @@ def test_pcg64_lifecycle():
 
 
 def test_matrix_view_round_trip():
-    """numpy_to_view produces a valid c4a_matrix_view_t."""
-    from chemometrics4all._ffi import lib
-    from chemometrics4all._matrix import numpy_to_view
+    """numpy_to_view produces a valid n4m_matrix_view_t."""
+    from n4m._ffi import lib
+    from n4m._matrix import numpy_to_view
 
     X = np.arange(20, dtype=np.float64).reshape(4, 5)
     view = numpy_to_view(X)
-    status = lib.c4a_matrix_view_validate(ctypes.byref(view))
+    status = lib.n4m_matrix_view_validate(ctypes.byref(view))
     assert status == 0, f"matrix_view_validate failed with status {status}"
     assert view.rows == 4
     assert view.cols == 5
@@ -88,7 +88,7 @@ def test_matrix_view_round_trip():
 
 
 # The 32 cross-binding method IDs maintained by the benchmark orchestrator.
-# Each entry maps a method id -> the corresponding ``c4a.python`` callable name.
+# Each entry maps a method id -> the corresponding ``n4m.python`` callable name.
 _CROSS_BINDING_PYTHON_NAMES: dict[str, str] = {
     "log_transform": "log_transform",
     "derivate": "derivate",
@@ -125,15 +125,15 @@ _CROSS_BINDING_PYTHON_NAMES: dict[str, str] = {
 
 
 def test_cross_binding_methods_present_in_python_surface():
-    """All cross-binding method IDs must resolve on ``chemometrics4all.python``."""
-    from chemometrics4all import python as c4a_python
+    """All cross-binding method IDs must resolve on ``n4m.python``."""
+    from n4m import python as n4m_python
 
     missing = [
         mid
         for mid, name in _CROSS_BINDING_PYTHON_NAMES.items()
-        if not callable(getattr(c4a_python, name, None))
+        if not callable(getattr(n4m_python, name, None))
     ]
-    assert not missing, f"missing c4a.python callables: {missing}"
+    assert not missing, f"missing n4m.python callables: {missing}"
     assert len(_CROSS_BINDING_PYTHON_NAMES) == 31
 
 
@@ -155,12 +155,12 @@ def test_cross_binding_methods_present_in_python_surface():
 )
 def test_cross_binding_python_surface_runs_smoke(method_id):
     """Execute a representative cheap subset of the 32 cross-binding methods."""
-    from chemometrics4all import python as c4a_python
+    from n4m import python as n4m_python
 
     rng = np.random.default_rng(2026)
     x = rng.uniform(0.1, 0.9, size=(40, 24)).astype(np.float64)
     wl = np.linspace(1100.0, 1600.0, 24)
-    func = getattr(c4a_python, _CROSS_BINDING_PYTHON_NAMES[method_id])
+    func = getattr(n4m_python, _CROSS_BINDING_PYTHON_NAMES[method_id])
 
     if method_id == "nirs_metrics":
         y = np.arange(8, dtype=np.float64)

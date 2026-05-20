@@ -4,37 +4,37 @@ Per Codex Phases 5a+5b+post-batch reviews: all 39 augmenters share a uniform ABI
 
 ## Category & naming
 
-- Category prefix: `c4a_aug_*` (NEW; not yet used).
-- Per-augmenter: `c4a_aug_<snake_case_name>_handle_t` (with `_handle_t` suffix per Codex M2 convention).
+- Category prefix: `n4m_aug_*` (NEW; not yet used).
+- Per-augmenter: `n4m_aug_<snake_case_name>_handle_t` (with `_handle_t` suffix per Codex M2 convention).
 - 3 symbols per augmenter: `_create`, `_apply`, `_destroy`.
 
 ## Universal ABI shape
 
 ```c
-typedef struct c4a_aug_<NAME>_handle_t c4a_aug_<NAME>_handle_t;
+typedef struct n4m_aug_<NAME>_handle_t n4m_aug_<NAME>_handle_t;
 
 /* _create takes the RNG handle FIRST, then operator-specific params.
  * The RNG is stored by reference; the augmenter does NOT own it.
  * Lifetime: caller must keep the RNG alive for the augmenter's lifetime. */
-C4A_API c4a_status_t c4a_aug_<NAME>_create(
-    c4a_aug_<NAME>_handle_t** out,
-    c4a_rng_pcg64_state_t* rng,  /* MUST be non-NULL */
+N4M_API n4m_status_t n4m_aug_<NAME>_create(
+    n4m_aug_<NAME>_handle_t** out,
+    n4m_rng_pcg64_state_t* rng,  /* MUST be non-NULL */
     /* operator-specific double / int32_t params */
 );
 
 /* _apply: stateless w.r.t. fit (RNG state advances per call).
  * In-place when X == out is allowed; out must be same shape as X. */
-C4A_API c4a_status_t c4a_aug_<NAME>_apply(
-    const c4a_aug_<NAME>_handle_t* handle,
-    c4a_matrix_view_t X,
-    c4a_matrix_view_t out);
+N4M_API n4m_status_t n4m_aug_<NAME>_apply(
+    const n4m_aug_<NAME>_handle_t* handle,
+    n4m_matrix_view_t X,
+    n4m_matrix_view_t out);
 
-C4A_API void c4a_aug_<NAME>_destroy(c4a_aug_<NAME>_handle_t* handle);
+N4M_API void n4m_aug_<NAME>_destroy(n4m_aug_<NAME>_handle_t* handle);
 ```
 
 ## Determinism
 
-Every augmenter consumes random numbers from the supplied PCG64 handle. With a fixed seed and a fixed RNG state at apply time, output is bit-exact reproducible. Tests use `c4a_rng_pcg64_set_seed(rng, S)` before each `_apply` to lock the stream.
+Every augmenter consumes random numbers from the supplied PCG64 handle. With a fixed seed and a fixed RNG state at apply time, output is bit-exact reproducible. Tests use `n4m_rng_pcg64_set_seed(rng, S)` before each `_apply` to lock the stream.
 
 ## Out-of-scope behaviours
 
@@ -61,7 +61,7 @@ Total: **39 augmenters × 3 symbols = 117 new ABI symbols**, target ABI 1.8.0.
 ## Reference
 
 - `/home/delete/nirs4all/nirs4all/nirs4all/operators/augmentation/{spectral,synthesis,scattering,edge_artifacts,splines,environmental,random}.py`
-- Each augmenter docs page in nirs4all + the c4a algorithm doc.
+- Each augmenter docs page in nirs4all + the n4m algorithm doc.
 
 ## Parity tolerance
 

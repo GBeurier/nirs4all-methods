@@ -1,4 +1,4 @@
-# chemometrics4all roadmap
+# nirs4all-methods roadmap
 
 This is the canonical phase index. Each phase has a brief in `roadmap/phase-N-<name>.md`, a pre-implementation Codex review at `docs/reviews/phase-N/codex-pre.md`, a post-implementation Codex review at `docs/reviews/phase-N/codex-post.md`, and an independent Opus review at `docs/reviews/phase-N/opus-post.md`.
 
@@ -6,7 +6,7 @@ This is the canonical phase index. Each phase has a brief in `roadmap/phase-N-<n
 
 | # | Phase | Status | Brief |
 |--:|-------|:------:|-------|
-| 0 | Bootstrap (clone pls4all template, rename p4a→c4a, strip PLS code, smoke build, git+push) | 🟢 | `roadmap/phase-0-bootstrap.md` |
+| 0 | Bootstrap (clone pls4all template, rename p4a→n4m, strip PLS code, smoke build, git+push) | 🟢 | `roadmap/phase-0-bootstrap.md` |
 | 1 | Common infrastructure: PCG64+Ziggurat RNG, PCA helper (randomized SVD), banded LDLT solver, wavelet filter banks (Haar/db4/sym4/coif1), B-spline | ⚪ | `roadmap/phase-1-common.md` |
 
 ## Preprocessings (52 operators across 9 phases)
@@ -55,7 +55,7 @@ This is the canonical phase index. Each phase has a brief in `roadmap/phase-N-<n
 |--:|-------|---------|
 | 22 | Python tier-1 + tier-2 sklearn | ctypes + sklearn-compatible classes for all 100+ operators; cibuildwheel for manylinux/macOS/Windows |
 | 23 | R tier-1 + tier-2 | `.Call` gateway + S3 methods + parsnip/recipes integration |
-| 24 | MATLAB | MEX dispatcher + classdefs in `+chemometrics4all/` |
+| 24 | MATLAB | MEX dispatcher + classdefs in `+n4m/` |
 | 25 | JS/WASM | Emscripten preset, subset (stateless + lightweight) |
 
 ## Benchmarks & release

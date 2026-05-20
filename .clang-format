@@ -1,4 +1,4 @@
-# chemometrics4all — LLVM-derived style, column 100, 4-space indent.
+# nirs4all-methods — LLVM-derived style, column 100, 4-space indent.
 BasedOnStyle: LLVM
 Language: Cpp
 Standard: c++17
@@ -43,8 +43,8 @@ IncludeCategories:
     Priority: 1
   - Regex:    '^<.*>'
     Priority: 2
-  # Public project headers (chemometrics4all/*)
-  - Regex:    '^"chemometrics4all/'
+  # Public project headers (nirs4all-methods/*)
+  - Regex:    '^"n4m/'
     Priority: 3
   # Internal project headers
   - Regex:    '.*'

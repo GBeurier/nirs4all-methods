@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
 // Parity tests for the Phase 20 transfer-metrics utility
-// (c4a_transfer_metrics_compute). One smoke test exercises the
+// (n4m_transfer_metrics_compute). One smoke test exercises the
 // create-input / compute / consume happy path on a small inline matrix;
 // one parity test loads transfer_metrics_v1.json, runs the C engine on
 // each case, and asserts within tolerance against the frozen NumPy
-// reference (parity/python_generator/src/c4a_parity_transfer_ref/).
+// reference (parity/python_generator/src/n4m_parity_transfer_ref/).
 //
 // Tolerance per the brief (Phase 20):
 //
@@ -22,28 +22,28 @@
 #include <string>
 #include <vector>
 
-#include "chemometrics4all/c4a.h"
+#include "n4m/n4m.h"
 
 #include "fixture_parser.hpp"
 #include "harness.hpp"
 
-#ifndef C4A_PARITY_FIXTURE_DIR
-#  error "C4A_PARITY_FIXTURE_DIR must be defined"
+#ifndef N4M_PARITY_FIXTURE_DIR
+#  error "N4M_PARITY_FIXTURE_DIR must be defined"
 #endif
 
 namespace {
 
-using ::c4a_testing::Case;
-using ::c4a_testing::params_get_int;
-using ::c4a_testing::params_get_double;
-using ::c4a_testing::slurp;
+using ::n4m_testing::Case;
+using ::n4m_testing::params_get_int;
+using ::n4m_testing::params_get_double;
+using ::n4m_testing::slurp;
 
-c4a_matrix_view_t make_rowmajor_view(double* data, std::int64_t rows,
+n4m_matrix_view_t make_rowmajor_view(double* data, std::int64_t rows,
                                       std::int64_t cols) {
-    c4a_matrix_view_t v{};
-    const c4a_status_t st =
-        c4a_matrix_view_init_rowmajor(&v, data, rows, cols, C4A_DTYPE_F64);
-    C4A_TEST_REQUIRE(st == C4A_OK);
+    n4m_matrix_view_t v{};
+    const n4m_status_t st =
+        n4m_matrix_view_init_rowmajor(&v, data, rows, cols, N4M_DTYPE_F64);
+    N4M_TEST_REQUIRE(st == N4M_OK);
     return v;
 }
 
@@ -67,30 +67,30 @@ void test_transfer_metrics_smoke() {
             X_tgt[i * P + j] = std::sin(t * 3.0 + j) + 0.05 * j + 0.3;
         }
     }
-    c4a_matrix_view_t Xs = make_rowmajor_view(X_src, N, P);
-    c4a_matrix_view_t Xt = make_rowmajor_view(X_tgt, N, P);
-    c4a_transfer_metrics_t out{};
-    const c4a_status_t st = c4a_transfer_metrics_compute(
+    n4m_matrix_view_t Xs = make_rowmajor_view(X_src, N, P);
+    n4m_matrix_view_t Xt = make_rowmajor_view(X_tgt, N, P);
+    n4m_transfer_metrics_t out{};
+    const n4m_status_t st = n4m_transfer_metrics_compute(
         Xs, Xt,
         /*n_components=*/3, /*k_neighbors=*/3, /*seed=*/42, &out);
-    C4A_TEST_REQUIRE(st == C4A_OK);
-    C4A_TEST_REQUIRE(std::isfinite(out.centroid_distance));
-    C4A_TEST_REQUIRE(out.centroid_distance >= 0.0);
-    C4A_TEST_REQUIRE(std::isfinite(out.cka_similarity));
-    C4A_TEST_REQUIRE(out.cka_similarity >= 0.0);
+    N4M_TEST_REQUIRE(st == N4M_OK);
+    N4M_TEST_REQUIRE(std::isfinite(out.centroid_distance));
+    N4M_TEST_REQUIRE(out.centroid_distance >= 0.0);
+    N4M_TEST_REQUIRE(std::isfinite(out.cka_similarity));
+    N4M_TEST_REQUIRE(out.cka_similarity >= 0.0);
     // For aligned features grassmann should be finite.
-    C4A_TEST_REQUIRE(std::isfinite(out.grassmann_distance));
-    C4A_TEST_REQUIRE(out.grassmann_distance >= 0.0);
-    C4A_TEST_REQUIRE(std::isfinite(out.rv_coefficient));
-    C4A_TEST_REQUIRE(std::isfinite(out.procrustes_disparity));
-    C4A_TEST_REQUIRE(out.procrustes_disparity >= 0.0);
-    C4A_TEST_REQUIRE(std::isfinite(out.trustworthiness));
-    C4A_TEST_REQUIRE(out.trustworthiness <= 1.0 + 1e-12);
-    C4A_TEST_REQUIRE(std::isfinite(out.spread_distance));
-    C4A_TEST_REQUIRE(std::isfinite(out.evr_source));
-    C4A_TEST_REQUIRE(std::isfinite(out.evr_target));
-    C4A_TEST_REQUIRE(out.evr_source >= 0.0 && out.evr_source <= 1.0 + 1e-12);
-    C4A_TEST_REQUIRE(out.evr_target >= 0.0 && out.evr_target <= 1.0 + 1e-12);
+    N4M_TEST_REQUIRE(std::isfinite(out.grassmann_distance));
+    N4M_TEST_REQUIRE(out.grassmann_distance >= 0.0);
+    N4M_TEST_REQUIRE(std::isfinite(out.rv_coefficient));
+    N4M_TEST_REQUIRE(std::isfinite(out.procrustes_disparity));
+    N4M_TEST_REQUIRE(out.procrustes_disparity >= 0.0);
+    N4M_TEST_REQUIRE(std::isfinite(out.trustworthiness));
+    N4M_TEST_REQUIRE(out.trustworthiness <= 1.0 + 1e-12);
+    N4M_TEST_REQUIRE(std::isfinite(out.spread_distance));
+    N4M_TEST_REQUIRE(std::isfinite(out.evr_source));
+    N4M_TEST_REQUIRE(std::isfinite(out.evr_target));
+    N4M_TEST_REQUIRE(out.evr_source >= 0.0 && out.evr_source <= 1.0 + 1e-12);
+    N4M_TEST_REQUIRE(out.evr_target >= 0.0 && out.evr_target <= 1.0 + 1e-12);
 }
 
 void test_transfer_metrics_invalid_args() {
@@ -98,18 +98,18 @@ void test_transfer_metrics_invalid_args() {
     constexpr int P = 3;
     double X_src[N * P] = {0};
     double X_tgt[N * P] = {0};
-    c4a_matrix_view_t Xs = make_rowmajor_view(X_src, N, P);
-    c4a_matrix_view_t Xt = make_rowmajor_view(X_tgt, N, P);
-    c4a_transfer_metrics_t out{};
+    n4m_matrix_view_t Xs = make_rowmajor_view(X_src, N, P);
+    n4m_matrix_view_t Xt = make_rowmajor_view(X_tgt, N, P);
+    n4m_transfer_metrics_t out{};
     // out NULL
-    C4A_TEST_REQUIRE(c4a_transfer_metrics_compute(Xs, Xt, 2, 2, 0, nullptr)
-                     == C4A_ERR_NULL_POINTER);
+    N4M_TEST_REQUIRE(n4m_transfer_metrics_compute(Xs, Xt, 2, 2, 0, nullptr)
+                     == N4M_ERR_NULL_POINTER);
     // n_components < 1
-    C4A_TEST_REQUIRE(c4a_transfer_metrics_compute(Xs, Xt, 0, 2, 0, &out)
-                     == C4A_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(n4m_transfer_metrics_compute(Xs, Xt, 0, 2, 0, &out)
+                     == N4M_ERR_INVALID_ARGUMENT);
     // k_neighbors < 2
-    C4A_TEST_REQUIRE(c4a_transfer_metrics_compute(Xs, Xt, 2, 1, 0, &out)
-                     == C4A_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(n4m_transfer_metrics_compute(Xs, Xt, 2, 1, 0, &out)
+                     == N4M_ERR_INVALID_ARGUMENT);
 }
 
 // ---------------------------------------------------------------------------
@@ -118,7 +118,7 @@ void test_transfer_metrics_invalid_args() {
 // each case produces a scalar struct rather than a matrix. Schema:
 //
 //   {
-//     "format": "c4a_transfer_metrics_v1",
+//     "format": "n4m_transfer_metrics_v1",
 //     "cases": [
 //       { "name": "...",
 //         "params": { "n_components": N, "k_neighbors": K, "seed": S },
@@ -152,7 +152,7 @@ struct TransferCase {
     int64_t     src_rows, src_cols;
     int64_t     tgt_rows, tgt_cols;
     std::vector<double> src, tgt;
-    // Expected scalars, in the order of the c4a_transfer_metrics_t struct.
+    // Expected scalars, in the order of the n4m_transfer_metrics_t struct.
     double      centroid_distance;
     double      cka_similarity;
     double      grassmann_distance;
@@ -189,21 +189,21 @@ double parse_expected_double(const std::string& body, std::size_t lo,
     if (p >= hi || body[p] != '"') {
         return std::nan("");
     }
-    return ::c4a_testing::hex_to_double(body, p);
+    return ::n4m_testing::hex_to_double(body, p);
 }
 
 std::vector<TransferCase> load_transfer_cases() {
     const std::string body =
-        slurp(std::string(C4A_PARITY_FIXTURE_DIR) + "/transfer_metrics_v1.json");
-    auto [cases_lo, cases_hi] = ::c4a_testing::find_cases_array(body);
-    auto spans = ::c4a_testing::list_case_object_spans(body, cases_lo, cases_hi);
+        slurp(std::string(N4M_PARITY_FIXTURE_DIR) + "/transfer_metrics_v1.json");
+    auto [cases_lo, cases_hi] = ::n4m_testing::find_cases_array(body);
+    auto spans = ::n4m_testing::list_case_object_spans(body, cases_lo, cases_hi);
     std::vector<TransferCase> out;
     for (const auto& [lo, hi] : spans) {
         TransferCase c;
-        std::size_t np = ::c4a_testing::find_value_for_key(body, "name", lo, hi);
-        c.name = ::c4a_testing::parse_string(body, np);
-        std::size_t pp = ::c4a_testing::find_value_for_key(body, "params", lo, hi);
-        auto [pb, pe] = ::c4a_testing::read_value_span(body, pp);
+        std::size_t np = ::n4m_testing::find_value_for_key(body, "name", lo, hi);
+        c.name = ::n4m_testing::parse_string(body, np);
+        std::size_t pp = ::n4m_testing::find_value_for_key(body, "params", lo, hi);
+        auto [pb, pe] = ::n4m_testing::read_value_span(body, pp);
         const std::string params_json = body.substr(pb, pe - pb);
         c.n_components = static_cast<int32_t>(
             params_get_int(params_json, "n_components", 10));
@@ -212,19 +212,19 @@ std::vector<TransferCase> load_transfer_cases() {
         c.seed = static_cast<uint64_t>(
             params_get_int(params_json, "seed", 0));
 
-        c.src_rows = ::c4a_testing::parse_int64(body,
-            ::c4a_testing::find_value_for_key(body, "source_rows", lo, hi));
-        c.src_cols = ::c4a_testing::parse_int64(body,
-            ::c4a_testing::find_value_for_key(body, "source_cols", lo, hi));
-        std::size_t shp = ::c4a_testing::find_value_for_key(body, "source_hex", lo, hi);
-        ::c4a_testing::parse_hex_double_array(body, shp, c.src);
+        c.src_rows = ::n4m_testing::parse_int64(body,
+            ::n4m_testing::find_value_for_key(body, "source_rows", lo, hi));
+        c.src_cols = ::n4m_testing::parse_int64(body,
+            ::n4m_testing::find_value_for_key(body, "source_cols", lo, hi));
+        std::size_t shp = ::n4m_testing::find_value_for_key(body, "source_hex", lo, hi);
+        ::n4m_testing::parse_hex_double_array(body, shp, c.src);
 
-        c.tgt_rows = ::c4a_testing::parse_int64(body,
-            ::c4a_testing::find_value_for_key(body, "target_rows", lo, hi));
-        c.tgt_cols = ::c4a_testing::parse_int64(body,
-            ::c4a_testing::find_value_for_key(body, "target_cols", lo, hi));
-        std::size_t thp = ::c4a_testing::find_value_for_key(body, "target_hex", lo, hi);
-        ::c4a_testing::parse_hex_double_array(body, thp, c.tgt);
+        c.tgt_rows = ::n4m_testing::parse_int64(body,
+            ::n4m_testing::find_value_for_key(body, "target_rows", lo, hi));
+        c.tgt_cols = ::n4m_testing::parse_int64(body,
+            ::n4m_testing::find_value_for_key(body, "target_cols", lo, hi));
+        std::size_t thp = ::n4m_testing::find_value_for_key(body, "target_hex", lo, hi);
+        ::n4m_testing::parse_hex_double_array(body, thp, c.tgt);
 
         c.centroid_distance    = parse_expected_double(body, lo, hi, "centroid_distance");
         c.cka_similarity       = parse_expected_double(body, lo, hi, "cka_similarity");
@@ -277,12 +277,12 @@ void verify_transfer_metrics_parity() {
     for (const auto& c : cases) {
         std::vector<double> src = c.src;
         std::vector<double> tgt = c.tgt;
-        c4a_matrix_view_t Xs = make_rowmajor_view(src.data(), c.src_rows, c.src_cols);
-        c4a_matrix_view_t Xt = make_rowmajor_view(tgt.data(), c.tgt_rows, c.tgt_cols);
-        c4a_transfer_metrics_t out{};
-        const c4a_status_t st = c4a_transfer_metrics_compute(
+        n4m_matrix_view_t Xs = make_rowmajor_view(src.data(), c.src_rows, c.src_cols);
+        n4m_matrix_view_t Xt = make_rowmajor_view(tgt.data(), c.tgt_rows, c.tgt_cols);
+        n4m_transfer_metrics_t out{};
+        const n4m_status_t st = n4m_transfer_metrics_compute(
             Xs, Xt, c.n_components, c.k_neighbors, c.seed, &out);
-        C4A_TEST_REQUIRE(st == C4A_OK);
+        N4M_TEST_REQUIRE(st == N4M_OK);
 
         const std::string tag = "transfer_metrics/" + c.name;
         assert_metric(tag + "/centroid_distance",    out.centroid_distance,
@@ -308,8 +308,8 @@ void verify_transfer_metrics_parity() {
 
 }  // namespace
 
-void register_transfer_metrics_tests(c4a_testing::Runner& r);
-void register_transfer_metrics_tests(c4a_testing::Runner& r) {
+void register_transfer_metrics_tests(n4m_testing::Runner& r);
+void register_transfer_metrics_tests(n4m_testing::Runner& r) {
     r.run("transfer_metrics_smoke",        test_transfer_metrics_smoke);
     r.run("transfer_metrics_invalid_args", test_transfer_metrics_invalid_args);
     r.run("transfer_metrics_parity",       verify_transfer_metrics_parity);

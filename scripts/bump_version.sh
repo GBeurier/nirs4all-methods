@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CECILL-2.1
 #
-# bump_version.sh — chemometrics4all version source-of-truth syncer.
+# bump_version.sh — nirs4all-methods version source-of-truth syncer.
 #
-# Reads the canonical project version from cpp/include/chemometrics4all/c4a_version.h
+# Reads the canonical project version from cpp/include/n4m/n4m_version.h
 # and propagates it to every downstream manifest.
 #
 # Usage:
@@ -12,8 +12,8 @@
 #   scripts/bump_version.sh --bump X.Y.Z   # rewrite header to X.Y.Z then sync
 #   scripts/bump_version.sh --help
 #
-# The script targets the **project semver** only (C4A_PROJECT_VERSION_*). The
-# ABI semver (C4A_ABI_VERSION_*) is bumped manually with a dedicated commit
+# The script targets the **project semver** only (N4M_PROJECT_VERSION_*). The
+# ABI semver (N4M_ABI_VERSION_*) is bumped manually with a dedicated commit
 # whenever the C ABI surface changes — those two semvers are intentionally
 # independent (see CMakeLists.txt comments).
 #
@@ -23,7 +23,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-HEADER="${ROOT}/cpp/include/chemometrics4all/c4a_version.h"
+HEADER="${ROOT}/cpp/include/n4m/n4m_version.h"
 
 if [[ ! -f "${HEADER}" ]]; then
     echo "error: canonical version header not found at ${HEADER}" >&2
@@ -100,33 +100,33 @@ if [[ "${MODE}" == "bump" ]]; then
     IFS='.' read -r NV_MAJOR NV_MINOR NV_PATCH <<<"${NEW_VERSION}"
 
     sed -i -E \
-        -e "s/^(#define[[:space:]]+C4A_PROJECT_VERSION_MAJOR[[:space:]]+)[0-9]+/\1${NV_MAJOR}/" \
-        -e "s/^(#define[[:space:]]+C4A_PROJECT_VERSION_MINOR[[:space:]]+)[0-9]+/\1${NV_MINOR}/" \
-        -e "s/^(#define[[:space:]]+C4A_PROJECT_VERSION_PATCH[[:space:]]+)[0-9]+/\1${NV_PATCH}/" \
-        -e "s/^(#define[[:space:]]+C4A_PROJECT_VERSION_STRING[[:space:]]+\")[^\"]+(\".*)$/\1${NEW_VERSION}\2/" \
+        -e "s/^(#define[[:space:]]+N4M_PROJECT_VERSION_MAJOR[[:space:]]+)[0-9]+/\1${NV_MAJOR}/" \
+        -e "s/^(#define[[:space:]]+N4M_PROJECT_VERSION_MINOR[[:space:]]+)[0-9]+/\1${NV_MINOR}/" \
+        -e "s/^(#define[[:space:]]+N4M_PROJECT_VERSION_PATCH[[:space:]]+)[0-9]+/\1${NV_PATCH}/" \
+        -e "s/^(#define[[:space:]]+N4M_PROJECT_VERSION_STRING[[:space:]]+\")[^\"]+(\".*)$/\1${NEW_VERSION}\2/" \
         "${HEADER}"
-    echo "  bumped c4a_version.h to ${NEW_VERSION}"
+    echo "  bumped n4m_version.h to ${NEW_VERSION}"
     MODE="sync"
 fi
 
 # ---------------------------------------------------------------------------
 # 4. Re-read header (post --bump if any) and cross-check internal consistency
 # ---------------------------------------------------------------------------
-PMAJOR=$(read_header_macro C4A_PROJECT_VERSION_MAJOR)
-PMINOR=$(read_header_macro C4A_PROJECT_VERSION_MINOR)
-PPATCH=$(read_header_macro C4A_PROJECT_VERSION_PATCH)
+PMAJOR=$(read_header_macro N4M_PROJECT_VERSION_MAJOR)
+PMINOR=$(read_header_macro N4M_PROJECT_VERSION_MINOR)
+PPATCH=$(read_header_macro N4M_PROJECT_VERSION_PATCH)
 VERSION="${PMAJOR}.${PMINOR}.${PPATCH}"
 
-VSTRING=$(read_header_string C4A_PROJECT_VERSION_STRING)
+VSTRING=$(read_header_string N4M_PROJECT_VERSION_STRING)
 if [[ "${VSTRING}" != "${VERSION}" ]]; then
-    echo "error: C4A_PROJECT_VERSION_STRING (\"${VSTRING}\") disagrees with" \
+    echo "error: N4M_PROJECT_VERSION_STRING (\"${VSTRING}\") disagrees with" \
          "numeric macros (\"${VERSION}\") in ${HEADER}" >&2
     exit 2
 fi
 
-AMAJOR=$(read_header_macro C4A_ABI_VERSION_MAJOR)
-AMINOR=$(read_header_macro C4A_ABI_VERSION_MINOR)
-APATCH=$(read_header_macro C4A_ABI_VERSION_PATCH)
+AMAJOR=$(read_header_macro N4M_ABI_VERSION_MAJOR)
+AMINOR=$(read_header_macro N4M_ABI_VERSION_MINOR)
+APATCH=$(read_header_macro N4M_ABI_VERSION_PATCH)
 ABI_VERSION="${AMAJOR}.${AMINOR}.${APATCH}"
 
 if [[ "${MODE}" == "check" ]]; then
@@ -316,7 +316,7 @@ update_with_sed \
     "^version[[:space:]]*=[[:space:]]*\"([0-9]+\.[0-9]+\.[0-9]+)\"" \
     "s/^(version[[:space:]]*=[[:space:]]*\")[0-9]+\.[0-9]+\.[0-9]+(\")/\1${VERSION}\2/"
 
-# Parity generator (own pyproject.toml — internal tool tracks chemometrics4all version)
+# Parity generator (own pyproject.toml — internal tool tracks nirs4all-methods version)
 update_with_sed \
     "parity/python_generator/pyproject.toml" \
     "^version[[:space:]]*=[[:space:]]*\"([0-9]+\.[0-9]+\.[0-9]+)\"" \
@@ -324,7 +324,7 @@ update_with_sed \
 
 # R (DESCRIPTION:  Version: X.Y.Z)
 update_with_sed \
-    "bindings/r/chemometrics4all/DESCRIPTION" \
+    "bindings/r/n4m/DESCRIPTION" \
     "^Version:[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)" \
     "s/^(Version:[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+/\1${VERSION}/"
 
@@ -342,29 +342,29 @@ run_optional_manifest() {
 # scaffolded, this same table starts enforcing its version automatically.
 
 # Julia (Project.toml:  version = "X.Y.Z")
-run_optional_manifest "bindings/julia/Chemometrics4all.jl/Project.toml" \
+run_optional_manifest "bindings/julia/N4M.jl/Project.toml" \
     update_with_sed \
-        "bindings/julia/Chemometrics4all.jl/Project.toml" \
+        "bindings/julia/N4M.jl/Project.toml" \
         "^version[[:space:]]*=[[:space:]]*\"([0-9]+\.[0-9]+\.[0-9]+)\"" \
         "s/^(version[[:space:]]*=[[:space:]]*\")[0-9]+\.[0-9]+\.[0-9]+(\")/\1${VERSION}\2/"
 
 # Rust (Cargo.toml:  version = "X.Y.Z" inside [package])
-run_optional_manifest "bindings/rust/chemometrics4all/Cargo.toml" \
+run_optional_manifest "bindings/rust/nirs4all-methods/Cargo.toml" \
     update_with_sed \
-        "bindings/rust/chemometrics4all/Cargo.toml" \
+        "bindings/rust/nirs4all-methods/Cargo.toml" \
         "^version[[:space:]]*=[[:space:]]*\"([0-9]+\.[0-9]+\.[0-9]+)\"" \
         "s/^(version[[:space:]]*=[[:space:]]*\")[0-9]+\.[0-9]+\.[0-9]+(\")/\1${VERSION}\2/"
 
-# Rust lock (Cargo.lock:  bump only the [[package]] entry where name = "chemometrics4all")
+# Rust lock (Cargo.lock:  bump only the [[package]] entry where name = "nirs4all-methods")
 # We use a small python helper because TOML arrays-of-tables are not pleasant
 # to munge with sed.
 update_cargo_lock() {
-    local rel="bindings/rust/chemometrics4all/Cargo.lock"
+    local rel="bindings/rust/nirs4all-methods/Cargo.lock"
     local abs="${ROOT}/${rel}"
     # Cargo.lock is intentionally NOT git-tracked for this library crate; it
     # is regenerated by `cargo build` from Cargo.toml. A clean checkout does
     # not include it. We therefore treat "absent" as a no-op (not drift). If
-    # the file is *present*, we still require its [[package]] chemometrics4all entry
+    # the file is *present*, we still require its [[package]] nirs4all-methods entry
     # to be in sync — the rest of the function handles that case.
     if [[ ! -f "${abs}" ]]; then
         return 0
@@ -374,19 +374,19 @@ update_cargo_lock() {
 import re, sys
 with open(sys.argv[1], encoding="utf-8") as f:
     txt = f.read()
-m = re.search(r'\[\[package\]\]\nname = "chemometrics4all"\nversion = "([^"]+)"', txt)
+m = re.search(r'\[\[package\]\]\nname = "nirs4all-methods"\nversion = "([^"]+)"', txt)
 sys.stdout.write(m.group(1) if m else "")
 PY
     )
     if [[ -z "${found}" ]]; then
-        echo "  DRIFT: ${rel} present but has no [[package]] entry for chemometrics4all" >&2
+        echo "  DRIFT: ${rel} present but has no [[package]] entry for nirs4all-methods" >&2
         DRIFTED+=("${rel}")
         EXIT_CODE=1
         return 0
     fi
     if [[ "${MODE}" == "check" ]]; then
         if [[ "${found}" != "${VERSION}" ]]; then
-            echo "  DRIFT: ${rel} (chemometrics4all entry) '${found}' (expected '${VERSION}')" >&2
+            echo "  DRIFT: ${rel} (nirs4all-methods entry) '${found}' (expected '${VERSION}')" >&2
             DRIFTED+=("${rel}")
             EXIT_CODE=1
         fi
@@ -400,7 +400,7 @@ path, new = sys.argv[1], sys.argv[2]
 with open(path, encoding="utf-8") as f:
     txt = f.read()
 txt = re.sub(
-    r'(\[\[package\]\]\nname = "chemometrics4all"\nversion = ")[^"]+(")',
+    r'(\[\[package\]\]\nname = "nirs4all-methods"\nversion = ")[^"]+(")',
     r'\g<1>' + new + r'\g<2>',
     txt,
     count=1,
@@ -408,7 +408,7 @@ txt = re.sub(
 with open(path, "w", encoding="utf-8") as f:
     f.write(txt)
 PY
-        echo "  updated ${rel} (chemometrics4all entry): ${found} → ${VERSION}"
+        echo "  updated ${rel} (nirs4all-methods entry): ${found} → ${VERSION}"
     fi
 }
 update_cargo_lock
@@ -420,9 +420,9 @@ run_optional_manifest "bindings/js/package-lock.json" \
     update_package_lock "bindings/js/package-lock.json"
 
 # .NET (csproj:  <Version>X.Y.Z</Version>)
-run_optional_manifest "bindings/dotnet/Chemometrics4all/Chemometrics4all.csproj" \
+run_optional_manifest "bindings/dotnet/N4M/N4M.csproj" \
     update_with_sed \
-        "bindings/dotnet/Chemometrics4all/Chemometrics4all.csproj" \
+        "bindings/dotnet/N4M/N4M.csproj" \
         "<Version>([0-9]+\.[0-9]+\.[0-9]+)</Version>" \
         "s,<Version>[0-9]+\.[0-9]+\.[0-9]+</Version>,<Version>${VERSION}</Version>,"
 
@@ -433,7 +433,7 @@ update_with_sed \
     "s/^(version:[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+([-_a-zA-Z0-9.]*)$/\1${VERSION}/"
 
 # Docs Sphinx. The current config reads the canonical version directly from
-# c4a_version.h; older static configs used release/version literals.
+# n4m_version.h; older static configs used release/version literals.
 SHORT_VERSION="${PMAJOR}.${PMINOR}"
 
 update_sphinx_versions() {
@@ -446,7 +446,7 @@ update_sphinx_versions() {
         return 0
     fi
     if grep -Eq '^release,[[:space:]]*version[[:space:]]*=[[:space:]]*_parse_version\(\)' "${abs}"; then
-        echo "  OK: ${rel} derives release/version from c4a_version.h"
+        echo "  OK: ${rel} derives release/version from n4m_version.h"
         return 0
     fi
 
@@ -497,10 +497,10 @@ fi
 # ---------------------------------------------------------------------------
 if [[ "${MODE}" == "check" ]]; then
     if [[ ${EXIT_CODE} -eq 0 ]]; then
-        echo "  OK: every manifest is in sync with c4a_version.h (${VERSION})"
+        echo "  OK: every manifest is in sync with n4m_version.h (${VERSION})"
     else
         echo "" >&2
-        echo "FAIL: ${#DRIFTED[@]} manifest(s) drifted from c4a_version.h." >&2
+        echo "FAIL: ${#DRIFTED[@]} manifest(s) drifted from n4m_version.h." >&2
         echo "      Run scripts/bump_version.sh to re-sync." >&2
     fi
 fi

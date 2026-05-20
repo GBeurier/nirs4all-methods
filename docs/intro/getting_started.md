@@ -1,6 +1,6 @@
 # Getting started
 
-chemometrics4all is currently documented as a chemometrics / NIRS operator
+nirs4all-methods is currently documented as a chemometrics / NIRS operator
 library. PLS model examples belong in `pls4all` unless and until this repository
 adds a supported model surface.
 

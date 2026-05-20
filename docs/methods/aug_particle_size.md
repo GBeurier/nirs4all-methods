@@ -4,7 +4,7 @@ _Group_: **Augmentation** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8` · _
 
 ## Description
 
-From the `chemometrics4all.ParticleSizeAugmenter` Python wrapper docstring:
+From the `n4m.ParticleSizeAugmenter` Python wrapper docstring:
 
 > Particle-size and path-length scattering simulation.
 
@@ -55,7 +55,7 @@ X^{\mathrm{aug}}_{i,:} \leftarrow X^{\mathrm{aug}}_{i,:} + G_{\sigma=3}(\eta_i)$
 where $G_{\sigma=3}$ is `scipy.ndimage.gaussian_filter1d` with
 default settings (mode `reflect`, `truncate=4.0`).
 
-The noise convolution reuses the existing `c4a_pp_gaussian` engine to
+The noise convolution reuses the existing `n4m_pp_gaussian` engine to
 preserve bit-exact kernel construction and convolution semantics.
 
 ### Implementation
@@ -63,9 +63,9 @@ preserve bit-exact kernel construction and convolution semantics.
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_aug_particle_size_apply( const c4a_aug_particle_size_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_particle_size_create( c4a_aug_particle_size_handle_t** out, c4a_rng_pcg64_state_t* rng, double mean_size_um, double size_variation_um, int use_size_range, double size_range_low_um, double size_range_high_um, double reference_size_um, double wavelength_exponent, double size_effect_strength, int include_path_length, double path_length_sensitivity, const double* wavelengths, int64_t n_wavelengths);
-void c4a_aug_particle_size_destroy( c4a_aug_particle_size_handle_t* handle);
+n4m_status_t n4m_aug_particle_size_apply( const n4m_aug_particle_size_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_particle_size_create( n4m_aug_particle_size_handle_t** out, n4m_rng_pcg64_state_t* rng, double mean_size_um, double size_variation_um, int use_size_range, double size_range_low_um, double size_range_high_um, double reference_size_um, double wavelength_exponent, double size_effect_strength, int include_path_length, double path_length_sensitivity, const double* wavelengths, int64_t n_wavelengths);
+void n4m_aug_particle_size_destroy( n4m_aug_particle_size_handle_t* handle);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -74,50 +74,50 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_aug_particle_size` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.aug_particle_size` | Python | ABI-close function backed by ctypes. |
-| Python sklearn | `chemometrics4all.sklearn.ParticleSizeAugmenter` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| C ABI | `n4m_aug_particle_size` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.aug_particle_size` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `n4m.sklearn.ParticleSizeAugmenter` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `aug_particle_size(X, wavelengths = NULL, mean_size_um = 50.0, size_variation_um = 15.0, use_size_range = 0L, size_range_low_um = 5.0, size_range_high_um = 500.0, reference_size_um = 50.0, wavelength_exponent = 1.5, size_effect_strength = 0.1, include_path_length = 1L, path_length_sensitivity = 0.5, seed = 17)` | R | Public package wrapper around the C ABI. |
 | ref.nirs4all | `nirs4all.ParticleSizeAugmenter` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_aug_particle_size_apply( const c4a_aug_particle_size_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_particle_size_create( c4a_aug_particle_size_handle_t** out, c4a_rng_pcg64_state_t* rng, double mean_size_um, double size_variation_um, int use_size_range, double size_range_low_um, double size_range_high_um, double reference_size_um, double wavelength_exponent, double size_effect_strength, int include_path_length, double path_length_sensitivity, const double* wavelengths, int64_t n_wavelengths);
-void c4a_aug_particle_size_destroy( c4a_aug_particle_size_handle_t* handle);
+n4m_status_t n4m_aug_particle_size_apply( const n4m_aug_particle_size_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_particle_size_create( n4m_aug_particle_size_handle_t** out, n4m_rng_pcg64_state_t* rng, double mean_size_um, double size_variation_um, int use_size_range, double size_range_low_um, double size_range_high_um, double reference_size_um, double wavelength_exponent, double size_effect_strength, int include_path_length, double path_length_sensitivity, const double* wavelengths, int64_t n_wavelengths);
+void n4m_aug_particle_size_destroy( n4m_aug_particle_size_handle_t* handle);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.aug_particle_size(X)
+Xt = n4m.aug_particle_size(X)
 ```
 
 :::
 
-:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:::{tab-item} Python sklearn · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from chemometrics4all.sklearn import ParticleSizeAugmenter
+from n4m.sklearn import ParticleSizeAugmenter
 
 op = ParticleSizeAugmenter(mean_size_um=50.0, size_variation_um=15.0, use_size_range=False, size_range_low_um=5.0, size_range_high_um=500.0, reference_size_um=50.0)
 Xt = op.fit_transform(X)
@@ -125,12 +125,12 @@ Xt = op.fit_transform(X)
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- aug_particle_size(X)
 ```
 
@@ -170,15 +170,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-16</td><td class="ms">0.109 ms</td><td class="ms">0.709 ms</td><td class="ms">3.354 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-16</td><td class="ms">0.109 ms</td><td class="ms">0.709 ms</td><td class="ms">3.354 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-16</td><td class="ms ms-best">🏆 0.107 ms</td><td class="ms ms-best">🏆 0.649 ms</td><td class="ms">3.507 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-16</td><td class="ms">0.113 ms</td><td class="ms">0.660 ms</td><td class="ms ms-best">🏆 3.180 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-16</td><td class="ms ms-best">🏆 0.107 ms</td><td class="ms ms-best">🏆 0.649 ms</td><td class="ms">3.507 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-16</td><td class="ms">0.113 ms</td><td class="ms">0.660 ms</td><td class="ms ms-best">🏆 3.180 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">6.7e-16</td><td class="ms">0.146 ms</td><td class="ms">0.867 ms</td><td class="ms">4.250 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">6.7e-16</td><td class="ms">0.146 ms</td><td class="ms">0.867 ms</td><td class="ms">4.250 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.ParticleSizeAugmenter · nirs4all@cd731a23+dirty — context">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-context" title="worst reference max abs diff over visible sizes">0</td><td class="ms">2.261 ms</td><td class="ms">3.661 ms</td><td class="ms">9.002 ms</td></tr>

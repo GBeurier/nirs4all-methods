@@ -18,8 +18,8 @@ outlier filters (developed in parallel):
 
 - YOutlierFilter / XOutlierFilter / MetadataFilter (Phase 12).
 - IsolationForest / Mahalanobis / LOF outlier methods.
-- The public ABI surface in `cpp/include/chemometrics4all/c4a.h` §13+
-  (Phase 12 owns the section banner and the shared `c4a_filter_stats_t`
+- The public ABI surface in `cpp/include/n4m/n4m.h` §13+
+  (Phase 12 owns the section banner and the shared `n4m_filter_stats_t`
   declaration). Phase 14 emits the same symbols through a side-channel
   header (`cpp/src/c_api/c_api_filters_meta.h`) until Phase 12 lands.
 
@@ -27,28 +27,28 @@ outlier filters (developed in parallel):
 
 | Operator | Algorithm | Stateful? |
 |----------|-----------|:---:|
-| **HighLeverageFilter** (`c4a_filter_leverage_*`) | Hat-matrix diag `h_ii = X_i (X^T X)^{-1} X_i^T` via Householder QR (shared with EMSC / Detrend) on `X^T X + reg * I`; OR PCA-based leverage using Jacobi eigendecomposition of `X^T X` (top-k components). Threshold = `multiplier * mean(training_leverages)` or `absolute_threshold` in `(0, 1)`. | yes (fit / apply) |
-| **SpectralQualityFilter** (`c4a_filter_quality_*`) | Six all-or-nothing per-row threshold checks: `max_nan_ratio`, `check_inf`, `max_zero_ratio`, `min_variance` (np.nanvar), `max_value`, `min_value`. | no (apply only) |
-| **CompositeFilter** (`c4a_filter_composite_*`) | Boolean AND (`mode=ANY`) or OR (`mode=ALL`) of sub-filter keep-masks. Holds references to sub-filter handles; caller owns lifetimes. | yes (delegates to each sub-filter's `_apply`) |
+| **HighLeverageFilter** (`n4m_filter_leverage_*`) | Hat-matrix diag `h_ii = X_i (X^T X)^{-1} X_i^T` via Householder QR (shared with EMSC / Detrend) on `X^T X + reg * I`; OR PCA-based leverage using Jacobi eigendecomposition of `X^T X` (top-k components). Threshold = `multiplier * mean(training_leverages)` or `absolute_threshold` in `(0, 1)`. | yes (fit / apply) |
+| **SpectralQualityFilter** (`n4m_filter_quality_*`) | Six all-or-nothing per-row threshold checks: `max_nan_ratio`, `check_inf`, `max_zero_ratio`, `min_variance` (np.nanvar), `max_value`, `min_value`. | no (apply only) |
+| **CompositeFilter** (`n4m_filter_composite_*`) | Boolean AND (`mode=ANY`) or OR (`mode=ALL`) of sub-filter keep-masks. Holds references to sub-filter handles; caller owns lifetimes. | yes (delegates to each sub-filter's `_apply`) |
 
 ## Phase 12 / Phase 14 coordination
 
-Phase 12 introduces the `c4a_filter_*` ABI category, the shared
-`c4a_filter_stats_t` result struct, and the §13+ banner in `c4a.h`.
+Phase 12 introduces the `n4m_filter_*` ABI category, the shared
+`n4m_filter_stats_t` result struct, and the §13+ banner in `n4m.h`.
 Phase 14 lands in parallel and reuses the same category. To avoid edit
-conflicts on `c4a.h`, `c4a_version.h`, the expected-symbols files, and
+conflicts on `n4m.h`, `n4m_version.h`, the expected-symbols files, and
 `tests/main.cpp`:
 
 - Phase 14 declarations live in `cpp/src/c_api/c_api_filters_meta.h`
-  (guarded behind `C4A_FILTER_STATS_T_DEFINED` so Phase 12 can drop its
-  own definition into `c4a.h` without conflicting at merge time).
+  (guarded behind `N4M_FILTER_STATS_T_DEFINED` so Phase 12 can drop its
+  own definition into `n4m.h` without conflicting at merge time).
 - The new symbols are still exported by the shared library through the
-  same `c4a_*` wildcard version script (`cpp/src/c_api/c4a_linux.map`).
+  same `n4m_*` wildcard version script (`cpp/src/c_api/n4m_linux.map`).
 - Phase 14 tests live in their own executable
-  (`chemometrics4all_tests_filters_meta`) attached to the existing test
+  (`n4m_tests_filters_meta`) attached to the existing test
   driver via `cpp/tests/CMakeLists.txt`. Once Phase 12 lands, the
   side-channel header is removed and the two executables are merged into
-  the canonical `chemometrics4all_tests` runner.
+  the canonical `n4m_tests` runner.
 
 ## Files
 
@@ -69,10 +69,10 @@ conflicts on `c4a.h`, `c4a_version.h`, the expected-symbols files, and
 
 ### Parity (4 files)
 
-- `parity/python_generator/src/c4a_parity_filters_ref/__init__.py`
-- `parity/python_generator/src/c4a_parity_filters_ref/high_leverage.py`
-- `parity/python_generator/src/c4a_parity_filters_ref/spectral_quality.py`
-- `parity/python_generator/src/c4a_parity_filters_ref/composite.py`
+- `parity/python_generator/src/n4m_parity_filters_ref/__init__.py`
+- `parity/python_generator/src/n4m_parity_filters_ref/high_leverage.py`
+- `parity/python_generator/src/n4m_parity_filters_ref/spectral_quality.py`
+- `parity/python_generator/src/n4m_parity_filters_ref/composite.py`
 
 ### Fixtures (4 files)
 
@@ -94,33 +94,33 @@ conflicts on `c4a.h`, `c4a_version.h`, the expected-symbols files, and
 ## Files modified
 
 - `cpp/src/CMakeLists.txt`     — add `core/filters/*.c` and `c_api_filters_meta.cpp`.
-- `cpp/tests/CMakeLists.txt`   — add `chemometrics4all_tests_filters_meta` executable.
+- `cpp/tests/CMakeLists.txt`   — add `n4m_tests_filters_meta` executable.
 
-No edits to `c4a.h`, `c4a_version.h`, `cpp/abi/expected_symbols_*.txt`,
+No edits to `n4m.h`, `n4m_version.h`, `cpp/abi/expected_symbols_*.txt`,
 top-level `CMakeLists.txt`, or `cpp/tests/main.cpp` — these belong to
 Phase 12 / the post-merge integration commit.
 
 ## ABI surface added
 
-14 new symbols (no new public section in `c4a.h` until Phase 12 lands):
+14 new symbols (no new public section in `n4m.h` until Phase 12 lands):
 
 ```
-c4a_filter_leverage_create
-c4a_filter_leverage_destroy
-c4a_filter_leverage_fit
-c4a_filter_leverage_is_fitted
-c4a_filter_leverage_apply
-c4a_filter_leverage_threshold
+n4m_filter_leverage_create
+n4m_filter_leverage_destroy
+n4m_filter_leverage_fit
+n4m_filter_leverage_is_fitted
+n4m_filter_leverage_apply
+n4m_filter_leverage_threshold
 
-c4a_filter_quality_create
-c4a_filter_quality_destroy
-c4a_filter_quality_apply
+n4m_filter_quality_create
+n4m_filter_quality_destroy
+n4m_filter_quality_apply
 
-c4a_filter_composite_create
-c4a_filter_composite_destroy
-c4a_filter_composite_add_leverage
-c4a_filter_composite_add_quality
-c4a_filter_composite_apply
+n4m_filter_composite_create
+n4m_filter_composite_destroy
+n4m_filter_composite_add_leverage
+n4m_filter_composite_add_quality
+n4m_filter_composite_apply
 ```
 
 Phase 12 will extend the composite's `add_*` family with
@@ -143,25 +143,25 @@ kinds.
 - 14 new ABI symbols (the canonical expected-symbols update lands with
   Phase 12 to avoid touching the abi/ directory in two parallel branches).
 - Frozen NumPy reference vendored under
-  `parity/python_generator/src/c4a_parity_filters_ref/` and validated
+  `parity/python_generator/src/n4m_parity_filters_ref/` and validated
   against the nirs4all 0.8.x reference behaviour.
 - CI green when run against the Phase 14 worktree.
 
 ## Verification
 
 ```bash
-cd /home/delete/nirs4all/chemometrics4all/.claude/worktrees/agent-a62f804de4a887c03
+cd /home/delete/nirs4all/nirs4all-methods/.claude/worktrees/agent-a62f804de4a887c03
 cmake --preset dev-debug
 cmake --build --preset dev-debug
-./build/dev-debug/cpp/tests/chemometrics4all_tests                # 82/82
-./build/dev-debug/cpp/tests/chemometrics4all_tests_filters_meta   # 6/6
+./build/dev-debug/cpp/tests/n4m_tests                # 82/82
+./build/dev-debug/cpp/tests/n4m_tests_filters_meta   # 6/6
 
-nm -D --defined-only build/dev-debug/cpp/src/libc4a.so.1.6.0 | \
-    awk '$2=="T" {print $3}' | grep "c4a_filter" | wc -l         # 14
+nm -D --defined-only build/dev-debug/cpp/src/libn4m.so.1.6.0 | \
+    awk '$2=="T" {print $3}' | grep "n4m_filter" | wc -l         # 14
 ```
 
 ## Next phase
 
 [Phase 15 — Augmentation (noise & spectral)](phase-15-augmentation.md):
-Begin the augmentation surface (`c4a_aug_*`) — `GaussianAdditiveNoise`,
+Begin the augmentation surface (`n4m_aug_*`) — `GaussianAdditiveNoise`,
 `MultiplicativeNoise`, `SpikeNoise`, `BandPerturbation`, etc.

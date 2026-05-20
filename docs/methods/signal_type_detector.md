@@ -12,15 +12,15 @@ Given a `rows × cols` row-major F64 matrix `X` (and an optional
 
 | Enum value | Meaning |
 |------------|---------|
-| `C4A_SIGNAL_UNKNOWN`               | Could not determine (low confidence or preprocessed). |
-| `C4A_SIGNAL_ABSORBANCE`            | Typical absorbance, values in ~[0, 3]. |
-| `C4A_SIGNAL_REFLECTANCE`           | Fractional reflectance in [0, 1]. |
-| `C4A_SIGNAL_REFLECTANCE_PERCENT`   | Percent reflectance in [0, 100]. |
-| `C4A_SIGNAL_TRANSMITTANCE`         | Fractional transmittance in [0, 1]. |
-| `C4A_SIGNAL_TRANSMITTANCE_PERCENT` | Percent transmittance in [0, 100]. |
-| `C4A_SIGNAL_KUBELKA_MUNK`          | Reserved; the heuristic never returns this on raw data. |
-| `C4A_SIGNAL_LOG_1_R`               | Reserved; never returned by the value-range heuristic. |
-| `C4A_SIGNAL_LOG_1_T`               | Reserved; never returned by the value-range heuristic. |
+| `N4M_SIGNAL_UNKNOWN`               | Could not determine (low confidence or preprocessed). |
+| `N4M_SIGNAL_ABSORBANCE`            | Typical absorbance, values in ~[0, 3]. |
+| `N4M_SIGNAL_REFLECTANCE`           | Fractional reflectance in [0, 1]. |
+| `N4M_SIGNAL_REFLECTANCE_PERCENT`   | Percent reflectance in [0, 100]. |
+| `N4M_SIGNAL_TRANSMITTANCE`         | Fractional transmittance in [0, 1]. |
+| `N4M_SIGNAL_TRANSMITTANCE_PERCENT` | Percent transmittance in [0, 100]. |
+| `N4M_SIGNAL_KUBELKA_MUNK`          | Reserved; the heuristic never returns this on raw data. |
+| `N4M_SIGNAL_LOG_1_R`               | Reserved; never returned by the value-range heuristic. |
+| `N4M_SIGNAL_LOG_1_T`               | Reserved; never returned by the value-range heuristic. |
 
 ### Parameters
 
@@ -63,7 +63,7 @@ No public constructor parameters are required for the documented default call.
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_signal_detect(c4a_matrix_view_t X, const double* wavelengths_optional, int64_t wl_length, double confidence_threshold, c4a_signal_type_t* type_out, double* confidence_out, char reason_buf[256]);
+n4m_status_t n4m_signal_detect(n4m_matrix_view_t X, const double* wavelengths_optional, int64_t wl_length, double confidence_threshold, n4m_signal_type_t* type_out, double* confidence_out, char reason_buf[256]);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -72,36 +72,36 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_signal_detect` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.signal_type_detector` | Python | ABI-close function backed by ctypes. |
+| C ABI | `n4m_signal_detect` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.signal_type_detector` | Python | ABI-close function backed by ctypes. |
 | ref.nirs4all | `nirs4all.detect_signal_type` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_signal_detect(c4a_matrix_view_t X, const double* wavelengths_optional, int64_t wl_length, double confidence_threshold, c4a_signal_type_t* type_out, double* confidence_out, char reason_buf[256]);
+n4m_status_t n4m_signal_detect(n4m_matrix_view_t X, const double* wavelengths_optional, int64_t wl_length, double confidence_threshold, n4m_signal_type_t* type_out, double* confidence_out, char reason_buf[256]);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.signal_type_detector(X)
+Xt = n4m.signal_type_detector(X)
 ```
 
 :::
@@ -140,12 +140,12 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.015 ms</td><td class="ms">0.079 ms</td><td class="ms">0.364 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.015 ms</td><td class="ms">0.079 ms</td><td class="ms">0.364 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.014 ms</td><td class="ms ms-best">🏆 0.075 ms</td><td class="ms">0.383 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.015 ms</td><td class="ms">0.076 ms</td><td class="ms ms-best">🏆 0.362 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.014 ms</td><td class="ms ms-best">🏆 0.075 ms</td><td class="ms">0.383 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.015 ms</td><td class="ms">0.076 ms</td><td class="ms ms-best">🏆 0.362 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.detect_signal_type · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.085 ms</td><td class="ms">0.323 ms</td><td class="ms">1.655 ms</td></tr>

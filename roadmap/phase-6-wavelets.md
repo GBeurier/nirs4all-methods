@@ -2,10 +2,10 @@
 
 ## Goal
 
-Add a wavelet transform tier to the c4a preprocessing toolkit, covering
+Add a wavelet transform tier to the n4m preprocessing toolkit, covering
 single-level DWT, multi-level decomposition + denoising, statistical
 feature extraction, and DWT-flatten + PCA / SVD dimensionality
-reduction.  All six operators stay within the chemometrics4all
+reduction.  All six operators stay within the nirs4all-methods
 "pure C, no deps" constraint by vendoring filter banks and the
 boundary-handling kernels.
 
@@ -53,54 +53,54 @@ example and would inflate the parity surface unnecessarily.
 
 ```c
 /* Wavelet (stateless) */
-c4a_pp_wavelet_{create,destroy,output_cols,transform}                  /* 4 */
+n4m_pp_wavelet_{create,destroy,output_cols,transform}                  /* 4 */
 /* Haar (stateless) */
-c4a_pp_haar_{create,destroy,output_cols,transform}                      /* 4 */
+n4m_pp_haar_{create,destroy,output_cols,transform}                      /* 4 */
 /* WaveletDenoise (stateless) */
-c4a_pp_wavelet_denoise_{create,destroy,transform}                       /* 3 */
+n4m_pp_wavelet_denoise_{create,destroy,transform}                       /* 3 */
 /* WaveletFeatures (stateless) */
-c4a_pp_wavelet_features_{create,destroy,output_cols,transform}          /* 4 */
+n4m_pp_wavelet_features_{create,destroy,output_cols,transform}          /* 4 */
 /* WaveletPCA (stateful) */
-c4a_pp_wavelet_pca_{create,destroy,fit,transform,is_fitted,output_cols} /* 6 */
+n4m_pp_wavelet_pca_{create,destroy,fit,transform,is_fitted,output_cols} /* 6 */
 /* WaveletSVD (stateful) */
-c4a_pp_wavelet_svd_{create,destroy,fit,transform,is_fitted,output_cols} /* 6 */
+n4m_pp_wavelet_svd_{create,destroy,fit,transform,is_fitted,output_cols} /* 6 */
 ```
 
 Wrappers live in `cpp/src/c_api/c_api_wavelets.cpp`; declarations move
-to `c4a.h` §16 (the Phase 6 slot in the §-numbering gap) at integration
+to `n4m.h` §16 (the Phase 6 slot in the §-numbering gap) at integration
 time.
 
 ## Enum companions
 
 ```c
 typedef enum {
-    C4A_PP_WAVELET_HAAR  = 0,
-    C4A_PP_WAVELET_DB4   = 1,
-    C4A_PP_WAVELET_SYM4  = 2,
-    C4A_PP_WAVELET_COIF1 = 3
-} c4a_pp_wavelet_family_t;
+    N4M_PP_WAVELET_HAAR  = 0,
+    N4M_PP_WAVELET_DB4   = 1,
+    N4M_PP_WAVELET_SYM4  = 2,
+    N4M_PP_WAVELET_COIF1 = 3
+} n4m_pp_wavelet_family_t;
 
 typedef enum {
-    C4A_PP_WAVELET_BOUNDARY_PERIODIZATION = 0,
-    C4A_PP_WAVELET_BOUNDARY_SYMMETRIC     = 1,
-    C4A_PP_WAVELET_BOUNDARY_ZERO          = 2
-} c4a_pp_wavelet_boundary_t;
+    N4M_PP_WAVELET_BOUNDARY_PERIODIZATION = 0,
+    N4M_PP_WAVELET_BOUNDARY_SYMMETRIC     = 1,
+    N4M_PP_WAVELET_BOUNDARY_ZERO          = 2
+} n4m_pp_wavelet_boundary_t;
 
 typedef enum {
-    C4A_PP_WAVELET_THRESHOLD_SOFT = 0,
-    C4A_PP_WAVELET_THRESHOLD_HARD = 1
-} c4a_pp_wavelet_threshold_t;
+    N4M_PP_WAVELET_THRESHOLD_SOFT = 0,
+    N4M_PP_WAVELET_THRESHOLD_HARD = 1
+} n4m_pp_wavelet_threshold_t;
 
 typedef enum {
-    C4A_PP_WAVELET_NOISE_MEDIAN = 0,
-    C4A_PP_WAVELET_NOISE_STD    = 1
-} c4a_pp_wavelet_noise_t;
+    N4M_PP_WAVELET_NOISE_MEDIAN = 0,
+    N4M_PP_WAVELET_NOISE_STD    = 1
+} n4m_pp_wavelet_noise_t;
 ```
 
 ## Parity
 
 Frozen NumPy reference under
-`parity/python_generator/src/c4a_parity_wavelets_ref/` — independent of
+`parity/python_generator/src/n4m_parity_wavelets_ref/` — independent of
 PyWavelets so upstream changes can't drift the fixtures.  Validation
 once against PyWavelets 1.6.0 via
 `parity/python_generator/scripts/validate_frozen_wavelets_ref.py`.
@@ -140,7 +140,7 @@ Fixtures (one per operator):
 
 - For odd-length inputs in `periodization` mode, PyWavelets internally
   pads with one extra copy of the trailing sample before periodising
-  (`n_eff = n + (n & 1)`).  The c4a engine and the frozen reference
+  (`n_eff = n + (n & 1)`).  The n4m engine and the frozen reference
   reproduce this convention exactly.
 - The `symmetric` mode in PyWavelets corresponds to NumPy's
   `np.pad(x, L-1, mode="symmetric")` — *edge-repeat* reflection
@@ -155,7 +155,7 @@ Fixtures (one per operator):
 - Tests: `cpp/tests/test_preprocessing_wavelets.cpp`
   (chained from `register_preprocessing_feature_selection_tests` because
    `main.cpp` is frozen for this batch).
-- Frozen NumPy ref: `parity/python_generator/src/c4a_parity_wavelets_ref/`
+- Frozen NumPy ref: `parity/python_generator/src/n4m_parity_wavelets_ref/`
 - Fixture generator: `parity/python_generator/scripts/generate_phase6_fixtures.py`
 - Validation script: `parity/python_generator/scripts/validate_frozen_wavelets_ref.py`
 - Docs: `docs/algorithms/{wavelet,haar,wavelet_denoise,wavelet_features,wavelet_pca,wavelet_svd}.md`

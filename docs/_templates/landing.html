@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>chemometrics4all · benchmark status</title>
-  <meta name="description" content="Benchmark status page for the chemometrics4all chemometrics/NIRS operator library: timings, external references, and parity gates.">
+  <title>nirs4all-methods · benchmark status</title>
+  <meta name="description" content="Benchmark status page for the nirs4all-methods chemometrics/NIRS operator library: timings, external references, and parity gates.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500;600;700;800&family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -38,8 +38,8 @@
       --score-mid:      #D58A1F;
       --score-far:      #B45309;
       --score-slow:     #B83A37;
-      --c4a-faint:      rgba(46, 91, 184, 0.025);
-      --c4a-soft:       rgba(46, 91, 184, 0.07);
+      --n4m-faint:      rgba(46, 91, 184, 0.025);
+      --n4m-soft:       rgba(46, 91, 184, 0.07);
       --winner-bg:      rgba(184, 110, 15, 0.14);
 
       /* per-language accent colors — darker variants tuned for light bg */
@@ -112,8 +112,8 @@
       --score-mid:      #F6C76B;
       --score-far:      #E58B35;
       --score-slow:     #E96565;
-      --c4a-faint:      rgba(125, 168, 247, 0.035);
-      --c4a-soft:       rgba(125, 168, 247, 0.09);
+      --n4m-faint:      rgba(125, 168, 247, 0.035);
+      --n4m-soft:       rgba(125, 168, 247, 0.09);
       --winner-bg:      rgba(242, 184, 92, 0.18);
 
       --lang-cpp:  #6DD3D6;
@@ -333,7 +333,7 @@
     }
     .preset-rail .preset-pill.active .cnt { color: var(--phosphor); }
     .preset-rail .preset-pill.partial {
-      background: var(--c4a-faint); color: var(--fg-0);
+      background: var(--n4m-faint); color: var(--fg-0);
       border-color: var(--fg-3);
     }
     .preset-rail .preset-pill.partial .cnt { color: var(--fg-1); }
@@ -437,7 +437,7 @@
     }
     .preset:hover { background: var(--phosphor-soft); color: var(--phosphor); border-color: var(--phosphor); }
     .preset.active { background: var(--phosphor-soft); color: var(--phosphor); border-color: var(--phosphor); }
-    .preset.partial { background: var(--c4a-faint); color: var(--fg-0); border-color: var(--fg-3); }
+    .preset.partial { background: var(--n4m-faint); color: var(--fg-0); border-color: var(--fg-3); }
 
     .ctrl-spacer { flex: 1; }
 
@@ -524,17 +524,17 @@
       border-left: 2px solid var(--line-2);
     }
 
-    /* chemometrics4all binding columns get a faint neutral wash so users can
+    /* nirs4all-methods binding columns get a faint neutral wash so users can
        visually distinguish "ours" from the externals they mimic. Same
-       short label can recur across the divide (chemometrics4all.sklearn vs
+       short label can recur across the divide (n4m.sklearn vs
        sklearn external — both render "sklearn") and the tint is what
        carries the disambiguation. */
-    table.bench th.col-chemometrics4all {
-      background: linear-gradient(180deg, var(--c4a-soft) 0%, var(--ink-2) 100%);
+    table.bench th.col-nirs4all-methods {
+      background: linear-gradient(180deg, var(--n4m-soft) 0%, var(--ink-2) 100%);
     }
-    table.bench th.col-chemometrics4all .col-label { color: var(--fg-0); }
-    table.bench td.col-chemometrics4all { background: var(--c4a-faint); }
-    table.bench tbody tr:hover td.col-chemometrics4all { background: var(--c4a-soft); }
+    table.bench th.col-nirs4all-methods .col-label { color: var(--fg-0); }
+    table.bench td.col-nirs4all-methods { background: var(--n4m-faint); }
+    table.bench tbody tr:hover td.col-nirs4all-methods { background: var(--n4m-soft); }
 
     table.bench th {
       background: var(--ink-2);
@@ -567,7 +567,7 @@
       line-height: 1.15;
       max-height: 2.4em;
     }
-    /* col-meta = tier subtitle below the short label (e.g. "chemometrics4all
+    /* col-meta = tier subtitle below the short label (e.g. "nirs4all-methods
        reference" / "external"). Kept small and clipped to one line so
        it adds context without stretching the column width. */
     table.bench th .col-meta {
@@ -638,21 +638,21 @@
       box-shadow: 10px 0 14px -14px rgba(15, 30, 40, 0.50);
     }
     table.bench th.algo-col, table.bench th.ref-col, table.bench th.size-col, table.bench th.thread-col { z-index: 30; }
-    /* The native (chemometrics4all.cpp) baseline column is NOT sticky — making it
+    /* The native (n4m.cpp) baseline column is NOT sticky — making it
        sticky used to hide neighbouring columns when scrolling right.
        It still gets a subtle internal accent so the comparison anchor
        remains visually identifiable. */
     table.bench th.native-col {
-      background: linear-gradient(180deg, var(--c4a-soft) 0%, var(--ink-2) 100%);
-      border-right: 2px solid var(--c4a-soft);
+      background: linear-gradient(180deg, var(--n4m-soft) 0%, var(--ink-2) 100%);
+      border-right: 2px solid var(--n4m-soft);
     }
     table.bench th.native-col .col-label { color: var(--fg-0); }
     table.bench td.native-cell {
-      background: var(--c4a-faint);
-      border-right: 2px solid var(--c4a-soft);
+      background: var(--n4m-faint);
+      border-right: 2px solid var(--n4m-soft);
     }
     table.bench tbody tr:hover td.native-cell {
-      background: var(--c4a-soft);
+      background: var(--n4m-soft);
     }
 
     table.bench td {
@@ -720,7 +720,7 @@
     .row-score-cols.active {
       color: var(--score-best);
       border-color: var(--score-best);
-      background: var(--c4a-soft);
+      background: var(--n4m-soft);
     }
     table.bench td.size-cell {
       font-family: var(--mono); color: var(--fg-1);
@@ -1029,7 +1029,7 @@
       <div class="brand">
         <span class="brand-led"></span>
         <div>
-          <div class="wordmark"><span class="accent">chemometrics4all</span><span class="sep">/</span><span class="light">benchmark status</span></div>
+          <div class="wordmark"><span class="accent">nirs4all-methods</span><span class="sep">/</span><span class="light">benchmark status</span></div>
           <div class="tagline" id="tagline">
             timing matrix <span class="dot">·</span> reference + binding parity <span class="dot">·</span> <span id="tagline-count">—</span> columns
           </div>
@@ -1182,7 +1182,7 @@
   </div>
   <div class="info-card">
     <h3>backends</h3>
-    <p>Internal columns are chemometrics4all routes. External columns are third-party or language-standard reference methods.</p>
+    <p>Internal columns are nirs4all-methods routes. External columns are third-party or language-standard reference methods.</p>
     <div id="backend-info"></div>
   </div>
   <div class="info-card">
@@ -1205,7 +1205,7 @@
 
 <div class="footer">
   generated {{ generated_at }}<span class="sep">·</span>
-  <a href="https://github.com/GBeurier/chemometrics4all">github.com/GBeurier/chemometrics4all</a><span class="sep">·</span>
+  <a href="https://github.com/GBeurier/nirs4all-methods">github.com/GBeurier/nirs4all-methods</a><span class="sep">·</span>
   <a href="about.html">project info</a><span class="sep">·</span>
   <a href="benchmarks/overview.html">benchmark overview</a><span class="sep">·</span>
   <a href="benchmarks/methodology.html">methodology</a>
@@ -1327,9 +1327,9 @@ if (state.cols.size === 0) {
 function nativeBaselineCol() {
   const find = id => DATA.columns.find(c => c.id === id);
   return (
-    find('chemometrics4all.cpp.ref') ||
-    find('chemometrics4all.cpp.blas+omp') ||
-    DATA.columns.find(c => c.id.startsWith('chemometrics4all.cpp.')) ||
+    find('n4m.cpp.ref') ||
+    find('n4m.cpp.blas+omp') ||
+    DATA.columns.find(c => c.id.startsWith('n4m.cpp.')) ||
     null
   );
 }
@@ -1518,10 +1518,10 @@ const LANG_LABEL = {
 };
 const LANG_ORDER = ['cpp', 'py', 'r', 'm', 'jl', 'rs', 'go', 'js', 'java', 'other'];
 const COLUMN_GROUP_LABELS = {
-  cpp: 'chemometrics4all · C++',
-  python: 'chemometrics4all · Python',
-  r: 'chemometrics4all · R',
-  matlab: 'chemometrics4all · MATLAB/Octave',
+  cpp: 'nirs4all-methods · C++',
+  python: 'nirs4all-methods · Python',
+  r: 'nirs4all-methods · R',
+  matlab: 'nirs4all-methods · MATLAB/Octave',
   'ext-py': 'external · Python',
   'ext-r': 'external · R',
   'ext-ml': 'external · MATLAB/Octave',
@@ -1845,8 +1845,8 @@ function renderColPicker() {
 
 // Compact column header label. Always use `col.short` so the header
 // band stays scannable across many backends — full labels live in the
-// tooltip + the column-picker + the bottom accordion. C4A bindings keep
-// explicit short names (for example C4A.sklearn) so they cannot be mistaken
+// tooltip + the column-picker + the bottom accordion. N4M bindings keep
+// explicit short names (for example N4M.sklearn) so they cannot be mistaken
 // for the external library columns.
 function shortLabel(label) {
   const meta = DATA.columns.find(c => c.label === label);
@@ -2041,10 +2041,10 @@ function renderTable() {
     const s = colLangSlug(col);
     const first = langFirstCol[col.id] ? ' col-lang-first' : '';
     const native = col.id === NATIVE_COL_ID ? ' native-col' : '';
-    // Every chemometrics4all binding (not just the native baseline) gets the
+    // Every nirs4all-methods binding (not just the native baseline) gets the
     // subtle internal tint so the "ours vs theirs" comparison is unambiguous.
-    const c4a = (col.kind || '').toLowerCase() === 'chemometrics4all' ? ' col-chemometrics4all' : '';
-    return s ? `col-${s}${first}${native}${c4a}` : (native + c4a).trim();
+    const n4m = (col.kind || '').toLowerCase() === 'nirs4all-methods' ? ' col-nirs4all-methods' : '';
+    return s ? `col-${s}${first}${native}${n4m}` : (native + n4m).trim();
   };
 
   // Tooltip text for backend column headers — full label + tier + lang
@@ -2074,7 +2074,7 @@ function renderTable() {
   for (const c of colMetas) {
     const lcls = langCls(c);
     // The col-meta line below the short label carries the tier (e.g.
-    // "chemometrics4all reference", "external", "chemometrics4all + BLAS + OpenMP") so
+    // "nirs4all-methods reference", "external", "nirs4all-methods + BLAS + OpenMP") so
     // users see what flavour of binding they're comparing without
     // hovering for the tooltip. Hidden in compact / ultra densities.
     const sub = c.tier || c.kind || '';
@@ -2490,7 +2490,7 @@ function rerender() {
 // ---------- theme toggle ----------
 // Light is the default; users can flip to the CRT-phosphor dark theme.
 // Choice persists in localStorage.
-const THEME_KEY = 'chemometrics4all.dashboard.theme';
+const THEME_KEY = 'n4m.dashboard.theme';
 function applyTheme(theme) {
   if (theme === 'dark') document.body.classList.add('theme-dark');
   else document.body.classList.remove('theme-dark');

@@ -6,7 +6,7 @@ The runner follows the same contract as the pls4all dashboard input: one CSV
 row per algorithm/backend/size/thread count with timing and parity metadata.
 Internal rows are produced from three routes when available:
 
-* ``cpp``: direct libc4a C ABI calls through ctypes;
+* ``cpp``: direct libn4m C ABI calls through ctypes;
 * ``python``: public ABI-close Python functions;
 * ``sklearn``: public scikit-learn-compatible Python estimators;
 * ``r``: installed public R package through Rscript.
@@ -61,23 +61,23 @@ LOCAL_NIRS4ALL = REPO_ROOT.parent / "nirs4all"
 if LOCAL_NIRS4ALL.exists() and str(LOCAL_NIRS4ALL) not in sys.path:
     sys.path.insert(0, str(LOCAL_NIRS4ALL))
 
-if "CHEMOMETRICS4ALL_LIB_PATH" not in os.environ:
+if "N4M_LIB_PATH" not in os.environ:
     for candidate in (
-        REPO_ROOT / "build" / "dev-release" / "cpp" / "src" / "libc4a.so",
-        REPO_ROOT / "build" / "local-tests" / "cpp" / "src" / "libc4a.so",
-        REPO_ROOT / "build" / "cpp" / "src" / "libc4a.so",
+        REPO_ROOT / "build" / "dev-release" / "cpp" / "src" / "libn4m.so",
+        REPO_ROOT / "build" / "local-tests" / "cpp" / "src" / "libn4m.so",
+        REPO_ROOT / "build" / "cpp" / "src" / "libn4m.so",
     ):
         if candidate.exists():
-            os.environ["CHEMOMETRICS4ALL_LIB_PATH"] = str(candidate)
+            os.environ["N4M_LIB_PATH"] = str(candidate)
             break
 
-import chemometrics4all as c4a  # noqa: E402
-from chemometrics4all import python as c4a_python  # noqa: E402
-from chemometrics4all._errors import check  # noqa: E402
-from chemometrics4all._ffi import lib  # noqa: E402
-from chemometrics4all._matrix import as_f64_2d, empty_like_f64, empty_like_i32, numpy_to_view  # noqa: E402
-from chemometrics4all._rng import PCG64  # noqa: E402
-from chemometrics4all._types import FilterStats, SplitResult, TransferMetrics  # noqa: E402
+import n4m as n4m  # noqa: E402
+from n4m import python as n4m_python  # noqa: E402
+from n4m._errors import check  # noqa: E402
+from n4m._ffi import lib  # noqa: E402
+from n4m._matrix import as_f64_2d, empty_like_f64, empty_like_i32, numpy_to_view  # noqa: E402
+from n4m._rng import PCG64  # noqa: E402
+from n4m._types import FilterStats, SplitResult, TransferMetrics  # noqa: E402
 
 
 CSV_FIELDS = [
@@ -110,7 +110,7 @@ CSV_FIELDS = [
     "binding_rms_diff",
     "binding_rel_l2_diff",
 ]
-REFERENCE_SNAPSHOT_SCHEMA = "chemometrics4all.reference_snapshot.v1"
+REFERENCE_SNAPSHOT_SCHEMA = "n4m.reference_snapshot.v1"
 REFERENCE_SNAPSHOT_ROOT = REPO_ROOT / "benchmarks" / "reference_snapshots" / "cross_binding"
 
 PLS4ALL_BENCHMARK_SIZES = [
@@ -144,7 +144,7 @@ class ReferenceSpec:
     library: str
     factory: Callable[[Dataset], Callable[[], object]] | None = None
     compare: bool = True
-    gate_c4a: bool = True
+    gate_n4m: bool = True
     language: str = "Python"
     r_expr: str | None = None
     contract_note: str = ""
@@ -208,9 +208,9 @@ def bool_cell(value: bool | None) -> str:
 
 def runtime_version() -> str:
     try:
-        return c4a.version()
+        return n4m.version()
     except Exception:
-        return f"abi.{'.'.join(map(str, c4a.abi_version()))}"
+        return f"abi.{'.'.join(map(str, n4m.abi_version()))}"
 
 
 _EXTERNAL_VERSION_CACHE: dict[str, str] = {}
@@ -604,7 +604,7 @@ def batch_loop_count(probe_ms: float, *, target_ms: float = 10.0, max_loops: int
 def time_callable(fn: Callable[[], object], repeat: int) -> tuple[float, object, list[float], int]:
     samples: list[float] = []
     last: object | None = None
-    cached_output = getattr(fn, "_c4a_output", None)
+    cached_output = getattr(fn, "_n4m_output", None)
 
     def run_once() -> object:
         out = fn()
@@ -700,46 +700,46 @@ def c_fit_y_transform(prefix: str, X: np.ndarray, y: np.ndarray, *create_args) -
 def split_result_to_arrays(result: SplitResult) -> tuple[np.ndarray, np.ndarray]:
     train = np.ctypeslib.as_array(result.train_idx, shape=(int(result.n_train),)).copy()
     test = np.ctypeslib.as_array(result.test_idx, shape=(int(result.n_test),)).copy()
-    lib.c4a_split_result_destroy(ctypes.byref(result))
+    lib.n4m_split_result_destroy(ctypes.byref(result))
     return train, test
 
 
 def c_split_kennard_stone(ctx: Dataset) -> tuple[np.ndarray, np.ndarray]:
-    handle = _create("c4a_split_kennard_stone", ctypes.c_double(0.25))
+    handle = _create("n4m_split_kennard_stone", ctypes.c_double(0.25))
     try:
         result = SplitResult()
         check(
-            lib.c4a_split_kennard_stone_split(handle, numpy_to_view(ctx.X), ctypes.byref(result)),
-            "c4a_split_kennard_stone_split",
+            lib.n4m_split_kennard_stone_split(handle, numpy_to_view(ctx.X), ctypes.byref(result)),
+            "n4m_split_kennard_stone_split",
         )
         return split_result_to_arrays(result)
     finally:
-        lib.c4a_split_kennard_stone_destroy(handle)
+        lib.n4m_split_kennard_stone_destroy(handle)
 
 
 def c_split_spxy(ctx: Dataset) -> tuple[np.ndarray, np.ndarray]:
     y = np.ascontiguousarray(ctx.y.reshape(-1, 1), dtype=np.float64)
-    handle = _create("c4a_split_spxy", ctypes.c_double(0.25))
+    handle = _create("n4m_split_spxy", ctypes.c_double(0.25))
     try:
         result = SplitResult()
         check(
-            lib.c4a_split_spxy_split(
+            lib.n4m_split_spxy_split(
                 handle,
                 numpy_to_view(ctx.X),
                 numpy_to_view(y),
                 ctypes.byref(result),
             ),
-            "c4a_split_spxy_split",
+            "n4m_split_spxy_split",
         )
         return split_result_to_arrays(result)
     finally:
-        lib.c4a_split_spxy_destroy(handle)
+        lib.n4m_split_spxy_destroy(handle)
 
 
 def c_split_kbins_stratified(ctx: Dataset) -> tuple[np.ndarray, np.ndarray]:
     y = np.ascontiguousarray(ctx.y.reshape(-1, 1), dtype=np.float64)
     handle = _create(
-        "c4a_split_kbins_stratified",
+        "n4m_split_kbins_stratified",
         ctypes.c_double(0.25),
         ctypes.c_uint64(17),
         ctypes.c_int32(5),
@@ -748,18 +748,18 @@ def c_split_kbins_stratified(ctx: Dataset) -> tuple[np.ndarray, np.ndarray]:
     try:
         result = SplitResult()
         check(
-            lib.c4a_split_kbins_stratified_split(handle, numpy_to_view(y), ctypes.byref(result)),
-            "c4a_split_kbins_stratified_split",
+            lib.n4m_split_kbins_stratified_split(handle, numpy_to_view(y), ctypes.byref(result)),
+            "n4m_split_kbins_stratified_split",
         )
         return split_result_to_arrays(result)
     finally:
-        lib.c4a_split_kbins_stratified_destroy(handle)
+        lib.n4m_split_kbins_stratified_destroy(handle)
 
 
 def c_y_outlier_iqr(ctx: Dataset) -> np.ndarray:
     y = np.ascontiguousarray(ctx.y, dtype=np.float64)
     handle = _create(
-        "c4a_filter_y_outlier",
+        "n4m_filter_y_outlier",
         ctypes.c_int(0),
         ctypes.c_double(1.5),
         ctypes.c_double(1.0),
@@ -767,33 +767,33 @@ def c_y_outlier_iqr(ctx: Dataset) -> np.ndarray:
     )
     try:
         check(
-            lib.c4a_filter_y_outlier_fit(
+            lib.n4m_filter_y_outlier_fit(
                 handle,
                 y.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                 ctypes.c_int64(y.size),
             ),
-            "c4a_filter_y_outlier_fit",
+            "n4m_filter_y_outlier_fit",
         )
         mask = np.empty(y.size, dtype=np.uint8)
         stats = FilterStats()
         check(
-            lib.c4a_filter_y_outlier_apply(
+            lib.n4m_filter_y_outlier_apply(
                 handle,
                 y.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                 ctypes.c_int64(y.size),
                 mask.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)),
                 ctypes.byref(stats),
             ),
-            "c4a_filter_y_outlier_apply",
+            "n4m_filter_y_outlier_apply",
         )
         return mask
     finally:
-        lib.c4a_filter_y_outlier_destroy(handle)
+        lib.n4m_filter_y_outlier_destroy(handle)
 
 
 def c_x_outlier_mahalanobis(ctx: Dataset) -> np.ndarray:
     handle = _create(
-        "c4a_filter_x_outlier",
+        "n4m_filter_x_outlier",
         ctypes.c_int32(0),
         ctypes.c_int(0),
         ctypes.c_double(0.0),
@@ -804,21 +804,21 @@ def c_x_outlier_mahalanobis(ctx: Dataset) -> np.ndarray:
         ctypes.c_int64(256),
     )
     try:
-        check(lib.c4a_filter_x_outlier_fit(handle, numpy_to_view(ctx.X)), "c4a_filter_x_outlier_fit")
+        check(lib.n4m_filter_x_outlier_fit(handle, numpy_to_view(ctx.X)), "n4m_filter_x_outlier_fit")
         mask = np.empty(ctx.X.shape[0], dtype=np.uint8)
         stats = FilterStats()
         check(
-            lib.c4a_filter_x_outlier_apply(
+            lib.n4m_filter_x_outlier_apply(
                 handle,
                 numpy_to_view(ctx.X),
                 mask.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)),
                 ctypes.byref(stats),
             ),
-            "c4a_filter_x_outlier_apply",
+            "n4m_filter_x_outlier_apply",
         )
         return mask
     finally:
-        lib.c4a_filter_x_outlier_destroy(handle)
+        lib.n4m_filter_x_outlier_destroy(handle)
 
 
 def _transfer_target(ctx: Dataset) -> np.ndarray:
@@ -862,35 +862,35 @@ def c_slope_bias(ctx: Dataset) -> np.ndarray:
     source = np.ascontiguousarray(ctx.y, dtype=np.float64)
     target = np.ascontiguousarray(2.0 * ctx.y + 1.0, dtype=np.float64)
     out = np.empty_like(source)
-    handle = _create("c4a_pp_slope_bias")
+    handle = _create("n4m_pp_slope_bias")
     try:
         check(
-            lib.c4a_pp_slope_bias_fit(
+            lib.n4m_pp_slope_bias_fit(
                 handle,
                 source.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                 target.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                 ctypes.c_int64(source.size),
             ),
-            "c4a_pp_slope_bias_fit",
+            "n4m_pp_slope_bias_fit",
         )
         check(
-            lib.c4a_pp_slope_bias_transform(
+            lib.n4m_pp_slope_bias_transform(
                 handle,
                 source.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                 ctypes.c_int64(source.size),
                 out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             ),
-            "c4a_pp_slope_bias_transform",
+            "n4m_pp_slope_bias_transform",
         )
         return out
     finally:
-        lib.c4a_pp_slope_bias_destroy(handle)
+        lib.n4m_pp_slope_bias_destroy(handle)
 
 
 def c_weighted_snv(ctx: Dataset) -> np.ndarray:
     weights = np.ascontiguousarray(np.linspace(1.0, 2.0, ctx.X.shape[1]), dtype=np.float64)
     return c_transform(
-        "c4a_pp_weighted_snv",
+        "n4m_pp_weighted_snv",
         ctx.X,
         weights.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_int64(weights.size),
@@ -908,19 +908,19 @@ def c_selector(prefix: str, ctx: Dataset, *, threshold: float = 0.0,
         ctypes.c_int32(-1 if top_k is None else int(top_k)),
     )
     try:
-        if prefix == "c4a_filter_correlation":
+        if prefix == "n4m_filter_correlation":
             y = np.ascontiguousarray(ctx.y, dtype=np.float64)
             check(
-                lib.c4a_filter_correlation_fit(
+                lib.n4m_filter_correlation_fit(
                     handle,
                     numpy_to_view(ctx.X),
                     y.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                     ctypes.c_int64(y.size),
                 ),
-                "c4a_filter_correlation_fit",
+                "n4m_filter_correlation_fit",
             )
         else:
-            check(lib.c4a_filter_variance_fit(handle, numpy_to_view(ctx.X)), "c4a_filter_variance_fit")
+            check(lib.n4m_filter_variance_fit(handle, numpy_to_view(ctx.X)), "n4m_filter_variance_fit")
         out_cols = ctypes.c_int64()
         check(getattr(lib, f"{prefix}_output_cols")(handle, ctypes.byref(out_cols)), f"{prefix}_output_cols")
         out = empty_like_f64((ctx.X.shape[0], int(out_cols.value)))
@@ -933,13 +933,13 @@ def c_selector(prefix: str, ctx: Dataset, *, threshold: float = 0.0,
 def c_interval_generator(ctx: Dataset) -> list[np.ndarray]:
     width = 16
     step = 8
-    handle = _create("c4a_interval_generator", ctypes.c_int32(width), ctypes.c_int32(step))
+    handle = _create("n4m_interval_generator", ctypes.c_int32(width), ctypes.c_int32(step))
     try:
-        check(lib.c4a_interval_generator_fit(handle, numpy_to_view(ctx.X)), "c4a_interval_generator_fit")
+        check(lib.n4m_interval_generator_fit(handle, numpy_to_view(ctx.X)), "n4m_interval_generator_fit")
         out_cols = ctypes.c_int64()
-        check(lib.c4a_interval_generator_output_cols(handle, ctypes.byref(out_cols)), "c4a_interval_generator_output_cols")
+        check(lib.n4m_interval_generator_output_cols(handle, ctypes.byref(out_cols)), "n4m_interval_generator_output_cols")
         out = empty_like_f64((ctx.X.shape[0], int(out_cols.value)))
-        check(lib.c4a_interval_generator_transform(handle, numpy_to_view(ctx.X), numpy_to_view(out)), "c4a_interval_generator_transform")
+        check(lib.n4m_interval_generator_transform(handle, numpy_to_view(ctx.X), numpy_to_view(out)), "n4m_interval_generator_transform")
         intervals = [(lo, min(ctx.X.shape[1], lo + width)) for lo in range(0, ctx.X.shape[1], step)]
         blocks = []
         offset = 0
@@ -949,43 +949,43 @@ def c_interval_generator(ctx: Dataset) -> list[np.ndarray]:
             offset += cols
         return blocks
     finally:
-        lib.c4a_interval_generator_destroy(handle)
+        lib.n4m_interval_generator_destroy(handle)
 
 
 def c_epo(ctx: Dataset) -> np.ndarray:
     y = np.ascontiguousarray(ctx.d, dtype=np.float64)
-    handle = _create("c4a_pp_epo", ctypes.c_int(1))
+    handle = _create("n4m_pp_epo", ctypes.c_int(1))
     try:
         check(
-            lib.c4a_pp_epo_fit(
+            lib.n4m_pp_epo_fit(
                 handle,
                 numpy_to_view(ctx.X),
                 y.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                 ctypes.c_int64(y.size),
             ),
-            "c4a_pp_epo_fit",
+            "n4m_pp_epo_fit",
         )
         out = empty_like_f64(ctx.X.shape)
         check(
-            lib.c4a_pp_epo_transform_with_d(
+            lib.n4m_pp_epo_transform_with_d(
                 handle,
                 numpy_to_view(ctx.X),
                 y.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                 ctypes.c_int64(y.size),
                 numpy_to_view(out),
             ),
-            "c4a_pp_epo_transform_with_d",
+            "n4m_pp_epo_transform_with_d",
         )
         return out
     finally:
-        lib.c4a_pp_epo_destroy(handle)
+        lib.n4m_pp_epo_destroy(handle)
 
 
 def c_fck_static(ctx: Dataset) -> np.ndarray:
     alphas = np.ascontiguousarray([0.5, 1.0], dtype=np.float64)
     sigmas = np.ascontiguousarray([1.0, 2.0], dtype=np.float64)
     handle = _create(
-        "c4a_pp_fck_static",
+        "n4m_pp_fck_static",
         ctypes.c_int32(5),
         alphas.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_int32(alphas.size),
@@ -995,18 +995,18 @@ def c_fck_static(ctx: Dataset) -> np.ndarray:
     try:
         out_cols = ctypes.c_int32()
         check(
-            lib.c4a_pp_fck_static_output_cols(
+            lib.n4m_pp_fck_static_output_cols(
                 ctypes.c_int32(alphas.size * sigmas.size),
                 ctypes.c_int32(ctx.X.shape[1]),
                 ctypes.byref(out_cols),
             ),
-            "c4a_pp_fck_static_output_cols",
+            "n4m_pp_fck_static_output_cols",
         )
         out = empty_like_f64((ctx.X.shape[0], int(out_cols.value)))
-        check(lib.c4a_pp_fck_static_transform(handle, numpy_to_view(ctx.X), numpy_to_view(out)), "c4a_pp_fck_static_transform")
+        check(lib.n4m_pp_fck_static_transform(handle, numpy_to_view(ctx.X), numpy_to_view(out)), "n4m_pp_fck_static_transform")
         return out
     finally:
-        lib.c4a_pp_fck_static_destroy(handle)
+        lib.n4m_pp_fck_static_destroy(handle)
 
 
 def c_crop(ctx: Dataset) -> np.ndarray:
@@ -1017,31 +1017,31 @@ def c_crop_factory(ctx: Dataset) -> Callable[[], np.ndarray]:
     start = max(0, ctx.X.shape[1] // 8)
     end = max(start + 1, ctx.X.shape[1] - ctx.X.shape[1] // 8)
     X_arr = as_f64_2d(ctx.X)
-    handle = _create("c4a_pp_crop", ctypes.c_int64(start), ctypes.c_int64(end))
+    handle = _create("n4m_pp_crop", ctypes.c_int64(start), ctypes.c_int64(end))
     out = empty_like_f64((X_arr.shape[0], end - start))
     x_view = numpy_to_view(X_arr)
     out_view = numpy_to_view(out)
 
     def run() -> np.ndarray:
-        status = lib.c4a_pp_crop_transform(handle, x_view, out_view)
+        status = lib.n4m_pp_crop_transform(handle, x_view, out_view)
         if status != 0:
-            check(status, "c4a_pp_crop_transform")
+            check(status, "n4m_pp_crop_transform")
         return out
 
-    run._c4a_output = out
-    weakref.finalize(run, lib.c4a_pp_crop_destroy, handle)
+    run._n4m_output = out
+    weakref.finalize(run, lib.n4m_pp_crop_destroy, handle)
     return run
 
 
 def c_resample(ctx: Dataset) -> np.ndarray:
     target = max(4, ctx.X.shape[1] // 2)
-    return c_transform("c4a_pp_resample", ctx.X, ctypes.c_int64(target), out_shape=(ctx.X.shape[0], target))
+    return c_transform("n4m_pp_resample", ctx.X, ctypes.c_int64(target), out_shape=(ctx.X.shape[0], target))
 
 
 def c_resampler(ctx: Dataset) -> np.ndarray:
     target = np.ascontiguousarray(np.linspace(ctx.wavelengths[0], ctx.wavelengths[-1], max(4, ctx.X.shape[1] // 2)), dtype=np.float64)
     handle = _create(
-        "c4a_pp_resampler",
+        "n4m_pp_resampler",
         target.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_int64(target.size),
         ctypes.c_int32(0),
@@ -1055,24 +1055,24 @@ def c_resampler(ctx: Dataset) -> np.ndarray:
     try:
         source = np.ascontiguousarray(ctx.wavelengths, dtype=np.float64)
         check(
-            lib.c4a_pp_resampler_fit(
+            lib.n4m_pp_resampler_fit(
                 handle,
                 source.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                 ctypes.c_int64(source.size),
             ),
-            "c4a_pp_resampler_fit",
+            "n4m_pp_resampler_fit",
         )
-        out_cols = int(lib.c4a_pp_resampler_output_cols(handle))
+        out_cols = int(lib.n4m_pp_resampler_output_cols(handle))
         out = empty_like_f64((ctx.X.shape[0], out_cols))
-        check(lib.c4a_pp_resampler_transform(handle, numpy_to_view(ctx.X), numpy_to_view(out)), "c4a_pp_resampler_transform")
+        check(lib.n4m_pp_resampler_transform(handle, numpy_to_view(ctx.X), numpy_to_view(out)), "n4m_pp_resampler_transform")
         return out
     finally:
-        lib.c4a_pp_resampler_destroy(handle)
+        lib.n4m_pp_resampler_destroy(handle)
 
 
 def c_kbins(ctx: Dataset) -> np.ndarray:
     return c_transform(
-        "c4a_pp_kbins_disc",
+        "n4m_pp_kbins_disc",
         ctx.X,
         ctypes.c_int32(5),
         ctypes.c_int32(0),
@@ -1084,7 +1084,7 @@ def c_kbins(ctx: Dataset) -> np.ndarray:
 def c_range_disc(ctx: Dataset) -> np.ndarray:
     edges = np.ascontiguousarray([0.25, 0.40, 0.55, 0.70], dtype=np.float64)
     return c_transform(
-        "c4a_pp_range_disc",
+        "n4m_pp_range_disc",
         ctx.X,
         edges.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_int64(edges.size),
@@ -1094,7 +1094,7 @@ def c_range_disc(ctx: Dataset) -> np.ndarray:
 
 def c_wavelet_features(ctx: Dataset, *, mode: int = 0, entropy: int = 0) -> np.ndarray:
     handle = _create_ex(
-        "c4a_pp_wavelet_features",
+        "n4m_pp_wavelet_features",
         ctypes.c_int(0),
         ctypes.c_int(mode),
         ctypes.c_int32(2),
@@ -1103,30 +1103,30 @@ def c_wavelet_features(ctx: Dataset, *, mode: int = 0, entropy: int = 0) -> np.n
     try:
         out_cols = ctypes.c_int64()
         check(
-            lib.c4a_pp_wavelet_features_output_cols(
+            lib.n4m_pp_wavelet_features_output_cols(
                 handle,
                 ctypes.c_int64(ctx.X.shape[1]),
                 ctypes.byref(out_cols),
             ),
-            "c4a_pp_wavelet_features_output_cols",
+            "n4m_pp_wavelet_features_output_cols",
         )
         out = empty_like_f64((ctx.X.shape[0], int(out_cols.value)))
         check(
-            lib.c4a_pp_wavelet_features_transform(
+            lib.n4m_pp_wavelet_features_transform(
                 handle,
                 numpy_to_view(ctx.X),
                 numpy_to_view(out),
             ),
-            "c4a_pp_wavelet_features_transform",
+            "n4m_pp_wavelet_features_transform",
         )
         return out
     finally:
-        lib.c4a_pp_wavelet_features_destroy(handle)
+        lib.n4m_pp_wavelet_features_destroy(handle)
 
 
 def c_log_transform(ctx: Dataset) -> np.ndarray:
     return c_transform(
-        "c4a_pp_log",
+        "n4m_pp_log",
         ctx.X,
         ctypes.c_double(0.0),
         ctypes.c_double(0.0),
@@ -1138,12 +1138,12 @@ def c_log_transform(ctx: Dataset) -> np.ndarray:
 
 def c_derivate(ctx: Dataset) -> np.ndarray:
     out_cols = int(
-        lib.c4a_pp_derivate_output_cols(
+        lib.n4m_pp_derivate_output_cols(
             ctypes.c_int32(1), ctypes.c_int64(ctx.X.shape[1])
         )
     )
     return c_transform(
-        "c4a_pp_derivate",
+        "n4m_pp_derivate",
         ctx.X,
         ctypes.c_int32(1),
         ctypes.c_double(1.0),
@@ -1223,7 +1223,7 @@ def c_aug_poly_drift(ctx: Dataset) -> np.ndarray:
     lo = np.ascontiguousarray(np.full(3, -0.01, dtype=np.float64))
     hi = np.ascontiguousarray(np.full(3, 0.01, dtype=np.float64))
     return c_aug_apply(
-        "c4a_aug_poly_drift",
+        "n4m_aug_poly_drift",
         ctx,
         ctypes.c_int32(2),
         lo.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
@@ -1233,46 +1233,46 @@ def c_aug_poly_drift(ctx: Dataset) -> np.ndarray:
 
 def c_aug_wavelength_shift(ctx: Dataset) -> np.ndarray:
     wl_ptr, wl_n, _wl = _aug_wavelength_ptr(ctx, required=True)
-    return c_aug_apply("c4a_aug_wavelength_shift", ctx, ctypes.c_double(-1.0), ctypes.c_double(1.0), wl_ptr, wl_n)
+    return c_aug_apply("n4m_aug_wavelength_shift", ctx, ctypes.c_double(-1.0), ctypes.c_double(1.0), wl_ptr, wl_n)
 
 
 def c_aug_wavelength_stretch(ctx: Dataset) -> np.ndarray:
     wl_ptr, wl_n, _wl = _aug_wavelength_ptr(ctx, required=True)
-    return c_aug_apply("c4a_aug_wavelength_stretch", ctx, ctypes.c_double(0.99), ctypes.c_double(1.01), wl_ptr, wl_n)
+    return c_aug_apply("n4m_aug_wavelength_stretch", ctx, ctypes.c_double(0.99), ctypes.c_double(1.01), wl_ptr, wl_n)
 
 
 def c_aug_local_warp(ctx: Dataset) -> np.ndarray:
     wl_ptr, wl_n, _wl = _aug_wavelength_ptr(ctx, required=True)
-    return c_aug_apply("c4a_aug_local_warp", ctx, ctypes.c_int32(3), ctypes.c_double(1.0), wl_ptr, wl_n)
+    return c_aug_apply("n4m_aug_local_warp", ctx, ctypes.c_int32(3), ctypes.c_double(1.0), wl_ptr, wl_n)
 
 
 def c_aug_band_perturb(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_band_perturb", ctx, ctypes.c_int32(3), ctypes.c_int32(5), ctypes.c_int32(15), ctypes.c_double(0.9), ctypes.c_double(1.1), ctypes.c_double(-0.01), ctypes.c_double(0.01))
+    return c_aug_apply("n4m_aug_band_perturb", ctx, ctypes.c_int32(3), ctypes.c_int32(5), ctypes.c_int32(15), ctypes.c_double(0.9), ctypes.c_double(1.1), ctypes.c_double(-0.01), ctypes.c_double(0.01))
 
 
 def c_aug_band_mask(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_band_mask", ctx, ctypes.c_int32(1), ctypes.c_int32(3), ctypes.c_int32(5), ctypes.c_int32(15), ctypes.c_int32(0))
+    return c_aug_apply("n4m_aug_band_mask", ctx, ctypes.c_int32(1), ctypes.c_int32(3), ctypes.c_int32(5), ctypes.c_int32(15), ctypes.c_int32(0))
 
 
 def c_aug_channel_dropout(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_channel_dropout", ctx, ctypes.c_double(0.05), ctypes.c_int32(0))
+    return c_aug_apply("n4m_aug_channel_dropout", ctx, ctypes.c_double(0.05), ctypes.c_int32(0))
 
 
 def c_aug_gauss_jitter(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_gauss_jitter", ctx, ctypes.c_double(0.5), ctypes.c_double(1.5), ctypes.c_int32(9))
+    return c_aug_apply("n4m_aug_gauss_jitter", ctx, ctypes.c_double(0.5), ctypes.c_double(1.5), ctypes.c_int32(9))
 
 
 def c_aug_unsharp_mask(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_unsharp_mask", ctx, ctypes.c_double(0.1), ctypes.c_double(0.5), ctypes.c_double(1.0), ctypes.c_int32(11))
+    return c_aug_apply("n4m_aug_unsharp_mask", ctx, ctypes.c_double(0.1), ctypes.c_double(0.5), ctypes.c_double(1.0), ctypes.c_int32(11))
 
 
 def c_aug_magnitude_warp(ctx: Dataset) -> np.ndarray:
     wl_ptr, wl_n, _wl = _aug_wavelength_ptr(ctx, required=True)
-    return c_aug_apply("c4a_aug_magnitude_warp", ctx, ctypes.c_int32(3), ctypes.c_double(0.9), ctypes.c_double(1.1), wl_ptr, wl_n)
+    return c_aug_apply("n4m_aug_magnitude_warp", ctx, ctypes.c_int32(3), ctypes.c_double(0.9), ctypes.c_double(1.1), wl_ptr, wl_n)
 
 
 def c_aug_local_clip(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_local_clip", ctx, ctypes.c_int32(1), ctypes.c_int32(5), ctypes.c_int32(15))
+    return c_aug_apply("n4m_aug_local_clip", ctx, ctypes.c_int32(1), ctypes.c_int32(5), ctypes.c_int32(15))
 
 
 def c_aug_wavelength_spectral(ctx: Dataset) -> np.ndarray:
@@ -1294,7 +1294,7 @@ def c_aug_wavelength_spectral(ctx: Dataset) -> np.ndarray:
 def c_aug_particle_size(ctx: Dataset) -> np.ndarray:
     wl_ptr, wl_n, _wl = _aug_wavelength_ptr(ctx, required=True)
     return c_aug_apply(
-        "c4a_aug_particle_size",
+        "n4m_aug_particle_size",
         ctx,
         ctypes.c_double(50.0),
         ctypes.c_double(15.0),
@@ -1314,7 +1314,7 @@ def c_aug_particle_size(ctx: Dataset) -> np.ndarray:
 def c_aug_emsc_distort(ctx: Dataset) -> np.ndarray:
     wl_ptr, wl_n, _wl = _aug_wavelength_ptr(ctx, required=True)
     return c_aug_apply(
-        "c4a_aug_emsc_distort",
+        "n4m_aug_emsc_distort",
         ctx,
         ctypes.c_double(0.9),
         ctypes.c_double(1.1),
@@ -1331,7 +1331,7 @@ def c_aug_emsc_distort(ctx: Dataset) -> np.ndarray:
 def c_aug_batch_effect(ctx: Dataset) -> np.ndarray:
     wl_ptr, wl_n, _wl = _aug_wavelength_ptr(ctx, required=True)
     return c_aug_apply(
-        "c4a_aug_batch_effect",
+        "n4m_aug_batch_effect",
         ctx,
         ctypes.c_double(0.02),
         ctypes.c_double(0.01),
@@ -1345,7 +1345,7 @@ def c_aug_batch_effect(ctx: Dataset) -> np.ndarray:
 def c_aug_instrument_broaden(ctx: Dataset) -> np.ndarray:
     wl_ptr, wl_n, _wl = _aug_wavelength_ptr(ctx, required=True)
     return c_aug_apply(
-        "c4a_aug_instrument_broaden",
+        "n4m_aug_instrument_broaden",
         ctx,
         ctypes.c_double(3.0),
         ctypes.c_int(0),
@@ -1360,7 +1360,7 @@ def c_aug_instrument_broaden(ctx: Dataset) -> np.ndarray:
 def c_aug_temperature(ctx: Dataset) -> np.ndarray:
     wl_ptr, wl_n, _wl = _aug_wavelength_ptr(ctx, required=True)
     return c_aug_apply(
-        "c4a_aug_temperature",
+        "n4m_aug_temperature",
         ctx,
         ctypes.c_double(5.0),
         ctypes.c_int(0),
@@ -1378,7 +1378,7 @@ def c_aug_temperature(ctx: Dataset) -> np.ndarray:
 def c_aug_moisture(ctx: Dataset) -> np.ndarray:
     wl_ptr, wl_n, _wl = _aug_wavelength_ptr(ctx, required=True)
     return c_aug_apply(
-        "c4a_aug_moisture",
+        "n4m_aug_moisture",
         ctx,
         ctypes.c_double(0.1),
         ctypes.c_int(0),
@@ -1396,79 +1396,79 @@ def c_aug_moisture(ctx: Dataset) -> np.ndarray:
 
 
 def c_aug_detector_rolloff(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_detector_rolloff", ctx, ctypes.c_int32(4), ctypes.c_double(1.0), ctypes.c_double(0.02), ctypes.c_int32(1), apply_wavelengths=True)
+    return c_aug_apply("n4m_aug_detector_rolloff", ctx, ctypes.c_int32(4), ctypes.c_double(1.0), ctypes.c_double(0.02), ctypes.c_int32(1), apply_wavelengths=True)
 
 
 def c_aug_stray_light(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_stray_light", ctx, ctypes.c_double(0.001), ctypes.c_double(2.0), ctypes.c_double(0.1), ctypes.c_int32(1), apply_wavelengths=True)
+    return c_aug_apply("n4m_aug_stray_light", ctx, ctypes.c_double(0.001), ctypes.c_double(2.0), ctypes.c_double(0.1), ctypes.c_int32(1), apply_wavelengths=True)
 
 
 def c_aug_edge_curve(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_edge_curve", ctx, ctypes.c_double(0.02), ctypes.c_int32(0), ctypes.c_double(0.0), ctypes.c_double(0.7), apply_wavelengths=True)
+    return c_aug_apply("n4m_aug_edge_curve", ctx, ctypes.c_double(0.02), ctypes.c_int32(0), ctypes.c_double(0.0), ctypes.c_double(0.7), apply_wavelengths=True)
 
 
 def c_aug_truncated_peak(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_truncated_peak", ctx, ctypes.c_double(0.5), ctypes.c_double(0.01), ctypes.c_double(0.1), ctypes.c_double(50.0), ctypes.c_double(200.0), ctypes.c_int32(1), ctypes.c_int32(1), apply_wavelengths=True)
+    return c_aug_apply("n4m_aug_truncated_peak", ctx, ctypes.c_double(0.5), ctypes.c_double(0.01), ctypes.c_double(0.1), ctypes.c_double(50.0), ctypes.c_double(200.0), ctypes.c_int32(1), ctypes.c_int32(1), apply_wavelengths=True)
 
 
 def c_aug_edge_artifacts(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_edge_artifacts", ctx, ctypes.c_int32(0xF), ctypes.c_double(1.0), ctypes.c_int32(4), apply_wavelengths=True)
+    return c_aug_apply("n4m_aug_edge_artifacts", ctx, ctypes.c_int32(0xF), ctypes.c_double(1.0), ctypes.c_int32(4), apply_wavelengths=True)
 
 
 def c_aug_spline_smooth(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_spline_smooth", ctx)
+    return c_aug_apply("n4m_aug_spline_smooth", ctx)
 
 
 def c_aug_spline_x_perturb(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_spline_x_perturb", ctx, ctypes.c_int32(3), ctypes.c_double(0.05), ctypes.c_double(-0.1), ctypes.c_double(0.1))
+    return c_aug_apply("n4m_aug_spline_x_perturb", ctx, ctypes.c_int32(3), ctypes.c_double(0.05), ctypes.c_double(-0.1), ctypes.c_double(0.1))
 
 
 def c_aug_spline_y_perturb(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_spline_y_perturb", ctx, ctypes.c_int32(-1), ctypes.c_double(0.005))
+    return c_aug_apply("n4m_aug_spline_y_perturb", ctx, ctypes.c_int32(-1), ctypes.c_double(0.005))
 
 
 def c_aug_rotate_translate(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_rotate_translate", ctx, ctypes.c_double(2.0), ctypes.c_double(3.0))
+    return c_aug_apply("n4m_aug_rotate_translate", ctx, ctypes.c_double(2.0), ctypes.c_double(3.0))
 
 
 def c_aug_random_x_op(ctx: Dataset) -> np.ndarray:
-    return c_aug_apply("c4a_aug_random_x_op", ctx, ctypes.c_int32(0), ctypes.c_double(0.97), ctypes.c_double(1.03))
+    return c_aug_apply("n4m_aug_random_x_op", ctx, ctypes.c_int32(0), ctypes.c_double(0.97), ctypes.c_double(1.03))
 
 
 def c_high_leverage(ctx: Dataset) -> np.ndarray:
-    return c4a_python.high_leverage_filter(ctx.X)
+    return n4m_python.high_leverage_filter(ctx.X)
 
 
 def c_spectral_quality(ctx: Dataset) -> np.ndarray:
-    return c4a_python.spectral_quality_filter(ctx.X)
+    return n4m_python.spectral_quality_filter(ctx.X)
 
 
 def c_composite_filter(ctx: Dataset) -> np.ndarray:
-    return c4a_python.composite_filter(ctx.X)
+    return n4m_python.composite_filter(ctx.X)
 
 
 def c_hotelling_t2(ctx: Dataset) -> tuple[np.ndarray, float]:
-    return c4a_python.hotelling_t2(ctx.X, n_components=min(5, ctx.X.shape[1]), alpha=0.05)
+    return n4m_python.hotelling_t2(ctx.X, n_components=min(5, ctx.X.shape[1]), alpha=0.05)
 
 
 def c_q_residuals(ctx: Dataset) -> tuple[np.ndarray, float]:
-    return c4a_python.q_residuals(ctx.X, n_components=min(5, ctx.X.shape[1]), alpha=0.05)
+    return n4m_python.q_residuals(ctx.X, n_components=min(5, ctx.X.shape[1]), alpha=0.05)
 
 
 def c_nirs_metrics(ctx: Dataset) -> np.ndarray:
-    return c4a_python.nirs_metrics(ctx.y, 1.05 * ctx.y + 0.02)
+    return n4m_python.nirs_metrics(ctx.y, 1.05 * ctx.y + 0.02)
 
 
 def c_signal_type(ctx: Dataset) -> np.ndarray:
-    return c4a_python.signal_type_detector(ctx.X, ctx.wavelengths, confidence_threshold=0.7)
+    return n4m_python.signal_type_detector(ctx.X, ctx.wavelengths, confidence_threshold=0.7)
 
 
 def c_rng_pcg64(ctx: Dataset) -> np.ndarray:
-    return c4a_python.rng_pcg64(seed=ctx.seed, n=1024)
+    return n4m_python.rng_pcg64(seed=ctx.seed, n=1024)
 
 
 def c_transfer_metrics(ctx: Dataset) -> np.ndarray:
-    return c4a_python.transfer_metrics(
+    return n4m_python.transfer_metrics(
         ctx.X,
         _transfer_target(ctx),
         n_components=min(5, ctx.X.shape[0] - 1, ctx.X.shape[1]),
@@ -1479,7 +1479,7 @@ def c_transfer_metrics(ctx: Dataset) -> np.ndarray:
 
 def c_iasls(ctx: Dataset) -> np.ndarray:
     handle = _create_ex(
-        "c4a_pp_iasls",
+        "n4m_pp_iasls",
         ctypes.c_double(1e5),
         ctypes.c_double(0.01),
         ctypes.c_double(1e-4),
@@ -1491,12 +1491,12 @@ def c_iasls(ctx: Dataset) -> np.ndarray:
     try:
         out = empty_like_f64(ctx.X.shape)
         check(
-            lib.c4a_pp_iasls_transform(handle, numpy_to_view(ctx.X), numpy_to_view(out)),
-            "c4a_pp_iasls_transform",
+            lib.n4m_pp_iasls_transform(handle, numpy_to_view(ctx.X), numpy_to_view(out)),
+            "n4m_pp_iasls_transform",
         )
         return out
     finally:
-        lib.c4a_pp_iasls_destroy(handle)
+        lib.n4m_pp_iasls_destroy(handle)
 
 
 def c_flexible(prefix: str, ctx: Dataset, n_components: float) -> np.ndarray:
@@ -1526,7 +1526,7 @@ def py_resampler(ctx: Dataset) -> Callable[[], object]:
     target = np.linspace(ctx.wavelengths[0], ctx.wavelengths[-1], max(4, ctx.X.shape[1] // 2))
 
     def run() -> object:
-        return c4a.Resampler(target_wavelengths=target).fit_transform(ctx.X, source_wavelengths=ctx.wavelengths)
+        return n4m.Resampler(target_wavelengths=target).fit_transform(ctx.X, source_wavelengths=ctx.wavelengths)
 
     return run
 
@@ -1534,51 +1534,51 @@ def py_resampler(ctx: Dataset) -> Callable[[], object]:
 def py_crop(ctx: Dataset) -> Callable[[], object]:
     start = max(0, ctx.X.shape[1] // 8)
     end = max(start + 1, ctx.X.shape[1] - ctx.X.shape[1] // 8)
-    return lambda: c4a.CropTransformer(start=start, end=end).fit_transform(ctx.X)
+    return lambda: n4m.CropTransformer(start=start, end=end).fit_transform(ctx.X)
 
 
 def py_resample(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.ResampleTransformer(num_samples=max(4, ctx.X.shape[1] // 2)).fit_transform(ctx.X)
+    return lambda: n4m.ResampleTransformer(num_samples=max(4, ctx.X.shape[1] // 2)).fit_transform(ctx.X)
 
 
 def py_range_disc(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.RangeDiscretizer(edges=[0.25, 0.40, 0.55, 0.70]).fit_transform(ctx.X)
+    return lambda: n4m.RangeDiscretizer(edges=[0.25, 0.40, 0.55, 0.70]).fit_transform(ctx.X)
 
 
 def py_kbins(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.IntegerKBinsDiscretizer(n_bins=5, strategy="uniform").fit_transform(ctx.X)
+    return lambda: n4m.IntegerKBinsDiscretizer(n_bins=5, strategy="uniform").fit_transform(ctx.X)
 
 
 def py_osc(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.OSC(n_components=1, scale=True).fit_transform(ctx.X, ctx.y)
+    return lambda: n4m.OSC(n_components=1, scale=True).fit_transform(ctx.X, ctx.y)
 
 
 def py_epo(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.EPO(scale=True).fit_transform(ctx.X, ctx.d)
+    return lambda: n4m.EPO(scale=True).fit_transform(ctx.X, ctx.d)
 
 
 def py_fck(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.FCKStaticTransformer(kernel_size=5, alphas=[0.5, 1.0], sigmas=[1.0, 2.0]).fit_transform(ctx.X)
+    return lambda: n4m.FCKStaticTransformer(kernel_size=5, alphas=[0.5, 1.0], sigmas=[1.0, 2.0]).fit_transform(ctx.X)
 
 
 def py_ks(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.KennardStoneSplitter(test_size=0.25).split(ctx.X)
+    return lambda: n4m.KennardStoneSplitter(test_size=0.25).split(ctx.X)
 
 
 def py_spxy(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.SPXYSplitter(test_size=0.25).split(ctx.X, ctx.y.reshape(-1, 1))
+    return lambda: n4m.SPXYSplitter(test_size=0.25).split(ctx.X, ctx.y.reshape(-1, 1))
 
 
 def py_kbins_stratified(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.KBinsStratifiedSplitter(test_size=0.25, seed=17, n_bins=5, strategy="uniform").split(ctx.y.reshape(-1, 1))
+    return lambda: n4m.KBinsStratifiedSplitter(test_size=0.25, seed=17, n_bins=5, strategy="uniform").split(ctx.y.reshape(-1, 1))
 
 
 def py_y_outlier(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.YOutlierFilter(method="iqr").fit_apply(ctx.y)[0]
+    return lambda: n4m.YOutlierFilter(method="iqr").fit_apply(ctx.y)[0]
 
 
 def py_x_outlier(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.XOutlierFilter(method="mahalanobis", n_components=min(5, ctx.X.shape[1])).fit_apply(ctx.X)[0]
+    return lambda: n4m.XOutlierFilter(method="mahalanobis", n_components=min(5, ctx.X.shape[1])).fit_apply(ctx.X)[0]
 
 
 def py_paired_transfer(cls, *args, **kwargs) -> Callable[[Dataset], Callable[[], object]]:
@@ -1591,28 +1591,28 @@ def py_paired_transfer(cls, *args, **kwargs) -> Callable[[Dataset], Callable[[],
 
 def py_slope_bias(ctx: Dataset) -> Callable[[], object]:
     target = 2.0 * ctx.y + 1.0
-    return lambda: c4a.SlopeBiasCorrection().fit(ctx.y, target).transform(ctx.y)
+    return lambda: n4m.SlopeBiasCorrection().fit(ctx.y, target).transform(ctx.y)
 
 
 def py_weighted_snv(ctx: Dataset) -> Callable[[], object]:
     weights = np.linspace(1.0, 2.0, ctx.X.shape[1])
-    return lambda: c4a.WeightedSNV(weights=weights).fit_transform(ctx.X)
+    return lambda: n4m.WeightedSNV(weights=weights).fit_transform(ctx.X)
 
 
 def py_variance_filter(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.VarianceFilter(threshold=0.0).fit_transform(ctx.X)
+    return lambda: n4m.VarianceFilter(threshold=0.0).fit_transform(ctx.X)
 
 
 def py_correlation_filter(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.CorrelationFilter(top_k=min(5, ctx.X.shape[1])).fit_transform(ctx.X, ctx.y)
+    return lambda: n4m.CorrelationFilter(top_k=min(5, ctx.X.shape[1])).fit_transform(ctx.X, ctx.y)
 
 
 def py_interval_generator(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.IntervalGenerator(interval_size=16, step=8).fit_transform(ctx.X)
+    return lambda: n4m.IntervalGenerator(interval_size=16, step=8).fit_transform(ctx.X)
 
 
 def pyabi_transform(name: str, *args, **kwargs) -> Callable[[Dataset], Callable[[], object]]:
-    fn = getattr(c4a_python, name)
+    fn = getattr(n4m_python, name)
 
     def factory(ctx: Dataset) -> Callable[[], object]:
         return lambda: fn(ctx.X, *args, **kwargs)
@@ -1622,61 +1622,61 @@ def pyabi_transform(name: str, *args, **kwargs) -> Callable[[Dataset], Callable[
 
 def pyabi_resampler(ctx: Dataset) -> Callable[[], object]:
     target = np.linspace(ctx.wavelengths[0], ctx.wavelengths[-1], max(4, ctx.X.shape[1] // 2))
-    return lambda: c4a_python.resampler(ctx.X, ctx.wavelengths, target)
+    return lambda: n4m_python.resampler(ctx.X, ctx.wavelengths, target)
 
 
 def pyabi_crop(ctx: Dataset) -> Callable[[], object]:
     start = max(0, ctx.X.shape[1] // 8)
     end = max(start + 1, ctx.X.shape[1] - ctx.X.shape[1] // 8)
-    return lambda: c4a_python.crop(ctx.X, start, end)
+    return lambda: n4m_python.crop(ctx.X, start, end)
 
 
 def pyabi_resample(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.resample(ctx.X, max(4, ctx.X.shape[1] // 2))
+    return lambda: n4m_python.resample(ctx.X, max(4, ctx.X.shape[1] // 2))
 
 
 def pyabi_range_disc(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.range_discretizer(ctx.X, [0.25, 0.40, 0.55, 0.70])
+    return lambda: n4m_python.range_discretizer(ctx.X, [0.25, 0.40, 0.55, 0.70])
 
 
 def pyabi_kbins(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.kbins_discretizer(ctx.X, n_bins=5, strategy="uniform")
+    return lambda: n4m_python.kbins_discretizer(ctx.X, n_bins=5, strategy="uniform")
 
 
 def pyabi_osc(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.osc(ctx.X, ctx.y, n_components=1, scale=True)
+    return lambda: n4m_python.osc(ctx.X, ctx.y, n_components=1, scale=True)
 
 
 def pyabi_epo(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.epo(ctx.X, ctx.d, scale=True)
+    return lambda: n4m_python.epo(ctx.X, ctx.d, scale=True)
 
 
 def pyabi_fck(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.fck_static(ctx.X, kernel_size=5, alphas=[0.5, 1.0], sigmas=[1.0, 2.0])
+    return lambda: n4m_python.fck_static(ctx.X, kernel_size=5, alphas=[0.5, 1.0], sigmas=[1.0, 2.0])
 
 
 def pyabi_ks(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.kennard_stone(ctx.X, test_size=0.25)
+    return lambda: n4m_python.kennard_stone(ctx.X, test_size=0.25)
 
 
 def pyabi_spxy(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.spxy(ctx.X, ctx.y.reshape(-1, 1), test_size=0.25)
+    return lambda: n4m_python.spxy(ctx.X, ctx.y.reshape(-1, 1), test_size=0.25)
 
 
 def pyabi_kbins_stratified(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.kbins_stratified(ctx.y.reshape(-1, 1), test_size=0.25, seed=17, n_bins=5, strategy="uniform")
+    return lambda: n4m_python.kbins_stratified(ctx.y.reshape(-1, 1), test_size=0.25, seed=17, n_bins=5, strategy="uniform")
 
 
 def pyabi_y_outlier(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.y_outlier_iqr(ctx.y)
+    return lambda: n4m_python.y_outlier_iqr(ctx.y)
 
 
 def pyabi_x_outlier(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.x_outlier_mahalanobis(ctx.X, n_components=min(5, ctx.X.shape[1]))
+    return lambda: n4m_python.x_outlier_mahalanobis(ctx.X, n_components=min(5, ctx.X.shape[1]))
 
 
 def pyabi_paired(name: str, *args, **kwargs) -> Callable[[Dataset], Callable[[], object]]:
-    fn = getattr(c4a_python, name)
+    fn = getattr(n4m_python, name)
 
     def factory(ctx: Dataset) -> Callable[[], object]:
         target = _transfer_target(ctx)
@@ -1687,28 +1687,28 @@ def pyabi_paired(name: str, *args, **kwargs) -> Callable[[Dataset], Callable[[],
 
 def pyabi_slope_bias(ctx: Dataset) -> Callable[[], object]:
     target = 2.0 * ctx.y + 1.0
-    return lambda: c4a_python.slope_bias_correction(ctx.y, target, ctx.y)
+    return lambda: n4m_python.slope_bias_correction(ctx.y, target, ctx.y)
 
 
 def pyabi_weighted_snv(ctx: Dataset) -> Callable[[], object]:
     weights = np.linspace(1.0, 2.0, ctx.X.shape[1])
-    return lambda: c4a_python.weighted_snv(ctx.X, weights=weights)
+    return lambda: n4m_python.weighted_snv(ctx.X, weights=weights)
 
 
 def pyabi_variance_filter(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.variance_filter(ctx.X, threshold=0.0)
+    return lambda: n4m_python.variance_filter(ctx.X, threshold=0.0)
 
 
 def pyabi_correlation_filter(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.correlation_filter(ctx.X, ctx.y, top_k=min(5, ctx.X.shape[1]))
+    return lambda: n4m_python.correlation_filter(ctx.X, ctx.y, top_k=min(5, ctx.X.shape[1]))
 
 
 def pyabi_interval_generator(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.interval_generator(ctx.X, interval_size=16, step=8)
+    return lambda: n4m_python.interval_generator(ctx.X, interval_size=16, step=8)
 
 
 def pyabi_with_wavelengths(name: str, *args, **kwargs) -> Callable[[Dataset], Callable[[], object]]:
-    fn = getattr(c4a_python, name)
+    fn = getattr(n4m_python, name)
 
     def factory(ctx: Dataset) -> Callable[[], object]:
         return lambda: fn(ctx.X, *args, wavelengths=ctx.wavelengths, **kwargs)
@@ -1717,19 +1717,19 @@ def pyabi_with_wavelengths(name: str, *args, **kwargs) -> Callable[[Dataset], Ca
 
 
 def pyabi_nirs_metrics(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.nirs_metrics(ctx.y, 1.05 * ctx.y + 0.02)
+    return lambda: n4m_python.nirs_metrics(ctx.y, 1.05 * ctx.y + 0.02)
 
 
 def pyabi_signal_type(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.signal_type_detector(ctx.X, ctx.wavelengths, confidence_threshold=0.7)
+    return lambda: n4m_python.signal_type_detector(ctx.X, ctx.wavelengths, confidence_threshold=0.7)
 
 
 def pyabi_rng_pcg64(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.rng_pcg64(seed=ctx.seed, n=1024)
+    return lambda: n4m_python.rng_pcg64(seed=ctx.seed, n=1024)
 
 
 def pyabi_transfer_metrics(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a_python.transfer_metrics(
+    return lambda: n4m_python.transfer_metrics(
         ctx.X,
         _transfer_target(ctx),
         n_components=min(5, ctx.X.shape[0] - 1, ctx.X.shape[1]),
@@ -1740,16 +1740,16 @@ def pyabi_transfer_metrics(ctx: Dataset) -> Callable[[], object]:
 
 def py_wavelength_spectral(ctx: Dataset) -> Callable[[], object]:
     classes = (
-        lambda: c4a.WavelengthShift(seed=17),
-        lambda: c4a.WavelengthStretch(seed=17),
-        lambda: c4a.LocalWarpAugmenter(n_control_points=3, seed=17),
-        lambda: c4a.BandPerturbationAugmenter(seed=17),
-        lambda: c4a.BandMasking(seed=17),
-        lambda: c4a.ChannelDropout(seed=17),
-        lambda: c4a.GaussianJitter(seed=17),
-        lambda: c4a.UnsharpMask(seed=17),
-        lambda: c4a.MagnitudeWarp(n_control_points=3, seed=17),
-        lambda: c4a.LocalClip(seed=17),
+        lambda: n4m.WavelengthShift(seed=17),
+        lambda: n4m.WavelengthStretch(seed=17),
+        lambda: n4m.LocalWarpAugmenter(n_control_points=3, seed=17),
+        lambda: n4m.BandPerturbationAugmenter(seed=17),
+        lambda: n4m.BandMasking(seed=17),
+        lambda: n4m.ChannelDropout(seed=17),
+        lambda: n4m.GaussianJitter(seed=17),
+        lambda: n4m.UnsharpMask(seed=17),
+        lambda: n4m.MagnitudeWarp(n_control_points=3, seed=17),
+        lambda: n4m.LocalClip(seed=17),
     )
 
     def run() -> object:
@@ -1765,46 +1765,46 @@ def py_wavelength_spectral(ctx: Dataset) -> Callable[[], object]:
 
 
 def py_high_leverage(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.HighLeverageFilter().fit_apply(ctx.X)[0]
+    return lambda: n4m.HighLeverageFilter().fit_apply(ctx.X)[0]
 
 
 def py_spectral_quality(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.SpectralQualityFilter().fit_apply(ctx.X)[0]
+    return lambda: n4m.SpectralQualityFilter().fit_apply(ctx.X)[0]
 
 
 def py_composite_filter(ctx: Dataset) -> Callable[[], object]:
     def run() -> object:
-        leverage = c4a.HighLeverageFilter().fit(ctx.X)
-        quality = c4a.SpectralQualityFilter()
-        return c4a.CompositeFilter(filters=[leverage, quality]).fit_apply(ctx.X)[0]
+        leverage = n4m.HighLeverageFilter().fit(ctx.X)
+        quality = n4m.SpectralQualityFilter()
+        return n4m.CompositeFilter(filters=[leverage, quality]).fit_apply(ctx.X)[0]
 
     return run
 
 
 def py_hotelling_t2(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.hotelling_t2(ctx.X, n_components=min(5, ctx.X.shape[1]), alpha=0.05)
+    return lambda: n4m.hotelling_t2(ctx.X, n_components=min(5, ctx.X.shape[1]), alpha=0.05)
 
 
 def py_q_residuals(ctx: Dataset) -> Callable[[], object]:
-    return lambda: c4a.q_residuals(ctx.X, n_components=min(5, ctx.X.shape[1]), alpha=0.05)
+    return lambda: n4m.q_residuals(ctx.X, n_components=min(5, ctx.X.shape[1]), alpha=0.05)
 
 
 def py_nirs_metrics(ctx: Dataset) -> Callable[[], object]:
     return lambda: np.asarray([
-        c4a.rmse(ctx.y, 1.05 * ctx.y + 0.02),
-        c4a.mae(ctx.y, 1.05 * ctx.y + 0.02),
-        c4a.bias(ctx.y, 1.05 * ctx.y + 0.02),
-        c4a.sep(ctx.y, 1.05 * ctx.y + 0.02),
-        c4a.rpd(ctx.y, 1.05 * ctx.y + 0.02),
-        c4a.rpiq(ctx.y, 1.05 * ctx.y + 0.02),
-        c4a.r2(ctx.y, 1.05 * ctx.y + 0.02),
-        c4a.nrmse(ctx.y, 1.05 * ctx.y + 0.02),
+        n4m.rmse(ctx.y, 1.05 * ctx.y + 0.02),
+        n4m.mae(ctx.y, 1.05 * ctx.y + 0.02),
+        n4m.bias(ctx.y, 1.05 * ctx.y + 0.02),
+        n4m.sep(ctx.y, 1.05 * ctx.y + 0.02),
+        n4m.rpd(ctx.y, 1.05 * ctx.y + 0.02),
+        n4m.rpiq(ctx.y, 1.05 * ctx.y + 0.02),
+        n4m.r2(ctx.y, 1.05 * ctx.y + 0.02),
+        n4m.nrmse(ctx.y, 1.05 * ctx.y + 0.02),
     ], dtype=np.float64)
 
 
 def py_transfer_metrics(ctx: Dataset) -> Callable[[], object]:
     def run() -> object:
-        raw = c4a.transfer_metrics(
+        raw = n4m.transfer_metrics(
             ctx.X,
             _transfer_target(ctx),
             n_components=min(5, ctx.X.shape[0] - 1, ctx.X.shape[1]),
@@ -1820,7 +1820,7 @@ def py_transfer_metrics(ctx: Dataset) -> Callable[[], object]:
 
 def py_signal_type(ctx: Dataset) -> Callable[[], object]:
     def run() -> object:
-        raw = c4a.signal_type_detector(ctx.X, ctx.wavelengths, confidence_threshold=0.7)
+        raw = n4m.signal_type_detector(ctx.X, ctx.wavelengths, confidence_threshold=0.7)
         if isinstance(raw, dict):
             return np.asarray([raw["type"], raw["confidence"]], dtype=np.float64)
         return np.asarray(raw, dtype=np.float64)
@@ -2926,7 +2926,7 @@ def nirs_ref(
     factory: Callable[[Dataset], Callable[[], object]],
     *,
     compare: bool = True,
-    gate_c4a: bool = True,
+    gate_n4m: bool = True,
     contract_note: str = "",
     max_cols: int | None = None,
 ) -> ReferenceSpec:
@@ -2935,7 +2935,7 @@ def nirs_ref(
         library,
         factory,
         compare=compare,
-        gate_c4a=gate_c4a,
+        gate_n4m=gate_n4m,
         language="Python",
         contract_note=contract_note,
         max_cols=max_cols,
@@ -2947,7 +2947,7 @@ def numpy_ref(
     factory: Callable[[Dataset], Callable[[], object]],
     *,
     compare: bool = True,
-    gate_c4a: bool = True,
+    gate_n4m: bool = True,
     contract_note: str = "",
     comparator: Callable[[object, object], tuple[bool, str]] | None = None,
 ) -> ReferenceSpec:
@@ -2956,7 +2956,7 @@ def numpy_ref(
         library,
         factory,
         compare=compare,
-        gate_c4a=gate_c4a,
+        gate_n4m=gate_n4m,
         language="Python",
         contract_note=contract_note,
         comparator=comparator,
@@ -2968,7 +2968,7 @@ def sklearn_ref(
     factory: Callable[[Dataset], Callable[[], object]],
     *,
     compare: bool = True,
-    gate_c4a: bool = True,
+    gate_n4m: bool = True,
     contract_note: str = "",
 ) -> ReferenceSpec:
     return ReferenceSpec(
@@ -2976,7 +2976,7 @@ def sklearn_ref(
         library,
         factory,
         compare=compare,
-        gate_c4a=gate_c4a,
+        gate_n4m=gate_n4m,
         language="Python",
         contract_note=contract_note,
     )
@@ -2987,7 +2987,7 @@ def scipy_ref(
     factory: Callable[[Dataset], Callable[[], object]],
     *,
     compare: bool = True,
-    gate_c4a: bool = True,
+    gate_n4m: bool = True,
     contract_note: str = "",
 ) -> ReferenceSpec:
     return ReferenceSpec(
@@ -2995,7 +2995,7 @@ def scipy_ref(
         library,
         factory,
         compare=compare,
-        gate_c4a=gate_c4a,
+        gate_n4m=gate_n4m,
         language="Python",
         contract_note=contract_note,
     )
@@ -3006,7 +3006,7 @@ def statsmodels_ref(
     factory: Callable[[Dataset], Callable[[], object]],
     *,
     compare: bool = True,
-    gate_c4a: bool = True,
+    gate_n4m: bool = True,
     contract_note: str = "",
 ) -> ReferenceSpec:
     return ReferenceSpec(
@@ -3014,7 +3014,7 @@ def statsmodels_ref(
         library,
         factory,
         compare=compare,
-        gate_c4a=gate_c4a,
+        gate_n4m=gate_n4m,
         language="Python",
         contract_note=contract_note,
     )
@@ -3025,7 +3025,7 @@ def cowarp_ref(
     factory: Callable[[Dataset], Callable[[], object]],
     *,
     compare: bool = True,
-    gate_c4a: bool = True,
+    gate_n4m: bool = True,
     contract_note: str = "",
     max_cols: int | None = None,
 ) -> ReferenceSpec:
@@ -3034,7 +3034,7 @@ def cowarp_ref(
         library,
         factory,
         compare=compare,
-        gate_c4a=gate_c4a,
+        gate_n4m=gate_n4m,
         language="Python",
         contract_note=contract_note,
         max_cols=max_cols,
@@ -3046,7 +3046,7 @@ def pywavelets_ref(
     factory: Callable[[Dataset], Callable[[], object]],
     *,
     compare: bool = True,
-    gate_c4a: bool = True,
+    gate_n4m: bool = True,
     contract_note: str = "",
     comparator: Callable[[object, object], tuple[bool, str]] | None = None,
 ) -> ReferenceSpec:
@@ -3055,7 +3055,7 @@ def pywavelets_ref(
         library,
         factory,
         compare=compare,
-        gate_c4a=gate_c4a,
+        gate_n4m=gate_n4m,
         language="Python",
         contract_note=contract_note,
         comparator=comparator,
@@ -3067,7 +3067,7 @@ def pycaltransfer_ref(
     factory: Callable[[Dataset], Callable[[], object]],
     *,
     compare: bool = True,
-    gate_c4a: bool = True,
+    gate_n4m: bool = True,
     contract_note: str = "",
     max_cols: int | None = None,
     comparator: Callable[[object, object], tuple[bool, str]] | None = None,
@@ -3077,7 +3077,7 @@ def pycaltransfer_ref(
         library,
         factory,
         compare=compare,
-        gate_c4a=gate_c4a,
+        gate_n4m=gate_n4m,
         language="Python",
         contract_note=contract_note,
         max_cols=max_cols,
@@ -3090,7 +3090,7 @@ def r_prospectr_ref(
     expr: str,
     *,
     compare: bool = False,
-    gate_c4a: bool = False,
+    gate_n4m: bool = False,
     contract_note: str = "",
     max_cols: int | None = None,
     comparator: Callable[[object, object], tuple[bool, str]] | None = None,
@@ -3100,7 +3100,7 @@ def r_prospectr_ref(
         library,
         factory=None,
         compare=compare,
-        gate_c4a=gate_c4a,
+        gate_n4m=gate_n4m,
         language="R",
         r_expr=expr,
         contract_note=contract_note,
@@ -3124,7 +3124,7 @@ def c_same(prefix: str, *args) -> Callable[[Dataset], Callable[[], object]]:
                 check(status, f"{prefix}_transform")
             return out
 
-        run._c4a_output = out
+        run._n4m_output = out
         weakref.finalize(run, getattr(lib, f"{prefix}_destroy"), handle)
         return run
 
@@ -3140,16 +3140,16 @@ METHODS: tuple[MethodSpec, ...] = (
         "snv",
         "SNV",
         "preprocessing",
-        py_transform(c4a.SNV, ddof=1),
-        c_same("c4a_pp_snv", ctypes.c_int(1), ctypes.c_int(1), ctypes.c_int(1)),
+        py_transform(n4m.SNV, ddof=1),
+        c_same("n4m_pp_snv", ctypes.c_int(1), ctypes.c_int(1), ctypes.c_int(1)),
         "snv(X, ddof = 1L)",
         (
             r_prospectr_ref(
                 "prospectr.standardNormalVariate",
                 "prospectr::standardNormalVariate(X)",
                 compare=True,
-                gate_c4a=True,
-                contract_note="c4a benchmark uses ddof=1 to match prospectr's sample-standard-deviation convention",
+                gate_n4m=True,
+                contract_note="n4m benchmark uses ddof=1 to match prospectr's sample-standard-deviation convention",
             ),
             nirs_ref("nirs4all.StandardNormalVariate", ref_nirs_transform("nirs4all.operators.transforms.scalers", "StandardNormalVariate", ddof=1)),
         ),
@@ -3158,8 +3158,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "lsnv",
         "LSNV",
         "preprocessing",
-        py_transform(c4a.LSNV, window=11, pad_mode="reflect"),
-        c_same("c4a_pp_lsnv", ctypes.c_int32(11), ctypes.c_int32(0), ctypes.c_double(0.0)),
+        py_transform(n4m.LSNV, window=11, pad_mode="reflect"),
+        c_same("n4m_pp_lsnv", ctypes.c_int32(11), ctypes.c_int32(0), ctypes.c_double(0.0)),
         "lsnv(X, window = 11L)",
         (nirs_ref("nirs4all.LocalStandardNormalVariate", ref_nirs_transform("nirs4all.operators.transforms.scalers", "LocalStandardNormalVariate", window=11, pad_mode="reflect")),),
     ),
@@ -3167,8 +3167,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "rnv",
         "RNV",
         "preprocessing",
-        py_transform(c4a.RNV),
-        c_same("c4a_pp_rnv", ctypes.c_int(1), ctypes.c_int(1), ctypes.c_double(1.4826)),
+        py_transform(n4m.RNV),
+        c_same("n4m_pp_rnv", ctypes.c_int(1), ctypes.c_int(1), ctypes.c_double(1.4826)),
         "rnv(X)",
         (nirs_ref("nirs4all.RobustStandardNormalVariate", ref_nirs_transform("nirs4all.operators.transforms.scalers", "RobustStandardNormalVariate")),),
     ),
@@ -3176,8 +3176,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "area_norm",
         "Area normalization",
         "preprocessing",
-        py_transform(c4a.AreaNormalization, method="sum"),
-        c_same("c4a_pp_area", ctypes.c_int32(0)),
+        py_transform(n4m.AreaNormalization, method="sum"),
+        c_same("n4m_pp_area", ctypes.c_int32(0)),
         "area_normalization(X, method = 'sum')",
         (
             nirs_ref("nirs4all.AreaNormalization", ref_nirs_transform("nirs4all.operators.transforms.nirs", "AreaNormalization", method="sum")),
@@ -3187,8 +3187,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "normalize",
         "Normalize",
         "preprocessing",
-        py_transform(c4a.Normalize, feature_min=-1.0, feature_max=1.0),
-        c_same("c4a_pp_normalize", ctypes.c_double(-1.0), ctypes.c_double(1.0)),
+        py_transform(n4m.Normalize, feature_min=-1.0, feature_max=1.0),
+        c_same("n4m_pp_normalize", ctypes.c_double(-1.0), ctypes.c_double(1.0)),
         "normalize(X, feature_min = -1, feature_max = 1)",
         (nirs_ref("nirs4all.Normalize", ref_nirs_transform("nirs4all.operators.transforms.scalers", "Normalize", feature_range=(-1, 1))),),
     ),
@@ -3196,8 +3196,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "simple_scale",
         "Simple scale",
         "preprocessing",
-        py_transform(c4a.SimpleScale),
-        c_same("c4a_pp_simple_scale"),
+        py_transform(n4m.SimpleScale),
+        c_same("n4m_pp_simple_scale"),
         "simple_scale(X)",
         (
             sklearn_ref("sklearn.preprocessing.MinMaxScaler", ref_sklearn_simple_scale),
@@ -3208,22 +3208,22 @@ METHODS: tuple[MethodSpec, ...] = (
         "msc",
         "MSC",
         "preprocessing",
-        py_transform(c4a.MSC),
-        c_stateful("c4a_pp_msc"),
+        py_transform(n4m.MSC),
+        c_stateful("n4m_pp_msc"),
         "msc(X)",
         (
             r_prospectr_ref(
                 "prospectr.msc",
                 "prospectr::msc(X)",
                 compare=True,
-                gate_c4a=True,
-                contract_note="c4a MSC follows the conventional row-wise reference-spectrum contract used by prospectr",
+                gate_n4m=True,
+                contract_note="n4m MSC follows the conventional row-wise reference-spectrum contract used by prospectr",
             ),
             nirs_ref(
                 "nirs4all.MultiplicativeScatterCorrection(scale=False)",
                 ref_nirs_transform("nirs4all.operators.transforms.nirs", "MultiplicativeScatterCorrection", scale=False),
                 compare=False,
-                gate_c4a=False,
+                gate_n4m=False,
                 contract_note="current local nirs4all checkout uses a historical column-regression MSC variant",
             ),
         ),
@@ -3232,8 +3232,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "emsc",
         "EMSC",
         "preprocessing",
-        py_transform(c4a.EMSC, degree=1),
-        c_stateful("c4a_pp_emsc", ctypes.c_int32(1)),
+        py_transform(n4m.EMSC, degree=1),
+        c_stateful("n4m_pp_emsc", ctypes.c_int32(1)),
         "emsc(X, degree = 1L)",
         (nirs_ref("nirs4all.ExtendedMultiplicativeScatterCorrection(scale=False)", ref_nirs_transform("nirs4all.operators.transforms.nirs", "ExtendedMultiplicativeScatterCorrection", degree=1, scale=False)),),
     ),
@@ -3241,8 +3241,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "baseline_center",
         "Baseline center",
         "preprocessing",
-        py_transform(c4a.BaselineCenter),
-        c_stateful("c4a_pp_baseline"),
+        py_transform(n4m.BaselineCenter),
+        c_stateful("n4m_pp_baseline"),
         "baseline_center(X)",
         (nirs_ref("nirs4all.Baseline", ref_nirs_transform("nirs4all.operators.transforms.signal", "Baseline")),),
     ),
@@ -3250,8 +3250,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "savitzky_golay",
         "Savitzky-Golay",
         "preprocessing",
-        py_transform(c4a.SavitzkyGolay, window_length=11, polyorder=2, deriv=0, mode="mirror"),
-        c_same("c4a_pp_savgol", ctypes.c_int32(11), ctypes.c_int32(2), ctypes.c_int32(0), ctypes.c_double(1.0), ctypes.c_int(0), ctypes.c_double(0.0)),
+        py_transform(n4m.SavitzkyGolay, window_length=11, polyorder=2, deriv=0, mode="mirror"),
+        c_same("n4m_pp_savgol", ctypes.c_int32(11), ctypes.c_int32(2), ctypes.c_int32(0), ctypes.c_double(1.0), ctypes.c_int(0), ctypes.c_double(0.0)),
         "savitzky_golay(X, window_length = 11L, polyorder = 2L, mode = 'mirror')",
         (
             scipy_ref("scipy.signal.savgol_filter", ref_scipy_savgol),
@@ -3259,7 +3259,7 @@ METHODS: tuple[MethodSpec, ...] = (
                 "prospectr.savitzkyGolay",
                 "prospectr::savitzkyGolay(X, m = 0, p = 2, w = 11)",
                 compare=True,
-                gate_c4a=True,
+                gate_n4m=True,
                 comparator=outputs_close_savgol_valid_window,
                 contract_note="prospectr drops boundary columns; parity compares the shared valid interior window",
             ),
@@ -3267,7 +3267,7 @@ METHODS: tuple[MethodSpec, ...] = (
                 "nirs4all.SavitzkyGolay(default edge mode)",
                 ref_nirs_transform("nirs4all.operators.transforms.nirs", "SavitzkyGolay", window_length=11, polyorder=2, deriv=0, delta=1.0),
                 compare=False,
-                contract_note="nirs4all does not expose c4a's mirror edge mode; the default scipy edge contract changes boundary samples",
+                contract_note="nirs4all does not expose n4m's mirror edge mode; the default scipy edge contract changes boundary samples",
             ),
         ),
     ),
@@ -3275,8 +3275,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "first_derivative",
         "First derivative",
         "preprocessing",
-        py_transform(c4a.FirstDerivative, delta=1.0, edge_order=2),
-        c_same("c4a_pp_first_derivative", ctypes.c_double(1.0), ctypes.c_int32(2)),
+        py_transform(n4m.FirstDerivative, delta=1.0, edge_order=2),
+        c_same("n4m_pp_first_derivative", ctypes.c_double(1.0), ctypes.c_int32(2)),
         "first_derivative(X)",
         (
             nirs_ref("nirs4all.FirstDerivative", ref_nirs_transform("nirs4all.operators.transforms.nirs", "FirstDerivative", delta=1.0, edge_order=2)),
@@ -3286,47 +3286,47 @@ METHODS: tuple[MethodSpec, ...] = (
         "second_derivative",
         "Second derivative",
         "preprocessing",
-        py_transform(c4a.SecondDerivative, delta=1.0, edge_order=2),
-        c_same("c4a_pp_second_derivative", ctypes.c_double(1.0), ctypes.c_int32(2)),
+        py_transform(n4m.SecondDerivative, delta=1.0, edge_order=2),
+        c_same("n4m_pp_second_derivative", ctypes.c_double(1.0), ctypes.c_int32(2)),
         "second_derivative(X)",
         (
             nirs_ref("nirs4all.SecondDerivative", ref_nirs_transform("nirs4all.operators.transforms.nirs", "SecondDerivative", delta=1.0, edge_order=2)),
         ),
     ),
-    MethodSpec("norris_williams", "Norris-Williams", "preprocessing", py_transform(c4a.NorrisWilliams, segment=5, gap=5, derivative_order=1), c_same("c4a_pp_norris_williams", ctypes.c_int32(5), ctypes.c_int32(5), ctypes.c_int32(1), ctypes.c_double(1.0)), "norris_williams(X, segment = 5L, gap = 5L)", (nirs_ref("nirs4all.NorrisWilliams", ref_nirs_transform("nirs4all.operators.transforms.norris_williams", "NorrisWilliams", segment=5, gap=5, deriv=1, delta=1.0)),)),
+    MethodSpec("norris_williams", "Norris-Williams", "preprocessing", py_transform(n4m.NorrisWilliams, segment=5, gap=5, derivative_order=1), c_same("n4m_pp_norris_williams", ctypes.c_int32(5), ctypes.c_int32(5), ctypes.c_int32(1), ctypes.c_double(1.0)), "norris_williams(X, segment = 5L, gap = 5L)", (nirs_ref("nirs4all.NorrisWilliams", ref_nirs_transform("nirs4all.operators.transforms.norris_williams", "NorrisWilliams", segment=5, gap=5, deriv=1, delta=1.0)),)),
     MethodSpec(
         "gaussian",
         "Gaussian",
         "preprocessing",
-        py_transform(c4a.Gaussian, sigma=1.0, order=0, mode="reflect"),
-        c_same("c4a_pp_gaussian", ctypes.c_double(1.0), ctypes.c_int32(0), ctypes.c_int(0), ctypes.c_double(0.0), ctypes.c_double(4.0)),
+        py_transform(n4m.Gaussian, sigma=1.0, order=0, mode="reflect"),
+        c_same("n4m_pp_gaussian", ctypes.c_double(1.0), ctypes.c_int32(0), ctypes.c_int(0), ctypes.c_double(0.0), ctypes.c_double(4.0)),
         "gaussian(X, sigma = 1.0)",
         (
             scipy_ref("scipy.ndimage.gaussian_filter1d", ref_scipy_gaussian),
             nirs_ref("nirs4all.Gaussian", ref_nirs_transform("nirs4all.operators.transforms.signal", "Gaussian", order=0, sigma=1.0)),
         ),
     ),
-    MethodSpec("to_absorbance", "To absorbance", "preprocessing", py_transform(c4a.ToAbsorbance), c_same("c4a_pp_to_absorbance", ctypes.c_int(0), ctypes.c_double(1e-10), ctypes.c_int(1)), "to_absorbance(X)", (nirs_ref("nirs4all.ToAbsorbance", ref_nirs_transform("nirs4all.operators.transforms.signal_conversion", "ToAbsorbance", source_type="reflectance", epsilon=1e-10, clip_negative=True)),)),
-    MethodSpec("from_absorbance", "From absorbance", "preprocessing", py_transform(c4a.FromAbsorbance), c_same("c4a_pp_from_absorbance", ctypes.c_int(0)), "from_absorbance(X)", (nirs_ref("nirs4all.FromAbsorbance", ref_nirs_transform("nirs4all.operators.transforms.signal_conversion", "FromAbsorbance", target_type="reflectance")),)),
-    MethodSpec("pct_to_frac", "Percent to fraction", "preprocessing", py_transform(c4a.PercentToFraction), c_same("c4a_pp_pct_to_frac"), "percent_to_fraction(X)", (nirs_ref("nirs4all.PercentToFraction", ref_nirs_transform("nirs4all.operators.transforms.signal_conversion", "PercentToFraction")),)),
-    MethodSpec("frac_to_pct", "Fraction to percent", "preprocessing", py_transform(c4a.FractionToPercent), c_same("c4a_pp_frac_to_pct"), "fraction_to_percent(X)", (nirs_ref("nirs4all.FractionToPercent", ref_nirs_transform("nirs4all.operators.transforms.signal_conversion", "FractionToPercent")),)),
-    MethodSpec("kubelka_munk", "Kubelka-Munk", "preprocessing", py_transform(c4a.KubelkaMunk), c_same("c4a_pp_kubelka_munk", ctypes.c_int(0), ctypes.c_double(1e-10)), "kubelka_munk(X)", (nirs_ref("nirs4all.KubelkaMunk", ref_nirs_transform("nirs4all.operators.transforms.signal_conversion", "KubelkaMunk", source_type="reflectance", epsilon=1e-10)),)),
-    MethodSpec("detrend", "Detrend", "baseline", py_transform(c4a.Detrend, polyorder=1), c_same("c4a_pp_detrend", ctypes.c_int32(1)), "detrend(X, polyorder = 1L)", (scipy_ref("scipy.signal.detrend", ref_scipy_detrend), nirs_ref("nirs4all.Detrend", ref_nirs_transform("nirs4all.operators.transforms.signal", "Detrend")), r_prospectr_ref("prospectr.detrend", "prospectr::detrend(X, wav = seq_len(ncol(X)))", contract_note="prospectr combines the NIR detrend convention with its own wavelength argument contract"))),
-    MethodSpec("asls", "AsLS", "baseline", py_transform(c4a.AsLS, lam=1e5, p=0.01, max_iter=20), c_same("c4a_pp_asls", ctypes.c_double(1e5), ctypes.c_double(0.01), ctypes.c_int32(20), ctypes.c_double(1e-3)), "asls(X, lam = 1e5, p = 0.01, max_iter = 20L)", (ReferenceSpec("ref.pybaselines", "pybaselines.asls", ref_pybaselines("asls", lam=1e5, p=0.01, max_iter=20)),)),
-    MethodSpec("airpls", "AirPLS", "baseline", py_transform(c4a.AirPLS, lam=1e5, max_iter=20), c_same("c4a_pp_airpls", ctypes.c_double(1e5), ctypes.c_int32(20), ctypes.c_double(1e-3)), "airpls(X, lam = 1e5, max_iter = 20L)", (ReferenceSpec("ref.pybaselines", "pybaselines.airpls", ref_pybaselines("airpls", lam=1e5, max_iter=20)),)),
-    MethodSpec("arpls", "ArPLS", "baseline", py_transform(c4a.ArPLS, lam=1e5, max_iter=20), c_same("c4a_pp_arpls", ctypes.c_double(1e5), ctypes.c_int32(20), ctypes.c_double(1e-3)), "arpls(X, lam = 1e5, max_iter = 20L)", (ReferenceSpec("ref.pybaselines", "pybaselines.arpls", ref_pybaselines("arpls", lam=1e5, max_iter=20)),)),
-    MethodSpec("modpoly", "ModPoly", "baseline", py_transform(c4a.ModPoly, polyorder=2, max_iter=50), c_same("c4a_pp_modpoly", ctypes.c_int32(2), ctypes.c_int32(50), ctypes.c_double(1e-3)), "modpoly(X, polyorder = 2L, max_iter = 50L)", (ReferenceSpec("ref.pybaselines", "pybaselines.modpoly", ref_pybaselines("modpoly", poly_order=2, max_iter=50)),)),
-    MethodSpec("imodpoly", "IModPoly", "baseline", py_transform(c4a.IModPoly, polyorder=2, max_iter=50), c_same("c4a_pp_imodpoly", ctypes.c_int32(2), ctypes.c_int32(50), ctypes.c_double(1e-3)), "imodpoly(X, polyorder = 2L, max_iter = 50L)", (ReferenceSpec("ref.pybaselines", "pybaselines.imodpoly(mask_initial_peaks=False)", ref_pybaselines("imodpoly", poly_order=2, max_iter=50, mask_initial_peaks=False)),)),
-    MethodSpec("snip", "SNIP", "baseline", py_transform(c4a.SNIP, max_half_window=10), c_same("c4a_pp_snip", ctypes.c_int32(10)), "snip(X, max_half_window = 10L)", (
+    MethodSpec("to_absorbance", "To absorbance", "preprocessing", py_transform(n4m.ToAbsorbance), c_same("n4m_pp_to_absorbance", ctypes.c_int(0), ctypes.c_double(1e-10), ctypes.c_int(1)), "to_absorbance(X)", (nirs_ref("nirs4all.ToAbsorbance", ref_nirs_transform("nirs4all.operators.transforms.signal_conversion", "ToAbsorbance", source_type="reflectance", epsilon=1e-10, clip_negative=True)),)),
+    MethodSpec("from_absorbance", "From absorbance", "preprocessing", py_transform(n4m.FromAbsorbance), c_same("n4m_pp_from_absorbance", ctypes.c_int(0)), "from_absorbance(X)", (nirs_ref("nirs4all.FromAbsorbance", ref_nirs_transform("nirs4all.operators.transforms.signal_conversion", "FromAbsorbance", target_type="reflectance")),)),
+    MethodSpec("pct_to_frac", "Percent to fraction", "preprocessing", py_transform(n4m.PercentToFraction), c_same("n4m_pp_pct_to_frac"), "percent_to_fraction(X)", (nirs_ref("nirs4all.PercentToFraction", ref_nirs_transform("nirs4all.operators.transforms.signal_conversion", "PercentToFraction")),)),
+    MethodSpec("frac_to_pct", "Fraction to percent", "preprocessing", py_transform(n4m.FractionToPercent), c_same("n4m_pp_frac_to_pct"), "fraction_to_percent(X)", (nirs_ref("nirs4all.FractionToPercent", ref_nirs_transform("nirs4all.operators.transforms.signal_conversion", "FractionToPercent")),)),
+    MethodSpec("kubelka_munk", "Kubelka-Munk", "preprocessing", py_transform(n4m.KubelkaMunk), c_same("n4m_pp_kubelka_munk", ctypes.c_int(0), ctypes.c_double(1e-10)), "kubelka_munk(X)", (nirs_ref("nirs4all.KubelkaMunk", ref_nirs_transform("nirs4all.operators.transforms.signal_conversion", "KubelkaMunk", source_type="reflectance", epsilon=1e-10)),)),
+    MethodSpec("detrend", "Detrend", "baseline", py_transform(n4m.Detrend, polyorder=1), c_same("n4m_pp_detrend", ctypes.c_int32(1)), "detrend(X, polyorder = 1L)", (scipy_ref("scipy.signal.detrend", ref_scipy_detrend), nirs_ref("nirs4all.Detrend", ref_nirs_transform("nirs4all.operators.transforms.signal", "Detrend")), r_prospectr_ref("prospectr.detrend", "prospectr::detrend(X, wav = seq_len(ncol(X)))", contract_note="prospectr combines the NIR detrend convention with its own wavelength argument contract"))),
+    MethodSpec("asls", "AsLS", "baseline", py_transform(n4m.AsLS, lam=1e5, p=0.01, max_iter=20), c_same("n4m_pp_asls", ctypes.c_double(1e5), ctypes.c_double(0.01), ctypes.c_int32(20), ctypes.c_double(1e-3)), "asls(X, lam = 1e5, p = 0.01, max_iter = 20L)", (ReferenceSpec("ref.pybaselines", "pybaselines.asls", ref_pybaselines("asls", lam=1e5, p=0.01, max_iter=20)),)),
+    MethodSpec("airpls", "AirPLS", "baseline", py_transform(n4m.AirPLS, lam=1e5, max_iter=20), c_same("n4m_pp_airpls", ctypes.c_double(1e5), ctypes.c_int32(20), ctypes.c_double(1e-3)), "airpls(X, lam = 1e5, max_iter = 20L)", (ReferenceSpec("ref.pybaselines", "pybaselines.airpls", ref_pybaselines("airpls", lam=1e5, max_iter=20)),)),
+    MethodSpec("arpls", "ArPLS", "baseline", py_transform(n4m.ArPLS, lam=1e5, max_iter=20), c_same("n4m_pp_arpls", ctypes.c_double(1e5), ctypes.c_int32(20), ctypes.c_double(1e-3)), "arpls(X, lam = 1e5, max_iter = 20L)", (ReferenceSpec("ref.pybaselines", "pybaselines.arpls", ref_pybaselines("arpls", lam=1e5, max_iter=20)),)),
+    MethodSpec("modpoly", "ModPoly", "baseline", py_transform(n4m.ModPoly, polyorder=2, max_iter=50), c_same("n4m_pp_modpoly", ctypes.c_int32(2), ctypes.c_int32(50), ctypes.c_double(1e-3)), "modpoly(X, polyorder = 2L, max_iter = 50L)", (ReferenceSpec("ref.pybaselines", "pybaselines.modpoly", ref_pybaselines("modpoly", poly_order=2, max_iter=50)),)),
+    MethodSpec("imodpoly", "IModPoly", "baseline", py_transform(n4m.IModPoly, polyorder=2, max_iter=50), c_same("n4m_pp_imodpoly", ctypes.c_int32(2), ctypes.c_int32(50), ctypes.c_double(1e-3)), "imodpoly(X, polyorder = 2L, max_iter = 50L)", (ReferenceSpec("ref.pybaselines", "pybaselines.imodpoly(mask_initial_peaks=False)", ref_pybaselines("imodpoly", poly_order=2, max_iter=50, mask_initial_peaks=False)),)),
+    MethodSpec("snip", "SNIP", "baseline", py_transform(n4m.SNIP, max_half_window=10), c_same("n4m_pp_snip", ctypes.c_int32(10)), "snip(X, max_half_window = 10L)", (
         ReferenceSpec(
             "ref.pybaselines",
             "pybaselines.snip(raw)",
             ref_pybaselines("snip", max_half_window=10),
         ),
     )),
-    MethodSpec("rolling_ball", "Rolling ball", "baseline", py_transform(c4a.RollingBall, half_window=10, smooth_half_window=0), c_same("c4a_pp_rolling_ball", ctypes.c_int32(10), ctypes.c_int32(0)), "rolling_ball(X, half_window = 10L, smooth_half_window = 0L)", (ReferenceSpec("ref.pybaselines", "pybaselines.rolling_ball", ref_pybaselines("rolling_ball", half_window=10, smooth_half_window=0)),)),
-    MethodSpec("iasls", "IAsLS", "baseline", py_transform(c4a.IAsLS, lam=1e5, p=0.01, lam_1=1e-4, polyorder=2, diff_order=2, max_iter=20), lambda ctx: lambda: c_iasls(ctx), "iasls(X, lam = 1e5, p = 0.01, lam_1 = 1e-4, polyorder = 2L, diff_order = 2L, max_iter = 20L)", (ReferenceSpec("ref.pybaselines", "pybaselines.iasls", ref_pybaselines("iasls", lam=1e5, p=0.01, lam_1=1e-4, diff_order=2, max_iter=20)),), comparator=outputs_close_iasls),
-    MethodSpec("beads", "BEADS", "baseline", py_transform(c4a.BEADS, lam_0=100.0, lam_1=0.5, lam_2=0.5, max_iter=20), c_same("c4a_pp_beads", ctypes.c_double(100.0), ctypes.c_double(0.5), ctypes.c_double(0.5), ctypes.c_int32(20), ctypes.c_double(1e-3)), "beads(X, max_iter = 20L)", (
+    MethodSpec("rolling_ball", "Rolling ball", "baseline", py_transform(n4m.RollingBall, half_window=10, smooth_half_window=0), c_same("n4m_pp_rolling_ball", ctypes.c_int32(10), ctypes.c_int32(0)), "rolling_ball(X, half_window = 10L, smooth_half_window = 0L)", (ReferenceSpec("ref.pybaselines", "pybaselines.rolling_ball", ref_pybaselines("rolling_ball", half_window=10, smooth_half_window=0)),)),
+    MethodSpec("iasls", "IAsLS", "baseline", py_transform(n4m.IAsLS, lam=1e5, p=0.01, lam_1=1e-4, polyorder=2, diff_order=2, max_iter=20), lambda ctx: lambda: c_iasls(ctx), "iasls(X, lam = 1e5, p = 0.01, lam_1 = 1e-4, polyorder = 2L, diff_order = 2L, max_iter = 20L)", (ReferenceSpec("ref.pybaselines", "pybaselines.iasls", ref_pybaselines("iasls", lam=1e5, p=0.01, lam_1=1e-4, diff_order=2, max_iter=20)),), comparator=outputs_close_iasls),
+    MethodSpec("beads", "BEADS", "baseline", py_transform(n4m.BEADS, lam_0=100.0, lam_1=0.5, lam_2=0.5, max_iter=20), c_same("n4m_pp_beads", ctypes.c_double(100.0), ctypes.c_double(0.5), ctypes.c_double(0.5), ctypes.c_int32(20), ctypes.c_double(1e-3)), "beads(X, max_iter = 20L)", (
         ReferenceSpec(
             "ref.pybaselines",
             "pybaselines.beads(full)",
@@ -3337,8 +3337,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "wavelet",
         "Wavelet",
         "wavelet",
-        py_transform(c4a.Wavelet, family="haar", mode="periodization"),
-        c_same("c4a_pp_wavelet", ctypes.c_int(0), ctypes.c_int(0)),
+        py_transform(n4m.Wavelet, family="haar", mode="periodization"),
+        c_same("n4m_pp_wavelet", ctypes.c_int(0), ctypes.c_int(0)),
         "wavelet(X, family = 'haar', boundary = 'periodization')",
         (
             pywavelets_ref("PyWavelets.dwt(haar, periodization)", ref_pywavelets_wavelet),
@@ -3346,7 +3346,7 @@ METHODS: tuple[MethodSpec, ...] = (
                 "nirs4all.Wavelet(detail-resampled)",
                 ref_nirs_transform("nirs4all.operators.transforms.nirs", "Wavelet", wavelet="haar", mode="periodization"),
                 compare=False,
-                contract_note="nirs4all returns resampled detail coefficients only; c4a/PyWavelets gate the concatenated approximation+detail coefficients",
+                contract_note="nirs4all returns resampled detail coefficients only; n4m/PyWavelets gate the concatenated approximation+detail coefficients",
             ),
         ),
     ),
@@ -3354,8 +3354,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "haar",
         "Haar",
         "wavelet",
-        py_transform(c4a.Haar),
-        c_same("c4a_pp_haar"),
+        py_transform(n4m.Haar),
+        c_same("n4m_pp_haar"),
         "haar(X)",
         (
             pywavelets_ref("PyWavelets.dwt(haar, periodization)", ref_pywavelets_haar),
@@ -3363,7 +3363,7 @@ METHODS: tuple[MethodSpec, ...] = (
                 "nirs4all.Haar(detail-resampled)",
                 ref_nirs_transform("nirs4all.operators.transforms.nirs", "Haar"),
                 compare=False,
-                contract_note="nirs4all returns resampled detail coefficients only; c4a/PyWavelets gate the concatenated approximation+detail coefficients",
+                contract_note="nirs4all returns resampled detail coefficients only; n4m/PyWavelets gate the concatenated approximation+detail coefficients",
             ),
         ),
     ),
@@ -3371,8 +3371,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "wavelet_denoise",
         "Wavelet denoise",
         "wavelet",
-        py_transform(c4a.WaveletDenoise, family="db4", mode="periodization", level=2),
-        c_same("c4a_pp_wavelet_denoise", ctypes.c_int(1), ctypes.c_int(0), ctypes.c_int32(2), ctypes.c_int(0), ctypes.c_int(0)),
+        py_transform(n4m.WaveletDenoise, family="db4", mode="periodization", level=2),
+        c_same("n4m_pp_wavelet_denoise", ctypes.c_int(1), ctypes.c_int(0), ctypes.c_int32(2), ctypes.c_int(0), ctypes.c_int(0)),
         "wavelet_denoise(X, level = 2L)",
         (
             pywavelets_ref("PyWavelets.wavedec/waverec(db4, periodization)", ref_pywavelets_denoise),
@@ -3383,7 +3383,7 @@ METHODS: tuple[MethodSpec, ...] = (
         "wavelet_features",
         "Wavelet features",
         "wavelet",
-        py_transform(c4a.WaveletFeatures, family="haar", mode="symmetric", max_level=2, entropy="histogram"),
+        py_transform(n4m.WaveletFeatures, family="haar", mode="symmetric", max_level=2, entropy="histogram"),
         lambda ctx: lambda: c_wavelet_features(ctx, mode=1, entropy=1),
         "wavelet_features(X, family = 'haar', boundary = 'symmetric', max_level = 2L, entropy = 'histogram')",
         (
@@ -3391,7 +3391,7 @@ METHODS: tuple[MethodSpec, ...] = (
             nirs_ref("nirs4all.WaveletFeatures(n_coeffs_per_level=0)", ref_nirs_transform("nirs4all.operators.transforms.nirs", "WaveletFeatures", wavelet="haar", max_level=2, n_coeffs_per_level=0)),
         ),
     ),
-    MethodSpec("osc", "OSC", "feature_extraction", py_osc, lambda ctx: lambda: c_fit_y_transform("c4a_pp_osc", ctx.X, ctx.y, ctypes.c_int32(1), ctypes.c_int(1)), "osc(X, y, n_components = 1L, scale = TRUE)", (nirs_ref("nirs4all.OSC", ref_nirs_osc),)),
+    MethodSpec("osc", "OSC", "feature_extraction", py_osc, lambda ctx: lambda: c_fit_y_transform("n4m_pp_osc", ctx.X, ctx.y, ctypes.c_int32(1), ctypes.c_int(1)), "osc(X, y, n_components = 1L, scale = TRUE)", (nirs_ref("nirs4all.OSC", ref_nirs_osc),)),
     MethodSpec(
         "epo",
         "EPO",
@@ -3401,8 +3401,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "epo(X, d, scale = TRUE)",
         (nirs_ref("nirs4all.EPO", ref_nirs_epo),),
     ),
-    MethodSpec("flexible_pca", "Flexible PCA", "feature_extraction", py_transform(c4a.FlexiblePCA, n_components=5.0), lambda ctx: lambda: c_flexible("c4a_pp_flex_pca", ctx, 5.0), "flexible_pca(X, n_components = 5.0)", (sklearn_ref("sklearn.decomposition.PCA", ref_sklearn_flexible_pca), nirs_ref("nirs4all.FlexiblePCA", ref_nirs_transform("nirs4all.operators.transforms.feature_selection", "FlexiblePCA", n_components=5, svd_solver="full"))), comparator=outputs_close_sign_invariant_columns),
-    MethodSpec("flexible_svd", "Flexible SVD", "feature_extraction", py_transform(c4a.FlexibleSVD, n_components=5.0), lambda ctx: lambda: c_flexible("c4a_pp_flex_svd", ctx, 5.0), "flexible_svd(X, n_components = 5.0)", (sklearn_ref("sklearn.decomposition.TruncatedSVD", ref_sklearn_flexible_svd), nirs_ref("nirs4all.FlexibleSVD", ref_nirs_transform("nirs4all.operators.transforms.feature_selection", "FlexibleSVD", n_components=5, algorithm="arpack", random_state=0))), comparator=outputs_close_sign_invariant_columns),
+    MethodSpec("flexible_pca", "Flexible PCA", "feature_extraction", py_transform(n4m.FlexiblePCA, n_components=5.0), lambda ctx: lambda: c_flexible("n4m_pp_flex_pca", ctx, 5.0), "flexible_pca(X, n_components = 5.0)", (sklearn_ref("sklearn.decomposition.PCA", ref_sklearn_flexible_pca), nirs_ref("nirs4all.FlexiblePCA", ref_nirs_transform("nirs4all.operators.transforms.feature_selection", "FlexiblePCA", n_components=5, svd_solver="full"))), comparator=outputs_close_sign_invariant_columns),
+    MethodSpec("flexible_svd", "Flexible SVD", "feature_extraction", py_transform(n4m.FlexibleSVD, n_components=5.0), lambda ctx: lambda: c_flexible("n4m_pp_flex_svd", ctx, 5.0), "flexible_svd(X, n_components = 5.0)", (sklearn_ref("sklearn.decomposition.TruncatedSVD", ref_sklearn_flexible_svd), nirs_ref("nirs4all.FlexibleSVD", ref_nirs_transform("nirs4all.operators.transforms.feature_selection", "FlexibleSVD", n_components=5, algorithm="arpack", random_state=0))), comparator=outputs_close_sign_invariant_columns),
     MethodSpec("fck_static", "FCK static", "feature_extraction", py_fck, lambda ctx: lambda: c_fck_static(ctx), "fck_static(X, kernel_size = 5L, filter_orders = c(0.5, 1.0), filter_scales = c(1.0, 2.0))", (
         nirs_ref(
             "nirs4all.FCKStaticTransformer",
@@ -3413,9 +3413,9 @@ METHODS: tuple[MethodSpec, ...] = (
         "direct_standardization",
         "Direct standardization",
         "calibration_transfer",
-        py_paired_transfer(c4a.DirectStandardization),
+        py_paired_transfer(n4m.DirectStandardization),
         lambda ctx: lambda: c_paired_transfer(
-            "c4a_pp_direct_standardization", ctx,
+            "n4m_pp_direct_standardization", ctx,
             ctypes.c_int(1), ctypes.c_double(0.0)
         ),
         "{target <- 1.05 * X + 0.1; direct_standardization(X, target, X, fit_intercept = TRUE, ridge = 0.0)}",
@@ -3429,9 +3429,9 @@ METHODS: tuple[MethodSpec, ...] = (
         "robust_direct_standardization",
         "Robust direct standardization",
         "calibration_transfer",
-        py_paired_transfer(c4a.RobustDirectStandardization, max_iter=2),
+        py_paired_transfer(n4m.RobustDirectStandardization, max_iter=2),
         lambda ctx: lambda: c_paired_transfer(
-            "c4a_pp_robust_direct_standardization", ctx,
+            "n4m_pp_robust_direct_standardization", ctx,
             ctypes.c_int(1), ctypes.c_double(0.0), ctypes.c_double(0.9),
             ctypes.c_int32(2)
         ),
@@ -3440,7 +3440,7 @@ METHODS: tuple[MethodSpec, ...] = (
             sklearn_ref(
                 "sklearn.linear_model.LinearRegression(iterative residual trimming)",
                 ref_sklearn_robust_direct_standardization,
-                contract_note="sklearn supplies the OLS fit; the adapter applies C4A's documented residual-trimming contract",
+                contract_note="sklearn supplies the OLS fit; the adapter applies N4M's documented residual-trimming contract",
             ),
         ),
         max_cols=96,
@@ -3449,9 +3449,9 @@ METHODS: tuple[MethodSpec, ...] = (
         "piecewise_direct_standardization",
         "Piecewise direct standardization",
         "calibration_transfer",
-        py_paired_transfer(c4a.PiecewiseDirectStandardization, window_size=5),
+        py_paired_transfer(n4m.PiecewiseDirectStandardization, window_size=5),
         lambda ctx: lambda: c_paired_transfer(
-            "c4a_pp_piecewise_direct_standardization", ctx,
+            "n4m_pp_piecewise_direct_standardization", ctx,
             ctypes.c_int32(5), ctypes.c_int(1), ctypes.c_double(0.0)
         ),
         "{target <- 1.05 * X + 0.1; piecewise_direct_standardization(X, target, X, window_size = 5L, fit_intercept = TRUE, ridge = 0.0)}",
@@ -3459,14 +3459,14 @@ METHODS: tuple[MethodSpec, ...] = (
             sklearn_ref(
                 "sklearn.linear_model.LinearRegression(local windows)",
                 ref_sklearn_piecewise_direct_standardization,
-                contract_note="sklearn supplies each local least-squares transfer model for the C4A PDS contract",
+                contract_note="sklearn supplies each local least-squares transfer model for the N4M PDS contract",
             ),
             pycaltransfer_ref(
                 "pycaltransfer.pds_pls_transfer_fit",
                 ref_pycaltransfer_piecewise_direct_standardization,
                 compare=False,
-                gate_c4a=False,
-                contract_note="pycaltransfer exposes the PDS-PLS variant; C4A's current PiecewiseDirectStandardization contract is local OLS and is gated by sklearn above",
+                gate_n4m=False,
+                contract_note="pycaltransfer exposes the PDS-PLS variant; N4M's current PiecewiseDirectStandardization contract is local OLS and is gated by sklearn above",
                 max_cols=96,
             ),
         ),
@@ -3476,9 +3476,9 @@ METHODS: tuple[MethodSpec, ...] = (
         "score_augmented_projection_standardization",
         "Score-augmented projection standardization",
         "calibration_transfer",
-        py_paired_transfer(c4a.ScoreAugmentedProjectionStandardization, n_components=3),
+        py_paired_transfer(n4m.ScoreAugmentedProjectionStandardization, n_components=3),
         lambda ctx: lambda: c_paired_transfer(
-            "c4a_pp_saps", ctx,
+            "n4m_pp_saps", ctx,
             ctypes.c_int32(3), ctypes.c_double(1.0), ctypes.c_int(1),
             ctypes.c_double(0.0)
         ),
@@ -3508,8 +3508,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "local_centering",
         "Local centering",
         "calibration_transfer",
-        py_paired_transfer(c4a.LocalCentering),
-        lambda ctx: lambda: c_paired_transfer("c4a_pp_local_centering", ctx),
+        py_paired_transfer(n4m.LocalCentering),
+        lambda ctx: lambda: c_paired_transfer("n4m_pp_local_centering", ctx),
         "{target <- 1.05 * X + 0.1; local_centering(X, target, X)}",
         (
             sklearn_ref(
@@ -3536,9 +3536,9 @@ METHODS: tuple[MethodSpec, ...] = (
         "variable_sorting_normalization",
         "Variable sorting normalization",
         "preprocessing",
-        py_transform(c4a.VariableSortingNormalization),
+        py_transform(n4m.VariableSortingNormalization),
         lambda ctx: lambda: c_transform(
-            "c4a_pp_vsn", ctx.X, ctypes.c_double(1e-12), fit_X=ctx.X
+            "n4m_pp_vsn", ctx.X, ctypes.c_double(1e-12), fit_X=ctx.X
         ),
         "variable_sorting_normalization(X, eps = 1e-12)",
         (
@@ -3552,9 +3552,9 @@ METHODS: tuple[MethodSpec, ...] = (
         "piecewise_snv",
         "Piecewise SNV",
         "preprocessing",
-        py_transform(c4a.PiecewiseSNV, window_size=16),
+        py_transform(n4m.PiecewiseSNV, window_size=16),
         lambda ctx: lambda: c_transform(
-            "c4a_pp_piecewise_snv", ctx.X, ctypes.c_int32(16),
+            "n4m_pp_piecewise_snv", ctx.X, ctypes.c_int32(16),
             ctypes.c_int32(0), ctypes.c_double(1e-12), fit_X=ctx.X
         ),
         "piecewise_snv(X, window = 16L, ddof = 0L, eps = 1e-12)",
@@ -3562,7 +3562,7 @@ METHODS: tuple[MethodSpec, ...] = (
             nirs_ref(
                 "nirs4all.StandardNormalVariate(ddof=0) per interval",
                 ref_nirs_piecewise_snv,
-                contract_note="nirs4all supplies the SNV transform; the adapter applies it independently to C4A intervals",
+                contract_note="nirs4all supplies the SNV transform; the adapter applies it independently to N4M intervals",
             ),
         ),
     ),
@@ -3570,9 +3570,9 @@ METHODS: tuple[MethodSpec, ...] = (
         "piecewise_msc",
         "Piecewise MSC",
         "preprocessing",
-        py_transform(c4a.PiecewiseMSC, window_size=16),
+        py_transform(n4m.PiecewiseMSC, window_size=16),
         lambda ctx: lambda: c_transform(
-            "c4a_pp_piecewise_msc", ctx.X, _null_f64_ptr(), ctypes.c_int64(0),
+            "n4m_pp_piecewise_msc", ctx.X, _null_f64_ptr(), ctypes.c_int64(0),
             ctypes.c_int32(16), ctypes.c_double(1e-12), fit_X=ctx.X
         ),
         "piecewise_msc(X, reference = NULL, window = 16L, eps = 1e-12)",
@@ -3580,13 +3580,13 @@ METHODS: tuple[MethodSpec, ...] = (
             sklearn_ref(
                 "sklearn.linear_model.LinearRegression(MSC per interval)",
                 ref_sklearn_piecewise_msc,
-                contract_note="sklearn supplies the per-row least-squares fit for each C4A piecewise MSC interval",
+                contract_note="sklearn supplies the per-row least-squares fit for each N4M piecewise MSC interval",
             ),
             r_prospectr_ref(
                 "prospectr.msc per interval",
                 "{out <- matrix(NA_real_, nrow=nrow(X), ncol=ncol(X)); for (lo in seq(1L, ncol(X), by=16L)) { hi <- min(ncol(X), lo + 16L - 1L); out[, lo:hi] <- prospectr::msc(X[, lo:hi, drop=FALSE], ref_spectrum = colMeans(X)[lo:hi]); }; out}",
                 compare=True,
-                gate_c4a=True,
+                gate_n4m=True,
                 contract_note="prospectr supplies the MSC transform; gated on small matrices because its Armadillo normal-equation solver drifts above 1e-6 on ill-conditioned 16-column windows",
                 max_cols=96,
             ),
@@ -3596,9 +3596,9 @@ METHODS: tuple[MethodSpec, ...] = (
         "localized_msc",
         "Localized MSC",
         "preprocessing",
-        py_transform(c4a.LocalizedMSC, window_size=17),
+        py_transform(n4m.LocalizedMSC, window_size=17),
         lambda ctx: lambda: c_transform(
-            "c4a_pp_localized_msc", ctx.X, _null_f64_ptr(), ctypes.c_int64(0),
+            "n4m_pp_localized_msc", ctx.X, _null_f64_ptr(), ctypes.c_int64(0),
             ctypes.c_int32(17), ctypes.c_double(1e-12), fit_X=ctx.X
         ),
         "localized_msc(X, reference = NULL, window = 17L, eps = 1e-12)",
@@ -3606,21 +3606,21 @@ METHODS: tuple[MethodSpec, ...] = (
             sklearn_ref(
                 "sklearn.linear_model.LinearRegression(sliding local MSC)",
                 ref_sklearn_localized_msc,
-                contract_note="sklearn supplies the per-window least-squares fit for C4A localized MSC",
+                contract_note="sklearn supplies the per-window least-squares fit for N4M localized MSC",
             ),
             r_prospectr_ref(
                 "prospectr.msc sliding interval",
                 "{ref <- colMeans(X); out <- matrix(NA_real_, nrow=nrow(X), ncol=ncol(X)); half <- 17L %/% 2L; for (j in seq_len(ncol(X))) { lo <- max(1L, j - half); hi <- min(ncol(X), j + half); tmp <- prospectr::msc(X[, lo:hi, drop=FALSE], ref_spectrum = ref[lo:hi]); out[, j] <- tmp[, j - lo + 1L]; }; out}",
                 compare=True,
-                gate_c4a=True,
-                contract_note="prospectr supplies the MSC transform over each local C4A window",
+                gate_n4m=True,
+                contract_note="prospectr supplies the MSC transform over each local N4M window",
                 max_cols=96,
             ),
             scipy_ref(
                 "scipy.ndimage.convolve1d(local MSC window sums)",
                 ref_scipy_localized_msc,
                 compare=False,
-                gate_c4a=False,
+                gate_n4m=False,
                 contract_note="SciPy supplies moving-window sums, but the raw-sum contract is numerically unstable on near-singular windows; sklearn is the strict gate",
             ),
         ),
@@ -3629,9 +3629,9 @@ METHODS: tuple[MethodSpec, ...] = (
         "cross_correlation_alignment",
         "Cross-correlation alignment",
         "alignment",
-        py_transform(c4a.CrossCorrelationAlignment, max_shift=2),
+        py_transform(n4m.CrossCorrelationAlignment, max_shift=2),
         lambda ctx: lambda: c_transform(
-            "c4a_pp_xcorr_align", ctx.X, _null_f64_ptr(), ctypes.c_int64(0),
+            "n4m_pp_xcorr_align", ctx.X, _null_f64_ptr(), ctypes.c_int64(0),
             ctypes.c_int32(0), ctypes.c_int32(2), fit_X=ctx.X
         ),
         "cross_correlation_alignment(X, reference = NULL, interval_size = 0L, max_shift = 2L)",
@@ -3647,9 +3647,9 @@ METHODS: tuple[MethodSpec, ...] = (
         "icoshift_alignment",
         "Icoshift alignment",
         "alignment",
-        py_transform(c4a.IcoshiftAlignment, interval_size=16, max_shift=2),
+        py_transform(n4m.IcoshiftAlignment, interval_size=16, max_shift=2),
         lambda ctx: lambda: c_transform(
-            "c4a_pp_icoshift_align", ctx.X, _null_f64_ptr(), ctypes.c_int64(0),
+            "n4m_pp_icoshift_align", ctx.X, _null_f64_ptr(), ctypes.c_int64(0),
             ctypes.c_int32(16), ctypes.c_int32(2), fit_X=ctx.X
         ),
         "icoshift_alignment(X, reference = NULL, interval_size = 16L, max_shift = 2L)",
@@ -3657,7 +3657,7 @@ METHODS: tuple[MethodSpec, ...] = (
             scipy_ref(
                 "scipy.ndimage.shift(interval-correlation shift search)",
                 ref_scipy_icoshift_alignment,
-                contract_note="SciPy supplies the edge-clamped interpolation used inside each C4A interval",
+                contract_note="SciPy supplies the edge-clamped interpolation used inside each N4M interval",
             ),
         ),
     ),
@@ -3665,9 +3665,9 @@ METHODS: tuple[MethodSpec, ...] = (
         "dynamic_time_warping_alignment",
         "Dynamic time warping alignment",
         "alignment",
-        py_transform(c4a.DynamicTimeWarpingAlignment),
+        py_transform(n4m.DynamicTimeWarpingAlignment),
         lambda ctx: lambda: c_transform(
-            "c4a_pp_dtw_align", ctx.X, _null_f64_ptr(), ctypes.c_int64(0),
+            "n4m_pp_dtw_align", ctx.X, _null_f64_ptr(), ctypes.c_int64(0),
             ctypes.c_int32(0), ctypes.c_int32(0), fit_X=ctx.X
         ),
         "dynamic_time_warping_alignment(X, reference = NULL, interval_size = 0L, max_shift = 0L)",
@@ -3678,7 +3678,7 @@ METHODS: tuple[MethodSpec, ...] = (
                 ref_dtw_python_alignment,
                 contract_note=(
                     "dtw-python provides the DTW path; the parity adapter maps that "
-                    "external path to c4a's fixed-length output by averaging query "
+                    "external path to n4m's fixed-length output by averaging query "
                     "samples assigned to each reference index"
                 ),
                 max_cols=96,
@@ -3690,9 +3690,9 @@ METHODS: tuple[MethodSpec, ...] = (
         "correlation_optimized_warping",
         "Correlation optimized warping",
         "alignment",
-        py_transform(c4a.CorrelationOptimizedWarping, interval_size=16, max_shift=2),
+        py_transform(n4m.CorrelationOptimizedWarping, interval_size=16, max_shift=2),
         lambda ctx: lambda: c_transform(
-            "c4a_pp_cow_align", ctx.X, _null_f64_ptr(), ctypes.c_int64(0),
+            "n4m_pp_cow_align", ctx.X, _null_f64_ptr(), ctypes.c_int64(0),
             ctypes.c_int32(16), ctypes.c_int32(2), fit_X=ctx.X
         ),
         "correlation_optimized_warping(X, reference = NULL, interval_size = 16L, max_shift = 2L)",
@@ -3711,7 +3711,7 @@ METHODS: tuple[MethodSpec, ...] = (
         "Variance filter",
         "feature_selection",
         py_variance_filter,
-        lambda ctx: lambda: c_selector("c4a_filter_variance", ctx, threshold=0.0),
+        lambda ctx: lambda: c_selector("n4m_filter_variance", ctx, threshold=0.0),
         "variance_filter(X, threshold = 0.0, top_k = 0L)",
         (sklearn_ref("sklearn.feature_selection.VarianceThreshold", ref_sklearn_variance_threshold),),
     ),
@@ -3721,7 +3721,7 @@ METHODS: tuple[MethodSpec, ...] = (
         "feature_selection",
         py_correlation_filter,
         lambda ctx: lambda: c_selector(
-            "c4a_filter_correlation", ctx, top_k=min(5, ctx.X.shape[1])
+            "n4m_filter_correlation", ctx, top_k=min(5, ctx.X.shape[1])
         ),
         "correlation_filter(X, y, threshold = 0.0, top_k = min(5L, ncol(X)))",
         (sklearn_ref("sklearn.feature_selection.r_regression", ref_sklearn_correlation_filter),),
@@ -3737,7 +3737,7 @@ METHODS: tuple[MethodSpec, ...] = (
             sklearn_ref(
                 "sklearn.compose.ColumnTransformer(passthrough intervals)",
                 ref_sklearn_interval_generator,
-                contract_note="sklearn supplies the column-selection transformer; the adapter returns C4A's list-of-intervals contract",
+                contract_note="sklearn supplies the column-selection transformer; the adapter returns N4M's list-of-intervals contract",
             ),
         ),
     ),
@@ -3765,14 +3765,14 @@ METHODS: tuple[MethodSpec, ...] = (
             "nirs4all.XOutlierFilter(PCA auto)",
             ref_nirs_x_outlier,
             compare=False,
-            contract_note="nirs4all leaves sklearn PCA on auto solver, which switches solver on wide matrices; c4a gates the full-SVD PCA contract",
+            contract_note="nirs4all leaves sklearn PCA on auto solver, which switches solver on wide matrices; n4m gates the full-SVD PCA contract",
         ),
     )),
     MethodSpec(
         "log_transform",
         "Log transform",
         "preprocessing",
-        py_transform(c4a.LogTransform, base=0.0, offset=0.0, auto_offset=True, min_value=1e-8),
+        py_transform(n4m.LogTransform, base=0.0, offset=0.0, auto_offset=True, min_value=1e-8),
         lambda ctx: lambda: c_log_transform(ctx),
         None,
         (
@@ -3784,7 +3784,7 @@ METHODS: tuple[MethodSpec, ...] = (
         "derivate",
         "Derivate",
         "preprocessing",
-        py_transform(c4a.Derivate, order=1, delta=1.0),
+        py_transform(n4m.Derivate, order=1, delta=1.0),
         lambda ctx: lambda: c_derivate(ctx),
         None,
         (
@@ -3793,8 +3793,8 @@ METHODS: tuple[MethodSpec, ...] = (
                 "nirs4all.Derivate(same-width)",
                 ref_nirs_transform("nirs4all.operators.transforms.scalers", "Derivate", order=1, delta=1),
                 compare=False,
-                gate_c4a=False,
-                contract_note="nirs4all pads/interpolates back to the input width; c4a exposes the strict finite-difference width p-1 and gates NumPy",
+                gate_n4m=False,
+                contract_note="nirs4all pads/interpolates back to the input width; n4m exposes the strict finite-difference width p-1 and gates NumPy",
                 max_cols=512,
             ),
         ),
@@ -3803,8 +3803,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "wavelet_pca",
         "Wavelet PCA",
         "wavelet",
-        py_transform(c4a.WaveletPCA, family="haar", mode="periodization", max_level=2, n_components=5.0),
-        lambda ctx: lambda: c_wavelet_projection("c4a_pp_wavelet_pca", ctx),
+        py_transform(n4m.WaveletPCA, family="haar", mode="periodization", max_level=2, n_components=5.0),
+        lambda ctx: lambda: c_wavelet_projection("n4m_pp_wavelet_pca", ctx),
         None,
         (
             pywavelets_ref(
@@ -3816,8 +3816,8 @@ METHODS: tuple[MethodSpec, ...] = (
                 "nirs4all.WaveletPCA(per-level contract)",
                 ref_nirs_transform("nirs4all.operators.transforms.nirs", "WaveletPCA", wavelet="haar", max_level=2, n_components_per_level=3),
                 compare=False,
-                gate_c4a=False,
-                contract_note="nirs4all fits per-level PCA blocks; c4a gates the flattened-DWT PCA contract with PyWavelets+sklearn",
+                gate_n4m=False,
+                contract_note="nirs4all fits per-level PCA blocks; n4m gates the flattened-DWT PCA contract with PyWavelets+sklearn",
                 max_cols=512,
             ),
         ),
@@ -3828,8 +3828,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "wavelet_svd",
         "Wavelet SVD",
         "wavelet",
-        py_transform(c4a.WaveletSVD, family="haar", mode="periodization", max_level=2, n_components=5.0),
-        lambda ctx: lambda: c_wavelet_projection("c4a_pp_wavelet_svd", ctx),
+        py_transform(n4m.WaveletSVD, family="haar", mode="periodization", max_level=2, n_components=5.0),
+        lambda ctx: lambda: c_wavelet_projection("n4m_pp_wavelet_svd", ctx),
         None,
         (
             pywavelets_ref(
@@ -3841,8 +3841,8 @@ METHODS: tuple[MethodSpec, ...] = (
                 "nirs4all.WaveletSVD(per-level contract)",
                 ref_nirs_transform("nirs4all.operators.transforms.nirs", "WaveletSVD", wavelet="haar", max_level=2, n_components_per_level=3),
                 compare=False,
-                gate_c4a=False,
-                contract_note="nirs4all fits per-level SVD blocks; c4a gates the flattened-DWT SVD contract with PyWavelets+sklearn",
+                gate_n4m=False,
+                contract_note="nirs4all fits per-level SVD blocks; n4m gates the flattened-DWT SVD contract with PyWavelets+sklearn",
                 max_cols=512,
             ),
         ),
@@ -3857,13 +3857,13 @@ METHODS: tuple[MethodSpec, ...] = (
     MethodSpec("nirs_metrics", "NIRS metrics", "metric", py_nirs_metrics, lambda ctx: lambda: c_nirs_metrics(ctx), None, (numpy_ref("NumPy regression metric formulae", ref_numpy_nirs_metrics),)),
     MethodSpec("transfer_metrics", "Transfer metrics", "metric", py_transfer_metrics, lambda ctx: lambda: c_transfer_metrics(ctx), None, (nirs_ref("nirs4all.TransferMetricsComputer", ref_nirs_transfer_metrics),), max_cols=512),
     MethodSpec("signal_type_detector", "Signal type detector", "diagnostic", py_signal_type, lambda ctx: lambda: c_signal_type(ctx), None, (nirs_ref("nirs4all.detect_signal_type", ref_nirs_signal_type),)),
-    MethodSpec("rng_pcg64", "PCG64 RNG", "utility", lambda ctx: lambda: c4a_python.rng_pcg64(seed=ctx.seed, n=1024), lambda ctx: lambda: c_rng_pcg64(ctx), None, (numpy_ref("numpy.random.default_rng(PCG64).standard_normal", ref_numpy_rng_pcg64),)),
+    MethodSpec("rng_pcg64", "PCG64 RNG", "utility", lambda ctx: lambda: n4m_python.rng_pcg64(seed=ctx.seed, n=1024), lambda ctx: lambda: c_rng_pcg64(ctx), None, (numpy_ref("numpy.random.default_rng(PCG64).standard_normal", ref_numpy_rng_pcg64),)),
     MethodSpec(
         "aug_gaussian_noise",
         "Gaussian additive noise",
         "augmentation",
-        py_transform(c4a.GaussianAdditiveNoise, sigma=0.01, seed=17),
-        lambda ctx: lambda: c_aug_apply("c4a_aug_gaussian_noise", ctx, ctypes.c_double(0.01)),
+        py_transform(n4m.GaussianAdditiveNoise, sigma=0.01, seed=17),
+        lambda ctx: lambda: c_aug_apply("n4m_aug_gaussian_noise", ctx, ctypes.c_double(0.01)),
         "aug_gaussian_noise(X)",
         (nirs_ref("nirs4all.GaussianAdditiveNoise", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "GaussianAdditiveNoise", sigma=0.01, smoothing_kernel_width=1, random_state=17, variation_scope="sample")),),
     ),
@@ -3871,8 +3871,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "aug_multiplicative_noise",
         "Multiplicative noise",
         "augmentation",
-        py_transform(c4a.MultiplicativeNoise, sigma_gain=0.01, seed=17),
-        lambda ctx: lambda: c_aug_apply("c4a_aug_multiplicative_noise", ctx, ctypes.c_double(0.01)),
+        py_transform(n4m.MultiplicativeNoise, sigma_gain=0.01, seed=17),
+        lambda ctx: lambda: c_aug_apply("n4m_aug_multiplicative_noise", ctx, ctypes.c_double(0.01)),
         "aug_multiplicative_noise(X)",
         (nirs_ref("nirs4all.MultiplicativeNoise", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "MultiplicativeNoise", sigma_gain=0.01, per_wavelength=False, random_state=17, variation_scope="sample")),),
     ),
@@ -3880,8 +3880,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "aug_spike_noise",
         "Spike noise",
         "augmentation",
-        py_transform(c4a.SpikeNoise, n_spikes_min=1, n_spikes_max=3, amplitude_min=-0.1, amplitude_max=0.1, seed=17),
-        lambda ctx: lambda: c_aug_apply("c4a_aug_spike_noise", ctx, ctypes.c_int32(1), ctypes.c_int32(3), ctypes.c_double(-0.1), ctypes.c_double(0.1)),
+        py_transform(n4m.SpikeNoise, n_spikes_min=1, n_spikes_max=3, amplitude_min=-0.1, amplitude_max=0.1, seed=17),
+        lambda ctx: lambda: c_aug_apply("n4m_aug_spike_noise", ctx, ctypes.c_int32(1), ctypes.c_int32(3), ctypes.c_double(-0.1), ctypes.c_double(0.1)),
         "aug_spike_noise(X)",
         (nirs_ref("nirs4all.SpikeNoise", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "SpikeNoise", n_spikes_range=(1, 3), amplitude_range=(-0.1, 0.1), random_state=17, variation_scope="sample")),),
     ),
@@ -3889,8 +3889,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "aug_hetero_noise",
         "Heteroscedastic noise",
         "augmentation",
-        py_transform(c4a.HeteroscedasticNoiseAugmenter, noise_base=0.001, noise_signal_dep=0.01, seed=17),
-        lambda ctx: lambda: c_aug_apply("c4a_aug_hetero_noise", ctx, ctypes.c_double(0.001), ctypes.c_double(0.01)),
+        py_transform(n4m.HeteroscedasticNoiseAugmenter, noise_base=0.001, noise_signal_dep=0.01, seed=17),
+        lambda ctx: lambda: c_aug_apply("n4m_aug_hetero_noise", ctx, ctypes.c_double(0.001), ctypes.c_double(0.01)),
         "aug_hetero_noise(X)",
         (nirs_ref("nirs4all.HeteroscedasticNoiseAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.synthesis", "HeteroscedasticNoiseAugmenter", noise_base=0.001, noise_signal_dep=0.01, random_state=17, variation_scope="sample")),),
     ),
@@ -3898,8 +3898,8 @@ METHODS: tuple[MethodSpec, ...] = (
         "aug_linear_drift",
         "Linear baseline drift",
         "augmentation",
-        py_transform(c4a.LinearBaselineDrift, offset_min=-0.05, offset_max=0.05, slope_min=-0.01, slope_max=0.01, seed=17),
-        lambda ctx: lambda: c_aug_apply("c4a_aug_linear_drift", ctx, ctypes.c_double(-0.05), ctypes.c_double(0.05), ctypes.c_double(-0.01), ctypes.c_double(0.01)),
+        py_transform(n4m.LinearBaselineDrift, offset_min=-0.05, offset_max=0.05, slope_min=-0.01, slope_max=0.01, seed=17),
+        lambda ctx: lambda: c_aug_apply("n4m_aug_linear_drift", ctx, ctypes.c_double(-0.05), ctypes.c_double(0.05), ctypes.c_double(-0.01), ctypes.c_double(0.01)),
         "aug_linear_drift(X)",
         (nirs_ref("nirs4all.LinearBaselineDrift", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "LinearBaselineDrift", offset_range=(-0.05, 0.05), slope_range=(-0.01, 0.01), random_state=17)),),
     ),
@@ -3907,7 +3907,7 @@ METHODS: tuple[MethodSpec, ...] = (
         "aug_poly_drift",
         "Polynomial baseline drift",
         "augmentation",
-        py_transform(c4a.PolynomialBaselineDrift, degree=2, seed=17),
+        py_transform(n4m.PolynomialBaselineDrift, degree=2, seed=17),
         lambda ctx: lambda: c_aug_poly_drift(ctx),
         "aug_poly_drift(X)",
         (nirs_ref("nirs4all.PolynomialBaselineDrift", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "PolynomialBaselineDrift", degree=2, coeff_ranges=[(-0.01, 0.01), (-0.01, 0.01), (-0.01, 0.01)], random_state=17)),),
@@ -3916,42 +3916,42 @@ METHODS: tuple[MethodSpec, ...] = (
         "aug_path_length",
         "Path length augmenter",
         "augmentation",
-        py_transform(c4a.PathLengthAugmenter, path_length_std=0.05, min_path_length=0.1, seed=17),
-        lambda ctx: lambda: c_aug_apply("c4a_aug_path_length", ctx, ctypes.c_double(0.05), ctypes.c_double(0.1)),
+        py_transform(n4m.PathLengthAugmenter, path_length_std=0.05, min_path_length=0.1, seed=17),
+        lambda ctx: lambda: c_aug_apply("n4m_aug_path_length", ctx, ctypes.c_double(0.05), ctypes.c_double(0.1)),
         "aug_path_length(X)",
         (nirs_ref("nirs4all.PathLengthAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.synthesis", "PathLengthAugmenter", path_length_std=0.05, min_path_length=0.1, random_state=17, variation_scope="sample")),),
     ),
-    MethodSpec("aug_wavelength_shift", "Wavelength shift augmenter", "augmentation", lambda ctx: lambda: c4a.WavelengthShift(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_wavelength_shift(ctx), "aug_wavelength_shift(X)", (nirs_ref("nirs4all.WavelengthShift", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "WavelengthShift", wavelengths=True, shift_range=(-1.0, 1.0), random_state=17)),)),
-    MethodSpec("aug_wavelength_stretch", "Wavelength stretch augmenter", "augmentation", lambda ctx: lambda: c4a.WavelengthStretch(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_wavelength_stretch(ctx), "aug_wavelength_stretch(X)", (nirs_ref("nirs4all.WavelengthStretch", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "WavelengthStretch", wavelengths=True, stretch_range=(0.99, 1.01), random_state=17)),)),
-    MethodSpec("aug_local_warp", "Local wavelength warp augmenter", "augmentation", lambda ctx: lambda: c4a.LocalWarpAugmenter(n_control_points=3, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_local_warp(ctx), "aug_local_warp(X)", (nirs_ref("nirs4all.LocalWavelengthWarp", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "LocalWavelengthWarp", wavelengths=True, n_control_points=3, max_shift=1.0, random_state=17)),)),
-    MethodSpec("aug_band_perturb", "Band perturbation augmenter", "augmentation", py_transform(c4a.BandPerturbationAugmenter, n_bands=3, bw_lo=5, bw_hi=15, gain_lo=0.9, gain_hi=1.1, offset_lo=-0.01, offset_hi=0.01, seed=17), lambda ctx: lambda: c_aug_band_perturb(ctx), "aug_band_perturb(X)", (nirs_ref("nirs4all.BandPerturbation", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "BandPerturbation", n_bands=3, bandwidth_range=(5, 15), gain_range=(0.9, 1.1), offset_range=(-0.01, 0.01), random_state=17)),)),
-    MethodSpec("aug_band_mask", "Band masking augmenter", "augmentation", py_transform(c4a.BandMasking, n_bands_lo=1, n_bands_hi=3, bw_lo=5, bw_hi=15, mode="zero", seed=17), lambda ctx: lambda: c_aug_band_mask(ctx), "aug_band_mask(X)", (nirs_ref("nirs4all.BandMasking", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "BandMasking", n_bands_range=(1, 3), bandwidth_range=(5, 15), mode="zero", random_state=17)),)),
-    MethodSpec("aug_channel_dropout", "Channel dropout augmenter", "augmentation", py_transform(c4a.ChannelDropout, dropout_prob=0.05, mode="zero", seed=17), lambda ctx: lambda: c_aug_channel_dropout(ctx), "aug_channel_dropout(X)", (nirs_ref("nirs4all.ChannelDropout", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "ChannelDropout", dropout_prob=0.05, mode="zero", random_state=17)),)),
-    MethodSpec("aug_gauss_jitter", "Gaussian smoothing jitter", "augmentation", py_transform(c4a.GaussianJitter, sigma_lo=0.5, sigma_hi=1.5, kernel_width=9, seed=17), lambda ctx: lambda: c_aug_gauss_jitter(ctx), "aug_gauss_jitter(X)", (nirs_ref("nirs4all.GaussianSmoothingJitter", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "GaussianSmoothingJitter", sigma_range=(0.5, 1.5), kernel_width=9, random_state=17)),)),
-    MethodSpec("aug_unsharp_mask", "Unsharp spectral mask augmenter", "augmentation", py_transform(c4a.UnsharpMask, amount_lo=0.1, amount_hi=0.5, sigma=1.0, kernel_width=11, seed=17), lambda ctx: lambda: c_aug_unsharp_mask(ctx), "aug_unsharp_mask(X)", (nirs_ref("nirs4all.UnsharpSpectralMask", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "UnsharpSpectralMask", amount_range=(0.1, 0.5), sigma=1.0, kernel_width=11, random_state=17)),)),
-    MethodSpec("aug_magnitude_warp", "Smooth magnitude warp augmenter", "augmentation", lambda ctx: lambda: c4a.MagnitudeWarp(n_control_points=3, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_magnitude_warp(ctx), "aug_magnitude_warp(X)", (nirs_ref("nirs4all.SmoothMagnitudeWarp", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "SmoothMagnitudeWarp", wavelengths=True, n_control_points=3, gain_range=(0.9, 1.1), random_state=17)),)),
-    MethodSpec("aug_local_clip", "Local clipping augmenter", "augmentation", py_transform(c4a.LocalClip, n_regions=1, width_lo=5, width_hi=15, seed=17), lambda ctx: lambda: c_aug_local_clip(ctx), "aug_local_clip(X)", (nirs_ref("nirs4all.LocalClipping", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "LocalClipping", n_regions=1, width_range=(5, 15), random_state=17)),)),
+    MethodSpec("aug_wavelength_shift", "Wavelength shift augmenter", "augmentation", lambda ctx: lambda: n4m.WavelengthShift(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_wavelength_shift(ctx), "aug_wavelength_shift(X)", (nirs_ref("nirs4all.WavelengthShift", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "WavelengthShift", wavelengths=True, shift_range=(-1.0, 1.0), random_state=17)),)),
+    MethodSpec("aug_wavelength_stretch", "Wavelength stretch augmenter", "augmentation", lambda ctx: lambda: n4m.WavelengthStretch(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_wavelength_stretch(ctx), "aug_wavelength_stretch(X)", (nirs_ref("nirs4all.WavelengthStretch", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "WavelengthStretch", wavelengths=True, stretch_range=(0.99, 1.01), random_state=17)),)),
+    MethodSpec("aug_local_warp", "Local wavelength warp augmenter", "augmentation", lambda ctx: lambda: n4m.LocalWarpAugmenter(n_control_points=3, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_local_warp(ctx), "aug_local_warp(X)", (nirs_ref("nirs4all.LocalWavelengthWarp", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "LocalWavelengthWarp", wavelengths=True, n_control_points=3, max_shift=1.0, random_state=17)),)),
+    MethodSpec("aug_band_perturb", "Band perturbation augmenter", "augmentation", py_transform(n4m.BandPerturbationAugmenter, n_bands=3, bw_lo=5, bw_hi=15, gain_lo=0.9, gain_hi=1.1, offset_lo=-0.01, offset_hi=0.01, seed=17), lambda ctx: lambda: c_aug_band_perturb(ctx), "aug_band_perturb(X)", (nirs_ref("nirs4all.BandPerturbation", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "BandPerturbation", n_bands=3, bandwidth_range=(5, 15), gain_range=(0.9, 1.1), offset_range=(-0.01, 0.01), random_state=17)),)),
+    MethodSpec("aug_band_mask", "Band masking augmenter", "augmentation", py_transform(n4m.BandMasking, n_bands_lo=1, n_bands_hi=3, bw_lo=5, bw_hi=15, mode="zero", seed=17), lambda ctx: lambda: c_aug_band_mask(ctx), "aug_band_mask(X)", (nirs_ref("nirs4all.BandMasking", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "BandMasking", n_bands_range=(1, 3), bandwidth_range=(5, 15), mode="zero", random_state=17)),)),
+    MethodSpec("aug_channel_dropout", "Channel dropout augmenter", "augmentation", py_transform(n4m.ChannelDropout, dropout_prob=0.05, mode="zero", seed=17), lambda ctx: lambda: c_aug_channel_dropout(ctx), "aug_channel_dropout(X)", (nirs_ref("nirs4all.ChannelDropout", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "ChannelDropout", dropout_prob=0.05, mode="zero", random_state=17)),)),
+    MethodSpec("aug_gauss_jitter", "Gaussian smoothing jitter", "augmentation", py_transform(n4m.GaussianJitter, sigma_lo=0.5, sigma_hi=1.5, kernel_width=9, seed=17), lambda ctx: lambda: c_aug_gauss_jitter(ctx), "aug_gauss_jitter(X)", (nirs_ref("nirs4all.GaussianSmoothingJitter", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "GaussianSmoothingJitter", sigma_range=(0.5, 1.5), kernel_width=9, random_state=17)),)),
+    MethodSpec("aug_unsharp_mask", "Unsharp spectral mask augmenter", "augmentation", py_transform(n4m.UnsharpMask, amount_lo=0.1, amount_hi=0.5, sigma=1.0, kernel_width=11, seed=17), lambda ctx: lambda: c_aug_unsharp_mask(ctx), "aug_unsharp_mask(X)", (nirs_ref("nirs4all.UnsharpSpectralMask", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "UnsharpSpectralMask", amount_range=(0.1, 0.5), sigma=1.0, kernel_width=11, random_state=17)),)),
+    MethodSpec("aug_magnitude_warp", "Smooth magnitude warp augmenter", "augmentation", lambda ctx: lambda: n4m.MagnitudeWarp(n_control_points=3, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_magnitude_warp(ctx), "aug_magnitude_warp(X)", (nirs_ref("nirs4all.SmoothMagnitudeWarp", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "SmoothMagnitudeWarp", wavelengths=True, n_control_points=3, gain_range=(0.9, 1.1), random_state=17)),)),
+    MethodSpec("aug_local_clip", "Local clipping augmenter", "augmentation", py_transform(n4m.LocalClip, n_regions=1, width_lo=5, width_hi=15, seed=17), lambda ctx: lambda: c_aug_local_clip(ctx), "aug_local_clip(X)", (nirs_ref("nirs4all.LocalClipping", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "LocalClipping", n_regions=1, width_range=(5, 15), random_state=17)),)),
     MethodSpec("aug_wavelength_spectral", "Wavelength/spectral augmenters", "augmentation", py_wavelength_spectral, lambda ctx: lambda: c_aug_wavelength_spectral(ctx), "aug_wavelength_spectral(X)", (nirs_ref("nirs4all wavelength/spectral augmenter bundle", ref_nirs_wavelength_spectral),)),
-    MethodSpec("aug_mixup", "Mixup augmenter", "augmentation", py_transform(c4a.MixupAugmenter, alpha=1.0, seed=17), lambda ctx: lambda: c_aug_apply("c4a_aug_mixup", ctx, ctypes.c_double(1.0)), "aug_mixup(X)", (nirs_ref("nirs4all.MixupAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "MixupAugmenter", alpha=1.0, random_state=17)),)),
-    MethodSpec("aug_local_mixup", "Local mixup augmenter", "augmentation", py_transform(c4a.LocalMixupAugmenter, alpha=1.0, k_neighbors=5, seed=17), lambda ctx: lambda: c_aug_apply("c4a_aug_local_mixup", ctx, ctypes.c_double(1.0), ctypes.c_int32(5)), "aug_local_mixup(X)", (nirs_ref("nirs4all.LocalMixupAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "LocalMixupAugmenter", alpha=1.0, k_neighbors=5, random_state=17)),)),
-    MethodSpec("aug_scatter_sim", "Scatter simulation MSC", "augmentation", py_transform(c4a.ScatterSimulationMSC, a_low=-0.05, a_high=0.05, b_low=0.9, b_high=1.1, seed=17), lambda ctx: lambda: c_aug_apply("c4a_aug_scatter_sim", ctx, ctypes.c_double(-0.05), ctypes.c_double(0.05), ctypes.c_double(0.9), ctypes.c_double(1.1)), "aug_scatter_sim(X)", (nirs_ref("nirs4all.ScatterSimulationMSC", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "ScatterSimulationMSC", a_range=(-0.05, 0.05), b_range=(0.9, 1.1), random_state=17)),)),
-    MethodSpec("aug_particle_size", "Particle size augmenter", "augmentation", lambda ctx: lambda: c4a.ParticleSizeAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_particle_size(ctx), "aug_particle_size(X)", (nirs_ref("nirs4all.ParticleSizeAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.scattering", "ParticleSizeAugmenter", wavelengths=True, mean_size_um=50.0, size_variation_um=15.0, reference_size_um=50.0, wavelength_exponent=1.5, size_effect_strength=0.1, include_path_length=True, path_length_sensitivity=0.5, random_state=17)),)),
-    MethodSpec("aug_emsc_distort", "EMSC distortion augmenter", "augmentation", lambda ctx: lambda: c4a.EMSCDistortionAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_emsc_distort(ctx), "aug_emsc_distort(X)", (nirs_ref("nirs4all.EMSCDistortionAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.scattering", "EMSCDistortionAugmenter", wavelengths=True, multiplicative_range=(0.9, 1.1), additive_range=(-0.05, 0.05), polynomial_order=2, polynomial_strength=0.02, correlation=0.3, random_state=17)),)),
-    MethodSpec("aug_batch_effect", "Batch effect augmenter", "augmentation", lambda ctx: lambda: c4a.BatchEffectAugmenter(offset_std=0.02, slope_std=0.01, gain_std=0.03, variation_scope=0, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_batch_effect(ctx), "aug_batch_effect(X)", (nirs_ref("nirs4all.BatchEffectAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.synthesis", "BatchEffectAugmenter", wavelengths=True, offset_std=0.02, slope_std=0.01, gain_std=0.03, variation_scope="sample", random_state=17)),)),
-    MethodSpec("aug_instrument_broaden", "Instrumental broadening augmenter", "augmentation", lambda ctx: lambda: c4a.InstrumentalBroadeningAugmenter(fwhm=3.0, use_fwhm_range=False, variation_scope=0, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_instrument_broaden(ctx), "aug_instrument_broaden(X)", (nirs_ref("nirs4all.InstrumentalBroadeningAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.synthesis", "InstrumentalBroadeningAugmenter", wavelengths=True, fwhm=3.0, variation_scope="sample", random_state=17)),)),
-    MethodSpec("aug_dead_band", "Dead band augmenter", "augmentation", py_transform(c4a.DeadBandAugmenter, n_bands=1, width_low=5, width_high=10, noise_std=0.05, probability=1.0, variation_scope=0, seed=17), lambda ctx: lambda: c_aug_apply("c4a_aug_dead_band", ctx, ctypes.c_int32(1), ctypes.c_int32(5), ctypes.c_int32(10), ctypes.c_double(0.05), ctypes.c_double(1.0), ctypes.c_int32(0)), "aug_dead_band(X)", (nirs_ref("nirs4all.DeadBandAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.synthesis", "DeadBandAugmenter", n_bands=1, width_range=(5, 10), noise_std=0.05, probability=1.0, random_state=17, variation_scope="sample")),)),
-    MethodSpec("aug_temperature", "Temperature augmenter", "augmentation", lambda ctx: lambda: c4a.TemperatureAugmenter(temperature_delta=5.0, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_temperature(ctx), "aug_temperature(X)", (nirs_ref("nirs4all.TemperatureAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.environmental", "TemperatureAugmenter", wavelengths=True, temperature_delta=5.0, enable_shift=True, enable_intensity=True, enable_broadening=True, region_specific=True, random_state=17)),)),
-    MethodSpec("aug_moisture", "Moisture augmenter", "augmentation", lambda ctx: lambda: c4a.MoistureAugmenter(water_activity_delta=0.1, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_moisture(ctx), "aug_moisture(X)", (nirs_ref("nirs4all.MoistureAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.environmental", "MoistureAugmenter", wavelengths=True, water_activity_delta=0.1, reference_water_activity=0.5, free_water_fraction=0.3, bound_water_shift=25.0, moisture_content=0.1, enable_shift=True, enable_intensity=True, random_state=17)),)),
-    MethodSpec("aug_detector_rolloff", "Detector roll-off augmenter", "augmentation", lambda ctx: lambda: c4a.DetectorRollOffAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_detector_rolloff(ctx), "aug_detector_rolloff(X)", (nirs_ref("nirs4all.DetectorRollOffAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.edge_artifacts", "DetectorRollOffAugmenter", wavelengths=True, detector_model="generic_nir", effect_strength=1.0, noise_amplification=0.02, include_baseline_distortion=True, random_state=17)),)),
-    MethodSpec("aug_stray_light", "Stray light augmenter", "augmentation", lambda ctx: lambda: c4a.StrayLightAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_stray_light(ctx), "aug_stray_light(X)", (nirs_ref("nirs4all.StrayLightAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.edge_artifacts", "StrayLightAugmenter", wavelengths=True, stray_light_fraction=0.001, edge_enhancement=2.0, edge_width=0.1, include_peak_truncation=True, random_state=17)),)),
-    MethodSpec("aug_edge_curve", "Edge curvature augmenter", "augmentation", lambda ctx: lambda: c4a.EdgeCurvatureAugmenter(curvature_type=0, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_edge_curve(ctx), "aug_edge_curve(X)", (nirs_ref("nirs4all.EdgeCurvatureAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.edge_artifacts", "EdgeCurvatureAugmenter", wavelengths=True, curvature_strength=0.02, curvature_type="random", asymmetry=0.0, edge_focus=0.7, random_state=17)),)),
-    MethodSpec("aug_truncated_peak", "Truncated peak augmenter", "augmentation", lambda ctx: lambda: c4a.TruncatedPeakAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_truncated_peak(ctx), "aug_truncated_peak(X)", (nirs_ref("nirs4all.TruncatedPeakAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.edge_artifacts", "TruncatedPeakAugmenter", wavelengths=True, peak_probability=0.5, amplitude_range=(0.01, 0.1), width_range=(50, 200), left_edge=True, right_edge=True, random_state=17)),)),
-    MethodSpec("aug_edge_artifacts", "Combined edge artifact augmenter", "augmentation", lambda ctx: lambda: c4a.EdgeArtifactsAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_edge_artifacts(ctx), "aug_edge_artifacts(X)", (nirs_ref("nirs4all.EdgeArtifactsAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.edge_artifacts", "EdgeArtifactsAugmenter", wavelengths=True, detector_roll_off=True, stray_light=True, edge_curvature=True, truncated_peaks=True, overall_strength=1.0, detector_model="generic_nir", random_state=17)),)),
-    MethodSpec("aug_spline_smooth", "Spline smoothing augmenter", "augmentation", py_transform(c4a.SplineSmoothingAugmenter, seed=17), lambda ctx: lambda: c_aug_spline_smooth(ctx), "aug_spline_smooth(X)", (nirs_ref("nirs4all.Spline_Smoothing", ref_nirs_augmenter("nirs4all.operators.augmentation.splines", "Spline_Smoothing", random_state=17)),)),
-    MethodSpec("aug_spline_x_perturb", "Spline X perturbation augmenter", "augmentation", py_transform(c4a.SplineXPerturbationAugmenter, spline_degree=3, perturbation_density=0.05, perturbation_range_min=-0.1, perturbation_range_max=0.1, seed=17), lambda ctx: lambda: c_aug_spline_x_perturb(ctx), "aug_spline_x_perturb(X)", (nirs_ref("nirs4all.Spline_X_Perturbations", ref_nirs_augmenter("nirs4all.operators.augmentation.splines", "Spline_X_Perturbations", spline_degree=3, perturbation_density=0.05, perturbation_range=(-0.1, 0.1), random_state=17)),)),
-    MethodSpec("aug_spline_y_perturb", "Spline Y perturbation augmenter", "augmentation", py_transform(c4a.SplineYPerturbationAugmenter, spline_points=-1, perturbation_intensity=0.005, seed=17), lambda ctx: lambda: c_aug_spline_y_perturb(ctx), "aug_spline_y_perturb(X)", (nirs_ref("nirs4all.Spline_Y_Perturbations", ref_nirs_augmenter("nirs4all.operators.augmentation.splines", "Spline_Y_Perturbations", spline_points=None, perturbation_intensity=0.005, random_state=17)),)),
-    MethodSpec("aug_rotate_translate", "Rotate/translate augmenter", "augmentation", py_transform(c4a.RotateTranslateAugmenter, p_range=2.0, y_factor=3.0, seed=17), lambda ctx: lambda: c_aug_rotate_translate(ctx), "aug_rotate_translate(X)", (nirs_ref("nirs4all.Rotate_Translate", ref_nirs_augmenter("nirs4all.operators.augmentation.random", "Rotate_Translate", p_range=2, y_factor=3, random_state=17)),)),
-    MethodSpec("aug_random_x_op", "Random X operation augmenter", "augmentation", py_transform(c4a.RandomXOperation, op_kind="multiply", operator_range_min=0.97, operator_range_max=1.03, seed=17), lambda ctx: lambda: c_aug_random_x_op(ctx), "aug_random_x_op(X)", (nirs_ref("nirs4all.Random_X_Operation", ref_nirs_augmenter("nirs4all.operators.augmentation.random", "Random_X_Operation", operator_range=(0.97, 1.03), random_state=17)),)),
+    MethodSpec("aug_mixup", "Mixup augmenter", "augmentation", py_transform(n4m.MixupAugmenter, alpha=1.0, seed=17), lambda ctx: lambda: c_aug_apply("n4m_aug_mixup", ctx, ctypes.c_double(1.0)), "aug_mixup(X)", (nirs_ref("nirs4all.MixupAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "MixupAugmenter", alpha=1.0, random_state=17)),)),
+    MethodSpec("aug_local_mixup", "Local mixup augmenter", "augmentation", py_transform(n4m.LocalMixupAugmenter, alpha=1.0, k_neighbors=5, seed=17), lambda ctx: lambda: c_aug_apply("n4m_aug_local_mixup", ctx, ctypes.c_double(1.0), ctypes.c_int32(5)), "aug_local_mixup(X)", (nirs_ref("nirs4all.LocalMixupAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "LocalMixupAugmenter", alpha=1.0, k_neighbors=5, random_state=17)),)),
+    MethodSpec("aug_scatter_sim", "Scatter simulation MSC", "augmentation", py_transform(n4m.ScatterSimulationMSC, a_low=-0.05, a_high=0.05, b_low=0.9, b_high=1.1, seed=17), lambda ctx: lambda: c_aug_apply("n4m_aug_scatter_sim", ctx, ctypes.c_double(-0.05), ctypes.c_double(0.05), ctypes.c_double(0.9), ctypes.c_double(1.1)), "aug_scatter_sim(X)", (nirs_ref("nirs4all.ScatterSimulationMSC", ref_nirs_augmenter("nirs4all.operators.augmentation.spectral", "ScatterSimulationMSC", a_range=(-0.05, 0.05), b_range=(0.9, 1.1), random_state=17)),)),
+    MethodSpec("aug_particle_size", "Particle size augmenter", "augmentation", lambda ctx: lambda: n4m.ParticleSizeAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_particle_size(ctx), "aug_particle_size(X)", (nirs_ref("nirs4all.ParticleSizeAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.scattering", "ParticleSizeAugmenter", wavelengths=True, mean_size_um=50.0, size_variation_um=15.0, reference_size_um=50.0, wavelength_exponent=1.5, size_effect_strength=0.1, include_path_length=True, path_length_sensitivity=0.5, random_state=17)),)),
+    MethodSpec("aug_emsc_distort", "EMSC distortion augmenter", "augmentation", lambda ctx: lambda: n4m.EMSCDistortionAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_emsc_distort(ctx), "aug_emsc_distort(X)", (nirs_ref("nirs4all.EMSCDistortionAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.scattering", "EMSCDistortionAugmenter", wavelengths=True, multiplicative_range=(0.9, 1.1), additive_range=(-0.05, 0.05), polynomial_order=2, polynomial_strength=0.02, correlation=0.3, random_state=17)),)),
+    MethodSpec("aug_batch_effect", "Batch effect augmenter", "augmentation", lambda ctx: lambda: n4m.BatchEffectAugmenter(offset_std=0.02, slope_std=0.01, gain_std=0.03, variation_scope=0, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_batch_effect(ctx), "aug_batch_effect(X)", (nirs_ref("nirs4all.BatchEffectAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.synthesis", "BatchEffectAugmenter", wavelengths=True, offset_std=0.02, slope_std=0.01, gain_std=0.03, variation_scope="sample", random_state=17)),)),
+    MethodSpec("aug_instrument_broaden", "Instrumental broadening augmenter", "augmentation", lambda ctx: lambda: n4m.InstrumentalBroadeningAugmenter(fwhm=3.0, use_fwhm_range=False, variation_scope=0, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_instrument_broaden(ctx), "aug_instrument_broaden(X)", (nirs_ref("nirs4all.InstrumentalBroadeningAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.synthesis", "InstrumentalBroadeningAugmenter", wavelengths=True, fwhm=3.0, variation_scope="sample", random_state=17)),)),
+    MethodSpec("aug_dead_band", "Dead band augmenter", "augmentation", py_transform(n4m.DeadBandAugmenter, n_bands=1, width_low=5, width_high=10, noise_std=0.05, probability=1.0, variation_scope=0, seed=17), lambda ctx: lambda: c_aug_apply("n4m_aug_dead_band", ctx, ctypes.c_int32(1), ctypes.c_int32(5), ctypes.c_int32(10), ctypes.c_double(0.05), ctypes.c_double(1.0), ctypes.c_int32(0)), "aug_dead_band(X)", (nirs_ref("nirs4all.DeadBandAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.synthesis", "DeadBandAugmenter", n_bands=1, width_range=(5, 10), noise_std=0.05, probability=1.0, random_state=17, variation_scope="sample")),)),
+    MethodSpec("aug_temperature", "Temperature augmenter", "augmentation", lambda ctx: lambda: n4m.TemperatureAugmenter(temperature_delta=5.0, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_temperature(ctx), "aug_temperature(X)", (nirs_ref("nirs4all.TemperatureAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.environmental", "TemperatureAugmenter", wavelengths=True, temperature_delta=5.0, enable_shift=True, enable_intensity=True, enable_broadening=True, region_specific=True, random_state=17)),)),
+    MethodSpec("aug_moisture", "Moisture augmenter", "augmentation", lambda ctx: lambda: n4m.MoistureAugmenter(water_activity_delta=0.1, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_moisture(ctx), "aug_moisture(X)", (nirs_ref("nirs4all.MoistureAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.environmental", "MoistureAugmenter", wavelengths=True, water_activity_delta=0.1, reference_water_activity=0.5, free_water_fraction=0.3, bound_water_shift=25.0, moisture_content=0.1, enable_shift=True, enable_intensity=True, random_state=17)),)),
+    MethodSpec("aug_detector_rolloff", "Detector roll-off augmenter", "augmentation", lambda ctx: lambda: n4m.DetectorRollOffAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_detector_rolloff(ctx), "aug_detector_rolloff(X)", (nirs_ref("nirs4all.DetectorRollOffAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.edge_artifacts", "DetectorRollOffAugmenter", wavelengths=True, detector_model="generic_nir", effect_strength=1.0, noise_amplification=0.02, include_baseline_distortion=True, random_state=17)),)),
+    MethodSpec("aug_stray_light", "Stray light augmenter", "augmentation", lambda ctx: lambda: n4m.StrayLightAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_stray_light(ctx), "aug_stray_light(X)", (nirs_ref("nirs4all.StrayLightAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.edge_artifacts", "StrayLightAugmenter", wavelengths=True, stray_light_fraction=0.001, edge_enhancement=2.0, edge_width=0.1, include_peak_truncation=True, random_state=17)),)),
+    MethodSpec("aug_edge_curve", "Edge curvature augmenter", "augmentation", lambda ctx: lambda: n4m.EdgeCurvatureAugmenter(curvature_type=0, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_edge_curve(ctx), "aug_edge_curve(X)", (nirs_ref("nirs4all.EdgeCurvatureAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.edge_artifacts", "EdgeCurvatureAugmenter", wavelengths=True, curvature_strength=0.02, curvature_type="random", asymmetry=0.0, edge_focus=0.7, random_state=17)),)),
+    MethodSpec("aug_truncated_peak", "Truncated peak augmenter", "augmentation", lambda ctx: lambda: n4m.TruncatedPeakAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_truncated_peak(ctx), "aug_truncated_peak(X)", (nirs_ref("nirs4all.TruncatedPeakAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.edge_artifacts", "TruncatedPeakAugmenter", wavelengths=True, peak_probability=0.5, amplitude_range=(0.01, 0.1), width_range=(50, 200), left_edge=True, right_edge=True, random_state=17)),)),
+    MethodSpec("aug_edge_artifacts", "Combined edge artifact augmenter", "augmentation", lambda ctx: lambda: n4m.EdgeArtifactsAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X), lambda ctx: lambda: c_aug_edge_artifacts(ctx), "aug_edge_artifacts(X)", (nirs_ref("nirs4all.EdgeArtifactsAugmenter", ref_nirs_augmenter("nirs4all.operators.augmentation.edge_artifacts", "EdgeArtifactsAugmenter", wavelengths=True, detector_roll_off=True, stray_light=True, edge_curvature=True, truncated_peaks=True, overall_strength=1.0, detector_model="generic_nir", random_state=17)),)),
+    MethodSpec("aug_spline_smooth", "Spline smoothing augmenter", "augmentation", py_transform(n4m.SplineSmoothingAugmenter, seed=17), lambda ctx: lambda: c_aug_spline_smooth(ctx), "aug_spline_smooth(X)", (nirs_ref("nirs4all.Spline_Smoothing", ref_nirs_augmenter("nirs4all.operators.augmentation.splines", "Spline_Smoothing", random_state=17)),)),
+    MethodSpec("aug_spline_x_perturb", "Spline X perturbation augmenter", "augmentation", py_transform(n4m.SplineXPerturbationAugmenter, spline_degree=3, perturbation_density=0.05, perturbation_range_min=-0.1, perturbation_range_max=0.1, seed=17), lambda ctx: lambda: c_aug_spline_x_perturb(ctx), "aug_spline_x_perturb(X)", (nirs_ref("nirs4all.Spline_X_Perturbations", ref_nirs_augmenter("nirs4all.operators.augmentation.splines", "Spline_X_Perturbations", spline_degree=3, perturbation_density=0.05, perturbation_range=(-0.1, 0.1), random_state=17)),)),
+    MethodSpec("aug_spline_y_perturb", "Spline Y perturbation augmenter", "augmentation", py_transform(n4m.SplineYPerturbationAugmenter, spline_points=-1, perturbation_intensity=0.005, seed=17), lambda ctx: lambda: c_aug_spline_y_perturb(ctx), "aug_spline_y_perturb(X)", (nirs_ref("nirs4all.Spline_Y_Perturbations", ref_nirs_augmenter("nirs4all.operators.augmentation.splines", "Spline_Y_Perturbations", spline_points=None, perturbation_intensity=0.005, random_state=17)),)),
+    MethodSpec("aug_rotate_translate", "Rotate/translate augmenter", "augmentation", py_transform(n4m.RotateTranslateAugmenter, p_range=2.0, y_factor=3.0, seed=17), lambda ctx: lambda: c_aug_rotate_translate(ctx), "aug_rotate_translate(X)", (nirs_ref("nirs4all.Rotate_Translate", ref_nirs_augmenter("nirs4all.operators.augmentation.random", "Rotate_Translate", p_range=2, y_factor=3, random_state=17)),)),
+    MethodSpec("aug_random_x_op", "Random X operation augmenter", "augmentation", py_transform(n4m.RandomXOperation, op_kind="multiply", operator_range_min=0.97, operator_range_max=1.03, seed=17), lambda ctx: lambda: c_aug_random_x_op(ctx), "aug_random_x_op(X)", (nirs_ref("nirs4all.Random_X_Operation", ref_nirs_augmenter("nirs4all.operators.augmentation.random", "Random_X_Operation", operator_range=(0.97, 1.03), random_state=17)),)),
 )
 
 
@@ -4044,7 +4044,7 @@ def _json_samples(payload: dict) -> list[float]:
 
 
 def run_r_timing(expr: str, ctx: Dataset, repeat: int) -> tuple[float, str, np.ndarray, list[float], int]:
-    with tempfile.TemporaryDirectory(prefix="c4a-r-bench-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="n4m-r-bench-") as tmp:
         tmp_path = Path(tmp)
         x_path = tmp_path / "X.csv"
         y_path = tmp_path / "y.txt"
@@ -4054,46 +4054,46 @@ def run_r_timing(expr: str, ctx: Dataset, repeat: int) -> tuple[float, str, np.n
         np.savetxt(y_path, ctx.y)
         np.savetxt(d_path, ctx.d)
         script = f"""
-suppressPackageStartupMessages(library(chemometrics4all))
+suppressPackageStartupMessages(library(n4m))
 if (!requireNamespace("jsonlite", quietly = TRUE)) stop("jsonlite is required")
 options(digits = 17, scipen = 999)
 X <- as.matrix(read.csv("{x_path.as_posix()}", header = FALSE))
 y <- scan("{y_path.as_posix()}", quiet = TRUE)
 d <- scan("{d_path.as_posix()}", quiet = TRUE)
-c4a_now_ms <- function() proc.time()[["elapsed"]] * 1000.0
-c4a_consume <- function(out) {{
+n4m_now_ms <- function() proc.time()[["elapsed"]] * 1000.0
+n4m_consume <- function(out) {{
   if (is.list(out)) {{
     invisible(length(unlist(out, recursive = FALSE, use.names = FALSE)))
   }} else {{
     invisible(length(out))
   }}
 }}
-c4a_run_once <- function() {{
+n4m_run_once <- function() {{
   out <- {expr}
-  c4a_consume(out)
+  n4m_consume(out)
   out
 }}
 warmups <- max(1L, min(3L, as.integer({repeat})))
 for (w in seq_len(warmups)) {{
-  out <- c4a_run_once()
+  out <- n4m_run_once()
 }}
 batch_loops <- 1L
 repeat {{
-  t0 <- c4a_now_ms()
-  for (j in seq_len(batch_loops)) out <- c4a_run_once()
-  elapsed <- c4a_now_ms() - t0
+  t0 <- n4m_now_ms()
+  for (j in seq_len(batch_loops)) out <- n4m_run_once()
+  elapsed <- n4m_now_ms() - t0
   if (elapsed >= 100.0 || batch_loops >= 10000L) break
   batch_loops <- min(10000L, batch_loops * 2L)
 }}
 for (w in seq_len(warmups)) {{
-  for (j in seq_len(batch_loops)) out <- c4a_run_once()
+  for (j in seq_len(batch_loops)) out <- n4m_run_once()
 }}
 gc(FALSE)
 times <- numeric({repeat})
 for (i in seq_len({repeat})) {{
-  t0 <- c4a_now_ms()
-  for (j in seq_len(batch_loops)) out <- c4a_run_once()
-  times[[i]] <- (c4a_now_ms() - t0) / batch_loops
+  t0 <- n4m_now_ms()
+  for (j in seq_len(batch_loops)) out <- n4m_run_once()
+  times[[i]] <- (n4m_now_ms() - t0) / batch_loops
 }}
 if (is.list(out) && all(c("train_idx", "test_idx") %in% names(out))) {{
   out <- c(out$train_idx - 1L, out$test_idx - 1L)
@@ -4125,7 +4125,7 @@ cat(jsonlite::toJSON(list(ok = TRUE, median_ms = median(times), samples_ms = as.
 
 
 def run_r_reference(expr: str, ctx: Dataset, repeat: int) -> tuple[float, np.ndarray, list[float], int]:
-    with tempfile.TemporaryDirectory(prefix="c4a-r-ref-bench-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="n4m-r-ref-bench-") as tmp:
         tmp_path = Path(tmp)
         x_path = tmp_path / "X.csv"
         y_path = tmp_path / "y.txt"
@@ -4140,41 +4140,41 @@ options(digits = 17, scipen = 999)
 X <- as.matrix(read.csv("{x_path.as_posix()}", header = FALSE, check.names = FALSE))
 y <- scan("{y_path.as_posix()}", quiet = TRUE)
 d <- scan("{d_path.as_posix()}", quiet = TRUE)
-c4a_now_ms <- function() proc.time()[["elapsed"]] * 1000.0
+n4m_now_ms <- function() proc.time()[["elapsed"]] * 1000.0
 ref_fun <- function() {{
   {expr}
 }}
-c4a_consume <- function(out) {{
+n4m_consume <- function(out) {{
   invisible(length(out))
 }}
-c4a_run_once <- function() {{
+n4m_run_once <- function() {{
   out <- ref_fun()
-  c4a_consume(out)
+  n4m_consume(out)
   out
 }}
 out <- ref_fun()
 if (is.list(out)) stop("R external references must return a vector or matrix")
 warmups <- max(1L, min(3L, as.integer({repeat})))
 for (w in seq_len(warmups)) {{
-  out <- c4a_run_once()
+  out <- n4m_run_once()
 }}
 batch_loops <- 1L
 repeat {{
-  t0 <- c4a_now_ms()
-  for (j in seq_len(batch_loops)) out <- c4a_run_once()
-  elapsed <- c4a_now_ms() - t0
+  t0 <- n4m_now_ms()
+  for (j in seq_len(batch_loops)) out <- n4m_run_once()
+  elapsed <- n4m_now_ms() - t0
   if (elapsed >= 100.0 || batch_loops >= 10000L) break
   batch_loops <- min(10000L, batch_loops * 2L)
 }}
 for (w in seq_len(warmups)) {{
-  for (j in seq_len(batch_loops)) out <- c4a_run_once()
+  for (j in seq_len(batch_loops)) out <- n4m_run_once()
 }}
 gc(FALSE)
 times <- numeric({repeat})
 for (i in seq_len({repeat})) {{
-  t0 <- c4a_now_ms()
-  for (j in seq_len(batch_loops)) out <- c4a_run_once()
-  times[[i]] <- (c4a_now_ms() - t0) / batch_loops
+  t0 <- n4m_now_ms()
+  for (j in seq_len(batch_loops)) out <- n4m_run_once()
+  times[[i]] <- (n4m_now_ms() - t0) / batch_loops
 }}
 write.table(as.matrix(out), file = "{out_path.as_posix()}", sep = ",", row.names = FALSE, col.names = FALSE, quote = FALSE)
 cat(jsonlite::toJSON(list(ok = TRUE, median_ms = median(times), samples_ms = as.numeric(times), batch_loops = batch_loops), auto_unbox = TRUE))
@@ -4364,7 +4364,7 @@ def benchmark_spec(
                 canonical_ref is not None
                 and reference_snapshot_output is not None
                 and spec.compare_internal
-                and canonical_ref.gate_c4a
+                and canonical_ref.gate_n4m
             )
             if can_gate_reference:
                 reference_ok, reference_reason = compare_reference_outputs(
@@ -4379,11 +4379,11 @@ def benchmark_spec(
                     if (not reference_ok and canonical_ref.contract_note)
                     else ""
                 )
-                reason = f"timed direct libc4a C ABI; reference gate vs stored {canonical_ref.library} snapshot: {reference_reason}{note}"
+                reason = f"timed direct libn4m C ABI; reference gate vs stored {canonical_ref.library} snapshot: {reference_reason}{note}"
             elif (
                 canonical_ref is not None
                 and reference_snapshot_output is not None
-                and not canonical_ref.gate_c4a
+                and not canonical_ref.gate_n4m
             ):
                 reference_divergence = output_reference_divergence(
                     spec, canonical_ref, cpp_output, reference_snapshot_output
@@ -4391,7 +4391,7 @@ def benchmark_spec(
                 note = canonical_ref.contract_note or "external implementation uses a different published contract"
                 parity = "context"
                 reason = (
-                    f"timed direct libc4a C ABI; external snapshot stored from {canonical_ref.library}, "
+                    f"timed direct libn4m C ABI; external snapshot stored from {canonical_ref.library}, "
                     f"but no parity gate is run: {note}"
                 )
             elif (
@@ -4405,21 +4405,21 @@ def benchmark_spec(
                 note = diagnostic_ref.contract_note or "external implementation uses a different published contract"
                 parity = "context"
                 reason = (
-                    f"timed direct libc4a C ABI; diagnostic divergence vs {diagnostic_ref.library} "
+                    f"timed direct libn4m C ABI; diagnostic divergence vs {diagnostic_ref.library} "
                     f"is reported but not parity-gated: {note}"
                 )
             elif canonical_ref is not None and reference_snapshot_output is None:
                 parity = "fail"
-                reason = f"timed direct libc4a C ABI; reference gate not run: {reference_snapshot_error or reference_error or 'reference snapshot unavailable'}"
+                reason = f"timed direct libn4m C ABI; reference gate not run: {reference_snapshot_error or reference_error or 'reference snapshot unavailable'}"
             else:
                 parity = "ok"
-                reason = "timed direct libc4a C ABI" if spec.compare_internal else "timed direct libc4a C ABI; internal binding gate disabled"
+                reason = "timed direct libn4m C ABI" if spec.compare_internal else "timed direct libn4m C ABI; internal binding gate disabled"
             rows.append(csv_row(
                 spec,
                 backend="cpp",
                 language="C++",
                 tier="c_abi",
-                kind="chemometrics4all",
+                kind="nirs4all-methods",
                 n=n,
                 p=p,
                 threads=threads,
@@ -4442,7 +4442,7 @@ def benchmark_spec(
                 backend="cpp",
                 language="C++",
                 tier="c_abi",
-                kind="chemometrics4all",
+                kind="nirs4all-methods",
                 n=n,
                 p=p,
                 threads=threads,
@@ -4483,7 +4483,7 @@ def benchmark_spec(
                 backend="python",
                 language="Python",
                 tier="abi_close",
-                kind="chemometrics4all",
+                kind="nirs4all-methods",
                 n=n,
                 p=p,
                 threads=threads,
@@ -4506,7 +4506,7 @@ def benchmark_spec(
                 backend="python",
                 language="Python",
                 tier="abi_close",
-                kind="chemometrics4all",
+                kind="nirs4all-methods",
                 n=n,
                 p=p,
                 threads=threads,
@@ -4546,7 +4546,7 @@ def benchmark_spec(
                 backend="sklearn",
                 language="Python",
                 tier="sklearn_compatible",
-                kind="chemometrics4all",
+                kind="nirs4all-methods",
                 n=n,
                 p=p,
                 threads=threads,
@@ -4569,7 +4569,7 @@ def benchmark_spec(
                 backend="sklearn",
                 language="Python",
                 tier="sklearn_compatible",
-                kind="chemometrics4all",
+                kind="nirs4all-methods",
                 n=n,
                 p=p,
                 threads=threads,
@@ -4608,7 +4608,7 @@ def benchmark_spec(
                 backend="r",
                 language="R",
                 tier="public_r",
-                kind="chemometrics4all",
+                kind="nirs4all-methods",
                 n=n,
                 p=p,
                 threads=threads,
@@ -4630,7 +4630,7 @@ def benchmark_spec(
                 backend="r",
                 language="R",
                 tier="public_r",
-                kind="chemometrics4all",
+                kind="nirs4all-methods",
                 n=n,
                 p=p,
                 threads=threads,
@@ -4659,10 +4659,10 @@ def benchmark_spec(
                         if native_output is not None and spec.compare_internal
                         else None
                     )
-                    note = ref.contract_note or "external implementation does not expose the exact c4a contract"
+                    note = ref.contract_note or "external implementation does not expose the exact n4m contract"
                     if reference_divergence:
                         reference_reason = (
-                            "performance context; diagnostic divergence vs direct libc4a C ABI is "
+                            "performance context; diagnostic divergence vs direct libn4m C ABI is "
                             f"reported but not parity-gated: {note}"
                         )
                     else:

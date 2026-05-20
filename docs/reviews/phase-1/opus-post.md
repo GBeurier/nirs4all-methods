@@ -29,7 +29,7 @@ The reviewer cross-checked the PCG64 implementation against NumPy v1.26.4 upstre
 
 **Issue**: `cmake/CompilerWarnings.cmake` applied `-Wnon-virtual-dtor`, `-Wold-style-cast`, `-Woverloaded-virtual`, `-Wzero-as-null-pointer-constant` to every target indiscriminately, triggering 4 "valid for C++/ObjC++ but not for C" diagnostics per .c TU (rng_pcg64.c, ziggurat.c).
 
-**Resolution**: Split the flag list into `_chemometrics4all_gnu_clang_warnings_common` (C+C++) and `_chemometrics4all_gnu_clang_warnings_cxx_only` (C++ only). The latter is wrapped in `$<COMPILE_LANGUAGE:CXX>` generator expression in `chemometrics4all_add_warnings`. Verified by full rebuild: no more C-vs-C++ mismatch warnings.
+**Resolution**: Split the flag list into `_n4m_gnu_clang_warnings_common` (C+C++) and `_n4m_gnu_clang_warnings_cxx_only` (C++ only). The latter is wrapped in `$<COMPILE_LANGUAGE:CXX>` generator expression in `n4m_add_warnings`. Verified by full rebuild: no more C-vs-C++ mismatch warnings.
 
 ## Medium-confidence issues addressed
 
@@ -43,9 +43,9 @@ The reviewer cross-checked the PCG64 implementation against NumPy v1.26.4 upstre
 
 ### Issue #4 — Test runner naming (80% confidence) — DEFERRED
 
-The `c4a_testing::Runner` instance is named `phase-0-smoke` but holds Phase 1 RNG tests. As more phases come online, this should be refactored to per-phase Runner instances. Logged as Phase 2 opener.
+The `n4m_testing::Runner` instance is named `phase-0-smoke` but holds Phase 1 RNG tests. As more phases come online, this should be refactored to per-phase Runner instances. Logged as Phase 2 opener.
 
-### Issue #5 — No NumPy-parity test for `c4a_rng_pcg64_advance` (80% confidence) — DEFERRED
+### Issue #5 — No NumPy-parity test for `n4m_rng_pcg64_advance` (80% confidence) — DEFERRED
 
 `test_advance_matches_repeated_draws` checks internal consistency only (advance + 1 draw == repeated draws), not bit-equivalence to `np.random.default_rng(s).bit_generator.advance(N)`. The implementation in `rng_pcg64.c:298-318` matches Brown 1994's canonical order, so most likely correct, but the test suite doesn't prove it. **Will be added** before Phase 9 (CARS / MCUVE — first consumer that uses `_advance` for thread-safe sub-streams).
 
@@ -62,9 +62,9 @@ The `c4a_testing::Runner` instance is named `phase-0-smoke` but holds Phase 1 RN
 ```
 cmake --preset dev-debug                                   → configures, no warnings
 cmake --build --preset dev-debug                           → 22/22 targets, zero warnings
-./build/dev-debug/cpp/cli/chemometrics4all_cli --selfcheck → OK
+./build/dev-debug/cpp/cli/n4m_cli --selfcheck → OK
 ctest --preset dev-debug                                   → 100% (1/1 test groups, 20/20 sub-tests)
-nm -D --defined-only build/dev-debug/cpp/src/libc4a.so.1.0.0 | awk '$2=="T" {print $3}' | wc -l → 36
+nm -D --defined-only build/dev-debug/cpp/src/libn4m.so.1.0.0 | awk '$2=="T" {print $3}' | wc -l → 36
 diff <(nm -D ... | sort -u) cpp/abi/expected_symbols_linux.txt → no drift
 python -c "import json; d=json.load(open('parity/fixtures/_rng_pcg64_stream_v1.json')); print(d['numpy_version'])" → 1.26.4
 ```

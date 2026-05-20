@@ -1,4 +1,4 @@
-# SpikeNoise — `c4a_aug_spike_noise_*`
+# SpikeNoise — `n4m_aug_spike_noise_*`
 
 Adds a small number of spikes at random wavelength positions per sample.
 
@@ -20,17 +20,17 @@ Mirrors `nirs4all.operators.augmentation.spectral.SpikeNoise`. Bounded integer d
 
 ## ABI
 ```c
-c4a_status_t c4a_aug_spike_noise_create(
-    c4a_aug_spike_noise_handle_t** out,
-    c4a_rng_pcg64_state_t* rng,
+n4m_status_t n4m_aug_spike_noise_create(
+    n4m_aug_spike_noise_handle_t** out,
+    n4m_rng_pcg64_state_t* rng,
     int32_t n_spikes_min, int32_t n_spikes_max,
     double  amplitude_min, double amplitude_max);
-void         c4a_aug_spike_noise_destroy(c4a_aug_spike_noise_handle_t* h);
-c4a_status_t c4a_aug_spike_noise_apply(
-    const c4a_aug_spike_noise_handle_t* h,
-    c4a_matrix_view_t X, c4a_matrix_view_t out);
+void         n4m_aug_spike_noise_destroy(n4m_aug_spike_noise_handle_t* h);
+n4m_status_t n4m_aug_spike_noise_apply(
+    const n4m_aug_spike_noise_handle_t* h,
+    n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 ## Reference
-- Internal parity fixture: `parity/python_generator/src/c4a_parity_augmenters_ref/spike_noise.py`.
+- Internal parity fixture: `parity/python_generator/src/n4m_parity_augmenters_ref/spike_noise.py`.
 - Parity tolerance: 1e-15 abs.

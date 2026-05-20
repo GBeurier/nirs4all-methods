@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate one chemometrics4all documentation page per public method.
+"""Generate one nirs4all-methods documentation page per public method.
 
 The layout deliberately mirrors the generated pls4all method pages:
 title, description, parameter table, bibliography, mathematical principle,
@@ -9,9 +9,9 @@ tables.
 Inputs are intentionally local and deterministic:
   * benchmarks/cross_binding/orchestrator.py for benchmark MethodSpec entries;
   * docs/algorithms/*.md for existing scientific explanations;
-  * cpp/include/chemometrics4all/c4a.h for C ABI signatures;
-  * bindings/python/src/chemometrics4all/sklearn/*.py for Python signatures;
-  * bindings/r/chemometrics4all/R/*.R for R signatures;
+  * cpp/include/n4m/n4m.h for C ABI signatures;
+  * bindings/python/src/n4m/sklearn/*.py for Python signatures;
+  * bindings/r/n4m/R/*.R for R signatures;
   * docs/_static/bench-data.json for dashboard timing/parity rows.
 """
 from __future__ import annotations
@@ -31,9 +31,9 @@ ROOT = Path(__file__).resolve().parents[2]
 ORCHESTRATOR = ROOT / "benchmarks" / "cross_binding" / "orchestrator.py"
 ALGORITHMS_DIR = ROOT / "docs" / "algorithms"
 METHODS_DIR = ROOT / "docs" / "methods"
-HEADER = ROOT / "cpp" / "include" / "chemometrics4all" / "c4a.h"
-PY_SKLEARN_DIR = ROOT / "bindings" / "python" / "src" / "chemometrics4all" / "sklearn"
-R_DIR = ROOT / "bindings" / "r" / "chemometrics4all" / "R"
+HEADER = ROOT / "cpp" / "include" / "n4m" / "n4m.h"
+PY_SKLEARN_DIR = ROOT / "bindings" / "python" / "src" / "n4m" / "sklearn"
+R_DIR = ROOT / "bindings" / "r" / "n4m" / "R"
 BENCH_JSON = ROOT / "docs" / "_static" / "bench-data.json"
 
 
@@ -115,27 +115,27 @@ PY_CLASS_OVERRIDES = {
 }
 
 C_PREFIX_OVERRIDES = {
-    "osc": "c4a_pp_osc",
-    "epo": "c4a_pp_epo",
-    "flexible_pca": "c4a_pp_flex_pca",
-    "flexible_svd": "c4a_pp_flex_svd",
-    "fck_static": "c4a_pp_fck_static",
-    "crop": "c4a_pp_crop",
-    "resample": "c4a_pp_resample",
-    "resampler": "c4a_pp_resampler",
-    "range_discretizer": "c4a_pp_range_disc",
-    "kbins_discretizer": "c4a_pp_kbins_disc",
-    "kennard_stone": "c4a_split_kennard_stone",
-    "spxy": "c4a_split_spxy",
-    "kbins_stratified": "c4a_split_kbins_stratified",
-    "y_outlier_iqr": "c4a_filter_y_outlier",
-    "x_outlier_mahalanobis": "c4a_filter_x_outlier",
-    "hotelling_t2": "c4a_util_hotelling_t2",
-    "q_residuals": "c4a_util_q_residuals",
-    "transfer_metrics": "c4a_transfer_metrics_compute",
-    "nirs_metrics": "c4a_metric_",
-    "signal_type_detector": "c4a_signal_detect",
-    "rng_pcg64": "c4a_rng_pcg64",
+    "osc": "n4m_pp_osc",
+    "epo": "n4m_pp_epo",
+    "flexible_pca": "n4m_pp_flex_pca",
+    "flexible_svd": "n4m_pp_flex_svd",
+    "fck_static": "n4m_pp_fck_static",
+    "crop": "n4m_pp_crop",
+    "resample": "n4m_pp_resample",
+    "resampler": "n4m_pp_resampler",
+    "range_discretizer": "n4m_pp_range_disc",
+    "kbins_discretizer": "n4m_pp_kbins_disc",
+    "kennard_stone": "n4m_split_kennard_stone",
+    "spxy": "n4m_split_spxy",
+    "kbins_stratified": "n4m_split_kbins_stratified",
+    "y_outlier_iqr": "n4m_filter_y_outlier",
+    "x_outlier_mahalanobis": "n4m_filter_x_outlier",
+    "hotelling_t2": "n4m_util_hotelling_t2",
+    "q_residuals": "n4m_util_q_residuals",
+    "transfer_metrics": "n4m_transfer_metrics_compute",
+    "nirs_metrics": "n4m_metric_",
+    "signal_type_detector": "n4m_signal_detect",
+    "rng_pcg64": "n4m_rng_pcg64",
 }
 
 REFERENCE_BACKENDS = {
@@ -189,7 +189,7 @@ class Reference:
     library: str
     language: str
     compare: bool = True
-    gate_c4a: bool = True
+    gate_n4m: bool = True
     note: str = ""
 
 
@@ -231,17 +231,17 @@ def _first_c_symbol(node: ast.AST | None) -> str:
         return ""
     for child in ast.walk(node):
         if isinstance(child, ast.Constant) and isinstance(child.value, str):
-            if child.value.startswith("c4a_"):
+            if child.value.startswith("n4m_"):
                 return child.value
     return ""
 
 
-def _first_c4a_class(node: ast.AST | None) -> str:
+def _first_n4m_class(node: ast.AST | None) -> str:
     if node is None:
         return ""
     for child in ast.walk(node):
         if isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name):
-            if child.value.id == "c4a":
+            if child.value.id == "n4m":
                 return child.attr
     return ""
 
@@ -258,9 +258,9 @@ def _parse_reference(node: ast.AST) -> Reference | None:
         return None
     name = _call_name(node.func)
     default_compare = False if name == "r_prospectr_ref" else True
-    default_gate_c4a = False if name == "r_prospectr_ref" else True
+    default_gate_n4m = False if name == "r_prospectr_ref" else True
     compare = _literal_bool(_keyword(node, "compare"), default_compare)
-    gate_c4a = _literal_bool(_keyword(node, "gate_c4a"), default_gate_c4a)
+    gate_n4m = _literal_bool(_keyword(node, "gate_n4m"), default_gate_n4m)
     note = _literal_string(_keyword(node, "contract_note"))
     if name == "ReferenceSpec" and len(node.args) >= 2:
         backend = _literal_string(node.args[0])
@@ -268,11 +268,11 @@ def _parse_reference(node: ast.AST) -> Reference | None:
         language = _literal_string(_keyword(node, "language"))
         if not language and len(node.args) > 5:
             language = _literal_string(node.args[5])
-        return Reference(backend, library, language or "Python", compare, gate_c4a, note)
+        return Reference(backend, library, language or "Python", compare, gate_n4m, note)
     if name in REFERENCE_BACKENDS:
         backend, language = REFERENCE_BACKENDS[name]
         library = _literal_string(node.args[0]) if node.args else backend
-        return Reference(backend, library, language, compare, gate_c4a, note)
+        return Reference(backend, library, language, compare, gate_n4m, note)
     return None
 
 
@@ -289,7 +289,7 @@ def parse_methods_from_orchestrator() -> list[Method]:
         family = _literal_string(node.args[2]) or "other"
         if not method_id or not label:
             continue
-        py_class = _first_c4a_class(node.args[3]) or PY_CLASS_OVERRIDES.get(method_id, "")
+        py_class = _first_n4m_class(node.args[3]) or PY_CLASS_OVERRIDES.get(method_id, "")
         c_prefix = _first_c_symbol(node.args[4]) or C_PREFIX_OVERRIDES.get(method_id, "")
         r_expr = _literal_string(node.args[5])
         refs: list[Reference] = []
@@ -362,7 +362,7 @@ def _label_internal_parity_fixtures(text: str) -> str:
     for old, new in replacements.items():
         text = text.replace(old, new)
     text = re.sub(
-        r"(?m)^-\s+Reference:\s+(`parity/python_generator/src/c4a_parity_[^`]+`)",
+        r"(?m)^-\s+Reference:\s+(`parity/python_generator/src/n4m_parity_[^`]+`)",
         r"- Internal parity fixture: \1",
         text,
     )
@@ -520,7 +520,7 @@ def load_c_prototypes() -> dict[str, list[str]]:
     active = False
     for line in lines:
         stripped = line.strip()
-        if stripped.startswith("C4A_API"):
+        if stripped.startswith("N4M_API"):
             active = True
             buf = [stripped]
             if ";" in stripped:
@@ -534,9 +534,9 @@ def load_c_prototypes() -> dict[str, list[str]]:
         if not active and buf:
             proto = " ".join(buf)
             proto = re.sub(r"\s+", " ", proto)
-            m = re.search(r"\b(c4a_[A-Za-z0-9_]+)\s*\(", proto)
+            m = re.search(r"\b(n4m_[A-Za-z0-9_]+)\s*\(", proto)
             if m:
-                prototypes[m.group(1)].append(proto.replace("C4A_API ", ""))
+                prototypes[m.group(1)].append(proto.replace("N4M_API ", ""))
             buf = []
     return prototypes
 
@@ -583,7 +583,7 @@ def method_description(m: Method, page: dict[str, str] | None, py_classes: dict[
         doc_lines = doc.splitlines()
         first_line = doc_lines[0] if doc_lines else doc
         parts.append(
-            f"From the `chemometrics4all.{m.py_class}` Python wrapper docstring:\n\n"
+            f"From the `n4m.{m.py_class}` Python wrapper docstring:\n\n"
             f"> {first_line}"
         )
         if len(doc_lines) > 1:
@@ -596,7 +596,7 @@ def method_description(m: Method, page: dict[str, str] | None, py_classes: dict[
             )
     if not parts:
         parts.append(
-            f"`{m.method_id}` is a chemometrics4all {m.family.replace('_', ' ')} method "
+            f"`{m.method_id}` is a nirs4all-methods {m.family.replace('_', ' ')} method "
             "exposed through the C ABI and the generated language bindings."
         )
     return "\n\n".join(parts)
@@ -625,7 +625,7 @@ def render_bibliography(m: Method, page: dict[str, str] | None) -> str:
         return "\n".join(refs)
     return (
         "No separate external paper is registered in the local documentation. "
-        "The page documents the in-tree chemometrics4all implementation contract."
+        "The page documents the in-tree nirs4all-methods implementation contract."
     )
 
 
@@ -659,15 +659,15 @@ def render_implementation_text(m: Method, page: dict[str, str] | None, prototype
 def render_implementation_table(m: Method, py_classes: dict[str, dict[str, Any]], r_sigs: dict[str, str], c_protos: list[str]) -> str:
     rows = []
     c_entry = m.c_prefix or (c_protos[0].split("(", 1)[0].split()[-1] if c_protos else "")
-    rows.append(("C ABI", code(c_entry), "C/C++", "Stable libc4a entry point family."))
+    rows.append(("C ABI", code(c_entry), "C/C++", "Stable libn4m entry point family."))
     rows.append((
         "Python",
-        code(f"chemometrics4all.python.{m.method_id}"),
+        code(f"n4m.python.{m.method_id}"),
         "Python",
         "ABI-close function backed by ctypes.",
     ))
     if m.py_class:
-        py = f"chemometrics4all.sklearn.{m.py_class}"
+        py = f"n4m.sklearn.{m.py_class}"
         rows.append(("Python sklearn", code(py), "Python", "scikit-learn-compatible estimator backed by ctypes."))
     r_name = ""
     if m.r_expr:
@@ -675,10 +675,10 @@ def render_implementation_table(m: Method, py_classes: dict[str, dict[str, Any]]
         r_entry = r_name.group(1) if r_name else m.r_expr
         rows.append(("R", code(r_sigs.get(r_entry, r_entry)), "R", "Public package wrapper around the C ABI."))
     for ref in m.refs:
-        if ref.compare and ref.gate_c4a:
+        if ref.compare and ref.gate_n4m:
             role = "canonical/comparator"
         elif ref.compare:
-            role = "canonical snapshot; c4a context"
+            role = "canonical snapshot; n4m context"
         else:
             role = "context only"
         rows.append((ref.backend, code(ref.library), ref.language, role + (f"; {ref.note}" if ref.note else "")))
@@ -698,73 +698,73 @@ def _py_default_args(params: list[dict[str, str]]) -> str:
 
 
 def _python_abi_usage(m: Method) -> str:
-    fn = f"c4a.{m.method_id}"
+    fn = f"n4m.{m.method_id}"
     if m.method_id in {"direct_standardization", "robust_direct_standardization", "piecewise_direct_standardization", "score_augmented_projection_standardization", "local_centering"}:
-        return f"from chemometrics4all import python as c4a\n\nXt = {fn}(X_source, X_target, X)"
+        return f"from n4m import python as n4m\n\nXt = {fn}(X_source, X_target, X)"
     if m.method_id == "slope_bias_correction":
-        return "from chemometrics4all import python as c4a\n\ny_corr = c4a.slope_bias_correction(y_source, y_target, y)"
+        return "from n4m import python as n4m\n\ny_corr = n4m.slope_bias_correction(y_source, y_target, y)"
     if m.method_id == "osc":
-        return "from chemometrics4all import python as c4a\n\nXt = c4a.osc(X, y)"
+        return "from n4m import python as n4m\n\nXt = n4m.osc(X, y)"
     if m.method_id == "epo":
-        return "from chemometrics4all import python as c4a\n\nXt = c4a.epo(X, d)"
+        return "from n4m import python as n4m\n\nXt = n4m.epo(X, d)"
     if m.method_id == "fck_static":
-        return "from chemometrics4all import python as c4a\n\nXt = c4a.fck_static(X, kernel_size=5, alphas=[0.5, 1.0], sigmas=[1.0, 2.0])"
+        return "from n4m import python as n4m\n\nXt = n4m.fck_static(X, kernel_size=5, alphas=[0.5, 1.0], sigmas=[1.0, 2.0])"
     if m.method_id == "kennard_stone":
-        return "from chemometrics4all import python as c4a\n\ntrain_idx, test_idx = c4a.kennard_stone(X)"
+        return "from n4m import python as n4m\n\ntrain_idx, test_idx = n4m.kennard_stone(X)"
     if m.method_id == "spxy":
-        return "from chemometrics4all import python as c4a\n\ntrain_idx, test_idx = c4a.spxy(X, y)"
+        return "from n4m import python as n4m\n\ntrain_idx, test_idx = n4m.spxy(X, y)"
     if m.method_id == "kbins_stratified":
-        return "from chemometrics4all import python as c4a\n\ntrain_idx, test_idx = c4a.kbins_stratified(y)"
+        return "from n4m import python as n4m\n\ntrain_idx, test_idx = n4m.kbins_stratified(y)"
     if m.method_id == "y_outlier_iqr":
-        return "from chemometrics4all import python as c4a\n\nmask, stats = c4a.y_outlier_filter(y)"
+        return "from n4m import python as n4m\n\nmask, stats = n4m.y_outlier_filter(y)"
     if m.method_id == "x_outlier_mahalanobis":
-        return "from chemometrics4all import python as c4a\n\nmask, stats = c4a.x_outlier_filter(X)"
+        return "from n4m import python as n4m\n\nmask, stats = n4m.x_outlier_filter(X)"
     if m.method_id == "correlation_filter":
-        return "from chemometrics4all import python as c4a\n\nXt = c4a.correlation_filter(X, y, top_k=5)"
+        return "from n4m import python as n4m\n\nXt = n4m.correlation_filter(X, y, top_k=5)"
     if m.method_id == "variance_filter":
-        return "from chemometrics4all import python as c4a\n\nXt = c4a.variance_filter(X, top_k=5)"
+        return "from n4m import python as n4m\n\nXt = n4m.variance_filter(X, top_k=5)"
     if m.method_id == "interval_generator":
-        return "from chemometrics4all import python as c4a\n\nblocks = c4a.interval_generator(X, interval_size=16, step=8)"
+        return "from n4m import python as n4m\n\nblocks = n4m.interval_generator(X, interval_size=16, step=8)"
     if m.method_id == "crop":
-        return "from chemometrics4all import python as c4a\n\nXt = c4a.crop(X, start=5, end=50)"
+        return "from n4m import python as n4m\n\nXt = n4m.crop(X, start=5, end=50)"
     if m.method_id == "resample":
-        return "from chemometrics4all import python as c4a\n\nXt = c4a.resample(X, num_samples=128)"
+        return "from n4m import python as n4m\n\nXt = n4m.resample(X, num_samples=128)"
     if m.method_id == "resampler":
-        return "from chemometrics4all import python as c4a\n\nXt = c4a.resampler(X, source_wavelengths, target_wavelengths)"
+        return "from n4m import python as n4m\n\nXt = n4m.resampler(X, source_wavelengths, target_wavelengths)"
     if m.method_id == "range_discretizer":
-        return "from chemometrics4all import python as c4a\n\nXi = c4a.range_discretizer(X, edges=[0.0, 0.25, 0.5, 1.0])"
+        return "from n4m import python as n4m\n\nXi = n4m.range_discretizer(X, edges=[0.0, 0.25, 0.5, 1.0])"
     if m.method_id == "weighted_snv":
-        return "from chemometrics4all import python as c4a\n\nXt = c4a.weighted_snv(X, weights=weights)"
-    return f"from chemometrics4all import python as c4a\n\nXt = {fn}(X)"
+        return "from n4m import python as n4m\n\nXt = n4m.weighted_snv(X, weights=weights)"
+    return f"from n4m import python as n4m\n\nXt = {fn}(X)"
 
 
 def render_usage(m: Method, py_classes: dict[str, dict[str, Any]], c_protos: list[str]) -> str:
     parts = [
         "### Usage\n",
-        "Every chemometrics4all binding dispatches into the same C kernel. "
+        "Every nirs4all-methods binding dispatches into the same C kernel. "
         "Registered comparator/source rows are listed in the benchmark card below.\n",
-        "::::{tab-set}\n:class: chemometrics4all-bindings\n\n",
+        "::::{tab-set}\n:class: nirs4all-methods-bindings\n\n",
     ]
-    c_body = "\n".join(c_protos[:10]) if c_protos else f"/* C ABI prefix */\n{m.c_prefix or 'c4a_*'}"
-    parts.append(":::{tab-item} C ABI · libc4a\n:sync: c\n:class-label: lang-c\n\n```c\n" + c_body + "\n```\n\n:::\n")
-    parts.append(":::{tab-item} Python ABI · chemometrics4all.python\n:sync: python-abi\n:class-label: lang-python\n\n```python\n" + _python_abi_usage(m) + "\n```\n\n:::\n")
+    c_body = "\n".join(c_protos[:10]) if c_protos else f"/* C ABI prefix */\n{m.c_prefix or 'n4m_*'}"
+    parts.append(":::{tab-item} C ABI · libn4m\n:sync: c\n:class-label: lang-c\n\n```c\n" + c_body + "\n```\n\n:::\n")
+    parts.append(":::{tab-item} Python ABI · n4m.python\n:sync: python-abi\n:class-label: lang-python\n\n```python\n" + _python_abi_usage(m) + "\n```\n\n:::\n")
     if m.py_class:
         params = py_classes.get(m.py_class, {}).get("params", [])
         args = _py_default_args(params)
         call = f"{m.py_class}({args})" if args else f"{m.py_class}()"
         if m.family == "splitter":
-            body = f"from chemometrics4all.sklearn import {m.py_class}\n\nsplitter = {call}\ntrain_idx, test_idx = splitter.split(X)"
+            body = f"from n4m.sklearn import {m.py_class}\n\nsplitter = {call}\ntrain_idx, test_idx = splitter.split(X)"
         elif m.family == "filter":
-            body = f"from chemometrics4all.sklearn import {m.py_class}\n\nflt = {call}\nmask, stats = flt.fit_apply(X)"
+            body = f"from n4m.sklearn import {m.py_class}\n\nflt = {call}\nmask, stats = flt.fit_apply(X)"
         elif m.method_id in {"osc", "epo"}:
             aux = "y" if m.method_id == "osc" else "d"
-            body = f"from chemometrics4all.sklearn import {m.py_class}\n\nop = {call}\nXt = op.fit_transform(X, {aux})"
+            body = f"from n4m.sklearn import {m.py_class}\n\nop = {call}\nXt = op.fit_transform(X, {aux})"
         else:
-            body = f"from chemometrics4all.sklearn import {m.py_class}\n\nop = {call}\nXt = op.fit_transform(X)"
-        parts.append(":::{tab-item} Python sklearn · chemometrics4all.sklearn\n:sync: python-sklearn\n:class-label: lang-python\n\n```python\n" + body + "\n```\n\n:::\n")
+            body = f"from n4m.sklearn import {m.py_class}\n\nop = {call}\nXt = op.fit_transform(X)"
+        parts.append(":::{tab-item} Python sklearn · n4m.sklearn\n:sync: python-sklearn\n:class-label: lang-python\n\n```python\n" + body + "\n```\n\n:::\n")
     if m.r_expr:
-        body = "library(chemometrics4all)\nres <- " + m.r_expr
-        parts.append(":::{tab-item} R · chemometrics4all\n:sync: r\n:class-label: lang-r\n\n```r\n" + body + "\n```\n\n:::\n")
+        body = "library(n4m)\nres <- " + m.r_expr
+        parts.append(":::{tab-item} R · nirs4all-methods\n:sync: r\n:class-label: lang-r\n\n```r\n" + body + "\n```\n\n:::\n")
     parts.append("::::\n")
     return "\n".join(parts)
 
@@ -920,7 +920,7 @@ def render_validation_contract(m: Method, contract: dict[str, Any] | None) -> st
         parts.append("\n| Backend | Library | Gate | Comparator | Note |\n")
         parts.append("|---------|---------|------|------------|------|\n")
         for ref in refs:
-            gate = "parity" if ref.get("compare") and ref.get("gate_c4a") else "context"
+            gate = "parity" if ref.get("compare") and ref.get("gate_n4m") else "context"
             note = ref.get("contract_note") or ""
             parts.append(
                 f"| `{esc_md(ref.get('backend', ''))}` "
@@ -958,14 +958,14 @@ def benchmark_band(cid: str, meta: dict[str, Any]) -> tuple[int, str, str]:
     group = str(meta.get("group") or "")
     kind = str(meta.get("kind") or "")
     lang = str(meta.get("lang") or "")
-    if kind == "chemometrics4all":
+    if kind == "nirs4all-methods":
         if group == "cpp":
-            return (0, "cpp", "C++ native · libc4a")
+            return (0, "cpp", "C++ native · libn4m")
         if group == "python":
-            return (1, "python", "Python · chemometrics4all")
+            return (1, "python", "Python · nirs4all-methods")
         if group == "r":
-            return (2, "r", "R · chemometrics4all")
-        return (3, "ext", "chemometrics4all")
+            return (2, "r", "R · nirs4all-methods")
+        return (3, "ext", "nirs4all-methods")
     if lang == "Python":
         return (4, "python", "Python · external")
     if lang == "R":
@@ -1249,7 +1249,7 @@ def render_index(methods: list[Method]) -> str:
         by_group[m.family].append(m)
     out = [
         "# Methods catalogue\n",
-        "Every public chemometrics4all method documented with its parameters, "
+        "Every public nirs4all-methods method documented with its parameters, "
         "bibliographic source, mathematical principle, binding signatures, "
         "benchmark comparators/sources, and benchmark rows when available.\n",
         f"_Total methods_: **{len(methods)}**. Grouped by family below.\n",

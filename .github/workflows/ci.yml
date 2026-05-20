@@ -93,16 +93,16 @@ jobs:
 
       - name: Run CLI selfcheck (Linux/macOS)
         if: runner.os != 'Windows'
-        run: ./build/${{ matrix.cfg.preset }}/cpp/cli/chemometrics4all_cli --selfcheck
+        run: ./build/${{ matrix.cfg.preset }}/cpp/cli/n4m_cli --selfcheck
 
       - name: Upload Release artefacts
         if: contains(matrix.cfg.label, 'release')
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: libc4a-${{ matrix.cfg.label }}
+          name: libn4m-${{ matrix.cfg.label }}
           path: |
-            build/${{ matrix.cfg.preset }}/cpp/src/**/c4a*
-            build/${{ matrix.cfg.preset }}/cpp/src/**/libc4a*
-            build/${{ matrix.cfg.preset }}/cpp/cli/chemometrics4all_cli*
+            build/${{ matrix.cfg.preset }}/cpp/src/**/n4m*
+            build/${{ matrix.cfg.preset }}/cpp/src/**/libn4m*
+            build/${{ matrix.cfg.preset }}/cpp/cli/n4m_cli*
           if-no-files-found: warn

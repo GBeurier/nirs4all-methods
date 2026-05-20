@@ -34,7 +34,7 @@ difference and is independent of `segment`.
 
 ## Numerical contract
 
-- `_create` returns `C4A_ERR_INVALID_ARGUMENT` for even or non-positive
+- `_create` returns `N4M_ERR_INVALID_ARGUMENT` for even or non-positive
   segments, $\text{gap} < 1$, $\text{derivative\_order} \notin \{1, 2\}$,
   or $\delta = 0$.
 - Tolerance vs nirs4all (`np.pad` + arithmetic): $10^{-12}$ absolute /

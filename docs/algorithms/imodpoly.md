@@ -19,12 +19,12 @@ Gan, Ruan & Mo 2006 σ-stopping variant of ModPoly. For each row `y` of length `
 
 ## ABI
 ```c
-c4a_status_t c4a_pp_imodpoly_create(c4a_pp_imodpoly_handle_t** out,
+n4m_status_t n4m_pp_imodpoly_create(n4m_pp_imodpoly_handle_t** out,
                                      int32_t polyorder,
                                      int32_t max_iter, double tol);
-void         c4a_pp_imodpoly_destroy(c4a_pp_imodpoly_handle_t* h);
-c4a_status_t c4a_pp_imodpoly_transform(const c4a_pp_imodpoly_handle_t* h,
-                                        c4a_matrix_view_t X, c4a_matrix_view_t out);
+void         n4m_pp_imodpoly_destroy(n4m_pp_imodpoly_handle_t* h);
+n4m_status_t n4m_pp_imodpoly_transform(const n4m_pp_imodpoly_handle_t* h,
+                                        n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 ## Numerical contract
@@ -36,4 +36,4 @@ c4a_status_t c4a_pp_imodpoly_transform(const c4a_pp_imodpoly_handle_t* h,
 
 ## Reference
 - Gan, F., Ruan, G. & Mo, J. (2006). "Baseline correction by improved iterative polynomial fitting with automatic threshold." Chemometrics and Intelligent Laboratory Systems 82(1-2), 59-65.
-- Internal parity fixture: `parity/python_generator/src/c4a_parity_pybaselines_ref/imodpoly.py`.
+- Internal parity fixture: `parity/python_generator/src/n4m_parity_pybaselines_ref/imodpoly.py`.

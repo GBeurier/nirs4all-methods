@@ -1,4 +1,4 @@
-# HeteroscedasticNoiseAugmenter — `c4a_aug_hetero_noise_*`
+# HeteroscedasticNoiseAugmenter — `n4m_aug_hetero_noise_*`
 
 Adds signal-dependent Gaussian noise to spectra.
 
@@ -16,16 +16,16 @@ Mirrors `nirs4all.operators.augmentation.synthesis.HeteroscedasticNoiseAugmenter
 
 ## ABI
 ```c
-c4a_status_t c4a_aug_hetero_noise_create(
-    c4a_aug_hetero_noise_handle_t** out,
-    c4a_rng_pcg64_state_t* rng,
+n4m_status_t n4m_aug_hetero_noise_create(
+    n4m_aug_hetero_noise_handle_t** out,
+    n4m_rng_pcg64_state_t* rng,
     double noise_base, double noise_signal_dep);
-void         c4a_aug_hetero_noise_destroy(c4a_aug_hetero_noise_handle_t* h);
-c4a_status_t c4a_aug_hetero_noise_apply(
-    const c4a_aug_hetero_noise_handle_t* h,
-    c4a_matrix_view_t X, c4a_matrix_view_t out);
+void         n4m_aug_hetero_noise_destroy(n4m_aug_hetero_noise_handle_t* h);
+n4m_status_t n4m_aug_hetero_noise_apply(
+    const n4m_aug_hetero_noise_handle_t* h,
+    n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 ## Reference
-- Internal parity fixture: `parity/python_generator/src/c4a_parity_augmenters_ref/hetero_noise.py`.
+- Internal parity fixture: `parity/python_generator/src/n4m_parity_augmenters_ref/hetero_noise.py`.
 - Parity tolerance: 1e-15 abs.

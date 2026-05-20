@@ -6,12 +6,12 @@ that both projects use the same comparator contract:
 
   * **Binding parity** (this module, Gate 1) — every language binding
     (python, R, MATLAB, JS/WASM) must produce bit-identical outputs to
-    libc4a (the C kernel reference). Tolerance: ``max|pred - ref| <=
+    libn4m (the C kernel reference). Tolerance: ``max|pred - ref| <=
     tolerance`` with default ``1e-6``. This gate is exercised once a
     binding ships; until then it is a no-op stub.
 
   * **Reference parity** (:mod:`parity.reference_parity`, Gate 2) —
-    libc4a's algorithms must agree with the canonical external reference
+    libn4m's algorithms must agree with the canonical external reference
     (numpy / scipy / sklearn / pywt / pybaselines / nirs4all) within a
     per-op tolerance recorded in ``parity/tolerances.md``. This gate is
     the existing Stage 2 of ``parity/python_generator/scripts/run_parity_gate.py``.
@@ -47,7 +47,7 @@ class BindingParityResult:
     shape_mismatch
         True when ``pred.shape != ref.shape``. The comparator does **not**
         attempt to reshape — bindings must produce arrays in the same
-        shape as libc4a.
+        shape as libn4m.
     detail
         Short human-readable summary suitable for log lines.
     """
@@ -66,14 +66,14 @@ def binding_parity(pred: np.ndarray, ref: np.ndarray,
     Default tolerance ``1e-6`` matches pls4all's binding-consistency
     contract. Use ``tolerance=0.0`` for strict bit-equality on
     deterministic ops where the binding is a thin ctypes wrapper that
-    forwards the libc4a result verbatim.
+    forwards the libn4m result verbatim.
 
     Parameters
     ----------
     pred
         Predicted array (from the binding under test).
     ref
-        Reference array (from libc4a).
+        Reference array (from libn4m).
     tolerance
         Maximum allowed absolute difference. Inclusive.
 

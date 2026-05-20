@@ -1,15 +1,15 @@
 cff-version: 1.2.0
-title: "chemometrics4all: A portable NIRS chemometrics engine with a stable C ABI"
-message: "If you use chemometrics4all in academic work, please cite as below."
+title: "nirs4all-methods: A portable NIRS chemometrics engine with a stable C ABI"
+message: "If you use nirs4all-methods in academic work, please cite as below."
 type: software
 authors:
   - family-names: Beurier
     given-names: Grégory
     affiliation: CIRAD
     email: beurier@cirad.fr
-  - name: "chemometrics4all contributors"
-repository-code: "https://github.com/GBeurier/chemometrics4all"
-url: "https://github.com/GBeurier/chemometrics4all"
+  - name: "nirs4all-methods contributors"
+repository-code: "https://github.com/GBeurier/nirs4all-methods"
+url: "https://github.com/GBeurier/nirs4all-methods"
 license: CECILL-2.1
 version: 0.1.0
 date-released: "2026-05-18"
@@ -31,7 +31,7 @@ keywords:
   - data-augmentation
   - C-ABI
 abstract: >
-  chemometrics4all is a portable C++17 library that ships the upstream NIRS toolchain
+  nirs4all-methods is a portable C++17 library that ships the upstream NIRS toolchain
   around PLS regression: 52 preprocessings (scatter correction, derivatives,
   baselines, wavelets, signal conversion, orthogonalization, feature selection),
   39 data augmentations (noise, drift, wavelength perturbations, mixup, scattering,
@@ -46,13 +46,13 @@ abstract: >
   Octave) the same parity-validated, zero-mandatory-dependency NIRS engine.
 preferred-citation:
   type: software
-  title: "chemometrics4all"
+  title: "nirs4all-methods"
   authors:
     - family-names: Beurier
       given-names: Grégory
   year: 2026
   version: 0.1.0
-  url: "https://github.com/GBeurier/chemometrics4all"
+  url: "https://github.com/GBeurier/nirs4all-methods"
 references:
   - type: software
     title: "pls4all: A portable Partial Least Squares engine with a stable C ABI"

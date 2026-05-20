@@ -45,7 +45,7 @@ $$
 \text{out} = (X_\text{new} - \mathbf{1}\mu^\top)\,\text{components}^\top.
 $$
 
-The c4a engine uses a one-sided Jacobi SVD (``cpp/src/core/common/svd.c``)
+The n4m engine uses a one-sided Jacobi SVD (``cpp/src/core/common/svd.c``)
 which agrees with ``np.linalg.svd`` to within a few ULPs on the singular
 values; the resulting transform parity tolerance is ``1e-10`` absolute /
 ``1e-11`` relative against the internal parity fixture.
@@ -57,21 +57,21 @@ values; the resulting transform parity tolerance is ``1e-10`` absolute /
 | `n_components` | —       | Flexible count or variance-ratio specifier |
 
 The constructor rejects values `<= 0` or `NaN` with
-`C4A_ERR_INVALID_ARGUMENT`.
+`N4M_ERR_INVALID_ARGUMENT`.
 
 ## Lifecycle
 
 Stateful: `_create / _fit / _transform / _destroy` with companion
 `_is_fitted` and `_output_cols` helpers. `_output_cols` reads the
 learned $k'$ off the fitted state. Calling `_transform` or
-`_output_cols` before `_fit` returns `C4A_ERR_NOT_FITTED`. Calling
+`_output_cols` before `_fit` returns `N4M_ERR_NOT_FITTED`. Calling
 `_fit` again replaces the prior fit (sklearn-style refit semantics).
 
 ## Numerical contract
 
 - `_fit` requires `rows >= 2` and `cols >= 1`. Returns
-  `C4A_ERR_INVALID_ARGUMENT` otherwise.
-- `_transform` returns `C4A_ERR_SHAPE_MISMATCH` if the output column
+  `N4M_ERR_INVALID_ARGUMENT` otherwise.
+- `_transform` returns `N4M_ERR_SHAPE_MISMATCH` if the output column
   count is not exactly `n_components_learned`, or the input column count
   is not exactly `n_features_in`.
 - Tolerance against the internal parity fixture: 1e-10 absolute / 1e-11

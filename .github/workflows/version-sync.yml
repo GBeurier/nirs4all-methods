@@ -1,7 +1,7 @@
 # Fail the PR if any active downstream manifest (Python pyproject, R
 # DESCRIPTION, parity generator, CITATION.cff, and any scaffolded future
 # binding manifests) drifts from the canonical version in
-# cpp/include/chemometrics4all/c4a_version.h. Future JS/Julia/Rust/.NET
+# cpp/include/n4m/n4m_version.h. Future JS/Julia/Rust/.NET
 # manifests are optional until their binding directories exist.
 #
 # Local equivalent:  scripts/bump_version.sh --check
@@ -45,5 +45,5 @@ jobs:
             exit 1
           fi
 
-      - name: Check every manifest is in sync with c4a_version.h
+      - name: Check every manifest is in sync with n4m_version.h
         run: scripts/bump_version.sh --check

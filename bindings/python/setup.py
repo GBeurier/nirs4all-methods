@@ -2,7 +2,7 @@
 """Setup hook for platform-tagged ctypes wheels.
 
 The binding has no CPython extension module, but wheels include the native
-``libc4a`` payload under ``chemometrics4all/lib``. Marking the distribution as
+``libn4m`` payload under ``n4m/lib``. Marking the distribution as
 non-pure makes setuptools and cibuildwheel produce platform wheels and run the
 repair step; ``scripts/retag_wheels.py`` then rewrites the interpreter/ABI tag
 to ``py3-none-${platform}``.

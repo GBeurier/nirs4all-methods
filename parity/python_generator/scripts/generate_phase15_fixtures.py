@@ -15,9 +15,9 @@ Each operator produces one fixture file under ``parity/fixtures/`` :
 Fixture schema (one file per operator)::
 
     {
-      "format": "c4a_aug_<NAME>_v1",
+      "format": "n4m_aug_<NAME>_v1",
       "numpy_version": "...",
-      "reference": "c4a_parity_augmenters_ref (frozen against nirs4all 0.8.x)",
+      "reference": "n4m_parity_augmenters_ref (frozen against nirs4all 0.8.x)",
       "encoding": "ieee754_binary64_be_hex",
       "rows": <int>, "cols": <int>,
       "X_hex": [ "<16 hex>", ... ],     # row-major flatten of input matrix
@@ -29,7 +29,7 @@ Fixture schema (one file per operator)::
     }
 
 Every case carries a fresh PCG64 seed so the C side calls
-``c4a_rng_pcg64_set_seed(rng, S)`` before invoking ``_apply`` -- matching the
+``n4m_rng_pcg64_set_seed(rng, S)`` before invoking ``_apply`` -- matching the
 "stochastic-with-seeded-PCG64" tolerance class declared in
 ``roadmap/phase-15-18-augmenters-abi-contract.md``.
 """
@@ -48,7 +48,7 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "parity" / "python_generator" / "src"))
 
-from c4a_parity_augmenters_ref import (  # noqa: E402
+from n4m_parity_augmenters_ref import (  # noqa: E402
     gaussian_noise_apply,
     hetero_noise_apply,
     linear_drift_apply,
@@ -110,9 +110,9 @@ def build_cases(
     op_name: str, X: np.ndarray, cases: list[tuple[str, int, dict, np.ndarray]]
 ) -> dict[str, Any]:
     return {
-        "format": f"c4a_aug_{op_name}_v1",
+        "format": f"n4m_aug_{op_name}_v1",
         "numpy_version": np.__version__,
-        "reference": "c4a_parity_augmenters_ref (frozen against nirs4all 0.8.x)",
+        "reference": "n4m_parity_augmenters_ref (frozen against nirs4all 0.8.x)",
         "encoding": "ieee754_binary64_be_hex",
         "rows": int(X.shape[0]),
         "cols": int(X.shape[1]),

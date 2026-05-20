@@ -1,13 +1,13 @@
 # Cross-Binding Benchmarks
 
-This directory contains the executable benchmark matrix for chemometrics4all.
+This directory contains the executable benchmark matrix for n4m.
 It follows the same broad contract as pls4all:
 
 * one CSV row per `(algorithm, backend, n, p, threads)` cell;
 * `median_ms` is wall-clock median over timed runs after an unmeasured warmup;
   `warmup_runs`, `timed_runs`, and `samples_ms` expose the exact protocol and
   raw per-run samples used for each cell;
-* internal rows cover direct libc4a C ABI (`cpp`), ABI-close public Python
+* internal rows cover direct libn4m C ABI (`cpp`), ABI-close public Python
   functions (`python`), scikit-learn-compatible Python estimators
   (`sklearn`), and installed public R bindings (`r`);
 * external rows cover the local git checkout of `nirs4all`, NumPy, SciPy
@@ -23,7 +23,7 @@ It follows the same broad contract as pls4all:
 Run the default dashboard matrix from the repository root:
 
 ```bash
-CHEMOMETRICS4ALL_LIB_PATH=$PWD/build/dev-release/cpp/src/libc4a.so \
+N4M_LIB_PATH=$PWD/build/dev-release/cpp/src/libn4m.so \
 PYTHONPATH=$PWD/bindings/python/src \
 python benchmarks/cross_binding/orchestrator.py \
   --repeat 5 --size-preset small --threads 1 \
@@ -59,7 +59,7 @@ matrix with measured parity rows instead of forcing the whole dashboard run to
 wait on wide `p=2500` algebra.
 `nirs4all.WaveletFeatures` is timed with `n_coeffs_per_level=0`, histogram
 entropy, and the symmetric boundary contract so its output feature count and
-contract match the chemometrics4all dashboard surface.
+contract match the nirs4all-methods dashboard surface.
 
 Canonical reference rows are marked with `reference_role=canonical` and render
 with a reference-method icon, not a pass/fail gate icon. When a canonical
@@ -97,5 +97,5 @@ revision and dirty marker in `lib_build`, for example `nirs4all@<sha>+dirty`.
 
 ## EPO
 
-The `epo` C++ timing row uses `c4a_pp_epo_transform_with_d(...)`, so it is a
+The `epo` C++ timing row uses `n4m_pp_epo_transform_with_d(...)`, so it is a
 real binding-parity baseline for Python `EPO.fit_transform(X, d)`.

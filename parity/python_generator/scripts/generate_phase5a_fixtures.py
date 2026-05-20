@@ -9,10 +9,10 @@ Four operators, all stateless:
   * AirPLS   — Zhang 2010.
   * ArPLS    — Baek 2015.
 
-The references come from the frozen `c4a_parity_pybaselines_ref` package
+The references come from the frozen `n4m_parity_pybaselines_ref` package
 under parity/python_generator/src/.  They have been validated once against
 pybaselines==1.1.4 and are now the canonical parity floor (so subsequent
-pybaselines releases can drift without breaking the c4a parity gates).
+pybaselines releases can drift without breaking the n4m parity gates).
 
 Shape: 40 rows x 60 cols of synthetic NIR-like spectra with a curved
 baseline and two Gaussian peaks.  Same generator family as Phase 4 but
@@ -34,7 +34,7 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "parity" / "python_generator" / "src"))
 
-from c4a_parity_pybaselines_ref import detrend, asls, airpls, arpls  # noqa: E402
+from n4m_parity_pybaselines_ref import detrend, asls, airpls, arpls  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -147,10 +147,10 @@ def write_fixture(name: str, X: np.ndarray,
                   cases: list[tuple[str, dict, Callable[[], np.ndarray]]],
                   out_dir: Path) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_pp_{name}_v1",
+        "format": f"n4m_pp_{name}_v1",
         "numpy_version": np.__version__,
         "scipy_version": __import__("scipy").__version__,
-        "reference": "c4a_parity_pybaselines_ref (frozen against pybaselines==1.1.4)",
+        "reference": "n4m_parity_pybaselines_ref (frozen against pybaselines==1.1.4)",
         "encoding": "ieee754_binary64_be_hex",
         "rows": int(X.shape[0]),
         "cols": int(X.shape[1]),

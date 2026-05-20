@@ -4,7 +4,7 @@ _Group_: **Utility** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8` · _Sourc
 
 ## Description
 
-`rng_pcg64` is a chemometrics4all utility method exposed through the C ABI and the generated language bindings.
+`rng_pcg64` is a nirs4all-methods utility method exposed through the C ABI and the generated language bindings.
 
 ### Parameters
 
@@ -28,13 +28,13 @@ No public constructor parameters are required for the documented default call.
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_rng_pcg64_advance(c4a_rng_pcg64_state_t* rng, uint64_t delta);
-c4a_status_t c4a_rng_pcg64_create(uint64_t seed, c4a_rng_pcg64_state_t** out);
-void c4a_rng_pcg64_destroy(c4a_rng_pcg64_state_t* rng);
-c4a_status_t c4a_rng_pcg64_set_seed(c4a_rng_pcg64_state_t* rng, uint64_t seed);
-c4a_status_t c4a_rng_pcg64_standard_normal_fill( c4a_rng_pcg64_state_t* rng, double* out, size_t n);
-c4a_status_t c4a_rng_pcg64_uint64(c4a_rng_pcg64_state_t* rng, uint64_t* out);
-c4a_status_t c4a_rng_pcg64_uint64_fill(c4a_rng_pcg64_state_t* rng, uint64_t* out, size_t n);
+n4m_status_t n4m_rng_pcg64_advance(n4m_rng_pcg64_state_t* rng, uint64_t delta);
+n4m_status_t n4m_rng_pcg64_create(uint64_t seed, n4m_rng_pcg64_state_t** out);
+void n4m_rng_pcg64_destroy(n4m_rng_pcg64_state_t* rng);
+n4m_status_t n4m_rng_pcg64_set_seed(n4m_rng_pcg64_state_t* rng, uint64_t seed);
+n4m_status_t n4m_rng_pcg64_standard_normal_fill( n4m_rng_pcg64_state_t* rng, double* out, size_t n);
+n4m_status_t n4m_rng_pcg64_uint64(n4m_rng_pcg64_state_t* rng, uint64_t* out);
+n4m_status_t n4m_rng_pcg64_uint64_fill(n4m_rng_pcg64_state_t* rng, uint64_t* out, size_t n);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -43,42 +43,42 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_rng_pcg64` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.rng_pcg64` | Python | ABI-close function backed by ctypes. |
+| C ABI | `n4m_rng_pcg64` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.rng_pcg64` | Python | ABI-close function backed by ctypes. |
 | ref.numpy | `numpy.random.default_rng(PCG64).standard_normal` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_rng_pcg64_advance(c4a_rng_pcg64_state_t* rng, uint64_t delta);
-c4a_status_t c4a_rng_pcg64_create(uint64_t seed, c4a_rng_pcg64_state_t** out);
-void c4a_rng_pcg64_destroy(c4a_rng_pcg64_state_t* rng);
-c4a_status_t c4a_rng_pcg64_set_seed(c4a_rng_pcg64_state_t* rng, uint64_t seed);
-c4a_status_t c4a_rng_pcg64_standard_normal_fill( c4a_rng_pcg64_state_t* rng, double* out, size_t n);
-c4a_status_t c4a_rng_pcg64_uint64(c4a_rng_pcg64_state_t* rng, uint64_t* out);
-c4a_status_t c4a_rng_pcg64_uint64_fill(c4a_rng_pcg64_state_t* rng, uint64_t* out, size_t n);
+n4m_status_t n4m_rng_pcg64_advance(n4m_rng_pcg64_state_t* rng, uint64_t delta);
+n4m_status_t n4m_rng_pcg64_create(uint64_t seed, n4m_rng_pcg64_state_t** out);
+void n4m_rng_pcg64_destroy(n4m_rng_pcg64_state_t* rng);
+n4m_status_t n4m_rng_pcg64_set_seed(n4m_rng_pcg64_state_t* rng, uint64_t seed);
+n4m_status_t n4m_rng_pcg64_standard_normal_fill( n4m_rng_pcg64_state_t* rng, double* out, size_t n);
+n4m_status_t n4m_rng_pcg64_uint64(n4m_rng_pcg64_state_t* rng, uint64_t* out);
+n4m_status_t n4m_rng_pcg64_uint64_fill(n4m_rng_pcg64_state_t* rng, uint64_t* out, size_t n);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.rng_pcg64(X)
+Xt = n4m.rng_pcg64(X)
 ```
 
 :::
@@ -117,12 +117,12 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.006 ms</td><td class="ms">0.007 ms</td><td class="ms">0.007 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.006 ms</td><td class="ms">0.007 ms</td><td class="ms">0.007 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.006 ms</td><td class="ms">0.007 ms</td><td class="ms">0.007 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.006 ms</td><td class="ms ms-best">🏆 0.006 ms</td><td class="ms ms-best">🏆 0.006 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.006 ms</td><td class="ms">0.007 ms</td><td class="ms">0.007 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.006 ms</td><td class="ms ms-best">🏆 0.006 ms</td><td class="ms ms-best">🏆 0.006 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): numpy.random.default_rng(PCG64).standard_normal · numpy 2.3.5 — canonical">◆</span><code>ref.numpy</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.010 ms</td><td class="ms">0.010 ms</td><td class="ms">0.009 ms</td></tr>

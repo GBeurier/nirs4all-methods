@@ -25,11 +25,11 @@ grid manipulation and target-discretization toolkit:
 
 | Operator | Algorithm | Type | Symbols |
 |----------|-----------|------|--------:|
-| `c4a_pp_resampler_*` | scipy interp1d (linear / nearest / cubic) | stateful | 6 |
-| `c4a_pp_crop_*` | column slice `[start, end)` | stateless | 4 |
-| `c4a_pp_resample_*` | linear interp to fixed N on `[0, 1]` axis | stateless | 4 |
-| `c4a_pp_kbins_disc_*` | sklearn KBinsDiscretizer (ordinal, int32) | stateful | 5 |
-| `c4a_pp_range_disc_*` | np.digitize (int32) | stateless | 3 |
+| `n4m_pp_resampler_*` | scipy interp1d (linear / nearest / cubic) | stateful | 6 |
+| `n4m_pp_crop_*` | column slice `[start, end)` | stateless | 4 |
+| `n4m_pp_resample_*` | linear interp to fixed N on `[0, 1]` axis | stateless | 4 |
+| `n4m_pp_kbins_disc_*` | sklearn KBinsDiscretizer (ordinal, int32) | stateful | 5 |
+| `n4m_pp_range_disc_*` | np.digitize (int32) | stateless | 3 |
 
 Total **22 new ABI symbols** (126 → 148). The Resampler also exposes
 `_output_cols(handle)` (post-fit) so callers can pre-allocate the output
@@ -56,7 +56,7 @@ Per-row hot path (no allocation):
              Horner-form per query.
 
 Bounds handling: `bounds_error == 1` rejects out-of-range queries with
-C4A_ERR_NUMERICAL_FAILURE; `bounds_error == 0` either fills with `fill_value`
+N4M_ERR_NUMERICAL_FAILURE; `bounds_error == 0` either fills with `fill_value`
 (if `extrapolate == 0`) or extrapolates the boundary segment.
 
 ### CropTransformer
@@ -125,9 +125,9 @@ Bins must be strictly ascending. Output labels in `[0, len(bins)]` (length
 
 ## Files NOT modified (central integration)
 
-- `cpp/include/chemometrics4all/c4a.h` — integrator appends §14 banner +
+- `cpp/include/n4m/n4m.h` — integrator appends §14 banner +
   22 ABI declarations.
-- `cpp/include/chemometrics4all/c4a_version.h` — integrator bumps MINOR
+- `cpp/include/n4m/n4m_version.h` — integrator bumps MINOR
   `6 → 7` (1.6.0 → 1.7.0).
 - `cpp/abi/expected_symbols_{linux,macos,windows}.txt` — integrator
   regenerates (126 → 148).
@@ -149,13 +149,13 @@ Bins must be strictly ascending. Output labels in `[0, len(bins)]` (length
 
 ```bash
 cmake --build --preset dev-debug
-./build/dev-debug/cpp/tests/chemometrics4all_tests
+./build/dev-debug/cpp/tests/n4m_tests
 # After central integration: 82 + 12 = 94 tests pass.
-nm -D --defined-only build/dev-debug/cpp/src/libc4a.so.1.7.0 \
+nm -D --defined-only build/dev-debug/cpp/src/libn4m.so.1.7.0 \
     | awk '$2=="T" {print $3}' | sort -u | wc -l
 # 148
 ```
 
 Local validation in this worktree confirmed 94/94 tests pass with a
 temporary main.cpp patch (subsequently reverted). The integrator will
-re-register the suite as part of the c4a.h / main.cpp updates.
+re-register the suite as part of the n4m.h / main.cpp updates.

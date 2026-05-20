@@ -1,4 +1,4 @@
-"""One-line descriptions for every parameter exposed by the chemometrics4all
+"""One-line descriptions for every parameter exposed by the nirs4all-methods
 sklearn-style wrappers. Consumed by `docs/_extras/build_methods.py` to fill
 the `Notes` column of the generated method-page parameter tables.
 
@@ -17,7 +17,7 @@ from __future__ import annotations
 
 # Generic, method-agnostic parameter descriptions.
 PARAM_DOCS: dict[str, str] = {
-    # ---- Shared PLS core knobs (libc4a Config) ----
+    # ---- Shared PLS core knobs (libn4m Config) ----
     "n_components": "Number of latent components extracted (k).",
     "solver": "Inner algorithm: 'nipals', 'simpls', 'svd', 'kernel', 'orthogonal-scores', 'power', 'randomized-svd', 'wide-kernel'.",
     "center_x": "Subtract the column mean of X before fitting.",

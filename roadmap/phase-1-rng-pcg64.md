@@ -2,7 +2,7 @@
 
 ## Goal
 
-Implement a portable PCG64 random number generator in C, bit-exact against NumPy's `Generator(PCG64(seed))` uint64 stream, with a `standard_normal` generator via Ziggurat. Expose via C ABI as `c4a_rng_pcg64_t`. This unlocks bit-exact parity for **all 39 augmenters** (Phases 15-18), stochastic feature selectors (CARS, MCUVE — Phase 9), randomized X-outlier filters (IsolationForest, LOF — Phase 13), and stochastic splitters (KMeans — Phase 11).
+Implement a portable PCG64 random number generator in C, bit-exact against NumPy's `Generator(PCG64(seed))` uint64 stream, with a `standard_normal` generator via Ziggurat. Expose via C ABI as `n4m_rng_pcg64_t`. This unlocks bit-exact parity for **all 39 augmenters** (Phases 15-18), stochastic feature selectors (CARS, MCUVE — Phase 9), randomized X-outlier filters (IsolationForest, LOF — Phase 13), and stochastic splitters (KMeans — Phase 11).
 
 ## Scope decision
 
@@ -24,7 +24,7 @@ This re-scoping is recorded in ROADMAP.md.
 | `cpp/src/core/common/rng_pcg64.c` | C implementation (uint64 stream + jump-ahead + reseed) |
 | `cpp/src/core/common/ziggurat_constants.h` | Vendored NumPy Ziggurat tables (BSD-3-Clause); `wi_double`, `ki_double`, `fi_double` |
 | `cpp/src/core/common/ziggurat.c` | Ziggurat `standard_normal_fill` algorithm |
-| `cpp/src/c_api/c_api_rng.cpp` | extern "C" wrappers: `c4a_rng_pcg64_create / destroy / uint64 / standard_normal_fill / set_seed / advance` |
+| `cpp/src/c_api/c_api_rng.cpp` | extern "C" wrappers: `n4m_rng_pcg64_create / destroy / uint64 / standard_normal_fill / set_seed / advance` |
 | `cpp/tests/test_rng_pcg64.cpp` | Bit-exact parity tests vs `_rng_pcg64_stream_v1.json` |
 | `parity/python_generator/scripts/generate_rng_fixture.py` | Generate the parity fixture from NumPy |
 | `parity/fixtures/_rng_pcg64_stream_v1.json` | 4096 uint64 + 4096 standard_normal draws for seeds {0, 1, 42, 12345, 0xDEADBEEF} |
@@ -32,15 +32,15 @@ This re-scoping is recorded in ROADMAP.md.
 ## C ABI surface added (Phase 1 deltas)
 
 ```c
-/* Added to cpp/include/chemometrics4all/c4a.h: */
-typedef struct c4a_rng_pcg64_state_t c4a_rng_pcg64_state_t;
-C4A_API c4a_status_t c4a_rng_pcg64_create(uint64_t seed, c4a_rng_pcg64_state_t** out);
-C4A_API void         c4a_rng_pcg64_destroy(c4a_rng_pcg64_state_t* rng);
-C4A_API c4a_status_t c4a_rng_pcg64_set_seed(c4a_rng_pcg64_state_t* rng, uint64_t seed);
-C4A_API c4a_status_t c4a_rng_pcg64_uint64(c4a_rng_pcg64_state_t* rng, uint64_t* out);
-C4A_API c4a_status_t c4a_rng_pcg64_uint64_fill(c4a_rng_pcg64_state_t* rng, uint64_t* out, size_t n);
-C4A_API c4a_status_t c4a_rng_pcg64_standard_normal_fill(c4a_rng_pcg64_state_t* rng, double* out, size_t n);
-C4A_API c4a_status_t c4a_rng_pcg64_advance(c4a_rng_pcg64_state_t* rng, uint64_t delta);
+/* Added to cpp/include/n4m/n4m.h: */
+typedef struct n4m_rng_pcg64_state_t n4m_rng_pcg64_state_t;
+N4M_API n4m_status_t n4m_rng_pcg64_create(uint64_t seed, n4m_rng_pcg64_state_t** out);
+N4M_API void         n4m_rng_pcg64_destroy(n4m_rng_pcg64_state_t* rng);
+N4M_API n4m_status_t n4m_rng_pcg64_set_seed(n4m_rng_pcg64_state_t* rng, uint64_t seed);
+N4M_API n4m_status_t n4m_rng_pcg64_uint64(n4m_rng_pcg64_state_t* rng, uint64_t* out);
+N4M_API n4m_status_t n4m_rng_pcg64_uint64_fill(n4m_rng_pcg64_state_t* rng, uint64_t* out, size_t n);
+N4M_API n4m_status_t n4m_rng_pcg64_standard_normal_fill(n4m_rng_pcg64_state_t* rng, double* out, size_t n);
+N4M_API n4m_status_t n4m_rng_pcg64_advance(n4m_rng_pcg64_state_t* rng, uint64_t delta);
 ```
 
 7 new exported symbols. Total ABI surface: 36 symbols.
@@ -103,19 +103,19 @@ with open("parity/fixtures/_rng_pcg64_stream_v1.json", "w") as f:
 
 `cpp/tests/test_rng_pcg64.cpp`:
 - Loads the JSON.
-- For each seed, calls `c4a_rng_pcg64_create(seed, &rng)`, then 4096 uint64 draws + 4096 standard_normal draws.
+- For each seed, calls `n4m_rng_pcg64_create(seed, &rng)`, then 4096 uint64 draws + 4096 standard_normal draws.
 - Asserts byte-equality on uint64 (1e-15 tolerance on double for standard_normal).
 
 ## Parity references
 
 | Operator | Reference | Tolerance |
 |----------|-----------|-----------|
-| `c4a_rng_pcg64_uint64_fill` | `np.random.default_rng(seed).bit_generator.random_raw(n)` | **exact** (byte equality) |
-| `c4a_rng_pcg64_standard_normal_fill` | `np.random.default_rng(seed).standard_normal(n)` | **1e-15 abs / 0 rel** (bit-exact double) |
+| `n4m_rng_pcg64_uint64_fill` | `np.random.default_rng(seed).bit_generator.random_raw(n)` | **exact** (byte equality) |
+| `n4m_rng_pcg64_standard_normal_fill` | `np.random.default_rng(seed).standard_normal(n)` | **1e-15 abs / 0 rel** (bit-exact double) |
 
 ## Acceptance criteria
 
-- ✅ `cmake --build` builds `libc4a.so.1.0.0` with 7 new symbols.
+- ✅ `cmake --build` builds `libn4m.so.1.0.0` with 7 new symbols.
 - ✅ `cpp/abi/expected_symbols_linux.txt` updated to 36 symbols.
 - ✅ `cpp/tests/test_rng_pcg64.cpp` passes byte-equality vs NumPy fixture for all 5 seeds × 4096 uint64 draws.
 - ✅ standard_normal parity within 1e-15 for all 5 seeds × 4096 draws.
@@ -126,9 +126,9 @@ with open("parity/fixtures/_rng_pcg64_stream_v1.json", "w") as f:
 ## Verification
 
 ```bash
-cd /home/delete/nirs4all/chemometrics4all
+cd /home/delete/nirs4all/nirs4all-methods
 cmake --build --preset dev-debug
-./build/dev-debug/cpp/tests/chemometrics4all_tests   # phase-0 smoke + phase-1 rng tests
+./build/dev-debug/cpp/tests/n4m_tests   # phase-0 smoke + phase-1 rng tests
 ```
 
 Expected: all phase-0 (7) + phase-1 (5 seeds × 2 fields = 10) test names pass.

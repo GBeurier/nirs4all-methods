@@ -12,17 +12,17 @@ Per-row polynomial detrending. For each row of `X` of length `p`:
 
 ## ABI
 ```c
-c4a_status_t c4a_pp_detrend_create(c4a_pp_detrend_handle_t** out, int32_t polyorder);
-void         c4a_pp_detrend_destroy(c4a_pp_detrend_handle_t* h);
-c4a_status_t c4a_pp_detrend_transform(const c4a_pp_detrend_handle_t* h,
-                                       c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_pp_detrend_create(n4m_pp_detrend_handle_t** out, int32_t polyorder);
+void         n4m_pp_detrend_destroy(n4m_pp_detrend_handle_t* h);
+n4m_status_t n4m_pp_detrend_transform(const n4m_pp_detrend_handle_t* h,
+                                       n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 ## Numerical contract
 - Closed-form least-squares via the shared Householder QR helper in `core/common/linalg.{c,h}`.
 - True per-element division and subtraction; no reciprocal-multiplication shortcut.
 - Parity tolerance vs internal parity fixture: `1e-11 abs / 1e-12 rel`.
-- Internal parity fixture: `parity/python_generator/src/c4a_parity_pybaselines_ref/detrend.py` (uses `np.polyfit`/`np.polyval`).
+- Internal parity fixture: `parity/python_generator/src/n4m_parity_pybaselines_ref/detrend.py` (uses `np.polyfit`/`np.polyval`).
 
 ## Reference
 - Standard polynomial detrending; see `numpy.polyfit` / `numpy.polyval` documentation.

@@ -2,7 +2,7 @@
 
 ## Algorithm
 
-`c4a_aug_mixup` augments a batch of spectra by replacing every row with a
+`n4m_aug_mixup` augments a batch of spectra by replacing every row with a
 convex combination of two original rows drawn from the same batch.
 
 Given an input matrix $X \in \mathbb{R}^{n \times p}$, the algorithm:
@@ -29,7 +29,7 @@ For each `_apply` call the PCG64 stream consumes:
 ## Determinism
 
 A fixed PCG64 state at call time yields a bit-exact output. Seeding the
-RNG with `c4a_rng_pcg64_set_seed(rng, S)` before each `_apply` produces a
+RNG with `n4m_rng_pcg64_set_seed(rng, S)` before each `_apply` produces a
 reproducible stream regardless of prior consumption.
 
 ## Parameters

@@ -21,7 +21,7 @@ Three behaviours:
 
 Each row is then row-wise convolved with a Gaussian of the corresponding
 $\sigma_{\mathrm{pts}}$. The convolution is delegated to the existing
-`c4a_pp_gaussian` engine (mode `reflect`, `truncate=4.0`), which has
+`n4m_pp_gaussian` engine (mode `reflect`, `truncate=4.0`), which has
 $10^{-9}$ parity with `scipy.ndimage.gaussian_filter1d`.
 
 ## Determinism

@@ -57,7 +57,7 @@ Five modes mirror `scipy.ndimage`:
 
 ## Numerical contract
 
-- `_create` validates each parameter; returns `C4A_ERR_INVALID_ARGUMENT`
+- `_create` validates each parameter; returns `N4M_ERR_INVALID_ARGUMENT`
   on $\sigma \leq 0$, $\text{order} < 0$, $\text{truncate} < 0$, or an
   unknown mode.
 - Tolerance vs scipy: $10^{-9}$ absolute / $10^{-10}$ relative.  The gap

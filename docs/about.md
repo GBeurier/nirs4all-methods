@@ -1,6 +1,6 @@
-# chemometrics4all documentation
+# nirs4all-methods documentation
 
-chemometrics4all is a portable chemometrics / NIRS operator library with a C++17
+nirs4all-methods is a portable chemometrics / NIRS operator library with a C++17
 core, a stable C ABI target, and thin language bindings.
 
 The project does not publish cross-binding benchmark numbers yet. The landing

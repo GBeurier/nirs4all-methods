@@ -4,7 +4,7 @@ Placeholder. The canonical guidance is in `CONTRIBUTING.md`; this page accumulat
 
 ## Optional FITPACK Spline Backend
 
-`CHEMOMETRICS4ALL_WITH_FITPACK` controls the vendored FITPACK backend used by
+`N4M_WITH_FITPACK` controls the vendored FITPACK backend used by
 `aug_spline_smooth`.
 
 * `AUTO` (default): enable FITPACK when a compatible Fortran compiler can be
@@ -17,7 +17,7 @@ Placeholder. The canonical guidance is in `CONTRIBUTING.md`; this page accumulat
 Linux CI exercises the FITPACK path. macOS and MSVC builds are allowed to use
 the dependency-free fallback so wheel and ABI jobs do not require a Fortran
 toolchain. The R package vendors the same sources and defines
-`C4A_HAVE_FITPACK=1` through `Makevars`, relying on the Fortran compiler shipped
+`N4M_HAVE_FITPACK=1` through `Makevars`, relying on the Fortran compiler shipped
 with the R build toolchain.
 
 ## Optional Numerical Backends: Eigen And Armadillo
@@ -32,7 +32,7 @@ and gives robust QR/SVD/eigenvalue implementations for code paths such as PCA,
 MSC/EMSC least-squares fits, leverage diagnostics, Q residuals, and
 calibration-transfer operators (direct standardisation, piecewise direct
 standardisation, score-augmented projection standardisation, slope-bias
-correction). It is a good candidate for a `C4A_ENABLE_EIGEN` backend when the
+correction). It is a good candidate for a `N4M_ENABLE_EIGEN` backend when the
 goal is portability, local optimisation, or replacing handwritten loops without
 adding a BLAS/LAPACK requirement.
 
@@ -41,7 +41,7 @@ BLAS/LAPACK-backed dense operations would speed up development. It is useful for
 prototype kernels, reference-oriented development backends, and larger matrix
 operations where the deployment target already provides BLAS/LAPACK. The tradeoff
 is a heavier dependency surface and solver behaviour that may differ from the
-canonical C4A contract; for example, normal-equation based least-squares paths
+canonical N4M contract; for example, normal-equation based least-squares paths
 can drift on ill-conditioned local MSC windows. Armadillo should therefore be
 parity-gated before being used as an optimised backend.
 
@@ -62,11 +62,11 @@ hybrid operators. Stochastic augmenters are lower priority unless the backend is
 only used for deterministic substeps.
 
 Each enabled backend must surface in the cross-binding dashboard with a
-clearly labelled column (for example `chemometrics4all.cpp.<build>+eigen` or
-`chemometrics4all.cpp.<build>+armadillo`) so divergence against the canonical
+clearly labelled column (for example `n4m.cpp.<build>+eigen` or
+`n4m.cpp.<build>+armadillo`) so divergence against the canonical
 reference is visible alongside the default native column; the docs generators
 in `docs/_extras/build_landing.py` and `docs/_extras/build_methods.py` recognise
-any backend slug that follows the existing `chemometrics4all.cpp.*` /
+any backend slug that follows the existing `n4m.cpp.*` /
 `ref.<library>` conventions, so no manual table edit is required when a new
 backend lands.
 

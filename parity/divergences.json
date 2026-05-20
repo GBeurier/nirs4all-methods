@@ -5,87 +5,87 @@
   "allowed_suite_skips": {
     "aug_band_mask": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_band_perturb": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_channel_dropout": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_gauss_jitter": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_gaussian_noise": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_hetero_noise": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_linear_drift": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_local_clip": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_local_warp": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_magnitude_warp": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_multiplicative_noise": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_path_length": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_poly_drift": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_spike_noise": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_unsharp_mask": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_wavelength_shift": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "aug_wavelength_stretch": {
       "category": "rng-order",
-      "reason": "stochastic augmenter; c4a uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
+      "reason": "stochastic augmenter; n4m uses the frozen PCG64 draw stream and the upstream reference does not expose the same draw order",
       "expires": "2026-08-31"
     },
     "haar": {
@@ -95,27 +95,27 @@
     },
     "split_binned_strat_group_kfold": {
       "category": "rng-order",
-      "reason": "splitter uses seeded PCG64 draws with c4a-specific ordering",
+      "reason": "splitter uses seeded PCG64 draws with n4m-specific ordering",
       "expires": "2026-08-31"
     },
     "split_kbins_stratified": {
       "category": "rng-order",
-      "reason": "splitter uses seeded PCG64 draws with c4a-specific ordering",
+      "reason": "splitter uses seeded PCG64 draws with n4m-specific ordering",
       "expires": "2026-08-31"
     },
     "split_kmeans": {
       "category": "rng-order",
-      "reason": "splitter uses seeded PCG64 draws with c4a-specific ordering",
+      "reason": "splitter uses seeded PCG64 draws with n4m-specific ordering",
       "expires": "2026-08-31"
     },
     "split_split_splitter": {
       "category": "rng-order",
-      "reason": "splitter uses seeded PCG64 draws with c4a-specific ordering",
+      "reason": "splitter uses seeded PCG64 draws with n4m-specific ordering",
       "expires": "2026-08-31"
     },
     "split_systematic_circular": {
       "category": "rng-order",
-      "reason": "splitter uses seeded PCG64 draws with c4a-specific ordering",
+      "reason": "splitter uses seeded PCG64 draws with n4m-specific ordering",
       "expires": "2026-08-31"
     },
     "wavelet": {
@@ -142,9 +142,9 @@
   "weak_reference_tolerances": {
     "beads": "pybaselines implementation differs materially; current tolerance is a compatibility ceiling, not tight parity",
     "filter_composite": "known boundary-cell divergence in quality/leverage composition",
-    "iasls": "pybaselines basis differs from c4a/nirs4all fixture contract",
-    "imodpoly": "pybaselines prefit differs from c4a/nirs4all fixture contract",
-    "snip": "pybaselines decreasing-window scheme differs from c4a/nirs4all fixture contract",
+    "iasls": "pybaselines basis differs from n4m/nirs4all fixture contract",
+    "imodpoly": "pybaselines prefit differs from n4m/nirs4all fixture contract",
+    "snip": "pybaselines decreasing-window scheme differs from n4m/nirs4all fixture contract",
     "transfer_metrics": "trustworthiness metric follows different ranking formulation"
   }
 }

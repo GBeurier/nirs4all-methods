@@ -1,5 +1,5 @@
 ---
-# chemometrics4all — clang-tidy configuration.
+# nirs4all-methods — clang-tidy configuration.
 # Strict checks for the internal C++ core. Public C ABI files (cpp/src/c_api/*) are
 # treated more leniently because they intentionally cross language boundaries
 # and use C-style types/idioms.

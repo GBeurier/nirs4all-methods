@@ -2,7 +2,7 @@
 
 ## Overview
 
-`chemometrics4all` ships a portable C implementation of the [PCG64](https://www.pcg-random.org/) random number generator that is **bit-exact compatible with NumPy's** `numpy.random.Generator(PCG64(seed))`. This unlocks deterministic, reproducible, cross-platform parity for every stochastic operator the library exposes — augmentations, randomized feature selectors (CARS, MCUVE), isolation-forest-based outlier filters, k-means splitters, and any future Monte-Carlo procedure.
+`nirs4all-methods` ships a portable C implementation of the [PCG64](https://www.pcg-random.org/) random number generator that is **bit-exact compatible with NumPy's** `numpy.random.Generator(PCG64(seed))`. This unlocks deterministic, reproducible, cross-platform parity for every stochastic operator the library exposes — augmentations, randomized feature selectors (CARS, MCUVE), isolation-forest-based outlier filters, k-means splitters, and any future Monte-Carlo procedure.
 
 ## Why PCG64
 
@@ -14,20 +14,20 @@
 ## API surface
 
 ```c
-typedef struct c4a_rng_pcg64_state_t c4a_rng_pcg64_state_t;
+typedef struct n4m_rng_pcg64_state_t n4m_rng_pcg64_state_t;
 
-C4A_API c4a_status_t c4a_rng_pcg64_create(uint64_t seed,
-                                          c4a_rng_pcg64_state_t** out);
-C4A_API void         c4a_rng_pcg64_destroy(c4a_rng_pcg64_state_t* rng);
-C4A_API c4a_status_t c4a_rng_pcg64_set_seed(c4a_rng_pcg64_state_t* rng,
+N4M_API n4m_status_t n4m_rng_pcg64_create(uint64_t seed,
+                                          n4m_rng_pcg64_state_t** out);
+N4M_API void         n4m_rng_pcg64_destroy(n4m_rng_pcg64_state_t* rng);
+N4M_API n4m_status_t n4m_rng_pcg64_set_seed(n4m_rng_pcg64_state_t* rng,
                                             uint64_t seed);
-C4A_API c4a_status_t c4a_rng_pcg64_uint64(c4a_rng_pcg64_state_t* rng,
+N4M_API n4m_status_t n4m_rng_pcg64_uint64(n4m_rng_pcg64_state_t* rng,
                                           uint64_t* out);
-C4A_API c4a_status_t c4a_rng_pcg64_uint64_fill(c4a_rng_pcg64_state_t* rng,
+N4M_API n4m_status_t n4m_rng_pcg64_uint64_fill(n4m_rng_pcg64_state_t* rng,
                                                uint64_t* out, size_t n);
-C4A_API c4a_status_t c4a_rng_pcg64_standard_normal_fill(
-    c4a_rng_pcg64_state_t* rng, double* out, size_t n);
-C4A_API c4a_status_t c4a_rng_pcg64_advance(c4a_rng_pcg64_state_t* rng,
+N4M_API n4m_status_t n4m_rng_pcg64_standard_normal_fill(
+    n4m_rng_pcg64_state_t* rng, double* out, size_t n);
+N4M_API n4m_status_t n4m_rng_pcg64_advance(n4m_rng_pcg64_state_t* rng,
                                             uint64_t delta);
 ```
 
@@ -43,7 +43,7 @@ A single uint64 user seed expands to the 256-bit PCG64 state (state + increment,
 2. **Stage 2 — cross-mix.** Pairwise mixer with `MIX_MULT_L = 0xca01f9dd`, `MIX_MULT_R = 0x4973f715`, `XSHIFT = 16` cross-mixes the pool.
 3. **Stage 3 — state generation.** The first 4 uint32s of the pool become 2 uint64s for the PCG64 initial state and increment.
 
-This matches NumPy's `_seed_sequence.pyx` byte-exactly. See `cpp/src/core/common/rng_pcg64.c::c4a_pcg64_engine_seed`.
+This matches NumPy's `_seed_sequence.pyx` byte-exactly. See `cpp/src/core/common/rng_pcg64.c::n4m_pcg64_engine_seed`.
 
 ### Output function (PCG-XSL-RR)
 
@@ -71,11 +71,11 @@ The bit-slicing is `idx = r & 0xFF; sign = (r >> 8) & 0x1; mantissa = (r >> 9)` 
 
 ### Jump-ahead
 
-`c4a_rng_pcg64_advance(rng, delta)` jumps the state forward by `delta` LCG steps in O(log delta) time using Brown's algorithm (binary fast-exponentiation of the LCG recurrence). Useful for parallel stream subdivision: thread *i* of *N* uses `advance(i * N_per_thread)` to start at its own stream offset.
+`n4m_rng_pcg64_advance(rng, delta)` jumps the state forward by `delta` LCG steps in O(log delta) time using Brown's algorithm (binary fast-exponentiation of the LCG recurrence). Useful for parallel stream subdivision: thread *i* of *N* uses `advance(i * N_per_thread)` to start at its own stream offset.
 
 ## Vendored content
 
-The Ziggurat tables (`ki_double`, `wi_double`, `fi_double`, `ziggurat_nor_r`, `ziggurat_nor_inv_r`) and the SeedSequence + PCG64 algorithm are vendored from [NumPy 1.26.4](https://github.com/numpy/numpy/tree/v1.26.4/numpy/random/src) under the [BSD-3-Clause license](https://github.com/numpy/numpy/blob/v1.26.4/LICENSE.txt). The license is compatible with chemometrics4all's CeCILL-2.1.
+The Ziggurat tables (`ki_double`, `wi_double`, `fi_double`, `ziggurat_nor_r`, `ziggurat_nor_inv_r`) and the SeedSequence + PCG64 algorithm are vendored from [NumPy 1.26.4](https://github.com/numpy/numpy/tree/v1.26.4/numpy/random/src) under the [BSD-3-Clause license](https://github.com/numpy/numpy/blob/v1.26.4/LICENSE.txt). The license is compatible with nirs4all-methods's CeCILL-2.1.
 
 Files vendored:
 - `cpp/src/core/common/ziggurat_constants.h` ← NumPy `numpy/random/src/distributions/ziggurat_constants.h`
@@ -100,10 +100,10 @@ Test (`cpp/tests/test_rng_pcg64.cpp`):
 ## Verification
 
 ```bash
-cd /home/delete/nirs4all/chemometrics4all
+cd /home/delete/nirs4all/nirs4all-methods
 cmake --preset dev-debug
 cmake --build --preset dev-debug
-./build/dev-debug/cpp/tests/chemometrics4all_tests
+./build/dev-debug/cpp/tests/n4m_tests
 ```
 
 Expected: all phase-1 RNG tests pass (10 parity + 3 functional) byte-exactly.

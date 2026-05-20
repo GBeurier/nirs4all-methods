@@ -2,7 +2,7 @@
 
 ## Algorithm
 
-`c4a_aug_local_mixup` is a neighborhood-aware variant of mixup. For each
+`n4m_aug_local_mixup` is a neighborhood-aware variant of mixup. For each
 sample, it draws a random neighbor among the $k$ nearest non-self rows and
 mixes the two with a $\mathrm{Beta}(\alpha, \alpha)$ weight.
 

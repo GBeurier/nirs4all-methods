@@ -21,12 +21,12 @@ For each row `y`:
 
 ## ABI
 ```c
-c4a_status_t c4a_pp_arpls_create(c4a_pp_arpls_handle_t** out,
+n4m_status_t n4m_pp_arpls_create(n4m_pp_arpls_handle_t** out,
                                   double lam,
                                   int32_t max_iter, double tol);
-void         c4a_pp_arpls_destroy(c4a_pp_arpls_handle_t* h);
-c4a_status_t c4a_pp_arpls_transform(const c4a_pp_arpls_handle_t* h,
-                                     c4a_matrix_view_t X, c4a_matrix_view_t out);
+void         n4m_pp_arpls_destroy(n4m_pp_arpls_handle_t* h);
+n4m_status_t n4m_pp_arpls_transform(const n4m_pp_arpls_handle_t* h,
+                                     n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 ## Numerical contract
@@ -38,4 +38,4 @@ c4a_status_t c4a_pp_arpls_transform(const c4a_pp_arpls_handle_t* h,
 
 ## Reference
 - Baek, S.-J.; Park, A.; Ahn, Y.-J.; Choo, J. (2015). "Baseline Correction Using Asymmetrically Reweighted Penalized Least Squares Smoothing." *Analyst*, 140 (1), 250–257.
-- Internal parity fixture: `parity/python_generator/src/c4a_parity_pybaselines_ref/arpls.py`.
+- Internal parity fixture: `parity/python_generator/src/n4m_parity_pybaselines_ref/arpls.py`.

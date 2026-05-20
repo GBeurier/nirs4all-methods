@@ -32,7 +32,7 @@ scaled input, then the result is unscaled back to the original units.
 
 ## SVD-fallback vs PLS-weight extraction
 
-chemometrics4all does **not** ship embedded PLS models (Phase 0 / 1 design
+nirs4all-methods does **not** ship embedded PLS models (Phase 0 / 1 design
 ban). The original nirs4all 0.8.x reference computes the PLS weight via
 the first iteration of NIPALS, which for a univariate target `y` reduces
 to the normalised cross-correlation `X^T y / ||X^T y||`. We use that
@@ -44,7 +44,7 @@ in the Phase 8 brief (`max_abs ≤ 2 ULPs`).
 For multivariate `y` (deferred — not exposed at the public ABI today)
 the SVD fallback would require computing the leading singular pair of
 the cross-product matrix `X^T Y`. We do not ship that path today since
-the c4a OSC ABI accepts only a univariate `y` (length `n_samples`).
+the n4m OSC ABI accepts only a univariate `y` (length `n_samples`).
 
 ## Invertibility
 
@@ -52,26 +52,26 @@ OSC is **not** invertible. Each orthogonal-component deflation step
 projects samples onto the subspace orthogonal to the stored components,
 which is many-to-one — the original point cannot be uniquely recovered
 from the transformed output. The public ABI's
-`c4a_pp_osc_inverse_transform` returns `C4A_ERR_UNSUPPORTED`.
+`n4m_pp_osc_inverse_transform` returns `N4M_ERR_UNSUPPORTED`.
 
 ## C ABI
 
 ```c
-typedef struct c4a_pp_osc_handle_t c4a_pp_osc_handle_t;
+typedef struct n4m_pp_osc_handle_t n4m_pp_osc_handle_t;
 
-C4A_API c4a_status_t c4a_pp_osc_create(c4a_pp_osc_handle_t** out,
+N4M_API n4m_status_t n4m_pp_osc_create(n4m_pp_osc_handle_t** out,
                                         int32_t n_components, int scale);
-C4A_API void         c4a_pp_osc_destroy(c4a_pp_osc_handle_t* h);
-C4A_API c4a_status_t c4a_pp_osc_fit(c4a_pp_osc_handle_t* h,
-                                     c4a_matrix_view_t X,
+N4M_API void         n4m_pp_osc_destroy(n4m_pp_osc_handle_t* h);
+N4M_API n4m_status_t n4m_pp_osc_fit(n4m_pp_osc_handle_t* h,
+                                     n4m_matrix_view_t X,
                                      const double* y, int64_t y_len);
-C4A_API c4a_status_t c4a_pp_osc_transform(const c4a_pp_osc_handle_t* h,
-                                           c4a_matrix_view_t X,
-                                           c4a_matrix_view_t out);
-C4A_API c4a_status_t c4a_pp_osc_inverse_transform(const c4a_pp_osc_handle_t* h,
-                                                   c4a_matrix_view_t X,
-                                                   c4a_matrix_view_t out);
-C4A_API c4a_status_t c4a_pp_osc_is_fitted(const c4a_pp_osc_handle_t* h,
+N4M_API n4m_status_t n4m_pp_osc_transform(const n4m_pp_osc_handle_t* h,
+                                           n4m_matrix_view_t X,
+                                           n4m_matrix_view_t out);
+N4M_API n4m_status_t n4m_pp_osc_inverse_transform(const n4m_pp_osc_handle_t* h,
+                                                   n4m_matrix_view_t X,
+                                                   n4m_matrix_view_t out);
+N4M_API n4m_status_t n4m_pp_osc_is_fitted(const n4m_pp_osc_handle_t* h,
                                            int* out_fitted);
 ```
 
@@ -90,7 +90,7 @@ matrices.
 
 | Reference | Abs tol | Rel tol |
 |-----------|---------|---------|
-| Internal parity fixture (`c4a_parity_orthog_ref.osc`) | 1e-9 | 1e-10 |
+| Internal parity fixture (`n4m_parity_orthog_ref.osc`) | 1e-9 | 1e-10 |
 
 The internal parity fixture matches nirs4all 0.8.x bit-for-bit (≤ 2 ULPs)
 across the four parameter combinations covered in `osc_v1.json`.

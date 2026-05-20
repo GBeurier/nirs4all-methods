@@ -1,8 +1,8 @@
 # Changelog
 
-All notable changes to chemometrics4all will be documented in this file.
+All notable changes to nirs4all-methods will be documented in this file.
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to dual semver: **project version** in `C4A_PROJECT_VERSION_*` and **ABI version** in `C4A_ABI_VERSION_*` (both in `cpp/include/chemometrics4all/c4a_version.h`).
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to dual semver: **project version** in `N4M_PROJECT_VERSION_*` and **ABI version** in `N4M_ABI_VERSION_*` (both in `cpp/include/n4m/n4m_version.h`).
 
 ## [Unreleased]
 
@@ -17,39 +17,39 @@ bump 1.8.0 → 1.9.0 is judged adequate.
 
 - **M2 (Splitter opaque-handle naming).** Renamed nine Phase 11 splitter
   typedefs to use the project-wide `_handle_t` suffix:
-  - `c4a_split_kennard_stone_t`            → `c4a_split_kennard_stone_handle_t`
-  - `c4a_split_spxy_t`                     → `c4a_split_spxy_handle_t`
-  - `c4a_split_spxy_fold_t`                → `c4a_split_spxy_fold_handle_t`
-  - `c4a_split_spxy_g_fold_t`              → `c4a_split_spxy_g_fold_handle_t`
-  - `c4a_split_kmeans_t`                   → `c4a_split_kmeans_handle_t`
-  - `c4a_split_kbins_stratified_t`         → `c4a_split_kbins_stratified_handle_t`
-  - `c4a_split_binned_strat_group_kfold_t` → `c4a_split_binned_strat_group_kfold_handle_t`
-  - `c4a_split_systematic_circular_t`      → `c4a_split_systematic_circular_handle_t`
-  - `c4a_split_split_splitter_t`           → `c4a_split_split_splitter_handle_t`
+  - `n4m_split_kennard_stone_t`            → `n4m_split_kennard_stone_handle_t`
+  - `n4m_split_spxy_t`                     → `n4m_split_spxy_handle_t`
+  - `n4m_split_spxy_fold_t`                → `n4m_split_spxy_fold_handle_t`
+  - `n4m_split_spxy_g_fold_t`              → `n4m_split_spxy_g_fold_handle_t`
+  - `n4m_split_kmeans_t`                   → `n4m_split_kmeans_handle_t`
+  - `n4m_split_kbins_stratified_t`         → `n4m_split_kbins_stratified_handle_t`
+  - `n4m_split_binned_strat_group_kfold_t` → `n4m_split_binned_strat_group_kfold_handle_t`
+  - `n4m_split_systematic_circular_t`      → `n4m_split_systematic_circular_handle_t`
+  - `n4m_split_split_splitter_t`           → `n4m_split_split_splitter_handle_t`
 
-  `c4a_split_result_t` is intentionally retained: it is a value-typed
+  `n4m_split_result_t` is intentionally retained: it is a value-typed
   struct (heap-owned index arrays), not an opaque handle.
 
   Also renamed two splitter enums for consistency:
-  - `c4a_split_bin_strategy_t` (`C4A_SPLIT_BIN_*`) →
-    `c4a_split_kbins_strategy_t` (`C4A_SPLIT_KBINS_*` — already used by
+  - `n4m_split_bin_strategy_t` (`N4M_SPLIT_BIN_*`) →
+    `n4m_split_kbins_strategy_t` (`N4M_SPLIT_KBINS_*` — already used by
     the engine internals)
-  - `c4a_split_group_agg_t`  (`C4A_SPLIT_GROUP_AGG_*`) →
-    `c4a_split_aggregation_t` (`C4A_SPLIT_AGGREGATION_*`)
+  - `n4m_split_group_agg_t`  (`N4M_SPLIT_GROUP_AGG_*`) →
+    `n4m_split_aggregation_t` (`N4M_SPLIT_AGGREGATION_*`)
 
-  `c4a_split_y_metric_t` was already correctly named — kept as-is.
+  `n4m_split_y_metric_t` was already correctly named — kept as-is.
 
 - **M3 (Y-outlier filter fit/apply split).** Replaced the single-call
-  `c4a_filter_y_outlier_fit_get_mask` with the classical sklearn split,
+  `n4m_filter_y_outlier_fit_get_mask` with the classical sklearn split,
   matching the Phase 14 leverage / quality / composite filter contracts:
-  - `c4a_filter_y_outlier_fit(handle, y, n)` — learns the bounds.
-  - `c4a_filter_y_outlier_apply(handle, y, n, mask, stats)` — writes
+  - `n4m_filter_y_outlier_fit(handle, y, n)` — learns the bounds.
+  - `n4m_filter_y_outlier_apply(handle, y, n, mask, stats)` — writes
     the keep-mask and stats using the previously fitted bounds. Returns
-    `C4A_ERR_NOT_FITTED` when called on an unfitted handle.
-  - `c4a_filter_y_outlier_is_fitted(handle, out)` — reports 0/1.
+    `N4M_ERR_NOT_FITTED` when called on an unfitted handle.
+  - `n4m_filter_y_outlier_is_fitted(handle, out)` — reports 0/1.
 
   Net symbol delta: `-1, +3` (one rename, two additions). The frozen
-  NumPy reference `c4a_parity_filters_ref.y_outlier.y_outlier_fit_get_mask`
+  NumPy reference `n4m_parity_filters_ref.y_outlier.y_outlier_fit_get_mask`
   is unchanged — it stays a single-call API on the reference side.
 
 ### Build / version
@@ -72,7 +72,7 @@ prior tests. ABI minor bumps from 1.7.0 to 1.8.0.
   WaveletSVD (stateful DWT-flatten + PCA / SVD). Shared filter banks for
   haar / db4 / sym4 / coif1 under `core/common/wavelet_kernels.{c,h}`. 12
   parity tests, bit-exact match against the frozen
-  `c4a_parity_wavelets_ref` (pywt-based) reference.
+  `n4m_parity_wavelets_ref` (pywt-based) reference.
 - **Phase 13 — XOutlierFilter (1 op, 6 methods, 5 symbols + 1 enum)**:
   Mahalanobis, RobustMahalanobis (MinCovDet shrinkage), PCA-Residual
   (Q-statistic), PCA-Leverage (Hotelling T²), IsolationForest, LOF. Adds
@@ -80,10 +80,10 @@ prior tests. ABI minor bumps from 1.7.0 to 1.8.0.
   `core/common/pca_helper.{c,h}` (delegates to the existing `svd.{c,h}`
   from Phase 9). 12 parity tests.
 - **Phase 15 — Augmenters: noise + drift (7 ops, 21 symbols)**: opens the
-  new `c4a_aug_*` ABI category. GaussianNoise, MultiplicativeNoise,
+  new `n4m_aug_*` ABI category. GaussianNoise, MultiplicativeNoise,
   SpikeNoise, HeteroscedasticNoise, LinearDrift, PolynomialDrift,
   PathLength. Bit-exact 1e-15 PCG64 parity against the frozen
-  `c4a_parity_augmenters_ref` (NumPy Generator) reference. 14 tests.
+  `n4m_parity_augmenters_ref` (NumPy Generator) reference. 14 tests.
 - **Phase 16 — Augmenters: wavelength + spectral (10 ops, 30 symbols)**:
   WavelengthShift, WavelengthStretch, LocalWarp, BandPerturbation,
   BandMasking, ChannelDropout, GaussJitter, UnsharpMask, MagnitudeWarp,
@@ -98,7 +98,7 @@ prior tests. ABI minor bumps from 1.7.0 to 1.8.0.
   DetectorRollOff, StrayLight, EdgeCurvature, TruncatedPeak,
   EdgeArtifacts (combined wrapper with 4-bit flag selector), SplineSmooth,
   SplineXPerturbations, SplineYPerturbations, SplineXSimplification
-  (v2-deferred — returns C4A_ERR_NOT_IMPLEMENTED), SplineCurveSimplification
+  (v2-deferred — returns N4M_ERR_NOT_IMPLEMENTED), SplineCurveSimplification
   (v2-deferred), RotateTranslate, RandomXOperation. Shared B-spline core
   under `core/common/bspline.{c,h}`. Adds the internal-only
   `c_api/rng_state_internal.hpp` (shared by `c_api_rng.cpp` and the four
@@ -106,9 +106,9 @@ prior tests. ABI minor bumps from 1.7.0 to 1.8.0.
 
 ### Changed
 
-- `cpp/include/chemometrics4all/c4a.h` gains six new sections (§23-§28,
+- `cpp/include/n4m/n4m.h` gains six new sections (§23-§28,
   one per integrated phase) plus extended ABI guard-rail
-  `C4A_STATIC_ASSERT`s for the five new public enums. Previous §23 (ABI
+  `N4M_STATIC_ASSERT`s for the five new public enums. Previous §23 (ABI
   guard rails) renumbered to §29.
 - `c_api_rng.cpp` refactored to include the new `rng_state_internal.hpp`
   rather than defining the public RNG handle struct inline. The four
@@ -138,43 +138,43 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 - **Phase 8 — Orthogonalization (2 stateful ops, 12 symbols)**: OSC (Wold
   1998) and EPO (Roger 2003) with fit/transform/inverse_transform contracts.
 - **Phase 9 — Feature selection (2 stateful ops + shared Jacobi SVD, 12
-  symbols)**: FlexiblePCA, FlexibleSVD, plus internal `c4a_svd_compact`
+  symbols)**: FlexiblePCA, FlexibleSVD, plus internal `n4m_svd_compact`
   (one-sided Jacobi with wide-matrix transpose fallback) used by Phases 9, 19.
 - **Phase 10 — Resampling / cropping / target discretization (5 ops)**:
   Resampler (interpolation), CropTransformer, ResampleTransformer,
   IntegerKBinsDiscretizer, RangeDiscretizer (int32 output).
-- **Phase 11 — Splitters (9 ops, NEW `c4a_split_*` category, 31 symbols)**:
+- **Phase 11 — Splitters (9 ops, NEW `n4m_split_*` category, 31 symbols)**:
   KennardStone, SPXY, SPXYFold, SPXYGFold (group-aware), KMeans, KBinsStratified,
   BinnedStratifiedGroupKFold, SystematicCircular, SPlit (data twinning), plus
-  the shared `c4a_split_result_t` struct + `c4a_split_result_destroy`.
-- **Phase 12 — YOutlierFilter (NEW `c4a_filter_*` category, 3 symbols)**:
+  the shared `n4m_split_result_t` struct + `n4m_split_result_destroy`.
+- **Phase 12 — YOutlierFilter (NEW `n4m_filter_*` category, 3 symbols)**:
   IQR / Z-score / Percentile / MAD detection methods, plus the shared
-  `c4a_filter_stats_t` struct used by every filter operator.
+  `n4m_filter_stats_t` struct used by every filter operator.
 - **Phase 14 — Filter meta operators (3 ops, 14 symbols)**: HighLeverageFilter
   (hat-matrix / PCA leverage), SpectralQualityFilter (6 row-level thresholds),
   CompositeFilter (ANY / ALL combinator over sub-filters).
 - **Phase 19 — Signal type detection + NIRS metrics + T² / Q (11 symbols)**:
-  - `c4a_signal_detect` auto-detects spectrum type (absorbance, reflectance,
+  - `n4m_signal_detect` auto-detects spectrum type (absorbance, reflectance,
     transmittance, Kubelka-Munk, log(1/R), log(1/T), and percent variants).
   - Eight regression metrics: RMSE, MAE, bias, SEP, RPD, RPIQ, R², NRMSE.
   - Two multivariate outlier statistics: Hotelling T², Q-residuals
     (Jackson-Mudholkar UCL).
-- **Phase 20 — Transfer metrics (NEW `c4a_transfer_*` category, 1 symbol)**:
-  `c4a_transfer_metrics_compute` returns nine dataset-alignment metrics
+- **Phase 20 — Transfer metrics (NEW `n4m_transfer_*` category, 1 symbol)**:
+  `n4m_transfer_metrics_compute` returns nine dataset-alignment metrics
   (centroid_distance, CKA, Grassmann, RV, Procrustes, trustworthiness,
   spread_distance, EVR source/target).
-- **Phase 21 — FCK static transformer (4 symbols, `c4a_pp_fck_static_*` +
-  `c4a_fck_kernel_1d`)**: bank of fractional convolutional kernels with
+- **Phase 21 — FCK static transformer (4 symbols, `n4m_pp_fck_static_*` +
+  `n4m_fck_kernel_1d`)**: bank of fractional convolutional kernels with
   reflect-mode 1D convolution.
 
 ### Changed
 
 - ABI minor bumps from 1.6.0 to 1.7.0. The public surface gains ~126 new
   symbols (126 → 252).
-- `c4a.h` grows ten new sections (§13-§22) and renumbers the trailing ABI
+- `n4m.h` grows ten new sections (§13-§22) and renumbers the trailing ABI
   guard-rail block to §23. All additions are inside the same `extern "C"`
   block as the existing surface; no enum-size or struct-layout changes.
-- Internal helper `c4a_svd_compact` (`cpp/src/core/common/svd.{c,h}`) is the
+- Internal helper `n4m_svd_compact` (`cpp/src/core/common/svd.{c,h}`) is the
   single shared SVD used by Phases 9, 19 (Hotelling T² / Q-residuals).
   Phase 20's `transfer_metrics.c` keeps its private Jacobi-PCA — its API
   surface is incompatible with the shared helper and the parity reference
@@ -185,7 +185,7 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 - All ten worktrees declared their tests through `register_*_tests` entry
   points; the standalone test mains (`main_phase19.cpp`, `main_splitters.cpp`,
   `test_transfer_metrics_main.cpp`) are dropped in favour of a single
-  `chemometrics4all_tests` executable (no auxiliary CTest targets).
+  `n4m_tests` executable (no auxiliary CTest targets).
 - Test suite grew from 82/82 to 171/171 passing (~89 new tests).
 - Zero new build warnings; sanitizer-clean.
 
@@ -195,33 +195,33 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 
 - **Six new stateless baseline correction operators** completing the family
   started in Phase 5a (`_create / _transform / _destroy` ABI contract):
-  - **ModPoly** (`c4a_pp_modpoly_*`, 3 symbols) — Lieber & Mahadevan-Jansen
+  - **ModPoly** (`n4m_pp_modpoly_*`, 3 symbols) — Lieber & Mahadevan-Jansen
     2003 iterative polynomial baseline. Per-row Householder QR (shared with
     Detrend) factored once and replayed against the clipped y at each
     iteration.
-  - **IModPoly** (`c4a_pp_imodpoly_*`, 3 symbols) — Gan, Ruan, Mo 2006
+  - **IModPoly** (`n4m_pp_imodpoly_*`, 3 symbols) — Gan, Ruan, Mo 2006
     σ-stopping variant of ModPoly. Convergence on the relative change of
     the residual stdev rather than the baseline.
-  - **SNIP** (`c4a_pp_snip_*`, 3 symbols) — Ryan 1988 / Morháč 1997 LLS-
+  - **SNIP** (`n4m_pp_snip_*`, 3 symbols) — Ryan 1988 / Morháč 1997 LLS-
     transformed peak-clipping. Pure arithmetic, no linear algebra.
-  - **RollingBall** (`c4a_pp_rolling_ball_*`, 3 symbols) — Kneen & Annegarn
+  - **RollingBall** (`n4m_pp_rolling_ball_*`, 3 symbols) — Kneen & Annegarn
     1996 min-then-max morphological baseline with optional moving-average
     smoothing.
-  - **IAsLS** (`c4a_pp_iasls_*`, 3 symbols) — He 2014 AsLS variant with
+  - **IAsLS** (`n4m_pp_iasls_*`, 3 symbols) — He 2014 AsLS variant with
     polynomial-prefit weight initialisation. Shares the pentadiagonal
     LDLT solver and the shared Vandermonde QR.
-  - **BEADS** (`c4a_pp_beads_*`, 3 symbols, simplified variant) — Ning &
+  - **BEADS** (`n4m_pp_beads_*`, 3 symbols, simplified variant) — Ning &
     Selesnick 2014 simplified to a pentadiagonal reweighted-L2 surrogate.
     See `docs/algorithms/beads.md` for the deferred 7-diagonal Chebyshev
     variant.
 - **LogTransform `_fit / _transform` split** (Phase 2 carry-forward,
   finally landed): `auto_offset != 0` now captures the safety offset via
-  `c4a_pp_log_fit` and reuses the cached `_fitted_offset` on every
+  `n4m_pp_log_fit` and reuses the cached `_fitted_offset` on every
   subsequent `_transform` call. `auto_offset == 0` is unchanged
   (stateless, no fit required). Adds 2 new symbols
-  (`c4a_pp_log_fit`, `c4a_pp_log_is_fitted`).
+  (`n4m_pp_log_fit`, `n4m_pp_log_is_fitted`).
 - **Frozen NumPy reference** for the 6 new operators under
-  `parity/python_generator/src/c4a_parity_pybaselines_ref/`. The Phase 5a
+  `parity/python_generator/src/n4m_parity_pybaselines_ref/`. The Phase 5a
   validation script extends to Phase 5b (10 ops total against
   `pybaselines==1.1.4`).
 - **Parity fixtures** under `parity/fixtures/`:
@@ -236,16 +236,16 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 
 - **Banded LDLT solver enhancements** in
   `cpp/src/core/common/banded_solver.{c,h}`:
-  - Added `c4a_banded5_factor_into(L_buf, D_buf, ...)` — same algorithm
-    as `c4a_banded5_factor` but writes into caller-owned scratch buffers,
+  - Added `n4m_banded5_factor_into(L_buf, D_buf, ...)` — same algorithm
+    as `n4m_banded5_factor` but writes into caller-owned scratch buffers,
     so AsLS / AirPLS / ArPLS / IAsLS / BEADS no longer allocate inside
     the iteration loop.
-  - Added `c4a_banded5_solve_into(L_buf, D_buf, ...)` — companion solve
+  - Added `n4m_banded5_solve_into(L_buf, D_buf, ...)` — companion solve
     against the in-place factor.
-  - Added `c4a_second_diff_penalty_pent5(n, lam, ...)` — shared
+  - Added `n4m_second_diff_penalty_pent5(n, lam, ...)` — shared
     `lam * D_2^T D_2` penalty builder; replaces three inline copies
     (AsLS / AirPLS / ArPLS).
-  - Added `c4a_relative_l2_diff(w, w_new, n)` — shared convergence
+  - Added `n4m_relative_l2_diff(w, w_new, n)` — shared convergence
     helper; replaces two inline copies (AsLS / ArPLS).
 - **AsLS / AirPLS / ArPLS refactored** to use the new helpers and the
   in-place LDLT factor. Per-row L / D scratch buffers replace per-iteration
@@ -261,11 +261,11 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 - ABI 1.5.0 → **1.6.0** (additive: 20 new symbols, no breakages).
 - Symbol count 106 → **126**.
   - +18 from the 6 baseline ops (3 symbols each).
-  - +2 from the LogTransform split (`c4a_pp_log_fit`,
-    `c4a_pp_log_is_fitted`).
+  - +2 from the LogTransform split (`n4m_pp_log_fit`,
+    `n4m_pp_log_is_fitted`).
 - All three platform expected-symbols lists updated:
   `cpp/abi/expected_symbols_{linux,macos,windows}.txt`.
-- `c4a.h` adds §12 (Phase 5b baseline correction rest), updates §8
+- `n4m.h` adds §12 (Phase 5b baseline correction rest), updates §8
   (LogTransform lifecycle banner).
 
 ## [0.1.0+abi.1.5.0] — Phase 5a baseline correction core
@@ -274,16 +274,16 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 
 - **Four stateless baseline correction operators** with the `_create /
   _transform / _destroy` ABI contract:
-  - **Detrend** (`c4a_pp_detrend_*`, 3 symbols) — polynomial baseline
+  - **Detrend** (`n4m_pp_detrend_*`, 3 symbols) — polynomial baseline
     subtraction via Householder QR on a (n, polyorder+1) Vandermonde
     matrix.  Matches `np.polyfit + np.polyval` per row.  `polyorder >= 0`.
-  - **AsLS** (`c4a_pp_asls_*`, 3 symbols) — Asymmetric Least Squares
+  - **AsLS** (`n4m_pp_asls_*`, 3 symbols) — Asymmetric Least Squares
     (Eilers & Boelens 2005).  Iteratively reweighted penalised least
     squares with a 2nd-order penalty `lam * D_2^T D_2`.
-  - **AirPLS** (`c4a_pp_airpls_*`, 3 symbols) — Adaptive iteratively
+  - **AirPLS** (`n4m_pp_airpls_*`, 3 symbols) — Adaptive iteratively
     reweighted PLS (Zhang 2010).  Weight update via exponential of
     clipped negative residuals; convergence on `|sum(neg)| / |y|_1`.
-  - **ArPLS** (`c4a_pp_arpls_*`, 3 symbols) — Asymmetrically reweighted
+  - **ArPLS** (`n4m_pp_arpls_*`, 3 symbols) — Asymmetrically reweighted
     PLS (Baek 2015).  Logistic weight update based on the distribution
     of negative residuals.
 - **Pentadiagonal symmetric LDLT solver** at
@@ -292,10 +292,10 @@ ABI minor bumps from 1.6.0 to 1.7.0.
   dense Gauss-Jordan reference (residual ~9e-12 on lam=1e3 systems).
   Internal-only; not exposed in the public ABI.
 - **Frozen NumPy reference** under
-  `parity/python_generator/src/c4a_parity_pybaselines_ref/`: pure
+  `parity/python_generator/src/n4m_parity_pybaselines_ref/`: pure
   NumPy + scipy.sparse implementations of the four operators, validated
   once against `pybaselines==1.1.4` and now the canonical parity floor.
-  Future pybaselines releases can drift without breaking the c4a
+  Future pybaselines releases can drift without breaking the n4m
   parity gates.
 - **Parity fixtures** under `parity/fixtures/`: `detrend_v1.json` (4
   cases sweeping polyorder), `asls_v1.json` / `airpls_v1.json` /
@@ -306,8 +306,8 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 ### Changed (Phase 5 opener cleanup — per Codex Phase 3+4 review)
 
 - **Extracted shared Householder QR** to
-  `cpp/src/core/common/linalg.{c,h}` (`c4a_householder_qr`,
-  `c4a_apply_qt`, `c4a_back_solve_R`).  Replaces three in-line copies
+  `cpp/src/core/common/linalg.{c,h}` (`n4m_householder_qr`,
+  `n4m_apply_qt`, `n4m_back_solve_R`).  Replaces three in-line copies
   previously living in `emsc.c`, `savitzky_golay.c` (main coef build),
   and `savitzky_golay.c` (`sg_fit_edge_left/right`).  Bit-exact: all
   61 prior tests still pass.
@@ -317,7 +317,7 @@ ABI minor bumps from 1.6.0 to 1.7.0.
   `test_preprocessing_{stateless,stateful,smoothing}.cpp`.  Net
   deletion: ~1,000 LOC of duplicated parser code across the three
   test files.
-- **Fixed `c4a_pp_derivate_*` documentation** in `c4a.h` §9: the
+- **Fixed `n4m_pp_derivate_*` documentation** in `n4m.h` §9: the
   banner now honestly states that `_fit` memoises the input column
   count for shape validation at transform time (previously claimed
   `_fit` was a pure no-op).
@@ -335,28 +335,28 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 
 - **Five stateless preprocessing operators** with the `_create / _transform /
   _destroy` ABI contract:
-  - **SavitzkyGolay** (`c4a_pp_savgol_*`, 3 symbols) — matches
+  - **SavitzkyGolay** (`n4m_pp_savgol_*`, 3 symbols) — matches
     `scipy.signal.savgol_filter`.  Vandermonde-QR pseudo-inverse for the
     coefficient build (mathematically equivalent to scipy's SVD-based
     lstsq path).  Five boundary modes — `mirror`, `constant`, `nearest`,
     `wrap`, `interp` — with the same `interp` polynomial-fit-at-edges
     behaviour as `_savitzky_golay._fit_edge`.
-  - **FirstDerivative** (`c4a_pp_first_derivative_*`, 3 symbols) — matches
+  - **FirstDerivative** (`n4m_pp_first_derivative_*`, 3 symbols) — matches
     `np.gradient(X, delta, axis=1, edge_order)` for `edge_order` in
     {1, 2}.  Shape-preserving.
-  - **SecondDerivative** (`c4a_pp_second_derivative_*`, 3 symbols) — two
+  - **SecondDerivative** (`n4m_pp_second_derivative_*`, 3 symbols) — two
     passes of `np.gradient`.
-  - **NorrisWilliams** (`c4a_pp_norris_williams_*`, 3 symbols) — centred
+  - **NorrisWilliams** (`n4m_pp_norris_williams_*`, 3 symbols) — centred
     moving-average smoother followed by a gap finite difference, applied
     `derivative_order` times.  Matches `nirs4all.operators.transforms.
     norris_williams.norris_williams`.
-  - **Gaussian** (`c4a_pp_gaussian_*`, 3 symbols) — matches
+  - **Gaussian** (`n4m_pp_gaussian_*`, 3 symbols) — matches
     `scipy.ndimage.gaussian_filter1d`.  Hermite-polynomial kernel
     recursion that produces the exact same kernel bytes as
     `_gaussian_kernel1d`.  Five boundary modes — `reflect`, `constant`,
     `nearest`, `mirror`, `wrap`.
-- **Two new enum types** in the public header: `c4a_pp_savgol_mode_t`
-  (5 values) and `c4a_pp_gaussian_mode_t` (5 values).
+- **Two new enum types** in the public header: `n4m_pp_savgol_mode_t`
+  (5 values) and `n4m_pp_gaussian_mode_t` (5 values).
 - **Boundary-padding helper** (`cpp/src/core/common/padding.{c,h}`) —
   shared index resolution for the five SciPy modes.  Used by SG and
   Gaussian; reused unchanged by Phases 5+.
@@ -389,8 +389,8 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 - **Total exported symbols**: 79 → **94** (15 new wrappers, no removals).
 - **Public header** gains §10 "Phase 4 — Stateless derivatives & smoothing
   preprocessings"; the previous §10 (ABI guard rails) is renumbered to
-  §11.  Two new static-size assertions cover `c4a_pp_savgol_mode_t` and
-  `c4a_pp_gaussian_mode_t`.
+  §11.  Two new static-size assertions cover `n4m_pp_savgol_mode_t` and
+  `n4m_pp_gaussian_mode_t`.
 
 ### Numerical parity findings
 
@@ -424,27 +424,27 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 - **Four stateful preprocessing operators** with the `_create / _fit /
   _transform / _destroy` ABI contract (and `_inverse_transform` / `_is_fitted`
   where applicable):
-  - **MSC** (`c4a_pp_msc_*`, 6 symbols) — Multiplicative Scatter Correction
+  - **MSC** (`n4m_pp_msc_*`, 6 symbols) — Multiplicative Scatter Correction
     with per-column linear regression against the per-row mean. Invertible.
     Matches `nirs4all.operators.transforms.nirs.MultiplicativeScatterCorrection(scale=False)`.
-  - **EMSC** (`c4a_pp_emsc_*`, 5 symbols) — Extended MSC with polynomial
+  - **EMSC** (`n4m_pp_emsc_*`, 5 symbols) — Extended MSC with polynomial
     wavelength terms (degree configurable). Per-row least-squares solve
     against `[reference, w^1, …, w^degree]` via Householder QR. Not
     invertible.
-  - **Baseline** (`c4a_pp_baseline_*`, 6 symbols) — Per-column mean
+  - **Baseline** (`n4m_pp_baseline_*`, 6 symbols) — Per-column mean
     centering (equivalent to `StandardScaler(with_std=False)`). Invertible.
     Matches `nirs4all.operators.transforms.signal.Baseline`. Class name is
     historical; this is NOT a baseline correction in the spectroscopic
     sense (the polynomial / AsLS family lives in Phase 5).
-  - **Derivate** (`c4a_pp_derivate_*`, 5 symbols) — `np.diff(X, n=order,
+  - **Derivate** (`n4m_pp_derivate_*`, 5 symbols) — `np.diff(X, n=order,
     axis=1) / delta**order`. Output column count is
-    `cols - order`; a helper `c4a_pp_derivate_output_cols(order, input_cols)`
+    `cols - order`; a helper `n4m_pp_derivate_output_cols(order, input_cols)`
     is exposed for callers to size their output buffers. Lifecycle is
     stateful-shaped (with a no-op `_fit`) for ABI uniformity with the
     other Phase 3 operators.
 - **Stateful contract enforcement**: every stateful operator tracks a
   `fitted` flag on its internal state. `_transform` (and
-  `_inverse_transform`) return `C4A_ERR_NOT_FITTED` when called before a
+  `_inverse_transform`) return `N4M_ERR_NOT_FITTED` when called before a
   successful `_fit`. Calling `_fit` again replaces the prior state
   (sklearn-style refit semantics).
 - **C engines** under `cpp/src/core/preprocessing/{scatter,scaling,
@@ -481,16 +481,16 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 
 ### Removed (Codex R3 + R4)
 
-- **c4a.h orphan PLS declarations** — config, pipeline, model,
+- **n4m.h orphan PLS declarations** — config, pipeline, model,
   operator_bank, gating_strategy, AOM (global + per-component),
   validation_plan, method_result, component_coefficients,
-  c4a_array_t opaque type + 4 accessors. None had implementations in
-  `cpp/src/`; all were inherited from pls4all and never wired. c4a.h
+  n4m_array_t opaque type + 4 accessors. None had implementations in
+  `cpp/src/`; all were inherited from pls4all and never wired. n4m.h
   shrunk from **2208** lines to **680** lines (-69%).
 - **Static asserts** in the ABI guard-rail section that referenced
-  removed enums (`c4a_algorithm_t`, `c4a_solver_t`, `c4a_deflation_t`,
-  `c4a_operator_kind_t`, `c4a_gating_mode_t`, `c4a_model_array_t`).
-- **Reintroduce-c4a_array_t-at-Phase-9** deferral logged at
+  removed enums (`n4m_algorithm_t`, `n4m_solver_t`, `n4m_deflation_t`,
+  `n4m_operator_kind_t`, `n4m_gating_mode_t`, `n4m_model_array_t`).
+- **Reintroduce-n4m_array_t-at-Phase-9** deferral logged at
   `docs/reviews/DEFERRALS.md`.
 
 ### Numerical parity findings
@@ -498,25 +498,25 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 - nirs4all's `MultiplicativeScatterCorrection` uses `np.polyfit(ref,
   col, 1)` per column where `ref = mean(X, axis=1)` is the per-row mean.
   The slope/intercept come back as `[a, b] = polyfit(...)`, then
-  transform is `(X[:, j] - b) / a`. The c4a closed-form `(a, b)`
+  transform is `(X[:, j] - b) / a`. The n4m closed-form `(a, b)`
   computation matches `np.polyfit`'s Vandermonde + lstsq path to within
   ~2 ULPs.
 - For EMSC the gold standard is `np.linalg.lstsq(B, x_i, rcond=None)`
-  which dispatches to LAPACK gelsd (SVD-based). The c4a Householder QR
+  which dispatches to LAPACK gelsd (SVD-based). The n4m Householder QR
   implementation agrees to ~8 decimal digits across the supported degree
   range. The gap is structural to the conditioning of the raw-integer
   wavelength basis and would not improve by switching solver families
   short of a full SVD implementation.
 - `np.diff(X, n=order, axis=1) / delta**order` evaluates `delta**order`
   as repeated multiplication when `order` is an integer (Python's
-  `int.__pow__`). The c4a engine matches this exactly and then divides
+  `int.__pow__`). The n4m engine matches this exactly and then divides
   each output element by the precomputed scalar (true element-wise
   division, not multiply-by-reciprocal).
 
 ### ABI
 
 - Project version stays 0.1.0; **ABI bumps to 1.3.0** (additive: 22 new
-  symbols; the c4a.h trim removed only orphan declarations with no
+  symbols; the n4m.h trim removed only orphan declarations with no
   exported counterparts, so it is not an ABI-breaking change). Total
   exported symbols: 57 → **79**.
 
@@ -541,13 +541,13 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 ### Added
 
 - **Seven stateless preprocessing operators** with bit-exact `nirs4all` 0.8.x / `numpy` 1.26.4 parity:
-  - **SNV** (`c4a_pp_snv_*`) — row-wise mean / std normalisation with configurable `with_mean`, `with_std`, `ddof`.
-  - **LocalSNV** (`c4a_pp_lsnv_*`) — sliding-window SNV with `reflect` / `edge` / `constant` padding and cumsum-based moving statistics matching `nirs4all.LocalStandardNormalVariate`.
-  - **RobustSNV** (`c4a_pp_rnv_*`) — median + `k * MAD` normalisation with optional center / scale, in-place quickselect median.
-  - **AreaNormalization** (`c4a_pp_area_*`) — per-row division by `sum` / `abs_sum` / `trapz` area (trapezoidal integration with unit spacing, pair-sum form matching `np.trapz`).
-  - **Normalize** (`c4a_pp_normalize_*`) — column-wise L2-norm scaling or user-defined-range scaling.
-  - **SimpleScale** (`c4a_pp_simple_scale_*`) — column-wise min-max to `[0, 1]`.
-  - **LogTransform** (`c4a_pp_log_*`) — element-wise `log(X + δ)` with optional fit-time auto-offset and arbitrary base.
+  - **SNV** (`n4m_pp_snv_*`) — row-wise mean / std normalisation with configurable `with_mean`, `with_std`, `ddof`.
+  - **LocalSNV** (`n4m_pp_lsnv_*`) — sliding-window SNV with `reflect` / `edge` / `constant` padding and cumsum-based moving statistics matching `nirs4all.LocalStandardNormalVariate`.
+  - **RobustSNV** (`n4m_pp_rnv_*`) — median + `k * MAD` normalisation with optional center / scale, in-place quickselect median.
+  - **AreaNormalization** (`n4m_pp_area_*`) — per-row division by `sum` / `abs_sum` / `trapz` area (trapezoidal integration with unit spacing, pair-sum form matching `np.trapz`).
+  - **Normalize** (`n4m_pp_normalize_*`) — column-wise L2-norm scaling or user-defined-range scaling.
+  - **SimpleScale** (`n4m_pp_simple_scale_*`) — column-wise min-max to `[0, 1]`.
+  - **LogTransform** (`n4m_pp_log_*`) — element-wise `log(X + δ)` with optional fit-time auto-offset and arbitrary base.
 - **C engines** under `cpp/src/core/preprocessing/{scatter,scaling}/` (7 `.c` + `.h` pairs). Pure ISO C11, no third-party dependencies, all accumulations preserve NumPy's left-to-right rounding order.
 - **C ABI wrappers** in `cpp/src/c_api/c_api_preprocessing.cpp` — 21 new symbols (3 × 7 operators: `create / destroy / transform`), each wrapped in `try` / `catch` so no C++ exception ever crosses the boundary. Input validation enforces row-major contiguous F64 matrix views and matching output shape.
 - **Parity fixtures** (`parity/fixtures/{snv,lsnv,rnv,area_norm,normalize,simple_scale,log_transform}_v1.json`) generated from a deterministic 50 × 200 NIR-shaped spectrum block (PCG64 seed=20260518); doubles encoded as big-endian hex to avoid JSON float-formatting loss.
@@ -571,8 +571,8 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 
 ### Reviews
 
-- **Opus post-review** at `docs/reviews/phase-2/opus-post.md`. Verdict: REVISE → 3 high-confidence fixes applied: (1) SNV flat-row threshold tightened from `>= 1e-15` to `!= 0` to match nirs4all exactly, (2) `c4a_pp_lsnv_pad_mode_t` and `c4a_pp_area_method_t` enums hoisted from internal headers into public `c4a.h`, (3) LogTransform per-call recomputation behaviour documented in c4a.h.
-- **Codex Phases 1+2 review** at `docs/reviews/phase-2/codex-post.md`. Verdict: ACCEPT with Phase 3 prerequisites. Applied: test Runner renamed to `chemometrics4all`, `parity/python_generator/pyproject.toml` added with numpy 1.26.4 pin, `cpp/src/c_api/c4a_linux.map` version script added (defense-in-depth on top of `-fvisibility=hidden`). Confirmed all 57 exports are `c4a_*`.
+- **Opus post-review** at `docs/reviews/phase-2/opus-post.md`. Verdict: REVISE → 3 high-confidence fixes applied: (1) SNV flat-row threshold tightened from `>= 1e-15` to `!= 0` to match nirs4all exactly, (2) `n4m_pp_lsnv_pad_mode_t` and `n4m_pp_area_method_t` enums hoisted from internal headers into public `n4m.h`, (3) LogTransform per-call recomputation behaviour documented in n4m.h.
+- **Codex Phases 1+2 review** at `docs/reviews/phase-2/codex-post.md`. Verdict: ACCEPT with Phase 3 prerequisites. Applied: test Runner renamed to `nirs4all-methods`, `parity/python_generator/pyproject.toml` added with numpy 1.26.4 pin, `cpp/src/c_api/n4m_linux.map` version script added (defense-in-depth on top of `-fvisibility=hidden`). Confirmed all 57 exports are `n4m_*`.
 - Per user direction, **Codex review runs every two phases** in addition to per-phase Opus reviews.
 
 ## [0.1.0+abi.1.1.0] — Phase 1 PCG64 RNG
@@ -582,7 +582,7 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 - **PCG64 random number generator** with bit-exact NumPy parity:
   - `cpp/src/core/common/rng_pcg64.{h,c}` — pure-C PCG-XSL-RR 128/64 implementation with native `__uint128_t` (gcc/clang) and MSVC two-uint64 fallback. Full NumPy `SeedSequence(seed)` expansion via SplitMix64-style 4-stage pool mixer.
   - `cpp/src/core/common/ziggurat.c` + `ziggurat_constants.h` — vendored NumPy 1.26.4 Ziggurat tables (BSD-3-Clause, license-compatible with CeCILL-2.1) with 256-region Marsaglia–Tsang algorithm for `standard_normal_fill`.
-  - `cpp/src/c_api/c_api_rng.cpp` — 7 C ABI wrappers (`c4a_rng_pcg64_{create, destroy, set_seed, uint64, uint64_fill, standard_normal_fill, advance}`) behind opaque handle `c4a_rng_pcg64_state_t`. Try/catch wrapped, null-pointer-safe, `destroy(NULL)` no-op.
+  - `cpp/src/c_api/c_api_rng.cpp` — 7 C ABI wrappers (`n4m_rng_pcg64_{create, destroy, set_seed, uint64, uint64_fill, standard_normal_fill, advance}`) behind opaque handle `n4m_rng_pcg64_state_t`. Try/catch wrapped, null-pointer-safe, `destroy(NULL)` no-op.
 - **Parity fixture** `parity/fixtures/_rng_pcg64_stream_v1.json` (848 kB) — 5 seeds × (4096 uint64 + 4096 standard_normal) generated with `numpy==1.26.4` (pinned per CONTRIBUTING.md). Doubles encoded as big-endian hex to avoid JSON float-precision loss.
 - **13 new tests** in `cpp/tests/test_rng_pcg64.cpp`: 3 functional (null-safety, set_seed-resets-stream, advance-matches-repeats) + 5 uint64 byte-exact parity (one per seed) + 5 standard_normal IEEE-754 bit-exact parity (one per seed). Hand-rolled JSON parser keeps the zero-dep policy.
 - **Documentation** `docs/algorithms/rng_pcg64.md` — algorithm, API, vendoring provenance, parity policy.
@@ -593,7 +593,7 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 
 ### ABI
 
-- Project version stays 0.1.0; **ABI bumps to 1.1.0** (additive: 7 new symbols, no breaking changes). Total exported symbols: 29 → **36** (`c4a_rng_pcg64_*` × 7 added).
+- Project version stays 0.1.0; **ABI bumps to 1.1.0** (additive: 7 new symbols, no breaking changes). Total exported symbols: 29 → **36** (`n4m_rng_pcg64_*` × 7 added).
 
 ### Review
 
@@ -609,9 +609,9 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 ### Added
 
 - C++17 core skeleton mirroring `pls4all`'s architecture: `cpp/src/core/{config,context,matrix_view,status,version}.cpp` + `cpp/src/c_api/{c_api_context,c_api_matrix,c_api_version}.cpp`.
-- Public C ABI header `cpp/include/chemometrics4all/c4a.h` (Phase 0 surface: status codes, dtype/backend enums, matrix view, context lifecycle, version queries). Full operator surface to be added phase by phase.
+- Public C ABI header `cpp/include/n4m/n4m.h` (Phase 0 surface: status codes, dtype/backend enums, matrix view, context lifecycle, version queries). Full operator surface to be added phase by phase.
 - CMake build system inherited from pls4all with 20+ presets in `CMakePresets.json` (dev-debug, dev-release, ci-*, blas-on, sanitizer-*). Zero mandatory dependencies in the reference build.
-- Tiny CLI `chemometrics4all_cli` with `--version`, `--abi-info`, `--selfcheck`.
+- Tiny CLI `n4m_cli` with `--version`, `--abi-info`, `--selfcheck`.
 - Hand-rolled zero-dependency test harness in `cpp/tests/main.cpp` + `cpp/tests/harness.hpp`, with 7 Phase 0 smoke tests (all passing).
 - GitHub Actions workflows inherited from pls4all (ci, parity-gate, docs, abi-check, coverage, sanitizers, version-sync) — to be re-enabled after Phase 1 once the new C ABI surface is wired.
 - `ROADMAP.md` with the 27-phase plan, `ARCHITECTURE.md` with the load-bearing decisions, `CONTRIBUTING.md` with the Codex+Opus review workflow.
@@ -623,19 +623,19 @@ ABI minor bumps from 1.6.0 to 1.7.0.
 - All PLS test fixtures and ABI test suites in `cpp/tests/{abi,fixtures}/`.
 - `bindings/` entirely (rebuilt in Phases 22-25 for Python / R / MATLAB / JS-WASM).
 - `benchmarks/` entirely (rebuilt in Phase 26).
-- `parity/python_generator/` and `parity/r_generator/` (rebuilt in Phase 1+ with c4a adapters; `parity/schema/` and `parity/tolerances.md` retained as inherited contract).
+- `parity/python_generator/` and `parity/r_generator/` (rebuilt in Phase 1+ with n4m adapters; `parity/schema/` and `parity/tolerances.md` retained as inherited contract).
 - `docs/methods/` (90 PLS algorithm docs), `docs/parity_audit_2026_05/`, `docs/reviews/phase-0/` (old pls4all reviews), `docs/benchmarks/cross_binding*.md`.
 - Pls4all-specific top-level docs (`Overview.md`, `Direction_Technique.md`, `DISTRIBUTION.md`, `Backlog.md`) — replaced by `ARCHITECTURE.md`, `ROADMAP.md`.
-- 97+ pls4all `roadmap/phase-*.md` files — replaced by c4a-scoped phases.
+- 97+ pls4all `roadmap/phase-*.md` files — replaced by n4m-scoped phases.
 - `CI workflows except `ci.yml` moved to `.github/workflows.disabled/` (`parity-gate`, `release-python`, `abi-check`, `version-sync`, `coverage`, `sanitizers`, `docs`). Each is re-enabled at the phase that wires its inputs.
 
 ### ABI
 
-- Initial ABI version `1.0.0`. `cpp/abi/expected_symbols_{linux,macos,windows}.txt` populated with the 29 actually-exported `c4a_*` symbols from `libc4a.so.1.0.0` (status / backend / dtype / matrix_view / context lifecycle / version queries).
+- Initial ABI version `1.0.0`. `cpp/abi/expected_symbols_{linux,macos,windows}.txt` populated with the 29 actually-exported `n4m_*` symbols from `libn4m.so.1.0.0` (status / backend / dtype / matrix_view / context lifecycle / version queries).
 
 ### Opus post-review
 
 - Independent Opus review completed (transcript at `docs/reviews/phase-0/opus-post.md`). 9 high-confidence issues identified and fixed before commit. 5 medium/low-priority items deferred to Phase 1+ with explicit tracking in the roadmap.
 
-[Unreleased]: https://github.com/GBeurier/chemometrics4all/compare/v0.1.0...HEAD
-[0.1.0+abi.1.0.0]: https://github.com/GBeurier/chemometrics4all/releases/tag/v0.1.0
+[Unreleased]: https://github.com/GBeurier/nirs4all-methods/compare/v0.1.0...HEAD
+[0.1.0+abi.1.0.0]: https://github.com/GBeurier/nirs4all-methods/releases/tag/v0.1.0

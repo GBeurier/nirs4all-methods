@@ -4,32 +4,32 @@ _Group_: **Augmentation** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8` · _
 
 ## Description
 
-Twelve data-augmentation operators in the unified `c4a_aug_*` ABI category.
+Twelve data-augmentation operators in the unified `n4m_aug_*` ABI category.
 
 All twelve operators share the universal ABI shape:
 
 ```c
-typedef struct c4a_aug_<NAME>_handle_t c4a_aug_<NAME>_handle_t;
+typedef struct n4m_aug_<NAME>_handle_t n4m_aug_<NAME>_handle_t;
 
-c4a_status_t c4a_aug_<NAME>_create(
-    c4a_aug_<NAME>_handle_t** out,
-    c4a_rng_pcg64_state_t* rng,   /* MUST be non-NULL */
+n4m_status_t n4m_aug_<NAME>_create(
+    n4m_aug_<NAME>_handle_t** out,
+    n4m_rng_pcg64_state_t* rng,   /* MUST be non-NULL */
     /* operator-specific parameters */);
 
-c4a_status_t c4a_aug_<NAME>_apply(
-    const c4a_aug_<NAME>_handle_t* handle,
-    c4a_matrix_view_t X,
-    [c4a_matrix_view_t wavelengths,]   /* only for wavelength-aware ops */
-    c4a_matrix_view_t out);
+n4m_status_t n4m_aug_<NAME>_apply(
+    const n4m_aug_<NAME>_handle_t* handle,
+    n4m_matrix_view_t X,
+    [n4m_matrix_view_t wavelengths,]   /* only for wavelength-aware ops */
+    n4m_matrix_view_t out);
 
-void c4a_aug_<NAME>_destroy(c4a_aug_<NAME>_handle_t* handle);
+void n4m_aug_<NAME>_destroy(n4m_aug_<NAME>_handle_t* handle);
 ```
 
 The RNG handle is stored by reference; the augmenter does NOT own it. The
 caller MUST keep the RNG alive for the augmenter's lifetime. With a fixed
 RNG state at `_apply` time the output is bit-exact reproducible.
 
-From the `chemometrics4all.EdgeCurvatureAugmenter` Python wrapper docstring:
+From the `n4m.EdgeCurvatureAugmenter` Python wrapper docstring:
 
 > Curved edge response artifact.
 
@@ -68,15 +68,15 @@ From the `chemometrics4all.EdgeCurvatureAugmenter` Python wrapper docstring:
   exercise the shape + finite-value path; bit-exact NumPy parity of
   `rng.uniform`, `rng.choice` is gated behind v2 of the augmenter ABI.
 - The 2 v2-deferred operators (`Spline_X_Simplification`,
-  `Spline_Curve_Simplification`) return `C4A_ERR_NOT_IMPLEMENTED` from
+  `Spline_Curve_Simplification`) return `N4M_ERR_NOT_IMPLEMENTED` from
   `_apply` until v2; their `_create` / `_destroy` symbols are stable.
 
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_aug_edge_curve_apply( const c4a_aug_edge_curve_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t wavelengths, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_edge_curve_create( c4a_aug_edge_curve_handle_t** out, c4a_rng_pcg64_state_t* rng, double curvature_strength, int32_t curvature_type, double asymmetry, double edge_focus);
-void c4a_aug_edge_curve_destroy(c4a_aug_edge_curve_handle_t* handle);
+n4m_status_t n4m_aug_edge_curve_apply( const n4m_aug_edge_curve_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t wavelengths, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_edge_curve_create( n4m_aug_edge_curve_handle_t** out, n4m_rng_pcg64_state_t* rng, double curvature_strength, int32_t curvature_type, double asymmetry, double edge_focus);
+void n4m_aug_edge_curve_destroy(n4m_aug_edge_curve_handle_t* handle);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -85,50 +85,50 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_aug_edge_curve` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.aug_edge_curve` | Python | ABI-close function backed by ctypes. |
-| Python sklearn | `chemometrics4all.sklearn.EdgeCurvatureAugmenter` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| C ABI | `n4m_aug_edge_curve` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.aug_edge_curve` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `n4m.sklearn.EdgeCurvatureAugmenter` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `aug_edge_curve(X, wavelengths = NULL, curvature_strength = 0.02, curvature_type = 0L, asymmetry = 0.0, edge_focus = 0.7, seed = 17)` | R | Public package wrapper around the C ABI. |
 | ref.nirs4all | `nirs4all.EdgeCurvatureAugmenter` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_aug_edge_curve_apply( const c4a_aug_edge_curve_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t wavelengths, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_edge_curve_create( c4a_aug_edge_curve_handle_t** out, c4a_rng_pcg64_state_t* rng, double curvature_strength, int32_t curvature_type, double asymmetry, double edge_focus);
-void c4a_aug_edge_curve_destroy(c4a_aug_edge_curve_handle_t* handle);
+n4m_status_t n4m_aug_edge_curve_apply( const n4m_aug_edge_curve_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t wavelengths, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_edge_curve_create( n4m_aug_edge_curve_handle_t** out, n4m_rng_pcg64_state_t* rng, double curvature_strength, int32_t curvature_type, double asymmetry, double edge_focus);
+void n4m_aug_edge_curve_destroy(n4m_aug_edge_curve_handle_t* handle);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.aug_edge_curve(X)
+Xt = n4m.aug_edge_curve(X)
 ```
 
 :::
 
-:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:::{tab-item} Python sklearn · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from chemometrics4all.sklearn import EdgeCurvatureAugmenter
+from n4m.sklearn import EdgeCurvatureAugmenter
 
 op = EdgeCurvatureAugmenter(curvature_strength=0.02, curvature_type=0, asymmetry=0.0, edge_focus=0.7, wavelengths=None, rng=None)
 Xt = op.fit_transform(X)
@@ -136,12 +136,12 @@ Xt = op.fit_transform(X)
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- aug_edge_curve(X)
 ```
 
@@ -181,15 +181,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.054 ms</td><td class="ms">0.517 ms</td><td class="ms">2.282 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.054 ms</td><td class="ms">0.517 ms</td><td class="ms">2.282 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.059 ms</td><td class="ms ms-best">🏆 0.452 ms</td><td class="ms">2.297 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.056 ms</td><td class="ms">0.456 ms</td><td class="ms ms-best">🏆 2.183 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.059 ms</td><td class="ms ms-best">🏆 0.452 ms</td><td class="ms">2.297 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.056 ms</td><td class="ms">0.456 ms</td><td class="ms ms-best">🏆 2.183 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">0.090 ms</td><td class="ms">0.699 ms</td><td class="ms">3.531 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">0.090 ms</td><td class="ms">0.699 ms</td><td class="ms">3.531 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.EdgeCurvatureAugmenter · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">1.093 ms</td><td class="ms">1.649 ms</td><td class="ms">3.884 ms</td></tr>

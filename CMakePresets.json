@@ -29,7 +29,7 @@
       "displayName": "Release · BLAS",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CHEMOMETRICS4ALL_WITH_BLAS": "ON",
+        "N4M_WITH_BLAS": "ON",
         "BLAS_INCLUDE_DIRS": "$env{CONDA_PREFIX}/include",
         "BLAS_LIBRARIES": "$env{CONDA_PREFIX}/lib/libopenblas.so",
         "CMAKE_BUILD_RPATH": "$env{CONDA_PREFIX}/lib",
@@ -42,7 +42,7 @@
       "displayName": "Release · OpenMP",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CHEMOMETRICS4ALL_WITH_OPENMP": "ON"
+        "N4M_WITH_OPENMP": "ON"
       }
     },
     {
@@ -51,8 +51,8 @@
       "displayName": "Release · BLAS + OpenMP",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CHEMOMETRICS4ALL_WITH_BLAS": "ON",
-        "CHEMOMETRICS4ALL_WITH_OPENMP": "ON",
+        "N4M_WITH_BLAS": "ON",
+        "N4M_WITH_OPENMP": "ON",
         "BLAS_INCLUDE_DIRS": "$env{CONDA_PREFIX}/include",
         "BLAS_LIBRARIES": "$env{CONDA_PREFIX}/lib/libopenblas.so",
         "CMAKE_BUILD_RPATH": "$env{CONDA_PREFIX}/lib",
@@ -65,42 +65,42 @@
       "displayName": "Release · CUDA",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CHEMOMETRICS4ALL_WITH_CUDA": "ON"
+        "N4M_WITH_CUDA": "ON"
       }
     },
 
     { "name": "ci-linux-gcc12-release", "inherits": "_base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS": "ON"
+        "N4M_WARNINGS_AS_ERRORS": "ON"
       },
       "environment": { "CC": "gcc-12", "CXX": "g++-12" }
     },
     { "name": "ci-linux-gcc12-debug", "inherits": "_base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS": "ON"
+        "N4M_WARNINGS_AS_ERRORS": "ON"
       },
       "environment": { "CC": "gcc-12", "CXX": "g++-12" }
     },
     { "name": "ci-linux-gcc13-release", "inherits": "_base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS": "ON"
+        "N4M_WARNINGS_AS_ERRORS": "ON"
       },
       "environment": { "CC": "gcc-13", "CXX": "g++-13" }
     },
     { "name": "ci-linux-clang16-release", "inherits": "_base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS": "ON"
+        "N4M_WARNINGS_AS_ERRORS": "ON"
       },
       "environment": { "CC": "clang-16", "CXX": "clang++-16" }
     },
     { "name": "ci-linux-clang16-debug", "inherits": "_base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS": "ON"
+        "N4M_WARNINGS_AS_ERRORS": "ON"
       },
       "environment": { "CC": "clang-16", "CXX": "clang++-16" }
     },
@@ -108,21 +108,21 @@
     { "name": "ci-macos-clang-release", "inherits": "_base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS": "ON"
+        "N4M_WARNINGS_AS_ERRORS": "ON"
       },
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
     },
     { "name": "ci-macos-clang-debug", "inherits": "_base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS": "ON"
+        "N4M_WARNINGS_AS_ERRORS": "ON"
       },
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
     },
     { "name": "ci-macos-universal2", "inherits": "_base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS": "ON",
+        "N4M_WARNINGS_AS_ERRORS": "ON",
         "CMAKE_OSX_ARCHITECTURES": "x86_64;arm64",
         "CMAKE_OSX_DEPLOYMENT_TARGET": "11.0"
       },
@@ -133,7 +133,7 @@
       "generator": "Visual Studio 17 2022",
       "cacheVariables": {
         "CMAKE_CONFIGURATION_TYPES": "Release",
-        "CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS": "ON"
+        "N4M_WARNINGS_AS_ERRORS": "ON"
       },
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
     },
@@ -141,14 +141,14 @@
       "generator": "Visual Studio 17 2022",
       "cacheVariables": {
         "CMAKE_CONFIGURATION_TYPES": "Debug",
-        "CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS": "ON"
+        "N4M_WARNINGS_AS_ERRORS": "ON"
       },
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
     },
     { "name": "ci-windows-mingw-release", "inherits": "_base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS": "ON"
+        "N4M_WARNINGS_AS_ERRORS": "ON"
       },
       "environment": { "CC": "gcc", "CXX": "g++" },
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
@@ -157,9 +157,9 @@
     { "name": "ci-asan", "inherits": "_base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CHEMOMETRICS4ALL_ENABLE_ASAN": "ON",
-        "CHEMOMETRICS4ALL_ENABLE_UBSAN": "OFF",
-        "CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS": "ON"
+        "N4M_ENABLE_ASAN": "ON",
+        "N4M_ENABLE_UBSAN": "OFF",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
       },
       "environment": { "CC": "clang-16", "CXX": "clang++-16" },
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
@@ -167,8 +167,8 @@
     { "name": "ci-ubsan", "inherits": "_base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CHEMOMETRICS4ALL_ENABLE_UBSAN": "ON",
-        "CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS": "ON"
+        "N4M_ENABLE_UBSAN": "ON",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
       },
       "environment": { "CC": "clang-16", "CXX": "clang++-16" },
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
@@ -176,8 +176,8 @@
     { "name": "ci-tsan", "inherits": "_base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CHEMOMETRICS4ALL_ENABLE_TSAN": "ON",
-        "CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS": "ON"
+        "N4M_ENABLE_TSAN": "ON",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
       },
       "environment": { "CC": "clang-16", "CXX": "clang++-16" },
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
@@ -185,9 +185,9 @@
     { "name": "ci-asan_ubsan", "inherits": "_base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CHEMOMETRICS4ALL_ENABLE_ASAN": "ON",
-        "CHEMOMETRICS4ALL_ENABLE_UBSAN": "ON",
-        "CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS": "ON"
+        "N4M_ENABLE_ASAN": "ON",
+        "N4M_ENABLE_UBSAN": "ON",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
       },
       "environment": { "CC": "clang-16", "CXX": "clang++-16" },
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
@@ -195,7 +195,7 @@
     { "name": "ci-coverage", "inherits": "_base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CHEMOMETRICS4ALL_ENABLE_COVERAGE": "ON"
+        "N4M_ENABLE_COVERAGE": "ON"
       }
     },
 
@@ -203,11 +203,11 @@
       "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CHEMOMETRICS4ALL_BUILD_BINDINGS_JS": "ON",
-        "CHEMOMETRICS4ALL_BUILD_SHARED": "OFF",
-        "CHEMOMETRICS4ALL_BUILD_STATIC": "ON",
-        "CHEMOMETRICS4ALL_BUILD_TESTS": "OFF",
-        "CHEMOMETRICS4ALL_BUILD_CLI": "OFF"
+        "N4M_BUILD_BINDINGS_JS": "ON",
+        "N4M_BUILD_SHARED": "OFF",
+        "N4M_BUILD_STATIC": "ON",
+        "N4M_BUILD_TESTS": "OFF",
+        "N4M_BUILD_CLI": "OFF"
       }
     },
     { "name": "android-arm64", "inherits": "_base",
@@ -216,9 +216,9 @@
         "CMAKE_BUILD_TYPE": "Release",
         "ANDROID_ABI": "arm64-v8a",
         "ANDROID_PLATFORM": "android-26",
-        "CHEMOMETRICS4ALL_BUILD_BINDINGS_ANDROID": "ON",
-        "CHEMOMETRICS4ALL_BUILD_TESTS": "OFF",
-        "CHEMOMETRICS4ALL_BUILD_CLI": "OFF"
+        "N4M_BUILD_BINDINGS_ANDROID": "ON",
+        "N4M_BUILD_TESTS": "OFF",
+        "N4M_BUILD_CLI": "OFF"
       }
     },
     { "name": "android-x86_64", "inherits": "_base",
@@ -227,9 +227,9 @@
         "CMAKE_BUILD_TYPE": "Release",
         "ANDROID_ABI": "x86_64",
         "ANDROID_PLATFORM": "android-26",
-        "CHEMOMETRICS4ALL_BUILD_BINDINGS_ANDROID": "ON",
-        "CHEMOMETRICS4ALL_BUILD_TESTS": "OFF",
-        "CHEMOMETRICS4ALL_BUILD_CLI": "OFF"
+        "N4M_BUILD_BINDINGS_ANDROID": "ON",
+        "N4M_BUILD_TESTS": "OFF",
+        "N4M_BUILD_CLI": "OFF"
       }
     }
   ],

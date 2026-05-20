@@ -15,12 +15,12 @@ Edges use centred windows clipped to `[0, n - 1]` (no padding / reflection).
 
 ## ABI
 ```c
-c4a_status_t c4a_pp_rolling_ball_create(c4a_pp_rolling_ball_handle_t** out,
+n4m_status_t n4m_pp_rolling_ball_create(n4m_pp_rolling_ball_handle_t** out,
                                          int32_t half_window,
                                          int32_t smooth_half_window);
-void         c4a_pp_rolling_ball_destroy(c4a_pp_rolling_ball_handle_t* h);
-c4a_status_t c4a_pp_rolling_ball_transform(const c4a_pp_rolling_ball_handle_t* h,
-                                            c4a_matrix_view_t X, c4a_matrix_view_t out);
+void         n4m_pp_rolling_ball_destroy(n4m_pp_rolling_ball_handle_t* h);
+n4m_status_t n4m_pp_rolling_ball_transform(const n4m_pp_rolling_ball_handle_t* h,
+                                            n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 ## Numerical contract
@@ -29,4 +29,4 @@ c4a_status_t c4a_pp_rolling_ball_transform(const c4a_pp_rolling_ball_handle_t* h
 
 ## Reference
 - Kneen, M. A. & Annegarn, H. J. (1996). "Algorithm for fitting XRF, SEM and PIXE X-ray spectra backgrounds." Nuclear Instruments and Methods B109/110, 209-213.
-- Internal parity fixture: `parity/python_generator/src/c4a_parity_pybaselines_ref/rolling_ball.py`.
+- Internal parity fixture: `parity/python_generator/src/n4m_parity_pybaselines_ref/rolling_ball.py`.

@@ -4,32 +4,32 @@ _Group_: **Augmentation** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8` · _
 
 ## Description
 
-Twelve data-augmentation operators in the unified `c4a_aug_*` ABI category.
+Twelve data-augmentation operators in the unified `n4m_aug_*` ABI category.
 
 All twelve operators share the universal ABI shape:
 
 ```c
-typedef struct c4a_aug_<NAME>_handle_t c4a_aug_<NAME>_handle_t;
+typedef struct n4m_aug_<NAME>_handle_t n4m_aug_<NAME>_handle_t;
 
-c4a_status_t c4a_aug_<NAME>_create(
-    c4a_aug_<NAME>_handle_t** out,
-    c4a_rng_pcg64_state_t* rng,   /* MUST be non-NULL */
+n4m_status_t n4m_aug_<NAME>_create(
+    n4m_aug_<NAME>_handle_t** out,
+    n4m_rng_pcg64_state_t* rng,   /* MUST be non-NULL */
     /* operator-specific parameters */);
 
-c4a_status_t c4a_aug_<NAME>_apply(
-    const c4a_aug_<NAME>_handle_t* handle,
-    c4a_matrix_view_t X,
-    [c4a_matrix_view_t wavelengths,]   /* only for wavelength-aware ops */
-    c4a_matrix_view_t out);
+n4m_status_t n4m_aug_<NAME>_apply(
+    const n4m_aug_<NAME>_handle_t* handle,
+    n4m_matrix_view_t X,
+    [n4m_matrix_view_t wavelengths,]   /* only for wavelength-aware ops */
+    n4m_matrix_view_t out);
 
-void c4a_aug_<NAME>_destroy(c4a_aug_<NAME>_handle_t* handle);
+void n4m_aug_<NAME>_destroy(n4m_aug_<NAME>_handle_t* handle);
 ```
 
 The RNG handle is stored by reference; the augmenter does NOT own it. The
 caller MUST keep the RNG alive for the augmenter's lifetime. With a fixed
 RNG state at `_apply` time the output is bit-exact reproducible.
 
-From the `chemometrics4all.SplineYPerturbationAugmenter` Python wrapper docstring:
+From the `n4m.SplineYPerturbationAugmenter` Python wrapper docstring:
 
 > Spline y-axis perturbation augmenter.
 
@@ -65,15 +65,15 @@ From the `chemometrics4all.SplineYPerturbationAugmenter` Python wrapper docstrin
   exercise the shape + finite-value path; bit-exact NumPy parity of
   `rng.uniform`, `rng.choice` is gated behind v2 of the augmenter ABI.
 - The 2 v2-deferred operators (`Spline_X_Simplification`,
-  `Spline_Curve_Simplification`) return `C4A_ERR_NOT_IMPLEMENTED` from
+  `Spline_Curve_Simplification`) return `N4M_ERR_NOT_IMPLEMENTED` from
   `_apply` until v2; their `_create` / `_destroy` symbols are stable.
 
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_aug_spline_y_perturb_apply( const c4a_aug_spline_y_perturb_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_spline_y_perturb_create( c4a_aug_spline_y_perturb_handle_t** out, c4a_rng_pcg64_state_t* rng, int32_t spline_points, double perturbation_intensity);
-void c4a_aug_spline_y_perturb_destroy( c4a_aug_spline_y_perturb_handle_t* handle);
+n4m_status_t n4m_aug_spline_y_perturb_apply( const n4m_aug_spline_y_perturb_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_spline_y_perturb_create( n4m_aug_spline_y_perturb_handle_t** out, n4m_rng_pcg64_state_t* rng, int32_t spline_points, double perturbation_intensity);
+void n4m_aug_spline_y_perturb_destroy( n4m_aug_spline_y_perturb_handle_t* handle);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -82,50 +82,50 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_aug_spline_y_perturb` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.aug_spline_y_perturb` | Python | ABI-close function backed by ctypes. |
-| Python sklearn | `chemometrics4all.sklearn.SplineYPerturbationAugmenter` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| C ABI | `n4m_aug_spline_y_perturb` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.aug_spline_y_perturb` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `n4m.sklearn.SplineYPerturbationAugmenter` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `aug_spline_y_perturb(X, spline_points = -1L, perturbation_intensity = 0.005, seed = 17)` | R | Public package wrapper around the C ABI. |
 | ref.nirs4all | `nirs4all.Spline_Y_Perturbations` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_aug_spline_y_perturb_apply( const c4a_aug_spline_y_perturb_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_spline_y_perturb_create( c4a_aug_spline_y_perturb_handle_t** out, c4a_rng_pcg64_state_t* rng, int32_t spline_points, double perturbation_intensity);
-void c4a_aug_spline_y_perturb_destroy( c4a_aug_spline_y_perturb_handle_t* handle);
+n4m_status_t n4m_aug_spline_y_perturb_apply( const n4m_aug_spline_y_perturb_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_spline_y_perturb_create( n4m_aug_spline_y_perturb_handle_t** out, n4m_rng_pcg64_state_t* rng, int32_t spline_points, double perturbation_intensity);
+void n4m_aug_spline_y_perturb_destroy( n4m_aug_spline_y_perturb_handle_t* handle);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.aug_spline_y_perturb(X)
+Xt = n4m.aug_spline_y_perturb(X)
 ```
 
 :::
 
-:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:::{tab-item} Python sklearn · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from chemometrics4all.sklearn import SplineYPerturbationAugmenter
+from n4m.sklearn import SplineYPerturbationAugmenter
 
 op = SplineYPerturbationAugmenter(spline_points=-1, perturbation_intensity=0.005, rng=None, seed=0)
 Xt = op.fit_transform(X)
@@ -133,12 +133,12 @@ Xt = op.fit_transform(X)
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- aug_spline_y_perturb(X)
 ```
 
@@ -178,15 +178,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.5e-15</td><td class="ms">0.221 ms</td><td class="ms">2.769 ms</td><td class="ms">16.936 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.5e-15</td><td class="ms">0.221 ms</td><td class="ms">2.769 ms</td><td class="ms">16.936 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.5e-15</td><td class="ms">0.218 ms</td><td class="ms">2.840 ms</td><td class="ms">16.336 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.5e-15</td><td class="ms">0.215 ms</td><td class="ms">2.754 ms</td><td class="ms ms-best">🏆 16.199 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.5e-15</td><td class="ms">0.218 ms</td><td class="ms">2.840 ms</td><td class="ms">16.336 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.5e-15</td><td class="ms">0.215 ms</td><td class="ms">2.754 ms</td><td class="ms ms-best">🏆 16.199 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.9e-15</td><td class="ms ms-best">🏆 0.191 ms</td><td class="ms ms-best">🏆 2.594 ms</td><td class="ms">16.750 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.9e-15</td><td class="ms ms-best">🏆 0.191 ms</td><td class="ms ms-best">🏆 2.594 ms</td><td class="ms">16.750 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.Spline_Y_Perturbations · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">2.231 ms</td><td class="ms">6.173 ms</td><td class="ms">25.475 ms</td></tr>

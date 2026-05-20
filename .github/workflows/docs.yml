@@ -3,7 +3,7 @@
 # After the first successful run, enable Pages in
 #   Settings → Pages → Source: "GitHub Actions"
 # (or "Deploy from a branch: gh-pages" if you prefer a per-branch model).
-# The site URL will be https://gbeurier.github.io/chemometrics4all/.
+# The site URL will be https://gbeurier.github.io/nirs4all-methods/.
 
 name: docs
 

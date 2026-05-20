@@ -65,7 +65,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          working-directory: bindings/r/chemometrics4all
+          working-directory: bindings/r/n4m
           extra-packages: |
             any::rcmdcheck
             any::jsonlite
@@ -74,7 +74,7 @@ jobs:
       - name: R CMD check --as-cran
         uses: r-lib/actions/check-r-package@v2
         with:
-          working-directory: bindings/r/chemometrics4all
+          working-directory: bindings/r/n4m
           args: 'c("--no-manual", "--as-cran")'
           error-on: '"warning"'
           upload-snapshots: true
@@ -84,7 +84,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rcheck-${{ matrix.cfg.label }}
-          path: bindings/r/chemometrics4all.Rcheck/
+          path: bindings/r/n4m.Rcheck/
 
   build-tarball:
     name: Build CRAN source tarball
@@ -101,19 +101,19 @@ jobs:
           use-public-rspm: true
 
       - name: Build source tarball
-        working-directory: bindings/r/chemometrics4all
+        working-directory: bindings/r/n4m
         run: R CMD build .
 
       - name: Stage tarball
-        working-directory: bindings/r/chemometrics4all
+        working-directory: bindings/r/n4m
         run: |
           mkdir -p ../../../dist-r
-          mv chemometrics4all_*.tar.gz ../../../dist-r/
+          mv n4m_*.tar.gz ../../../dist-r/
 
       - uses: actions/upload-artifact@v4
         with:
-          name: chemometrics4all-cran-tarball
-          path: dist-r/chemometrics4all_*.tar.gz
+          name: nirs4all-methods-cran-tarball
+          path: dist-r/n4m_*.tar.gz
           if-no-files-found: error
           retention-days: 90
 
@@ -127,11 +127,11 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: chemometrics4all-cran-tarball
+          name: nirs4all-methods-cran-tarball
           path: dist-r/
 
       - name: Upload to the matching Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist-r/chemometrics4all_*.tar.gz
+          files: dist-r/n4m_*.tar.gz
           fail_on_unmatched_files: true

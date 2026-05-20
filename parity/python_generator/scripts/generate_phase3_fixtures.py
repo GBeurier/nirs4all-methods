@@ -30,7 +30,7 @@ key when fit and transform use different matrices):
 
 ```json
 {
-  "format": "c4a_pp_<op>_v1",
+  "format": "n4m_pp_<op>_v1",
   "numpy_version": "1.26.4",
   "nirs4all_version": "0.8.x",
   "encoding": "ieee754_binary64_be_hex",
@@ -150,10 +150,10 @@ def synthesize_spectra(seed: int) -> np.ndarray:
 # Baseline: nirs4all's signal.Baseline. mean_ = mean(X_fit, axis=0).
 # Derivate: brief specifies np.diff(X, n=order, axis=1) / delta**order. The
 #          nirs4all class uses np.gradient(X, delta, axis=0), but Phase 3
-#          locks in the np.diff axis=1 variant for the c4a_pp_derivate API
+#          locks in the np.diff axis=1 variant for the n4m_pp_derivate API
 #          (output shape = (rows, cols - order)), reflecting the more common
 #          spectroscopic convention. The nirs4all parity is therefore on the
-#          algorithm specified in the c4a roadmap, not on
+#          algorithm specified in the n4m roadmap, not on
 #          nirs4all.Derivate verbatim.
 # ---------------------------------------------------------------------------
 
@@ -269,7 +269,7 @@ def write_fixture(name: str, op_id: str,
                   cases: list[tuple[str, dict, Callable[[], np.ndarray]]],
                   out_dir: Path, nirs4all_version: str) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_pp_{op_id}_v1",
+        "format": f"n4m_pp_{op_id}_v1",
         "numpy_version": np.__version__,
         "nirs4all_version": nirs4all_version,
         "encoding": "ieee754_binary64_be_hex",

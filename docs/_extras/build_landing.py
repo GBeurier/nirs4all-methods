@@ -13,7 +13,7 @@ import subprocess
 from pathlib import Path
 
 
-PLACEHOLDER_COLUMN = "chemometrics4all.reference-registry"
+PLACEHOLDER_COLUMN = "n4m.reference-registry"
 
 
 def _validation_payload() -> dict:
@@ -92,14 +92,14 @@ def placeholder_payload(generated_at: str | None = None) -> dict:
                 "group": "python",
                 "tier": "benchmark scaffold",
                 "lang": "Python",
-                "what": "Placeholder column: the chemometrics4all benchmark registry exists, but no timing matrix has been generated yet.",
+                "what": "Placeholder column: the nirs4all-methods benchmark registry exists, but no timing matrix has been generated yet.",
                 "build": "",
-                "kind": "chemometrics4all",
+                "kind": "nirs4all-methods",
             }
         ],
         "presets": {
             "all": {"label": "Scaffold", "cols": [PLACEHOLDER_COLUMN]},
-            "chemometrics4all": {"label": "chemometrics4all only", "cols": [PLACEHOLDER_COLUMN]},
+            "nirs4all-methods": {"label": "nirs4all-methods only", "cols": [PLACEHOLDER_COLUMN]},
         },
         "rows": [
             {
@@ -111,7 +111,7 @@ def placeholder_payload(generated_at: str | None = None) -> dict:
                     PLACEHOLDER_COLUMN: {
                         "parity": "not_run",
                         "ok": False,
-                        "reason": "Placeholder: real chemometrics4all benchmark results have not been generated yet.",
+                        "reason": "Placeholder: real nirs4all-methods benchmark results have not been generated yet.",
                     }
                 },
             }
@@ -282,10 +282,10 @@ def _column_id(row: dict) -> str:
     backend = row.get("backend", "unknown").strip() or "unknown"
     build = row.get("lib_build", "").strip()
     if backend == "cpp" and build:
-        return f"chemometrics4all.cpp.{build}"
+        return f"n4m.cpp.{build}"
     if backend.startswith("ref."):
         return backend
-    return f"chemometrics4all.{backend}"
+    return f"n4m.{backend}"
 
 
 def _column_meta(cid: str, row: dict) -> dict:
@@ -341,11 +341,11 @@ def _column_meta(cid: str, row: dict) -> dict:
         "matlab": "matlab",
     }.get(backend, backend)
     short = {
-        "cpp": "C4A.cpp",
-        "python": "C4A.python",
-        "sklearn": "C4A.sklearn",
-        "r": "C4A.R",
-        "matlab": "C4A.MATLAB",
+        "cpp": "N4M.cpp",
+        "python": "N4M.python",
+        "sklearn": "N4M.sklearn",
+        "r": "N4M.R",
+        "matlab": "N4M.MATLAB",
     }.get(backend, backend)
     return {
         "id": cid,
@@ -356,7 +356,7 @@ def _column_meta(cid: str, row: dict) -> dict:
         "lang": lang,
         "what": row.get("kind", ""),
         "build": row.get("lib_build", ""),
-        "kind": row.get("kind", "chemometrics4all"),
+        "kind": row.get("kind", "nirs4all-methods"),
         "reference": library,
     }
 
@@ -384,7 +384,7 @@ CANDIDATE_REFERENCE_ROWS = {}
 def _column_sort_key(col: dict) -> tuple:
     lang = col.get("lang", "")
     lang_rank = _LANG_ORDER.get(lang, 90)
-    kind_rank = 0 if col.get("kind") == "chemometrics4all" else 1
+    kind_rank = 0 if col.get("kind") == "nirs4all-methods" else 1
     group = str(col.get("group", ""))
     label = str(col.get("short") or col.get("label") or col.get("id") or "")
     return (lang_rank, lang, kind_rank, group, label)
@@ -432,7 +432,7 @@ def _result_csv_paths(results_dir: Path) -> list[Path]:
 
 
 def build_payload(results_dir: Path) -> dict:
-    """Read chemometrics4all cross-binding CSVs and build dashboard payload."""
+    """Read nirs4all-methods cross-binding CSVs and build dashboard payload."""
     csv_paths = _result_csv_paths(results_dir)
     if not csv_paths:
         return placeholder_payload()
@@ -655,9 +655,9 @@ def build_payload(results_dir: Path) -> dict:
         "columns": col_list,
         "presets": {
             "all": {"label": "All", "cols": [c["id"] for c in col_list]},
-            "chemometrics4all": {
-                "label": "chemometrics4all",
-                "cols": [c["id"] for c in col_list if c["kind"] == "chemometrics4all"],
+            "nirs4all-methods": {
+                "label": "nirs4all-methods",
+                "cols": [c["id"] for c in col_list if c["kind"] == "nirs4all-methods"],
             },
             "externals": {
                 "label": "externals",

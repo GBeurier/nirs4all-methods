@@ -23,12 +23,12 @@ X^{\mathrm{aug}}_{i,:} \leftarrow X^{\mathrm{aug}}_{i,:} + G_{\sigma=3}(\eta_i)$
 where $G_{\sigma=3}$ is `scipy.ndimage.gaussian_filter1d` with
 default settings (mode `reflect`, `truncate=4.0`).
 
-The noise convolution reuses the existing `c4a_pp_gaussian` engine to
+The noise convolution reuses the existing `n4m_pp_gaussian` engine to
 preserve bit-exact kernel construction and convolution semantics.
 
 ## Parameters
 
-See `c4a.h` for the full list. Key flags:
+See `n4m.h` for the full list. Key flags:
 
 | Parameter | Meaning |
 |-----------|---------|

@@ -4,7 +4,7 @@ _Group_: **Feature Selection** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8`
 
 ## Description
 
-`variance_filter` is a chemometrics4all feature selection method exposed through the C ABI and the generated language bindings.
+`variance_filter` is a nirs4all-methods feature selection method exposed through the C ABI and the generated language bindings.
 
 ### Parameters
 
@@ -25,12 +25,12 @@ No public constructor parameters are required for the documented default call.
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_filter_variance_create( c4a_filter_variance_handle_t** out, double threshold, int32_t top_k);
-void c4a_filter_variance_destroy(c4a_filter_variance_handle_t* handle);
-c4a_status_t c4a_filter_variance_fit( c4a_filter_variance_handle_t* handle, c4a_matrix_view_t X);
-c4a_status_t c4a_filter_variance_is_fitted( const c4a_filter_variance_handle_t* handle, int* out_fitted);
-c4a_status_t c4a_filter_variance_output_cols( const c4a_filter_variance_handle_t* handle, int64_t* out_cols);
-c4a_status_t c4a_filter_variance_transform( const c4a_filter_variance_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_filter_variance_create( n4m_filter_variance_handle_t** out, double threshold, int32_t top_k);
+void n4m_filter_variance_destroy(n4m_filter_variance_handle_t* handle);
+n4m_status_t n4m_filter_variance_fit( n4m_filter_variance_handle_t* handle, n4m_matrix_view_t X);
+n4m_status_t n4m_filter_variance_is_fitted( const n4m_filter_variance_handle_t* handle, int* out_fitted);
+n4m_status_t n4m_filter_variance_output_cols( const n4m_filter_variance_handle_t* handle, int64_t* out_cols);
+n4m_status_t n4m_filter_variance_transform( const n4m_filter_variance_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -39,52 +39,52 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_filter_variance` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.variance_filter` | Python | ABI-close function backed by ctypes. |
+| C ABI | `n4m_filter_variance` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.variance_filter` | Python | ABI-close function backed by ctypes. |
 | R | `variance_filter(X, threshold = 0.0, top_k = 0L)` | R | Public package wrapper around the C ABI. |
 | ref.sklearn | `sklearn.feature_selection.VarianceThreshold` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_filter_variance_create( c4a_filter_variance_handle_t** out, double threshold, int32_t top_k);
-void c4a_filter_variance_destroy(c4a_filter_variance_handle_t* handle);
-c4a_status_t c4a_filter_variance_fit( c4a_filter_variance_handle_t* handle, c4a_matrix_view_t X);
-c4a_status_t c4a_filter_variance_is_fitted( const c4a_filter_variance_handle_t* handle, int* out_fitted);
-c4a_status_t c4a_filter_variance_output_cols( const c4a_filter_variance_handle_t* handle, int64_t* out_cols);
-c4a_status_t c4a_filter_variance_transform( const c4a_filter_variance_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_filter_variance_create( n4m_filter_variance_handle_t** out, double threshold, int32_t top_k);
+void n4m_filter_variance_destroy(n4m_filter_variance_handle_t* handle);
+n4m_status_t n4m_filter_variance_fit( n4m_filter_variance_handle_t* handle, n4m_matrix_view_t X);
+n4m_status_t n4m_filter_variance_is_fitted( const n4m_filter_variance_handle_t* handle, int* out_fitted);
+n4m_status_t n4m_filter_variance_output_cols( const n4m_filter_variance_handle_t* handle, int64_t* out_cols);
+n4m_status_t n4m_filter_variance_transform( const n4m_filter_variance_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.variance_filter(X, top_k=5)
+Xt = n4m.variance_filter(X, top_k=5)
 ```
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- variance_filter(X, threshold = 0.0, top_k = 0L)
 ```
 
@@ -125,15 +125,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.012 ms</td><td class="ms ms-best">🏆 0.060 ms</td><td class="ms">0.343 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.012 ms</td><td class="ms ms-best">🏆 0.060 ms</td><td class="ms">0.343 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.012 ms</td><td class="ms">0.063 ms</td><td class="ms">0.356 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.016 ms</td><td class="ms">0.094 ms</td><td class="ms ms-best">🏆 0.316 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.012 ms</td><td class="ms">0.063 ms</td><td class="ms">0.356 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.016 ms</td><td class="ms">0.094 ms</td><td class="ms ms-best">🏆 0.316 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">0.033 ms</td><td class="ms">0.285 ms</td><td class="ms">2.078 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">0.033 ms</td><td class="ms">0.285 ms</td><td class="ms">2.078 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): sklearn.feature_selection.VarianceThreshold · scikit-learn 1.8.0 — canonical">◆</span><code>ref.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.165 ms</td><td class="ms">0.327 ms</td><td class="ms">1.285 ms</td></tr>

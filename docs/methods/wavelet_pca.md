@@ -4,7 +4,7 @@ _Group_: **Wavelet** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8` · _Sourc
 
 ## Description
 
-From the `chemometrics4all.WaveletPCA` Python wrapper docstring:
+From the `n4m.WaveletPCA` Python wrapper docstring:
 
 > DWT coefficient projection through PCA scores.
 
@@ -24,7 +24,7 @@ From the `chemometrics4all.WaveletPCA` Python wrapper docstring:
 `nirs4all.operators.transforms.nirs.WaveletPCA` (Trygg & Wold 1998,
 "PLS regression on wavelet compressed NIR spectra").  The nirs4all
 reference fits a separate `sklearn.decomposition.PCA` per level;
-chemometrics4all fits a single PCA on the concatenated coefficient
+nirs4all-methods fits a single PCA on the concatenated coefficient
 stack, matching the simpler "flatten + PCA" path documented in the
 v1 brief.
 
@@ -60,17 +60,17 @@ and projects them through $(F_{\text{new}} - \mu) V^{\top \top}_{[:k', :]}$.
 
 Stateful: `_create / _fit / _transform / _destroy` plus `_is_fitted`
 and `_output_cols`.  Calling `_transform` or `_output_cols` before
-`_fit` returns `C4A_ERR_NOT_FITTED`.
+`_fit` returns `N4M_ERR_NOT_FITTED`.
 
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_pp_wavelet_pca_create( c4a_pp_wavelet_pca_handle_t** out, c4a_pp_wavelet_family_t family, c4a_pp_wavelet_boundary_t mode, int32_t max_level, double n_components);
-void c4a_pp_wavelet_pca_destroy( c4a_pp_wavelet_pca_handle_t* handle);
-c4a_status_t c4a_pp_wavelet_pca_fit( c4a_pp_wavelet_pca_handle_t* handle, c4a_matrix_view_t X);
-c4a_status_t c4a_pp_wavelet_pca_is_fitted( const c4a_pp_wavelet_pca_handle_t* handle, int* out_fitted);
-c4a_status_t c4a_pp_wavelet_pca_output_cols( const c4a_pp_wavelet_pca_handle_t* handle, int64_t* out_cols);
-c4a_status_t c4a_pp_wavelet_pca_transform( const c4a_pp_wavelet_pca_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_pp_wavelet_pca_create( n4m_pp_wavelet_pca_handle_t** out, n4m_pp_wavelet_family_t family, n4m_pp_wavelet_boundary_t mode, int32_t max_level, double n_components);
+void n4m_pp_wavelet_pca_destroy( n4m_pp_wavelet_pca_handle_t* handle);
+n4m_status_t n4m_pp_wavelet_pca_fit( n4m_pp_wavelet_pca_handle_t* handle, n4m_matrix_view_t X);
+n4m_status_t n4m_pp_wavelet_pca_is_fitted( const n4m_pp_wavelet_pca_handle_t* handle, int* out_fitted);
+n4m_status_t n4m_pp_wavelet_pca_output_cols( const n4m_pp_wavelet_pca_handle_t* handle, int64_t* out_cols);
+n4m_status_t n4m_pp_wavelet_pca_transform( const n4m_pp_wavelet_pca_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -79,53 +79,53 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_pp_wavelet_pca` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.wavelet_pca` | Python | ABI-close function backed by ctypes. |
-| Python sklearn | `chemometrics4all.sklearn.WaveletPCA` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| C ABI | `n4m_pp_wavelet_pca` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.wavelet_pca` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `n4m.sklearn.WaveletPCA` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | ref.pywavelets | `PyWavelets.wavedec(haar, periodization)+sklearn.PCA(full)` | Python | canonical/comparator |
-| ref.nirs4all | `nirs4all.WaveletPCA(per-level contract)` | Python | context only; nirs4all fits per-level PCA blocks; c4a gates the flattened-DWT PCA contract with PyWavelets+sklearn |
+| ref.nirs4all | `nirs4all.WaveletPCA(per-level contract)` | Python | context only; nirs4all fits per-level PCA blocks; n4m gates the flattened-DWT PCA contract with PyWavelets+sklearn |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_pp_wavelet_pca_create( c4a_pp_wavelet_pca_handle_t** out, c4a_pp_wavelet_family_t family, c4a_pp_wavelet_boundary_t mode, int32_t max_level, double n_components);
-void c4a_pp_wavelet_pca_destroy( c4a_pp_wavelet_pca_handle_t* handle);
-c4a_status_t c4a_pp_wavelet_pca_fit( c4a_pp_wavelet_pca_handle_t* handle, c4a_matrix_view_t X);
-c4a_status_t c4a_pp_wavelet_pca_is_fitted( const c4a_pp_wavelet_pca_handle_t* handle, int* out_fitted);
-c4a_status_t c4a_pp_wavelet_pca_output_cols( const c4a_pp_wavelet_pca_handle_t* handle, int64_t* out_cols);
-c4a_status_t c4a_pp_wavelet_pca_transform( const c4a_pp_wavelet_pca_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_pp_wavelet_pca_create( n4m_pp_wavelet_pca_handle_t** out, n4m_pp_wavelet_family_t family, n4m_pp_wavelet_boundary_t mode, int32_t max_level, double n_components);
+void n4m_pp_wavelet_pca_destroy( n4m_pp_wavelet_pca_handle_t* handle);
+n4m_status_t n4m_pp_wavelet_pca_fit( n4m_pp_wavelet_pca_handle_t* handle, n4m_matrix_view_t X);
+n4m_status_t n4m_pp_wavelet_pca_is_fitted( const n4m_pp_wavelet_pca_handle_t* handle, int* out_fitted);
+n4m_status_t n4m_pp_wavelet_pca_output_cols( const n4m_pp_wavelet_pca_handle_t* handle, int64_t* out_cols);
+n4m_status_t n4m_pp_wavelet_pca_transform( const n4m_pp_wavelet_pca_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.wavelet_pca(X)
+Xt = n4m.wavelet_pca(X)
 ```
 
 :::
 
-:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:::{tab-item} Python sklearn · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from chemometrics4all.sklearn import WaveletPCA
+from n4m.sklearn import WaveletPCA
 
 op = WaveletPCA(family='haar', mode='periodization', max_level=2, n_components=5.0)
 Xt = op.fit_transform(X)
@@ -142,7 +142,7 @@ Xt = op.fit_transform(X)
 :class-card: external-refs
 
 - ◆ **`ref.pywavelets`** (Python · canonical) — `PyWavelets.wavedec(haar, periodization)+sklearn.PCA(full)` · PyWavelets 1.9.0
-- ℹ **`ref.nirs4all`** (Python · context) — `nirs4all.WaveletPCA(per-level contract)` · nirs4all@cd731a23+dirty — nirs4all fits per-level PCA blocks; c4a gates the flattened-DWT PCA contract with PyWavelets+sklearn
+- ℹ **`ref.nirs4all`** (Python · context) — `nirs4all.WaveletPCA(per-level contract)` · nirs4all@cd731a23+dirty — nirs4all fits per-level PCA blocks; n4m gates the flattened-DWT PCA contract with PyWavelets+sklearn
 :::
 
 ### Validation contract
@@ -156,7 +156,7 @@ Xt = op.fit_transform(X)
 | Backend | Library | Gate | Comparator | Note |
 |---------|---------|------|------------|------|
 | `ref.pywavelets` | `PyWavelets.wavedec(haar, periodization)+sklearn.PCA(full)` | Python / parity | `sign_invariant_columns` |  |
-| `ref.nirs4all` | `nirs4all.WaveletPCA(per-level contract)` | Python / context | `sign_invariant_columns` | nirs4all fits per-level PCA blocks; c4a gates the flattened-DWT PCA contract with PyWavelets+sklearn |
+| `ref.nirs4all` | `nirs4all.WaveletPCA(per-level contract)` | Python / context | `sign_invariant_columns` | nirs4all fits per-level PCA blocks; n4m gates the flattened-DWT PCA contract with PyWavelets+sklearn |
 
 ### Benchmarks
 Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Divergence is the worst finite value over the visible sizes for each backend, preferring reference max-abs difference and falling back to binding max-abs difference when no reference comparison is recorded. Rows without a recorded comparison show `—`; the fastest backend per column is marked 🏆.
@@ -169,12 +169,12 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-15</td><td class="ms">1.512 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-15</td><td class="ms">1.512 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-15</td><td class="ms">1.506 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-15</td><td class="ms">1.509 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-15</td><td class="ms">1.506 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-15</td><td class="ms">1.509 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.WaveletPCA(per-level contract) · nirs4all@cd731a23+dirty — context">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-context" title="no divergence recorded">—</td><td class="ms">25.720 ms</td></tr>

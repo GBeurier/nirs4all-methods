@@ -1,4 +1,4 @@
-# MultiplicativeNoise — `c4a_aug_multiplicative_noise_*`
+# MultiplicativeNoise — `n4m_aug_multiplicative_noise_*`
 
 Applies per-sample multiplicative gain to spectra.
 
@@ -14,17 +14,17 @@ Mirrors `nirs4all.operators.augmentation.spectral.MultiplicativeNoise` with `per
 
 ## ABI
 ```c
-c4a_status_t c4a_aug_multiplicative_noise_create(
-    c4a_aug_multiplicative_noise_handle_t** out,
-    c4a_rng_pcg64_state_t* rng,
+n4m_status_t n4m_aug_multiplicative_noise_create(
+    n4m_aug_multiplicative_noise_handle_t** out,
+    n4m_rng_pcg64_state_t* rng,
     double sigma_gain);
-void         c4a_aug_multiplicative_noise_destroy(
-    c4a_aug_multiplicative_noise_handle_t* h);
-c4a_status_t c4a_aug_multiplicative_noise_apply(
-    const c4a_aug_multiplicative_noise_handle_t* h,
-    c4a_matrix_view_t X, c4a_matrix_view_t out);
+void         n4m_aug_multiplicative_noise_destroy(
+    n4m_aug_multiplicative_noise_handle_t* h);
+n4m_status_t n4m_aug_multiplicative_noise_apply(
+    const n4m_aug_multiplicative_noise_handle_t* h,
+    n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 ## Reference
-- Internal parity fixture: `parity/python_generator/src/c4a_parity_augmenters_ref/multiplicative_noise.py`.
+- Internal parity fixture: `parity/python_generator/src/n4m_parity_augmenters_ref/multiplicative_noise.py`.
 - Parity tolerance: 1e-15 abs.

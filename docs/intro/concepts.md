@@ -1,6 +1,6 @@
 # Core concepts
 
-chemometrics4all focuses on portable chemometrics / NIRS operators, not on
+nirs4all-methods focuses on portable chemometrics / NIRS operators, not on
 shipping PLS model variants. The PLS model family lives in `pls4all`.
 
 ## Layers
@@ -10,7 +10,7 @@ The intended architecture has three layers:
 | Layer | Role |
 |---|---|
 | C++ core | Numerical kernels and deterministic utilities. |
-| C ABI | Stable `c4a_*` entry points, opaque handles, and error reporting. |
+| C ABI | Stable `n4m_*` entry points, opaque handles, and error reporting. |
 | Bindings | Thin host-language wrappers around the C ABI. |
 
 ## Determinism

@@ -4,7 +4,7 @@ _Group_: **Preprocessing** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8`
 
 ## Description
 
-`weighted_snv` is a chemometrics4all preprocessing method exposed through the C ABI and the generated language bindings.
+`weighted_snv` is a nirs4all-methods preprocessing method exposed through the C ABI and the generated language bindings.
 
 ### Parameters
 
@@ -28,48 +28,48 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | — | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.weighted_snv` | Python | ABI-close function backed by ctypes. |
+| C ABI | — | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.weighted_snv` | Python | ABI-close function backed by ctypes. |
 | R | `weighted_snv(X, weights = NULL, ddof = 0L, eps = 1e-12)` | R | Public package wrapper around the C ABI. |
 | ref.statsmodels | `statsmodels.stats.weightstats.DescrStatsW` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
 /* C ABI prefix */
-c4a_*
+n4m_*
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.weighted_snv(X, weights=weights)
+Xt = n4m.weighted_snv(X, weights=weights)
 ```
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- weighted_snv(X, weights = seq(1, 2, length.out = ncol(X)), ddof = 0L, eps = 1e-12)
 ```
 
@@ -110,15 +110,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.5e-14</td><td class="ms">0.018 ms</td><td class="ms">0.080 ms</td><td class="ms">0.362 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.5e-14</td><td class="ms">0.018 ms</td><td class="ms">0.080 ms</td><td class="ms">0.362 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.5e-14</td><td class="ms ms-best">🏆 0.014 ms</td><td class="ms ms-best">🏆 0.073 ms</td><td class="ms">0.357 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.5e-14</td><td class="ms">0.017 ms</td><td class="ms">0.083 ms</td><td class="ms ms-best">🏆 0.350 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.5e-14</td><td class="ms ms-best">🏆 0.014 ms</td><td class="ms ms-best">🏆 0.073 ms</td><td class="ms">0.357 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.5e-14</td><td class="ms">0.017 ms</td><td class="ms">0.083 ms</td><td class="ms ms-best">🏆 0.350 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">3.0e-14</td><td class="ms">0.035 ms</td><td class="ms">0.363 ms</td><td class="ms">1.969 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">3.0e-14</td><td class="ms">0.035 ms</td><td class="ms">0.363 ms</td><td class="ms">1.969 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): statsmodels.stats.weightstats.DescrStatsW · statsmodels 0.14.6 — canonical">◆</span><code>ref.statsmodels</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.439 ms</td><td class="ms">0.510 ms</td><td class="ms">0.925 ms</td></tr>

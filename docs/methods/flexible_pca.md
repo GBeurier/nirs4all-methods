@@ -4,7 +4,7 @@ _Group_: **Feature extraction** · _Registry tolerance_: sign-invariant `rtol=1e
 
 ## Description
 
-From the `chemometrics4all.FlexiblePCA` Python wrapper docstring:
+From the `n4m.FlexiblePCA` Python wrapper docstring:
 
 > PCA with integer or explained-variance component selection.
 
@@ -15,7 +15,7 @@ From the `chemometrics4all.FlexiblePCA` Python wrapper docstring:
 | `n_components` | —       | Flexible count or variance-ratio specifier |
 
 The constructor rejects values `<= 0` or `NaN` with
-`C4A_ERR_INVALID_ARGUMENT`.
+`N4M_ERR_INVALID_ARGUMENT`.
 
 ## Explanations
 
@@ -69,7 +69,7 @@ $$
 \text{out} = (X_\text{new} - \mathbf{1}\mu^\top)\,\text{components}^\top.
 $$
 
-The c4a engine uses a one-sided Jacobi SVD (``cpp/src/core/common/svd.c``)
+The n4m engine uses a one-sided Jacobi SVD (``cpp/src/core/common/svd.c``)
 which agrees with ``np.linalg.svd`` to within a few ULPs on the singular
 values; the resulting transform parity tolerance is ``1e-10`` absolute /
 ``1e-11`` relative against the internal parity fixture.
@@ -79,18 +79,18 @@ values; the resulting transform parity tolerance is ``1e-10`` absolute /
 Stateful: `_create / _fit / _transform / _destroy` with companion
 `_is_fitted` and `_output_cols` helpers. `_output_cols` reads the
 learned $k'$ off the fitted state. Calling `_transform` or
-`_output_cols` before `_fit` returns `C4A_ERR_NOT_FITTED`. Calling
+`_output_cols` before `_fit` returns `N4M_ERR_NOT_FITTED`. Calling
 `_fit` again replaces the prior fit (sklearn-style refit semantics).
 
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_pp_flex_pca_create(c4a_pp_flex_pca_handle_t** out, double n_components);
-void c4a_pp_flex_pca_destroy(c4a_pp_flex_pca_handle_t* handle);
-c4a_status_t c4a_pp_flex_pca_fit(c4a_pp_flex_pca_handle_t* handle, c4a_matrix_view_t X);
-c4a_status_t c4a_pp_flex_pca_is_fitted( const c4a_pp_flex_pca_handle_t* handle, int* out_fitted);
-c4a_status_t c4a_pp_flex_pca_output_cols( const c4a_pp_flex_pca_handle_t* handle, int64_t* out_cols);
-c4a_status_t c4a_pp_flex_pca_transform( const c4a_pp_flex_pca_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_pp_flex_pca_create(n4m_pp_flex_pca_handle_t** out, double n_components);
+void n4m_pp_flex_pca_destroy(n4m_pp_flex_pca_handle_t* handle);
+n4m_status_t n4m_pp_flex_pca_fit(n4m_pp_flex_pca_handle_t* handle, n4m_matrix_view_t X);
+n4m_status_t n4m_pp_flex_pca_is_fitted( const n4m_pp_flex_pca_handle_t* handle, int* out_fitted);
+n4m_status_t n4m_pp_flex_pca_output_cols( const n4m_pp_flex_pca_handle_t* handle, int64_t* out_cols);
+n4m_status_t n4m_pp_flex_pca_transform( const n4m_pp_flex_pca_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -99,54 +99,54 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_pp_flex_pca` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.flexible_pca` | Python | ABI-close function backed by ctypes. |
-| Python sklearn | `chemometrics4all.sklearn.FlexiblePCA` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| C ABI | `n4m_pp_flex_pca` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.flexible_pca` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `n4m.sklearn.FlexiblePCA` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `flexible_pca(X, n_components = 5.0)` | R | Public package wrapper around the C ABI. |
 | ref.sklearn | `sklearn.decomposition.PCA` | Python | canonical/comparator |
 | ref.nirs4all | `nirs4all.FlexiblePCA` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_pp_flex_pca_create(c4a_pp_flex_pca_handle_t** out, double n_components);
-void c4a_pp_flex_pca_destroy(c4a_pp_flex_pca_handle_t* handle);
-c4a_status_t c4a_pp_flex_pca_fit(c4a_pp_flex_pca_handle_t* handle, c4a_matrix_view_t X);
-c4a_status_t c4a_pp_flex_pca_is_fitted( const c4a_pp_flex_pca_handle_t* handle, int* out_fitted);
-c4a_status_t c4a_pp_flex_pca_output_cols( const c4a_pp_flex_pca_handle_t* handle, int64_t* out_cols);
-c4a_status_t c4a_pp_flex_pca_transform( const c4a_pp_flex_pca_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_pp_flex_pca_create(n4m_pp_flex_pca_handle_t** out, double n_components);
+void n4m_pp_flex_pca_destroy(n4m_pp_flex_pca_handle_t* handle);
+n4m_status_t n4m_pp_flex_pca_fit(n4m_pp_flex_pca_handle_t* handle, n4m_matrix_view_t X);
+n4m_status_t n4m_pp_flex_pca_is_fitted( const n4m_pp_flex_pca_handle_t* handle, int* out_fitted);
+n4m_status_t n4m_pp_flex_pca_output_cols( const n4m_pp_flex_pca_handle_t* handle, int64_t* out_cols);
+n4m_status_t n4m_pp_flex_pca_transform( const n4m_pp_flex_pca_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.flexible_pca(X)
+Xt = n4m.flexible_pca(X)
 ```
 
 :::
 
-:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:::{tab-item} Python sklearn · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from chemometrics4all.sklearn import FlexiblePCA
+from n4m.sklearn import FlexiblePCA
 
 op = FlexiblePCA()
 Xt = op.fit_transform(X)
@@ -154,12 +154,12 @@ Xt = op.fit_transform(X)
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- flexible_pca(X, n_components = 5.0)
 ```
 
@@ -201,15 +201,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.6e-13</td><td class="ms">0.220 ms</td><td class="ms">1.963 ms</td><td class="ms">4.828 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.6e-13</td><td class="ms">0.220 ms</td><td class="ms">1.963 ms</td><td class="ms">4.828 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.6e-13</td><td class="ms">0.230 ms</td><td class="ms">1.977 ms</td><td class="ms">4.875 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.6e-13</td><td class="ms">0.221 ms</td><td class="ms">1.910 ms</td><td class="ms ms-best">🏆 4.787 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.6e-13</td><td class="ms">0.230 ms</td><td class="ms">1.977 ms</td><td class="ms">4.875 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.6e-13</td><td class="ms">0.221 ms</td><td class="ms">1.910 ms</td><td class="ms ms-best">🏆 4.787 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.6e-13</td><td class="ms ms-best">🏆 0.219 ms</td><td class="ms ms-best">🏆 1.844 ms</td><td class="ms">5.281 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.6e-13</td><td class="ms ms-best">🏆 0.219 ms</td><td class="ms ms-best">🏆 1.844 ms</td><td class="ms">5.281 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.FlexiblePCA · nirs4all@cd731a23+dirty — comparator">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.0e-14</td><td class="ms">0.694 ms</td><td class="ms">3.103 ms</td><td class="ms">15.909 ms</td></tr>

@@ -1,4 +1,4 @@
-/* chemometrics4all — sidebar autoscroll for the corralled toctree-l2 list.
+/* nirs4all-methods — sidebar autoscroll for the corralled toctree-l2 list.
  *
  * When the user is deep inside a section that has many siblings
  * (e.g. one of the 70+ method pages), custom.css clamps the active

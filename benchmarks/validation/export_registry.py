@@ -1,4 +1,4 @@
-"""Export the chemometrics4all validation registry to deterministic JSON.
+"""Export the nirs4all-methods validation registry to deterministic JSON.
 
 The exporter intentionally does not import
 ``benchmarks.cross_binding.orchestrator``. That module loads numpy,
@@ -65,55 +65,55 @@ REF_BUILDERS: dict[str, dict[str, Any]] = {
         "backend": "ref.nirs4all",
         "language": "Python",
         "compare": True,
-        "gate_c4a": True,
+        "gate_n4m": True,
     },
     "numpy_ref": {
         "backend": "ref.numpy",
         "language": "Python",
         "compare": True,
-        "gate_c4a": True,
+        "gate_n4m": True,
     },
     "sklearn_ref": {
         "backend": "ref.sklearn",
         "language": "Python",
         "compare": True,
-        "gate_c4a": True,
+        "gate_n4m": True,
     },
     "scipy_ref": {
         "backend": "ref.scipy",
         "language": "Python",
         "compare": True,
-        "gate_c4a": True,
+        "gate_n4m": True,
     },
     "statsmodels_ref": {
         "backend": "ref.statsmodels",
         "language": "Python",
         "compare": True,
-        "gate_c4a": True,
+        "gate_n4m": True,
     },
     "cowarp_ref": {
         "backend": "ref.cowarp",
         "language": "Python",
         "compare": True,
-        "gate_c4a": True,
+        "gate_n4m": True,
     },
     "pywavelets_ref": {
         "backend": "ref.pywavelets",
         "language": "Python",
         "compare": True,
-        "gate_c4a": True,
+        "gate_n4m": True,
     },
     "pycaltransfer_ref": {
         "backend": "ref.pycaltransfer",
         "language": "Python",
         "compare": True,
-        "gate_c4a": True,
+        "gate_n4m": True,
     },
     "r_prospectr_ref": {
         "backend": "ref.r.prospectr",
         "language": "R",
         "compare": False,
-        "gate_c4a": False,
+        "gate_n4m": False,
     },
 }
 
@@ -287,7 +287,7 @@ def _parse_reference(call: ast.Call, method_comparator: str) -> ReferenceLink:
         library = str(_literal(call.args[1], backend)) if len(call.args) > 1 else backend
         language = _str_keyword(call, "language", "Python")
         compare = _bool_keyword(call, "compare", True)
-        gate = _bool_keyword(call, "gate_c4a", True)
+        gate = _bool_keyword(call, "gate_n4m", True)
         contract_note = _str_keyword(call, "contract_note")
         max_cols = _int_keyword(call, "max_cols")
         comparator = _comparator_id(_keyword(call, "comparator"))
@@ -298,7 +298,7 @@ def _parse_reference(call: ast.Call, method_comparator: str) -> ReferenceLink:
             library=library,
             language=language,
             compare=compare,
-            gate_c4a=gate,
+            gate_n4m=gate,
             contract_note=contract_note,
             max_cols=max_cols,
             comparator=comparator,
@@ -313,7 +313,7 @@ def _parse_reference(call: ast.Call, method_comparator: str) -> ReferenceLink:
     if name == "r_prospectr_ref" and len(call.args) > 1:
         r_expr = str(_literal(call.args[1], ""))
     compare = _bool_keyword(call, "compare", bool(spec.get("compare", True)))
-    gate = _bool_keyword(call, "gate_c4a", bool(spec.get("gate_c4a", True)))
+    gate = _bool_keyword(call, "gate_n4m", bool(spec.get("gate_n4m", True)))
     comparator = _comparator_id(_keyword(call, "comparator"))
     if comparator == "default_allclose":
         comparator = method_comparator
@@ -322,7 +322,7 @@ def _parse_reference(call: ast.Call, method_comparator: str) -> ReferenceLink:
         library=library,
         language=str(language),
         compare=compare,
-        gate_c4a=gate,
+        gate_n4m=gate,
         contract_note=_str_keyword(call, "contract_note"),
         max_cols=_int_keyword(call, "max_cols"),
         comparator=comparator,

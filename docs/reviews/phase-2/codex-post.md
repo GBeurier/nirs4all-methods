@@ -12,32 +12,32 @@ The reviewer confirmed the two-layer C engine + C ABI veneer is sound, naming is
 ## Major architectural recommendations — addressed
 
 ### M1. Standardize C ABI naming
-**Decision**: Stay with `c4a_<category>_<op>_*`:
-- `c4a_pp_*` — preprocessing (Phases 2-10)
-- `c4a_split_*` — splitters (Phase 11)
-- `c4a_filter_*` — filters (Phases 12-14)
-- `c4a_aug_*` — augmentations (Phases 15-18)
-- `c4a_util_*` — utilities (Phases 19-21)
-- `c4a_rng_*` — RNG (Phase 1)
-- `c4a_metric_*` — NIRS / transfer metrics (Phases 19-20)
+**Decision**: Stay with `n4m_<category>_<op>_*`:
+- `n4m_pp_*` — preprocessing (Phases 2-10)
+- `n4m_split_*` — splitters (Phase 11)
+- `n4m_filter_*` — filters (Phases 12-14)
+- `n4m_aug_*` — augmentations (Phases 15-18)
+- `n4m_util_*` — utilities (Phases 19-21)
+- `n4m_rng_*` — RNG (Phase 1)
+- `n4m_metric_*` — NIRS / transfer metrics (Phases 19-20)
 
-Locked in `c4a.h` header comment for Phases 3-21.
+Locked in `n4m.h` header comment for Phases 3-21.
 
 ### M2. Keep distinct opaque types per operator
-**Decision**: No collapsing. Each operator gets its own `c4a_pp_<name>_handle_t`. Python/R/MATLAB tier-2 wrappers hand-roll one class per operator regardless. Per-operator boilerplate (~21 lines × 7 ops) is small and acceptable.
+**Decision**: No collapsing. Each operator gets its own `n4m_pp_<name>_handle_t`. Python/R/MATLAB tier-2 wrappers hand-roll one class per operator regardless. Per-operator boilerplate (~21 lines × 7 ops) is small and acceptable.
 
 ### M3. No per-operator `_to_bytes / _from_bytes`
 **Decision**: Adopt pls4all's pipeline-level serialization in Phase 11+. Bindings serialize constructor parameters, not engine state. Saves 84+ ABI symbols.
 
-### M4. `c4a_array_t` orphans
-**Decision**: **Delete orphan declarations in Phase 3 opener.** Caller-allocates pattern (current Phase 2 default) is the right convention. Re-add `c4a_array_t` only when Phase 9 (CARS/MCUVE) needs variable-shape output.
+### M4. `n4m_array_t` orphans
+**Decision**: **Delete orphan declarations in Phase 3 opener.** Caller-allocates pattern (current Phase 2 default) is the right convention. Re-add `n4m_array_t` only when Phase 9 (CARS/MCUVE) needs variable-shape output.
 
 ### M5. LogTransform stateless miscategorisation
-**Decision**: Document the per-call recomputation in c4a.h (done). Proper `_fit/_transform` split lands in Phase 3 alongside MSC/EMSC.
+**Decision**: Document the per-call recomputation in n4m.h (done). Proper `_fit/_transform` split lands in Phase 3 alongside MSC/EMSC.
 
 ### M6. ABI contract for `_fit/_transform`
-**Decision**: To be declared in c4a.h §-Phase 3 placeholder before Phase 3 implementation:
-- `_fit` before `_transform` → currently no contract; Phase 3 will use `C4A_ERR_NOT_FITTED` (already declared).
+**Decision**: To be declared in n4m.h §-Phase 3 placeholder before Phase 3 implementation:
+- `_fit` before `_transform` → currently no contract; Phase 3 will use `N4M_ERR_NOT_FITTED` (already declared).
 - Calling `_fit` twice is allowed (overwrites).
 - `_fit` resets fitted state.
 
@@ -45,11 +45,11 @@ Locked in `c4a.h` header comment for Phases 3-21.
 
 | # | Recommendation | Status |
 |---|---|---|
-| R1 | Rename test Runner from `phase-0-smoke` to `chemometrics4all` | ✅ Done — `cpp/tests/main.cpp:73` |
+| R1 | Rename test Runner from `phase-0-smoke` to `nirs4all-methods` | ✅ Done — `cpp/tests/main.cpp:73` |
 | R2 | Add `parity/python_generator/pyproject.toml` with numpy 1.26.4 pin | ✅ Done — pins numpy 1.26.4 + scipy 1.11.4 + scikit-learn 1.4.2 + PyWavelets 1.6.0 + pybaselines 1.1.4 |
-| R3 | Trim orphan pls4all declarations in c4a.h (~1900 lines) | ⏳ Deferred to Phase 3 opener (big surgery; needs its own commit) |
-| R4 | Delete `c4a_array_t` orphan declarations | ⏳ Deferred to Phase 3 opener (paired with R3) |
-| R5 | Add empty `c4a_linux.map` / `chemometrics4all.def` skeletons | ✅ Done — `cpp/src/c_api/c4a_linux.map` with `CHEMOMETRICS4ALL_1 { global: c4a_*; local: *; }`. CMake auto-picks it up. Confirmed: all 57 exported symbols are `c4a_*`. |
+| R3 | Trim orphan pls4all declarations in n4m.h (~1900 lines) | ⏳ Deferred to Phase 3 opener (big surgery; needs its own commit) |
+| R4 | Delete `n4m_array_t` orphan declarations | ⏳ Deferred to Phase 3 opener (paired with R3) |
+| R5 | Add empty `n4m_linux.map` / `n4m.def` skeletons | ✅ Done — `cpp/src/c_api/n4m_linux.map` with `N4M_1 { global: n4m_*; local: *; }`. CMake auto-picks it up. Confirmed: all 57 exported symbols are `n4m_*`. |
 
 ## Code quality observations — deferred
 

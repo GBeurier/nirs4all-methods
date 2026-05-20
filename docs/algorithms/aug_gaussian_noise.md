@@ -1,4 +1,4 @@
-# GaussianAdditiveNoise — `c4a_aug_gaussian_noise_*`
+# GaussianAdditiveNoise — `n4m_aug_gaussian_noise_*`
 
 Adds per-sample std-scaled Gaussian noise to spectra.
 
@@ -15,19 +15,19 @@ The single-call bulk draw fixes the RNG stream order, so the C reference matches
 
 ## ABI
 ```c
-c4a_status_t c4a_aug_gaussian_noise_create(
-    c4a_aug_gaussian_noise_handle_t** out,
-    c4a_rng_pcg64_state_t* rng,         /* borrowed, MUST be non-NULL */
+n4m_status_t n4m_aug_gaussian_noise_create(
+    n4m_aug_gaussian_noise_handle_t** out,
+    n4m_rng_pcg64_state_t* rng,         /* borrowed, MUST be non-NULL */
     double sigma);
-void         c4a_aug_gaussian_noise_destroy(c4a_aug_gaussian_noise_handle_t* h);
-c4a_status_t c4a_aug_gaussian_noise_apply(
-    const c4a_aug_gaussian_noise_handle_t* h,
-    c4a_matrix_view_t X, c4a_matrix_view_t out);
+void         n4m_aug_gaussian_noise_destroy(n4m_aug_gaussian_noise_handle_t* h);
+n4m_status_t n4m_aug_gaussian_noise_apply(
+    const n4m_aug_gaussian_noise_handle_t* h,
+    n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 ## Determinism
-The augmenter does not own the RNG. Re-seed the RNG with `c4a_rng_pcg64_set_seed(rng, seed)` before each `_apply` to lock the output. Tested in `cpp/tests/test_augmenters_noise_drift.cpp::aug_gaussian_noise_*`.
+The augmenter does not own the RNG. Re-seed the RNG with `n4m_rng_pcg64_set_seed(rng, seed)` before each `_apply` to lock the output. Tested in `cpp/tests/test_augmenters_noise_drift.cpp::aug_gaussian_noise_*`.
 
 ## Reference
-- Internal parity fixture: `parity/python_generator/src/c4a_parity_augmenters_ref/gaussian_noise.py` (validated against `nirs4all.operators.augmentation.spectral.GaussianAdditiveNoise` with `variation_scope="sample"`).
+- Internal parity fixture: `parity/python_generator/src/n4m_parity_augmenters_ref/gaussian_noise.py` (validated against `nirs4all.operators.augmentation.spectral.GaussianAdditiveNoise` with `variation_scope="sample"`).
 - Parity tolerance: 1e-15 abs.

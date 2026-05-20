@@ -155,7 +155,7 @@ def validate_json(path: Path, snapshot_root: Path) -> list[str]:
                     )
         if canonical_refs:
             for col_id, cell in (row.get("cells") or {}).items():
-                if not str(col_id).startswith("chemometrics4all.cpp"):
+                if not str(col_id).startswith("n4m.cpp"):
                     continue
                 if cell.get("ok") is True and str(cell.get("raw_parity") or "") == "ok":
                     errors.append(

@@ -1,10 +1,10 @@
 {
-  "schema": "chemometrics4all.benchmark_registry.v0",
+  "schema": "n4m.benchmark_registry.v0",
   "status": "scaffold",
   "generated_results": false,
   "notes": [
     "This registry is intentionally minimal and contains no timing or parity results.",
-    "PLS regression/classification methods are out of scope for chemometrics4all benchmarks."
+    "PLS regression/classification methods are out of scope for nirs4all-methods benchmarks."
   ],
   "methods": [
     {

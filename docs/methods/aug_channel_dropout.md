@@ -4,7 +4,7 @@ _Group_: **Augmentation** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8` · _
 
 ## Description
 
-Ten stochastic augmenters in the new `c4a_aug_*` ABI category. All ten
+Ten stochastic augmenters in the new `n4m_aug_*` ABI category. All ten
 implement the locked 3-symbol ABI from
 `roadmap/phase-15-18-augmenters-abi-contract.md` (`_create`, `_apply`,
 `_destroy`); the RNG handle is the first constructor parameter and is
@@ -12,18 +12,18 @@ stored by reference (the augmenter does NOT own it).
 
 | Operator                  | Symbol prefix                  | Algorithm |
 | ------------------------- | ------------------------------ | --------- |
-| WavelengthShift           | `c4a_aug_wavelength_shift_*`   | `out[i] = np.interp(lambdas - shift_i, lambdas, X[i])`, `shift_i ~ U(lo, hi)` |
-| WavelengthStretch         | `c4a_aug_wavelength_stretch_*` | `query = center + (lambdas - center) / f_i`, `out[i] = np.interp(query, lambdas, X[i])`, `f_i ~ U(lo, hi)` |
-| LocalWavelengthWarp       | `c4a_aug_local_warp_*`         | linearly-interp `n_control_points` random shifts `~ U(-mx, mx)` to wavelengths, then resample |
-| BandPerturbation          | `c4a_aug_band_perturb_*`       | for each (sample, band): multiply by random gain, add random offset, within a random band |
-| BandMasking               | `c4a_aug_band_mask_*`          | zero (or ramp-interpolate) `n_per_sample ~ U[n_lo, n_hi]` random bands per sample |
-| ChannelDropout            | `c4a_aug_channel_dropout_*`    | mask `rng.random() < p` channels; zero or interpolate from kept neighbours |
-| GaussianSmoothingJitter   | `c4a_aug_gauss_jitter_*`       | per-row reflect-padded Gaussian convolution with `sigma_i ~ U(sigma_lo, sigma_hi)` |
-| UnsharpSpectralMask       | `c4a_aug_unsharp_mask_*`       | `out = X + amount_i * (X - convolve(X, gauss))`, `amount_i ~ U(amt_lo, amt_hi)` |
-| SmoothMagnitudeWarp       | `c4a_aug_magnitude_warp_*`     | linearly-interp `n_control_points` random gains `~ U(g_lo, g_hi)`, multiply spectrum elementwise |
-| LocalClipping             | `c4a_aug_local_clip_*`         | clip each of `n_regions` random bands to the 90th-percentile of the band |
+| WavelengthShift           | `n4m_aug_wavelength_shift_*`   | `out[i] = np.interp(lambdas - shift_i, lambdas, X[i])`, `shift_i ~ U(lo, hi)` |
+| WavelengthStretch         | `n4m_aug_wavelength_stretch_*` | `query = center + (lambdas - center) / f_i`, `out[i] = np.interp(query, lambdas, X[i])`, `f_i ~ U(lo, hi)` |
+| LocalWavelengthWarp       | `n4m_aug_local_warp_*`         | linearly-interp `n_control_points` random shifts `~ U(-mx, mx)` to wavelengths, then resample |
+| BandPerturbation          | `n4m_aug_band_perturb_*`       | for each (sample, band): multiply by random gain, add random offset, within a random band |
+| BandMasking               | `n4m_aug_band_mask_*`          | zero (or ramp-interpolate) `n_per_sample ~ U[n_lo, n_hi]` random bands per sample |
+| ChannelDropout            | `n4m_aug_channel_dropout_*`    | mask `rng.random() < p` channels; zero or interpolate from kept neighbours |
+| GaussianSmoothingJitter   | `n4m_aug_gauss_jitter_*`       | per-row reflect-padded Gaussian convolution with `sigma_i ~ U(sigma_lo, sigma_hi)` |
+| UnsharpSpectralMask       | `n4m_aug_unsharp_mask_*`       | `out = X + amount_i * (X - convolve(X, gauss))`, `amount_i ~ U(amt_lo, amt_hi)` |
+| SmoothMagnitudeWarp       | `n4m_aug_magnitude_warp_*`     | linearly-interp `n_control_points` random gains `~ U(g_lo, g_hi)`, multiply spectrum elementwise |
+| LocalClipping             | `n4m_aug_local_clip_*`         | clip each of `n_regions` random bands to the 90th-percentile of the band |
 
-From the `chemometrics4all.ChannelDropout` Python wrapper docstring:
+From the `n4m.ChannelDropout` Python wrapper docstring:
 
 > Randomly drop individual wavelength channels.
 
@@ -53,9 +53,9 @@ NumPy 1.26.4 dispatches `rng.uniform` to PCG64's `next_double` callback
 32-bit Lemire path when `high - low <= 2^32`. The C engine replicates
 both exactly:
 
-- `c4a_aug_uniform`: `lo + (hi - lo) * next_double` — bit-equivalent to
+- `n4m_aug_uniform`: `lo + (hi - lo) * next_double` — bit-equivalent to
   `rng.uniform(lo, hi)`.
-- `c4a_aug_randint`: buffered 32-bit Lemire (or unbuffered 64-bit Lemire
+- `n4m_aug_randint`: buffered 32-bit Lemire (or unbuffered 64-bit Lemire
   for wider ranges) — bit-equivalent to `rng.integers(lo, hi)`.
 
 Random-stream order in each operator matches the Python reference's
@@ -65,9 +65,9 @@ offsets as four successive batches in row-major order).
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_aug_channel_dropout_apply( const c4a_aug_channel_dropout_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_channel_dropout_create( c4a_aug_channel_dropout_handle_t** out, c4a_rng_pcg64_state_t* rng, double dropout_prob, int32_t mode);
-void c4a_aug_channel_dropout_destroy(c4a_aug_channel_dropout_handle_t* handle);
+n4m_status_t n4m_aug_channel_dropout_apply( const n4m_aug_channel_dropout_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_channel_dropout_create( n4m_aug_channel_dropout_handle_t** out, n4m_rng_pcg64_state_t* rng, double dropout_prob, int32_t mode);
+void n4m_aug_channel_dropout_destroy(n4m_aug_channel_dropout_handle_t* handle);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -76,50 +76,50 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_aug_channel_dropout` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.aug_channel_dropout` | Python | ABI-close function backed by ctypes. |
-| Python sklearn | `chemometrics4all.sklearn.ChannelDropout` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| C ABI | `n4m_aug_channel_dropout` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.aug_channel_dropout` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `n4m.sklearn.ChannelDropout` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `aug_channel_dropout(X, dropout_prob = 0.05, mode = 0L, seed = 17)` | R | Public package wrapper around the C ABI. |
 | ref.nirs4all | `nirs4all.ChannelDropout` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_aug_channel_dropout_apply( const c4a_aug_channel_dropout_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_channel_dropout_create( c4a_aug_channel_dropout_handle_t** out, c4a_rng_pcg64_state_t* rng, double dropout_prob, int32_t mode);
-void c4a_aug_channel_dropout_destroy(c4a_aug_channel_dropout_handle_t* handle);
+n4m_status_t n4m_aug_channel_dropout_apply( const n4m_aug_channel_dropout_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_channel_dropout_create( n4m_aug_channel_dropout_handle_t** out, n4m_rng_pcg64_state_t* rng, double dropout_prob, int32_t mode);
+void n4m_aug_channel_dropout_destroy(n4m_aug_channel_dropout_handle_t* handle);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.aug_channel_dropout(X)
+Xt = n4m.aug_channel_dropout(X)
 ```
 
 :::
 
-:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:::{tab-item} Python sklearn · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from chemometrics4all.sklearn import ChannelDropout
+from n4m.sklearn import ChannelDropout
 
 op = ChannelDropout(dropout_prob=0.05, mode='zero', rng=None, seed=0)
 Xt = op.fit_transform(X)
@@ -127,12 +127,12 @@ Xt = op.fit_transform(X)
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- aug_channel_dropout(X)
 ```
 
@@ -172,15 +172,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.022 ms</td><td class="ms">0.156 ms</td><td class="ms ms-best">🏆 0.766 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.022 ms</td><td class="ms">0.156 ms</td><td class="ms ms-best">🏆 0.766 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.021 ms</td><td class="ms">0.161 ms</td><td class="ms">0.783 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.022 ms</td><td class="ms ms-best">🏆 0.155 ms</td><td class="ms">0.795 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.021 ms</td><td class="ms">0.161 ms</td><td class="ms">0.783 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.022 ms</td><td class="ms ms-best">🏆 0.155 ms</td><td class="ms">0.795 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">0.038 ms</td><td class="ms">0.299 ms</td><td class="ms">1.797 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">0.038 ms</td><td class="ms">0.299 ms</td><td class="ms">1.797 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.ChannelDropout · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.026 ms</td><td class="ms">0.173 ms</td><td class="ms">0.927 ms</td></tr>

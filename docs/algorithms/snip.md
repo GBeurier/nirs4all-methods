@@ -18,11 +18,11 @@ For each row `y` of length `n`:
 
 ## ABI
 ```c
-c4a_status_t c4a_pp_snip_create(c4a_pp_snip_handle_t** out,
+n4m_status_t n4m_pp_snip_create(n4m_pp_snip_handle_t** out,
                                  int32_t max_half_window);
-void         c4a_pp_snip_destroy(c4a_pp_snip_handle_t* h);
-c4a_status_t c4a_pp_snip_transform(const c4a_pp_snip_handle_t* h,
-                                    c4a_matrix_view_t X, c4a_matrix_view_t out);
+void         n4m_pp_snip_destroy(n4m_pp_snip_handle_t* h);
+n4m_status_t n4m_pp_snip_transform(const n4m_pp_snip_handle_t* h,
+                                    n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 ## Numerical Contract

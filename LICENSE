@@ -50,7 +50,7 @@ Vendored third-party components:
 * FITPACK subset from SciPy 1.17.1
   (cpp/src/core/common/_vendored/fitpack and the mirrored R vendored tree) —
   BSD-3-Clause License, Copyright (c) 2001-2002 Enthought, Inc. and
-  2003 SciPy Developers. Used by the public `libc4a` spline smoothing
+  2003 SciPy Developers. Used by the public `libn4m` spline smoothing
   augmenter to match SciPy/nirs4all parity.
 
 Additional vendored components will be listed here as they are added,

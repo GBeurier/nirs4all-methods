@@ -1,25 +1,25 @@
-# chemometrics4all — Python binding
+# nirs4all-methods — Python binding
 
-`ctypes`-based binding for [`libc4a`](../../cpp/), the C ABI of
-chemometrics4all.
+`ctypes`-based binding for [`libn4m`](../../cpp/), the C ABI of
+n4m.
 
 ## Tiers
 
-* **Tier 1 (`chemometrics4all._ffi`)** — raw `ctypes.CDLL` access to the 498
-  `c4a_*` symbols. Loads the shared library from
-  `CHEMOMETRICS4ALL_LIB_PATH`, the wheel's bundled `lib/` directory, or the
+* **Tier 1 (`n4m._ffi`)** — raw `ctypes.CDLL` access to the 498
+  `n4m_*` symbols. Loads the shared library from
+  `N4M_LIB_PATH`, the wheel's bundled `lib/` directory, or the
   development build tree (`build/dev-debug/cpp/src/`).
 
-* **Tier 2 (`chemometrics4all.python`)** — ABI-close NumPy functions that
-  allocate the matching `c4a_*` handle, run the public C ABI call, return NumPy
-  arrays, and destroy the handle. This is the dashboard `C4A.python` backend.
+* **Tier 2 (`n4m.python`)** — ABI-close NumPy functions that
+  allocate the matching `n4m_*` handle, run the public C ABI call, return NumPy
+  arrays, and destroy the handle. This is the dashboard `N4M.python` backend.
 
-* **Tier 3 (`chemometrics4all.sklearn`)** — hand-written
+* **Tier 3 (`n4m.sklearn`)** — hand-written
   scikit-learn-compatible wrappers (`BaseEstimator`, `TransformerMixin`,
   `fit`, `transform`, `fit_transform`, and `inverse_transform`
   where the C ABI exposes a real inverse) over the main non-model NIRS
   operators already present in the C ABI. This is the dashboard
-  `C4A.sklearn` backend:
+  `N4M.sklearn` backend:
 
   | Family           | Classes                                                              |
   | ---------------- | -------------------------------------------------------------------- |
@@ -41,7 +41,7 @@ chemometrics4all.
   |                  | `SPlitSplitter`                                                      |
   | Filters          | `YOutlierFilter`, `XOutlierFilter`, `HighLeverageFilter`,            |
   |                  | `SpectralQualityFilter`, `CompositeFilter`                           |
-  | Augmentation     | Full `c4a_aug_*` surface from noise/drift, wavelength/spectral,      |
+  | Augmentation     | Full `n4m_aug_*` surface from noise/drift, wavelength/spectral,      |
   |                  | mixup/physical/environmental, edge/spline/random phases              |
   | Advanced         | `DirectStandardization`, `PiecewiseDirectStandardization`,           |
   |                  | `WeightedSNV`, `VariableSortingNormalization`, alignment helpers,    |
@@ -52,7 +52,7 @@ chemometrics4all.
 ## binding_parity gate
 
 `tests/test_binding_parity.py` is the Gate 1 contract: for every covered
-operator, the binding output must match the libc4a reference fixture in
+operator, the binding output must match the libn4m reference fixture in
 `parity/fixtures/<op>_v1.json` to within `tolerance=1e-6`.
 
 ## Install + test
@@ -60,6 +60,6 @@ operator, the binding output must match the libc4a reference fixture in
 ```bash
 cd bindings/python
 pip install -e .
-CHEMOMETRICS4ALL_LIB_PATH=/path/to/libc4a.so.1.9.0 \
+N4M_LIB_PATH=/path/to/libn4m.so.1.9.0 \
     python -m pytest tests/test_binding_parity.py -v
 ```

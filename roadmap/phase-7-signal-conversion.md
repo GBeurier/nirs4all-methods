@@ -3,7 +3,7 @@
 ## Goal
 
 Land the five stateless signal-conversion operators that bridge the
-reflectance / transmittance / absorbance domains in the chemometrics4all C
+reflectance / transmittance / absorbance domains in the nirs4all-methods C
 ABI. All five are pure closed-form arithmetic — no learned state, no
 iterative loops, no boundary modes — and reach bit-for-bit parity with
 `nirs4all.operators.transforms.signal_conversion` at the 1e-12 abs / 1e-13
@@ -30,40 +30,40 @@ Total: 126 → **141 symbols**. ABI bump 1.6.0 → 1.7.0.
 
 ```c
 /* §14 — Phase 7 Signal type conversion preprocessings */
-typedef struct c4a_pp_to_absorbance_handle_t   c4a_pp_to_absorbance_handle_t;
-typedef struct c4a_pp_from_absorbance_handle_t c4a_pp_from_absorbance_handle_t;
-typedef struct c4a_pp_pct_to_frac_handle_t     c4a_pp_pct_to_frac_handle_t;
-typedef struct c4a_pp_frac_to_pct_handle_t     c4a_pp_frac_to_pct_handle_t;
-typedef struct c4a_pp_kubelka_munk_handle_t    c4a_pp_kubelka_munk_handle_t;
+typedef struct n4m_pp_to_absorbance_handle_t   n4m_pp_to_absorbance_handle_t;
+typedef struct n4m_pp_from_absorbance_handle_t n4m_pp_from_absorbance_handle_t;
+typedef struct n4m_pp_pct_to_frac_handle_t     n4m_pp_pct_to_frac_handle_t;
+typedef struct n4m_pp_frac_to_pct_handle_t     n4m_pp_frac_to_pct_handle_t;
+typedef struct n4m_pp_kubelka_munk_handle_t    n4m_pp_kubelka_munk_handle_t;
 
-C4A_API c4a_status_t c4a_pp_to_absorbance_create(c4a_pp_to_absorbance_handle_t** out,
+N4M_API n4m_status_t n4m_pp_to_absorbance_create(n4m_pp_to_absorbance_handle_t** out,
                                                   int is_percent, double epsilon,
                                                   int clip_negative);
-C4A_API void         c4a_pp_to_absorbance_destroy(c4a_pp_to_absorbance_handle_t* h);
-C4A_API c4a_status_t c4a_pp_to_absorbance_transform(
-    const c4a_pp_to_absorbance_handle_t* h, c4a_matrix_view_t X, c4a_matrix_view_t out);
+N4M_API void         n4m_pp_to_absorbance_destroy(n4m_pp_to_absorbance_handle_t* h);
+N4M_API n4m_status_t n4m_pp_to_absorbance_transform(
+    const n4m_pp_to_absorbance_handle_t* h, n4m_matrix_view_t X, n4m_matrix_view_t out);
 
-C4A_API c4a_status_t c4a_pp_from_absorbance_create(
-    c4a_pp_from_absorbance_handle_t** out, int is_percent);
-C4A_API void         c4a_pp_from_absorbance_destroy(c4a_pp_from_absorbance_handle_t* h);
-C4A_API c4a_status_t c4a_pp_from_absorbance_transform(
-    const c4a_pp_from_absorbance_handle_t* h, c4a_matrix_view_t X, c4a_matrix_view_t out);
+N4M_API n4m_status_t n4m_pp_from_absorbance_create(
+    n4m_pp_from_absorbance_handle_t** out, int is_percent);
+N4M_API void         n4m_pp_from_absorbance_destroy(n4m_pp_from_absorbance_handle_t* h);
+N4M_API n4m_status_t n4m_pp_from_absorbance_transform(
+    const n4m_pp_from_absorbance_handle_t* h, n4m_matrix_view_t X, n4m_matrix_view_t out);
 
-C4A_API c4a_status_t c4a_pp_pct_to_frac_create(c4a_pp_pct_to_frac_handle_t** out);
-C4A_API void         c4a_pp_pct_to_frac_destroy(c4a_pp_pct_to_frac_handle_t* h);
-C4A_API c4a_status_t c4a_pp_pct_to_frac_transform(
-    const c4a_pp_pct_to_frac_handle_t* h, c4a_matrix_view_t X, c4a_matrix_view_t out);
+N4M_API n4m_status_t n4m_pp_pct_to_frac_create(n4m_pp_pct_to_frac_handle_t** out);
+N4M_API void         n4m_pp_pct_to_frac_destroy(n4m_pp_pct_to_frac_handle_t* h);
+N4M_API n4m_status_t n4m_pp_pct_to_frac_transform(
+    const n4m_pp_pct_to_frac_handle_t* h, n4m_matrix_view_t X, n4m_matrix_view_t out);
 
-C4A_API c4a_status_t c4a_pp_frac_to_pct_create(c4a_pp_frac_to_pct_handle_t** out);
-C4A_API void         c4a_pp_frac_to_pct_destroy(c4a_pp_frac_to_pct_handle_t* h);
-C4A_API c4a_status_t c4a_pp_frac_to_pct_transform(
-    const c4a_pp_frac_to_pct_handle_t* h, c4a_matrix_view_t X, c4a_matrix_view_t out);
+N4M_API n4m_status_t n4m_pp_frac_to_pct_create(n4m_pp_frac_to_pct_handle_t** out);
+N4M_API void         n4m_pp_frac_to_pct_destroy(n4m_pp_frac_to_pct_handle_t* h);
+N4M_API n4m_status_t n4m_pp_frac_to_pct_transform(
+    const n4m_pp_frac_to_pct_handle_t* h, n4m_matrix_view_t X, n4m_matrix_view_t out);
 
-C4A_API c4a_status_t c4a_pp_kubelka_munk_create(c4a_pp_kubelka_munk_handle_t** out,
+N4M_API n4m_status_t n4m_pp_kubelka_munk_create(n4m_pp_kubelka_munk_handle_t** out,
                                                  int is_percent, double epsilon);
-C4A_API void         c4a_pp_kubelka_munk_destroy(c4a_pp_kubelka_munk_handle_t* h);
-C4A_API c4a_status_t c4a_pp_kubelka_munk_transform(
-    const c4a_pp_kubelka_munk_handle_t* h, c4a_matrix_view_t X, c4a_matrix_view_t out);
+N4M_API void         n4m_pp_kubelka_munk_destroy(n4m_pp_kubelka_munk_handle_t* h);
+N4M_API n4m_status_t n4m_pp_kubelka_munk_transform(
+    const n4m_pp_kubelka_munk_handle_t* h, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 ## Parity tolerances
@@ -113,8 +113,8 @@ the tolerance window) against the captured Python reference.
 
 ## Files to modify (central integration)
 
-- `cpp/include/chemometrics4all/c4a.h` — append §14 (15 new symbols).
-- `cpp/include/chemometrics4all/c4a_version.h` — bump MINOR 6 → 7.
+- `cpp/include/n4m/n4m.h` — append §14 (15 new symbols).
+- `cpp/include/n4m/n4m_version.h` — bump MINOR 6 → 7.
 - `cpp/abi/expected_symbols_{linux,macos,windows}.txt` — add 15 new lines.
 - `cpp/src/CMakeLists.txt` — add 5 new C engine sources + 1 wrapper source.
 - `cpp/tests/CMakeLists.txt` — add `test_preprocessing_signal_conversion.cpp`.
@@ -134,8 +134,8 @@ the tolerance window) against the captured Python reference.
 
 ```bash
 cmake --build --preset dev-debug
-./build/dev-debug/cpp/tests/chemometrics4all_tests       # 92/92 pass
-nm -D --defined-only build/dev-debug/cpp/src/libc4a.so.1.7.0 \
+./build/dev-debug/cpp/tests/n4m_tests       # 92/92 pass
+nm -D --defined-only build/dev-debug/cpp/src/libn4m.so.1.7.0 \
   | awk '$2=="T" {print $3}' | sort -u | wc -l           # 141
 ```
 

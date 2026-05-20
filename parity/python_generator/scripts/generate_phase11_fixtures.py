@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: CECILL-2.1
 """Generate Phase 11 parity fixtures for the sample-partitioning splitters.
 
-Nine operators in the new ``c4a_split_*`` category:
+Nine operators in the new ``n4m_split_*`` category:
 
   * KennardStone           — deterministic max-min Euclidean on X.
   * SPXY                   — deterministic max-min on X + Y (joint distance).
@@ -98,7 +98,7 @@ def compute_train_test_count(n_samples: int, test_size: float) -> tuple[int, int
 
 
 def max_min_selection(D: np.ndarray, train_size: int) -> tuple[np.ndarray, np.ndarray]:
-    """Replicates c4a_split_max_min_selection. Returns (train_idx, test_idx)."""
+    """Replicates n4m_split_max_min_selection. Returns (train_idx, test_idx)."""
     n = D.shape[0]
     flat_arg = int(np.argmax(D))    # row-major first-occurrence on ties
     first  = flat_arg // n
@@ -143,7 +143,7 @@ def euclidean_distance_matrix(M: np.ndarray) -> np.ndarray:
 
 
 def rng_uniform01(rng: np.random.Generator) -> float:
-    """Mirror the C `c4a_split_rng_uniform01`. Both consume one uint64."""
+    """Mirror the C `n4m_split_rng_uniform01`. Both consume one uint64."""
     u = int(rng.bit_generator.random_raw())
     return (u >> 11) * (1.0 / (1 << 53))
 
@@ -192,7 +192,7 @@ def _compute_fold_distance(X: np.ndarray, y: np.ndarray | None, use_y: int) -> n
 
 
 def assign_to_folds(D: np.ndarray, n_splits: int) -> np.ndarray:
-    """Replicates c4a_split_spxy_fold_assign."""
+    """Replicates n4m_split_spxy_fold_assign."""
     n = D.shape[0]
     fa = np.full(n, -1, dtype=np.int32)
     centroid = D.mean(axis=1)
@@ -255,7 +255,7 @@ def split_spxy_fold(X: np.ndarray, y: np.ndarray, n_splits: int,
 def split_spxy_g_fold(X: np.ndarray, y: np.ndarray, groups: np.ndarray,
                        n_splits: int, y_metric: int, aggregation: int,
                        fold_idx: int) -> tuple[np.ndarray, np.ndarray]:
-    """Mirrors c4a_split_spxy_g_fold_assign."""
+    """Mirrors n4m_split_spxy_g_fold_assign."""
     n = X.shape[0]
     unique_groups: list[int] = []
     sample_to_group = np.zeros(n, dtype=np.int64)
@@ -691,7 +691,7 @@ def write_fixture(name: str, X: np.ndarray, y: np.ndarray | None,
                   cases: list[tuple[str, dict, Callable[[], tuple[np.ndarray, np.ndarray]]]],
                   out_dir: Path, embed_y: bool) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_split_{name}_v1",
+        "format": f"n4m_split_{name}_v1",
         "numpy_version": np.__version__,
         "encoding": "ieee754_binary64_be_hex",
         "rows": int(X.shape[0]),

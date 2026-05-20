@@ -1,9 +1,9 @@
 # Benchmarks
 
-This directory contains the chemometrics4all benchmark and reference registry,
+This directory contains the nirs4all-methods benchmark and reference registry,
 plus an initial cross-binding timing runner.
 
-chemometrics4all is not pls4all: benchmark claims must be tied to real runs for
+nirs4all-methods is not pls4all: benchmark claims must be tied to real runs for
 preprocessing, splitting, filtering, augmentation, diagnostics, and utility
 operators. The initial generated matrix covers Python tier-2 bindings for a
 conservative subset of already-gated methods; C++/R/MATLAB and external rows
@@ -36,7 +36,7 @@ Run:
 
 ```bash
 python benchmarks/check_truth_sources.py
-CHEMOMETRICS4ALL_LIB_PATH=$PWD/build/dev-release/cpp/src/libc4a.so \
+N4M_LIB_PATH=$PWD/build/dev-release/cpp/src/libn4m.so \
   PYTHONPATH=$PWD/bindings/python/src \
   python benchmarks/cross_binding/orchestrator.py --write-reference-snapshots
 python docs/_extras/build_landing.py

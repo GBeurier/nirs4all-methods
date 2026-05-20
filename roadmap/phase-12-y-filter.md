@@ -1,9 +1,9 @@
-# Phase 12 — Y-based outlier filter (`c4a_filter_*` opener)
+# Phase 12 — Y-based outlier filter (`n4m_filter_*` opener)
 
 ## Goal
 
 Land the first member of the **filter** family — `YOutlierFilter` — and open
-the new ABI prefix `c4a_filter_*` (reserved in `c4a.h` §5 but unused before
+the new ABI prefix `n4m_filter_*` (reserved in `n4m.h` §5 but unused before
 this phase). One operator, four detection methods (IQR, Z-score, percentile,
 MAD), single-call `_fit_get_mask` lifecycle.
 
@@ -26,12 +26,12 @@ state). A separate `_fit` step would just be a placeholder.
 ## Mask + stats contract
 
 ```c
-typedef struct c4a_filter_stats_t {
+typedef struct n4m_filter_stats_t {
     int64_t n_samples;
     int64_t n_kept;
     int64_t n_excluded;
     double  exclusion_rate;
-} c4a_filter_stats_t;
+} n4m_filter_stats_t;
 ```
 
 The **mask** is a caller-allocated `uint8_t*` buffer of length `n`:
@@ -44,9 +44,9 @@ fixed at 32 bytes (3 × `int64_t` + 1 × `double`) and asserted at compile time.
 ## Files created
 
 ### Public headers
-- `cpp/include/chemometrics4all/c4a_filters.h` — new ABI surface for the
-  `c4a_filter_*` category. Standalone header (includes `c4a.h` for the
-  status / export macros) so the existing `c4a.h` does not need to grow.
+- `cpp/include/n4m/n4m_filters.h` — new ABI surface for the
+  `n4m_filter_*` category. Standalone header (includes `n4m.h` for the
+  status / export macros) so the existing `n4m.h` does not need to grow.
 
 ### Core engine
 - `cpp/src/core/filters/y_outlier.{c,h}` — 1-D outlier detection. Pure
@@ -58,11 +58,11 @@ fixed at 32 bytes (3 × `int64_t` + 1 × `double`) and asserted at compile time.
   destroy, byte-compatible stats reinterpret).
 
 ### Frozen NumPy reference
-- `parity/python_generator/src/c4a_parity_filters_ref/__init__.py`
-- `parity/python_generator/src/c4a_parity_filters_ref/y_outlier.py`
+- `parity/python_generator/src/n4m_parity_filters_ref/__init__.py`
+- `parity/python_generator/src/n4m_parity_filters_ref/y_outlier.py`
 
-New parity package (`c4a_parity_filters_ref/`) — distinct from
-`c4a_parity_pybaselines_ref` because the upstream parity target is
+New parity package (`n4m_parity_filters_ref/`) — distinct from
+`n4m_parity_pybaselines_ref` because the upstream parity target is
 `nirs4all`, not `pybaselines`.
 
 ### Fixture generator
@@ -82,7 +82,7 @@ Schema differs from preprocessing fixtures: 1-D `y_hex` input, per-case
 ### Tests
 - `cpp/tests/test_filters_y.cpp` — 12 tests (4 smoke per method + 4 parity +
   4 cross-cutting: param validation × 2, NaN exclusion, constant input).
-  Standalone executable (`chemometrics4all_filters_tests`) to avoid touching
+  Standalone executable (`n4m_filters_tests`) to avoid touching
   the existing Phase 0+ test harness in `cpp/tests/main.cpp`.
 
 ### Docs
@@ -91,18 +91,18 @@ Schema differs from preprocessing fixtures: 1-D `y_hex` input, per-case
 ## Files modified
 
 - `cpp/src/CMakeLists.txt` — append `core/filters/y_outlier.c` to
-  `chemometrics4all_core` and `c_api/c_api_filters.cpp` to the C ABI source
+  `n4m_core` and `c_api/c_api_filters.cpp` to the C ABI source
   list. No changes to top-level CMake.
 - `cpp/tests/CMakeLists.txt` — add new test executable
-  `chemometrics4all_filters_tests` with its own CTest entry. The existing
-  `chemometrics4all_tests` executable stays exactly as-is (no edits to
+  `n4m_filters_tests` with its own CTest entry. The existing
+  `n4m_tests` executable stays exactly as-is (no edits to
   `cpp/tests/main.cpp`).
 
 Per the phase brief, the following files are intentionally **not** modified:
 
-- `cpp/include/chemometrics4all/c4a.h` (the new ABI lives in the dedicated
-  `c4a_filters.h` instead — first non-preprocessing surface header).
-- `cpp/include/chemometrics4all/c4a_version.h`
+- `cpp/include/n4m/n4m.h` (the new ABI lives in the dedicated
+  `n4m_filters.h` instead — first non-preprocessing surface header).
+- `cpp/include/n4m/n4m_version.h`
   (ABI version stays at 1.6.0 for this worktree; downstream phases bundle
   the version bump with the symbol-list regeneration).
 - `cpp/abi/expected_symbols_{linux,macos,windows}.txt` (worktree-local, no
@@ -114,33 +114,33 @@ Per the phase brief, the following files are intentionally **not** modified:
 ## ABI surface added
 
 ```c
-/* c4a_filters.h §2 - Phase 12 YOutlierFilter (1 op, 3 symbols) */
-typedef enum c4a_y_outlier_method_t {
-    C4A_Y_OUTLIER_IQR        = 0,
-    C4A_Y_OUTLIER_ZSCORE     = 1,
-    C4A_Y_OUTLIER_PERCENTILE = 2,
-    C4A_Y_OUTLIER_MAD        = 3
-} c4a_y_outlier_method_t;
+/* n4m_filters.h §2 - Phase 12 YOutlierFilter (1 op, 3 symbols) */
+typedef enum n4m_y_outlier_method_t {
+    N4M_Y_OUTLIER_IQR        = 0,
+    N4M_Y_OUTLIER_ZSCORE     = 1,
+    N4M_Y_OUTLIER_PERCENTILE = 2,
+    N4M_Y_OUTLIER_MAD        = 3
+} n4m_y_outlier_method_t;
 
-typedef struct c4a_filter_stats_t {
+typedef struct n4m_filter_stats_t {
     int64_t n_samples;
     int64_t n_kept;
     int64_t n_excluded;
     double  exclusion_rate;
-} c4a_filter_stats_t;
+} n4m_filter_stats_t;
 
-typedef struct c4a_filter_y_outlier_handle_t c4a_filter_y_outlier_handle_t;
+typedef struct n4m_filter_y_outlier_handle_t n4m_filter_y_outlier_handle_t;
 
-c4a_status_t c4a_filter_y_outlier_create(c4a_filter_y_outlier_handle_t** out,
-                                          c4a_y_outlier_method_t method,
+n4m_status_t n4m_filter_y_outlier_create(n4m_filter_y_outlier_handle_t** out,
+                                          n4m_y_outlier_method_t method,
                                           double threshold,
                                           double lower_pct, double upper_pct);
-void         c4a_filter_y_outlier_destroy(c4a_filter_y_outlier_handle_t* h);
-c4a_status_t c4a_filter_y_outlier_fit_get_mask(
-    const c4a_filter_y_outlier_handle_t* h,
+void         n4m_filter_y_outlier_destroy(n4m_filter_y_outlier_handle_t* h);
+n4m_status_t n4m_filter_y_outlier_fit_get_mask(
+    const n4m_filter_y_outlier_handle_t* h,
     const double* y, int64_t n,
     uint8_t* mask_out,
-    c4a_filter_stats_t* stats_out);
+    n4m_filter_stats_t* stats_out);
 ```
 
 3 new exported symbols. Total: 126 → **129**. ABI MINOR remains at 1.6 until
@@ -162,30 +162,30 @@ worktree is forbidden from touching them).
 - Build clean.
 - 4 new fixtures, ~30 KB total.
 - 12 new tests, all passing.
-- 3 new ABI symbols exported via `c4a_*` version script.
-- No edits to `c4a.h` / `c4a_version.h` / `expected_symbols_*` / top
+- 3 new ABI symbols exported via `n4m_*` version script.
+- No edits to `n4m.h` / `n4m_version.h` / `expected_symbols_*` / top
   `CMakeLists.txt` / `tests/main.cpp`.
 - Existing 82 tests still pass (zero regressions).
 
 ## Verification
 
 ```bash
-cd /home/delete/nirs4all/chemometrics4all/.claude/worktrees/agent-a40029a940a5f7368
+cd /home/delete/nirs4all/nirs4all-methods/.claude/worktrees/agent-a40029a940a5f7368
 cmake --preset dev-debug
 cmake --build --preset dev-debug
 ctest --test-dir build/dev-debug
-# 2/2 tests passed (82 in chemometrics4all_tests + 12 in chemometrics4all_filters_tests)
+# 2/2 tests passed (82 in n4m_tests + 12 in n4m_filters_tests)
 
-nm -D --defined-only build/dev-debug/cpp/src/libc4a.so.1.6.0 \
+nm -D --defined-only build/dev-debug/cpp/src/libn4m.so.1.6.0 \
     | awk '$2=="T" {print $3}' \
-    | grep '^c4a_filter_y_outlier_'
-# c4a_filter_y_outlier_create
-# c4a_filter_y_outlier_destroy
-# c4a_filter_y_outlier_fit_get_mask
+    | grep '^n4m_filter_y_outlier_'
+# n4m_filter_y_outlier_create
+# n4m_filter_y_outlier_destroy
+# n4m_filter_y_outlier_fit_get_mask
 ```
 
 ## Next phase
 
 Phase 13 — `XOutlierFilter`: X-based (spectral) outlier detection with
-distance-based and statistical methods. Reuses `c4a_filter_stats_t` and
-the new `c4a_filters.h` header.
+distance-based and statistical methods. Reuses `n4m_filter_stats_t` and
+the new `n4m_filters.h` header.

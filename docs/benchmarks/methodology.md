@@ -1,6 +1,6 @@
 # Benchmark methodology
 
-This page defines the policy for chemometrics4all benchmarks. The current
+This page defines the policy for nirs4all-methods benchmarks. The current
 runner is a bootstrap matrix for Python tier-2 bindings; the same CSV contract
 is intended for C++/R/MATLAB and external references.
 
@@ -53,15 +53,15 @@ Rows that are useful for performance but not identical in contract must not be
 compared. They are marked `reference_role=context` and `parity=context`, with
 the CSV `reason` explaining the contract mismatch. Current context examples
 include Savitzky-Golay calls with different edge modes, nirs4all wavelet
-transforms that return resampled detail coefficients instead of c4a's
+transforms that return resampled detail coefficients instead of n4m's
 approximation+detail layout, and nirs4all X-outlier filtering when sklearn PCA
 auto solver switches on wide matrices. For `nirs4all.WaveletFeatures`, the runner sets
-`n_coeffs_per_level=0` and selects c4a's `histogram` entropy with `symmetric`
+`n_coeffs_per_level=0` and selects n4m's `histogram` entropy with `symmetric`
 boundary mode so the comparator row uses the same contract.
 
 Some external libraries expose a different computational surface even when the
 name is close. `pybaselines` baseline references are applied row-by-row because
-the public API is one-dimensional; `pybaselines.iasls` is now the c4a IAsLS
+the public API is one-dimensional; `pybaselines.iasls` is now the n4m IAsLS
 contract, `pybaselines.imodpoly` is called with `mask_initial_peaks=False`, and
 both are gated like the other same-contract references. `pybaselines.snip(raw)`
 and `pybaselines.beads(full)` are canonical same-contract references and are

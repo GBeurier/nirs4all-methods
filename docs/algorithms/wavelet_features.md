@@ -59,16 +59,16 @@ Stateless: `_create / _transform / _destroy` plus `_output_cols`.
 
 `PyWavelets.wavedec(...)+band stats` is the canonical external reference used
 for exact parity snapshots. The dashboard benchmark currently uses
-`haar + symmetric + histogram` so the c4a, PyWavelets, and nirs4all rows compare
+`haar + symmetric + histogram` so the n4m, PyWavelets, and nirs4all rows compare
 the same feature contract.
 
 `nirs4all.operators.transforms.nirs.WaveletFeatures` is also timed as an
 external comparator. Its default surface adds top-K retained coefficients per
 band; the benchmark calls it with `n_coeffs_per_level=0` so its output has the
-same feature count as chemometrics4all. The benchmark selects the same
+same feature count as n4m. The benchmark selects the same
 histogram entropy and symmetric boundary contract, so this row carries an
 external comparator parity gate.
 
-chemometrics4all reduces the nirs4all surface to the four canonical statistics
+nirs4all-methods reduces the nirs4all surface to the four canonical statistics
 in v1; top-K coefficient retention is omitted to keep the ABI and parity
 surface compact.

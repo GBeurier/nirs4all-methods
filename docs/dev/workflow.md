@@ -19,7 +19,7 @@ Every roadmap and every implementation PR follows the loop captured in the maste
 cmake --preset dev-debug    # or dev-release / ci-* / emscripten / android-*
 cmake --build --preset dev-debug --parallel
 ctest --preset dev-debug --output-on-failure
-./build/dev-debug/cpp/cli/chemometrics4all_cli --selfcheck
+./build/dev-debug/cpp/cli/n4m_cli --selfcheck
 ```
 
 ## Regenerating the parity fixtures

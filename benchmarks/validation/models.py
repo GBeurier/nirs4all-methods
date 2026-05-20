@@ -4,7 +4,7 @@ The framework wraps ``benchmarks/cross_binding/orchestrator.py`` and
 exports a deterministic, host-insensitive structural view. The
 dataclasses below describe the shape of each JSON file under
 ``benchmarks/validation/registry/``. They are intentionally stdlib-only:
-the model layer itself does not import numpy, ctypes, or the chemometrics4all
+the model layer itself does not import numpy, ctypes, or the nirs4all-methods
 package.
 
 All dataclasses are frozen and convert to plain dicts via ``to_dict()``
@@ -21,7 +21,7 @@ SCHEMA_VERSION = 1
 SCHEMA_DESCRIPTION = (
     "Declarative validation contracts derived from "
     "benchmarks/cross_binding/orchestrator.py and enriched from "
-    "benchmarks/benchmark_registry.json. Phase C4A-1 of the validation "
+    "benchmarks/benchmark_registry.json. Phase N4M-1 of the validation "
     "framework port - structural data only, host-insensitive, regenerated "
     "by `python -m benchmarks.validation.export_registry --write`."
 )
@@ -68,7 +68,7 @@ class ReferenceLink:
     library: str
     language: str
     compare: bool
-    gate_c4a: bool
+    gate_n4m: bool
     contract_note: str
     max_cols: int | None
     comparator: str
@@ -80,7 +80,7 @@ class ReferenceLink:
             "library": self.library,
             "language": self.language,
             "compare": bool(self.compare),
-            "gate_c4a": bool(self.gate_c4a),
+            "gate_n4m": bool(self.gate_n4m),
             "contract_note": self.contract_note,
             "max_cols": (None if self.max_cols is None
                           else int(self.max_cols)),

@@ -24,21 +24,21 @@ The mask is exact (mask equality with the internal parity fixture, no float tole
 ## ABI
 
 ```c
-c4a_status_t c4a_filter_quality_create(c4a_filter_quality_handle_t** out,
+n4m_status_t n4m_filter_quality_create(n4m_filter_quality_handle_t** out,
                                         double max_nan_ratio,
                                         double max_zero_ratio,
                                         double min_variance,
                                         int    use_max, double max_value,
                                         int    use_min, double min_value,
                                         int    check_inf);
-void         c4a_filter_quality_destroy(c4a_filter_quality_handle_t* h);
-c4a_status_t c4a_filter_quality_apply(const c4a_filter_quality_handle_t* h,
-                                       c4a_matrix_view_t X,
+void         n4m_filter_quality_destroy(n4m_filter_quality_handle_t* h);
+n4m_status_t n4m_filter_quality_apply(const n4m_filter_quality_handle_t* h,
+                                       n4m_matrix_view_t X,
                                        uint8_t* mask_out,
-                                       c4a_filter_stats_t* stats_out);
+                                       n4m_filter_stats_t* stats_out);
 ```
 
 ## Reference
 
 - nirs4all 0.8.x — `nirs4all/operators/filters/spectral_quality.py`
-- `parity/python_generator/src/c4a_parity_filters_ref/spectral_quality.py`
+- `parity/python_generator/src/n4m_parity_filters_ref/spectral_quality.py`

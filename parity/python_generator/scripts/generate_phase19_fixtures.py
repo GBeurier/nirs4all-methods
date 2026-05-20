@@ -302,7 +302,7 @@ def build_signal_type_cases(rng: np.random.Generator):
 
 def write_signal_type_fixture(cases, out_path: Path) -> None:
     fixture: dict[str, Any] = {
-        "format": "c4a_signal_detect_v1",
+        "format": "n4m_signal_detect_v1",
         "numpy_version": np.__version__,
         "reference": "nirs4all.data.signal_type.SignalTypeDetector (ported inline)",
         "encoding": "ieee754_binary64_be_hex",
@@ -396,7 +396,7 @@ def build_metric_cases(rng: np.random.Generator):
 
 def write_metrics_fixture(cases, out_path: Path) -> None:
     fixture: dict[str, Any] = {
-        "format": "c4a_metric_v1",
+        "format": "n4m_metric_v1",
         "numpy_version": np.__version__,
         "reference": "nirs4all.core.metrics (closed-form NumPy reduction)",
         "encoding": "ieee754_binary64_be_hex",
@@ -503,7 +503,7 @@ def build_t2_q_cases(rng: np.random.Generator):
 
 def write_t2_fixture(cases, out_path: Path) -> None:
     fixture: dict[str, Any] = {
-        "format": "c4a_util_hotelling_t2_v1",
+        "format": "n4m_util_hotelling_t2_v1",
         "numpy_version": np.__version__,
         "reference": "numpy.linalg.svd + scipy.stats.f",
         "encoding": "ieee754_binary64_be_hex",
@@ -531,7 +531,7 @@ def write_t2_fixture(cases, out_path: Path) -> None:
 
 def write_q_fixture(cases, out_path: Path) -> None:
     fixture: dict[str, Any] = {
-        "format": "c4a_util_q_residuals_v1",
+        "format": "n4m_util_q_residuals_v1",
         "numpy_version": np.__version__,
         "reference": "numpy.linalg.svd + Jackson-Mudholkar approximation",
         "encoding": "ieee754_binary64_be_hex",

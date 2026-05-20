@@ -45,7 +45,7 @@ def hex_to_double(text: str) -> float:
 
 def build_fixture() -> dict:
     fixture: dict = {
-        "format": "c4a_rng_pcg64_stream_v1",
+        "format": "n4m_rng_pcg64_stream_v1",
         "numpy_version": np.__version__,
         "n_samples": N_SAMPLES,
         "standard_normal_encoding": "ieee754_binary64_be_hex",

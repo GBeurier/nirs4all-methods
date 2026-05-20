@@ -4,8 +4,8 @@ The documentation builds in two environments:
 
 | Target | Triggered by | Source of truth for benchmark data |
 |---|---|---|
-| **GitHub Pages** (`https://gbeurier.github.io/chemometrics4all/`) | Push to `main` via `.github/workflows/docs.yml` | Scaffold `docs/_static/bench-data.json` until a real benchmark runner is implemented |
-| **Read the Docs** (`chemometrics4all.readthedocs.io`) | RTD webhook on every push | `docs/_static/bench-data.json` (the committed scaffold fallback) |
+| **GitHub Pages** (`https://gbeurier.github.io/nirs4all-methods/`) | Push to `main` via `.github/workflows/docs.yml` | Scaffold `docs/_static/bench-data.json` until a real benchmark runner is implemented |
+| **Read the Docs** (`n4m.readthedocs.io`) | RTD webhook on every push | `docs/_static/bench-data.json` (the committed scaffold fallback) |
 
 The two builds share the same Sphinx config (`docs/conf.py`).
 
@@ -14,18 +14,18 @@ The two builds share the same Sphinx config (`docs/conf.py`).
 1. **Push** `.readthedocs.yaml` and `docs/_static/bench-data.json` to
    `main`. Both already live in this repo.
 2. Sign in at <https://readthedocs.org/> and **Import a Project** →
-   GitHub provider → pick `GBeurier/chemometrics4all`.
+   GitHub provider → pick `GBeurier/nirs4all-methods`.
 3. In **Admin → Advanced settings**:
    - *Documentation type*: Sphinx HTML.
    - *Privacy level*: Public.
    - *Default branch*: `main`.
 4. Optional: in **Admin → Domains** add a custom CNAME
-   (e.g. `docs.chemometrics4all.io`).
+   (e.g. `docs.n4m.io`).
 5. Run the first build (it auto-triggers after import). Logs land at
-   `https://readthedocs.org/projects/chemometrics4all/builds/`.
+   `https://readthedocs.org/projects/nirs4all-methods/builds/`.
 
 After the first green build the URL is
-`https://chemometrics4all.readthedocs.io/`. Versioned snapshots live at
+`https://n4m.readthedocs.io/`. Versioned snapshots live at
 `/en/<branch-or-tag>/`.
 
 ## Build behaviour

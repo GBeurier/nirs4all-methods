@@ -64,7 +64,7 @@ def reference_parity(pred: np.ndarray, ref: np.ndarray,
     Parameters
     ----------
     pred
-        Predicted array (from libc4a).
+        Predicted array (from libn4m).
     ref
         Reference array (from the canonical external implementation).
     tolerance

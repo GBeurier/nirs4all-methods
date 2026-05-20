@@ -1,4 +1,4 @@
-"""Unified parity gate for chemometrics4all.
+"""Unified parity gate for n4m.
 
 Mirrors `pls4all/parity/python_generator/scripts/...` and the
 `parity-gate.yml` CI workflow contract.
@@ -13,7 +13,7 @@ Four stages:
             with the committed copy. Catches algorithmic drift in the
             frozen NumPy references.
 
-  Stage 2 — Frozen-ref cross-validation: where a frozen `c4a_parity_*_ref/`
+  Stage 2 — Frozen-ref cross-validation: where a frozen `n4m_parity_*_ref/`
             module ships with a `validate_*.py` helper, run it against the
             actually-installed upstream package (numpy, scipy, sklearn,
             pywt, pybaselines, nirs4all). Catches drift of the frozen ref
@@ -21,7 +21,7 @@ Four stages:
             `--reference-parity-informational` is passed. Expected skips live
             in `parity/divergences.json`.
 
-  Stage 3 — C++ parity tests: invoke the built `chemometrics4all_tests`
+  Stage 3 — C++ parity tests: invoke the built `n4m_tests`
             binary; every fixture under `parity/fixtures/` is loaded and
             asserted to within its declared tolerance.
 
@@ -364,7 +364,7 @@ def stage3_cpp_tests(build_dir: Path, verbose: bool = True) -> tuple[int, list[s
     if verbose:
         print(f"\n=== Stage 3: C++ parity tests ({build_dir}) ===\n")
 
-    test_bin = build_dir / "cpp" / "tests" / "chemometrics4all_tests"
+    test_bin = build_dir / "cpp" / "tests" / "n4m_tests"
     if not test_bin.exists():
         return 2, [f"test binary missing: {test_bin}"]
 
@@ -385,12 +385,12 @@ def stage3_cpp_tests(build_dir: Path, verbose: bool = True) -> tuple[int, list[s
             print(f"  {line}")
 
     if result.returncode != 0:
-        return 2, [f"chemometrics4all_tests exited {result.returncode}"]
+        return 2, [f"n4m_tests exited {result.returncode}"]
     return 0, []
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="chemometrics4all parity gate runner.")
+    parser = argparse.ArgumentParser(description="nirs4all-methods parity gate runner.")
     parser.add_argument("--build-dir", default="build/dev-debug",
                         help="CMake build directory (default: build/dev-debug)")
     parser.add_argument("--skip-generator-env-check", action="store_true",

@@ -27,35 +27,35 @@
 #include <string>
 #include <vector>
 
-#include "chemometrics4all/c4a.h"
+#include "n4m/n4m.h"
 
 #include "fixture_parser.hpp"
 #include "harness.hpp"
 
-#ifndef C4A_PARITY_FIXTURE_DIR
-#  error "C4A_PARITY_FIXTURE_DIR must be defined"
+#ifndef N4M_PARITY_FIXTURE_DIR
+#  error "N4M_PARITY_FIXTURE_DIR must be defined"
 #endif
 
 namespace {
 
-using ParityFixture = ::c4a_testing::Fixture;
-using ParityCase    = ::c4a_testing::Case;
+using ParityFixture = ::n4m_testing::Fixture;
+using ParityCase    = ::n4m_testing::Case;
 
 ParityFixture load_fixture(const std::string& filename) {
-    return ::c4a_testing::load_fixture(
-        std::string(C4A_PARITY_FIXTURE_DIR) + "/" + filename,
+    return ::n4m_testing::load_fixture(
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/" + filename,
         /*require_per_case_output_shape=*/true);
 }
 
-using ::c4a_testing::params_get_double;
-using ::c4a_testing::params_get_int;
+using ::n4m_testing::params_get_double;
+using ::n4m_testing::params_get_int;
 
-c4a_matrix_view_t make_rowmajor_view(double* data, std::int64_t rows,
+n4m_matrix_view_t make_rowmajor_view(double* data, std::int64_t rows,
                                       std::int64_t cols) {
-    c4a_matrix_view_t v{};
-    const c4a_status_t st =
-        c4a_matrix_view_init_rowmajor(&v, data, rows, cols, C4A_DTYPE_F64);
-    C4A_TEST_REQUIRE(st == C4A_OK);
+    n4m_matrix_view_t v{};
+    const n4m_status_t st =
+        n4m_matrix_view_init_rowmajor(&v, data, rows, cols, N4M_DTYPE_F64);
+    N4M_TEST_REQUIRE(st == N4M_OK);
     return v;
 }
 
@@ -67,18 +67,18 @@ void test_detrend_smoke() {
     // A pure linear ramp should be perfectly removed by polyorder=1.
     double X[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     double Y[10] = {0};
-    c4a_pp_detrend_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_detrend_create(&h, /*polyorder=*/1) == C4A_OK);
-    C4A_TEST_REQUIRE(h != nullptr);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
-    C4A_TEST_REQUIRE(c4a_pp_detrend_transform(h, Xv, Yv) == C4A_OK);
+    n4m_pp_detrend_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_detrend_create(&h, /*polyorder=*/1) == N4M_OK);
+    N4M_TEST_REQUIRE(h != nullptr);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
+    N4M_TEST_REQUIRE(n4m_pp_detrend_transform(h, Xv, Yv) == N4M_OK);
     // After detrending a perfect ramp the output should be ~0 everywhere.
     for (int i = 0; i < 10; ++i) {
-        C4A_TEST_REQUIRE(std::fabs(Y[i]) < 1e-12);
+        N4M_TEST_REQUIRE(std::fabs(Y[i]) < 1e-12);
     }
-    c4a_pp_detrend_destroy(h);
-    c4a_pp_detrend_destroy(nullptr);  // null-safe
+    n4m_pp_detrend_destroy(h);
+    n4m_pp_detrend_destroy(nullptr);  // null-safe
 }
 
 void test_asls_smoke() {
@@ -86,24 +86,24 @@ void test_asls_smoke() {
     // ~ 0 (within iteration tolerance).
     double X[10] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
     double Y[10] = {0};
-    c4a_pp_asls_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_asls_create(&h, /*lam=*/1e6, /*p=*/1e-2,
+    n4m_pp_asls_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_asls_create(&h, /*lam=*/1e6, /*p=*/1e-2,
                                           /*max_iter=*/50, /*tol=*/1e-3)
-                     == C4A_OK);
-    C4A_TEST_REQUIRE(h != nullptr);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
-    C4A_TEST_REQUIRE(c4a_pp_asls_transform(h, Xv, Yv) == C4A_OK);
+                     == N4M_OK);
+    N4M_TEST_REQUIRE(h != nullptr);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
+    N4M_TEST_REQUIRE(n4m_pp_asls_transform(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 10; ++i) {
-        C4A_TEST_REQUIRE(std::isfinite(Y[i]));
+        N4M_TEST_REQUIRE(std::isfinite(Y[i]));
     }
-    c4a_pp_asls_destroy(h);
-    c4a_pp_asls_destroy(nullptr);
+    n4m_pp_asls_destroy(h);
+    n4m_pp_asls_destroy(nullptr);
     // Invalid parameters reject.
-    C4A_TEST_REQUIRE(c4a_pp_asls_create(&h, /*lam=*/-1.0, 1e-2, 50, 1e-3)
-                     == C4A_ERR_INVALID_ARGUMENT);
-    C4A_TEST_REQUIRE(c4a_pp_asls_create(&h, /*lam=*/1e6, /*p=*/1.5, 50, 1e-3)
-                     == C4A_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(n4m_pp_asls_create(&h, /*lam=*/-1.0, 1e-2, 50, 1e-3)
+                     == N4M_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(n4m_pp_asls_create(&h, /*lam=*/1e6, /*p=*/1.5, 50, 1e-3)
+                     == N4M_ERR_INVALID_ARGUMENT);
 }
 
 void test_airpls_smoke() {
@@ -111,40 +111,40 @@ void test_airpls_smoke() {
     // constant, so the detrended output must be bounded near zero.
     double X[10] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
     double Y[10] = {0};
-    c4a_pp_airpls_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_airpls_create(&h, /*lam=*/1e6,
+    n4m_pp_airpls_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_airpls_create(&h, /*lam=*/1e6,
                                            /*max_iter=*/50, /*tol=*/1e-3)
-                     == C4A_OK);
-    C4A_TEST_REQUIRE(h != nullptr);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
-    C4A_TEST_REQUIRE(c4a_pp_airpls_transform(h, Xv, Yv) == C4A_OK);
+                     == N4M_OK);
+    N4M_TEST_REQUIRE(h != nullptr);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
+    N4M_TEST_REQUIRE(n4m_pp_airpls_transform(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 10; ++i) {
-        C4A_TEST_REQUIRE(std::isfinite(Y[i]));
-        C4A_TEST_REQUIRE(std::fabs(Y[i]) < 1e-6);
+        N4M_TEST_REQUIRE(std::isfinite(Y[i]));
+        N4M_TEST_REQUIRE(std::fabs(Y[i]) < 1e-6);
     }
-    c4a_pp_airpls_destroy(h);
-    C4A_TEST_REQUIRE(c4a_pp_airpls_create(&h, /*lam=*/0.0, 50, 1e-3)
-                     == C4A_ERR_INVALID_ARGUMENT);
+    n4m_pp_airpls_destroy(h);
+    N4M_TEST_REQUIRE(n4m_pp_airpls_create(&h, /*lam=*/0.0, 50, 1e-3)
+                     == N4M_ERR_INVALID_ARGUMENT);
 }
 
 void test_arpls_smoke() {
     double X[10] = {0, 0.5, 1, 0.5, 0, 0, 0.5, 1, 0.5, 0};
     double Y[10] = {0};
-    c4a_pp_arpls_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_arpls_create(&h, /*lam=*/1e5,
+    n4m_pp_arpls_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_arpls_create(&h, /*lam=*/1e5,
                                           /*max_iter=*/50, /*tol=*/1e-3)
-                     == C4A_OK);
-    C4A_TEST_REQUIRE(h != nullptr);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
-    C4A_TEST_REQUIRE(c4a_pp_arpls_transform(h, Xv, Yv) == C4A_OK);
+                     == N4M_OK);
+    N4M_TEST_REQUIRE(h != nullptr);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
+    N4M_TEST_REQUIRE(n4m_pp_arpls_transform(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 10; ++i) {
-        C4A_TEST_REQUIRE(std::isfinite(Y[i]));
+        N4M_TEST_REQUIRE(std::isfinite(Y[i]));
     }
-    c4a_pp_arpls_destroy(h);
-    C4A_TEST_REQUIRE(c4a_pp_arpls_create(&h, /*lam=*/-1.0, 50, 1e-3)
-                     == C4A_ERR_INVALID_ARGUMENT);
+    n4m_pp_arpls_destroy(h);
+    N4M_TEST_REQUIRE(n4m_pp_arpls_create(&h, /*lam=*/-1.0, 50, 1e-3)
+                     == N4M_ERR_INVALID_ARGUMENT);
 }
 
 // ---------------------------------------------------------------------------
@@ -154,124 +154,124 @@ void test_arpls_smoke() {
 void test_modpoly_smoke() {
     double X[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     double Y[10] = {0};
-    c4a_pp_modpoly_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_modpoly_create(&h, /*polyorder=*/1,
+    n4m_pp_modpoly_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_modpoly_create(&h, /*polyorder=*/1,
                                             /*max_iter=*/250, /*tol=*/1e-3)
-                     == C4A_OK);
-    C4A_TEST_REQUIRE(h != nullptr);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
-    C4A_TEST_REQUIRE(c4a_pp_modpoly_transform(h, Xv, Yv) == C4A_OK);
+                     == N4M_OK);
+    N4M_TEST_REQUIRE(h != nullptr);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
+    N4M_TEST_REQUIRE(n4m_pp_modpoly_transform(h, Xv, Yv) == N4M_OK);
     // ModPoly clips peaks downward; on a pure ramp the baseline IS the ramp,
     // so detrended ~ 0 (within iteration tolerance).
     for (int i = 0; i < 10; ++i) {
-        C4A_TEST_REQUIRE(std::isfinite(Y[i]));
-        C4A_TEST_REQUIRE(std::fabs(Y[i]) < 1e-10);
+        N4M_TEST_REQUIRE(std::isfinite(Y[i]));
+        N4M_TEST_REQUIRE(std::fabs(Y[i]) < 1e-10);
     }
-    c4a_pp_modpoly_destroy(h);
-    c4a_pp_modpoly_destroy(nullptr);
-    C4A_TEST_REQUIRE(c4a_pp_modpoly_create(&h, /*polyorder=*/-1, 250, 1e-3)
-                     == C4A_ERR_INVALID_ARGUMENT);
+    n4m_pp_modpoly_destroy(h);
+    n4m_pp_modpoly_destroy(nullptr);
+    N4M_TEST_REQUIRE(n4m_pp_modpoly_create(&h, /*polyorder=*/-1, 250, 1e-3)
+                     == N4M_ERR_INVALID_ARGUMENT);
 }
 
 void test_imodpoly_smoke() {
     double X[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     double Y[10] = {0};
-    c4a_pp_imodpoly_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_imodpoly_create(&h, /*polyorder=*/1,
+    n4m_pp_imodpoly_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_imodpoly_create(&h, /*polyorder=*/1,
                                               /*max_iter=*/250, /*tol=*/1e-3)
-                     == C4A_OK);
-    C4A_TEST_REQUIRE(h != nullptr);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
-    C4A_TEST_REQUIRE(c4a_pp_imodpoly_transform(h, Xv, Yv) == C4A_OK);
+                     == N4M_OK);
+    N4M_TEST_REQUIRE(h != nullptr);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
+    N4M_TEST_REQUIRE(n4m_pp_imodpoly_transform(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 10; ++i) {
-        C4A_TEST_REQUIRE(std::isfinite(Y[i]));
-        C4A_TEST_REQUIRE(std::fabs(Y[i]) < 1e-9);
+        N4M_TEST_REQUIRE(std::isfinite(Y[i]));
+        N4M_TEST_REQUIRE(std::fabs(Y[i]) < 1e-9);
     }
-    c4a_pp_imodpoly_destroy(h);
-    C4A_TEST_REQUIRE(c4a_pp_imodpoly_create(&h, 2, /*max_iter=*/-1, 1e-3)
-                     == C4A_ERR_INVALID_ARGUMENT);
+    n4m_pp_imodpoly_destroy(h);
+    N4M_TEST_REQUIRE(n4m_pp_imodpoly_create(&h, 2, /*max_iter=*/-1, 1e-3)
+                     == N4M_ERR_INVALID_ARGUMENT);
 }
 
 void test_snip_smoke() {
     double X[10] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
     double Y[10] = {0};
-    c4a_pp_snip_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_snip_create(&h, /*max_half_window=*/3) == C4A_OK);
-    C4A_TEST_REQUIRE(h != nullptr);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
-    C4A_TEST_REQUIRE(c4a_pp_snip_transform(h, Xv, Yv) == C4A_OK);
+    n4m_pp_snip_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_snip_create(&h, /*max_half_window=*/3) == N4M_OK);
+    N4M_TEST_REQUIRE(h != nullptr);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
+    N4M_TEST_REQUIRE(n4m_pp_snip_transform(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 10; ++i) {
-        C4A_TEST_REQUIRE(std::isfinite(Y[i]));
+        N4M_TEST_REQUIRE(std::isfinite(Y[i]));
         // For a constant row, raw-data clipping leaves the baseline equal to
         // the input -> detrended near zero.
-        C4A_TEST_REQUIRE(std::fabs(Y[i]) < 1e-12);
+        N4M_TEST_REQUIRE(std::fabs(Y[i]) < 1e-12);
     }
-    c4a_pp_snip_destroy(h);
-    C4A_TEST_REQUIRE(c4a_pp_snip_create(&h, /*max_half_window=*/0)
-                     == C4A_ERR_INVALID_ARGUMENT);
+    n4m_pp_snip_destroy(h);
+    N4M_TEST_REQUIRE(n4m_pp_snip_create(&h, /*max_half_window=*/0)
+                     == N4M_ERR_INVALID_ARGUMENT);
 }
 
 void test_rolling_ball_smoke() {
     double X[10] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
     double Y[10] = {0};
-    c4a_pp_rolling_ball_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_rolling_ball_create(&h, /*half_window=*/3,
+    n4m_pp_rolling_ball_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_rolling_ball_create(&h, /*half_window=*/3,
                                                   /*smooth_half_window=*/0)
-                     == C4A_OK);
-    C4A_TEST_REQUIRE(h != nullptr);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
-    C4A_TEST_REQUIRE(c4a_pp_rolling_ball_transform(h, Xv, Yv) == C4A_OK);
+                     == N4M_OK);
+    N4M_TEST_REQUIRE(h != nullptr);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
+    N4M_TEST_REQUIRE(n4m_pp_rolling_ball_transform(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 10; ++i) {
         // min-then-max of a constant is the constant.
-        C4A_TEST_REQUIRE(std::fabs(Y[i]) < 1e-15);
+        N4M_TEST_REQUIRE(std::fabs(Y[i]) < 1e-15);
     }
-    c4a_pp_rolling_ball_destroy(h);
-    C4A_TEST_REQUIRE(c4a_pp_rolling_ball_create(&h, /*half_window=*/0, 0)
-                     == C4A_ERR_INVALID_ARGUMENT);
+    n4m_pp_rolling_ball_destroy(h);
+    N4M_TEST_REQUIRE(n4m_pp_rolling_ball_create(&h, /*half_window=*/0, 0)
+                     == N4M_ERR_INVALID_ARGUMENT);
 }
 
 void test_iasls_smoke() {
     double X[10] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
     double Y[10] = {0};
-    c4a_pp_iasls_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_iasls_create(&h, /*lam=*/1e6, /*p=*/1e-2,
+    n4m_pp_iasls_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_iasls_create(&h, /*lam=*/1e6, /*p=*/1e-2,
                                           /*polyorder=*/2,
                                           /*max_iter=*/50, /*tol=*/1e-3)
-                     == C4A_OK);
-    C4A_TEST_REQUIRE(h != nullptr);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
-    C4A_TEST_REQUIRE(c4a_pp_iasls_transform(h, Xv, Yv) == C4A_OK);
+                     == N4M_OK);
+    N4M_TEST_REQUIRE(h != nullptr);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
+    N4M_TEST_REQUIRE(n4m_pp_iasls_transform(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 10; ++i) {
-        C4A_TEST_REQUIRE(std::isfinite(Y[i]));
+        N4M_TEST_REQUIRE(std::isfinite(Y[i]));
     }
-    c4a_pp_iasls_destroy(h);
-    C4A_TEST_REQUIRE(c4a_pp_iasls_create(&h, /*lam=*/-1.0, 1e-2, 2, 50, 1e-3)
-                     == C4A_ERR_INVALID_ARGUMENT);
+    n4m_pp_iasls_destroy(h);
+    N4M_TEST_REQUIRE(n4m_pp_iasls_create(&h, /*lam=*/-1.0, 1e-2, 2, 50, 1e-3)
+                     == N4M_ERR_INVALID_ARGUMENT);
 }
 
 void test_beads_smoke() {
     double X[10] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
     double Y[10] = {0};
-    c4a_pp_beads_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_beads_create(&h, /*lam_0=*/1e2, /*lam_1=*/0.5,
+    n4m_pp_beads_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_beads_create(&h, /*lam_0=*/1e2, /*lam_1=*/0.5,
                                           /*lam_2=*/0.5,
                                           /*max_iter=*/50, /*tol=*/1e-3)
-                     == C4A_OK);
-    C4A_TEST_REQUIRE(h != nullptr);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
-    C4A_TEST_REQUIRE(c4a_pp_beads_transform(h, Xv, Yv) == C4A_OK);
+                     == N4M_OK);
+    N4M_TEST_REQUIRE(h != nullptr);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
+    N4M_TEST_REQUIRE(n4m_pp_beads_transform(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 10; ++i) {
-        C4A_TEST_REQUIRE(std::isfinite(Y[i]));
+        N4M_TEST_REQUIRE(std::isfinite(Y[i]));
     }
-    c4a_pp_beads_destroy(h);
-    C4A_TEST_REQUIRE(c4a_pp_beads_create(&h, -1.0, 0.5, 0.5, 50, 1e-3)
-                     == C4A_ERR_INVALID_ARGUMENT);
+    n4m_pp_beads_destroy(h);
+    N4M_TEST_REQUIRE(n4m_pp_beads_create(&h, -1.0, 0.5, 0.5, 50, 1e-3)
+                     == N4M_ERR_INVALID_ARGUMENT);
 }
 
 // ---------------------------------------------------------------------------
@@ -284,18 +284,18 @@ void verify_detrend_parity() {
         const int polyorder = static_cast<int>(
             params_get_int(c.params_json, "polyorder", 1));
 
-        c4a_pp_detrend_handle_t* h = nullptr;
-        C4A_TEST_REQUIRE(c4a_pp_detrend_create(&h, polyorder) == C4A_OK);
+        n4m_pp_detrend_handle_t* h = nullptr;
+        N4M_TEST_REQUIRE(n4m_pp_detrend_create(&h, polyorder) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
-        c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
-        c4a_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        C4A_TEST_REQUIRE(c4a_pp_detrend_transform(h, Xv, Yv) == C4A_OK);
-        ::c4a_testing::assert_close(out, c.expected_output,
+        n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
+        n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_pp_detrend_transform(h, Xv, Yv) == N4M_OK);
+        ::n4m_testing::assert_close(out, c.expected_output,
                                      "detrend/" + c.name,
                                      /*abs_tol=*/1e-11,
                                      /*rel_tol=*/1e-12);
-        c4a_pp_detrend_destroy(h);
+        n4m_pp_detrend_destroy(h);
     }
 }
 
@@ -308,18 +308,18 @@ void verify_asls_parity() {
             params_get_int(c.params_json, "max_iter", 50));
         const double tol     = params_get_double(c.params_json, "tol",     1e-3);
 
-        c4a_pp_asls_handle_t* h = nullptr;
-        C4A_TEST_REQUIRE(c4a_pp_asls_create(&h, lam, p, max_it, tol) == C4A_OK);
+        n4m_pp_asls_handle_t* h = nullptr;
+        N4M_TEST_REQUIRE(n4m_pp_asls_create(&h, lam, p, max_it, tol) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
-        c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
-        c4a_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        C4A_TEST_REQUIRE(c4a_pp_asls_transform(h, Xv, Yv) == C4A_OK);
-        ::c4a_testing::assert_close(out, c.expected_output,
+        n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
+        n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_pp_asls_transform(h, Xv, Yv) == N4M_OK);
+        ::n4m_testing::assert_close(out, c.expected_output,
                                      "asls/" + c.name,
                                      /*abs_tol=*/1e-7,
                                      /*rel_tol=*/1e-8);
-        c4a_pp_asls_destroy(h);
+        n4m_pp_asls_destroy(h);
     }
 }
 
@@ -331,13 +331,13 @@ void verify_airpls_parity() {
             params_get_int(c.params_json, "max_iter", 50));
         const double tol    = params_get_double(c.params_json, "tol",     1e-3);
 
-        c4a_pp_airpls_handle_t* h = nullptr;
-        C4A_TEST_REQUIRE(c4a_pp_airpls_create(&h, lam, max_it, tol) == C4A_OK);
+        n4m_pp_airpls_handle_t* h = nullptr;
+        N4M_TEST_REQUIRE(n4m_pp_airpls_create(&h, lam, max_it, tol) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
-        c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
-        c4a_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        C4A_TEST_REQUIRE(c4a_pp_airpls_transform(h, Xv, Yv) == C4A_OK);
+        n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
+        n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_pp_airpls_transform(h, Xv, Yv) == N4M_OK);
         // AirPLS' exp-of-weights amplifies tiny LDLT-vs-splu divergences
         // across iterations. Cases that probe boundary regimes
         // (stiff regularisation lam=1e7 or tight tol with few iterations)
@@ -350,10 +350,10 @@ void verify_airpls_parity() {
             abs_tol = 1e-6;
             rel_tol = 1e-5;
         }
-        ::c4a_testing::assert_close(out, c.expected_output,
+        ::n4m_testing::assert_close(out, c.expected_output,
                                      "airpls/" + c.name,
                                      abs_tol, rel_tol);
-        c4a_pp_airpls_destroy(h);
+        n4m_pp_airpls_destroy(h);
     }
 }
 
@@ -365,18 +365,18 @@ void verify_arpls_parity() {
             params_get_int(c.params_json, "max_iter", 50));
         const double tol    = params_get_double(c.params_json, "tol",     1e-3);
 
-        c4a_pp_arpls_handle_t* h = nullptr;
-        C4A_TEST_REQUIRE(c4a_pp_arpls_create(&h, lam, max_it, tol) == C4A_OK);
+        n4m_pp_arpls_handle_t* h = nullptr;
+        N4M_TEST_REQUIRE(n4m_pp_arpls_create(&h, lam, max_it, tol) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
-        c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
-        c4a_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        C4A_TEST_REQUIRE(c4a_pp_arpls_transform(h, Xv, Yv) == C4A_OK);
-        ::c4a_testing::assert_close(out, c.expected_output,
+        n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
+        n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_pp_arpls_transform(h, Xv, Yv) == N4M_OK);
+        ::n4m_testing::assert_close(out, c.expected_output,
                                      "arpls/" + c.name,
                                      /*abs_tol=*/1e-7,
                                      /*rel_tol=*/1e-8);
-        c4a_pp_arpls_destroy(h);
+        n4m_pp_arpls_destroy(h);
     }
 }
 
@@ -393,19 +393,19 @@ void verify_modpoly_parity() {
             params_get_int(c.params_json, "max_iter", 250));
         const double tol    = params_get_double(c.params_json, "tol", 1e-3);
 
-        c4a_pp_modpoly_handle_t* h = nullptr;
-        C4A_TEST_REQUIRE(c4a_pp_modpoly_create(&h, polyorder, max_iter, tol)
-                         == C4A_OK);
+        n4m_pp_modpoly_handle_t* h = nullptr;
+        N4M_TEST_REQUIRE(n4m_pp_modpoly_create(&h, polyorder, max_iter, tol)
+                         == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
-        c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
-        c4a_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        C4A_TEST_REQUIRE(c4a_pp_modpoly_transform(h, Xv, Yv) == C4A_OK);
-        ::c4a_testing::assert_close(out, c.expected_output,
+        n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
+        n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_pp_modpoly_transform(h, Xv, Yv) == N4M_OK);
+        ::n4m_testing::assert_close(out, c.expected_output,
                                      "modpoly/" + c.name,
                                      /*abs_tol=*/1e-9,
                                      /*rel_tol=*/1e-10);
-        c4a_pp_modpoly_destroy(h);
+        n4m_pp_modpoly_destroy(h);
     }
 }
 
@@ -418,19 +418,19 @@ void verify_imodpoly_parity() {
             params_get_int(c.params_json, "max_iter", 250));
         const double tol    = params_get_double(c.params_json, "tol", 1e-3);
 
-        c4a_pp_imodpoly_handle_t* h = nullptr;
-        C4A_TEST_REQUIRE(c4a_pp_imodpoly_create(&h, polyorder, max_iter, tol)
-                         == C4A_OK);
+        n4m_pp_imodpoly_handle_t* h = nullptr;
+        N4M_TEST_REQUIRE(n4m_pp_imodpoly_create(&h, polyorder, max_iter, tol)
+                         == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
-        c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
-        c4a_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        C4A_TEST_REQUIRE(c4a_pp_imodpoly_transform(h, Xv, Yv) == C4A_OK);
-        ::c4a_testing::assert_close(out, c.expected_output,
+        n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
+        n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_pp_imodpoly_transform(h, Xv, Yv) == N4M_OK);
+        ::n4m_testing::assert_close(out, c.expected_output,
                                      "imodpoly/" + c.name,
                                      /*abs_tol=*/1e-9,
                                      /*rel_tol=*/1e-10);
-        c4a_pp_imodpoly_destroy(h);
+        n4m_pp_imodpoly_destroy(h);
     }
 }
 
@@ -439,18 +439,18 @@ void verify_snip_parity() {
     for (const auto& c : fx.cases) {
         const int max_half_window = static_cast<int>(
             params_get_int(c.params_json, "max_half_window", 20));
-        c4a_pp_snip_handle_t* h = nullptr;
-        C4A_TEST_REQUIRE(c4a_pp_snip_create(&h, max_half_window) == C4A_OK);
+        n4m_pp_snip_handle_t* h = nullptr;
+        N4M_TEST_REQUIRE(n4m_pp_snip_create(&h, max_half_window) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
-        c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
-        c4a_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        C4A_TEST_REQUIRE(c4a_pp_snip_transform(h, Xv, Yv) == C4A_OK);
-        ::c4a_testing::assert_close(out, c.expected_output,
+        n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
+        n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_pp_snip_transform(h, Xv, Yv) == N4M_OK);
+        ::n4m_testing::assert_close(out, c.expected_output,
                                      "snip/" + c.name,
                                      /*abs_tol=*/1e-12,
                                      /*rel_tol=*/1e-13);
-        c4a_pp_snip_destroy(h);
+        n4m_pp_snip_destroy(h);
     }
 }
 
@@ -461,20 +461,20 @@ void verify_rolling_ball_parity() {
             params_get_int(c.params_json, "half_window", 20));
         const int smooth_half_window = static_cast<int>(
             params_get_int(c.params_json, "smooth_half_window", 0));
-        c4a_pp_rolling_ball_handle_t* h = nullptr;
-        C4A_TEST_REQUIRE(c4a_pp_rolling_ball_create(&h, half_window,
+        n4m_pp_rolling_ball_handle_t* h = nullptr;
+        N4M_TEST_REQUIRE(n4m_pp_rolling_ball_create(&h, half_window,
                                                      smooth_half_window)
-                         == C4A_OK);
+                         == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
-        c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
-        c4a_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        C4A_TEST_REQUIRE(c4a_pp_rolling_ball_transform(h, Xv, Yv) == C4A_OK);
-        ::c4a_testing::assert_close(out, c.expected_output,
+        n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
+        n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_pp_rolling_ball_transform(h, Xv, Yv) == N4M_OK);
+        ::n4m_testing::assert_close(out, c.expected_output,
                                      "rolling_ball/" + c.name,
                                      /*abs_tol=*/1e-12,
                                      /*rel_tol=*/1e-13);
-        c4a_pp_rolling_ball_destroy(h);
+        n4m_pp_rolling_ball_destroy(h);
     }
 }
 
@@ -492,19 +492,19 @@ void verify_iasls_parity() {
             params_get_int(c.params_json, "max_iter", 50));
         const double tol       = params_get_double(c.params_json, "tol", 1e-3);
 
-        c4a_pp_iasls_handle_t* h = nullptr;
-        C4A_TEST_REQUIRE(c4a_pp_iasls_create_ex(&h, lam, p, lam_1, polyorder,
-                                                 diff_order, max_it, tol) == C4A_OK);
+        n4m_pp_iasls_handle_t* h = nullptr;
+        N4M_TEST_REQUIRE(n4m_pp_iasls_create_ex(&h, lam, p, lam_1, polyorder,
+                                                 diff_order, max_it, tol) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
-        c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
-        c4a_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        C4A_TEST_REQUIRE(c4a_pp_iasls_transform(h, Xv, Yv) == C4A_OK);
-        ::c4a_testing::assert_close(out, c.expected_output,
+        n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
+        n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_pp_iasls_transform(h, Xv, Yv) == N4M_OK);
+        ::n4m_testing::assert_close(out, c.expected_output,
                                      "iasls/" + c.name,
                                      /*abs_tol=*/5e-6,
                                      /*rel_tol=*/1e-5);
-        c4a_pp_iasls_destroy(h);
+        n4m_pp_iasls_destroy(h);
     }
 }
 
@@ -518,26 +518,26 @@ void verify_beads_parity() {
             params_get_int(c.params_json, "max_iter", 50));
         const double tol    = params_get_double(c.params_json, "tol", 1e-3);
 
-        c4a_pp_beads_handle_t* h = nullptr;
-        C4A_TEST_REQUIRE(c4a_pp_beads_create(&h, lam_0, lam_1, lam_2,
-                                              max_it, tol) == C4A_OK);
+        n4m_pp_beads_handle_t* h = nullptr;
+        N4M_TEST_REQUIRE(n4m_pp_beads_create(&h, lam_0, lam_1, lam_2,
+                                              max_it, tol) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
-        c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
-        c4a_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        C4A_TEST_REQUIRE(c4a_pp_beads_transform(h, Xv, Yv) == C4A_OK);
-        ::c4a_testing::assert_close(out, c.expected_output,
+        n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
+        n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_pp_beads_transform(h, Xv, Yv) == N4M_OK);
+        ::n4m_testing::assert_close(out, c.expected_output,
                                      "beads/" + c.name,
                                      /*abs_tol=*/1e-6,
                                      /*rel_tol=*/1e-7);
-        c4a_pp_beads_destroy(h);
+        n4m_pp_beads_destroy(h);
     }
 }
 
 }  // namespace
 
-void register_preprocessing_baselines_tests(c4a_testing::Runner& r);
-void register_preprocessing_baselines_tests(c4a_testing::Runner& r) {
+void register_preprocessing_baselines_tests(n4m_testing::Runner& r);
+void register_preprocessing_baselines_tests(n4m_testing::Runner& r) {
     r.run("pp_detrend_smoke",       test_detrend_smoke);
     r.run("pp_detrend_parity",      verify_detrend_parity);
     r.run("pp_asls_smoke",          test_asls_smoke);

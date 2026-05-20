@@ -1,4 +1,4 @@
-# LinearBaselineDrift — `c4a_aug_linear_drift_*`
+# LinearBaselineDrift — `n4m_aug_linear_drift_*`
 
 Adds a per-sample affine baseline drift (constant + linear-in-wavelength) to spectra.
 
@@ -19,17 +19,17 @@ Mirrors `nirs4all.operators.augmentation.spectral.LinearBaselineDrift` with the 
 
 ## ABI
 ```c
-c4a_status_t c4a_aug_linear_drift_create(
-    c4a_aug_linear_drift_handle_t** out,
-    c4a_rng_pcg64_state_t* rng,
+n4m_status_t n4m_aug_linear_drift_create(
+    n4m_aug_linear_drift_handle_t** out,
+    n4m_rng_pcg64_state_t* rng,
     double offset_min, double offset_max,
     double slope_min,  double slope_max);
-void         c4a_aug_linear_drift_destroy(c4a_aug_linear_drift_handle_t* h);
-c4a_status_t c4a_aug_linear_drift_apply(
-    const c4a_aug_linear_drift_handle_t* h,
-    c4a_matrix_view_t X, c4a_matrix_view_t out);
+void         n4m_aug_linear_drift_destroy(n4m_aug_linear_drift_handle_t* h);
+n4m_status_t n4m_aug_linear_drift_apply(
+    const n4m_aug_linear_drift_handle_t* h,
+    n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 ## Reference
-- Internal parity fixture: `parity/python_generator/src/c4a_parity_augmenters_ref/linear_drift.py`.
+- Internal parity fixture: `parity/python_generator/src/n4m_parity_augmenters_ref/linear_drift.py`.
 - Parity tolerance: 1e-15 abs.

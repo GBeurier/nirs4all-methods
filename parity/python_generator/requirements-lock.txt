@@ -1,4 +1,4 @@
-# Pinned lock file for the chemometrics4all parity fixture generator.
+# Pinned lock file for the nirs4all-methods parity fixture generator.
 #
 # Mirrors `pyproject.toml`'s top-level pins and adds the transitive deps
 # that scikit-learn / scipy actually drag in at install time. Used by the

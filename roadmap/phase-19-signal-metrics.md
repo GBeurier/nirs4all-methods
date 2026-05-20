@@ -2,7 +2,7 @@
 
 ## Goal
 
-Land the chemometrics4all surface for three diagnostic concerns that have
+Land the nirs4all-methods surface for three diagnostic concerns that have
 been sitting in nirs4all (and have no equivalent in pybaselines /
 scikit-learn / scipy directly):
 
@@ -19,28 +19,28 @@ scikit-learn / scipy directly):
 
 | Category | New symbols |
 |----------|-------------|
-| `c4a_signal_*` | `c4a_signal_detect` (1 symbol) |
-| `c4a_metric_*` | `c4a_metric_{rmse, mae, bias, sep, rpd, rpiq, r2, nrmse}` (8 symbols) |
-| `c4a_util_*`   | `c4a_util_{hotelling_t2, q_residuals}` (2 symbols) |
+| `n4m_signal_*` | `n4m_signal_detect` (1 symbol) |
+| `n4m_metric_*` | `n4m_metric_{rmse, mae, bias, sep, rpd, rpiq, r2, nrmse}` (8 symbols) |
+| `n4m_util_*`   | `n4m_util_{hotelling_t2, q_residuals}` (2 symbols) |
 
 Total: **11 new symbols**. ABI 1.6.0 → 1.7.0. Symbol count 126 → 137.
 
 (The brief specified "approximately 18"; the realised count is 11 because
 each metric is a stateless function — no `_create / _destroy / _transform`
-triplet — and `c4a_signal_detect` is similarly stateless.)
+triplet — and `n4m_signal_detect` is similarly stateless.)
 
 ## Parity tolerances
 
 | Operator | Reference | Abs tol | Rel tol |
 |----------|-----------|---------|---------|
-| `c4a_signal_detect` (enum) | Python heuristic | exact | exact |
-| `c4a_signal_detect` (confidence) | Python heuristic | 1e-12 | n/a (bit-hex) |
-| `c4a_signal_detect` (reason str) | Python format string | byte-equal | byte-equal |
-| 8 × `c4a_metric_*` | NumPy reductions | 1e-13 | 1e-13 |
-| `c4a_util_hotelling_t2` (per-sample) | LAPACK SVD (`numpy.linalg.svd`) | 1e-10 | 1e-11 |
-| `c4a_util_hotelling_t2` (UCL) | `scipy.stats.f.ppf` | 1e-6 | 1e-6 |
-| `c4a_util_q_residuals` (per-sample) | LAPACK SVD | 1e-10 | 1e-11 |
-| `c4a_util_q_residuals` (UCL) | `scipy.stats.norm.ppf` | 1e-6 | 1e-5 |
+| `n4m_signal_detect` (enum) | Python heuristic | exact | exact |
+| `n4m_signal_detect` (confidence) | Python heuristic | 1e-12 | n/a (bit-hex) |
+| `n4m_signal_detect` (reason str) | Python format string | byte-equal | byte-equal |
+| 8 × `n4m_metric_*` | NumPy reductions | 1e-13 | 1e-13 |
+| `n4m_util_hotelling_t2` (per-sample) | LAPACK SVD (`numpy.linalg.svd`) | 1e-10 | 1e-11 |
+| `n4m_util_hotelling_t2` (UCL) | `scipy.stats.f.ppf` | 1e-6 | 1e-6 |
+| `n4m_util_q_residuals` (per-sample) | LAPACK SVD | 1e-10 | 1e-11 |
+| `n4m_util_q_residuals` (UCL) | `scipy.stats.norm.ppf` | 1e-6 | 1e-5 |
 
 The structural gap between the Jacobi SVD and LAPACK Householder-bidiagonal
 SVD is what drives the 1e-10 / 1e-11 floor on T² and Q. The UCL gaps are
@@ -61,7 +61,7 @@ incomplete beta for T², Wichura AS241 for Q).
 - `cpp/src/c_api/c_api_signal_type.cpp`
 - `cpp/src/c_api/c_api_metrics.cpp`
 - `cpp/src/c_api/c_api_phase19.h` (private declarations until central
-  integration into `cpp/include/chemometrics4all/c4a.h`)
+  integration into `cpp/include/n4m/n4m.h`)
 
 ### Tests + fixtures + docs
 - `cpp/tests/test_signal_type.cpp` (4 tests: 3 smoke + 1 parity)
@@ -78,20 +78,20 @@ incomplete beta for T², Wichura AS241 for Q).
 
 ### Process
 - `cpp/src/CMakeLists.txt` — register the new core + c_api sources.
-- `cpp/tests/CMakeLists.txt` — register `chemometrics4all_tests_phase19`.
+- `cpp/tests/CMakeLists.txt` — register `n4m_tests_phase19`.
 
 ## Acceptance criteria (met)
 
 - [x] Library builds clean on Linux GCC 11 (no warnings or errors with
       the project's stock warning set).
-- [x] `chemometrics4all_tests` still passes (82 / 82).
-- [x] `chemometrics4all_tests_phase19` passes (12 / 12).
+- [x] `n4m_tests` still passes (82 / 82).
+- [x] `n4m_tests_phase19` passes (12 / 12).
 - [x] Total: 94 / 94 tests.
-- [x] 11 new symbols exported from `libc4a.so` under the
-      `CHEMOMETRICS4ALL_1` linker version.
+- [x] 11 new symbols exported from `libn4m.so` under the
+      `N4M_1` linker version.
 - [x] Parity fixtures regenerable from
       `generate_phase19_fixtures.py` with deterministic seed 20260519.
-- [x] Public ABI not yet touched in `c4a.h` — central integration step
+- [x] Public ABI not yet touched in `n4m.h` — central integration step
       adds §17 with declarations from `c_api_phase19.h`.
 
 ## Integration handoff
@@ -99,14 +99,14 @@ incomplete beta for T², Wichura AS241 for Q).
 The central integration step needs:
 
 1. Move declarations from `cpp/src/c_api/c_api_phase19.h` into
-   `cpp/include/chemometrics4all/c4a.h` as §17 (banner like Phases 8 /
+   `cpp/include/n4m/n4m.h` as §17 (banner like Phases 8 /
    11 / 12).
-2. Bump `C4A_ABI_VERSION_MINOR` from 6 to 7 in
-   `cpp/include/chemometrics4all/c4a_version.h`.
+2. Bump `N4M_ABI_VERSION_MINOR` from 6 to 7 in
+   `cpp/include/n4m/n4m_version.h`.
 3. Add the 11 new symbols to
    `cpp/abi/expected_symbols_{linux,macos,windows}.txt`.
 4. Fold `register_signal_type_tests` and `register_metrics_tests` into
    `cpp/tests/main.cpp` and remove `main_phase19.cpp` + the standalone
    binary from `cpp/tests/CMakeLists.txt`.
 5. Drop the private `cpp/src/c_api/c_api_phase19.h` header; the wrappers
-   and tests should `#include "chemometrics4all/c4a.h"` instead.
+   and tests should `#include "n4m/n4m.h"` instead.

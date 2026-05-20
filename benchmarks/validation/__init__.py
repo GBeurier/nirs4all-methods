@@ -1,7 +1,7 @@
 """Internal validation framework - declarative registry layer.
 
-Phase C4A-1 port of the pls4all validation framework: project the
-chemometrics4all cross-binding orchestrator (``benchmarks/cross_binding/
+Phase N4M-1 port of the pls4all validation framework: project the
+nirs4all-methods cross-binding orchestrator (``benchmarks/cross_binding/
 orchestrator.py``) onto a deterministic JSON snapshot under
 ``benchmarks/validation/registry/`` so docs and dashboard consumers can
 inspect comparator / reference / tolerance contracts without importing

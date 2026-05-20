@@ -10,10 +10,10 @@
 //     transform on a test matrix, validate byte-equality / 1e-10 abs /
 //     1e-11 rel tolerance against the reference output);
 //   * a NOT_FITTED test asserting `_transform` before `_fit` returns
-//     C4A_ERR_NOT_FITTED.
+//     N4M_ERR_NOT_FITTED.
 //
 // Baseline also gets an inverse-transform test, and Derivate gets a
-// dedicated `c4a_pp_derivate_output_cols(2, 200) == 198` shape-helper
+// dedicated `n4m_pp_derivate_output_cols(2, 200) == 198` shape-helper
 // test. Total contributions: 4 smoke + 4 parity + 4 not-fitted + 1
 // inverse + 1 output-cols = 14 new tests.
 
@@ -26,45 +26,45 @@
 #include <string>
 #include <vector>
 
-#include "chemometrics4all/c4a.h"
+#include "n4m/n4m.h"
 
 #include "fixture_parser.hpp"
 #include "harness.hpp"
 
-#ifndef C4A_PARITY_FIXTURE_DIR
-#  error "C4A_PARITY_FIXTURE_DIR must be defined"
+#ifndef N4M_PARITY_FIXTURE_DIR
+#  error "N4M_PARITY_FIXTURE_DIR must be defined"
 #endif
 
 namespace {
 
-using ParityFixture = ::c4a_testing::Fixture;
-using ParityCase    = ::c4a_testing::Case;
+using ParityFixture = ::n4m_testing::Fixture;
+using ParityCase    = ::n4m_testing::Case;
 
 ParityFixture load_fixture(const std::string& filename) {
-    return ::c4a_testing::load_fixture(
-        std::string(C4A_PARITY_FIXTURE_DIR) + "/" + filename,
+    return ::n4m_testing::load_fixture(
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/" + filename,
         /*require_per_case_output_shape=*/true);
 }
 
-using ::c4a_testing::params_get_bool;
-using ::c4a_testing::params_get_double;
-using ::c4a_testing::params_get_int;
-using ::c4a_testing::params_get_string;
+using ::n4m_testing::params_get_bool;
+using ::n4m_testing::params_get_double;
+using ::n4m_testing::params_get_int;
+using ::n4m_testing::params_get_string;
 
 void assert_close(const std::vector<double>& got,
                   const std::vector<double>& want,
                   const std::string& tag,
                   double abs_tol = 1e-10,
                   double rel_tol = 1e-11) {
-    ::c4a_testing::assert_close(got, want, tag, abs_tol, rel_tol);
+    ::n4m_testing::assert_close(got, want, tag, abs_tol, rel_tol);
 }
 
-c4a_matrix_view_t make_rowmajor_view(double* data, std::int64_t rows,
+n4m_matrix_view_t make_rowmajor_view(double* data, std::int64_t rows,
                                       std::int64_t cols) {
-    c4a_matrix_view_t v{};
-    const c4a_status_t st =
-        c4a_matrix_view_init_rowmajor(&v, data, rows, cols, C4A_DTYPE_F64);
-    C4A_TEST_REQUIRE(st == C4A_OK);
+    n4m_matrix_view_t v{};
+    const n4m_status_t st =
+        n4m_matrix_view_init_rowmajor(&v, data, rows, cols, N4M_DTYPE_F64);
+    N4M_TEST_REQUIRE(st == N4M_OK);
     return v;
 }
 
@@ -85,32 +85,32 @@ void test_msc_smoke() {
         2.5, 5.0, 7.5, 10.0,
     };
     double Y[8] = {0};
-    c4a_pp_msc_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_msc_create(&h) == C4A_OK);
-    C4A_TEST_REQUIRE(h != nullptr);
+    n4m_pp_msc_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_msc_create(&h) == N4M_OK);
+    N4M_TEST_REQUIRE(h != nullptr);
 
     int fitted = 1;
-    C4A_TEST_REQUIRE(c4a_pp_msc_is_fitted(h, &fitted) == C4A_OK);
-    C4A_TEST_REQUIRE(fitted == 0);
+    N4M_TEST_REQUIRE(n4m_pp_msc_is_fitted(h, &fitted) == N4M_OK);
+    N4M_TEST_REQUIRE(fitted == 0);
 
-    c4a_matrix_view_t Xfv = make_rowmajor_view(Xfit, 3, 4);
-    C4A_TEST_REQUIRE(c4a_pp_msc_fit(h, Xfv) == C4A_OK);
+    n4m_matrix_view_t Xfv = make_rowmajor_view(Xfit, 3, 4);
+    N4M_TEST_REQUIRE(n4m_pp_msc_fit(h, Xfv) == N4M_OK);
 
-    C4A_TEST_REQUIRE(c4a_pp_msc_is_fitted(h, &fitted) == C4A_OK);
-    C4A_TEST_REQUIRE(fitted == 1);
+    N4M_TEST_REQUIRE(n4m_pp_msc_is_fitted(h, &fitted) == N4M_OK);
+    N4M_TEST_REQUIRE(fitted == 1);
 
-    c4a_matrix_view_t Xv = make_rowmajor_view(Xt, 2, 4);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 2, 4);
-    C4A_TEST_REQUIRE(c4a_pp_msc_transform(h, Xv, Yv) == C4A_OK);
+    n4m_matrix_view_t Xv = make_rowmajor_view(Xt, 2, 4);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 4);
+    N4M_TEST_REQUIRE(n4m_pp_msc_transform(h, Xv, Yv) == N4M_OK);
     // The Xfit columns are scalar multiples of [1, 2, 3, 4] so each MSC
     // (a, b) per column should be exact; the resulting MSC-transformed
     // rows are the per-row mean (after scatter correction). Just sanity-
     // check that none of the outputs is NaN/Inf.
     for (int k = 0; k < 8; ++k) {
-        C4A_TEST_REQUIRE(std::isfinite(Y[k]));
+        N4M_TEST_REQUIRE(std::isfinite(Y[k]));
     }
-    c4a_pp_msc_destroy(h);
-    c4a_pp_msc_destroy(nullptr);  // null-safe
+    n4m_pp_msc_destroy(h);
+    n4m_pp_msc_destroy(nullptr);  // null-safe
 }
 
 void test_emsc_smoke() {
@@ -120,87 +120,87 @@ void test_emsc_smoke() {
         2.0, 3.0, 4.0, 5.0,
     };
     double Y[12] = {0};
-    c4a_pp_emsc_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_emsc_create(&h, /*degree=*/2) == C4A_OK);
-    C4A_TEST_REQUIRE(h != nullptr);
+    n4m_pp_emsc_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_emsc_create(&h, /*degree=*/2) == N4M_OK);
+    N4M_TEST_REQUIRE(h != nullptr);
 
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 3, 4);
-    C4A_TEST_REQUIRE(c4a_pp_emsc_fit(h, Xv) == C4A_OK);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 3, 4);
-    C4A_TEST_REQUIRE(c4a_pp_emsc_transform(h, Xv, Yv) == C4A_OK);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 3, 4);
+    N4M_TEST_REQUIRE(n4m_pp_emsc_fit(h, Xv) == N4M_OK);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 3, 4);
+    N4M_TEST_REQUIRE(n4m_pp_emsc_transform(h, Xv, Yv) == N4M_OK);
     for (int k = 0; k < 12; ++k) {
-        C4A_TEST_REQUIRE(std::isfinite(Y[k]));
+        N4M_TEST_REQUIRE(std::isfinite(Y[k]));
     }
-    c4a_pp_emsc_destroy(h);
+    n4m_pp_emsc_destroy(h);
 }
 
 void test_baseline_smoke() {
     double X[6] = {1, 2, 3, 4, 5, 6};
     double Y[6] = {0};
-    c4a_pp_baseline_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_baseline_create(&h) == C4A_OK);
+    n4m_pp_baseline_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_baseline_create(&h) == N4M_OK);
 
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
-    C4A_TEST_REQUIRE(c4a_pp_baseline_fit(h, Xv) == C4A_OK);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
-    C4A_TEST_REQUIRE(c4a_pp_baseline_transform(h, Xv, Yv) == C4A_OK);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
+    N4M_TEST_REQUIRE(n4m_pp_baseline_fit(h, Xv) == N4M_OK);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
+    N4M_TEST_REQUIRE(n4m_pp_baseline_transform(h, Xv, Yv) == N4M_OK);
 
     // Column means: (1+4)/2=2.5, (2+5)/2=3.5, (3+6)/2=4.5.
     // Row 0: [1-2.5, 2-3.5, 3-4.5] = [-1.5, -1.5, -1.5]
-    C4A_TEST_REQUIRE(std::fabs(Y[0] + 1.5) < 1e-15);
-    C4A_TEST_REQUIRE(std::fabs(Y[1] + 1.5) < 1e-15);
-    C4A_TEST_REQUIRE(std::fabs(Y[2] + 1.5) < 1e-15);
+    N4M_TEST_REQUIRE(std::fabs(Y[0] + 1.5) < 1e-15);
+    N4M_TEST_REQUIRE(std::fabs(Y[1] + 1.5) < 1e-15);
+    N4M_TEST_REQUIRE(std::fabs(Y[2] + 1.5) < 1e-15);
     // Row 1: [4-2.5, 5-3.5, 6-4.5] = [1.5, 1.5, 1.5]
-    C4A_TEST_REQUIRE(std::fabs(Y[3] - 1.5) < 1e-15);
-    C4A_TEST_REQUIRE(std::fabs(Y[5] - 1.5) < 1e-15);
-    c4a_pp_baseline_destroy(h);
+    N4M_TEST_REQUIRE(std::fabs(Y[3] - 1.5) < 1e-15);
+    N4M_TEST_REQUIRE(std::fabs(Y[5] - 1.5) < 1e-15);
+    n4m_pp_baseline_destroy(h);
 }
 
 void test_baseline_inverse() {
     double X[6] = {1, 2, 3, 4, 5, 6};
     double Y[6] = {0};
     double Z[6] = {0};
-    c4a_pp_baseline_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_baseline_create(&h) == C4A_OK);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
-    c4a_matrix_view_t Zv = make_rowmajor_view(Z, 2, 3);
-    C4A_TEST_REQUIRE(c4a_pp_baseline_fit(h, Xv) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_pp_baseline_transform(h, Xv, Yv) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_pp_baseline_inverse_transform(h, Yv, Zv) == C4A_OK);
+    n4m_pp_baseline_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_baseline_create(&h) == N4M_OK);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
+    n4m_matrix_view_t Zv = make_rowmajor_view(Z, 2, 3);
+    N4M_TEST_REQUIRE(n4m_pp_baseline_fit(h, Xv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_pp_baseline_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_pp_baseline_inverse_transform(h, Yv, Zv) == N4M_OK);
     for (int k = 0; k < 6; ++k) {
-        C4A_TEST_REQUIRE(std::fabs(Z[k] - X[k]) < 1e-15);
+        N4M_TEST_REQUIRE(std::fabs(Z[k] - X[k]) < 1e-15);
     }
-    c4a_pp_baseline_destroy(h);
+    n4m_pp_baseline_destroy(h);
 }
 
 void test_derivate_smoke() {
     double X[8] = {1.0, 2.0, 4.0, 7.0,    /* diff1: [1, 2, 3], diff2: [1, 1] */
                    2.0, 3.0, 5.0, 8.0};
     double Y[6] = {0};  // output cols = 4 - 1 = 3, rows = 2
-    c4a_pp_derivate_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_derivate_create(&h, /*order=*/1,
-                                              /*delta=*/1.0) == C4A_OK);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 2, 4);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
-    C4A_TEST_REQUIRE(c4a_pp_derivate_fit(h, Xv) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_pp_derivate_transform(h, Xv, Yv) == C4A_OK);
+    n4m_pp_derivate_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_derivate_create(&h, /*order=*/1,
+                                              /*delta=*/1.0) == N4M_OK);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 4);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
+    N4M_TEST_REQUIRE(n4m_pp_derivate_fit(h, Xv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_pp_derivate_transform(h, Xv, Yv) == N4M_OK);
     // Row 0 diffs: [2-1, 4-2, 7-4] = [1, 2, 3]
-    C4A_TEST_REQUIRE(std::fabs(Y[0] - 1.0) < 1e-15);
-    C4A_TEST_REQUIRE(std::fabs(Y[1] - 2.0) < 1e-15);
-    C4A_TEST_REQUIRE(std::fabs(Y[2] - 3.0) < 1e-15);
-    C4A_TEST_REQUIRE(std::fabs(Y[3] - 1.0) < 1e-15);
-    C4A_TEST_REQUIRE(std::fabs(Y[5] - 3.0) < 1e-15);
-    c4a_pp_derivate_destroy(h);
+    N4M_TEST_REQUIRE(std::fabs(Y[0] - 1.0) < 1e-15);
+    N4M_TEST_REQUIRE(std::fabs(Y[1] - 2.0) < 1e-15);
+    N4M_TEST_REQUIRE(std::fabs(Y[2] - 3.0) < 1e-15);
+    N4M_TEST_REQUIRE(std::fabs(Y[3] - 1.0) < 1e-15);
+    N4M_TEST_REQUIRE(std::fabs(Y[5] - 3.0) < 1e-15);
+    n4m_pp_derivate_destroy(h);
 }
 
 void test_derivate_output_cols() {
-    C4A_TEST_REQUIRE(c4a_pp_derivate_output_cols(2, 200) == 198);
-    C4A_TEST_REQUIRE(c4a_pp_derivate_output_cols(1, 10)  == 9);
-    C4A_TEST_REQUIRE(c4a_pp_derivate_output_cols(3, 200) == 197);
+    N4M_TEST_REQUIRE(n4m_pp_derivate_output_cols(2, 200) == 198);
+    N4M_TEST_REQUIRE(n4m_pp_derivate_output_cols(1, 10)  == 9);
+    N4M_TEST_REQUIRE(n4m_pp_derivate_output_cols(3, 200) == 197);
     // Degenerate: order >= input_cols → 0 (out-of-range).
-    C4A_TEST_REQUIRE(c4a_pp_derivate_output_cols(10, 10) == 0);
-    C4A_TEST_REQUIRE(c4a_pp_derivate_output_cols(1, 1)   == 0);
+    N4M_TEST_REQUIRE(n4m_pp_derivate_output_cols(10, 10) == 0);
+    N4M_TEST_REQUIRE(n4m_pp_derivate_output_cols(1, 1)   == 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -210,47 +210,47 @@ void test_derivate_output_cols() {
 void test_msc_not_fitted() {
     double X[6] = {1, 2, 3, 4, 5, 6};
     double Y[6] = {0};
-    c4a_pp_msc_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_msc_create(&h) == C4A_OK);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
-    C4A_TEST_REQUIRE(c4a_pp_msc_transform(h, Xv, Yv) == C4A_ERR_NOT_FITTED);
-    C4A_TEST_REQUIRE(c4a_pp_msc_inverse_transform(h, Xv, Yv) == C4A_ERR_NOT_FITTED);
-    c4a_pp_msc_destroy(h);
+    n4m_pp_msc_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_msc_create(&h) == N4M_OK);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
+    N4M_TEST_REQUIRE(n4m_pp_msc_transform(h, Xv, Yv) == N4M_ERR_NOT_FITTED);
+    N4M_TEST_REQUIRE(n4m_pp_msc_inverse_transform(h, Xv, Yv) == N4M_ERR_NOT_FITTED);
+    n4m_pp_msc_destroy(h);
 }
 
 void test_emsc_not_fitted() {
     double X[6] = {1, 2, 3, 4, 5, 6};
     double Y[6] = {0};
-    c4a_pp_emsc_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_emsc_create(&h, 2) == C4A_OK);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
-    C4A_TEST_REQUIRE(c4a_pp_emsc_transform(h, Xv, Yv) == C4A_ERR_NOT_FITTED);
-    c4a_pp_emsc_destroy(h);
+    n4m_pp_emsc_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_emsc_create(&h, 2) == N4M_OK);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
+    N4M_TEST_REQUIRE(n4m_pp_emsc_transform(h, Xv, Yv) == N4M_ERR_NOT_FITTED);
+    n4m_pp_emsc_destroy(h);
 }
 
 void test_baseline_not_fitted() {
     double X[6] = {1, 2, 3, 4, 5, 6};
     double Y[6] = {0};
-    c4a_pp_baseline_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_baseline_create(&h) == C4A_OK);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
-    C4A_TEST_REQUIRE(c4a_pp_baseline_transform(h, Xv, Yv) == C4A_ERR_NOT_FITTED);
-    C4A_TEST_REQUIRE(c4a_pp_baseline_inverse_transform(h, Xv, Yv) == C4A_ERR_NOT_FITTED);
-    c4a_pp_baseline_destroy(h);
+    n4m_pp_baseline_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_baseline_create(&h) == N4M_OK);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
+    N4M_TEST_REQUIRE(n4m_pp_baseline_transform(h, Xv, Yv) == N4M_ERR_NOT_FITTED);
+    N4M_TEST_REQUIRE(n4m_pp_baseline_inverse_transform(h, Xv, Yv) == N4M_ERR_NOT_FITTED);
+    n4m_pp_baseline_destroy(h);
 }
 
 void test_derivate_not_fitted() {
     double X[8] = {1, 2, 4, 7, 2, 3, 5, 8};
     double Y[6] = {0};
-    c4a_pp_derivate_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_derivate_create(&h, 1, 1.0) == C4A_OK);
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 2, 4);
-    c4a_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
-    C4A_TEST_REQUIRE(c4a_pp_derivate_transform(h, Xv, Yv) == C4A_ERR_NOT_FITTED);
-    c4a_pp_derivate_destroy(h);
+    n4m_pp_derivate_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_derivate_create(&h, 1, 1.0) == N4M_OK);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 4);
+    n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
+    N4M_TEST_REQUIRE(n4m_pp_derivate_transform(h, Xv, Yv) == N4M_ERR_NOT_FITTED);
+    n4m_pp_derivate_destroy(h);
 }
 
 // ---------------------------------------------------------------------------
@@ -261,12 +261,12 @@ void verify_msc_parity() {
     ParityFixture fx = load_fixture("msc_v1.json");
     for (const auto& c : fx.cases) {
         const std::string variant = params_get_string(c.params_json, "variant", "");
-        c4a_pp_msc_handle_t* h = nullptr;
-        C4A_TEST_REQUIRE(c4a_pp_msc_create(&h) == C4A_OK);
+        n4m_pp_msc_handle_t* h = nullptr;
+        N4M_TEST_REQUIRE(n4m_pp_msc_create(&h) == N4M_OK);
         std::vector<double> fit_in = fx.fit_input;
-        c4a_matrix_view_t Xfv = make_rowmajor_view(fit_in.data(),
+        n4m_matrix_view_t Xfv = make_rowmajor_view(fit_in.data(),
                                                     fx.fit_rows, fx.fit_cols);
-        C4A_TEST_REQUIRE(c4a_pp_msc_fit(h, Xfv) == C4A_OK);
+        N4M_TEST_REQUIRE(n4m_pp_msc_fit(h, Xfv) == N4M_OK);
 
         if (variant == "inverse") {
             // The reference for this case is inverse_transform(transform(test)).
@@ -274,26 +274,26 @@ void verify_msc_parity() {
             std::vector<double> in = fx.input;
             std::vector<double> mid(in.size(), 0.0);
             std::vector<double> out(in.size(), 0.0);
-            c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),
+            n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),
                                                        fx.rows, fx.cols);
-            c4a_matrix_view_t Mv = make_rowmajor_view(mid.data(),
+            n4m_matrix_view_t Mv = make_rowmajor_view(mid.data(),
                                                        fx.rows, fx.cols);
-            c4a_matrix_view_t Ov = make_rowmajor_view(out.data(),
+            n4m_matrix_view_t Ov = make_rowmajor_view(out.data(),
                                                        fx.rows, fx.cols);
-            C4A_TEST_REQUIRE(c4a_pp_msc_transform(h, Xv, Mv) == C4A_OK);
-            C4A_TEST_REQUIRE(c4a_pp_msc_inverse_transform(h, Mv, Ov) == C4A_OK);
+            N4M_TEST_REQUIRE(n4m_pp_msc_transform(h, Xv, Mv) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_pp_msc_inverse_transform(h, Mv, Ov) == N4M_OK);
             assert_close(out, c.expected_output, "msc/" + c.name);
         } else {
             std::vector<double> in = fx.input;
             std::vector<double> out(in.size(), 0.0);
-            c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),
+            n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),
                                                        fx.rows, fx.cols);
-            c4a_matrix_view_t Yv = make_rowmajor_view(out.data(),
+            n4m_matrix_view_t Yv = make_rowmajor_view(out.data(),
                                                        fx.rows, fx.cols);
-            C4A_TEST_REQUIRE(c4a_pp_msc_transform(h, Xv, Yv) == C4A_OK);
+            N4M_TEST_REQUIRE(n4m_pp_msc_transform(h, Xv, Yv) == N4M_OK);
             assert_close(out, c.expected_output, "msc/" + c.name);
         }
-        c4a_pp_msc_destroy(h);
+        n4m_pp_msc_destroy(h);
     }
 }
 
@@ -302,20 +302,20 @@ void verify_emsc_parity() {
     for (const auto& c : fx.cases) {
         const int degree = static_cast<int>(params_get_int(c.params_json,
                                                             "degree", 2));
-        c4a_pp_emsc_handle_t* h = nullptr;
-        C4A_TEST_REQUIRE(c4a_pp_emsc_create(&h, degree) == C4A_OK);
+        n4m_pp_emsc_handle_t* h = nullptr;
+        N4M_TEST_REQUIRE(n4m_pp_emsc_create(&h, degree) == N4M_OK);
         std::vector<double> fit_in = fx.fit_input;
-        c4a_matrix_view_t Xfv = make_rowmajor_view(fit_in.data(),
+        n4m_matrix_view_t Xfv = make_rowmajor_view(fit_in.data(),
                                                     fx.fit_rows, fx.fit_cols);
-        C4A_TEST_REQUIRE(c4a_pp_emsc_fit(h, Xfv) == C4A_OK);
+        N4M_TEST_REQUIRE(n4m_pp_emsc_fit(h, Xfv) == N4M_OK);
 
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
-        c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),
+        n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),
                                                    fx.rows, fx.cols);
-        c4a_matrix_view_t Yv = make_rowmajor_view(out.data(),
+        n4m_matrix_view_t Yv = make_rowmajor_view(out.data(),
                                                    fx.rows, fx.cols);
-        C4A_TEST_REQUIRE(c4a_pp_emsc_transform(h, Xv, Yv) == C4A_OK);
+        N4M_TEST_REQUIRE(n4m_pp_emsc_transform(h, Xv, Yv) == N4M_OK);
         /* EMSC parity is bounded by the LAPACK gelsd (SVD-based) vs our
          * Householder QR difference on the ill-conditioned raw-integer
          * wavelength basis (1, w, w^2, …, w^degree with w in [0, p-1]).
@@ -326,7 +326,7 @@ void verify_emsc_parity() {
          * Phase 3 brief allotted to least-squares ops. */
         assert_close(out, c.expected_output, "emsc/" + c.name,
                      /*abs=*/5e-10, /*rel=*/5e-10);
-        c4a_pp_emsc_destroy(h);
+        n4m_pp_emsc_destroy(h);
     }
 }
 
@@ -334,21 +334,21 @@ void verify_baseline_parity() {
     ParityFixture fx = load_fixture("baseline_center_v1.json");
     for (const auto& c : fx.cases) {
         const std::string variant = params_get_string(c.params_json, "variant", "");
-        c4a_pp_baseline_handle_t* h = nullptr;
-        C4A_TEST_REQUIRE(c4a_pp_baseline_create(&h) == C4A_OK);
+        n4m_pp_baseline_handle_t* h = nullptr;
+        N4M_TEST_REQUIRE(n4m_pp_baseline_create(&h) == N4M_OK);
         std::vector<double> fit_in = fx.fit_input;
-        c4a_matrix_view_t Xfv = make_rowmajor_view(fit_in.data(),
+        n4m_matrix_view_t Xfv = make_rowmajor_view(fit_in.data(),
                                                     fx.fit_rows, fx.fit_cols);
-        C4A_TEST_REQUIRE(c4a_pp_baseline_fit(h, Xfv) == C4A_OK);
+        N4M_TEST_REQUIRE(n4m_pp_baseline_fit(h, Xfv) == N4M_OK);
 
         if (variant == "test") {
             std::vector<double> in = fx.input;
             std::vector<double> out(in.size(), 0.0);
-            c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),
+            n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),
                                                        fx.rows, fx.cols);
-            c4a_matrix_view_t Yv = make_rowmajor_view(out.data(),
+            n4m_matrix_view_t Yv = make_rowmajor_view(out.data(),
                                                        fx.rows, fx.cols);
-            C4A_TEST_REQUIRE(c4a_pp_baseline_transform(h, Xv, Yv) == C4A_OK);
+            N4M_TEST_REQUIRE(n4m_pp_baseline_transform(h, Xv, Yv) == N4M_OK);
             assert_close(out, c.expected_output, "baseline/" + c.name,
                          1e-12, 1e-13);
         } else if (variant == "inverse") {
@@ -356,29 +356,29 @@ void verify_baseline_parity() {
             std::vector<double> in = fx.fit_input;
             std::vector<double> mid(in.size(), 0.0);
             std::vector<double> out(in.size(), 0.0);
-            c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),
+            n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),
                                                        fx.fit_rows, fx.fit_cols);
-            c4a_matrix_view_t Mv = make_rowmajor_view(mid.data(),
+            n4m_matrix_view_t Mv = make_rowmajor_view(mid.data(),
                                                        fx.fit_rows, fx.fit_cols);
-            c4a_matrix_view_t Ov = make_rowmajor_view(out.data(),
+            n4m_matrix_view_t Ov = make_rowmajor_view(out.data(),
                                                        fx.fit_rows, fx.fit_cols);
-            C4A_TEST_REQUIRE(c4a_pp_baseline_transform(h, Xv, Mv) == C4A_OK);
-            C4A_TEST_REQUIRE(c4a_pp_baseline_inverse_transform(h, Mv, Ov) == C4A_OK);
+            N4M_TEST_REQUIRE(n4m_pp_baseline_transform(h, Xv, Mv) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_pp_baseline_inverse_transform(h, Mv, Ov) == N4M_OK);
             assert_close(out, c.expected_output, "baseline/" + c.name,
                          1e-12, 1e-13);
         } else {
             // default: fit on fit_X then transform on fit_X.
             std::vector<double> in = fx.fit_input;
             std::vector<double> out(in.size(), 0.0);
-            c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),
+            n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),
                                                        fx.fit_rows, fx.fit_cols);
-            c4a_matrix_view_t Yv = make_rowmajor_view(out.data(),
+            n4m_matrix_view_t Yv = make_rowmajor_view(out.data(),
                                                        fx.fit_rows, fx.fit_cols);
-            C4A_TEST_REQUIRE(c4a_pp_baseline_transform(h, Xv, Yv) == C4A_OK);
+            N4M_TEST_REQUIRE(n4m_pp_baseline_transform(h, Xv, Yv) == N4M_OK);
             assert_close(out, c.expected_output, "baseline/" + c.name,
                          1e-12, 1e-13);
         }
-        c4a_pp_baseline_destroy(h);
+        n4m_pp_baseline_destroy(h);
     }
 }
 
@@ -388,24 +388,24 @@ void verify_derivate_parity() {
         const int order  = static_cast<int>(params_get_int(c.params_json,
                                                             "order", 1));
         const double delta = params_get_double(c.params_json, "delta", 1.0);
-        c4a_pp_derivate_handle_t* h = nullptr;
-        C4A_TEST_REQUIRE(c4a_pp_derivate_create(&h, order, delta) == C4A_OK);
+        n4m_pp_derivate_handle_t* h = nullptr;
+        N4M_TEST_REQUIRE(n4m_pp_derivate_create(&h, order, delta) == N4M_OK);
         std::vector<double> fit_in = fx.fit_input;
-        c4a_matrix_view_t Xfv = make_rowmajor_view(fit_in.data(),
+        n4m_matrix_view_t Xfv = make_rowmajor_view(fit_in.data(),
                                                     fx.fit_rows, fx.fit_cols);
-        C4A_TEST_REQUIRE(c4a_pp_derivate_fit(h, Xfv) == C4A_OK);
+        N4M_TEST_REQUIRE(n4m_pp_derivate_fit(h, Xfv) == N4M_OK);
 
         std::vector<double> in = fx.input;
         const std::int64_t out_size = c.output_rows * c.output_cols;
         std::vector<double> out(static_cast<std::size_t>(out_size), 0.0);
-        c4a_matrix_view_t Xv = make_rowmajor_view(in.data(),
+        n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),
                                                    fx.rows, fx.cols);
-        c4a_matrix_view_t Yv = make_rowmajor_view(out.data(),
+        n4m_matrix_view_t Yv = make_rowmajor_view(out.data(),
                                                    c.output_rows, c.output_cols);
-        C4A_TEST_REQUIRE(c4a_pp_derivate_transform(h, Xv, Yv) == C4A_OK);
+        N4M_TEST_REQUIRE(n4m_pp_derivate_transform(h, Xv, Yv) == N4M_OK);
         assert_close(out, c.expected_output, "derivate/" + c.name,
                      1e-12, 1e-13);
-        c4a_pp_derivate_destroy(h);
+        n4m_pp_derivate_destroy(h);
     }
 }
 
@@ -415,8 +415,8 @@ void verify_derivate_parity() {
  * to capture output_B. output_A must differ from output_B because the fit
  * state was overwritten. */
 void test_msc_refit_replaces_state() {
-    c4a_pp_msc_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_msc_create(&h) == C4A_OK);
+    n4m_pp_msc_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_msc_create(&h) == N4M_OK);
 
     /* X1: ascending rows */
     double X1[6] = {1.0, 2.0, 3.0,
@@ -428,29 +428,29 @@ void test_msc_refit_replaces_state() {
     double X3[6] = {2.0, 4.0, 6.0,
                     3.0, 5.0, 7.0};
     double outA[6], outB[6];
-    c4a_matrix_view_t vX1, vX2, vX3, voutA, voutB;
-    c4a_matrix_view_init_rowmajor(&vX1, X1, 2, 3, C4A_DTYPE_F64);
-    c4a_matrix_view_init_rowmajor(&vX2, X2, 2, 3, C4A_DTYPE_F64);
-    c4a_matrix_view_init_rowmajor(&vX3, X3, 2, 3, C4A_DTYPE_F64);
-    c4a_matrix_view_init_rowmajor(&voutA, outA, 2, 3, C4A_DTYPE_F64);
-    c4a_matrix_view_init_rowmajor(&voutB, outB, 2, 3, C4A_DTYPE_F64);
+    n4m_matrix_view_t vX1, vX2, vX3, voutA, voutB;
+    n4m_matrix_view_init_rowmajor(&vX1, X1, 2, 3, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&vX2, X2, 2, 3, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&vX3, X3, 2, 3, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&voutA, outA, 2, 3, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&voutB, outB, 2, 3, N4M_DTYPE_F64);
 
-    C4A_TEST_REQUIRE(c4a_pp_msc_fit(h, vX1) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_pp_msc_transform(h, vX3, voutA) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_pp_msc_fit(h, vX2) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_pp_msc_transform(h, vX3, voutB) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_pp_msc_fit(h, vX1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_pp_msc_transform(h, vX3, voutA) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_pp_msc_fit(h, vX2) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_pp_msc_transform(h, vX3, voutB) == N4M_OK);
     /* outputs must differ — different references produce different regressions */
     bool any_diff = false;
     for (int i = 0; i < 6; ++i) {
         if (std::fabs(outA[i] - outB[i]) > 1e-9) { any_diff = true; break; }
     }
-    C4A_TEST_REQUIRE(any_diff);
-    c4a_pp_msc_destroy(h);
+    N4M_TEST_REQUIRE(any_diff);
+    n4m_pp_msc_destroy(h);
 }
 
 void test_emsc_refit_replaces_state() {
-    c4a_pp_emsc_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_emsc_create(&h, 2) == C4A_OK);
+    n4m_pp_emsc_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_emsc_create(&h, 2) == N4M_OK);
     double X1[8] = {1.0, 2.0, 3.0, 4.0,
                     2.0, 3.0, 4.0, 5.0};
     double X2[8] = {10.0,  5.0, 20.0, 15.0,
@@ -458,27 +458,27 @@ void test_emsc_refit_replaces_state() {
     double X3[8] = {3.0, 4.0, 5.0, 6.0,
                     2.5, 3.5, 4.5, 5.5};
     double outA[8], outB[8];
-    c4a_matrix_view_t vX1, vX2, vX3, voutA, voutB;
-    c4a_matrix_view_init_rowmajor(&vX1, X1, 2, 4, C4A_DTYPE_F64);
-    c4a_matrix_view_init_rowmajor(&vX2, X2, 2, 4, C4A_DTYPE_F64);
-    c4a_matrix_view_init_rowmajor(&vX3, X3, 2, 4, C4A_DTYPE_F64);
-    c4a_matrix_view_init_rowmajor(&voutA, outA, 2, 4, C4A_DTYPE_F64);
-    c4a_matrix_view_init_rowmajor(&voutB, outB, 2, 4, C4A_DTYPE_F64);
-    C4A_TEST_REQUIRE(c4a_pp_emsc_fit(h, vX1) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_pp_emsc_transform(h, vX3, voutA) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_pp_emsc_fit(h, vX2) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_pp_emsc_transform(h, vX3, voutB) == C4A_OK);
+    n4m_matrix_view_t vX1, vX2, vX3, voutA, voutB;
+    n4m_matrix_view_init_rowmajor(&vX1, X1, 2, 4, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&vX2, X2, 2, 4, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&vX3, X3, 2, 4, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&voutA, outA, 2, 4, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&voutB, outB, 2, 4, N4M_DTYPE_F64);
+    N4M_TEST_REQUIRE(n4m_pp_emsc_fit(h, vX1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_pp_emsc_transform(h, vX3, voutA) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_pp_emsc_fit(h, vX2) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_pp_emsc_transform(h, vX3, voutB) == N4M_OK);
     bool any_diff = false;
     for (int i = 0; i < 8; ++i) {
         if (std::fabs(outA[i] - outB[i]) > 1e-9) { any_diff = true; break; }
     }
-    C4A_TEST_REQUIRE(any_diff);
-    c4a_pp_emsc_destroy(h);
+    N4M_TEST_REQUIRE(any_diff);
+    n4m_pp_emsc_destroy(h);
 }
 
 void test_baseline_refit_replaces_state() {
-    c4a_pp_baseline_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_pp_baseline_create(&h) == C4A_OK);
+    n4m_pp_baseline_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_pp_baseline_create(&h) == N4M_OK);
     double X1[6] = {0.0,  0.0,  0.0,
                     0.0,  0.0,  0.0};
     double X2[6] = {10.0, 20.0, 30.0,
@@ -486,29 +486,29 @@ void test_baseline_refit_replaces_state() {
     double X3[6] = {1.0,  2.0,  3.0,
                     4.0,  5.0,  6.0};
     double outA[6], outB[6];
-    c4a_matrix_view_t vX1, vX2, vX3, voutA, voutB;
-    c4a_matrix_view_init_rowmajor(&vX1, X1, 2, 3, C4A_DTYPE_F64);
-    c4a_matrix_view_init_rowmajor(&vX2, X2, 2, 3, C4A_DTYPE_F64);
-    c4a_matrix_view_init_rowmajor(&vX3, X3, 2, 3, C4A_DTYPE_F64);
-    c4a_matrix_view_init_rowmajor(&voutA, outA, 2, 3, C4A_DTYPE_F64);
-    c4a_matrix_view_init_rowmajor(&voutB, outB, 2, 3, C4A_DTYPE_F64);
-    C4A_TEST_REQUIRE(c4a_pp_baseline_fit(h, vX1) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_pp_baseline_transform(h, vX3, voutA) == C4A_OK);
+    n4m_matrix_view_t vX1, vX2, vX3, voutA, voutB;
+    n4m_matrix_view_init_rowmajor(&vX1, X1, 2, 3, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&vX2, X2, 2, 3, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&vX3, X3, 2, 3, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&voutA, outA, 2, 3, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&voutB, outB, 2, 3, N4M_DTYPE_F64);
+    N4M_TEST_REQUIRE(n4m_pp_baseline_fit(h, vX1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_pp_baseline_transform(h, vX3, voutA) == N4M_OK);
     /* mean(X1) is all zeros, so outA == X3 */
-    for (int i = 0; i < 6; ++i) C4A_TEST_REQUIRE(std::fabs(outA[i] - X3[i]) < 1e-15);
-    C4A_TEST_REQUIRE(c4a_pp_baseline_fit(h, vX2) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_pp_baseline_transform(h, vX3, voutB) == C4A_OK);
+    for (int i = 0; i < 6; ++i) N4M_TEST_REQUIRE(std::fabs(outA[i] - X3[i]) < 1e-15);
+    N4M_TEST_REQUIRE(n4m_pp_baseline_fit(h, vX2) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_pp_baseline_transform(h, vX3, voutB) == N4M_OK);
     /* mean(X2) = [25, 35, 45], so outB[0] = X3[0] - 25 = -24, etc. */
     const double expected[6] = { 1.0 - 25.0, 2.0 - 35.0, 3.0 - 45.0,
                                   4.0 - 25.0, 5.0 - 35.0, 6.0 - 45.0 };
-    for (int i = 0; i < 6; ++i) C4A_TEST_REQUIRE(std::fabs(outB[i] - expected[i]) < 1e-15);
-    c4a_pp_baseline_destroy(h);
+    for (int i = 0; i < 6; ++i) N4M_TEST_REQUIRE(std::fabs(outB[i] - expected[i]) < 1e-15);
+    n4m_pp_baseline_destroy(h);
 }
 
 }  // namespace
 
-void register_preprocessing_stateful_tests(c4a_testing::Runner& r);
-void register_preprocessing_stateful_tests(c4a_testing::Runner& r) {
+void register_preprocessing_stateful_tests(n4m_testing::Runner& r);
+void register_preprocessing_stateful_tests(n4m_testing::Runner& r) {
     r.run("pp_msc_smoke",            test_msc_smoke);
     r.run("pp_msc_not_fitted",       test_msc_not_fitted);
     r.run("pp_msc_parity",           verify_msc_parity);

@@ -5,35 +5,35 @@
 // on a small inline matrix and verifies the universal contract from
 // roadmap/phase-15-18-augmenters-abi-contract.md:
 //
-//   1. _create(NULL, ...)        -> C4A_ERR_NULL_POINTER
-//   2. _create(out, NULL_rng,..) -> C4A_ERR_NULL_POINTER
-//   3. _apply with non-matching shape -> C4A_ERR_SHAPE_MISMATCH
-//   4. _apply with float32 input -> C4A_ERR_DTYPE_MISMATCH
+//   1. _create(NULL, ...)        -> N4M_ERR_NULL_POINTER
+//   2. _create(out, NULL_rng,..) -> N4M_ERR_NULL_POINTER
+//   3. _apply with non-matching shape -> N4M_ERR_SHAPE_MISMATCH
+//   4. _apply with float32 input -> N4M_ERR_DTYPE_MISMATCH
 //   5. Determinism: re-seeding the RNG before two independent runs yields the
 //      same output bit-for-bit.
 //   6. _destroy(NULL) is a no-op.
 //
 // The two v2-deferred operators (Spline_X_Simplification,
 // Spline_Curve_Simplification) skip the determinism check and instead
-// verify that _apply returns C4A_ERR_NOT_IMPLEMENTED.
+// verify that _apply returns N4M_ERR_NOT_IMPLEMENTED.
 
 #include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <vector>
 
-#include "chemometrics4all/c4a.h"
+#include "n4m/n4m.h"
 
 #include "harness.hpp"
 
 namespace {
 
-c4a_matrix_view_t rowmajor_view(double* data, std::int64_t rows,
+n4m_matrix_view_t rowmajor_view(double* data, std::int64_t rows,
                                  std::int64_t cols) {
-    c4a_matrix_view_t v{};
-    const c4a_status_t st = c4a_matrix_view_init_rowmajor(
-        &v, data, rows, cols, C4A_DTYPE_F64);
-    C4A_TEST_REQUIRE(st == C4A_OK);
+    n4m_matrix_view_t v{};
+    const n4m_status_t st = n4m_matrix_view_init_rowmajor(
+        &v, data, rows, cols, N4M_DTYPE_F64);
+    N4M_TEST_REQUIRE(st == N4M_OK);
     return v;
 }
 
@@ -82,7 +82,7 @@ void require_equal_arrays(const std::vector<double>& a,
     }
 }
 
-constexpr uint64_t kSeed = 0xC4A18AAAULL;
+constexpr uint64_t kSeed = 3298921130ULL;
 
 // -------------------------------------------------------------------------
 // DetectorRollOff
@@ -93,50 +93,50 @@ void test_detector_rolloff() {
     synth_spectra(Xv, wlv, 4, 32);
     std::vector<double> O1(Xv.size()), O2(Xv.size());
 
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(kSeed, &rng) == C4A_OK);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
     // NULL out
-    C4A_TEST_REQUIRE(c4a_aug_detector_rolloff_create(
-        nullptr, rng, 4, 1.0, 0.02, 1) == C4A_ERR_NULL_POINTER);
+    N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_create(
+        nullptr, rng, 4, 1.0, 0.02, 1) == N4M_ERR_NULL_POINTER);
     // NULL rng
-    c4a_aug_detector_rolloff_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_detector_rolloff_create(
-        &h, nullptr, 4, 1.0, 0.02, 1) == C4A_ERR_NULL_POINTER);
-    C4A_TEST_REQUIRE(h == nullptr);
+    n4m_aug_detector_rolloff_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_create(
+        &h, nullptr, 4, 1.0, 0.02, 1) == N4M_ERR_NULL_POINTER);
+    N4M_TEST_REQUIRE(h == nullptr);
     // Invalid detector model
-    C4A_TEST_REQUIRE(c4a_aug_detector_rolloff_create(
-        &h, rng, 42, 1.0, 0.02, 1) == C4A_ERR_INVALID_ARGUMENT);
-    C4A_TEST_REQUIRE(h == nullptr);
+    N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_create(
+        &h, rng, 42, 1.0, 0.02, 1) == N4M_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(h == nullptr);
 
     // Valid create
-    C4A_TEST_REQUIRE(c4a_aug_detector_rolloff_create(
+    N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_create(
         &h, rng, /*model=*/4, /*strength=*/1.0,
-        /*noise=*/0.02, /*baseline=*/1) == C4A_OK);
-    C4A_TEST_REQUIRE(h != nullptr);
+        /*noise=*/0.02, /*baseline=*/1) == N4M_OK);
+    N4M_TEST_REQUIRE(h != nullptr);
 
     // First apply (seeded fresh).
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
-    c4a_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
-    c4a_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_detector_rolloff_apply(h, X, W, O) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
+    n4m_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
+    n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_apply(h, X, W, O) == N4M_OK);
 
     // Second apply with the same seed produces identical output.
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_detector_rolloff_apply(h, X, W, O22) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_apply(h, X, W, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "detector_rolloff determinism");
 
     // Shape mismatch on output buffer.
     std::vector<double> bad(10);
-    c4a_matrix_view_t Obad = rowmajor_view(bad.data(), 1, 10);
-    C4A_TEST_REQUIRE(c4a_aug_detector_rolloff_apply(h, X, W, Obad)
-                      == C4A_ERR_SHAPE_MISMATCH);
+    n4m_matrix_view_t Obad = rowmajor_view(bad.data(), 1, 10);
+    N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_apply(h, X, W, Obad)
+                      == N4M_ERR_SHAPE_MISMATCH);
 
-    c4a_aug_detector_rolloff_destroy(h);
-    c4a_aug_detector_rolloff_destroy(nullptr);
-    c4a_rng_pcg64_destroy(rng);
+    n4m_aug_detector_rolloff_destroy(h);
+    n4m_aug_detector_rolloff_destroy(nullptr);
+    n4m_rng_pcg64_destroy(rng);
 }
 
 // -------------------------------------------------------------------------
@@ -148,25 +148,25 @@ void test_stray_light() {
     synth_spectra(Xv, wlv, 4, 32);
     std::vector<double> O1(Xv.size()), O2(Xv.size());
 
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(kSeed, &rng) == C4A_OK);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
-    c4a_aug_stray_light_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_stray_light_create(
-        &h, rng, 0.001, 2.0, 0.1, 1) == C4A_OK);
+    n4m_aug_stray_light_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_stray_light_create(
+        &h, rng, 0.001, 2.0, 0.1, 1) == N4M_OK);
 
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
-    c4a_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
-    c4a_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_stray_light_apply(h, X, W, O) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_stray_light_apply(h, X, W, O22) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
+    n4m_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
+    n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_stray_light_apply(h, X, W, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_stray_light_apply(h, X, W, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "stray_light determinism");
 
-    c4a_aug_stray_light_destroy(h);
-    c4a_rng_pcg64_destroy(rng);
+    n4m_aug_stray_light_destroy(h);
+    n4m_rng_pcg64_destroy(rng);
 }
 
 // -------------------------------------------------------------------------
@@ -178,25 +178,25 @@ void test_edge_curvature() {
     synth_spectra(Xv, wlv, 4, 32);
     std::vector<double> O1(Xv.size()), O2(Xv.size());
 
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(kSeed, &rng) == C4A_OK);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
-    c4a_aug_edge_curve_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_edge_curve_create(
-        &h, rng, 0.02, /*type=*/1, 0.0, 0.7) == C4A_OK);
+    n4m_aug_edge_curve_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_edge_curve_create(
+        &h, rng, 0.02, /*type=*/1, 0.0, 0.7) == N4M_OK);
 
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
-    c4a_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
-    c4a_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_edge_curve_apply(h, X, W, O) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_edge_curve_apply(h, X, W, O22) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
+    n4m_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
+    n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_edge_curve_apply(h, X, W, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_edge_curve_apply(h, X, W, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "edge_curve determinism");
 
-    c4a_aug_edge_curve_destroy(h);
-    c4a_rng_pcg64_destroy(rng);
+    n4m_aug_edge_curve_destroy(h);
+    n4m_rng_pcg64_destroy(rng);
 }
 
 // -------------------------------------------------------------------------
@@ -208,26 +208,26 @@ void test_truncated_peak() {
     synth_spectra(Xv, wlv, 4, 32);
     std::vector<double> O1(Xv.size()), O2(Xv.size());
 
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(kSeed, &rng) == C4A_OK);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
-    c4a_aug_truncated_peak_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_truncated_peak_create(
+    n4m_aug_truncated_peak_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_truncated_peak_create(
         &h, rng, /*prob=*/0.5, /*amp_min=*/0.01, /*amp_max=*/0.1,
-        /*w_min=*/50.0, /*w_max=*/200.0, /*left=*/1, /*right=*/1) == C4A_OK);
+        /*w_min=*/50.0, /*w_max=*/200.0, /*left=*/1, /*right=*/1) == N4M_OK);
 
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
-    c4a_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
-    c4a_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_truncated_peak_apply(h, X, W, O) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_truncated_peak_apply(h, X, W, O22) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
+    n4m_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
+    n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_truncated_peak_apply(h, X, W, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_truncated_peak_apply(h, X, W, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "truncated_peak determinism");
 
-    c4a_aug_truncated_peak_destroy(h);
-    c4a_rng_pcg64_destroy(rng);
+    n4m_aug_truncated_peak_destroy(h);
+    n4m_rng_pcg64_destroy(rng);
 }
 
 // -------------------------------------------------------------------------
@@ -239,46 +239,46 @@ void test_edge_artifacts_combined() {
     synth_spectra(Xv, wlv, 4, 32);
     std::vector<double> O1(Xv.size()), O2(Xv.size());
 
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(kSeed, &rng) == C4A_OK);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
     // All flags enabled.
-    const int32_t all = C4A_AUG_EDGE_ARTIFACTS_DETECTOR_ROLL_OFF |
-                         C4A_AUG_EDGE_ARTIFACTS_STRAY_LIGHT       |
-                         C4A_AUG_EDGE_ARTIFACTS_EDGE_CURVATURE    |
-                         C4A_AUG_EDGE_ARTIFACTS_TRUNCATED_PEAKS;
-    c4a_aug_edge_artifacts_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_edge_artifacts_create(
-        &h, rng, all, 1.0, /*detector=*/4) == C4A_OK);
+    const int32_t all = N4M_AUG_EDGE_ARTIFACTS_DETECTOR_ROLL_OFF |
+                         N4M_AUG_EDGE_ARTIFACTS_STRAY_LIGHT       |
+                         N4M_AUG_EDGE_ARTIFACTS_EDGE_CURVATURE    |
+                         N4M_AUG_EDGE_ARTIFACTS_TRUNCATED_PEAKS;
+    n4m_aug_edge_artifacts_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_create(
+        &h, rng, all, 1.0, /*detector=*/4) == N4M_OK);
 
-    c4a_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
-    c4a_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
-    c4a_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_edge_artifacts_apply(h, X, W, O) == C4A_OK);
-    c4a_aug_edge_artifacts_destroy(h);
+    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
+    n4m_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
+    n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_apply(h, X, W, O) == N4M_OK);
+    n4m_aug_edge_artifacts_destroy(h);
     h = nullptr;
 
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_aug_edge_artifacts_create(
-        &h, rng, all, 1.0, /*detector=*/4) == C4A_OK);
-    c4a_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_edge_artifacts_apply(h, X, W, O22) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_create(
+        &h, rng, all, 1.0, /*detector=*/4) == N4M_OK);
+    n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_apply(h, X, W, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "edge_artifacts determinism");
 
-    c4a_aug_edge_artifacts_destroy(h);
+    n4m_aug_edge_artifacts_destroy(h);
 
     // Subset of flags (only stray light): output must differ from full
     // set, both must run cleanly.
     h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_edge_artifacts_create(
-        &h, rng, C4A_AUG_EDGE_ARTIFACTS_STRAY_LIGHT, 1.0, 4) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_create(
+        &h, rng, N4M_AUG_EDGE_ARTIFACTS_STRAY_LIGHT, 1.0, 4) == N4M_OK);
     std::vector<double> O3(Xv.size());
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t O33 = rowmajor_view(O3.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_edge_artifacts_apply(h, X, W, O33) == C4A_OK);
-    c4a_aug_edge_artifacts_destroy(h);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t O33 = rowmajor_view(O3.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_apply(h, X, W, O33) == N4M_OK);
+    n4m_aug_edge_artifacts_destroy(h);
 
-    c4a_rng_pcg64_destroy(rng);
+    n4m_rng_pcg64_destroy(rng);
 }
 
 // -------------------------------------------------------------------------
@@ -290,17 +290,17 @@ void test_spline_smoothing() {
     synth_spectra(Xv, wlv, 4, 32);
     std::vector<double> O1(Xv.size()), O2(Xv.size());
 
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(kSeed, &rng) == C4A_OK);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
-    c4a_aug_spline_smooth_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_spline_smooth_create(&h, rng) == C4A_OK);
+    n4m_aug_spline_smooth_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_spline_smooth_create(&h, rng) == N4M_OK);
 
-    c4a_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
-    c4a_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_spline_smooth_apply(h, X, O) == C4A_OK);
-    c4a_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_spline_smooth_apply(h, X, O22) == C4A_OK);
+    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
+    n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_spline_smooth_apply(h, X, O) == N4M_OK);
+    n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_spline_smooth_apply(h, X, O22) == N4M_OK);
     // Stateless: same input -> same output regardless of RNG state.
     require_equal_arrays(O1, O2, 0.0, "spline_smooth idempotence");
 
@@ -321,8 +321,8 @@ void test_spline_smoothing() {
         throw std::runtime_error("spline_smooth: implausible output scale");
     }
 
-    c4a_aug_spline_smooth_destroy(h);
-    c4a_rng_pcg64_destroy(rng);
+    n4m_aug_spline_smooth_destroy(h);
+    n4m_rng_pcg64_destroy(rng);
 }
 
 // -------------------------------------------------------------------------
@@ -334,25 +334,25 @@ void test_spline_x_perturbations() {
     synth_spectra(Xv, wlv, 4, 32);
     std::vector<double> O1(Xv.size()), O2(Xv.size());
 
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(kSeed, &rng) == C4A_OK);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
-    c4a_aug_spline_x_perturb_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_spline_x_perturb_create(
+    n4m_aug_spline_x_perturb_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_spline_x_perturb_create(
         &h, rng, /*degree=*/3, /*density=*/0.05,
-        /*range_min=*/-0.1, /*range_max=*/0.1) == C4A_OK);
+        /*range_min=*/-0.1, /*range_max=*/0.1) == N4M_OK);
 
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
-    c4a_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_spline_x_perturb_apply(h, X, O) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_spline_x_perturb_apply(h, X, O22) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
+    n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_spline_x_perturb_apply(h, X, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_spline_x_perturb_apply(h, X, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "spline_x_perturb determinism");
 
-    c4a_aug_spline_x_perturb_destroy(h);
-    c4a_rng_pcg64_destroy(rng);
+    n4m_aug_spline_x_perturb_destroy(h);
+    n4m_rng_pcg64_destroy(rng);
 }
 
 // -------------------------------------------------------------------------
@@ -364,24 +364,24 @@ void test_spline_y_perturbations() {
     synth_spectra(Xv, wlv, 4, 32);
     std::vector<double> O1(Xv.size()), O2(Xv.size());
 
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(kSeed, &rng) == C4A_OK);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
-    c4a_aug_spline_y_perturb_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_spline_y_perturb_create(
-        &h, rng, /*spline_points=*/-1, /*intensity=*/0.005) == C4A_OK);
+    n4m_aug_spline_y_perturb_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_spline_y_perturb_create(
+        &h, rng, /*spline_points=*/-1, /*intensity=*/0.005) == N4M_OK);
 
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
-    c4a_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_spline_y_perturb_apply(h, X, O) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_spline_y_perturb_apply(h, X, O22) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
+    n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_spline_y_perturb_apply(h, X, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_spline_y_perturb_apply(h, X, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "spline_y_perturb determinism");
 
-    c4a_aug_spline_y_perturb_destroy(h);
-    c4a_rng_pcg64_destroy(rng);
+    n4m_aug_spline_y_perturb_destroy(h);
+    n4m_rng_pcg64_destroy(rng);
 }
 
 // -------------------------------------------------------------------------
@@ -393,20 +393,20 @@ void test_spline_x_simplification_stub() {
     synth_spectra(Xv, wlv, 2, 16);
     std::vector<double> Ov(Xv.size());
 
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(kSeed, &rng) == C4A_OK);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
-    c4a_aug_spline_x_simplify_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_spline_x_simplify_create(
-        &h, rng, /*points=*/4, /*uniform=*/0) == C4A_OK);
+    n4m_aug_spline_x_simplify_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_spline_x_simplify_create(
+        &h, rng, /*points=*/4, /*uniform=*/0) == N4M_OK);
 
-    c4a_matrix_view_t X = rowmajor_view(Xv.data(), 2, 16);
-    c4a_matrix_view_t O = rowmajor_view(Ov.data(), 2, 16);
-    C4A_TEST_REQUIRE(c4a_aug_spline_x_simplify_apply(h, X, O)
-                      == C4A_ERR_NOT_IMPLEMENTED);
+    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 2, 16);
+    n4m_matrix_view_t O = rowmajor_view(Ov.data(), 2, 16);
+    N4M_TEST_REQUIRE(n4m_aug_spline_x_simplify_apply(h, X, O)
+                      == N4M_ERR_NOT_IMPLEMENTED);
 
-    c4a_aug_spline_x_simplify_destroy(h);
-    c4a_rng_pcg64_destroy(rng);
+    n4m_aug_spline_x_simplify_destroy(h);
+    n4m_rng_pcg64_destroy(rng);
 }
 
 // -------------------------------------------------------------------------
@@ -418,20 +418,20 @@ void test_spline_curve_simplification_stub() {
     synth_spectra(Xv, wlv, 2, 16);
     std::vector<double> Ov(Xv.size());
 
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(kSeed, &rng) == C4A_OK);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
-    c4a_aug_spline_curve_simplify_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_spline_curve_simplify_create(
-        &h, rng, /*points=*/4, /*uniform=*/1) == C4A_OK);
+    n4m_aug_spline_curve_simplify_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_spline_curve_simplify_create(
+        &h, rng, /*points=*/4, /*uniform=*/1) == N4M_OK);
 
-    c4a_matrix_view_t X = rowmajor_view(Xv.data(), 2, 16);
-    c4a_matrix_view_t O = rowmajor_view(Ov.data(), 2, 16);
-    C4A_TEST_REQUIRE(c4a_aug_spline_curve_simplify_apply(h, X, O)
-                      == C4A_ERR_NOT_IMPLEMENTED);
+    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 2, 16);
+    n4m_matrix_view_t O = rowmajor_view(Ov.data(), 2, 16);
+    N4M_TEST_REQUIRE(n4m_aug_spline_curve_simplify_apply(h, X, O)
+                      == N4M_ERR_NOT_IMPLEMENTED);
 
-    c4a_aug_spline_curve_simplify_destroy(h);
-    c4a_rng_pcg64_destroy(rng);
+    n4m_aug_spline_curve_simplify_destroy(h);
+    n4m_rng_pcg64_destroy(rng);
 }
 
 // -------------------------------------------------------------------------
@@ -443,24 +443,24 @@ void test_rotate_translate() {
     synth_spectra(Xv, wlv, 4, 32);
     std::vector<double> O1(Xv.size()), O2(Xv.size());
 
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(kSeed, &rng) == C4A_OK);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
-    c4a_aug_rotate_translate_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_rotate_translate_create(
-        &h, rng, /*p_range=*/2.0, /*y_factor=*/3.0) == C4A_OK);
+    n4m_aug_rotate_translate_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_rotate_translate_create(
+        &h, rng, /*p_range=*/2.0, /*y_factor=*/3.0) == N4M_OK);
 
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
-    c4a_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_rotate_translate_apply(h, X, O) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_rotate_translate_apply(h, X, O22) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
+    n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_rotate_translate_apply(h, X, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_rotate_translate_apply(h, X, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "rotate_translate determinism");
 
-    c4a_aug_rotate_translate_destroy(h);
-    c4a_rng_pcg64_destroy(rng);
+    n4m_aug_rotate_translate_destroy(h);
+    n4m_rng_pcg64_destroy(rng);
 }
 
 // -------------------------------------------------------------------------
@@ -472,21 +472,21 @@ void test_random_x_operation() {
     synth_spectra(Xv, wlv, 4, 32);
     std::vector<double> O1(Xv.size()), O2(Xv.size());
 
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(kSeed, &rng) == C4A_OK);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
     // Multiplicative
-    c4a_aug_random_x_op_handle_t* h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_random_x_op_create(
-        &h, rng, /*op=*/0, 0.97, 1.03) == C4A_OK);
+    n4m_aug_random_x_op_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_random_x_op_create(
+        &h, rng, /*op=*/0, 0.97, 1.03) == N4M_OK);
 
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
-    c4a_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_random_x_op_apply(h, X, O) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    c4a_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    C4A_TEST_REQUIRE(c4a_aug_random_x_op_apply(h, X, O22) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
+    n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_random_x_op_apply(h, X, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_random_x_op_apply(h, X, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "random_x_op multiplicative determinism");
 
     // Output is roughly within [0.97*input, 1.03*input].
@@ -498,36 +498,36 @@ void test_random_x_operation() {
                 "random_x_op out of mul range at i=" + std::to_string(i));
         }
     }
-    c4a_aug_random_x_op_destroy(h);
+    n4m_aug_random_x_op_destroy(h);
 
     // Additive
     h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_random_x_op_create(
-        &h, rng, /*op=*/1, -0.01, 0.01) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_aug_random_x_op_apply(h, X, O) == C4A_OK);
-    c4a_aug_random_x_op_destroy(h);
+    N4M_TEST_REQUIRE(n4m_aug_random_x_op_create(
+        &h, rng, /*op=*/1, -0.01, 0.01) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_aug_random_x_op_apply(h, X, O) == N4M_OK);
+    n4m_aug_random_x_op_destroy(h);
 
     // Subtractive
     h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_random_x_op_create(
-        &h, rng, /*op=*/2, 0.0, 0.01) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, kSeed) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_aug_random_x_op_apply(h, X, O) == C4A_OK);
-    c4a_aug_random_x_op_destroy(h);
+    N4M_TEST_REQUIRE(n4m_aug_random_x_op_create(
+        &h, rng, /*op=*/2, 0.0, 0.01) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_aug_random_x_op_apply(h, X, O) == N4M_OK);
+    n4m_aug_random_x_op_destroy(h);
 
     // Invalid op_kind.
     h = nullptr;
-    C4A_TEST_REQUIRE(c4a_aug_random_x_op_create(
-        &h, rng, /*op=*/99, 0.97, 1.03) == C4A_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(n4m_aug_random_x_op_create(
+        &h, rng, /*op=*/99, 0.97, 1.03) == N4M_ERR_INVALID_ARGUMENT);
 
-    c4a_rng_pcg64_destroy(rng);
+    n4m_rng_pcg64_destroy(rng);
 }
 
 }  // namespace
 
-void register_augmenters_edge_splines_random_tests(c4a_testing::Runner& r);
-void register_augmenters_edge_splines_random_tests(c4a_testing::Runner& r) {
+void register_augmenters_edge_splines_random_tests(n4m_testing::Runner& r);
+void register_augmenters_edge_splines_random_tests(n4m_testing::Runner& r) {
     r.run("aug_detector_rolloff",         test_detector_rolloff);
     r.run("aug_stray_light",              test_stray_light);
     r.run("aug_edge_curvature",           test_edge_curvature);

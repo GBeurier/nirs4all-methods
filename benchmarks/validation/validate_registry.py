@@ -1,4 +1,4 @@
-"""Validate the committed chemometrics4all validation snapshot."""
+"""Validate the committed nirs4all-methods validation snapshot."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ REQUIRED_REFERENCE_FIELDS: tuple[str, ...] = (
     "library",
     "language",
     "compare",
-    "gate_c4a",
+    "gate_n4m",
     "contract_note",
     "max_cols",
     "comparator",

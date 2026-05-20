@@ -307,7 +307,7 @@ def write_fixture_stateless_float(name: str, op_id: str,
                                    cases: list[tuple[str, dict, Callable]],
                                    out_dir: Path, nirs4all_version: str) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_pp_{op_id}_v1",
+        "format": f"n4m_pp_{op_id}_v1",
         "numpy_version": np.__version__,
         "nirs4all_version": nirs4all_version,
         "encoding": "ieee754_binary64_be_hex",
@@ -338,7 +338,7 @@ def write_fixture_stateless_int(name: str, op_id: str,
                                  cases: list[tuple[str, dict, Callable]],
                                  out_dir: Path, nirs4all_version: str) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_pp_{op_id}_v1",
+        "format": f"n4m_pp_{op_id}_v1",
         "numpy_version": np.__version__,
         "nirs4all_version": nirs4all_version,
         "encoding": "ieee754_binary64_be_hex",
@@ -371,7 +371,7 @@ def write_fixture_stateful_float(name: str, op_id: str,
                                   out_dir: Path,
                                   nirs4all_version: str) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_pp_{op_id}_v1",
+        "format": f"n4m_pp_{op_id}_v1",
         "numpy_version": np.__version__,
         "nirs4all_version": nirs4all_version,
         "encoding": "ieee754_binary64_be_hex",
@@ -406,7 +406,7 @@ def write_fixture_stateful_int(name: str, op_id: str,
                                 out_dir: Path,
                                 nirs4all_version: str) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_pp_{op_id}_v1",
+        "format": f"n4m_pp_{op_id}_v1",
         "numpy_version": np.__version__,
         "nirs4all_version": nirs4all_version,
         "encoding": "ieee754_binary64_be_hex",

@@ -4,14 +4,14 @@ requires = ["setuptools>=77", "wheel", "packaging>=24.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "chemometrics4all"
+name = "nirs4all-methods"
 version = "0.1.0"
-description = "Python binding for the chemometrics4all C ABI (libc4a)."
+description = "Python binding for the nirs4all-methods C ABI (libn4m)."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "CECILL-2.1"
 authors = [
-    { name = "chemometrics4all contributors" },
+    { name = "nirs4all-methods contributors" },
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -34,9 +34,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/GBeurier/chemometrics4all"
-Repository = "https://github.com/GBeurier/chemometrics4all"
-Issues = "https://github.com/GBeurier/chemometrics4all/issues"
+Homepage = "https://github.com/GBeurier/nirs4all-methods"
+Repository = "https://github.com/GBeurier/nirs4all-methods"
+Issues = "https://github.com/GBeurier/nirs4all-methods/issues"
 
 [project.optional-dependencies]
 test = [
@@ -50,9 +50,9 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-chemometrics4all = [
-    "lib/libc4a*",
-    "lib/c4a*",
+n4m = [
+    "lib/libn4m*",
+    "lib/n4m*",
     "lib/*.so",
     "lib/*.so.*",
     "lib/*.dylib",

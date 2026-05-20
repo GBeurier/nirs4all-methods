@@ -8,15 +8,15 @@ Given a `rows × cols` row-major F64 matrix `X` (and an optional
 
 | Enum value | Meaning |
 |------------|---------|
-| `C4A_SIGNAL_UNKNOWN`               | Could not determine (low confidence or preprocessed). |
-| `C4A_SIGNAL_ABSORBANCE`            | Typical absorbance, values in ~[0, 3]. |
-| `C4A_SIGNAL_REFLECTANCE`           | Fractional reflectance in [0, 1]. |
-| `C4A_SIGNAL_REFLECTANCE_PERCENT`   | Percent reflectance in [0, 100]. |
-| `C4A_SIGNAL_TRANSMITTANCE`         | Fractional transmittance in [0, 1]. |
-| `C4A_SIGNAL_TRANSMITTANCE_PERCENT` | Percent transmittance in [0, 100]. |
-| `C4A_SIGNAL_KUBELKA_MUNK`          | Reserved; the heuristic never returns this on raw data. |
-| `C4A_SIGNAL_LOG_1_R`               | Reserved; never returned by the value-range heuristic. |
-| `C4A_SIGNAL_LOG_1_T`               | Reserved; never returned by the value-range heuristic. |
+| `N4M_SIGNAL_UNKNOWN`               | Could not determine (low confidence or preprocessed). |
+| `N4M_SIGNAL_ABSORBANCE`            | Typical absorbance, values in ~[0, 3]. |
+| `N4M_SIGNAL_REFLECTANCE`           | Fractional reflectance in [0, 1]. |
+| `N4M_SIGNAL_REFLECTANCE_PERCENT`   | Percent reflectance in [0, 100]. |
+| `N4M_SIGNAL_TRANSMITTANCE`         | Fractional transmittance in [0, 1]. |
+| `N4M_SIGNAL_TRANSMITTANCE_PERCENT` | Percent transmittance in [0, 100]. |
+| `N4M_SIGNAL_KUBELKA_MUNK`          | Reserved; the heuristic never returns this on raw data. |
+| `N4M_SIGNAL_LOG_1_R`               | Reserved; never returned by the value-range heuristic. |
+| `N4M_SIGNAL_LOG_1_T`               | Reserved; never returned by the value-range heuristic. |
 
 ## Algorithm
 
@@ -39,23 +39,23 @@ Given a `rows × cols` row-major F64 matrix `X` (and an optional
 ## ABI
 
 ```c
-typedef enum c4a_signal_type_t {
-    C4A_SIGNAL_UNKNOWN               = 0,
-    C4A_SIGNAL_ABSORBANCE            = 1,
-    C4A_SIGNAL_REFLECTANCE           = 2,
-    C4A_SIGNAL_REFLECTANCE_PERCENT   = 3,
-    C4A_SIGNAL_TRANSMITTANCE         = 4,
-    C4A_SIGNAL_TRANSMITTANCE_PERCENT = 5,
-    C4A_SIGNAL_KUBELKA_MUNK          = 6,
-    C4A_SIGNAL_LOG_1_R               = 7,
-    C4A_SIGNAL_LOG_1_T               = 8
-} c4a_signal_type_t;
+typedef enum n4m_signal_type_t {
+    N4M_SIGNAL_UNKNOWN               = 0,
+    N4M_SIGNAL_ABSORBANCE            = 1,
+    N4M_SIGNAL_REFLECTANCE           = 2,
+    N4M_SIGNAL_REFLECTANCE_PERCENT   = 3,
+    N4M_SIGNAL_TRANSMITTANCE         = 4,
+    N4M_SIGNAL_TRANSMITTANCE_PERCENT = 5,
+    N4M_SIGNAL_KUBELKA_MUNK          = 6,
+    N4M_SIGNAL_LOG_1_R               = 7,
+    N4M_SIGNAL_LOG_1_T               = 8
+} n4m_signal_type_t;
 
-c4a_status_t c4a_signal_detect(c4a_matrix_view_t X,
+n4m_status_t n4m_signal_detect(n4m_matrix_view_t X,
                                 const double* wavelengths_optional /* may be NULL */,
                                 int64_t wl_length,
                                 double confidence_threshold,
-                                c4a_signal_type_t* type_out,
+                                n4m_signal_type_t* type_out,
                                 double* confidence_out,
                                 char reason_buf[256]);
 ```

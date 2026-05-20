@@ -1,11 +1,11 @@
-# What is chemometrics4all?
+# What is nirs4all-methods?
 
-chemometrics4all is a portable chemometrics / NIRS operator library written in
+nirs4all-methods is a portable chemometrics / NIRS operator library written in
 C++17 and exposed through a stable C ABI target plus thin language bindings.
 
 The repository does not currently publish a real cross-binding benchmark matrix.
 The landing page is an explicit scaffold so inherited pls4all benchmark numbers
-cannot be mistaken for chemometrics4all results.
+cannot be mistaken for nirs4all-methods results.
 
 ## What's in Scope
 

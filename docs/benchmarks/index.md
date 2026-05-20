@@ -1,11 +1,11 @@
 # Benchmarks
 
-chemometrics4all now has an initial cross-binding timing matrix.
+nirs4all-methods now has an initial cross-binding timing matrix.
 
 The previous PLS dashboard text came from the pls4all template and is not a
 valid claim for this repository. The committed benchmark surface starts with a
-reference registry, split Python timing runners (`C4A.python` ABI-close
-functions and `C4A.sklearn` estimators), and a dashboard payload generated from
+reference registry, split Python timing runners (`N4M.python` ABI-close
+functions and `N4M.sklearn` estimators), and a dashboard payload generated from
 `benchmarks/cross_binding/results/full_matrix.csv`.
 
 ## Current assets

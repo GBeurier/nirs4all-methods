@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: CECILL-2.1
-"""Gate 2 reference-parity runner for chemometrics4all (Stage 2 of the gate).
+"""Gate 2 reference-parity runner for nirs4all-methods (Stage 2 of the gate).
 
 This is the *external-reference* gate from the 2-gate parity model:
 
   * **Gate 1 — binding parity** (:mod:`parity.binding_parity`): every
-    language binding produces bit-identical outputs to libc4a. No-op
+    language binding produces bit-identical outputs to libn4m. No-op
     until the first binding ships (Phase 22).
-  * **Gate 2 — reference parity** (this script): libc4a's algorithms
+  * **Gate 2 — reference parity** (this script): libn4m's algorithms
     agree with the canonical external reference (numpy / scipy / sklearn /
     pywt / pybaselines / nirs4all) within a per-op tolerance recorded in
     ``parity/tolerances.md``.
@@ -15,10 +15,10 @@ This is the *external-reference* gate from the 2-gate parity model:
 Mirrors the ``pls4all/parity/python_generator/src/pls4all_parity/cli.py`` +
 ``suites.py`` pattern: one script defines a registry of "suites", one per
 operator family, that each (1) build a deterministic upstream output by
-calling the canonical implementation and (2) compare to the committed c4a
+calling the canonical implementation and (2) compare to the committed n4m
 fixture under ``parity/fixtures/`` using :func:`reference_parity`.
 
-The script is the *authoritative* cross-check that the c4a fixtures match
+The script is the *authoritative* cross-check that the n4m fixtures match
 the actual upstream behaviour — every per-phase generator (Phase 2 .. 21)
 still produces those fixture files, but this script validates them against
 the canonical upstream implementations rather than the vendored frozen
@@ -275,7 +275,7 @@ TOLERANCE_TABLE: dict[str, tuple[float, float]] = {
     # Phase 5a/5b baselines (pybaselines).
     #
     # The Gate-2 tolerances below are looser than the C++-test tolerances
-    # in parity/tolerances.md because we are comparing libc4a (which
+    # in parity/tolerances.md because we are comparing libn4m (which
     # implements the algorithms directly in C with its own pivoted LDL'
     # solver) against pybaselines (which uses scipy.sparse + scipy.linalg
     # at multiple call sites). For the iterative AsLS family the small
@@ -391,7 +391,7 @@ TOLERANCE_TABLE: dict[str, tuple[float, float]] = {
     # Phase 20 transfer metrics. The `trustworthiness` metric is
     # known-divergent vs nirs4all: nirs4all delegates to sklearn's
     # `manifold.trustworthiness` which uses a k-NN-with-pairwise-distances
-    # implementation, whereas libc4a uses a direct ranking formulation.
+    # implementation, whereas libn4m uses a direct ranking formulation.
     # The other metrics (Mahalanobis / Wasserstein / Grassmann / etc.) match
     # to 1e-10; trustworthiness alone drifts by up to ~30% relative
     # depending on the case. Tolerance is sized to admit that — the
@@ -559,7 +559,7 @@ def run_suite(name: str, fixture_name: str, tol: tuple[Any, Any],
     """Generic suite runner.
 
     Steps:
-      1. Load the c4a fixture.
+      1. Load the n4m fixture.
       2. Compute a fingerprint = sha256(input_hex + every case.params).
       3. If cache hit: reuse cached upstream payload. Else compute via
          ``build_upstream(fixture)`` and write the cache.
@@ -1113,7 +1113,7 @@ def _pad_to_period(row: np.ndarray, level: int, wavelet) -> np.ndarray:
 
 
 _WAVELET_DIVERGENCE_NOTE = (
-    "c4a fixture uses the frozen `c4a_parity_wavelets_ref` (pywt wavedec + "
+    "n4m fixture uses the frozen `n4m_parity_wavelets_ref` (pywt wavedec + "
     "concatenated coeffs); nirs4all.Wavelet does a single-level DWT with a "
     "different output layout. The fixtures and upstream are intentionally "
     "incompatible — Phase 6 chose the wavedec layout for the C engine. Cross-"
@@ -1146,7 +1146,7 @@ for op in ("wavelet", "haar", "wavelet_features", "wavelet_pca",
 
 @register_suite("wavelet_denoise")
 def wavelet_denoise_suite() -> SuiteResult:
-    """nirs4all's WaveletDenoise reproduces the c4a fixture exactly (output
+    """nirs4all's WaveletDenoise reproduces the n4m fixture exactly (output
     shape = input shape, same pywt wavedec + thresholding + waverec recipe)."""
     abs_tol, rel_tol = TOLERANCE_TABLE["wavelet_denoise"]
 
@@ -1403,7 +1403,7 @@ def _flexible_dimreduce_suite(name: str, kind: str
 
     def build_upstream(fix: dict[str, Any]):
         # Use nirs4all's FlexiblePCA / FlexibleSVD directly — they are the
-        # ground truth the c4a engine reproduces.
+        # ground truth the n4m engine reproduces.
         fs = load_nirs4all_module("operators/transforms/feature_selection")
         fit_X = fixture_fit_matrix(fix)
         test_X = fixture_transform_matrix(fix)
@@ -1726,13 +1726,13 @@ register_suite("split_spxy_fold")(_make_splitter_suite(
 register_suite("split_spxy_g_fold")(_make_splitter_suite(
     "split_spxy_g_fold", "split_spxy_g_fold", _impl_spxy_g_fold))
 
-# Seeded (PCG64-divergent) splitters: c4a engine uses its own PCG64 stream
+# Seeded (PCG64-divergent) splitters: n4m engine uses its own PCG64 stream
 # with a bespoke draw order (Fisher-Yates / circular rotation / etc) that
 # does NOT coincide with nirs4all's sklearn RNG. The fixtures were
 # generated from a pure-NumPy mirror of the C engine, not from nirs4all.
 # Direct cross-impl is therefore meaningless — SKIP with a reason.
 _SPLIT_RNG_NOTE = (
-    "splitter uses seeded RNG draws (PCG64) with a bespoke order; c4a fixture "
+    "splitter uses seeded RNG draws (PCG64) with a bespoke order; n4m fixture "
     "was generated by a NumPy mirror of the C engine, NOT by nirs4all. The "
     "C engine still validates against the fixture via Stage 3.")
 
@@ -1968,7 +1968,7 @@ def filter_composite_suite() -> SuiteResult:
 
 # ===========================================================================
 # Phase 15-18 augmenters — compare against nirs4all augmentation classes when
-# possible; otherwise mark as SKIP (RNG mismatch between PCG64 and the c4a
+# possible; otherwise mark as SKIP (RNG mismatch between PCG64 and the n4m
 # engine's draw-order for stochastic ops).
 # ===========================================================================
 
@@ -1986,13 +1986,13 @@ def _augmenter_skip_suite(name: str, reason: str
     return runner
 
 
-# Phase 15 — stochastic, RNG-divergent from c4a's PCG64-via-engine impl.
+# Phase 15 — stochastic, RNG-divergent from n4m's PCG64-via-engine impl.
 for op in ("aug_gaussian_noise", "aug_multiplicative_noise", "aug_spike_noise",
            "aug_hetero_noise", "aug_linear_drift", "aug_poly_drift",
            "aug_path_length"):
     register_suite(op)(_augmenter_skip_suite(
         op,
-        "stochastic operator — c4a engine uses PCG64 with bespoke draw order; "
+        "stochastic operator — n4m engine uses PCG64 with bespoke draw order; "
         "upstream cross-check requires v2 augmenter RNG-port (see DEFERRALS.md). "
         "Fixture validates determinism + finite output only."))
 
@@ -2004,7 +2004,7 @@ for op in ("aug_wavelength_shift", "aug_wavelength_stretch", "aug_local_warp",
     register_suite(op)(_augmenter_skip_suite(
         op,
         "stochastic spectral augmenter; deterministic only via fixed PCG64 stream "
-        "(c4a-internal). Per-cell parity deferred to augmenter ABI v2."))
+        "(n4m-internal). Per-cell parity deferred to augmenter ABI v2."))
 
 
 # Phase 17 — deterministic cases CAN be cross-checked.
@@ -2477,7 +2477,7 @@ def find_skip_policy_violations(
 def main(argv: list[str] | None = None) -> int:
     global CACHE_DIR, FIXTURES_DIR, NIRS4ALL_ROOT
     parser = argparse.ArgumentParser(
-        description="Cross-implementation parity check for chemometrics4all.")
+        description="Cross-implementation parity check for n4m.")
     parser.add_argument("--cache-dir", type=Path, default=CACHE_DIR,
                         help="Cache directory (default: parity/cache).")
     parser.add_argument("--fixtures-dir", type=Path, default=FIXTURES_DIR,
@@ -2532,7 +2532,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
 
-    print("=== chemometrics4all cross-impl parity check ===\n")
+    print("=== nirs4all-methods cross-impl parity check ===\n")
     versions = collect_upstream_versions()
     print("Upstream environment:")
     for k, v in versions.items():

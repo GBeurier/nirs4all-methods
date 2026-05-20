@@ -43,6 +43,6 @@ Reviewer cross-referenced scipy 1.11.4 source for `savgol_filter`, `_fit_edge_po
 ## Post-implementation state
 - Build: 44/44 targets clean, 0 warnings.
 - Tests: 61/61 (7 phase-0 + 13 phase-1 + 14 phase-2 + 17 phase-3 + 10 phase-4).
-- CLI: `chemometrics4all 0.1.0+abi.1.4.0 (ABI 1.4.0)`.
-- ABI: 94 c4a_* symbols exported; 0 non-c4a leaks.
-- c4a.h: 831 lines (after Phase 4's §10 banner).
+- CLI: `nirs4all-methods 0.1.0+abi.1.4.0 (ABI 1.4.0)`.
+- ABI: 94 n4m_* symbols exported; 0 non-n4m leaks.
+- n4m.h: 831 lines (after Phase 4's §10 banner).

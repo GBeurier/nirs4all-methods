@@ -28,7 +28,7 @@ The lockfile distinguishes:
 - project comparators such as pinned nirs4all modules;
 - literature sources for methods that have no credible external executable comparator.
 
-Internal fixtures under `parity/python_generator/src/c4a_parity_*_ref/` are
+Internal fixtures under `parity/python_generator/src/n4m_parity_*_ref/` are
 development oracles for deterministic C/binding parity. They are not external
 benchmark references and must not appear as `ref.*` benchmark backends.
 
@@ -38,5 +38,5 @@ to prevent untraceable dashboard claims.
 ## Dashboard status
 
 The landing dashboard currently renders a placeholder row only. It must stay
-that way until a real chemometrics4all benchmark runner emits a result matrix
+that way until a real nirs4all-methods benchmark runner emits a result matrix
 from this registry.

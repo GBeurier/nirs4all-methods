@@ -18,12 +18,12 @@ Eilers & Boelens 2005 asymmetric least squares baseline estimation. For each row
 
 ## ABI
 ```c
-c4a_status_t c4a_pp_asls_create(c4a_pp_asls_handle_t** out,
+n4m_status_t n4m_pp_asls_create(n4m_pp_asls_handle_t** out,
                                  double lam, double p,
                                  int32_t max_iter, double tol);
-void         c4a_pp_asls_destroy(c4a_pp_asls_handle_t* h);
-c4a_status_t c4a_pp_asls_transform(const c4a_pp_asls_handle_t* h,
-                                    c4a_matrix_view_t X, c4a_matrix_view_t out);
+void         n4m_pp_asls_destroy(n4m_pp_asls_handle_t* h);
+n4m_status_t n4m_pp_asls_transform(const n4m_pp_asls_handle_t* h,
+                                    n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 ## Numerical contract
@@ -35,4 +35,4 @@ c4a_status_t c4a_pp_asls_transform(const c4a_pp_asls_handle_t* h,
 
 ## Reference
 - Eilers, P. H. C. & Boelens, H. F. M. (2005). "Baseline Correction with Asymmetric Least Squares Smoothing." Leiden University Medical Centre Report.
-- Internal parity fixture: `parity/python_generator/src/c4a_parity_pybaselines_ref/asls.py` (historically validated against `pybaselines==1.1.4`); current upstream `pybaselines` drift is tracked by the reference parity gate.
+- Internal parity fixture: `parity/python_generator/src/n4m_parity_pybaselines_ref/asls.py` (historically validated against `pybaselines==1.1.4`); current upstream `pybaselines` drift is tracked by the reference parity gate.

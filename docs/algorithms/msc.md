@@ -59,11 +59,11 @@ same handle after a transform).
 ## Numerical contract
 
 * `_fit` requires `rows >= 1` and `cols >= 2`.
-* `_fit` returns `C4A_ERR_NUMERICAL_FAILURE` when the reference spectrum has
+* `_fit` returns `N4M_ERR_NUMERICAL_FAILURE` when the reference spectrum has
   zero variance.
-* `_transform` returns `C4A_ERR_NUMERICAL_FAILURE` when a row slope is zero or
+* `_transform` returns `N4M_ERR_NUMERICAL_FAILURE` when a row slope is zero or
   non-finite.
-* `_inverse_transform` returns `C4A_ERR_SHAPE_MISMATCH` unless the input shape
+* `_inverse_transform` returns `N4M_ERR_SHAPE_MISMATCH` unless the input shape
   matches the previous transform on the same handle.
 * The active benchmark gate compares against `prospectr::msc`; observed
   full-matrix differences are at double-precision roundoff.

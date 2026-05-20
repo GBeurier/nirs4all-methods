@@ -9,19 +9,19 @@ One operator, four methods (each emitted as a separate fixture file):
   * percentile — ``filter_y_outlier_percentile_v1.json``
   * mad        — ``filter_y_outlier_mad_v1.json``
 
-The reference comes from the frozen ``c4a_parity_filters_ref`` package under
+The reference comes from the frozen ``n4m_parity_filters_ref`` package under
 ``parity/python_generator/src/``. It has been validated once against
 ``nirs4all.operators.filters.YOutlierFilter`` and is now the canonical parity
 floor (so subsequent nirs4all releases can drift without breaking the
-chemometrics4all parity gates).
+nirs4all-methods parity gates).
 
 Fixture schema (per file) — distinct from the preprocessing fixtures because
 filters consume a 1-D `y` and produce a `uint8` mask + a stats record:
 
   {
-    "format": "c4a_filter_y_outlier_<method>_v1",
+    "format": "n4m_filter_y_outlier_<method>_v1",
     "numpy_version": "...",
-    "reference": "c4a_parity_filters_ref (frozen against nirs4all 0.8.x)",
+    "reference": "n4m_parity_filters_ref (frozen against nirs4all 0.8.x)",
     "encoding": "ieee754_binary64_be_hex",
     "n": <int>,                  // length of y
     "y_hex": [ "<16 hex>", ... ], // input y values
@@ -55,7 +55,7 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "parity" / "python_generator" / "src"))
 
-from c4a_parity_filters_ref import y_outlier_fit_get_mask  # noqa: E402
+from n4m_parity_filters_ref import y_outlier_fit_get_mask  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -216,9 +216,9 @@ def mad_cases(y: np.ndarray) -> list[Case]:
 def write_fixture(method: str, y: np.ndarray, cases: list[Case],
                   out_dir: Path) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_filter_y_outlier_{method}_v1",
+        "format": f"n4m_filter_y_outlier_{method}_v1",
         "numpy_version": np.__version__,
-        "reference": "c4a_parity_filters_ref (frozen against nirs4all 0.8.x)",
+        "reference": "n4m_parity_filters_ref (frozen against nirs4all 0.8.x)",
         "encoding": "ieee754_binary64_be_hex",
         "n": int(y.shape[0]),
         "y_hex": array_to_hex(y),

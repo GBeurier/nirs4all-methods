@@ -1,5 +1,5 @@
-# cpp/src/CMakeLists.txt — chemometrics4all_core (internal OBJECT) +
-# chemometrics4all_c (C ABI shared) + chemometrics4all_c_static (C ABI static).
+# cpp/src/CMakeLists.txt — n4m_core (internal OBJECT) +
+# n4m_c (C ABI shared) + n4m_c_static (C ABI static).
 #
 # Phase 0 (bootstrap): only the structural plumbing compiles. Each subsequent
 # phase appends its files to the lists below.
@@ -8,16 +8,16 @@
 # Generated visibility macro header
 # ---------------------------------------------------------------------------
 configure_file(
-    ${PROJECT_SOURCE_DIR}/cpp/include/chemometrics4all/c4a_export.h.in
-    ${PROJECT_BINARY_DIR}/generated/chemometrics4all/c4a_export.h
+    ${PROJECT_SOURCE_DIR}/cpp/include/n4m/n4m_export.h.in
+    ${PROJECT_BINARY_DIR}/generated/n4m/n4m_export.h
     @ONLY)
 
 # ---------------------------------------------------------------------------
-# chemometrics4all_core — internal OBJECT library. Embedded inside
-# chemometrics4all_c and chemometrics4all_c_static via $<TARGET_OBJECTS:...>.
+# n4m_core — internal OBJECT library. Embedded inside
+# n4m_c and n4m_c_static via $<TARGET_OBJECTS:...>.
 # Never installed.
 # ---------------------------------------------------------------------------
-add_library(chemometrics4all_core OBJECT
+add_library(n4m_core OBJECT
     core/context.cpp
     core/matrix_view.cpp
     core/status.cpp
@@ -143,41 +143,41 @@ add_library(chemometrics4all_core OBJECT
     core/utilities/q_residuals.c
     core/utilities/signal_type_detector.c
     core/utilities/transfer_metrics.c)
-target_include_directories(chemometrics4all_core
+target_include_directories(n4m_core
     PUBLIC  ${PROJECT_SOURCE_DIR}/cpp/include
             ${PROJECT_BINARY_DIR}/generated
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_features(chemometrics4all_core PUBLIC cxx_std_17)
-target_compile_definitions(chemometrics4all_core PRIVATE CHEMOMETRICS4ALL_BUILDING_CORE=1)
-if(CHEMOMETRICS4ALL_HAVE_FITPACK)
-    target_compile_definitions(chemometrics4all_core PRIVATE C4A_HAVE_FITPACK=1)
+target_compile_features(n4m_core PUBLIC cxx_std_17)
+target_compile_definitions(n4m_core PRIVATE N4M_BUILDING_CORE=1)
+if(N4M_HAVE_FITPACK)
+    target_compile_definitions(n4m_core PRIVATE N4M_HAVE_FITPACK=1)
 else()
-    target_compile_definitions(chemometrics4all_core PRIVATE C4A_HAVE_FITPACK=0)
+    target_compile_definitions(n4m_core PRIVATE N4M_HAVE_FITPACK=0)
 endif()
-set_target_properties(chemometrics4all_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
-if(CHEMOMETRICS4ALL_ENABLE_FAULT_INJECTION)
-    target_compile_definitions(chemometrics4all_core PUBLIC CHEMOMETRICS4ALL_ENABLE_FAULT_INJECTION=1)
+set_target_properties(n4m_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+if(N4M_ENABLE_FAULT_INJECTION)
+    target_compile_definitions(n4m_core PUBLIC N4M_ENABLE_FAULT_INJECTION=1)
 endif()
-set(_chemometrics4all_sanitizer_build OFF)
-if(CHEMOMETRICS4ALL_ENABLE_ASAN OR CHEMOMETRICS4ALL_ENABLE_UBSAN OR CHEMOMETRICS4ALL_ENABLE_TSAN)
-    set(_chemometrics4all_sanitizer_build ON)
+set(_n4m_sanitizer_build OFF)
+if(N4M_ENABLE_ASAN OR N4M_ENABLE_UBSAN OR N4M_ENABLE_TSAN)
+    set(_n4m_sanitizer_build ON)
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-    target_compile_options(chemometrics4all_core PRIVATE
+    target_compile_options(n4m_core PRIVATE
         $<$<NOT:$<CONFIG:Debug>>:-ffunction-sections>
         $<$<NOT:$<CONFIG:Debug>>:-fdata-sections>)
 endif()
-chemometrics4all_add_warnings(chemometrics4all_core)
+n4m_add_warnings(n4m_core)
 
 # Optional backends (BLAS / OpenMP / CUDA): re-introduced phase-by-phase.
 # Phase 0 keeps the build dependency-free.
 
 # ---------------------------------------------------------------------------
-# chemometrics4all_c — public C ABI shared library (libc4a.{so,dll,dylib}).
-# chemometrics4all_c_static is the same surface, statically linked.
+# n4m_c — public C ABI shared library (libn4m.{so,dll,dylib}).
+# n4m_c_static is the same surface, statically linked.
 # ---------------------------------------------------------------------------
-if(CHEMOMETRICS4ALL_HAVE_FITPACK)
-    set(_chemometrics4all_fitpack_sources
+if(N4M_HAVE_FITPACK)
+    set(_n4m_fitpack_sources
         core/common/_vendored/fitpack/curfit.f
         core/common/_vendored/fitpack/fpback.f
         core/common/_vendored/fitpack/fpbspl.f
@@ -190,14 +190,14 @@ if(CHEMOMETRICS4ALL_HAVE_FITPACK)
         core/common/_vendored/fitpack/fprota.f
         core/common/_vendored/fitpack/splev.f)
 
-    add_library(chemometrics4all_fitpack OBJECT ${_chemometrics4all_fitpack_sources})
-    set_target_properties(chemometrics4all_fitpack PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    add_library(n4m_fitpack OBJECT ${_n4m_fitpack_sources})
+    set_target_properties(n4m_fitpack PROPERTIES POSITION_INDEPENDENT_CODE ON)
     if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
-        target_compile_options(chemometrics4all_fitpack PRIVATE -w)
+        target_compile_options(n4m_fitpack PRIVATE -w)
     endif()
 endif()
 
-set(_chemometrics4all_c_sources
+set(_n4m_c_sources
     c_api/c_api_advanced.cpp
     c_api/c_api_augmenters.cpp
     c_api/c_api_augmenters_edge_splines_random.cpp
@@ -227,12 +227,12 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
         COMPILE_OPTIONS "-Wno-sign-conversion")
 endif()
 
-function(chemometrics4all_apply_c_target target)
+function(n4m_apply_c_target target)
     target_sources(${target} PRIVATE
-        $<TARGET_OBJECTS:chemometrics4all_core>)
-    if(CHEMOMETRICS4ALL_HAVE_FITPACK)
+        $<TARGET_OBJECTS:n4m_core>)
+    if(N4M_HAVE_FITPACK)
         target_sources(${target} PRIVATE
-            $<TARGET_OBJECTS:chemometrics4all_fitpack>)
+            $<TARGET_OBJECTS:n4m_fitpack>)
     endif()
     target_include_directories(${target}
         PUBLIC  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/cpp/include>
@@ -244,44 +244,44 @@ function(chemometrics4all_apply_c_target target)
             $<$<NOT:$<CONFIG:Debug>>:-ffunction-sections>
             $<$<NOT:$<CONFIG:Debug>>:-fdata-sections>)
     endif()
-    chemometrics4all_add_warnings(${target})
+    n4m_add_warnings(${target})
 endfunction()
 
-if(CHEMOMETRICS4ALL_BUILD_SHARED)
-    add_library(chemometrics4all_c SHARED ${_chemometrics4all_c_sources})
-    chemometrics4all_apply_c_target(chemometrics4all_c)
-    set_target_properties(chemometrics4all_c PROPERTIES
-        OUTPUT_NAME c4a
-        SOVERSION   ${C4A_ABI_VERSION_MAJOR}
-        VERSION     ${C4A_ABI_VERSION})
-    target_compile_definitions(chemometrics4all_c PRIVATE CHEMOMETRICS4ALL_BUILDING_DLL=1)
+if(N4M_BUILD_SHARED)
+    add_library(n4m_c SHARED ${_n4m_c_sources})
+    n4m_apply_c_target(n4m_c)
+    set_target_properties(n4m_c PROPERTIES
+        OUTPUT_NAME n4m
+        SOVERSION   ${N4M_ABI_VERSION_MAJOR}
+        VERSION     ${N4M_ABI_VERSION})
+    target_compile_definitions(n4m_c PRIVATE N4M_BUILDING_DLL=1)
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        if(NOT _chemometrics4all_sanitizer_build)
-            target_link_options(chemometrics4all_c PRIVATE -Wl,--no-undefined)
+        if(NOT _n4m_sanitizer_build)
+            target_link_options(n4m_c PRIVATE -Wl,--no-undefined)
         endif()
-        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/c_api/c4a_linux.map")
-            target_link_options(chemometrics4all_c PRIVATE
-                -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/c_api/c4a_linux.map
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/c_api/n4m_linux.map")
+            target_link_options(n4m_c PRIVATE
+                -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/c_api/n4m_linux.map
                 $<$<NOT:$<CONFIG:Debug>>:-Wl,--gc-sections>)
         endif()
     elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-        target_link_options(chemometrics4all_c PRIVATE
+        target_link_options(n4m_c PRIVATE
             -Wl,-undefined,error
             $<$<NOT:$<CONFIG:Debug>>:-Wl,-dead_strip>)
     elseif(MSVC)
-        target_link_options(chemometrics4all_c PRIVATE
+        target_link_options(n4m_c PRIVATE
             $<$<NOT:$<CONFIG:Debug>>:/OPT:REF>
             $<$<NOT:$<CONFIG:Debug>>:/OPT:ICF>)
     endif()
-    if((MSVC OR MINGW) AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/c_api/chemometrics4all.def")
-        target_sources(chemometrics4all_c PRIVATE c_api/chemometrics4all.def)
+    if((MSVC OR MINGW) AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/c_api/n4m.def")
+        target_sources(n4m_c PRIVATE c_api/n4m.def)
     endif()
 endif()
 
-if(CHEMOMETRICS4ALL_BUILD_STATIC)
-    add_library(chemometrics4all_c_static STATIC ${_chemometrics4all_c_sources})
-    chemometrics4all_apply_c_target(chemometrics4all_c_static)
-    set_target_properties(chemometrics4all_c_static PROPERTIES OUTPUT_NAME c4a_static)
-    target_compile_definitions(chemometrics4all_c_static PUBLIC CHEMOMETRICS4ALL_STATIC=1)
+if(N4M_BUILD_STATIC)
+    add_library(n4m_c_static STATIC ${_n4m_c_sources})
+    n4m_apply_c_target(n4m_c_static)
+    set_target_properties(n4m_c_static PROPERTIES OUTPUT_NAME n4m_static)
+    target_compile_definitions(n4m_c_static PUBLIC N4M_STATIC=1)
 endif()

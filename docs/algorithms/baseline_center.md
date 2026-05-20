@@ -38,8 +38,8 @@ This operator takes no constructor parameters. Use `_create()`, then
 ## Numerical contract
 
 * `_fit` requires `rows >= 1` and `cols >= 1`.
-* `_transform` and `_inverse_transform` return `C4A_ERR_NOT_FITTED` before
-  fit, and `C4A_ERR_SHAPE_MISMATCH` on column-count drift.
+* `_transform` and `_inverse_transform` return `N4M_ERR_NOT_FITTED` before
+  fit, and `N4M_ERR_SHAPE_MISMATCH` on column-count drift.
 * Tolerance against nirs4all + numpy: 1e-12 absolute / 1e-13 relative
   (closed-form arithmetic — no least-squares involvement).
 

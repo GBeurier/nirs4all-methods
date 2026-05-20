@@ -13,7 +13,7 @@ For each input row `X[i, :]`:
 
 Mirrors `nirs4all.operators.augmentation.spectral.MultiplicativeNoise` with `per_wavelength=False, variation_scope="sample"` (default). Per-wavelength and batch-scope variants are deferred to a follow-up phase.
 
-From the `chemometrics4all.MultiplicativeNoise` Python wrapper docstring:
+From the `n4m.MultiplicativeNoise` Python wrapper docstring:
 
 > Apply per-element multiplicative Gaussian noise.
 
@@ -29,7 +29,7 @@ From the `chemometrics4all.MultiplicativeNoise` Python wrapper docstring:
 
 ### Bibliographic source
 
-- Internal parity fixture: `parity/python_generator/src/c4a_parity_augmenters_ref/multiplicative_noise.py`.
+- Internal parity fixture: `parity/python_generator/src/n4m_parity_augmenters_ref/multiplicative_noise.py`.
 - Parity tolerance: 1e-15 abs.
 
 ### Mathematical principle
@@ -41,9 +41,9 @@ From the `chemometrics4all.MultiplicativeNoise` Python wrapper docstring:
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_aug_multiplicative_noise_apply( const c4a_aug_multiplicative_noise_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_multiplicative_noise_create( c4a_aug_multiplicative_noise_handle_t** out, c4a_rng_pcg64_state_t* rng, double sigma_gain);
-void c4a_aug_multiplicative_noise_destroy( c4a_aug_multiplicative_noise_handle_t* handle);
+n4m_status_t n4m_aug_multiplicative_noise_apply( const n4m_aug_multiplicative_noise_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_multiplicative_noise_create( n4m_aug_multiplicative_noise_handle_t** out, n4m_rng_pcg64_state_t* rng, double sigma_gain);
+void n4m_aug_multiplicative_noise_destroy( n4m_aug_multiplicative_noise_handle_t* handle);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -52,50 +52,50 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_aug_multiplicative_noise` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.aug_multiplicative_noise` | Python | ABI-close function backed by ctypes. |
-| Python sklearn | `chemometrics4all.sklearn.MultiplicativeNoise` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| C ABI | `n4m_aug_multiplicative_noise` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.aug_multiplicative_noise` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `n4m.sklearn.MultiplicativeNoise` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `aug_multiplicative_noise(X, sigma_gain = 0.01, seed = 17)` | R | Public package wrapper around the C ABI. |
 | ref.nirs4all | `nirs4all.MultiplicativeNoise` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_aug_multiplicative_noise_apply( const c4a_aug_multiplicative_noise_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_multiplicative_noise_create( c4a_aug_multiplicative_noise_handle_t** out, c4a_rng_pcg64_state_t* rng, double sigma_gain);
-void c4a_aug_multiplicative_noise_destroy( c4a_aug_multiplicative_noise_handle_t* handle);
+n4m_status_t n4m_aug_multiplicative_noise_apply( const n4m_aug_multiplicative_noise_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_multiplicative_noise_create( n4m_aug_multiplicative_noise_handle_t** out, n4m_rng_pcg64_state_t* rng, double sigma_gain);
+void n4m_aug_multiplicative_noise_destroy( n4m_aug_multiplicative_noise_handle_t* handle);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.aug_multiplicative_noise(X)
+Xt = n4m.aug_multiplicative_noise(X)
 ```
 
 :::
 
-:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:::{tab-item} Python sklearn · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from chemometrics4all.sklearn import MultiplicativeNoise
+from n4m.sklearn import MultiplicativeNoise
 
 op = MultiplicativeNoise(sigma_gain=0.01, rng=None, seed=0)
 Xt = op.fit_transform(X)
@@ -103,12 +103,12 @@ Xt = op.fit_transform(X)
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- aug_multiplicative_noise(X)
 ```
 
@@ -148,15 +148,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.007 ms</td><td class="ms">0.018 ms</td><td class="ms">0.086 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.007 ms</td><td class="ms">0.018 ms</td><td class="ms">0.086 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.007 ms</td><td class="ms ms-best">🏆 0.017 ms</td><td class="ms ms-best">🏆 0.076 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.008 ms</td><td class="ms">0.018 ms</td><td class="ms">0.078 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.007 ms</td><td class="ms ms-best">🏆 0.017 ms</td><td class="ms ms-best">🏆 0.076 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.008 ms</td><td class="ms">0.018 ms</td><td class="ms">0.078 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">0.022 ms</td><td class="ms">0.172 ms</td><td class="ms">1.180 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">0.022 ms</td><td class="ms">0.172 ms</td><td class="ms">1.180 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.MultiplicativeNoise · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.021 ms</td><td class="ms">0.076 ms</td><td class="ms">0.290 ms</td></tr>

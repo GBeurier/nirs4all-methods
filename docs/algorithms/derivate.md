@@ -33,7 +33,7 @@ precomputed scalar $\delta^k$.
 | `order` | — | Derivative order $k \geq 1$. |
 | `delta` | — | Wavelength spacing $\delta \neq 0$. |
 
-A helper `c4a_pp_derivate_output_cols(order, input_cols)` returns the output
+A helper `n4m_pp_derivate_output_cols(order, input_cols)` returns the output
 column count for the caller's pre-sizing of the output buffer. It returns 0
 for degenerate cases (`order >= input_cols` or `input_cols <= 0`).
 
@@ -43,22 +43,22 @@ Mathematically stateless, but exposes the stateful contract
 (`_create / _fit / _transform / _destroy`) to fit uniformly with MSC,
 EMSC and Baseline. `_fit` records the input column count and marks the
 state fitted; calling `_transform` before `_fit` returns
-`C4A_ERR_NOT_FITTED`.
+`N4M_ERR_NOT_FITTED`.
 
 ## Algorithm-vs-nirs4all note
 
-The c4a Derivate operator implements `np.diff(X, n=order, axis=1) /
+The n4m Derivate operator implements `np.diff(X, n=order, axis=1) /
 delta**order` per the Phase 3 contract. The nirs4all class
 `nirs4all.operators.transforms.scalers.Derivate` (as of 0.8.x) uses
 `np.gradient(X, delta, axis=0)` — a different operator that preserves the
-column count and differs from the c4a definition at the boundaries. Phase 3
+column count and differs from the n4m definition at the boundaries. Phase 3
 locks in the `np.diff(..., axis=1)` variant since it is the convention used
 in the rest of the chemometrics literature for spectroscopic derivatives.
 
 ## Numerical contract
 
-* `_fit` requires `cols > order`. Returns `C4A_ERR_INVALID_ARGUMENT` otherwise.
-* `_transform` returns `C4A_ERR_SHAPE_MISMATCH` if the output column count
+* `_fit` requires `cols > order`. Returns `N4M_ERR_INVALID_ARGUMENT` otherwise.
+* `_transform` returns `N4M_ERR_SHAPE_MISMATCH` if the output column count
   is not exactly `cols - order`.
 * Tolerance against `np.diff` + scalar division: 1e-12 absolute / 1e-13
   relative — well within the byte-equality region for typical NIRS data.

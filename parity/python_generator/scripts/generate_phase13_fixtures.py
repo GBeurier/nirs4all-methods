@@ -8,9 +8,9 @@ One operator, six methods. Each method gets its own JSON fixture file
 Schemas reuse the standard preprocessing/filter shape:
 
   {
-    "format": "c4a_filter_x_outlier_<method>_v1",
+    "format": "n4m_filter_x_outlier_<method>_v1",
     "numpy_version": "...",
-    "reference": "c4a_parity_filters_ref (frozen against sklearn)",
+    "reference": "n4m_parity_filters_ref (frozen against sklearn)",
     "encoding": "ieee754_binary64_be_hex",
     "rows": <int>, "cols": <int>,
     "input_hex": [ "<16 hex>", ... ],
@@ -25,8 +25,8 @@ Schemas reuse the standard preprocessing/filter shape:
 The C side's deterministic methods (mahalanobis, pca_residual, pca_leverage)
 are bit-identical to the sklearn reference within the contracted 1e-10 abs
 tolerance. The seeded random paths (robust_mahalanobis, isolation_forest)
-use sklearn's NumPy-RandomState seeding which differs from c4a's PCG64,
-so the C output is byte-equal to the reference only when c4a uses its
+use sklearn's NumPy-RandomState seeding which differs from n4m's PCG64,
+so the C output is byte-equal to the reference only when n4m uses its
 own seed-derived ensemble. The fixtures still capture the sklearn mask
 so the parity test can quantify divergence rather than skip the path.
 """
@@ -45,7 +45,7 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "parity" / "python_generator" / "src"))
 
-from c4a_parity_filters_ref import x_outlier_fit_get_mask  # noqa: E402
+from n4m_parity_filters_ref import x_outlier_fit_get_mask  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -211,9 +211,9 @@ def cases_for(method: str, X: np.ndarray) -> list[tuple[str, dict,
 
 def write_fixture(method: str, X: np.ndarray, cases, out_dir: Path) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_filter_x_outlier_{method}_v1",
+        "format": f"n4m_filter_x_outlier_{method}_v1",
         "numpy_version": np.__version__,
-        "reference": "c4a_parity_filters_ref (frozen against sklearn)",
+        "reference": "n4m_parity_filters_ref (frozen against sklearn)",
         "encoding": "ieee754_binary64_be_hex",
         "rows": int(X.shape[0]),
         "cols": int(X.shape[1]),

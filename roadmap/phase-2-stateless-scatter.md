@@ -21,7 +21,7 @@ Implement 7 stateless preprocessing operators that don't need a `fit` step (para
 - `cpp/src/core/preprocessing/scatter/{snv.{hpp,c}, local_snv.{hpp,c}, robust_snv.{hpp,c}, area_normalization.{hpp,c}}`
 - `cpp/src/core/preprocessing/scaling/{normalize.{hpp,c}, simple_scale.{hpp,c}, log_transform.{hpp,c}}`
 - `cpp/src/c_api/c_api_preprocessing.cpp` — extern "C" wrappers for all 7 operators.
-- `cpp/include/chemometrics4all/c4a.h` — append "Phase 2 — Stateless scatter / scaling" section.
+- `cpp/include/n4m/n4m.h` — append "Phase 2 — Stateless scatter / scaling" section.
 - `cpp/tests/test_preprocessing_stateless.cpp` — per-operator parity tests vs nirs4all + numpy + prospectr.
 - `parity/python_generator/scripts/generate_phase2_fixtures.py` — fixture generator.
 - `parity/fixtures/snv_v1.json`, `lsnv_v1.json`, `rnv_v1.json`, `area_norm_v1.json`, `normalize_v1.json`, `simple_scale_v1.json`, `log_transform_v1.json`.
@@ -31,12 +31,12 @@ Implement 7 stateless preprocessing operators that don't need a `fit` step (para
 
 Pattern per operator (using SNV as example):
 ```c
-typedef struct c4a_pp_snv_state_t c4a_pp_snv_state_t;
-C4A_API c4a_status_t c4a_pp_snv_create(c4a_pp_snv_state_t** out,
+typedef struct n4m_pp_snv_state_t n4m_pp_snv_state_t;
+N4M_API n4m_status_t n4m_pp_snv_create(n4m_pp_snv_state_t** out,
                                        int with_mean, int with_std, int ddof);
-C4A_API void         c4a_pp_snv_destroy(c4a_pp_snv_state_t* state);
-C4A_API c4a_status_t c4a_pp_snv_transform(c4a_pp_snv_state_t* state,
-                                          c4a_matrix_view_t X, c4a_array_t* out);
+N4M_API void         n4m_pp_snv_destroy(n4m_pp_snv_state_t* state);
+N4M_API n4m_status_t n4m_pp_snv_transform(n4m_pp_snv_state_t* state,
+                                          n4m_matrix_view_t X, n4m_array_t* out);
 ```
 
 3 symbols × 7 operators = **21 new ABI symbols**. Total: 36 → 57.
@@ -60,14 +60,14 @@ R cross-check for SNV (optional): `prospectr::standardNormalVariate` — 1e-10 a
 - ✅ Build clean: `cmake --build --preset dev-debug` → 0 warnings, 0 errors.
 - ✅ 7 parity test files pass; total tests: 20 → 20 + 7 = 27.
 - ✅ ABI symbol list updated: 36 → 57 symbols.
-- ✅ `c4a_cli --selfcheck` exits 0.
+- ✅ `n4m_cli --selfcheck` exits 0.
 - ✅ Opus post-review accepts.
 - ✅ Push to GitHub, CI green.
 
 ## Implementation notes
 
 - All 7 operators are short C functions (~20-50 LOC each). State struct holds only constructor parameters.
-- LocalSNV needs a sliding-window helper. Vendor a small `c4a_common_sliding_mean_std` in `cpp/src/core/common/sliding.c`.
+- LocalSNV needs a sliding-window helper. Vendor a small `n4m_common_sliding_mean_std` in `cpp/src/core/common/sliding.c`.
 - For padded boundaries: `reflect`, `edge`, `constant`. Match scipy.ndimage convention.
 - SNV uses `ddof` (delta degrees of freedom) for std normalization. Default 0 (matches numpy); nirs4all uses 0 too. `ddof=1` is sample std.
 - AreaNormalization: nirs4all's default is `method="sum"` which sums absolute values. Implement `sum, abs_sum, max, l1, l2`.
@@ -76,9 +76,9 @@ R cross-check for SNV (optional): `prospectr::standardNormalVariate` — 1e-10 a
 ## Verification
 
 ```bash
-cd /home/delete/nirs4all/chemometrics4all
+cd /home/delete/nirs4all/nirs4all-methods
 cmake --build --preset dev-debug
-./build/dev-debug/cpp/tests/chemometrics4all_tests
+./build/dev-debug/cpp/tests/n4m_tests
 ```
 
 ## Next phase

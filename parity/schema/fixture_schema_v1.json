@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://chemometrics4all.dev/schemas/fixture_v1.json",
-  "title": "chemometrics4all parity fixture v1",
+  "$id": "https://n4m.dev/schemas/fixture_v1.json",
+  "title": "nirs4all-methods parity fixture v1",
   "description": "A self-contained PLS reference fixture: deterministic (X, Y) input plus the expected outputs from a pinned reference implementation, with a comparison policy declaring per-field tolerance.",
   "type": "object",
   "required": ["schema_version", "fixture_id", "generator", "data", "expected", "comparison_policy"],

@@ -4,7 +4,7 @@ _Group_: **Calibration Transfer** · _Registry tolerance_: `rtol=1e-5`, `atol=1e
 
 ## Description
 
-`slope_bias_correction` is a chemometrics4all calibration transfer method exposed through the C ABI and the generated language bindings.
+`slope_bias_correction` is a nirs4all-methods calibration transfer method exposed through the C ABI and the generated language bindings.
 
 ### Parameters
 
@@ -29,49 +29,49 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | — | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.slope_bias_correction` | Python | ABI-close function backed by ctypes. |
+| C ABI | — | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.slope_bias_correction` | Python | ABI-close function backed by ctypes. |
 | R | `{target <- 2.0 * y + 1.0; slope_bias_correction(y, target, y)}` | R | Public package wrapper around the C ABI. |
 | ref.sklearn | `sklearn.linear_model.LinearRegression` | Python | canonical/comparator |
 | ref.pycaltransfer | `pycaltransfer.slope_bias_correction` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
 /* C ABI prefix */
-c4a_*
+n4m_*
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-y_corr = c4a.slope_bias_correction(y_source, y_target, y)
+y_corr = n4m.slope_bias_correction(y_source, y_target, y)
 ```
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- {target <- 2.0 * y + 1.0; slope_bias_correction(y, target, y)}
 ```
 
@@ -114,15 +114,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.6e-14</td><td class="ms">0.010 ms</td><td class="ms">0.010 ms</td><td class="ms">0.010 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.6e-14</td><td class="ms">0.010 ms</td><td class="ms">0.010 ms</td><td class="ms">0.010 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.6e-14</td><td class="ms">0.009 ms</td><td class="ms">0.010 ms</td><td class="ms">0.010 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.6e-14</td><td class="ms">0.011 ms</td><td class="ms">0.011 ms</td><td class="ms">0.011 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.6e-14</td><td class="ms">0.009 ms</td><td class="ms">0.010 ms</td><td class="ms">0.010 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.6e-14</td><td class="ms">0.011 ms</td><td class="ms">0.011 ms</td><td class="ms">0.011 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.3e-14</td><td class="ms ms-best">🏆 0.002 ms</td><td class="ms ms-best">🏆 0.002 ms</td><td class="ms ms-best">🏆 0.002 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.3e-14</td><td class="ms ms-best">🏆 0.002 ms</td><td class="ms ms-best">🏆 0.002 ms</td><td class="ms ms-best">🏆 0.002 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pycaltransfer.slope_bias_correction · pycaltransfer 0.1.8 — comparator">◆</span><code>ref.pycaltransfer</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.235 ms</td><td class="ms">0.197 ms</td><td class="ms">0.197 ms</td></tr>

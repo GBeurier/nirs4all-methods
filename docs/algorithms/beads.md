@@ -1,7 +1,7 @@
 # BEADS — Baseline Estimation And Denoising with Sparsity
 
 Ning & Selesnick 2014 BEADS, implemented against the
-`pybaselines.Baseline().beads` full banded contract for the public c4a
+`pybaselines.Baseline().beads` full banded contract for the public n4m
 parameter surface.
 
 The exposed options are:
@@ -32,12 +32,12 @@ For each row `y` of length `n`:
 
 ## ABI
 ```c
-c4a_status_t c4a_pp_beads_create(c4a_pp_beads_handle_t** out,
+n4m_status_t n4m_pp_beads_create(n4m_pp_beads_handle_t** out,
                                   double lam_0, double lam_1, double lam_2,
                                   int32_t max_iter, double tol);
-void         c4a_pp_beads_destroy(c4a_pp_beads_handle_t* h);
-c4a_status_t c4a_pp_beads_transform(const c4a_pp_beads_handle_t* h,
-                                     c4a_matrix_view_t X, c4a_matrix_view_t out);
+void         n4m_pp_beads_destroy(n4m_pp_beads_handle_t* h);
+n4m_status_t n4m_pp_beads_transform(const n4m_pp_beads_handle_t* h,
+                                     n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 ## Numerical Contract

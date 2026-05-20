@@ -186,7 +186,7 @@ def main() -> None:
         cases.append({**case, "deterministic": False, "output_hex": []})
 
     fixture: dict[str, Any] = {
-        "format": "c4a_aug_phase17_v1",
+        "format": "n4m_aug_phase17_v1",
         "numpy_version": np.__version__,
         "nirs4all_version": version,
         "encoding": "ieee754_binary64_be_hex",

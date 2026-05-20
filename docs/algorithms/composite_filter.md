@@ -5,10 +5,10 @@ Aggregates the keep-masks of any number of sub-filters via either ANY or ALL sem
 ## Modes
 
 ```c
-typedef enum c4a_composite_mode_t {
-    C4A_COMPOSITE_ANY = 0,   /* exclude if ANY sub-filter excludes */
-    C4A_COMPOSITE_ALL = 1    /* exclude only if ALL sub-filters exclude */
-} c4a_composite_mode_t;
+typedef enum n4m_composite_mode_t {
+    N4M_COMPOSITE_ANY = 0,   /* exclude if ANY sub-filter excludes */
+    N4M_COMPOSITE_ALL = 1    /* exclude only if ALL sub-filters exclude */
+} n4m_composite_mode_t;
 ```
 
 - **ANY** (default): a sample is excluded if ANY sub-filter excludes it. Equivalent to `keep_mask = AND_k(submask_k)`. Most restrictive; only samples that pass every sub-filter are kept.
@@ -30,19 +30,19 @@ The composite never frees the sub-filter handles.
 ## ABI
 
 ```c
-c4a_status_t c4a_filter_composite_create(c4a_filter_composite_handle_t** out,
+n4m_status_t n4m_filter_composite_create(n4m_filter_composite_handle_t** out,
                                           int32_t mode);
-void         c4a_filter_composite_destroy(c4a_filter_composite_handle_t* h);
+void         n4m_filter_composite_destroy(n4m_filter_composite_handle_t* h);
 
-c4a_status_t c4a_filter_composite_add_leverage(c4a_filter_composite_handle_t* h,
-                                                c4a_filter_leverage_handle_t* sub);
-c4a_status_t c4a_filter_composite_add_quality(c4a_filter_composite_handle_t* h,
-                                               c4a_filter_quality_handle_t* sub);
+n4m_status_t n4m_filter_composite_add_leverage(n4m_filter_composite_handle_t* h,
+                                                n4m_filter_leverage_handle_t* sub);
+n4m_status_t n4m_filter_composite_add_quality(n4m_filter_composite_handle_t* h,
+                                               n4m_filter_quality_handle_t* sub);
 
-c4a_status_t c4a_filter_composite_apply(const c4a_filter_composite_handle_t* h,
-                                         c4a_matrix_view_t X,
+n4m_status_t n4m_filter_composite_apply(const n4m_filter_composite_handle_t* h,
+                                         n4m_matrix_view_t X,
                                          uint8_t* mask_out,
-                                         c4a_filter_stats_t* stats_out);
+                                         n4m_filter_stats_t* stats_out);
 ```
 
 Phase 12 extends this list with `add_y_outlier`, `add_x_outlier`, `add_metadata` as the matching handles land in the public ABI.
@@ -54,4 +54,4 @@ Composite is purely a boolean aggregator over already-computed sub-filter masks.
 ## Reference
 
 - nirs4all 0.8.x — `nirs4all.operators.filters.CompositeFilter` in `base.py`
-- `parity/python_generator/src/c4a_parity_filters_ref/composite.py`
+- `parity/python_generator/src/n4m_parity_filters_ref/composite.py`

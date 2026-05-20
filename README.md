@@ -1,18 +1,18 @@
-# chemometrics4all
+# nirs4all-methods
 
 [![License: CeCILL-2.1](https://img.shields.io/badge/license-CeCILL--2.1-blue.svg)](LICENSE)
 [![Status: Stabilization](https://img.shields.io/badge/status-stabilization-blue.svg)](ROADMAP.md)
 
-**chemometrics4all** is a portable C++17 library for chemometrics / NIRS
+**nirs4all-methods** is a portable C++17 library for chemometrics / NIRS
 operators: preprocessings, splitters, filters, augmentations, signal-type
 detection, transfer metrics, diagnostics, and FCK feature engineering. It is the
 companion of [pls4all](https://github.com/GBeurier/pls4all), which owns the PLS
 regression / classification model family.
 
-> **chemometrics4all does NOT ship any models.** PLS variants live in `pls4all`. This library focuses on the upstream/downstream layer: how you prepare spectra, partition samples, detect outliers, augment training data, convert signal types, and measure transfer-learning alignment.
+> **nirs4all-methods does NOT ship any models.** PLS variants live in `pls4all`. This library focuses on the upstream/downstream layer: how you prepare spectra, partition samples, detect outliers, augment training data, convert signal types, and measure transfer-learning alignment.
 
 **Documentation / dashboard**:
-[`https://gbeurier.github.io/chemometrics4all/`](https://gbeurier.github.io/chemometrics4all/)
+[`https://gbeurier.github.io/nirs4all-methods/`](https://gbeurier.github.io/nirs4all-methods/)
 · local source under [`docs/`](docs/).
 
 ---
@@ -35,7 +35,7 @@ All operators are mirrored byte-bit-where-possible against [nirs4all](https://gi
 ## Architecture
 
 - **C++17 core** in `cpp/src/core/` — internal headers + implementations, never directly exposed.
-- **Stable C ABI** in `cpp/include/chemometrics4all/c4a.h` — `c4a_*` symbols, opaque handles, error-buffer-per-context.
+- **Stable C ABI** in `cpp/include/n4m/n4m.h` — `n4m_*` symbols, opaque handles, error-buffer-per-context.
 - **Thin language bindings** (`bindings/`): Python (ctypes + sklearn-compatible classes) and R (.Call) are active; MATLAB and JS/WASM are next in the roadmap.
 - **Zero mandatory dependencies** — DIY linalg, RNG (PCG64 reimplementation for NumPy bit-exact parity), banded LDLT, FFT-free wavelet filter banks. Optional backends (BLAS, OpenMP, FITPACK spline smoothing) are gated by CMake.
 - **CMake ≥ 3.21** with 20+ presets in `CMakePresets.json` (dev-debug, dev-release, ci-*, blas-on, sanitizer-*).
@@ -47,11 +47,11 @@ All operators are mirrored byte-bit-where-possible against [nirs4all](https://gi
 
 ## Documentation
 
-- 🌐 **[Sphinx site + interactive benchmark dashboard](https://gbeurier.github.io/chemometrics4all/)** — public GitHub Pages build from [`docs/`](docs/)
+- 🌐 **[Sphinx site + interactive benchmark dashboard](https://gbeurier.github.io/nirs4all-methods/)** — public GitHub Pages build from [`docs/`](docs/)
 - 📚 **[Method catalogue](docs/methods/index.md)** — generated pages with signatures, math, bibliography, parity contracts, divergences, and timings
 - 📊 **[Benchmark overview](docs/benchmarks/overview.md)** — cross-binding timing/parity payload and dashboard data model
 - 🔬 **[Benchmark methodology](docs/benchmarks/methodology.md)** — reference policy, tolerances, datasets, and reproducibility notes
-- 📜 **[ABI reference](docs/abi/reference.md)** — stable `c4a_*` C ABI, handles, errors, and exported symbols
+- 📜 **[ABI reference](docs/abi/reference.md)** — stable `n4m_*` C ABI, handles, errors, and exported symbols
 - 🔌 **Bindings** — [Python](docs/bindings/python.md) · [R](docs/bindings/r.md) · [MATLAB](docs/bindings/matlab.md) · [JS / WASM](docs/bindings/js.md) · [Android](docs/bindings/android.md)
 
 ---
@@ -62,11 +62,11 @@ All operators are mirrored byte-bit-where-possible against [nirs4all](https://gi
 cmake --preset dev-release
 cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
-./build/dev-release/cpp/cli/chemometrics4all_cli --version
-./build/dev-release/cpp/cli/chemometrics4all_cli --selfcheck
+./build/dev-release/cpp/cli/n4m_cli --version
+./build/dev-release/cpp/cli/n4m_cli --selfcheck
 ```
 
-Requirements: C++17 toolchain (GCC ≥ 11 / Clang ≥ 14 / MSVC 2022), CMake ≥ 3.21, Ninja (recommended). A Fortran compiler is optional: `CHEMOMETRICS4ALL_WITH_FITPACK=AUTO` enables the vendored FITPACK spline-smoothing backend when the toolchain supports it and keeps builds portable when it does not.
+Requirements: C++17 toolchain (GCC ≥ 11 / Clang ≥ 14 / MSVC 2022), CMake ≥ 3.21, Ninja (recommended). A Fortran compiler is optional: `N4M_WITH_FITPACK=AUTO` enables the vendored FITPACK spline-smoothing backend when the toolchain supports it and keeps builds portable when it does not.
 
 ---
 

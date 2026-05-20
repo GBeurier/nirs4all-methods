@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: CECILL-2.1
-"""Gate 1 (binding_parity) tests for the chemometrics4all Python binding.
+"""Gate 1 (binding_parity) tests for the nirs4all-methods Python binding.
 
 For each of the twenty Tier-2 operators, we:
 
@@ -13,7 +13,7 @@ For each of the twenty Tier-2 operators, we:
 5. Compare the two arrays via :func:`parity.binding_parity` with the Gate 1
    tolerance of ``1e-6``.
 
-A failure means the binding diverged from libc4a's bit-equivalent reference
+A failure means the binding diverged from libn4m's bit-equivalent reference
 — widening the tolerance is NOT the fix.
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from chemometrics4all import (
+from n4m import (
     EMSC,
     LSNV,
     MSC,

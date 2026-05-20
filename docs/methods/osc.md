@@ -4,7 +4,7 @@ _Group_: **Feature extraction** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8
 
 ## Description
 
-From the `chemometrics4all.OSC` Python wrapper docstring:
+From the `n4m.OSC` Python wrapper docstring:
 
 > Orthogonal Signal Correction.
 
@@ -56,12 +56,12 @@ scaled input, then the result is unscaled back to the original units.
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_pp_osc_create(c4a_pp_osc_handle_t** out, int32_t n_components, int scale);
-void c4a_pp_osc_destroy(c4a_pp_osc_handle_t* handle);
-c4a_status_t c4a_pp_osc_fit(c4a_pp_osc_handle_t* handle, c4a_matrix_view_t X, const double* y, int64_t y_len);
-c4a_status_t c4a_pp_osc_inverse_transform( const c4a_pp_osc_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_pp_osc_is_fitted(const c4a_pp_osc_handle_t* handle, int* out_fitted);
-c4a_status_t c4a_pp_osc_transform(const c4a_pp_osc_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_pp_osc_create(n4m_pp_osc_handle_t** out, int32_t n_components, int scale);
+void n4m_pp_osc_destroy(n4m_pp_osc_handle_t* handle);
+n4m_status_t n4m_pp_osc_fit(n4m_pp_osc_handle_t* handle, n4m_matrix_view_t X, const double* y, int64_t y_len);
+n4m_status_t n4m_pp_osc_inverse_transform( const n4m_pp_osc_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_pp_osc_is_fitted(const n4m_pp_osc_handle_t* handle, int* out_fitted);
+n4m_status_t n4m_pp_osc_transform(const n4m_pp_osc_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -70,53 +70,53 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_pp_osc` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.osc` | Python | ABI-close function backed by ctypes. |
-| Python sklearn | `chemometrics4all.sklearn.OSC` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| C ABI | `n4m_pp_osc` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.osc` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `n4m.sklearn.OSC` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `osc(X, y, n_components = 1L, scale = TRUE)` | R | Public package wrapper around the C ABI. |
 | ref.nirs4all | `nirs4all.OSC` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_pp_osc_create(c4a_pp_osc_handle_t** out, int32_t n_components, int scale);
-void c4a_pp_osc_destroy(c4a_pp_osc_handle_t* handle);
-c4a_status_t c4a_pp_osc_fit(c4a_pp_osc_handle_t* handle, c4a_matrix_view_t X, const double* y, int64_t y_len);
-c4a_status_t c4a_pp_osc_inverse_transform( const c4a_pp_osc_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_pp_osc_is_fitted(const c4a_pp_osc_handle_t* handle, int* out_fitted);
-c4a_status_t c4a_pp_osc_transform(const c4a_pp_osc_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_pp_osc_create(n4m_pp_osc_handle_t** out, int32_t n_components, int scale);
+void n4m_pp_osc_destroy(n4m_pp_osc_handle_t* handle);
+n4m_status_t n4m_pp_osc_fit(n4m_pp_osc_handle_t* handle, n4m_matrix_view_t X, const double* y, int64_t y_len);
+n4m_status_t n4m_pp_osc_inverse_transform( const n4m_pp_osc_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_pp_osc_is_fitted(const n4m_pp_osc_handle_t* handle, int* out_fitted);
+n4m_status_t n4m_pp_osc_transform(const n4m_pp_osc_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.osc(X, y)
+Xt = n4m.osc(X, y)
 ```
 
 :::
 
-:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:::{tab-item} Python sklearn · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from chemometrics4all.sklearn import OSC
+from n4m.sklearn import OSC
 
 op = OSC(n_components=1, scale=True)
 Xt = op.fit_transform(X, y)
@@ -124,12 +124,12 @@ Xt = op.fit_transform(X, y)
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- osc(X, y, n_components = 1L, scale = TRUE)
 ```
 
@@ -169,15 +169,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">3.3e-14</td><td class="ms ms-best">🏆 0.032 ms</td><td class="ms">0.254 ms</td><td class="ms">1.281 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">3.3e-14</td><td class="ms ms-best">🏆 0.032 ms</td><td class="ms">0.254 ms</td><td class="ms">1.281 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">3.3e-14</td><td class="ms">0.034 ms</td><td class="ms ms-best">🏆 0.251 ms</td><td class="ms">1.277 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">3.3e-14</td><td class="ms">0.033 ms</td><td class="ms">0.252 ms</td><td class="ms ms-best">🏆 1.212 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">3.3e-14</td><td class="ms">0.034 ms</td><td class="ms ms-best">🏆 0.251 ms</td><td class="ms">1.277 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">3.3e-14</td><td class="ms">0.033 ms</td><td class="ms">0.252 ms</td><td class="ms ms-best">🏆 1.212 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">3.4e-14</td><td class="ms">0.047 ms</td><td class="ms">0.555 ms</td><td class="ms">3.188 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">3.4e-14</td><td class="ms">0.047 ms</td><td class="ms">0.555 ms</td><td class="ms">3.188 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.OSC · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.101 ms</td><td class="ms">0.512 ms</td><td class="ms">2.720 ms</td></tr>

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: CECILL-2.1
-"""Auto-generate ctypes declarations for libc4a.
+"""Auto-generate ctypes declarations for libn4m.
 
-Parses ``cpp/include/chemometrics4all/c4a.h`` and emits a python module
+Parses ``cpp/include/n4m/n4m.h`` and emits a python module
 ``_ffi_decls.py`` containing two helper functions:
 
     apply_argtypes(lib): bind argtypes/restype for every exported function.
     SYMBOLS: a tuple of (symbol_name, argtypes, restype) for all ABI exports.
 
-The parser is intentionally simple: every ``C4A_API <return> <name>(<args>);``
+The parser is intentionally simple: every ``N4M_API <return> <name>(<args>);``
 declaration that fits on one or more lines (delimited by ``;``) is recognised.
 Unknown handle struct pointers are mapped to ``ctypes.c_void_p`` since the
 binding never dereferences them.
@@ -21,8 +21,8 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-DEFAULT_HEADER = HERE / ".." / ".." / ".." / "cpp" / "include" / "chemometrics4all" / "c4a.h"
-DEFAULT_OUT = HERE / ".." / "src" / "chemometrics4all" / "_ffi_decls.py"
+DEFAULT_HEADER = HERE / ".." / ".." / ".." / "cpp" / "include" / "n4m" / "n4m.h"
+DEFAULT_OUT = HERE / ".." / "src" / "n4m" / "_ffi_decls.py"
 
 # Base type-name -> ctypes expression (single tokens, no pointer / const).
 PRIMITIVE_MAP = {
@@ -37,32 +37,32 @@ PRIMITIVE_MAP = {
     "double": "c_double",
     "float": "c_float",
     "char": "c_char",
-    "c4a_status_t": "c_int",  # enum -> int
-    "c4a_backend_t": "c_int",
-    "c4a_dtype_t": "c_int",
-    "c4a_pp_savgol_mode_t": "c_int",
-    "c4a_pp_gaussian_mode_t": "c_int",
-    "c4a_pp_lsnv_pad_mode_t": "c_int",
-    "c4a_pp_area_method_t": "c_int",
-    "c4a_signal_type_t": "c_int",
-    "c4a_split_kbins_strategy_t": "c_int",
-    "c4a_split_y_metric_t": "c_int",
-    "c4a_split_aggregation_t": "c_int",
-    "c4a_y_outlier_method_t": "c_int",
-    "c4a_filter_x_outlier_method_t": "c_int",
-    "c4a_composite_mode_t": "c_int",
-    "c4a_pp_wavelet_family_t": "c_int",
-    "c4a_pp_wavelet_boundary_t": "c_int",
-    "c4a_pp_wavelet_threshold_t": "c_int",
-    "c4a_pp_wavelet_noise_t": "c_int",
-    "c4a_matrix_view_t": "MatrixView",
-    "c4a_filter_stats_t": "FilterStats",
-    "c4a_split_result_t": "SplitResult",
-    "c4a_transfer_metrics_t": "TransferMetrics",
+    "n4m_status_t": "c_int",  # enum -> int
+    "n4m_backend_t": "c_int",
+    "n4m_dtype_t": "c_int",
+    "n4m_pp_savgol_mode_t": "c_int",
+    "n4m_pp_gaussian_mode_t": "c_int",
+    "n4m_pp_lsnv_pad_mode_t": "c_int",
+    "n4m_pp_area_method_t": "c_int",
+    "n4m_signal_type_t": "c_int",
+    "n4m_split_kbins_strategy_t": "c_int",
+    "n4m_split_y_metric_t": "c_int",
+    "n4m_split_aggregation_t": "c_int",
+    "n4m_y_outlier_method_t": "c_int",
+    "n4m_filter_x_outlier_method_t": "c_int",
+    "n4m_composite_mode_t": "c_int",
+    "n4m_pp_wavelet_family_t": "c_int",
+    "n4m_pp_wavelet_boundary_t": "c_int",
+    "n4m_pp_wavelet_threshold_t": "c_int",
+    "n4m_pp_wavelet_noise_t": "c_int",
+    "n4m_matrix_view_t": "MatrixView",
+    "n4m_filter_stats_t": "FilterStats",
+    "n4m_split_result_t": "SplitResult",
+    "n4m_transfer_metrics_t": "TransferMetrics",
 }
 
 DECL_RE = re.compile(
-    r"^C4A_API\s+(?P<rest>.*?)\s*\((?P<args>.*?)\)\s*;",
+    r"^N4M_API\s+(?P<rest>.*?)\s*\((?P<args>.*?)\)\s*;",
     re.DOTALL | re.MULTILINE,
 )
 
@@ -153,7 +153,7 @@ def _ctype_of(typestr: str) -> str:
         for _ in range(n_stars):
             inner = f"POINTER({inner})"
         return inner
-    # Opaque handle structs (c4a_*_handle_t) - we never deref. Use c_void_p
+    # Opaque handle structs (n4m_*_handle_t) - we never deref. Use c_void_p
     # for single-pointer, POINTER(c_void_p) for **
     if n_stars == 1:
         return "c_void_p"
@@ -195,7 +195,7 @@ def parse_header(header_text: str) -> list[dict]:
 def render_module(decls: list[dict]) -> str:
     lines: list[str] = []
     lines.append("# SPDX-License-Identifier: CECILL-2.1")
-    lines.append('"""Auto-generated ctypes argtypes/restype declarations for libc4a.')
+    lines.append('"""Auto-generated ctypes argtypes/restype declarations for libn4m.')
     lines.append("")
     lines.append("Do not edit by hand. Regenerate with::")
     lines.append("")

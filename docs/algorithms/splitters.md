@@ -1,36 +1,36 @@
 # Sample-partitioning splitters (Phase 11)
 
-Phase 11 introduces the `c4a_split_*` ABI category — nine sample-partitioning
+Phase 11 introduces the `n4m_split_*` ABI category — nine sample-partitioning
 operators that produce `(train_idx[], test_idx[])` integer arrays.
 
 | Operator                       | Public symbol prefix                            | Public type                                       |
 |--------------------------------|-------------------------------------------------|---------------------------------------------------|
-| KennardStone                   | `c4a_split_kennard_stone_*`                     | `c4a_split_kennard_stone_handle_t`                |
-| SPXY                           | `c4a_split_spxy_*`                              | `c4a_split_spxy_handle_t`                         |
-| SPXYFold                       | `c4a_split_spxy_fold_*`                         | `c4a_split_spxy_fold_handle_t`                    |
-| SPXYGFold                      | `c4a_split_spxy_g_fold_*`                       | `c4a_split_spxy_g_fold_handle_t`                  |
-| KMeans                         | `c4a_split_kmeans_*`                            | `c4a_split_kmeans_handle_t`                       |
-| KBinsStratified                | `c4a_split_kbins_stratified_*`                  | `c4a_split_kbins_stratified_handle_t`             |
-| BinnedStratifiedGroupKFold     | `c4a_split_binned_strat_group_kfold_*`          | `c4a_split_binned_strat_group_kfold_handle_t`     |
-| SystematicCircular             | `c4a_split_systematic_circular_*`               | `c4a_split_systematic_circular_handle_t`          |
-| SPlit (data twinning)          | `c4a_split_split_splitter_*`                    | `c4a_split_split_splitter_handle_t`               |
+| KennardStone                   | `n4m_split_kennard_stone_*`                     | `n4m_split_kennard_stone_handle_t`                |
+| SPXY                           | `n4m_split_spxy_*`                              | `n4m_split_spxy_handle_t`                         |
+| SPXYFold                       | `n4m_split_spxy_fold_*`                         | `n4m_split_spxy_fold_handle_t`                    |
+| SPXYGFold                      | `n4m_split_spxy_g_fold_*`                       | `n4m_split_spxy_g_fold_handle_t`                  |
+| KMeans                         | `n4m_split_kmeans_*`                            | `n4m_split_kmeans_handle_t`                       |
+| KBinsStratified                | `n4m_split_kbins_stratified_*`                  | `n4m_split_kbins_stratified_handle_t`             |
+| BinnedStratifiedGroupKFold     | `n4m_split_binned_strat_group_kfold_*`          | `n4m_split_binned_strat_group_kfold_handle_t`     |
+| SystematicCircular             | `n4m_split_systematic_circular_*`               | `n4m_split_systematic_circular_handle_t`          |
+| SPlit (data twinning)          | `n4m_split_split_splitter_*`                    | `n4m_split_split_splitter_handle_t`               |
 
 All operators share the result type:
 
 ```c
-typedef struct c4a_split_result_t {
+typedef struct n4m_split_result_t {
     int64_t* train_idx;    /* length n_train */
     int64_t  n_train;
     int64_t* test_idx;     /* length n_test  */
     int64_t  n_test;
     void*    _owner;       /* opaque allocation handle */
-} c4a_split_result_t;
+} n4m_split_result_t;
 
-C4A_API void c4a_split_result_destroy(c4a_split_result_t* r);
+N4M_API void n4m_split_result_destroy(n4m_split_result_t* r);
 ```
 
 Buffers are owned by the splitter side; the caller must invoke
-`c4a_split_result_destroy` exactly once per filled result. Calling
+`n4m_split_result_destroy` exactly once per filled result. Calling
 `_destroy` on an empty result is safe.
 
 ## Algorithms
@@ -134,7 +134,7 @@ Fixtures live under `parity/fixtures/split_*_v1.json`.
 
 ## ABI
 
-- 31 new exports under the `c4a_split_*` prefix.
-- 1 new struct: `c4a_split_result_t`.
-- 1 new struct destructor: `c4a_split_result_destroy`.
-- 9 new opaque handle types: `c4a_split_<op>_handle_t`.
+- 31 new exports under the `n4m_split_*` prefix.
+- 1 new struct: `n4m_split_result_t`.
+- 1 new struct destructor: `n4m_split_result_destroy`.
+- 9 new opaque handle types: `n4m_split_<op>_handle_t`.

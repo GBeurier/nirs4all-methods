@@ -34,7 +34,7 @@ available the UCL is reported as zero.
 ## ABI
 
 ```c
-C4A_API c4a_status_t c4a_util_q_residuals(c4a_matrix_view_t X,
+N4M_API n4m_status_t n4m_util_q_residuals(n4m_matrix_view_t X,
                                            int32_t n_components,
                                            double alpha,
                                            double* q_per_sample,
@@ -42,7 +42,7 @@ C4A_API c4a_status_t c4a_util_q_residuals(c4a_matrix_view_t X,
                                            double* ucl_out);
 ```
 
-Same validation as `c4a_util_hotelling_t2`: `n_samples` must equal
+Same validation as `n4m_util_hotelling_t2`: `n_samples` must equal
 `X.rows`, `alpha` ∈ (0, 1), `1 ≤ n_components ≤ cols` and `< n_samples`.
 
 ## Numerical contract

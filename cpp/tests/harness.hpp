@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
-// Hand-rolled zero-dependency test harness for chemometrics4all.
+// Hand-rolled zero-dependency test harness for n4m.
 
 #pragma once
 
@@ -13,15 +13,15 @@
 #include <utility>
 #include <vector>
 
-#include "chemometrics4all/c4a.h"
+#include "n4m/n4m.h"
 
-#define C4A_TEST_REQUIRE(cond) do { \
+#define N4M_TEST_REQUIRE(cond) do { \
     if (!(cond)) { \
-        throw c4a_testing::AssertFailed(__FILE__, __LINE__, #cond); \
+        throw n4m_testing::AssertFailed(__FILE__, __LINE__, #cond); \
     } \
 } while (0)
 
-namespace c4a_testing {
+namespace n4m_testing {
 
 struct AssertFailed : public std::runtime_error {
     AssertFailed(const char* file, int line, const char* expr)
@@ -53,7 +53,7 @@ public:
     }
 
     int finalize() const {
-        printf("\n=== chemometrics4all_tests: %zu passed, %zu failed ===\n",
+        printf("\n=== n4m_tests: %zu passed, %zu failed ===\n",
                pass_, fail_);
         for (const auto& [name, msg] : failures_) {
             printf("  FAIL %s: %s\n", name.c_str(), msg.c_str());
@@ -68,4 +68,4 @@ private:
     std::vector<std::pair<std::string, std::string>> failures_;
 };
 
-}  // namespace c4a_testing
+}  // namespace n4m_testing

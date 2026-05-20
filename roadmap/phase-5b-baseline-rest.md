@@ -20,9 +20,9 @@ Complete the baseline-correction family started in Phase 5a, refactor the iterat
 | Item | Status from earlier reviews |
 |---|---|
 | **LogTransform `_fit/_transform` split** | Opened Phase 2, deferred Phase 3, Phase 4 Codex M3 said "must land Phase 5". Now lands. |
-| **`c4a_banded5_factor_into(...)` (in-place factor)** | Phase 5a Opus #10 — lifts L/D buffers to row-scope, saves max_iter mallocs per row. |
-| **Shared `c4a_second_diff_penalty_pent5(n, lam, m, s1, s2)` in banded_solver** | Phase 5a Opus #11 — dedup penalty builder across AsLS / AirPLS / ArPLS / IAsLS / BEADS. |
-| **Shared `c4a_relative_l2_diff(w_old, w_new, n)` helper** | Phase 5a Opus #11 — dedup convergence check across AsLS / ArPLS / IAsLS. |
+| **`n4m_banded5_factor_into(...)` (in-place factor)** | Phase 5a Opus #10 — lifts L/D buffers to row-scope, saves max_iter mallocs per row. |
+| **Shared `n4m_second_diff_penalty_pent5(n, lam, m, s1, s2)` in banded_solver** | Phase 5a Opus #11 — dedup penalty builder across AsLS / AirPLS / ArPLS / IAsLS / BEADS. |
+| **Shared `n4m_relative_l2_diff(w_old, w_new, n)` helper** | Phase 5a Opus #11 — dedup convergence check across AsLS / ArPLS / IAsLS. |
 | **AirPLS smoke test strengthening** (bounded-value on constant input) | Phase 5a #7. |
 | **CONTRIBUTING.md review order codification** | Phase 4 Codex P1. |
 
@@ -30,28 +30,28 @@ Complete the baseline-correction family started in Phase 5a, refactor the iterat
 
 6 baseline ops × 3 symbols (`_create / _destroy / _transform`) = **18 new symbols**.
 
-LogTransform split adds `c4a_pp_log_fit` (and changes `_transform` semantics slightly — `_transform` reads `_fitted_offset` instead of recomputing). **No new ABI symbol** (just one new function alongside existing) — well, technically `_fit` is new, so +1. Net Phase 5b: **+19 symbols**.
+LogTransform split adds `n4m_pp_log_fit` (and changes `_transform` semantics slightly — `_transform` reads `_fitted_offset` instead of recomputing). **No new ABI symbol** (just one new function alongside existing) — well, technically `_fit` is new, so +1. Net Phase 5b: **+19 symbols**.
 
 Total: 106 → **125 symbols**. ABI 1.5.0 → 1.6.0.
 
 ```c
 /* §12 — Phase 5b Baseline correction (rest) */
-typedef struct c4a_pp_modpoly_handle_t       c4a_pp_modpoly_handle_t;
-typedef struct c4a_pp_imodpoly_handle_t      c4a_pp_imodpoly_handle_t;
-typedef struct c4a_pp_snip_handle_t          c4a_pp_snip_handle_t;
-typedef struct c4a_pp_rolling_ball_handle_t  c4a_pp_rolling_ball_handle_t;
-typedef struct c4a_pp_iasls_handle_t         c4a_pp_iasls_handle_t;
-typedef struct c4a_pp_beads_handle_t         c4a_pp_beads_handle_t;
+typedef struct n4m_pp_modpoly_handle_t       n4m_pp_modpoly_handle_t;
+typedef struct n4m_pp_imodpoly_handle_t      n4m_pp_imodpoly_handle_t;
+typedef struct n4m_pp_snip_handle_t          n4m_pp_snip_handle_t;
+typedef struct n4m_pp_rolling_ball_handle_t  n4m_pp_rolling_ball_handle_t;
+typedef struct n4m_pp_iasls_handle_t         n4m_pp_iasls_handle_t;
+typedef struct n4m_pp_beads_handle_t         n4m_pp_beads_handle_t;
 
-C4A_API c4a_status_t c4a_pp_modpoly_create(c4a_pp_modpoly_handle_t** out,
+N4M_API n4m_status_t n4m_pp_modpoly_create(n4m_pp_modpoly_handle_t** out,
                                             int32_t polyorder, int32_t max_iter, double tol);
-C4A_API void         c4a_pp_modpoly_destroy(c4a_pp_modpoly_handle_t* h);
-C4A_API c4a_status_t c4a_pp_modpoly_transform(...);
+N4M_API void         n4m_pp_modpoly_destroy(n4m_pp_modpoly_handle_t* h);
+N4M_API n4m_status_t n4m_pp_modpoly_transform(...);
 
 /* ... same shape for IModPoly, SNIP, RollingBall, IAsLS, BEADS ... */
 
 /* §8 update — LogTransform stateful split */
-C4A_API c4a_status_t c4a_pp_log_fit(c4a_pp_log_handle_t* h, c4a_matrix_view_t X);
+N4M_API n4m_status_t n4m_pp_log_fit(n4m_pp_log_handle_t* h, n4m_matrix_view_t X);
 /* _transform behavior change: now reads handle->_fitted_offset (set by _fit
  * if auto_offset=1) instead of recomputing per call. */
 ```
@@ -77,7 +77,7 @@ C4A_API c4a_status_t c4a_pp_log_fit(c4a_pp_log_handle_t* h, c4a_matrix_view_t X)
 - `cpp/src/core/preprocessing/baselines/iasls.{c,h}`
 - `cpp/src/core/preprocessing/baselines/beads.{c,h}`
 
-### Frozen Python references (under `c4a_parity_pybaselines_ref/`)
+### Frozen Python references (under `n4m_parity_pybaselines_ref/`)
 - `modpoly.py`, `imodpoly.py`, `snip.py`, `rolling_ball.py`, `iasls.py`, `beads.py`
 
 ### Tests + fixtures + docs
@@ -87,12 +87,12 @@ C4A_API c4a_status_t c4a_pp_log_fit(c4a_pp_log_handle_t* h, c4a_matrix_view_t X)
 - `docs/algorithms/{modpoly,imodpoly,snip,rolling_ball,iasls,beads}.md`
 
 ### Refactors
-- Update `cpp/src/core/common/banded_solver.{c,h}` — add `c4a_banded5_factor_into(...)`, `c4a_second_diff_penalty_pent5(...)`.
+- Update `cpp/src/core/common/banded_solver.{c,h}` — add `n4m_banded5_factor_into(...)`, `n4m_second_diff_penalty_pent5(...)`.
 - Update `cpp/src/core/preprocessing/baselines/{asls,airpls,arpls}.c` — use the shared helpers and in-place factor.
 - Update `cpp/src/core/preprocessing/scaling/log_transform.{c,h}` — add `_fit` step + change `_transform` to read cached `_fitted_offset`.
 
 ### Process
-- `cpp/include/chemometrics4all/c4a.h` — append §12 + update §8 LogTransform banner.
+- `cpp/include/n4m/n4m.h` — append §12 + update §8 LogTransform banner.
 - `cpp/src/c_api/c_api_preprocessing.cpp` — append wrappers.
 - `CHANGELOG.md` — `[0.1.0+abi.1.6.0]` section.
 
@@ -110,8 +110,8 @@ C4A_API c4a_status_t c4a_pp_log_fit(c4a_pp_log_handle_t* h, c4a_matrix_view_t X)
 
 ```bash
 cmake --build --preset dev-debug
-./build/dev-debug/cpp/tests/chemometrics4all_tests   # 82/82
-nm -D --defined-only build/dev-debug/cpp/src/libc4a.so.1.6.0 | awk '$2=="T" {print $3}' | sort -u | wc -l   # 125
+./build/dev-debug/cpp/tests/n4m_tests   # 82/82
+nm -D --defined-only build/dev-debug/cpp/src/libn4m.so.1.6.0 | awk '$2=="T" {print $3}' | sort -u | wc -l   # 125
 ```
 
 ## Next phase

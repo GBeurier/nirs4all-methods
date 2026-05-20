@@ -13,18 +13,18 @@ def _spectra(rows: int = 12, cols: int = 32):
 
 
 def test_public_python_and_sklearn_surfaces_are_distinct():
-    import chemometrics4all as c4a
-    from chemometrics4all import python as c4a_python
-    from chemometrics4all import sklearn as c4a_sklearn
+    import n4m as n4m
+    from n4m import python as n4m_python
+    from n4m import sklearn as n4m_sklearn
 
     x, _ = _spectra(rows=4, cols=8)
-    direct = c4a_python.snv(x, ddof=1)
-    estimator = c4a_sklearn.SNV(ddof=1)
+    direct = n4m_python.snv(x, ddof=1)
+    estimator = n4m_sklearn.SNV(ddof=1)
     wrapped = estimator.fit_transform(x)
 
     assert np.allclose(direct, wrapped)
-    assert c4a.python is c4a_python
-    assert c4a.sklearn is c4a_sklearn
+    assert n4m.python is n4m_python
+    assert n4m.sklearn is n4m_sklearn
 
     try:
         from sklearn.base import BaseEstimator, TransformerMixin
@@ -38,42 +38,42 @@ def test_public_python_and_sklearn_surfaces_are_distinct():
 @pytest.mark.parametrize(
     "factory",
     [
-        lambda wl: __import__("chemometrics4all").MultiplicativeNoise(seed=1),
-        lambda wl: __import__("chemometrics4all").SpikeNoise(seed=1),
-        lambda wl: __import__("chemometrics4all").HeteroscedasticNoiseAugmenter(seed=1),
-        lambda wl: __import__("chemometrics4all").LinearBaselineDrift(seed=1),
-        lambda wl: __import__("chemometrics4all").PolynomialBaselineDrift(seed=1),
-        lambda wl: __import__("chemometrics4all").PathLengthAugmenter(seed=1),
-        lambda wl: __import__("chemometrics4all").WavelengthShift(wavelengths=wl, seed=1),
-        lambda wl: __import__("chemometrics4all").WavelengthStretch(wavelengths=wl, seed=1),
-        lambda wl: __import__("chemometrics4all").LocalWarpAugmenter(wavelengths=wl, seed=1),
-        lambda wl: __import__("chemometrics4all").BandPerturbationAugmenter(seed=1),
-        lambda wl: __import__("chemometrics4all").BandMasking(seed=1),
-        lambda wl: __import__("chemometrics4all").ChannelDropout(seed=1),
-        lambda wl: __import__("chemometrics4all").GaussianJitter(seed=1),
-        lambda wl: __import__("chemometrics4all").UnsharpMask(seed=1),
-        lambda wl: __import__("chemometrics4all").MagnitudeWarp(wavelengths=wl, seed=1),
-        lambda wl: __import__("chemometrics4all").LocalClip(seed=1),
-        lambda wl: __import__("chemometrics4all").MixupAugmenter(seed=1),
-        lambda wl: __import__("chemometrics4all").LocalMixupAugmenter(seed=1),
-        lambda wl: __import__("chemometrics4all").ScatterSimulationMSC(seed=1),
-        lambda wl: __import__("chemometrics4all").ParticleSizeAugmenter(wavelengths=wl, seed=1),
-        lambda wl: __import__("chemometrics4all").EMSCDistortionAugmenter(wavelengths=wl, seed=1),
-        lambda wl: __import__("chemometrics4all").BatchEffectAugmenter(wavelengths=wl, seed=1),
-        lambda wl: __import__("chemometrics4all").InstrumentalBroadeningAugmenter(wavelengths=wl, seed=1),
-        lambda wl: __import__("chemometrics4all").DeadBandAugmenter(seed=1),
-        lambda wl: __import__("chemometrics4all").TemperatureAugmenter(wavelengths=wl, seed=1),
-        lambda wl: __import__("chemometrics4all").MoistureAugmenter(wavelengths=wl, seed=1),
-        lambda wl: __import__("chemometrics4all").DetectorRollOffAugmenter(wavelengths=wl, seed=1),
-        lambda wl: __import__("chemometrics4all").StrayLightAugmenter(wavelengths=wl, seed=1),
-        lambda wl: __import__("chemometrics4all").EdgeCurvatureAugmenter(wavelengths=wl, seed=1),
-        lambda wl: __import__("chemometrics4all").TruncatedPeakAugmenter(wavelengths=wl, seed=1),
-        lambda wl: __import__("chemometrics4all").EdgeArtifactsAugmenter(wavelengths=wl, seed=1),
-        lambda wl: __import__("chemometrics4all").SplineSmoothingAugmenter(seed=1),
-        lambda wl: __import__("chemometrics4all").SplineXPerturbationAugmenter(seed=1),
-        lambda wl: __import__("chemometrics4all").SplineYPerturbationAugmenter(seed=1),
-        lambda wl: __import__("chemometrics4all").RotateTranslateAugmenter(seed=1),
-        lambda wl: __import__("chemometrics4all").RandomXOperation(seed=1),
+        lambda wl: __import__("n4m").MultiplicativeNoise(seed=1),
+        lambda wl: __import__("n4m").SpikeNoise(seed=1),
+        lambda wl: __import__("n4m").HeteroscedasticNoiseAugmenter(seed=1),
+        lambda wl: __import__("n4m").LinearBaselineDrift(seed=1),
+        lambda wl: __import__("n4m").PolynomialBaselineDrift(seed=1),
+        lambda wl: __import__("n4m").PathLengthAugmenter(seed=1),
+        lambda wl: __import__("n4m").WavelengthShift(wavelengths=wl, seed=1),
+        lambda wl: __import__("n4m").WavelengthStretch(wavelengths=wl, seed=1),
+        lambda wl: __import__("n4m").LocalWarpAugmenter(wavelengths=wl, seed=1),
+        lambda wl: __import__("n4m").BandPerturbationAugmenter(seed=1),
+        lambda wl: __import__("n4m").BandMasking(seed=1),
+        lambda wl: __import__("n4m").ChannelDropout(seed=1),
+        lambda wl: __import__("n4m").GaussianJitter(seed=1),
+        lambda wl: __import__("n4m").UnsharpMask(seed=1),
+        lambda wl: __import__("n4m").MagnitudeWarp(wavelengths=wl, seed=1),
+        lambda wl: __import__("n4m").LocalClip(seed=1),
+        lambda wl: __import__("n4m").MixupAugmenter(seed=1),
+        lambda wl: __import__("n4m").LocalMixupAugmenter(seed=1),
+        lambda wl: __import__("n4m").ScatterSimulationMSC(seed=1),
+        lambda wl: __import__("n4m").ParticleSizeAugmenter(wavelengths=wl, seed=1),
+        lambda wl: __import__("n4m").EMSCDistortionAugmenter(wavelengths=wl, seed=1),
+        lambda wl: __import__("n4m").BatchEffectAugmenter(wavelengths=wl, seed=1),
+        lambda wl: __import__("n4m").InstrumentalBroadeningAugmenter(wavelengths=wl, seed=1),
+        lambda wl: __import__("n4m").DeadBandAugmenter(seed=1),
+        lambda wl: __import__("n4m").TemperatureAugmenter(wavelengths=wl, seed=1),
+        lambda wl: __import__("n4m").MoistureAugmenter(wavelengths=wl, seed=1),
+        lambda wl: __import__("n4m").DetectorRollOffAugmenter(wavelengths=wl, seed=1),
+        lambda wl: __import__("n4m").StrayLightAugmenter(wavelengths=wl, seed=1),
+        lambda wl: __import__("n4m").EdgeCurvatureAugmenter(wavelengths=wl, seed=1),
+        lambda wl: __import__("n4m").TruncatedPeakAugmenter(wavelengths=wl, seed=1),
+        lambda wl: __import__("n4m").EdgeArtifactsAugmenter(wavelengths=wl, seed=1),
+        lambda wl: __import__("n4m").SplineSmoothingAugmenter(seed=1),
+        lambda wl: __import__("n4m").SplineXPerturbationAugmenter(seed=1),
+        lambda wl: __import__("n4m").SplineYPerturbationAugmenter(seed=1),
+        lambda wl: __import__("n4m").RotateTranslateAugmenter(seed=1),
+        lambda wl: __import__("n4m").RandomXOperation(seed=1),
     ],
 )
 def test_augmenter_wrappers_shape(factory):
@@ -84,49 +84,49 @@ def test_augmenter_wrappers_shape(factory):
 
 
 def test_deferred_spline_simplification_wrappers_raise_not_implemented():
-    import chemometrics4all as c4a
+    import n4m as n4m
 
     x, _ = _spectra()
-    with pytest.raises(c4a.Chemometrics4allError):
-        c4a.SplineXSimplificationAugmenter(seed=1).fit_transform(x)
-    with pytest.raises(c4a.Chemometrics4allError):
-        c4a.SplineCurveSimplificationAugmenter(seed=1).fit_transform(x)
+    with pytest.raises(n4m.N4MError):
+        n4m.SplineXSimplificationAugmenter(seed=1).fit_transform(x)
+    with pytest.raises(n4m.N4MError):
+        n4m.SplineCurveSimplificationAugmenter(seed=1).fit_transform(x)
 
 
 def test_splitter_wrappers_smoke():
-    import chemometrics4all as c4a
+    import n4m as n4m
 
     x, _ = _spectra(rows=24, cols=6)
     y = np.arange(x.shape[0], dtype=np.float64).reshape(-1, 1)
     groups = np.repeat(np.arange(12, dtype=np.int64), 2)
 
     for train, test in [
-        c4a.KMeansSplitter(seed=1).split(x),
-        c4a.SystematicCircularSplitter(seed=1).split(y),
-        c4a.SPlitSplitter(seed=1).split(x),
+        n4m.KMeansSplitter(seed=1).split(x),
+        n4m.SystematicCircularSplitter(seed=1).split(y),
+        n4m.SPlitSplitter(seed=1).split(x),
     ]:
         assert train.ndim == test.ndim == 1
         assert train.size + test.size == x.shape[0]
 
-    train, test = c4a.SPXYFoldSplitter(n_splits=3).split_fold(x, y, 0)
+    train, test = n4m.SPXYFoldSplitter(n_splits=3).split_fold(x, y, 0)
     assert train.size + test.size == x.shape[0]
 
-    train, test = c4a.SPXYGroupFoldSplitter(n_splits=3).split_fold(x, y, groups, 0)
+    train, test = n4m.SPXYGroupFoldSplitter(n_splits=3).split_fold(x, y, groups, 0)
     assert train.size + test.size == x.shape[0]
 
-    train, test = c4a.BinnedStratifiedGroupKFoldSplitter(
+    train, test = n4m.BinnedStratifiedGroupKFoldSplitter(
         n_splits=3, n_bins=2, seed=1
     ).split_fold(y, groups, 0)
     assert train.size + test.size == x.shape[0]
 
 
 def test_filter_meta_wrappers_smoke():
-    import chemometrics4all as c4a
+    import n4m as n4m
 
     x, _ = _spectra(rows=20, cols=4)
-    leverage = c4a.HighLeverageFilter().fit(x)
-    quality = c4a.SpectralQualityFilter()
-    composite = c4a.CompositeFilter(filters=[leverage, quality]).fit(x)
+    leverage = n4m.HighLeverageFilter().fit(x)
+    quality = n4m.SpectralQualityFilter()
+    composite = n4m.CompositeFilter(filters=[leverage, quality]).fit(x)
 
     for filt in [leverage, quality, composite]:
         mask, stats = filt.apply(x)
@@ -135,32 +135,32 @@ def test_filter_meta_wrappers_smoke():
 
 
 def test_advanced_transfer_and_scatter_wrappers_smoke():
-    import chemometrics4all as c4a
+    import n4m as n4m
 
     x, _ = _spectra(rows=16, cols=12)
     target = 1.05 * x + 0.1
 
     for op in [
-        c4a.DirectStandardization(),
-        c4a.RobustDirectStandardization(max_iter=2),
-        c4a.PiecewiseDirectStandardization(window_size=5),
-        c4a.ScoreAugmentedProjectionStandardization(n_components=3),
-        c4a.LocalCentering(),
+        n4m.DirectStandardization(),
+        n4m.RobustDirectStandardization(max_iter=2),
+        n4m.PiecewiseDirectStandardization(window_size=5),
+        n4m.ScoreAugmentedProjectionStandardization(n_components=3),
+        n4m.LocalCentering(),
     ]:
         out = op.fit(x, target).transform(x)
         assert out.shape == x.shape
         assert np.isfinite(out).all()
 
     y = np.linspace(0.0, 1.0, x.shape[0])
-    corrected = c4a.SlopeBiasCorrection().fit(y, 2.0 * y + 1.0).transform(y)
+    corrected = n4m.SlopeBiasCorrection().fit(y, 2.0 * y + 1.0).transform(y)
     assert np.allclose(corrected, 2.0 * y + 1.0)
 
     for op in [
-        c4a.WeightedSNV(),
-        c4a.VariableSortingNormalization(),
-        c4a.PiecewiseSNV(window_size=4),
-        c4a.PiecewiseMSC(window_size=4),
-        c4a.LocalizedMSC(window_size=5),
+        n4m.WeightedSNV(),
+        n4m.VariableSortingNormalization(),
+        n4m.PiecewiseSNV(window_size=4),
+        n4m.PiecewiseMSC(window_size=4),
+        n4m.LocalizedMSC(window_size=5),
     ]:
         out = op.fit_transform(x)
         assert out.shape == x.shape
@@ -168,34 +168,34 @@ def test_advanced_transfer_and_scatter_wrappers_smoke():
 
 
 def test_advanced_alignment_and_selection_wrappers_smoke():
-    import chemometrics4all as c4a
+    import n4m as n4m
 
     x, _ = _spectra(rows=10, cols=10)
     y = np.linspace(0.0, 1.0, x.shape[0])
 
     for op in [
-        c4a.CrossCorrelationAlignment(max_shift=2),
-        c4a.IcoshiftAlignment(interval_size=5, max_shift=1),
-        c4a.DynamicTimeWarpingAlignment(),
-        c4a.CorrelationOptimizedWarping(interval_size=5, max_shift=1),
+        n4m.CrossCorrelationAlignment(max_shift=2),
+        n4m.IcoshiftAlignment(interval_size=5, max_shift=1),
+        n4m.DynamicTimeWarpingAlignment(),
+        n4m.CorrelationOptimizedWarping(interval_size=5, max_shift=1),
     ]:
         out = op.fit_transform(x)
         assert out.shape == x.shape
         assert np.isfinite(out).all()
 
     for selector in [
-        c4a.VarianceFilter(top_k=3),
-        c4a.CorrelationFilter(top_k=3),
+        n4m.VarianceFilter(top_k=3),
+        n4m.CorrelationFilter(top_k=3),
     ]:
         out = selector.fit_transform(x, y)
         assert out.shape == (x.shape[0], 3)
 
-    intervals = c4a.IntervalGenerator(interval_size=4, step=3).fit_transform(x)
+    intervals = n4m.IntervalGenerator(interval_size=4, step=3).fit_transform(x)
     assert intervals
     assert all(block.shape[0] == x.shape[0] for block in intervals)
 
 
-# Names that must be importable from the top-level ``chemometrics4all`` module
+# Names that must be importable from the top-level ``nirs4all-methods`` module
 # for every one of the 32 cross-binding method IDs.
 _CROSS_BINDING_SKLEARN_NAMES: dict[str, str] = {
     "log_transform": "LogTransform",
@@ -233,13 +233,13 @@ _CROSS_BINDING_SKLEARN_NAMES: dict[str, str] = {
 
 
 def test_cross_binding_sklearn_surface_exposes_all_methods():
-    """Every method ID must resolve on the top-level ``chemometrics4all`` package."""
-    import chemometrics4all as c4a
+    """Every method ID must resolve on the top-level ``nirs4all-methods`` package."""
+    import n4m as n4m
 
     missing = [
         mid
         for mid, name in _CROSS_BINDING_SKLEARN_NAMES.items()
-        if not hasattr(c4a, name)
+        if not hasattr(n4m, name)
     ]
     assert not missing, f"missing top-level sklearn-surface names: {missing}"
     assert len(_CROSS_BINDING_SKLEARN_NAMES) == 31
@@ -247,27 +247,27 @@ def test_cross_binding_sklearn_surface_exposes_all_methods():
 
 def test_cross_binding_wavelength_bundle_helper_matches_python_surface():
     """The sklearn-side wavelength bundle helper reproduces the ABI-close output."""
-    import chemometrics4all as c4a
-    from chemometrics4all import python as c4a_python
+    import n4m as n4m
+    from n4m import python as n4m_python
 
     x, wl = _spectra(rows=6, cols=16)
-    out_py = c4a_python.aug_wavelength_spectral(x, wavelengths=wl, seed=5)
-    out_skl = c4a.aug_wavelength_spectral(x, wavelengths=wl, seed=5)
+    out_py = n4m_python.aug_wavelength_spectral(x, wavelengths=wl, seed=5)
+    out_skl = n4m.aug_wavelength_spectral(x, wavelengths=wl, seed=5)
     assert out_py.shape == (x.shape[0], 10 * x.shape[1])
     assert np.allclose(out_py, out_skl)
 
 
 def test_cross_binding_metric_helpers_smoke():
     """``nirs_metrics`` and ``signal_type_detector`` work from the public surface."""
-    import chemometrics4all as c4a
+    import n4m as n4m
 
     y = np.arange(8, dtype=np.float64)
-    metrics = c4a.nirs_metrics(y, y + 0.1)
+    metrics = n4m.nirs_metrics(y, y + 0.1)
     assert set(metrics) == {"rmse", "mae", "bias", "sep", "rpd", "rpiq", "r2", "nrmse"}
     assert all(isinstance(v, float) for v in metrics.values())
 
     x, wl = _spectra(rows=20, cols=24)
-    detection = c4a.signal_type_detector(x, wavelengths=wl)
+    detection = n4m.signal_type_detector(x, wavelengths=wl)
     assert set(detection) == {"type", "confidence", "reason"}
     assert isinstance(detection["type"], int)
     assert 0.0 <= detection["confidence"] <= 1.0

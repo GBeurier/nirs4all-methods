@@ -15,23 +15,23 @@
 #include <string>
 #include <vector>
 
-#include "chemometrics4all/c4a.h"
+#include "n4m/n4m.h"
 
 #include "fixture_parser.hpp"
 #include "harness.hpp"
 
-#ifndef C4A_PARITY_FIXTURE_DIR
-#  error "C4A_PARITY_FIXTURE_DIR must be defined"
+#ifndef N4M_PARITY_FIXTURE_DIR
+#  error "N4M_PARITY_FIXTURE_DIR must be defined"
 #endif
 
 namespace {
 
-c4a_matrix_view_t make_rowmajor_view(double* data, std::int64_t rows,
+n4m_matrix_view_t make_rowmajor_view(double* data, std::int64_t rows,
                                       std::int64_t cols) {
-    c4a_matrix_view_t v{};
-    const c4a_status_t st =
-        c4a_matrix_view_init_rowmajor(&v, data, rows, cols, C4A_DTYPE_F64);
-    C4A_TEST_REQUIRE(st == C4A_OK);
+    n4m_matrix_view_t v{};
+    const n4m_status_t st =
+        n4m_matrix_view_init_rowmajor(&v, data, rows, cols, N4M_DTYPE_F64);
+    N4M_TEST_REQUIRE(st == N4M_OK);
     return v;
 }
 
@@ -46,49 +46,49 @@ void test_signal_detect_smoke_reflectance() {
         0.42, 0.51, 0.53, 0.49,
         0.47, 0.49, 0.52, 0.46,
     };
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 3, 4);
-    c4a_signal_type_t type_out = C4A_SIGNAL_UNKNOWN;
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 3, 4);
+    n4m_signal_type_t type_out = N4M_SIGNAL_UNKNOWN;
     double confidence = -1.0;
     char reason_buf[256] = {0};
-    const c4a_status_t st = c4a_signal_detect(
+    const n4m_status_t st = n4m_signal_detect(
         Xv, nullptr, 0, /*threshold=*/0.3, &type_out, &confidence, reason_buf);
-    C4A_TEST_REQUIRE(st == C4A_OK);
-    C4A_TEST_REQUIRE(type_out == C4A_SIGNAL_REFLECTANCE);
-    C4A_TEST_REQUIRE(confidence > 0.0 && confidence <= 1.0);
-    C4A_TEST_REQUIRE(reason_buf[0] != '\0');
+    N4M_TEST_REQUIRE(st == N4M_OK);
+    N4M_TEST_REQUIRE(type_out == N4M_SIGNAL_REFLECTANCE);
+    N4M_TEST_REQUIRE(confidence > 0.0 && confidence <= 1.0);
+    N4M_TEST_REQUIRE(reason_buf[0] != '\0');
 }
 
 void test_signal_detect_smoke_empty() {
     // 0x0 input — empty data path.
-    c4a_matrix_view_t Xv{};
+    n4m_matrix_view_t Xv{};
     Xv.data       = nullptr;
     Xv.rows       = 0;
     Xv.cols       = 0;
     Xv.row_stride = 0;
     Xv.col_stride = 1;
-    Xv.dtype      = C4A_DTYPE_F64;
-    c4a_signal_type_t type_out = C4A_SIGNAL_ABSORBANCE;
+    Xv.dtype      = N4M_DTYPE_F64;
+    n4m_signal_type_t type_out = N4M_SIGNAL_ABSORBANCE;
     double confidence = -1.0;
     char reason_buf[256] = {0};
-    const c4a_status_t st = c4a_signal_detect(
+    const n4m_status_t st = n4m_signal_detect(
         Xv, nullptr, 0, /*threshold=*/0.7, &type_out, &confidence, reason_buf);
-    C4A_TEST_REQUIRE(st == C4A_OK);
-    C4A_TEST_REQUIRE(type_out == C4A_SIGNAL_UNKNOWN);
-    C4A_TEST_REQUIRE(confidence == 0.0);
+    N4M_TEST_REQUIRE(st == N4M_OK);
+    N4M_TEST_REQUIRE(type_out == N4M_SIGNAL_UNKNOWN);
+    N4M_TEST_REQUIRE(confidence == 0.0);
 }
 
 void test_signal_detect_smoke_nullptr_out() {
     double X[2] = {0.4, 0.6};
-    c4a_matrix_view_t Xv = make_rowmajor_view(X, 1, 2);
+    n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 2);
     double conf = 0.0;
     char reason[256] = {0};
-    const c4a_status_t st1 = c4a_signal_detect(
+    const n4m_status_t st1 = n4m_signal_detect(
         Xv, nullptr, 0, 0.5, nullptr, &conf, reason);
-    C4A_TEST_REQUIRE(st1 == C4A_ERR_NULL_POINTER);
-    c4a_signal_type_t t = C4A_SIGNAL_UNKNOWN;
-    const c4a_status_t st2 = c4a_signal_detect(
+    N4M_TEST_REQUIRE(st1 == N4M_ERR_NULL_POINTER);
+    n4m_signal_type_t t = N4M_SIGNAL_UNKNOWN;
+    const n4m_status_t st2 = n4m_signal_detect(
         Xv, nullptr, 0, 0.5, &t, nullptr, reason);
-    C4A_TEST_REQUIRE(st2 == C4A_ERR_NULL_POINTER);
+    N4M_TEST_REQUIRE(st2 == N4M_ERR_NULL_POINTER);
 }
 
 // ---------------------------------------------------------------------------
@@ -113,49 +113,49 @@ struct SignalCase {
 };
 
 std::vector<SignalCase> load_signal_cases(const std::string& filename) {
-    const std::string body = ::c4a_testing::slurp(
-        std::string(C4A_PARITY_FIXTURE_DIR) + "/" + filename);
-    auto [cases_lo, cases_hi] = ::c4a_testing::find_cases_array(body);
-    auto spans = ::c4a_testing::list_case_object_spans(body, cases_lo,
+    const std::string body = ::n4m_testing::slurp(
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/" + filename);
+    auto [cases_lo, cases_hi] = ::n4m_testing::find_cases_array(body);
+    auto spans = ::n4m_testing::list_case_object_spans(body, cases_lo,
                                                         cases_hi);
     std::vector<SignalCase> out;
     for (const auto& [lo, hi] : spans) {
         SignalCase c;
         // name
-        std::size_t np = ::c4a_testing::find_value_for_key(body, "name", lo, hi);
-        c.name = ::c4a_testing::parse_string(body, np);
+        std::size_t np = ::n4m_testing::find_value_for_key(body, "name", lo, hi);
+        c.name = ::n4m_testing::parse_string(body, np);
         // rows, cols
-        c.rows = ::c4a_testing::parse_int64(body,
-            ::c4a_testing::find_value_for_key(body, "rows", lo, hi));
-        c.cols = ::c4a_testing::parse_int64(body,
-            ::c4a_testing::find_value_for_key(body, "cols", lo, hi));
+        c.rows = ::n4m_testing::parse_int64(body,
+            ::n4m_testing::find_value_for_key(body, "rows", lo, hi));
+        c.cols = ::n4m_testing::parse_int64(body,
+            ::n4m_testing::find_value_for_key(body, "cols", lo, hi));
         // input_hex
-        std::size_t ip = ::c4a_testing::find_value_for_key(body, "input_hex",
+        std::size_t ip = ::n4m_testing::find_value_for_key(body, "input_hex",
                                                             lo, hi);
-        ::c4a_testing::parse_hex_double_array(body, ip, c.input);
+        ::n4m_testing::parse_hex_double_array(body, ip, c.input);
         // confidence_threshold, expected_type
         c.confidence_threshold = std::strtod(
-            body.c_str() + ::c4a_testing::find_value_for_key(
+            body.c_str() + ::n4m_testing::find_value_for_key(
                 body, "confidence_threshold", lo, hi), nullptr);
         c.expected_type = static_cast<int32_t>(
-            ::c4a_testing::parse_int64(body,
-                ::c4a_testing::find_value_for_key(body, "expected_type",
+            ::n4m_testing::parse_int64(body,
+                ::n4m_testing::find_value_for_key(body, "expected_type",
                                                    lo, hi)));
         // expected_confidence_hex
-        std::size_t hp = ::c4a_testing::find_value_for_key(
+        std::size_t hp = ::n4m_testing::find_value_for_key(
             body, "expected_confidence_hex", lo, hi);
-        c.expected_confidence = ::c4a_testing::parse_hex_double(body, hp);
+        c.expected_confidence = ::n4m_testing::parse_hex_double(body, hp);
         // expected_reason
-        std::size_t rp = ::c4a_testing::find_value_for_key(
+        std::size_t rp = ::n4m_testing::find_value_for_key(
             body, "expected_reason", lo, hi);
-        c.expected_reason = ::c4a_testing::parse_string(body, rp);
+        c.expected_reason = ::n4m_testing::parse_string(body, rp);
         // wl_length, optional wavelengths_hex
-        c.wl_length = ::c4a_testing::parse_int64(body,
-            ::c4a_testing::find_value_for_key(body, "wl_length", lo, hi));
+        c.wl_length = ::n4m_testing::parse_int64(body,
+            ::n4m_testing::find_value_for_key(body, "wl_length", lo, hi));
         if (c.wl_length > 0) {
-            std::size_t wp = ::c4a_testing::find_value_for_key(
+            std::size_t wp = ::n4m_testing::find_value_for_key(
                 body, "wavelengths_hex", lo, hi);
-            ::c4a_testing::parse_hex_double_array(body, wp, c.wavelengths);
+            ::n4m_testing::parse_hex_double_array(body, wp, c.wavelengths);
         }
         out.push_back(std::move(c));
     }
@@ -164,18 +164,18 @@ std::vector<SignalCase> load_signal_cases(const std::string& filename) {
 
 void verify_signal_detect_parity() {
     auto cases = load_signal_cases("signal_type_detect_v1.json");
-    C4A_TEST_REQUIRE(!cases.empty());
+    N4M_TEST_REQUIRE(!cases.empty());
     for (const auto& c : cases) {
         std::vector<double> X = c.input;
-        c4a_matrix_view_t Xv = make_rowmajor_view(X.data(), c.rows, c.cols);
-        c4a_signal_type_t type_out = C4A_SIGNAL_UNKNOWN;
+        n4m_matrix_view_t Xv = make_rowmajor_view(X.data(), c.rows, c.cols);
+        n4m_signal_type_t type_out = N4M_SIGNAL_UNKNOWN;
         double confidence = 0.0;
         char reason_buf[256] = {0};
         const double*  wl_ptr = (c.wl_length > 0) ? c.wavelengths.data() : nullptr;
-        const c4a_status_t st = c4a_signal_detect(
+        const n4m_status_t st = n4m_signal_detect(
             Xv, wl_ptr, c.wl_length, c.confidence_threshold,
             &type_out, &confidence, reason_buf);
-        C4A_TEST_REQUIRE(st == C4A_OK);
+        N4M_TEST_REQUIRE(st == N4M_OK);
 
         // Enum: exact match.
         if (static_cast<int32_t>(type_out) != c.expected_type) {
@@ -205,8 +205,8 @@ void verify_signal_detect_parity() {
 
 }  // namespace
 
-void register_signal_type_tests(c4a_testing::Runner& r);
-void register_signal_type_tests(c4a_testing::Runner& r) {
+void register_signal_type_tests(n4m_testing::Runner& r);
+void register_signal_type_tests(n4m_testing::Runner& r) {
     r.run("signal_detect_smoke_reflectance", test_signal_detect_smoke_reflectance);
     r.run("signal_detect_smoke_empty",       test_signal_detect_smoke_empty);
     r.run("signal_detect_smoke_nullptr_out", test_signal_detect_smoke_nullptr_out);

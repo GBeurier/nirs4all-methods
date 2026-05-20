@@ -1,5 +1,5 @@
 {
-  "schema": "chemometrics4all.truth_sources_lock.v0",
+  "schema": "n4m.truth_sources_lock.v0",
   "locked_at": "2026-05-19",
   "sources": {
     "nirs4all_snv": {

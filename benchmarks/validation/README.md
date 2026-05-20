@@ -1,11 +1,11 @@
-# chemometrics4all validation registry
+# nirs4all-methods validation registry
 
 This directory contains the deterministic validation snapshot used by the
 documentation and dashboard.
 
 The exporter reads the cross-binding orchestrator structurally with
 Python's `ast` module. It does not import `benchmarks.cross_binding.orchestrator`,
-so refreshing the registry does not load numpy, ctypes, `libc4a`, or
+so refreshing the registry does not load numpy, ctypes, `libn4m`, or
 optional external reference packages.
 
 ## Refresh workflow

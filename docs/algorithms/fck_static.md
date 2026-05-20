@@ -83,7 +83,7 @@ fractional-order behaviour.
 ## Boundary handling
 
 The convolution uses the Phase 4 padding helper with mode
-`C4A_PAD_REFLECT` (no edge-repeat reflection), matching
+`N4M_PAD_REFLECT` (no edge-repeat reflection), matching
 `scipy.ndimage.convolve1d(..., mode='reflect')`.
 
 ## Parameters
@@ -98,17 +98,17 @@ The convolution uses the Phase 4 padding helper with mode
 
 The bank size is $L = n_{\text{orders}} \cdot n_{\text{scales}}$. The
 output column count is $L \cdot p$; the helper
-`c4a_pp_fck_static_output_cols(L, p, &out)` computes this and detects
+`n4m_pp_fck_static_output_cols(L, p, &out)` computes this and detects
 `int32_t` overflow.
 
 ## Numerical contract
 
 - `_create` validates each parameter and returns
-  `C4A_ERR_INVALID_ARGUMENT` on `kernel_size <= 0`, `n_orders <= 0`,
+  `N4M_ERR_INVALID_ARGUMENT` on `kernel_size <= 0`, `n_orders <= 0`,
   `n_scales <= 0`, any non-positive sigma, or a bank size that overflows
-  `int32_t`. Returns `C4A_ERR_NULL_POINTER` on NULL `out`,
+  `int32_t`. Returns `N4M_ERR_NULL_POINTER` on NULL `out`,
   `filter_orders`, or `filter_scales`.
-- `_transform` returns `C4A_ERR_SHAPE_MISMATCH` if `out.cols != L *
+- `_transform` returns `N4M_ERR_SHAPE_MISMATCH` if `out.cols != L *
   X.cols` or `out.rows != X.rows`.
 - Tolerance vs the canonical Python reference: $10^{-12}$ absolute /
   $10^{-13}$ relative. The operator is pure arithmetic (one Gaussian, one
@@ -125,4 +125,4 @@ output column count is $L \cdot p$; the helper
 - `nirs4all.operators.models.sklearn.fckpls.fractional_kernel_1d`
   ([source](https://github.com/GBeurier/nirs4all/blob/main/nirs4all/operators/models/sklearn/fckpls.py)) —
   canonical spatial-domain kernel builder mirrored by
-  `c4a_fck_kernel_1d`.
+  `n4m_fck_kernel_1d`.

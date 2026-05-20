@@ -27,25 +27,25 @@ of length `n`:
 
 ## ABI
 ```c
-c4a_status_t c4a_pp_iasls_create(c4a_pp_iasls_handle_t** out,
+n4m_status_t n4m_pp_iasls_create(n4m_pp_iasls_handle_t** out,
                                   double lam, double p,
                                   int32_t polyorder,
                                   int32_t max_iter, double tol);
-c4a_status_t c4a_pp_iasls_create_ex(c4a_pp_iasls_handle_t** out,
+n4m_status_t n4m_pp_iasls_create_ex(n4m_pp_iasls_handle_t** out,
                                      double lam, double p,
                                      double lam_1,
                                      int32_t polyorder,
                                      int32_t diff_order,
                                      int32_t max_iter, double tol);
-void         c4a_pp_iasls_destroy(c4a_pp_iasls_handle_t* h);
-c4a_status_t c4a_pp_iasls_transform(const c4a_pp_iasls_handle_t* h,
-                                     c4a_matrix_view_t X, c4a_matrix_view_t out);
+void         n4m_pp_iasls_destroy(n4m_pp_iasls_handle_t* h);
+n4m_status_t n4m_pp_iasls_transform(const n4m_pp_iasls_handle_t* h,
+                                     n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 ## Numerical contract
 - Shared 1st/2nd-difference penalties + in-place pentadiagonal LDLT from `core/common/banded_solver.h`. The fixed penalty is built once per matrix; the LDLT factor reuses row-scope `L` / `D` scratch buffers across iterations.
 - Polynomial pre-fit uses the shared Householder QR (`core/common/linalg.h`), factored once per matrix and replayed per row.
-- Convergence uses `c4a_relative_l2_diff` (shared with AsLS / ArPLS).
+- Convergence uses `n4m_relative_l2_diff` (shared with AsLS / ArPLS).
 - On `max_iter` reached without convergence: silently returns the last iterate.
 - Parity tolerance vs pybaselines snapshot: `5e-6 abs / 1e-5 rel`.
 

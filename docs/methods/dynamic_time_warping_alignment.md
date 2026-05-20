@@ -4,7 +4,7 @@ _Group_: **Alignment** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8`
 
 ## Description
 
-From the `chemometrics4all.DynamicTimeWarpingAlignment` Python wrapper docstring:
+From the `n4m.DynamicTimeWarpingAlignment` Python wrapper docstring:
 
 > Dynamic-time-warping alignment to a fixed-length reference.
 
@@ -29,11 +29,11 @@ From the `chemometrics4all.DynamicTimeWarpingAlignment` Python wrapper docstring
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_pp_dtw_align_create( c4a_pp_dtw_align_handle_t** out, const double* reference, int64_t n_reference, int32_t interval_size, int32_t max_shift);
-void c4a_pp_dtw_align_destroy(c4a_pp_dtw_align_handle_t* handle);
-c4a_status_t c4a_pp_dtw_align_fit( c4a_pp_dtw_align_handle_t* handle, c4a_matrix_view_t X);
-c4a_status_t c4a_pp_dtw_align_is_fitted( const c4a_pp_dtw_align_handle_t* handle, int* out_fitted);
-c4a_status_t c4a_pp_dtw_align_transform( const c4a_pp_dtw_align_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_pp_dtw_align_create( n4m_pp_dtw_align_handle_t** out, const double* reference, int64_t n_reference, int32_t interval_size, int32_t max_shift);
+void n4m_pp_dtw_align_destroy(n4m_pp_dtw_align_handle_t* handle);
+n4m_status_t n4m_pp_dtw_align_fit( n4m_pp_dtw_align_handle_t* handle, n4m_matrix_view_t X);
+n4m_status_t n4m_pp_dtw_align_is_fitted( const n4m_pp_dtw_align_handle_t* handle, int* out_fitted);
+n4m_status_t n4m_pp_dtw_align_transform( const n4m_pp_dtw_align_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -42,52 +42,52 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_pp_dtw_align` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.dynamic_time_warping_alignment` | Python | ABI-close function backed by ctypes. |
-| Python sklearn | `chemometrics4all.sklearn.DynamicTimeWarpingAlignment` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| C ABI | `n4m_pp_dtw_align` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.dynamic_time_warping_alignment` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `n4m.sklearn.DynamicTimeWarpingAlignment` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `dynamic_time_warping_alignment(X, reference = NULL, interval_size = 16L, max_shift = 3L)` | R | Public package wrapper around the C ABI. |
-| ref.dtw_python | `dtw-python.dtw(step_pattern=symmetric1)` | Python | canonical/comparator; dtw-python provides the DTW path; the parity adapter maps that external path to c4a's fixed-length output by averaging query samples assigned to each reference index |
+| ref.dtw_python | `dtw-python.dtw(step_pattern=symmetric1)` | Python | canonical/comparator; dtw-python provides the DTW path; the parity adapter maps that external path to n4m's fixed-length output by averaging query samples assigned to each reference index |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_pp_dtw_align_create( c4a_pp_dtw_align_handle_t** out, const double* reference, int64_t n_reference, int32_t interval_size, int32_t max_shift);
-void c4a_pp_dtw_align_destroy(c4a_pp_dtw_align_handle_t* handle);
-c4a_status_t c4a_pp_dtw_align_fit( c4a_pp_dtw_align_handle_t* handle, c4a_matrix_view_t X);
-c4a_status_t c4a_pp_dtw_align_is_fitted( const c4a_pp_dtw_align_handle_t* handle, int* out_fitted);
-c4a_status_t c4a_pp_dtw_align_transform( const c4a_pp_dtw_align_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_pp_dtw_align_create( n4m_pp_dtw_align_handle_t** out, const double* reference, int64_t n_reference, int32_t interval_size, int32_t max_shift);
+void n4m_pp_dtw_align_destroy(n4m_pp_dtw_align_handle_t* handle);
+n4m_status_t n4m_pp_dtw_align_fit( n4m_pp_dtw_align_handle_t* handle, n4m_matrix_view_t X);
+n4m_status_t n4m_pp_dtw_align_is_fitted( const n4m_pp_dtw_align_handle_t* handle, int* out_fitted);
+n4m_status_t n4m_pp_dtw_align_transform( const n4m_pp_dtw_align_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.dynamic_time_warping_alignment(X)
+Xt = n4m.dynamic_time_warping_alignment(X)
 ```
 
 :::
 
-:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:::{tab-item} Python sklearn · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from chemometrics4all.sklearn import DynamicTimeWarpingAlignment
+from n4m.sklearn import DynamicTimeWarpingAlignment
 
 op = DynamicTimeWarpingAlignment(reference=None)
 Xt = op.fit_transform(X)
@@ -95,12 +95,12 @@ Xt = op.fit_transform(X)
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- dynamic_time_warping_alignment(X, reference = NULL, interval_size = 0L, max_shift = 0L)
 ```
 
@@ -114,7 +114,7 @@ res <- dynamic_time_warping_alignment(X, reference = NULL, interval_size = 0L, m
 :::{card}
 :class-card: external-refs
 
-- ◆ **`ref.dtw_python`** (Python · canonical) — `dtw-python.dtw(step_pattern=symmetric1)` · dtw-python 1.7.4 — dtw-python provides the DTW path; the parity adapter maps that external path to c4a's fixed-length output by averaging query samples assigned to each reference index
+- ◆ **`ref.dtw_python`** (Python · canonical) — `dtw-python.dtw(step_pattern=symmetric1)` · dtw-python 1.7.4 — dtw-python provides the DTW path; the parity adapter maps that external path to n4m's fixed-length output by averaging query samples assigned to each reference index
 :::
 
 ### Validation contract
@@ -128,7 +128,7 @@ res <- dynamic_time_warping_alignment(X, reference = NULL, interval_size = 0L, m
 
 | Backend | Library | Gate | Comparator | Note |
 |---------|---------|------|------------|------|
-| `ref.dtw_python` | `dtw-python.dtw(step_pattern=symmetric1)` | Python / parity | `default_allclose` | dtw-python provides the DTW path; the parity adapter maps that external path to c4a's fixed-length output by averaging query samples assigned to each reference index |
+| `ref.dtw_python` | `dtw-python.dtw(step_pattern=symmetric1)` | Python / parity | `default_allclose` | dtw-python provides the DTW path; the parity adapter maps that external path to n4m's fixed-length output by averaging query samples assigned to each reference index |
 
 ### Benchmarks
 Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Divergence is the worst finite value over the visible sizes for each backend, preferring reference max-abs difference and falling back to binding max-abs difference when no reference comparison is recorded. Rows without a recorded comparison show `—`; the fastest backend per column is marked 🏆.
@@ -141,15 +141,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-16</td><td class="ms ms-best">🏆 0.381 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-16</td><td class="ms ms-best">🏆 0.381 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-16</td><td class="ms">0.383 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-16</td><td class="ms">0.406 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-16</td><td class="ms">0.383 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">2.2e-16</td><td class="ms">0.406 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">1.234 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">1.234 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): dtw-python.dtw(step_pattern=symmetric1) · dtw-python 1.7.4 — canonical">◆</span><code>ref.dtw_python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">14.412 ms</td></tr>

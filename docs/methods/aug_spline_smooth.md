@@ -4,32 +4,32 @@ _Group_: **Augmentation** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8` · _
 
 ## Description
 
-Twelve data-augmentation operators in the unified `c4a_aug_*` ABI category.
+Twelve data-augmentation operators in the unified `n4m_aug_*` ABI category.
 
 All twelve operators share the universal ABI shape:
 
 ```c
-typedef struct c4a_aug_<NAME>_handle_t c4a_aug_<NAME>_handle_t;
+typedef struct n4m_aug_<NAME>_handle_t n4m_aug_<NAME>_handle_t;
 
-c4a_status_t c4a_aug_<NAME>_create(
-    c4a_aug_<NAME>_handle_t** out,
-    c4a_rng_pcg64_state_t* rng,   /* MUST be non-NULL */
+n4m_status_t n4m_aug_<NAME>_create(
+    n4m_aug_<NAME>_handle_t** out,
+    n4m_rng_pcg64_state_t* rng,   /* MUST be non-NULL */
     /* operator-specific parameters */);
 
-c4a_status_t c4a_aug_<NAME>_apply(
-    const c4a_aug_<NAME>_handle_t* handle,
-    c4a_matrix_view_t X,
-    [c4a_matrix_view_t wavelengths,]   /* only for wavelength-aware ops */
-    c4a_matrix_view_t out);
+n4m_status_t n4m_aug_<NAME>_apply(
+    const n4m_aug_<NAME>_handle_t* handle,
+    n4m_matrix_view_t X,
+    [n4m_matrix_view_t wavelengths,]   /* only for wavelength-aware ops */
+    n4m_matrix_view_t out);
 
-void c4a_aug_<NAME>_destroy(c4a_aug_<NAME>_handle_t* handle);
+void n4m_aug_<NAME>_destroy(n4m_aug_<NAME>_handle_t* handle);
 ```
 
 The RNG handle is stored by reference; the augmenter does NOT own it. The
 caller MUST keep the RNG alive for the augmenter's lifetime. With a fixed
 RNG state at `_apply` time the output is bit-exact reproducible.
 
-From the `chemometrics4all.SplineSmoothingAugmenter` Python wrapper docstring:
+From the `n4m.SplineSmoothingAugmenter` Python wrapper docstring:
 
 > Spline smoothing augmenter.
 
@@ -63,15 +63,15 @@ From the `chemometrics4all.SplineSmoothingAugmenter` Python wrapper docstring:
   exercise the shape + finite-value path; bit-exact NumPy parity of
   `rng.uniform`, `rng.choice` is gated behind v2 of the augmenter ABI.
 - The 2 v2-deferred operators (`Spline_X_Simplification`,
-  `Spline_Curve_Simplification`) return `C4A_ERR_NOT_IMPLEMENTED` from
+  `Spline_Curve_Simplification`) return `N4M_ERR_NOT_IMPLEMENTED` from
   `_apply` until v2; their `_create` / `_destroy` symbols are stable.
 
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_aug_spline_smooth_apply( const c4a_aug_spline_smooth_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_spline_smooth_create( c4a_aug_spline_smooth_handle_t** out, c4a_rng_pcg64_state_t* rng);
-void c4a_aug_spline_smooth_destroy( c4a_aug_spline_smooth_handle_t* handle);
+n4m_status_t n4m_aug_spline_smooth_apply( const n4m_aug_spline_smooth_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_spline_smooth_create( n4m_aug_spline_smooth_handle_t** out, n4m_rng_pcg64_state_t* rng);
+void n4m_aug_spline_smooth_destroy( n4m_aug_spline_smooth_handle_t* handle);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -80,50 +80,50 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_aug_spline_smooth` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.aug_spline_smooth` | Python | ABI-close function backed by ctypes. |
-| Python sklearn | `chemometrics4all.sklearn.SplineSmoothingAugmenter` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| C ABI | `n4m_aug_spline_smooth` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.aug_spline_smooth` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `n4m.sklearn.SplineSmoothingAugmenter` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `aug_spline_smooth(X, seed = 17)` | R | Public package wrapper around the C ABI. |
 | ref.nirs4all | `nirs4all.Spline_Smoothing` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_aug_spline_smooth_apply( const c4a_aug_spline_smooth_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_spline_smooth_create( c4a_aug_spline_smooth_handle_t** out, c4a_rng_pcg64_state_t* rng);
-void c4a_aug_spline_smooth_destroy( c4a_aug_spline_smooth_handle_t* handle);
+n4m_status_t n4m_aug_spline_smooth_apply( const n4m_aug_spline_smooth_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_spline_smooth_create( n4m_aug_spline_smooth_handle_t** out, n4m_rng_pcg64_state_t* rng);
+void n4m_aug_spline_smooth_destroy( n4m_aug_spline_smooth_handle_t* handle);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.aug_spline_smooth(X)
+Xt = n4m.aug_spline_smooth(X)
 ```
 
 :::
 
-:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:::{tab-item} Python sklearn · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from chemometrics4all.sklearn import SplineSmoothingAugmenter
+from n4m.sklearn import SplineSmoothingAugmenter
 
 op = SplineSmoothingAugmenter(rng=None, seed=0)
 Xt = op.fit_transform(X)
@@ -131,12 +131,12 @@ Xt = op.fit_transform(X)
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- aug_spline_smooth(X)
 ```
 
@@ -176,15 +176,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">1.810 ms</td><td class="ms">845.131 ms</td><td class="ms">52332.509 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">1.810 ms</td><td class="ms">845.131 ms</td><td class="ms">52332.509 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">1.798 ms</td><td class="ms">868.058 ms</td><td class="ms">52554.790 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 1.773 ms</td><td class="ms">846.716 ms</td><td class="ms">52073.350 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">1.798 ms</td><td class="ms">868.058 ms</td><td class="ms">52554.790 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 1.773 ms</td><td class="ms">846.716 ms</td><td class="ms">52073.350 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">1.844 ms</td><td class="ms ms-best">🏆 842.000 ms</td><td class="ms">51951.000 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">1.844 ms</td><td class="ms ms-best">🏆 842.000 ms</td><td class="ms">51951.000 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.Spline_Smoothing · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">3.061 ms</td><td class="ms">889.588 ms</td><td class="ms ms-best">🏆 51838.608 ms</td></tr>

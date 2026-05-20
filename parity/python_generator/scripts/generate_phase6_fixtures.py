@@ -24,7 +24,7 @@ import numpy as np
 PKG_ROOT = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(PKG_ROOT))
 
-from c4a_parity_wavelets_ref import (  # noqa: E402
+from n4m_parity_wavelets_ref import (  # noqa: E402
     haar_transform,
     wavelet_denoise_transform,
     wavelet_features_transform,
@@ -199,7 +199,7 @@ def write_simple_fixture(
     pywt_version: str,
 ) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_pp_{op_id}_v1",
+        "format": f"n4m_pp_{op_id}_v1",
         "numpy_version": np.__version__,
         "pywt_version": pywt_version,
         "encoding": "ieee754_binary64_be_hex",
@@ -232,7 +232,7 @@ def write_fit_transform_fixture(
     pywt_version: str,
 ) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_pp_{op_id}_v1",
+        "format": f"n4m_pp_{op_id}_v1",
         "numpy_version": np.__version__,
         "pywt_version": pywt_version,
         "encoding": "ieee754_binary64_be_hex",

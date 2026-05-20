@@ -19,8 +19,8 @@ The test was applying `1e-6 / 1e-7` to all 4 AirPLS cases, but only the `high_la
 **Fix**: Per-case dispatch in `cpp/tests/test_preprocessing_baselines.cpp:verify_airpls_parity`: `high_lam` keeps `1e-6 / 1e-7`; all other cases enforce `1e-7 / 1e-8` per the brief contract.
 
 ### #3. Frozen pybaselines reference not reproducibly validated
-The `c4a_parity_pybaselines_ref/__init__.py` docstring claimed "Validated once against pybaselines==1.1.4" but no committed script proved it.
-**Fix**: Added `parity/python_generator/scripts/validate_frozen_pybaselines_ref.py` — imports both `c4a_parity_pybaselines_ref` and the actually-installed `pybaselines` package, runs each baseline operator on a deterministic synthetic spectrum (PCG64 seed 20260518), asserts max-abs-error < 1e-10. Manual attestation: run after any pin bump or frozen-ref change.
+The `n4m_parity_pybaselines_ref/__init__.py` docstring claimed "Validated once against pybaselines==1.1.4" but no committed script proved it.
+**Fix**: Added `parity/python_generator/scripts/validate_frozen_pybaselines_ref.py` — imports both `n4m_parity_pybaselines_ref` and the actually-installed `pybaselines` package, runs each baseline operator on a deterministic synthetic spectrum (PCG64 seed 20260518), asserts max-abs-error < 1e-10. Manual attestation: run after any pin bump or frozen-ref change.
 
 ## Medium-confidence items — deferred
 
@@ -33,27 +33,27 @@ The `c4a_parity_pybaselines_ref/__init__.py` docstring claimed "Validated once a
 ## Low-priority deferrals (Phase 5b)
 
 - **#9** AirPLS LDLT vs spsolve compounding divergence at lam=1e7 (~1e-7 abs after 50 iter). Not a bug — structural difference between banded LDLT and SuperLU pivot strategies. Document with a residual-check in debug builds.
-- **#10** Iterative ops allocate L/D buffers inside the iteration loop (max_iter mallocs/frees). Lift to row-scope: `c4a_banded5_factor_into(...)`. ~5–10× call-overhead win on max_iter=50.
-- **#11** Duplicated `build_penalty_diagonals` / `relative_l2_diff` across asls.c / airpls.c / arpls.c. Extract to `core/common/banded_solver.{c,h}` as `c4a_second_diff_penalty_pent5` + a shared utils header.
+- **#10** Iterative ops allocate L/D buffers inside the iteration loop (max_iter mallocs/frees). Lift to row-scope: `n4m_banded5_factor_into(...)`. ~5–10× call-overhead win on max_iter=50.
+- **#11** Duplicated `build_penalty_diagonals` / `relative_l2_diff` across asls.c / airpls.c / arpls.c. Extract to `core/common/banded_solver.{c,h}` as `n4m_second_diff_penalty_pent5` + a shared utils header.
 
 ## Things done well
 
-- **Linalg extraction is clean**: `c4a_householder_qr`, `c4a_apply_qt`, `c4a_back_solve_R` with well-documented contracts. 3 callers (EMSC + SG main + SG edge) use them consistently. Phases 0-4 byte-exact preserved.
+- **Linalg extraction is clean**: `n4m_householder_qr`, `n4m_apply_qt`, `n4m_back_solve_R` with well-documented contracts. 3 callers (EMSC + SG main + SG edge) use them consistently. Phases 0-4 byte-exact preserved.
 - **`fixture_parser.hpp` API design is clean**: zero-deps, structured `Fixture` / `Case` types, templated `params_get_*` helpers. 1087 LOC eliminated from test files.
-- **Banded LDLT is mathematically sound**: standard Cholesky-style recurrence, `(n, 2)` L storage, zero-pivot returns `C4A_ERR_NUMERICAL_FAILURE`. Validated independently on random pentadiagonal systems (residual ~9e-16).
+- **Banded LDLT is mathematically sound**: standard Cholesky-style recurrence, `(n, 2)` L storage, zero-pivot returns `N4M_ERR_NUMERICAL_FAILURE`. Validated independently on random pentadiagonal systems (residual ~9e-16).
 - **Iteration loops faithfully mirror Python ref**: iteration counts, convergence-check position, exit_early semantics, exp clip bounds all match.
 - **AsLS / AirPLS / ArPLS implementations are scientifically correct**: papers cited, weight update formulae correct, convergence semantics consistent with pybaselines.
 - **§9 Derivate banner correctly updated** to honestly state input-shape memoization (addresses prior Codex M2).
 - **§11 banner is honest and informative**: clear `out = X - baseline` output convention.
 - **ABI: 106 symbols, version-script clean, 0 leak**.
-- **CMake integration**: linalg.c + banded_solver.c + 4 baselines added to `chemometrics4all_core`. ABI version bumped to 1.5.0.
+- **CMake integration**: linalg.c + banded_solver.c + 4 baselines added to `n4m_core`. ABI version bumped to 1.5.0.
 
 ## Verification (post-fix)
 
 ```
 cmake --build --preset dev-debug                           → 51/51 targets clean
-./build/dev-debug/cpp/cli/chemometrics4all_cli --selfcheck → OK
-./build/dev-debug/cpp/tests/chemometrics4all_tests         → 69/69 passing (61 prior + 8 new)
-nm -D --defined-only build/dev-debug/cpp/src/libc4a.so.1.5.0 | awk '$2=="T" {print $3}' | wc -l → 106
-wc -l cpp/include/chemometrics4all/c4a.h                   → 913
+./build/dev-debug/cpp/cli/n4m_cli --selfcheck → OK
+./build/dev-debug/cpp/tests/n4m_tests         → 69/69 passing (61 prior + 8 new)
+nm -D --defined-only build/dev-debug/cpp/src/libn4m.so.1.5.0 | awk '$2=="T" {print $3}' | wc -l → 106
+wc -l cpp/include/n4m/n4m.h                   → 913
 ```

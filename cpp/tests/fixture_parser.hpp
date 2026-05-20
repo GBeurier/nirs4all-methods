@@ -5,7 +5,7 @@
 // The phase fixtures all follow the same shape:
 //
 //   {
-//     "format": "c4a_pp_*_v1",
+//     "format": "n4m_pp_*_v1",
 //     "rows": <int>, "cols": <int>,
 //     "input_hex":          [ "<16 hex chars>", ... ]   // mandatory
 //     "fit_rows": <int>, "fit_cols": <int>,             // optional
@@ -39,7 +39,7 @@
 #include <utility>
 #include <vector>
 
-namespace c4a_testing {
+namespace n4m_testing {
 
 // ---------------------------------------------------------------------------
 // Slurp helper — load the full contents of a file into a string.
@@ -471,4 +471,4 @@ inline void assert_close(const std::vector<double>& got,
     }
 }
 
-}  // namespace c4a_testing
+}  // namespace n4m_testing

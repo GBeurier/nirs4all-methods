@@ -3,20 +3,20 @@
 """Generate Phase 16 parity fixtures for the wavelength + spectral augmenters.
 
 Ten augmenters; one fixture file each. The reference comes from the frozen
-``c4a_parity_aug_spectral_ref`` package under ``parity/python_generator/src/``.
+``n4m_parity_aug_spectral_ref`` package under ``parity/python_generator/src/``.
 
 Each fixture exercises one operator with a small set of parameter
 combinations. The input matrix is a (n_samples, n_features) NIR-like
 synthetic spectrum block, the random stream is locked by a per-case
-``seed`` parameter (the C engine calls ``c4a_rng_pcg64_set_seed`` before
+``seed`` parameter (the C engine calls ``n4m_rng_pcg64_set_seed`` before
 each apply).
 
 Fixture schema (consumed by the existing ``fixture_parser.hpp``):
 
   {
-    "format": "c4a_aug_<NAME>_v1",
+    "format": "n4m_aug_<NAME>_v1",
     "numpy_version": "...",
-    "reference": "c4a_parity_aug_spectral_ref",
+    "reference": "n4m_parity_aug_spectral_ref",
     "encoding": "ieee754_binary64_be_hex",
     "rows": <int>, "cols": <int>,
     "input_hex": [ "<16 hex>", ... ],
@@ -44,7 +44,7 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "parity" / "python_generator" / "src"))
 
-from c4a_parity_aug_spectral_ref import (  # noqa: E402
+from n4m_parity_aug_spectral_ref import (  # noqa: E402
     band_mask,
     band_perturb,
     channel_dropout,
@@ -97,9 +97,9 @@ def write_fixture(name: str, X: np.ndarray, cases: list[tuple],
                    out_dir: Path) -> None:
     """`cases` is a list of (case_name, params_dict, np.ndarray) tuples."""
     fixture: dict[str, Any] = {
-        "format": f"c4a_aug_{name}_v1",
+        "format": f"n4m_aug_{name}_v1",
         "numpy_version": np.__version__,
-        "reference": "c4a_parity_aug_spectral_ref",
+        "reference": "n4m_parity_aug_spectral_ref",
         "encoding": "ieee754_binary64_be_hex",
         "rows": int(X.shape[0]),
         "cols": int(X.shape[1]),

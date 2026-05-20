@@ -17,12 +17,12 @@ Lieber & Mahadevan-Jansen 2003 iterative polynomial baseline. For each row `y` o
 
 ## ABI
 ```c
-c4a_status_t c4a_pp_modpoly_create(c4a_pp_modpoly_handle_t** out,
+n4m_status_t n4m_pp_modpoly_create(n4m_pp_modpoly_handle_t** out,
                                     int32_t polyorder,
                                     int32_t max_iter, double tol);
-void         c4a_pp_modpoly_destroy(c4a_pp_modpoly_handle_t* h);
-c4a_status_t c4a_pp_modpoly_transform(const c4a_pp_modpoly_handle_t* h,
-                                       c4a_matrix_view_t X, c4a_matrix_view_t out);
+void         n4m_pp_modpoly_destroy(n4m_pp_modpoly_handle_t* h);
+n4m_status_t n4m_pp_modpoly_transform(const n4m_pp_modpoly_handle_t* h,
+                                       n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 ## Numerical contract
@@ -33,4 +33,4 @@ c4a_status_t c4a_pp_modpoly_transform(const c4a_pp_modpoly_handle_t* h,
 
 ## Reference
 - Lieber, C. A. & Mahadevan-Jansen, A. (2003). "Automated method for subtraction of fluorescence from biological raman spectra." Applied Spectroscopy 57(11), 1363-1367.
-- Internal parity fixture: `parity/python_generator/src/c4a_parity_pybaselines_ref/modpoly.py`.
+- Internal parity fixture: `parity/python_generator/src/n4m_parity_pybaselines_ref/modpoly.py`.

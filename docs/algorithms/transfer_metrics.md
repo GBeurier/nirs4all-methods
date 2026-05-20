@@ -2,7 +2,7 @@
 
 Phase 20 introduces a single utility function that quantifies how well a *source* and a *target* dataset align in a shared low-dimensional space — useful for transfer-learning workflows where preprocessing aims to bring the two distributions closer before refitting a downstream model.
 
-The utility mirrors `nirs4all.analysis.transfer_metrics.TransferMetricsComputer` (Python). One C ABI symbol — `c4a_transfer_metrics_compute` — returns a 9-field POD struct.
+The utility mirrors `nirs4all.analysis.transfer_metrics.TransferMetricsComputer` (Python). One C ABI symbol — `n4m_transfer_metrics_compute` — returns a 9-field POD struct.
 
 ## Pipeline
 
@@ -32,12 +32,12 @@ The utility mirrors `nirs4all.analysis.transfer_metrics.TransferMetricsComputer`
 The `spread_distance` subsampling step uses a deterministic Fisher-Yates permutation driven by SplitMix64 keyed on `seed`. This is **not** bit-identical to `numpy.random.RandomState(seed).choice` — we mirror SplitMix64 instead because:
 
 1. The C ABI already exposes PCG64 (Phase 1); replicating NumPy's legacy Mersenne-Twister stream would add a maintenance liability without parity benefit.
-2. The internal parity fixture under `parity/python_generator/src/c4a_parity_transfer_ref/` uses the same SplitMix64 helper, so the parity fixtures encode the SplitMix64 behaviour rather than NumPy's MT19937.
+2. The internal parity fixture under `parity/python_generator/src/n4m_parity_transfer_ref/` uses the same SplitMix64 helper, so the parity fixtures encode the SplitMix64 behaviour rather than NumPy's MT19937.
 3. The downstream metric (a mean of two min-distance scalars over a 100-sample subsample) is statistically robust to the choice of seed regardless.
 
 ## Parameters
 
-`c4a_transfer_metrics_compute` takes three scalars + a seed:
+`n4m_transfer_metrics_compute` takes three scalars + a seed:
 
 | Argument | Meaning | Constraint |
 |---|---|---|
@@ -47,17 +47,17 @@ The `spread_distance` subsampling step uses a deterministic Fisher-Yates permuta
 
 The two matrix views must be row-major contiguous F64. The wrapper returns:
 
-- `C4A_OK` on success (every field of `*out` set).
-- `C4A_ERR_NULL_POINTER` if `out` is NULL or a view has NULL data with `rows*cols > 0`.
-- `C4A_ERR_INVALID_ARGUMENT` if either dataset has fewer than 2 rows or a scalar fails the constraint above.
-- `C4A_ERR_DTYPE_MISMATCH` / `C4A_ERR_STRIDE_INVALID` on non-conforming views.
-- `C4A_ERR_OUT_OF_MEMORY` on scratch allocation failure.
-- `C4A_ERR_NUMERICAL_FAILURE` if the Jacobi sweep does not converge in the budgeted 100 sweeps (extremely unlikely on well-scaled NIR data; conditions producing this are typically a sign of an upstream bug).
+- `N4M_OK` on success (every field of `*out` set).
+- `N4M_ERR_NULL_POINTER` if `out` is NULL or a view has NULL data with `rows*cols > 0`.
+- `N4M_ERR_INVALID_ARGUMENT` if either dataset has fewer than 2 rows or a scalar fails the constraint above.
+- `N4M_ERR_DTYPE_MISMATCH` / `N4M_ERR_STRIDE_INVALID` on non-conforming views.
+- `N4M_ERR_OUT_OF_MEMORY` on scratch allocation failure.
+- `N4M_ERR_NUMERICAL_FAILURE` if the Jacobi sweep does not converge in the budgeted 100 sweeps (extremely unlikely on well-scaled NIR data; conditions producing this are typically a sign of an upstream bug).
 
 ## ABI
 
 ```c
-typedef struct c4a_transfer_metrics_t {
+typedef struct n4m_transfer_metrics_t {
     double centroid_distance;
     double cka_similarity;
     double grassmann_distance;
@@ -67,18 +67,18 @@ typedef struct c4a_transfer_metrics_t {
     double spread_distance;
     double evr_source;
     double evr_target;
-} c4a_transfer_metrics_t;
+} n4m_transfer_metrics_t;
 
-C4A_API c4a_status_t c4a_transfer_metrics_compute(
-    c4a_matrix_view_t X_source,
-    c4a_matrix_view_t X_target,
+N4M_API n4m_status_t n4m_transfer_metrics_compute(
+    n4m_matrix_view_t X_source,
+    n4m_matrix_view_t X_target,
     int32_t n_components,
     int32_t k_neighbors,
     uint64_t seed,
-    c4a_transfer_metrics_t* out);
+    n4m_transfer_metrics_t* out);
 ```
 
-One ABI symbol total. Naming follows the `c4a_transfer_*` prefix reserved in `c4a.h §5` for Phase 20.
+One ABI symbol total. Naming follows the `n4m_transfer_*` prefix reserved in `n4m.h §5` for Phase 20.
 
 ## Parity tolerance
 
@@ -87,7 +87,7 @@ Iterative Jacobi diagonalisation combined with multiple matrix compositions (CKA
 - **Absolute tolerance**: `1e-9`
 - **Relative tolerance**: `1e-10`
 
-These are consistent with the LDLT-iterative baseline operators (Phase 5) and reflect the deepest numerical pipeline in the chemometrics4all C ABI so far.
+These are consistent with the LDLT-iterative baseline operators (Phase 5) and reflect the deepest numerical pipeline in the nirs4all-methods C ABI so far.
 
 ## References
 
@@ -102,8 +102,8 @@ These are consistent with the LDLT-iterative baseline operators (Phase 5) and re
 
 - `cpp/src/core/utilities/transfer_metrics.{c,h}` — reference C engine (Jacobi PCA + metric kernels).
 - `cpp/src/c_api/c_api_transfer_metrics.cpp` — extern "C" wrapper.
-- `cpp/src/c_api/c_api_transfer_metrics_decl.h` — worktree-local declaration (moves to `c4a.h §13` at merge time).
+- `cpp/src/c_api/c_api_transfer_metrics_decl.h` — worktree-local declaration (moves to `n4m.h §13` at merge time).
 - `cpp/tests/test_transfer_metrics.cpp` — smoke + invalid-args + parity tests.
-- `parity/python_generator/src/c4a_parity_transfer_ref/transfer_metrics.py` — internal parity fixture.
+- `parity/python_generator/src/n4m_parity_transfer_ref/transfer_metrics.py` — internal parity fixture.
 - `parity/python_generator/scripts/generate_phase20_fixtures.py` — fixture generator.
 - `parity/fixtures/transfer_metrics_v1.json` — 5 parity cases.

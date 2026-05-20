@@ -3,9 +3,9 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "chemometrics4all-parity"
+name = "nirs4all-methods-parity"
 version = "0.1.0"
-description = "Pinned-reference fixture generator for chemometrics4all parity gates."
+description = "Pinned-reference fixture generator for nirs4all-methods parity gates."
 requires-python = ">=3.10"
 dependencies = [
     "numpy==1.26.4",

@@ -3,7 +3,7 @@
 // Bit-exact parity tests for the PCG64 RNG against NumPy's default_rng.
 //
 // The fixture lives at parity/fixtures/_rng_pcg64_stream_v1.json (path
-// passed in via the -DC4A_PARITY_FIXTURE_DIR compile definition). For each
+// passed in via the -DN4M_PARITY_FIXTURE_DIR compile definition). For each
 // seed in {0, 1, 42, 12345, 0xDEADBEEF} the fixture stores 4096 uint64
 // draws and 4096 IEEE-754 binary64 doubles (encoded as big-endian hex to
 // avoid JSON float-formatting precision loss). The C engine must match
@@ -27,12 +27,12 @@
 #include <string>
 #include <vector>
 
-#include "chemometrics4all/c4a.h"
+#include "n4m/n4m.h"
 
 #include "harness.hpp"
 
-#ifndef C4A_PARITY_FIXTURE_DIR
-#  error "C4A_PARITY_FIXTURE_DIR must be defined to locate the fixture file"
+#ifndef N4M_PARITY_FIXTURE_DIR
+#  error "N4M_PARITY_FIXTURE_DIR must be defined to locate the fixture file"
 #endif
 
 namespace {
@@ -226,7 +226,7 @@ SeedData load_seed(const std::string& s, const std::string& seed_key) {
 
 std::string fixture_path() {
     static const std::string p =
-        std::string(C4A_PARITY_FIXTURE_DIR) + "/_rng_pcg64_stream_v1.json";
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/_rng_pcg64_stream_v1.json";
     return p;
 }
 
@@ -249,16 +249,16 @@ const SeedData& cached_seed(const char* key) {
 
 void verify_uint64_seed(const char* key) {
     const SeedData& d = cached_seed(key);
-    C4A_TEST_REQUIRE(d.uint64_draws.size() == kNumSamples);
+    N4M_TEST_REQUIRE(d.uint64_draws.size() == kNumSamples);
 
     std::uint64_t seed = std::strtoull(key, nullptr, 10);
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(seed, &rng) == C4A_OK);
-    C4A_TEST_REQUIRE(rng != nullptr);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &rng) == N4M_OK);
+    N4M_TEST_REQUIRE(rng != nullptr);
 
     std::vector<std::uint64_t> got(kNumSamples);
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_uint64_fill(rng, got.data(), kNumSamples)
-                     == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_uint64_fill(rng, got.data(), kNumSamples)
+                     == N4M_OK);
 
     for (std::size_t i = 0; i < kNumSamples; ++i) {
         if (got[i] != d.uint64_draws[i]) {
@@ -270,22 +270,22 @@ void verify_uint64_seed(const char* key) {
         }
     }
 
-    c4a_rng_pcg64_destroy(rng);
+    n4m_rng_pcg64_destroy(rng);
 }
 
 void verify_standard_normal_seed(const char* key) {
     const SeedData& d = cached_seed(key);
-    C4A_TEST_REQUIRE(d.normal_draws.size() == kNumSamples);
+    N4M_TEST_REQUIRE(d.normal_draws.size() == kNumSamples);
 
     std::uint64_t seed = std::strtoull(key, nullptr, 10);
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(seed, &rng) == C4A_OK);
-    C4A_TEST_REQUIRE(rng != nullptr);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &rng) == N4M_OK);
+    N4M_TEST_REQUIRE(rng != nullptr);
 
     std::vector<double> got(kNumSamples);
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_standard_normal_fill(rng, got.data(),
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_standard_normal_fill(rng, got.data(),
                                                           kNumSamples)
-                     == C4A_OK);
+                     == N4M_OK);
 
     // Bit-exact: same hex pattern, identical FP representation. We assert
     // memcmp equality on the raw bytes — there's no ULP tolerance to grant.
@@ -303,31 +303,31 @@ void verify_standard_normal_seed(const char* key) {
         }
     }
 
-    c4a_rng_pcg64_destroy(rng);
+    n4m_rng_pcg64_destroy(rng);
 }
 
 void test_create_destroy_null_safe() {
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(123, nullptr) == C4A_ERR_NULL_POINTER);
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(123, &rng) == C4A_OK);
-    C4A_TEST_REQUIRE(rng != nullptr);
-    c4a_rng_pcg64_destroy(rng);
-    c4a_rng_pcg64_destroy(nullptr);  // must not crash
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(123, nullptr) == N4M_ERR_NULL_POINTER);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(123, &rng) == N4M_OK);
+    N4M_TEST_REQUIRE(rng != nullptr);
+    n4m_rng_pcg64_destroy(rng);
+    n4m_rng_pcg64_destroy(nullptr);  // must not crash
 }
 
 void test_set_seed_resets_stream() {
-    c4a_rng_pcg64_state_t* rng = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(42, &rng) == C4A_OK);
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(42, &rng) == N4M_OK);
 
     std::uint64_t a = 0;
     std::uint64_t b = 0;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_uint64(rng, &a) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_uint64(rng, &a) == N4M_OK);
 
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_set_seed(rng, 42) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_uint64(rng, &b) == C4A_OK);
-    C4A_TEST_REQUIRE(a == b);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, 42) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_uint64(rng, &b) == N4M_OK);
+    N4M_TEST_REQUIRE(a == b);
 
-    c4a_rng_pcg64_destroy(rng);
+    n4m_rng_pcg64_destroy(rng);
 }
 
 void test_advance_matches_repeated_draws() {
@@ -335,32 +335,32 @@ void test_advance_matches_repeated_draws() {
     // N, draw 1 — that single draw must match the (N+1)-th value of the
     // original stream.
     constexpr std::uint64_t kAdvance = 137;
-    c4a_rng_pcg64_state_t*  ref      = nullptr;
-    c4a_rng_pcg64_state_t*  adv      = nullptr;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(0xC0FFEE, &ref) == C4A_OK);
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_create(0xC0FFEE, &adv) == C4A_OK);
+    n4m_rng_pcg64_state_t*  ref      = nullptr;
+    n4m_rng_pcg64_state_t*  adv      = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0xC0FFEE, &ref) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0xC0FFEE, &adv) == N4M_OK);
 
     std::uint64_t scratch = 0;
     for (std::uint64_t i = 0; i < kAdvance; ++i) {
-        C4A_TEST_REQUIRE(c4a_rng_pcg64_uint64(ref, &scratch) == C4A_OK);
+        N4M_TEST_REQUIRE(n4m_rng_pcg64_uint64(ref, &scratch) == N4M_OK);
     }
     std::uint64_t ref_next = 0;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_uint64(ref, &ref_next) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_uint64(ref, &ref_next) == N4M_OK);
 
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_advance(adv, kAdvance) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_advance(adv, kAdvance) == N4M_OK);
     std::uint64_t adv_next = 0;
-    C4A_TEST_REQUIRE(c4a_rng_pcg64_uint64(adv, &adv_next) == C4A_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_uint64(adv, &adv_next) == N4M_OK);
 
-    C4A_TEST_REQUIRE(ref_next == adv_next);
+    N4M_TEST_REQUIRE(ref_next == adv_next);
 
-    c4a_rng_pcg64_destroy(ref);
-    c4a_rng_pcg64_destroy(adv);
+    n4m_rng_pcg64_destroy(ref);
+    n4m_rng_pcg64_destroy(adv);
 }
 
 }  // namespace
 
-void register_rng_pcg64_tests(c4a_testing::Runner& r);
-void register_rng_pcg64_tests(c4a_testing::Runner& r) {
+void register_rng_pcg64_tests(n4m_testing::Runner& r);
+void register_rng_pcg64_tests(n4m_testing::Runner& r) {
     r.run("rng_pcg64_create_destroy_null_safe", test_create_destroy_null_safe);
     r.run("rng_pcg64_set_seed_resets_stream",   test_set_seed_resets_stream);
     r.run("rng_pcg64_advance_matches_repeats",  test_advance_matches_repeated_draws);

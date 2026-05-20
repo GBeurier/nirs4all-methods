@@ -30,7 +30,7 @@ function (Numerical Recipes §6.4 continued fraction + bisection).
 ## ABI
 
 ```c
-C4A_API c4a_status_t c4a_util_hotelling_t2(c4a_matrix_view_t X,
+N4M_API n4m_status_t n4m_util_hotelling_t2(n4m_matrix_view_t X,
                                             int32_t n_components,
                                             double alpha,
                                             double* t2_per_sample,
@@ -39,7 +39,7 @@ C4A_API c4a_status_t c4a_util_hotelling_t2(c4a_matrix_view_t X,
 ```
 
 `n_samples` must equal the row count of the view (returns
-`C4A_ERR_SHAPE_MISMATCH` otherwise). `alpha` must be in (0, 1).
+`N4M_ERR_SHAPE_MISMATCH` otherwise). `alpha` must be in (0, 1).
 `n_components` must satisfy `1 ≤ n_components ≤ cols` and `< n_samples`.
 
 ## Numerical contract

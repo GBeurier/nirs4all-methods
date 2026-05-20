@@ -35,7 +35,7 @@ For our C engine, we precompute the coefficients **at `_create` time** (so trans
 - `constant`: pad with `cval`.
 - `nearest`: pad with edge value.
 - `wrap`: cyclic.
-- `interp`: fit the polynomial to the boundary segment using positions outside the window — this is the most complex mode. For v1 we may defer `interp` to a follow-up and return `C4A_ERR_NOT_IMPLEMENTED`.
+- `interp`: fit the polynomial to the boundary segment using positions outside the window — this is the most complex mode. For v1 we may defer `interp` to a follow-up and return `N4M_ERR_NOT_IMPLEMENTED`.
 
 `scipy.ndimage.gaussian_filter1d` supports modes:
 - `reflect`: `[a b c d]` → `[b a | a b c d | d c]` (mirror without repeating edge).
@@ -44,7 +44,7 @@ For our C engine, we precompute the coefficients **at `_create` time** (so trans
 - `mirror`: `[a b c d]` → `[c b | a b c d | c b]` (mirror through edge, repeats edge).
 - `wrap`: cyclic.
 
-We replicate both sets exactly using a common `c4a_common_pad_1d` helper in `cpp/src/core/common/padding.c`.
+We replicate both sets exactly using a common `n4m_common_pad_1d` helper in `cpp/src/core/common/padding.c`.
 
 ### Gaussian kernel construction
 
@@ -67,53 +67,53 @@ Total ABI: 79 → **94 symbols**. ABI 1.3.0 → 1.4.0 (additive).
 
 ```c
 /* SavitzkyGolay */
-typedef struct c4a_pp_savgol_handle_t c4a_pp_savgol_handle_t;
-typedef enum c4a_pp_savgol_mode_t {
-    C4A_PP_SAVGOL_MIRROR   = 0,
-    C4A_PP_SAVGOL_CONSTANT = 1,
-    C4A_PP_SAVGOL_NEAREST  = 2,
-    C4A_PP_SAVGOL_WRAP     = 3,
-    C4A_PP_SAVGOL_INTERP   = 4
-} c4a_pp_savgol_mode_t;
-C4A_API c4a_status_t c4a_pp_savgol_create(c4a_pp_savgol_handle_t** out,
+typedef struct n4m_pp_savgol_handle_t n4m_pp_savgol_handle_t;
+typedef enum n4m_pp_savgol_mode_t {
+    N4M_PP_SAVGOL_MIRROR   = 0,
+    N4M_PP_SAVGOL_CONSTANT = 1,
+    N4M_PP_SAVGOL_NEAREST  = 2,
+    N4M_PP_SAVGOL_WRAP     = 3,
+    N4M_PP_SAVGOL_INTERP   = 4
+} n4m_pp_savgol_mode_t;
+N4M_API n4m_status_t n4m_pp_savgol_create(n4m_pp_savgol_handle_t** out,
                                            int32_t window_length,
                                            int32_t polyorder,
                                            int32_t deriv,
                                            double delta,
-                                           c4a_pp_savgol_mode_t mode,
+                                           n4m_pp_savgol_mode_t mode,
                                            double cval);
-C4A_API void         c4a_pp_savgol_destroy(c4a_pp_savgol_handle_t* h);
-C4A_API c4a_status_t c4a_pp_savgol_transform(const c4a_pp_savgol_handle_t* h,
-                                              c4a_matrix_view_t X,
-                                              c4a_matrix_view_t out);
+N4M_API void         n4m_pp_savgol_destroy(n4m_pp_savgol_handle_t* h);
+N4M_API n4m_status_t n4m_pp_savgol_transform(const n4m_pp_savgol_handle_t* h,
+                                              n4m_matrix_view_t X,
+                                              n4m_matrix_view_t out);
 
 /* FirstDerivative / SecondDerivative */
-typedef struct c4a_pp_first_derivative_handle_t  c4a_pp_first_derivative_handle_t;
-typedef struct c4a_pp_second_derivative_handle_t c4a_pp_second_derivative_handle_t;
-C4A_API c4a_status_t c4a_pp_first_derivative_create(c4a_pp_first_derivative_handle_t** out, double delta);
-C4A_API void         c4a_pp_first_derivative_destroy(c4a_pp_first_derivative_handle_t* h);
-C4A_API c4a_status_t c4a_pp_first_derivative_transform(...);  /* same shape as savgol */
+typedef struct n4m_pp_first_derivative_handle_t  n4m_pp_first_derivative_handle_t;
+typedef struct n4m_pp_second_derivative_handle_t n4m_pp_second_derivative_handle_t;
+N4M_API n4m_status_t n4m_pp_first_derivative_create(n4m_pp_first_derivative_handle_t** out, double delta);
+N4M_API void         n4m_pp_first_derivative_destroy(n4m_pp_first_derivative_handle_t* h);
+N4M_API n4m_status_t n4m_pp_first_derivative_transform(...);  /* same shape as savgol */
 /* ... same for SecondDerivative ... */
 
 /* NorrisWilliams */
-typedef struct c4a_pp_norris_williams_handle_t c4a_pp_norris_williams_handle_t;
-C4A_API c4a_status_t c4a_pp_norris_williams_create(c4a_pp_norris_williams_handle_t** out,
+typedef struct n4m_pp_norris_williams_handle_t n4m_pp_norris_williams_handle_t;
+N4M_API n4m_status_t n4m_pp_norris_williams_create(n4m_pp_norris_williams_handle_t** out,
                                                     int32_t segment, int32_t gap,
                                                     int32_t derivative_order);
 /* ... destroy + transform ... */
 
 /* Gaussian */
-typedef struct c4a_pp_gaussian_handle_t c4a_pp_gaussian_handle_t;
-typedef enum c4a_pp_gaussian_mode_t {
-    C4A_PP_GAUSSIAN_REFLECT  = 0,
-    C4A_PP_GAUSSIAN_CONSTANT = 1,
-    C4A_PP_GAUSSIAN_NEAREST  = 2,
-    C4A_PP_GAUSSIAN_MIRROR   = 3,
-    C4A_PP_GAUSSIAN_WRAP     = 4
-} c4a_pp_gaussian_mode_t;
-C4A_API c4a_status_t c4a_pp_gaussian_create(c4a_pp_gaussian_handle_t** out,
+typedef struct n4m_pp_gaussian_handle_t n4m_pp_gaussian_handle_t;
+typedef enum n4m_pp_gaussian_mode_t {
+    N4M_PP_GAUSSIAN_REFLECT  = 0,
+    N4M_PP_GAUSSIAN_CONSTANT = 1,
+    N4M_PP_GAUSSIAN_NEAREST  = 2,
+    N4M_PP_GAUSSIAN_MIRROR   = 3,
+    N4M_PP_GAUSSIAN_WRAP     = 4
+} n4m_pp_gaussian_mode_t;
+N4M_API n4m_status_t n4m_pp_gaussian_create(n4m_pp_gaussian_handle_t** out,
                                              double sigma, int32_t order,
-                                             c4a_pp_gaussian_mode_t mode,
+                                             n4m_pp_gaussian_mode_t mode,
                                              double cval, double truncate);
 /* ... destroy + transform ... */
 ```
@@ -152,11 +152,11 @@ C4A_API c4a_status_t c4a_pp_gaussian_create(c4a_pp_gaussian_handle_t** out,
 ## Verification
 
 ```bash
-cd /home/delete/nirs4all/chemometrics4all
+cd /home/delete/nirs4all/nirs4all-methods
 cmake --build --preset dev-debug
-./build/dev-debug/cpp/tests/chemometrics4all_tests   # 61/61
-./build/dev-debug/cpp/cli/chemometrics4all_cli --selfcheck
-nm -D --defined-only build/dev-debug/cpp/src/libc4a.so.1.4.0 | awk '$2=="T" {print $3}' | sort -u | wc -l  # 94
+./build/dev-debug/cpp/tests/n4m_tests   # 61/61
+./build/dev-debug/cpp/cli/n4m_cli --selfcheck
+nm -D --defined-only build/dev-debug/cpp/src/libn4m.so.1.4.0 | awk '$2=="T" {print $3}' | sort -u | wc -l  # 94
 ```
 
 ## Next phase

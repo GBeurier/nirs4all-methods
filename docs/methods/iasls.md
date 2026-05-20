@@ -20,7 +20,7 @@ of length `n`:
    - `w = w_new`.
 5. Output: `out = y - z`.
 
-From the `chemometrics4all.IAsLS` Python wrapper docstring:
+From the `n4m.IAsLS` Python wrapper docstring:
 
 > Improved asymmetric least-squares baseline correction.
 
@@ -52,17 +52,17 @@ From the `chemometrics4all.IAsLS` Python wrapper docstring:
 
 - Shared 1st/2nd-difference penalties + in-place pentadiagonal LDLT from `core/common/banded_solver.h`. The fixed penalty is built once per matrix; the LDLT factor reuses row-scope `L` / `D` scratch buffers across iterations.
 - Polynomial pre-fit uses the shared Householder QR (`core/common/linalg.h`), factored once per matrix and replayed per row.
-- Convergence uses `c4a_relative_l2_diff` (shared with AsLS / ArPLS).
+- Convergence uses `n4m_relative_l2_diff` (shared with AsLS / ArPLS).
 - On `max_iter` reached without convergence: silently returns the last iterate.
 - Parity tolerance vs pybaselines snapshot: `5e-6 abs / 1e-5 rel`.
 
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_pp_iasls_create(c4a_pp_iasls_handle_t** out, double lam, double p, int32_t polyorder, int32_t max_iter, double tol);
-c4a_status_t c4a_pp_iasls_create_ex(c4a_pp_iasls_handle_t** out, double lam, double p, double lam_1, int32_t polyorder, int32_t diff_order, int32_t max_iter, double tol);
-void c4a_pp_iasls_destroy(c4a_pp_iasls_handle_t* handle);
-c4a_status_t c4a_pp_iasls_transform(const c4a_pp_iasls_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_pp_iasls_create(n4m_pp_iasls_handle_t** out, double lam, double p, int32_t polyorder, int32_t max_iter, double tol);
+n4m_status_t n4m_pp_iasls_create_ex(n4m_pp_iasls_handle_t** out, double lam, double p, double lam_1, int32_t polyorder, int32_t diff_order, int32_t max_iter, double tol);
+void n4m_pp_iasls_destroy(n4m_pp_iasls_handle_t* handle);
+n4m_status_t n4m_pp_iasls_transform(const n4m_pp_iasls_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -71,51 +71,51 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_pp_iasls` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.iasls` | Python | ABI-close function backed by ctypes. |
-| Python sklearn | `chemometrics4all.sklearn.IAsLS` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| C ABI | `n4m_pp_iasls` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.iasls` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `n4m.sklearn.IAsLS` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `iasls(X, lam = 1e6, p = 0.01, lam_1 = 1e-4, polyorder = 2L, diff_order = 2L, max_iter = 50L, tol = 1e-3)` | R | Public package wrapper around the C ABI. |
 | ref.pybaselines | `pybaselines.iasls` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_pp_iasls_create(c4a_pp_iasls_handle_t** out, double lam, double p, int32_t polyorder, int32_t max_iter, double tol);
-c4a_status_t c4a_pp_iasls_create_ex(c4a_pp_iasls_handle_t** out, double lam, double p, double lam_1, int32_t polyorder, int32_t diff_order, int32_t max_iter, double tol);
-void c4a_pp_iasls_destroy(c4a_pp_iasls_handle_t* handle);
-c4a_status_t c4a_pp_iasls_transform(const c4a_pp_iasls_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_pp_iasls_create(n4m_pp_iasls_handle_t** out, double lam, double p, int32_t polyorder, int32_t max_iter, double tol);
+n4m_status_t n4m_pp_iasls_create_ex(n4m_pp_iasls_handle_t** out, double lam, double p, double lam_1, int32_t polyorder, int32_t diff_order, int32_t max_iter, double tol);
+void n4m_pp_iasls_destroy(n4m_pp_iasls_handle_t* handle);
+n4m_status_t n4m_pp_iasls_transform(const n4m_pp_iasls_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.iasls(X)
+Xt = n4m.iasls(X)
 ```
 
 :::
 
-:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:::{tab-item} Python sklearn · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from chemometrics4all.sklearn import IAsLS
+from n4m.sklearn import IAsLS
 
 op = IAsLS(lam=1000000.0, p=0.01, lam_1=0.0001, polyorder=2, diff_order=2, max_iter=50)
 Xt = op.fit_transform(X)
@@ -123,12 +123,12 @@ Xt = op.fit_transform(X)
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- iasls(X, lam = 1e5, p = 0.01, lam_1 = 1e-4, polyorder = 2L, diff_order = 2L, max_iter = 20L)
 ```
 
@@ -168,15 +168,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">6.0e-08</td><td class="ms">0.398 ms</td><td class="ms">5.515 ms</td><td class="ms">32.385 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">6.0e-08</td><td class="ms">0.398 ms</td><td class="ms">5.515 ms</td><td class="ms">32.385 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">6.0e-08</td><td class="ms ms-best">🏆 0.396 ms</td><td class="ms ms-best">🏆 5.454 ms</td><td class="ms ms-best">🏆 32.339 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">6.0e-08</td><td class="ms">0.414 ms</td><td class="ms">5.591 ms</td><td class="ms">32.361 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">6.0e-08</td><td class="ms ms-best">🏆 0.396 ms</td><td class="ms ms-best">🏆 5.454 ms</td><td class="ms ms-best">🏆 32.339 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">6.0e-08</td><td class="ms">0.414 ms</td><td class="ms">5.591 ms</td><td class="ms">32.361 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">6.0e-08</td><td class="ms">0.438 ms</td><td class="ms">5.812 ms</td><td class="ms">32.750 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">6.0e-08</td><td class="ms">0.438 ms</td><td class="ms">5.812 ms</td><td class="ms">32.750 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): pybaselines.iasls · pybaselines 1.2.1 — canonical">◆</span><code>ref.pybaselines</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">13.911 ms</td><td class="ms">29.968 ms</td><td class="ms">102.126 ms</td></tr>

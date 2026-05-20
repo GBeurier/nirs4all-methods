@@ -2,12 +2,12 @@
 
 Usage:
     cd parity/python_generator
-    python -m venv /tmp/c4a-pybaselines-1.2.1
-    /tmp/c4a-pybaselines-1.2.1/bin/pip install -e . 'pybaselines==1.2.1'
-    /tmp/c4a-pybaselines-1.2.1/bin/python scripts/validate_frozen_pybaselines_ref.py
+    python -m venv /tmp/n4m-pybaselines-1.2.1
+    /tmp/n4m-pybaselines-1.2.1/bin/pip install -e . 'pybaselines==1.2.1'
+    /tmp/n4m-pybaselines-1.2.1/bin/python scripts/validate_frozen_pybaselines_ref.py
 
 This script imports BOTH the local reference adapters in
-``c4a_parity_pybaselines_ref`` AND the upstream ``pybaselines`` package, runs
+``n4m_parity_pybaselines_ref`` AND the upstream ``pybaselines`` package, runs
 each baseline operator on a small synthetic spectrum, and asserts the current
 same-contract operators remain aligned.
 
@@ -24,11 +24,11 @@ from pathlib import Path
 
 import numpy as np
 
-# Add the c4a_parity_pybaselines_ref module to the path.
+# Add the n4m_parity_pybaselines_ref module to the path.
 _HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_HERE.parent / "src"))
 
-import c4a_parity_pybaselines_ref as c4a_ref  # noqa: E402
+import n4m_parity_pybaselines_ref as n4m_ref  # noqa: E402
 
 try:
     import pybaselines  # noqa: E402
@@ -85,25 +85,25 @@ def main() -> int:
     y_mat = y[None, :]
 
     # Detrend (polynomial)
-    ours_d = c4a_ref.detrend(y_mat, polyorder=2)[0]
+    ours_d = n4m_ref.detrend(y_mat, polyorder=2)[0]
     theirs_z, _ = fitter.poly(y, poly_order=2)
     theirs_d = y - theirs_z
     all_ok &= _check("detrend", ours_d, theirs_d)
 
     # AsLS
-    ours_a = c4a_ref.asls(y_mat, lam=1e6, p=0.001, max_iter=50, tol=1e-3)[0]
+    ours_a = n4m_ref.asls(y_mat, lam=1e6, p=0.001, max_iter=50, tol=1e-3)[0]
     theirs_z, _ = fitter.asls(y, lam=1e6, p=0.001, max_iter=50, tol=1e-3)
     theirs_a = y - theirs_z
     all_ok &= _check("asls", ours_a, theirs_a)
 
     # AirPLS
-    ours_p = c4a_ref.airpls(y_mat, lam=1e6, max_iter=50, tol=1e-2)[0]
+    ours_p = n4m_ref.airpls(y_mat, lam=1e6, max_iter=50, tol=1e-2)[0]
     theirs_z, _ = fitter.airpls(y, lam=1e6, max_iter=50, tol=1e-2)
     theirs_p = y - theirs_z
     all_ok &= _check("airpls", ours_p, theirs_p)
 
     # ArPLS
-    ours_r = c4a_ref.arpls(y_mat, lam=1e5, max_iter=50, tol=1e-3)[0]
+    ours_r = n4m_ref.arpls(y_mat, lam=1e5, max_iter=50, tol=1e-3)[0]
     theirs_z, _ = fitter.arpls(y, lam=1e5, max_iter=50, tol=1e-3)
     theirs_r = y - theirs_z
     all_ok &= _check("arpls", ours_r, theirs_r)
@@ -114,25 +114,25 @@ def main() -> int:
     y_mat = y[None, :]
 
     # ModPoly
-    ours = c4a_ref.modpoly(y_mat, polyorder=2, max_iter=250, tol=1e-3)[0]
+    ours = n4m_ref.modpoly(y_mat, polyorder=2, max_iter=250, tol=1e-3)[0]
     theirs_z, _ = fitter.modpoly(y, poly_order=2, max_iter=250, tol=1e-3)
     all_ok &= _check("modpoly", ours, y - theirs_z)
 
     # IModPoly — pybaselines uses mask_initial_peaks=True by default; force
     # it off to match the frozen reference's compact surface.
-    ours = c4a_ref.imodpoly(y_mat, polyorder=2, max_iter=250, tol=1e-3)[0]
+    ours = n4m_ref.imodpoly(y_mat, polyorder=2, max_iter=250, tol=1e-3)[0]
     theirs_z, _ = fitter.imodpoly(y, poly_order=2, max_iter=250, tol=1e-3,
                                    mask_initial_peaks=False, num_std=1.0)
     all_ok &= _check("imodpoly", ours, y - theirs_z)
 
     # SNIP — pybaselines.morphological.snip with max_half_window
-    ours = c4a_ref.snip(y_mat, max_half_window=20)[0]
+    ours = n4m_ref.snip(y_mat, max_half_window=20)[0]
     theirs_z, _ = fitter.snip(y, max_half_window=20)
     all_ok &= _check("snip", ours, y - theirs_z)
 
     # RollingBall — pybaselines uses min then max filter; default
     # half_window matches our 20-pt centred clipped window.
-    ours = c4a_ref.rolling_ball(y_mat, half_window=20, smooth_half_window=0)[0]
+    ours = n4m_ref.rolling_ball(y_mat, half_window=20, smooth_half_window=0)[0]
     theirs_z, _ = fitter.rolling_ball(y, half_window=20, smooth_half_window=1)
     # pybaselines smooths by 1 even when not requested via smooth_half_window=0,
     # so the comparison runs with a finite smoothing window: we accept a
@@ -142,15 +142,15 @@ def main() -> int:
     print(f"  [INFO] rolling_ball max_abs_err (rough) = {abs_err:.3e}")
 
     # IAsLS — pybaselines exposes it under whittaker
-    ours = c4a_ref.iasls(y_mat, lam=1e6, p=1e-2, lam_1=1e-4,
+    ours = n4m_ref.iasls(y_mat, lam=1e6, p=1e-2, lam_1=1e-4,
                           polyorder=2, diff_order=2, max_iter=50,
                           tol=1e-3)[0]
     theirs_z, _ = fitter.iasls(y, lam=1e6, p=1e-2, lam_1=1e-4,
                                 diff_order=2, max_iter=50, tol=1e-3)
     all_ok &= _check("iasls", ours, y - theirs_z)
 
-    # BEADS — same pybaselines full banded contract as c4a.
-    ours = c4a_ref.beads(y_mat, lam_0=1e2, lam_1=0.5, lam_2=0.5,
+    # BEADS — same pybaselines full banded contract as n4m.
+    ours = n4m_ref.beads(y_mat, lam_0=1e2, lam_1=0.5, lam_2=0.5,
                           max_iter=50, tol=1e-3)[0]
     try:
         theirs_z, _ = fitter.beads(y, lam_0=1e2, lam_1=0.5, lam_2=0.5,

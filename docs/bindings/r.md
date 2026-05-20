@@ -1,6 +1,6 @@
 # R Binding
 
-The R package lives in `bindings/r/chemometrics4all` and vendors the `libc4a`
+The R package lives in `bindings/r/n4m` and vendors the `libn4m`
 source for CRAN-style source builds.
 
 It exposes two layers:
@@ -17,12 +17,12 @@ supports them, including `msc_inverse_transform()`,
 `baseline_center_inverse_transform()`, and `epo_inverse_transform()`.
 
 The vendored R build enables the FITPACK spline-smoothing backend through
-`Makevars` (`C4A_HAVE_FITPACK=1`) and compiles the bundled Fortran sources with
+`Makevars` (`N4M_HAVE_FITPACK=1`) and compiles the bundled Fortran sources with
 the R toolchain.
 
 Local release smoke:
 
 ```bash
-R CMD build bindings/r/chemometrics4all
-R CMD check --no-manual --no-build-vignettes chemometrics4all_0.1.0.tar.gz
+R CMD build bindings/r/n4m
+R CMD check --no-manual --no-build-vignettes n4m_0.1.0.tar.gz
 ```

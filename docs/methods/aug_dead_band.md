@@ -4,7 +4,7 @@ _Group_: **Augmentation** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8` · _
 
 ## Description
 
-From the `chemometrics4all.DeadBandAugmenter` Python wrapper docstring:
+From the `n4m.DeadBandAugmenter` Python wrapper docstring:
 
 > Simulate dead spectral detector bands.
 
@@ -66,9 +66,9 @@ exercises this case (`dead_band_zero_probability`).
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_aug_dead_band_apply( const c4a_aug_dead_band_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_dead_band_create( c4a_aug_dead_band_handle_t** out, c4a_rng_pcg64_state_t* rng, int32_t n_bands, int32_t width_low, int32_t width_high, double noise_std, double probability, int32_t variation_scope);
-void c4a_aug_dead_band_destroy( c4a_aug_dead_band_handle_t* handle);
+n4m_status_t n4m_aug_dead_band_apply( const n4m_aug_dead_band_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_dead_band_create( n4m_aug_dead_band_handle_t** out, n4m_rng_pcg64_state_t* rng, int32_t n_bands, int32_t width_low, int32_t width_high, double noise_std, double probability, int32_t variation_scope);
+void n4m_aug_dead_band_destroy( n4m_aug_dead_band_handle_t* handle);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -77,50 +77,50 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_aug_dead_band` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.aug_dead_band` | Python | ABI-close function backed by ctypes. |
-| Python sklearn | `chemometrics4all.sklearn.DeadBandAugmenter` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| C ABI | `n4m_aug_dead_band` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.aug_dead_band` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `n4m.sklearn.DeadBandAugmenter` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `aug_dead_band(X, n_bands = 1L, width_low = 5L, width_high = 10L, noise_std = 0.05, probability = 1.0, variation_scope = 0L, seed = 17)` | R | Public package wrapper around the C ABI. |
 | ref.nirs4all | `nirs4all.DeadBandAugmenter` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_aug_dead_band_apply( const c4a_aug_dead_band_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
-c4a_status_t c4a_aug_dead_band_create( c4a_aug_dead_band_handle_t** out, c4a_rng_pcg64_state_t* rng, int32_t n_bands, int32_t width_low, int32_t width_high, double noise_std, double probability, int32_t variation_scope);
-void c4a_aug_dead_band_destroy( c4a_aug_dead_band_handle_t* handle);
+n4m_status_t n4m_aug_dead_band_apply( const n4m_aug_dead_band_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
+n4m_status_t n4m_aug_dead_band_create( n4m_aug_dead_band_handle_t** out, n4m_rng_pcg64_state_t* rng, int32_t n_bands, int32_t width_low, int32_t width_high, double noise_std, double probability, int32_t variation_scope);
+void n4m_aug_dead_band_destroy( n4m_aug_dead_band_handle_t* handle);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.aug_dead_band(X)
+Xt = n4m.aug_dead_band(X)
 ```
 
 :::
 
-:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:::{tab-item} Python sklearn · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from chemometrics4all.sklearn import DeadBandAugmenter
+from n4m.sklearn import DeadBandAugmenter
 
 op = DeadBandAugmenter(n_bands=1, width_low=5, width_high=10, noise_std=0.05, probability=0.0, variation_scope=0)
 Xt = op.fit_transform(X)
@@ -128,12 +128,12 @@ Xt = op.fit_transform(X)
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- aug_dead_band(X)
 ```
 
@@ -173,15 +173,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.011 ms</td><td class="ms">0.020 ms</td><td class="ms">0.064 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.011 ms</td><td class="ms">0.020 ms</td><td class="ms">0.064 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst binding max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.011 ms</td><td class="ms ms-best">🏆 0.019 ms</td><td class="ms ms-best">🏆 0.063 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst binding max abs diff over visible sizes">0</td><td class="ms">0.012 ms</td><td class="ms">0.021 ms</td><td class="ms">0.065 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst binding max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.011 ms</td><td class="ms ms-best">🏆 0.019 ms</td><td class="ms ms-best">🏆 0.063 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst binding max abs diff over visible sizes">0</td><td class="ms">0.012 ms</td><td class="ms">0.021 ms</td><td class="ms">0.065 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">0.044 ms</td><td class="ms">0.220 ms</td><td class="ms">1.180 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">0.044 ms</td><td class="ms">0.220 ms</td><td class="ms">1.180 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-relaxed"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.DeadBandAugmenter · nirs4all@cd731a23+dirty — context">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-context" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.301 ms</td><td class="ms">0.311 ms</td><td class="ms">0.506 ms</td></tr>

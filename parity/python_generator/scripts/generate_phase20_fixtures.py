@@ -2,16 +2,16 @@
 # SPDX-License-Identifier: CECILL-2.1
 """Generate Phase 20 parity fixtures for the transfer-metrics utility.
 
-The reference comes from the frozen ``c4a_parity_transfer_ref`` package
+The reference comes from the frozen ``n4m_parity_transfer_ref`` package
 (SplitMix64 deterministic choice — see the module banner for the rationale).
 
 Fixture shape (one file, multiple cases — each case carries its own source
 and target matrices because metric values depend on both):
 
   {
-    "format": "c4a_transfer_metrics_v1",
+    "format": "n4m_transfer_metrics_v1",
     "numpy_version": "...",
-    "reference": "c4a_parity_transfer_ref",
+    "reference": "n4m_parity_transfer_ref",
     "encoding": "ieee754_binary64_be_hex",
     "cases": [
       { "name": "...",
@@ -54,7 +54,7 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "parity" / "python_generator" / "src"))
 
-from c4a_parity_transfer_ref import transfer_metrics  # noqa: E402
+from n4m_parity_transfer_ref import transfer_metrics  # noqa: E402
 
 
 SEED = 20260518
@@ -182,9 +182,9 @@ def main() -> None:
                              n_components=4, k_neighbors=3, seed=2026))
 
     fixture: dict[str, Any] = {
-        "format":         "c4a_transfer_metrics_v1",
+        "format":         "n4m_transfer_metrics_v1",
         "numpy_version":  np.__version__,
-        "reference":      "c4a_parity_transfer_ref",
+        "reference":      "n4m_parity_transfer_ref",
         "encoding":       "ieee754_binary64_be_hex",
         "cases":          cases,
     }

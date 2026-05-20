@@ -29,4 +29,4 @@ jobs:
       - run: cmake --build --preset ci-${{ matrix.san }} --parallel
       - run: ctest --preset ci-${{ matrix.san }} --output-on-failure
       - name: Run CLI selfcheck under sanitizers
-        run: ./build/ci-${{ matrix.san }}/cpp/cli/chemometrics4all_cli --selfcheck
+        run: ./build/ci-${{ matrix.san }}/cpp/cli/n4m_cli --selfcheck

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: CECILL-2.1
 """Generate Phase 18 parity fixtures for the augmenter slice.
 
-Twelve augmenters share the universal ``c4a_aug_*`` ABI shape locked in
+Twelve augmenters share the universal ``n4m_aug_*`` ABI shape locked in
 ``roadmap/phase-15-18-augmenters-abi-contract.md``. Bit-exact NumPy parity
 of the Phase 18 stochastic operators requires a complete in-engine port of
 ``np.random.Generator.uniform``, ``choice(replace=False)`` and friends on
@@ -13,7 +13,7 @@ For Phase 18 we ship **shape + finite-value fixtures**: synthetic input
 matrices, the documented operator parameters per case, and the expected
 output **shape** (rows × cols), so the C++ harness can run a smoke test
 that asserts shape + finite output + determinism rather than per-cell
-parity. The fixture format is the existing ``c4a_aug_*_v1`` family — the
+parity. The fixture format is the existing ``n4m_aug_*_v1`` family — the
 ``output_hex`` block holds the *input* unchanged so consumers see a
 well-formed fixture and the parity harness's "output_shape" path is
 exercised.
@@ -74,7 +74,7 @@ def write_smoke_fixture(name: str, op_id: str, X: np.ndarray,
                          cases: list[tuple[str, dict, np.ndarray]],
                          out_dir: Path, nirs4all_version: str) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_aug_{op_id}_v1",
+        "format": f"n4m_aug_{op_id}_v1",
         "numpy_version": np.__version__,
         "nirs4all_version": nirs4all_version,
         "encoding": "ieee754_binary64_be_hex",

@@ -12,11 +12,11 @@ Six operators, all stateless:
   * BEADS        — Ning & Selesnick 2014 pybaselines full banded variant.
 
 References execute the external pybaselines implementation through the
-``c4a_parity_pybaselines_ref`` adapter and record the pybaselines version in
+``n4m_parity_pybaselines_ref`` adapter and record the pybaselines version in
 the fixture metadata.
 
 Shape: 40 rows × 60 cols (same generator as Phase 5a), so the same input
-matrix would round-trip through the c4a engine and the NumPy reference.
+matrix would round-trip through the n4m engine and the NumPy reference.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ import pybaselines
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "parity" / "python_generator" / "src"))
 
-from c4a_parity_pybaselines_ref import (  # noqa: E402
+from n4m_parity_pybaselines_ref import (  # noqa: E402
     modpoly,
     imodpoly,
     snip,
@@ -202,7 +202,7 @@ def write_fixture(name: str, X: np.ndarray,
                   cases: list[tuple[str, dict, Callable[[], np.ndarray]]],
                   out_dir: Path) -> None:
     fixture: dict[str, Any] = {
-        "format": f"c4a_pp_{name}_v1",
+        "format": f"n4m_pp_{name}_v1",
         "numpy_version": np.__version__,
         "scipy_version": __import__("scipy").__version__,
         "reference": f"pybaselines=={pybaselines.__version__}",

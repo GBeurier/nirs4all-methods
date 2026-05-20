@@ -6,42 +6,42 @@ context / config lifecycles. See `bindings/python/README.md` for installation an
 ## Hello-version
 
 ```python
-import chemometrics4all
+import n4m
 
-print(chemometrics4all.version())          # "0.58.0+abi.1.0.0"
-print(chemometrics4all.abi_version())      # (1, 0, 0)
-print(chemometrics4all.build_info())       # ""
+print(n4m.version())          # "0.58.0+abi.1.0.0"
+print(n4m.abi_version())      # (1, 0, 0)
+print(n4m.build_info())       # ""
 
-with chemometrics4all.Context() as ctx:
+with n4m.Context() as ctx:
     ctx.seed = 42
     assert ctx.seed == 42
     try:
-        ctx.backend = chemometrics4all.Backend.CUDA
-    except chemometrics4all.Chemometrics4allError as exc:
+        ctx.backend = n4m.Backend.CUDA
+    except n4m.N4MError as exc:
         print(exc.status_name)    # "backend unavailable"
-        print(exc.last_error)     # "backend 5 is not compiled into this build of libc4a"
+        print(exc.last_error)     # "backend 5 is not compiled into this build of libn4m"
 
-with chemometrics4all.Config() as cfg:
-    cfg.algorithm = chemometrics4all.Algorithm.PCR
-    cfg.solver = chemometrics4all.Solver.SVD
-    cfg.deflation = chemometrics4all.Deflation.REGRESSION
-    assert cfg.algorithm == chemometrics4all.Algorithm.PCR
-    assert cfg.solver == chemometrics4all.Solver.SVD
-    assert cfg.deflation == chemometrics4all.Deflation.REGRESSION
-    cfg.algorithm = chemometrics4all.Algorithm.PLS_SVD
-    cfg.deflation = chemometrics4all.Deflation.CANONICAL
-    assert cfg.algorithm == chemometrics4all.Algorithm.PLS_SVD
-    assert cfg.deflation == chemometrics4all.Deflation.CANONICAL
+with n4m.Config() as cfg:
+    cfg.algorithm = n4m.Algorithm.PCR
+    cfg.solver = n4m.Solver.SVD
+    cfg.deflation = n4m.Deflation.REGRESSION
+    assert cfg.algorithm == n4m.Algorithm.PCR
+    assert cfg.solver == n4m.Solver.SVD
+    assert cfg.deflation == n4m.Deflation.REGRESSION
+    cfg.algorithm = n4m.Algorithm.PLS_SVD
+    cfg.deflation = n4m.Deflation.CANONICAL
+    assert cfg.algorithm == n4m.Algorithm.PLS_SVD
+    assert cfg.deflation == n4m.Deflation.CANONICAL
 ```
 
 Phase 2 expands the surface to a full sklearn-compatible estimator with
-zero-copy NumPy `c4a_matrix_view_t` round-trips.
+zero-copy NumPy `n4m_matrix_view_t` round-trips.
 
 ## EPO compatibility note
 
 `EPO.fit_transform(X, d)` applies the training-time EPO projection expected by
 nirs4all/sklearn-style callers via the public
-`c4a_pp_epo_transform_with_d(...)` ABI entry point. `EPO.transform(X)` remains
+`n4m_pp_epo_transform_with_d(...)` ABI entry point. `EPO.transform(X)` remains
 available for the no-`d` contract and is therefore a pass-through at
 `d = d_mean`. Use `EPO.transform_with_d(X, d)` when the external parameter is
 known for the transform batch.

@@ -59,10 +59,10 @@ Five modes mirror SciPy:
 
 ## Numerical contract
 
-- `_create` validates parameters; returns `C4A_ERR_INVALID_ARGUMENT` for
+- `_create` validates parameters; returns `N4M_ERR_INVALID_ARGUMENT` for
   even windows, $p \geq w$, $d < 0$, $\delta = 0$, or an unknown mode.
 - `_transform` requires `cols >= window_length`; otherwise
-  `C4A_ERR_INVALID_ARGUMENT`.
+  `N4M_ERR_INVALID_ARGUMENT`.
 - Tolerance vs scipy: $10^{-9}$ absolute / $10^{-10}$ relative.  The gap is
   structural to the QR-vs-SVD lstsq comparison on the Vandermonde matrix.
 

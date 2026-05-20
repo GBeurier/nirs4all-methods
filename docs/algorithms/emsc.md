@@ -52,10 +52,10 @@ and discards the row-specific coefficients.
   is why we use Householder QR instead of a Cholesky-on-normal-equations
   shortcut.
 * `_fit` requires `rows >= 1` and `cols >= degree + 2`. Returns
-  `C4A_ERR_NUMERICAL_FAILURE` when the QR factor's diagonal is zero
+  `N4M_ERR_NUMERICAL_FAILURE` when the QR factor's diagonal is zero
   (linearly dependent basis columns).
-* `_transform` returns `C4A_ERR_NOT_FITTED` before fit, and
-  `C4A_ERR_NUMERICAL_FAILURE` when the per-row reference coefficient
+* `_transform` returns `N4M_ERR_NOT_FITTED` before fit, and
+  `N4M_ERR_NUMERICAL_FAILURE` when the per-row reference coefficient
   $c_0 = 0$.
 * Tolerance against nirs4all + `np.linalg.lstsq` (LAPACK gelsd): 5e-10
   absolute / 5e-10 relative. The handrolled Householder QR vs gelsd's SVD

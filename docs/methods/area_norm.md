@@ -4,7 +4,7 @@ _Group_: **Preprocessing** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8` · 
 
 ## Description
 
-From the `chemometrics4all.AreaNormalization` Python wrapper docstring:
+From the `n4m.AreaNormalization` Python wrapper docstring:
 
 > Per-row area normalisation.
 
@@ -48,9 +48,9 @@ If $|A_i| < 10^{-10}$, the divisor is replaced by $1.0$ to avoid amplifying nois
 C ABI entry points used by the language bindings:
 
 ```c
-c4a_status_t c4a_pp_area_create(c4a_pp_area_handle_t** out, int32_t method);
-void c4a_pp_area_destroy(c4a_pp_area_handle_t* handle);
-c4a_status_t c4a_pp_area_transform(const c4a_pp_area_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_pp_area_create(n4m_pp_area_handle_t** out, int32_t method);
+void n4m_pp_area_destroy(n4m_pp_area_handle_t* handle);
+n4m_status_t n4m_pp_area_transform(const n4m_pp_area_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
@@ -59,50 +59,50 @@ Benchmark comparator backends are registered in the matrix and stored as reprodu
 
 | Layer | Entry point | Language | Contract |
 |-------|-------------|----------|----------|
-| C ABI | `c4a_pp_area` | C/C++ | Stable libc4a entry point family. |
-| Python | `chemometrics4all.python.area_norm` | Python | ABI-close function backed by ctypes. |
-| Python sklearn | `chemometrics4all.sklearn.AreaNormalization` | Python | scikit-learn-compatible estimator backed by ctypes. |
+| C ABI | `n4m_pp_area` | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.area_norm` | Python | ABI-close function backed by ctypes. |
+| Python sklearn | `n4m.sklearn.AreaNormalization` | Python | scikit-learn-compatible estimator backed by ctypes. |
 | R | `area_normalization(X, method = "sum")` | R | Public package wrapper around the C ABI. |
 | ref.nirs4all | `nirs4all.AreaNormalization` | Python | canonical/comparator |
 
 ### Usage
 
-Every chemometrics4all binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
 
 ::::{tab-set}
-:class: chemometrics4all-bindings
+:class: nirs4all-methods-bindings
 
 
-:::{tab-item} C ABI · libc4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-c4a_status_t c4a_pp_area_create(c4a_pp_area_handle_t** out, int32_t method);
-void c4a_pp_area_destroy(c4a_pp_area_handle_t* handle);
-c4a_status_t c4a_pp_area_transform(const c4a_pp_area_handle_t* handle, c4a_matrix_view_t X, c4a_matrix_view_t out);
+n4m_status_t n4m_pp_area_create(n4m_pp_area_handle_t** out, int32_t method);
+void n4m_pp_area_destroy(n4m_pp_area_handle_t* handle);
+n4m_status_t n4m_pp_area_transform(const n4m_pp_area_handle_t* handle, n4m_matrix_view_t X, n4m_matrix_view_t out);
 ```
 
 :::
 
-:::{tab-item} Python ABI · chemometrics4all.python
+:::{tab-item} Python ABI · n4m.python
 :sync: python-abi
 :class-label: lang-python
 
 ```python
-from chemometrics4all import python as c4a
+from n4m import python as n4m
 
-Xt = c4a.area_norm(X)
+Xt = n4m.area_norm(X)
 ```
 
 :::
 
-:::{tab-item} Python sklearn · chemometrics4all.sklearn
+:::{tab-item} Python sklearn · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from chemometrics4all.sklearn import AreaNormalization
+from n4m.sklearn import AreaNormalization
 
 op = AreaNormalization(method='sum')
 Xt = op.fit_transform(X)
@@ -110,12 +110,12 @@ Xt = op.fit_transform(X)
 
 :::
 
-:::{tab-item} R · chemometrics4all
+:::{tab-item} R · nirs4all-methods
 :sync: r
 :class-label: lang-r
 
 ```r
-library(chemometrics4all)
+library(n4m)
 res <- area_normalization(X, method = 'sum')
 ```
 
@@ -155,15 +155,15 @@ Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/o
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libc4a</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.0e-17</td><td class="ms ms-best">🏆 0.001 ms</td><td class="ms ms-best">🏆 0.012 ms</td><td class="ms ms-best">🏆 0.077 ms</td></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.0e-17</td><td class="ms ms-best">🏆 0.001 ms</td><td class="ms ms-best">🏆 0.012 ms</td><td class="ms ms-best">🏆 0.077 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.0e-17</td><td class="ms">0.006 ms</td><td class="ms">0.018 ms</td><td class="ms">0.094 ms</td></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.0e-17</td><td class="ms">0.008 ms</td><td class="ms">0.021 ms</td><td class="ms">0.090 ms</td></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.0e-17</td><td class="ms">0.006 ms</td><td class="ms">0.018 ms</td><td class="ms">0.094 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">1.0e-17</td><td class="ms">0.008 ms</td><td class="ms">0.021 ms</td><td class="ms">0.090 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · chemometrics4all</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>C4A.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-17</td><td class="ms">0.027 ms</td><td class="ms">0.252 ms</td><td class="ms">1.945 ms</td></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-17</td><td class="ms">0.027 ms</td><td class="ms">0.252 ms</td><td class="ms">1.945 ms</td></tr>
 </tbody>
 <tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
 <tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): nirs4all.AreaNormalization · nirs4all@cd731a23+dirty — canonical">◆</span><code>ref.nirs4all</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.230 ms</td><td class="ms">0.285 ms</td><td class="ms">0.701 ms</td></tr>

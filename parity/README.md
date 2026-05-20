@@ -1,12 +1,12 @@
 # Parity Gates
 
-`chemometrics4all` validates non-PLS NIRS operators against two different
+`nirs4all-methods` validates non-PLS NIRS operators against two different
 contracts:
 
 | Gate | Comparator | Purpose | CI Stage |
 | --- | --- | --- | --- |
-| Binding parity | `parity/binding_parity.py` | Every language binding must match the same `libc4a` call path. | Stage 4 |
-| Reference parity | `parity/reference_parity.py` | `libc4a` fixtures must agree with the canonical external implementation where one exists. | Stage 2 |
+| Binding parity | `parity/binding_parity.py` | Every language binding must match the same `libn4m` call path. | Stage 4 |
+| Reference parity | `parity/reference_parity.py` | `libn4m` fixtures must agree with the canonical external implementation where one exists. | Stage 2 |
 
 The unified runner is `parity/python_generator/scripts/run_parity_gate.py`.
 It executes:
@@ -19,10 +19,10 @@ It executes:
 3. Stage 2, reference parity: `parity/run_reference_parity.py` compares
    fixtures with NumPy, SciPy, scikit-learn, PyWavelets, pybaselines, and
    selected `nirs4all` homemade references.
-4. Stage 3, C++ parity: `chemometrics4all_tests` validates `libc4a` against
+4. Stage 3, C++ parity: `n4m_tests` validates `libn4m` against
    the frozen fixtures.
 5. Stage 4, binding parity: each binding validates itself against the built
-   `libc4a`.
+   `libn4m`.
 
 Stage 2 is a hard gate by default. Expected reference gaps live in
 `parity/divergences.json`; any skipped suite or skipped case that is not listed
@@ -58,7 +58,7 @@ python parity/python_generator/scripts/run_parity_gate.py \
 For local debugging without touching fixtures:
 
 ```bash
-python parity/run_reference_parity.py --cache-dir /tmp/c4a-reference-cache --quiet-cases
+python parity/run_reference_parity.py --cache-dir /tmp/n4m-reference-cache --quiet-cases
 python parity/python_generator/scripts/run_parity_gate.py --skip-fixture-regen --build-dir build/dev-debug
 ```
 
@@ -66,7 +66,7 @@ python parity/python_generator/scripts/run_parity_gate.py --skip-fixture-regen -
 
 `parity/divergences.json` is the machine-readable reference contract. It
 records stochastic operators whose upstream library cannot reproduce the exact
-`c4a` PCG64 draw order, wavelet fixtures that still rely on a frozen layout
+`n4m` PCG64 draw order, wavelet fixtures that still rely on a frozen layout
 reference, and weak tolerance zones that need future tightening.
 
 The file is intentionally separate from the implementation so dashboards and
@@ -75,4 +75,4 @@ release checks can distinguish:
 - hard reference failures;
 - expected skips;
 - weak but currently accepted reference parity;
-- pure binding parity against `libc4a`.
+- pure binding parity against `libn4m`.
