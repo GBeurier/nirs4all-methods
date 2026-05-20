@@ -16,6 +16,10 @@ the installed public R binding. Inverse transforms are exposed where the C ABI
 supports them, including `msc_inverse_transform()`,
 `baseline_center_inverse_transform()`, and `epo_inverse_transform()`.
 
+The vendored R build enables the FITPACK spline-smoothing backend through
+`Makevars` (`C4A_HAVE_FITPACK=1`) and compiles the bundled Fortran sources with
+the R toolchain.
+
 Local release smoke:
 
 ```bash

@@ -56,20 +56,11 @@ if(NOT "${CMAKE_MATCH_2}" STREQUAL "${C4A_PROJECT_VERSION}")
         "scripts/bump_version.sh to re-sync.")
 endif()
 
-if(NOT DEFINED CMAKE_Fortran_COMPILER)
-    find_program(_c4a_fortran_compiler
-        NAMES gfortran x86_64-conda-linux-gnu-gfortran flang ifort ifx)
-    if(_c4a_fortran_compiler)
-        set(CMAKE_Fortran_COMPILER "${_c4a_fortran_compiler}" CACHE FILEPATH
-            "Fortran compiler used for the vendored FITPACK spline smoother")
-    endif()
-endif()
-
 project(chemometrics4all
     VERSION ${C4A_PROJECT_VERSION}
     DESCRIPTION "Portable NIRS chemometrics engine: preprocessings, splitters, filters, augmentations, transfer metrics"
     HOMEPAGE_URL "https://github.com/GBeurier/chemometrics4all"
-    LANGUAGES C CXX Fortran)
+    LANGUAGES C CXX)
 
 # ============================================================================
 # Language and visibility defaults
@@ -81,18 +72,6 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-# The vendored FITPACK subset is plain numerical Fortran 77 and does not call
-# the Fortran runtime. Keeping the implicit gfortran runtime off avoids leaking
-# a compiler-runtime dependency into libc4a for this tiny source subset.
-if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
-    set(CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES "")
-    set(CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES "")
-    set(CMAKE_Fortran_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "")
-    set(CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES "" CACHE STRING "" FORCE)
-    set(CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES "" CACHE STRING "" FORCE)
-    set(CMAKE_Fortran_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "" CACHE STRING "" FORCE)
-endif()
 
 # Hidden by default — only C4A_API-decorated symbols escape chemometrics4all_c.
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
@@ -118,6 +97,53 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(Chemometrics4allOptions)
 include(CompilerWarnings)
 include(SanitizersToolchain)
+
+set(CHEMOMETRICS4ALL_HAVE_FITPACK OFF)
+if(CHEMOMETRICS4ALL_WITH_FITPACK STREQUAL "ON"
+        OR CHEMOMETRICS4ALL_WITH_FITPACK STREQUAL "AUTO")
+    set(_c4a_skip_fitpack_fortran OFF)
+    if(WIN32 AND (MSVC OR CMAKE_GENERATOR MATCHES "Visual Studio"))
+        set(_c4a_skip_fitpack_fortran ON)
+    endif()
+
+    if(_c4a_skip_fitpack_fortran)
+        if(CHEMOMETRICS4ALL_WITH_FITPACK STREQUAL "ON")
+            message(FATAL_ERROR
+                "CHEMOMETRICS4ALL_WITH_FITPACK=ON is not supported with the "
+                "Visual Studio generator. Use AUTO/OFF or a non-MSVC toolchain.")
+        endif()
+    else()
+        if(NOT DEFINED CMAKE_Fortran_COMPILER)
+            find_program(_c4a_fortran_compiler
+                NAMES gfortran x86_64-conda-linux-gnu-gfortran flang ifort ifx)
+            if(_c4a_fortran_compiler)
+                set(CMAKE_Fortran_COMPILER "${_c4a_fortran_compiler}" CACHE FILEPATH
+                    "Fortran compiler used for the vendored FITPACK spline smoother")
+            endif()
+        endif()
+        include(CheckLanguage)
+        check_language(Fortran)
+        if(CMAKE_Fortran_COMPILER)
+            enable_language(Fortran)
+            set(CHEMOMETRICS4ALL_HAVE_FITPACK ON)
+        elseif(CHEMOMETRICS4ALL_WITH_FITPACK STREQUAL "ON")
+            message(FATAL_ERROR
+                "CHEMOMETRICS4ALL_WITH_FITPACK=ON requires a working Fortran compiler.")
+        endif()
+    endif()
+endif()
+
+# The vendored FITPACK subset is plain numerical Fortran 77 and does not call
+# the Fortran runtime. Keeping the implicit gfortran runtime off avoids leaking
+# a compiler-runtime dependency into libc4a for this tiny source subset.
+if(CHEMOMETRICS4ALL_HAVE_FITPACK AND CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
+    set(CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES "")
+    set(CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES "")
+    set(CMAKE_Fortran_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "")
+    set(CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES "" CACHE STRING "" FORCE)
+    set(CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES "" CACHE STRING "" FORCE)
+    set(CMAKE_Fortran_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "" CACHE STRING "" FORCE)
+endif()
 
 # OpenMP must be discovered at the top-level so its imported target
 # (OpenMP::OpenMP_CXX) is visible in both cpp/src/ and cpp/tests/.
@@ -238,6 +264,7 @@ if(CHEMOMETRICS4ALL_IS_TOPLEVEL)
     message(STATUS "  Build static      : ${CHEMOMETRICS4ALL_BUILD_STATIC}")
     message(STATUS "  Build tests       : ${CHEMOMETRICS4ALL_BUILD_TESTS}")
     message(STATUS "  Build CLI         : ${CHEMOMETRICS4ALL_BUILD_CLI}")
+    message(STATUS "  FITPACK smoothing : ${CHEMOMETRICS4ALL_HAVE_FITPACK}")
     message(STATUS "  Sanitizers (A/U/T): ${CHEMOMETRICS4ALL_ENABLE_ASAN}/${CHEMOMETRICS4ALL_ENABLE_UBSAN}/${CHEMOMETRICS4ALL_ENABLE_TSAN}")
     message(STATUS "  Warnings as errs  : ${CHEMOMETRICS4ALL_WARNINGS_AS_ERRORS}")
     message(STATUS "")

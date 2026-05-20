@@ -6,6 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef C4A_HAVE_FITPACK
+#define C4A_HAVE_FITPACK 0
+#endif
+
+#if C4A_HAVE_FITPACK
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -17,6 +22,7 @@ void splev_(double* t, int* n, double* c, int* nc, int* k, double* x,
             double* y, int* m, int* e, int* ier);
 #if defined(__cplusplus)
 }
+#endif
 #endif
 
 struct c4a_aug_spline_smooth_state_t {
@@ -51,6 +57,10 @@ c4a_status_t c4a_aug_spline_smooth_state_apply(
         if (out != X) memcpy(out, X, (size_t)(rows * cols) * sizeof(double));
         return C4A_OK;
     }
+#if !C4A_HAVE_FITPACK
+    if (out != X) memcpy(out, X, (size_t)(rows * cols) * sizeof(double));
+    return C4A_OK;
+#else
     if (cols > (int64_t)(INT_MAX - 4)) return C4A_ERR_INVALID_ARGUMENT;
 
     const int k_value = 3;
@@ -123,4 +133,5 @@ c4a_status_t c4a_aug_spline_smooth_state_apply(
     }
     free(x); free(y); free(w); free(knots); free(coef); free(wrk); free(iwrk);
     return C4A_OK;
+#endif
 }

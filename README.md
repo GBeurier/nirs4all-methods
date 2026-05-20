@@ -37,7 +37,7 @@ All operators are mirrored byte-bit-where-possible against [nirs4all](https://gi
 - **C++17 core** in `cpp/src/core/` — internal headers + implementations, never directly exposed.
 - **Stable C ABI** in `cpp/include/chemometrics4all/c4a.h` — `c4a_*` symbols, opaque handles, error-buffer-per-context.
 - **Thin language bindings** (`bindings/`): Python (ctypes + sklearn-compatible classes) and R (.Call) are active; MATLAB and JS/WASM are next in the roadmap.
-- **Zero mandatory dependencies** — DIY linalg, RNG (PCG64 reimplementation for NumPy bit-exact parity), banded LDLT, FFT-free wavelet filter banks. Optional accelerated backends (BLAS, OpenMP) are gated by CMake presets.
+- **Zero mandatory dependencies** — DIY linalg, RNG (PCG64 reimplementation for NumPy bit-exact parity), banded LDLT, FFT-free wavelet filter banks. Optional backends (BLAS, OpenMP, FITPACK spline smoothing) are gated by CMake.
 - **CMake ≥ 3.21** with 20+ presets in `CMakePresets.json` (dev-debug, dev-release, ci-*, blas-on, sanitizer-*).
 - **Parity-gated** — every operator is validated against pinned reference implementations (numpy 1.26.4, scipy 1.17.1, scikit-learn 1.8.0, pywt 1.8.0, pybaselines 1.2.1, selected nirs4all operators, …) with `parity/fixtures/*.json` + `parity/tolerances.md`.
 - **Benchmark + validation docs** — generated method pages and the interactive matrix consume the same committed benchmark payload (`docs/_static/bench-data.json`) and validation contracts (`benchmarks/validation/registry/`).
@@ -66,7 +66,7 @@ ctest --preset dev-release --output-on-failure
 ./build/dev-release/cpp/cli/chemometrics4all_cli --selfcheck
 ```
 
-Requirements: C++17 toolchain (GCC ≥ 11 / Clang ≥ 14 / MSVC 2022), CMake ≥ 3.21, Ninja (recommended).
+Requirements: C++17 toolchain (GCC ≥ 11 / Clang ≥ 14 / MSVC 2022), CMake ≥ 3.21, Ninja (recommended). A Fortran compiler is optional: `CHEMOMETRICS4ALL_WITH_FITPACK=AUTO` enables the vendored FITPACK spline-smoothing backend when the toolchain supports it and keeps builds portable when it does not.
 
 ---
 

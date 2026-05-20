@@ -27,6 +27,9 @@ option(CHEMOMETRICS4ALL_BUILD_BINDINGS_ANDROID  "Build the Android AAR (NDK)"   
 option(CHEMOMETRICS4ALL_WITH_BLAS    "Build optional BLAS backend"   OFF)
 option(CHEMOMETRICS4ALL_WITH_OPENMP  "Build optional OpenMP backend" OFF)
 option(CHEMOMETRICS4ALL_WITH_CUDA    "Build optional CUDA backend"   OFF)
+set(CHEMOMETRICS4ALL_WITH_FITPACK "AUTO" CACHE STRING
+    "Build the vendored FITPACK spline smoother when a compatible Fortran compiler is available (AUTO, ON, OFF)")
+set_property(CACHE CHEMOMETRICS4ALL_WITH_FITPACK PROPERTY STRINGS AUTO ON OFF)
 
 # ---- Diagnostics ----------------------------------------------------------
 option(CHEMOMETRICS4ALL_ENABLE_ASAN             "Enable AddressSanitizer (clang/gcc only)"            OFF)
@@ -42,6 +45,14 @@ if(CHEMOMETRICS4ALL_ENABLE_ASAN AND CHEMOMETRICS4ALL_ENABLE_TSAN)
     message(FATAL_ERROR
         "CHEMOMETRICS4ALL_ENABLE_ASAN and CHEMOMETRICS4ALL_ENABLE_TSAN are mutually exclusive — "
         "TSAN cannot run under AddressSanitizer.")
+endif()
+
+if(NOT CHEMOMETRICS4ALL_WITH_FITPACK STREQUAL "AUTO"
+        AND NOT CHEMOMETRICS4ALL_WITH_FITPACK STREQUAL "ON"
+        AND NOT CHEMOMETRICS4ALL_WITH_FITPACK STREQUAL "OFF")
+    message(FATAL_ERROR
+        "CHEMOMETRICS4ALL_WITH_FITPACK must be AUTO, ON, or OFF "
+        "(got '${CHEMOMETRICS4ALL_WITH_FITPACK}').")
 endif()
 
 if(CHEMOMETRICS4ALL_BUILD_FUZZ AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")

@@ -211,7 +211,7 @@ c4a_status_t c4a_mcd_fit(c4a_mcd_t* mcd,
     compute_mean(X, idx, h, cols, mean);
     compute_cov(X, idx, h, cols, mean, cov);
 
-    double prev_log_det = INFINITY;
+    double prev_log_det = HUGE_VAL;
     c4a_status_t st = C4A_OK;
     for (int iter = 0; iter < C4A_MCD_MAX_ITERS; ++iter) {
         double log_det = 0.0;

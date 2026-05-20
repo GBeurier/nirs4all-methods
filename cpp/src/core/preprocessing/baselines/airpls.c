@@ -108,7 +108,7 @@ c4a_status_t c4a_pp_airpls_state_apply(const c4a_pp_airpls_state_t* state,
     /* Match pybaselines' clip upper bound: log(DBL_MAX) - spacing(log(DBL_MAX)).
      * spacing(x) here is the gap to the next representable double. */
     const double log_max         = log(DBL_MAX);
-    const double spacing_log_max = nextafter(log_max, INFINITY) - log_max;
+    const double spacing_log_max = nextafter(log_max, HUGE_VAL) - log_max;
     const double clip_hi         = log_max - spacing_log_max;
 
     for (int64_t r = 0; r < rows; ++r) {

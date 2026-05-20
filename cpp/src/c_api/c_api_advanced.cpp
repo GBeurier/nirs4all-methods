@@ -809,7 +809,7 @@ void dtw_row(const MatrixIn& x, MatrixOut& out, const AlignState& s,
     const std::int64_t n = x.cols;
     std::vector<double> cost(static_cast<std::size_t>((n + 1) * (n + 1)),
                              std::numeric_limits<double>::infinity());
-    cost[0] = 0.0;
+    cost.at(0) = 0.0;
     for (std::int64_t i = 1; i <= n; ++i) {
         for (std::int64_t j = 1; j <= n; ++j) {
             const double d = std::fabs(s.reference[static_cast<std::size_t>(i - 1)] - at(x, row, j - 1));
@@ -1592,7 +1592,9 @@ extern "C" C4A_API c4a_status_t prefix##_transform(const HandleType* h, c4a_matr
     return call_status([&] { return h ? msc_transform(h->s, x, out) : C4A_ERR_NULL_POINTER; }); \
 } \
 extern "C" C4A_API c4a_status_t prefix##_is_fitted(const HandleType* h, int* out) { \
-    if (!out) return C4A_ERR_NULL_POINTER; *out = (h && h->s.fitted) ? 1 : 0; return C4A_OK; \
+    if (!out) return C4A_ERR_NULL_POINTER; \
+    *out = (h && h->s.fitted) ? 1 : 0; \
+    return C4A_OK; \
 }
 
 DEFINE_MSC_API(c4a_pp_piecewise_msc, c4a_pp_piecewise_msc_handle_t, false)
@@ -1612,7 +1614,9 @@ extern "C" C4A_API c4a_status_t prefix##_transform(const HandleType* h, c4a_matr
     return call_status([&] { return h ? align_transform(h->s, x, out) : C4A_ERR_NULL_POINTER; }); \
 } \
 extern "C" C4A_API c4a_status_t prefix##_is_fitted(const HandleType* h, int* out) { \
-    if (!out) return C4A_ERR_NULL_POINTER; *out = (h && h->s.fitted) ? 1 : 0; return C4A_OK; \
+    if (!out) return C4A_ERR_NULL_POINTER; \
+    *out = (h && h->s.fitted) ? 1 : 0; \
+    return C4A_OK; \
 }
 
 DEFINE_ALIGN_API(c4a_pp_xcorr_align, c4a_pp_xcorr_align_handle_t, false, false, false)
@@ -1629,10 +1633,15 @@ extern "C" C4A_API c4a_status_t prefix##_transform(const HandleType* h, c4a_matr
     return call_status([&] { return h ? selector_transform(h->s, x, out) : C4A_ERR_NULL_POINTER; }); \
 } \
 extern "C" C4A_API c4a_status_t prefix##_output_cols(const HandleType* h, int64_t* out) { \
-    if (!out) return C4A_ERR_NULL_POINTER; if (!h || !h->s.fitted) return C4A_ERR_NOT_FITTED; *out = static_cast<int64_t>(h->s.indices.size()); return C4A_OK; \
+    if (!out) return C4A_ERR_NULL_POINTER; \
+    if (!h || !h->s.fitted) return C4A_ERR_NOT_FITTED; \
+    *out = static_cast<int64_t>(h->s.indices.size()); \
+    return C4A_OK; \
 } \
 extern "C" C4A_API c4a_status_t prefix##_is_fitted(const HandleType* h, int* out) { \
-    if (!out) return C4A_ERR_NULL_POINTER; *out = (h && h->s.fitted) ? 1 : 0; return C4A_OK; \
+    if (!out) return C4A_ERR_NULL_POINTER; \
+    *out = (h && h->s.fitted) ? 1 : 0; \
+    return C4A_OK; \
 }
 
 DEFINE_SELECTOR_CREATE(c4a_filter_variance, c4a_filter_variance_handle_t, false)

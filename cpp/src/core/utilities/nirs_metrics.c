@@ -111,7 +111,7 @@ c4a_status_t c4a_metric_rpd_impl(const double* y_true, const double* y_pred,
     /* SD = std(y_true). */
     const double sd = compute_std(y_true, n);
     if (sep == 0.0) {
-        *out = INFINITY;
+        *out = HUGE_VAL;
     } else {
         *out = sd / sep;
     }
@@ -158,7 +158,7 @@ c4a_status_t c4a_metric_rpiq_impl(const double* y_true, const double* y_pred,
     const double iqr = q75 - q25;
     free(sorted);
     if (rmse == 0.0) {
-        *out = INFINITY;
+        *out = HUGE_VAL;
     } else {
         *out = iqr / rmse;
     }
@@ -204,7 +204,7 @@ c4a_status_t c4a_metric_nrmse_impl(const double* y_true, const double* y_pred,
     const double rmse   = sqrt(sse / (double)n);
     const double mean_y = sum_y / (double)n;
     if (mean_y == 0.0) {
-        *out = INFINITY;
+        *out = HUGE_VAL;
     } else {
         *out = rmse / mean_y;
     }

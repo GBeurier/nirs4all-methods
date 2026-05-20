@@ -2,6 +2,24 @@
 
 Placeholder. The canonical guidance is in `CONTRIBUTING.md`; this page accumulates details (toolchain matrices, sanitizer use, release checklist) as the project stabilises.
 
+## Optional FITPACK Spline Backend
+
+`CHEMOMETRICS4ALL_WITH_FITPACK` controls the vendored FITPACK backend used by
+`aug_spline_smooth`.
+
+* `AUTO` (default): enable FITPACK when a compatible Fortran compiler can be
+  configured; otherwise build the ABI without a Fortran dependency.
+* `ON`: require FITPACK and fail configuration if Fortran is unavailable or the
+  generator is unsupported.
+* `OFF`: compile without FITPACK. The public operator remains present for ABI
+  stability and returns the input unchanged.
+
+Linux CI exercises the FITPACK path. macOS and MSVC builds are allowed to use
+the dependency-free fallback so wheel and ABI jobs do not require a Fortran
+toolchain. The R package vendors the same sources and defines
+`C4A_HAVE_FITPACK=1` through `Makevars`, relying on the Fortran compiler shipped
+with the R build toolchain.
+
 ## Optional Numerical Backends: Eigen And Armadillo
 
 The public C ABI should remain dependency-light and row-major. Eigen and

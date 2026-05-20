@@ -103,7 +103,7 @@ static double f_cdf_ref(double F0, double d1, double d2) {
 /* Invert F-cdf at probability p (0 < p < 1) via bisection. */
 static double f_quantile_ref(double p, double d1, double d2) {
     if (p <= 0.0) return 0.0;
-    if (p >= 1.0) return INFINITY;
+    if (p >= 1.0) return HUGE_VAL;
     /* Bracket: F_quantile grows with p; pick large upper bound. */
     double lo = 1e-10;
     double hi = 1.0;

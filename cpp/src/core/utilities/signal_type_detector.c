@@ -153,8 +153,8 @@ static void analyze_water_bands(const double* X, int64_t rows, int64_t cols,
     free(valid_count);
 
     /* Range of wavelengths. */
-    double wl_min =  INFINITY;
-    double wl_max = -INFINITY;
+    double wl_min =  HUGE_VAL;
+    double wl_max = -HUGE_VAL;
     for (int64_t j = 0; j < cols; ++j) {
         if (wavelengths[j] < wl_min) wl_min = wavelengths[j];
         if (wavelengths[j] > wl_max) wl_max = wavelengths[j];
@@ -244,8 +244,8 @@ c4a_status_t c4a_signal_detect_impl(const double* X,
     /* Compute NaN-skipping statistics. */
     double sum      = 0.0;
     double sq_sum   = 0.0;
-    double mn       =  INFINITY;
-    double mx       = -INFINITY;
+    double mn       =  HUGE_VAL;
+    double mx       = -HUGE_VAL;
     int64_t valid_n = 0;
     for (int64_t i = 0; i < rows; ++i) {
         for (int64_t j = 0; j < cols; ++j) {

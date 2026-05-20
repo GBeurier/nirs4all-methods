@@ -29,6 +29,7 @@ R_CXX_OBJECTS = $(R_CXX_SOURCES:.cpp=.o)
 OBJECTS = $(R_C_OBJECTS) $(R_CXX_OBJECTS) $(LIBC4A_OBJECTS)
 
 PKG_CPPFLAGS = -DCHEMOMETRICS4ALL_STATIC=1 \
+               -DC4A_HAVE_FITPACK=1 \
                -I$(LIBC4A_DIR)/include \
                -I$(LIBC4A_DIR)/generated \
                -I$(LIBC4A_DIR)/src \

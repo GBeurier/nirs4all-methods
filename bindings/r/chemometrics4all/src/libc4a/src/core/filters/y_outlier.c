@@ -79,8 +79,8 @@ c4a_filter_y_outlier_state_t* c4a_filter_y_outlier_state_new(
     s->threshold   = threshold;
     s->lower_pct   = lower_pct;
     s->upper_pct   = upper_pct;
-    s->lower_bound = -INFINITY;
-    s->upper_bound =  INFINITY;
+    s->lower_bound = -HUGE_VAL;
+    s->upper_bound =  HUGE_VAL;
     s->fitted      = 0;
     return s;
 }
@@ -199,8 +199,8 @@ c4a_status_t c4a_filter_y_outlier_state_fit(
         return C4A_ERR_NULL_POINTER;
     }
 
-    double lo = -INFINITY;
-    double hi =  INFINITY;
+    double lo = -HUGE_VAL;
+    double hi =  HUGE_VAL;
 
     if (n == 0) {
         /* Empty input: bounds stay at +/-inf. Still mark as fitted. */
