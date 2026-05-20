@@ -715,12 +715,27 @@ def host_info() -> dict:
     return info
 
 
+def _result_csv_paths(results_dir: Path) -> list[Path]:
+    """Return the CSV sources that define the dashboard state.
+
+    A strict parity-gate refresh is intentionally self-contained. When it is
+    present, mixing it with older `dashboard_refresh_*` shards reintroduces
+    stale 100x50/large-matrix rows and old per-method tolerances into the
+    release dashboard.
+    """
+    strict_gate = results_dir / "parity_30x30_strict.csv"
+    if strict_gate.exists():
+        return [strict_gate]
+
+    full_matrix = results_dir / "full_matrix.csv"
+    refresh_paths = sorted(results_dir.glob("dashboard_refresh_*.csv"))
+    return ([full_matrix] if full_matrix.exists() else []) + refresh_paths
+
+
 def build_payload(results_dir: Path) -> dict:
     """Read canonical cross-binding CSVs and build the dashboard payload."""
     rows_in: list[dict] = []
-    full_matrix = results_dir / "full_matrix.csv"
-    refresh_paths = sorted(results_dir.glob("dashboard_refresh_*.csv"))
-    csv_paths = ([full_matrix] if full_matrix.exists() else []) + refresh_paths
+    csv_paths = _result_csv_paths(results_dir)
     generated_at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     if csv_paths:
         latest_source = max(p.stat().st_mtime for p in csv_paths)

@@ -175,11 +175,14 @@ def test_binding_gate_does_not_fall_back_to_external_reference(
 def test_comparator_allows_vector_shape_quirk_only() -> None:
     vector = np.array([1.0, 2.0, 3.0])
     column = np.array([[1.0], [2.0], [3.0]])
+    flat_matrix = np.array([1.0, 2.0, 3.0, 4.0])
     matrix = np.array([[1.0, 2.0], [3.0, 4.0]])
     row = np.array([[1.0, 2.0, 3.0, 4.0]])
 
     assert binding_parity(vector, column).ok is True
     assert reference_parity(vector, column, tolerance=1e-6).ok is True
+    assert binding_parity(flat_matrix, matrix).ok is True
+    assert reference_parity(matrix, flat_matrix, tolerance=1e-6).ok is True
 
     binding = binding_parity(matrix, row)
     reference = reference_parity(matrix, row, tolerance=1e-6)

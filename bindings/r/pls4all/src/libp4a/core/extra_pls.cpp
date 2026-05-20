@@ -231,7 +231,8 @@ void simple_simpls(std::vector<double> xk,
                    std::size_t n, std::size_t p, std::size_t q,
                    std::size_t a,
                    std::vector<double>& coefficients,
-                   std::vector<double>* weights_w = nullptr) {
+                   std::vector<double>* weights_w = nullptr,
+                   std::vector<double>* rotations_r = nullptr) {
     coefficients.assign(p * q, 0.0);
     if (weights_w != nullptr) weights_w->assign(p * a, 0.0);
     std::vector<double> covariance(p * q, 0.0);
@@ -421,6 +422,7 @@ void simple_simpls(std::vector<double> xk,
             R[f * a + j] = s;
         }
     }
+    if (rotations_r != nullptr) *rotations_r = R;
     for (std::size_t f = 0; f < p; ++f) {
         for (std::size_t t = 0; t < q; ++t) {
             double s = 0.0;
@@ -428,6 +430,223 @@ void simple_simpls(std::vector<double> xk,
                 s += R[f * a + c] * B[c] * Q_load[t * a + c];
             }
             coefficients[f * q + t] = s;
+        }
+    }
+}
+
+void sklearn_pls_regression_scores(std::vector<double> xk,
+                                   std::vector<double> yk,
+                                   std::size_t n,
+                                   std::size_t p,
+                                   std::size_t q,
+                                   std::size_t a,
+                                   std::vector<double>& scores,
+                                   std::vector<double>& rotations) {
+    scores.assign(n * a, 0.0);
+    rotations.assign(p * a, 0.0);
+    if (n == 0U || p == 0U || q == 0U || a == 0U) {
+        return;
+    }
+
+    const double eps = std::numeric_limits<double>::epsilon();
+    std::vector<double> weights(p * a, 0.0);
+    std::vector<double> loadings(p * a, 0.0);
+
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        for (std::size_t target = 0; target < q; ++target) {
+            bool all_zero = true;
+            for (std::size_t row = 0; row < n; ++row) {
+                if (std::fabs(yk[idx(row, q, target)]) >= 10.0 * eps) {
+                    all_zero = false;
+                    break;
+                }
+            }
+            if (all_zero) {
+                for (std::size_t row = 0; row < n; ++row) {
+                    yk[idx(row, q, target)] = 0.0;
+                }
+            }
+        }
+
+        std::vector<double> y_score(n, 0.0);
+        bool found_y_score = false;
+        for (std::size_t target = 0; target < q && !found_y_score; ++target) {
+            for (std::size_t row = 0; row < n; ++row) {
+                if (std::fabs(yk[idx(row, q, target)]) > eps) {
+                    for (std::size_t copy_row = 0; copy_row < n; ++copy_row) {
+                        y_score[copy_row] = yk[idx(copy_row, q, target)];
+                    }
+                    found_y_score = true;
+                    break;
+                }
+            }
+        }
+        if (!found_y_score) {
+            break;
+        }
+
+        std::vector<double> x_weights(p, 0.0);
+        std::vector<double> x_weights_old(p, 100.0);
+        std::vector<double> y_weights(q, 0.0);
+        std::vector<double> x_score(n, 0.0);
+        for (int iter = 0; iter < 500; ++iter) {
+            double y_score_ss = 0.0;
+            for (double value : y_score) {
+                y_score_ss += value * value;
+            }
+            if (y_score_ss <= eps) {
+                break;
+            }
+            std::fill(x_weights.begin(), x_weights.end(), 0.0);
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                for (std::size_t row = 0; row < n; ++row) {
+                    x_weights[feature] +=
+                        xk[idx(row, p, feature)] * y_score[row];
+                }
+                x_weights[feature] /= y_score_ss;
+            }
+            double x_weight_norm = std::sqrt(squared_norm(x_weights)) + eps;
+            for (double& value : x_weights) {
+                value /= x_weight_norm;
+            }
+
+            std::fill(x_score.begin(), x_score.end(), 0.0);
+            for (std::size_t row = 0; row < n; ++row) {
+                for (std::size_t feature = 0; feature < p; ++feature) {
+                    x_score[row] += xk[idx(row, p, feature)] *
+                        x_weights[feature];
+                }
+            }
+            const double x_score_ss = squared_norm(x_score);
+            if (x_score_ss <= eps) {
+                break;
+            }
+
+            std::fill(y_weights.begin(), y_weights.end(), 0.0);
+            for (std::size_t target = 0; target < q; ++target) {
+                for (std::size_t row = 0; row < n; ++row) {
+                    y_weights[target] += yk[idx(row, q, target)] *
+                        x_score[row];
+                }
+                y_weights[target] /= x_score_ss;
+            }
+            const double y_weight_ss = squared_norm(y_weights) + eps;
+            std::fill(y_score.begin(), y_score.end(), 0.0);
+            for (std::size_t row = 0; row < n; ++row) {
+                for (std::size_t target = 0; target < q; ++target) {
+                    y_score[row] += yk[idx(row, q, target)] *
+                        y_weights[target];
+                }
+                y_score[row] /= y_weight_ss;
+            }
+
+            double diff_ss = 0.0;
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                const double diff = x_weights[feature] -
+                    x_weights_old[feature];
+                diff_ss += diff * diff;
+            }
+            if (diff_ss < 1e-6 || q == 1U) {
+                break;
+            }
+            x_weights_old = x_weights;
+        }
+
+        std::size_t max_abs_idx = 0;
+        double max_abs = 0.0;
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            const double abs_value = std::fabs(x_weights[feature]);
+            if (abs_value > max_abs) {
+                max_abs = abs_value;
+                max_abs_idx = feature;
+            }
+        }
+        const double sign = x_weights[max_abs_idx] < 0.0 ? -1.0 : 1.0;
+        for (double& value : x_weights) {
+            value *= sign;
+        }
+        for (double& value : y_weights) {
+            value *= sign;
+        }
+
+        std::fill(x_score.begin(), x_score.end(), 0.0);
+        for (std::size_t row = 0; row < n; ++row) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                x_score[row] += xk[idx(row, p, feature)] *
+                    x_weights[feature];
+            }
+            scores[idx(row, a, comp)] = x_score[row];
+        }
+        const double x_score_ss = squared_norm(x_score);
+        if (x_score_ss <= eps) {
+            break;
+        }
+
+        std::vector<double> x_loadings(p, 0.0);
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            for (std::size_t row = 0; row < n; ++row) {
+                x_loadings[feature] += x_score[row] *
+                    xk[idx(row, p, feature)];
+            }
+            x_loadings[feature] /= x_score_ss;
+        }
+
+        std::vector<double> y_loadings(q, 0.0);
+        for (std::size_t target = 0; target < q; ++target) {
+            for (std::size_t row = 0; row < n; ++row) {
+                y_loadings[target] += x_score[row] *
+                    yk[idx(row, q, target)];
+            }
+            y_loadings[target] /= x_score_ss;
+        }
+
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            weights[idx(feature, a, comp)] = x_weights[feature];
+            loadings[idx(feature, a, comp)] = x_loadings[feature];
+        }
+
+        for (std::size_t row = 0; row < n; ++row) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                xk[idx(row, p, feature)] -=
+                    x_score[row] * x_loadings[feature];
+            }
+            for (std::size_t target = 0; target < q; ++target) {
+                yk[idx(row, q, target)] -=
+                    x_score[row] * y_loadings[target];
+            }
+        }
+    }
+
+    std::vector<double> ptw(a * a, 0.0);
+    for (std::size_t row = 0; row < a; ++row) {
+        for (std::size_t col = 0; col < a; ++col) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                ptw[idx(row, a, col)] += loadings[idx(feature, a, row)] *
+                    weights[idx(feature, a, col)];
+            }
+        }
+    }
+    std::vector<double> inv(a * a, 0.0);
+    for (std::size_t diag = 0; diag < a; ++diag) {
+        std::vector<double> unit(a, 0.0);
+        unit[diag] = 1.0;
+        std::vector<double> column;
+        if (!solve_linear_system(ptw, unit, a, column)) {
+            rotations = weights;
+            return;
+        }
+        for (std::size_t row = 0; row < a; ++row) {
+            inv[idx(row, a, diag)] = column[row];
+        }
+    }
+    for (std::size_t feature = 0; feature < p; ++feature) {
+        for (std::size_t comp = 0; comp < a; ++comp) {
+            double value = 0.0;
+            for (std::size_t prev = 0; prev < a; ++prev) {
+                value += weights[idx(feature, a, prev)] *
+                    inv[idx(prev, a, comp)];
+            }
+            rotations[idx(feature, a, comp)] = value;
         }
     }
 }
@@ -1070,23 +1289,15 @@ p4a_status_t fit_pls_qda(Context& ctx,
     for (std::size_t i = 0; i < n; ++i) {
         Yv[i * n_classes + static_cast<std::size_t>(y_labels[i])] = 1.0;
     }
+    std::vector<double> y_mean;
+    column_means(Yv, n, n_classes, y_mean);
+    subtract_means(Yv, n, n_classes, y_mean);
     const std::size_t a = std::min<std::size_t>(
         static_cast<std::size_t>(cfg.n_components),
         std::min(n - 1, p));
-    std::vector<double> coefs;
-    std::vector<double> W;
-    simple_simpls(X_buf, Yv, n, p, n_classes, a, coefs, &W);
-    // Project X onto latent space.
-    std::vector<double> scores(n * a, 0.0);
-    for (std::size_t i = 0; i < n; ++i) {
-        for (std::size_t comp = 0; comp < a; ++comp) {
-            double s = 0.0;
-            for (std::size_t f = 0; f < p; ++f) {
-                s += X_buf[i * p + f] * W[f * a + comp];
-            }
-            scores[i * a + comp] = s;
-        }
-    }
+    std::vector<double> R;
+    std::vector<double> scores;
+    sklearn_pls_regression_scores(X_buf, Yv, n, p, n_classes, a, scores, R);
     out.class_means.assign(n_classes * a, 0.0);
     out.class_covariances.assign(n_classes * a * a, 0.0);
     out.log_class_priors.assign(n_classes, 0.0);
@@ -1136,7 +1347,7 @@ p4a_status_t fit_pls_qda(Context& ctx,
     }
     out.n_classes = static_cast<std::int32_t>(n_classes);
     out.n_components = static_cast<std::int32_t>(a);
-    out.rotations_r = std::move(W);
+    out.rotations_r = std::move(R);
     ctx.clear_error();
     return P4A_OK;
 }

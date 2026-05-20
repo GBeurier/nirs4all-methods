@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <limits>
@@ -153,6 +154,77 @@ double in_sample_rmse(const std::vector<double>& predictions,
         }
     }
     return std::sqrt(sumsq / static_cast<double>(n * q));
+}
+
+[[nodiscard]] bool invert_and_logdet(std::vector<double> a,
+                                     std::size_t n,
+                                     std::vector<double>& inverse,
+                                     double& logdet) {
+    inverse.assign(n * n, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        inverse[i * n + i] = 1.0;
+    }
+    logdet = 0.0;
+    for (std::size_t col = 0; col < n; ++col) {
+        std::size_t pivot = col;
+        double pivot_abs = std::fabs(a[col * n + col]);
+        for (std::size_t row = col + 1U; row < n; ++row) {
+            const double candidate = std::fabs(a[row * n + col]);
+            if (candidate > pivot_abs) {
+                pivot = row;
+                pivot_abs = candidate;
+            }
+        }
+        if (pivot_abs <= std::numeric_limits<double>::epsilon()) {
+            return false;
+        }
+        if (pivot != col) {
+            for (std::size_t j = 0; j < n; ++j) {
+                std::swap(a[col * n + j], a[pivot * n + j]);
+                std::swap(inverse[col * n + j], inverse[pivot * n + j]);
+            }
+        }
+        const double diag = a[col * n + col];
+        logdet += std::log(std::fabs(diag));
+        for (std::size_t j = 0; j < n; ++j) {
+            a[col * n + j] /= diag;
+            inverse[col * n + j] /= diag;
+        }
+        for (std::size_t row = 0; row < n; ++row) {
+            if (row == col) {
+                continue;
+            }
+            const double factor = a[row * n + col];
+            if (factor == 0.0) {
+                continue;
+            }
+            for (std::size_t j = 0; j < n; ++j) {
+                a[row * n + j] -= factor * a[col * n + j];
+                inverse[row * n + j] -= factor * inverse[col * n + j];
+            }
+        }
+    }
+    return true;
+}
+
+[[nodiscard]] bool qda_regularized_inverse(
+    const std::vector<double>& covariance,
+    std::size_t class_offset,
+    std::size_t n_components,
+    double reg_param,
+    std::vector<double>& inverse,
+    double& logdet) {
+    std::vector<double> regularized(n_components * n_components, 0.0);
+    const double cov_weight = 1.0 - reg_param;
+    for (std::size_t row = 0; row < n_components; ++row) {
+        for (std::size_t col = 0; col < n_components; ++col) {
+            regularized[row * n_components + col] =
+                cov_weight * covariance[
+                    class_offset + row * n_components + col];
+        }
+        regularized[row * n_components + row] += reg_param;
+    }
+    return invert_and_logdet(regularized, n_components, inverse, logdet);
 }
 
 // Predict Yhat = (X - x_mean) @ coefficients + y_mean for any §26-style
@@ -1676,17 +1748,40 @@ P4A_API p4a_status_t p4a_pls_qda_fit(
         handle->set_double_matrix("rotations_r", res.rotations_r, p, k);
         handle->set_double_matrix("x_mean", res.x_mean, 1, p);
 
-        // QDA prediction: for each row i, project to scores, then compute
-        // log p(class c | scores) ≈ -0.5 * (s - mu_c)' Sigma_c^{-1} (s - mu_c)
-        //                            - 0.5 * log |Sigma_c| + log prior.
-        // For the parity gate we just return the centered scores as the
-        // prediction proxy (n × n_classes) — sufficient for paper-only.
+        // QDA prediction: mirror sklearn's
+        // QuadraticDiscriminantAnalysis(reg_param=0.01) on the latent PLS
+        // scores and expose predict_proba as `predictions`.
         const std::size_t n = static_cast<std::size_t>(X->rows);
         std::vector<double> preds(n * static_cast<std::size_t>(q), 0.0);
         const auto* xdata = static_cast<const double*>(X->data);
         const std::size_t x_rs = static_cast<std::size_t>(X->row_stride);
         const std::size_t x_cs = static_cast<std::size_t>(X->col_stride);
         std::vector<double> scores(static_cast<std::size_t>(k), 0.0);
+        std::vector<double> inv_covariances(
+            static_cast<std::size_t>(q) * static_cast<std::size_t>(k) *
+            static_cast<std::size_t>(k), 0.0);
+        std::vector<double> log_dets(static_cast<std::size_t>(q), 0.0);
+        constexpr double reg_param = 0.01;
+        for (std::size_t c = 0; c < static_cast<std::size_t>(q); ++c) {
+            std::vector<double> inv;
+            double logdet = 0.0;
+            if (!qda_regularized_inverse(
+                    res.class_covariances,
+                    c * static_cast<std::size_t>(k) *
+                        static_cast<std::size_t>(k),
+                    static_cast<std::size_t>(k),
+                    reg_param,
+                    inv,
+                    logdet)) {
+                set_error(ctx, "failed to invert regularized PLS-QDA covariance");
+                return P4A_ERR_NUMERICAL_FAILURE;
+            }
+            log_dets[c] = logdet;
+            for (std::size_t j = 0; j < inv.size(); ++j) {
+                inv_covariances[c * static_cast<std::size_t>(k) *
+                                    static_cast<std::size_t>(k) + j] = inv[j];
+            }
+        }
         for (std::size_t i = 0; i < n; ++i) {
             // Project X[i] to scores.
             for (std::size_t comp = 0;
@@ -1700,18 +1795,41 @@ P4A_API p4a_status_t p4a_pls_qda_fit(
                 }
                 scores[comp] = s;
             }
-            // Distance to each class mean (negated, with prior).
+            std::vector<double> log_prob(static_cast<std::size_t>(q), 0.0);
+            double max_log_prob = -std::numeric_limits<double>::infinity();
             for (std::size_t c = 0;
                  c < static_cast<std::size_t>(q); ++c) {
-                double d = res.log_class_priors[c];
-                for (std::size_t comp = 0;
-                     comp < static_cast<std::size_t>(k); ++comp) {
-                    const double diff = scores[comp] -
-                        res.class_means[c *
-                          static_cast<std::size_t>(k) + comp];
-                    d -= 0.5 * diff * diff;
+                double mahal = 0.0;
+                for (std::size_t lhs = 0;
+                     lhs < static_cast<std::size_t>(k); ++lhs) {
+                    const double left = scores[lhs] -
+                        res.class_means[c * static_cast<std::size_t>(k) + lhs];
+                    for (std::size_t rhs = 0;
+                         rhs < static_cast<std::size_t>(k); ++rhs) {
+                        const double right = scores[rhs] -
+                            res.class_means[
+                                c * static_cast<std::size_t>(k) + rhs];
+                        mahal += left *
+                            inv_covariances[
+                                c * static_cast<std::size_t>(k) *
+                                    static_cast<std::size_t>(k) +
+                                lhs * static_cast<std::size_t>(k) + rhs] *
+                            right;
+                    }
                 }
-                preds[i * static_cast<std::size_t>(q) + c] = d;
+                const double value = res.log_class_priors[c] -
+                    0.5 * (mahal + log_dets[c]);
+                log_prob[c] = value;
+                max_log_prob = std::max(max_log_prob, value);
+            }
+            double denom = 0.0;
+            for (double value : log_prob) {
+                denom += std::exp(value - max_log_prob);
+            }
+            for (std::size_t c = 0;
+                 c < static_cast<std::size_t>(q); ++c) {
+                preds[i * static_cast<std::size_t>(q) + c] =
+                    std::exp(log_prob[c] - max_log_prob) / denom;
             }
         }
         handle->set_double_matrix("predictions", std::move(preds),

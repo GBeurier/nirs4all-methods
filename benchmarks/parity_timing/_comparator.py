@@ -78,6 +78,10 @@ def _reshape_vector_compatible(p: np.ndarray,
         return p, ""
     if p.size != r.size:
         return p, f"shape mismatch ({p.shape} vs {r.shape})"
+    if p.ndim == 1 and r.ndim > 1:
+        return p.reshape(r.shape), ""
+    if r.ndim == 1 and p.ndim > 1:
+        return p.reshape(r.shape), ""
     p_is_vector = p.ndim == 1 or (p.ndim == 2 and 1 in p.shape)
     r_is_vector = r.ndim == 1 or (r.ndim == 2 and 1 in r.shape)
     if p_is_vector and r_is_vector:
