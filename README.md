@@ -39,7 +39,7 @@ All operators are mirrored byte-bit-where-possible against [nirs4all](https://gi
 - **Thin language bindings** (`bindings/`): Python (ctypes + sklearn-compatible classes) and R (.Call) are active; MATLAB and JS/WASM are next in the roadmap.
 - **Zero mandatory dependencies** — DIY linalg, RNG (PCG64 reimplementation for NumPy bit-exact parity), banded LDLT, FFT-free wavelet filter banks. Optional backends (BLAS, OpenMP, FITPACK spline smoothing) are gated by CMake.
 - **CMake ≥ 3.21** with 20+ presets in `CMakePresets.json` (dev-debug, dev-release, ci-*, blas-on, sanitizer-*).
-- **Parity-gated** — every operator is validated against pinned reference implementations (numpy 1.26.4, scipy 1.17.1, scikit-learn 1.8.0, pywt 1.8.0, pybaselines 1.2.1, selected nirs4all operators, …) with `parity/fixtures/*.json` + `parity/tolerances.md`.
+- **Parity-gated outside GitHub Actions** — every operator is validated against pinned reference implementations (numpy 1.26.4, scipy 1.17.1, scikit-learn 1.8.0, pywt 1.8.0, pybaselines 1.2.1, selected nirs4all operators, …) with `parity/fixtures/*.json` + `parity/tolerances.md`. The unified parity gate is intended for local or dedicated-server runs where the nirs4all reference checkout/package is controlled.
 - **Benchmark + validation docs** — generated method pages and the interactive matrix consume the same committed benchmark payload (`docs/_static/bench-data.json`) and validation contracts (`benchmarks/validation/registry/`).
 - **Codex+Opus review workflow** — each phase is reviewed by Codex (pre & post) and Opus (independent post-review); transcripts in `docs/reviews/phase-N/`.
 

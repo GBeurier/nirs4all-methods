@@ -60,6 +60,7 @@ import numpy as np
 # Local-imported here so the runner stays a single-file script while still
 # delegating the comparator contract to ``parity.reference_parity``.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from nirs4all_source import find_nirs4all_root  # noqa: E402
 from reference_parity import reference_parity  # noqa: E402
 
 
@@ -73,9 +74,7 @@ FIXTURES_DIR = PARITY_DIR / "fixtures"
 CACHE_DIR = PARITY_DIR / "cache"
 DEFAULT_DIVERGENCES_PATH = PARITY_DIR / "divergences.json"
 
-DEFAULT_NIRS4ALL_ROOT = Path(
-    os.environ.get("NIRS4ALL_ROOT", "/home/delete/nirs4all/nirs4all/nirs4all")
-)
+DEFAULT_NIRS4ALL_ROOT = find_nirs4all_root()
 NIRS4ALL_ROOT = DEFAULT_NIRS4ALL_ROOT
 
 

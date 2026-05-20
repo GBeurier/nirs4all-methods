@@ -33,6 +33,11 @@ from typing import Any
 
 import numpy as np
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT))
+
+from parity.nirs4all_source import find_nirs4all_root, get_nirs4all_version  # noqa: E402
+
 
 def double_to_hex(value: float) -> str:
     return pack(">d", float(value)).hex()
@@ -141,13 +146,7 @@ def main() -> None:
         "aug_detector_rolloff", "aug_stray_light", "aug_edge_curve",
         "aug_truncated_peak", "aug_edge_artifacts",
     }
-    n4a_init = Path("/home/delete/nirs4all/nirs4all/nirs4all/__init__.py")
-    version = "unknown"
-    if n4a_init.exists():
-        for line in n4a_init.read_text(encoding="utf-8").splitlines():
-            if line.strip().startswith("__version__"):
-                version = line.split("=", 1)[1].strip().strip('"').strip("'")
-                break
+    version = get_nirs4all_version(find_nirs4all_root())
     for op_id, params in operators:
         cases = [("default", params, X.copy())]
         wl_for = wl if op_id in needs_wl else None

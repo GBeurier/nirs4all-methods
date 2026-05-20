@@ -34,8 +34,13 @@ import numpy as np
 import scipy.ndimage as ndimage
 import scipy.signal as signal
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT))
 
-NIRS4ALL_ROOT = Path("/home/delete/nirs4all/nirs4all/nirs4all")
+from parity.nirs4all_source import find_nirs4all_root, get_nirs4all_version  # noqa: E402
+
+
+NIRS4ALL_ROOT = find_nirs4all_root()
 
 
 def _load(path: Path, name: str):
@@ -301,12 +306,7 @@ def main() -> None:
     out_dir = repo_root / "parity" / "fixtures"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    n4a_init = NIRS4ALL_ROOT / "__init__.py"
-    version = "unknown"
-    for line in n4a_init.read_text(encoding="utf-8").splitlines():
-        if line.strip().startswith("__version__"):
-            version = line.split("=", 1)[1].strip().strip('"').strip("'")
-            break
+    version = get_nirs4all_version(NIRS4ALL_ROOT)
 
     X = synthesize_spectra(SEED)
     print(f"X shape {X.shape}, range [{X.min():.4f}, {X.max():.4f}]")

@@ -45,6 +45,11 @@ from typing import Any, Callable
 
 import numpy as np
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT))
+
+from parity.nirs4all_source import find_nirs4all_root, get_nirs4all_version  # noqa: E402
+
 
 # ---------------------------------------------------------------------------
 # Frozen NumPy reference (no nirs4all dependency).
@@ -170,15 +175,7 @@ def main() -> None:
     out_dir = repo_root / "parity" / "fixtures"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Optional nirs4all version lookup (best-effort; defaults to "unknown"
-    # when nirs4all isn't checked out alongside).
-    nirs4all_init = Path("/home/delete/nirs4all/nirs4all/nirs4all/__init__.py")
-    version = "unknown"
-    if nirs4all_init.exists():
-        for line in nirs4all_init.read_text(encoding="utf-8").splitlines():
-            if line.strip().startswith("__version__"):
-                version = line.split("=", 1)[1].strip().strip('"').strip("'")
-                break
+    version = get_nirs4all_version(find_nirs4all_root())
 
     fit_X       = synthesize_spectra(SEED)
     transform_X = synthesize_spectra(SEED + 1)

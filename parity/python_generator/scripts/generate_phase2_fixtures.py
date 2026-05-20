@@ -45,6 +45,11 @@ from typing import Any, Callable
 
 import numpy as np
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT))
+
+from parity.nirs4all_source import find_nirs4all_root, get_nirs4all_version  # noqa: E402
+
 
 # ---------------------------------------------------------------------------
 # Load nirs4all reference operators directly from source files.
@@ -54,7 +59,7 @@ import numpy as np
 # generator only depends on numpy + scipy + sklearn + pywavelets.
 # ---------------------------------------------------------------------------
 
-NIRS4ALL_ROOT = Path("/home/delete/nirs4all/nirs4all/nirs4all")
+NIRS4ALL_ROOT = find_nirs4all_root()
 
 
 def _load(path: Path, name: str):
@@ -283,17 +288,7 @@ def main() -> None:
     out_dir = repo_root / "parity" / "fixtures"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Pin the nirs4all "version" string we record in the fixture. The actual
-    # check is by source-file path (loaded via importlib above), so we read
-    # the version directly from nirs4all/__init__.py rather than importing
-    # the heavyweight package.
-    n4a_init = NIRS4ALL_ROOT / "__init__.py"
-    version = "unknown"
-    for line in n4a_init.read_text(encoding="utf-8").splitlines():
-        if line.strip().startswith("__version__"):
-            # __version__ = "0.8.11"
-            version = line.split("=", 1)[1].strip().strip('"').strip("'")
-            break
+    version = get_nirs4all_version(NIRS4ALL_ROOT)
 
     X = synthesize_spectra()
     print(f"synthesised X with shape {X.shape}, dtype {X.dtype}, "
