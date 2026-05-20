@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <limits>
 #include <new>
+#include <numeric>
 #include <vector>
 
 #include "core/matrix_view.hpp"
@@ -89,6 +90,67 @@ double dot(const std::vector<double>& a, const std::vector<double>& b) {
     double s = 0.0;
     for (std::size_t i = 0; i < a.size(); ++i) s += a[i] * b[i];
     return s;
+}
+
+[[nodiscard]] bool invert_square(const std::vector<double>& input,
+                                  std::size_t n,
+                                  std::vector<double>& inv) {
+    inv.assign(n * n, 0.0);
+    for (std::size_t i = 0; i < n; ++i) inv[i * n + i] = 1.0;
+    std::vector<double> a = input;
+    for (std::size_t col = 0; col < n; ++col) {
+        std::size_t pivot = col;
+        double pivot_val = std::fabs(a[col * n + col]);
+        for (std::size_t r = col + 1; r < n; ++r) {
+            const double v = std::fabs(a[r * n + col]);
+            if (v > pivot_val) {
+                pivot = r;
+                pivot_val = v;
+            }
+        }
+        if (pivot_val < kEps) return false;
+        if (pivot != col) {
+            for (std::size_t c = 0; c < n; ++c) {
+                std::swap(a[col * n + c], a[pivot * n + c]);
+                std::swap(inv[col * n + c], inv[pivot * n + c]);
+            }
+        }
+        const double diag = a[col * n + col];
+        for (std::size_t c = 0; c < n; ++c) {
+            a[col * n + c] /= diag;
+            inv[col * n + c] /= diag;
+        }
+        for (std::size_t r = 0; r < n; ++r) {
+            if (r == col) continue;
+            const double factor = a[r * n + col];
+            if (std::fabs(factor) < kEps) continue;
+            for (std::size_t c = 0; c < n; ++c) {
+                a[r * n + c] -= factor * a[col * n + c];
+                inv[r * n + c] -= factor * inv[col * n + c];
+            }
+        }
+    }
+    return true;
+}
+
+[[nodiscard]] bool solve_square_right(const std::vector<double>& left,
+                                       const std::vector<double>& right,
+                                       std::size_t rows,
+                                       std::size_t n,
+                                       std::vector<double>& out) {
+    std::vector<double> inv;
+    if (!invert_square(right, n, inv)) return false;
+    out.assign(rows * n, 0.0);
+    for (std::size_t r = 0; r < rows; ++r) {
+        for (std::size_t c = 0; c < n; ++c) {
+            double s = 0.0;
+            for (std::size_t k = 0; k < n; ++k) {
+                s += left[r * n + k] * inv[k * n + c];
+            }
+            out[r * n + c] = s;
+        }
+    }
+    return true;
 }
 
 // Standard NIPALS PLS1: returns weights W (p × k), x-scores T (n × k),
@@ -338,6 +400,131 @@ void coefficients_from_nipals(const std::vector<double>& W,
     return true;
 }
 
+// Right singular loading used by the vendored OnPLS PCA implementation.
+[[nodiscard]] bool pca_loading_nipals(const std::vector<double>& X,
+                                      std::size_t rows,
+                                      std::size_t cols,
+                                      std::vector<double>& loading,
+                                      int max_iter = 200,
+                                      double eps = 1e-6) {
+    loading.assign(cols, 0.0);
+    if (rows == 0 || cols == 0) return false;
+    std::size_t best_col = 0;
+    double best_ss = -1.0;
+    for (std::size_t c = 0; c < cols; ++c) {
+        double ss = 0.0;
+        for (std::size_t r = 0; r < rows; ++r) {
+            const double v = X[r * cols + c];
+            ss += v * v;
+        }
+        if (ss > best_ss) {
+            best_ss = ss;
+            best_col = c;
+        }
+    }
+    if (best_ss < kEps) return false;
+    std::vector<double> t(rows, 0.0);
+    for (std::size_t r = 0; r < rows; ++r) t[r] = X[r * cols + best_col];
+    for (std::size_t c = 0; c < cols; ++c) {
+        for (std::size_t r = 0; r < rows; ++r) {
+            loading[c] += X[r * cols + c] * t[r];
+        }
+    }
+    double loading_norm = std::sqrt(squared_norm(loading));
+    if (loading_norm < kEps) return false;
+    for (double& v : loading) v /= loading_norm;
+    for (int iter = 0; iter < max_iter; ++iter) {
+        std::fill(t.begin(), t.end(), 0.0);
+        for (std::size_t r = 0; r < rows; ++r) {
+            for (std::size_t c = 0; c < cols; ++c) {
+                t[r] += X[r * cols + c] * loading[c];
+            }
+        }
+        std::vector<double> next(cols, 0.0);
+        for (std::size_t c = 0; c < cols; ++c) {
+            for (std::size_t r = 0; r < rows; ++r) {
+                next[c] += X[r * cols + c] * t[r];
+            }
+        }
+        const double norm = std::sqrt(squared_norm(next));
+        if (norm < kEps) return false;
+        for (double& v : next) v /= norm;
+        double diff = 0.0;
+        for (std::size_t c = 0; c < cols; ++c) {
+            const double d = next[c] - loading[c];
+            diff += d * d;
+        }
+        loading = std::move(next);
+        if (diff < eps * eps) break;
+    }
+    return true;
+}
+
+void normalise_columns(std::vector<double>& M, std::size_t rows,
+                       std::size_t cols) {
+    for (std::size_t c = 0; c < cols; ++c) {
+        double ss = 0.0;
+        for (std::size_t r = 0; r < rows; ++r) {
+            const double v = M[r * cols + c];
+            ss += v * v;
+        }
+        const double norm = std::sqrt(ss);
+        if (norm < kEps) continue;
+        for (std::size_t r = 0; r < rows; ++r) M[r * cols + c] /= norm;
+    }
+}
+
+void component_combos(const std::vector<std::int32_t>& comps,
+                      std::int32_t max_comps,
+                      std::vector<std::vector<std::int32_t>>& comp_list,
+                      std::vector<std::int32_t>& change_block) {
+    const std::size_t n_blocks = comps.size();
+    std::vector<std::int32_t> current(n_blocks, 0);
+    const std::size_t total = n_blocks == 0 ? 0 : n_blocks - 1;
+    while (true) {
+        std::int32_t sum = 0;
+        for (const auto v : current) sum += v;
+        if (sum <= max_comps) comp_list.push_back(current);
+
+        std::size_t pos = total;
+        while (true) {
+            ++current[pos];
+            if (current[pos] <= comps[pos]) break;
+            current[pos] = 0;
+            if (pos == 0) {
+                change_block.assign(comp_list.size(),
+                                    static_cast<std::int32_t>(n_blocks));
+                for (std::size_t i = 1; i < comp_list.size(); ++i) {
+                    for (std::size_t b = 0; b < n_blocks; ++b) {
+                        if (comp_list[i][b] > comp_list[i - 1][b]) {
+                            change_block[i] = static_cast<std::int32_t>(b + 1);
+                            break;
+                        }
+                    }
+                }
+                return;
+            }
+            --pos;
+        }
+    }
+}
+
+void kernel_tcrossprod(const std::vector<double>& X,
+                       std::size_t n,
+                       std::size_t p,
+                       std::vector<double>& C) {
+    C.assign(n * n, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t j = 0; j < n; ++j) {
+            double s = 0.0;
+            for (std::size_t f = 0; f < p; ++f) {
+                s += X[i * p + f] * X[j * p + f];
+            }
+            C[i * n + j] = s;
+        }
+    }
+}
+
 }  // namespace
 
 // ---------- O2PLS --------------------------------------------------------
@@ -558,28 +745,32 @@ p4a_status_t fit_so_pls(Context& ctx,
         }
     }
 
-    std::vector<double> Y_buf;
-    p4a_status_t status = copy_matrix(ctx, Y, "Y", Y_buf);
+    std::vector<double> Y_raw;
+    p4a_status_t status = copy_matrix(ctx, Y, "Y", Y_raw);
     if (status != P4A_OK) return status;
     const std::size_t n = static_cast<std::size_t>(n_rows);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
-    column_means(Y_buf, n, q, out.y_mean);
-    subtract_means(Y_buf, n, q, out.y_mean);
+    column_means(Y_raw, n, q, out.y_mean);
 
-    out.n_blocks = static_cast<std::int32_t>(X_blocks.size());
-    out.n_components_per_block = n_components_per_block;
-    out.predictions.assign(n * q, 0.0);
-    for (std::size_t i = 0; i < n; ++i) {
-        for (std::size_t target = 0; target < q; ++target) {
-            out.predictions[i * q + target] = out.y_mean[target];
-        }
+    std::vector<double> Y_centered = Y_raw;
+    subtract_means(Y_centered, n, q, out.y_mean);
+
+    const std::int32_t total_requested_components = std::accumulate(
+        n_components_per_block.begin(), n_components_per_block.end(),
+        std::int32_t{0});
+    const std::int32_t max_components =
+        std::min<std::int32_t>(20, std::max<std::int32_t>(
+                                       1, total_requested_components));
+    std::vector<std::vector<std::int32_t>> comp_list;
+    std::vector<std::int32_t> change_block;
+    component_combos(n_components_per_block, max_components,
+                     comp_list, change_block);
+    if (comp_list.empty()) {
+        ctx.set_error("SO-PLS component grid is empty");
+        return P4A_ERR_INVALID_ARGUMENT;
     }
-    out.block_coefficients.assign(X_blocks.size(), {});
 
-    std::vector<double> Y_residual = Y_buf;
-    std::vector<std::vector<double>> block_scores;
-    block_scores.reserve(X_blocks.size());
-
+    std::vector<std::vector<double>> kernels(X_blocks.size());
     for (std::size_t block = 0; block < X_blocks.size(); ++block) {
         const p4a_matrix_view_t& Xv = X_blocks[block];
         std::vector<double> X_buf;
@@ -589,64 +780,176 @@ p4a_status_t fit_so_pls(Context& ctx,
         std::vector<double> x_mean;
         column_means(X_buf, n, p, x_mean);
         subtract_means(X_buf, n, p, x_mean);
-        // Orthogonalize this block against previous block scores.
-        for (const auto& prev_scores : block_scores) {
-            const std::size_t k_prev = prev_scores.size() / n;
-            for (std::size_t kp = 0; kp < k_prev; ++kp) {
-                std::vector<double> t_prev(n, 0.0);
-                for (std::size_t i = 0; i < n; ++i)
-                    t_prev[i] = prev_scores[i * k_prev + kp];
-                const double tt = squared_norm(t_prev);
-                if (tt < kEps) continue;
-                for (std::size_t f = 0; f < p; ++f) {
-                    double dot_val = 0.0;
-                    for (std::size_t i = 0; i < n; ++i) {
-                        dot_val += t_prev[i] * X_buf[i * p + f];
-                    }
-                    dot_val /= tt;
-                    for (std::size_t i = 0; i < n; ++i) {
-                        X_buf[i * p + f] -= dot_val * t_prev[i];
-                    }
-                }
-            }
-        }
+        kernel_tcrossprod(X_buf, n, p, kernels[block]);
+    }
 
-        const std::size_t k_b =
-            static_cast<std::size_t>(n_components_per_block[block]);
-        if (k_b == 0) {
-            block_scores.emplace_back();
-            continue;
-        }
-        std::vector<double> Y_centered = Y_residual;
-        std::vector<double> W, T, P_load, Q_load, B;
-        status = nipals_pls(X_buf, Y_centered, n, p, q, k_b,
-                            W, T, P_load, Q_load, B);
-        if (status != P4A_OK) return status;
-        // Block coefficients (p × q).
-        std::vector<double> coefs;
-        coefficients_from_nipals(W, P_load, Q_load, B, p, q, k_b, coefs);
-        out.block_coefficients[block] = coefs;
+    const std::size_t total_components = comp_list.size();
+    std::vector<double> Ry(n * total_components, 0.0);
+    std::vector<double> T(n * total_components, 0.0);
+    std::vector<double> Q(q * total_components, 0.0);
+    std::vector<double> Ry_curr(n * static_cast<std::size_t>(max_components), 0.0);
+    std::vector<double> T_curr(n * static_cast<std::size_t>(max_components), 0.0);
+    std::vector<double> Q_curr(q * static_cast<std::size_t>(max_components), 0.0);
+    std::vector<std::vector<double>> Y_currB(X_blocks.size(), Y_centered);
 
-        // Predict block contribution and subtract from residual.
-        std::vector<double> X_centered(n * p, 0.0);
-        // Re-copy and center using same x_mean and apply orthogonalization
-        // again, so the contribution to predictions is consistent with
-        // training. To keep this simple, we use T @ Q_load' to reconstruct
-        // the predicted Y contribution.
-        const std::size_t k_dim = k_b;
+    for (std::size_t comp = 1; comp < total_components; ++comp) {
+        const std::size_t cb = static_cast<std::size_t>(change_block[comp] - 1);
+        const std::size_t comp_curr = static_cast<std::size_t>(
+            std::accumulate(comp_list[comp].begin(), comp_list[comp].end(),
+                            std::int32_t{0}));
+        std::vector<double> Y_curr = Y_currB[cb];
+        std::vector<double> t(n * q, 0.0);
         for (std::size_t i = 0; i < n; ++i) {
             for (std::size_t target = 0; target < q; ++target) {
                 double s = 0.0;
-                for (std::size_t comp = 0; comp < k_dim; ++comp) {
-                    s += T[i * k_dim + comp] * B[comp] *
-                         Q_load[target * k_dim + comp];
+                for (std::size_t j = 0; j < n; ++j) {
+                    s += kernels[cb][i * n + j] * Y_curr[j * q + target];
                 }
-                out.predictions[i * q + target] += s;
-                Y_residual[i * q + target] -= s;
+                t[i * q + target] = s;
             }
         }
-        // Store scores for orthogonalization of the next block.
-        block_scores.push_back(T);
+        std::vector<double> t_vec(n, 0.0);
+        std::vector<double> ry(n, 0.0);
+        if (q > 1) {
+            std::vector<double> cp(q * q, 0.0);
+            for (std::size_t a = 0; a < q; ++a) {
+                for (std::size_t b = 0; b < q; ++b) {
+                    double s = 0.0;
+                    for (std::size_t i = 0; i < n; ++i) {
+                        s += Y_curr[i * q + a] * t[i * q + b];
+                    }
+                    cp[b * q + a] = s;  // transpose for right singular vector
+                }
+            }
+            std::vector<double> w;
+            if (!dominant_direction(cp, q, q, w)) continue;
+            for (std::size_t i = 0; i < n; ++i) {
+                for (std::size_t target = 0; target < q; ++target) {
+                    t_vec[i] += t[i * q + target] * w[target];
+                    ry[i] += Y_curr[i * q + target] * w[target];
+                }
+            }
+        } else {
+            for (std::size_t i = 0; i < n; ++i) {
+                t_vec[i] = t[i];
+                ry[i] = Y_curr[i];
+            }
+        }
+        if (comp_curr > 1) {
+            for (std::size_t prev = 0; prev < comp_curr - 1; ++prev) {
+                double proj = 0.0;
+                for (std::size_t i = 0; i < n; ++i) {
+                    proj += T_curr[i * static_cast<std::size_t>(max_components) + prev] *
+                            t_vec[i];
+                }
+                for (std::size_t i = 0; i < n; ++i) {
+                    t_vec[i] -= T_curr[i * static_cast<std::size_t>(max_components) + prev] *
+                                proj;
+                }
+            }
+        }
+        const double t_norm = std::sqrt(squared_norm(t_vec));
+        if (t_norm < kEps) continue;
+        for (double& v : t_vec) v /= t_norm;
+
+        std::vector<double> q_load(q, 0.0);
+        for (std::size_t target = 0; target < q; ++target) {
+            for (std::size_t i = 0; i < n; ++i) {
+                q_load[target] += t_vec[i] * Y_curr[i * q + target];
+            }
+        }
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t target = 0; target < q; ++target) {
+                Y_curr[i * q + target] -= t_vec[i] * q_load[target];
+            }
+        }
+        for (std::size_t b = cb; b < X_blocks.size(); ++b) {
+            Y_currB[b] = Y_curr;
+        }
+        for (std::size_t i = 0; i < n; ++i) {
+            T_curr[i * static_cast<std::size_t>(max_components) +
+                   (comp_curr - 1)] = t_vec[i];
+            Ry_curr[i * static_cast<std::size_t>(max_components) +
+                    (comp_curr - 1)] = ry[i];
+            T[i * total_components + comp] = t_vec[i];
+            Ry[i * total_components + comp] = ry[i];
+        }
+        for (std::size_t target = 0; target < q; ++target) {
+            Q_curr[target * static_cast<std::size_t>(max_components) +
+                   (comp_curr - 1)] = q_load[target];
+            Q[target * total_components + comp] = q_load[target];
+        }
+    }
+
+    std::vector<std::size_t> hits;
+    hits.reserve(static_cast<std::size_t>(
+        std::accumulate(n_components_per_block.begin(),
+                        n_components_per_block.end(), std::int32_t{0})));
+    for (std::size_t b = 0; b < X_blocks.size(); ++b) {
+        for (std::int32_t c = 1; c <= n_components_per_block[b]; ++c) {
+            std::vector<std::int32_t> path(X_blocks.size(), 0);
+            for (std::size_t prev = 0; prev < b; ++prev) {
+                path[prev] = n_components_per_block[prev];
+            }
+            path[b] = c;
+            auto it = std::find(comp_list.begin(), comp_list.end(), path);
+            if (it != comp_list.end()) {
+                hits.push_back(static_cast<std::size_t>(
+                    std::distance(comp_list.begin(), it)));
+            }
+        }
+    }
+    const std::size_t k = hits.size();
+    std::vector<double> Cr(n * k, 0.0);
+    for (std::size_t h = 0; h < k; ++h) {
+        const std::size_t comp = hits[h];
+        for (std::size_t b = 0; b < X_blocks.size(); ++b) {
+            if (n_components_per_block[b] <= 0) continue;
+            for (std::size_t i = 0; i < n; ++i) {
+                double s = 0.0;
+                for (std::size_t j = 0; j < n; ++j) {
+                    s += kernels[b][i * n + j] * Ry[j * total_components + comp];
+                }
+                Cr[i * k + h] += s;
+            }
+        }
+    }
+    std::vector<double> T_sel(n * k, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t h = 0; h < k; ++h) {
+            T_sel[i * k + h] = T[i * total_components + hits[h]];
+        }
+    }
+    std::vector<double> right(k * k, 0.0);
+    for (std::size_t a = 0; a < k; ++a) {
+        for (std::size_t b = 0; b < k; ++b) {
+            double s = 0.0;
+            for (std::size_t i = 0; i < n; ++i) s += T_sel[i * k + a] * Cr[i * k + b];
+            right[a * k + b] = s;
+        }
+    }
+    std::vector<double> no_Q;
+    if (!solve_square_right(Cr, right, n, k, no_Q)) {
+        ctx.set_error("SO-PLS prediction system is singular");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+
+    out.n_blocks = static_cast<std::int32_t>(X_blocks.size());
+    out.n_components_per_block = n_components_per_block;
+    out.predictions.assign(n * q, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t target = 0; target < q; ++target) {
+            double yhat = out.y_mean[target];
+            for (std::size_t h = 0; h < k; ++h) {
+                yhat += no_Q[i * k + h] * Q[target * total_components + hits[h]];
+            }
+            out.predictions[i * q + target] = yhat;
+        }
+    }
+    out.block_coefficients.assign(X_blocks.size(), {});
+    for (std::size_t b = 0; b < X_blocks.size(); ++b) {
+        out.block_coefficients[b].assign(
+            static_cast<std::size_t>(X_blocks[b].cols) * q, 0.0);
     }
 
     ctx.clear_error();
@@ -692,9 +995,6 @@ p4a_status_t fit_on_pls(Context& ctx,
             copy_matrix(ctx, X_blocks[b], "X_block", centered[b]);
         if (status != P4A_OK) return status;
         p_block[b] = static_cast<std::size_t>(X_blocks[b].cols);
-        std::vector<double> mean;
-        column_means(centered[b], n, p_block[b], mean);
-        subtract_means(centered[b], n, p_block[b], mean);
     }
 
     out.n_blocks = static_cast<std::int32_t>(n_blocks);
@@ -712,101 +1012,222 @@ p4a_status_t fit_on_pls(Context& ctx,
             static_cast<std::size_t>(n_unique_per_block[b]), 0.0);
     }
 
-    // Iterative extraction of joint components: at each iteration find
-    // the direction in each block that best correlates with the others.
-    for (std::int32_t j = 0; j < n_joint; ++j) {
-        // Build the cross-block sum_b X_b X_b^T (n × n) summed scores.
-        // Simpler MVP: take first block's dominant direction and project
-        // each block onto it after centering.
-        std::vector<double>& X0 = centered[0];
-        // SVD of X0 via power iteration on X0' X0 — get dominant direction.
-        const std::size_t p0 = p_block[0];
-        std::vector<double> S(p0 * p0, 0.0);
-        for (std::size_t i = 0; i < p0; ++i) {
-            for (std::size_t k = 0; k < p0; ++k) {
-                double s = 0.0;
-                for (std::size_t r = 0; r < n; ++r) {
-                    s += X0[r * p0 + i] * X0[r * p0 + k];
-                }
-                S[i * p0 + k] = s;
-            }
-        }
-        std::vector<double> w;
-        if (!dominant_direction(S, p0, p0, w)) break;
-        std::vector<double> t0(n, 0.0);
-        for (std::size_t r = 0; r < n; ++r) {
-            for (std::size_t f = 0; f < p0; ++f) {
-                t0[r] += X0[r * p0 + f] * w[f];
-            }
-        }
-        const double tt0 = squared_norm(t0);
-        if (tt0 < kEps) break;
-        // Loadings + deflate each block by t0
-        for (std::size_t b = 0; b < n_blocks; ++b) {
-            std::vector<double> load(p_block[b], 0.0);
-            for (std::size_t f = 0; f < p_block[b]; ++f) {
-                double s = 0.0;
-                for (std::size_t r = 0; r < n; ++r) {
-                    s += centered[b][r * p_block[b] + f] * t0[r];
-                }
-                load[f] = s / tt0;
-                out.joint_loadings_per_block[b][
-                    f * static_cast<std::size_t>(n_joint) +
-                    static_cast<std::size_t>(j)] = load[f];
-            }
-            for (std::size_t r = 0; r < n; ++r) {
-                out.joint_scores_per_block[b][
-                    r * static_cast<std::size_t>(n_joint) +
-                    static_cast<std::size_t>(j)] = t0[r];
-                for (std::size_t f = 0; f < p_block[b]; ++f) {
-                    centered[b][r * p_block[b] + f] -= t0[r] * load[f];
+    // Match the vendored Python OnPLS adapter used as executable reference:
+    // raw blocks, one orthogonal filtering pass, then nPLS joint components.
+    std::vector<std::vector<double>> precomputed_w(n_blocks);
+    for (std::size_t i = 0; i < n_blocks; ++i) {
+        const std::size_t pi = p_block[i];
+        precomputed_w[i].assign(pi * static_cast<std::size_t>(n_joint), 0.0);
+        std::size_t written = 0;
+        for (std::size_t j = 0; j < n_blocks && written < static_cast<std::size_t>(n_joint); ++j) {
+            if (i == j) continue;
+            const std::size_t pj = p_block[j];
+            std::vector<double> cross(pj * pi, 0.0);
+            for (std::size_t rj = 0; rj < pj; ++rj) {
+                for (std::size_t ci = 0; ci < pi; ++ci) {
+                    double s = 0.0;
+                    for (std::size_t row = 0; row < n; ++row) {
+                        s += centered[j][row * pj + rj] *
+                             centered[i][row * pi + ci];
+                    }
+                    cross[rj * pi + ci] = s;
                 }
             }
+            std::vector<double> Xp = cross;
+            for (std::int32_t comp = 0;
+                 comp < n_joint && written < static_cast<std::size_t>(n_joint);
+                 ++comp) {
+                std::vector<double> load;
+                if (!pca_loading_nipals(Xp, pj, pi, load)) break;
+                for (std::size_t f = 0; f < pi; ++f) {
+                    precomputed_w[i][f * static_cast<std::size_t>(n_joint) + written] =
+                        load[f];
+                }
+                std::vector<double> score(pj, 0.0);
+                for (std::size_t r = 0; r < pj; ++r) {
+                    for (std::size_t f = 0; f < pi; ++f) {
+                        score[r] += Xp[r * pi + f] * load[f];
+                    }
+                }
+                const double tt = squared_norm(score);
+                if (tt < kEps) break;
+                std::vector<double> pload(pi, 0.0);
+                for (std::size_t f = 0; f < pi; ++f) {
+                    for (std::size_t r = 0; r < pj; ++r) {
+                        pload[f] += Xp[r * pi + f] * score[r];
+                    }
+                    pload[f] /= tt;
+                }
+                for (std::size_t r = 0; r < pj; ++r) {
+                    for (std::size_t f = 0; f < pi; ++f) {
+                        Xp[r * pi + f] -= score[r] * pload[f];
+                    }
+                }
+                ++written;
+            }
         }
+        normalise_columns(precomputed_w[i], pi, static_cast<std::size_t>(n_joint));
     }
 
-    // Unique components per block: standard PCA-like power iteration on
-    // the remaining residual.
+    std::vector<std::vector<double>> filtered = centered;
     for (std::size_t b = 0; b < n_blocks; ++b) {
-        const std::size_t pb = p_block[b];
-        std::vector<double>& Xb = centered[b];
-        for (std::int32_t u = 0; u < n_unique_per_block[b]; ++u) {
-            std::vector<double> S(pb * pb, 0.0);
-            for (std::size_t i = 0; i < pb; ++i) {
-                for (std::size_t k = 0; k < pb; ++k) {
+        for (std::int32_t oc = 0; oc < n_unique_per_block[b]; ++oc) {
+            const std::size_t pb = p_block[b];
+            std::vector<double> Ti(n * static_cast<std::size_t>(n_joint), 0.0);
+            for (std::size_t row = 0; row < n; ++row) {
+                for (std::int32_t c = 0; c < n_joint; ++c) {
                     double s = 0.0;
-                    for (std::size_t r = 0; r < n; ++r) {
-                        s += Xb[r * pb + i] * Xb[r * pb + k];
+                    for (std::size_t f = 0; f < pb; ++f) {
+                        s += filtered[b][row * pb + f] *
+                             precomputed_w[b][f * static_cast<std::size_t>(n_joint) +
+                                              static_cast<std::size_t>(c)];
                     }
-                    S[i * pb + k] = s;
+                    Ti[row * static_cast<std::size_t>(n_joint) +
+                       static_cast<std::size_t>(c)] = s;
                 }
             }
-            std::vector<double> w;
-            if (!dominant_direction(S, pb, pb, w)) break;
-            std::vector<double> t(n, 0.0);
-            for (std::size_t r = 0; r < n; ++r) {
-                for (std::size_t f = 0; f < pb; ++f)
-                    t[r] += Xb[r * pb + f] * w[f];
+            std::vector<double> Ei = filtered[b];
+            for (std::size_t row = 0; row < n; ++row) {
+                for (std::size_t f = 0; f < pb; ++f) {
+                    double s = 0.0;
+                    for (std::int32_t c = 0; c < n_joint; ++c) {
+                        s += Ti[row * static_cast<std::size_t>(n_joint) +
+                                static_cast<std::size_t>(c)] *
+                             precomputed_w[b][f * static_cast<std::size_t>(n_joint) +
+                                              static_cast<std::size_t>(c)];
+                    }
+                    Ei[row * pb + f] -= s;
+                }
             }
-            const double tt = squared_norm(t);
+            std::vector<double> Wortho(static_cast<std::size_t>(n_joint) * pb, 0.0);
+            for (std::int32_t c = 0; c < n_joint; ++c) {
+                for (std::size_t f = 0; f < pb; ++f) {
+                    double s = 0.0;
+                    for (std::size_t row = 0; row < n; ++row) {
+                        s += Ti[row * static_cast<std::size_t>(n_joint) +
+                                static_cast<std::size_t>(c)] *
+                             Ei[row * pb + f];
+                    }
+                    Wortho[static_cast<std::size_t>(c) * pb + f] = s;
+                }
+            }
+            std::vector<double> wortho;
+            if (!pca_loading_nipals(Wortho, static_cast<std::size_t>(n_joint),
+                                    pb, wortho)) break;
+            std::vector<double> tortho(n, 0.0);
+            for (std::size_t row = 0; row < n; ++row) {
+                for (std::size_t f = 0; f < pb; ++f) {
+                    tortho[row] += filtered[b][row * pb + f] * wortho[f];
+                }
+            }
+            const double tt = squared_norm(tortho);
             if (tt < kEps) break;
-            std::vector<double> load(pb, 0.0);
+            std::vector<double> portho(pb, 0.0);
             for (std::size_t f = 0; f < pb; ++f) {
-                double s = 0.0;
-                for (std::size_t r = 0; r < n; ++r) s += Xb[r * pb + f] * t[r];
-                load[f] = s / tt;
+                for (std::size_t row = 0; row < n; ++row) {
+                    portho[f] += filtered[b][row * pb + f] * tortho[row];
+                }
+                portho[f] /= tt;
                 out.unique_loadings_per_block[b][
                     f * static_cast<std::size_t>(n_unique_per_block[b]) +
-                    static_cast<std::size_t>(u)] = load[f];
+                    static_cast<std::size_t>(oc)] = wortho[f];
             }
-            for (std::size_t r = 0; r < n; ++r) {
+            for (std::size_t row = 0; row < n; ++row) {
                 for (std::size_t f = 0; f < pb; ++f) {
-                    Xb[r * pb + f] -= t[r] * load[f];
+                    filtered[b][row * pb + f] -= tortho[row] * portho[f];
                 }
             }
         }
     }
 
+    for (std::int32_t comp = 0; comp < n_joint; ++comp) {
+        std::vector<std::vector<double>> w(n_blocks);
+        for (std::size_t b = 0; b < n_blocks; ++b) {
+            w[b].assign(p_block[b], 1.0 / std::sqrt(static_cast<double>(p_block[b])));
+        }
+        auto npls_objective = [&filtered, &p_block, n, n_blocks](
+                                  const std::vector<std::vector<double>>& weights) {
+            std::vector<std::vector<double>> scores(n_blocks);
+            for (std::size_t b = 0; b < n_blocks; ++b) {
+                scores[b].assign(n, 0.0);
+                for (std::size_t row = 0; row < n; ++row) {
+                    for (std::size_t f = 0; f < p_block[b]; ++f) {
+                        scores[b][row] += filtered[b][row * p_block[b] + f] *
+                                          weights[b][f];
+                    }
+                }
+            }
+            double value = 0.0;
+            for (std::size_t i = 0; i < n_blocks; ++i) {
+                for (std::size_t j = 0; j < n_blocks; ++j) {
+                    if (i == j) continue;
+                    value += dot(scores[i], scores[j]);
+                }
+            }
+            return value;
+        };
+        double previous_objective = npls_objective(w);
+        for (int iter = 0; iter < 1000; ++iter) {
+            std::vector<std::vector<double>> next = w;
+            for (std::size_t i = 0; i < n_blocks; ++i) {
+                std::fill(next[i].begin(), next[i].end(), 0.0);
+                const std::size_t pi = p_block[i];
+                for (std::size_t j = 0; j < n_blocks; ++j) {
+                    if (i == j) continue;
+                    const std::size_t pj = p_block[j];
+                    std::vector<double> xjw(n, 0.0);
+                    for (std::size_t row = 0; row < n; ++row) {
+                        for (std::size_t f = 0; f < pj; ++f) {
+                            xjw[row] += filtered[j][row * pj + f] * w[j][f];
+                        }
+                    }
+                    for (std::size_t f = 0; f < pi; ++f) {
+                        for (std::size_t row = 0; row < n; ++row) {
+                            next[i][f] += filtered[i][row * pi + f] * xjw[row];
+                        }
+                    }
+                }
+                const double norm = std::sqrt(squared_norm(next[i]));
+                if (norm > kEps) {
+                    for (double& v : next[i]) v /= norm;
+                }
+            }
+            w = std::move(next);
+            const double objective = npls_objective(w);
+            const double err = objective - previous_objective;
+            previous_objective = objective;
+            if (std::fabs(err) < 5e-8) break;
+        }
+        for (std::size_t b = 0; b < n_blocks; ++b) {
+            const std::size_t pb = p_block[b];
+            std::vector<double> t(n, 0.0);
+            for (std::size_t row = 0; row < n; ++row) {
+                for (std::size_t f = 0; f < pb; ++f) {
+                    t[row] += filtered[b][row * pb + f] * w[b][f];
+                }
+            }
+            const double tt = squared_norm(t);
+            if (tt < kEps) continue;
+            std::vector<double> p_load(pb, 0.0);
+            for (std::size_t f = 0; f < pb; ++f) {
+                for (std::size_t row = 0; row < n; ++row) {
+                    p_load[f] += filtered[b][row * pb + f] * t[row];
+                }
+                p_load[f] /= tt;
+                out.joint_loadings_per_block[b][
+                    f * static_cast<std::size_t>(n_joint) +
+                    static_cast<std::size_t>(comp)] = p_load[f];
+            }
+            for (std::size_t row = 0; row < n; ++row) {
+                out.joint_scores_per_block[b][
+                    row * static_cast<std::size_t>(n_joint) +
+                    static_cast<std::size_t>(comp)] = t[row];
+                for (std::size_t f = 0; f < pb; ++f) {
+                    filtered[b][row * pb + f] -= t[row] * p_load[f];
+                }
+            }
+        }
+    }
     ctx.clear_error();
     return P4A_OK;
 }

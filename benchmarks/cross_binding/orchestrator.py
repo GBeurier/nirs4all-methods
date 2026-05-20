@@ -61,6 +61,7 @@ from benchmarks.parity_timing.registry import (  # noqa: E402
 # inside each cell, up to the adaptive protocol's max-run cap.
 DEFAULT_SEED_BASE = 1_234_567_890
 DEFAULT_MAX_RUNS = 40
+STRICT_REFERENCE_RMSE_REL_TOL = 1e-3
 
 # 11 sizes (10000×2500 skipped per user decision).
 DEFAULT_SIZES = [
@@ -82,6 +83,8 @@ TIMING_SCHEMA = "adaptive-v1"
 BACKENDS = [
     ("registry_pls4all", "bench_registry_pls4all.py", "Python", "canonical", "pls4all_binding"),
     ("cpp",          "bench_cpp.py",          "C++",    "direct",   "pls4all_core"),
+    ("js_wasm",      "bench_js_wasm.mjs",     "JavaScript", "WASM", "pls4all_binding"),
+    ("julia",        "bench_julia_pls4all.jl", "Julia", "tier 1",   "pls4all_binding"),
     ("python_tier1", "bench_python_tier1.py", "Python", "tier 1",   "pls4all_binding"),
     ("python_tier2", "bench_python_tier2.py", "Python", "tier 2",   "pls4all_binding"),
     ("sklearn",      "bench_sklearn.py",      "Python", "external", "external"),
@@ -136,6 +139,7 @@ LIBP4A_BUILDS = {
     "omp-on":      str(REPO / "build/omp-on/cpp/src"),        # OMP only
     "blas-omp":    str(REPO / "build/blas-omp/cpp/src"),      # BLAS + OMP
     "cuda-on":     str(REPO / "build/cuda-on/cpp/src"),       # BLAS + CUDA
+    "wasm":        str(REPO / "build/dev-release/cpp/src"),   # JS/WASM cells do not link native libp4a
 }
 
 # Conda env paths (R + Octave live here).
@@ -183,6 +187,15 @@ def predictions_path(algo: str, backend: str, n: int, p: int,
     return PREDS_DIR / f"{algo}_{backend}_{n}x{p}_t{threads}_{build}.npy"
 
 
+def seeded_predictions_path(algo: str, backend: str, n: int, p: int,
+                            threads: int, build: str,
+                            prediction_seed: int) -> Path:
+    return (
+        PREDS_DIR /
+        f"{algo}_{backend}_{n}x{p}_t{threads}_{build}_seed{prediction_seed}.npy"
+    )
+
+
 def reference_oracle_path(algo: str, backend: str, n: int, p: int,
                           prediction_seed: int) -> Path:
     return ORACLES_DIR / f"{algo}_{backend}_{n}x{p}_seed{prediction_seed}.npy"
@@ -190,6 +203,70 @@ def reference_oracle_path(algo: str, backend: str, n: int, p: int,
 
 def prediction_metadata_path(pred_path: Path) -> Path:
     return pred_path.with_suffix(".json")
+
+
+def _metadata_int(value) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _metadata_mismatch(path: Path, expected: dict,
+                       *, require_metadata: bool = False) -> str:
+    meta_path = prediction_metadata_path(path)
+    if not meta_path.exists():
+        return "prediction metadata missing" if require_metadata else ""
+    try:
+        meta = json.loads(meta_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        return f"prediction metadata load error: {exc}"
+    int_keys = {"n", "p", "threads", "prediction_seed"}
+    for key, want in expected.items():
+        if want in (None, ""):
+            continue
+        got = meta.get(key)
+        if got in (None, ""):
+            return f"prediction metadata missing key {key}"
+        if key in int_keys:
+            got_i = _metadata_int(got)
+            want_i = _metadata_int(want)
+            if got_i is None or want_i is None or got_i != want_i:
+                return (
+                    f"prediction metadata mismatch for {key}: "
+                    f"expected {want}, got {got}"
+                )
+            continue
+        if str(got) != str(want):
+            return (
+                f"prediction metadata mismatch for {key}: "
+                f"expected {want}, got {got}"
+            )
+    return ""
+
+
+def _expected_prediction_metadata(record: dict) -> dict:
+    return {
+        "algorithm": record.get("algorithm"),
+        "backend": record.get("backend"),
+        "n": record.get("n"),
+        "p": record.get("p"),
+        "threads": record.get("threads"),
+        "libp4a_build": record.get("libp4a_build"),
+        "prediction_seed": record_prediction_seed(record),
+    }
+
+
+def _expected_oracle_metadata(algo: str, canonical_backend: str,
+                              n: int, p: int,
+                              prediction_seed: int) -> dict:
+    return {
+        "algorithm": algo,
+        "backend": canonical_backend,
+        "n": n,
+        "p": p,
+        "prediction_seed": prediction_seed,
+    }
 
 
 def record_prediction_seed(record: dict) -> int:
@@ -253,6 +330,35 @@ def write_prediction_metadata(record: dict) -> None:
     os.replace(tmp, meta_path)
 
 
+def stabilize_prediction_path(record: dict) -> None:
+    """Move a successful scratch prediction to a seed-stable cache path."""
+    pred_path = record.get("predictions_path")
+    if not record.get("ok") or not pred_path:
+        return
+    src = Path(pred_path)
+    if not src.exists():
+        return
+    try:
+        dst = seeded_predictions_path(
+            str(record["algorithm"]),
+            str(record["backend"]),
+            int(record["n"]),
+            int(record["p"]),
+            int(record["threads"]),
+            str(record.get("libp4a_build", "")),
+            record_prediction_seed(record),
+        )
+    except (KeyError, TypeError, ValueError):
+        return
+    if src == dst:
+        return
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dst.with_name(f"{dst.name}.tmp.{os.getpid()}")
+    shutil.copy2(src, tmp)
+    os.replace(tmp, dst)
+    record["predictions_path"] = str(dst)
+
+
 def snapshot_reference_oracle(record: dict) -> None:
     """Freeze the canonical external prediction vector for later gates.
 
@@ -264,6 +370,10 @@ def snapshot_reference_oracle(record: dict) -> None:
         return
     pred_path = record.get("predictions_path")
     if not pred_path or not Path(pred_path).exists():
+        return
+    arr, _note = load_prediction_array(
+        Path(pred_path), _expected_prediction_metadata(record))
+    if arr is None:
         return
     try:
         method = get_method(record["algorithm"])
@@ -304,7 +414,13 @@ def snapshot_reference_oracle(record: dict) -> None:
     os.replace(tmp_meta, meta_path)
 
 
-def load_prediction_array(path: Path):
+def load_prediction_array(path: Path, expected_metadata: dict | None = None,
+                          *, require_metadata: bool = False):
+    if expected_metadata is not None:
+        note = _metadata_mismatch(
+            path, expected_metadata, require_metadata=require_metadata)
+        if note:
+            return None, note
     try:
         return np.load(path), ""
     except Exception as exc:
@@ -314,24 +430,35 @@ def load_prediction_array(path: Path):
 def load_reference_oracle(algo: str, canonical_backend: str, n: int, p: int,
                           prediction_seed: int, reference_ref: dict | None):
     """Load the canonical external prediction vector for one dataset seed."""
+    current_note = ""
     if reference_ref is not None:
         ref_seed = record_prediction_seed(reference_ref)
         rref_path = reference_ref.get("predictions_path")
         if ref_seed == prediction_seed and rref_path:
             path = Path(rref_path)
             if path.exists():
-                arr, note = load_prediction_array(path)
+                arr, note = load_prediction_array(
+                    path,
+                    _expected_prediction_metadata(reference_ref),
+                )
                 if arr is not None:
                     return arr, str(path), "current"
-                return None, str(path), note
+                current_note = note
 
     path = reference_oracle_path(algo, canonical_backend, n, p,
                                  prediction_seed)
     if path.exists():
-        arr, note = load_prediction_array(path)
+        arr, note = load_prediction_array(
+            path,
+            _expected_oracle_metadata(
+                algo, canonical_backend, n, p, prediction_seed),
+            require_metadata=True,
+        )
         if arr is not None:
             return arr, str(path), "stored"
         return None, str(path), note
+    if current_note:
+        return None, str(path), current_note
     return None, str(path), "missing"
 
 
@@ -354,6 +481,46 @@ def _params_to_json(params: dict) -> str:
         else:
             out[key] = value
     return json.dumps(out)
+
+
+def _params_to_julia_literal(params: dict) -> str:
+    """Trusted Julia literal mirror of `_params_to_json`.
+
+    The Julia benchmark runner deliberately avoids adding a JSON runtime
+    dependency to the package, so the orchestrator passes the registry params
+    as a Julia expression generated from local MethodSpec data.
+    """
+    def to_plain(value):
+        if hasattr(value, "tolist"):
+            return value.tolist()
+        if isinstance(value, (np.integer,)):
+            return int(value)
+        if isinstance(value, (np.floating,)):
+            return float(value)
+        return value
+
+    def literal(value) -> str:
+        value = to_plain(value)
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        if value is None:
+            return "nothing"
+        if isinstance(value, int):
+            return str(value)
+        if isinstance(value, float):
+            return repr(value)
+        if isinstance(value, str):
+            return json.dumps(value)
+        if isinstance(value, (list, tuple)):
+            return "Any[" + ", ".join(literal(v) for v in value) + "]"
+        raise TypeError(f"unsupported Julia param literal type: {type(value)!r}")
+
+    pairs = []
+    for key, value in params.items():
+        if key in {"n_samples", "n_features"}:
+            continue
+        pairs.append(f"{json.dumps(str(key))} => {literal(value)}")
+    return "Dict{String,Any}(" + ", ".join(pairs) + ")"
 
 
 def _subprocess_failure_reason(out: subprocess.CompletedProcess) -> str:
@@ -441,7 +608,8 @@ def run_backend(name: str, script: str, language: str, tier: str,
     # `adapted_params` computes in Python. Serialise to JSON env var so
     # the R/MATLAB script gets the exact same param shape we use on the
     # Python side.
-    if script.endswith(".R") or script.endswith(".m"):
+    if (script.endswith(".R") or script.endswith(".m")
+            or script.endswith(".mjs") or script.endswith(".jl")):
         try:
             from benchmarks.cross_binding.scripts.bench_registry_common import (
                 adapted_params, load_method)
@@ -449,17 +617,29 @@ def run_backend(name: str, script: str, language: str, tier: str,
             params = adapted_params(method, n, p, n_components)
             env["BENCH_R_PARAMS_JSON"] = _params_to_json(params)
             env["BENCH_MATLAB_PARAMS_JSON"] = env["BENCH_R_PARAMS_JSON"]
+            env["BENCH_JS_PARAMS_JSON"] = env["BENCH_R_PARAMS_JSON"]
+            env["BENCH_JULIA_PARAMS_JL"] = _params_to_julia_literal(params)
             if method.needs_labels:
                 env["BENCH_R_NEEDS_LABELS"] = "1"
+                env["BENCH_JS_NEEDS_LABELS"] = "1"
+                env["BENCH_JULIA_NEEDS_LABELS"] = "1"
             if method.needs_sample_weights:
                 env["BENCH_R_NEEDS_SAMPLE_WEIGHTS"] = "1"
+                env["BENCH_JS_NEEDS_SAMPLE_WEIGHTS"] = "1"
+                env["BENCH_JULIA_NEEDS_SAMPLE_WEIGHTS"] = "1"
             if method.needs_group_assignment:
                 env["BENCH_R_NEEDS_GROUP_ASSIGNMENT"] = "1"
+                env["BENCH_JS_NEEDS_GROUP_ASSIGNMENT"] = "1"
+                env["BENCH_JULIA_NEEDS_GROUP_ASSIGNMENT"] = "1"
             if method.needs_x_target:
                 # R/MATLAB read per-seed NumPy/PCG sidecars so their
                 # X_target matches the Python registry exactly.
                 env["BENCH_R_NEEDS_X_TARGET"] = "1"
                 env["BENCH_R_X_TARGET_DIR"] = str(X_TARGET_DIR)
+                env["BENCH_JS_NEEDS_X_TARGET"] = "1"
+                env["BENCH_JS_X_TARGET_DIR"] = str(X_TARGET_DIR)
+                env["BENCH_JULIA_NEEDS_X_TARGET"] = "1"
+                env["BENCH_JULIA_X_TARGET_DIR"] = str(X_TARGET_DIR)
             # Tell R/MATLAB which field of the result struct matches the
             # registry's parity reference — otherwise classifiers return
             # integer labels where the registry expects `decision_scores`,
@@ -480,6 +660,13 @@ def run_backend(name: str, script: str, language: str, tier: str,
 
     if script.endswith(".py"):
         cmd = [sys.executable, str(script_path), *argv8]
+    elif script.endswith(".mjs"):
+        node = shutil.which("node") or "node"
+        cmd = [node, str(script_path), *argv8]
+    elif script.endswith(".jl"):
+        julia = shutil.which("julia") or "julia"
+        cmd = [julia, f"--project={REPO / 'bindings/julia/Pls4all.jl'}",
+               "--startup-file=no", str(script_path), *argv8]
     elif script.endswith(".R"):
         rscript = shutil.which("Rscript") or f"{PLS4ALL_R_ENV}/bin/Rscript"
         cmd = [rscript, str(script_path), *argv8]
@@ -557,7 +744,7 @@ def compute_parity(records: list[dict]) -> None:
     otherwise the frozen oracle snapshot written under
     `data/.reference_oracles/`. Those snapshots change only when the
     canonical reference backend is run again.
-    Tolerance: `||pred - ref||_RMS / ||ref||_RMS ≤ method.rmse_rel_tol`
+    Tolerance: `||pred - ref||_RMS / ||ref||_RMS ≤ min(method.rmse_rel_tol, 1e-3)`
     (with `rmse_abs ≤ 1e-9` escape near zero). Methods with
     `reference_kind == "paper_only"` show `—` (NaN + ok=None) — no
     executable truth to compare against.
@@ -596,16 +783,17 @@ def compute_parity(records: list[dict]) -> None:
                     break
             if binding_ref:
                 break
-        if binding_ref is None:
-            binding_ref = group[0]
 
         binding_ref_pred = None
-        bref_path = binding_ref.get("predictions_path")
-        if bref_path and Path(bref_path).exists():
-            try:
-                binding_ref_pred = np.load(bref_path)
-            except Exception:
-                binding_ref_pred = None
+        if binding_ref is not None:
+            bref_path = binding_ref.get("predictions_path")
+        else:
+            bref_path = None
+        if binding_ref is not None and bref_path and Path(bref_path).exists():
+            binding_ref_pred, _bref_note = load_prediction_array(
+                Path(bref_path),
+                _expected_prediction_metadata(binding_ref),
+            )
 
         # ---- Resolve gate-2 reference (canonical external) -----------
         try:
@@ -623,14 +811,17 @@ def compute_parity(records: list[dict]) -> None:
                 if r["backend"] == canonical_backend:
                     reference_ref = r
                     break
-        rel_tol = float(getattr(method, "rmse_rel_tol", 5e-2)) \
+        method_rel_tol = float(getattr(method, "rmse_rel_tol", 5e-2)) \
+            if canonical is not None else float("nan")
+        rel_tol = min(method_rel_tol, STRICT_REFERENCE_RMSE_REL_TOL) \
             if canonical is not None else float("nan")
 
         # ---- Populate both gates per cell ---------------------------
         for r in group:
             # Legacy/back-compat fields keep mirroring the binding gate
             # so the existing renderer doesn't fall over.
-            r["binding_parity_ref"] = binding_ref["backend"]
+            r["binding_parity_ref"] = (
+                binding_ref["backend"] if binding_ref is not None else "")
             r["reference_parity_ref"] = (
                 canonical_backend if canonical is not None else "")
             r["reference_parity_tolerance"] = rel_tol
@@ -643,7 +834,10 @@ def compute_parity(records: list[dict]) -> None:
             pp = r.get("predictions_path")
             r_pred = None
             if pp and Path(pp).exists():
-                r_pred, load_note = load_prediction_array(Path(pp))
+                r_pred, load_note = load_prediction_array(
+                    Path(pp),
+                    _expected_prediction_metadata(r),
+                )
                 if r_pred is None:
                     r["binding_parity_note"] = load_note
                     r["reference_parity_note"] = load_note
@@ -659,7 +853,9 @@ def compute_parity(records: list[dict]) -> None:
                 r["binding_parity_max_diff"] = float("nan")
                 r["binding_parity_ok"] = False
                 r["binding_parity_note"] = (
-                    r.get("binding_parity_note") or "predictions missing")
+                    r.get("binding_parity_note")
+                    or ("binding reference missing"
+                        if binding_ref is None else "predictions missing"))
             else:
                 bres = binding_parity(r_pred, binding_ref_pred,
                                        tolerance=r.get("parity_tolerance",
@@ -1058,8 +1254,12 @@ def main():
         for _n, _p in sizes_for_algo(algo):
             for _thr in threads:
                 for _backend in backends_for_algo(algo):
+                    name = _backend[0]
                     kind = _backend[4]
-                    total += len(builds) if kind != "external" else 1
+                    if kind == "external" or name == "js_wasm":
+                        total += 1
+                    else:
+                        total += len(builds)
     size_mode = "registry-cells" if args.registry_cells else f"{len(sizes)} sizes"
     print(f"# {len(algos)} algorithms × {size_mode} × "
            f"{len(threads)} threads × dynamic backends "
@@ -1097,6 +1297,8 @@ def main():
                     # an external user on a modern install).
                     if kind == "external":
                         per_backend_builds = ["blas-omp"]
+                    elif name == "js_wasm":
+                        per_backend_builds = ["wasm"]
                     else:
                         per_backend_builds = list(builds)
                     for build in per_backend_builds:
@@ -1174,6 +1376,7 @@ def main():
                             "seed_base": args.seed_base,
                         })
                         rec["prediction_seed"] = record_prediction_seed(rec)
+                        stabilize_prediction_path(rec)
                         write_prediction_metadata(rec)
                         snapshot_reference_oracle(rec)
                         records.append(rec)

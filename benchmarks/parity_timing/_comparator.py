@@ -71,14 +71,27 @@ def rms(arr: np.ndarray) -> float:
     return float(math.sqrt(float(np.mean(a * a))))
 
 
+def _reshape_vector_compatible(p: np.ndarray,
+                               r: np.ndarray) -> tuple[np.ndarray, str]:
+    """Allow only 1-D vs column/row-vector shape quirks, never matrices."""
+    if p.shape == r.shape:
+        return p, ""
+    if p.size != r.size:
+        return p, f"shape mismatch ({p.shape} vs {r.shape})"
+    p_is_vector = p.ndim == 1 or (p.ndim == 2 and 1 in p.shape)
+    r_is_vector = r.ndim == 1 or (r.ndim == 2 and 1 in r.shape)
+    if p_is_vector and r_is_vector:
+        return p.reshape(r.shape), ""
+    return p, f"shape mismatch ({p.shape} vs {r.shape})"
+
+
 def binding_parity(pred: np.ndarray, ref: np.ndarray,
                     tolerance: float = 1e-6) -> BindingParityResult:
     """Bit-exact comparator: max|pred - ref| ≤ tolerance.
 
     Used by the cross-binding orchestrator to verify every binding
-    produces the same numbers as the cpp reference. Shape mismatch
-    auto-reshape when sizes match (handles 1-D-vs-2-D quirks); larger
-    mismatches fail with a descriptive note.
+    produces the same numbers as the cpp reference. Only 1-D vs row/column
+    vector quirks are reshaped; matrix-vs-matrix shape mismatches fail.
     """
     p = np.asarray(pred, dtype=np.float64)
     r = np.asarray(ref, dtype=np.float64)
@@ -87,12 +100,11 @@ def binding_parity(pred: np.ndarray, ref: np.ndarray,
             max_abs_diff=float("nan"), tolerance=tolerance, ok=False,
             note=f"empty predictions ({p.shape} vs {r.shape})")
     if p.shape != r.shape:
-        if p.size == r.size:
-            p = p.reshape(r.shape)
-        else:
+        p, note = _reshape_vector_compatible(p, r)
+        if note:
             return BindingParityResult(
                 max_abs_diff=float("nan"), tolerance=tolerance, ok=False,
-                note=f"shape mismatch ({p.shape} vs {r.shape})")
+                note=note)
     diff = float(np.max(np.abs(p - r)))
     return BindingParityResult(
         max_abs_diff=diff, tolerance=tolerance, ok=diff <= tolerance)
@@ -114,13 +126,12 @@ def reference_parity(pred: np.ndarray, ref: np.ndarray,
             tolerance=tolerance, ok=False,
             note=f"empty predictions ({p.shape} vs {r.shape})")
     if p.shape != r.shape:
-        if p.size == r.size:
-            p = p.reshape(r.shape)
-        else:
+        p, note = _reshape_vector_compatible(p, r)
+        if note:
             return ReferenceParityResult(
                 rmse_abs=float("nan"), rmse_rel=float("nan"),
                 tolerance=tolerance, ok=False,
-                note=f"shape mismatch ({p.shape} vs {r.shape})")
+                note=note)
     abs_rmse = rmse(p, r)
     ref_rms = rms(r) or 1.0
     rel_rmse = abs_rmse / ref_rms

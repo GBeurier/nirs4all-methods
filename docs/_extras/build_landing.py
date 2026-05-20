@@ -294,6 +294,9 @@ def _float_or_none(v: Any) -> float | None:
 
 
 _METHOD_TOLERANCES: dict[str, float] | None = None
+STRICT_REFERENCE_EXACT_TOL = 1e-6
+STRICT_REFERENCE_DRIFT_TOL = 1e-3
+REFERENCE_ABS_EXACT_TOL = 1e-9
 
 
 def _method_tolerances() -> dict[str, float]:
@@ -353,6 +356,20 @@ def _quality_from_tol(tol: float | None) -> str:
     return "qualitative"
 
 
+def _strict_reference_code(rel: float | None,
+                           abs_rmse: float | None = None) -> str | None:
+    """Release-policy reference severity independent of MethodSpec tolerances."""
+    if rel is None:
+        return None
+    if abs_rmse is not None and abs_rmse <= REFERENCE_ABS_EXACT_TOL:
+        return "exact"
+    if rel <= STRICT_REFERENCE_EXACT_TOL:
+        return "exact"
+    if rel <= STRICT_REFERENCE_DRIFT_TOL:
+        return "drift"
+    return "divergent"
+
+
 def _format_divergence(value: float | None) -> str:
     if value is None or value != value:
         return ""
@@ -366,50 +383,172 @@ def _format_divergence(value: float | None) -> str:
     return f"{value:.2f}"
 
 
+def _has_comparison_value(value: Any) -> bool:
+    return _float_or_none(value) is not None
+
+
 def divergence_fields(row: dict) -> dict:
     """Build per-cell divergence fields for the dashboard.
 
-    Source rules (Codex spec):
-      - kind == "pls4all_binding"            → binding gate (vs C++)
-      - kind in {"pls4all_core", "external"} → reference gate (vs MethodSpec ref)
+    Source rules:
+      - rows with reference-gate metadata    → reference gate (vs MethodSpec ref)
+      - legacy rows without ref metadata     → binding gate fallback (vs C++)
       - is_canonical_reference=True          → basis="self", no numeric value
 
     Returns a dict ready for cell merge:
         {"divergence": float|None, "divergence_fmt": str|None,
          "divergence_basis": "binding"|"reference"|"self",
-         "divergence_quality": "strict"|"relaxed"|"qualitative"|"binding"|"unknown"}
+         "divergence_quality": "strict"|"drift"|"divergent"|"binding"|"unknown"}
     Empty dict if the row can't supply a value.
     """
     kind = (row.get("kind") or "").strip().lower()
+    # `divergence_status` carries the gate verdict for cells that have a
+    # measured timing but no comparison number — so the dashboard can
+    # render `✓ / ≈ / ✗ / ⊘` instead of a flat `—`. The CSV genuinely
+    # lacks cross-library parity for non-canonical externals (e.g.
+    # ikpls run as a fixed external on pls), so the gate verdict is
+    # the most we can honestly say about those cells.
+    parity_note = (row.get("reference_parity_note")
+                    or row.get("binding_parity_note") or "").strip()
     if is_true(row.get("is_canonical_reference")):
         return {
             "divergence": None,
             "divergence_fmt": "source",
             "divergence_basis": "self",
             "divergence_quality": "self",
+            "divergence_status": "source",
         }
+    has_reference_gate = any(
+        row.get(k) not in (None, "", "None")
+        for k in (
+            "reference_parity_ok",
+            "reference_parity_rmse_rel",
+            "reference_parity_note",
+            "reference_kind",
+        )
+    )
+    if kind in ("pls4all_binding", "pls4all_core", "external") and has_reference_gate:
+        # The release view is reference-first: if a row has an executable
+        # external comparison, show that number even for bindings. Gate 1
+        # binding exactness remains available through `binding_parity`, but
+        # it must not mask a gate-2 reference failure as numeric zero.
+        ref_diff = _float_or_none(row.get("reference_parity_rmse_rel"))
+        ref_abs = _float_or_none(row.get("reference_parity_rmse_abs"))
+        ref_status = _strict_reference_code(ref_diff, ref_abs)
+        if ref_status is not None:
+            out = {
+                "divergence": ref_diff,
+                "divergence_fmt": _format_divergence(ref_diff),
+                "divergence_basis": "reference",
+                "divergence_quality": (
+                    "strict" if ref_status == "exact" else ref_status
+                ),
+                "divergence_status": ref_status,
+            }
+            if parity_note:
+                out["divergence_note"] = parity_note[:160]
+            return out
+        status = _diff_status(
+            None,
+            gate="reference",
+            parity_ok=row.get("reference_parity_ok"),
+            ok=is_true(row.get("ok")),
+            note=parity_note,
+        )
+        out = {
+            "divergence": None,
+            "divergence_fmt": "—",
+            "divergence_basis": "reference",
+            "divergence_quality": "unknown",
+            "divergence_status": status,
+        }
+        if parity_note:
+            out["divergence_note"] = parity_note[:160]
+        return out
     if kind == "pls4all_binding":
         diff = _float_or_none(row.get("binding_parity_max_diff")
                               or row.get("parity_max_diff"))
-        return {
+        status = _diff_status(
+            diff,
+            gate="binding",
+            parity_ok=row.get("binding_parity_ok") or row.get("parity_ok"),
+            note=parity_note,
+        )
+        out = {
             "divergence": diff,
             "divergence_fmt": _format_divergence(diff) if diff is not None else "—",
             "divergence_basis": "binding",
             "divergence_quality": "binding",
+            "divergence_status": status,
         }
+        if parity_note:
+            out["divergence_note"] = parity_note[:160]
+        return out
     if kind in ("pls4all_core", "external"):
         # rmse_rel only — the tooltip says "rmse_rel" so falling back to
         # rmse_abs (different units, very different magnitude scale)
         # would be a silent lie about what the number means.
         diff = _float_or_none(row.get("reference_parity_rmse_rel"))
-        tol = reference_tolerance(row)
-        return {
+        status = _diff_status(
+            diff,
+            gate="reference",
+            parity_ok=row.get("reference_parity_ok"),
+            ok=is_true(row.get("ok")),
+            note=parity_note,
+        )
+        out = {
             "divergence": diff,
             "divergence_fmt": _format_divergence(diff) if diff is not None else "—",
             "divergence_basis": "reference",
-            "divergence_quality": _quality_from_tol(tol),
+            "divergence_quality": "unknown",
+            "divergence_status": status,
         }
+        if parity_note:
+            out["divergence_note"] = parity_note[:160]
+        return out
     return {}
+
+
+def _diff_status(diff: float | None, *, gate: str,
+                  parity_ok=None, ok: bool = True,
+                  note: str = "") -> str:
+    """Non-numeric fallback for the divergence cell.
+
+    When `diff` is finite, the renderer prefers the numeric value. When
+    it is None / NaN, this function returns a short string the renderer
+    can map to a glyph:
+
+      "exact"     → gate passed (✓)
+      "drift"     → gate passed within drift band (≈)
+      "divergent" → gate failed (✗)
+      "no_compare"→ row ran (`ok=True`) but no comparison was recorded
+                    against this gate (very common for non-canonical
+                    externals — they have a timing but no parity)
+      "not_run"   → row didn't run at all
+    """
+    if diff is not None and diff == diff:
+        # numeric — caller will use the value, status is informational
+        return "ok"
+    if not ok:
+        return "not_run"
+    if is_true(parity_ok):
+        return "exact"
+    if parity_ok in (None, "", "None"):
+        return "no_compare"
+    note_l = (note or "").lower()
+    if any(marker in note_l for marker in (
+            "reference oracle missing",
+            "not_applicable",
+            "predictions missing",
+            "missing",
+    )):
+        return "no_compare"
+    if any(marker in note_l for marker in (
+            "shape mismatch",
+            "empty predictions",
+    )):
+        return "divergent"
+    return "no_compare"
 
 
 def parity_code(row: dict) -> str:
@@ -460,10 +599,12 @@ def parity_code(row: dict) -> str:
             return "error"
         return "error"
     parity_ok = row.get("binding_parity_ok", row.get("parity_ok"))
-    if is_true(parity_ok):
-        return "exact"
     diff_val = row.get("binding_parity_max_diff",
                         row.get("parity_max_diff", "nan"))
+    if parity_ok in (None, "", "None") and not _has_comparison_value(diff_val):
+        return "not_available"
+    if is_true(parity_ok):
+        return "exact"
     try:
         d = float(diff_val)
     except (TypeError, ValueError):
@@ -476,12 +617,12 @@ def parity_code(row: dict) -> str:
 
 
 def reference_parity_code(row: dict) -> str:
-    """Gate-2 parity classification.
+    """Gate-2 parity classification under the strict release policy.
 
     Values:
-      exact          — within `method.rmse_rel_tol`.
-      drift          — finite but above tolerance, < 10× method tolerance.
-      divergent      — >= 10× method tolerance.
+      exact          — rmse_abs ≤ 1e-9 or rmse_rel ≤ 1e-6.
+      drift          — finite rmse_rel ≤ 1e-3 and not exact.
+      divergent      — finite rmse_rel > 1e-3.
       not_available  — `reference_kind=paper_only` (no executable truth).
       deferred       — intentionally skipped in the CRAN-fast dashboard build;
                        catch-up benchmark jobs fill these cells later.
@@ -500,21 +641,19 @@ def reference_parity_code(row: dict) -> str:
     ref_ok = row.get("reference_parity_ok")
     if ref_ok in (None, "", "None"):
         return "not_available"
-    if is_true(ref_ok):
-        return "exact"
     rel = row.get("reference_parity_rmse_rel", "nan")
-    try:
-        d = float(rel)
-    except (TypeError, ValueError):
-        return "drift"
-    if d != d:
-        return "drift"
-    tol = reference_tolerance(row)
-    if tol is None:
-        return "drift"
-    if d < 10 * tol:
-        return "drift"
-    return "divergent"
+    abs_rmse = row.get("reference_parity_rmse_abs", "nan")
+    note_l = (row.get("reference_parity_note") or "").lower()
+    d = _float_or_none(rel)
+    a = _float_or_none(abs_rmse)
+    if d is None:
+        if any(marker in note_l for marker in (
+                "shape mismatch",
+                "empty predictions",
+        )):
+            return "divergent"
+        return "not_available"
+    return _strict_reference_code(d, a) or "not_available"
 
 
 def fmt_ms(ms_str: str) -> str:
@@ -868,6 +1007,13 @@ def build_payload(results_dir: Path) -> dict:
                 existing_ok = bool(existing.get("ok"))
                 incoming_rank = cell.get("_rank", (0, 0.0, 0))
                 existing_rank = existing.get("_rank", (0, 0.0, 0))
+                incoming_ref_comparison = (
+                    incoming_is_ref
+                    and incoming_ok
+                    and cell.get("divergence_basis") in ("reference", "self")
+                    and cell.get("divergence_status") not in (
+                        "no_compare", "not_run")
+                )
 
                 # Timing is an atomic part of the selected source. Prefer
                 # the legacy fixed-bench timing when both rows succeeded,
@@ -914,9 +1060,37 @@ def build_payload(results_dir: Path) -> dict:
                     # the merged cell as "source" (basis=self).
                     if incoming_ok:
                         for k in ("divergence", "divergence_fmt",
-                                  "divergence_basis", "divergence_quality"):
+                                  "divergence_basis", "divergence_quality",
+                                  "divergence_status", "divergence_note"):
                             if k in cell:
                                 existing[k] = cell[k]
+                # Even when the incoming ref_* alias is NOT the canonical
+                # reference (e.g. `ref_python_ikpls` for `pls`, where the
+                # canonical ref is sklearn), it may still carry a finite
+                # `reference_parity_rmse_rel`. The legacy fixed bench
+                # never computes that, so the existing cell starts with
+                # `divergence=None`. Upgrade the merged cell to the
+                # alias's number rather than leaving "—" for the user.
+                elif incoming_ok and cell.get("divergence") is not None:
+                    existing_div = existing.get("divergence")
+                    existing_is_finite = (existing_div is not None
+                                           and existing_div == existing_div)
+                    if not existing_is_finite:
+                        for k in ("divergence", "divergence_fmt",
+                                  "divergence_basis", "divergence_quality",
+                                  "divergence_status", "divergence_note"):
+                            if k in cell:
+                                existing[k] = cell[k]
+                elif incoming_ref_comparison and not existing_is_ref:
+                    # A fixed legacy external row (e.g. `r_pls`) may have
+                    # timing only while its collapsed `ref_*` alias carries
+                    # the actual reference-gate verdict. Keep the legacy
+                    # timing, but let the ref alias own the gate metadata.
+                    for k in ("divergence", "divergence_fmt",
+                              "divergence_basis", "divergence_quality",
+                              "divergence_status", "divergence_note"):
+                        if k in cell:
+                            existing[k] = cell[k]
                 if cell.get("reference_kind") and not existing.get("reference_kind"):
                     existing["reference_kind"] = cell["reference_kind"]
                 if cell.get("reference_parity_tolerance") is not None:
@@ -927,6 +1101,7 @@ def build_payload(results_dir: Path) -> dict:
                 # reference alias itself, its self-comparison verdict is
                 # the correct global gate-2 verdict for that column.
                 if (cell.get("is_canonical_reference")
+                        or incoming_ref_comparison
                         or existing.get("reference_parity") in (None, "self", "not_available")):
                     existing["reference_parity"] = cell["reference_parity"]
                 if reason and not existing.get("ok"):
@@ -967,7 +1142,8 @@ def build_payload(results_dir: Path) -> dict:
         # Carry divergence info onto the synthetic reference column so the
         # divergence-δ viz can render "source" instead of "—".
         for k in ("divergence", "divergence_fmt",
-                  "divergence_basis", "divergence_quality"):
+                  "divergence_basis", "divergence_quality",
+                  "divergence_status", "divergence_note"):
             if k in src:
                 mirror[k] = src[k]
         cells[REF_COL_ID] = mirror

@@ -7,12 +7,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <memory>
 #include <new>
 #include <vector>
 
 #include "core/matrix_view.hpp"
-#include "core/model.hpp"
 #include "core/status.hpp"
 
 namespace {
@@ -50,19 +48,6 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     values.clear();
     values.resize(n);
     std::fill(values.begin(), values.end(), fill);
-}
-
-[[nodiscard]] p4a_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
-                                                  std::int64_t rows,
-                                                  std::int64_t cols) noexcept {
-    p4a_matrix_view_t view{};
-    view.data = values.data();
-    view.rows = rows;
-    view.cols = cols;
-    view.row_stride = cols > 0 ? cols : 1;
-    view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
-    return view;
 }
 
 [[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
@@ -107,15 +92,10 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     return P4A_OK;
 }
 
-[[nodiscard]] p4a_status_t transform_blocks(::pls4all::core::Context& ctx,
-                                            const p4a_matrix_view_t& X,
-                                            const std::int64_t* block_sizes,
-                                            std::size_t n_blocks,
-                                            std::vector<double>& transformed,
-                                            std::vector<double>& x_mean,
-                                            std::vector<double>& x_scale,
-                                            std::vector<double>& feature_weights,
-                                            std::vector<double>& block_weights) {
+[[nodiscard]] p4a_status_t validate_block_sizes(::pls4all::core::Context& ctx,
+                                                const p4a_matrix_view_t& X,
+                                                const std::int64_t* block_sizes,
+                                                std::size_t n_blocks) {
     if (block_sizes == nullptr || n_blocks == 0) {
         ctx.set_error("MB-PLS requires at least one block size");
         return P4A_ERR_INVALID_ARGUMENT;
@@ -141,56 +121,74 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
         return P4A_ERR_SHAPE_MISMATCH;
     }
 
-    const auto rows = static_cast<std::size_t>(X.rows);
-    const auto cols = static_cast<std::size_t>(X.cols);
-    std::size_t total = 0;
-    if (!checked_mul_size(rows, cols, total)) {
-        ctx.set_error("MB-PLS transformed matrix size overflows size_t");
-        return P4A_ERR_INVALID_ARGUMENT;
-    }
-    resize_fill(transformed, total, 0.0);
-    resize_fill(x_mean, cols, 0.0);
-    resize_fill(x_scale, cols, 1.0);
-    resize_fill(feature_weights, cols, 1.0);
-    resize_fill(block_weights, n_blocks, 1.0);
+    return P4A_OK;
+}
 
-    std::size_t start = 0;
-    for (std::size_t block = 0; block < n_blocks; ++block) {
-        const auto width = static_cast<std::size_t>(block_sizes[block]);
-        const std::size_t stop = start + width;
-        const double block_weight = 1.0 / std::sqrt(static_cast<double>(width));
-        block_weights[block] = block_weight;
-        for (std::size_t col = start; col < stop; ++col) {
-            double sum = 0.0;
-            for (std::size_t row = 0; row < rows; ++row) {
-                const double value = read_float(X, row, col);
-                if (!std::isfinite(value)) {
-                    ctx.set_error("X contains NaN or Inf");
-                    return P4A_ERR_INVALID_ARGUMENT;
-                }
-                sum += value;
-            }
-            const double mean = sum / static_cast<double>(rows);
-            x_mean[col] = mean;
-            double sumsq = 0.0;
-            for (std::size_t row = 0; row < rows; ++row) {
-                const double delta = read_float(X, row, col) - mean;
-                sumsq += delta * delta;
-            }
-            double scale = std::sqrt(sumsq / static_cast<double>(rows - 1U));
-            if (scale == 0.0 || !std::isfinite(scale)) {
-                scale = 1.0;
-            }
-            x_scale[col] = scale;
-            feature_weights[col] = block_weight;
-            for (std::size_t row = 0; row < rows; ++row) {
-                transformed[idx(row, cols, col)] =
-                    (read_float(X, row, col) - mean) / scale * block_weight;
+void column_means(const std::vector<double>& values,
+                  std::size_t rows,
+                  std::size_t cols,
+                  std::vector<double>& means) {
+    means.assign(cols, 0.0);
+    if (rows == 0U) {
+        return;
+    }
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t col = 0; col < cols; ++col) {
+            means[col] += values[idx(row, cols, col)];
+        }
+    }
+    const double denom = static_cast<double>(rows);
+    for (double& mean : means) {
+        mean /= denom;
+    }
+}
+
+[[nodiscard]] bool invert_square_matrix(std::vector<double> a,
+                                        std::size_t n,
+                                        std::vector<double>& inverse) {
+    inverse.assign(n * n, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        inverse[idx(i, n, i)] = 1.0;
+    }
+    for (std::size_t col = 0; col < n; ++col) {
+        std::size_t pivot = col;
+        double pivot_abs = std::fabs(a[idx(col, n, col)]);
+        for (std::size_t row = col + 1U; row < n; ++row) {
+            const double candidate = std::fabs(a[idx(row, n, col)]);
+            if (candidate > pivot_abs) {
+                pivot = row;
+                pivot_abs = candidate;
             }
         }
-        start = stop;
+        if (pivot_abs <= std::numeric_limits<double>::epsilon()) {
+            return false;
+        }
+        if (pivot != col) {
+            for (std::size_t j = 0; j < n; ++j) {
+                std::swap(a[idx(col, n, j)], a[idx(pivot, n, j)]);
+                std::swap(inverse[idx(col, n, j)], inverse[idx(pivot, n, j)]);
+            }
+        }
+        const double diag = a[idx(col, n, col)];
+        for (std::size_t j = 0; j < n; ++j) {
+            a[idx(col, n, j)] /= diag;
+            inverse[idx(col, n, j)] /= diag;
+        }
+        for (std::size_t row = 0; row < n; ++row) {
+            if (row == col) {
+                continue;
+            }
+            const double factor = a[idx(row, n, col)];
+            if (factor == 0.0) {
+                continue;
+            }
+            for (std::size_t j = 0; j < n; ++j) {
+                a[idx(row, n, j)] -= factor * a[idx(col, n, j)];
+                inverse[idx(row, n, j)] -= factor * inverse[idx(col, n, j)];
+            }
+        }
     }
-    return P4A_OK;
+    return true;
 }
 
 }  // namespace
@@ -233,40 +231,20 @@ p4a_status_t fit_predict_mb_pls(Context& ctx,
             return P4A_ERR_INVALID_ARGUMENT;
         }
 
-        std::vector<double> transformed;
-        std::vector<double> feature_weights;
-        status = transform_blocks(ctx,
-                                  X,
-                                  block_sizes,
-                                  n_blocks,
-                                  transformed,
-                                  out.x_mean,
-                                  out.x_scale,
-                                  feature_weights,
-                                  out.block_weights);
+        status = validate_block_sizes(ctx, X, block_sizes, n_blocks);
         if (status != P4A_OK) {
             out = MbPlsResult{};
             return status;
         }
 
+        std::vector<double> x_values;
+        status = copy_float_matrix(ctx, X, "X", x_values);
+        if (status != P4A_OK) {
+            out = MbPlsResult{};
+            return status;
+        }
         std::vector<double> y_values;
         status = copy_float_matrix(ctx, Y, "Y", y_values);
-        if (status != P4A_OK) {
-            out = MbPlsResult{};
-            return status;
-        }
-
-        Config pls_cfg = cfg;
-        pls_cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-        pls_cfg.deflation = P4A_DEFLATION_REGRESSION;
-        pls_cfg.center_x = 1;
-        pls_cfg.scale_x = 0;
-        pls_cfg.center_y = 1;
-        pls_cfg.scale_y = 0;
-        p4a_matrix_view_t Xt = rowmajor_f64_view(transformed, X.rows, X.cols);
-        p4a_matrix_view_t Yt = rowmajor_f64_view(y_values, Y.rows, Y.cols);
-        std::unique_ptr<Model> model;
-        status = fit_model(ctx, pls_cfg, Xt, Yt, model);
         if (status != P4A_OK) {
             out = MbPlsResult{};
             return status;
@@ -275,6 +253,10 @@ p4a_status_t fit_predict_mb_pls(Context& ctx,
         const auto rows = static_cast<std::size_t>(X.rows);
         const auto cols = static_cast<std::size_t>(X.cols);
         const auto targets = static_cast<std::size_t>(Y.cols);
+        const auto components = static_cast<std::size_t>(
+            std::min<std::int32_t>(cfg.n_components,
+                                   static_cast<std::int32_t>(
+                                       std::min<std::size_t>(rows - 1U, cols))));
         std::size_t pred_size = 0;
         std::size_t coef_size = 0;
         if (!checked_mul_size(rows, targets, pred_size) ||
@@ -284,38 +266,225 @@ p4a_status_t fit_predict_mb_pls(Context& ctx,
             return P4A_ERR_INVALID_ARGUMENT;
         }
 
-        out.predictions.assign(pred_size, 0.0);
-        p4a_matrix_view_t pred_view = rowmajor_f64_view(out.predictions, X.rows, Y.cols);
-        status = predict_into(ctx, *model, Xt, pred_view);
-        if (status != P4A_OK) {
+        std::size_t latent_size = 0;
+        if (!checked_mul_size(cols, components, latent_size)) {
+            ctx.set_error("MB-PLS latent matrix size overflows size_t");
             out = MbPlsResult{};
-            return status;
+            return P4A_ERR_INVALID_ARGUMENT;
+        }
+
+        column_means(x_values, rows, cols, out.x_mean);
+        out.x_scale.assign(cols, 1.0);
+        out.block_weights.assign(n_blocks, 1.0);
+        std::vector<double> y_mean;
+        column_means(y_values, rows, targets, y_mean);
+
+        std::vector<std::vector<double>> x_res_blocks;
+        std::vector<std::size_t> starts;
+        x_res_blocks.reserve(n_blocks);
+        starts.reserve(n_blocks);
+        std::size_t start = 0;
+        for (std::size_t block = 0; block < n_blocks; ++block) {
+            const auto width = static_cast<std::size_t>(block_sizes[block]);
+            starts.push_back(start);
+            std::vector<double> block_values(rows * width, 0.0);
+            for (std::size_t row = 0; row < rows; ++row) {
+                for (std::size_t local_col = 0; local_col < width; ++local_col) {
+                    const std::size_t feature = start + local_col;
+                    block_values[idx(row, width, local_col)] =
+                        x_values[idx(row, cols, feature)] - out.x_mean[feature];
+                }
+            }
+            x_res_blocks.push_back(std::move(block_values));
+            start += width;
+        }
+
+        std::vector<double> y_res(rows * targets, 0.0);
+        for (std::size_t row = 0; row < rows; ++row) {
+            for (std::size_t target = 0; target < targets; ++target) {
+                y_res[idx(row, targets, target)] =
+                    y_values[idx(row, targets, target)] - y_mean[target];
+            }
+        }
+
+        std::vector<double> W(cols * components, 0.0);
+        std::vector<double> P(cols * components, 0.0);
+        std::vector<double> Q(targets * components, 0.0);
+        std::vector<double> score(rows, 0.0);
+        std::vector<double> super_score(rows, 0.0);
+        constexpr double kEps = 1e-10;
+
+        for (std::size_t comp = 0; comp < components; ++comp) {
+            std::fill(super_score.begin(), super_score.end(), 0.0);
+            for (std::size_t block = 0; block < n_blocks; ++block) {
+                const std::size_t width = static_cast<std::size_t>(block_sizes[block]);
+                const std::size_t offset = starts[block];
+                const auto& Xb = x_res_blocks[block];
+                std::vector<double> w(width, 0.0);
+                for (std::size_t local_col = 0; local_col < width; ++local_col) {
+                    double value = 0.0;
+                    for (std::size_t row = 0; row < rows; ++row) {
+                        value += Xb[idx(row, width, local_col)] *
+                                 y_res[idx(row, targets, 0)];
+                    }
+                    w[local_col] = value;
+                }
+                double w_norm = 0.0;
+                for (double value : w) {
+                    w_norm += value * value;
+                }
+                w_norm = std::sqrt(w_norm);
+                if (w_norm > kEps) {
+                    for (double& value : w) {
+                        value /= w_norm;
+                    }
+                }
+                std::fill(score.begin(), score.end(), 0.0);
+                for (std::size_t row = 0; row < rows; ++row) {
+                    for (std::size_t local_col = 0; local_col < width; ++local_col) {
+                        score[row] += Xb[idx(row, width, local_col)] * w[local_col];
+                    }
+                    super_score[row] += score[row];
+                }
+                for (std::size_t local_col = 0; local_col < width; ++local_col) {
+                    W[idx(offset + local_col, components, comp)] = w[local_col];
+                }
+            }
+
+            for (double& value : super_score) {
+                value /= static_cast<double>(n_blocks);
+            }
+            double t_norm = 0.0;
+            for (double value : super_score) {
+                t_norm += value * value;
+            }
+            t_norm = std::sqrt(t_norm);
+            if (t_norm > kEps) {
+                for (double& value : super_score) {
+                    value /= t_norm;
+                }
+            }
+            double t_dot = 1e-10;
+            for (double value : super_score) {
+                t_dot += value * value;
+            }
+
+            std::vector<std::vector<double>> p_blocks;
+            p_blocks.reserve(n_blocks);
+            for (std::size_t block = 0; block < n_blocks; ++block) {
+                const std::size_t width = static_cast<std::size_t>(block_sizes[block]);
+                const std::size_t offset = starts[block];
+                const auto& Xb = x_res_blocks[block];
+                std::vector<double> p_block(width, 0.0);
+                for (std::size_t local_col = 0; local_col < width; ++local_col) {
+                    double value = 0.0;
+                    for (std::size_t row = 0; row < rows; ++row) {
+                        value += Xb[idx(row, width, local_col)] * super_score[row];
+                    }
+                    value /= t_dot;
+                    p_block[local_col] = value;
+                    P[idx(offset + local_col, components, comp)] = value;
+                }
+                p_blocks.push_back(std::move(p_block));
+            }
+
+            for (std::size_t target = 0; target < targets; ++target) {
+                double value = 0.0;
+                for (std::size_t row = 0; row < rows; ++row) {
+                    value += y_res[idx(row, targets, target)] * super_score[row];
+                }
+                Q[idx(target, components, comp)] = value / t_dot;
+            }
+
+            for (std::size_t block = 0; block < n_blocks; ++block) {
+                const std::size_t width = static_cast<std::size_t>(block_sizes[block]);
+                auto& Xb = x_res_blocks[block];
+                const auto& p_block = p_blocks[block];
+                for (std::size_t row = 0; row < rows; ++row) {
+                    for (std::size_t local_col = 0; local_col < width; ++local_col) {
+                        Xb[idx(row, width, local_col)] -=
+                            super_score[row] * p_block[local_col];
+                    }
+                }
+            }
+            for (std::size_t row = 0; row < rows; ++row) {
+                for (std::size_t target = 0; target < targets; ++target) {
+                    y_res[idx(row, targets, target)] -=
+                        super_score[row] * Q[idx(target, components, comp)];
+                }
+            }
+        }
+
+        std::vector<double> ptw(components * components, 0.0);
+        for (std::size_t row_comp = 0; row_comp < components; ++row_comp) {
+            for (std::size_t col_comp = 0; col_comp < components; ++col_comp) {
+                double value = 0.0;
+                for (std::size_t feature = 0; feature < cols; ++feature) {
+                    value += P[idx(feature, components, row_comp)] *
+                             W[idx(feature, components, col_comp)];
+                }
+                if (row_comp == col_comp) {
+                    value += 1e-10;
+                }
+                ptw[idx(row_comp, components, col_comp)] = value;
+            }
+        }
+        std::vector<double> ptw_inv;
+        if (!invert_square_matrix(ptw, components, ptw_inv)) {
+            ctx.set_error("MB-PLS regularized latent system is singular");
+            out = MbPlsResult{};
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+
+        std::vector<double> rotations(cols * components, 0.0);
+        for (std::size_t feature = 0; feature < cols; ++feature) {
+            for (std::size_t comp = 0; comp < components; ++comp) {
+                double value = 0.0;
+                for (std::size_t inner = 0; inner < components; ++inner) {
+                    value += W[idx(feature, components, inner)] *
+                             ptw_inv[idx(inner, components, comp)];
+                }
+                rotations[idx(feature, components, comp)] = value;
+            }
         }
 
         out.coefficients.assign(coef_size, 0.0);
-        out.intercept.assign(targets, 0.0);
         for (std::size_t feature = 0; feature < cols; ++feature) {
-            const double factor = feature_weights[feature] / out.x_scale[feature];
             for (std::size_t target = 0; target < targets; ++target) {
-                out.coefficients[idx(feature, targets, target)] =
-                    model->coefficients[idx(feature, targets, target)] * factor;
+                double value = 0.0;
+                for (std::size_t comp = 0; comp < components; ++comp) {
+                    value += rotations[idx(feature, components, comp)] *
+                             Q[idx(target, components, comp)];
+                }
+                out.coefficients[idx(feature, targets, target)] = value;
             }
         }
+
+        out.predictions.assign(pred_size, 0.0);
+        out.intercept.assign(targets, 0.0);
         for (std::size_t target = 0; target < targets; ++target) {
-            double value = model->y_mean[target];
+            double value = y_mean[target];
             for (std::size_t feature = 0; feature < cols; ++feature) {
-                value -= model->x_mean[feature] *
-                         model->coefficients[idx(feature, targets, target)];
                 value -= out.x_mean[feature] *
                          out.coefficients[idx(feature, targets, target)];
             }
             out.intercept[target] = value;
         }
+        for (std::size_t row = 0; row < rows; ++row) {
+            for (std::size_t target = 0; target < targets; ++target) {
+                double value = out.intercept[target];
+                for (std::size_t feature = 0; feature < cols; ++feature) {
+                    value += x_values[idx(row, cols, feature)] *
+                             out.coefficients[idx(feature, targets, target)];
+                }
+                out.predictions[idx(row, targets, target)] = value;
+            }
+        }
 
         out.n_samples = X.rows;
         out.n_features = static_cast<std::int32_t>(X.cols);
         out.n_targets = static_cast<std::int32_t>(Y.cols);
-        out.n_components = cfg.n_components;
+        out.n_components = static_cast<std::int32_t>(components);
         out.n_blocks = static_cast<std::int32_t>(n_blocks);
         ctx.clear_error();
         return P4A_OK;

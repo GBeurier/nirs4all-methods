@@ -469,6 +469,197 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     return P4A_OK;
 }
 
+[[nodiscard]] p4a_status_t symmetric_eigendecomposition(
+    ::pls4all::core::Context& ctx,
+    const std::vector<double>& symmetric,
+    std::size_t n,
+    std::int32_t max_iter,
+    double tol,
+    const char* label,
+    std::vector<double>& eigenvalues,
+    std::vector<double>& eigenvectors) {
+    resize_fill(eigenvalues, n, 0.0);
+    resize_fill(eigenvectors, n * n, 0.0);
+    if (n == 0U || symmetric.size() != n * n) {
+        ctx.set_errorf("%s eigenproblem shape is invalid", label);
+        return P4A_ERR_INTERNAL;
+    }
+    for (std::size_t i = 0; i < n; ++i) {
+        eigenvectors[idx(i, n, i)] = 1.0;
+    }
+    if (n == 1U) {
+        eigenvalues[0] = symmetric[0];
+        return P4A_OK;
+    }
+
+    std::vector<double> a = symmetric;
+    const std::size_t requested_limit =
+        static_cast<std::size_t>(std::max<std::int32_t>(max_iter, 1));
+    const std::size_t floor_limit = 32U * n * n;
+    const std::size_t rotation_limit = std::max(requested_limit, floor_limit);
+    const double stop_tol = std::min(std::max(tol, 1e-14), 1e-12);
+    bool converged = false;
+
+    for (std::size_t iter = 0; iter < rotation_limit; ++iter) {
+        std::size_t pivot_p = 0;
+        std::size_t pivot_q = 1;
+        double max_off = 0.0;
+        double diag_scale = 1.0;
+        for (std::size_t row = 0; row < n; ++row) {
+            diag_scale = std::max(diag_scale, std::fabs(a[idx(row, n, row)]));
+            for (std::size_t col = row + 1U; col < n; ++col) {
+                const double off = std::fabs(a[idx(row, n, col)]);
+                if (off > max_off) {
+                    max_off = off;
+                    pivot_p = row;
+                    pivot_q = col;
+                }
+            }
+        }
+        if (max_off <= stop_tol * diag_scale) {
+            converged = true;
+            break;
+        }
+
+        const double app = a[idx(pivot_p, n, pivot_p)];
+        const double aqq = a[idx(pivot_q, n, pivot_q)];
+        const double apq = a[idx(pivot_p, n, pivot_q)];
+        if (apq == 0.0) {
+            converged = true;
+            break;
+        }
+        const double tau = (aqq - app) / (2.0 * apq);
+        const double tau_sign = tau >= 0.0 ? 1.0 : -1.0;
+        const double t = tau_sign / (std::fabs(tau) + std::sqrt(1.0 + tau * tau));
+        const double c = 1.0 / std::sqrt(1.0 + t * t);
+        const double s = t * c;
+
+        a[idx(pivot_p, n, pivot_p)] = app - t * apq;
+        a[idx(pivot_q, n, pivot_q)] = aqq + t * apq;
+        a[idx(pivot_p, n, pivot_q)] = 0.0;
+        a[idx(pivot_q, n, pivot_p)] = 0.0;
+
+        for (std::size_t k = 0; k < n; ++k) {
+            if (k == pivot_p || k == pivot_q) {
+                continue;
+            }
+            const double akp = a[idx(k, n, pivot_p)];
+            const double akq = a[idx(k, n, pivot_q)];
+            const double next_p = c * akp - s * akq;
+            const double next_q = s * akp + c * akq;
+            a[idx(k, n, pivot_p)] = next_p;
+            a[idx(pivot_p, n, k)] = next_p;
+            a[idx(k, n, pivot_q)] = next_q;
+            a[idx(pivot_q, n, k)] = next_q;
+        }
+
+        for (std::size_t row = 0; row < n; ++row) {
+            const double vip = eigenvectors[idx(row, n, pivot_p)];
+            const double viq = eigenvectors[idx(row, n, pivot_q)];
+            eigenvectors[idx(row, n, pivot_p)] = c * vip - s * viq;
+            eigenvectors[idx(row, n, pivot_q)] = s * vip + c * viq;
+        }
+    }
+
+    if (!converged) {
+        ctx.set_errorf("%s Jacobi diagonalization failed to converge", label);
+        return P4A_ERR_CONVERGENCE_FAILED;
+    }
+    for (std::size_t i = 0; i < n; ++i) {
+        eigenvalues[i] = a[idx(i, n, i)];
+    }
+    return P4A_OK;
+}
+
+void column_mean_raw(const std::vector<double>& matrix,
+                     std::size_t rows,
+                     std::size_t cols,
+                     std::vector<double>& mean) {
+    resize_fill(mean, cols, 0.0);
+    if (rows == 0U) {
+        return;
+    }
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t col = 0; col < cols; ++col) {
+            mean[col] += matrix[idx(row, cols, col)];
+        }
+    }
+    const double inv_rows = 1.0 / static_cast<double>(rows);
+    for (double& value : mean) {
+        value *= inv_rows;
+    }
+}
+
+void center_with_mean(const std::vector<double>& input,
+                      std::size_t rows,
+                      std::size_t cols,
+                      const std::vector<double>& mean,
+                      std::vector<double>& output) {
+    resize_fill(output, rows * cols, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t col = 0; col < cols; ++col) {
+            output[idx(row, cols, col)] = input[idx(row, cols, col)] - mean[col];
+        }
+    }
+}
+
+[[nodiscard]] p4a_status_t convex_relaxation_matrix(
+    ::pls4all::core::Context& ctx,
+    const std::vector<double>& xs,
+    const std::vector<double>& xt,
+    std::size_t ns,
+    std::size_t nt,
+    std::size_t features,
+    std::int32_t max_iter,
+    double tol,
+    std::vector<double>& out) {
+    resize_fill(out, features * features, 0.0);
+    if (ns == 0U || nt == 0U) {
+        ctx.set_error("DI-PLS source and target domains must be non-empty");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+    std::vector<double> rot(features * features, 0.0);
+    const double inv_ns = 1.0 / static_cast<double>(ns);
+    const double inv_nt = 1.0 / static_cast<double>(nt);
+    for (std::size_t i = 0; i < features; ++i) {
+        for (std::size_t j = i; j < features; ++j) {
+            double source = 0.0;
+            double target = 0.0;
+            for (std::size_t row = 0; row < ns; ++row) {
+                source += xs[idx(row, features, i)] * xs[idx(row, features, j)];
+            }
+            for (std::size_t row = 0; row < nt; ++row) {
+                target += xt[idx(row, features, i)] * xt[idx(row, features, j)];
+            }
+            const double value = inv_ns * source - inv_nt * target;
+            rot[idx(i, features, j)] = value;
+            rot[idx(j, features, i)] = value;
+        }
+    }
+
+    std::vector<double> eigenvalues;
+    std::vector<double> eigenvectors;
+    p4a_status_t status = symmetric_eigendecomposition(
+        ctx, rot, features, max_iter, tol, "DI-PLS convex relaxation",
+        eigenvalues, eigenvectors);
+    if (status != P4A_OK) {
+        return status;
+    }
+    for (std::size_t i = 0; i < features; ++i) {
+        for (std::size_t j = i; j < features; ++j) {
+            double value = 0.0;
+            for (std::size_t ev = 0; ev < features; ++ev) {
+                value += eigenvectors[idx(i, features, ev)] *
+                         std::fabs(eigenvalues[ev]) *
+                         eigenvectors[idx(j, features, ev)];
+            }
+            out[idx(i, features, j)] = value;
+            out[idx(j, features, i)] = value;
+        }
+    }
+    return P4A_OK;
+}
+
 [[nodiscard]] p4a_status_t dominant_svd_pair(
     ::pls4all::core::Context& ctx,
     const std::vector<double>& covariance,
@@ -3941,6 +4132,19 @@ p4a_status_t fit_di_pls(Context& ctx,
         ctx.set_error("X_source and X_target must have the same number of columns");
         return P4A_ERR_SHAPE_MISMATCH;
     }
+    if (X_target.rows <= 0) {
+        ctx.set_error("X_target must contain at least one row");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+
+    // Preserve the exact SIMPLS path for lambda=0; diPLSlib also reduces to
+    // ordinary PLS in this case, and the direct call keeps legacy parity tests
+    // bit-stable.
+    if (cfg.di_lambda == 0.0) {
+        Config relaxed = cfg;
+        relaxed.algorithm = P4A_ALGO_PLS_REGRESSION;
+        return fit_pls_regression_simpls(ctx, relaxed, X_source, Y_source, out_model);
+    }
 
     // Build a temporary regression Config so validate_fit_request accepts
     // the source dataset using the regression chassis.
@@ -3983,29 +4187,33 @@ p4a_status_t fit_di_pls(Context& ctx,
     model->tol = cfg.tol;
     model->max_iter = cfg.max_iter;
 
-    std::vector<double> xk;
-    std::vector<double> yk;
-    center_scale_in_place(x_source_buf, n, p, cfg.center_x != 0, cfg.scale_x != 0,
-                          model->x_mean, model->x_scale, xk);
-    center_scale_in_place(y_source_buf, n, q, cfg.center_y != 0, cfg.scale_y != 0,
-                          model->y_mean, model->y_scale, yk);
+    std::vector<double> source_mean;
+    std::vector<double> target_mean;
+    column_mean_raw(x_source_buf, n, p, source_mean);
+    column_mean_raw(x_target_buf, n_target, p, target_mean);
+    if (cfg.center_x == 0) {
+        std::fill(source_mean.begin(), source_mean.end(), 0.0);
+        std::fill(target_mean.begin(), target_mean.end(), 0.0);
+    }
+    model->x_mean = target_mean;
+    resize_fill(model->x_scale, p, 1.0);
 
-    // Compute target mean and the source-vs-target difference vector d
-    // (in centered source space).
-    std::vector<double> target_mean(p, 0.0);
-    for (std::size_t row = 0; row < n_target; ++row) {
-        for (std::size_t feature = 0; feature < p; ++feature) {
-            target_mean[feature] += x_target_buf[idx(row, p, feature)];
-        }
+    std::vector<double> xk;
+    std::vector<double> xs_work;
+    std::vector<double> xt_work;
+    center_with_mean(x_source_buf, n, p, source_mean, xk);
+    center_with_mean(x_source_buf, n, p, source_mean, xs_work);
+    center_with_mean(x_target_buf, n_target, p, target_mean, xt_work);
+
+    std::vector<double> y_mean;
+    column_mean_raw(y_source_buf, n, q, y_mean);
+    if (cfg.center_y == 0) {
+        std::fill(y_mean.begin(), y_mean.end(), 0.0);
     }
-    const double n_target_inv = (n_target > 0)
-        ? 1.0 / static_cast<double>(n_target) : 0.0;
-    for (double& value : target_mean) value *= n_target_inv;
-    std::vector<double> diff(p, 0.0);
-    for (std::size_t feature = 0; feature < p; ++feature) {
-        diff[feature] = model->x_mean[feature] - target_mean[feature];
-    }
-    double diff_ss = squared_norm(diff);
+    model->y_mean = y_mean;
+    resize_fill(model->y_scale, q, 1.0);
+    std::vector<double> yk;
+    center_with_mean(y_source_buf, n, q, y_mean, yk);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -4015,96 +4223,130 @@ p4a_status_t fit_di_pls(Context& ctx,
     resize_fill(scores_t, n * a, 0.0);
     resize_fill(y_scores_u, n * a, 0.0);
 
-    std::vector<double> covariance;
-    resize_fill(covariance, p * q, 0.0);
-    // Cross-covariance: covariance = X^T * Y  (p x q).
-    // X is (n x p) row-major; Y is (n x q) row-major.
-    pls4all::linalg::gemm(
-        pls4all::linalg::Trans_Yes, pls4all::linalg::Trans_No,
-        p, q, n,
-        1.0,
-        xk.data(), p,
-        yk.data(), q,
-        0.0,
-        covariance.data(), q);
-
-    std::vector<double> basis_v;
-    resize_fill(basis_v, p * a, 0.0);
-
     for (std::size_t comp = 0; comp < a; ++comp) {
-        std::vector<double> direction;
-        status = dominant_left_singular_direction(ctx, covariance, p, q,
-                                                  cfg.max_iter, cfg.tol,
-                                                  comp, direction);
+        std::vector<double> yty(q * q, 0.0);
+        for (std::size_t i = 0; i < q; ++i) {
+            for (std::size_t j = i; j < q; ++j) {
+                double sum = 0.0;
+                for (std::size_t row = 0; row < n; ++row) {
+                    sum += yk[idx(row, q, i)] * yk[idx(row, q, j)];
+                }
+                yty[idx(i, q, j)] = sum;
+                yty[idx(j, q, i)] = sum;
+            }
+        }
+        double y_energy = 0.0;
+        for (std::size_t target = 0; target < q; ++target) {
+            y_energy += yty[idx(target, q, target)];
+        }
+        if (y_energy <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("DI-PLS Y residual vanished at component %llu", ull(comp));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+
+        std::vector<double> covariance(p * q, 0.0);
+        pls4all::linalg::gemm(
+            pls4all::linalg::Trans_Yes, pls4all::linalg::Trans_No,
+            p, q, n,
+            1.0,
+            xk.data(), p,
+            yk.data(), q,
+            0.0,
+            covariance.data(), q);
+
+        std::vector<double> direction(p, 0.0);
+        if (q == 1U) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                direction[feature] = covariance[idx(feature, q, 0)] / y_energy;
+            }
+        } else {
+            status = dominant_left_singular_direction(ctx, covariance, p, q,
+                                                      cfg.max_iter, cfg.tol,
+                                                      comp, direction);
+            if (status != P4A_OK) return status;
+        }
+
+        std::vector<double> D;
+        status = convex_relaxation_matrix(ctx, xs_work, xt_work, n, n_target, p,
+                                          cfg.max_iter, cfg.tol, D);
         if (status != P4A_OK) return status;
 
-        // DI step: remove a fraction of the direction's component along
-        // the source-target difference. The fraction is bounded in
-        // [0, 1] and equals lambda / (1 + lambda) so lambda=0 leaves the
-        // direction unchanged and lambda → ∞ projects it onto the
-        // orthogonal complement of `diff`.
-        if (lambda > 0.0 && diff_ss >
-            std::numeric_limits<double>::epsilon()) {
-            double projection = 0.0;
-            for (std::size_t feature = 0; feature < p; ++feature) {
-                projection += direction[feature] * diff[feature];
+        std::vector<double> reg(p * p, 0.0);
+        for (std::size_t row = 0; row < p; ++row) {
+            for (std::size_t col = 0; col < p; ++col) {
+                reg[idx(row, p, col)] = (row == col ? 1.0 : 0.0) +
+                    (lambda / y_energy) * D[idx(row, p, col)];
             }
-            const double frac = lambda / (1.0 + lambda);
-            const double scale = frac * (projection / diff_ss);
-            for (std::size_t feature = 0; feature < p; ++feature) {
-                direction[feature] -= scale * diff[feature];
+        }
+        std::vector<double> reg_inv;
+        if (!invert_square(reg, p, reg_inv)) {
+            ctx.set_errorf("DI-PLS regularized system is singular at component %llu",
+                           ull(comp));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        std::vector<double> solved(p, 0.0);
+        for (std::size_t row = 0; row < p; ++row) {
+            for (std::size_t col = 0; col < p; ++col) {
+                solved[row] += reg_inv[idx(row, p, col)] * direction[col];
             }
-            const double norm = std::sqrt(squared_norm(direction));
-            if (norm <= std::numeric_limits<double>::epsilon()) {
-                ctx.set_errorf(
-                    "DI-PLS direction collapsed at component %llu", ull(comp));
-                return P4A_ERR_NUMERICAL_FAILURE;
-            }
-            for (double& value : direction) value /= norm;
+        }
+        direction = std::move(solved);
+        const double direction_norm = std::sqrt(squared_norm(direction));
+        if (direction_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("DI-PLS direction collapsed at component %llu", ull(comp));
+            return P4A_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : direction) {
+            value /= direction_norm;
         }
 
         std::vector<double> x_score;
         matrix_vector_product(xk, n, p, direction, x_score);
-        const double x_score_norm = std::sqrt(squared_norm(x_score));
-        if (x_score_norm <= std::numeric_limits<double>::epsilon()) {
+        const double x_score_ss = squared_norm(x_score);
+        if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("DI-PLS X score vanished at component %llu",
                            ull(comp));
             return P4A_ERR_NUMERICAL_FAILURE;
         }
-        for (double& value : x_score) value /= x_score_norm;
-        for (double& value : direction) value /= x_score_norm;
-
-        // x_loadings = X^T * x_score, y_loadings = Y^T * x_score
-        // (BLAS gemv — see comment on fit_pls_regression_simpls for
-        // perf/parity rationale).
-        std::vector<double> x_loadings(p, 0.0);
-        pls4all::linalg::gemv(
-            pls4all::linalg::Trans_Yes, n, p, 1.0,
-            xk.data(), x_score.data(), 0.0, x_loadings.data());
-        std::vector<double> y_loadings(q, 0.0);
-        pls4all::linalg::gemv(
-            pls4all::linalg::Trans_Yes, n, q, 1.0,
-            yk.data(), x_score.data(), 0.0, y_loadings.data());
-
-        std::vector<double> v = x_loadings;
-        if (comp > 0U) {
-            for (std::size_t prev = 0; prev < comp; ++prev) {
-                double projection = 0.0;
-                for (std::size_t feature = 0; feature < p; ++feature) {
-                    projection += basis_v[idx(feature, a, prev)] * v[feature];
-                }
-                for (std::size_t feature = 0; feature < p; ++feature) {
-                    v[feature] -= basis_v[idx(feature, a, prev)] * projection;
-                }
-            }
-        }
-        const double v_norm = std::sqrt(squared_norm(v));
-        if (v_norm <= std::numeric_limits<double>::epsilon()) {
-            ctx.set_errorf("DI-PLS deflation basis vanished at component %llu",
+        std::vector<double> source_score;
+        std::vector<double> target_score;
+        matrix_vector_product(xs_work, n, p, direction, source_score);
+        matrix_vector_product(xt_work, n_target, p, direction, target_score);
+        const double source_score_ss = squared_norm(source_score);
+        const double target_score_ss = squared_norm(target_score);
+        if (source_score_ss <= std::numeric_limits<double>::epsilon() ||
+            target_score_ss <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("DI-PLS domain score vanished at component %llu",
                            ull(comp));
             return P4A_ERR_NUMERICAL_FAILURE;
         }
-        for (double& value : v) value /= v_norm;
+
+        std::vector<double> x_loadings(p, 0.0);
+        std::vector<double> source_loadings(p, 0.0);
+        std::vector<double> target_loadings(p, 0.0);
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            double x_sum = 0.0;
+            double source_sum = 0.0;
+            double target_sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                x_sum += x_score[row] * xk[idx(row, p, feature)];
+                source_sum += source_score[row] * xs_work[idx(row, p, feature)];
+            }
+            for (std::size_t row = 0; row < n_target; ++row) {
+                target_sum += target_score[row] * xt_work[idx(row, p, feature)];
+            }
+            x_loadings[feature] = x_sum / x_score_ss;
+            source_loadings[feature] = source_sum / source_score_ss;
+            target_loadings[feature] = target_sum / target_score_ss;
+        }
+        std::vector<double> y_loadings(q, 0.0);
+        for (std::size_t target = 0; target < q; ++target) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += yk[idx(row, q, target)] * x_score[row];
+            }
+            y_loadings[target] = sum / x_score_ss;
+        }
 
         std::vector<double> y_scores(n, 0.0);
         const double y_loading_ss = squared_norm(y_loadings);
@@ -4121,7 +4363,6 @@ p4a_status_t fit_di_pls(Context& ctx,
         for (std::size_t feature = 0; feature < p; ++feature) {
             model->weights_w[idx(feature, a, comp)] = direction[feature];
             model->loadings_p[idx(feature, a, comp)] = x_loadings[feature];
-            basis_v[idx(feature, a, comp)] = v[feature];
         }
         for (std::size_t target = 0; target < q; ++target) {
             model->y_loadings_q[idx(target, a, comp)] = y_loadings[target];
@@ -4131,18 +4372,26 @@ p4a_status_t fit_di_pls(Context& ctx,
             y_scores_u[idx(row, a, comp)] = y_scores[row];
         }
 
-        std::vector<double> v_transpose_s(q, 0.0);
-        for (std::size_t target = 0; target < q; ++target) {
-            double sum = 0.0;
+        for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
-                sum += v[feature] * covariance[idx(feature, q, target)];
+                xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
+                xs_work[idx(row, p, feature)] -=
+                    source_score[row] * source_loadings[feature];
             }
-            v_transpose_s[target] = sum;
-        }
-        for (std::size_t feature = 0; feature < p; ++feature) {
             for (std::size_t target = 0; target < q; ++target) {
-                covariance[idx(feature, q, target)] -=
-                    v[feature] * v_transpose_s[target];
+                yk[idx(row, q, target)] -= x_score[row] * y_loadings[target];
+            }
+        }
+        double xt_sum = 0.0;
+        for (double value : xt_work) {
+            xt_sum += value;
+        }
+        if (xt_sum != 0.0) {
+            for (std::size_t row = 0; row < n_target; ++row) {
+                for (std::size_t feature = 0; feature < p; ++feature) {
+                    xt_work[idx(row, p, feature)] -=
+                        target_score[row] * target_loadings[feature];
+                }
             }
         }
     }

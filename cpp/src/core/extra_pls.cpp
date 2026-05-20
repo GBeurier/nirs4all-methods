@@ -7,11 +7,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <new>
 #include <random>
 #include <vector>
 
 #include "core/matrix_view.hpp"
+#include "core/model.hpp"
+#include "core/status.hpp"
 
 namespace pls4all::core {
 
@@ -55,6 +58,19 @@ constexpr double kEps = 1e-12;
     return P4A_OK;
 }
 
+[[nodiscard]] p4a_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
+                                                  std::int64_t rows,
+                                                  std::int64_t cols) noexcept {
+    p4a_matrix_view_t view{};
+    view.data = values.data();
+    view.rows = rows;
+    view.cols = cols;
+    view.row_stride = cols > 0 ? cols : 1;
+    view.col_stride = 1;
+    view.dtype = P4A_DTYPE_F64;
+    return view;
+}
+
 double squared_norm(const std::vector<double>& v) {
     double s = 0.0;
     for (double x : v) s += x * x;
@@ -84,11 +100,127 @@ void subtract_means(std::vector<double>& mat, std::size_t rows,
     }
 }
 
-void soft_threshold(std::vector<double>& w, double lambda) {
-    for (double& v : w) {
-        const double abs_v = std::fabs(v);
-        v = (abs_v > lambda) ? std::copysign(abs_v - lambda, v) : 0.0;
+[[nodiscard]] bool solve_linear_system(std::vector<double> a,
+                                       std::vector<double> b,
+                                       std::size_t n,
+                                       std::vector<double>& x) {
+    for (std::size_t col = 0; col < n; ++col) {
+        std::size_t pivot = col;
+        double pivot_abs = std::fabs(a[idx(col, n, col)]);
+        for (std::size_t row = col + 1U; row < n; ++row) {
+            const double candidate = std::fabs(a[idx(row, n, col)]);
+            if (candidate > pivot_abs) {
+                pivot = row;
+                pivot_abs = candidate;
+            }
+        }
+        if (pivot_abs <= std::numeric_limits<double>::epsilon()) {
+            return false;
+        }
+        if (pivot != col) {
+            for (std::size_t j = col; j < n; ++j) {
+                std::swap(a[idx(col, n, j)], a[idx(pivot, n, j)]);
+            }
+            std::swap(b[col], b[pivot]);
+        }
+        const double diag = a[idx(col, n, col)];
+        for (std::size_t row = col + 1U; row < n; ++row) {
+            const double factor = a[idx(row, n, col)] / diag;
+            if (factor == 0.0) {
+                continue;
+            }
+            a[idx(row, n, col)] = 0.0;
+            for (std::size_t j = col + 1U; j < n; ++j) {
+                a[idx(row, n, j)] -= factor * a[idx(col, n, j)];
+            }
+            b[row] -= factor * b[col];
+        }
     }
+
+    x.assign(n, 0.0);
+    for (std::size_t rev = 0; rev < n; ++rev) {
+        const std::size_t row = n - 1U - rev;
+        double sum = b[row];
+        for (std::size_t col = row + 1U; col < n; ++col) {
+            sum -= a[idx(row, n, col)] * x[col];
+        }
+        const double diag = a[idx(row, n, row)];
+        if (std::fabs(diag) <= std::numeric_limits<double>::epsilon()) {
+            return false;
+        }
+        x[row] = sum / diag;
+    }
+    return true;
+}
+
+[[nodiscard]] p4a_status_t fit_poisson_irls(Context& ctx,
+                                            const std::vector<double>& design,
+                                            const std::vector<double>& Y,
+                                            std::size_t n,
+                                            std::size_t q,
+                                            std::size_t n_terms,
+                                            std::int32_t max_iter,
+                                            std::vector<double>& beta) {
+    constexpr double ridge = 1e-8;
+    beta.assign(q * n_terms, 0.0);
+    for (std::size_t target = 0; target < q; ++target) {
+        double mean = 0.0;
+        for (std::size_t row = 0; row < n; ++row) {
+            const double y = Y[idx(row, q, target)];
+            if (y < 0.0 || !std::isfinite(y)) {
+                ctx.set_error("Poisson PLS-GLM requires finite non-negative Y");
+                return P4A_ERR_INVALID_ARGUMENT;
+            }
+            mean += y;
+        }
+        mean /= static_cast<double>(n);
+        beta[target * n_terms] = std::log(std::max(mean, 1e-12));
+    }
+    const int iterations = std::max(1, static_cast<int>(max_iter));
+    for (int iter = 0; iter < iterations; ++iter) {
+        double max_step = 0.0;
+        for (std::size_t target = 0; target < q; ++target) {
+            std::vector<double> gradient(n_terms, 0.0);
+            std::vector<double> hessian(n_terms * n_terms, 0.0);
+            for (std::size_t row = 0; row < n; ++row) {
+                double eta = 0.0;
+                for (std::size_t term = 0; term < n_terms; ++term) {
+                    eta += beta[target * n_terms + term] *
+                           design[idx(row, n_terms, term)];
+                }
+                eta = std::clamp(eta, -40.0, 40.0);
+                const double mu = std::exp(eta);
+                const double residual = mu - Y[idx(row, q, target)];
+                for (std::size_t a = 0; a < n_terms; ++a) {
+                    const double za = design[idx(row, n_terms, a)];
+                    gradient[a] += residual * za;
+                    for (std::size_t b = 0; b < n_terms; ++b) {
+                        hessian[idx(a, n_terms, b)] +=
+                            mu * za * design[idx(row, n_terms, b)];
+                    }
+                }
+            }
+            hessian[idx(0, n_terms, 0)] += ridge;
+            for (std::size_t term = 1; term < n_terms; ++term) {
+                const std::size_t offset = target * n_terms + term;
+                gradient[term] += ridge * beta[offset];
+                hessian[idx(term, n_terms, term)] += ridge;
+            }
+            std::vector<double> step;
+            if (!solve_linear_system(hessian, gradient, n_terms, step)) {
+                ctx.set_error("Poisson PLS-GLM IRLS system is singular");
+                return P4A_ERR_NUMERICAL_FAILURE;
+            }
+            for (std::size_t term = 0; term < n_terms; ++term) {
+                beta[target * n_terms + term] -= step[term];
+                max_step = std::max(max_step, std::fabs(step[term]));
+            }
+        }
+        if (max_step < 1e-9) {
+            break;
+        }
+    }
+    return P4A_OK;
 }
 
 // SIMPLS in centered space (xk and yk are mutated). Builds the regression
@@ -314,9 +446,11 @@ p4a_status_t fit_sparse_pls_da(Context& ctx,
         ctx.set_error("y_labels length must equal X.rows");
         return P4A_ERR_SHAPE_MISMATCH;
     }
-    std::vector<double> X_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    p4a_status_t status = validate_nonnull_view(X);
+    if (status != P4A_OK) {
+        ctx.set_errorf("X matrix view is invalid: %s", status_to_string(status));
+        return status;
+    }
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     std::int32_t max_label = 0;
@@ -341,23 +475,23 @@ p4a_status_t fit_sparse_pls_da(Context& ctx,
     }
     for (double& v : out.class_priors)
         v /= static_cast<double>(n);
-    column_means(X_buf, n, p, out.x_mean);
-    subtract_means(X_buf, n, p, out.x_mean);
-    column_means(Yv, n, q, out.y_mean);
-    subtract_means(Yv, n, q, out.y_mean);
-    const double lambda = cfg.sparsity_lambda;
-    // Simple soft-threshold on the SIMPLS direction at each component.
     const std::size_t a = std::min<std::size_t>(
         static_cast<std::size_t>(cfg.n_components),
         std::min(n - 1, p));
-    std::vector<double> coefs;
-    std::vector<double> weights;
-    simple_simpls(X_buf, Yv, n, p, q, a, coefs, &weights);
-    if (lambda > 0.0) {
-        soft_threshold(weights, lambda);
-    }
+    Config sparse_cfg = cfg;
+    sparse_cfg.algorithm = P4A_ALGO_SPARSE_PLS;
+    sparse_cfg.solver = P4A_SOLVER_SIMPLS;
+    sparse_cfg.deflation = P4A_DEFLATION_REGRESSION;
+    sparse_cfg.n_components = static_cast<std::int32_t>(a);
+    p4a_matrix_view_t Y_view = rowmajor_f64_view(
+        Yv, static_cast<std::int64_t>(n), static_cast<std::int64_t>(q));
+    std::unique_ptr<Model> model;
+    status = fit_model(ctx, sparse_cfg, X, Y_view, model);
+    if (status != P4A_OK) return status;
     out.n_classes = static_cast<std::int32_t>(q);
-    out.coefficients = std::move(coefs);
+    out.coefficients = std::move(model->coefficients);
+    out.x_mean = std::move(model->x_mean);
+    out.y_mean = std::move(model->y_mean);
     ctx.clear_error();
     return P4A_OK;
 }
@@ -819,21 +953,88 @@ p4a_status_t fit_pls_glm(Context& ctx,
     const std::size_t a = std::min<std::size_t>(
         static_cast<std::size_t>(cfg.n_components),
         std::min(n - 1, p));
-    // Step 1: PLS regression on Y as continuous (logistic ≈ identity link
-    // for the latent space).
+    if (a == 0U) {
+        ctx.set_error("PLS-GLM requires at least one component");
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+
     std::vector<double> Y_centered = Y_buf;
     std::vector<double> y_mean(q, 0.0);
     column_means(Y_centered, n, q, y_mean);
     subtract_means(Y_centered, n, q, y_mean);
     std::vector<double> coefs;
-    simple_simpls(X_buf, Y_centered, n, p, q, a, coefs, nullptr);
-    // Step 2: a few IRLS iterations on the predicted scores to refine
-    // intercept and coefficient scaling.
-    std::vector<double> intercept(q, 0.0);
-    for (std::size_t target = 0; target < q; ++target) {
-        intercept[target] = y_mean[target];
+    if (!poisson) {
+        Config pls_cfg = cfg;
+        pls_cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
+        pls_cfg.solver = P4A_SOLVER_SIMPLS;
+        pls_cfg.deflation = P4A_DEFLATION_REGRESSION;
+        pls_cfg.n_components = static_cast<std::int32_t>(a);
+        std::unique_ptr<Model> model;
+        status = fit_model(ctx, pls_cfg, X, Y, model);
+        if (status != P4A_OK) return status;
+        std::vector<double> intercept = model->y_mean;
+        for (std::size_t target = 0; target < q; ++target) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                intercept[target] -= model->x_mean[feature] *
+                    model->coefficients[feature * q + target];
+            }
+        }
+        out.coefficients = std::move(model->coefficients);
+        out.intercept = std::move(intercept);
+        out.n_features = static_cast<std::int32_t>(p);
+        out.n_classes = static_cast<std::int32_t>(q);
+        out.n_components = static_cast<std::int32_t>(a);
+        ctx.clear_error();
+        return P4A_OK;
     }
-    out.coefficients = std::move(coefs);
+
+    // Poisson PLS-GLM: build a supervised PLS score design, fit the GLM
+    // on latent scores, then map score coefficients back to feature space.
+    std::vector<double> weights;
+    simple_simpls(X_buf, Y_centered, n, p, q, a, coefs, &weights);
+
+    std::vector<double> scores(n * a, 0.0);
+    for (std::size_t row = 0; row < n; ++row) {
+        for (std::size_t comp = 0; comp < a; ++comp) {
+            double sum = 0.0;
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                sum += X_buf[row * p + feature] * weights[feature * a + comp];
+            }
+            scores[row * a + comp] = sum;
+        }
+    }
+    const std::size_t n_terms = a + 1U;
+    std::vector<double> design(n * n_terms, 0.0);
+    for (std::size_t row = 0; row < n; ++row) {
+        design[row * n_terms] = 1.0;
+        for (std::size_t comp = 0; comp < a; ++comp) {
+            design[row * n_terms + comp + 1U] = scores[row * a + comp];
+        }
+    }
+
+    std::vector<double> beta;
+    status = fit_poisson_irls(ctx, design, Y_buf, n, q, n_terms, cfg.max_iter, beta);
+    if (status != P4A_OK) return status;
+
+    std::vector<double> intercept(q, 0.0);
+    std::vector<double> feature_coefs(p * q, 0.0);
+    for (std::size_t target = 0; target < q; ++target) {
+        intercept[target] = beta[target * n_terms];
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            double sum = 0.0;
+            for (std::size_t comp = 0; comp < a; ++comp) {
+                sum += weights[feature * a + comp] *
+                    beta[target * n_terms + comp + 1U];
+            }
+            feature_coefs[feature * q + target] = sum;
+        }
+    }
+    for (std::size_t target = 0; target < q; ++target) {
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            intercept[target] -= x_mean[feature] * feature_coefs[feature * q + target];
+        }
+    }
+    out.coefficients = std::move(feature_coefs);
     out.intercept = std::move(intercept);
     out.n_features = static_cast<std::int32_t>(p);
     out.n_classes = static_cast<std::int32_t>(q);

@@ -200,13 +200,60 @@ namespace {
         return P4A_ERR_INTERNAL;
     }
 
+    if (model->coefficients.size() != p * q) {
+        ctx.set_error("shaving fitted model returned inconsistent coefficients");
+        return P4A_ERR_INTERNAL;
+    }
+
+    std::vector<double> coefficients(p, 0.0);
+    double norm_sq = 0.0;
+    for (std::size_t feature = 0; feature < p; ++feature) {
+        const double value = model->coefficients[idx(feature, q, 0)];
+        coefficients[feature] = value;
+        norm_sq += value * value;
+    }
+    if (!std::isfinite(norm_sq) || norm_sq <= std::numeric_limits<double>::epsilon()) {
+        ctx.set_error("shaving SR coefficients collapsed");
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+
+    const auto n = static_cast<std::size_t>(subset_x.rows);
+    const double norm = std::sqrt(norm_sq);
+    std::vector<double> t_scores(n, 0.0);
+    for (std::size_t row = 0; row < n; ++row) {
+        double score = 0.0;
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            score += read_value(subset_x, row, feature) * coefficients[feature] / norm;
+        }
+        t_scores[row] = score;
+    }
+
+    double t_norm_sq = 0.0;
+    for (const double value : t_scores) {
+        t_norm_sq += value * value;
+    }
+    if (!std::isfinite(t_norm_sq) || t_norm_sq <= std::numeric_limits<double>::epsilon()) {
+        ctx.set_error("shaving SR score vector collapsed");
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+
     out.assign(p, 0.0);
     for (std::size_t feature = 0; feature < p; ++feature) {
-        double best = 0.0;
-        for (std::size_t target = 0; target < q; ++target) {
-            best = std::max(best, std::fabs(model->coefficients[idx(feature, q, target)]));
+        double loading = 0.0;
+        for (std::size_t row = 0; row < n; ++row) {
+            loading += read_value(subset_x, row, feature) * t_scores[row];
         }
-        out[feature] = best;
+        loading /= t_norm_sq;
+
+        double explained = 0.0;
+        double residual = 0.0;
+        for (std::size_t row = 0; row < n; ++row) {
+            const double fitted = t_scores[row] * loading;
+            const double error = read_value(subset_x, row, feature) - fitted;
+            explained += fitted * fitted;
+            residual += error * error;
+        }
+        out[feature] = explained / std::max(residual, std::numeric_limits<double>::epsilon());
     }
     return P4A_OK;
 }
@@ -217,7 +264,8 @@ namespace {
                                        const p4a_matrix_view_t& Y,
                                        const ::pls4all::core::ValidationPlan& plan,
                                        const std::vector<std::int64_t>& columns,
-                                       double& out) {
+                                       double& out,
+                                       std::int32_t& best_n_components) {
     std::vector<double> subset_x;
     p4a_status_t status = copy_columns(ctx, X, columns, subset_x);
     if (status != P4A_OK) {
@@ -225,12 +273,29 @@ namespace {
     }
     p4a_matrix_view_t subset_view =
         rowmajor_f64_view(subset_x, X.rows, static_cast<std::int64_t>(columns.size()));
-    ::pls4all::core::CrossValidationResult cv;
-    status = ::pls4all::core::cross_validate_regression(ctx, cfg, subset_view, Y, plan, cv);
-    if (status != P4A_OK) {
-        return status;
+    const std::int32_t max_components =
+        std::min<std::int32_t>(cfg.n_components,
+                               static_cast<std::int32_t>(columns.size()));
+    out = std::numeric_limits<double>::infinity();
+    best_n_components = 1;
+    for (std::int32_t n_components = 1; n_components <= max_components; ++n_components) {
+        ::pls4all::core::Config local_cfg = cfg;
+        local_cfg.n_components = n_components;
+        ::pls4all::core::CrossValidationResult cv;
+        status = ::pls4all::core::cross_validate_regression(ctx,
+                                                            local_cfg,
+                                                            subset_view,
+                                                            Y,
+                                                            plan,
+                                                            cv);
+        if (status != P4A_OK) {
+            return status;
+        }
+        if (cv.metrics.rmse < out) {
+            out = cv.metrics.rmse;
+            best_n_components = n_components;
+        }
     }
-    out = cv.metrics.rmse;
     return P4A_OK;
 }
 
@@ -243,18 +308,20 @@ namespace {
         return active;
     }
     std::int32_t remove_count =
-        static_cast<std::int32_t>(std::ceil(static_cast<double>(active.size()) * shave_fraction));
+        static_cast<std::int32_t>(std::round(static_cast<double>(active.size()) * shave_fraction));
     remove_count = std::max(1, remove_count);
     remove_count = std::min(remove_count, static_cast<std::int32_t>(active.size()) - min_features);
     std::vector<std::int64_t> order = active;
-    std::stable_sort(order.begin(), order.end(), [&full_scores](std::int64_t lhs, std::int64_t rhs) {
-        const double left = full_scores[static_cast<std::size_t>(lhs)];
-        const double right = full_scores[static_cast<std::size_t>(rhs)];
-        if (left == right) {
-            return lhs > rhs;
-        }
-        return left < right;
-    });
+    std::stable_sort(order.begin(),
+                     order.end(),
+                     [&full_scores](std::int64_t lhs, std::int64_t rhs) {
+                         const double left = full_scores[static_cast<std::size_t>(lhs)];
+                         const double right = full_scores[static_cast<std::size_t>(rhs)];
+                         if (left == right) {
+                             return lhs > rhs;
+                         }
+                         return left < right;
+                     });
     std::vector<unsigned char> remove(full_scores.size(), 0U);
     for (std::int32_t i = 0; i < remove_count; ++i) {
         remove[static_cast<std::size_t>(order[static_cast<std::size_t>(i)])] = 1U;
@@ -298,21 +365,32 @@ p4a_status_t select_by_shaving(Context& ctx,
         }
 
         const auto p = static_cast<std::size_t>(X.cols);
+        std::int32_t planned_steps = 1;
+        std::int32_t remaining = static_cast<std::int32_t>(X.cols);
+        while (remaining > min_features) {
+            ++planned_steps;
+            const std::int32_t remove_count =
+                std::max(1,
+                         static_cast<std::int32_t>(
+                             std::round(static_cast<double>(remaining) * shave_fraction)));
+            remaining -= remove_count;
+        }
+        const std::int32_t actual_steps = planned_steps;
         std::vector<std::int64_t> active(p, 0);
         for (std::size_t feature = 0; feature < p; ++feature) {
             active[feature] = static_cast<std::int64_t>(feature);
         }
 
         std::vector<std::vector<std::int64_t>> candidates;
-        candidates.reserve(static_cast<std::size_t>(n_steps));
-        out.coefficient_scores.assign(static_cast<std::size_t>(n_steps) * p, 0.0);
-        out.rmse_by_step.reserve(static_cast<std::size_t>(n_steps));
-        out.retained_counts.reserve(static_cast<std::size_t>(n_steps));
+        candidates.reserve(static_cast<std::size_t>(actual_steps));
+        out.coefficient_scores.assign(static_cast<std::size_t>(actual_steps) * p, 0.0);
+        out.rmse_by_step.reserve(static_cast<std::size_t>(actual_steps));
+        out.retained_counts.reserve(static_cast<std::size_t>(actual_steps));
 
         double best_rmse = std::numeric_limits<double>::infinity();
         std::int32_t best_step = -1;
 
-        for (std::int32_t step = 0; step < n_steps; ++step) {
+        for (std::int32_t step = 0; step < actual_steps; ++step) {
             std::vector<double> active_x;
             status = copy_columns(ctx, X, active, active_x);
             if (status != P4A_OK) {
@@ -324,8 +402,17 @@ p4a_status_t select_by_shaving(Context& ctx,
                                   X.rows,
                                   static_cast<std::int64_t>(active.size()));
 
+            double rmse = 0.0;
+            std::int32_t best_n_components = cfg.n_components;
+            status = subset_rmse(ctx, cfg, X, Y, plan, active, rmse, best_n_components);
+            if (status != P4A_OK) {
+                out = ShavingSelectionResult{};
+                return status;
+            }
+            ::pls4all::core::Config score_cfg = cfg;
+            score_cfg.n_components = best_n_components;
             std::vector<double> active_scores;
-            status = compute_subset_scores(ctx, cfg, active_x_view, Y, active_scores);
+            status = compute_subset_scores(ctx, score_cfg, active_x_view, Y, active_scores);
             if (status != P4A_OK) {
                 out = ShavingSelectionResult{};
                 return status;
@@ -344,21 +431,15 @@ p4a_status_t select_by_shaving(Context& ctx,
                     active_scores[local];
             }
 
-            double rmse = 0.0;
-            status = subset_rmse(ctx, cfg, X, Y, plan, active, rmse);
-            if (status != P4A_OK) {
-                out = ShavingSelectionResult{};
-                return status;
-            }
             out.retained_counts.push_back(static_cast<std::int64_t>(active.size()));
             out.rmse_by_step.push_back(rmse);
             candidates.push_back(active);
-            if (rmse < best_rmse) {
+            if (rmse <= best_rmse) {
                 best_rmse = rmse;
                 best_step = step;
             }
 
-            if (step != n_steps - 1) {
+            if (step != actual_steps - 1) {
                 active = shave_active(active, full_scores, min_features, shave_fraction);
             }
         }
@@ -371,7 +452,7 @@ p4a_status_t select_by_shaving(Context& ctx,
         out.n_features = static_cast<std::int32_t>(X.cols);
         out.n_targets = static_cast<std::int32_t>(Y.cols);
         out.n_components = cfg.n_components;
-        out.n_steps = n_steps;
+        out.n_steps = actual_steps;
         out.min_features = min_features;
         out.best_step = best_step;
         out.shave_fraction = shave_fraction;

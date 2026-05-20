@@ -7,12 +7,15 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <new>
+#include <numeric>
 #include <utility>
 #include <vector>
 
 #include "core/cross_validation.hpp"
 #include "core/matrix_view.hpp"
+#include "core/model.hpp"
 #include "core/status.hpp"
 
 namespace {
@@ -127,8 +130,8 @@ namespace {
                        static_cast<int>(cfg.n_components));
         return P4A_ERR_INVALID_ARGUMENT;
     }
-    if (min_features < cfg.n_components || min_features >= X.cols) {
-        ctx.set_errorf("min_features must be in [n_components, %lld); got %d",
+    if (min_features < 1 || min_features >= X.cols) {
+        ctx.set_errorf("min_features must be in [1, %lld); got %d",
                        static_cast<long long>(X.cols),
                        static_cast<int>(min_features));
         return P4A_ERR_INVALID_ARGUMENT;
@@ -136,10 +139,6 @@ namespace {
     if (X.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max()) ||
         Y.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max())) {
         ctx.set_error("BVE matrix dimensions exceed int32 result storage");
-        return P4A_ERR_INVALID_ARGUMENT;
-    }
-    if (static_cast<std::int64_t>(n_steps) > X.cols - min_features) {
-        ctx.set_error("n_steps would remove more variables than min_features allows");
         return P4A_ERR_INVALID_ARGUMENT;
     }
     return P4A_OK;
@@ -186,7 +185,8 @@ namespace {
                                        const p4a_matrix_view_t& Y,
                                        const ::pls4all::core::ValidationPlan& plan,
                                        const std::vector<std::int64_t>& columns,
-                                       double& out) {
+                                       double& out,
+                                       std::int32_t& best_n_components) {
     std::vector<double> subset_x;
     p4a_status_t status = copy_columns(ctx, X, columns, subset_x);
     if (status != P4A_OK) {
@@ -194,25 +194,153 @@ namespace {
     }
     p4a_matrix_view_t subset_view =
         rowmajor_f64_view(subset_x, X.rows, static_cast<std::int64_t>(columns.size()));
-    ::pls4all::core::CrossValidationResult cv;
-    status = ::pls4all::core::cross_validate_regression(ctx, cfg, subset_view, Y, plan, cv);
-    if (status != P4A_OK) {
-        return status;
+    const std::int32_t max_components =
+        std::min<std::int32_t>(cfg.n_components,
+                               static_cast<std::int32_t>(columns.size()));
+    out = std::numeric_limits<double>::infinity();
+    best_n_components = 1;
+    for (std::int32_t n_components = 1; n_components <= max_components; ++n_components) {
+        ::pls4all::core::Config local_cfg = cfg;
+        local_cfg.n_components = n_components;
+        ::pls4all::core::CrossValidationResult cv;
+        status = ::pls4all::core::cross_validate_regression(ctx,
+                                                            local_cfg,
+                                                            subset_view,
+                                                            Y,
+                                                            plan,
+                                                            cv);
+        if (status != P4A_OK) {
+            return status;
+        }
+        if (cv.metrics.rmse < out) {
+            out = cv.metrics.rmse;
+            best_n_components = n_components;
+        }
     }
-    out = cv.metrics.rmse;
     return P4A_OK;
 }
 
-[[nodiscard]] std::vector<std::int64_t> without_feature(const std::vector<std::int64_t>& active,
-                                                        std::int64_t feature) {
-    std::vector<std::int64_t> out;
-    out.reserve(active.size() - 1U);
-    for (const std::int64_t candidate : active) {
-        if (candidate != feature) {
-            out.push_back(candidate);
+[[nodiscard]] p4a_status_t compute_subset_vip(::pls4all::core::Context& ctx,
+                                              const ::pls4all::core::Config& cfg,
+                                              const p4a_matrix_view_t& subset_x,
+                                              const p4a_matrix_view_t& Y,
+                                              std::vector<double>& out) {
+    ::pls4all::core::Config local_cfg = cfg;
+    local_cfg.store_scores = 1;
+    std::unique_ptr<::pls4all::core::Model> model;
+    p4a_status_t status = ::pls4all::core::fit_model(ctx, local_cfg, subset_x, Y, model);
+    if (status != P4A_OK) {
+        return status;
+    }
+    if (!model) {
+        ctx.set_error("BVE fitted model is null");
+        return P4A_ERR_INTERNAL;
+    }
+    const auto n = static_cast<std::size_t>(model->n_samples);
+    const auto p = static_cast<std::size_t>(model->n_features);
+    const auto q = static_cast<std::size_t>(model->n_targets);
+    const auto a = static_cast<std::size_t>(model->n_components);
+    if (model->weights_w.size() != p * a ||
+        model->y_loadings_q.size() != q * a ||
+        model->scores_t.size() != n * a) {
+        ctx.set_error("BVE fitted model arrays are inconsistent for VIP");
+        return P4A_ERR_INTERNAL;
+    }
+
+    std::vector<double> component_ssy(a, 0.0);
+    double total_ssy = 0.0;
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        double tss = 0.0;
+        for (std::size_t row = 0; row < n; ++row) {
+            const double value = model->scores_t[idx(row, a, comp)];
+            tss += value * value;
+        }
+        double qss = 0.0;
+        for (std::size_t target = 0; target < q; ++target) {
+            const double value = model->y_loadings_q[idx(target, a, comp)];
+            qss += value * value;
+        }
+        component_ssy[comp] = tss * qss;
+        total_ssy += component_ssy[comp];
+    }
+    if (!std::isfinite(total_ssy) || total_ssy <= std::numeric_limits<double>::epsilon()) {
+        ctx.set_error("BVE VIP total explained variance collapsed");
+        return P4A_ERR_NUMERICAL_FAILURE;
+    }
+
+    std::vector<double> weight_norm_sq(a, 0.0);
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            const double value = model->weights_w[idx(feature, a, comp)];
+            weight_norm_sq[comp] += value * value;
+        }
+        if (!std::isfinite(weight_norm_sq[comp]) ||
+            weight_norm_sq[comp] <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_error("BVE VIP loading-weight norm collapsed");
+            return P4A_ERR_NUMERICAL_FAILURE;
         }
     }
-    return out;
+
+    out.assign(p, 0.0);
+    for (std::size_t feature = 0; feature < p; ++feature) {
+        double weighted = 0.0;
+        for (std::size_t comp = 0; comp < a; ++comp) {
+            const double weight = model->weights_w[idx(feature, a, comp)];
+            weighted += component_ssy[comp] * weight * weight / weight_norm_sq[comp];
+        }
+        out[feature] = std::sqrt(static_cast<double>(p) * weighted / total_ssy);
+    }
+    return P4A_OK;
+}
+
+[[nodiscard]] std::vector<std::size_t> bve_removal_order(const std::vector<double>& vip,
+                                                         std::int32_t n_components) {
+    std::vector<std::size_t> remove;
+    remove.reserve(vip.size());
+    for (std::size_t i = 0; i < vip.size(); ++i) {
+        if (vip[i] < 1.0) {
+            remove.push_back(i);
+        }
+    }
+    if (remove.size() <= static_cast<std::size_t>(n_components + 1)) {
+        remove.resize(vip.size());
+        std::iota(remove.begin(), remove.end(), std::size_t{0});
+        std::stable_sort(remove.begin(), remove.end(), [&vip](std::size_t lhs, std::size_t rhs) {
+            const double left = vip[lhs];
+            const double right = vip[rhs];
+            if (left == right) {
+                return lhs < rhs;
+            }
+            return left < right;
+        });
+        const auto keep = std::min(remove.size(), static_cast<std::size_t>(n_components));
+        remove.resize(keep);
+    } else {
+        std::stable_sort(remove.begin(), remove.end());
+    }
+    if (remove.size() >= vip.size()) {
+        remove.resize(vip.size() - 1U);
+    }
+    return remove;
+}
+
+[[nodiscard]] std::vector<std::int64_t> remove_local_indices(
+    const std::vector<std::int64_t>& active,
+    const std::vector<std::size_t>& local_remove) {
+    std::vector<unsigned char> remove(active.size(), 0U);
+    for (const std::size_t local : local_remove) {
+        if (local < remove.size()) {
+            remove[local] = 1U;
+        }
+    }
+    std::vector<std::int64_t> next;
+    next.reserve(active.size() - local_remove.size());
+    for (std::size_t local = 0; local < active.size(); ++local) {
+        if (remove[local] == 0U) {
+            next.push_back(active[local]);
+        }
+    }
+    return next;
 }
 
 }  // namespace
@@ -248,55 +376,81 @@ p4a_status_t select_by_bve(Context& ctx,
 
         std::vector<std::vector<std::int64_t>> candidates;
         candidates.reserve(static_cast<std::size_t>(n_steps));
-        out.candidate_rmse.assign(static_cast<std::size_t>(n_steps) * p, 0.0);
         out.rmse_by_step.reserve(static_cast<std::size_t>(n_steps));
         out.retained_counts.reserve(static_cast<std::size_t>(n_steps));
-        out.removed_indices.reserve(static_cast<std::size_t>(n_steps));
+        out.removed_indices.reserve(static_cast<std::size_t>(n_steps) *
+                                    static_cast<std::size_t>(std::max(1, cfg.n_components)));
 
         double best_rmse = std::numeric_limits<double>::infinity();
         std::int32_t best_step = -1;
+        std::int32_t actual_steps = 0;
 
-        for (std::int32_t step = 0; step < n_steps; ++step) {
-            double best_candidate_rmse = std::numeric_limits<double>::infinity();
-            std::int64_t best_removed = -1;
-            std::vector<std::int64_t> best_candidate;
-
-            for (const std::int64_t feature : active) {
-                std::vector<std::int64_t> candidate = without_feature(active, feature);
-                if (candidate.size() < static_cast<std::size_t>(min_features)) {
-                    continue;
-                }
-                double rmse = 0.0;
-                status = subset_rmse(ctx, cfg, X, Y, plan, candidate, rmse);
-                if (status != P4A_OK) {
-                    out = BveSelectionResult{};
-                    return status;
-                }
-                out.candidate_rmse[static_cast<std::size_t>(step) * p +
-                                   static_cast<std::size_t>(feature)] = rmse;
-                if (rmse < best_candidate_rmse ||
-                    (rmse == best_candidate_rmse &&
-                     (best_removed < 0 || feature < best_removed))) {
-                    best_candidate_rmse = rmse;
-                    best_removed = feature;
-                    best_candidate = std::move(candidate);
-                }
+        while (actual_steps < n_steps &&
+               active.size() > static_cast<std::size_t>(cfg.n_components + 1)) {
+            std::vector<double> active_x;
+            status = copy_columns(ctx, X, active, active_x);
+            if (status != P4A_OK) {
+                out = BveSelectionResult{};
+                return status;
             }
-            if (best_removed < 0) {
-                ctx.set_error("BVE did not produce a removable candidate");
+            p4a_matrix_view_t active_x_view =
+                rowmajor_f64_view(active_x,
+                                  X.rows,
+                                  static_cast<std::int64_t>(active.size()));
+
+            double rmse = 0.0;
+            std::int32_t best_n_components = cfg.n_components;
+            status = subset_rmse(ctx, cfg, X, Y, plan, active, rmse, best_n_components);
+            if (status != P4A_OK) {
+                out = BveSelectionResult{};
+                return status;
+            }
+
+            std::vector<double> vip;
+            ::pls4all::core::Config vip_cfg = cfg;
+            vip_cfg.n_components = best_n_components;
+            status = compute_subset_vip(ctx, vip_cfg, active_x_view, Y, vip);
+            if (status != P4A_OK) {
+                out = BveSelectionResult{};
+                return status;
+            }
+            if (vip.size() != active.size()) {
+                ctx.set_error("BVE VIP score count is inconsistent");
                 out = BveSelectionResult{};
                 return P4A_ERR_INTERNAL;
             }
 
-            out.rmse_by_step.push_back(best_candidate_rmse);
-            out.retained_counts.push_back(static_cast<std::int64_t>(best_candidate.size()));
-            out.removed_indices.push_back(best_removed);
-            candidates.push_back(best_candidate);
-            if (best_candidate_rmse < best_rmse) {
-                best_rmse = best_candidate_rmse;
-                best_step = step;
+            std::vector<double> row(p, 0.0);
+            for (std::size_t local = 0; local < active.size(); ++local) {
+                row[static_cast<std::size_t>(active[local])] = vip[local];
             }
-            active = std::move(best_candidate);
+            out.candidate_rmse.insert(out.candidate_rmse.end(), row.begin(), row.end());
+
+            std::vector<std::size_t> local_remove = bve_removal_order(vip, cfg.n_components);
+            if (local_remove.empty()) {
+                ctx.set_error("BVE did not produce removable VIP candidates");
+                out = BveSelectionResult{};
+                return P4A_ERR_INTERNAL;
+            }
+            std::vector<std::int64_t> next = remove_local_indices(active, local_remove);
+            if (next.empty()) {
+                ctx.set_error("BVE removed all variables");
+                out = BveSelectionResult{};
+                return P4A_ERR_INTERNAL;
+            }
+            for (const std::size_t local : local_remove) {
+                out.removed_indices.push_back(active[local]);
+            }
+
+            out.rmse_by_step.push_back(rmse);
+            out.retained_counts.push_back(static_cast<std::int64_t>(next.size()));
+            candidates.push_back(next);
+            if (rmse < best_rmse) {
+                best_rmse = rmse;
+                best_step = actual_steps;
+            }
+            active = std::move(next);
+            ++actual_steps;
         }
 
         if (best_step < 0) {
@@ -307,7 +461,7 @@ p4a_status_t select_by_bve(Context& ctx,
         out.n_features = static_cast<std::int32_t>(X.cols);
         out.n_targets = static_cast<std::int32_t>(Y.cols);
         out.n_components = cfg.n_components;
-        out.n_steps = n_steps;
+        out.n_steps = actual_steps;
         out.min_features = min_features;
         out.best_step = best_step;
         out.best_rmse = best_rmse;

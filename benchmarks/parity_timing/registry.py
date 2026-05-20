@@ -763,7 +763,9 @@ n_test <- length(pred)
 oh <- matrix(0, nrow=n_test, ncol=n_classes)
 for (i in seq_len(n_test)) {{
   cl <- as.integer(pred[i])
-  if (cl >= 0 && cl < n_classes) {{
+  if (cl >= 1 && cl <= n_classes) {{
+    oh[i, cl] <- 1.0
+  }} else if (cl >= 0 && cl < n_classes) {{
     oh[i, cl + 1] <- 1.0
   }}
 }}
@@ -2351,6 +2353,8 @@ class _Nirs4allAomPlsReference(ReferenceAdapter):
         Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
         mod = _load_intree_module("nirs4all_aom_pls",
                                    _NIRS4ALL_SKLEARN_DIR / "aom_pls.py")
+        from sklearn.model_selection import KFold
+
         cls = mod.POPPLSRegressor if self._per_component else mod.AOMPLSRegressor
         bank = list(mod.compact_bank(X.shape[1]))[:max(1, self._n_operators)]
         if not bank:
@@ -2364,6 +2368,7 @@ class _Nirs4allAomPlsReference(ReferenceAdapter):
             center=True,
             scale=False,
             backend="numpy",
+            cv_splitter=KFold(n_splits=self._cv, shuffle=False),
         )
         y_arg = Y if Y.shape[1] > 1 else Y.ravel()
         self._fit.fit(X, y_arg)
@@ -5418,12 +5423,11 @@ METHODS: list[MethodSpec] = [
         python_reference=lambda **kw: _Nirs4allMbplsReference(
             n_components=kw["n_components"], n_blocks=kw["n_blocks"]),
         r_reference=None,
-        rmse_rel_tol=2.0,
+        rmse_rel_tol=1e-3,
         notes=("In-tree `nirs4all.operators.models.sklearn.mbpls.MBPLS` "
                "is the sanctioned external reference (the mbpls PyPI "
-               "package is broken against sklearn 1.8). pls4all's MB-PLS "
-               "uses block-balanced SIMPLS, the in-tree ref uses NIPALS — "
-               "tolerance widened."),
+               "package is broken against sklearn 1.8). The C++ kernel "
+               "mirrors the in-tree multiblock NIPALS implementation."),
     ),
     MethodSpec(
         name="lw_pls",
@@ -5435,11 +5439,11 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"],
             n_neighbors=kw["n_neighbors"]),
         r_reference=None,
-        rmse_rel_tol=5.0,
+        rmse_rel_tol=1e-3,
         notes=("In-tree `nirs4all.operators.models.sklearn.lwpls.LWPLS` "
-               "is the sanctioned external reference. nirs4all weights "
-               "neighbours via a kernel bandwidth, pls4all uses a k-NN "
-               "cut — both are valid Naes-Centner LW-PLS variants."),
+               "is the sanctioned external reference. The C++ kernel "
+               "uses the same Gaussian-distance weighting with "
+               "`lambda=max(1, 0.5*n_neighbors)`."),
     ),
     MethodSpec(
         name="pls_lda",
@@ -5504,13 +5508,12 @@ METHODS: list[MethodSpec] = [
             cv=kw["cv"]),
         r_reference=None,
         prediction_key="predictions",
-        rmse_rel_tol=5.0,
+        rmse_rel_tol=1e-3,
         notes=("Global AOMPLS/AOM-PLS selector with the compact strict-linear "
                "nirs4all bank: identity, Savitzky-Golay smooth/derivative, "
                "detrend and finite-difference operators. Reference is "
-               "the in-tree nirs4all estimator stack; parity remains "
-               "qualitative because selection tie-breaking and CV "
-               "scoring details differ across implementations."),
+               "the in-tree nirs4all estimator stack with the same "
+               "deterministic contiguous CV folds as the ABI wrappers."),
     ),
     MethodSpec(
         name="pop_pls",
@@ -5525,10 +5528,11 @@ METHODS: list[MethodSpec] = [
             cv=kw["cv"]),
         r_reference=None,
         prediction_key="predictions",
-        rmse_rel_tol=5.0,
+        rmse_rel_tol=1e-3,
         notes=("POPPLS/POP-PLS uses per-component operator selection over the "
                "same compact nirs4all bank. Reference is the in-tree "
-               "nirs4all POPPLSRegressor; parity is qualitative."),
+               "nirs4all POPPLSRegressor with deterministic contiguous "
+               "CV folds."),
     ),
     # ====================================================================
     # §18 — Phase 5 selector shims (21 entries). All compare via a (1, p)

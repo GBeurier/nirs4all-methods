@@ -53,6 +53,34 @@ def adapted_params(method, n: int, p: int, n_components: int) -> dict:
                                             max(1, n_classes - 1)))
     if "max_components" in params:
         params["max_components"] = _cap_components(params["max_components"], n, p)
+    if "window_size" in params:
+        if method.name == "recursive_pls":
+            # Moving-window PLS windows over rows. Global 30x30 parity sweeps
+            # must keep the registry's 60-row window inside the generated
+            # dataset while preserving a real rolling history.
+            params["window_size"] = max(2, min(int(params["window_size"]),
+                                               max(2, n - 1)))
+        else:
+            # Interval selectors use window_size over feature columns.
+            params["window_size"] = max(1, min(int(params["window_size"]), p))
+    for key in ("initial_intervals", "initial_size", "min_size", "min_features",
+                "max_features", "max_size", "top_k"):
+        if key in params:
+            params[key] = max(1, min(int(params[key]), p))
+    if "min_size" in params and "initial_size" in params:
+        params["min_size"] = min(int(params["min_size"]),
+                                 int(params["initial_size"]))
+    if "max_size" in params and "initial_size" in params:
+        params["max_size"] = max(int(params["initial_size"]),
+                                 min(int(params["max_size"]), p))
+    if "max_features" in params and "min_features" in params:
+        params["max_features"] = max(int(params["min_features"]),
+                                     min(int(params["max_features"]), p))
+    if "top_k" in params:
+        upper = p
+        if "initial_intervals" in params:
+            upper = min(upper, int(params["initial_intervals"]))
+        params["top_k"] = max(1, min(int(params["top_k"]), upper))
     if (method.name in {"ipw_select", "rep_select", "shaving_select"}
             and not use_registry_components):
         # These selectors are compared to compact plsVarSel survivor sets.

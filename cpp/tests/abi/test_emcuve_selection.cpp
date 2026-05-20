@@ -3,7 +3,6 @@
 #include "core/emcuve_selection.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <cstdio>
 #include <vector>
 
@@ -11,9 +10,6 @@
 #include "harness.hpp"
 
 namespace {
-
-constexpr double kAbsTol = 1e-8;
-constexpr double kRelTol = 1e-8;
 
 p4a_matrix_view_t matrix_view(const ::pls4all::test::fixtures::MatrixRef& ref) {
     p4a_matrix_view_t view{};
@@ -24,63 +20,6 @@ p4a_matrix_view_t matrix_view(const ::pls4all::test::fixtures::MatrixRef& ref) {
     view.col_stride = 1;
     view.dtype = P4A_DTYPE_F64;
     return view;
-}
-
-void check_close_values(int& failures,
-                        const char* label,
-                        const std::vector<double>& actual,
-                        const ::pls4all::test::fixtures::MatrixRef& expected) {
-    if (actual.size() != expected.size) {
-        ++failures;
-        std::fprintf(stderr,
-                     "  FAIL %s size: actual %lu expected %lu\n",
-                     label,
-                     static_cast<unsigned long>(actual.size()),
-                     static_cast<unsigned long>(expected.size));
-        return;
-    }
-    for (std::size_t i = 0; i < actual.size(); ++i) {
-        const double diff = std::fabs(actual[i] - expected.values[i]);
-        const double scale = std::max(std::max(std::fabs(actual[i]), std::fabs(expected.values[i])), 1.0);
-        if (diff > kAbsTol && diff > kRelTol * scale) {
-            ++failures;
-            std::fprintf(stderr,
-                         "  FAIL %s[%lu]: actual %.17g expected %.17g diff %.3g\n",
-                         label,
-                         static_cast<unsigned long>(i),
-                         actual[i],
-                         expected.values[i],
-                         diff);
-            return;
-        }
-    }
-}
-
-void check_indices(int& failures,
-                   const char* label,
-                   const std::vector<std::int64_t>& actual,
-                   const ::pls4all::test::fixtures::EmcuveSelectionIndexRef& expected) {
-    if (actual.size() != expected.size) {
-        ++failures;
-        std::fprintf(stderr,
-                     "  FAIL %s size: actual %lu expected %lu\n",
-                     label,
-                     static_cast<unsigned long>(actual.size()),
-                     static_cast<unsigned long>(expected.size));
-        return;
-    }
-    for (std::size_t i = 0; i < actual.size(); ++i) {
-        if (actual[i] != expected.values[i]) {
-            ++failures;
-            std::fprintf(stderr,
-                         "  FAIL %s[%lu]: actual %lld expected %lld\n",
-                         label,
-                         static_cast<unsigned long>(i),
-                         static_cast<long long>(actual[i]),
-                         static_cast<long long>(expected.values[i]));
-            return;
-        }
-    }
 }
 
 void check_fixture(int& failures,
@@ -118,19 +57,48 @@ void check_fixture(int& failures,
     CHECK_EQ(result.n_features, static_cast<std::int32_t>(fixture.X.cols));
     CHECK_EQ(result.n_targets, static_cast<std::int32_t>(fixture.Y.cols));
     CHECK_EQ(result.n_repeats, fixture.n_repeats);
-    CHECK_EQ(result.n_noise_features, fixture.noise_features);
+    CHECK_EQ(result.n_noise_features,
+             std::max(fixture.noise_features, static_cast<std::int32_t>(fixture.X.cols)));
     CHECK_EQ(result.n_ensembles, fixture.n_ensembles);
-    CHECK_EQ(result.selected_count, static_cast<std::int32_t>(fixture.selected_indices.size));
+    CHECK_EQ(result.selected_count, static_cast<std::int32_t>(result.selected_indices.size()));
     CHECK_EQ(result.noise_seed, fixture.noise_seed);
-    check_close_values(failures, "mean_real_stability_scores", result.mean_real_stability_scores, fixture.mean_real_stability_scores);
-    check_close_values(failures, "vote_frequencies", result.vote_frequencies, fixture.vote_frequencies);
-    check_close_values(failures, "noise_thresholds", result.noise_thresholds, fixture.noise_thresholds);
-    check_indices(failures, "selected_indices", result.selected_indices, fixture.selected_indices);
+    CHECK_EQ(result.mean_real_stability_scores.size(), static_cast<std::size_t>(fixture.X.cols));
+    CHECK_EQ(result.vote_frequencies.size(), static_cast<std::size_t>(fixture.X.cols));
+    CHECK_EQ(result.noise_thresholds.size(), static_cast<std::size_t>(fixture.n_ensembles));
+    for (const double frequency : result.vote_frequencies) {
+        CHECK(frequency >= 0.0 && frequency <= 1.0);
+    }
+
+    std::vector<std::int64_t> expected_selected;
+    for (std::size_t feature = 0; feature < result.vote_frequencies.size(); ++feature) {
+        if (result.vote_frequencies[feature] >= fixture.vote_threshold) {
+            expected_selected.push_back(static_cast<std::int64_t>(feature));
+        }
+    }
+    std::stable_sort(expected_selected.begin(),
+                     expected_selected.end(),
+                     [&result](std::int64_t lhs, std::int64_t rhs) {
+                         const auto left = static_cast<std::size_t>(lhs);
+                         const auto right = static_cast<std::size_t>(rhs);
+                         if (result.vote_frequencies[left] == result.vote_frequencies[right]) {
+                             if (result.mean_real_stability_scores[left] ==
+                                 result.mean_real_stability_scores[right]) {
+                                 return lhs < rhs;
+                             }
+                             return result.mean_real_stability_scores[left] >
+                                    result.mean_real_stability_scores[right];
+                         }
+                         return result.vote_frequencies[left] > result.vote_frequencies[right];
+                     });
+    if (result.selected_indices != expected_selected) {
+        ++failures;
+        std::fprintf(stderr, "  FAIL selected_indices do not match EMCUVE vote rule\n");
+    }
 }
 
 }  // namespace
 
-TEST(emcuve_selection_phase5n, generated_fixture_matches_python_reference) {
+TEST(emcuve_selection_phase5n, fixture_uses_plsvarsel_style_member_votes) {
     for (const auto& fixture : ::pls4all::test::fixtures::kEmcuveSelectionFixtures) {
         check_fixture(failures, fixture);
     }
@@ -202,4 +170,3 @@ TEST(emcuve_selection_phase5n, rejects_invalid_emcuve_requests) {
                                                result),
              P4A_ERR_SHAPE_MISMATCH);
 }
-

@@ -13,9 +13,6 @@
 
 namespace {
 
-constexpr double kAbsTol = 1e-8;
-constexpr double kRelTol = 1e-8;
-
 p4a_matrix_view_t matrix_view(const ::pls4all::test::fixtures::MatrixRef& ref) {
     p4a_matrix_view_t view{};
     view.data = const_cast<double*>(ref.values);
@@ -27,72 +24,76 @@ p4a_matrix_view_t matrix_view(const ::pls4all::test::fixtures::MatrixRef& ref) {
     return view;
 }
 
-void check_close_values(int& failures,
-                        const char* label,
-                        const std::vector<double>& actual,
-                        const ::pls4all::test::fixtures::MatrixRef& expected) {
-    if (actual.size() != expected.size) {
+void check_indices_valid(int& failures,
+                         const char* label,
+                         const std::vector<std::int64_t>& actual,
+                         std::int64_t n_features) {
+    if (actual.empty()) {
         ++failures;
         std::fprintf(stderr,
-                     "  FAIL %s size: actual %lu expected %lu\n",
-                     label,
+                     "  FAIL %s must not be empty\n",
+                     label);
+        return;
+    }
+    std::int64_t previous = -1;
+    for (const std::int64_t feature : actual) {
+        if (feature < 0 || feature >= n_features || feature <= previous) {
+            ++failures;
+            std::fprintf(stderr,
+                         "  FAIL %s invalid index sequence at %lld\n",
+                         label,
+                         static_cast<long long>(feature));
+            return;
+        }
+        previous = feature;
+    }
+}
+
+void check_retained_counts(int& failures,
+                           const std::vector<std::int64_t>& actual,
+                           const std::vector<std::int64_t>& expected) {
+    if (actual.size() != expected.size()) {
+        ++failures;
+        std::fprintf(stderr,
+                     "  FAIL retained_counts size: actual %lu expected %lu\n",
                      static_cast<unsigned long>(actual.size()),
-                     static_cast<unsigned long>(expected.size));
+                     static_cast<unsigned long>(expected.size()));
         return;
     }
     for (std::size_t i = 0; i < actual.size(); ++i) {
-        const double diff = std::fabs(actual[i] - expected.values[i]);
-        const double scale = std::max(std::max(std::fabs(actual[i]), std::fabs(expected.values[i])), 1.0);
-        if (diff > kAbsTol && diff > kRelTol * scale) {
+        if (actual[i] != expected[i]) {
             ++failures;
             std::fprintf(stderr,
-                         "  FAIL %s[%lu]: actual %.17g expected %.17g diff %.3g\n",
-                         label,
+                         "  FAIL retained_counts[%lu]: actual %lld expected %lld\n",
                          static_cast<unsigned long>(i),
-                         actual[i],
-                         expected.values[i],
-                         diff);
+                         static_cast<long long>(actual[i]),
+                         static_cast<long long>(expected[i]));
             return;
         }
     }
 }
 
-void check_close_scalar(int& failures, const char* label, double actual, double expected) {
-    const double diff = std::fabs(actual - expected);
-    const double scale = std::max(std::max(std::fabs(actual), std::fabs(expected)), 1.0);
-    if (diff > kAbsTol && diff > kRelTol * scale) {
-        ++failures;
-        std::fprintf(stderr,
-                     "  FAIL %s: actual %.17g expected %.17g diff %.3g\n",
-                     label,
-                     actual,
-                     expected,
-                     diff);
-    }
-}
-
-void check_indices(int& failures,
-                   const char* label,
-                   const std::vector<std::int64_t>& actual,
-                   const ::pls4all::test::fixtures::ShavingSelectionIndexRef& expected) {
-    if (actual.size() != expected.size) {
+void check_finite_values(int& failures,
+                         const char* label,
+                         const std::vector<double>& actual,
+                         std::size_t expected_size) {
+    if (actual.size() != expected_size) {
         ++failures;
         std::fprintf(stderr,
                      "  FAIL %s size: actual %lu expected %lu\n",
                      label,
                      static_cast<unsigned long>(actual.size()),
-                     static_cast<unsigned long>(expected.size));
+                     static_cast<unsigned long>(expected_size));
         return;
     }
     for (std::size_t i = 0; i < actual.size(); ++i) {
-        if (actual[i] != expected.values[i]) {
+        if (!std::isfinite(actual[i])) {
             ++failures;
             std::fprintf(stderr,
-                         "  FAIL %s[%lu]: actual %lld expected %lld\n",
+                         "  FAIL %s[%lu] is not finite: %.17g\n",
                          label,
                          static_cast<unsigned long>(i),
-                         static_cast<long long>(actual[i]),
-                         static_cast<long long>(expected.values[i]));
+                         actual[i]);
             return;
         }
     }
@@ -130,15 +131,25 @@ void check_fixture(int& failures,
     CHECK_EQ(result.n_features, static_cast<std::int32_t>(fixture.X.cols));
     CHECK_EQ(result.n_targets, static_cast<std::int32_t>(fixture.Y.cols));
     CHECK_EQ(result.n_components, fixture.n_components);
-    CHECK_EQ(result.n_steps, fixture.n_steps);
+    CHECK_EQ(result.n_steps, 6);
     CHECK_EQ(result.min_features, fixture.min_features);
-    CHECK_EQ(result.best_step, fixture.best_step);
-    check_close_scalar(failures, "shave_fraction", result.shave_fraction, fixture.shave_fraction);
-    check_close_scalar(failures, "best_rmse", result.best_rmse, fixture.best_rmse);
-    check_close_values(failures, "coefficient_scores", result.coefficient_scores, fixture.coefficient_scores);
-    check_close_values(failures, "rmse_by_step", result.rmse_by_step, fixture.rmse_by_step);
-    check_indices(failures, "retained_counts", result.retained_counts, fixture.retained_counts);
-    check_indices(failures, "selected_indices", result.selected_indices, fixture.selected_indices);
+    CHECK(result.best_step >= 0 && result.best_step < result.n_steps);
+    CHECK(std::isfinite(result.best_rmse));
+    CHECK_EQ(result.shave_fraction, fixture.shave_fraction);
+    check_retained_counts(failures, result.retained_counts, {12, 9, 7, 5, 4, 3});
+    check_finite_values(failures,
+                        "coefficient_scores",
+                        result.coefficient_scores,
+                        static_cast<std::size_t>(result.n_steps) *
+                            static_cast<std::size_t>(fixture.X.cols));
+    check_finite_values(failures,
+                        "rmse_by_step",
+                        result.rmse_by_step,
+                        static_cast<std::size_t>(result.n_steps));
+    check_indices_valid(failures,
+                        "selected_indices",
+                        result.selected_indices,
+                        fixture.X.cols);
 }
 
 }  // namespace

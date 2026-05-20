@@ -1224,9 +1224,37 @@ def _failure_verdict(row: dict) -> str:
     return ""
 
 
+STRICT_REFERENCE_EXACT_TOL = 1e-6
+STRICT_REFERENCE_DRIFT_TOL = 1e-3
+REFERENCE_ABS_EXACT_TOL = 1e-9
+
+
+def _float_or_none(value) -> float | None:
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return None
+    if f != f:
+        return None
+    return f
+
+
+def _has_reference_gate(row: dict) -> bool:
+    return any(
+        row.get(k) not in (None, "", "None")
+        for k in (
+            "reference_parity_ok",
+            "reference_parity_rmse_rel",
+            "reference_parity_note",
+            "reference_kind",
+        )
+    )
+
+
 def _uses_reference_parity(row: dict, cid: str) -> bool:
     return (
-        cid.startswith("pls4all.cpp.")
+        _has_reference_gate(row)
+        or cid.startswith("pls4all.cpp.")
         or cid.startswith("ref.")
         or row.get("kind") == "external"
     )
@@ -1243,16 +1271,17 @@ def verdict(row: dict, cid: str = "") -> str:
         ref_ok = row.get("reference_parity_ok")
         if ref_ok in (None, "", "None"):
             return "not_available"
-        if is_true(ref_ok):
+        d = _float_or_none(row.get("reference_parity_rmse_rel"))
+        a = _float_or_none(row.get("reference_parity_rmse_abs"))
+        if d is None:
+            return "not_available"
+        if a is not None and a <= REFERENCE_ABS_EXACT_TOL:
             return "exact"
-        try:
-            d = float(row.get("reference_parity_rmse_rel", "nan"))
-            tol = float(row.get("reference_parity_tolerance", "nan"))
-        except (TypeError, ValueError):
+        if d <= STRICT_REFERENCE_EXACT_TOL:
+            return "exact"
+        if d <= STRICT_REFERENCE_DRIFT_TOL:
             return "drift"
-        if d != d or tol != tol:
-            return "drift"
-        return "drift" if d < 10 * tol else "divergent"
+        return "divergent"
 
     parity_ok = row.get("binding_parity_ok", row.get("parity_ok"))
     if is_true(parity_ok):

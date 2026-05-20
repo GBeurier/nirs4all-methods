@@ -13,8 +13,6 @@
 
 namespace {
 
-constexpr std::uint64_t kSplitMixGolden = 0x9E3779B97F4A7C15ull;
-
 [[nodiscard]] std::vector<std::int64_t> rank_selected(
     const std::vector<double>& vote_frequencies,
     const std::vector<double>& mean_scores,
@@ -86,7 +84,7 @@ p4a_status_t select_by_emcuve(Context& ctx,
 
         for (std::size_t ensemble = 0; ensemble < ensemble_count; ++ensemble) {
             const std::uint64_t member_seed =
-                noise_seed + static_cast<std::uint64_t>(ensemble) * kSplitMixGolden;
+                noise_seed + static_cast<std::uint64_t>(ensemble) + UINT64_C(1);
             UveSelectionResult member;
             status = select_by_uve(ctx,
                                    cfg,

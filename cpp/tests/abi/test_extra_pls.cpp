@@ -174,18 +174,17 @@ TEST(extra_pls_phase26_continuum, interpolates_with_tau) {
     for (double v : res.coefficients) CHECK(std::isfinite(v));
 }
 
-TEST(extra_pls_phase27_glm, fits_logistic_target) {
+TEST(extra_pls_phase27_glm, fits_gaussian_target) {
     auto Xv = small_X();
-    // 3-class one-hot
     std::vector<double> Yv = {
-        1, 0, 0,
-        0, 1, 0,
-        0, 0, 1,
-        1, 0, 0,
-        0, 1, 0,
-        1, 0, 0,
-        0, 0, 1,
-        0, 1, 0,
+        1.1, 0.55, 0.2,
+        0.7, 0.35, 0.5,
+        0.4, 0.20, 0.9,
+        1.0, 0.50, 0.3,
+        0.9, 0.45, 0.7,
+        0.6, 0.30, 0.4,
+        1.2, 0.60, 0.8,
+        1.3, 0.65, 0.6,
     };
     p4a_matrix_view_t X = make_view(Xv, 8, 4);
     p4a_matrix_view_t Y = make_view(Yv, 8, 3);
@@ -196,6 +195,8 @@ TEST(extra_pls_phase27_glm, fits_logistic_target) {
              P4A_OK);
     CHECK_EQ(res.n_classes, 3);
     for (double v : res.coefficients) CHECK(std::isfinite(v));
+    for (double v : res.intercept) CHECK(std::isfinite(v));
+    CHECK(std::fabs(res.intercept[0]) > 1e-3);
 }
 
 TEST(extra_pls_phase27_qda, fits_class_covariances) {

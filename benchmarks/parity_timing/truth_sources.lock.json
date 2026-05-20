@@ -8,7 +8,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 5.0,
+      "rmse_rel_tol": 0.001,
       "prediction_key": "predictions"
     },
     {
@@ -215,7 +215,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 5.0,
+      "rmse_rel_tol": 0.001,
       "prediction_key": "predictions"
     },
     {
@@ -224,7 +224,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 2.0,
+      "rmse_rel_tol": 0.001,
       "prediction_key": "predictions"
     },
     {
@@ -407,7 +407,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 5.0,
+      "rmse_rel_tol": 0.001,
       "prediction_key": "predictions"
     },
     {

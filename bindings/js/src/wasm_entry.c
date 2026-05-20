@@ -116,6 +116,95 @@ int p4a_wasm_pls_fit_legacy(const double *x, const double *y,
     return P4A_OK;
 }
 
+/* Return an owning native p4a_model_t* for method shims that need a fitted
+ * model handle (diagnostics, monitoring, feature ranking). JS releases it
+ * with p4a_model_destroy. */
+__attribute__((used))
+int p4a_wasm_pls_model_fit(const double *x, const double *y,
+                           int n, int p, int q, int n_components,
+                           int store_scores,
+                           p4a_model_t **out_model) {
+    if (out_model == NULL) return P4A_ERR_NULL_POINTER;
+    *out_model = NULL;
+    if (x == NULL || y == NULL) return P4A_ERR_NULL_POINTER;
+    if (n < 2 || p < 1 || q < 1 || n_components < 1) {
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+
+    p4a_matrix_view_t xv, yv;
+    p4a_matrix_view_init_rowmajor(&xv, (void *)x, n, p, P4A_DTYPE_F64);
+    p4a_matrix_view_init_rowmajor(&yv, (void *)y, n, q, P4A_DTYPE_F64);
+
+    p4a_context_t *ctx = NULL;
+    p4a_status_t s = p4a_context_create(&ctx);
+    if (s != P4A_OK) return s;
+    p4a_config_t *cfg = NULL;
+    s = p4a_config_create(&cfg);
+    if (s != P4A_OK) { p4a_context_destroy(ctx); return s; }
+
+    p4a_config_set_algorithm(cfg, P4A_ALGO_PLS_REGRESSION);
+    p4a_config_set_solver(cfg, P4A_SOLVER_SIMPLS);
+    p4a_config_set_deflation(cfg, P4A_DEFLATION_REGRESSION);
+    p4a_config_set_n_components(cfg, n_components);
+    p4a_config_set_center_x(cfg, 1);
+    p4a_config_set_center_y(cfg, 1);
+    p4a_config_set_scale_x(cfg, 0);
+    p4a_config_set_scale_y(cfg, 0);
+    p4a_config_set_store_scores(cfg, store_scores ? 1 : 0);
+
+    s = p4a_model_fit(ctx, cfg, &xv, &yv, out_model);
+    p4a_config_destroy(cfg);
+    p4a_context_destroy(ctx);
+    return s;
+}
+
+__attribute__((used))
+int p4a_wasm_model_fit_predict(const double *x, const double *y,
+                               int n, int p, int q,
+                               int algorithm, int solver, int deflation,
+                               int n_components,
+                               int center_x, int scale_x,
+                               int center_y, int scale_y,
+                               double *predictions_out) {
+    if (x == NULL || y == NULL || predictions_out == NULL) {
+        return P4A_ERR_NULL_POINTER;
+    }
+    if (n < 2 || p < 1 || q < 1 || n_components < 1) {
+        return P4A_ERR_INVALID_ARGUMENT;
+    }
+
+    p4a_matrix_view_t xv, yv, pv;
+    p4a_matrix_view_init_rowmajor(&xv, (void *)x, n, p, P4A_DTYPE_F64);
+    p4a_matrix_view_init_rowmajor(&yv, (void *)y, n, q, P4A_DTYPE_F64);
+    p4a_matrix_view_init_rowmajor(&pv, predictions_out, n, q, P4A_DTYPE_F64);
+
+    p4a_context_t *ctx = NULL;
+    p4a_status_t s = p4a_context_create(&ctx);
+    if (s != P4A_OK) return s;
+    p4a_config_t *cfg = NULL;
+    s = p4a_config_create(&cfg);
+    if (s != P4A_OK) { p4a_context_destroy(ctx); return s; }
+
+    p4a_config_set_algorithm(cfg, (p4a_algorithm_t)algorithm);
+    p4a_config_set_solver(cfg, (p4a_solver_t)solver);
+    p4a_config_set_deflation(cfg, (p4a_deflation_t)deflation);
+    p4a_config_set_n_components(cfg, n_components);
+    p4a_config_set_center_x(cfg, center_x ? 1 : 0);
+    p4a_config_set_scale_x(cfg, scale_x ? 1 : 0);
+    p4a_config_set_center_y(cfg, center_y ? 1 : 0);
+    p4a_config_set_scale_y(cfg, scale_y ? 1 : 0);
+
+    p4a_model_t *m = NULL;
+    s = p4a_model_fit(ctx, cfg, &xv, &yv, &m);
+    p4a_config_destroy(cfg);
+    if (s != P4A_OK) { p4a_context_destroy(ctx); return s; }
+
+    s = p4a_model_predict(ctx, m, &xv, &pv);
+    p4a_model_destroy(m);
+    p4a_context_destroy(ctx);
+    return s;
+}
+
 /* Predict from coefficients + means. Useful when the model was fit
  * elsewhere and only its coefficient triple was transported. */
 __attribute__((used))

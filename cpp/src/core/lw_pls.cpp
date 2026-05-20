@@ -7,13 +7,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <memory>
 #include <new>
 #include <utility>
 #include <vector>
 
 #include "core/matrix_view.hpp"
-#include "core/model.hpp"
 #include "core/status.hpp"
 
 namespace {
@@ -51,19 +49,6 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     values.clear();
     values.resize(n);
     std::fill(values.begin(), values.end(), fill);
-}
-
-[[nodiscard]] p4a_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
-                                                  std::int64_t rows,
-                                                  std::int64_t cols) noexcept {
-    p4a_matrix_view_t view{};
-    view.data = values.data();
-    view.rows = rows;
-    view.cols = cols;
-    view.row_stride = cols > 0 ? cols : 1;
-    view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
-    return view;
 }
 
 [[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
@@ -108,42 +93,13 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     return P4A_OK;
 }
 
-[[nodiscard]] p4a_status_t standardize_for_distance(::pls4all::core::Context& ctx,
-                                                    const std::vector<double>& X,
-                                                    std::size_t rows,
-                                                    std::size_t cols,
-                                                    std::vector<double>& Xs) {
-    std::size_t total = 0;
-    if (!checked_mul_size(rows, cols, total)) {
-        ctx.set_error("LW-PLS distance matrix size overflows size_t");
-        return P4A_ERR_INVALID_ARGUMENT;
+[[nodiscard]] double dot(const std::vector<double>& a,
+                         const std::vector<double>& b) noexcept {
+    double out = 0.0;
+    for (std::size_t i = 0; i < a.size(); ++i) {
+        out += a[i] * b[i];
     }
-    resize_fill(Xs, total, 0.0);
-    std::vector<double> mean(cols, 0.0);
-    std::vector<double> scale(cols, 1.0);
-    for (std::size_t col = 0; col < cols; ++col) {
-        double sum = 0.0;
-        for (std::size_t row = 0; row < rows; ++row) {
-            sum += X[idx(row, cols, col)];
-        }
-        mean[col] = sum / static_cast<double>(rows);
-        double sumsq = 0.0;
-        for (std::size_t row = 0; row < rows; ++row) {
-            const double delta = X[idx(row, cols, col)] - mean[col];
-            sumsq += delta * delta;
-        }
-        double stddev = std::sqrt(sumsq / static_cast<double>(rows - 1U));
-        if (stddev == 0.0 || !std::isfinite(stddev)) {
-            stddev = 1.0;
-        }
-        scale[col] = stddev;
-    }
-    for (std::size_t row = 0; row < rows; ++row) {
-        for (std::size_t col = 0; col < cols; ++col) {
-            Xs[idx(row, cols, col)] = (X[idx(row, cols, col)] - mean[col]) / scale[col];
-        }
-    }
-    return P4A_OK;
+    return out;
 }
 
 }  // namespace
@@ -210,74 +166,162 @@ p4a_status_t fit_predict_lw_pls(Context& ctx,
         if (status != P4A_OK) {
             return status;
         }
-        std::vector<double> standardized;
-        status = standardize_for_distance(ctx, x_values, rows, cols, standardized);
-        if (status != P4A_OK) {
-            return status;
-        }
-
         out.predictions.assign(pred_size, 0.0);
         out.neighbor_indices.assign(neighbor_size, 0);
         std::vector<std::pair<double, std::int64_t>> order(rows);
-        std::vector<double> local_x(neighbors * cols, 0.0);
-        std::vector<double> local_y(neighbors * targets, 0.0);
-        std::vector<double> query(cols, 0.0);
-        std::vector<double> query_pred(targets, 0.0);
-
-        Config local_cfg = cfg;
-        local_cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-        local_cfg.deflation = P4A_DEFLATION_REGRESSION;
-        local_cfg.center_x = 1;
-        local_cfg.scale_x = 1;
-        local_cfg.center_y = 1;
-        local_cfg.scale_y = 1;
+        std::vector<double> distances(rows, 0.0);
+        std::vector<double> weights(rows, 0.0);
+        std::vector<double> x_weighted_mean(cols, 0.0);
+        std::vector<double> centered_x(rows * cols, 0.0);
+        std::vector<double> centered_query(cols, 0.0);
+        std::vector<double> centered_y(rows, 0.0);
+        std::vector<double> loading_weight(cols, 0.0);
+        std::vector<double> score(rows, 0.0);
+        std::vector<double> loading_p(cols, 0.0);
+        const double lambda = std::max(1.0, 0.5 * static_cast<double>(n_neighbors));
+        constexpr double kEps = 1e-10;
 
         for (std::size_t row = 0; row < rows; ++row) {
             for (std::size_t other = 0; other < rows; ++other) {
                 double distance = 0.0;
                 for (std::size_t col = 0; col < cols; ++col) {
                     const double delta =
-                        standardized[idx(other, cols, col)] -
-                        standardized[idx(row, cols, col)];
+                        x_values[idx(other, cols, col)] -
+                        x_values[idx(row, cols, col)];
                     distance += delta * delta;
                 }
+                distance = std::sqrt(distance);
+                distances[other] = distance;
                 order[other] = {distance, static_cast<std::int64_t>(other)};
             }
             std::sort(order.begin(), order.end());
             for (std::size_t nidx = 0; nidx < neighbors; ++nidx) {
-                const auto selected = static_cast<std::size_t>(order[nidx].second);
                 out.neighbor_indices[idx(row, neighbors, nidx)] = order[nidx].second;
+            }
+
+            double distance_mean = 0.0;
+            for (double distance : distances) {
+                distance_mean += distance;
+            }
+            distance_mean /= static_cast<double>(rows);
+            double distance_var = 0.0;
+            for (double distance : distances) {
+                const double delta = distance - distance_mean;
+                distance_var += delta * delta;
+            }
+            double distance_std = std::sqrt(distance_var / static_cast<double>(rows - 1U));
+            if (distance_std <= 0.0 || !std::isfinite(distance_std)) {
+                distance_std = 1.0;
+            }
+            double weight_sum = 0.0;
+            for (std::size_t other = 0; other < rows; ++other) {
+                const double weight = std::exp(-distances[other] / distance_std / lambda);
+                weights[other] = weight;
+                weight_sum += weight;
+            }
+            if (weight_sum < kEps) {
+                const double uniform = 1.0 / static_cast<double>(rows);
+                std::fill(weights.begin(), weights.end(), uniform);
+                weight_sum = 1.0;
+            }
+
+            std::fill(x_weighted_mean.begin(), x_weighted_mean.end(), 0.0);
+            for (std::size_t other = 0; other < rows; ++other) {
                 for (std::size_t col = 0; col < cols; ++col) {
-                    local_x[idx(nidx, cols, col)] = x_values[idx(selected, cols, col)];
+                    x_weighted_mean[col] += weights[other] * x_values[idx(other, cols, col)];
                 }
-                for (std::size_t target = 0; target < targets; ++target) {
-                    local_y[idx(nidx, targets, target)] =
-                        y_values[idx(selected, targets, target)];
+            }
+            for (double& value : x_weighted_mean) {
+                value /= weight_sum;
+            }
+            for (std::size_t other = 0; other < rows; ++other) {
+                for (std::size_t col = 0; col < cols; ++col) {
+                    centered_x[idx(other, cols, col)] =
+                        x_values[idx(other, cols, col)] - x_weighted_mean[col];
                 }
             }
             for (std::size_t col = 0; col < cols; ++col) {
-                query[col] = x_values[idx(row, cols, col)];
+                centered_query[col] = x_values[idx(row, cols, col)] - x_weighted_mean[col];
             }
 
-            p4a_matrix_view_t local_x_view =
-                rowmajor_f64_view(local_x, static_cast<std::int64_t>(neighbors), X.cols);
-            p4a_matrix_view_t local_y_view =
-                rowmajor_f64_view(local_y, static_cast<std::int64_t>(neighbors), Y.cols);
-            std::unique_ptr<Model> model;
-            status = fit_model(ctx, local_cfg, local_x_view, local_y_view, model);
-            if (status != P4A_OK) {
-                out = LwPlsResult{};
-                return status;
-            }
-            p4a_matrix_view_t query_view = rowmajor_f64_view(query, 1, X.cols);
-            p4a_matrix_view_t pred_view = rowmajor_f64_view(query_pred, 1, Y.cols);
-            status = predict_into(ctx, *model, query_view, pred_view);
-            if (status != P4A_OK) {
-                out = LwPlsResult{};
-                return status;
-            }
             for (std::size_t target = 0; target < targets; ++target) {
-                out.predictions[idx(row, targets, target)] = query_pred[target];
+                double y_weighted_mean = 0.0;
+                for (std::size_t other = 0; other < rows; ++other) {
+                    y_weighted_mean += weights[other] * y_values[idx(other, targets, target)];
+                }
+                y_weighted_mean /= weight_sum;
+                for (std::size_t other = 0; other < rows; ++other) {
+                    centered_y[other] =
+                        y_values[idx(other, targets, target)] - y_weighted_mean;
+                }
+
+                std::vector<double> local_x = centered_x;
+                std::vector<double> local_query = centered_query;
+                double prediction = y_weighted_mean;
+                for (std::int32_t comp = 0; comp < cfg.n_components; ++comp) {
+                    std::fill(loading_weight.begin(), loading_weight.end(), 0.0);
+                    for (std::size_t col = 0; col < cols; ++col) {
+                        for (std::size_t other = 0; other < rows; ++other) {
+                            loading_weight[col] +=
+                                local_x[idx(other, cols, col)] *
+                                weights[other] * centered_y[other];
+                        }
+                    }
+                    double norm = std::sqrt(dot(loading_weight, loading_weight));
+                    if (norm < kEps) {
+                        break;
+                    }
+                    for (double& value : loading_weight) {
+                        value /= norm;
+                    }
+
+                    std::fill(score.begin(), score.end(), 0.0);
+                    for (std::size_t other = 0; other < rows; ++other) {
+                        for (std::size_t col = 0; col < cols; ++col) {
+                            score[other] +=
+                                local_x[idx(other, cols, col)] * loading_weight[col];
+                        }
+                    }
+                    double denom = 0.0;
+                    for (std::size_t other = 0; other < rows; ++other) {
+                        denom += weights[other] * score[other] * score[other];
+                    }
+                    if (denom < kEps) {
+                        break;
+                    }
+
+                    std::fill(loading_p.begin(), loading_p.end(), 0.0);
+                    for (std::size_t col = 0; col < cols; ++col) {
+                        for (std::size_t other = 0; other < rows; ++other) {
+                            loading_p[col] +=
+                                local_x[idx(other, cols, col)] *
+                                weights[other] * score[other];
+                        }
+                        loading_p[col] /= denom;
+                    }
+                    double loading_q = 0.0;
+                    for (std::size_t other = 0; other < rows; ++other) {
+                        loading_q += centered_y[other] * weights[other] * score[other];
+                    }
+                    loading_q /= denom;
+
+                    const double query_score = dot(local_query, loading_weight);
+                    prediction += query_score * loading_q;
+
+                    if (comp < cfg.n_components - 1) {
+                        for (std::size_t other = 0; other < rows; ++other) {
+                            for (std::size_t col = 0; col < cols; ++col) {
+                                local_x[idx(other, cols, col)] -=
+                                    score[other] * loading_p[col];
+                            }
+                            centered_y[other] -= score[other] * loading_q;
+                        }
+                        for (std::size_t col = 0; col < cols; ++col) {
+                            local_query[col] -= query_score * loading_p[col];
+                        }
+                    }
+                }
+                out.predictions[idx(row, targets, target)] = prediction;
             }
         }
 
