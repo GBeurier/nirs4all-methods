@@ -269,7 +269,7 @@ C4A_API c4a_status_t c4a_split_spxy_fold_split_fold(
             s = require_y_view(Y, xr, yp, yc);
             if (s != C4A_OK) return s;
         }
-        std::int32_t* fa = new (std::nothrow) std::int32_t[xr];
+        std::int32_t* fa = new (std::nothrow) std::int32_t[static_cast<std::size_t>(xr)];
         if (fa == nullptr) return C4A_ERR_OUT_OF_MEMORY;
         s = c4a_split_spxy_fold_assign(h->state, xp, xr, xc, yp, yc, fa);
         if (s != C4A_OK) { delete[] fa; return s; }
@@ -341,7 +341,7 @@ C4A_API c4a_status_t c4a_split_spxy_g_fold_split_fold(
             s = require_y_view(Y, xr, yp, yc);
             if (s != C4A_OK) return s;
         }
-        std::int32_t* fa = new (std::nothrow) std::int32_t[xr];
+        std::int32_t* fa = new (std::nothrow) std::int32_t[static_cast<std::size_t>(xr)];
         if (fa == nullptr) return C4A_ERR_OUT_OF_MEMORY;
         s = c4a_split_spxy_g_fold_assign(h->state, xp, xr, xc, yp, yc,
                                           groups, fa);
@@ -501,7 +501,7 @@ C4A_API c4a_status_t c4a_split_binned_strat_group_kfold_split_fold(
         if (s != C4A_OK) return s;
         if (yc != 1) return C4A_ERR_SHAPE_MISMATCH;
         if (groups_len != yr) return C4A_ERR_SHAPE_MISMATCH;
-        std::int32_t* fa = new (std::nothrow) std::int32_t[yr];
+        std::int32_t* fa = new (std::nothrow) std::int32_t[static_cast<std::size_t>(yr)];
         if (fa == nullptr) return C4A_ERR_OUT_OF_MEMORY;
         s = c4a_split_bsgk_assign(h->state, yp, yr, groups, fa);
         if (s != C4A_OK) { delete[] fa; return s; }
