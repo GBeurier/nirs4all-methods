@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 from pathlib import Path
 
 from docs._extras import build_landing
@@ -225,3 +226,42 @@ def test_strict_gate_csv_replaces_stale_dashboard_refresh(
     cell = payload["rows"][0]["cells"]["pls4all.cpp.blas+omp"]
     assert cell["divergence"] == 1e-14
     assert cell["reference_parity"] == "exact"
+
+
+def test_strict_gate_successful_bindings_have_numeric_reference_scores(
+        ) -> None:
+    csv_path = (Path(__file__).resolve().parents[1]
+                / "results" / "parity_30x30_strict.csv")
+    rows = list(csv.DictReader(csv_path.open()))
+    cpp_scored_algos = set()
+    for row in rows:
+        if row["backend"] != "cpp":
+            continue
+        try:
+            value = float(row.get("reference_parity_rmse_rel") or "nan")
+        except ValueError:
+            value = float("nan")
+        if math.isfinite(value):
+            cpp_scored_algos.add(row["algorithm"])
+
+    missing = []
+    for row in rows:
+        if row["algorithm"] not in cpp_scored_algos:
+            continue
+        if row.get("reference_kind") == "paper_only":
+            continue
+        if not build_landing.is_true(row.get("ok")):
+            continue
+        if not row.get("reference_parity_ref"):
+            continue
+        try:
+            value = float(row.get("reference_parity_rmse_rel") or "nan")
+        except ValueError:
+            value = float("nan")
+        if not math.isfinite(value):
+            missing.append(
+                (row["algorithm"], row["backend"],
+                 row.get("reference_parity_note", ""))
+            )
+
+    assert missing == []

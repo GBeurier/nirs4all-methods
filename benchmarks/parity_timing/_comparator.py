@@ -73,7 +73,7 @@ def rms(arr: np.ndarray) -> float:
 
 def _reshape_vector_compatible(p: np.ndarray,
                                r: np.ndarray) -> tuple[np.ndarray, str]:
-    """Allow only 1-D vs column/row-vector shape quirks, never matrices."""
+    """Allow flat-vector serialization quirks, never 2-D matrix reshapes."""
     if p.shape == r.shape:
         return p, ""
     if p.size != r.size:
