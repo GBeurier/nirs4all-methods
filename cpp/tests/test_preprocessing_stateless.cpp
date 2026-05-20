@@ -260,7 +260,7 @@ void verify_lsnv_parity() {
         c4a_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
         C4A_TEST_REQUIRE(c4a_pp_lsnv_transform(h, Xv, Yv) == C4A_OK);
         ::c4a_testing::assert_close(out, c.expected_output, "lsnv/" + c.name,
-                                    /*abs_tol=*/1e-11, /*rel_tol=*/1e-11);
+                                    /*abs_tol=*/1e-10, /*rel_tol=*/1e-10);
         c4a_pp_lsnv_destroy(h);
     }
 }

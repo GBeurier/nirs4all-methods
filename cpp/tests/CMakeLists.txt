@@ -38,6 +38,14 @@ target_compile_definitions(chemometrics4all_tests PRIVATE
     C4A_PARITY_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/parity/fixtures")
 chemometrics4all_add_warnings(chemometrics4all_tests)
 
+if(WIN32)
+    add_custom_command(TARGET chemometrics4all_tests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_RUNTIME_DLLS:chemometrics4all_tests>
+            $<TARGET_FILE_DIR:chemometrics4all_tests>
+        COMMAND_EXPAND_LISTS)
+endif()
+
 add_test(NAME chemometrics4all_tests COMMAND chemometrics4all_tests)
 set_tests_properties(chemometrics4all_tests PROPERTIES
     LABELS "smoke;abi;parity"
