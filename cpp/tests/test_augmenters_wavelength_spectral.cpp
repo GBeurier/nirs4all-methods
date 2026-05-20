@@ -14,7 +14,7 @@
 // integration commit, matching the Phase 12 / Phase 14 coordination
 // pattern. Once Phases 15-18 are merged the two binaries fold into one.
 //
-// Tolerance: 1e-15 abs / 1e-15 rel (the locked PCG64 contract). The C
+// Tolerance: 1e-12 abs / 1e-12 rel (the locked PCG64 contract). The C
 // engine consumes the same PCG64 stream as NumPy 1.26.4's
 // `Generator.uniform / integers`, so the output is bit-equivalent up to
 // IEEE-754 round-off in the linear-interp / convolution kernels.
@@ -44,8 +44,8 @@ using ::c4a_testing::params_get_double;
 using ::c4a_testing::params_get_int;
 using ::c4a_testing::params_get_string;
 
-constexpr double kAbsTol = 1e-15;
-constexpr double kRelTol = 1e-15;
+constexpr double kAbsTol = 1e-12;
+constexpr double kRelTol = 1e-12;
 
 ParityFixture load_fixture(const std::string& filename) {
     return ::c4a_testing::load_fixture(

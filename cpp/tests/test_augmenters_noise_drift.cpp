@@ -6,14 +6,6 @@
 // corresponding fixture under ``parity/fixtures/aug_<NAME>_v1.json`` and
 // asserts bit-exact equality (1e-15 absolute tolerance) against the frozen
 // Python reference in ``c4a_parity_augmenters_ref``.
-//
-// This executable is independent from the main ``chemometrics4all_tests``
-// binary because the Phase 15 ABI contract requires the public augmenter
-// declarations to live in c4a.h, but the locked task constraints forbid
-// modifying c4a.h directly. The handles are therefore opaque-by-symbol;
-// we forward-declare them here (matching the inline forward-decls used
-// by c_api_augmenters.cpp) and exercise the ABI through the symbol-only
-// surface.
 
 #include <cmath>
 #include <cstddef>
@@ -35,88 +27,6 @@
 #endif
 
 #include "harness.hpp"
-
-// ---------------------------------------------------------------------------
-// Forward declarations of the augmenter ABI (mirrored from
-// cpp/src/c_api/c_api_augmenters.cpp). c4a.h does not expose them in Phase
-// 15, so test consumers redeclare exactly the symbols they call.
-// ---------------------------------------------------------------------------
-extern "C" {
-
-struct c4a_aug_gaussian_noise_handle_t;
-struct c4a_aug_multiplicative_noise_handle_t;
-struct c4a_aug_spike_noise_handle_t;
-struct c4a_aug_hetero_noise_handle_t;
-struct c4a_aug_linear_drift_handle_t;
-struct c4a_aug_poly_drift_handle_t;
-struct c4a_aug_path_length_handle_t;
-
-c4a_status_t c4a_aug_gaussian_noise_create(
-    c4a_aug_gaussian_noise_handle_t** out,
-    c4a_rng_pcg64_state_t* rng, double sigma);
-void c4a_aug_gaussian_noise_destroy(c4a_aug_gaussian_noise_handle_t* h);
-c4a_status_t c4a_aug_gaussian_noise_apply(
-    const c4a_aug_gaussian_noise_handle_t* h,
-    c4a_matrix_view_t X, c4a_matrix_view_t out);
-
-c4a_status_t c4a_aug_multiplicative_noise_create(
-    c4a_aug_multiplicative_noise_handle_t** out,
-    c4a_rng_pcg64_state_t* rng, double sigma_gain);
-void c4a_aug_multiplicative_noise_destroy(
-    c4a_aug_multiplicative_noise_handle_t* h);
-c4a_status_t c4a_aug_multiplicative_noise_apply(
-    const c4a_aug_multiplicative_noise_handle_t* h,
-    c4a_matrix_view_t X, c4a_matrix_view_t out);
-
-c4a_status_t c4a_aug_spike_noise_create(
-    c4a_aug_spike_noise_handle_t** out,
-    c4a_rng_pcg64_state_t* rng,
-    int32_t n_spikes_min, int32_t n_spikes_max,
-    double amplitude_min, double amplitude_max);
-void c4a_aug_spike_noise_destroy(c4a_aug_spike_noise_handle_t* h);
-c4a_status_t c4a_aug_spike_noise_apply(
-    const c4a_aug_spike_noise_handle_t* h,
-    c4a_matrix_view_t X, c4a_matrix_view_t out);
-
-c4a_status_t c4a_aug_hetero_noise_create(
-    c4a_aug_hetero_noise_handle_t** out,
-    c4a_rng_pcg64_state_t* rng,
-    double noise_base, double noise_signal_dep);
-void c4a_aug_hetero_noise_destroy(c4a_aug_hetero_noise_handle_t* h);
-c4a_status_t c4a_aug_hetero_noise_apply(
-    const c4a_aug_hetero_noise_handle_t* h,
-    c4a_matrix_view_t X, c4a_matrix_view_t out);
-
-c4a_status_t c4a_aug_linear_drift_create(
-    c4a_aug_linear_drift_handle_t** out,
-    c4a_rng_pcg64_state_t* rng,
-    double offset_min, double offset_max,
-    double slope_min,  double slope_max);
-void c4a_aug_linear_drift_destroy(c4a_aug_linear_drift_handle_t* h);
-c4a_status_t c4a_aug_linear_drift_apply(
-    const c4a_aug_linear_drift_handle_t* h,
-    c4a_matrix_view_t X, c4a_matrix_view_t out);
-
-c4a_status_t c4a_aug_poly_drift_create(
-    c4a_aug_poly_drift_handle_t** out,
-    c4a_rng_pcg64_state_t* rng,
-    int32_t degree,
-    const double* coeff_min, const double* coeff_max);
-void c4a_aug_poly_drift_destroy(c4a_aug_poly_drift_handle_t* h);
-c4a_status_t c4a_aug_poly_drift_apply(
-    const c4a_aug_poly_drift_handle_t* h,
-    c4a_matrix_view_t X, c4a_matrix_view_t out);
-
-c4a_status_t c4a_aug_path_length_create(
-    c4a_aug_path_length_handle_t** out,
-    c4a_rng_pcg64_state_t* rng,
-    double path_length_std, double min_path_length);
-void c4a_aug_path_length_destroy(c4a_aug_path_length_handle_t* h);
-c4a_status_t c4a_aug_path_length_apply(
-    const c4a_aug_path_length_handle_t* h,
-    c4a_matrix_view_t X, c4a_matrix_view_t out);
-
-}  // extern "C"
 
 namespace {
 

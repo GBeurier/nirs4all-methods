@@ -44,35 +44,6 @@
 #  error "C4A_PARITY_FIXTURE_DIR must be defined"
 #endif
 
-// ---------------------------------------------------------------------------
-// Phase 13 ABI forward declarations.
-// Until the public c4a.h §18 enum + struct land at the integration commit,
-// the parity test uses int32_t for the method argument.
-// ---------------------------------------------------------------------------
-extern "C" {
-typedef struct c4a_filter_x_outlier_handle_t c4a_filter_x_outlier_handle_t;
-c4a_status_t c4a_filter_x_outlier_create(
-    c4a_filter_x_outlier_handle_t** out,
-    std::int32_t method,
-    int          use_threshold,
-    double       threshold,
-    std::int32_t n_components,
-    double       contamination,
-    std::uint64_t seed,
-    std::int32_t n_estimators,
-    std::int64_t max_samples);
-void c4a_filter_x_outlier_destroy(c4a_filter_x_outlier_handle_t* h);
-c4a_status_t c4a_filter_x_outlier_fit(
-    c4a_filter_x_outlier_handle_t* h, c4a_matrix_view_t X);
-c4a_status_t c4a_filter_x_outlier_is_fitted(
-    const c4a_filter_x_outlier_handle_t* h, int* out_fitted);
-c4a_status_t c4a_filter_x_outlier_apply(
-    const c4a_filter_x_outlier_handle_t* h,
-    c4a_matrix_view_t X,
-    std::uint8_t* mask_out,
-    c4a_filter_stats_t* stats_out);
-}
-
 namespace {
 
 using ParityFixture = ::c4a_testing::Fixture;
@@ -441,4 +412,3 @@ void register_filter_x_outlier_tests(c4a_testing::Runner& r) {
     r.run("filter_x_outlier_lof_parity",
             verify_lof_parity);
 }
-

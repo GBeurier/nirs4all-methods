@@ -33,46 +33,6 @@
 #include "fixture_parser.hpp"
 #include "harness.hpp"
 
-// Forward-declarations of the Phase 8 ABI surface. Until the user
-// integrates these into c4a.h §16 centrally, we declare them locally so
-// the translation unit compiles. Once §16 lands, these block re-declares
-// of identical signatures are harmless.
-extern "C" {
-
-typedef struct c4a_pp_osc_handle_t c4a_pp_osc_handle_t;
-typedef struct c4a_pp_epo_handle_t c4a_pp_epo_handle_t;
-
-c4a_status_t c4a_pp_osc_create(c4a_pp_osc_handle_t** out,
-                                int32_t n_components, int scale);
-void         c4a_pp_osc_destroy(c4a_pp_osc_handle_t* h);
-c4a_status_t c4a_pp_osc_fit(c4a_pp_osc_handle_t* h,
-                             c4a_matrix_view_t X,
-                             const double* y, int64_t y_len);
-c4a_status_t c4a_pp_osc_transform(const c4a_pp_osc_handle_t* h,
-                                    c4a_matrix_view_t X,
-                                    c4a_matrix_view_t out);
-c4a_status_t c4a_pp_osc_inverse_transform(const c4a_pp_osc_handle_t* h,
-                                            c4a_matrix_view_t X,
-                                            c4a_matrix_view_t out);
-c4a_status_t c4a_pp_osc_is_fitted(const c4a_pp_osc_handle_t* h,
-                                    int* out_fitted);
-
-c4a_status_t c4a_pp_epo_create(c4a_pp_epo_handle_t** out, int scale);
-void         c4a_pp_epo_destroy(c4a_pp_epo_handle_t* h);
-c4a_status_t c4a_pp_epo_fit(c4a_pp_epo_handle_t* h,
-                             c4a_matrix_view_t X,
-                             const double* d, int64_t d_len);
-c4a_status_t c4a_pp_epo_transform(const c4a_pp_epo_handle_t* h,
-                                    c4a_matrix_view_t X,
-                                    c4a_matrix_view_t out);
-c4a_status_t c4a_pp_epo_inverse_transform(const c4a_pp_epo_handle_t* h,
-                                            c4a_matrix_view_t X,
-                                            c4a_matrix_view_t out);
-c4a_status_t c4a_pp_epo_is_fitted(const c4a_pp_epo_handle_t* h,
-                                    int* out_fitted);
-
-}  // extern "C"
-
 #ifndef C4A_PARITY_FIXTURE_DIR
 #  error "C4A_PARITY_FIXTURE_DIR must be defined"
 #endif
