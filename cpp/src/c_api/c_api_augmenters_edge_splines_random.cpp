@@ -541,7 +541,7 @@ C4A_API c4a_status_t c4a_aug_edge_artifacts_apply(
         const std::int64_t total = xr * xc;
         // Stage X -> out. Subsequent stages operate in-place on out.
         if (op != xp) {
-            std::memcpy(op, xp, (size_t)total * sizeof(double));
+            std::memcpy(op, xp, static_cast<std::size_t>(total) * sizeof(double));
         }
         if (h->truncated_state != nullptr) {
             const c4a_status_t st = c4a_aug_truncated_peak_state_apply(

@@ -55,8 +55,7 @@ jobs:
         #          via parity/run_reference_parity.py, comparator
         #          parity/reference_parity.py
         # Stage 3: C++ parity tests vs the frozen Python fixtures
-        run: python parity/python_generator/scripts/run_parity_gate.py \
-               --build-dir build/ci-linux-gcc12-release
+        run: python parity/python_generator/scripts/run_parity_gate.py --build-dir build/ci-linux-gcc12-release
 
       - name: Run binding-parity (Stage 4, Python)
         # Stage 4: per-binding bit-exact check vs libc4a.
