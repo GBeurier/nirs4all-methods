@@ -99,6 +99,12 @@ CSV_FIELDS = [
     "reference_role",
     "binding_parity_ok",
     "reference_parity_ok",
+    "reference_max_abs_diff",
+    "reference_rms_diff",
+    "reference_rel_l2_diff",
+    "binding_max_abs_diff",
+    "binding_rms_diff",
+    "binding_rel_l2_diff",
 ]
 REFERENCE_SNAPSHOT_SCHEMA = "chemometrics4all.reference_snapshot.v1"
 REFERENCE_SNAPSHOT_ROOT = REPO_ROOT / "benchmarks" / "reference_snapshots" / "cross_binding"
@@ -328,6 +334,38 @@ def compare_outputs(spec: MethodSpec, left: object, right: object) -> tuple[bool
     if spec.comparator is not None:
         return spec.comparator(left, right)
     return outputs_close(left, right)
+
+
+def aligned_flat_outputs(spec: MethodSpec, observed: object, expected: object) -> tuple[np.ndarray, np.ndarray]:
+    if spec.comparator is outputs_close_sign_invariant_columns:
+        a2 = np.asarray(observed, dtype=np.float64)
+        b2 = np.asarray(expected, dtype=np.float64)
+        if a2.shape != b2.shape:
+            return flatten_output(observed), flatten_output(expected)
+        if a2.ndim == 2:
+            b2 = np.array(b2, copy=True)
+            for col in range(b2.shape[1]):
+                if float(np.dot(a2[:, col], b2[:, col])) < 0.0:
+                    b2[:, col] *= -1.0
+            return np.ravel(a2), np.ravel(b2)
+    return flatten_output(observed), flatten_output(expected)
+
+
+def output_divergence(spec: MethodSpec, observed: object | None, expected: object | None) -> dict[str, float]:
+    if observed is None or expected is None:
+        return {}
+    a, b = aligned_flat_outputs(spec, observed, expected)
+    if a.shape != b.shape:
+        return {}
+    if a.size == 0:
+        return {"max_abs": 0.0, "rms": 0.0, "rel_l2": 0.0}
+    diff = np.where(np.isnan(a) & np.isnan(b), 0.0, a - b)
+    abs_diff = np.abs(diff)
+    max_abs = float(np.nanmax(abs_diff))
+    rms = float(np.sqrt(np.nanmean(diff * diff)))
+    denom = float(np.linalg.norm(np.nan_to_num(b, nan=0.0)))
+    rel_l2 = float(np.linalg.norm(np.nan_to_num(diff, nan=0.0)) / max(denom, np.finfo(np.float64).tiny))
+    return {"max_abs": max_abs, "rms": rms, "rel_l2": rel_l2}
 
 
 @dataclass(frozen=True)
@@ -1737,9 +1775,18 @@ def csv_row(
     samples_ms: Iterable[float] | None = None,
     repeat: int | None = None,
     batch_loops: int = 1,
+    reference_divergence: dict[str, float] | None = None,
+    binding_divergence: dict[str, float] | None = None,
 ) -> dict[str, str]:
     samples = list(samples_ms or [])
     timed_runs = repeat if repeat is not None else (len(samples) if samples else None)
+    reference_divergence = reference_divergence or {}
+    binding_divergence = binding_divergence or {}
+
+    def metric(metrics: dict[str, float], key: str) -> str:
+        value = metrics.get(key)
+        return "" if value is None or not math.isfinite(value) else f"{value:.17g}"
+
     return {
         "algorithm": spec.method_id,
         "family": spec.family,
@@ -1763,6 +1810,12 @@ def csv_row(
         "reference_role": reference_role,
         "binding_parity_ok": bool_cell(binding_parity_ok),
         "reference_parity_ok": bool_cell(reference_parity_ok),
+        "reference_max_abs_diff": metric(reference_divergence, "max_abs"),
+        "reference_rms_diff": metric(reference_divergence, "rms"),
+        "reference_rel_l2_diff": metric(reference_divergence, "rel_l2"),
+        "binding_max_abs_diff": metric(binding_divergence, "max_abs"),
+        "binding_rms_diff": metric(binding_divergence, "rms"),
+        "binding_rel_l2_diff": metric(binding_divergence, "rel_l2"),
     }
 
 
@@ -1773,12 +1826,13 @@ def _json_samples(payload: dict) -> list[float]:
     return [float(value) for value in raw]
 
 
-def run_r_timing(expr: str, ctx: Dataset, repeat: int) -> tuple[float, str, list[float], int]:
+def run_r_timing(expr: str, ctx: Dataset, repeat: int) -> tuple[float, str, np.ndarray, list[float], int]:
     with tempfile.TemporaryDirectory(prefix="c4a-r-bench-") as tmp:
         tmp_path = Path(tmp)
         x_path = tmp_path / "X.csv"
         y_path = tmp_path / "y.txt"
         d_path = tmp_path / "d.txt"
+        out_path = tmp_path / "out.csv"
         np.savetxt(x_path, ctx.X, delimiter=",")
         np.savetxt(y_path, ctx.y)
         np.savetxt(d_path, ctx.d)
@@ -1823,6 +1877,13 @@ for (i in seq_len({repeat})) {{
   for (j in seq_len(batch_loops)) out <- c4a_run_once()
   times[[i]] <- (c4a_now_ms() - t0) / batch_loops
 }}
+if (is.list(out)) {{
+  out <- unlist(out, recursive = TRUE, use.names = FALSE)
+}}
+if (is.logical(out)) {{
+  out <- out + 0
+}}
+write.table(as.matrix(out), file = "{out_path.as_posix()}", sep = ",", row.names = FALSE, col.names = FALSE)
 cat(jsonlite::toJSON(list(ok = TRUE, median_ms = median(times), samples_ms = as.numeric(times), batch_loops = batch_loops), auto_unbox = TRUE))
 """
         completed = subprocess.run(
@@ -1837,8 +1898,9 @@ cat(jsonlite::toJSON(list(ok = TRUE, median_ms = median(times), samples_ms = as.
             raise RuntimeError((completed.stderr or completed.stdout).strip())
         marker = completed.stdout.strip().splitlines()[-1]
         payload = json.loads(marker)
+        output = np.loadtxt(out_path, delimiter=",")
         batch_loops = max(1, int(payload.get("batch_loops", 1)))
-        return float(payload["median_ms"]), f"ok; batch_loops={batch_loops}", _json_samples(payload), batch_loops
+        return float(payload["median_ms"]), f"ok; batch_loops={batch_loops}", np.asarray(output, dtype=np.float64), _json_samples(payload), batch_loops
 
 
 def run_r_reference(expr: str, ctx: Dataset, repeat: int) -> tuple[float, np.ndarray, list[float], int]:
@@ -1947,6 +2009,7 @@ def benchmark_spec(
     if canonical_ref is not None:
         try:
             median_ms, reference_output, reference_samples, reference_batch_loops = time_reference(canonical_ref, ctx, repeat)
+            snapshot_divergence = None
             try:
                 snapshot = get_reference_snapshot(
                     spec,
@@ -1957,6 +2020,7 @@ def benchmark_spec(
                 )
                 reference_snapshot_output = snapshot.output
                 snapshot_ok, snapshot_reason = compare_outputs(spec, reference_output, snapshot.output)
+                snapshot_divergence = output_divergence(spec, reference_output, snapshot.output)
                 action = "updated" if write_reference_snapshots else "loaded"
                 if snapshot_ok:
                     parity = "reference_snapshot"
@@ -2001,6 +2065,7 @@ def benchmark_spec(
                 samples_ms=reference_samples,
                 repeat=repeat,
                 batch_loops=reference_batch_loops,
+                reference_divergence=snapshot_divergence if reference_snapshot_output is not None else None,
             ))
         except ModuleNotFoundError as exc:
             reference_error = f"missing dependency: {exc.name}"
@@ -2049,13 +2114,16 @@ def benchmark_spec(
             if spec.compare_internal:
                 native_output = cpp_output
             reference_ok: bool | None = None
-            if (
+            reference_divergence = None
+            can_gate_reference = (
                 canonical_ref is not None
                 and reference_snapshot_output is not None
                 and spec.compare_internal
                 and canonical_ref.gate_c4a
-            ):
+            )
+            if can_gate_reference:
                 reference_ok, reference_reason = compare_outputs(spec, cpp_output, reference_snapshot_output)
+                reference_divergence = output_divergence(spec, cpp_output, reference_snapshot_output)
                 parity = "reference_ok" if reference_ok else "reference_diverged"
                 reason = f"timed direct libc4a C ABI; reference gate vs stored {canonical_ref.library} snapshot: {reference_reason}"
             elif (
@@ -2094,6 +2162,7 @@ def benchmark_spec(
                 samples_ms=cpp_samples,
                 repeat=repeat,
                 batch_loops=cpp_batch_loops,
+                reference_divergence=reference_divergence,
             ))
         except Exception as exc:  # noqa: BLE001 - benchmark rows must be non-fatal
             native_error = str(exc)
@@ -2118,14 +2187,26 @@ def benchmark_spec(
     if include_python:
         try:
             median_ms, py_output, py_samples, py_batch_loops = time_callable(spec.python_factory(ctx), repeat)
+            reference_divergence = (
+                output_divergence(spec, py_output, reference_snapshot_output)
+                if (
+                    canonical_ref is not None
+                    and reference_snapshot_output is not None
+                    and spec.compare_internal
+                    and canonical_ref.gate_c4a
+                )
+                else None
+            )
             if native_output is not None and spec.compare_internal:
                 parity_ok, parity_reason = compare_outputs(spec, py_output, native_output)
+                binding_divergence = output_divergence(spec, py_output, native_output)
                 parity = "binding_ok" if parity_ok else "binding_mismatch"
                 binding_ok = parity_ok and binding_verified
                 reason = f"timed public Python binding; binding gate vs C++: {parity_reason}"
             else:
                 parity = "ok"
                 binding_ok = None
+                binding_divergence = None
                 reason = f"timed public Python binding; binding gate not run: {native_error or 'no C++ native output'}"
             rows.append(csv_row(
                 spec,
@@ -2146,6 +2227,8 @@ def benchmark_spec(
                 samples_ms=py_samples,
                 repeat=repeat,
                 batch_loops=py_batch_loops,
+                reference_divergence=reference_divergence,
+                binding_divergence=binding_divergence,
             ))
         except Exception as exc:  # noqa: BLE001
             rows.append(csv_row(
@@ -2167,7 +2250,17 @@ def benchmark_spec(
 
     if include_r and spec.r_expr:
         try:
-            median_ms, reason, r_samples, r_batch_loops = run_r_timing(spec.r_expr, ctx, repeat)
+            median_ms, reason, r_output, r_samples, r_batch_loops = run_r_timing(spec.r_expr, ctx, repeat)
+            reference_divergence = (
+                output_divergence(spec, r_output, reference_snapshot_output)
+                if (
+                    canonical_ref is not None
+                    and reference_snapshot_output is not None
+                    and spec.compare_internal
+                    and canonical_ref.gate_c4a
+                )
+                else None
+            )
             rows.append(csv_row(
                 spec,
                 backend="r",
@@ -2187,6 +2280,7 @@ def benchmark_spec(
                 samples_ms=r_samples,
                 repeat=repeat,
                 batch_loops=r_batch_loops,
+                reference_divergence=reference_divergence,
             ))
         except Exception as exc:  # noqa: BLE001
             rows.append(csv_row(
@@ -2215,19 +2309,23 @@ def benchmark_spec(
                 reference_role = "comparator" if ref.compare else "context"
                 if not ref.compare:
                     reference_ok = None
+                    reference_divergence = None
                     note = ref.contract_note or "external implementation does not expose the exact c4a contract"
                     reference_reason = f"performance context; no parity comparison: {note}"
                     parity = "context"
                 elif reference_snapshot_output is None:
                     reference_ok = None
+                    reference_divergence = None
                     reference_reason = reference_snapshot_error or reference_error or "reference snapshot unavailable"
                     parity = "fail"
                 elif canonical_ref is not None:
                     reference_ok, reference_reason = compare_outputs(spec, ref_output, reference_snapshot_output)
+                    reference_divergence = output_divergence(spec, ref_output, reference_snapshot_output)
                     parity = "external_ok" if reference_ok else "external_diverged"
                     reference_reason = f"comparator gate vs stored reference snapshot: {reference_reason}"
                 else:
                     reference_ok = None
+                    reference_divergence = None
                     reference_reason = "reference snapshot unavailable"
                     parity = "fail"
                 rows.append(csv_row(
@@ -2251,6 +2349,7 @@ def benchmark_spec(
                     samples_ms=ref_samples,
                     repeat=repeat,
                     batch_loops=ref_batch_loops,
+                    reference_divergence=reference_divergence,
                 ))
             except ModuleNotFoundError as exc:
                 rows.append(csv_row(

@@ -140,6 +140,16 @@ def _tri_bool(value: str | bool | None) -> bool | None:
     return text in {"1", "true", "yes", "ok", "pass"}
 
 
+def _float_or_none(value: str | float | None) -> float | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
 def _float_list(value: str | None) -> list[float]:
     out: list[float] = []
     for part in str(value or "").split(";"):
@@ -445,6 +455,12 @@ def build_payload(results_dir: Path) -> dict:
             "reference_role": raw.get("reference_role", "").strip(),
             "binding_parity_ok": _tri_bool(raw.get("binding_parity_ok")),
             "reference_parity_ok": _tri_bool(raw.get("reference_parity_ok")),
+            "reference_max_abs_diff": _float_or_none(raw.get("reference_max_abs_diff")),
+            "reference_rms_diff": _float_or_none(raw.get("reference_rms_diff")),
+            "reference_rel_l2_diff": _float_or_none(raw.get("reference_rel_l2_diff")),
+            "binding_max_abs_diff": _float_or_none(raw.get("binding_max_abs_diff")),
+            "binding_rms_diff": _float_or_none(raw.get("binding_rms_diff")),
+            "binding_rel_l2_diff": _float_or_none(raw.get("binding_rel_l2_diff")),
         }
 
     repo_root = Path(__file__).resolve().parents[2]

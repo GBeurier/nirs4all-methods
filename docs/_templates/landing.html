@@ -825,6 +825,11 @@
     .speed-faster { color: var(--phosphor); font-weight: 600; }
     .speed-equal  { color: var(--fg-1); }
     .speed-slower { color: var(--amber); }
+    .div-zero  { color: var(--phosphor); font-weight: 700; }
+    .div-tiny  { color: var(--phosphor); font-weight: 600; }
+    .div-small { color: var(--fg-1); }
+    .div-mid   { color: var(--amber); font-weight: 600; }
+    .div-large { color: var(--crimson); font-weight: 700; }
     table.bench td .cell-value.score-best { color: var(--score-best); font-weight: 700; }
     table.bench td .cell-value.score-near { color: var(--score-near); font-weight: 600; }
     table.bench td .cell-value.score-mid  { color: var(--score-mid); }
@@ -1113,6 +1118,7 @@
         <option value="duration">duration</option>
         <option value="speedup">duration %</option>
         <option value="avg-speedup">avg duration %</option>
+        <option value="divergence">ref divergence</option>
       </select>
     </div>
     <span class="ctrl-spacer"></span>
@@ -1135,6 +1141,7 @@
     <span class="legend-item"><span class="score-swatch" style="color:var(--score-mid)">+50%</span> within 50%</span>
     <span class="legend-item"><span class="score-swatch" style="color:var(--score-far)">+100%</span> within 100%</span>
     <span class="legend-item"><span class="score-swatch" style="color:var(--score-slow)">slow</span> slower</span>
+    <span class="legend-item"><span class="score-swatch div-tiny">Δref</span> max abs divergence</span>
     <span class="legend-item"><span class="reference-method-icon" style="margin-left:0">◆</span> reference method</span>
     <span class="legend-item"><span class="ref-badge" style="color:var(--amber);font-weight:600;border-left:2px solid var(--amber);padding-left:5px">ref</span> method reference label</span>
     <span class="legend-item" style="margin-left:auto;color:var(--fg-2);font-size:10px">click header to sort · ⇧+click for descending</span>
@@ -1245,7 +1252,7 @@ function parseParity(raw) {
   return keys.length ? new Set(keys) : new Set(PARITY_VALUES);
 }
 
-const VIZ_VALUES = ['duration', 'speedup', 'avg-speedup'];
+const VIZ_VALUES = ['duration', 'speedup', 'avg-speedup', 'divergence'];
 function loadState() {
   const p = new URLSearchParams(location.hash.slice(1));
   const density = p.get('density') || '';
@@ -1409,6 +1416,26 @@ function fmtDurationPercent(ratio) {
   return `${pct.toExponential(1)}%`;
 }
 
+function fmtDivergence(value) {
+  if (!Number.isFinite(value)) return '—';
+  const v = Math.abs(value);
+  if (v === 0) return '0';
+  if (v < 1e-3) return v.toExponential(1);
+  if (v < 1) return v.toPrecision(3);
+  if (v < 1000) return v.toPrecision(4);
+  return v.toExponential(2);
+}
+
+function divergenceClass(value) {
+  if (!Number.isFinite(value)) return '';
+  const v = Math.abs(value);
+  if (v === 0) return 'div-zero';
+  if (v <= 1e-10) return 'div-tiny';
+  if (v <= 1e-6) return 'div-small';
+  if (v <= 1e-3) return 'div-mid';
+  return 'div-large';
+}
+
 function applyRowFilters() {
   const q = state.search.trim().toLowerCase();
   const groupMap = DATA.algo_to_group || {};
@@ -1564,6 +1591,40 @@ function fastestPerLanguage(row, cols, colsById) {
   return winners;
 }
 
+function bestDivergenceColumn(row, cols) {
+  let best = null;
+  for (const id of cols) {
+    const c = row.cells[id];
+    if (!c || !cellPasses(c)) continue;
+    const d = c.reference_max_abs_diff;
+    if (!Number.isFinite(d)) continue;
+    if (best === null || d < best.value) best = { id, value: d };
+  }
+  return best ? best.id : null;
+}
+
+function bestDivergencePerLanguage(row, cols, colsById) {
+  const winners = {};
+  for (const id of cols) {
+    const c = row.cells[id];
+    if (!c || !cellPasses(c)) continue;
+    const d = c.reference_max_abs_diff;
+    if (!Number.isFinite(d)) continue;
+    const meta = colsById[id];
+    if (!meta) continue;
+    const slug = colLangSlug(meta);
+    if (!winners[slug]) winners[slug] = { id, value: d, count: 1 };
+    else {
+      winners[slug].count += 1;
+      if (d < winners[slug].value) {
+        winners[slug].id = id;
+        winners[slug].value = d;
+      }
+    }
+  }
+  return winners;
+}
+
 function rowHasVisibleCell(_row, _cols) {
   // Always true. Rows are filtered ONLY by the explicit row-level
   // filters (algo, family, lang, size, threads, search). Hiding a row
@@ -1598,12 +1659,17 @@ function sortRows(rows, cols) {
     // bottom (regardless of direction). Direction only flips the order
     // among numerically-valid cells.
     const ca = a.cells[col]; const cb = b.cells[col];
-    const aValid = ca && Number.isFinite(ca.ms);
-    const bValid = cb && Number.isFinite(cb.ms);
+    const cellValue = c => state.viz === 'divergence'
+      ? (c ? c.reference_max_abs_diff : null)
+      : (c ? c.ms : null);
+    const av = cellValue(ca);
+    const bv = cellValue(cb);
+    const aValid = Number.isFinite(av);
+    const bValid = Number.isFinite(bv);
     if (!aValid && !bValid) return 0;
     if (!aValid) return 1;
     if (!bValid) return -1;
-    return dir * (ca.ms - cb.ms);
+    return dir * (av - bv);
   });
   return r;
 }
@@ -1840,6 +1906,16 @@ function formatMs(value) {
 }
 
 function cellTitle(row, id, cell, meta) {
+  const addDivergence = parts => {
+    if (Number.isFinite(cell.reference_max_abs_diff)) {
+      parts.push(`reference max abs diff: ${fmtDivergence(cell.reference_max_abs_diff)}`);
+      if (Number.isFinite(cell.reference_rms_diff)) parts.push(`reference RMS diff: ${fmtDivergence(cell.reference_rms_diff)}`);
+      if (Number.isFinite(cell.reference_rel_l2_diff)) parts.push(`reference rel L2 diff: ${fmtDivergence(cell.reference_rel_l2_diff)}`);
+    }
+    if (Number.isFinite(cell.binding_max_abs_diff)) {
+      parts.push(`binding max abs diff: ${fmtDivergence(cell.binding_max_abs_diff)}`);
+    }
+  };
   if (isCanonicalReferenceCell(cell)) {
     const parts = [
       meta ? meta.label : id,
@@ -1856,6 +1932,7 @@ function cellTitle(row, id, cell, meta) {
         parts.push(`duration: ${fmtDurationPercent(cell.duration_ratio)} of C++ baseline`);
       }
     }
+    addDivergence(parts);
     if (cell.samples_ms && cell.samples_ms.length) parts.push(`samples: ${cell.samples_ms.map(formatMs).join(', ')}`);
     if (cell.reason) parts.push(`reason: ${cell.reason}`);
     return escAttr(parts.join('\n'));
@@ -1877,6 +1954,7 @@ function cellTitle(row, id, cell, meta) {
       parts.push(`duration: ${fmtDurationPercent(cell.duration_ratio)} of C++ baseline`);
     }
   }
+  addDivergence(parts);
   if (cell.samples_ms && cell.samples_ms.length) parts.push(`samples: ${cell.samples_ms.map(formatMs).join(', ')}`);
   if (cell.reason) parts.push(`reason: ${cell.reason}`);
   return escAttr(parts.join('\n'));
@@ -1959,6 +2037,7 @@ function renderTable() {
 
   // === BODY ===
   const relativeDurationMode = state.viz === 'speedup' || state.viz === 'avg-speedup';
+  const divergenceMode = state.viz === 'divergence';
   const baselineId = relativeDurationMode && NATIVE_COL_ID ? NATIVE_COL_ID : null;
   if (!rows.length) {
     $('bench-body').innerHTML = `<tr><td colspan="${cols.length + 4}"><div class="empty-state">
@@ -1969,8 +2048,8 @@ function renderTable() {
   } else {
     const body = [];
     for (const row of rows) {
-      const fastestId = fastestColumn(row, cols);
-      const langWinners = fastestPerLanguage(row, cols, colsById);
+      const fastestId = divergenceMode ? bestDivergenceColumn(row, cols) : fastestColumn(row, cols);
+      const langWinners = divergenceMode ? bestDivergencePerLanguage(row, cols, colsById) : fastestPerLanguage(row, cols, colsById);
       const baseCell  = baselineId ? row.cells[baselineId] : null;
       const baseMs    = baseCell && Number.isFinite(baseCell.ms) ? baseCell.ms : null;
       const canHighlight = !baselineId || baseMs !== null;
@@ -2007,9 +2086,18 @@ function renderTable() {
         let display;
         const fastCls = (canHighlight && id === fastestId) ? 'cell-fastest' : '';
         const langSlug = meta ? colLangSlug(meta) : '';
-        const scoreBest = langSlug && langWinners[langSlug] ? langWinners[langSlug].ms : c.ms;
-        const scoreCls = scoreClass(c.ms, scoreBest, canHighlight && id === fastestId);
-        if (baselineId && baseMs !== null) {
+        const divergenceValue = c.reference_max_abs_diff;
+        const scoreBest = langSlug && langWinners[langSlug]
+          ? (divergenceMode ? langWinners[langSlug].value : langWinners[langSlug].ms)
+          : (divergenceMode ? divergenceValue : c.ms);
+        const scoreCls = divergenceMode
+          ? divergenceClass(divergenceValue)
+          : scoreClass(c.ms, scoreBest, canHighlight && id === fastestId);
+        if (divergenceMode) {
+          display = Number.isFinite(divergenceValue)
+            ? `<span class="cell-value ${scoreCls}">${fmtDivergence(divergenceValue)}</span>`
+            : `<span class="cell-value speed-equal">—</span>`;
+        } else if (baselineId && baseMs !== null) {
           if (id === baselineId) {
             display = `<span class="cell-value speed-equal ${fastCls} ${scoreCls}">${densifyFmt(c.fmt || formatMs(c.ms))}</span>`;
           } else {
@@ -2045,7 +2133,9 @@ function renderTable() {
   // meta
   $('visible-count').textContent = `${rows.length} row${rows.length === 1 ? '' : 's'} · ${cols.length} cols`;
   $('table-meta-left').textContent = `${DATA.rows.length} rows · ${DATA.stats.cells.toLocaleString()} cells total`;
-  if (state.viz === 'avg-speedup' && baselineId) {
+  if (divergenceMode) {
+    $('table-meta-right').textContent = `reference divergence · max abs diff vs stored canonical external-reference snapshot`;
+  } else if (state.viz === 'avg-speedup' && baselineId) {
     $('table-meta-right').textContent = `geomean duration % · ${baselineId} shows geomean time · sizes collapsed`;
   } else if (baselineId) {
     $('table-meta-right').textContent = `duration % vs ${baselineId} · baseline column shows median time`;
