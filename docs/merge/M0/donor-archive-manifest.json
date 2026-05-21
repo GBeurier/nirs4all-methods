@@ -1,0 +1,138 @@
+{
+  "$schema": "https://nirs4all-methods.example/schemas/donor-archive-manifest-v1.json",
+  "captured_at": "2026-05-21T17:50:00Z",
+  "captured_by": "claude-opus-4-7-1m",
+  "purpose": "Preflight inventory before the pls4all + nirs4all-methods merge (see docs/merge/MERGE_ROADMAP.md). The donor repo will be renamed to nirs4all-methods-archive and archived in M16 step (a).",
+  "donor": {
+    "owner": "GBeurier",
+    "name": "nirs4all-methods",
+    "html_url": "https://github.com/GBeurier/nirs4all-methods",
+    "ssh_url": "git@github.com:GBeurier/nirs4all-methods.git",
+    "default_branch": "main",
+    "main_tip_sha": "95906aae18ceb882835e25b7ccaa2887f80f02cd",
+    "main_tip_subject": "Rename project to nirs4all-methods",
+    "created_at": "2026-05-18T12:28:20Z",
+    "updated_at": "2026-05-20T21:05:30Z",
+    "pushed_at": "2026-05-20T21:05:17Z",
+    "size_kib": 291597,
+    "license_spdx": "NOASSERTION",
+    "is_private": false,
+    "is_archived": false,
+    "open_issues_count": 0,
+    "has_issues": true,
+    "has_wiki": true,
+    "has_projects": true,
+    "has_downloads": true,
+    "has_pages": true,
+    "has_discussions": false,
+    "metadata_dump": "docs/merge/M0/donor-raw/repo.json"
+  },
+  "preserved_content": {
+    "commits_on_main": 44,
+    "tags": {
+      "count": 0,
+      "raw_dump": "docs/merge/M0/donor-raw/tags.json"
+    },
+    "releases": {
+      "count": 0,
+      "raw_dump": "docs/merge/M0/donor-raw/releases.json"
+    },
+    "issues_all_states": {
+      "count": 0,
+      "raw_dump": "docs/merge/M0/donor-raw/issues.json"
+    },
+    "pull_requests_all_states": {
+      "count": 0,
+      "raw_dump": "docs/merge/M0/donor-raw/pulls.json"
+    },
+    "branches": {
+      "count": 2,
+      "names": ["main", "worktree-agent-a62b667d41c6c951a"],
+      "raw_dump": "docs/merge/M0/donor-raw/branches.json"
+    },
+    "milestones": {
+      "count": 0,
+      "raw_dump": "docs/merge/M0/donor-raw/milestones.json"
+    },
+    "labels": {
+      "count": 9,
+      "note": "stock GitHub labels only — none customised",
+      "raw_dump": "docs/merge/M0/donor-raw/labels.json"
+    },
+    "workflows": {
+      "count": 8,
+      "names": ["ABI Surface", "CI", "Coverage", "docs", "release-python", "release-r", "Sanitizers", "version-sync"],
+      "raw_dump": "docs/merge/M0/donor-raw/workflows.json"
+    },
+    "pages": {
+      "enabled": true,
+      "status": null,
+      "url": "https://gbeurier.github.io/nirs4all-methods/",
+      "build_type": "workflow",
+      "source_branch": "main",
+      "https_enforced": true,
+      "builds_count": 0,
+      "raw_dump": "docs/merge/M0/donor-raw/pages.json",
+      "builds_raw_dump": "docs/merge/M0/donor-raw/pages-builds.json"
+    },
+    "wiki": {
+      "feature_enabled": true,
+      "wiki_repo_exists": false,
+      "verification": "git ls-remote https://github.com/GBeurier/nirs4all-methods.wiki.git returns 'Repository not found'",
+      "wiki_pages_count": 0
+    },
+    "discussions": {
+      "feature_enabled": false,
+      "discussions_count": 0
+    },
+    "branch_protection_main": {
+      "configured": false,
+      "verification": "gh api repos/GBeurier/nirs4all-methods/branches/main/protection returns HTTP 404 'Branch not protected'"
+    },
+    "packages": {
+      "queryable_by_pat": false,
+      "note": "gh api .../packages returned HTTP 403 with the maintainer's PAT — assume no published GitHub Packages exist for this repo; verify manually if relevant"
+    },
+    "local_worktree_agent_branches": {
+      "count": 18,
+      "note": "Not present on remote except worktree-agent-a62b667d41c6c951a. Detailed table in docs/merge/M0/worktree-inventory.md",
+      "all_locked_on_disk": true,
+      "preservation_warning": "The 18 worktree-agent-* tips are NOT reachable from `main`. `git subtree add ... main` in M1 imports only the main-reachable history. Preservation of these branches requires explicit archive tags created and pushed to origin BEFORE the branches are deleted in M0 cleanup. See docs/merge/M0/worktree-inventory.md for the tag-first cleanup commands."
+    },
+    "notes": [
+      "The donor repo is 3 days old (created 2026-05-18) and has not accumulated community artefacts (0 issues, 0 PRs, 0 releases, 0 tags, 0 milestones, no custom labels, no wiki content, no discussions, no branch protection rules).",
+      "Pages are enabled but have never deployed (status=null, 0 builds).",
+      "8 GitHub Actions workflows are active; their definitions live in the repo at .github/workflows/* and will be preserved by the source merge.",
+      "All commits reachable from main are preserved by the git history merge in M1. The 18 worktree-agent-* branch tips are NOT reachable from main — see preservation_warning above.",
+      "The single push to the remote-only branch worktree-agent-a62b667d41c6c951a is phase-10 (resampling preprocessors); content is semantically integrated by later aggregate commits on main — see docs/merge/M0/worktree-inventory.md for the integration evidence."
+    ]
+  },
+  "local_state": {
+    "checkout_path": "/home/delete/nirs4all/nirs4all-methods/",
+    "current_branch": "main",
+    "main_local_tip": "95906aae18ceb882835e25b7ccaa2887f80f02cd",
+    "working_tree_clean": true,
+    "local_branches_count": 19,
+    "worktree_agent_branches": 18,
+    "worktree_inventory": "docs/merge/M0/worktree-inventory.md",
+    "stale_worktree_pointers": 18,
+    "stale_worktree_state": "All 18 worktrees are LOCKED — `git worktree prune` skips locked worktrees and would not clean them. Cleanup must first `git worktree unlock <path>` then `git worktree remove --force <path>` or `git worktree prune` after the metadata files are removed.",
+    "stale_worktree_parent_dir": "/home/delete/nirs4all/chemometrics4all/ (no longer exists; the parent path was renamed to nirs4all-methods/ but git's worktree metadata still references the old path)"
+  },
+  "ci_status_at_capture": {
+    "main_tip_ci_workflow_result": "FAILING",
+    "failures": [
+      "cpp / macos-clang-debug — n4m_tests: split_kmeans_parity index mismatch at i=34 (got 45, want 46)",
+      "release-r — R CMD check: Fortran 2018 deleted feature warnings (vendored FITPACK) + missing roxygen docs; workflow is error-on=warning"
+    ],
+    "detail": "docs/merge/M0/ci-status.md"
+  },
+  "archive_plan_after_merge": {
+    "step_1": "Rename donor repo from 'nirs4all-methods' to 'nirs4all-methods-archive' (frees the slug for the base repo) — M16 step (a) of MERGE_ROADMAP.md.",
+    "step_2": "Set archived=true on the renamed repo (read-only flag).",
+    "step_3": "Add a NOTICE.md at donor root linking to the renamed base.",
+    "step_4": "No issue/PR/release re-import needed (none exist in donor).",
+    "step_5": "No wiki / projects / pages content to migrate (all empty).",
+    "step_6": "Workflows in .github/workflows/* are preserved by the source merge and become inactive on the archived repo automatically once it is flagged archived."
+  }
+}

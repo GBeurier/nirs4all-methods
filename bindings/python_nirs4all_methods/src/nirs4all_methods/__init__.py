@@ -10,5 +10,5 @@ raise ImportError(
     "nirs4all_methods is in M9 scaffold state — the actual extension "
     "(vendored sources compiled via ctypes) lands in the focused M9 "
     "session. Use the legacy 'pls4all' package or build from the "
-    "unified repo source directly until then. See M9/STATUS.md."
+    "unified repo source directly until then. See docs/merge/M9/STATUS.md (or focus the M9 session)."
 )

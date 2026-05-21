@@ -6,5 +6,5 @@ catalog/scripts/render_subset.py from catalog/subsets/pls4all.yaml.
 raise ImportError(
     "pls4all (slim) is in M10 scaffold state. Build from the unified "
     "repo source or use the legacy pls4all 0.97.x package until M10 "
-    "lands. See M10/STATUS.md."
+    "lands. See docs/merge/M10/STATUS.md (or focus the M10 session)."
 )

@@ -8,7 +8,7 @@
  *
  * STATUS: scaffold only. The per-category declarations will be lifted
  * from the renamed umbrella headers in the focused M5+M6 session per
- * /home/delete/nirs4all/M5/STATUS.md and /home/delete/nirs4all/M6/STATUS.md.
+ * docs/merge/M5/STATUS.md and docs/merge/M6/STATUS.md.
  *
  * After M5+M6 lands:
  *   - cpp/include/n4m/n4m.h is the umbrella header that #includes each
