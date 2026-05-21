@@ -65,6 +65,23 @@ except ImportError:  # pragma: no cover - depends on import path
     def _param_doc_lookup(method: str, param: str) -> str:
         return ""
 
+# Validation framework snapshot - the declarative contracts under
+# `benchmarks/validation/registry/*.json`. Loaded eagerly so we can
+# inject a `### Validation contract` section into each method page.
+# Falls back to an empty snapshot when the JSON files are missing
+# (fresh clone without the validation snapshot generated yet) - the
+# docs build still succeeds, the contract section is simply omitted.
+try:
+    from validation_registry import (
+        ValidationSnapshot as _ValidationSnapshot,
+        load_snapshot as _load_validation_snapshot,
+    )
+except ImportError:  # pragma: no cover - validation_registry sibling missing
+    _ValidationSnapshot = None  # type: ignore[assignment]
+
+    def _load_validation_snapshot():  # type: ignore[no-redef]
+        return None
+
 BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
     "pls": {
         "group": "core",
@@ -1365,7 +1382,9 @@ def parse_csv(path: Path) -> dict[str, list[dict]]:
                 if not algo:
                     continue
                 try:
-                    n = int(r["n"]); p = int(r["p"]); t = int(r["threads"])
+                    n = int(r["n"])
+                    p = int(r["p"])
+                    t = int(r["threads"])
                 except (KeyError, TypeError, ValueError):
                     continue
                 cid = column_id(r.get("backend", ""),
@@ -1422,7 +1441,6 @@ def parse_python_sklearn(directory: Path) -> dict[str, dict]:
                     defaults = args.defaults
                     kwonly = args.kwonlyargs
                     kwonly_defaults = args.kw_defaults
-                    n_args = len(args.args)
                     # Skip `self`
                     arg_names = [a.arg for a in args.args[1:]]
                     arg_annots = [
@@ -1687,7 +1705,6 @@ METHOD_TO_R_RAW: dict[str, str] = {
     "aom_preprocess": "aom_preprocess",
     "aom_pls": "aom_pls",
     "pop_pls": "pop_pls",
-    "aom_preprocess": "aom_preprocess",
     # selectors.R / methods_extra.R — *_select family
     "variable_select_vip":  "vip_select",
     "variable_select_coef": "coefficient_select",
@@ -1983,9 +2000,11 @@ def _truth_quality_class(quality: str) -> str:
 
 
 def _quality_from_tol(tol):
-    """Tolerance-band classifier — kept aligned with the registry's
-    `_truth_source_quality()` in `parity_timing/registry.py`. Used both
-    for the per-row badge styling and for the method-level legend chip.
+    """Release-gate classifier for benchmark cells.
+
+    Registry truth-source metadata still carries a separate diagnostic
+    quality derived from `MethodSpec.rmse_rel_tol`; that labels the reference
+    source, not the release verdict.
     """
     if tol is None:
         return "unknown"
@@ -1995,7 +2014,7 @@ def _quality_from_tol(tol):
         return "unknown"
     if t != t:  # NaN
         return "unknown"
-    if t <= 1e-6:
+    if t <= STRICT_REFERENCE_DRIFT_TOL:
         return "strict"
     if t < 1e-1:
         return "relaxed"
@@ -2136,6 +2155,49 @@ def _parity_badge_html(verdict_, basis, diff, quality, is_self):
             f"? ref {fmt}" if fmt else "? ref")
 
 
+def _format_divergence_value(diff_str):
+    """Format a row-level divergence value for compact table display."""
+    if diff_str in (None, "", "None"):
+        return "", 0.0
+    try:
+        d = float(diff_str)
+    except (TypeError, ValueError):
+        return "", 0.0
+    if d != d:
+        return "", 0.0
+    av = abs(d)
+    if av == 0:
+        return "0", 0.0
+    if av < 1e-3 or av >= 100:
+        return f"{av:.0e}", av
+    if av < 0.1:
+        return f"{av:.1e}", av
+    return f"{av:.2f}", av
+
+
+def _divergence_cell_html(verdict_, basis, diff, quality, is_self):
+    """Compose the row-level divergence cell without parity icons."""
+    fmt, _ = _format_divergence_value(diff)
+    if is_self and basis == "reference" and not fmt:
+        fmt = "0"
+    if not fmt:
+        fmt = "—"
+
+    klass = f"parity parity-divergence parity-{verdict_}"
+    if verdict_ == "exact" and basis == "reference":
+        if is_self:
+            klass = "parity parity-divergence parity-ref-source"
+        elif quality == "strict":
+            klass = "parity parity-divergence parity-ref-strict"
+        elif quality == "relaxed":
+            klass = "parity parity-divergence parity-ref-relaxed"
+        elif quality == "qualitative":
+            klass = "parity parity-divergence parity-ref-qualitative"
+        else:
+            klass = "parity parity-divergence parity-ref-unknown"
+    return klass, fmt
+
+
 def _truth_quality_label(quality: str, tol: float) -> str:
     """Human label for the 📐 tooltip."""
     rounded = f"{tol:.0e}"
@@ -2157,6 +2219,181 @@ def _truth_mark_html(meta: dict) -> str:
     title_safe = title.replace('"', "&quot;").strip()
     return (f'<span class="truth-mark" title="{title_safe}">'
             f'{TRUTH_SOURCE_ICON}</span>')
+
+
+# ---------------------------------------------------------------------------
+# Validation contract (PLS-2)
+#
+# Renders a `### Validation contract` block per method from the
+# declarative snapshot under `benchmarks/validation/registry/`. The
+# section is documentation-only: it describes the comparator, tolerance
+# band, executable references and benchmark cell parameters the parity
+# gate uses for this method. It does not replace the existing
+# `### Benchmarks` divergence table, nor the "Registry parity references"
+# card at the end of the usage section.
+# ---------------------------------------------------------------------------
+
+
+def _format_tolerance_value(value) -> str:
+    """Render a tolerance number for the contract block.
+
+    Mirrors the rounding rules `_truth_quality_label` uses, so the
+    block matches the parity-table legend visually.
+    """
+    if value is None:
+        return "—"
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if v != v:  # NaN
+        return "—"
+    return f"{v:.0e}"
+
+
+def _format_cell_param_value(value) -> str:
+    """Pretty-print a cell_params value for the contract table."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, float):
+        # Avoid printing `3.0` when `3` is enough; keep one decimal otherwise.
+        if value.is_integer():
+            return str(int(value))
+        return f"{value:.4g}"
+    if isinstance(value, list):
+        return "[" + ", ".join(_format_cell_param_value(v) for v in value) + "]"
+    return str(value)
+
+
+def validation_contract_section(method: str,
+                                  contract: dict | None) -> str:
+    """Build the `### Validation contract` markdown for a method page.
+
+    `contract` is the output of
+    `ValidationSnapshot.method_contract(method)`. Returns an empty
+    string when the snapshot does not declare this method (so the
+    caller can omit the section entirely without a placeholder).
+    """
+    if not contract:
+        return ""
+
+    role = contract.get("canonical_reference_role")
+    kind = contract.get("reference_kind") or "—"
+    comparator = contract.get("comparator") or "—"
+    comparator_detail = contract.get("comparator_detail") or {}
+    quality = contract.get("tolerance_quality") or "—"
+    ref_tol = contract.get("reference_tolerance")
+    bind_tol = contract.get("binding_tolerance")
+
+    extras = list(contract.get("extra_reference_roles") or [])
+    refs = []
+    if contract.get("has_python_reference"):
+        refs.append("Python")
+    if contract.get("has_r_reference"):
+        refs.append("R")
+    refs.extend(extras)
+    refs_str = ", ".join(refs) if refs else "—"
+
+    paper_only = (contract.get("paper_only") or "").strip()
+
+    needs_lines: list[str] = []
+    if contract.get("needs_x_target"):
+        needs_lines.append("`X_target`")
+    if contract.get("needs_sample_weights"):
+        needs_lines.append("`sample_weights`")
+    if contract.get("needs_labels"):
+        needs_lines.append("`y_labels`")
+    if contract.get("needs_group_assignment"):
+        needs_lines.append("`group_assignment`")
+    data_flags = ", ".join(needs_lines) if needs_lines else "none"
+
+    suites = contract.get("suites") or []
+    cell_params = contract.get("cell_params") or {}
+    datasets = contract.get("datasets") or []
+
+    parts: list[str] = []
+    parts.append("### Validation contract\n")
+    parts.append(
+        "Structural validation contract for `" + method + "`, exported by "
+        "the declarative validation framework "
+        "(`benchmarks/validation/registry/`) from "
+        "`benchmarks.parity_timing.registry`. Regenerated by "
+        "`python -m benchmarks.validation.export_registry --write`."
+    )
+    parts.append("")
+
+    parts.append("| Field | Value |")
+    parts.append("|------|-------|")
+    parts.append(f"| Reference kind | `{kind}` |")
+    if role:
+        parts.append(f"| Canonical reference role | `{role}` |")
+    else:
+        parts.append("| Canonical reference role | — |")
+    parts.append(f"| Declared references | {refs_str} |")
+    comparator_label = comparator_detail.get("name") or comparator
+    parts.append(
+        f"| Comparator | `{comparator}` ({comparator_label}) |"
+    )
+    metric = comparator_detail.get("metric")
+    if metric:
+        parts.append(f"| Comparator metric | `{metric}` |")
+    parts.append(
+        f"| Reference tolerance | `{_format_tolerance_value(ref_tol)}` "
+        f"({quality}) |"
+    )
+    parts.append(
+        f"| Binding tolerance | `{_format_tolerance_value(bind_tol)}` |"
+    )
+    parts.append(
+        f"| Prediction key | `{contract.get('prediction_key') or '—'}` |"
+    )
+    parts.append(f"| Required data flags | {data_flags} |")
+    if paper_only:
+        parts.append(f"| Paper-only citation | {paper_only} |")
+    parts.append("")
+
+    if cell_params:
+        parts.append("**Benchmark cell parameters**")
+        parts.append("")
+        parts.append("| Parameter | Value |")
+        parts.append("|-----------|-------|")
+        for key in sorted(cell_params):
+            parts.append(
+                f"| `{key}` | `{_format_cell_param_value(cell_params[key])}` |"
+            )
+        parts.append("")
+
+    if suites:
+        parts.append("**Validation suites**")
+        parts.append("")
+        for suite in suites:
+            sid = suite.get("id") or "?"
+            desc = (suite.get("description") or "").strip()
+            sds = suite.get("datasets") or []
+            cmp_list = suite.get("comparators") or []
+            ds_render = ", ".join(f"`{d}`" for d in sds) if sds else "—"
+            cmp_render = (
+                ", ".join(f"`{c}`" for c in cmp_list) if cmp_list else "—"
+            )
+            parts.append(
+                f"- **`{sid}`** — {desc} Datasets: {ds_render}. "
+                f"Comparators: {cmp_render}."
+            )
+        parts.append("")
+
+    if datasets:
+        parts.append("**Dataset cells referenced by these suites**")
+        parts.append("")
+        parts.append("| Dataset | n | p |")
+        parts.append("|---------|---|---|")
+        for d in datasets:
+            parts.append(
+                f"| `{d.get('id', '?')}` | {d.get('n', '?')} | "
+                f"{d.get('p', '?')} |"
+            )
+        parts.append("")
+
+    return "\n".join(parts)
 
 
 def parity_table(method: str, rows: list[dict],
@@ -2216,14 +2453,32 @@ def parity_table(method: str, rows: list[dict],
     if not rows:
         return "_No benchmark rows recorded for this method._"
 
+    def _raw_row_ms(r: dict | None) -> float:
+        if r is None:
+            return float("nan")
+        try:
+            return float(r.get("reported_ms") or r.get("median_ms") or "nan")
+        except (TypeError, ValueError):
+            return float("nan")
+
+    def _has_successful_timing(r: dict | None) -> bool:
+        if r is None or not is_true(r.get("ok")):
+            return False
+        ms = _raw_row_ms(r)
+        return ms == ms
+
     # Pre-filter: drop rows for backends that don't implement this
-    # method at all (every measured cell is `not_available`). If
+    # method at all (every measured cell is `not_available` and has no
+    # successful timing). If
     # that empties the entire set we render a friendlier note rather
     # than an empty table — `_row_is_present()` below uses the same
     # rule per-thread.
     def _is_unsupported_only(r: dict) -> bool:
         cid = column_id(r["backend"], r.get("libp4a_build", ""))
-        return verdict(r, cid) == "not_available"
+        return (
+            verdict(r, cid) == "not_available"
+            and not _has_successful_timing(r)
+        )
     if rows and all(_is_unsupported_only(r) for r in rows):
         return ("_No backend implements this method yet — only "
                 "registry-declared parity references exist._")
@@ -2231,7 +2486,9 @@ def parity_table(method: str, rows: list[dict],
     cells: dict[tuple[str, int, int, int], dict] = {}
     for r in rows:
         try:
-            n = int(r["n"]); p = int(r["p"]); t = int(r["threads"])
+            n = int(r["n"])
+            p = int(r["p"])
+            t = int(r["threads"])
         except (KeyError, ValueError):
             continue
         cid = column_id(r["backend"], r.get("libp4a_build", ""))
@@ -2254,35 +2511,25 @@ def parity_table(method: str, rows: list[dict],
         return verdict(r, cid) if r is not None else "not_run"
 
     def _row_ms(r: dict | None) -> float:
-        if r is None:
-            return float("nan")
-        try:
-            return float(r.get("reported_ms") or r.get("median_ms") or "nan")
-        except (TypeError, ValueError):
-            return float("nan")
+        return _raw_row_ms(r)
 
-    # Method-level reference tolerance — used to band the parity badge
-    # (strict / relaxed / qualitative). Prefer the registry's truth-source
-    # metadata; fall back to the first row that records a finite
-    # `reference_parity_tolerance` so the badge stays honest even when
-    # `load_truth_source_metadata()` produced an empty dict.
+    def _row_has_successful_timing(r: dict | None) -> bool:
+        return _has_successful_timing(r)
+
+    # Method-level release tolerance — used to band benchmark cells. Prefer
+    # the row-level value emitted by the orchestrator; registry truth-source
+    # metadata is only a diagnostic/variant budget.
     method_tol = None
-    for meta in truth_sources.values():
+    for r in rows:
         try:
-            method_tol = float(meta.get("tolerance"))
-            if method_tol == method_tol:
+            t = float(r.get("reference_parity_tolerance"))
+            if t == t:
+                method_tol = t
                 break
         except (TypeError, ValueError):
             continue
     if method_tol is None or method_tol != method_tol:
-        for r in rows:
-            try:
-                t = float(r.get("reference_parity_tolerance"))
-                if t == t:
-                    method_tol = t
-                    break
-            except (TypeError, ValueError):
-                continue
+        method_tol = STRICT_REFERENCE_DRIFT_TOL
     method_quality = _quality_from_tol(method_tol)
 
     lines: list[str] = []
@@ -2293,37 +2540,34 @@ def parity_table(method: str, rows: list[dict],
         "Only backends that implement this method are listed; "
         "libraries without the method are omitted.",
         "",
-        "**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a "
-        "reference-gate pass at strict / relaxed / qualitative "
-        "tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees "
-        "with the C++ baseline &nbsp;·&nbsp; ✗ divergent "
-        "&nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The "
-        "fastest backend per column is marked 🏆.",
+        "**Divergence** is the worst finite value over the visible "
+        "sizes for each backend: reference-gate rows show `rmse_rel`, "
+        "binding-gate rows show `max_diff` against the C++ baseline. "
+        "Rows without a recorded comparison show `—`; the fastest "
+        "backend per column is marked 🏆.",
     ]
     if method_tol is not None and method_tol == method_tol:
         if method_quality == "strict":
             legend_lines += [
                 "",
-                f"**Reference gate**: strict — numeric equivalence "
-                f"(`rmse_rel_tol ≤ {method_tol:.0e}`).",
+                f"**Reference gate**: strict release — `rmse_rel ≤ "
+                f"{method_tol:.0e}` is required; `rmse_rel ≤ "
+                f"{STRICT_REFERENCE_EXACT_TOL:.0e}` is displayed as exact.",
             ]
         elif method_quality == "relaxed":
             legend_lines += [
                 "",
-                f"**Reference gate**: relaxed — known algorithmic "
-                f"drift between pls4all and the external reference "
-                f"(`rmse_rel_tol ≤ {method_tol:.0e}`).",
+                f"**Reference gate**: relaxed diagnostic only — this does "
+                f"not validate release parity (`rmse_rel ≤ "
+                f"{method_tol:.0e}`).",
             ]
         elif method_quality == "qualitative":
             legend_lines += [
                 "",
-                f"**Reference gate**: qualitative — shape/smoke "
-                f"comparison only. The external library and pls4all "
-                f"do not produce numerically equivalent output for "
-                f"this method (see the MethodSpec notes); the "
-                f"`rmse_rel_tol ≤ {method_tol:.0e}` budget is set "
-                f"wide on purpose. Treat ~ shape as *“we ran both, "
-                f"both finished”*, not as numerical agreement.",
+                f"**Reference gate**: non-release diagnostic — shape/smoke "
+                f"comparison only (`rmse_rel ≤ {method_tol:.0e}`). Treat it "
+                f"as evidence that both implementations ran, not as "
+                f"numerical agreement.",
             ]
     if truth_sources:
         legend_lines += [
@@ -2345,25 +2589,20 @@ def parity_table(method: str, rows: list[dict],
         lines.append(_tab_open(
             f"{t} thread{'s' if t != 1 else ''}", sync))
 
-        # Compute per-column best (lowest ms) across all valid backends
-        # for this thread count. "Valid" means the cell ran successfully
-        # (verdict ∈ {exact, drift}) — divergent / error / skip rows are
-        # not eligible for the medal.
-        column_min: dict[tuple[int, int], tuple[float, str]] = {}
+        # Compute per-column best (lowest ms) across all successful timed
+        # runs for this thread count. This medal is a timing marker only:
+        # divergent / no-comparison successful runs are still eligible, while
+        # failed / skipped / unsupported cells are excluded.
+        column_min: dict[tuple[int, int], float] = {}
         for (n, p_) in sizes:
             for cid in cids:
                 r = cells.get((cid, n, p_, t))
-                if r is None:
-                    continue
-                v = _row_verdict(r, cid)
-                if v not in ("exact", "drift"):
+                if not _row_has_successful_timing(r):
                     continue
                 ms = _row_ms(r)
-                if ms != ms:  # NaN
-                    continue
                 cur = column_min.get((n, p_))
-                if cur is None or ms < cur[0]:
-                    column_min[(n, p_)] = (ms, cid)
+                if cur is None or ms < cur:
+                    column_min[(n, p_)] = ms
 
         # Header
         size_headers = "".join(
@@ -2374,25 +2613,27 @@ def parity_table(method: str, rows: list[dict],
             '<table class="docutils parity-grouped">',
             '<thead><tr>'
             '<th scope="col">Backend</th>'
-            '<th scope="col">Parity</th>'
+            '<th scope="col">Divergence</th>'
             f'{size_headers}'
             '</tr></thead>',
         ]
 
         # Pre-scan rows so we can drop backends that don't implement
         # this method (or that simply didn't run any size). A row is
-        # "present" only when at least one of its visible cells has a
-        # REAL outcome — exact/drift/divergent/error. Cells whose
-        # verdict is `not_available` (library doesn't ship the method)
-        # or `not_run` (size deferred / timeout / not scheduled) are
-        # absence-of-data, not evidence of presence.
+        # "present" when at least one visible cell has either a successful
+        # finite timing or a real outcome — exact/drift/divergent/error.
+        # `not_available` without timing is absence-of-data, not evidence
+        # of presence.
         _PRESENCE_VERDICTS = {"exact", "drift", "divergent", "error"}
         def _row_is_present(cid: str) -> bool:
             for (n, p_) in sizes:
                 r = cells.get((cid, n, p_, t))
                 if r is None:
                     continue
-                if _row_verdict(r, cid) in _PRESENCE_VERDICTS:
+                if (
+                    _row_has_successful_timing(r)
+                    or _row_verdict(r, cid) in _PRESENCE_VERDICTS
+                ):
                     return True
             return False
 
@@ -2424,7 +2665,7 @@ def parity_table(method: str, rows: list[dict],
                 v = _row_worst_verdict(cells_in_row, cid)
                 basis, diff = _row_worst_diff(cells_in_row, cid)
                 is_self = is_true(primary.get("is_canonical_reference"))
-                p_class, p_cell = _parity_badge_html(
+                p_class, p_cell = _divergence_cell_html(
                     v, basis, diff, method_quality, is_self)
                 truth_meta = truth_sources.get(cid)
                 bk_row_class = "bk-row"
@@ -2454,7 +2695,11 @@ def parity_table(method: str, rows: list[dict],
                     fmt = fmt_ms(r.get("reported_ms") or r.get("median_ms", "")) \
                         if ms == ms else "—"
                     best = column_min.get((n, p_))
-                    is_best = (best is not None and best[1] == cid)
+                    is_best = (
+                        best is not None
+                        and _row_has_successful_timing(r)
+                        and abs(ms - best) <= max(1e-12, abs(best) * 1e-9)
+                    )
                     cls = "ms" + (" ms-best" if is_best else "")
                     medal = '<span class="medal" title="fastest">🏆</span>' \
                         if is_best else ""
@@ -3000,7 +3245,8 @@ def _docstring_summary(doc: str) -> str:
 def render_method_page(spec: dict, cat: dict | None,
                        bench_rows: list[dict],
                        py_docs: dict, r_docs: dict, m_docs: dict,
-                       truth_sources: dict[str, dict] | None = None) -> str:
+                       truth_sources: dict[str, dict] | None = None,
+                       validation_contract: dict | None = None) -> str:
     """Build the full markdown for one method."""
     name = spec["name"]
     truth_sources = truth_sources or {}
@@ -3085,6 +3331,10 @@ def render_method_page(spec: dict, cat: dict | None,
 
     parts.append(usage_section(name, spec, cat, py_docs, r_docs, m_docs,
                                 truth_sources=truth_sources))
+
+    contract_block = validation_contract_section(name, validation_contract)
+    if contract_block:
+        parts.append(contract_block)
 
     parts.append(parity_table(name, bench_rows,
                                 truth_sources=truth_sources))
@@ -3172,6 +3422,26 @@ def main() -> None:
     m_docs = parse_matlab(MATLAB_DIR)
     truth_sources = load_truth_source_metadata(strict=args.strict)
 
+    # Validation contracts come from the declarative snapshot under
+    # `benchmarks/validation/registry/`. Missing snapshot is non-fatal
+    # in non-strict mode - the contract section is then skipped.
+    validation_snapshot = _load_validation_snapshot() \
+        if _load_validation_snapshot is not None else None
+    if validation_snapshot is None or not validation_snapshot.is_loaded:
+        if args.strict:
+            errs = list(getattr(validation_snapshot, "errors", []) or [])
+            raise SystemExit(
+                "missing validation snapshot - run `python -m "
+                "benchmarks.validation.export_registry --write`. "
+                "Errors: " + ("; ".join(errs) if errs else "(none)")
+            )
+        validation_contracts: dict[str, dict] = {}
+    else:
+        validation_contracts = {
+            n: validation_snapshot.method_contract(n) or {}
+            for n in validation_snapshot.method_names()
+        }
+
     if args.no_bench or not CSV_PATH.exists():
         if args.strict and not CSV_PATH.exists():
             raise SystemExit(f"missing CSV: {CSV_PATH}")
@@ -3206,7 +3476,8 @@ def main() -> None:
         page = render_method_page(
             m, method_to_cat.get(m["name"]), rows,
             py_docs, r_docs, m_docs,
-            truth_sources=truth_sources.get(m["name"], {}))
+            truth_sources=truth_sources.get(m["name"], {}),
+            validation_contract=validation_contracts.get(m["name"]))
         (out_dir / f"{m['name']}.md").write_text(page, encoding="utf-8")
 
     (out_dir / "index.md").write_text(render_index(methods), encoding="utf-8")

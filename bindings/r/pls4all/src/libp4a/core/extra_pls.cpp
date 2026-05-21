@@ -9,7 +9,6 @@
 #include <limits>
 #include <memory>
 #include <new>
-#include <random>
 #include <vector>
 
 #include "core/matrix_view.hpp"
@@ -21,9 +20,31 @@ namespace pls4all::core {
 namespace {
 
 constexpr double kEps = 1e-12;
+constexpr std::uint64_t kSplitMixGolden = 0x9E3779B97F4A7C15ull;
 
 [[maybe_unused]] inline std::size_t idx(std::size_t row, std::size_t cols, std::size_t col) noexcept {
     return row * cols + col;
+}
+
+[[nodiscard]] std::uint64_t splitmix64_next(std::uint64_t& state) noexcept {
+    std::uint64_t z = (state += kSplitMixGolden);
+    z = (z ^ (z >> 30U)) * 0xBF58476D1CE4E5B9ull;
+    z = (z ^ (z >> 27U)) * 0x94D049BB133111EBull;
+    return z ^ (z >> 31U);
+}
+
+[[nodiscard]] std::size_t random_bounded(std::uint64_t& state,
+                                          std::size_t bound) noexcept {
+    return static_cast<std::size_t>(
+        splitmix64_next(state) % static_cast<std::uint64_t>(bound));
+}
+
+void shuffle_indices(std::vector<std::size_t>& indices,
+                     std::uint64_t& state) noexcept {
+    for (std::size_t i = indices.size(); i > 1U; --i) {
+        const std::size_t j = random_bounded(state, i);
+        std::swap(indices[i - 1U], indices[j]);
+    }
 }
 
 [[nodiscard]] p4a_status_t copy_matrix(Context& ctx,
@@ -1914,13 +1935,12 @@ p4a_status_t fit_bagging_pls(Context& ctx,
     const std::size_t a = std::min<std::size_t>(
         static_cast<std::size_t>(cfg.n_components),
         std::min(n - 1, p));
-    std::mt19937_64 rng(seed);
-    std::uniform_int_distribution<std::size_t> dist(0, n - 1);
+    std::uint64_t rng_state = seed;
     std::vector<double> X_boot(n * p, 0.0);
     std::vector<double> Y_boot(n * q, 0.0);
     for (std::int32_t e = 0; e < n_estimators; ++e) {
         for (std::size_t r = 0; r < n; ++r) {
-            const std::size_t idx_row = dist(rng);
+            const std::size_t idx_row = random_bounded(rng_state, n);
             for (std::size_t f = 0; f < p; ++f)
                 X_boot[r * p + f] = X_buf[idx_row * p + f];
             for (std::size_t target = 0; target < q; ++target)
@@ -2025,11 +2045,11 @@ p4a_status_t fit_random_subspace_pls(Context& ctx,
     const std::size_t a = std::min<std::size_t>(
         static_cast<std::size_t>(cfg.n_components),
         std::min(n - 1, static_cast<std::size_t>(features_per_subspace)));
-    std::mt19937_64 rng(seed);
+    std::uint64_t rng_state = seed;
     std::vector<std::size_t> indices(p);
     for (std::size_t i = 0; i < p; ++i) indices[i] = i;
     for (std::int32_t e = 0; e < n_estimators; ++e) {
-        std::shuffle(indices.begin(), indices.end(), rng);
+        shuffle_indices(indices, rng_state);
         const std::size_t sub_p = static_cast<std::size_t>(features_per_subspace);
         std::vector<double> X_sub(n * sub_p, 0.0);
         for (std::size_t r = 0; r < n; ++r) {

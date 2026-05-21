@@ -399,7 +399,15 @@ p4a_status_t select_by_wvc_threshold(Context& ctx,
         out.mean_score = sum / static_cast<double>(out.final_scores.size());
         out.score_threshold = score_threshold;
         out.threshold_factor = threshold_factor;
-        out.effective_threshold = std::max(score_threshold, threshold_factor * out.mean_score);
+        std::vector<double> sorted_scores = out.final_scores;
+        std::sort(sorted_scores.begin(), sorted_scores.end());
+        const std::size_t mid = sorted_scores.size() / 2U;
+        const double median_score =
+            (sorted_scores.size() % 2U == 0U)
+                ? 0.5 * (sorted_scores[mid - 1U] + sorted_scores[mid])
+                : sorted_scores[mid];
+        out.effective_threshold = std::max(score_threshold,
+                                           threshold_factor * median_score);
 
         for (const std::int64_t feature : out.ranked_indices) {
             const double score = out.final_scores[static_cast<std::size_t>(feature)];

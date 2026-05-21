@@ -18,11 +18,24 @@
 
 import { getModule } from "./ffi.js";
 
-export { loadModule, getModule } from "./ffi.js";
+export { loadModule, getModule, hasExportedFunction } from "./ffi.js";
 export { Context } from "./context.js";
 export { Config } from "./config.js";
+export { fitPredictCore, type CoreFitOptions } from "./core.js";
 export { Model, fitPls, predictPls, type PlsModel } from "./model.js";
+export { NativeModel } from "./nativeModel.js";
 export { MethodResult } from "./methodResult.js";
+export {
+    AomGlobalResult,
+    AomPerComponentResult,
+    GatingStrategy,
+    OperatorBank,
+    ValidationPlan,
+    aom_global_select,
+    aom_per_component_select,
+    type HandleLike,
+} from "./aom.js";
+export * from "./methods.js";
 export {
     PLSRegression,
     type PLSRegressionParams,
@@ -33,6 +46,8 @@ export {
     Algorithm,
     Solver,
     Deflation,
+    GatingMode,
+    OperatorKind,
     Pls4allError,
     type Matrix,
 } from "./types.js";
@@ -54,4 +69,3 @@ export function abiVersion(): readonly [number, number, number] {
         m.ccall("p4a_get_abi_version_patch", "number", [], []) as number,
     ];
 }
-

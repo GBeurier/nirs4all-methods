@@ -1,0 +1,103 @@
+{
+  "references": [
+    {
+      "is_extra": true,
+      "methods": [
+        "pls"
+      ],
+      "role": "ikpls"
+    },
+    {
+      "is_extra": true,
+      "methods": [
+        "pls"
+      ],
+      "role": "mixOmics"
+    },
+    {
+      "is_extra": false,
+      "methods": [
+        "aom_pls",
+        "aom_preprocess",
+        "bagging_pls",
+        "di_pls",
+        "ecr",
+        "gpr_pls",
+        "irf_select",
+        "iriv_select",
+        "lw_pls",
+        "mb_pls",
+        "n_pls",
+        "on_pls",
+        "pcr",
+        "pls",
+        "pls_lda",
+        "pls_logistic",
+        "pls_qda",
+        "pop_pls",
+        "pso_select",
+        "random_frog_select",
+        "random_subspace_pls",
+        "recursive_pls",
+        "ridge_pls",
+        "vip_spa_select",
+        "vissa_select",
+        "weighted_pls"
+      ],
+      "role": "python"
+    },
+    {
+      "is_extra": false,
+      "methods": [
+        "approximate_press",
+        "bipls_select",
+        "boosting_pls",
+        "bve_select",
+        "cars_select",
+        "continuum_regression",
+        "cppls",
+        "ds",
+        "emcuve_select",
+        "ga_select",
+        "group_sparse_pls",
+        "interval_select",
+        "ipw_select",
+        "kernel_pls_rbf",
+        "missing_aware_nipals",
+        "o2pls",
+        "one_se_rule",
+        "opls",
+        "pcr",
+        "pds",
+        "pls",
+        "pls_cox",
+        "pls_diagnostic_dmodx",
+        "pls_diagnostic_q",
+        "pls_diagnostic_t2",
+        "pls_glm",
+        "pls_monitoring",
+        "randomization_select",
+        "recursive_pls",
+        "rep_select",
+        "robust_pls",
+        "rosa",
+        "shaving_select",
+        "so_pls",
+        "spa_select",
+        "sparse_pls_da",
+        "sparse_simpls",
+        "st_select",
+        "stability_select",
+        "t2_select",
+        "uve_select",
+        "variable_select_coef",
+        "variable_select_sr",
+        "variable_select_vip",
+        "wvc_select",
+        "wvc_threshold_select"
+      ],
+      "role": "r"
+    }
+  ],
+  "schema_version": 1
+}

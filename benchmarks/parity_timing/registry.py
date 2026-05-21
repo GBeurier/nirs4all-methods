@@ -6308,10 +6308,11 @@ def reference_kind(method: MethodSpec) -> str:
 #     The committed lockfile uses this so CI on a minimal host can verify
 #     "registry didn't drift" without needing R / Octave installed.
 #
-# Quality bands drive the dashboard CSS class. They derive from
-# `rmse_rel_tol` so the icon honestly reflects how strict the gate is —
-# a primary `python_reference` with tol > 1 (e.g. the AOM shape-only
-# oracle) is correctly tagged "qualitative", not "primary-strict".
+# Quality bands describe the diagnostic strength of the registry reference.
+# They derive from `rmse_rel_tol`, but they are not the release Gate 2
+# threshold. The cross-binding release gate clamps executable references to
+# rmse_rel <= 1e-3 and keeps wider diagnostic/variant contracts visible as
+# divergences until a package-compatible implementation is tested.
 
 QUALITY_STRICT = "strict"          # tol <= 1e-6 — effectively bit-exact
 QUALITY_RELAXED = "relaxed"        # 1e-6 < tol < 1e-1 — algorithmic drift
@@ -6341,11 +6342,10 @@ def truth_source_metadata_for(method: MethodSpec) -> dict[str, dict]:
     `benchmarks/cross_binding/orchestrator.py`). The cid this function
     returns matches that convention exactly.
 
-    `quality` derives from `method.rmse_rel_tol` so the renderer can
-    style strict / relaxed / qualitative bands distinctly. A primary
-    python_reference whose tolerance is wide (e.g. AOM oracle, MB/LW
-    cross-implementation refs) ends up classified by its real strength,
-    not by its role slot.
+    `quality` derives from `method.rmse_rel_tol` so generated docs can
+    label strict / relaxed / qualitative diagnostic references distinctly.
+    It does not override the strict release Gate 2 threshold emitted by the
+    cross-binding orchestrator.
     """
     out: dict[str, dict] = {}
     for ref in resolved_references_for_method(method):

@@ -77,6 +77,11 @@ bindings/js/coverage/
 *.wat
 
 # ============================================================
+# Julia
+# ============================================================
+bindings/julia/Pls4all.jl/Manifest.toml
+
+# ============================================================
 # MATLAB
 # ============================================================
 bindings/matlab/*.mex*
@@ -122,6 +127,8 @@ todo.local.md
 # Cross-binding benchmark caches (regenerated per run)
 benchmarks/cross_binding/data/*.csv
 benchmarks/cross_binding/data/.predictions/
+benchmarks/cross_binding/data/.reference_oracles/
+benchmarks/cross_binding/data/.x_target/
 benchmarks/cross_binding/results/*
 !benchmarks/cross_binding/results/dashboard_refresh_*.csv
 docs/_build/

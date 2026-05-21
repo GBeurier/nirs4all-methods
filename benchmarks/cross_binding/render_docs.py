@@ -658,9 +658,11 @@ def render(csv_path: Path, out_path: Path,
                 "for an algorithm")
     out.append("- Gate 2 reference: the registry-declared canonical "
                 "external reference for the method")
-    out.append("- Gate 1 tolerance: 1e-6 max-abs-diff; Gate 2 tolerance: "
-                "`MethodSpec.rmse_rel_tol` (also emitted as "
-                "`reference_parity_tolerance` by newer CSVs)")
+    out.append("- Gate 1 tolerance: 1e-6 max-abs-diff")
+    out.append("- Gate 2 release tolerance: strict rmse_rel <= 1e-3 "
+                "(<= 1e-6 is displayed as exact). `MethodSpec.rmse_rel_tol` "
+                "is only a diagnostic/variant budget and must not turn a "
+                "strict reference divergence into a passing release gate.")
     out.append("- All backends read the same orchestrator-generated CSV dataset "
                 "(`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`)")
     out.append("- Adaptive timing: warmstart run #1; if there is any "

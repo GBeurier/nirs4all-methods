@@ -29,6 +29,21 @@ External libraries are included in this comparison. If sklearn, R `pls`,
 libPLS or another external implementation diverges from the canonical
 oracle, the dashboard should show that divergence explicitly.
 
+Reference parity has three documented contract classes:
+
+- **strict**: numerical equivalence is expected and required by the release
+  gate (`rmse_rel <= 1e-3`, with `<= 1e-6` displayed as exact).
+- **variant**: the C++ method is useful but intentionally differs from the
+  external package contract. The matching package-compatible behavior should
+  be exposed as a named variant and tested separately.
+- **non-release diagnostic**: the executable oracle only validates package
+  availability, output shape, mask overlap, or algorithm-family behavior.
+  These rows remain visible as divergent under the strict release gate unless
+  the method is explicitly excluded from release parity.
+
+Wide `MethodSpec.rmse_rel_tol` values are diagnostic smoke thresholds, not a
+way to turn a strict dashboard divergence into a validated release parity.
+
 ## Binding parity
 
 Binding parity compares pls4all language bindings against the native C++
@@ -44,8 +59,10 @@ A release-quality run needs:
 
 - fixture parity green in CI;
 - binding parity green for every shipped pls4all binding row;
-- reference parity green or explicitly relaxed for every shipped method;
+- reference parity green under the strict release gate, or an explicit
+  non-release/variant note explaining why strict parity is not the current
+  contract;
 - missing external references classified as `paper_only` or
   `not_available`, not hidden as infrastructure errors;
 - tolerances documented strongly enough that a wide selector mask
-  threshold is visible as qualitative evidence, not exact agreement.
+  threshold is visible as divergent diagnostic evidence, not exact agreement.

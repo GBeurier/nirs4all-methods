@@ -142,14 +142,14 @@ def setup(app):
          published pages always reflect the latest results.
     """
     import json as _json
-    from build_landing import build_payload
+    from build_landing import build_payload, _result_csv_paths
     from method_benchmark_tables import load_or_build_blocks, install_sphinx_hook
 
     here = _Path(__file__).parent
     results_dir = here.parent / "benchmarks" / "cross_binding" / "results"
     static_json = here / "_static" / "bench-data.json"
 
-    csvs_present = results_dir.exists() and (results_dir / "full_matrix.csv").exists()
+    csvs_present = bool(_result_csv_paths(results_dir))
 
     if csvs_present:
         payload = build_payload(results_dir)
@@ -164,12 +164,21 @@ def setup(app):
         generated_at = raw.get("generated_at", "unknown")
     else:
         # Empty fallback so the template still renders gracefully.
+        # Mirrors the shape of build_payload's payload, including the
+        # validation block introduced in Phase PLS-2 (the dashboard JS
+        # treats ``available=false`` as "no validation surface").
         bench_json = _json.dumps({
             "generated_at": "n/a",
             "host": {}, "columns": [], "presets": {},
             "rows": [], "versions": {},
             "stats": {"algos": 0, "backends": 0, "sizes": 0,
                        "threads": [], "rows": 0, "cells": 0, "ok": 0},
+            "validation": {
+                "schema_version": 0, "available": False,
+                "errors": [],
+                "methods": {}, "comparators": {},
+                "datasets": {}, "suites": [],
+            },
         })
         generated_at = "n/a"
 

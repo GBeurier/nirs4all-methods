@@ -1397,12 +1397,40 @@ def build_payload(results_dir: Path) -> dict:
             "ok":       sum(1 for cid, c in timed_cells
                             if _cell_effective_parity(cid, c) == "exact"),
         },
+        "validation":   _validation_payload(),
     }
     return {
         "payload":      payload,
         "json":         json.dumps(payload, separators=(",", ":")),
         "generated_at": payload["generated_at"],
     }
+
+
+def _validation_payload() -> dict:
+    """Compact validation contracts for the landing dashboard.
+
+    Wraps `docs._extras.validation_registry.load_snapshot()` so the
+    landing page payload exposes per-method validation metadata
+    (comparator, tolerance band, reference structure) without
+    duplicating the snapshot reader. Degrades gracefully when the
+    snapshot is missing - returns the same empty stub the loader
+    produces so the dashboard JS can treat ``available=false`` as
+    "no validation surface to render".
+    """
+    try:
+        from validation_registry import load_snapshot
+    except ImportError:  # pragma: no cover - sibling missing in tests
+        return {
+            "schema_version": 0,
+            "available": False,
+            "errors": ["validation_registry import failed"],
+            "methods": {},
+            "comparators": {},
+            "datasets": {},
+            "suites": [],
+        }
+    snapshot = load_snapshot()
+    return snapshot.dashboard_payload()
 
 
 def main() -> None:

@@ -6,8 +6,8 @@
 # Provides a mutable model struct with an `fit!` / `predict` surface
 # compatible with the de-facto Julia ML conventions (StatsAPI-style).
 # Heavier framework adapters (MLJModelInterface, ScikitLearn.jl) can be
-# layered on top as separate packages; this module deliberately avoids
-# pulling MLJ as a hard dependency.
+# are exposed at the top level as `PLSRegressor`, `PCRRegressor`, and
+# `OPLSRegressor`.
 #
 # Example:
 #
@@ -28,13 +28,14 @@ mutable struct PLSRegression
     coefficients::Union{Matrix{Float64}, Nothing}
     x_mean::Union{Vector{Float64}, Nothing}
     y_mean::Union{Vector{Float64}, Nothing}
+    feature_names::Union{Vector{Symbol}, Nothing}
     n_features_in::Int
     n_targets::Int
 
     function PLSRegression(; n_components::Integer=2)
         n_components >= 1 || throw(ArgumentError(
             "n_components must be >= 1; got $n_components"))
-        new(Int(n_components), nothing, nothing, nothing, 0, 0)
+        new(Int(n_components), nothing, nothing, nothing, nothing, 0, 0)
     end
 end
 
@@ -44,20 +45,16 @@ end
 Train the model in-place. `X` is `(n, p)` and `y` is either a length-`n`
 vector or an `(n, q)` matrix.
 """
-function fit!(model::PLSRegression, X::AbstractMatrix{<:Real},
-              y::AbstractVecOrMat{<:Real})
-    X64 = Matrix{Float64}(X)
-    Y64 = if y isa AbstractVector
-        reshape(Vector{Float64}(y), :, 1)
-    else
-        Matrix{Float64}(y)
-    end
+function fit!(model::PLSRegression, X, y; columns=nothing)
+    X64, feature_names = Pls4all._feature_matrix(X; columns=columns)
+    Y64, _, _ = Pls4all._target_matrix(y)
     size(X64, 1) == size(Y64, 1) || throw(ArgumentError(
         "X and y must share the first dimension; got $(size(X64)) and $(size(Y64))"))
     res = Pls4all.pls_fit(X64, Y64; n_components=model.n_components)
     model.coefficients = res.coefficients
     model.x_mean = collect(res.x_mean)
     model.y_mean = collect(res.y_mean)
+    model.feature_names = feature_names
     model.n_features_in = size(X64, 2)
     model.n_targets = size(Y64, 2)
     return model
@@ -72,12 +69,15 @@ mirrors the C ABI contract (cpp/src/core/model.cpp::fill_prediction):
 
     yhat = (X - x_mean) * coefficients + y_mean
 """
-function predict(model::PLSRegression, X::AbstractMatrix{<:Real})
+function predict(model::PLSRegression, X; columns=nothing)
     model.coefficients === nothing && throw(ErrorException(
         "PLSRegression is not fitted yet"))
-    size(X, 2) == model.n_features_in || throw(DimensionMismatch(
-        "X has $(size(X, 2)) features, but model was fitted with $(model.n_features_in)"))
-    X64 = Matrix{Float64}(X)
+    selected = columns === nothing ? model.feature_names : columns
+    X64, _ = selected === nothing ?
+        Pls4all._feature_matrix(X) :
+        Pls4all._feature_matrix(X; columns=selected)
+    size(X64, 2) == model.n_features_in || throw(DimensionMismatch(
+        "X has $(size(X64, 2)) features, but model was fitted with $(model.n_features_in)"))
     yhat = (X64 .- transpose(model.x_mean)) * model.coefficients .+ transpose(model.y_mean)
     return model.n_targets == 1 ? vec(yhat) : yhat
 end

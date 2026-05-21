@@ -921,6 +921,11 @@ div.body table.docutils.parity-grouped td.ms.ms-best {
   border-radius: 2px;
   display: inline-block;
 }
+.parity.parity-divergence {
+  min-width: 4.5em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 .parity.parity-exact   { color: var(--phosphor-deep); background: var(--phosphor-soft); }
 .parity.parity-drift   { color: var(--amber-text);   background: var(--amber-soft); }
 .parity.parity-divergent,

@@ -1,0 +1,21 @@
+{
+  "comparators": [
+    {
+      "default_tolerance": 1e-06,
+      "description": "Element-wise max|pred-ref| <= tolerance. Asserts every pls4all binding produces bit-identical outputs to the C kernel.",
+      "id": "binding_parity",
+      "metric": "max_abs_diff",
+      "name": "binding-consistency gate",
+      "tolerance_field": "binding_tolerance"
+    },
+    {
+      "default_tolerance": 0.05,
+      "description": "Relative-RMSE ||pred-ref||_RMS / ||ref||_RMS <= tolerance, with an absolute-RMSE <= 1e-9 escape near zero. Asserts pls4all's algorithm output matches an external ground-truth implementation within the method's declared tolerance band.",
+      "id": "reference_parity",
+      "metric": "rmse_rel",
+      "name": "external-reference validity gate",
+      "tolerance_field": "reference_tolerance"
+    }
+  ],
+  "schema_version": 1
+}

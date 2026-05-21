@@ -9,6 +9,10 @@ R, MATLAB, a browser, or Android is checked against the same C++ parity
 contract and tolerance policy. Cross-checked against scikit-learn, R
 `pls`, `ropls`, `mixOmics`, `ikpls`, MATLAB `plsregress`.
 
+**Documentation / dashboard**:
+[`https://gbeurier.github.io/pls4all/`](https://gbeurier.github.io/pls4all/)
+· local source under [`docs/`](docs/).
+
 ---
 
 ## Headline — 100 × 50, 1 thread, median ms
@@ -197,8 +201,7 @@ implementation.
 
 ## Documentation
 
-- 🌐 **Sphinx site** : (configurer GitHub Pages — voir
-  [`.github/workflows/docs.yml`](.github/workflows/docs.yml))
+- 🌐 **[Sphinx site + interactive benchmark dashboard](https://gbeurier.github.io/pls4all/)** — GitHub Pages build from [`docs/`](docs/) with refreshed benchmark tables when CSV data is available
 - 📊 **[Cross-binding benchmarks](docs/benchmarks/cross_binding.md)** — parity + timing matrix generated from the canonical method registry
 - 🧪 **[Cross-binding runbook](benchmarks/cross_binding/README.md)** — registry refs, clean sweeps, git-pinned refs, and legacy fixed-reference modes
 - 🔬 **[Methodology](docs/benchmarks/methodology.md)** — reference policy, tolerances, threading, hardware

@@ -1,0 +1,516 @@
+{
+  "schema_version": 1,
+  "tolerances": [
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "aom_pls",
+      "quality": "relaxed",
+      "reference_tolerance": 0.001
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "aom_preprocess",
+      "quality": "qualitative",
+      "reference_tolerance": 5.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "approximate_press",
+      "quality": "qualitative",
+      "reference_tolerance": 10.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "bagging_pls",
+      "quality": "qualitative",
+      "reference_tolerance": 2.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "bipls_select",
+      "quality": "qualitative",
+      "reference_tolerance": 0.7
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "boosting_pls",
+      "quality": "qualitative",
+      "reference_tolerance": 10.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "bve_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.4
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "cars_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.4
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "continuum_regression",
+      "quality": "qualitative",
+      "reference_tolerance": 0.2
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "cppls",
+      "quality": "qualitative",
+      "reference_tolerance": 10.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "di_pls",
+      "quality": "relaxed",
+      "reference_tolerance": 0.02
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "ds",
+      "quality": "qualitative",
+      "reference_tolerance": 0.5
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "ecr",
+      "quality": "relaxed",
+      "reference_tolerance": 0.001
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "emcuve_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.6
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "binding_parity",
+      "method": "fused_sparse_pls",
+      "quality": "relaxed",
+      "reference_tolerance": 0.05
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "ga_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.3
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "gpr_pls",
+      "quality": "strict",
+      "reference_tolerance": 1e-08
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "group_sparse_pls",
+      "quality": "qualitative",
+      "reference_tolerance": 10.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "interval_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "ipw_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "irf_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.3
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "iriv_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "kernel_pls_rbf",
+      "quality": "qualitative",
+      "reference_tolerance": 2.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "lw_pls",
+      "quality": "relaxed",
+      "reference_tolerance": 0.001
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "mb_pls",
+      "quality": "relaxed",
+      "reference_tolerance": 0.001
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "binding_parity",
+      "method": "mir_pls",
+      "quality": "relaxed",
+      "reference_tolerance": 0.05
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "missing_aware_nipals",
+      "quality": "qualitative",
+      "reference_tolerance": 10.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "n_pls",
+      "quality": "qualitative",
+      "reference_tolerance": 10.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "o2pls",
+      "quality": "qualitative",
+      "reference_tolerance": 1.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "on_pls",
+      "quality": "qualitative",
+      "reference_tolerance": 10.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "one_se_rule",
+      "quality": "qualitative",
+      "reference_tolerance": 10.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "opls",
+      "quality": "relaxed",
+      "reference_tolerance": 0.001
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "pcr",
+      "quality": "strict",
+      "reference_tolerance": 1e-06
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "pds",
+      "quality": "qualitative",
+      "reference_tolerance": 0.5
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "pls",
+      "quality": "qualitative",
+      "reference_tolerance": 0.1
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "pls_cox",
+      "quality": "qualitative",
+      "reference_tolerance": 5.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "pls_diagnostic_dmodx",
+      "quality": "qualitative",
+      "reference_tolerance": 5.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "pls_diagnostic_q",
+      "quality": "qualitative",
+      "reference_tolerance": 5.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "pls_diagnostic_t2",
+      "quality": "qualitative",
+      "reference_tolerance": 10.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "pls_glm",
+      "quality": "qualitative",
+      "reference_tolerance": 0.5
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "pls_lda",
+      "quality": "qualitative",
+      "reference_tolerance": 5.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "pls_logistic",
+      "quality": "qualitative",
+      "reference_tolerance": 5.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "pls_monitoring",
+      "quality": "qualitative",
+      "reference_tolerance": 10.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "pls_qda",
+      "quality": "qualitative",
+      "reference_tolerance": 10.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "pop_pls",
+      "quality": "relaxed",
+      "reference_tolerance": 0.001
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "pso_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.4
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "random_frog_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.35
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "random_subspace_pls",
+      "quality": "qualitative",
+      "reference_tolerance": 2.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "randomization_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.3
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "recursive_pls",
+      "quality": "qualitative",
+      "reference_tolerance": 0.1
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "rep_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.8
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "ridge_pls",
+      "quality": "qualitative",
+      "reference_tolerance": 0.1
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "robust_pls",
+      "quality": "qualitative",
+      "reference_tolerance": 2.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "rosa",
+      "quality": "qualitative",
+      "reference_tolerance": 1.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "binding_parity",
+      "method": "scars_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "shaving_select",
+      "quality": "qualitative",
+      "reference_tolerance": 0.8
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "binding_parity",
+      "method": "sipls_select",
+      "quality": "qualitative",
+      "reference_tolerance": 0.7
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "so_pls",
+      "quality": "qualitative",
+      "reference_tolerance": 1.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "spa_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.2
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "sparse_pls_da",
+      "quality": "qualitative",
+      "reference_tolerance": 2.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "sparse_simpls",
+      "quality": "qualitative",
+      "reference_tolerance": 1.0
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "st_select",
+      "quality": "qualitative",
+      "reference_tolerance": 2.1
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "stability_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.35
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "t2_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.2
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "uve_select",
+      "quality": "qualitative",
+      "reference_tolerance": 0.72
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "variable_select_coef",
+      "quality": "qualitative",
+      "reference_tolerance": 1.1
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "variable_select_sr",
+      "quality": "qualitative",
+      "reference_tolerance": 1.3
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "variable_select_vip",
+      "quality": "qualitative",
+      "reference_tolerance": 0.8
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "vip_spa_select",
+      "quality": "qualitative",
+      "reference_tolerance": 1.3
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "vissa_select",
+      "quality": "qualitative",
+      "reference_tolerance": 2.5
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "weighted_pls",
+      "quality": "qualitative",
+      "reference_tolerance": 0.1
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "wvc_select",
+      "quality": "qualitative",
+      "reference_tolerance": 0.7
+    },
+    {
+      "binding_tolerance": 1e-06,
+      "comparator": "reference_parity",
+      "method": "wvc_threshold_select",
+      "quality": "qualitative",
+      "reference_tolerance": 0.7
+    }
+  ]
+}

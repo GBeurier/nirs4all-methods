@@ -3,15 +3,15 @@
 Loader search order (highest priority first):
 
 1.  $PLS4ALL_LIB_PATH                                  — explicit override.
-2.  <site-packages>/pls4all.libs/libp4a-*.so*          — auditwheel-grafted
+2.  <repo-root>/build/{blas-omp,blas-on,omp-on,dev-release,dev-debug}/cpp/src
+    — developer convenience when running from a source checkout.
+3.  <site-packages>/pls4all.libs/libp4a-*.so*          — auditwheel-grafted
     sibling directory (Linux wheels). delocate creates an equivalent
     layout on macOS, and delvewheel uses pls4all.libs/ as well on Windows
     (since delvewheel 1.5).
-3.  <site-packages>/pls4all/lib/libp4a*                — wheel layout when
+4.  <site-packages>/pls4all/lib/libp4a*                — wheel layout when
     libp4a is bundled directly as package data (the cibuildwheel
     fallback when no repair tool runs).
-4.  <repo-root>/build/{dev-release,dev-debug}/cpp/src  — developer
-    convenience.
 5.  System search path (ctypes.util.find_library / DLL search path).
 """
 
@@ -50,20 +50,21 @@ def _candidate_paths() -> list[Path]:
     if env:
         paths.append(Path(env))
 
-    # (2) Auditwheel / delocate / delvewheel place the bundled library in a
+    # (2) Developer convenience: when importing from a source checkout, prefer
+    #     fresh local builds over any stale package-data copy committed by a
+    #     previous wheel build.
+    if _REPO_ROOT is not None:
+        for preset in ("blas-omp", "blas-on", "omp-on",
+                       "dev-release", "dev-debug"):
+            paths.extend(_glob_libs(_REPO_ROOT / "build" / preset / "cpp" / "src"))
+
+    # (3) Auditwheel / delocate / delvewheel place the bundled library in a
     #     sibling `<package>.libs/` directory at install time. The library
     #     is content-addressed (e.g. libp4a-7c4d2a1f.so.1) — match by glob.
     paths.extend(_glob_libs(_SIBLING_LIBS))
 
-    # (3) Direct wheel layout: package_data ships libp4a under pls4all/lib/.
+    # (4) Direct wheel layout: package_data ships libp4a under pls4all/lib/.
     paths.extend(_glob_libs(_PACKAGE_DIR / "lib"))
-
-    # (4) Developer convenience: repo-root build directory. Glob so any
-    #     versioned SONAME the build produced is picked up without
-    #     hard-coding a version string.
-    if _REPO_ROOT is not None:
-        for preset in ("dev-release", "dev-debug"):
-            paths.extend(_glob_libs(_REPO_ROOT / "build" / preset / "cpp" / "src"))
 
     # (5) System search path (ctypes.util.find_library or DLL search path).
     if sys.platform.startswith("linux") or sys.platform == "darwin":

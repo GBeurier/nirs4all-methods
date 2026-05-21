@@ -13,31 +13,31 @@ export enum Status {
     OK = 0,
     ERR_INVALID_ARGUMENT = 1,
     ERR_NULL_POINTER = 2,
-    ERR_OUT_OF_MEMORY = 3,
+    ERR_SHAPE_MISMATCH = 3,
     ERR_DTYPE_MISMATCH = 4,
-    ERR_SHAPE_MISMATCH = 5,
-    ERR_DIM_MISMATCH = 6,
+    ERR_STRIDE_INVALID = 5,
+    ERR_NOT_FITTED = 6,
     ERR_NUMERICAL_FAILURE = 7,
-    ERR_NOT_FITTED = 8,
-    ERR_INTERNAL = 9,
-    ERR_ABI_MISMATCH = 10,
-    ERR_VERSION_INCOMPATIBLE = 11,
-    ERR_BACKEND_UNAVAILABLE = 12,
+    ERR_CONVERGENCE_FAILED = 8,
+    ERR_OUT_OF_MEMORY = 9,
+    ERR_UNSUPPORTED = 10,
+    ERR_NOT_IMPLEMENTED = 11,
+    ERR_ABI_MISMATCH = 12,
     ERR_IO = 13,
-    ERR_PERMISSION = 14,
-    ERR_NOT_IMPLEMENTED = 15,
-    ERR_TIMEOUT = 16,
-    ERR_CANCELED = 17,
+    ERR_CORRUPT_BUFFER = 14,
+    ERR_VERSION_INCOMPATIBLE = 15,
+    ERR_BACKEND_UNAVAILABLE = 16,
+    ERR_CANCELLED = 17,
+    ERR_INTERNAL = 255,
 }
 
 /** Mirror of p4a_dtype_t. */
 export enum Dtype {
     UNKNOWN = 0,
-    F32 = 1,
-    F64 = 2,
+    F64 = 1,
+    F32 = 2,
     I32 = 3,
     I64 = 4,
-    U8 = 5,
 }
 
 /** Mirror of p4a_algorithm_t. Values must match cpp/include/pls4all/p4a.h. */
@@ -74,6 +74,38 @@ export enum Deflation {
     X_ONLY = 2,
     XY = 3,
     ORTHOGONAL = 4,
+}
+
+/** Mirror of p4a_operator_kind_t. */
+export enum OperatorKind {
+    IDENTITY = 0,
+    CENTER = 1,
+    AUTOSCALE = 2,
+    PARETO_SCALE = 3,
+    SNV = 4,
+    MSC = 5,
+    EMSC = 6,
+    DETREND_POLY = 7,
+    SAVGOL_SMOOTH = 8,
+    SAVGOL_DERIVATIVE = 9,
+    NORRIS_WILLIAMS = 10,
+    ASLS_BASELINE = 11,
+    OSC = 12,
+    EPO = 13,
+    WAVELET_DENOISE = 14,
+    FINITE_DIFFERENCE = 15,
+    WHITTAKER = 16,
+    FCK = 17,
+}
+
+/** Mirror of p4a_gating_mode_t. */
+export enum GatingMode {
+    HARD = 0,
+    SOFT = 1,
+    SPARSE = 2,
+    PER_COMPONENT = 3,
+    PER_BLOCK = 4,
+    PER_TARGET = 5,
 }
 
 export class Pls4allError extends Error {

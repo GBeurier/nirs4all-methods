@@ -124,10 +124,12 @@ reference row is also present. Those rows should be interpreted as
 | `not_run` | The comparator was not scheduled, the backend timed out, or the orchestrator skipped the cell. |
 | `error` | Runtime failure. The `reason` field should carry the process error. |
 
-Selector methods may use RMSE-relative mask tolerances for reference
-parity. Any tolerance wide enough to accept almost-disjoint masks is a
-qualitative smoke threshold, not a release-quality oracle. Those rows
-must be visible in the dashboard as relaxed/qualitative evidence.
+Selector methods may still declare RMSE-relative mask tolerances as
+diagnostic budgets. Any tolerance wide enough to accept almost-disjoint
+masks is a smoke threshold, not a release-quality oracle. The release
+dashboard keeps the strict Gate 2 threshold at `rmse_rel <= 1e-3`; rows
+above that threshold must stay visible as divergent unless a
+package-compatible variant is implemented and tested separately.
 
 ## Reading benchmark tables
 

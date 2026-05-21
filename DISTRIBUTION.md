@@ -90,7 +90,7 @@ packages with a "see GitHub" README are fine.
 | pkg.go.dev | `github.com/GBeurier/pls4all/bindings/go` | indexed automatically on first `GOPROXY` hit |
 | NuGet | `Pls4all` (managed) + `Pls4all.Native` (multi-RID native runtime) | reserve via Microsoft account |
 | RubyGems | `pls4all` | reserve via `gem push` of 0.0.0 placeholder |
-| Julia General | `Pls4all` (UUID `f04a4a11-…`) | already in `Project.toml`; not yet registered |
+| Julia General | `Pls4all` (UUID `773cca83-73c7-4c8b-9de3-b5f2b2ce6491`) | already in `Project.toml`; not yet registered |
 | LuaRocks | `pls4all` | rockspec + `luarocks upload` |
 | Nimble | `pls4all` | PR to `nim-lang/packages` |
 | Maven Central | groupId `io.github.gbeurier`, artifactId `pls4all-jni` (desktop), `pls4all-android` (AAR) | via Sonatype Central Portal; needs domain ownership proof |
@@ -489,6 +489,7 @@ assert(size(yhat, 1) == 50);
 - `@pls4all/wasm` (browser + Deno + Bun + Node universal ESM):
   - `dist/index.js` (ESM)
   - `dist/index.d.ts`
+  - `dist/p4a.js` (Emscripten ES module loader)
   - `dist/p4a.wasm` (single binary, ~120 KB after strip)
   - `dist/p4a.wasm.map` (source map, optional)
 - `@pls4all/node` (Node-only with native bindings via `node-gyp` or
@@ -513,9 +514,9 @@ assert(size(yhat, 1) == 50);
 # npm
 cd bindings/js
 npm version ${VER} --no-git-tag-version
-npm publish --access public --provenance     # provenance since npm v9
+npm publish --access public                  # provenance is automatic under npm Trusted Publishing
 # JSR mirror
-npx jsr publish
+npx jsr publish --allow-dirty --allow-slow-types
 ```
 
 **Smoke test:**
@@ -726,6 +727,14 @@ via Yggdrasil's `build_tarballs.jl`).
 using Pkg; Pkg.add(name="Pls4all", version="${VER}")
 using Pls4all
 @assert startswith(Pls4all.version(), "${VER}")
+```
+
+Release preflight also runs the in-repo Julia package tests and one
+cross-binding benchmark smoke through the native Julia backend:
+
+```bash
+PLS4ALL_LIB=/absolute/path/to/libp4a.so julia --project=bindings/julia/Pls4all.jl -e 'using Pkg; Pkg.test()'
+python benchmarks/cross_binding/orchestrator.py --algorithms sparse_simpls --sizes 20x6 --threads 1 --only julia --n-runs 2 --reference-backends none --libp4a-build dev-release
 ```
 
 ### 3.9 Ruby — `pls4all` gem on RubyGems
@@ -1142,7 +1151,7 @@ checklist is reproduced inside each `bindings/${LANG}/CHECKLIST.md`.
 2. **Identity**: claim the name on the registry (empty placeholder OK).
 3. **Manifest**: add the language's package manifest (`pyproject.toml`, `gemspec`, `nimble`, `rockspec`, etc.) with a `version` field tied to the canonical version source.
 4. **Source layout**: respect `bindings/${LANG}/` with the README, the manifest, `src/`, and `tests/`.
-5. **Parity gate**: implement the SIMPLS parity test against `bindings/_catalog/parity_fixture.json` so the binding fails CI if any numerical drift exceeds `rmse_rel < 1e-12`.
+5. **Parity gate**: implement the SIMPLS parity test against `bindings/_catalog/parity_fixture.json`, bind the full public method surface for that language, add a method-surface parity gate, and wire the binding into `benchmarks/cross_binding` so every method can enter the benchmark matrix.
 6. **Loader rules**: documented prioritised path discovery for `libp4a` — `${LIB}_LIB_PATH` env var first, then bundled, then system.
 7. **Smoke test**: in CI on every PR.
 8. **Release wiring**: a `release-${LANG}.yml` workflow callable from `release.yml`.
@@ -1290,7 +1299,7 @@ Software Heritage  → no manifest; passive
 | R-universe | ⬜ universe not created | needs `gbeurier/universe` repo + packages.json |
 | MATLAB File Exchange | ⬜ no FX submission | needs `.mltbx` packager job + FX account |
 | npm `@pls4all/wasm` | 🟡 package.json present, never published | needs npm scope + first publish |
-| JSR | ⬜ not configured | mirror of npm — add after first npm publish |
+| JSR | 🟡 `jsr.json` present, never published | needs JSR scope + first publish |
 | pkg.go.dev | 🟡 module exists, not tagged in subdir convention | needs `bindings/go/v*` tag |
 | crates.io | ⬜ never published | needs first `cargo publish` |
 | NuGet | ⬜ never published | needs `Pls4all` (managed) + `Pls4all.Native` (multi-RID native) |

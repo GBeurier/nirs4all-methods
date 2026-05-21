@@ -10,12 +10,13 @@ from benchmarks.parity_timing._comparator import binding_parity, reference_parit
 
 
 def _record(tmp_path: Path, backend: str, kind: str,
-             predictions: np.ndarray, *, seed: int = 123) -> dict:
+             predictions: np.ndarray, *, seed: int = 123,
+             algorithm: str = "pcr") -> dict:
     pred_path = tmp_path / f"{backend}_{seed}.npy"
     np.save(pred_path, np.asarray(predictions, dtype=np.float64),
             allow_pickle=False)
     return {
-        "algorithm": "pcr",
+        "algorithm": algorithm,
         "backend": backend,
         "language": "Python",
         "tier": "test",
@@ -31,11 +32,13 @@ def _record(tmp_path: Path, backend: str, kind: str,
     }
 
 
-def _write_oracle_metadata(path: Path, *, seed: int = 123) -> None:
+def _write_oracle_metadata(path: Path, *, seed: int = 123,
+                           algorithm: str = "pcr",
+                           backend: str = "ref_python_scikit_learn") -> None:
     orchestrator.prediction_metadata_path(path).write_text(
         json.dumps({
-            "algorithm": "pcr",
-            "backend": "ref_python_scikit_learn",
+            "algorithm": algorithm,
+            "backend": backend,
             "n": 200,
             "p": 50,
             "prediction_seed": seed,
@@ -89,6 +92,29 @@ def test_pls4all_only_rows_use_stored_reference_oracle(tmp_path, monkeypatch):
         assert row["binding_parity_ok"] is True
         assert row["reference_parity_ok"] is True
         assert row["reference_oracle_path"] == str(oracle)
+
+
+def test_reference_gate_clamps_loose_method_tolerance(
+        tmp_path, monkeypatch):
+    monkeypatch.setattr(orchestrator, "ORACLES_DIR", tmp_path / "oracles")
+    orchestrator.ORACLES_DIR.mkdir()
+
+    oracle = orchestrator.reference_oracle_path(
+        "bagging_pls", "ref_python_scikit_learn", 200, 50, 123)
+    np.save(oracle, np.array([1.0, 1.0]), allow_pickle=False)
+    _write_oracle_metadata(
+        oracle, algorithm="bagging_pls",
+        backend="ref_python_scikit_learn")
+
+    records = [
+        _record(tmp_path, "cpp", "pls4all_core",
+                np.array([2.0, 1.0]), algorithm="bagging_pls"),
+    ]
+
+    orchestrator.compute_parity(records)
+
+    assert records[0]["reference_parity_ok"] is False
+    assert records[0]["reference_parity_tolerance"] == 1e-3
 
 
 def test_stale_stored_reference_oracle_metadata_is_a_gate_failure(

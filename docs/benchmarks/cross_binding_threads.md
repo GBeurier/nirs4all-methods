@@ -1620,7 +1620,8 @@ Each column in the per-algorithm tables above is one of the entries below. Colum
 
 - Gate 1 reference: `cpp` cell at 1 thread (libp4a via ctypes), or `python_tier1` when `cpp` is unavailable for an algorithm
 - Gate 2 reference: the registry-declared canonical external reference for the method
-- Gate 1 tolerance: 1e-6 max-abs-diff; Gate 2 tolerance: `MethodSpec.rmse_rel_tol` (also emitted as `reference_parity_tolerance` by newer CSVs)
+- Gate 1 tolerance: 1e-6 max-abs-diff
+- Gate 2 release tolerance: strict rmse_rel <= 1e-3 (<= 1e-6 is displayed as exact). `MethodSpec.rmse_rel_tol` is only a diagnostic/variant budget and must not turn a strict reference divergence into a passing release gate.
 - All backends read the same orchestrator-generated CSV dataset (`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`)
 - Adaptive timing: warmstart run #1; if there is any subsequent run, run #1 is excluded from the score. 2 total runs report run #2 alone; 3 total runs report the mean of runs #2-#3; 10/20/40 total runs report the median after the warmstart.
 - Per-cell timeout guard: 24 h

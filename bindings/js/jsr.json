@@ -1,0 +1,22 @@
+{
+  "$schema": "https://jsr.io/schema/config-file.v1.json",
+  "name": "@pls4all/wasm",
+  "version": "0.97.3",
+  "license": "CECILL-2.1",
+  "exports": {
+    ".": "./dist/index.js",
+    "./sklearn": "./dist/sklearn.js"
+  },
+  "publish": {
+    "include": [
+      "README.md",
+      "package.json",
+      "dist/**/*.js",
+      "dist/**/*.d.ts",
+      "dist/p4a.wasm"
+    ],
+    "exclude": [
+      "!dist"
+    ]
+  }
+}

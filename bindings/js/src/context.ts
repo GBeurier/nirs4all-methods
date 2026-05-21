@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CECILL-2.1
 
-import { checkStatus, getModule } from "./ffi.js";
+import { asU64, checkStatus, getModule } from "./ffi.js";
 
 /** RAII wrapper around p4a_context_t. */
 export class Context {
@@ -18,7 +18,7 @@ export class Context {
             const status = m.ccall(
                 "p4a_context_create", "number", ["number"], [out]) as number;
             checkStatus(status);
-            const ptr = m.getValue(out, "i32");
+            const ptr = Number(m.getValue(out, "i32"));
             return new Context(ptr);
         } finally {
             m._free(out);
@@ -43,8 +43,7 @@ export class Context {
         const status = getModule().ccall(
             "p4a_context_set_seed", "number",
             ["number", "number"],
-            [this._ptr,
-             typeof seed === "bigint" ? Number(seed) : seed]) as number;
+            [this._ptr, asU64(seed)]) as number;
         checkStatus(status, this._ptr);
     }
 }

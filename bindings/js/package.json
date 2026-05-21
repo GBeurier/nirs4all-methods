@@ -10,16 +10,41 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./sklearn": {
+      "import": "./dist/sklearn.js",
+      "types": "./dist/sklearn.d.ts"
+    },
+    "./package.json": "./package.json",
     "./p4a.wasm": "./dist/p4a.wasm"
   },
   "files": [
-    "dist/"
+    "dist/",
+    "README.md"
   ],
   "scripts": {
-    "build": "tsc -p .",
-    "test": "node --experimental-vm-modules test/run_smoke.mjs"
+    "build": "npm run build:ts && npm run copy:wasm",
+    "build:ts": "tsc -p .",
+    "build:wasm": "cmake -S ../.. --preset emscripten && cmake --build ../../build/emscripten --target pls4all_wasm",
+    "copy:wasm": "node scripts/copy-wasm.mjs",
+    "prepack": "npm run build",
+    "test": "npm run test:smoke && npm run test:methods",
+    "test:smoke": "node --experimental-vm-modules test/run_smoke.mjs",
+    "test:methods": "node --experimental-vm-modules test/run_methods_smoke.mjs",
+    "test:methods:strict": "P4A_REQUIRE_ALL_METHODS=1 node --experimental-vm-modules test/run_methods_smoke.mjs"
   },
   "license": "CECILL-2.1",
+  "keywords": [
+    "pls",
+    "partial-least-squares",
+    "nirs",
+    "chemometrics",
+    "wasm",
+    "webassembly"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/GBeurier/pls4all.git",

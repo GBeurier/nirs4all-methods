@@ -1,13 +1,8 @@
 """pls4all — Python binding for the pls4all C ABI.
 
-Current scope: version / status / dtype / backend introspection, a Context
-and a Config wrapper, an OperatorBank wrapper, a ValidationPlan wrapper, and
-the AOM global / POP per-component selection result handles
-(`aom_global_select`, `aom_per_component_select`). Full Python model
-wrappers (NIPALS, orthogonal-scores, SIMPLS, kernel, wide-kernel, SVD,
-power, randomized-SVD, PLSCanonical, PLSSVD, PLS-DA, OPLS/OPLS-DA, PCR and
-the cross-validation / metrics / variable-selection surface) land in
-Phase 2 on top of the live C core.
+The package exposes the native Context/Config/Model/MethodResult lifecycle,
+the full public method surface, and scikit-learn-compatible estimators under
+``pls4all.sklearn``.
 """
 
 from ._ffi import lib  # noqa: F401  — eagerly loads libp4a

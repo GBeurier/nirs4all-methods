@@ -53,13 +53,13 @@ _Total methods_: **73**. Grouped by family below.
 | [`continuum_regression`](continuum_regression.md) | Continuum regression (interpolates PLS / OLS) | `0.2` | R |
 | [`gpr_pls`](gpr_pls.md) | GPR-on-PLS — RBF Gaussian Process on PLS scores (§47) | `1e-08` | Py |
 | [`kernel_pls_rbf`](kernel_pls_rbf.md) | Non-linear kernel PLS (RBF kernel) | `2.0` | R |
-| [`lw_pls`](lw_pls.md) | LW-PLS — Locally-weighted PLS (§17 Phase 4) | `5.0` | Py |
+| [`lw_pls`](lw_pls.md) | LW-PLS — Locally-weighted PLS (§17 Phase 4) | `0.001` | Py |
 
 ## Multi-block / cross-modal
 
 | Method | Description | Tolerance | Refs |
 |--------|-------------|-----------|------|
-| [`mb_pls`](mb_pls.md) | MB-PLS — Multi-block PLS (§17 Phase 4) | `2.0` | Py |
+| [`mb_pls`](mb_pls.md) | MB-PLS — Multi-block PLS (§17 Phase 4) | `0.001` | Py |
 | [`mir_pls`](mir_pls.md) | MIR-PLS — Inverse-regression PLS (§13) | `0.05` | — |
 | [`n_pls`](n_pls.md) | N-PLS — 3-way tensor PLS (Bro 1996) | `10.0` | Py |
 | [`o2pls`](o2pls.md) | O2PLS — bi-directional OPLS (Trygg & Wold 2003) | `1.0` | R |

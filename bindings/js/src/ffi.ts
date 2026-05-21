@@ -2,7 +2,7 @@
 //
 // Thin ccall/cwrap wrappers around the Emscripten module.
 
-import { Status, Pls4allError } from "./types.js";
+import { Dtype, Status, Pls4allError } from "./types.js";
 
 /** Loose typing of the Emscripten module factory's runtime instance. */
 export interface EmModule {
@@ -18,18 +18,24 @@ export interface EmModule {
     UTF8ToString(ptr: number): string;
     stringToUTF8(s: string, ptr: number, max: number): void;
     lengthBytesUTF8(s: string): number;
-    getValue(ptr: number, type: string): number;
-    setValue(ptr: number, value: number, type: string): void;
+    getValue(ptr: number, type: string): number | bigint;
+    setValue(ptr: number, value: number | bigint, type: string): void;
 }
 
 let _module: EmModule | null = null;
 
+export interface LoadModuleOptions {
+    locateFile?: (path: string, prefix: string) => string;
+    [key: string]: unknown;
+}
+
 /** Load and cache the Emscripten module. Call once at app startup. */
-export async function loadModule(): Promise<EmModule> {
+export async function loadModule(options: LoadModuleOptions = {}
+                                  ): Promise<EmModule> {
     if (_module !== null) return _module;
-    const factory = (await import("../p4a.js")).default as
-        (opts?: object) => Promise<EmModule>;
-    _module = await factory({});
+    const factory = (await import("./p4a.js")).default as
+        (opts?: LoadModuleOptions) => Promise<EmModule>;
+    _module = await factory(options);
     return _module;
 }
 
@@ -40,6 +46,11 @@ export function getModule(): EmModule {
         );
     }
     return _module;
+}
+
+export function hasExportedFunction(name: string): boolean {
+    const m = getModule() as unknown as Record<string, unknown>;
+    return typeof m[`_${name}`] === "function";
 }
 
 export function checkStatus(status: number, ctxPtr: number = 0): void {
@@ -60,6 +71,24 @@ export function checkStatus(status: number, ctxPtr: number = 0): void {
     throw new Pls4allError(status, msg);
 }
 
+export function asI64(value: number | bigint): bigint {
+    return typeof value === "bigint" ? value : BigInt(value);
+}
+
+export function asU64(value: number | bigint): bigint {
+    if (typeof value === "number" && value < 0) {
+        throw new Error(`uint64 value must be non-negative, got ${value}`);
+    }
+    if (typeof value === "bigint" && value < 0n) {
+        throw new Error(`uint64 value must be non-negative, got ${value}`);
+    }
+    return typeof value === "bigint" ? value : BigInt(value);
+}
+
+export function readI64(ptr: number): number {
+    return Number(getModule().getValue(ptr, "i64") as number | bigint);
+}
+
 // ---- p4a_matrix_view_t layout (mirrors cpp/include/pls4all/p4a.h) -------
 //
 // struct {
@@ -77,7 +106,7 @@ export const MATRIX_VIEW_SIZE = 48;
 /** Allocate a matrix-view struct and copy `data` into the WASM heap.
  *  Returns the view pointer; caller must `freeMatrixView` it. */
 export function makeMatrixView(data: Float64Array, rows: number,
-                                  cols: number, dtype: number = 2): {
+                                  cols: number, dtype: number = Dtype.F64): {
     viewPtr: number;
     dataPtr: number;
     free: () => void;
@@ -99,7 +128,7 @@ export function makeMatrixView(data: Float64Array, rows: number,
         "p4a_matrix_view_init_rowmajor",
         "number",
         ["number", "number", "number", "number", "number"],
-        [viewPtr, dataPtr, rows, cols, dtype],
+        [viewPtr, dataPtr, asI64(rows), asI64(cols), dtype],
     ) as number;
     if (status !== Status.OK) {
         m._free(dataPtr);

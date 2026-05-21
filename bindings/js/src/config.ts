@@ -18,7 +18,7 @@ export class Config {
             const status = m.ccall(
                 "p4a_config_create", "number", ["number"], [out]) as number;
             checkStatus(status);
-            return new Config(m.getValue(out, "i32"));
+            return new Config(Number(m.getValue(out, "i32")));
         } finally {
             m._free(out);
         }
@@ -77,10 +77,79 @@ export class Config {
         checkStatus(s);
     }
 
+    setScaleX(on: boolean): void {
+        const s = getModule().ccall(
+            "p4a_config_set_scale_x", "number",
+            ["number", "number"], [this._ptr, on ? 1 : 0]) as number;
+        checkStatus(s);
+    }
+
+    setScaleY(on: boolean): void {
+        const s = getModule().ccall(
+            "p4a_config_set_scale_y", "number",
+            ["number", "number"], [this._ptr, on ? 1 : 0]) as number;
+        checkStatus(s);
+    }
+
+    setTol(tol: number): void {
+        const s = getModule().ccall(
+            "p4a_config_set_tol", "number",
+            ["number", "number"], [this._ptr, tol]) as number;
+        checkStatus(s);
+    }
+
+    setMaxIter(maxIter: number): void {
+        const s = getModule().ccall(
+            "p4a_config_set_max_iter", "number",
+            ["number", "number"], [this._ptr, maxIter]) as number;
+        checkStatus(s);
+    }
+
     setStoreScores(on: boolean): void {
         const s = getModule().ccall(
             "p4a_config_set_store_scores", "number",
             ["number", "number"], [this._ptr, on ? 1 : 0]) as number;
+        checkStatus(s);
+    }
+
+    setStoreDiagnostics(on: boolean): void {
+        const s = getModule().ccall(
+            "p4a_config_set_store_diagnostics", "number",
+            ["number", "number"], [this._ptr, on ? 1 : 0]) as number;
+        checkStatus(s);
+    }
+
+    setDtype(dtype: number): void {
+        const s = getModule().ccall(
+            "p4a_config_set_dtype", "number",
+            ["number", "number"], [this._ptr, dtype]) as number;
+        checkStatus(s);
+    }
+
+    setPipeline(pipeline: number | { handle: number } | null): void {
+        const handle = pipeline === null ? 0 :
+            typeof pipeline === "number" ? pipeline : pipeline.handle;
+        const s = getModule().ccall(
+            "p4a_config_set_pipeline", "number",
+            ["number", "number"], [this._ptr, handle]) as number;
+        checkStatus(s);
+    }
+
+    setOperatorBank(bank: number | { handle: number } | null): void {
+        const handle = bank === null ? 0 :
+            typeof bank === "number" ? bank : bank.handle;
+        const s = getModule().ccall(
+            "p4a_config_set_operator_bank", "number",
+            ["number", "number"], [this._ptr, handle]) as number;
+        checkStatus(s);
+    }
+
+    setGatingStrategy(gate: number | { handle: number } | null): void {
+        const handle = gate === null ? 0 :
+            typeof gate === "number" ? gate : gate.handle;
+        const s = getModule().ccall(
+            "p4a_config_set_gating_strategy", "number",
+            ["number", "number"], [this._ptr, handle]) as number;
         checkStatus(s);
     }
 }

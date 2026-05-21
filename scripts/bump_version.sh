@@ -431,8 +431,9 @@ PY
 }
 update_cargo_lock
 
-# JS (package.json: top-level "version")
+# JS (package.json + jsr.json: top-level "version")
 update_json_field "bindings/js/package.json"      "version"
+update_json_field "bindings/js/jsr.json"          "version"
 update_package_lock "bindings/js/package-lock.json"
 
 # .NET (csproj:  <Version>X.Y.Z</Version>)

@@ -3,7 +3,7 @@
 // Node smoke + parity:
 // 1. Loads the WASM build, prints version / ABI.
 // 2. Fits a SIMPLS PLS regression on deterministic data via the
-//    `p4a_wasm_pls_fit` helper.
+//    `p4a_pls_fit_simple` helper.
 // 3. Predicts in-sample.
 // 4. Loads the parity reference (fixture saved by
 //    `bindings/js/test/generate_parity_fixture.py`, which calls the

@@ -1,58 +1,111 @@
-# Python binding
+# Python Binding
 
-The current Python package ships a minimal **ctypes-only** binding that:
+The Python package is a ctypes binding over the `pls4all` C ABI. It exposes:
 
-- loads `libp4a.{so,dll,dylib}` via `ctypes.CDLL`,
-- exposes the version / status / dtype / backend introspection queries,
-- exposes a Pythonic `Context` and `Config` wrapper for the lifecycle calls,
-- raises a typed exception (`Pls4allError`) on any non-OK status, capturing the per-context `last_error` message.
+- native lifecycle objects: `Context`, `Config`, `Model`, `MethodResult`;
+- the full public method surface: diagnostics, monitoring, AOM/POP,
+  multi-block methods, selectors, ECR/IRIV/IRF/VIP-SPA and related
+  `p4a_method_result_t` APIs;
+- a scikit-learn-compatible layer under `pls4all.sklearn`.
 
-A real wheel with NumPy zero-copy `p4a_matrix_view_t` conversion + a
-sklearn-compatible estimator lands in Phase 2 on top of the live C core.
-
-## Build the underlying library
+## Build The Native Library
 
 ```bash
 cmake --preset dev-release
 cmake --build --preset dev-release --parallel
 ```
 
-This produces `build/dev-release/cpp/src/libp4a.so` (or `.dylib` / `.dll`).
-The binding looks for it on disk via the loader rules below.
+This produces `build/dev-release/cpp/src/libp4a.so` on Linux, or the
+equivalent dynamic library on macOS/Windows.
 
-## Loader rules
+## Loader Rules
 
 In order:
 
-1. `$PLS4ALL_LIB_PATH` — explicit path to `libp4a` (most direct).
-2. `pls4all/lib/libp4a*` next to the installed package (wheel layout).
-3. `<repo-root>/build/dev-release/cpp/src/libp4a*` (developer convenience).
-4. The standard system search path (`LD_LIBRARY_PATH`, macOS rpath, Windows `PATH`).
+1. `$PLS4ALL_LIB_PATH` points directly to `libp4a`.
+2. `pls4all/lib/libp4a*` next to the installed package, for wheel layout.
+3. `<repo-root>/build/dev-release/cpp/src/libp4a*`, for editable checkout.
+4. The standard system search path.
 
-## Smoke test
+## Low-Level API
 
 ```python
+import numpy as np
 import pls4all
-print(pls4all.version())       # "0.96.0+abi.1.13.0"
-print(pls4all.abi_version())   # (1, 13, 0)
 
-with pls4all.Context() as ctx:
-    ctx.seed = 42
-    print(ctx.last_error)      # ""
-    try:
-        ctx.backend = pls4all.Backend.CUDA
-    except pls4all.Pls4allError as e:
-        print(e)               # 'backend 5 is not compiled into this build of libp4a'
+X = np.random.randn(50, 5)
+y = X[:, 0] + 0.5 * X[:, 1]
+Y = y.reshape(-1, 1)
 
-with pls4all.Config() as cfg:
-    cfg.algorithm = pls4all.Algorithm.PCR
-    cfg.solver = pls4all.Solver.SVD
+with pls4all.Context() as ctx, pls4all.Config() as cfg:
+    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+    cfg.solver = pls4all.Solver.SIMPLS
     cfg.deflation = pls4all.Deflation.REGRESSION
-    assert cfg.algorithm == pls4all.Algorithm.PCR
-    assert cfg.solver == pls4all.Solver.SVD
-    assert cfg.deflation == pls4all.Deflation.REGRESSION
-    cfg.algorithm = pls4all.Algorithm.PLS_SVD
-    cfg.deflation = pls4all.Deflation.CANONICAL
-    assert cfg.algorithm == pls4all.Algorithm.PLS_SVD
-    assert cfg.deflation == pls4all.Deflation.CANONICAL
+    cfg.n_components = 3
+
+    model = pls4all.Model.fit(ctx, cfg, X, Y)
+    try:
+        yhat = model.predict(ctx, X)
+        coefs = model.coefficients
+    finally:
+        model.close()
 ```
+
+Method-result functions follow the C ABI names:
+
+```python
+with pls4all.Context() as ctx, pls4all.Config() as cfg:
+    cfg.n_components = 3
+    result = pls4all.sparse_simpls_fit(ctx, cfg, X, Y, sparsity_lambda=0.01)
+    try:
+        yhat = result.matrix("predictions")
+    finally:
+        result.close()
+```
+
+## Scikit-Learn API
+
+The `pls4all.sklearn` submodule provides estimators compatible with the
+scikit-learn `fit`/`predict`/`score`, `get_params` and `set_params`
+contracts.
+
+```python
+from pls4all.sklearn import PLSRegression, PCR, OPLSRegression
+
+reg = PLSRegression(n_components=3)
+reg.fit(X, y)
+yhat = reg.predict(X)
+r2 = reg.score(X, y)
+
+pcr = PCR(n_components=3).fit(X, y)
+opls = OPLSRegression(n_components=1).fit(X, y)
+```
+
+Selectors expose the usual scikit-learn feature-selection shape:
+
+```python
+from pls4all.sklearn import VIPSelector, CARSSelector
+
+sel = VIPSelector(n_components=3, top_k=10).fit(X, y)
+mask = sel.get_support()
+X_selected = sel.transform(X)
+```
+
+Some kernels only expose in-sample predictions because the C result does
+not contain enough state for `predict(Xnew)`. Those estimators document the
+restriction in their class docstrings and raise a clear error for new
+inputs.
+
+## Julia Compatibility Mapping
+
+The Julia binding now mirrors the Python ergonomics:
+
+- Python `pls4all.sklearn.PLSRegression` maps to Julia
+  `Pls4all.Sklearn.PLSRegression`.
+- Python scikit-learn estimators map to Julia MLJModelInterface types
+  `Pls4all.PLSRegressor`, `Pls4all.PCRRegressor`, and
+  `Pls4all.OPLSRegressor`.
+- Python NumPy/pandas-style tabular inputs map to Julia Tables.jl inputs
+  accepted by `Pls4all.table_matrix`, `Pls4all.pls_fit`, and
+  `Pls4all.Sklearn.fit!`.
+

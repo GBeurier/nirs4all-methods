@@ -6,6 +6,7 @@
 
 using Pls4all
 using JSON
+using Test
 
 println("Julia pls4all version: ", Pls4all.version())
 println("Julia pls4all ABI: ",
@@ -57,7 +58,10 @@ println("  y_mean       rmse_rel: ", ym_rel)
 println("  predictions  rmse_rel: ", preds_rel)
 
 tol = 1e-6
-if coefs_rel > tol || xm_rel > tol || ym_rel > tol || preds_rel > tol
-    error("Julia parity failure: tolerance $tol exceeded")
+@testset "Pls4all Julia parity" begin
+    @test coefs_rel <= tol
+    @test xm_rel <= tol
+    @test ym_rel <= tol
+    @test preds_rel <= tol
 end
 println("\nJulia smoke + parity OK")

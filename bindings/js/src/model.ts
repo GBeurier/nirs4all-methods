@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
-// PLS regression model wrapper. Internally uses the `p4a_wasm_pls_fit`
-// helper which takes raw double pointers and works around an Emscripten
-// 5.0.7 codegen issue for matrix-view-pointer args (see README "Status").
+// PLS regression model wrapper. Internally uses the public
+// `p4a_pls_fit_simple` ABI helper which takes raw double pointers and
+// avoids the JS<->WASM matrix-view struct call path.
 
 import { checkStatus, getModule } from "./ffi.js";
 import { Matrix } from "./types.js";

@@ -120,9 +120,10 @@ Per-algorithm overrides exist for inherently noisier algorithms:
 | `bagging_pls`, `boosting_pls`, ensembles | 1e-3 | Stochastic averaging; per-implementation RNG differences |
 | `GA`, `PSO`, `VISSA` selectors | non-applicable | Stochastic feature selection; per-implementation RNG streams |
 
-Wide selector tolerances are qualitative evidence, not a release-quality
-oracle. A blocking release gate should either make the selector
-deterministic across bindings or explicitly mark the row as relaxed.
+Wide selector tolerances are diagnostic evidence, not a release-quality
+oracle. The release Gate 2 threshold remains `rmse_rel <= 1e-3`; rows above
+that threshold must stay divergent until the selector is deterministic across
+bindings or a package-compatible variant is implemented and tested.
 
 ## Thread control
 
