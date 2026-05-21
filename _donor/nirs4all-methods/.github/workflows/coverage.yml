@@ -1,0 +1,35 @@
+name: Coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  gcov:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-12 g++-12 ninja-build cmake lcov
+      - run: cmake --preset ci-coverage
+        env:
+          CC: gcc-12
+          CXX: g++-12
+      - run: cmake --build --preset ci-coverage --parallel
+      - run: ctest --preset ci-coverage --output-on-failure
+      - name: Generate coverage report
+        run: |
+          lcov --directory build/ci-coverage --capture --output-file coverage.info \
+               --rc lcov_branch_coverage=1 --ignore-errors mismatch || true
+          lcov --remove coverage.info '/usr/*' '*/cpp/tests/*' --output-file coverage.filtered.info || true
+          lcov --list coverage.filtered.info || true
+      - name: Upload to Codecov (informational)
+        uses: codecov/codecov-action@v4
+        continue-on-error: true
+        with:
+          files: ./coverage.filtered.info
+          fail_ci_if_error: false

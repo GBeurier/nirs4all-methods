@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://n4m.dev/schemas/fixture_v1.json",
+  "title": "nirs4all-methods parity fixture v1",
+  "description": "A self-contained PLS reference fixture: deterministic (X, Y) input plus the expected outputs from a pinned reference implementation, with a comparison policy declaring per-field tolerance.",
+  "type": "object",
+  "required": ["schema_version", "fixture_id", "generator", "data", "expected", "comparison_policy"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "fixture_id":     { "type": "string", "pattern": "^[a-z0-9_\\-]+$" },
+    "generator": {
+      "type": "object",
+      "required": ["name", "version", "git_revision_sha", "params"],
+      "properties": {
+        "name":              { "type": "string" },
+        "version":           { "type": "string" },
+        "git_revision_sha":  { "type": "string", "pattern": "^[0-9a-f]{7,40}$|^unknown$" },
+        "params":            { "type": "object" }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": ["X", "Y"],
+      "properties": {
+        "X": { "$ref": "#/$defs/dense_matrix_f64" },
+        "Y": { "$ref": "#/$defs/dense_matrix_f64" }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "description": "Per-field expected output arrays + per-field tolerances. Fields tagged sign_invariant: true require the comparator to apply the max_abs_element_positive resolver before computing differences.",
+      "additionalProperties": { "$ref": "#/$defs/expected_array" }
+    },
+    "comparison_policy": {
+      "type": "object",
+      "required": ["components_alignment", "sign_resolver", "tolerance_table_row"],
+      "properties": {
+        "components_alignment": { "enum": ["first-k-prefix", "rotation-aware", "exact"] },
+        "sign_resolver":        { "enum": ["max_abs_element_positive", "none"] },
+        "tolerance_table_row":  { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "dense_matrix_f64": {
+      "type": "object",
+      "required": ["shape", "layout", "dtype", "values"],
+      "properties": {
+        "shape":   { "type": "array", "items": { "type": "integer", "minimum": 0 }, "minItems": 1, "maxItems": 2 },
+        "layout":  { "enum": ["row_major", "col_major"] },
+        "dtype":   { "enum": ["f64", "f32"] },
+        "rng_seed": { "type": "integer" },
+        "values":  { "type": "array", "items": { "type": "number" } }
+      }
+    },
+    "expected_array": {
+      "type": "object",
+      "required": ["shape", "values"],
+      "properties": {
+        "shape":          { "type": "array", "items": { "type": "integer", "minimum": 0 }, "minItems": 1, "maxItems": 3 },
+        "values":         { "type": "array", "items": { "type": "number" } },
+        "abs_tol":        { "type": "number", "minimum": 0 },
+        "rel_tol":        { "type": "number", "minimum": 0 },
+        "sign_invariant": { "type": "boolean" }
+      }
+    }
+  }
+}

@@ -1,0 +1,284 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "_base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "dev-debug",
+      "inherits": "_base",
+      "displayName": "Local development · Debug",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "dev-release",
+      "inherits": "_base",
+      "displayName": "Local development · Release",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "blas-on",
+      "inherits": "_base",
+      "displayName": "Release · BLAS",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "N4M_WITH_BLAS": "ON",
+        "BLAS_INCLUDE_DIRS": "$env{CONDA_PREFIX}/include",
+        "BLAS_LIBRARIES": "$env{CONDA_PREFIX}/lib/libopenblas.so",
+        "CMAKE_BUILD_RPATH": "$env{CONDA_PREFIX}/lib",
+        "CMAKE_INSTALL_RPATH": "$env{CONDA_PREFIX}/lib"
+      }
+    },
+    {
+      "name": "omp-on",
+      "inherits": "_base",
+      "displayName": "Release · OpenMP",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "N4M_WITH_OPENMP": "ON"
+      }
+    },
+    {
+      "name": "blas-omp",
+      "inherits": "_base",
+      "displayName": "Release · BLAS + OpenMP",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "N4M_WITH_BLAS": "ON",
+        "N4M_WITH_OPENMP": "ON",
+        "BLAS_INCLUDE_DIRS": "$env{CONDA_PREFIX}/include",
+        "BLAS_LIBRARIES": "$env{CONDA_PREFIX}/lib/libopenblas.so",
+        "CMAKE_BUILD_RPATH": "$env{CONDA_PREFIX}/lib",
+        "CMAKE_INSTALL_RPATH": "$env{CONDA_PREFIX}/lib"
+      }
+    },
+    {
+      "name": "cuda-on",
+      "inherits": "_base",
+      "displayName": "Release · CUDA",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "N4M_WITH_CUDA": "ON"
+      }
+    },
+
+    { "name": "ci-linux-gcc12-release", "inherits": "_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
+      },
+      "environment": { "CC": "gcc-12", "CXX": "g++-12" }
+    },
+    { "name": "ci-linux-gcc12-debug", "inherits": "_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
+      },
+      "environment": { "CC": "gcc-12", "CXX": "g++-12" }
+    },
+    { "name": "ci-linux-gcc13-release", "inherits": "_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
+      },
+      "environment": { "CC": "gcc-13", "CXX": "g++-13" }
+    },
+    { "name": "ci-linux-clang16-release", "inherits": "_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
+      },
+      "environment": { "CC": "clang-16", "CXX": "clang++-16" }
+    },
+    { "name": "ci-linux-clang16-debug", "inherits": "_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
+      },
+      "environment": { "CC": "clang-16", "CXX": "clang++-16" }
+    },
+
+    { "name": "ci-macos-clang-release", "inherits": "_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
+      },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
+    },
+    { "name": "ci-macos-clang-debug", "inherits": "_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
+      },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
+    },
+    { "name": "ci-macos-universal2", "inherits": "_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "N4M_WARNINGS_AS_ERRORS": "ON",
+        "CMAKE_OSX_ARCHITECTURES": "x86_64;arm64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "11.0"
+      },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
+    },
+
+    { "name": "ci-windows-msvc-release", "inherits": "_base",
+      "generator": "Visual Studio 17 2022",
+      "cacheVariables": {
+        "CMAKE_CONFIGURATION_TYPES": "Release",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
+      },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    },
+    { "name": "ci-windows-msvc-debug", "inherits": "_base",
+      "generator": "Visual Studio 17 2022",
+      "cacheVariables": {
+        "CMAKE_CONFIGURATION_TYPES": "Debug",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
+      },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    },
+    { "name": "ci-windows-mingw-release", "inherits": "_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
+      },
+      "environment": { "CC": "gcc", "CXX": "g++" },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    },
+
+    { "name": "ci-asan", "inherits": "_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "N4M_ENABLE_ASAN": "ON",
+        "N4M_ENABLE_UBSAN": "OFF",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
+      },
+      "environment": { "CC": "clang-16", "CXX": "clang++-16" },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+    },
+    { "name": "ci-ubsan", "inherits": "_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "N4M_ENABLE_UBSAN": "ON",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
+      },
+      "environment": { "CC": "clang-16", "CXX": "clang++-16" },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+    },
+    { "name": "ci-tsan", "inherits": "_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "N4M_ENABLE_TSAN": "ON",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
+      },
+      "environment": { "CC": "clang-16", "CXX": "clang++-16" },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+    },
+    { "name": "ci-asan_ubsan", "inherits": "_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "N4M_ENABLE_ASAN": "ON",
+        "N4M_ENABLE_UBSAN": "ON",
+        "N4M_WARNINGS_AS_ERRORS": "ON"
+      },
+      "environment": { "CC": "clang-16", "CXX": "clang++-16" },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+    },
+    { "name": "ci-coverage", "inherits": "_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "N4M_ENABLE_COVERAGE": "ON"
+      }
+    },
+
+    { "name": "emscripten", "inherits": "_base",
+      "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "N4M_BUILD_BINDINGS_JS": "ON",
+        "N4M_BUILD_SHARED": "OFF",
+        "N4M_BUILD_STATIC": "ON",
+        "N4M_BUILD_TESTS": "OFF",
+        "N4M_BUILD_CLI": "OFF"
+      }
+    },
+    { "name": "android-arm64", "inherits": "_base",
+      "toolchainFile": "$env{ANDROID_NDK}/build/cmake/android.toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ANDROID_ABI": "arm64-v8a",
+        "ANDROID_PLATFORM": "android-26",
+        "N4M_BUILD_BINDINGS_ANDROID": "ON",
+        "N4M_BUILD_TESTS": "OFF",
+        "N4M_BUILD_CLI": "OFF"
+      }
+    },
+    { "name": "android-x86_64", "inherits": "_base",
+      "toolchainFile": "$env{ANDROID_NDK}/build/cmake/android.toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ANDROID_ABI": "x86_64",
+        "ANDROID_PLATFORM": "android-26",
+        "N4M_BUILD_BINDINGS_ANDROID": "ON",
+        "N4M_BUILD_TESTS": "OFF",
+        "N4M_BUILD_CLI": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "dev-debug",                "configurePreset": "dev-debug" },
+    { "name": "dev-release",              "configurePreset": "dev-release" },
+    { "name": "blas-on",                  "configurePreset": "blas-on" },
+    { "name": "omp-on",                   "configurePreset": "omp-on" },
+    { "name": "blas-omp",                 "configurePreset": "blas-omp" },
+    { "name": "cuda-on",                  "configurePreset": "cuda-on" },
+    { "name": "ci-linux-gcc12-release",   "configurePreset": "ci-linux-gcc12-release" },
+    { "name": "ci-linux-gcc12-debug",     "configurePreset": "ci-linux-gcc12-debug" },
+    { "name": "ci-linux-gcc13-release",   "configurePreset": "ci-linux-gcc13-release" },
+    { "name": "ci-linux-clang16-release", "configurePreset": "ci-linux-clang16-release" },
+    { "name": "ci-linux-clang16-debug",   "configurePreset": "ci-linux-clang16-debug" },
+    { "name": "ci-macos-clang-release",   "configurePreset": "ci-macos-clang-release" },
+    { "name": "ci-macos-clang-debug",     "configurePreset": "ci-macos-clang-debug" },
+    { "name": "ci-macos-universal2",      "configurePreset": "ci-macos-universal2" },
+    { "name": "ci-windows-msvc-release",  "configurePreset": "ci-windows-msvc-release", "configuration": "Release" },
+    { "name": "ci-windows-msvc-debug",    "configurePreset": "ci-windows-msvc-debug",   "configuration": "Debug" },
+    { "name": "ci-windows-mingw-release", "configurePreset": "ci-windows-mingw-release" },
+    { "name": "ci-asan",                  "configurePreset": "ci-asan" },
+    { "name": "ci-ubsan",                 "configurePreset": "ci-ubsan" },
+    { "name": "ci-tsan",                  "configurePreset": "ci-tsan" },
+    { "name": "ci-asan_ubsan",            "configurePreset": "ci-asan_ubsan" },
+    { "name": "ci-coverage",              "configurePreset": "ci-coverage" }
+  ],
+  "testPresets": [
+    { "name": "dev-debug",                "configurePreset": "dev-debug",                "output": { "outputOnFailure": true } },
+    { "name": "dev-release",              "configurePreset": "dev-release",              "output": { "outputOnFailure": true } },
+    { "name": "blas-on",                  "configurePreset": "blas-on",                  "output": { "outputOnFailure": true } },
+    { "name": "omp-on",                   "configurePreset": "omp-on",                   "output": { "outputOnFailure": true } },
+    { "name": "blas-omp",                 "configurePreset": "blas-omp",                 "output": { "outputOnFailure": true } },
+    { "name": "cuda-on",                  "configurePreset": "cuda-on",                  "output": { "outputOnFailure": true } },
+    { "name": "ci-linux-gcc12-release",   "configurePreset": "ci-linux-gcc12-release",   "output": { "outputOnFailure": true } },
+    { "name": "ci-linux-gcc12-debug",     "configurePreset": "ci-linux-gcc12-debug",     "output": { "outputOnFailure": true } },
+    { "name": "ci-linux-gcc13-release",   "configurePreset": "ci-linux-gcc13-release",   "output": { "outputOnFailure": true } },
+    { "name": "ci-linux-clang16-release", "configurePreset": "ci-linux-clang16-release", "output": { "outputOnFailure": true } },
+    { "name": "ci-linux-clang16-debug",   "configurePreset": "ci-linux-clang16-debug",   "output": { "outputOnFailure": true } },
+    { "name": "ci-macos-clang-release",   "configurePreset": "ci-macos-clang-release",   "output": { "outputOnFailure": true } },
+    { "name": "ci-macos-clang-debug",     "configurePreset": "ci-macos-clang-debug",     "output": { "outputOnFailure": true } },
+    { "name": "ci-macos-universal2",      "configurePreset": "ci-macos-universal2",      "output": { "outputOnFailure": true } },
+    { "name": "ci-windows-msvc-release",  "configurePreset": "ci-windows-msvc-release",  "configuration": "Release", "output": { "outputOnFailure": true } },
+    { "name": "ci-windows-msvc-debug",    "configurePreset": "ci-windows-msvc-debug",    "configuration": "Debug",   "output": { "outputOnFailure": true } },
+    { "name": "ci-windows-mingw-release", "configurePreset": "ci-windows-mingw-release", "output": { "outputOnFailure": true } },
+    { "name": "ci-asan",                  "configurePreset": "ci-asan",                  "output": { "outputOnFailure": true } },
+    { "name": "ci-ubsan",                 "configurePreset": "ci-ubsan",                 "output": { "outputOnFailure": true } },
+    { "name": "ci-tsan",                  "configurePreset": "ci-tsan",                  "output": { "outputOnFailure": true } },
+    { "name": "ci-asan_ubsan",            "configurePreset": "ci-asan_ubsan",            "output": { "outputOnFailure": true } },
+    { "name": "ci-coverage",              "configurePreset": "ci-coverage",              "output": { "outputOnFailure": true } }
+  ]
+}

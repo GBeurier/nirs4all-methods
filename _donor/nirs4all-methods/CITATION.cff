@@ -1,0 +1,68 @@
+cff-version: 1.2.0
+title: "nirs4all-methods: A portable NIRS chemometrics engine with a stable C ABI"
+message: "If you use nirs4all-methods in academic work, please cite as below."
+type: software
+authors:
+  - family-names: Beurier
+    given-names: Grégory
+    affiliation: CIRAD
+    email: beurier@cirad.fr
+  - name: "nirs4all-methods contributors"
+repository-code: "https://github.com/GBeurier/nirs4all-methods"
+url: "https://github.com/GBeurier/nirs4all-methods"
+license: CECILL-2.1
+version: 0.1.0
+date-released: "2026-05-18"
+keywords:
+  - NIRS
+  - spectroscopy
+  - chemometrics
+  - preprocessing
+  - SNV
+  - MSC
+  - SavitzkyGolay
+  - wavelet
+  - baseline-correction
+  - Kennard-Stone
+  - SPXY
+  - outlier-detection
+  - Hotelling-T2
+  - transfer-learning
+  - data-augmentation
+  - C-ABI
+abstract: >
+  nirs4all-methods is a portable C++17 library that ships the upstream NIRS toolchain
+  around PLS regression: 52 preprocessings (scatter correction, derivatives,
+  baselines, wavelets, signal conversion, orthogonalization, feature selection),
+  39 data augmentations (noise, drift, wavelength perturbations, mixup, scattering,
+  edge artifacts, splines), 9 sample-partitioning splitters (Kennard-Stone, SPXY,
+  SPXY-Fold, KMeans, KBinsStratified, BinnedStratifiedGroupKFold, SystematicCircular,
+  SPlit), 11 outlier-detection methods (Mahalanobis, robust Mahalanobis, PCA-residual,
+  PCA-leverage, IsolationForest, LOF, IQR, z-score, MAD, percentile, hat-leverage),
+  and NIRS utilities (signal-type detection, transfer metrics, Hotelling T²,
+  Q-residuals, RPD/RPIQ/SEP/Bias). It is the companion of pls4all (which provides
+  the PLS regression / classification variants) and gives every binding language
+  (Python, R, MATLAB, JavaScript/WASM, Go, Rust, Julia, Ruby, .NET, Lua, Nim, JNI,
+  Octave) the same parity-validated, zero-mandatory-dependency NIRS engine.
+preferred-citation:
+  type: software
+  title: "nirs4all-methods"
+  authors:
+    - family-names: Beurier
+      given-names: Grégory
+  year: 2026
+  version: 0.1.0
+  url: "https://github.com/GBeurier/nirs4all-methods"
+references:
+  - type: software
+    title: "pls4all: A portable Partial Least Squares engine with a stable C ABI"
+    authors:
+      - family-names: Beurier
+        given-names: Grégory
+    url: "https://github.com/GBeurier/pls4all"
+  - type: software
+    title: "nirs4all: Python framework for NIRS data analysis"
+    authors:
+      - family-names: Beurier
+        given-names: Grégory
+    url: "https://github.com/nirs4all/nirs4all"

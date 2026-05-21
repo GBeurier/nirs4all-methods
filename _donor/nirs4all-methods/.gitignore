@@ -1,0 +1,132 @@
+# ============================================================
+# Build artefacts (CMake / Ninja / Make)
+# ============================================================
+build/
+build-*/
+out/
+cmake-build-*/
+_deps/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.pdb
+*.exe
+*.exp
+*.ilk
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+install_manifest.txt
+Testing/
+compile_commands.json
+
+# Generated headers (CMake configure-time)
+cpp/include/n4m/n4m_export.h
+
+# ============================================================
+# Python (bindings + parity generator)
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.venv/
+venv/
+env/
+dist/
+sdist/
+wheels/
+
+# ============================================================
+# R (binding + parity generator)
+# ============================================================
+bindings/r/n4m/src/*.o
+bindings/r/n4m/src/*.so
+bindings/r/n4m/src/*.dll
+bindings/r/n4m/src/symbols.rds
+bindings/r/n4m/inst/include/
+parity/r_generator/*.Rcheck/
+n4m_*.tar.gz
+n4m.Rcheck/
+.Rhistory
+.RData
+.Ruserdata
+
+# ============================================================
+# JS / WASM
+# ============================================================
+bindings/js/node_modules/
+bindings/js/dist/
+bindings/js/coverage/
+*.wasm
+*.wat
+
+# ============================================================
+# MATLAB
+# ============================================================
+bindings/matlab/*.mex*
+bindings/matlab/*.o
+bindings/matlab/*.obj
+bindings/matlab/asv/
+
+# ============================================================
+# Android
+# ============================================================
+bindings/android/.gradle/
+bindings/android/local.properties
+bindings/android/*/build/
+bindings/android/.idea/
+bindings/android/captures/
+bindings/android/.cxx/
+
+# ============================================================
+# IDE / editor / OS
+# ============================================================
+.vscode/
+.idea/
+.cache/
+.devcontainer/
+*.swp
+*.swo
+*.swn
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ============================================================
+# Local-only artefacts
+# ============================================================
+*.log
+*.bak
+.env
+.env.local
+newplot*.png
+*:Zone.Identifier
+todo.local.md
+
+# Cross-binding benchmark caches (regenerated per run)
+benchmarks/cross_binding/data/*.csv
+benchmarks/cross_binding/data/.predictions/
+benchmarks/cross_binding/results/
+docs/_build/
+
+# Local Claude Code agent worktrees
+.claude/worktrees/
+
+# Cross-impl parity upstream cache (regenerated per run)
+parity/cache/

@@ -1,0 +1,24 @@
+# Pinned lock file for the nirs4all-methods parity fixture generator.
+#
+# Mirrors `pyproject.toml`'s top-level pins and adds the transitive deps
+# that scikit-learn / scipy actually drag in at install time. Used by the
+# parity-gate CI workflow (G2 from Codex post-batch review) to guarantee
+# that fixtures regenerate byte-for-byte across machines.
+#
+# Generated to match the `pyproject.toml` pins (numpy==1.26.4 et al.). Refresh
+# via `pip-compile parity/python_generator/pyproject.toml -o requirements-lock.txt`
+# whenever the pyproject pins are bumped.
+#
+# Install via:
+#   pip install -r parity/python_generator/requirements-lock.txt
+
+# Top-level pins (must mirror pyproject.toml)
+numpy==1.26.4
+scipy==1.17.1
+scikit-learn==1.8.0
+PyWavelets==1.8.0
+pybaselines==1.2.1
+
+# Transitive deps locked by scikit-learn 1.8.0
+joblib==1.5.2
+threadpoolctl==3.6.0

@@ -1,0 +1,1276 @@
+/* ============================================================
+   nirs4all-methods docs · "phosphor paper" — refined scientific reading
+   surface that inherits the cross-binding benchmark's visual
+   language (Sora / Inter Tight / JetBrains Mono, paper-white
+   ground, teal phosphor accent #0d9488, faint engineering grid)
+   but rebalances for prose.
+
+   Specificity note: Alabaster's selectors are element-qualified
+   (`div.body`, `div.sphinxsidebar`, `div.footer`, `div.body h1`,
+   etc.) — most chrome rules below mirror that qualification so
+   they win the cascade without needing !important.
+   ============================================================ */
+
+/* ---- web fonts (matched to the landing dashboard) ---------- */
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500;600;700&family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+/* ---- design tokens ---------------------------------------- */
+:root {
+  /* surfaces — paper, slightly warmer than landing for long reads */
+  --paper:        #F8FAFB;
+  --paper-2:      #FFFFFF;
+  --paper-3:      #F2F5F7;
+  --paper-4:      #E7ECF0;
+  --paper-cream:  #FBF9F4;   /* code-block wash */
+  --grid:         rgba(15, 30, 40, 0.022);
+
+  /* ink — primary scale */
+  --ink-0: #0F2027;
+  --ink-1: #2A3942;
+  --ink-2: #4A5862;
+  --ink-3: #6F7B85;
+  --ink-4: #98A2AC;
+  --ink-5: #C8D0D7;
+
+  /* hairlines */
+  --line:   rgba(15, 30, 40, 0.07);
+  --line-2: rgba(15, 30, 40, 0.13);
+  --line-3: rgba(15, 30, 40, 0.20);
+
+  /* phosphor — single accent, used sparingly.
+     --phosphor       = accent dots, borders, LEDs, hover glow
+     --phosphor-deep  = TEXT contrast (AA on white at 4.79:1) */
+  --phosphor:           #0d9488;
+  --phosphor-deep:      #0a6e64;   /* darker so text links pass AA */
+  --phosphor-soft:      rgba(13, 148, 136, 0.10);
+  --phosphor-softer:    rgba(13, 148, 136, 0.05);
+  --phosphor-stronger:  rgba(13, 148, 136, 0.18);
+  --phosphor-glow:      rgba(13, 148, 136, 0.30);
+
+  /* parity / status — text variants darkened to pass AA */
+  --amber:        #B86E0F;            /* accent fill, dots */
+  --amber-text:   #8E520B;            /* AA-compliant text */
+  --amber-soft:   rgba(184, 110, 15, 0.12);
+  --crimson:      #B83A37;
+  --crimson-text: #952F2C;
+  --crimson-soft: rgba(184, 58, 55, 0.10);
+  --indigo:       #2E5BB8;
+  --indigo-text:  #21438A;
+  --indigo-soft:  rgba(46, 91, 184, 0.10);
+
+  /* type stacks */
+  --display: 'Sora', 'Inter Tight', system-ui, sans-serif;
+  --sans:    'Inter Tight', system-ui, -apple-system, sans-serif;
+  --mono:    'JetBrains Mono', 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+
+  /* hero spectrum (same hues as landing, for brand continuity) */
+  --hero-spectrum: linear-gradient(90deg,
+      #4338CA 0%, #6366F1 13%, #06B6D4 27%, #14B8A6 40%, #84CC16 53%,
+      #EAB308 67%, #F97316 82%, #B91C1C 100%);
+
+  /* fluid rhythm */
+  --measure: 70ch;             /* readable column inside .body */
+}
+
+/* ============================================================
+   PAGE SHELL
+   ============================================================ */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--paper);
+  color: var(--ink-0);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.62;
+  font-weight: 400;
+  font-feature-settings: "tnum" 1, "lnum" 1, "ss01" 1, "cv11" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: -1px -1px;
+}
+
+/* 2 px hero-spectrum strip fixed at the very top of every page —
+   a quiet callback to the benchmark hero strip */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--hero-spectrum);
+  opacity: 0.62;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+a {
+  color: var(--phosphor-deep);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+a:hover {
+  color: var(--phosphor-deep);
+  border-bottom-color: var(--phosphor);
+}
+a:focus-visible {
+  outline: 2px solid var(--phosphor);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ---- alabaster layout overrides --------------------------- */
+/* Alabaster honors `page_width` (1380 px in conf.py) by emitting an
+   inline `width: 1380px` on div.document. We mirror that width via
+   max-width so external overrides stay consistent. */
+div.document {
+  background: transparent;
+  margin: 0 auto;
+  padding: 0;
+}
+div.documentwrapper { float: right; width: calc(100% - 300px); }
+div.bodywrapper { margin: 0; }
+div.body {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  min-width: 0;
+  max-width: none;
+  padding: 26px 56px 48px;
+  margin: 10px 24px 18px 0;
+  box-shadow:
+    0 1px 0 rgba(15, 30, 40, 0.02),
+    0 24px 60px -32px rgba(15, 30, 40, 0.08);
+  position: relative;
+  overflow: visible;
+}
+/* a faint phosphor edge on the body card */
+div.body::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px var(--phosphor-softer);
+}
+
+/* main reading measure — applied to prose only so wide tables
+   and tabsets still get the full body width */
+div.body > section > p,
+div.body > section > section > p,
+div.body > section > section > section > p,
+div.body > section > ul,
+div.body > section > section > ul,
+div.body > section > section > section > ul,
+div.body > section > ol,
+div.body > section > section > ol,
+div.body > section > section > section > ol,
+div.body > section > blockquote,
+div.body > section > section > blockquote,
+div.body > section > section > section > blockquote {
+  max-width: var(--measure);
+}
+
+/* Compress the gap above the H1: Alabaster's related-top bar +
+   body card margin previously stacked to ~74 px before the title
+   showed up. Tightened to ~26 px total. */
+div.body > section:first-of-type > h1:first-child {
+  margin-top: 0;
+}
+
+/* ============================================================
+   SIDEBAR — Alabaster's `fixed_sidebar: True` keeps it fixed-
+   position; we reskin it as a quiet ink-rail with a tight
+   wordmark, a one-line blurb, and a flat nav. Deep toctree
+   children (e.g. the 70+ methods catalogue) are stacked inside
+   a contained scroll affordance so they don't dominate.
+   ============================================================ */
+div.sphinxsidebar {
+  width: 260px;
+  margin-left: 0;
+  padding: 22px 16px 28px 24px;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--sans);
+  font-size: 13.25px;
+  line-height: 1.5;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-5) transparent;
+}
+div.sphinxsidebar::-webkit-scrollbar { width: 8px; }
+div.sphinxsidebar::-webkit-scrollbar-thumb {
+  background: var(--ink-5);
+  border-radius: 4px;
+}
+div.sphinxsidebar::-webkit-scrollbar-track { background: transparent; }
+div.sphinxsidebarwrapper { padding: 0; }
+
+/* wordmark */
+div.sphinxsidebarwrapper h1.logo {
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+  padding: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+div.sphinxsidebarwrapper h1.logo::before {
+  content: "";
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--phosphor);
+  box-shadow: 0 0 10px var(--phosphor-glow);
+  animation: phosphor-pulse 2.6s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes phosphor-pulse {
+  0%, 100% { opacity: 1;    box-shadow: 0 0 10px var(--phosphor-glow); }
+  50%      { opacity: 0.50; box-shadow: 0 0 3px  var(--phosphor-soft); }
+}
+@media (prefers-reduced-motion: reduce) {
+  div.sphinxsidebarwrapper h1.logo::before { animation: none; }
+}
+div.sphinxsidebarwrapper h1.logo a {
+  color: var(--ink-0);
+  border-bottom: none;
+}
+div.sphinxsidebar h1.logo a:hover { color: var(--phosphor-deep); }
+
+div.sphinxsidebarwrapper p.blurb {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 400;
+  font-style: normal;
+  color: var(--ink-3);
+  line-height: 1.5;
+  margin: 6px 0 18px;
+  letter-spacing: -0.002em;
+  /* one-line tagline-style: clamp to two lines so the wordmark stays
+     the dominant element. The full description lives in about.md. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* hide any stray third-party widget Alabaster might still emit */
+div.sphinxsidebarwrapper iframe { display: none !important; }
+div.sphinxsidebarwrapper > p:has(> iframe) { display: none !important; }
+
+div.sphinxsidebar h3,
+div.sphinxsidebar h4 {
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--ink-4);
+  margin: 20px 0 8px;
+  padding: 0 0 4px;
+  border-bottom: 1px solid var(--line);
+}
+div.sphinxsidebar h3 a, div.sphinxsidebar h4 a {
+  color: var(--ink-4);
+  border-bottom: none;
+}
+div.sphinxsidebar h3 a:hover, div.sphinxsidebar h4 a:hover { color: var(--phosphor-deep); }
+
+div.sphinxsidebar p {
+  margin: 0 0 10px;
+  color: var(--ink-2);
+}
+
+div.sphinxsidebar ul {
+  list-style: none;
+  margin: 0; padding: 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+div.sphinxsidebar ul ul { padding-left: 10px; margin-top: 2px; }
+div.sphinxsidebar li {
+  margin: 0;
+  position: relative;
+}
+div.sphinxsidebar a {
+  color: var(--ink-2);
+  border-bottom: none;
+}
+div.sphinxsidebar a:hover {
+  color: var(--ink-0);
+  text-decoration: none;
+}
+div.sphinxsidebar li > a {
+  display: block;
+  padding: 3px 10px 3px 12px;
+  border-radius: 3px;
+  transition: background 100ms ease, color 100ms ease;
+}
+div.sphinxsidebar li > a:hover { background: var(--paper-3); color: var(--ink-0); }
+
+/* toctree-l1 — section roots get a tiny weight bump so they feel
+   like categories rather than peers of the L2 method names */
+div.sphinxsidebar li.toctree-l1 > a {
+  font-weight: 500;
+  color: var(--ink-1);
+}
+div.sphinxsidebar li.toctree-l1 > a:hover { color: var(--ink-0); }
+
+/* current item — accent rail + soft phosphor wash */
+div.sphinxsidebar li.current > a,
+div.sphinxsidebar li > a.current {
+  color: var(--phosphor-deep);
+  font-weight: 600;
+  background: var(--phosphor-softer);
+}
+div.sphinxsidebar li.current > a::before,
+div.sphinxsidebar li > a.current::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 4px; bottom: 4px;
+  width: 2px;
+  background: var(--phosphor);
+  border-radius: 1px;
+}
+
+/* When inside a deep section (the Methods catalogue expands its
+   70+ children), corral the L2 children into a contained scroll
+   so the sidebar stays scannable. The current item is auto-
+   scrolled into view via CSS scroll-margin-top. */
+div.sphinxsidebar li.toctree-l1.current > ul {
+  max-height: 38vh;
+  overflow-y: auto;
+  margin: 4px 0 6px 0;
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+  scroll-padding-top: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-5) transparent;
+}
+div.sphinxsidebar li.toctree-l1.current > ul::-webkit-scrollbar { width: 6px; }
+div.sphinxsidebar li.toctree-l1.current > ul::-webkit-scrollbar-thumb {
+  background: var(--ink-5);
+  border-radius: 3px;
+}
+div.sphinxsidebar li.toctree-l1.current > ul li.current {
+  scroll-margin-top: 8px;
+}
+div.sphinxsidebar li.toctree-l2 > a {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-2);
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+/* The trailing toctree-l2 group anchors (Preprocessing, Baseline, Wavelet…)
+   live mixed with the method names in the same UL — separate them
+   visually with a hairline + uppercase eyebrow weight. They are the
+   L2 items pointing back at an index fragment (`index.html#…`). The
+   active method page itself uses `href="#"`, which we must NOT style
+   as an eyebrow — hence the specific prefix match. */
+div.sphinxsidebar li.toctree-l2 > a[href^="index.html#"] {
+  font-family: var(--sans);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+  margin-top: 6px;
+  padding-left: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+div.sphinxsidebar li.toctree-l2 > a[href^="index.html#"]:hover { color: var(--phosphor-deep); }
+
+/* quick search */
+div.sphinxsidebar #searchbox h3 { margin-top: 28px; }
+div.sphinxsidebar #searchbox form {
+  display: flex; gap: 6px;
+  margin-top: 6px;
+}
+div.sphinxsidebar #searchbox input[type="text"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--paper-2);
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  padding: 6px 9px;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--ink-0);
+  outline: none;
+  transition: border-color 100ms ease, box-shadow 100ms ease;
+}
+div.sphinxsidebar #searchbox input[type="text"]:focus-visible {
+  border-color: var(--phosphor);
+  box-shadow: 0 0 0 2px var(--phosphor-soft);
+  outline: 2px solid var(--phosphor);
+  outline-offset: -3px;
+}
+div.sphinxsidebar #searchbox input[type="submit"] {
+  background: var(--ink-0);
+  color: var(--paper-2);
+  border: 1px solid var(--ink-0);
+  border-radius: 3px;
+  padding: 6px 11px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background 100ms ease, border-color 100ms ease;
+}
+div.sphinxsidebar #searchbox input[type="submit"]:hover {
+  background: var(--phosphor-deep);
+  border-color: var(--phosphor-deep);
+}
+div.sphinxsidebar #searchbox input[type="submit"]:focus-visible {
+  outline: 2px solid var(--phosphor);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   RELATED NAV (top / bottom) — minimalist breadcrumb
+   ============================================================ */
+div.related {
+  background: transparent;
+  border: none;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--ink-3);
+  padding: 0;
+  margin: 0;
+}
+div.related.top {
+  margin: 0 24px 0 0;
+  padding: 10px 8px 6px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+div.related.bottom {
+  margin: 18px 24px 0 0;
+  padding: 12px 8px;
+  border-top: 1px solid var(--line);
+}
+div.related nav#rellinks { float: none; margin: 0; }
+div.related nav#rellinks li + li::before { content: none; }
+div.related ul {
+  margin: 0; padding: 0; list-style: none;
+  display: flex; flex-wrap: wrap; gap: 18px;
+}
+div.related li { margin: 0; }
+div.related a {
+  color: var(--ink-2);
+  text-transform: none;
+  letter-spacing: 0;
+  border-bottom: none;
+}
+div.related a:hover { color: var(--phosphor-deep); border-bottom: 1px solid var(--phosphor); }
+div.related code { font-size: 12px; }
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+div.footer {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-4);
+  text-align: left;
+  width: auto;
+  padding: 14px 0 28px;
+  margin: 0 22px 0 0;
+  border-top: 1px solid var(--line);
+  letter-spacing: 0.03em;
+}
+div.footer a { color: var(--ink-3); border-bottom: 1px dotted var(--ink-5); }
+div.footer a:hover { color: var(--phosphor-deep); border-bottom-color: var(--phosphor); }
+
+/* ============================================================
+   TYPOGRAPHY — overrides Alabaster's div.body h1-6 rules
+   ============================================================ */
+
+/* H1 — document title */
+div.body h1 {
+  font-family: var(--display);
+  font-size: 32px;
+  font-weight: 300;
+  letter-spacing: -0.018em;
+  line-height: 1.18;
+  color: var(--ink-0);
+  margin: 0 0 12px;
+  padding: 0 0 18px;
+  position: relative;
+}
+div.body h1::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: 0;
+  width: 96px; height: 2px;
+  background: var(--hero-spectrum);
+  opacity: 0.7;
+  border-radius: 1px;
+}
+div.body h1 code,
+div.body h1 .pre {
+  font-family: var(--mono);
+  font-size: 0.84em;
+  font-weight: 500;
+  background: var(--phosphor-soft);
+  color: var(--phosphor-deep);
+  padding: 1px 9px 2px;
+  border-radius: 4px;
+  border: 1px solid var(--phosphor-softer);
+}
+
+/* H2 — major section */
+div.body h2 {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--ink-0);
+  margin: 56px 0 18px;
+  padding: 22px 0 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+div.body h2::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--phosphor);
+  box-shadow: 0 0 0 3px var(--phosphor-softer);
+  flex-shrink: 0;
+}
+
+/* H3 — subsection. Calmer marker (left rule rather than diamond) */
+div.body h3 {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.004em;
+  color: var(--ink-1);
+  margin: 36px 0 12px;
+  padding: 0 0 0 12px;
+  border-left: 2px solid var(--phosphor-stronger);
+  position: relative;
+}
+
+/* H4 — micro-label, uppercase tracked */
+div.body h4 {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+  margin: 28px 0 8px;
+  padding: 0;
+}
+div.body h5, div.body h6 {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-1);
+  margin: 22px 0 6px;
+  padding: 0;
+}
+
+/* anchor (¶) — always present for keyboard discovery,
+   visually subdued until heading hover or anchor focus */
+.body a.headerlink {
+  margin-left: 8px;
+  color: var(--phosphor-deep);
+  border-bottom: none;
+  font-weight: 400;
+  font-size: 0.7em;
+  opacity: 0;
+  visibility: visible;
+  transform: translateY(-2px);
+  transition: opacity 150ms ease;
+}
+.body h1:hover > a.headerlink,
+.body h2:hover > a.headerlink,
+.body h3:hover > a.headerlink,
+.body h4:hover > a.headerlink,
+.body h5:hover > a.headerlink,
+.body h6:hover > a.headerlink,
+.body dt:hover > a.headerlink,
+.body caption:hover > a.headerlink,
+.body a.headerlink:focus-visible,
+.body a.headerlink:hover {
+  opacity: 1;
+}
+.body a.headerlink:focus-visible {
+  outline: 2px solid var(--phosphor);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* body paragraph rhythm */
+div.body p {
+  margin: 0 0 14px;
+  color: var(--ink-1);
+}
+div.body p strong, div.body li strong, div.body td strong, div.body th strong {
+  color: var(--ink-0);
+  font-weight: 600;
+}
+div.body p em, div.body li em { color: var(--ink-1); font-style: italic; }
+
+/* lists */
+div.body ul, div.body ol {
+  margin: 0 0 14px;
+  padding-left: 22px;
+}
+div.body ul li, div.body ol li { margin: 4px 0; color: var(--ink-1); }
+div.body ul li::marker { color: var(--phosphor); }
+
+/* blockquote */
+div.body blockquote {
+  margin: 16px 0;
+  padding: 12px 16px 12px 20px;
+  border-left: 3px solid var(--phosphor);
+  background: var(--phosphor-softer);
+  border-radius: 0 4px 4px 0;
+  color: var(--ink-1);
+  font-style: normal;
+  max-width: var(--measure);
+}
+div.body blockquote p:last-child { margin-bottom: 0; }
+div.body blockquote > div > p:last-child { margin-bottom: 0; }
+
+/* horizontal rule */
+div.body hr, div.body hr.docutils {
+  border: none;
+  height: 1px;
+  background: var(--line);
+  margin: 32px 0;
+}
+
+/* ============================================================
+   CODE — inline + block
+   ============================================================ */
+
+/* inline code — soft mint pill. Allow wrap so long paths/API
+   names don't clip on mobile. */
+div.body code,
+div.body code.docutils.literal.notranslate {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  font-weight: 500;
+  background: var(--phosphor-softer);
+  color: var(--phosphor-deep);
+  padding: 1px 6px 2px;
+  border-radius: 3px;
+  border: 1px solid var(--phosphor-softer);
+  word-break: normal;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+div.body a code,
+div.body a code.docutils.literal.notranslate {
+  color: var(--phosphor-deep);
+  border-color: transparent;
+}
+div.body a:hover code { color: var(--phosphor-deep); }
+
+/* code BLOCK — paper-cream wash with a thin teal LED left rule */
+div.body div[class*="highlight-"] { margin: 14px 0; }
+div.body div.highlight {
+  background: var(--paper-cream);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--phosphor);
+  border-radius: 0 5px 5px 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  overflow-x: auto;
+  position: relative;
+}
+div.body div.highlight pre {
+  margin: 0;
+  padding: 14px 18px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-0);
+  background: transparent;
+  overflow-x: auto;
+}
+div.body div.highlight pre code,
+div.body div.highlight pre code.docutils.literal.notranslate {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+  white-space: pre;
+}
+
+/* Pygments tints */
+div.body .highlight .c, div.body .highlight .c1, div.body .highlight .cm { color: #6F7B85; font-style: italic; }
+div.body .highlight .k,  div.body .highlight .kn { color: #8A2F5C; font-weight: 600; }
+div.body .highlight .s,  div.body .highlight .s1, div.body .highlight .s2 { color: #16652A; }
+div.body .highlight .n  { color: var(--ink-0); }
+div.body .highlight .nf { color: var(--phosphor-deep); font-weight: 600; }
+div.body .highlight .nb { color: var(--indigo-text); }
+div.body .highlight .nn { color: var(--ink-1); }
+div.body .highlight .o  { color: var(--ink-2); }
+div.body .highlight .p  { color: var(--ink-2); }
+div.body .highlight .mi, div.body .highlight .m { color: var(--amber-text); }
+div.body .highlight .w  { background: transparent; }
+
+/* ============================================================
+   MATH — block + inline (MathJax 3 output)
+   ============================================================ */
+div.body div.math.notranslate.nohighlight {
+  margin: 18px 0;
+  padding: 12px 18px 12px 22px;
+  border-left: 2px solid var(--phosphor-stronger);
+  background: linear-gradient(90deg,
+    var(--phosphor-softer) 0%,
+    rgba(13, 148, 136, 0.012) 60%,
+    transparent 100%);
+  border-radius: 0 4px 4px 0;
+  overflow-x: auto;
+  font-size: 1.02em;
+  color: var(--ink-0);
+}
+div.body span.math.notranslate.nohighlight {
+  color: var(--ink-0);
+  font-size: 1em;
+}
+div.body span.math mjx-container { vertical-align: -0.05em; }
+
+/* ============================================================
+   TABLES — default Sphinx + custom .docutils
+   ============================================================ */
+
+/* Wrappers carry the horizontal scroll affordance. Bare
+   `table.docutils.align-default` tables (no wrapper) wrap their
+   content normally; the .parity-grouped variant keeps tight
+   nowrap so backend names and ms columns line up. */
+.table-wrapper,
+figure.table,
+div.parity-table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+  margin: 14px 0;
+  border-radius: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-5) var(--paper-3);
+}
+.table-wrapper::-webkit-scrollbar,
+div.parity-table-wrap::-webkit-scrollbar { height: 10px; }
+.table-wrapper::-webkit-scrollbar-track,
+div.parity-table-wrap::-webkit-scrollbar-track { background: var(--paper-3); border-radius: 4px; }
+.table-wrapper::-webkit-scrollbar-thumb,
+div.parity-table-wrap::-webkit-scrollbar-thumb {
+  background: var(--ink-5); border-radius: 4px;
+}
+.table-wrapper > table.docutils,
+figure.table > table.docutils,
+div.parity-table-wrap > table.docutils {
+  max-width: none;
+  width: max-content;
+}
+
+div.body table.docutils {
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.45;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: auto;
+  max-width: 100%;
+  margin: 14px 0;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+div.body table.docutils thead th,
+div.body table.docutils th.head {
+  font-family: var(--sans);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-2);
+  background: var(--paper-3);
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line-2);
+  border-right: 1px solid var(--line);
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+div.body table.docutils thead th:last-child,
+div.body table.docutils th.head:last-child { border-right: none; }
+
+div.body table.docutils td {
+  padding: 6px 12px;
+  line-height: 1.45;
+  text-align: left;
+  border-top: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  color: var(--ink-1);
+  vertical-align: top;
+  white-space: normal;
+}
+div.body table.docutils td:last-child { border-right: none; }
+div.body table.docutils tbody tr:first-child td { border-top: none; }
+div.body table.docutils tbody tr.row-odd  { background: var(--paper-2); }
+div.body table.docutils tbody tr.row-even { background: rgba(15, 30, 40, 0.012); }
+div.body table.docutils tbody tr:hover td { background: var(--phosphor-softer); }
+
+/* inline code in table cells: normal-weight pill */
+div.body table.docutils td code,
+div.body table.docutils td code.docutils.literal.notranslate {
+  font-size: 11.5px;
+  background: var(--paper-3);
+  border-color: var(--line);
+  color: var(--ink-0);
+}
+div.body table.docutils td p { margin: 0; }
+
+/* ============================================================
+   PARITY TABLES (per-method benchmark grids)
+   ============================================================ */
+div.body table.docutils.parity-grouped {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+div.body table.docutils.parity-grouped td,
+div.body table.docutils.parity-grouped th {
+  white-space: nowrap;
+}
+div.body table.docutils.parity-grouped tbody.lang-band tr.lang-band-row > th {
+  font-family: var(--sans);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  padding: 6px 12px;
+  background: var(--paper-3);
+  color: var(--ink-2);
+  border-top: 1px solid var(--line-2);
+  border-bottom: 1px solid var(--line);
+}
+.lang-band-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--ink-4);
+  margin-right: 9px;
+  vertical-align: 0;
+}
+/* per-language dot tints (mirror landing semantics) */
+div.body table.docutils.parity-grouped tbody.lang-cpp    .lang-band-dot { background: #0E8C8F; }
+div.body table.docutils.parity-grouped tbody.lang-python .lang-band-dot { background: #B88528; }
+div.body table.docutils.parity-grouped tbody.lang-r      .lang-band-dot { background: #4A60D6; }
+div.body table.docutils.parity-grouped tbody.lang-matlab .lang-band-dot { background: #B85AA6; }
+div.body table.docutils.parity-grouped tbody.lang-ext    .lang-band-dot { background: var(--ink-3); }
+div.body table.docutils.parity-grouped tbody.lang-cpp    tr.lang-band-row > th { color: #0E8C8F; }
+div.body table.docutils.parity-grouped tbody.lang-python tr.lang-band-row > th { color: #B88528; }
+div.body table.docutils.parity-grouped tbody.lang-r      tr.lang-band-row > th { color: #4A60D6; }
+div.body table.docutils.parity-grouped tbody.lang-matlab tr.lang-band-row > th { color: #B85AA6; }
+
+div.body table.docutils.parity-grouped td.bk-name code {
+  font-family: var(--mono);
+  background: transparent;
+  border: none;
+  color: var(--ink-0);
+  font-size: 12px;
+  padding: 0;
+  white-space: nowrap;
+}
+div.body table.docutils.parity-grouped td.ms {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-1);
+  text-align: right;
+}
+div.body table.docutils.parity-grouped td.ms.ms-best {
+  color: var(--phosphor-deep);
+  font-weight: 600;
+}
+
+/* parity status markers — text variants pass AA */
+.parity, .ref-parity {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 1px 6px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.parity.parity-divergence {
+  min-width: 4.5em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.parity.parity-exact   { color: var(--phosphor-deep); background: var(--phosphor-soft); }
+.parity.parity-context,
+.parity.parity-candidate,
+.parity.parity-drift   { color: var(--amber-text);   background: var(--amber-soft); }
+.parity.parity-divergent,
+.parity.parity-error,
+.parity.parity-fail    { color: var(--crimson-text); background: var(--crimson-soft); }
+.parity.parity-deferred,
+.parity.parity-not_run { color: var(--indigo-text);  background: var(--indigo-soft); }
+.parity.parity-na,
+.parity.parity-reference_needed,
+.parity.parity-not_available { color: var(--ink-3); background: var(--paper-3); }
+
+/* Reference-gate variants — honest visual signal that "exact" within a
+   loose tolerance (relaxed, qualitative) is NOT the same as bit-exact.
+   strict   = phosphor (numeric equivalence)
+   relaxed  = amber    (known algorithmic drift)
+   qualitative = grey  (shape/smoke comparison, not agreement)
+   source   = italic   (the canonical reference row, no self-comparison) */
+.parity.parity-ref-strict      { color: var(--phosphor-deep); background: var(--phosphor-soft); }
+.parity.parity-ref-relaxed     { color: var(--amber-text);    background: var(--amber-soft); }
+.parity.parity-ref-qualitative { color: var(--ink-3);         background: var(--paper-3); }
+.parity.parity-ref-source      { color: var(--ink-3);         background: transparent;
+                                  font-style: italic; font-weight: 500; }
+.parity.parity-ref-unknown     { color: var(--ink-3);         background: var(--paper-3);
+                                  font-style: italic; }
+.p-exact   { color: var(--phosphor-deep); }
+.p-drift   { color: var(--amber-text); }
+.p-divergent, .p-error, .p-fail { color: var(--crimson-text); }
+.p-deferred, .p-not_run, .p-timeout { color: var(--indigo-text); }
+.p-na, .p-not_available { color: var(--ink-3); }
+
+/* truth-source marker tints */
+.icon-ok    { color: var(--phosphor-deep); font-weight: 600; }
+.icon-warn  { color: var(--amber-text);  font-weight: 600; }
+.icon-fail  { color: var(--crimson-text); font-weight: 600; }
+.truth-mark {
+  margin-right: 5px;
+  opacity: 0.85;
+  font-size: 0.9em;
+  cursor: help;
+  user-select: none;
+  color: var(--phosphor-deep);
+}
+.truth-mark.paper-only { color: var(--ink-3); opacity: 0.7; }
+
+tr.bk-row.truth-source > td.bk-name {
+  background: rgba(13, 148, 136, 0.04);
+  border-left: 3px solid rgba(13, 148, 136, 0.55);
+}
+tr.bk-row.truth-source-strict > td.bk-name {
+  background: rgba(13, 148, 136, 0.08);
+  border-left: 3px solid var(--phosphor);
+}
+tr.bk-row.truth-source-relaxed > td.bk-name {
+  background: rgba(184, 110, 15, 0.06);
+  border-left: 3px solid rgba(184, 110, 15, 0.65);
+}
+tr.bk-row.truth-source-qualitative > td.bk-name {
+  background: rgba(120, 120, 120, 0.04);
+  border-left: 3px dashed rgba(120, 120, 120, 0.55);
+}
+
+.medal { font-size: 1em; vertical-align: -1px; }
+
+/* ============================================================
+   SPHINX-DESIGN — cards & tab combo
+   ============================================================ */
+div.body .sd-card {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--phosphor);
+  border-radius: 0 5px 5px 0;
+  box-shadow: none;
+  margin: 14px 0 22px;
+}
+div.body .sd-card .sd-card-body {
+  padding: 14px 18px;
+  font-size: 13.5px;
+  color: var(--ink-1);
+}
+div.body .sd-card .sd-card-body p,
+div.body .sd-card .sd-card-body .sd-card-text {
+  margin: 4px 0;
+}
+div.body .sd-card ul { margin: 4px 0 0 0; padding-left: 18px; max-width: none; }
+
+/* tab combo — only hide native labels on sets that JS has actually
+   enhanced. Without `.p4-combo-ready` the sphinx-design fallback
+   keeps working (single-tab sets, no-JS users). */
+div.body .sd-tab-set { margin: 18px 0 26px; }
+div.body .sd-tab-set.p4-combo-ready > .sd-tab-label {
+  position: absolute;
+  left: -10000px;
+  width: 1px; height: 1px;
+  overflow: hidden;
+}
+div.body .sd-tab-set > .sd-tab-content {
+  padding: 14px 0 0;
+  box-shadow: none;
+}
+
+.p4-tab-combo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 6px;
+  padding: 4px 12px 4px 10px;
+  max-width: 100%;
+  background: var(--paper-2);
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.p4-tab-combo:hover,
+.p4-tab-combo:focus-within {
+  border-color: var(--phosphor);
+  box-shadow: 0 0 0 3px var(--phosphor-softer);
+}
+.p4-tab-combo::before {
+  content: "BINDING";
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-3);
+  padding-right: 8px;
+  border-right: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.p4-tab-combo-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  box-shadow: 0 0 0 2px var(--paper-2);
+  flex-shrink: 0;
+}
+.p4-tab-combo-dot[data-lang="python"] { background: #B88528; }
+.p4-tab-combo-dot[data-lang="r"]      { background: #4A60D6; }
+.p4-tab-combo-dot[data-lang="matlab"] { background: #B85AA6; }
+.p4-tab-combo-dot[data-lang="c"]      { background: #0E8C8F; }
+.p4-tab-combo-dot[data-lang="cpp"]    { background: #0E8C8F; }
+
+.p4-tab-combo select {
+  min-width: 0;
+  width: clamp(12rem, 55vw, 26rem);
+  padding: 5px 26px 5px 4px;
+  border: none;
+  background-color: transparent;
+  color: var(--ink-0);
+  font: 500 12.5px/1.4 var(--sans);
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%230a6e64' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='1.5 1.5 6 6 10.5 1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  background-size: 10px;
+}
+.p4-tab-combo select:focus-visible {
+  outline: 2px solid var(--phosphor);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.p4-tab-combo select option {
+  background: var(--paper-2);
+  color: var(--ink-0);
+  font-family: var(--sans);
+}
+
+/* ============================================================
+   SEARCH RESULTS (Sphinx default search page)
+   ============================================================ */
+div.body #search-results { font-family: var(--sans); }
+div.body ul.search { padding-left: 0; list-style: none; }
+div.body ul.search li { padding: 8px 0; border-bottom: 1px solid var(--line); }
+div.body ul.search li:first-child { padding-top: 0; }
+
+/* ============================================================
+   ADMONITIONS — Sphinx ``note`` / ``warning`` / etc.
+   ============================================================ */
+div.body .admonition {
+  margin: 16px 0;
+  padding: 12px 18px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ink-3);
+  border-radius: 0 4px 4px 0;
+  font-size: 14px;
+  max-width: var(--measure);
+}
+div.body .admonition .admonition-title {
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-2);
+  margin: 0 0 6px;
+}
+div.body .admonition.note,
+div.body .admonition.hint,
+div.body .admonition.tip { border-left-color: var(--phosphor); }
+div.body .admonition.warning,
+div.body .admonition.caution,
+div.body .admonition.attention { border-left-color: var(--amber); }
+div.body .admonition.warning .admonition-title,
+div.body .admonition.caution .admonition-title { color: var(--amber-text); }
+div.body .admonition.danger,
+div.body .admonition.error { border-left-color: var(--crimson); }
+div.body .admonition.danger .admonition-title,
+div.body .admonition.error .admonition-title { color: var(--crimson-text); }
+
+/* ============================================================
+   RESPONSIVE — match Alabaster's responsive breakpoint, which
+   tracks `page_width` (1380 px, set in conf.py). Below that
+   Alabaster collapses the sidebar to a dark band above content;
+   we restyle that band as a paper-toned bar matching the
+   design system.
+   ============================================================ */
+@media screen and (max-width: 1380px) {
+  body { padding: 10px 18px; }
+
+  div.document {
+    width: auto;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0;
+  }
+  div.documentwrapper {
+    float: none;
+    width: 100%;
+    background: transparent;
+    margin: 0;
+  }
+  div.bodywrapper { margin: 0; }
+
+  div.body {
+    margin: 14px 0;
+    padding: 28px 24px 40px;
+    min-width: 0;
+    min-height: 0;
+  }
+  div.body h1 { font-size: 26px; }
+  div.body h2 { font-size: 19px; margin-top: 40px; }
+  div.body h3 { font-size: 15.5px; }
+
+  /* sidebar collapsed: override Alabaster's dark band */
+  div.sphinxsidebar {
+    display: block;
+    float: none;
+    position: static;
+    width: auto;
+    max-height: none;
+    margin: -10px -18px 14px;
+    padding: 16px 20px 18px;
+    background: var(--paper-2);
+    color: var(--ink-1);
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    box-shadow: 0 1px 0 var(--line);
+    overflow: visible;
+  }
+  div.sphinxsidebar h3,
+  div.sphinxsidebar h4,
+  div.sphinxsidebar p,
+  div.sphinxsidebar h3 a { color: var(--ink-2); }
+  div.sphinxsidebar a { color: var(--ink-2); }
+  div.sphinxsidebar a:hover { color: var(--phosphor-deep); }
+  div.sphinxsidebar p.logo,
+  div.sphinxsidebarwrapper p.logo { display: none; }
+  div.sphinxsidebarwrapper h1.logo { font-size: 22px; margin-bottom: 6px; }
+  div.sphinxsidebarwrapper p.blurb { font-size: 12px; margin-bottom: 14px; }
+
+  div.related.top { margin: 0; }
+  div.related.bottom { margin: 14px 0 0; }
+  div.footer {
+    display: block;
+    width: auto;
+    margin: 0;
+    padding: 14px 0 24px;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  div.body { padding: 22px 18px 32px; }
+  div.body h1 { font-size: 23px; }
+  div.body h2 { font-size: 18px; }
+  .p4-tab-combo::before { display: none; }
+}
+
+/* ============================================================
+   DARK MODE — opt-in via the user's OS preference. Mirrors the
+   landing's `.theme-dark` palette (phosphor on near-black).
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper:       #0B1117;
+    --paper-2:     #10171F;
+    --paper-3:     #1A2331;
+    --paper-4:     #232E3E;
+    --paper-cream: #15201A;
+    --grid:        rgba(255, 255, 255, 0.020);
+
+    --ink-0: #EAF0F6;
+    --ink-1: #C3CCD6;
+    --ink-2: #99A4AE;
+    --ink-3: #6F7B89;
+    --ink-4: #485162;
+    --ink-5: #2C3645;
+
+    --line:   rgba(255, 255, 255, 0.06);
+    --line-2: rgba(255, 255, 255, 0.12);
+    --line-3: rgba(255, 255, 255, 0.20);
+
+    --phosphor:           #7CE5A2;
+    --phosphor-deep:      #9BEFBA;          /* lighter for dark-bg text */
+    --phosphor-soft:      rgba(124, 229, 162, 0.14);
+    --phosphor-softer:    rgba(124, 229, 162, 0.06);
+    --phosphor-stronger:  rgba(124, 229, 162, 0.22);
+    --phosphor-glow:      rgba(124, 229, 162, 0.45);
+
+    --amber:        #F2B85C;
+    --amber-text:   #F4C273;
+    --amber-soft:   rgba(242, 184, 92, 0.14);
+    --crimson:      #E96565;
+    --crimson-text: #F08A8A;
+    --crimson-soft: rgba(233, 101, 101, 0.12);
+    --indigo:       #7DA8F7;
+    --indigo-text:  #9DBDFB;
+    --indigo-soft:  rgba(125, 168, 247, 0.12);
+  }
+  /* dark-mode pygments retints */
+  div.body .highlight .c, div.body .highlight .c1, div.body .highlight .cm { color: #6F7B85; }
+  div.body .highlight .k, div.body .highlight .kn { color: #F4A4C5; }
+  div.body .highlight .s, div.body .highlight .s1, div.body .highlight .s2 { color: #9FE0A8; }
+  div.body .highlight .nf { color: var(--phosphor-deep); }
+  div.body .highlight .nb { color: #9CB7F5; }
+  div.body .highlight .mi, div.body .highlight .m { color: #F2B85C; }
+  div.body { box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 24px 60px -32px rgba(0, 0, 0, 0.55); }
+
+  /* select arrow tinted for dark mode */
+  .p4-tab-combo select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%239BEFBA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='1.5 1.5 6 6 10.5 1.5'/%3E%3C/svg%3E");
+  }
+}

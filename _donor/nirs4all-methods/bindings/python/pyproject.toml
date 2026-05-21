@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: CECILL-2.1
+[build-system]
+requires = ["setuptools>=77", "wheel", "packaging>=24.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nirs4all-methods"
+version = "0.1.0"
+description = "Python binding for the nirs4all-methods C ABI (libn4m)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "CECILL-2.1"
+authors = [
+    { name = "nirs4all-methods contributors" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+dependencies = [
+    "numpy>=1.26",
+]
+
+[project.urls]
+Homepage = "https://github.com/GBeurier/nirs4all-methods"
+Repository = "https://github.com/GBeurier/nirs4all-methods"
+Issues = "https://github.com/GBeurier/nirs4all-methods/issues"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+n4m = [
+    "lib/libn4m*",
+    "lib/n4m*",
+    "lib/*.so",
+    "lib/*.so.*",
+    "lib/*.dylib",
+    "lib/*.dll",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

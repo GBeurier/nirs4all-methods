@@ -1,0 +1,4787 @@
+{
+  "methods": [
+    {
+      "c_prefix": "n4m_pp_airpls",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 256,
+        "n_samples": 24,
+        "seed": 1234567894
+      },
+      "family": "baseline",
+      "label": "Adaptive iteratively reweighted penalized least squares",
+      "max_cols": null,
+      "method_id": "airpls",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "n4m.AirPLS",
+      "r_expr": "airpls(X, lam = 1e5, max_iter = 20L)",
+      "references": [
+        {
+          "backend": "ref.pybaselines",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "pybaselines.airpls",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "pybaselines_airpls"
+      ]
+    },
+    {
+      "c_prefix": "n4m_pp_area",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "Area normalization",
+      "max_cols": null,
+      "method_id": "area_norm",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.AreaNormalization",
+      "r_expr": "area_normalization(X, method = 'sum')",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.AreaNormalization",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_arpls",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 256,
+        "n_samples": 24,
+        "seed": 1234567895
+      },
+      "family": "baseline",
+      "label": "Asymmetrically reweighted penalized least squares",
+      "max_cols": null,
+      "method_id": "arpls",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "n4m.ArPLS",
+      "r_expr": "arpls(X, lam = 1e5, max_iter = 20L)",
+      "references": [
+        {
+          "backend": "ref.pybaselines",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "pybaselines.arpls",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "pybaselines_arpls"
+      ]
+    },
+    {
+      "c_prefix": "n4m_pp_asls",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 256,
+        "n_samples": 24,
+        "seed": 1234567893
+      },
+      "family": "baseline",
+      "label": "Asymmetric least-squares baseline correction",
+      "max_cols": null,
+      "method_id": "asls",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "n4m.AsLS",
+      "r_expr": "asls(X, lam = 1e5, p = 0.01, max_iter = 20L)",
+      "references": [
+        {
+          "backend": "ref.pybaselines",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "pybaselines.asls",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "pybaselines_asls"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_band_mask(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Band masking augmenter",
+      "max_cols": null,
+      "method_id": "aug_band_mask",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.BandMasking",
+      "r_expr": "aug_band_mask(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.BandMasking",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_band_perturb(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Band perturbation augmenter",
+      "max_cols": null,
+      "method_id": "aug_band_perturb",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.BandPerturbationAugmenter",
+      "r_expr": "aug_band_perturb(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.BandPerturbation",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_batch_effect(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Batch effect augmenter",
+      "max_cols": null,
+      "method_id": "aug_batch_effect",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m.BatchEffectAugmenter(offset_std=0.02, slope_std=0.01, gain_std=0.03, variation_scope=0, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X)",
+      "r_expr": "aug_batch_effect(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.BatchEffectAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_channel_dropout(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Channel dropout augmenter",
+      "max_cols": null,
+      "method_id": "aug_channel_dropout",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.ChannelDropout",
+      "r_expr": "aug_channel_dropout(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.ChannelDropout",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_apply('n4m_aug_dead_band', ctx, ctypes.c_int32(1), ctypes.c_int32(5), ctypes.c_int32(10), ctypes.c_double(0.05), ctypes.c_double(1.0), ctypes.c_int32(0))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Dead band augmenter",
+      "max_cols": null,
+      "method_id": "aug_dead_band",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.DeadBandAugmenter",
+      "r_expr": "aug_dead_band(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.DeadBandAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_detector_rolloff(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Detector roll-off augmenter",
+      "max_cols": null,
+      "method_id": "aug_detector_rolloff",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m.DetectorRollOffAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X)",
+      "r_expr": "aug_detector_rolloff(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.DetectorRollOffAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_edge_artifacts(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Combined edge artifact augmenter",
+      "max_cols": null,
+      "method_id": "aug_edge_artifacts",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m.EdgeArtifactsAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X)",
+      "r_expr": "aug_edge_artifacts(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.EdgeArtifactsAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_edge_curve(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Edge curvature augmenter",
+      "max_cols": null,
+      "method_id": "aug_edge_curve",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m.EdgeCurvatureAugmenter(curvature_type=0, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X)",
+      "r_expr": "aug_edge_curve(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.EdgeCurvatureAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_emsc_distort(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "EMSC distortion augmenter",
+      "max_cols": null,
+      "method_id": "aug_emsc_distort",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m.EMSCDistortionAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X)",
+      "r_expr": "aug_emsc_distort(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.EMSCDistortionAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_gauss_jitter(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Gaussian smoothing jitter",
+      "max_cols": null,
+      "method_id": "aug_gauss_jitter",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.GaussianJitter",
+      "r_expr": "aug_gauss_jitter(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.GaussianSmoothingJitter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_apply('n4m_aug_gaussian_noise', ctx, ctypes.c_double(0.01))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Gaussian additive noise",
+      "max_cols": null,
+      "method_id": "aug_gaussian_noise",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.GaussianAdditiveNoise",
+      "r_expr": "aug_gaussian_noise(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.GaussianAdditiveNoise",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_apply('n4m_aug_hetero_noise', ctx, ctypes.c_double(0.001), ctypes.c_double(0.01))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Heteroscedastic noise",
+      "max_cols": null,
+      "method_id": "aug_hetero_noise",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.HeteroscedasticNoiseAugmenter",
+      "r_expr": "aug_hetero_noise(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.HeteroscedasticNoiseAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_instrument_broaden(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Instrumental broadening augmenter",
+      "max_cols": null,
+      "method_id": "aug_instrument_broaden",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m.InstrumentalBroadeningAugmenter(fwhm=3.0, use_fwhm_range=False, variation_scope=0, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X)",
+      "r_expr": "aug_instrument_broaden(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.InstrumentalBroadeningAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_apply('n4m_aug_linear_drift', ctx, ctypes.c_double(-0.05), ctypes.c_double(0.05), ctypes.c_double(-0.01), ctypes.c_double(0.01))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Linear baseline drift",
+      "max_cols": null,
+      "method_id": "aug_linear_drift",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.LinearBaselineDrift",
+      "r_expr": "aug_linear_drift(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.LinearBaselineDrift",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_local_clip(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Local clipping augmenter",
+      "max_cols": null,
+      "method_id": "aug_local_clip",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.LocalClip",
+      "r_expr": "aug_local_clip(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.LocalClipping",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_apply('n4m_aug_local_mixup', ctx, ctypes.c_double(1.0), ctypes.c_int32(5))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Local mixup augmenter",
+      "max_cols": null,
+      "method_id": "aug_local_mixup",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.LocalMixupAugmenter",
+      "r_expr": "aug_local_mixup(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.LocalMixupAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_local_warp(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Local wavelength warp augmenter",
+      "max_cols": null,
+      "method_id": "aug_local_warp",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m.LocalWarpAugmenter(n_control_points=3, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X)",
+      "r_expr": "aug_local_warp(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.LocalWavelengthWarp",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_magnitude_warp(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Smooth magnitude warp augmenter",
+      "max_cols": null,
+      "method_id": "aug_magnitude_warp",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m.MagnitudeWarp(n_control_points=3, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X)",
+      "r_expr": "aug_magnitude_warp(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.SmoothMagnitudeWarp",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_apply('n4m_aug_mixup', ctx, ctypes.c_double(1.0))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Mixup augmenter",
+      "max_cols": null,
+      "method_id": "aug_mixup",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.MixupAugmenter",
+      "r_expr": "aug_mixup(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.MixupAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_moisture(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Moisture augmenter",
+      "max_cols": null,
+      "method_id": "aug_moisture",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m.MoistureAugmenter(water_activity_delta=0.1, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X)",
+      "r_expr": "aug_moisture(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.MoistureAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_apply('n4m_aug_multiplicative_noise', ctx, ctypes.c_double(0.01))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Multiplicative noise",
+      "max_cols": null,
+      "method_id": "aug_multiplicative_noise",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.MultiplicativeNoise",
+      "r_expr": "aug_multiplicative_noise(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.MultiplicativeNoise",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_particle_size(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Particle size augmenter",
+      "max_cols": null,
+      "method_id": "aug_particle_size",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m.ParticleSizeAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X)",
+      "r_expr": "aug_particle_size(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.ParticleSizeAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_apply('n4m_aug_path_length', ctx, ctypes.c_double(0.05), ctypes.c_double(0.1))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Path length augmenter",
+      "max_cols": null,
+      "method_id": "aug_path_length",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.PathLengthAugmenter",
+      "r_expr": "aug_path_length(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.PathLengthAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_poly_drift(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Polynomial baseline drift",
+      "max_cols": null,
+      "method_id": "aug_poly_drift",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.PolynomialBaselineDrift",
+      "r_expr": "aug_poly_drift(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.PolynomialBaselineDrift",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_random_x_op(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Random X operation augmenter",
+      "max_cols": null,
+      "method_id": "aug_random_x_op",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.RandomXOperation",
+      "r_expr": "aug_random_x_op(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.Random_X_Operation",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_rotate_translate(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Rotate/translate augmenter",
+      "max_cols": null,
+      "method_id": "aug_rotate_translate",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.RotateTranslateAugmenter",
+      "r_expr": "aug_rotate_translate(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.Rotate_Translate",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_apply('n4m_aug_scatter_sim', ctx, ctypes.c_double(-0.05), ctypes.c_double(0.05), ctypes.c_double(0.9), ctypes.c_double(1.1))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Scatter simulation MSC",
+      "max_cols": null,
+      "method_id": "aug_scatter_sim",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.ScatterSimulationMSC",
+      "r_expr": "aug_scatter_sim(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.ScatterSimulationMSC",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_apply('n4m_aug_spike_noise', ctx, ctypes.c_int32(1), ctypes.c_int32(3), ctypes.c_double(-0.1), ctypes.c_double(0.1))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Spike noise",
+      "max_cols": null,
+      "method_id": "aug_spike_noise",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.SpikeNoise",
+      "r_expr": "aug_spike_noise(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.SpikeNoise",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_spline_smooth(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Spline smoothing augmenter",
+      "max_cols": null,
+      "method_id": "aug_spline_smooth",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.SplineSmoothingAugmenter",
+      "r_expr": "aug_spline_smooth(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.Spline_Smoothing",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_spline_x_perturb(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Spline X perturbation augmenter",
+      "max_cols": null,
+      "method_id": "aug_spline_x_perturb",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.SplineXPerturbationAugmenter",
+      "r_expr": "aug_spline_x_perturb(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.Spline_X_Perturbations",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_spline_y_perturb(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Spline Y perturbation augmenter",
+      "max_cols": null,
+      "method_id": "aug_spline_y_perturb",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.SplineYPerturbationAugmenter",
+      "r_expr": "aug_spline_y_perturb(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.Spline_Y_Perturbations",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_stray_light(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Stray light augmenter",
+      "max_cols": null,
+      "method_id": "aug_stray_light",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m.StrayLightAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X)",
+      "r_expr": "aug_stray_light(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.StrayLightAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_temperature(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Temperature augmenter",
+      "max_cols": null,
+      "method_id": "aug_temperature",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m.TemperatureAugmenter(temperature_delta=5.0, wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X)",
+      "r_expr": "aug_temperature(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.TemperatureAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_truncated_peak(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Truncated peak augmenter",
+      "max_cols": null,
+      "method_id": "aug_truncated_peak",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m.TruncatedPeakAugmenter(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X)",
+      "r_expr": "aug_truncated_peak(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.TruncatedPeakAugmenter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_unsharp_mask(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Unsharp spectral mask augmenter",
+      "max_cols": null,
+      "method_id": "aug_unsharp_mask",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.UnsharpMask",
+      "r_expr": "aug_unsharp_mask(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.UnsharpSpectralMask",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_wavelength_shift(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Wavelength shift augmenter",
+      "max_cols": null,
+      "method_id": "aug_wavelength_shift",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m.WavelengthShift(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X)",
+      "r_expr": "aug_wavelength_shift(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.WavelengthShift",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_wavelength_spectral(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Wavelength/spectral augmenters",
+      "max_cols": null,
+      "method_id": "aug_wavelength_spectral",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_wavelength_spectral",
+      "r_expr": "aug_wavelength_spectral(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all wavelength/spectral augmenter bundle",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_aug_wavelength_stretch(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "augmentation",
+      "label": "Wavelength stretch augmenter",
+      "max_cols": null,
+      "method_id": "aug_wavelength_stretch",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m.WavelengthStretch(wavelengths=ctx.wavelengths, seed=17).fit_transform(ctx.X)",
+      "r_expr": "aug_wavelength_stretch(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.WavelengthStretch",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_baseline",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "Baseline center",
+      "max_cols": null,
+      "method_id": "baseline_center",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.BaselineCenter",
+      "r_expr": "baseline_center(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.Baseline",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_beads",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "baseline",
+      "label": "BEADS",
+      "max_cols": null,
+      "method_id": "beads",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.BEADS",
+      "r_expr": "beads(X, max_iter = 20L)",
+      "references": [
+        {
+          "backend": "ref.pybaselines",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "pybaselines.beads(full)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_composite_filter(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "filter",
+      "label": "Composite filter",
+      "max_cols": 512,
+      "method_id": "composite_filter",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_composite_filter",
+      "r_expr": "",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.CompositeFilter",
+          "max_cols": 512,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_selector('n4m_filter_correlation', ctx, top_k=min(5, ctx.X.shape[1]))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 128,
+        "n_samples": 64,
+        "seed": 1234567914
+      },
+      "family": "feature_selection",
+      "label": "Correlation feature filter",
+      "max_cols": null,
+      "method_id": "correlation_filter",
+      "metrics": [
+        "finite_output",
+        "shape_equal",
+        "support_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "py_correlation_filter",
+      "r_expr": "correlation_filter(X, y, threshold = 0.0, top_k = min(5L, ncol(X)))",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.feature_selection.r_regression",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "nir_variable_selection_review_2010"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_transform('n4m_pp_cow_align', ctx.X, _null_f64_ptr(), ctypes.c_int64(0), ctypes.c_int32(16), ctypes.c_int32(2), fit_X=ctx.X)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 96,
+        "n_samples": 32,
+        "seed": 1234567910
+      },
+      "family": "alignment",
+      "label": "Correlation optimized warping",
+      "max_cols": 512,
+      "method_id": "correlation_optimized_warping",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "n4m.CorrelationOptimizedWarping",
+      "r_expr": "correlation_optimized_warping(X, reference = NULL, interval_size = 16L, max_shift = 2L)",
+      "references": [
+        {
+          "backend": "ref.cowarp",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "cowarp provides the external dynamic-programming COW contract used by this gate",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "cowarp.warp(segment_length=16, slack=2)",
+          "max_cols": 512,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "tomasi_cow_dtw_2004"
+      ]
+    },
+    {
+      "c_prefix": "c_crop_factory",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "resampling",
+      "label": "Crop",
+      "max_cols": null,
+      "method_id": "crop",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_crop",
+      "r_expr": "{start <- ncol(X) %/% 8L; end <- ncol(X) - ncol(X) %/% 8L; crop_transform(X, start = start, end = end)}",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.CropTransformer",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_transform('n4m_pp_xcorr_align', ctx.X, _null_f64_ptr(), ctypes.c_int64(0), ctypes.c_int32(0), ctypes.c_int32(2), fit_X=ctx.X)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 96,
+        "n_samples": 32,
+        "seed": 1234567909
+      },
+      "family": "alignment",
+      "label": "Cross-correlation alignment",
+      "max_cols": null,
+      "method_id": "cross_correlation_alignment",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "n4m.CrossCorrelationAlignment",
+      "r_expr": "cross_correlation_alignment(X, reference = NULL, interval_size = 0L, max_shift = 2L)",
+      "references": [
+        {
+          "backend": "ref.scipy",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "SciPy supplies the edge-clamped interpolation used for each tested integer shift",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "scipy.ndimage.shift(cross-correlation shift search)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "savorani_icoshift_2010"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_derivate(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "Derivate",
+      "max_cols": null,
+      "method_id": "derivate",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.Derivate",
+      "r_expr": "",
+      "references": [
+        {
+          "backend": "ref.numpy",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "numpy.diff(axis=1)",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": false,
+          "contract_note": "nirs4all pads/interpolates back to the input width; n4m exposes the strict finite-difference width p-1 and gates NumPy",
+          "gate_n4m": false,
+          "language": "Python",
+          "library": "nirs4all.Derivate(same-width)",
+          "max_cols": 512,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_detrend",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "baseline",
+      "label": "Detrend",
+      "max_cols": null,
+      "method_id": "detrend",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.Detrend",
+      "r_expr": "detrend(X, polyorder = 1L)",
+      "references": [
+        {
+          "backend": "ref.scipy",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "scipy.signal.detrend",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.Detrend",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.r.prospectr",
+          "comparator": "default_allclose",
+          "compare": false,
+          "contract_note": "prospectr combines the NIR detrend convention with its own wavelength argument contract",
+          "gate_n4m": false,
+          "language": "R",
+          "library": "prospectr.detrend",
+          "max_cols": null,
+          "r_expr": "prospectr::detrend(X, wav = seq_len(ncol(X)))"
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_paired_transfer('n4m_pp_direct_standardization', ctx, ctypes.c_int(1), ctypes.c_double(0.0))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 96,
+        "n_samples": 48,
+        "seed": 1234567898
+      },
+      "family": "calibration_transfer",
+      "label": "Direct standardization",
+      "max_cols": 96,
+      "method_id": "direct_standardization",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform_pair",
+      "py_class": "py_paired_transfer(n4m.DirectStandardization)",
+      "r_expr": "{target <- 1.05 * X + 0.1; direct_standardization(X, target, X, fit_intercept = TRUE, ridge = 0.0)}",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.linear_model.LinearRegression",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.pycaltransfer",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "pycaltransfer.ds_pc_transfer_fit",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "workman_2018_calibration_transfer"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_transform('n4m_pp_dtw_align', ctx.X, _null_f64_ptr(), ctypes.c_int64(0), ctypes.c_int32(0), ctypes.c_int32(0), fit_X=ctx.X)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 96,
+        "n_samples": 32,
+        "seed": 1234567911
+      },
+      "family": "alignment",
+      "label": "Dynamic time warping alignment",
+      "max_cols": 96,
+      "method_id": "dynamic_time_warping_alignment",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "n4m.DynamicTimeWarpingAlignment",
+      "r_expr": "dynamic_time_warping_alignment(X, reference = NULL, interval_size = 0L, max_shift = 0L)",
+      "references": [
+        {
+          "backend": "ref.dtw_python",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "dtw-python provides the DTW path; the parity adapter maps that external path to n4m's fixed-length output by averaging query samples assigned to each reference index",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "dtw-python.dtw(step_pattern=symmetric1)",
+          "max_cols": 96,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "tomasi_cow_dtw_2004"
+      ]
+    },
+    {
+      "c_prefix": "n4m_pp_emsc",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "EMSC",
+      "max_cols": null,
+      "method_id": "emsc",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.EMSC",
+      "r_expr": "emsc(X, degree = 1L)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.ExtendedMultiplicativeScatterCorrection(scale=False)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_epo(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "feature_extraction",
+      "label": "EPO",
+      "max_cols": null,
+      "method_id": "epo",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_epo",
+      "r_expr": "epo(X, d, scale = TRUE)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.EPO",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_fck_static(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "feature_extraction",
+      "label": "FCK static",
+      "max_cols": null,
+      "method_id": "fck_static",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_fck",
+      "r_expr": "fck_static(X, kernel_size = 5L, filter_orders = c(0.5, 1.0), filter_scales = c(1.0, 2.0))",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.FCKStaticTransformer",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_first_derivative",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "First derivative",
+      "max_cols": null,
+      "method_id": "first_derivative",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.FirstDerivative",
+      "r_expr": "first_derivative(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.FirstDerivative",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_flexible('n4m_pp_flex_pca', ctx, 5.0)",
+      "comparator": "sign_invariant_columns",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "feature_extraction",
+      "label": "Flexible PCA",
+      "max_cols": null,
+      "method_id": "flexible_pca",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.FlexiblePCA",
+      "r_expr": "flexible_pca(X, n_components = 5.0)",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "sign_invariant_columns",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.decomposition.PCA",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "sign_invariant_columns",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.FlexiblePCA",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "contract-specific",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_flexible('n4m_pp_flex_svd', ctx, 5.0)",
+      "comparator": "sign_invariant_columns",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "feature_extraction",
+      "label": "Flexible SVD",
+      "max_cols": null,
+      "method_id": "flexible_svd",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.FlexibleSVD",
+      "r_expr": "flexible_svd(X, n_components = 5.0)",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "sign_invariant_columns",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.decomposition.TruncatedSVD",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "sign_invariant_columns",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.FlexibleSVD",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "contract-specific",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_frac_to_pct",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "Fraction to percent",
+      "max_cols": null,
+      "method_id": "frac_to_pct",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.FractionToPercent",
+      "r_expr": "fraction_to_percent(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.FractionToPercent",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_from_absorbance",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "From absorbance",
+      "max_cols": null,
+      "method_id": "from_absorbance",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.FromAbsorbance",
+      "r_expr": "from_absorbance(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.FromAbsorbance",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_gaussian",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "Gaussian",
+      "max_cols": null,
+      "method_id": "gaussian",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.Gaussian",
+      "r_expr": "gaussian(X, sigma = 1.0)",
+      "references": [
+        {
+          "backend": "ref.scipy",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "scipy.ndimage.gaussian_filter1d",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.Gaussian",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_haar",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "wavelet",
+      "label": "Haar",
+      "max_cols": null,
+      "method_id": "haar",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.Haar",
+      "r_expr": "haar(X)",
+      "references": [
+        {
+          "backend": "ref.pywavelets",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "PyWavelets.dwt(haar, periodization)",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": false,
+          "contract_note": "nirs4all returns resampled detail coefficients only; n4m/PyWavelets gate the concatenated approximation+detail coefficients",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.Haar(detail-resampled)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_high_leverage(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "filter",
+      "label": "High leverage filter",
+      "max_cols": 512,
+      "method_id": "high_leverage",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_high_leverage",
+      "r_expr": "",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.HighLeverageFilter",
+          "max_cols": 512,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_hotelling_t2(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 24,
+        "n_samples": 80,
+        "seed": 1234567897
+      },
+      "family": "diagnostic",
+      "label": "Hotelling T2 diagnostic",
+      "max_cols": 512,
+      "method_id": "hotelling_t2",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "transform",
+      "py_class": "py_hotelling_t2",
+      "r_expr": "",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.PCA + scipy.stats.f",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "numpy_svd",
+        "scipy_f_distribution"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_iasls(ctx)",
+      "comparator": "iasls_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "baseline",
+      "label": "IAsLS",
+      "max_cols": null,
+      "method_id": "iasls",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.IAsLS",
+      "r_expr": "iasls(X, lam = 1e5, p = 0.01, lam_1 = 1e-4, polyorder = 2L, diff_order = 2L, max_iter = 20L)",
+      "references": [
+        {
+          "backend": "ref.pybaselines",
+          "comparator": "iasls_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "pybaselines.iasls",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "relaxed-atol",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_transform('n4m_pp_icoshift_align', ctx.X, _null_f64_ptr(), ctypes.c_int64(0), ctypes.c_int32(16), ctypes.c_int32(2), fit_X=ctx.X)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 96,
+        "n_samples": 32,
+        "seed": 1234567912
+      },
+      "family": "alignment",
+      "label": "Icoshift interval alignment",
+      "max_cols": null,
+      "method_id": "icoshift_alignment",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "n4m.IcoshiftAlignment",
+      "r_expr": "icoshift_alignment(X, reference = NULL, interval_size = 16L, max_shift = 2L)",
+      "references": [
+        {
+          "backend": "ref.scipy",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "SciPy supplies the edge-clamped interpolation used inside each N4M interval",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "scipy.ndimage.shift(interval-correlation shift search)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "savorani_icoshift_2010"
+      ]
+    },
+    {
+      "c_prefix": "n4m_pp_imodpoly",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "baseline",
+      "label": "IModPoly",
+      "max_cols": null,
+      "method_id": "imodpoly",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.IModPoly",
+      "r_expr": "imodpoly(X, polyorder = 2L, max_iter = 50L)",
+      "references": [
+        {
+          "backend": "ref.pybaselines",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "pybaselines.imodpoly(mask_initial_peaks=False)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_interval_generator(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 128,
+        "n_samples": 64,
+        "seed": 1234567915
+      },
+      "family": "feature_selection",
+      "label": "Interval generator",
+      "max_cols": null,
+      "method_id": "interval_generator",
+      "metrics": [
+        "coverage_equal",
+        "deterministic",
+        "shape_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "py_interval_generator",
+      "r_expr": "interval_generator(X, interval_size = 16L, step = 8L)",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "sklearn supplies the column-selection transformer; the adapter returns N4M's list-of-intervals contract",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.compose.ColumnTransformer(passthrough intervals)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "norgaard_ipls_2000"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_kbins(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "resampling",
+      "label": "K-bins discretizer",
+      "max_cols": null,
+      "method_id": "kbins_discretizer",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_kbins",
+      "r_expr": "kbins_discretizer(X, n_bins = 5L, strategy = 'uniform')",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.preprocessing.KBinsDiscretizer",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.IntegerKBinsDiscretizer",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_split_kbins_stratified(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "splitter",
+      "label": "K-bins stratified",
+      "max_cols": null,
+      "method_id": "kbins_stratified",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_kbins_stratified",
+      "r_expr": "kbins_stratified(matrix(y, ncol = 1L), test_size = 0.25, seed = 17, n_bins = 5L, strategy = 'uniform')",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.model_selection.StratifiedShuffleSplit",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.KBinsStratifiedSplitter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_split_kennard_stone(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 32,
+        "n_samples": 80,
+        "seed": 1234567896
+      },
+      "family": "splitter",
+      "label": "Kennard-Stone splitter",
+      "max_cols": null,
+      "method_id": "kennard_stone",
+      "metrics": [
+        "coverage_equal",
+        "deterministic",
+        "indices_equal"
+      ],
+      "operation": "split",
+      "py_class": "py_ks",
+      "r_expr": "kennard_stone(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.KennardStoneSplitter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "nirs4all_kennard_stone"
+      ]
+    },
+    {
+      "c_prefix": "n4m_pp_kubelka_munk",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "Kubelka-Munk",
+      "max_cols": null,
+      "method_id": "kubelka_munk",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.KubelkaMunk",
+      "r_expr": "kubelka_munk(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.KubelkaMunk",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_paired_transfer('n4m_pp_local_centering', ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 96,
+        "n_samples": 48,
+        "seed": 1234567903
+      },
+      "family": "calibration_transfer",
+      "label": "Local centering transfer",
+      "max_cols": null,
+      "method_id": "local_centering",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform_pair",
+      "py_class": "py_paired_transfer(n4m.LocalCentering)",
+      "r_expr": "{target <- 1.05 * X + 0.1; local_centering(X, target, X)}",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.preprocessing.StandardScaler(with_std=False)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "workman_2018_calibration_transfer"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_transform('n4m_pp_localized_msc', ctx.X, _null_f64_ptr(), ctypes.c_int64(0), ctypes.c_int32(17), ctypes.c_double(1e-12), fit_X=ctx.X)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 128,
+        "n_samples": 64,
+        "seed": 1234567908
+      },
+      "family": "preprocessing",
+      "label": "Localized MSC",
+      "max_cols": null,
+      "method_id": "localized_msc",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "n4m.LocalizedMSC",
+      "r_expr": "localized_msc(X, reference = NULL, window = 17L, eps = 1e-12)",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "sklearn supplies the per-window least-squares fit for N4M localized MSC",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.linear_model.LinearRegression(sliding local MSC)",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.r.prospectr",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "prospectr supplies the MSC transform over each local N4M window",
+          "gate_n4m": true,
+          "language": "R",
+          "library": "prospectr.msc sliding interval",
+          "max_cols": 96,
+          "r_expr": "{ref <- colMeans(X); out <- matrix(NA_real_, nrow=nrow(X), ncol=ncol(X)); half <- 17L %/% 2L; for (j in seq_len(ncol(X))) { lo <- max(1L, j - half); hi <- min(ncol(X), j + half); tmp <- prospectr::msc(X[, lo:hi, drop=FALSE], ref_spectrum = ref[lo:hi]); out[, j] <- tmp[, j - lo + 1L]; }; out}"
+        },
+        {
+          "backend": "ref.scipy",
+          "comparator": "default_allclose",
+          "compare": false,
+          "contract_note": "SciPy supplies moving-window sums, but the raw-sum contract is numerically unstable on near-singular windows; sklearn is the strict gate",
+          "gate_n4m": false,
+          "language": "Python",
+          "library": "scipy.ndimage.convolve1d(local MSC window sums)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "local_scatter_2026"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_log_transform(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "Log transform",
+      "max_cols": null,
+      "method_id": "log_transform",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.LogTransform",
+      "r_expr": "",
+      "references": [
+        {
+          "backend": "ref.numpy",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "numpy.log(auto-offset)",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.LogTransform",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_lsnv",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "LSNV",
+      "max_cols": null,
+      "method_id": "lsnv",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.LSNV",
+      "r_expr": "lsnv(X, window = 11L)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.LocalStandardNormalVariate",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_modpoly",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "baseline",
+      "label": "ModPoly",
+      "max_cols": null,
+      "method_id": "modpoly",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.ModPoly",
+      "r_expr": "modpoly(X, polyorder = 2L, max_iter = 50L)",
+      "references": [
+        {
+          "backend": "ref.pybaselines",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "pybaselines.modpoly",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_msc",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 128,
+        "n_samples": 64,
+        "seed": 1234567891
+      },
+      "family": "preprocessing",
+      "label": "Multiplicative scatter correction",
+      "max_cols": null,
+      "method_id": "msc",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "n4m.MSC",
+      "r_expr": "msc(X)",
+      "references": [
+        {
+          "backend": "ref.r.prospectr",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "n4m MSC follows the conventional row-wise reference-spectrum contract used by prospectr",
+          "gate_n4m": true,
+          "language": "R",
+          "library": "prospectr.msc",
+          "max_cols": null,
+          "r_expr": "prospectr::msc(X)"
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": false,
+          "contract_note": "current local nirs4all checkout uses a historical column-regression MSC variant",
+          "gate_n4m": false,
+          "language": "Python",
+          "library": "nirs4all.MultiplicativeScatterCorrection(scale=False)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "nirs4all_msc"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_nirs_metrics(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "metric",
+      "label": "NIRS metrics",
+      "max_cols": null,
+      "method_id": "nirs_metrics",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_nirs_metrics",
+      "r_expr": "",
+      "references": [
+        {
+          "backend": "ref.numpy",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "NumPy regression metric formulae",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_normalize",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "Normalize",
+      "max_cols": null,
+      "method_id": "normalize",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.Normalize",
+      "r_expr": "normalize(X, feature_min = -1, feature_max = 1)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.Normalize",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_norris_williams",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "Norris-Williams",
+      "max_cols": null,
+      "method_id": "norris_williams",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.NorrisWilliams",
+      "r_expr": "norris_williams(X, segment = 5L, gap = 5L)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.NorrisWilliams",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_fit_y_transform('n4m_pp_osc', ctx.X, ctx.y, ctypes.c_int32(1), ctypes.c_int(1))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "feature_extraction",
+      "label": "OSC",
+      "max_cols": null,
+      "method_id": "osc",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_osc",
+      "r_expr": "osc(X, y, n_components = 1L, scale = TRUE)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.OSC",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_pct_to_frac",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "Percent to fraction",
+      "max_cols": null,
+      "method_id": "pct_to_frac",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.PercentToFraction",
+      "r_expr": "percent_to_fraction(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.PercentToFraction",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_paired_transfer('n4m_pp_piecewise_direct_standardization', ctx, ctypes.c_int32(5), ctypes.c_int(1), ctypes.c_double(0.0))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 96,
+        "n_samples": 48,
+        "seed": 1234567899
+      },
+      "family": "calibration_transfer",
+      "label": "Piecewise direct standardization",
+      "max_cols": 96,
+      "method_id": "piecewise_direct_standardization",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform_pair",
+      "py_class": "py_paired_transfer(n4m.PiecewiseDirectStandardization, window_size=5)",
+      "r_expr": "{target <- 1.05 * X + 0.1; piecewise_direct_standardization(X, target, X, window_size = 5L, fit_intercept = TRUE, ridge = 0.0)}",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "sklearn supplies each local least-squares transfer model for the N4M PDS contract",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.linear_model.LinearRegression(local windows)",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.pycaltransfer",
+          "comparator": "default_allclose",
+          "compare": false,
+          "contract_note": "pycaltransfer exposes the PDS-PLS variant; N4M's current PiecewiseDirectStandardization contract is local OLS and is gated by sklearn above",
+          "gate_n4m": false,
+          "language": "Python",
+          "library": "pycaltransfer.pds_pls_transfer_fit",
+          "max_cols": 96,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "workman_2018_calibration_transfer"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_transform('n4m_pp_piecewise_msc', ctx.X, _null_f64_ptr(), ctypes.c_int64(0), ctypes.c_int32(16), ctypes.c_double(1e-12), fit_X=ctx.X)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 128,
+        "n_samples": 64,
+        "seed": 1234567907
+      },
+      "family": "preprocessing",
+      "label": "Piecewise MSC",
+      "max_cols": null,
+      "method_id": "piecewise_msc",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "n4m.PiecewiseMSC",
+      "r_expr": "piecewise_msc(X, reference = NULL, window = 16L, eps = 1e-12)",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "sklearn supplies the per-row least-squares fit for each N4M piecewise MSC interval",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.linear_model.LinearRegression(MSC per interval)",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.r.prospectr",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "prospectr supplies the MSC transform; gated on small matrices because its Armadillo normal-equation solver drifts above 1e-6 on ill-conditioned 16-column windows",
+          "gate_n4m": true,
+          "language": "R",
+          "library": "prospectr.msc per interval",
+          "max_cols": 96,
+          "r_expr": "{out <- matrix(NA_real_, nrow=nrow(X), ncol=ncol(X)); for (lo in seq(1L, ncol(X), by=16L)) { hi <- min(ncol(X), lo + 16L - 1L); out[, lo:hi] <- prospectr::msc(X[, lo:hi, drop=FALSE], ref_spectrum = colMeans(X)[lo:hi]); }; out}"
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "local_scatter_2026"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_transform('n4m_pp_piecewise_snv', ctx.X, ctypes.c_int32(16), ctypes.c_int32(0), ctypes.c_double(1e-12), fit_X=ctx.X)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 128,
+        "n_samples": 64,
+        "seed": 1234567906
+      },
+      "family": "preprocessing",
+      "label": "Piecewise SNV",
+      "max_cols": null,
+      "method_id": "piecewise_snv",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "n4m.PiecewiseSNV",
+      "r_expr": "piecewise_snv(X, window = 16L, ddof = 0L, eps = 1e-12)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "nirs4all supplies the SNV transform; the adapter applies it independently to N4M intervals",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.StandardNormalVariate(ddof=0) per interval",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "local_scatter_2026"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_q_residuals(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "diagnostic",
+      "label": "Q residuals",
+      "max_cols": 512,
+      "method_id": "q_residuals",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_q_residuals",
+      "r_expr": "",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.PCA + scipy.stats.norm",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_range_disc(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "resampling",
+      "label": "Range discretizer",
+      "max_cols": null,
+      "method_id": "range_discretizer",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_range_disc",
+      "r_expr": "range_discretizer(X, edges = c(0.25, 0.40, 0.55, 0.70))",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.RangeDiscretizer",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_resample(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "resampling",
+      "label": "Resample",
+      "max_cols": null,
+      "method_id": "resample",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_resample",
+      "r_expr": "resample_transform(X, num_samples = max(4L, ncol(X) %/% 2L))",
+      "references": [
+        {
+          "backend": "ref.scipy",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "scipy.interpolate.interp1d",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.ResampleTransformer",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_resampler(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "resampling",
+      "label": "Wavelength resampler",
+      "max_cols": null,
+      "method_id": "resampler",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_resampler",
+      "r_expr": "{source <- seq(900, 1700, length.out = ncol(X)); target <- seq(source[[1L]], source[[length(source)]], length.out = max(4L, ncol(X) %/% 2L)); resampler(X, source_wavelengths = source, target_wavelengths = target)}",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.Resampler",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_rng_pcg64(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "utility",
+      "label": "PCG64 RNG",
+      "max_cols": null,
+      "method_id": "rng_pcg64",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "lambda ctx: lambda: n4m_python.rng_pcg64(seed=ctx.seed, n=1024)",
+      "r_expr": "",
+      "references": [
+        {
+          "backend": "ref.numpy",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "numpy.random.default_rng(PCG64).standard_normal",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_rnv",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "RNV",
+      "max_cols": null,
+      "method_id": "rnv",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.RNV",
+      "r_expr": "rnv(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.RobustStandardNormalVariate",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_paired_transfer('n4m_pp_robust_direct_standardization', ctx, ctypes.c_int(1), ctypes.c_double(0.0), ctypes.c_double(0.9), ctypes.c_int32(2))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 96,
+        "n_samples": 48,
+        "seed": 1234567900
+      },
+      "family": "calibration_transfer",
+      "label": "Robust direct standardization",
+      "max_cols": 96,
+      "method_id": "robust_direct_standardization",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform_pair",
+      "py_class": "py_paired_transfer(n4m.RobustDirectStandardization, max_iter=2)",
+      "r_expr": "{target <- 1.05 * X + 0.1; robust_direct_standardization(X, target, X, fit_intercept = TRUE, ridge = 0.0, trim_quantile = 0.9, max_iter = 2L)}",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "sklearn supplies the OLS fit; the adapter applies N4M's documented residual-trimming contract",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.linear_model.LinearRegression(iterative residual trimming)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "workman_2018_calibration_transfer"
+      ]
+    },
+    {
+      "c_prefix": "n4m_pp_rolling_ball",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "baseline",
+      "label": "Rolling ball",
+      "max_cols": null,
+      "method_id": "rolling_ball",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.RollingBall",
+      "r_expr": "rolling_ball(X, half_window = 10L, smooth_half_window = 0L)",
+      "references": [
+        {
+          "backend": "ref.pybaselines",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "pybaselines.rolling_ball",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_savgol",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 129,
+        "n_samples": 64,
+        "seed": 1234567892
+      },
+      "family": "preprocessing",
+      "label": "Savitzky-Golay smoothing and derivatives",
+      "max_cols": null,
+      "method_id": "savitzky_golay",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "transform",
+      "py_class": "n4m.SavitzkyGolay",
+      "r_expr": "savitzky_golay(X, window_length = 11L, polyorder = 2L, mode = 'mirror')",
+      "references": [
+        {
+          "backend": "ref.scipy",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "scipy.signal.savgol_filter",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.r.prospectr",
+          "comparator": "savgol_valid_window",
+          "compare": true,
+          "contract_note": "prospectr drops boundary columns; parity compares the shared valid interior window",
+          "gate_n4m": true,
+          "language": "R",
+          "library": "prospectr.savitzkyGolay",
+          "max_cols": null,
+          "r_expr": "prospectr::savitzkyGolay(X, m = 0, p = 2, w = 11)"
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": false,
+          "contract_note": "nirs4all does not expose n4m's mirror edge mode; the default scipy edge contract changes boundary samples",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.SavitzkyGolay(default edge mode)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "nirs4all_savitzky_golay",
+        "scipy_savgol_filter"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_paired_transfer('n4m_pp_saps', ctx, ctypes.c_int32(3), ctypes.c_double(1.0), ctypes.c_int(1), ctypes.c_double(0.0))",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 96,
+        "n_samples": 48,
+        "seed": 1234567901
+      },
+      "family": "calibration_transfer",
+      "label": "Score-augmented projection standardization",
+      "max_cols": 96,
+      "method_id": "score_augmented_projection_standardization",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform_pair",
+      "py_class": "py_paired_transfer(n4m.ScoreAugmentedProjectionStandardization, n_components=3)",
+      "r_expr": "{target <- 1.05 * X + 0.1; score_augmented_projection_standardization(X, target, X, n_components = 3L, score_weight = 1.0, fit_intercept = TRUE, ridge = 0.0)}",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "sklearn supplies the PCA score space and OLS fit used by the SAPS transfer contract",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.decomposition.PCA + sklearn.linear_model.LinearRegression",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "sa_pbs_2023"
+      ]
+    },
+    {
+      "c_prefix": "n4m_pp_second_derivative",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "Second derivative",
+      "max_cols": null,
+      "method_id": "second_derivative",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.SecondDerivative",
+      "r_expr": "second_derivative(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.SecondDerivative",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_signal_type(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "diagnostic",
+      "label": "Signal type detector",
+      "max_cols": null,
+      "method_id": "signal_type_detector",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_signal_type",
+      "r_expr": "",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.detect_signal_type",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_simple_scale",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "Simple scale",
+      "max_cols": null,
+      "method_id": "simple_scale",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.SimpleScale",
+      "r_expr": "simple_scale(X)",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.preprocessing.MinMaxScaler",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.SimpleScale",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_slope_bias(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 1,
+        "n_samples": 80,
+        "seed": 1234567902
+      },
+      "family": "calibration_transfer",
+      "label": "Slope/bias correction",
+      "max_cols": null,
+      "method_id": "slope_bias_correction",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform_vector",
+      "py_class": "py_slope_bias",
+      "r_expr": "{target <- 2.0 * y + 1.0; slope_bias_correction(y, target, y)}",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.linear_model.LinearRegression",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.pycaltransfer",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "pycaltransfer.slope_bias_correction",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "workman_2018_calibration_transfer"
+      ]
+    },
+    {
+      "c_prefix": "n4m_pp_snip",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "baseline",
+      "label": "SNIP",
+      "max_cols": null,
+      "method_id": "snip",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.SNIP",
+      "r_expr": "snip(X, max_half_window = 10L)",
+      "references": [
+        {
+          "backend": "ref.pybaselines",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "pybaselines.snip(raw)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_snv",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 128,
+        "n_samples": 64,
+        "seed": 1234567890
+      },
+      "family": "preprocessing",
+      "label": "Standard normal variate",
+      "max_cols": null,
+      "method_id": "snv",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "transform",
+      "py_class": "n4m.SNV",
+      "r_expr": "snv(X, ddof = 1L)",
+      "references": [
+        {
+          "backend": "ref.r.prospectr",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "n4m benchmark uses ddof=1 to match prospectr's sample-standard-deviation convention",
+          "gate_n4m": true,
+          "language": "R",
+          "library": "prospectr.standardNormalVariate",
+          "max_cols": null,
+          "r_expr": "prospectr::standardNormalVariate(X)"
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.StandardNormalVariate",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "nirs4all_snv"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_spectral_quality(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "filter",
+      "label": "Spectral quality filter",
+      "max_cols": null,
+      "method_id": "spectral_quality",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_spectral_quality",
+      "r_expr": "spectral_quality(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.SpectralQualityFilter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_split_spxy(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "splitter",
+      "label": "SPXY",
+      "max_cols": null,
+      "method_id": "spxy",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_spxy",
+      "r_expr": "spxy(X, matrix(y, ncol = 1))",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.SPXYSplitter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_to_absorbance",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "preprocessing",
+      "label": "To absorbance",
+      "max_cols": null,
+      "method_id": "to_absorbance",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.ToAbsorbance",
+      "r_expr": "to_absorbance(X)",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.ToAbsorbance",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_transfer_metrics(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "metric",
+      "label": "Transfer metrics",
+      "max_cols": 512,
+      "method_id": "transfer_metrics",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_transfer_metrics",
+      "r_expr": "",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.TransferMetricsComputer",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_transform('n4m_pp_vsn', ctx.X, ctypes.c_double(1e-12), fit_X=ctx.X)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 128,
+        "n_samples": 64,
+        "seed": 1234567905
+      },
+      "family": "preprocessing",
+      "label": "Variable sorting normalization",
+      "max_cols": null,
+      "method_id": "variable_sorting_normalization",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "n4m.VariableSortingNormalization",
+      "r_expr": "variable_sorting_normalization(X, eps = 1e-12)",
+      "references": [
+        {
+          "backend": "ref.statsmodels",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.feature_selection.r_regression + statsmodels.DescrStatsW",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "vsn_2020"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_selector('n4m_filter_variance', ctx, threshold=0.0)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 128,
+        "n_samples": 64,
+        "seed": 1234567913
+      },
+      "family": "feature_selection",
+      "label": "Variance feature filter",
+      "max_cols": null,
+      "method_id": "variance_filter",
+      "metrics": [
+        "finite_output",
+        "shape_equal",
+        "support_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "py_variance_filter",
+      "r_expr": "variance_filter(X, threshold = 0.0, top_k = 0L)",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.feature_selection.VarianceThreshold",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "nir_variable_selection_review_2010"
+      ]
+    },
+    {
+      "c_prefix": "n4m_pp_wavelet",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "wavelet",
+      "label": "Wavelet",
+      "max_cols": null,
+      "method_id": "wavelet",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.Wavelet",
+      "r_expr": "wavelet(X, family = 'haar', boundary = 'periodization')",
+      "references": [
+        {
+          "backend": "ref.pywavelets",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "PyWavelets.dwt(haar, periodization)",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": false,
+          "contract_note": "nirs4all returns resampled detail coefficients only; n4m/PyWavelets gate the concatenated approximation+detail coefficients",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.Wavelet(detail-resampled)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "n4m_pp_wavelet_denoise",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "wavelet",
+      "label": "Wavelet denoise",
+      "max_cols": null,
+      "method_id": "wavelet_denoise",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.WaveletDenoise",
+      "r_expr": "wavelet_denoise(X, level = 2L)",
+      "references": [
+        {
+          "backend": "ref.pywavelets",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "PyWavelets.wavedec/waverec(db4, periodization)",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.WaveletDenoise",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_wavelet_features(ctx, mode=1, entropy=1)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "wavelet",
+      "label": "Wavelet features",
+      "max_cols": null,
+      "method_id": "wavelet_features",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.WaveletFeatures",
+      "r_expr": "wavelet_features(X, family = 'haar', boundary = 'symmetric', max_level = 2L, entropy = 'histogram')",
+      "references": [
+        {
+          "backend": "ref.pywavelets",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "PyWavelets.wavedec(haar, symmetric)+histogram band stats",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.WaveletFeatures(n_coeffs_per_level=0)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_wavelet_projection('n4m_pp_wavelet_pca', ctx)",
+      "comparator": "sign_invariant_columns",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "wavelet",
+      "label": "Wavelet PCA",
+      "max_cols": 512,
+      "method_id": "wavelet_pca",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.WaveletPCA",
+      "r_expr": "",
+      "references": [
+        {
+          "backend": "ref.pywavelets",
+          "comparator": "sign_invariant_columns",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "PyWavelets.wavedec(haar, periodization)+sklearn.PCA(full)",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "sign_invariant_columns",
+          "compare": false,
+          "contract_note": "nirs4all fits per-level PCA blocks; n4m gates the flattened-DWT PCA contract with PyWavelets+sklearn",
+          "gate_n4m": false,
+          "language": "Python",
+          "library": "nirs4all.WaveletPCA(per-level contract)",
+          "max_cols": 512,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "contract-specific",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_wavelet_projection('n4m_pp_wavelet_svd', ctx)",
+      "comparator": "sign_invariant_columns",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "wavelet",
+      "label": "Wavelet SVD",
+      "max_cols": 512,
+      "method_id": "wavelet_svd",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "n4m.WaveletSVD",
+      "r_expr": "",
+      "references": [
+        {
+          "backend": "ref.pywavelets",
+          "comparator": "sign_invariant_columns",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "PyWavelets.wavedec(haar, periodization)+sklearn.TruncatedSVD",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "sign_invariant_columns",
+          "compare": false,
+          "contract_note": "nirs4all fits per-level SVD blocks; n4m gates the flattened-DWT SVD contract with PyWavelets+sklearn",
+          "gate_n4m": false,
+          "language": "Python",
+          "library": "nirs4all.WaveletSVD(per-level contract)",
+          "max_cols": 512,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "contract-specific",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_weighted_snv(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 128,
+        "n_samples": 64,
+        "seed": 1234567904
+      },
+      "family": "preprocessing",
+      "label": "Weighted SNV",
+      "max_cols": null,
+      "method_id": "weighted_snv",
+      "metrics": [
+        "finite_output",
+        "max_abs_diff",
+        "shape_equal"
+      ],
+      "operation": "fit_transform",
+      "py_class": "py_weighted_snv",
+      "r_expr": "weighted_snv(X, weights = seq(1, 2, length.out = ncol(X)), ddof = 0L, eps = 1e-12)",
+      "references": [
+        {
+          "backend": "ref.statsmodels",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "statsmodels.stats.weightstats.DescrStatsW",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": [
+        "vsn_2020"
+      ]
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_x_outlier_mahalanobis(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "filter",
+      "label": "X outlier Mahalanobis",
+      "max_cols": null,
+      "method_id": "x_outlier_mahalanobis",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_x_outlier",
+      "r_expr": "x_outlier_filter(X, method = 'mahalanobis', n_components = min(5L, ncol(X)))$mask",
+      "references": [
+        {
+          "backend": "ref.sklearn",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "sklearn.PCA(full)+EmpiricalCovariance+chi2",
+          "max_cols": null,
+          "r_expr": ""
+        },
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": false,
+          "contract_note": "nirs4all leaves sklearn PCA on auto solver, which switches solver on wide matrices; n4m gates the full-SVD PCA contract",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.XOutlierFilter(PCA auto)",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    },
+    {
+      "c_prefix": "lambda ctx: lambda: c_y_outlier_iqr(ctx)",
+      "comparator": "default_allclose",
+      "compare_internal": true,
+      "default_dataset": {
+        "n_features": 50,
+        "n_samples": 100,
+        "seed": 20260556
+      },
+      "family": "filter",
+      "label": "Y outlier IQR",
+      "max_cols": null,
+      "method_id": "y_outlier_iqr",
+      "metrics": [
+        "max_abs_diff",
+        "rel_l2_diff",
+        "rms_diff",
+        "shape_equal"
+      ],
+      "operation": "cross_binding_callable",
+      "py_class": "py_y_outlier",
+      "r_expr": "y_outlier_filter(y, method = 'iqr')$mask",
+      "references": [
+        {
+          "backend": "ref.nirs4all",
+          "comparator": "default_allclose",
+          "compare": true,
+          "contract_note": "",
+          "gate_n4m": true,
+          "language": "Python",
+          "library": "nirs4all.YOutlierFilter",
+          "max_cols": null,
+          "r_expr": ""
+        }
+      ],
+      "tolerance_quality": "strict",
+      "truth_sources": []
+    }
+  ],
+  "schema_version": 1
+}

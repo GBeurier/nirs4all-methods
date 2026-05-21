@@ -1,0 +1,134 @@
+# `interval_generator` — Interval generator
+
+_Group_: **Feature Selection** · _Registry tolerance_: `rtol=1e-5`, `atol=1e-8`
+
+## Description
+
+`interval_generator` is a nirs4all-methods feature selection method exposed through the C ABI and the generated language bindings.
+
+### Parameters
+
+No public constructor parameters are required for the documented default call.
+
+## Explanations
+
+### Bibliographic source
+
+- `ref.sklearn` — sklearn.compose.ColumnTransformer(passthrough intervals) (Python).
+
+### Mathematical principle
+
+`interval_generator` follows the standard feature selection operator contract: an input matrix $\mathbf{X}\in\mathbb{R}^{n\times p}$ is transformed, scored, split, or filtered by the method-specific kernel while preserving the parity contract recorded by the benchmark snapshots. The precise numerical convention is the one exposed by the C ABI signatures and the registered external references below.
+
+### Implementation
+
+Benchmark comparator backends are registered in the matrix and stored as reproducible snapshots when they define the canonical contract.
+
+### Implementations
+
+| Layer | Entry point | Language | Contract |
+|-------|-------------|----------|----------|
+| C ABI | — | C/C++ | Stable libn4m entry point family. |
+| Python | `n4m.python.interval_generator` | Python | ABI-close function backed by ctypes. |
+| R | `interval_generator(X, interval_size = 16L, step = interval_size)` | R | Public package wrapper around the C ABI. |
+| ref.sklearn | `sklearn.compose.ColumnTransformer(passthrough intervals)` | Python | canonical/comparator; sklearn supplies the column-selection transformer; the adapter returns N4M's list-of-intervals contract |
+
+### Usage
+
+Every nirs4all-methods binding dispatches into the same C kernel. Registered comparator/source rows are listed in the benchmark card below.
+
+::::{tab-set}
+:class: nirs4all-methods-bindings
+
+
+:::{tab-item} C ABI · libn4m
+:sync: c
+:class-label: lang-c
+
+```c
+/* C ABI prefix */
+n4m_*
+```
+
+:::
+
+:::{tab-item} Python ABI · n4m.python
+:sync: python-abi
+:class-label: lang-python
+
+```python
+from n4m import python as n4m
+
+blocks = n4m.interval_generator(X, interval_size=16, step=8)
+```
+
+:::
+
+:::{tab-item} R · nirs4all-methods
+:sync: r
+:class-label: lang-r
+
+```r
+library(n4m)
+res <- interval_generator(X, interval_size = 16L, step = 8L)
+```
+
+:::
+
+::::
+
+
+**Benchmark Comparators And Sources** ◆
+
+:::{card}
+:class-card: external-refs
+
+- ◆ **`ref.sklearn`** (Python · canonical) — `sklearn.compose.ColumnTransformer(passthrough intervals)` · scikit-learn 1.8.0 — sklearn supplies the column-selection transformer; the adapter returns N4M's list-of-intervals contract
+:::
+
+### Validation contract
+
+- Operation: `fit_transform` · comparator: `default_allclose` · tolerance: `rtol=1e-05`, `atol=1e-08` · quality: **strict**
+- Default validation dataset: `64×128` · seed `1234567915`
+- Suites: smoke `3` cells; benchmark `11` cells · Default C/Python/reference parity comparator.
+- Metrics: `coverage_equal`, `deterministic`, `shape_equal`
+- Truth sources:
+  - `norgaard_ipls_2000` — Interval Partial Least-Squares Regression (iPLS): A Comparative Chemometric Study with an Example from Near-Infrared Spectroscopy (doi:10.1366/0003702001949500)
+
+| Backend | Library | Gate | Comparator | Note |
+|---------|---------|------|------------|------|
+| `ref.sklearn` | `sklearn.compose.ColumnTransformer(passthrough intervals)` | Python / parity | `default_allclose` | sklearn supplies the column-selection transformer; the adapter returns N4M's list-of-intervals contract |
+
+### Benchmarks
+Median wall-clock per cell from [`docs/_static/bench-data.json`](../benchmarks/overview.md). Divergence is the worst finite value over the visible sizes for each backend, preferring reference max-abs difference and falling back to binding max-abs difference when no reference comparison is recorded. Rows without a recorded comparison show `—`; the fastest backend per column is marked 🏆.
+::::{tab-set}
+:class: parity-tabs
+
+:::{tab-item} 1 thread
+:sync: threads-1
+
+<div class="parity-table-wrap">
+<table class="docutils parity-grouped">
+<thead><tr><th>Backend</th><th>Divergence</th><th>100×50</th><th>100×500</th><th>100×2500</th></tr></thead>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.cpp</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms ms-best">🏆 0.015 ms</td><td class="ms ms-best">🏆 0.109 ms</td><td class="ms ms-best">🏆 1.053 ms</td></tr>
+</tbody>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.python</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.016 ms</td><td class="ms">0.119 ms</td><td class="ms">1.118 ms</td></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">0.018 ms</td><td class="ms">0.125 ms</td><td class="ms">1.387 ms</td></tr>
+</tbody>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>R · nirs4all-methods</th></tr>
+<tr class="bk-row"><td class="bk-name"><code>N4M.R</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">5.6e-16</td><td class="ms">0.072 ms</td><td class="ms">0.695 ms</td><td class="ms">5.312 ms</td></tr>
+</tbody>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="5" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
+<tr class="bk-row truth-source-strict"><td class="bk-name"><span class="truth-mark" title="Registry parity reference (Python): sklearn.compose.ColumnTransformer(passthrough intervals) · scikit-learn 1.8.0 — canonical">◆</span><code>ref.sklearn</code></td><td class="parity parity-divergence parity-exact" title="worst reference max abs diff over visible sizes">0</td><td class="ms">1.253 ms</td><td class="ms">10.715 ms</td><td class="ms">45.971 ms</td></tr>
+</tbody>
+</table>
+</div>
+
+:::
+::::
+
+---
+
+_See also_: [benchmark overview](../benchmarks/overview.md) · [methods index](index.md) · [interactive dashboard](../landing/dashboard.md)

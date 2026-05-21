@@ -1,0 +1,5 @@
+# Sphinx + myst-parser pin for reproducible doc builds.
+sphinx>=7.4,<9
+myst-parser>=3.0,<5
+sphinx-design>=0.6,<1
+linkify-it-py>=2.0,<3      # for myst linkify extension
