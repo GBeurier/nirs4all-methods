@@ -7,7 +7,7 @@
 
 #include "pls4all/p4a.h"
 
-#include "core/matrix_view.hpp"
+#include "core/common/matrix_view.hpp"
 
 extern "C" {
 

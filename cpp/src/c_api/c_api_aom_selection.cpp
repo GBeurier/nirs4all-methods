@@ -18,7 +18,7 @@
 
 #include "core/aom_selection.hpp"
 #include "core/config.hpp"
-#include "core/context.hpp"
+#include "core/common/context.hpp"
 #include "core/operator_bank.hpp"
 #include "core/validation.hpp"
 

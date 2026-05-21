@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "pls4all/p4a.h"
-#include "core/context.hpp"
+#include "core/common/context.hpp"
 #include "core/operator_entry.hpp"
 
 namespace n4m::core {

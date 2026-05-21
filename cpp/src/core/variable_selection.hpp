@@ -9,7 +9,7 @@
 
 #include "pls4all/p4a.h"
 
-#include "core/context.hpp"
+#include "core/common/context.hpp"
 #include "core/model.hpp"
 
 namespace n4m::core {

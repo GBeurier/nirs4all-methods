@@ -13,10 +13,10 @@
 
 #include "core/aom_operators.hpp"
 #include "core/component_coefficients.hpp"
-#include "core/matrix_view.hpp"
+#include "core/common/matrix_view.hpp"
 #include "core/model.hpp"
 #include "core/operator_entry.hpp"
-#include "core/status.hpp"
+#include "core/common/status.hpp"
 
 namespace {
 

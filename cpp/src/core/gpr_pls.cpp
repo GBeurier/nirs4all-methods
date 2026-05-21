@@ -16,7 +16,7 @@
 #include <memory>
 #include <vector>
 
-#include "core/linalg.hpp"
+#include "core/common/linalg.hpp"
 #include "core/model.hpp"
 
 namespace n4m::core {

@@ -68,7 +68,7 @@ add_executable(pls4all_tests
     abi/test_blas_backend.cpp
     abi/test_openmp_backend.cpp
     abi/test_cuda_backend.cpp)
-target_link_libraries(pls4all_tests PRIVATE pls4all_c pls4all_core)
+target_link_libraries(pls4all_tests PRIVATE pls4all_c pls4all_core n4m_core)
 target_include_directories(pls4all_tests
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}

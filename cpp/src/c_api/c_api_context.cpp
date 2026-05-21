@@ -12,7 +12,7 @@
 
 #include "pls4all/p4a.h"
 
-#include "core/context.hpp"
+#include "core/common/context.hpp"
 
 namespace {
 

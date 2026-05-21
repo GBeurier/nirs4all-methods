@@ -1,32 +1,7 @@
-// SPDX-License-Identifier: CECILL-2.1
-//
-// Compile-time constants surfaced through the n4m_get_*_version_* family.
-// All values are derived from the canonical pls4all/n4m_version.h so that the
-// runtime library can never drift from the header consumers compile against.
-
+/* SPDX-License-Identifier: CECILL-2.1 */
+/* Compat shim — forwards to the unified common-core header at
+ * cpp/src/core/common/version.hpp post the M3 + M2.5 unification.
+ * This file exists so existing pls4all sources that #include "core/version.hpp"
+ * keep working without churn. Delete after the M5+M6 header reorganisation. */
 #pragma once
-
-#include <cstdint>
-
-#include "pls4all/p4a_version.h"
-
-namespace n4m::core {
-
-[[nodiscard]] const char* version_string() noexcept;
-[[nodiscard]] const char* build_info() noexcept;
-[[nodiscard]] const char* git_revision() noexcept;
-
-constexpr std::uint32_t abi_major() noexcept {
-    return static_cast<std::uint32_t>(N4M_ABI_VERSION_MAJOR);
-}
-constexpr std::uint32_t abi_minor() noexcept {
-    return static_cast<std::uint32_t>(N4M_ABI_VERSION_MINOR);
-}
-constexpr std::uint32_t abi_patch() noexcept {
-    return static_cast<std::uint32_t>(N4M_ABI_VERSION_PATCH);
-}
-constexpr std::uint32_t abi_int() noexcept {
-    return static_cast<std::uint32_t>(N4M_ABI_VERSION_INT);
-}
-
-}  // namespace n4m::core
+#include "core/common/version.hpp"

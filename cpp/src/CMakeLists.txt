@@ -31,12 +31,9 @@ add_library(pls4all_core OBJECT
     core/sipls_selection.cpp
     core/t2_selection.cpp
     core/wvc_selection.cpp
-    core/status.cpp
-    core/version.cpp
     core/cars_selection.cpp
     core/classification_metrics.cpp
     core/component_coefficients.cpp
-    core/context.cpp
     core/ecr.cpp
     core/ga_selection.cpp
     core/gpr_pls.cpp
@@ -47,7 +44,6 @@ add_library(pls4all_core OBJECT
     core/variable_selection.cpp
     core/config.cpp
     core/cross_validation.cpp
-    core/matrix_view.cpp
     core/mb_pls.cpp
     core/metrics.cpp
     core/model.cpp
@@ -283,7 +279,7 @@ function(pls4all_apply_c_target target)
 endfunction()
 
 if(PLS4ALL_BUILD_SHARED)
-    add_library(pls4all_c SHARED ${_pls4all_c_sources})
+    add_library(pls4all_c SHARED ${_pls4all_c_sources} $<TARGET_OBJECTS:n4m_core>)
     pls4all_apply_c_target(pls4all_c)
     # SOVERSION + VERSION are derived from the **ABI** semver (parsed from
     # n4m_version.h in the top-level CMakeLists.txt), not from the project

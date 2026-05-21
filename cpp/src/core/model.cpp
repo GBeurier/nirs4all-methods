@@ -10,10 +10,10 @@
 #include <memory>
 #include <vector>
 
-#include "core/linalg.hpp"
-#include "core/matrix_view.hpp"
-#include "core/parallel.hpp"
-#include "core/status.hpp"
+#include "core/common/linalg.hpp"
+#include "core/common/matrix_view.hpp"
+#include "core/common/parallel.hpp"
+#include "core/common/status.hpp"
 
 namespace {
 

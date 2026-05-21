@@ -12,7 +12,7 @@
 #include <new>
 #include <vector>
 
-#include "core/matrix_view.hpp"
+#include "core/common/matrix_view.hpp"
 
 namespace n4m::core {
 

@@ -88,226 +88,26 @@
 
 #include "pls4all/p4a_export.h"
 #include "pls4all/p4a_version.h"
+#include "n4m/n4m.h"  /* Common-core: status/backend/dtype/matrix_view/context/version */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* ============================================================================
- * 1. Status codes
- * ========================================================================== */
-
-typedef enum n4m_status_t {
-    N4M_OK                        =   0,
-    N4M_ERR_INVALID_ARGUMENT      =   1,
-    N4M_ERR_NULL_POINTER          =   2,
-    N4M_ERR_SHAPE_MISMATCH        =   3,
-    N4M_ERR_DTYPE_MISMATCH        =   4,
-    N4M_ERR_STRIDE_INVALID        =   5,
-    N4M_ERR_NOT_FITTED            =   6,
-    N4M_ERR_NUMERICAL_FAILURE     =   7,
-    N4M_ERR_CONVERGENCE_FAILED    =   8,
-    N4M_ERR_OUT_OF_MEMORY         =   9,
-    N4M_ERR_UNSUPPORTED           =  10,
-    N4M_ERR_NOT_IMPLEMENTED       =  11,   /* deferred public surface */
-    N4M_ERR_ABI_MISMATCH          =  12,
-    N4M_ERR_IO                    =  13,
-    N4M_ERR_CORRUPT_BUFFER        =  14,
-    N4M_ERR_VERSION_INCOMPATIBLE  =  15,
-    N4M_ERR_BACKEND_UNAVAILABLE   =  16,
-    N4M_ERR_CANCELLED             =  17,
-    N4M_ERR_INTERNAL              = 255
-} n4m_status_t;
-
-/* Returns a static NUL-terminated string describing the status code. Returns
- * "unknown status" for any integer outside the declared enum range; never
- * returns NULL. */
-N4M_API const char* n4m_status_to_string(n4m_status_t s);
-
-/* ============================================================================
- * 2. Backends
- * ==========================================================================
- *
- * Backends are runtime-selectable via n4m_context_set_backend. The reference
- * CPU backend is always available; everything else is built when the
- * corresponding PLS4ALL_WITH_* CMake option is enabled at compile time.
- */
-typedef enum n4m_backend_t {
-    N4M_BACKEND_AUTO            = 0,   /* library picks the best available */
-    N4M_BACKEND_REFERENCE_CPU   = 1,   /* always present, portable */
-    N4M_BACKEND_NATIVE_CPU      = 2,   /* SIMD-tuned scalar paths */
-    N4M_BACKEND_BLAS            = 3,
-    N4M_BACKEND_OPENMP          = 4,   /* combinable with another backend */
-    N4M_BACKEND_CUDA            = 5,
-    N4M_BACKEND_OPENCL          = 6,   /* reserved, not implemented */
-    N4M_BACKEND_METAL           = 7    /* reserved, not implemented */
-} n4m_backend_t;
-
-/* Returns 1 if the backend was compiled into this build of libn4m, 0
- * otherwise. AUTO is always available (it resolves to REFERENCE_CPU at
- * minimum). */
-N4M_API int          n4m_backend_is_available(n4m_backend_t backend);
-N4M_API const char*  n4m_backend_to_string(n4m_backend_t backend);
-
-/* ============================================================================
- * 3. Numerical dtypes
- * ========================================================================== */
-
-typedef enum n4m_dtype_t {
-    N4M_DTYPE_UNKNOWN = 0,
-    N4M_DTYPE_F64     = 1,
-    N4M_DTYPE_F32     = 2,
-    N4M_DTYPE_I32     = 3,    /* reserved for label / index views */
-    N4M_DTYPE_I64     = 4
-} n4m_dtype_t;
-
-/* Returns the size in bytes of one element of the given dtype.
- * Returns 0 for N4M_DTYPE_UNKNOWN or any out-of-range value. */
-N4M_API size_t       n4m_dtype_size(n4m_dtype_t dtype);
-N4M_API const char*  n4m_dtype_to_string(n4m_dtype_t dtype);
-
-/* ============================================================================
- * 4. Matrix view — non-owning, stride-aware
- * ==========================================================================
- *
- * The view describes a 2-D array of `dtype` elements at `data`, with `rows`
- * and `cols` and explicit `row_stride` / `col_stride` measured in *elements*
- * (NOT bytes). This shape accepts:
- *   - NumPy row-major (col_stride=1, row_stride=cols)
- *   - R / MATLAB / Fortran column-major (row_stride=1, col_stride=rows)
- *   - Transposed sub-views (swap the two strides)
- *   - Slice views (arbitrary positive strides)
- *
- * Stride rules enforced by n4m_matrix_view_validate:
- *   - Negative strides are rejected.
- *   - For `rows >= 2`, `row_stride` must be >= 1.
- *   - For `cols >= 2`, `col_stride` must be >= 1.
- *   - For degenerate dimensions (`rows <= 1` or `cols <= 1`), the
- *     corresponding stride is unused and may be any non-negative value.
- *   - `rows == 0` or `cols == 0` is allowed (empty view); the buffer may be
- *     NULL in that case.
- *
- * Layout on LP64 (Linux, macOS) and LLP64 (Windows-64): 48 bytes total
- * (8+8+8+8+8+4+4). ILP32 is not supported; Android 32-bit (armeabi-v7a) is
- * explicitly excluded from Phase 0/2 — see roadmap.
- */
-typedef struct n4m_matrix_view_t {
-    void*        data;
-    int64_t      rows;
-    int64_t      cols;
-    int64_t      row_stride;   /* elements between row i and i+1 */
-    int64_t      col_stride;   /* elements between col j and j+1 */
-    n4m_dtype_t  dtype;
-    int32_t      reserved0;    /* keep struct size stable */
-} n4m_matrix_view_t;
-
-/* Initialise a row-major (C / NumPy default) view. row_stride = cols,
- * col_stride = 1. Returns N4M_ERR_NULL_POINTER if `out` is NULL or
- * `data` is NULL with rows*cols > 0; N4M_ERR_INVALID_ARGUMENT for negative
- * dimensions or N4M_DTYPE_UNKNOWN; N4M_OK on success. */
-N4M_API n4m_status_t n4m_matrix_view_init_rowmajor(
-    n4m_matrix_view_t* out, void* data,
-    int64_t rows, int64_t cols, n4m_dtype_t dtype);
-
-/* Initialise a column-major (Fortran / R / MATLAB default) view.
- * row_stride = 1, col_stride = rows. */
-N4M_API n4m_status_t n4m_matrix_view_init_colmajor(
-    n4m_matrix_view_t* out, void* data,
-    int64_t rows, int64_t cols, n4m_dtype_t dtype);
-
-/* Initialise a strided view with explicit positive strides. Useful for
- * slicing into a larger buffer or for transposed views. Strides must be
- * positive (>= 1) and ints; the caller is responsible for ensuring the
- * underlying buffer is large enough. */
-N4M_API n4m_status_t n4m_matrix_view_init_strided(
-    n4m_matrix_view_t* out, void* data,
-    int64_t rows, int64_t cols,
-    int64_t row_stride, int64_t col_stride,
-    n4m_dtype_t dtype);
-
-/* Validate that the view is well-formed. The rules are listed in §4 prelude
- * above. Returns:
- *   - N4M_OK if all rules hold.
- *   - N4M_ERR_NULL_POINTER  if `v` is NULL, or `v->data` is NULL with
- *                            rows*cols > 0.
- *   - N4M_ERR_STRIDE_INVALID if a stride is negative or zero where required.
- *   - N4M_ERR_INVALID_ARGUMENT for negative `rows` / `cols`, or dtype not
- *                              in {F64, F32, I32, I64}. */
-N4M_API n4m_status_t n4m_matrix_view_validate(const n4m_matrix_view_t* v);
-
-/* ============================================================================
  * 5. Opaque handles
  * ========================================================================== */
 
-typedef struct n4m_context_s                    n4m_context_t;
 typedef struct n4m_config_s                     n4m_config_t;
 typedef struct n4m_operator_bank_s              n4m_operator_bank_t;
 typedef struct n4m_gating_strategy_s            n4m_gating_strategy_t;
 typedef struct n4m_pipeline_s                   n4m_pipeline_t;
 typedef struct n4m_model_s                      n4m_model_t;
-typedef struct n4m_array_s                      n4m_array_t;
 typedef struct n4m_validation_plan_s            n4m_validation_plan_t;
 typedef struct n4m_aom_global_result_s          n4m_aom_global_result_t;
 typedef struct n4m_aom_per_component_result_s   n4m_aom_per_component_result_t;
 typedef struct n4m_method_result_s              n4m_method_result_t;
-
-/* ============================================================================
- * 6. Context lifecycle
- * ==========================================================================
- *
- * One n4m_context_t represents an isolated execution environment. It owns:
- *   - the per-context 4 KiB error buffer,
- *   - the current backend selection,
- *   - the RNG seed used by stochastic algorithms,
- *   - the thread-count hint for parallel backends,
- *   - an optional user-pointer for binding-side bookkeeping.
- *
- * Threading: a single n4m_context_t* must not be used concurrently from two
- * threads — use one context per thread. Across contexts the library is
- * thread-safe.
- *
- * Signal safety: no n4m_* function is async-signal-safe. Do not call any
- * n4m_* function from a POSIX signal handler.
- */
-N4M_API n4m_status_t n4m_context_create(n4m_context_t** out_ctx);
-N4M_API void         n4m_context_destroy(n4m_context_t* ctx);
-
-N4M_API n4m_status_t n4m_context_set_seed(n4m_context_t* ctx, uint64_t seed);
-N4M_API n4m_status_t n4m_context_get_seed(const n4m_context_t* ctx,
-                                          uint64_t* out_seed);
-
-N4M_API n4m_status_t n4m_context_set_backend(n4m_context_t* ctx,
-                                             n4m_backend_t backend);
-N4M_API n4m_status_t n4m_context_get_backend(const n4m_context_t* ctx,
-                                             n4m_backend_t* out_backend);
-
-/* `n_threads`: any int32_t is accepted. Values <= 0 are documented as
- * "library picks the default" (read by parallel backends later); positive
- * values pin the worker count. The setter does NOT validate the upper
- * bound — the caller is responsible for choosing a sensible cap. */
-N4M_API n4m_status_t n4m_context_set_num_threads(n4m_context_t* ctx,
-                                                 int32_t n_threads);
-N4M_API n4m_status_t n4m_context_get_num_threads(const n4m_context_t* ctx,
-                                                 int32_t* out_threads);
-
-/* Returns a NUL-terminated UTF-8 string owned by the context. The pointer
- * remains valid until the next n4m_* call on this context — bindings must
- * copy if they need to retain the value. Never returns NULL: when no error
- * has occurred since context creation (or since the last clear_error),
- * returns the empty string "". If `ctx` is NULL, returns a static "" string
- * literal (still never NULL). The buffer capacity is fixed at
- * N4M_ERROR_BUFFER_BYTES (4096) — over-long messages are truncated at the
- * boundary, preserving the NUL terminator. */
-N4M_API const char*  n4m_context_last_error(const n4m_context_t* ctx);
-/* No-op when `ctx` is NULL. */
-N4M_API void         n4m_context_clear_error(n4m_context_t* ctx);
-
-/* Optional binding-side annotation. The library never reads or writes the
- * pointer's referent. `n4m_context_get_user_data(NULL)` returns NULL — this
- * is indistinguishable from a context that has had NULL stored explicitly;
- * if you need to distinguish, store a sentinel value. */
-N4M_API n4m_status_t n4m_context_set_user_data(n4m_context_t* ctx, void* user);
-N4M_API void*        n4m_context_get_user_data(const n4m_context_t* ctx);
+typedef struct n4m_array_s                      n4m_array_t;
 
 /* ============================================================================
  * 7. Algorithm / solver / deflation enums
@@ -621,25 +421,6 @@ N4M_API n4m_status_t n4m_serialization_inspect(
     uint32_t* out_writer_abi_major,
     uint32_t* out_writer_abi_minor,
     uint32_t* out_writer_abi_patch);
-
-/* ============================================================================
- * 12. ABI version + build info
- * ========================================================================== */
-
-N4M_API uint32_t     n4m_get_abi_version_major(void);
-N4M_API uint32_t     n4m_get_abi_version_minor(void);
-N4M_API uint32_t     n4m_get_abi_version_patch(void);
-N4M_API uint32_t     n4m_get_abi_version_int(void);   /* MAJOR*10000 + MINOR*100 + PATCH */
-N4M_API const char*  n4m_get_version_string(void);    /* e.g. "0.97.0+abi.1.14.0" */
-N4M_API const char*  n4m_get_build_info(void);        /* compiler / flags / backends */
-N4M_API const char*  n4m_get_git_revision(void);      /* git rev at build time, or "" */
-
-/* Returns N4M_OK if the header's ABI MAJOR == library MAJOR and the header's
- * MINOR <= library MINOR (forward compat). Returns N4M_ERR_ABI_MISMATCH on
- * MAJOR mismatch, N4M_ERR_VERSION_INCOMPATIBLE on MINOR-too-high. */
-N4M_API n4m_status_t n4m_check_abi_compatibility(
-    uint32_t header_abi_major,
-    uint32_t header_abi_minor);
 
 /* ============================================================================
  * 13. Output array helper — core-allocated arrays returned by *_alloc calls

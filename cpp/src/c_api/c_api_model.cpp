@@ -15,7 +15,7 @@
 #include "pls4all/p4a.h"
 #include "pls4all/p4a_version.h"
 
-#include "core/context.hpp"
+#include "core/common/context.hpp"
 #include "core/model.hpp"
 
 namespace {
