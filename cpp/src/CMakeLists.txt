@@ -221,10 +221,7 @@ endif()
 # pls4all_c_static is the same surface, statically linked.
 # ---------------------------------------------------------------------------
 set(_pls4all_c_sources
-    c_api/c_api_version.cpp
-    c_api/c_api_context.cpp
     c_api/c_api_config.cpp
-    c_api/c_api_matrix.cpp
     c_api/c_api_operator_bank.cpp
     c_api/c_api_gating_strategy.cpp
     c_api/c_api_pipeline.cpp
@@ -250,7 +247,6 @@ function(pls4all_apply_c_target target)
     endif()
     if(PLS4ALL_WITH_BLAS)
         # Mirrors the define applied to pls4all_core, so the C-API
-        # translation units (e.g. c_api_version.cpp) see the same BLAS
         # availability flag.
         target_compile_definitions(${target} PRIVATE N4M_USE_BLAS=1)
         # OBJECT libraries do not propagate PRIVATE link deps through
@@ -278,52 +274,6 @@ function(pls4all_apply_c_target target)
     pls4all_add_warnings(${target})
 endfunction()
 
-if(PLS4ALL_BUILD_SHARED)
-    add_library(pls4all_c SHARED ${_pls4all_c_sources} $<TARGET_OBJECTS:n4m_core>)
-    pls4all_apply_c_target(pls4all_c)
-    # SOVERSION + VERSION are derived from the **ABI** semver (parsed from
-    # n4m_version.h in the top-level CMakeLists.txt), not from the project
-    # semver. Rationale: the C ABI is stable across the project's 0.x → 1.x
-    # transition. Linux SONAME = libn4m.so.${N4M_ABI_VERSION_MAJOR}, real file
-    # = libn4m.so.${N4M_ABI_VERSION}. macOS dylib install name embeds
-    # N4M_ABI_VERSION_MAJOR via the standard CMake VERSION/SOVERSION machinery.
-    # Windows DLLs have no SONAME; the import lib name is unaffected.
-    set_target_properties(pls4all_c PROPERTIES
-        OUTPUT_NAME p4a
-        SOVERSION   ${N4M_ABI_VERSION_MAJOR}
-        VERSION     ${N4M_ABI_VERSION})
-    target_compile_definitions(pls4all_c PRIVATE PLS4ALL_BUILDING_DLL=1)
-
-    # Undefined-symbol enforcement + dead-code stripping at link time.
-    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        if(NOT _pls4all_sanitizer_build)
-            target_link_options(pls4all_c PRIVATE -Wl,--no-undefined)
-        endif()
-        target_link_options(pls4all_c PRIVATE
-            -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/c_api/n4m_linux.map
-            $<$<NOT:$<CONFIG:Debug>>:-Wl,--gc-sections>)
-    elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-        target_link_options(pls4all_c PRIVATE
-            -Wl,-undefined,error
-            $<$<NOT:$<CONFIG:Debug>>:-Wl,-dead_strip>)
-    elseif(MSVC)
-        target_link_options(pls4all_c PRIVATE
-            $<$<NOT:$<CONFIG:Debug>>:/OPT:REF>
-            $<$<NOT:$<CONFIG:Debug>>:/OPT:ICF>)
-    endif()
-    # MinGW and MSVC both honour the .def export gate once it exists (PR 7).
-    if((MSVC OR MINGW) AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/c_api/pls4all.def")
-        target_sources(pls4all_c PRIVATE c_api/pls4all.def)
-    endif()
-endif()
-
-if(PLS4ALL_BUILD_STATIC)
-    add_library(pls4all_c_static STATIC ${_pls4all_c_sources})
-    pls4all_apply_c_target(pls4all_c_static)
-    set_target_properties(pls4all_c_static PROPERTIES OUTPUT_NAME n4m_static)
-    target_compile_definitions(pls4all_c_static PUBLIC PLS4ALL_STATIC=1)
-endif()
-
 # ---------------------------------------------------------------------------
 # libn4m — donor-side methods compiled into a parallel shared library
 # libn4m.so. Coexists with libn4m.so until M5+M6 ABI rename merges them.
@@ -334,3 +284,13 @@ endif()
 if(PLS4ALL_BUILD_N4M AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/n4m_targets.cmake")
     include(${CMAKE_CURRENT_SOURCE_DIR}/n4m_targets.cmake)
 endif()
+
+if(PLS4ALL_BUILD_SHARED)
+    # pls4all_c is now an alias for n4m_c — single unified libn4m.so output.
+    # Historical reasons for the separate pls4all_c target are addressed by
+    # the M5+M6 ABI rename which collapsed both halves under n4m_*.
+    add_library(pls4all_c ALIAS n4m_c)
+endif()
+
+
+

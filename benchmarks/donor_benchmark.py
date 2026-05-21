@@ -23,7 +23,7 @@ Usage:
 
 Requires:
     - libn4m.so built (cpp/src/n4m_targets.cmake target)
-    - bindings/donor_imports/python/src/n4m/ in sys.path
+    - bindings/python_n4m/src/n4m/ in sys.path
 """
 
 from __future__ import annotations
@@ -37,8 +37,8 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 
-# Wire the donor Python binding so n4m.* imports resolve
-sys.path.insert(0, str(REPO / "bindings" / "donor_imports" / "python" / "src"))
+# Wire the n4m Python binding so n4m.* imports resolve
+sys.path.insert(0, str(REPO / "bindings" / "python_n4m" / "src"))
 
 # Default libn4m path if N4M_LIB_PATH isn't set
 _default_lib = REPO / "build" / "dev-release" / "cpp" / "src" / "libn4m.so.1.0.0"

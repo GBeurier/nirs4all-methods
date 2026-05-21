@@ -106,11 +106,17 @@ set(_N4M_LINK_OBJS $<TARGET_OBJECTS:n4m_core>)
 if(_N4M_FITPACK_ENABLED)
     list(APPEND _N4M_LINK_OBJS $<TARGET_OBJECTS:n4m_fitpack>)
 endif()
-add_library(n4m_c SHARED ${_N4M_C_API_CPP} ${_N4M_LINK_OBJS})
+# Pls4all c_api wrappers (PLS-side public ABI) — merged into libn4m.so
+file(GLOB _PLS_C_API_CPP
+    CONFIGURE_DEPENDS
+    "${CMAKE_SOURCE_DIR}/cpp/src/c_api/*.cpp"
+)
+add_library(n4m_c SHARED ${_N4M_C_API_CPP} ${_PLS_C_API_CPP} ${_N4M_LINK_OBJS} $<TARGET_OBJECTS:pls4all_core>)
 target_include_directories(n4m_c
     PUBLIC
-        ${CMAKE_SOURCE_DIR}/cpp/include
-        ${PROJECT_BINARY_DIR}/generated
+        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/cpp/include>
+        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/generated>
+        $<INSTALL_INTERFACE:include>
     PRIVATE
         ${CMAKE_SOURCE_DIR}/cpp/src
 )

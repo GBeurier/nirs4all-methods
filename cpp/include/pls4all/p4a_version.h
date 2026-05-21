@@ -37,7 +37,7 @@
 
 /* Serialization magic + format version. Kept here so consumers can write
  * import-compatibility checks without including the full p4a.h surface. */
-#define N4M_SERIALIZATION_MAGIC          "P4AM"
+#define N4M_SERIALIZATION_MAGIC          "N4MM"
 #define N4M_SERIALIZATION_FORMAT_VERSION 1u
 
 #endif /* PLS4ALL_P4A_VERSION_H */

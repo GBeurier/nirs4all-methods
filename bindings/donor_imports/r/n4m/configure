@@ -1,8 +1,0 @@
-#!/bin/sh
-# SPDX-License-Identifier: CECILL-2.1
-set -eu
-
-# libn4m is vendored under src/libn4m and compiled by src/Makevars. Keep this
-# configure script intentionally minimal so source installs behave like pls4all
-# while still leaving a hook for future feature probes.
-exit 0
