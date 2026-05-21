@@ -12,8 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/augmentations/aug_rng_utils.h"
-#include "core/augmentations/spectral/spectral_common.h"
+#include "core/augmentation/aug_rng_utils.h"
+#include "core/augmentation/spectral/spectral_common.h"
 
 struct n4m_aug_dead_band_state_t {
     int32_t n_bands;

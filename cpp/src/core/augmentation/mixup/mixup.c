@@ -16,8 +16,8 @@
 
 #include <stdlib.h>
 
-#include "core/augmentations/aug_rng_utils.h"
-#include "core/augmentations/spectral/spectral_common.h"
+#include "core/augmentation/aug_rng_utils.h"
+#include "core/augmentation/spectral/spectral_common.h"
 
 struct n4m_aug_mixup_state_t {
     double alpha;

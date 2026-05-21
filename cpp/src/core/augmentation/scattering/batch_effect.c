@@ -8,7 +8,7 @@
 
 #include <stdlib.h>
 
-#include "core/augmentations/aug_rng_utils.h"
+#include "core/augmentation/aug_rng_utils.h"
 
 struct n4m_aug_batch_effect_state_t {
     double  offset_std;

@@ -9,8 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/augmentations/aug_rng_utils.h"
-#include "core/augmentations/environmental/aug_interp.h"
+#include "core/augmentation/aug_rng_utils.h"
+#include "core/augmentation/environmental/aug_interp.h"
 
 struct n4m_aug_moisture_state_t {
     double water_activity_delta;

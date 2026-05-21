@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/augmentations/spectral/spectral_common.h"
+#include "core/augmentation/spectral/spectral_common.h"
 #include "../../common/rng_pcg64.h"
 
 struct n4m_aug_edge_curvature_state_t {

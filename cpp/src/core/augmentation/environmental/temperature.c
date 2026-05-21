@@ -13,8 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/augmentations/aug_rng_utils.h"
-#include "core/augmentations/environmental/aug_interp.h"
+#include "core/augmentation/aug_rng_utils.h"
+#include "core/augmentation/environmental/aug_interp.h"
 #include "core/preprocessing/smoothing/gaussian.h"
 
 /* TEMPERATURE_REGION_PARAMS — must match nirs4all.environmental in name

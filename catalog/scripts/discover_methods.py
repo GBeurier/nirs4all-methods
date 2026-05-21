@@ -23,59 +23,70 @@ def file_to_method_id(rel_path: str) -> tuple[str | None, str, str, str]:
     """(method_id, category, subcategory, family) or (None, ...) if not a method file.
 
     Static rules:
-    - donor tree paths under cpp/src/core/<category>/<sub?>/<name>.c
-    - pls4all flat paths cpp/src/core/<name>.cpp mapped via PLS4ALL_MAP
+    - cpp/src/core/<category>/<sub?>/<name>.{c,cpp} → donor-style nested layout
+      (this is where moved donor sources live post-M3).
+    - cpp/src/core/<name>.cpp (flat) → pls4all-style, mapped via PLS4ALL_MAP.
+
+    Note: the historical `_donor/nirs4all-methods/` prefix is no longer
+    expected — M3 lifted everything out. Any leftover path under
+    `_donor/.../cpp/src/core/` is treated as archeology (skipped).
     """
     name = Path(rel_path).name
     stem = Path(rel_path).stem
 
-    # ----- donor side -----
-    if rel_path.startswith(f"{DONOR_PREFIX}/cpp/src/core/"):
-        parts = rel_path.split("/")
-        # parts = ['_donor','nirs4all-methods','cpp','src','core','<category>',('<sub>',)'<file>']
-        rest = parts[5:]  # everything from <category> onward
-        if not rest:
-            return (None, "", "", "")
-        # Skip vendored utility subtrees at any depth (not public methods).
-        if any(p == "_vendored" for p in rest):
-            return (None, "", "", "")
-        # donor uses augmentations/ — target is augmentation/
-        head = rest[0]
-        if head == "augmentations":
-            head = "augmentation"
-        # common files don't expose public methods directly
-        if head == "common":
-            return (None, "common", "", "")
-        if len(rest) == 3:
-            # <category>/<sub>/<file>
-            sub = rest[1]
-            return (
-                f"{head}.{sub}.{stem}",
-                head,
-                sub,
-                f"{head}.{sub}",
-            )
-        if len(rest) == 2:
-            # <category>/<file>
-            return (f"{head}.{stem}", head, "", head)
-        # nested too deep — skip
+    # Skip donor archeology (anything still living under _donor/)
+    if rel_path.startswith(f"{DONOR_PREFIX}/"):
         return (None, "", "", "")
 
-    # ----- pls4all flat side -----
-    if rel_path.startswith("cpp/src/core/") and not rel_path.startswith(f"cpp/src/core/{DONOR_PREFIX}"):
-        # PLS4ALL_MAP maps stem → (category, subcategory, method_id_override?)
-        # If method_id_override is explicitly None, the file is not a public
-        # method (e.g. infra/common files like context.cpp).
+    if not rel_path.startswith("cpp/src/core/"):
+        return (None, "", "", "")
+
+    parts = rel_path.split("/")
+    # parts = ['cpp','src','core','<category>',('<sub>',)'<file>'] for nested layout
+    # parts = ['cpp','src','core','<file>']                         for flat layout
+
+    rest = parts[3:]  # everything from <category> onward
+    if not rest:
+        return (None, "", "", "")
+
+    # Skip vendored utility subtrees at any depth (not public methods).
+    if any(p == "_vendored" for p in rest):
+        return (None, "", "", "")
+
+    if len(rest) == 1:
+        # Flat pls4all-style file at cpp/src/core/<file>.cpp
         m = PLS4ALL_MAP.get(stem)
         if m is None:
             return (None, "", "", "")
         category, sub, mid_override = m
         if mid_override is None:
             return (None, "", "", "")
-        method_id = mid_override
         family = f"{category}.{sub}" if sub else category
-        return (method_id, category, sub, family)
+        return (mid_override, category, sub, family)
 
+    # Nested donor-style file under cpp/src/core/<category>/...
+    head = rest[0]
+    # Defensive — the M3 move was supposed to singularize. If something is
+    # still under augmentations/ here, treat it as a path bug.
+    if head == "augmentations":
+        head = "augmentation"
+    if head == "common":
+        # common files don't expose public methods directly
+        return (None, "common", "", "")
+
+    if len(rest) == 3:
+        # <category>/<sub>/<file>
+        sub = rest[1]
+        return (
+            f"{head}.{sub}.{stem}",
+            head,
+            sub,
+            f"{head}.{sub}",
+        )
+    if len(rest) == 2:
+        # <category>/<file>
+        return (f"{head}.{stem}", head, "", head)
+    # nested too deep — skip
     return (None, "", "", "")
 
 
@@ -281,6 +292,7 @@ def emit_entry(method_id: str, category: str, subcategory: str, family: str, tu_
 
 
 def walk_pls4all() -> list[dict]:
+    """Flat pls4all sources at cpp/src/core/*.cpp (M4 will split these)."""
     entries: list[dict] = []
     for cpp in sorted((REPO / "cpp" / "src" / "core").glob("*.cpp")):
         rel = cpp.relative_to(REPO).as_posix()
@@ -292,14 +304,19 @@ def walk_pls4all() -> list[dict]:
 
 
 def walk_donor() -> list[dict]:
+    """Donor sources lifted into cpp/src/core/<category>/... by M3."""
     entries: list[dict] = []
-    donor_root = REPO / "_donor" / "nirs4all-methods" / "cpp" / "src" / "core"
-    for c in sorted(donor_root.rglob("*.c")):
-        rel = c.relative_to(REPO).as_posix()
-        mid, cat, sub, fam = file_to_method_id(rel)
-        if mid is None:
+    core_root = REPO / "cpp" / "src" / "core"
+    for sub_root_name in ("preprocessing", "augmentation", "splitters", "filters", "utilities"):
+        sub_root = core_root / sub_root_name
+        if not sub_root.is_dir():
             continue
-        entries.append(emit_entry(mid, cat, sub, fam, rel))
+        for c in sorted(sub_root.rglob("*.c")):
+            rel = c.relative_to(REPO).as_posix()
+            mid, cat, sub, fam = file_to_method_id(rel)
+            if mid is None:
+                continue
+            entries.append(emit_entry(mid, cat, sub, fam, rel))
     return entries
 
 

@@ -14,7 +14,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "core/augmentations/aug_rng_utils.h"
+#include "core/augmentation/aug_rng_utils.h"
 #include "core/preprocessing/smoothing/gaussian.h"
 
 struct n4m_aug_particle_size_state_t {

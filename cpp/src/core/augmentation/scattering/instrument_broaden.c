@@ -9,7 +9,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "core/augmentations/aug_rng_utils.h"
+#include "core/augmentation/aug_rng_utils.h"
 #include "core/preprocessing/smoothing/gaussian.h"
 
 struct n4m_aug_instrument_broaden_state_t {

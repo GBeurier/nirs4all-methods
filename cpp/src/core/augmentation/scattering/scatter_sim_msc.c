@@ -8,7 +8,7 @@
 
 #include <stdlib.h>
 
-#include "core/augmentations/aug_rng_utils.h"
+#include "core/augmentation/aug_rng_utils.h"
 
 struct n4m_aug_scatter_sim_state_t {
     double a_low;

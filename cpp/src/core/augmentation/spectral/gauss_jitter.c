@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/augmentations/spectral/spectral_common.h"
+#include "core/augmentation/spectral/spectral_common.h"
 
 struct n4m_aug_gauss_jitter_state_t {
     n4m_rng_pcg64* rng;
