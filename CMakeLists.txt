@@ -124,10 +124,14 @@ endif()
 # Subdirectories — only those that exist in this revision are added. Later
 # Later PRs flip optional examples, bench targets and full bindings on.
 # ============================================================================
+# enable_testing() before add_subdirectory(cpp/src) so n4m_tests (added inside
+# n4m_targets.cmake) is registered with the root CTest project.
+if(PLS4ALL_BUILD_TESTS)
+    enable_testing()
+endif()
 add_subdirectory(cpp/src)
 
 if(PLS4ALL_BUILD_TESTS AND EXISTS "${PROJECT_SOURCE_DIR}/cpp/tests/CMakeLists.txt")
-    enable_testing()
     add_subdirectory(cpp/tests)
 endif()
 if(PLS4ALL_BUILD_CLI AND EXISTS "${PROJECT_SOURCE_DIR}/cpp/cli/CMakeLists.txt")

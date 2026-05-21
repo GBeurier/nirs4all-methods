@@ -84,8 +84,8 @@ jobs:
       - name: Extract exported symbols
         shell: pwsh
         run: |
-          $dll = Get-ChildItem build -Recurse -Filter "p4a.dll" | Select-Object -First 1
-          if (-not $dll) { Write-Error "p4a.dll not built"; exit 1 }
+          $dll = Get-ChildItem build -Recurse -Filter "n4m.dll" | Select-Object -First 1
+          if (-not $dll) { Write-Error "n4m.dll not built"; exit 1 }
           $dumpbinPath = $null
           $cmd = Get-Command dumpbin.exe -ErrorAction SilentlyContinue
           if ($cmd) { $dumpbinPath = $cmd.Source }
