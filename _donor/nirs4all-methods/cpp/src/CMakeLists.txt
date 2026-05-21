@@ -1,3 +1,20 @@
+# =============================================================================
+# BROKEN — paths invalidated by M3 source move (2026-05-21).
+#
+# The 222 donor source files this CMakeLists.txt enumerates were moved out of
+# _donor/nirs4all-methods/cpp/src/core/ to their final positions under
+# cpp/src/core/{preprocessing,augmentation,splitters,filters,utilities,common}/
+# at the repository root. The relative-path entries below are obsolete and
+# this file no longer configures cleanly.
+#
+# Do not try to build n4m_core / n4m_c / n4m_c_static from this file.
+# The unified build wiring lands in M5/M6 of MERGE_ROADMAP.md (split-target
+# headers + ABI rename) and consumes the moved sources from their new paths.
+#
+# This file is preserved for git-blame archeology only. It will be deleted
+# (or substantively rewritten) in M6 when the unified CMakeLists takes over.
+# =============================================================================
+#
 # cpp/src/CMakeLists.txt — n4m_core (internal OBJECT) +
 # n4m_c (C ABI shared) + n4m_c_static (C ABI static).
 #

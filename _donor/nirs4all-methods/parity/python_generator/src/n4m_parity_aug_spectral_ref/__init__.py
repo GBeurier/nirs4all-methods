@@ -17,7 +17,7 @@ reproduce bit-exactly in C; the C engine matches this linear path at the
 Random-stream order is locked: every operator draws its parameters in the
 same order and shape that NumPy's `Generator.uniform / integers` calls
 emit them — see the C engines under
-``cpp/src/core/augmentations/{wavelength, spectral}/`` for the matching
+``cpp/src/core/augmentation/{wavelength, spectral}/`` for the matching
 sweep order.
 """
 
