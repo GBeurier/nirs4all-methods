@@ -25,9 +25,9 @@ jobs:
           echo "----- exported -----"
           cat /tmp/exported.txt
           echo "----- expected -----"
-          cat cpp/abi/expected_symbols_linux.txt
+          cat cpp/abi_n4m/expected_symbols_linux.txt
           echo "----- diff -----"
-          diff -u cpp/abi/expected_symbols_linux.txt /tmp/exported.txt
+          diff -u cpp/abi_n4m/expected_symbols_linux.txt /tmp/exported.txt
       - name: Assert every exported symbol starts with n4m_
         run: |
           if grep -v '^n4m_' /tmp/exported.txt; then
