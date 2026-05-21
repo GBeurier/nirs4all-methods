@@ -35,7 +35,7 @@ jobs:
         working-directory: parity/python_generator
         run: generate-fixtures --check --out ../fixtures
 
-      - name: Build libp4a (Linux gcc-12 Release)
+      - name: Build libn4m (Linux gcc-12 Release)
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-12 g++-12 ninja-build cmake
@@ -47,7 +47,7 @@ jobs:
 
       - name: Run pls4all Python binding smoke test
         env:
-          PLS4ALL_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libp4a.so
+          PLS4ALL_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libn4m.so
         run: |
           pip install -e bindings/python
           python - <<'PY'

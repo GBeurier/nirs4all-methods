@@ -100,9 +100,9 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: libp4a-${{ matrix.cfg.label }}
+          name: libn4m-${{ matrix.cfg.label }}
           path: |
             build/${{ matrix.cfg.preset }}/cpp/src/**/p4a*
-            build/${{ matrix.cfg.preset }}/cpp/src/**/libp4a*
+            build/${{ matrix.cfg.preset }}/cpp/src/**/libn4m*
             build/${{ matrix.cfg.preset }}/cpp/cli/pls4all_cli*
           if-no-files-found: warn

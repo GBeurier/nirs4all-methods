@@ -4,9 +4,9 @@
 # Build libn4m + stage it inside the Python source tree so the wheel ships
 # it as package data. Invoked by cibuildwheel via:
 #
-#   CIBW_BEFORE_ALL_LINUX:   bash bindings/python/scripts/build_libp4a_in_wheel.sh
-#   CIBW_BEFORE_ALL_MACOS:   bash bindings/python/scripts/build_libp4a_in_wheel.sh
-#   CIBW_BEFORE_ALL_WINDOWS: bash bindings/python/scripts/build_libp4a_in_wheel.sh
+#   CIBW_BEFORE_ALL_LINUX:   bash bindings/python/scripts/build_libn4m_in_wheel.sh
+#   CIBW_BEFORE_ALL_MACOS:   bash bindings/python/scripts/build_libn4m_in_wheel.sh
+#   CIBW_BEFORE_ALL_WINDOWS: bash bindings/python/scripts/build_libn4m_in_wheel.sh
 #
 # (cibuildwheel runs CIBW_BEFORE_ALL once per matrix entry, before any
 # wheel build for that target. The CWD is the project root.)
@@ -61,13 +61,13 @@ mkdir -p "${SRC_LIB_DIR}"
 
 # Copy every libn4m* file produced by CMake — on Linux that's the SONAME
 # symlinks (libn4m.so, libn4m.so.1) plus the real file
-# (libn4m.so.1.16.0); on macOS it's libn4m.dylib + libn4m.1.dylib; on
-# Windows it's p4a.dll (+ p4a.lib import lib, which we deliberately
+# (libn4m.so.1.9.0); on macOS it's libn4m.dylib + libn4m.1.dylib; on
+# Windows it's n4m.dll (+ n4m.lib import lib, which we deliberately
 # leave out of the wheel — Python loaders don't need the import lib).
 case "$(uname -s)" in
     Linux*)
         # Preserve symlinks so the loader sees the conventional
-        # libn4m.so -> libn4m.so.1 -> libn4m.so.1.16.0 chain.
+        # libn4m.so -> libn4m.so.1 -> libn4m.so.1.9.0 chain.
         cp -a "${BUILD_DIR}/cpp/src/"libn4m.so*       "${SRC_LIB_DIR}/"
         ;;
     Darwin*)
@@ -75,17 +75,17 @@ case "$(uname -s)" in
         ;;
     MINGW*|CYGWIN*|MSYS*)
         # MSVC multi-config generators (Visual Studio 17 2022 for our CI
-        # preset) drop binaries under cpp/src/Release/p4a.dll. Ninja
+        # preset) drop binaries under cpp/src/Release/n4m.dll. Ninja
         # single-config builds drop them directly under cpp/src/. Check both.
         dll_paths=()
         for candidate in \
-            "${BUILD_DIR}/cpp/src/Release/p4a.dll" \
-            "${BUILD_DIR}/cpp/src/p4a.dll"; do
+            "${BUILD_DIR}/cpp/src/Release/n4m.dll" \
+            "${BUILD_DIR}/cpp/src/n4m.dll"; do
             [[ -f "${candidate}" ]] && dll_paths+=("${candidate}")
         done
         if [[ ${#dll_paths[@]} -eq 0 ]]; then
-            echo "ERROR: p4a.dll not found in ${BUILD_DIR}/cpp/src or Release/" >&2
-            find "${BUILD_DIR}/cpp/src" \( -name 'p4a*' -o -name 'libn4m*' \) -ls || true
+            echo "ERROR: n4m.dll not found in ${BUILD_DIR}/cpp/src or Release/" >&2
+            find "${BUILD_DIR}/cpp/src" \( -name 'n4m*' -o -name 'libn4m*' \) -ls || true
             exit 1
         fi
         cp -a "${dll_paths[@]}" "${SRC_LIB_DIR}/"

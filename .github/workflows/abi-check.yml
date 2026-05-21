@@ -16,10 +16,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-12 g++-12 ninja-build cmake
       - run: cmake --preset ci-linux-gcc12-release
-      - run: cmake --build --preset ci-linux-gcc12-release --target pls4all_c --parallel
+      - run: cmake --build --preset ci-linux-gcc12-release --target n4m_c --parallel
       - name: Extract exported symbols
         run: |
-          LIB=$(find build -name 'libp4a.so.*' | head -n 1)
+          LIB=$(find build -name 'libn4m.so.*' | head -n 1)
           echo "Inspecting $LIB"
           nm -D --defined-only "$LIB" | awk '{print $3}' | sort -u > /tmp/exported.txt
           echo "----- exported -----"
@@ -28,20 +28,20 @@ jobs:
           cat cpp/abi/expected_symbols_linux.txt
           echo "----- diff -----"
           diff -u cpp/abi/expected_symbols_linux.txt /tmp/exported.txt
-      - name: Assert every exported symbol starts with p4a_
+      - name: Assert every exported symbol starts with n4m_
         run: |
-          if grep -v '^p4a_' /tmp/exported.txt; then
-            echo "Forbidden non-p4a_ symbol exported"
+          if grep -v '^n4m_' /tmp/exported.txt; then
+            echo "Forbidden non-n4m_ symbol exported"
             exit 1
           fi
       - name: Runtime-dependency audit (forbidden libs)
         run: |
-          LIB=$(find build -name 'libp4a.so.*' | head -n 1)
+          LIB=$(find build -name 'libn4m.so.*' | head -n 1)
           deps=$(ldd "$LIB" 2>&1)
           echo "$deps"
           # Forbidden runtime-dep list per roadmap §5.3.
           if echo "$deps" | grep -iE 'libopenblas|libmkl|libpython|libR\.|librcpp|libboost|libeigen|libpybind11|libembind|libnlohmann|libyaml-cpp'; then
-            echo "ERROR: libp4a links a forbidden runtime dependency"
+            echo "ERROR: libn4m links a forbidden runtime dependency"
             exit 1
           fi
 
@@ -51,26 +51,26 @@ jobs:
       - uses: actions/checkout@v4
       - run: brew install ninja cmake
       - run: cmake --preset ci-macos-clang-release
-      - run: cmake --build --preset ci-macos-clang-release --target pls4all_c --parallel
+      - run: cmake --build --preset ci-macos-clang-release --target n4m_c --parallel
       - name: Extract exported symbols
         run: |
-          LIB=$(find build -name 'libp4a*.dylib' | head -n 1)
+          LIB=$(find build -name 'libn4m*.dylib' | head -n 1)
           echo "Inspecting $LIB"
           nm -gU "$LIB" | awk '{print $3}' | sed 's/^_//' | sort -u > /tmp/exported.txt
           cat /tmp/exported.txt
-      - name: Assert every exported symbol starts with p4a_
+      - name: Assert every exported symbol starts with n4m_
         run: |
-          if grep -v '^p4a_' /tmp/exported.txt; then
-            echo "Forbidden non-p4a_ symbol exported"
+          if grep -v '^n4m_' /tmp/exported.txt; then
+            echo "Forbidden non-n4m_ symbol exported"
             exit 1
           fi
       - name: Runtime-dependency audit (forbidden libs)
         run: |
-          LIB=$(find build -name 'libp4a*.dylib' | head -n 1)
+          LIB=$(find build -name 'libn4m*.dylib' | head -n 1)
           deps=$(otool -L "$LIB")
           echo "$deps"
           if echo "$deps" | grep -iE 'openblas|libmkl|libpython|libR\.|librcpp|libboost|libeigen|libpybind11|libembind|libnlohmann|libyaml-cpp'; then
-            echo "ERROR: libp4a links a forbidden runtime dependency"
+            echo "ERROR: libn4m links a forbidden runtime dependency"
             exit 1
           fi
 
@@ -80,7 +80,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: microsoft/setup-msbuild@v2
       - run: cmake --preset ci-windows-msvc-release
-      - run: cmake --build --preset ci-windows-msvc-release --target pls4all_c --parallel --config Release
+      - run: cmake --build --preset ci-windows-msvc-release --target n4m_c --parallel --config Release
       - name: Extract exported symbols
         shell: pwsh
         run: |
@@ -101,7 +101,7 @@ jobs:
           }
           if (-not $dumpbinPath) { Write-Error "dumpbin not found"; exit 1 }
           & $dumpbinPath /EXPORTS $dll.FullName |
-            Select-String -Pattern '^\s+\d+\s+\w+\s+\w+\s+(p4a_\w+)' |
+            Select-String -Pattern '^\s+\d+\s+\w+\s+\w+\s+(n4m_\w+)' |
             ForEach-Object { $_.Matches[0].Groups[1].Value } |
             Sort-Object -Unique | Out-File -Encoding ascii exported.txt
           Get-Content exported.txt

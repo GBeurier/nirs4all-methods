@@ -124,12 +124,19 @@ target_compile_features(n4m_c PUBLIC cxx_std_17)
 target_compile_definitions(n4m_c PRIVATE N4M_BUILDING_C_DLL=1)
 set_target_properties(n4m_c PROPERTIES
     OUTPUT_NAME "n4m"
-    SOVERSION 1
-    VERSION 1.0.0
+    SOVERSION ${N4M_ABI_VERSION_MAJOR}
+    VERSION ${N4M_ABI_VERSION}
     C_VISIBILITY_PRESET hidden
     CXX_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN ON
 )
+
+# Apply the n4m_linux.map version script on Linux so libn4m.so exports
+# only n4m_* C ABI symbols and hides all C++ class member implementations.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "${CMAKE_SOURCE_DIR}/cpp/src/c_api/n4m_linux.map")
+    target_link_options(n4m_c PRIVATE
+        -Wl,--version-script=${CMAKE_SOURCE_DIR}/cpp/src/c_api/n4m_linux.map)
+endif()
 pls4all_add_warnings(n4m_c)
 
 if(_N4M_FITPACK_ENABLED)

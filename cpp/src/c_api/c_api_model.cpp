@@ -249,8 +249,7 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
                                          std::size_t& written) noexcept {
     auto* out = static_cast<unsigned char*>(buffer);
     Writer w{out, buffer_size};
-    const char magic[4] = {'P', '4', 'A', 'M'};
-    w.bytes(magic, sizeof(magic));
+    w.bytes(N4M_SERIALIZATION_MAGIC, 4);
     w.u32(N4M_SERIALIZATION_FORMAT_VERSION);
     w.u32(N4M_ABI_VERSION_MAJOR);
     w.u32(N4M_ABI_VERSION_MINOR);
@@ -311,10 +310,7 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
         return N4M_ERR_CORRUPT_BUFFER;
     }
     auto* data = static_cast<const unsigned char*>(buffer);
-    if (data[0] != static_cast<unsigned char>('P') ||
-        data[1] != static_cast<unsigned char>('4') ||
-        data[2] != static_cast<unsigned char>('A') ||
-        data[3] != static_cast<unsigned char>('M')) {
+    if (std::memcmp(data, N4M_SERIALIZATION_MAGIC, 4U) != 0) {
         return N4M_ERR_CORRUPT_BUFFER;
     }
     Reader r{data + 4U, buffer_size - 4U};

@@ -391,7 +391,7 @@ N4M_API n4m_status_t n4m_model_get_n_targets   (const n4m_model_t*, int32_t* out
  * 11. Serialization
  * ==========================================================================
  *
- * The binary format starts with the four-byte magic "P4AM" (the first 4
+ * The binary format starts with the four-byte magic "N4MM" (the first 4
  * bytes of N4M_SERIALIZATION_MAGIC — note that as a string literal that
  * macro is 5 bytes including the trailing NUL; consumers should compare or
  * memcpy exactly 4 bytes), followed by N4M_SERIALIZATION_FORMAT_VERSION

@@ -129,7 +129,7 @@ jobs:
             # The CMake preset pins CMAKE_OSX_DEPLOYMENT_TARGET=11.0, so the
             # wheel + delocate must agree: MACOSX_DEPLOYMENT_TARGET=11.0 makes
             # cibuildwheel tag the wheel macosx_11_0 and tells delocate the
-            # same target so libp4a.dylib's 11.0 minimum is accepted.
+            # same target so libn4m.dylib's 11.0 minimum is accepted.
             build_preset: ci-macos-universal2
             macos_deployment_target: "11.0"
           - label: windows-amd64
@@ -143,7 +143,7 @@ jobs:
     env:
       CIBW_BUILD: ${{ matrix.cfg.cibw_build }}
       CIBW_ARCHS: ${{ matrix.cfg.cibw_archs }}
-      # Tell build_libp4a_in_wheel.sh which CMake preset to use.
+      # Tell build_libn4m_in_wheel.sh which CMake preset to use.
       PLS4ALL_BUILD_PRESET: ${{ matrix.cfg.build_preset }}
       # macOS only: keep wheel tag + delocate target + CMake deployment
       # target in sync. Empty/unset on non-macOS jobs.
@@ -155,15 +155,15 @@ jobs:
       # preset (CMakePresets.json sets CMAKE_OSX_ARCHITECTURES for the universal2
       # preset).
       CIBW_ENVIRONMENT: PLS4ALL_BUILD_PRESET=${{ matrix.cfg.build_preset }}
-      # Run libp4a's CMake build once per matrix entry, before any wheel.
-      CIBW_BEFORE_ALL_LINUX: bash bindings/python/scripts/build_libp4a_in_wheel.sh
-      CIBW_BEFORE_ALL_MACOS: bash bindings/python/scripts/build_libp4a_in_wheel.sh
-      CIBW_BEFORE_ALL_WINDOWS: bash bindings/python/scripts/build_libp4a_in_wheel.sh
-      # Wheel repair: bundle/verify libp4a + sibling deps.
+      # Run libn4m's CMake build once per matrix entry, before any wheel.
+      CIBW_BEFORE_ALL_LINUX: bash bindings/python/scripts/build_libn4m_in_wheel.sh
+      CIBW_BEFORE_ALL_MACOS: bash bindings/python/scripts/build_libn4m_in_wheel.sh
+      CIBW_BEFORE_ALL_WINDOWS: bash bindings/python/scripts/build_libn4m_in_wheel.sh
+      # Wheel repair: bundle/verify libn4m + sibling deps.
       CIBW_REPAIR_WHEEL_COMMAND_LINUX: "auditwheel repair -w {dest_dir} {wheel}"
       CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
       # cibuildwheel ships no Windows default; declare delvewheel explicitly.
-      # --analyze-existing keeps libp4a in the wheel even though no compiled
+      # --analyze-existing keeps libn4m in the wheel even though no compiled
       # extension references it (ctypes loads it at runtime via CDLL).
       CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "pip install delvewheel && delvewheel repair --analyze-existing -w {dest_dir} {wheel}"
       CIBW_BUILD_VERBOSITY: "1"
