@@ -138,8 +138,25 @@ LIBP4A_BUILDS = {
     "cuda-on":     str(REPO / "build/cuda-on/cpp/src"),       # BLAS + CUDA
 }
 
-# Conda env paths (R + Octave live here).
-PLS4ALL_R_ENV = "/home/delete/miniconda3/envs/pls4all_r"
+# Conda env paths (R + Octave live here). Override via env vars so a fresh
+# clone on a different machine does not require editing this file:
+#   N4M_R_ENV=/path/to/miniconda3/envs/<r-env>
+#   N4M_OCTAVE_ENV=/path/to/miniconda3/envs/<octave-env>  (optional)
+# Falls back to the maintainer's historical path if unset (which only works
+# on /home/delete; new contributors MUST set N4M_R_ENV).
+import os as _os
+PLS4ALL_R_ENV = _os.environ.get(
+    "N4M_R_ENV",
+    _os.environ.get("PLS4ALL_R_ENV", "/home/delete/miniconda3/envs/pls4all_r"),
+)
+if not _os.path.isdir(PLS4ALL_R_ENV) and not _os.environ.get("N4M_R_ENV_NOWARN"):
+    import sys as _sys
+    print(
+        f"warning: N4M_R_ENV not set and fallback {PLS4ALL_R_ENV!r} does not "
+        f"exist; R-side benchmarks will be skipped. Set N4M_R_ENV to your "
+        f"conda env path to silence this warning.",
+        file=_sys.stderr,
+    )
 
 
 def gen_dataset_csv(n: int, p: int, seed: int) -> Path:
