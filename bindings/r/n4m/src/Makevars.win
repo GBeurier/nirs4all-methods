@@ -37,3 +37,9 @@ PKG_CPPFLAGS = -DN4M_STATIC=1 \
 
 CXX_STD = CXX17
 PKG_LIBS =
+
+# Vendored FITPACK uses Fortran 77 shared DO termination labels (deleted in
+# Fortran 2018). Modern gfortran (>= 13) flags those as deleted-feature
+# warnings; the R workflow runs `error-on: "warning"`, so without
+# -std=legacy the package fails CRAN-style check on every platform.
+PKG_FFLAGS = -std=legacy
