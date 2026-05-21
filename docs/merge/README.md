@@ -23,6 +23,8 @@ its phase (analysis, reconciliation, gate evidence, follow-up plan).
 | M16 | 📄 procedure documented | [`M16/M16_REPO_RENAME.md`](M16/M16_REPO_RENAME.md) |
 | M17 | 📄 procedure documented | [`M17/M17_RELEASE_V1.md`](M17/M17_RELEASE_V1.md) |
 
+For the verification report (what actually works end-to-end), see [`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md).
+
 For the master roadmap (rationale, target tree, parity strategy, subset
 machinery), see [`MERGE_ROADMAP.md`](MERGE_ROADMAP.md).
 
