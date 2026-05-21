@@ -58,7 +58,7 @@
         },
         "method_ids": {
           "type": "array",
-          "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"},
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)+$"},
           "description": "Specific method_ids to include in addition to or instead of whole categories."
         },
         "patterns": {
@@ -73,7 +73,7 @@
       "additionalProperties": false,
       "properties": {
         "categories": {"type": "array", "items": {"type": "string"}},
-        "method_ids": {"type": "array", "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"}},
+        "method_ids": {"type": "array", "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)+$"}},
         "patterns": {"type": "array", "items": {"type": "string"}}
       },
       "description": "Hard exclude pass applied last, after includes."
