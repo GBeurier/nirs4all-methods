@@ -1,0 +1,89 @@
+# SPDX-License-Identifier: CECILL-2.1
+# Schema: catalog/schema/subset_v1.json
+package: pls4all
+title: "pls4all — Partial Least Squares engine, slim distribution"
+description: |
+  Drop-in replacement for the legacy pls4all package. Carved from the unified
+  nirs4all-methods source tree to ship every PLS regression / classification
+  method, every variable selector, AOM-PLS / POP-PLS, calibration transfer,
+  PLS-specific diagnostics, and the historical pls4all preprocessing pipeline.
+  Excludes the NIRS-side categories (augmentation, filters, signal-type
+  detection, transfer metrics) that ship in the full nirs4all-methods
+  package.
+maintainers:
+  - "Grégory Beurier <beurier@cirad.fr>"
+license: CECILL-2.1
+status: active
+since_release: "1.0.0"
+abi:
+  symbol_prefix: n4m
+  exported_subset: true
+includes:
+  categories:
+    - models
+    - selection
+    - diagnostics
+    - aom_pop
+  # 'transfer' is intentionally omitted at v1.0.0: PDS / DS live inside
+  # extra_pls.cpp today and become standalone methods after the M4 split.
+  # The category will be re-added once methods.yaml has transfer.* entries.
+  method_ids:
+    # Minimal preprocessing pipeline shipped historically with pls4all
+    - preprocessing.scaling.simple_scale
+    - preprocessing.scatter.snv
+    - preprocessing.scatter.msc
+    - preprocessing.scatter.emsc
+    - preprocessing.derivatives.savitzky_golay
+    - preprocessing.derivatives.norris_williams
+    - preprocessing.baselines.asls
+    - preprocessing.baselines.detrend
+    - preprocessing.wavelets.haar
+    - preprocessing.orthogonalization.osc
+    - preprocessing.orthogonalization.epo
+    # Splitters needed by validation
+    - splitters.kennard_stone
+    - splitters.spxy
+    - splitters.split_splitter
+    # Utilities required by PLS diagnostics
+    - utilities.hotelling_t2
+    - utilities.q_residuals
+    - utilities.nirs_metrics
+excludes:
+  categories:
+    - augmentation
+    - filters
+  patterns:
+    - "utilities.signal_type_detector"
+    - "utilities.transfer_metrics"
+    - "preprocessing.signal_conversion.*"
+    - "preprocessing.specialized.*"
+audience: |
+  PLS chemometrics users on Python and R who want a slim, focused package
+  matching what they expect from R `pls`, `ropls`, `mixOmics`, `plsVarSel`
+  and the scikit-learn cross_decomposition family — plus the AOM-PLS and
+  POP-PLS scientific contributions that distinguish pls4all.
+publish:
+  pypi:
+    name: pls4all
+    module: pls4all
+    legacy_import_paths:
+      - "pls4all.sklearn"            # historical sklearn surface preserved by contract tests
+      - "pls4all.sklearn.PLSRegression"
+      - "pls4all.sklearn.SIMPLS"
+      - "pls4all.sklearn.SparseSIMPLS"
+      - "pls4all.sklearn.CPPLS"
+      - "pls4all.sklearn.ECRegression"
+      - "pls4all.sklearn.AOMPLSRegressor"
+      - "pls4all.sklearn.POPPLSRegressor"
+      - "pls4all.sklearn.MbPlsRegression"
+      - "pls4all.sklearn.RidgePLS"
+      - "pls4all.sklearn.BaggingPLS"
+      - "pls4all.sklearn.GPRPLSRegression"
+  cran:
+    name: pls4all
+    vendored_lib_dir: libn4m_pls4all
+notes: |
+  Activated at v1.0.0 of the unified repo. Replaces the standalone pls4all
+  0.97.x package. Same opaque-handle ABI, same parity contracts; the only
+  hard break is the C symbol prefix (p4a_* → n4m_*). Python and R surfaces
+  are preserved verbatim via contract tests (M10 / M11 of the merge plan).

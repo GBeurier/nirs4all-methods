@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: CECILL-2.1
+# Schema: catalog/schema/subset_v1.json
+# Status: PLANNED — no build glue generated at v1.0.0.
+package: nirs4all-selection
+title: "nirs4all-selection — variable selection algorithms"
+description: |
+  Slim package focused on variable / interval / stability selection algorithms
+  (VIP, SR, SPA, CARS, GA-PLS, PSO, VISSA, IRIV, IRF, shaving, BVE, REP, IPW,
+  ST-PLS, T2, WVC, EMCUVE, randomization, biPLS, siPLS, interval, stability,
+  UVE, random frog, SCARS, VIP-SPA). Carved from the unified
+  nirs4all-methods source tree.
+maintainers:
+  - "Grégory Beurier <beurier@cirad.fr>"
+license: CECILL-2.1
+status: planned
+activates_in_release: null
+abi:
+  symbol_prefix: n4m
+  exported_subset: true
+includes:
+  categories:
+    - selection
+  method_ids:
+    # Selection algorithms need a backing PLS solver — pull in SIMPLS at minimum
+    - models.pls.simpls
+audience: |
+  R chemometrics users currently relying on `plsVarSel` who want an actively
+  maintained replacement with parity guarantees against the upstream.
+publish:
+  pypi:
+    name: nirs4all-selection
+    module: nirs4all_selection
+    legacy_import_paths: []
+  cran:
+    name: n4msel
+    vendored_lib_dir: libn4m_sel
+notes: |
+  Planned, not active. Activates if upstream `plsVarSel` is deprecated or
+  loses upkeep.

@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: CECILL-2.1
+# Schema: catalog/schema/subset_v1.json
+# Status: PLANNED — no build glue generated at v1.0.0.
+package: nirs4all-preprocessing
+title: "nirs4all-preprocessing — spectra preprocessing only"
+description: |
+  Slim package for classical chemometrics users who only want the preprocessing
+  toolbox (no PLS models, no augmentation, no filters). Carved from the
+  unified nirs4all-methods source tree.
+maintainers:
+  - "Grégory Beurier <beurier@cirad.fr>"
+license: CECILL-2.1
+status: planned
+activates_in_release: null
+abi:
+  symbol_prefix: n4m
+  exported_subset: true
+includes:
+  categories:
+    - preprocessing
+  method_ids:
+    - utilities.signal_type_detector
+    - utilities.nirs_metrics
+excludes:
+  patterns:
+    - "preprocessing.specialized.*"
+audience: |
+  Classical chemometrics users on R / Python who only need spectra
+  preprocessing (SNV, MSC, EMSC, SG, derivatives, baselines, wavelets, OSC,
+  EPO, KubelkaMunk, signal-type conversion) without PLS modelling.
+publish:
+  pypi:
+    name: nirs4all-preprocessing
+    module: nirs4all_preprocessing
+    legacy_import_paths: []
+  cran:
+    name: n4mpre
+    vendored_lib_dir: libn4m_pre
+notes: |
+  Planned, not active. Activates when preprocessing-only users push back on
+  the size of the full nirs4all-methods install.

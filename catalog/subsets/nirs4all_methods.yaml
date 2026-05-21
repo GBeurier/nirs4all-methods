@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: CECILL-2.1
+# Schema: catalog/schema/subset_v1.json
+package: nirs4all-methods
+title: "nirs4all-methods — full umbrella catalog"
+description: |
+  The unified PLS / NIRS engine. Ships every method in catalog/methods.yaml
+  across every category. This is the upstream package; pls4all, aompls,
+  and the planned subset libraries are slim carvings from the same source
+  tree driven by their own subset YAMLs.
+maintainers:
+  - "Grégory Beurier <beurier@cirad.fr>"
+license: CECILL-2.1
+status: active
+since_release: "1.0.0"
+abi:
+  symbol_prefix: n4m
+  exported_subset: false   # full surface — no library-level filter
+includes:
+  categories:
+    - preprocessing
+    - augmentation
+    - splitters
+    - filters
+    - utilities
+    - models
+    - selection
+    - diagnostics
+    - aom_pop
+    - pipeline
+  # 'transfer' is intentionally omitted at v1.0.0: PDS / DS live inside
+  # pls4all's extra_pls.cpp aggregate today and only become standalone
+  # method entries after the M4 split. The category will be re-added once
+  # methods.yaml has transfer.* entries.
+audience: |
+  Researchers and engineers running NIRS / chemometrics / process-monitoring
+  pipelines that need the full preprocessing → augmentation → model → diagnostics
+  → calibration-transfer stack from a single library with one stable C ABI and
+  bindings for Python, R, MATLAB / Octave, and (tier-2) JS/WASM, Julia, Go,
+  Rust, .NET, Ruby, Lua, Nim, JNI.
+publish:
+  pypi:
+    name: nirs4all-methods
+    module: nirs4all_methods
+    legacy_import_paths: []
+  cran:
+    name: n4m
+    vendored_lib_dir: libn4m
+notes: |
+  Activated at v1.0.0 of the unified repo. The slim 'pls4all' subset is the
+  other active descriptor.

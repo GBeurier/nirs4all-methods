@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: CECILL-2.1
+# Schema: catalog/schema/subset_v1.json
+# Status: PLANNED — no build glue generated at v1.0.0.
+package: nirs4all-augmentation
+title: "nirs4all-augmentation — data augmentation only"
+description: |
+  Slim package for ML practitioners who only want the spectral augmentation
+  operators (noise, drift, wavelength shift, mixup, scatter simulation,
+  environmental perturbations, etc.). Carved from the unified
+  nirs4all-methods source tree.
+maintainers:
+  - "Grégory Beurier <beurier@cirad.fr>"
+license: CECILL-2.1
+status: planned
+activates_in_release: null
+abi:
+  symbol_prefix: n4m
+  exported_subset: true
+includes:
+  categories:
+    - augmentation
+audience: |
+  Python deep-learning audience (TensorFlow / PyTorch users) doing data
+  augmentation for spectroscopic models, who don't need the PLS modelling
+  stack.
+publish:
+  pypi:
+    name: nirs4all-augmentation
+    module: nirs4all_augmentation
+    legacy_import_paths: []
+  cran: null   # not a CRAN audience
+notes: |
+  Planned, not active. Activates when ML practitioners ask for a pure-
+  augmentation package independent of the PLS stack.

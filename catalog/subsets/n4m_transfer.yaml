@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: CECILL-2.1
+# Schema: catalog/schema/subset_v1.json
+# Status: PLANNED — no build glue generated at v1.0.0.
+package: n4m-transfer
+title: "n4m-transfer — calibration transfer between spectrometers"
+description: |
+  Slim package focused on calibration transfer methods (PDS, DS, plus the
+  transfer-metrics utilities). Carved from the unified nirs4all-methods
+  source tree.
+maintainers:
+  - "Grégory Beurier <beurier@cirad.fr>"
+license: CECILL-2.1
+status: planned
+activates_in_release: null
+abi:
+  symbol_prefix: n4m
+  exported_subset: true
+includes:
+  categories:
+    - transfer
+  method_ids:
+    - utilities.transfer_metrics
+    - preprocessing.scatter.snv
+    - preprocessing.derivatives.savitzky_golay
+audience: |
+  Spectrometer vendors, calibration consultants, multi-instrument deployments
+  needing piecewise direct standardization and related transfer methods
+  packaged as a focused dependency.
+publish:
+  pypi:
+    name: n4m-transfer
+    module: n4m_transfer
+    legacy_import_paths: []
+  cran:
+    name: n4mxfer
+    vendored_lib_dir: libn4m_xfer
+notes: |
+  Planned, not active. Activates if calibration transfer is requested as a
+  separate dep by upstream NIRS instrument vendors.

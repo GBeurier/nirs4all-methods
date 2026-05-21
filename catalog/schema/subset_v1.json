@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nirs4all-methods.example/schemas/subset_v1.json",
+  "title": "n4m subset descriptor v1",
+  "description": "Drives the vendored-source generation for slim packages (e.g. pls4all on PyPI/CRAN, future aompls, nirs4all-preprocessing, nirs4all-augmentation, nirs4all-selection). One YAML per package. Validated by catalog/scripts/validate_catalog.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["package", "title", "license", "status", "abi"],
+  "properties": {
+    "package": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "Distribution name (PyPI/CRAN-compatible). E.g. 'pls4all', 'nirs4all-methods', 'aompls'."
+    },
+    "title": {"type": "string"},
+    "description": {"type": "string"},
+    "maintainers": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX identifier or descriptor (e.g. 'CECILL-2.1')."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "planned", "deprecated"],
+      "description": "active = builds glue is generated; planned = manifest declared but no build glue; deprecated = removed in a future release."
+    },
+    "since_release": {
+      "type": ["string", "null"],
+      "description": "First unified release that activates this subset (e.g. '1.0.0' for nirs4all_methods + pls4all)."
+    },
+    "abi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symbol_prefix", "exported_subset"],
+      "properties": {
+        "symbol_prefix": {
+          "type": "string",
+          "enum": ["n4m"],
+          "description": "All slim packages share the same symbol prefix in v1.0.0."
+        },
+        "exported_subset": {
+          "type": "boolean",
+          "description": "If true, the vendored shared library exports only the subset's category-closure of n4m_* symbols."
+        }
+      }
+    },
+    "includes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "categories": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Whole categories included in the subset (e.g. 'models', 'selection'). Resolves to all methods whose category matches."
+        },
+        "method_ids": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"},
+          "description": "Specific method_ids to include in addition to or instead of whole categories."
+        },
+        "patterns": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Glob patterns over method_id (e.g. 'preprocessing.scatter.*', 'models.pls.*'). Matched after categories + method_ids."
+        }
+      }
+    },
+    "excludes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "categories": {"type": "array", "items": {"type": "string"}},
+        "method_ids": {"type": "array", "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"}},
+        "patterns": {"type": "array", "items": {"type": "string"}}
+      },
+      "description": "Hard exclude pass applied last, after includes."
+    },
+    "audience": {
+      "type": "string",
+      "description": "Free-text description of who this slim package is for."
+    },
+    "publish": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pypi": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "name": {"type": "string"},
+            "module": {"type": "string"},
+            "legacy_import_paths": {"type": "array", "items": {"type": "string"}}
+          },
+          "description": "null = not published on PyPI for this subset."
+        },
+        "cran": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "name": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9.]*$", "description": "CRAN package name — letters / digits / dots only (no hyphens, no underscores)."},
+            "vendored_lib_dir": {"type": "string", "description": "Where the vendored C/C++ sources land under src/ (e.g. 'libn4m_pls4all')."}
+          },
+          "description": "null = not published on CRAN for this subset (e.g. Python-only deep-learning audience)."
+        }
+      }
+    },
+    "activates_in_release": {
+      "type": ["string", "null"],
+      "description": "If status=planned, the unified release that will activate this subset (e.g. '1.1.0' for aompls if the AOM paper triggers it)."
+    },
+    "notes": {"type": "string"}
+  }
+}

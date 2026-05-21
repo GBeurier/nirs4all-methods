@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: CECILL-2.1
+# Schema: catalog/schema/subset_v1.json
+# Status: PLANNED — no build glue generated at v1.0.0.
+package: aompls
+title: "aompls — AOM-PLS + POP-PLS, minimal slim distribution"
+description: |
+  Activates a dedicated micro-package for AOM-PLS and POP-PLS reproducibility
+  pinning to the corresponding paper. Carved from the unified
+  nirs4all-methods source tree.
+maintainers:
+  - "Grégory Beurier <beurier@cirad.fr>"
+license: CECILL-2.1
+status: planned
+activates_in_release: null
+abi:
+  symbol_prefix: n4m
+  exported_subset: true
+includes:
+  categories:
+    - aom_pop
+  method_ids:
+    # Minimal supporting pieces (a real activation would compute these via
+    # build_closure.py; listed here so the planned descriptor closes).
+    - preprocessing.scatter.snv
+    - preprocessing.derivatives.savitzky_golay
+    - preprocessing.derivatives.norris_williams
+    - preprocessing.baselines.detrend
+    - splitters.kennard_stone
+    - splitters.spxy
+    - utilities.nirs_metrics
+audience: |
+  Researchers reproducing the AOM-PLS / POP-PLS paper. Pinned PyPI/CRAN
+  releases provide stable URLs that papers can cite without depending on the
+  full nirs4all-methods install.
+publish:
+  pypi:
+    name: aompls
+    module: aompls
+    legacy_import_paths: []
+  cran:
+    name: aompls
+    vendored_lib_dir: libn4m_aompls
+notes: |
+  Planned, not active. Activates when the AOM paper lands a DOI or when a
+  user asks for a smaller standalone install.
