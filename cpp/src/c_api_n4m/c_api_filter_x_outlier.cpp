@@ -32,7 +32,7 @@
 #include "n4m/n4m.h"
 
 #include "core/filters/x_outlier.h"
-#include "core/matrix_view.hpp"
+#include "core/common/matrix_view.hpp"
 
 // Layout check: the internal struct mirrors the public one. Both have the
 // same field order (n_samples, n_kept, n_excluded, exclusion_rate).

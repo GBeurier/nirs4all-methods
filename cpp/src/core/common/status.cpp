@@ -2,7 +2,7 @@
 //
 // n4m_status_t -> string description.
 
-#include "core/status.hpp"
+#include "core/common/status.hpp"
 
 #if defined(__GNUC__) || defined(__clang__)
 #  define N4M_NO_UBSAN __attribute__((no_sanitize("undefined")))

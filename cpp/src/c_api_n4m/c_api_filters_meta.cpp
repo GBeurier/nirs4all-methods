@@ -33,7 +33,7 @@
 #include "core/filters/composite.h"
 #include "core/filters/high_leverage.h"
 #include "core/filters/spectral_quality.h"
-#include "core/matrix_view.hpp"
+#include "core/common/matrix_view.hpp"
 
 // ---------------------------------------------------------------------------
 // Opaque public handles.

@@ -32,7 +32,7 @@
 
 #include "n4m/n4m.h"
 
-#include "core/matrix_view.hpp"
+#include "core/common/matrix_view.hpp"
 #include "core/preprocessing/signal_conversion/fraction_to_percent.h"
 #include "core/preprocessing/signal_conversion/from_absorbance.h"
 #include "core/preprocessing/signal_conversion/kubelka_munk.h"

@@ -3,7 +3,7 @@
 // extern "C" wrappers for the Phase 17 augmenters (mixup, scattering,
 // environmental). Each wrapper has a try/catch around its full body so no
 // C++ exception ever crosses the boundary. Opaque handles wrap the
-// internal C engine in core/augmentations/.
+// internal C engine in core/augmentation/.
 //
 // Universal ABI shape (per the Phase 15-18 contract document):
 //
@@ -28,16 +28,16 @@
 
 #include "n4m/n4m.h"
 
-#include "core/augmentations/mixup/mixup.h"
-#include "core/augmentations/mixup/local_mixup.h"
-#include "core/augmentations/scattering/scatter_sim_msc.h"
-#include "core/augmentations/scattering/particle_size.h"
-#include "core/augmentations/scattering/emsc_distort.h"
-#include "core/augmentations/scattering/batch_effect.h"
-#include "core/augmentations/scattering/instrument_broaden.h"
-#include "core/augmentations/scattering/dead_band.h"
-#include "core/augmentations/environmental/temperature.h"
-#include "core/augmentations/environmental/moisture.h"
+#include "core/augmentation/mixup/mixup.h"
+#include "core/augmentation/mixup/local_mixup.h"
+#include "core/augmentation/scattering/scatter_sim_msc.h"
+#include "core/augmentation/scattering/particle_size.h"
+#include "core/augmentation/scattering/emsc_distort.h"
+#include "core/augmentation/scattering/batch_effect.h"
+#include "core/augmentation/scattering/instrument_broaden.h"
+#include "core/augmentation/scattering/dead_band.h"
+#include "core/augmentation/environmental/temperature.h"
+#include "core/augmentation/environmental/moisture.h"
 
 #include "rng_state_internal.hpp"
 

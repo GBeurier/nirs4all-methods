@@ -3,7 +3,7 @@
 // extern "C" wrappers for the Phase 16 wavelength + spectral augmenters.
 // Implements the 30 public symbols declared in
 // c_api_augmenters_wavelength_spectral.h on top of the engines under
-// core/augmentations/{wavelength,spectral}/.
+// core/augmentation/{wavelength,spectral}/.
 //
 // Universal rules (mirroring c_api_filters_meta.cpp):
 //   - Every entry point is wrapped in try/catch so no C++ exception ever
@@ -32,17 +32,17 @@
 
 #include "n4m/n4m.h"
 
-#include "core/augmentations/spectral/band_mask.h"
-#include "core/augmentations/spectral/band_perturb.h"
-#include "core/augmentations/spectral/channel_dropout.h"
-#include "core/augmentations/spectral/gauss_jitter.h"
-#include "core/augmentations/spectral/local_clip.h"
-#include "core/augmentations/spectral/magnitude_warp.h"
-#include "core/augmentations/spectral/unsharp_mask.h"
-#include "core/augmentations/wavelength/local_warp.h"
-#include "core/augmentations/wavelength/wavelength_shift.h"
-#include "core/augmentations/wavelength/wavelength_stretch.h"
-#include "core/matrix_view.hpp"
+#include "core/augmentation/spectral/band_mask.h"
+#include "core/augmentation/spectral/band_perturb.h"
+#include "core/augmentation/spectral/channel_dropout.h"
+#include "core/augmentation/spectral/gauss_jitter.h"
+#include "core/augmentation/spectral/local_clip.h"
+#include "core/augmentation/spectral/magnitude_warp.h"
+#include "core/augmentation/spectral/unsharp_mask.h"
+#include "core/augmentation/wavelength/local_warp.h"
+#include "core/augmentation/wavelength/wavelength_shift.h"
+#include "core/augmentation/wavelength/wavelength_stretch.h"
+#include "core/common/matrix_view.hpp"
 
 #include "rng_state_internal.hpp"
 

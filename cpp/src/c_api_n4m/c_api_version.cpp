@@ -11,8 +11,8 @@
 
 #include "n4m/n4m.h"
 
-#include "core/status.hpp"
-#include "core/version.hpp"
+#include "core/common/status.hpp"
+#include "core/common/version.hpp"
 
 #if defined(N4M_USE_CUDA)
 #  include "core/cuda_dispatch.hpp"

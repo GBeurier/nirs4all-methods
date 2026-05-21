@@ -4,7 +4,7 @@
 // are pulled from n4m_version.h via the macros below, so a single
 // scripts/bump_version.sh edit propagates everywhere.
 
-#include "core/version.hpp"
+#include "core/common/version.hpp"
 
 #include "n4m/n4m_version.h"
 

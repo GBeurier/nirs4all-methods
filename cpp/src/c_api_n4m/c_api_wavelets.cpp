@@ -29,7 +29,7 @@
 
 #include "n4m/n4m.h"
 
-#include "core/matrix_view.hpp"
+#include "core/common/matrix_view.hpp"
 #include "core/common/wavelet_kernels.h"
 #include "core/preprocessing/wavelets/haar.h"
 #include "core/preprocessing/wavelets/wavelet.h"

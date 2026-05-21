@@ -327,3 +327,14 @@ if(PLS4ALL_BUILD_STATIC)
     set_target_properties(pls4all_c_static PROPERTIES OUTPUT_NAME p4a_static)
     target_compile_definitions(pls4all_c_static PUBLIC PLS4ALL_STATIC=1)
 endif()
+
+# ---------------------------------------------------------------------------
+# libn4m — donor-side methods compiled into a parallel shared library
+# libn4m.so. Coexists with libp4a.so until M5+M6 ABI rename merges them.
+# ---------------------------------------------------------------------------
+if(NOT DEFINED PLS4ALL_BUILD_N4M)
+    set(PLS4ALL_BUILD_N4M ON)
+endif()
+if(PLS4ALL_BUILD_N4M AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/n4m_targets.cmake")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/n4m_targets.cmake)
+endif()

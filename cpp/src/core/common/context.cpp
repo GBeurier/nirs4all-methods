@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: CECILL-2.1
 
-#include "core/context.hpp"
+#include "core/common/context.hpp"
 
 #include <cstdarg>
 #include <cstdio>
 
 #if defined(N4M_USE_CUDA)
-#  include "core/cuda_dispatch.hpp"
+#  include "core/common/cuda_dispatch.hpp"
 #endif
 
 namespace n4m::core {

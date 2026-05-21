@@ -12,7 +12,7 @@
 
 #include "n4m/n4m.h"
 
-#include "core/context.hpp"
+#include "core/common/context.hpp"
 
 namespace {
 

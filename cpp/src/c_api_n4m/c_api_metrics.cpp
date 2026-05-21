@@ -16,7 +16,7 @@
 
 #include "n4m/n4m.h"
 
-#include "core/matrix_view.hpp"
+#include "core/common/matrix_view.hpp"
 #include "core/utilities/hotelling_t2.h"
 #include "core/utilities/nirs_metrics.h"
 #include "core/utilities/q_residuals.h"

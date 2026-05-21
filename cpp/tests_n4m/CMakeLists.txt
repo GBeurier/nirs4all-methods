@@ -36,7 +36,7 @@ target_include_directories(n4m_tests PRIVATE
 # generator and ends up as a stringised C++ token at compile time.
 target_compile_definitions(n4m_tests PRIVATE
     N4M_PARITY_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/parity/fixtures")
-n4m_add_warnings(n4m_tests)
+pls4all_add_warnings(n4m_tests)
 
 if(WIN32)
     add_custom_command(TARGET n4m_tests POST_BUILD

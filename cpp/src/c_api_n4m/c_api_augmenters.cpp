@@ -46,14 +46,14 @@
 
 #include "n4m/n4m.h"
 
-#include "core/augmentations/drift/linear_drift.h"
-#include "core/augmentations/drift/path_length.h"
-#include "core/augmentations/drift/poly_drift.h"
-#include "core/augmentations/noise/gaussian_noise.h"
-#include "core/augmentations/noise/hetero_noise.h"
-#include "core/augmentations/noise/multiplicative_noise.h"
-#include "core/augmentations/noise/spike_noise.h"
-#include "core/matrix_view.hpp"
+#include "core/augmentation/drift/linear_drift.h"
+#include "core/augmentation/drift/path_length.h"
+#include "core/augmentation/drift/poly_drift.h"
+#include "core/augmentation/noise/gaussian_noise.h"
+#include "core/augmentation/noise/hetero_noise.h"
+#include "core/augmentation/noise/multiplicative_noise.h"
+#include "core/augmentation/noise/spike_noise.h"
+#include "core/common/matrix_view.hpp"
 
 #include "rng_state_internal.hpp"
 

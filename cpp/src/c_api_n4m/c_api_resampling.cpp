@@ -27,7 +27,7 @@
 
 #include "n4m/n4m.h"
 
-#include "core/matrix_view.hpp"
+#include "core/common/matrix_view.hpp"
 #include "core/preprocessing/resampling/crop.h"
 #include "core/preprocessing/resampling/kbins_discretizer.h"
 #include "core/preprocessing/resampling/range_discretizer.h"
