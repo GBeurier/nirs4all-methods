@@ -23,7 +23,7 @@
 #include <string>
 #include <vector>
 
-namespace pls4all::test {
+namespace n4m::test {
 
 struct TestCase {
     const char* group;
@@ -52,18 +52,18 @@ struct AutoRegister {
     AutoRegister(const TestCase& tc) { Registry::instance().add(tc); }
 };
 
-}  // namespace pls4all::test
+}  // namespace n4m::test
 
-#define P4A_CONCAT_INNER(a, b) a##b
-#define P4A_CONCAT(a, b)       P4A_CONCAT_INNER(a, b)
+#define N4M_CONCAT_INNER(a, b) a##b
+#define N4M_CONCAT(a, b)       N4M_CONCAT_INNER(a, b)
 
 #define TEST(group, name)                                                       \
-    static void P4A_CONCAT(p4a_test_body_, __LINE__)(int& failures);            \
-    static ::pls4all::test::AutoRegister                                        \
-        P4A_CONCAT(p4a_test_reg_, __LINE__){                                    \
+    static void N4M_CONCAT(n4m_test_body_, __LINE__)(int& failures);            \
+    static ::n4m::test::AutoRegister                                        \
+        N4M_CONCAT(n4m_test_reg_, __LINE__){                                    \
             {#group, #name, __FILE__, __LINE__,                                  \
-             &P4A_CONCAT(p4a_test_body_, __LINE__)}};                            \
-    static void P4A_CONCAT(p4a_test_body_, __LINE__)(int& failures)
+             &N4M_CONCAT(n4m_test_body_, __LINE__)}};                            \
+    static void N4M_CONCAT(n4m_test_body_, __LINE__)(int& failures)
 
 #define CHECK(cond)                                                             \
     do {                                                                         \

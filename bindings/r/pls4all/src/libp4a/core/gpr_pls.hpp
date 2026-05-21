@@ -20,12 +20,12 @@
 #include <cstdint>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/config.hpp"
 #include "core/context.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 // ----------------------------------------------------------------------------
 // GP head — standalone, reusable from any future module that produces
@@ -44,10 +44,10 @@ struct GpHeadResult {
 
 // Fits the GP head on pre-computed training scores T (n × k row-major)
 // and centred targets y_centered (length n). On success, fills every
-// field of `out`. Returns P4A_ERR_NUMERICAL_FAILURE if the Cholesky of
+// field of `out`. Returns N4M_ERR_NUMERICAL_FAILURE if the Cholesky of
 // (K + noise²·I) fails (ill-conditioned at very low noise or redundant
 // score directions).
-[[nodiscard]] p4a_status_t fit_gp_on_scores(
+[[nodiscard]] n4m_status_t fit_gp_on_scores(
     Context& ctx,
     const std::vector<double>& T,
     std::int32_t n,
@@ -80,16 +80,16 @@ struct GprPlsResult {
 // with ensemble methods — the fit is fully deterministic.
 //
 // Y must be n × 1 (single-target only in Phase 47).
-[[nodiscard]] p4a_status_t fit_gpr_pls(
+[[nodiscard]] n4m_status_t fit_gpr_pls(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     double length_scale,
     double noise_level,
     std::uint64_t seed,
     GprPlsResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core
 
 #endif  // PLS4ALL_CORE_GPR_PLS_HPP

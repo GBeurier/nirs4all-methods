@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: CECILL-2.1
 #
-# WASM build of libp4a via Emscripten. Produces:
+# WASM build of libn4m via Emscripten. Produces:
 #   build/<preset>/bindings/js/p4a.js     — Emscripten glue (MODULARIZE)
 #   build/<preset>/bindings/js/p4a.wasm   — WebAssembly module
 # Plus the canonical TypeScript source under bindings/js/src/.
@@ -13,8 +13,8 @@ if(NOT EMSCRIPTEN)
     return()
 endif()
 
-if(NOT TARGET pls4all_c_static)
-    message(FATAL_ERROR "pls4all_c_static must be built for the JS binding.")
+if(NOT TARGET n4m_c_static)
+    message(FATAL_ERROR "n4m_c_static must be built for the JS binding.")
 endif()
 
 # Whitelist of public C ABI symbols we want to export to JS. The list is
@@ -24,7 +24,7 @@ set(_js_export_list "")
 file(STRINGS "${PROJECT_SOURCE_DIR}/cpp/abi/expected_symbols_linux.txt"
      _exported_symbols)
 foreach(sym IN LISTS _exported_symbols)
-    if(sym MATCHES "^p4a_")
+    if(sym MATCHES "^n4m_")
         list(APPEND _js_export_list "_${sym}")
     endif()
 endforeach()
@@ -36,7 +36,7 @@ string(REPLACE ";" "," _js_export_flag "${_js_export_list}")
 
 add_executable(pls4all_wasm
     "${CMAKE_CURRENT_SOURCE_DIR}/src/wasm_entry.c")
-target_link_libraries(pls4all_wasm PRIVATE pls4all_c_static)
+target_link_libraries(pls4all_wasm PRIVATE n4m_c_static)
 set_target_properties(pls4all_wasm PROPERTIES
     OUTPUT_NAME "p4a"
     SUFFIX ".js")

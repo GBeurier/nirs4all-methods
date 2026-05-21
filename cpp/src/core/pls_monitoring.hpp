@@ -18,7 +18,7 @@
 #include "core/context.hpp"
 #include "core/model.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct MonitoringThresholds {
     double alpha{0.05};                  // tail probability (e.g. 0.05 → 95%)
@@ -29,10 +29,10 @@ struct MonitoringThresholds {
     std::vector<double> q_reference;     // training Q-residuals
 };
 
-[[nodiscard]] p4a_status_t pls_monitoring_fit(
+[[nodiscard]] n4m_status_t pls_monitoring_fit(
     Context& ctx,
     const Model& model,
-    const p4a_matrix_view_t& X_reference,
+    const n4m_matrix_view_t& X_reference,
     double alpha,
     MonitoringThresholds& out);
 
@@ -46,11 +46,11 @@ struct MonitoringResult {
     std::vector<std::int32_t> any_alarms;
 };
 
-[[nodiscard]] p4a_status_t pls_monitoring_evaluate(
+[[nodiscard]] n4m_status_t pls_monitoring_evaluate(
     Context& ctx,
     const Model& model,
     const MonitoringThresholds& thresholds,
-    const p4a_matrix_view_t& X,
+    const n4m_matrix_view_t& X,
     MonitoringResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

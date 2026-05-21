@@ -48,14 +48,14 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     std::fill(values.begin(), values.end(), fill);
 }
 
-[[nodiscard]] double read_value(const p4a_matrix_view_t& v,
+[[nodiscard]] double read_value(const n4m_matrix_view_t& v,
                                 std::size_t row,
                                 std::size_t col) noexcept {
     const std::int64_t off =
         static_cast<std::int64_t>(row) * v.row_stride +
         static_cast<std::int64_t>(col) * v.col_stride;
     const std::size_t uoff = static_cast<std::size_t>(off);
-    if (v.dtype == P4A_DTYPE_F64) {
+    if (v.dtype == N4M_DTYPE_F64) {
         const auto* ptr = static_cast<const double*>(v.data);
         return ptr[uoff];
     }
@@ -63,7 +63,7 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     return static_cast<double>(ptr[uoff]);
 }
 
-void write_value(p4a_matrix_view_t& v,
+void write_value(n4m_matrix_view_t& v,
                  std::size_t row,
                  std::size_t col,
                  double value) noexcept {
@@ -71,7 +71,7 @@ void write_value(p4a_matrix_view_t& v,
         static_cast<std::int64_t>(row) * v.row_stride +
         static_cast<std::int64_t>(col) * v.col_stride;
     const std::size_t uoff = static_cast<std::size_t>(off);
-    if (v.dtype == P4A_DTYPE_F64) {
+    if (v.dtype == N4M_DTYPE_F64) {
         auto* ptr = static_cast<double*>(v.data);
         ptr[uoff] = value;
         return;
@@ -80,34 +80,34 @@ void write_value(p4a_matrix_view_t& v,
     ptr[uoff] = static_cast<float>(value);
 }
 
-[[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& v,
+[[nodiscard]] n4m_status_t validate_float_view(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& v,
                                                const char* name) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(v);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(v);
+    if (status != N4M_OK) {
         ctx.set_errorf("%s matrix view is invalid: %s",
                        name,
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
-    if (v.dtype != P4A_DTYPE_F64 && v.dtype != P4A_DTYPE_F32) {
+    if (v.dtype != N4M_DTYPE_F64 && v.dtype != N4M_DTYPE_F32) {
         ctx.set_errorf("%s dtype must be f64 or f32", name);
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t copy_matrix_checked(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& src,
+[[nodiscard]] n4m_status_t copy_matrix_checked(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& src,
                                                const char* name,
                                                std::vector<double>& out) {
     const std::size_t rows = static_cast<std::size_t>(src.rows);
     const std::size_t cols = static_cast<std::size_t>(src.cols);
     resize_fill(out, rows * cols, 0.0);
-    if ((src.dtype == P4A_DTYPE_F64 || src.dtype == P4A_DTYPE_F32) &&
+    if ((src.dtype == N4M_DTYPE_F64 || src.dtype == N4M_DTYPE_F32) &&
         src.row_stride == static_cast<std::int64_t>(cols) &&
         src.col_stride == 1) {
-        if (src.dtype == P4A_DTYPE_F64) {
+        if (src.dtype == N4M_DTYPE_F64) {
             const auto* ptr = static_cast<const double*>(src.data);
             const std::size_t total = rows * cols;
             for (std::size_t offset = 0; offset < total; ++offset) {
@@ -119,11 +119,11 @@ void write_value(p4a_matrix_view_t& v,
                                    name,
                                    ull(i),
                                    ull(j));
-                    return P4A_ERR_INVALID_ARGUMENT;
+                    return N4M_ERR_INVALID_ARGUMENT;
                 }
                 out[offset] = value;
             }
-            return P4A_OK;
+            return N4M_OK;
         }
         const auto* ptr = static_cast<const float*>(src.data);
         const std::size_t total = rows * cols;
@@ -136,11 +136,11 @@ void write_value(p4a_matrix_view_t& v,
                                name,
                                ull(i),
                                ull(j));
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out[offset] = value;
         }
-        return P4A_OK;
+        return N4M_OK;
     }
     for (std::size_t i = 0; i < rows; ++i) {
         for (std::size_t j = 0; j < cols; ++j) {
@@ -150,12 +150,12 @@ void write_value(p4a_matrix_view_t& v,
                                name,
                                ull(i),
                                ull(j));
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out[idx(i, cols, j)] = value;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 void center_scale_in_place(const std::vector<double>& original,
@@ -330,8 +330,8 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     return 2.0 * unit - 1.0;
 }
 
-[[nodiscard]] p4a_status_t largest_symmetric_eigenvector(
-    ::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t largest_symmetric_eigenvector(
+    ::n4m::core::Context& ctx,
     const std::vector<double>& symmetric,
     std::size_t n,
     std::int32_t max_iter,
@@ -346,16 +346,16 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         ctx.set_errorf("%s eigenproblem shape is invalid at component %llu",
                        label,
                        ull(component));
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
     if (n == 1U) {
         eigenvalue = symmetric[0];
         eigenvector[0] = 1.0;
         if (!(eigenvalue > std::numeric_limits<double>::epsilon())) {
             ctx.set_errorf("%s covariance vanished at component %llu", label, ull(component));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
-        return P4A_OK;
+        return N4M_OK;
     }
 
     std::vector<double> a = symmetric;
@@ -437,7 +437,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         ctx.set_errorf("%s Jacobi SVD failed to converge at component %llu",
                        label,
                        ull(component));
-        return P4A_ERR_CONVERGENCE_FAILED;
+        return N4M_ERR_CONVERGENCE_FAILED;
     }
 
     std::size_t best = 0;
@@ -451,7 +451,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     }
     if (!(best_value > std::numeric_limits<double>::epsilon())) {
         ctx.set_errorf("%s covariance vanished at component %llu", label, ull(component));
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
 
     for (std::size_t i = 0; i < n; ++i) {
@@ -460,17 +460,17 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     const double norm = std::sqrt(squared_norm(eigenvector));
     if (norm <= std::numeric_limits<double>::epsilon()) {
         ctx.set_errorf("%s eigenvector vanished at component %llu", label, ull(component));
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
     for (double& value : eigenvector) {
         value /= norm;
     }
     eigenvalue = best_value;
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t dominant_svd_pair(
-    ::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t dominant_svd_pair(
+    ::n4m::core::Context& ctx,
     const std::vector<double>& covariance,
     std::size_t features,
     std::size_t targets,
@@ -490,7 +490,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         }
         if (norm_sq <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("SVD covariance vanished at component %llu", ull(component));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         const double norm = std::sqrt(norm_sq);
         for (double& value : left) {
@@ -498,11 +498,11 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         }
         right[0] = 1.0;
         canonicalize_svd_pair_sign(left, right);
-        return P4A_OK;
+        return N4M_OK;
     }
 
     double singular_value = 0.0;
-    p4a_status_t status = P4A_OK;
+    n4m_status_t status = N4M_OK;
     if (targets <= features) {
         std::vector<double> gram;
         resize_fill(gram, targets * targets, 0.0);
@@ -520,7 +520,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         double eigenvalue = 0.0;
         status = largest_symmetric_eigenvector(ctx, gram, targets, max_iter, tol,
                                                "SVD right", component, right, eigenvalue);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         singular_value = std::sqrt(eigenvalue);
@@ -548,7 +548,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         double eigenvalue = 0.0;
         status = largest_symmetric_eigenvector(ctx, gram, features, max_iter, tol,
                                                "SVD left", component, left, eigenvalue);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         singular_value = std::sqrt(eigenvalue);
@@ -563,14 +563,14 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
 
     if (!(singular_value > std::numeric_limits<double>::epsilon())) {
         ctx.set_errorf("SVD singular value vanished at component %llu", ull(component));
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
     double left_norm = std::sqrt(squared_norm(left));
     double right_norm = std::sqrt(squared_norm(right));
     if (left_norm <= std::numeric_limits<double>::epsilon() ||
         right_norm <= std::numeric_limits<double>::epsilon()) {
         ctx.set_errorf("SVD singular vectors vanished at component %llu", ull(component));
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
     for (double& value : left) {
         value /= left_norm;
@@ -579,11 +579,11 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         value /= right_norm;
     }
     canonicalize_svd_pair_sign(left, right);
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t dominant_svd_pair_power(
-    ::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t dominant_svd_pair_power(
+    ::n4m::core::Context& ctx,
     const std::vector<double>& covariance,
     std::size_t features,
     std::size_t targets,
@@ -603,7 +603,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         }
         if (norm_sq <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("power covariance vanished at component %llu", ull(component));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         const double norm = std::sqrt(norm_sq);
         for (double& value : left) {
@@ -611,7 +611,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         }
         right[0] = 1.0;
         canonicalize_svd_pair_sign(left, right);
-        return P4A_OK;
+        return N4M_OK;
     }
 
     std::size_t initial_target = 0;
@@ -629,7 +629,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     }
     if (best_ss <= std::numeric_limits<double>::epsilon()) {
         ctx.set_errorf("power covariance vanished at component %llu", ull(component));
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
     right[initial_target] = 1.0;
 
@@ -648,7 +648,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         if (left_norm <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("power left singular vector vanished at component %llu",
                            ull(component));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : left) {
             value /= left_norm;
@@ -665,7 +665,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         if (right_norm <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("power right singular vector vanished at component %llu",
                            ull(component));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : next_right) {
             value /= right_norm;
@@ -689,7 +689,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     if (!converged) {
         ctx.set_errorf("power singular-vector iteration failed to converge at component %llu",
                        ull(component));
-        return P4A_ERR_CONVERGENCE_FAILED;
+        return N4M_ERR_CONVERGENCE_FAILED;
     }
 
     for (std::size_t feature = 0; feature < features; ++feature) {
@@ -703,7 +703,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     if (left_norm <= std::numeric_limits<double>::epsilon()) {
         ctx.set_errorf("power final left singular vector vanished at component %llu",
                        ull(component));
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
     for (double& value : left) {
         value /= left_norm;
@@ -720,17 +720,17 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     if (right_norm <= std::numeric_limits<double>::epsilon()) {
         ctx.set_errorf("power final right singular vector vanished at component %llu",
                        ull(component));
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
     for (double& value : right) {
         value /= right_norm;
     }
     canonicalize_svd_pair_sign(left, right);
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t dominant_svd_pair_randomized(
-    ::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t dominant_svd_pair_randomized(
+    ::n4m::core::Context& ctx,
     const std::vector<double>& covariance,
     std::size_t features,
     std::size_t targets,
@@ -752,7 +752,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         if (norm_sq <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("randomized SVD covariance vanished at component %llu",
                            ull(component));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         const double norm = std::sqrt(norm_sq);
         for (double& value : left) {
@@ -760,7 +760,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         }
         right[0] = 1.0;
         canonicalize_svd_pair_sign(left, right);
-        return P4A_OK;
+        return N4M_OK;
     }
 
     std::uint64_t state =
@@ -793,7 +793,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         if (left_norm <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("randomized SVD left singular vector vanished at component %llu",
                            ull(component));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : left) {
             value /= left_norm;
@@ -810,7 +810,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         if (right_norm <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("randomized SVD right singular vector vanished at component %llu",
                            ull(component));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : next_right) {
             value /= right_norm;
@@ -834,7 +834,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     if (!converged) {
         ctx.set_errorf("randomized SVD iteration failed to converge at component %llu",
                        ull(component));
-        return P4A_ERR_CONVERGENCE_FAILED;
+        return N4M_ERR_CONVERGENCE_FAILED;
     }
 
     for (std::size_t feature = 0; feature < features; ++feature) {
@@ -848,7 +848,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     if (left_norm <= std::numeric_limits<double>::epsilon()) {
         ctx.set_errorf("randomized SVD final left singular vector vanished at component %llu",
                        ull(component));
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
     for (double& value : left) {
         value /= left_norm;
@@ -865,17 +865,17 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     if (right_norm <= std::numeric_limits<double>::epsilon()) {
         ctx.set_errorf("randomized SVD final right singular vector vanished at component %llu",
                        ull(component));
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
     for (double& value : right) {
         value /= right_norm;
     }
     canonicalize_svd_pair_sign(left, right);
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t dominant_left_singular_direction(
-    ::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t dominant_left_singular_direction(
+    ::n4m::core::Context& ctx,
     const std::vector<double>& covariance,
     std::size_t features,
     std::size_t targets,
@@ -890,10 +890,10 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         }
         if (squared_norm(out) <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("SIMPLS covariance vanished at component %llu", ull(component));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         canonicalize_direction_sign(out);
-        return P4A_OK;
+        return N4M_OK;
     }
 
     std::size_t best_target = 0;
@@ -911,7 +911,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     }
     if (best_norm <= std::numeric_limits<double>::epsilon()) {
         ctx.set_errorf("SIMPLS covariance vanished at component %llu", ull(component));
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
     const double initial_norm = std::sqrt(best_norm);
     for (std::size_t feature = 0; feature < features; ++feature) {
@@ -936,7 +936,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         if (right_norm <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("SIMPLS right singular direction vanished at component %llu",
                            ull(component));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : right) {
             value /= right_norm;
@@ -953,7 +953,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         if (left_norm <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("SIMPLS left singular direction vanished at component %llu",
                            ull(component));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : next_left) {
             value /= left_norm;
@@ -979,15 +979,15 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         ctx.set_errorf(
             "SIMPLS singular-vector iteration failed to converge at component %llu",
             ull(component));
-        return P4A_ERR_CONVERGENCE_FAILED;
+        return N4M_ERR_CONVERGENCE_FAILED;
     }
     canonicalize_direction_sign(out);
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t compute_rotations_and_coefficients(
-    ::pls4all::core::Context& ctx,
-    ::pls4all::core::Model& model,
+[[nodiscard]] n4m_status_t compute_rotations_and_coefficients(
+    ::n4m::core::Context& ctx,
+    ::n4m::core::Model& model,
     std::size_t features,
     std::size_t targets,
     std::size_t components) {
@@ -1007,7 +1007,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     std::vector<double> ptw_inv;
     if (!invert_square(ptw, components, ptw_inv)) {
         ctx.set_error("failed to invert P.T @ W while computing rotations");
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
 
     resize_fill(model.rotations_r, features * components, 0.0);
@@ -1034,123 +1034,123 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
                 sum * model.y_scale[target] / model.x_scale[feature];
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t validate_fit_request(::pls4all::core::Context& ctx,
-                                                const ::pls4all::core::Config& cfg,
-                                                const p4a_matrix_view_t& X,
-                                                const p4a_matrix_view_t& Y) noexcept {
+[[nodiscard]] n4m_status_t validate_fit_request(::n4m::core::Context& ctx,
+                                                const ::n4m::core::Config& cfg,
+                                                const n4m_matrix_view_t& X,
+                                                const n4m_matrix_view_t& Y) noexcept {
     const bool regression_chassis_algorithm =
-        cfg.algorithm == P4A_ALGO_PLS_REGRESSION || cfg.algorithm == P4A_ALGO_PLS_DA;
+        cfg.algorithm == N4M_ALGO_PLS_REGRESSION || cfg.algorithm == N4M_ALGO_PLS_DA;
     const bool supported_pls_regression =
         regression_chassis_algorithm &&
-        (cfg.solver == P4A_SOLVER_NIPALS ||
-         cfg.solver == P4A_SOLVER_ORTHOGONAL_SCORES ||
-         cfg.solver == P4A_SOLVER_SIMPLS ||
-         cfg.solver == P4A_SOLVER_KERNEL_ALGORITHM ||
-         cfg.solver == P4A_SOLVER_WIDE_KERNEL ||
-         cfg.solver == P4A_SOLVER_SVD ||
-         cfg.solver == P4A_SOLVER_POWER ||
-         cfg.solver == P4A_SOLVER_RANDOMIZED_SVD);
+        (cfg.solver == N4M_SOLVER_NIPALS ||
+         cfg.solver == N4M_SOLVER_ORTHOGONAL_SCORES ||
+         cfg.solver == N4M_SOLVER_SIMPLS ||
+         cfg.solver == N4M_SOLVER_KERNEL_ALGORITHM ||
+         cfg.solver == N4M_SOLVER_WIDE_KERNEL ||
+         cfg.solver == N4M_SOLVER_SVD ||
+         cfg.solver == N4M_SOLVER_POWER ||
+         cfg.solver == N4M_SOLVER_RANDOMIZED_SVD);
     const bool supported_pls_canonical =
-        cfg.algorithm == P4A_ALGO_PLS_CANONICAL &&
-        (cfg.solver == P4A_SOLVER_NIPALS || cfg.solver == P4A_SOLVER_SVD);
+        cfg.algorithm == N4M_ALGO_PLS_CANONICAL &&
+        (cfg.solver == N4M_SOLVER_NIPALS || cfg.solver == N4M_SOLVER_SVD);
     const bool supported_pls_svd =
-        cfg.algorithm == P4A_ALGO_PLS_SVD && cfg.solver == P4A_SOLVER_SVD;
+        cfg.algorithm == N4M_ALGO_PLS_SVD && cfg.solver == N4M_SOLVER_SVD;
     const bool opls_chassis_algorithm =
-        cfg.algorithm == P4A_ALGO_OPLS || cfg.algorithm == P4A_ALGO_OPLS_DA;
+        cfg.algorithm == N4M_ALGO_OPLS || cfg.algorithm == N4M_ALGO_OPLS_DA;
     const bool supported_opls =
-        opls_chassis_algorithm && cfg.solver == P4A_SOLVER_NIPALS;
+        opls_chassis_algorithm && cfg.solver == N4M_SOLVER_NIPALS;
     const bool supported_pcr =
-        cfg.algorithm == P4A_ALGO_PCR && cfg.solver == P4A_SOLVER_SVD;
+        cfg.algorithm == N4M_ALGO_PCR && cfg.solver == N4M_SOLVER_SVD;
     const bool supported_sparse_pls =
-        cfg.algorithm == P4A_ALGO_SPARSE_PLS &&
-        cfg.solver == P4A_SOLVER_SIMPLS;
+        cfg.algorithm == N4M_ALGO_SPARSE_PLS &&
+        cfg.solver == N4M_SOLVER_SIMPLS;
     if (!supported_pls_regression && !supported_pls_canonical && !supported_pls_svd &&
         !supported_opls && !supported_pcr && !supported_sparse_pls) {
         ctx.set_error(
-            "this release supports P4A_ALGO_PLS_REGRESSION with P4A_SOLVER_NIPALS, "
-            "P4A_SOLVER_ORTHOGONAL_SCORES, P4A_SOLVER_SIMPLS, "
-            "P4A_SOLVER_KERNEL_ALGORITHM, P4A_SOLVER_WIDE_KERNEL or "
-            "P4A_SOLVER_SVD, P4A_SOLVER_POWER or P4A_SOLVER_RANDOMIZED_SVD, "
-            "P4A_ALGO_PLS_CANONICAL with P4A_SOLVER_NIPALS or P4A_SOLVER_SVD, "
-            "P4A_ALGO_PLS_SVD with P4A_SOLVER_SVD, "
-            "P4A_ALGO_PLS_DA with the PLS regression solver set, "
-            "P4A_ALGO_OPLS/P4A_ALGO_OPLS_DA with P4A_SOLVER_NIPALS, "
-            "plus P4A_ALGO_PCR with P4A_SOLVER_SVD");
-        return P4A_ERR_UNSUPPORTED;
+            "this release supports N4M_ALGO_PLS_REGRESSION with N4M_SOLVER_NIPALS, "
+            "N4M_SOLVER_ORTHOGONAL_SCORES, N4M_SOLVER_SIMPLS, "
+            "N4M_SOLVER_KERNEL_ALGORITHM, N4M_SOLVER_WIDE_KERNEL or "
+            "N4M_SOLVER_SVD, N4M_SOLVER_POWER or N4M_SOLVER_RANDOMIZED_SVD, "
+            "N4M_ALGO_PLS_CANONICAL with N4M_SOLVER_NIPALS or N4M_SOLVER_SVD, "
+            "N4M_ALGO_PLS_SVD with N4M_SOLVER_SVD, "
+            "N4M_ALGO_PLS_DA with the PLS regression solver set, "
+            "N4M_ALGO_OPLS/N4M_ALGO_OPLS_DA with N4M_SOLVER_NIPALS, "
+            "plus N4M_ALGO_PCR with N4M_SOLVER_SVD");
+        return N4M_ERR_UNSUPPORTED;
     }
     const bool supported_deflation =
         ((supported_pls_regression || supported_pcr || supported_sparse_pls) &&
-         cfg.deflation == P4A_DEFLATION_REGRESSION) ||
+         cfg.deflation == N4M_DEFLATION_REGRESSION) ||
         ((supported_pls_canonical || supported_pls_svd) &&
-         cfg.deflation == P4A_DEFLATION_CANONICAL) ||
-        (supported_opls && cfg.deflation == P4A_DEFLATION_ORTHOGONAL);
+         cfg.deflation == N4M_DEFLATION_CANONICAL) ||
+        (supported_opls && cfg.deflation == N4M_DEFLATION_ORTHOGONAL);
     if (!supported_deflation) {
         ctx.set_error(
-            "this release supports P4A_DEFLATION_REGRESSION for PLS regression/PCR "
-            "and P4A_DEFLATION_CANONICAL for PLS canonical/PLSSVD and "
-            "P4A_DEFLATION_ORTHOGONAL for OPLS");
-        return P4A_ERR_UNSUPPORTED;
+            "this release supports N4M_DEFLATION_REGRESSION for PLS regression/PCR "
+            "and N4M_DEFLATION_CANONICAL for PLS canonical/PLSSVD and "
+            "N4M_DEFLATION_ORTHOGONAL for OPLS");
+        return N4M_ERR_UNSUPPORTED;
     }
     if (cfg.pipeline != nullptr || cfg.operator_bank != nullptr || cfg.gating_strategy != nullptr) {
         ctx.set_error("pipelines, operator banks and gating strategies are not yet supported by model_fit");
-        return P4A_ERR_UNSUPPORTED;
+        return N4M_ERR_UNSUPPORTED;
     }
 
-    p4a_status_t status = validate_float_view(ctx, X, "X");
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_float_view(ctx, X, "X");
+    if (status != N4M_OK) {
         return status;
     }
     status = validate_float_view(ctx, Y, "Y");
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     if (X.dtype != Y.dtype) {
         ctx.set_error("X and Y must have the same floating dtype");
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
     if (X.rows != Y.rows) {
         ctx.set_errorf("X rows (%lld) must match Y rows (%lld)",
                        static_cast<long long>(X.rows),
                        static_cast<long long>(Y.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (X.rows < 2 || X.cols < 1 || Y.cols < 1) {
         ctx.set_error("fit requires at least 2 rows, 1 X column and 1 Y column");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max()) ||
         Y.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max())) {
         ctx.set_error("matrix column count exceeds the ABI limits");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::int64_t rank_upper_bound = std::min(X.rows, X.cols);
-    if (cfg.algorithm == P4A_ALGO_PLS_CANONICAL || cfg.algorithm == P4A_ALGO_PLS_SVD) {
+    if (cfg.algorithm == N4M_ALGO_PLS_CANONICAL || cfg.algorithm == N4M_ALGO_PLS_SVD) {
         rank_upper_bound = std::min(rank_upper_bound, Y.cols);
     }
     if (static_cast<std::int64_t>(cfg.n_components) > rank_upper_bound) {
         ctx.set_errorf("n_components upper bound is %lld; got %d",
                        static_cast<long long>(rank_upper_bound),
                        static_cast<int>(cfg.n_components));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t validate_apply_input(::pls4all::core::Context& ctx,
-                                                const ::pls4all::core::Model& model,
-                                                const p4a_matrix_view_t& X,
-                                                const p4a_matrix_view_t& out,
+[[nodiscard]] n4m_status_t validate_apply_input(::n4m::core::Context& ctx,
+                                                const ::n4m::core::Model& model,
+                                                const n4m_matrix_view_t& X,
+                                                const n4m_matrix_view_t& out,
                                                 std::int64_t expected_cols,
                                                 const char* op) noexcept {
-    p4a_status_t status = validate_float_view(ctx, X, "X");
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_float_view(ctx, X, "X");
+    if (status != N4M_OK) {
         return status;
     }
     status = validate_float_view(ctx, out, "output");
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     if (X.cols != static_cast<std::int64_t>(model.n_features)) {
@@ -1158,16 +1158,16 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
                        op,
                        static_cast<int>(model.n_features),
                        static_cast<long long>(X.cols));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (out.rows != X.rows || out.cols != expected_cols) {
         ctx.set_errorf("%s output shape must be (%lld, %lld)",
                        op,
                        static_cast<long long>(X.rows),
                        static_cast<long long>(expected_cols));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 enum class CanonicalWeightSolver {
@@ -1175,9 +1175,9 @@ enum class CanonicalWeightSolver {
     Svd
 };
 
-[[nodiscard]] p4a_status_t canonical_nipals_pair(
-    ::pls4all::core::Context& ctx,
-    const ::pls4all::core::Config& cfg,
+[[nodiscard]] n4m_status_t canonical_nipals_pair(
+    ::n4m::core::Context& ctx,
+    const ::n4m::core::Config& cfg,
     const std::vector<double>& xk,
     std::vector<double>& yk,
     std::size_t rows,
@@ -1217,7 +1217,7 @@ enum class CanonicalWeightSolver {
     if (initial_target == targets) {
         ctx.set_errorf("Y residual became constant at canonical component %llu",
                        ull(component));
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
 
     std::vector<double> y_score;
@@ -1238,7 +1238,7 @@ enum class CanonicalWeightSolver {
         if (y_score_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("canonical Y score vanished at component %llu",
                            ull(component));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         // x_weights = (1 / y_score_ss) * X^T * y_score   (NIPALS inner power step)
@@ -1255,7 +1255,7 @@ enum class CanonicalWeightSolver {
         if (x_weight_norm <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("canonical X weights vanished at component %llu",
                            ull(component));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         const double x_weight_denom =
             x_weight_norm + std::numeric_limits<double>::epsilon();
@@ -1268,7 +1268,7 @@ enum class CanonicalWeightSolver {
         if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("canonical X score vanished at component %llu",
                            ull(component));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         for (std::size_t target = 0; target < targets; ++target) {
@@ -1283,7 +1283,7 @@ enum class CanonicalWeightSolver {
         if (y_weight_norm <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("canonical Y weights vanished at component %llu",
                            ull(component));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         const double y_weight_denom =
             y_weight_norm + std::numeric_limits<double>::epsilon();
@@ -1316,7 +1316,7 @@ enum class CanonicalWeightSolver {
     if (!converged) {
         ctx.set_errorf("canonical NIPALS iteration failed to converge at component %llu",
                        ull(component));
-        return P4A_ERR_CONVERGENCE_FAILED;
+        return N4M_ERR_CONVERGENCE_FAILED;
     }
 
     std::size_t sign_idx = 0;
@@ -1337,12 +1337,12 @@ enum class CanonicalWeightSolver {
         }
     }
 
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t canonical_svd_pair(
-    ::pls4all::core::Context& ctx,
-    const ::pls4all::core::Config& cfg,
+[[nodiscard]] n4m_status_t canonical_svd_pair(
+    ::n4m::core::Context& ctx,
+    const ::n4m::core::Config& cfg,
     const std::vector<double>& xk,
     const std::vector<double>& yk,
     std::size_t rows,
@@ -1367,28 +1367,28 @@ enum class CanonicalWeightSolver {
                              component, x_weights, y_weights);
 }
 
-[[nodiscard]] p4a_status_t fit_pls_canonical_impl(
-    ::pls4all::core::Context& ctx,
-    const ::pls4all::core::Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
-    std::unique_ptr<::pls4all::core::Model>& out_model,
+[[nodiscard]] n4m_status_t fit_pls_canonical_impl(
+    ::n4m::core::Context& ctx,
+    const ::n4m::core::Config& cfg,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
+    std::unique_ptr<::n4m::core::Model>& out_model,
     CanonicalWeightSolver solver) {
     out_model.reset();
 
-    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != N4M_OK) {
         return status;
     }
 
     std::vector<double> x_original;
     std::vector<double> y_original;
     status = copy_matrix_checked(ctx, X, "X", x_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = copy_matrix_checked(ctx, Y, "Y", y_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -1397,7 +1397,7 @@ enum class CanonicalWeightSolver {
     const std::size_t q = static_cast<std::size_t>(Y.cols);
     const std::size_t a = static_cast<std::size_t>(cfg.n_components);
 
-    auto model = std::make_unique<::pls4all::core::Model>();
+    auto model = std::make_unique<::n4m::core::Model>();
     model->algorithm = cfg.algorithm;
     model->solver = cfg.solver;
     model->deflation = cfg.deflation;
@@ -1438,7 +1438,7 @@ enum class CanonicalWeightSolver {
             status = canonical_svd_pair(ctx, cfg, xk, yk, n, p, q,
                                         comp, x_weights, y_weights);
         }
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -1448,7 +1448,7 @@ enum class CanonicalWeightSolver {
         if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("canonical X score vanished after weights at component %llu",
                            ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         std::vector<double> y_scores;
@@ -1457,12 +1457,12 @@ enum class CanonicalWeightSolver {
         if (y_score_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("canonical Y score vanished after weights at component %llu",
                            ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t feature = 0; feature < p; ++feature) {
             double sum = 0.0;
             for (std::size_t row = 0; row < n; ++row) {
@@ -1470,7 +1470,7 @@ enum class CanonicalWeightSolver {
             }
             x_loadings[feature] = sum / x_score_ss;
         }
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
@@ -1486,7 +1486,7 @@ enum class CanonicalWeightSolver {
             }
             y_loadings[target] = sum / y_score_ss;
         }
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t target = 0; target < q; ++target) {
                 yk[idx(row, q, target)] -= y_scores[row] * y_loadings[target];
@@ -1507,7 +1507,7 @@ enum class CanonicalWeightSolver {
     }
 
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -1518,34 +1518,34 @@ enum class CanonicalWeightSolver {
 
     out_model = std::move(model);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t fit_pls_regression_nipals(
+n4m_status_t fit_pls_regression_nipals(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model) {
     out_model.reset();
 
-    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != N4M_OK) {
         return status;
     }
 
     std::vector<double> x_original;
     std::vector<double> y_original;
     status = copy_matrix_checked(ctx, X, "X", x_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = copy_matrix_checked(ctx, Y, "Y", y_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -1616,7 +1616,7 @@ p4a_status_t fit_pls_regression_nipals(
         }
         if (initial_target == q) {
             ctx.set_errorf("Y residual became constant at component %llu", ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         std::vector<double> y_score;
@@ -1639,7 +1639,7 @@ p4a_status_t fit_pls_regression_nipals(
             const double y_score_ss = squared_norm(y_score);
             if (y_score_ss <= std::numeric_limits<double>::epsilon()) {
                 ctx.set_errorf("Y score vanished at component %llu", ull(comp));
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
 
             // x_weights = (1 / y_score_ss) * X^T * y_score   (NIPALS inner power step)
@@ -1655,7 +1655,7 @@ p4a_status_t fit_pls_regression_nipals(
             const double x_weight_norm = std::sqrt(squared_norm(x_weights));
             if (x_weight_norm <= std::numeric_limits<double>::epsilon()) {
                 ctx.set_errorf("X weights vanished at component %llu", ull(comp));
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
             const double x_weight_denom = x_weight_norm + std::numeric_limits<double>::epsilon();
             for (double& value : x_weights) {
@@ -1666,7 +1666,7 @@ p4a_status_t fit_pls_regression_nipals(
             const double x_score_ss = squared_norm(x_score);
             if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
                 ctx.set_errorf("X score vanished at component %llu", ull(comp));
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
 
             for (std::size_t target = 0; target < q; ++target) {
@@ -1680,7 +1680,7 @@ p4a_status_t fit_pls_regression_nipals(
             const double y_weight_ss = squared_norm(y_weights);
             if (y_weight_ss <= std::numeric_limits<double>::epsilon()) {
                 ctx.set_errorf("Y weights vanished at component %llu", ull(comp));
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
             const double y_score_denom = y_weight_ss + std::numeric_limits<double>::epsilon();
             for (std::size_t row = 0; row < n; ++row) {
@@ -1706,7 +1706,7 @@ p4a_status_t fit_pls_regression_nipals(
         if (!converged) {
             ctx.set_errorf("NIPALS power iteration failed to converge at component %llu",
                            ull(comp));
-            return P4A_ERR_CONVERGENCE_FAILED;
+            return N4M_ERR_CONVERGENCE_FAILED;
         }
 
         std::size_t sign_idx = 0;
@@ -1734,13 +1734,13 @@ p4a_status_t fit_pls_regression_nipals(
         if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("X score vanished after sign normalization at component %llu",
                            ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         const double y_weight_ss = squared_norm(y_weights);
         if (y_weight_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("Y weights vanished after sign normalization at component %llu",
                            ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         std::vector<double> y_scores;
@@ -1802,7 +1802,7 @@ p4a_status_t fit_pls_regression_nipals(
     }
 
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -1813,50 +1813,50 @@ p4a_status_t fit_pls_regression_nipals(
 
     out_model = std::move(model);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_pls_canonical_nipals(
+n4m_status_t fit_pls_canonical_nipals(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model) {
     return fit_pls_canonical_impl(ctx, cfg, X, Y, out_model,
                                   CanonicalWeightSolver::Nipals);
 }
 
-p4a_status_t fit_pls_canonical_svd(
+n4m_status_t fit_pls_canonical_svd(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model) {
     return fit_pls_canonical_impl(ctx, cfg, X, Y, out_model,
                                   CanonicalWeightSolver::Svd);
 }
 
-p4a_status_t fit_pls_svd(
+n4m_status_t fit_pls_svd(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model) {
     out_model.reset();
 
-    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != N4M_OK) {
         return status;
     }
 
     std::vector<double> x_original;
     std::vector<double> y_original;
     status = copy_matrix_checked(ctx, X, "X", x_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = copy_matrix_checked(ctx, Y, "Y", y_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -1915,7 +1915,7 @@ p4a_status_t fit_pls_svd(
         std::vector<double> y_weights;
         status = dominant_svd_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
                                    comp, x_weights, y_weights);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -1930,7 +1930,7 @@ p4a_status_t fit_pls_svd(
         if (!(singular_value > std::numeric_limits<double>::epsilon())) {
             ctx.set_errorf("PLSSVD singular value vanished at component %llu",
                            ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         std::vector<double> x_score;
@@ -1940,12 +1940,12 @@ p4a_status_t fit_pls_svd(
         const double x_score_ss = squared_norm(x_score);
         if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("PLSSVD X score vanished at component %llu", ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t feature = 0; feature < p; ++feature) {
             double sum = 0.0;
             for (std::size_t row = 0; row < n; ++row) {
@@ -1994,30 +1994,30 @@ p4a_status_t fit_pls_svd(
 
     out_model = std::move(model);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_opls_nipals(
+n4m_status_t fit_opls_nipals(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model) {
     out_model.reset();
 
-    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != N4M_OK) {
         return status;
     }
 
     std::vector<double> x_original;
     std::vector<double> y_original;
     status = copy_matrix_checked(ctx, X, "X", x_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = copy_matrix_checked(ctx, Y, "Y", y_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -2121,7 +2121,7 @@ p4a_status_t fit_opls_nipals(
             std::vector<double>& scores,
             std::vector<double>& loadings,
             std::vector<double>& y_loadings,
-            std::vector<double>& y_score) -> p4a_status_t {
+            std::vector<double>& y_score) -> n4m_status_t {
             resize_fill(weights, p, 0.0);
             std::vector<double> y_weights;
             resize_fill(y_weights, q, 0.0);
@@ -2137,7 +2137,7 @@ p4a_status_t fit_opls_nipals(
                 if (weight_norm <= std::numeric_limits<double>::epsilon()) {
                     ctx.set_errorf("OPLS predictive weights vanished at component %llu",
                                    ull(component));
-                    return P4A_ERR_NUMERICAL_FAILURE;
+                    return N4M_ERR_NUMERICAL_FAILURE;
                 }
                 for (double& value : weights) {
                     value /= weight_norm;
@@ -2155,10 +2155,10 @@ p4a_status_t fit_opls_nipals(
                     yk.data(), q,
                     0.0,
                     covariance.data(), q);
-                const p4a_status_t pair_status =
+                const n4m_status_t pair_status =
                     dominant_svd_pair(ctx, covariance, p, q, cfg.max_iter,
                                       cfg.tol, component, weights, y_weights);
-                if (pair_status != P4A_OK) {
+                if (pair_status != N4M_OK) {
                     return pair_status;
                 }
             }
@@ -2168,7 +2168,7 @@ p4a_status_t fit_opls_nipals(
             if (score_ss <= std::numeric_limits<double>::epsilon()) {
                 ctx.set_errorf("OPLS predictive score vanished at component %llu",
                                ull(component));
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
 
             resize_fill(loadings, p, 0.0);
@@ -2186,7 +2186,7 @@ p4a_status_t fit_opls_nipals(
             if (y_weight_ss <= std::numeric_limits<double>::epsilon()) {
                 ctx.set_errorf("OPLS predictive Y weights vanished at component %llu",
                                ull(component));
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
             const double y_score_denom =
                 y_weight_ss + std::numeric_limits<double>::epsilon();
@@ -2211,7 +2211,7 @@ p4a_status_t fit_opls_nipals(
                         yk[idx(row, q, 0U)] * y_loadings[0] / y_loading_denom;
                 }
             }
-            return P4A_OK;
+            return N4M_OK;
         };
 
     for (std::size_t orth = 0; orth + 1U < a; ++orth) {
@@ -2223,7 +2223,7 @@ p4a_status_t fit_opls_nipals(
         status = predictive_component(xk, orth + 1U, predictive_weights,
                                       predictive_scores, predictive_loadings,
                                       predictive_y_loadings, predictive_y_score);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -2231,7 +2231,7 @@ p4a_status_t fit_opls_nipals(
         if (predictive_weight_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("OPLS predictive weight norm vanished at orthogonal component %llu",
                            ull(orth));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         const double alignment = dot(predictive_weights, predictive_loadings) /
                                  predictive_weight_ss;
@@ -2245,7 +2245,7 @@ p4a_status_t fit_opls_nipals(
         if (orth_weight_norm <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("OPLS orthogonal weights vanished at component %llu",
                            ull(orth));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : orth_weights) {
             value /= orth_weight_norm;
@@ -2258,7 +2258,7 @@ p4a_status_t fit_opls_nipals(
         if (orth_score_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("OPLS orthogonal score vanished at component %llu",
                            ull(orth));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         std::vector<double> orth_loadings;
@@ -2305,7 +2305,7 @@ p4a_status_t fit_opls_nipals(
     status = predictive_component(xk, 0U, predictive_weights, predictive_scores,
                                   predictive_loadings, predictive_y_loadings,
                                   predictive_y_score);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -2314,7 +2314,7 @@ p4a_status_t fit_opls_nipals(
     const double predictive_denom = dot(predictive_loadings, predictive_weights);
     if (std::fabs(predictive_denom) <= std::numeric_limits<double>::epsilon()) {
         ctx.set_error("OPLS predictive denominator vanished");
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
 
     for (std::size_t feature = 0; feature < p; ++feature) {
@@ -2344,30 +2344,30 @@ p4a_status_t fit_opls_nipals(
 
     out_model = std::move(model);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_pls_regression_orthogonal_scores(
+n4m_status_t fit_pls_regression_orthogonal_scores(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model) {
     out_model.reset();
 
-    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != N4M_OK) {
         return status;
     }
 
     std::vector<double> x_original;
     std::vector<double> y_original;
     status = copy_matrix_checked(ctx, X, "X", x_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = copy_matrix_checked(ctx, Y, "Y", y_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -2431,7 +2431,7 @@ p4a_status_t fit_pls_regression_orthogonal_scores(
             if (best_ss <= std::numeric_limits<double>::epsilon()) {
                 ctx.set_errorf("orthogonal-scores Y residual became constant at component %llu",
                                ull(comp));
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
             for (std::size_t row = 0; row < n; ++row) {
                 y_score[row] = yk[idx(row, q, initial_target)];
@@ -2461,7 +2461,7 @@ p4a_status_t fit_pls_regression_orthogonal_scores(
             if (x_weight_norm <= std::numeric_limits<double>::epsilon()) {
                 ctx.set_errorf("orthogonal-scores X weights vanished at component %llu",
                                ull(comp));
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
             for (double& value : x_weights) {
                 value /= x_weight_norm;
@@ -2472,7 +2472,7 @@ p4a_status_t fit_pls_regression_orthogonal_scores(
             if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
                 ctx.set_errorf("orthogonal-scores X score vanished at component %llu",
                                ull(comp));
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
 
             for (std::size_t target = 0; target < q; ++target) {
@@ -2512,7 +2512,7 @@ p4a_status_t fit_pls_regression_orthogonal_scores(
             if (y_loading_ss <= std::numeric_limits<double>::epsilon()) {
                 ctx.set_errorf("orthogonal-scores Y loadings vanished at component %llu",
                                ull(comp));
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
             for (std::size_t row = 0; row < n; ++row) {
                 double sum = 0.0;
@@ -2527,14 +2527,14 @@ p4a_status_t fit_pls_regression_orthogonal_scores(
         if (!converged) {
             ctx.set_errorf("orthogonal-scores iteration failed to converge at component %llu",
                            ull(comp));
-            return P4A_ERR_CONVERGENCE_FAILED;
+            return N4M_ERR_CONVERGENCE_FAILED;
         }
 
         const double x_score_ss = squared_norm(x_score);
         if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("orthogonal-scores X score vanished after convergence at component %llu",
                            ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         std::vector<double> x_loadings;
@@ -2574,7 +2574,7 @@ p4a_status_t fit_pls_regression_orthogonal_scores(
             }
         }
 
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
@@ -2598,7 +2598,7 @@ p4a_status_t fit_pls_regression_orthogonal_scores(
     }
 
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -2609,30 +2609,30 @@ p4a_status_t fit_pls_regression_orthogonal_scores(
 
     out_model = std::move(model);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_pls_regression_kernel(
+n4m_status_t fit_pls_regression_kernel(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model) {
     out_model.reset();
 
-    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != N4M_OK) {
         return status;
     }
 
     std::vector<double> x_original;
     std::vector<double> y_original;
     status = copy_matrix_checked(ctx, X, "X", x_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = copy_matrix_checked(ctx, Y, "Y", y_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -2689,7 +2689,7 @@ p4a_status_t fit_pls_regression_kernel(
         if (initial_target == q) {
             ctx.set_errorf("kernel PLS Y residual became constant at component %llu",
                            ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         std::vector<double> kernel;
@@ -2726,7 +2726,7 @@ p4a_status_t fit_pls_regression_kernel(
             if (y_score_ss <= std::numeric_limits<double>::epsilon()) {
                 ctx.set_errorf("kernel PLS Y score vanished at component %llu",
                                ull(comp));
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
 
             std::vector<double> raw_score;
@@ -2742,7 +2742,7 @@ p4a_status_t fit_pls_regression_kernel(
             if (raw_score_norm <= std::numeric_limits<double>::epsilon()) {
                 ctx.set_errorf("kernel PLS X score vanished at component %llu",
                                ull(comp));
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
             for (std::size_t row = 0; row < n; ++row) {
                 x_score[row] = raw_score[row] / raw_score_norm;
@@ -2760,7 +2760,7 @@ p4a_status_t fit_pls_regression_kernel(
             if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
                 ctx.set_errorf("kernel PLS normalized X score vanished at component %llu",
                                ull(comp));
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
 
             for (std::size_t target = 0; target < q; ++target) {
@@ -2775,7 +2775,7 @@ p4a_status_t fit_pls_regression_kernel(
             if (y_loading_ss <= std::numeric_limits<double>::epsilon()) {
                 ctx.set_errorf("kernel PLS Y loadings vanished at component %llu",
                                ull(comp));
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
             for (std::size_t row = 0; row < n; ++row) {
                 double sum = 0.0;
@@ -2805,7 +2805,7 @@ p4a_status_t fit_pls_regression_kernel(
         if (!converged) {
             ctx.set_errorf("kernel PLS iteration failed to converge at component %llu",
                            ull(comp));
-            return P4A_ERR_CONVERGENCE_FAILED;
+            return N4M_ERR_CONVERGENCE_FAILED;
         }
 
         std::size_t sign_idx = 0;
@@ -2832,7 +2832,7 @@ p4a_status_t fit_pls_regression_kernel(
         const double x_score_ss = squared_norm(x_score);
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t feature = 0; feature < p; ++feature) {
             double sum = 0.0;
             for (std::size_t row = 0; row < n; ++row) {
@@ -2854,7 +2854,7 @@ p4a_status_t fit_pls_regression_kernel(
             }
         }
 
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
@@ -2878,7 +2878,7 @@ p4a_status_t fit_pls_regression_kernel(
     }
 
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -2889,30 +2889,30 @@ p4a_status_t fit_pls_regression_kernel(
 
     out_model = std::move(model);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_pls_regression_svd(
+n4m_status_t fit_pls_regression_svd(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model) {
     out_model.reset();
 
-    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != N4M_OK) {
         return status;
     }
 
     std::vector<double> x_original;
     std::vector<double> y_original;
     status = copy_matrix_checked(ctx, X, "X", x_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = copy_matrix_checked(ctx, Y, "Y", y_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -2969,7 +2969,7 @@ p4a_status_t fit_pls_regression_svd(
         std::vector<double> y_weights;
         status = dominant_svd_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
                                    comp, x_weights, y_weights);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -2978,7 +2978,7 @@ p4a_status_t fit_pls_regression_svd(
         const double x_score_ss = squared_norm(x_score);
         if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("SVD X score vanished at component %llu", ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         std::vector<double> y_scores;
@@ -2986,7 +2986,7 @@ p4a_status_t fit_pls_regression_svd(
         const double y_weight_ss = squared_norm(y_weights);
         if (y_weight_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("SVD Y weights vanished at component %llu", ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         const double y_score_denom = y_weight_ss + std::numeric_limits<double>::epsilon();
         for (std::size_t row = 0; row < n; ++row) {
@@ -2999,7 +2999,7 @@ p4a_status_t fit_pls_regression_svd(
 
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t feature = 0; feature < p; ++feature) {
             double sum = 0.0;
             for (std::size_t row = 0; row < n; ++row) {
@@ -3007,7 +3007,7 @@ p4a_status_t fit_pls_regression_svd(
             }
             x_loadings[feature] = sum / x_score_ss;
         }
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
@@ -3023,7 +3023,7 @@ p4a_status_t fit_pls_regression_svd(
             }
             y_loadings[target] = sum / x_score_ss;
         }
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t target = 0; target < q; ++target) {
                 yk[idx(row, q, target)] -= x_score[row] * y_loadings[target];
@@ -3044,7 +3044,7 @@ p4a_status_t fit_pls_regression_svd(
     }
 
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -3055,30 +3055,30 @@ p4a_status_t fit_pls_regression_svd(
 
     out_model = std::move(model);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_pls_regression_power(
+n4m_status_t fit_pls_regression_power(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model) {
     out_model.reset();
 
-    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != N4M_OK) {
         return status;
     }
 
     std::vector<double> x_original;
     std::vector<double> y_original;
     status = copy_matrix_checked(ctx, X, "X", x_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = copy_matrix_checked(ctx, Y, "Y", y_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -3135,7 +3135,7 @@ p4a_status_t fit_pls_regression_power(
         std::vector<double> y_weights;
         status = dominant_svd_pair_power(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
                                          comp, x_weights, y_weights);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -3144,7 +3144,7 @@ p4a_status_t fit_pls_regression_power(
         const double x_score_ss = squared_norm(x_score);
         if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("power PLS X score vanished at component %llu", ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         std::vector<double> y_scores;
@@ -3152,7 +3152,7 @@ p4a_status_t fit_pls_regression_power(
         const double y_weight_ss = squared_norm(y_weights);
         if (y_weight_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("power PLS Y weights vanished at component %llu", ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         const double y_score_denom = y_weight_ss + std::numeric_limits<double>::epsilon();
         for (std::size_t row = 0; row < n; ++row) {
@@ -3165,7 +3165,7 @@ p4a_status_t fit_pls_regression_power(
 
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t feature = 0; feature < p; ++feature) {
             double sum = 0.0;
             for (std::size_t row = 0; row < n; ++row) {
@@ -3173,7 +3173,7 @@ p4a_status_t fit_pls_regression_power(
             }
             x_loadings[feature] = sum / x_score_ss;
         }
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
@@ -3189,7 +3189,7 @@ p4a_status_t fit_pls_regression_power(
             }
             y_loadings[target] = sum / x_score_ss;
         }
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t target = 0; target < q; ++target) {
                 yk[idx(row, q, target)] -= x_score[row] * y_loadings[target];
@@ -3210,7 +3210,7 @@ p4a_status_t fit_pls_regression_power(
     }
 
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -3221,30 +3221,30 @@ p4a_status_t fit_pls_regression_power(
 
     out_model = std::move(model);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_pls_regression_randomized_svd(
+n4m_status_t fit_pls_regression_randomized_svd(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model) {
     out_model.reset();
 
-    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != N4M_OK) {
         return status;
     }
 
     std::vector<double> x_original;
     std::vector<double> y_original;
     status = copy_matrix_checked(ctx, X, "X", x_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = copy_matrix_checked(ctx, Y, "Y", y_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -3303,7 +3303,7 @@ p4a_status_t fit_pls_regression_randomized_svd(
         status = dominant_svd_pair_randomized(ctx, covariance, p, q, cfg.max_iter,
                                               cfg.tol, seed, comp,
                                               x_weights, y_weights);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -3313,7 +3313,7 @@ p4a_status_t fit_pls_regression_randomized_svd(
         if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("randomized SVD PLS X score vanished at component %llu",
                            ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         std::vector<double> y_scores;
@@ -3322,7 +3322,7 @@ p4a_status_t fit_pls_regression_randomized_svd(
         if (y_weight_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("randomized SVD PLS Y weights vanished at component %llu",
                            ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         const double y_score_denom = y_weight_ss + std::numeric_limits<double>::epsilon();
         for (std::size_t row = 0; row < n; ++row) {
@@ -3335,7 +3335,7 @@ p4a_status_t fit_pls_regression_randomized_svd(
 
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t feature = 0; feature < p; ++feature) {
             double sum = 0.0;
             for (std::size_t row = 0; row < n; ++row) {
@@ -3343,7 +3343,7 @@ p4a_status_t fit_pls_regression_randomized_svd(
             }
             x_loadings[feature] = sum / x_score_ss;
         }
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
@@ -3359,7 +3359,7 @@ p4a_status_t fit_pls_regression_randomized_svd(
             }
             y_loadings[target] = sum / x_score_ss;
         }
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t target = 0; target < q; ++target) {
                 yk[idx(row, q, target)] -= x_score[row] * y_loadings[target];
@@ -3380,7 +3380,7 @@ p4a_status_t fit_pls_regression_randomized_svd(
     }
 
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -3391,30 +3391,30 @@ p4a_status_t fit_pls_regression_randomized_svd(
 
     out_model = std::move(model);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_pcr_svd(
+n4m_status_t fit_pcr_svd(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model) {
     out_model.reset();
 
-    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != N4M_OK) {
         return status;
     }
 
     std::vector<double> x_original;
     std::vector<double> y_original;
     status = copy_matrix_checked(ctx, X, "X", x_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = copy_matrix_checked(ctx, Y, "Y", y_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -3473,7 +3473,7 @@ p4a_status_t fit_pcr_svd(
         status = largest_symmetric_eigenvector(ctx, gram, p, cfg.max_iter, cfg.tol,
                                                "PCR X covariance", comp,
                                                direction, eigenvalue);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         canonicalize_direction_sign(direction);
@@ -3483,12 +3483,12 @@ p4a_status_t fit_pcr_svd(
         const double x_score_ss = squared_norm(x_score);
         if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("PCR X score vanished at component %llu", ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         std::vector<double> x_loadings;
         resize_fill(x_loadings, p, 0.0);
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t feature = 0; feature < p; ++feature) {
             double sum = 0.0;
             for (std::size_t row = 0; row < n; ++row) {
@@ -3520,7 +3520,7 @@ p4a_status_t fit_pcr_svd(
             }
         }
 
-        P4A_PARALLEL_FOR_STATIC
+        N4M_PARALLEL_FOR_STATIC
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 xk[idx(row, p, feature)] -= x_score[row] * x_loadings[feature];
@@ -3541,7 +3541,7 @@ p4a_status_t fit_pcr_svd(
     }
 
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -3552,30 +3552,30 @@ p4a_status_t fit_pcr_svd(
 
     out_model = std::move(model);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_pls_regression_simpls(
+n4m_status_t fit_pls_regression_simpls(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model) {
     out_model.reset();
 
-    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != N4M_OK) {
         return status;
     }
 
     std::vector<double> x_original;
     std::vector<double> y_original;
     status = copy_matrix_checked(ctx, X, "X", x_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = copy_matrix_checked(ctx, Y, "Y", y_original);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -3635,7 +3635,7 @@ p4a_status_t fit_pls_regression_simpls(
         std::vector<double> direction;
         status = dominant_left_singular_direction(ctx, covariance, p, q, cfg.max_iter,
                                                   cfg.tol, comp, direction);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -3644,7 +3644,7 @@ p4a_status_t fit_pls_regression_simpls(
         const double x_score_norm = std::sqrt(squared_norm(x_score));
         if (x_score_norm <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("SIMPLS X score vanished at component %llu", ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : x_score) {
             value /= x_score_norm;
@@ -3655,7 +3655,7 @@ p4a_status_t fit_pls_regression_simpls(
 
         // x_loadings = X^T * x_score  (O(n*p) — was a hand-written
         // strided loop walking xk column-by-column; replaced with a
-        // single BLAS gemv via linalg::gemv when libp4a is built with
+        // single BLAS gemv via linalg::gemv when libn4m is built with
         // PLS4ALL_WITH_BLAS, which closes the perf gap vs sklearn at
         // mid-to-large sizes. Scalar fallback in linalg::gemv preserves
         // bit-for-bit parity when BLAS is unavailable, and BLAS-vs-
@@ -3691,7 +3691,7 @@ p4a_status_t fit_pls_regression_simpls(
         const double v_norm = std::sqrt(squared_norm(v));
         if (v_norm <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("SIMPLS deflation basis vanished at component %llu", ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : v) {
             value /= v_norm;
@@ -3741,7 +3741,7 @@ p4a_status_t fit_pls_regression_simpls(
     }
 
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -3752,18 +3752,18 @@ p4a_status_t fit_pls_regression_simpls(
 
     out_model = std::move(model);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t predict_into(Context& ctx,
+n4m_status_t predict_into(Context& ctx,
                           const Model& model,
-                          const p4a_matrix_view_t& X,
-                          p4a_matrix_view_t& out) {
-    const p4a_status_t status =
+                          const n4m_matrix_view_t& X,
+                          n4m_matrix_view_t& out) {
+    const n4m_status_t status =
         validate_apply_input(ctx, model, X, out,
                              static_cast<std::int64_t>(model.n_targets),
                              "predict");
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -3779,7 +3779,7 @@ p4a_status_t predict_into(Context& ctx,
                     ctx.set_errorf("X contains NaN or Inf at row %llu col %llu",
                                    ull(i),
                                    ull(j));
-                    return P4A_ERR_INVALID_ARGUMENT;
+                    return N4M_ERR_INVALID_ARGUMENT;
                 }
                 sum += (x_value - model.x_mean[j]) *
                        model.coefficients[idx(j, q, t)];
@@ -3788,50 +3788,50 @@ p4a_status_t predict_into(Context& ctx,
         }
     }
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_di_pls(Context& ctx,
+n4m_status_t fit_di_pls(Context& ctx,
                          const Config& cfg,
-                         const p4a_matrix_view_t& X_source,
-                         const p4a_matrix_view_t& Y_source,
-                         const p4a_matrix_view_t& X_target,
+                         const n4m_matrix_view_t& X_source,
+                         const n4m_matrix_view_t& Y_source,
+                         const n4m_matrix_view_t& X_target,
                          std::unique_ptr<Model>& out_model) {
     out_model.reset();
-    if (cfg.solver != P4A_SOLVER_SIMPLS) {
+    if (cfg.solver != N4M_SOLVER_SIMPLS) {
         ctx.set_error("DI-PLS currently requires the SIMPLS solver");
-        return P4A_ERR_UNSUPPORTED;
+        return N4M_ERR_UNSUPPORTED;
     }
-    if (cfg.deflation != P4A_DEFLATION_REGRESSION) {
+    if (cfg.deflation != N4M_DEFLATION_REGRESSION) {
         ctx.set_error("DI-PLS requires regression deflation");
-        return P4A_ERR_UNSUPPORTED;
+        return N4M_ERR_UNSUPPORTED;
     }
     if (!(cfg.di_lambda >= 0.0) || !std::isfinite(cfg.di_lambda)) {
         ctx.set_error("di_lambda must be >= 0 and finite");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X_source.cols != X_target.cols) {
         ctx.set_error("X_source and X_target must have the same number of columns");
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
 
     // Build a temporary regression Config so validate_fit_request accepts
     // the source dataset using the regression chassis.
     Config local = cfg;
-    local.algorithm = P4A_ALGO_PLS_REGRESSION;
+    local.algorithm = N4M_ALGO_PLS_REGRESSION;
 
-    p4a_status_t status = validate_fit_request(ctx, local, X_source, Y_source);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = validate_fit_request(ctx, local, X_source, Y_source);
+    if (status != N4M_OK) return status;
 
     std::vector<double> x_source_buf;
     std::vector<double> y_source_buf;
     std::vector<double> x_target_buf;
     status = copy_matrix_checked(ctx, X_source, "X_source", x_source_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     status = copy_matrix_checked(ctx, Y_source, "Y_source", y_source_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     status = copy_matrix_checked(ctx, X_target, "X_target", x_target_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
 
     const std::size_t n = static_cast<std::size_t>(X_source.rows);
     const std::size_t n_target = static_cast<std::size_t>(X_target.rows);
@@ -3909,7 +3909,7 @@ p4a_status_t fit_di_pls(Context& ctx,
         status = dominant_left_singular_direction(ctx, covariance, p, q,
                                                   cfg.max_iter, cfg.tol,
                                                   comp, direction);
-        if (status != P4A_OK) return status;
+        if (status != N4M_OK) return status;
 
         // DI step: remove a fraction of the direction's component along
         // the source-target difference. The fraction is bounded in
@@ -3931,7 +3931,7 @@ p4a_status_t fit_di_pls(Context& ctx,
             if (norm <= std::numeric_limits<double>::epsilon()) {
                 ctx.set_errorf(
                     "DI-PLS direction collapsed at component %llu", ull(comp));
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
             for (double& value : direction) value /= norm;
         }
@@ -3942,7 +3942,7 @@ p4a_status_t fit_di_pls(Context& ctx,
         if (x_score_norm <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("DI-PLS X score vanished at component %llu",
                            ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : x_score) value /= x_score_norm;
         for (double& value : direction) value /= x_score_norm;
@@ -3975,7 +3975,7 @@ p4a_status_t fit_di_pls(Context& ctx,
         if (v_norm <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("DI-PLS deflation basis vanished at component %llu",
                            ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : v) value /= v_norm;
 
@@ -4021,7 +4021,7 @@ p4a_status_t fit_di_pls(Context& ctx,
     }
 
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
 
     if (cfg.store_scores != 0) {
         model->scores_t = std::move(scores_t);
@@ -4030,26 +4030,26 @@ p4a_status_t fit_di_pls(Context& ctx,
 
     out_model = std::move(model);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_pls_sparse_simpls(Context& ctx,
+n4m_status_t fit_pls_sparse_simpls(Context& ctx,
                                     const Config& cfg,
-                                    const p4a_matrix_view_t& X,
-                                    const p4a_matrix_view_t& Y,
+                                    const n4m_matrix_view_t& X,
+                                    const n4m_matrix_view_t& Y,
                                     std::unique_ptr<Model>& out_model) {
     out_model.reset();
-    if (cfg.solver != P4A_SOLVER_SIMPLS) {
+    if (cfg.solver != N4M_SOLVER_SIMPLS) {
         ctx.set_error("sparse PLS currently requires the SIMPLS solver");
-        return P4A_ERR_UNSUPPORTED;
+        return N4M_ERR_UNSUPPORTED;
     }
-    if (cfg.deflation != P4A_DEFLATION_REGRESSION) {
+    if (cfg.deflation != N4M_DEFLATION_REGRESSION) {
         ctx.set_error("sparse PLS requires regression deflation");
-        return P4A_ERR_UNSUPPORTED;
+        return N4M_ERR_UNSUPPORTED;
     }
     if (!(cfg.sparsity_lambda >= 0.0) || !std::isfinite(cfg.sparsity_lambda)) {
         ctx.set_error("sparsity_lambda must be >= 0 and finite");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
 
     // When lambda == 0 the sparse path is identical to plain SIMPLS — call
@@ -4057,21 +4057,21 @@ p4a_status_t fit_pls_sparse_simpls(Context& ctx,
     // coverage.
     if (cfg.sparsity_lambda == 0.0) {
         Config relaxed = cfg;
-        relaxed.algorithm = P4A_ALGO_PLS_REGRESSION;
+        relaxed.algorithm = N4M_ALGO_PLS_REGRESSION;
         return fit_pls_regression_simpls(ctx, relaxed, X, Y, out_model);
     }
 
-    p4a_status_t status = validate_fit_request(ctx, cfg, X, Y);
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != N4M_OK) {
         return status;
     }
 
     std::vector<double> x_original;
     std::vector<double> y_original;
     status = copy_matrix_checked(ctx, X, "X", x_original);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     status = copy_matrix_checked(ctx, Y, "Y", y_original);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
 
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
@@ -4131,7 +4131,7 @@ p4a_status_t fit_pls_sparse_simpls(Context& ctx,
         status = dominant_left_singular_direction(ctx, covariance, p, q,
                                                   cfg.max_iter, cfg.tol,
                                                   comp, direction);
-        if (status != P4A_OK) return status;
+        if (status != N4M_OK) return status;
 
         // Sparse step: soft-threshold direction with lambda, renormalize.
         for (double& value : direction) {
@@ -4144,7 +4144,7 @@ p4a_status_t fit_pls_sparse_simpls(Context& ctx,
                 "sparse SIMPLS direction collapsed to zero at component %llu "
                 "(lambda %.3e too large for this dataset)",
                 ull(comp), lambda);
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : direction) value /= dir_norm;
 
@@ -4154,14 +4154,14 @@ p4a_status_t fit_pls_sparse_simpls(Context& ctx,
         if (x_score_norm <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("sparse SIMPLS X score vanished at component %llu",
                            ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : x_score) value /= x_score_norm;
         for (double& value : direction) value /= x_score_norm;
 
         // x_loadings = X^T * x_score  (O(n*p) — was a hand-written
         // strided loop walking xk column-by-column; replaced with a
-        // single BLAS gemv via linalg::gemv when libp4a is built with
+        // single BLAS gemv via linalg::gemv when libn4m is built with
         // PLS4ALL_WITH_BLAS, which closes the perf gap vs sklearn at
         // mid-to-large sizes. Scalar fallback in linalg::gemv preserves
         // bit-for-bit parity when BLAS is unavailable, and BLAS-vs-
@@ -4198,7 +4198,7 @@ p4a_status_t fit_pls_sparse_simpls(Context& ctx,
         if (v_norm <= std::numeric_limits<double>::epsilon()) {
             ctx.set_errorf("sparse SIMPLS deflation basis vanished at "
                            "component %llu", ull(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (double& value : v) value /= v_norm;
 
@@ -4246,7 +4246,7 @@ p4a_status_t fit_pls_sparse_simpls(Context& ctx,
     }
 
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
 
     if (cfg.store_scores != 0) {
         model->scores_t = std::move(scores_t);
@@ -4255,64 +4255,64 @@ p4a_status_t fit_pls_sparse_simpls(Context& ctx,
 
     out_model = std::move(model);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_model(Context& ctx,
+n4m_status_t fit_model(Context& ctx,
                        const Config& cfg,
-                       const p4a_matrix_view_t& X,
-                       const p4a_matrix_view_t& Y,
+                       const n4m_matrix_view_t& X,
+                       const n4m_matrix_view_t& Y,
                        std::unique_ptr<Model>& out_model) {
-    if (cfg.algorithm == P4A_ALGO_SPARSE_PLS) {
+    if (cfg.algorithm == N4M_ALGO_SPARSE_PLS) {
         return fit_pls_sparse_simpls(ctx, cfg, X, Y, out_model);
     }
-    if (cfg.algorithm == P4A_ALGO_PCR) {
+    if (cfg.algorithm == N4M_ALGO_PCR) {
         return fit_pcr_svd(ctx, cfg, X, Y, out_model);
     }
-    if (cfg.algorithm == P4A_ALGO_PLS_SVD) {
+    if (cfg.algorithm == N4M_ALGO_PLS_SVD) {
         return fit_pls_svd(ctx, cfg, X, Y, out_model);
     }
-    if (cfg.algorithm == P4A_ALGO_PLS_CANONICAL) {
-        if (cfg.solver == P4A_SOLVER_SVD) {
+    if (cfg.algorithm == N4M_ALGO_PLS_CANONICAL) {
+        if (cfg.solver == N4M_SOLVER_SVD) {
             return fit_pls_canonical_svd(ctx, cfg, X, Y, out_model);
         }
         return fit_pls_canonical_nipals(ctx, cfg, X, Y, out_model);
     }
-    if (cfg.algorithm == P4A_ALGO_OPLS ||
-        cfg.algorithm == P4A_ALGO_OPLS_DA) {
+    if (cfg.algorithm == N4M_ALGO_OPLS ||
+        cfg.algorithm == N4M_ALGO_OPLS_DA) {
         return fit_opls_nipals(ctx, cfg, X, Y, out_model);
     }
-    if (cfg.solver == P4A_SOLVER_KERNEL_ALGORITHM ||
-        cfg.solver == P4A_SOLVER_WIDE_KERNEL) {
+    if (cfg.solver == N4M_SOLVER_KERNEL_ALGORITHM ||
+        cfg.solver == N4M_SOLVER_WIDE_KERNEL) {
         return fit_pls_regression_kernel(ctx, cfg, X, Y, out_model);
     }
-    if (cfg.solver == P4A_SOLVER_SIMPLS) {
+    if (cfg.solver == N4M_SOLVER_SIMPLS) {
         return fit_pls_regression_simpls(ctx, cfg, X, Y, out_model);
     }
-    if (cfg.solver == P4A_SOLVER_ORTHOGONAL_SCORES) {
+    if (cfg.solver == N4M_SOLVER_ORTHOGONAL_SCORES) {
         return fit_pls_regression_orthogonal_scores(ctx, cfg, X, Y, out_model);
     }
-    if (cfg.solver == P4A_SOLVER_POWER) {
+    if (cfg.solver == N4M_SOLVER_POWER) {
         return fit_pls_regression_power(ctx, cfg, X, Y, out_model);
     }
-    if (cfg.solver == P4A_SOLVER_RANDOMIZED_SVD) {
+    if (cfg.solver == N4M_SOLVER_RANDOMIZED_SVD) {
         return fit_pls_regression_randomized_svd(ctx, cfg, X, Y, out_model);
     }
-    if (cfg.solver == P4A_SOLVER_SVD) {
+    if (cfg.solver == N4M_SOLVER_SVD) {
         return fit_pls_regression_svd(ctx, cfg, X, Y, out_model);
     }
     return fit_pls_regression_nipals(ctx, cfg, X, Y, out_model);
 }
 
-p4a_status_t transform_into(Context& ctx,
+n4m_status_t transform_into(Context& ctx,
                             const Model& model,
-                            const p4a_matrix_view_t& X,
-                            p4a_matrix_view_t& out_scores) {
-    const p4a_status_t status =
+                            const n4m_matrix_view_t& X,
+                            n4m_matrix_view_t& out_scores) {
+    const n4m_status_t status =
         validate_apply_input(ctx, model, X, out_scores,
                              static_cast<std::int64_t>(model.n_components),
                              "transform");
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -4328,7 +4328,7 @@ p4a_status_t transform_into(Context& ctx,
                     ctx.set_errorf("X contains NaN or Inf at row %llu col %llu",
                                    ull(i),
                                    ull(j));
-                    return P4A_ERR_INVALID_ARGUMENT;
+                    return N4M_ERR_INVALID_ARGUMENT;
                 }
                 const double normalized = (x_value - model.x_mean[j]) / model.x_scale[j];
                 sum += normalized * model.rotations_r[idx(j, a, comp)];
@@ -4337,12 +4337,12 @@ p4a_status_t transform_into(Context& ctx,
         }
     }
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t model_array(Context& ctx,
+n4m_status_t model_array(Context& ctx,
                          const Model& model,
-                         p4a_model_array_t which,
+                         n4m_model_array_t which,
                          std::unique_ptr<Array>& out) {
     out.reset();
 
@@ -4350,7 +4350,7 @@ p4a_status_t model_array(Context& ctx,
                    std::int64_t cols,
                    const std::vector<double>& values) {
         auto arr = std::make_unique<Array>();
-        arr->dtype = P4A_DTYPE_F64;
+        arr->dtype = N4M_DTYPE_F64;
         arr->rows = rows;
         arr->cols = cols;
         arr->values = values;
@@ -4358,57 +4358,57 @@ p4a_status_t model_array(Context& ctx,
     };
 
     switch (which) {
-        case P4A_MODEL_COEFFICIENTS:
+        case N4M_MODEL_COEFFICIENTS:
             out = make(model.n_features, model.n_targets, model.coefficients);
             break;
-        case P4A_MODEL_INTERCEPT:
+        case N4M_MODEL_INTERCEPT:
             out = make(1, model.n_targets, model.y_mean);
             break;
-        case P4A_MODEL_X_MEAN:
+        case N4M_MODEL_X_MEAN:
             out = make(1, model.n_features, model.x_mean);
             break;
-        case P4A_MODEL_X_SCALE:
+        case N4M_MODEL_X_SCALE:
             out = make(1, model.n_features, model.x_scale);
             break;
-        case P4A_MODEL_Y_MEAN:
+        case N4M_MODEL_Y_MEAN:
             out = make(1, model.n_targets, model.y_mean);
             break;
-        case P4A_MODEL_Y_SCALE:
+        case N4M_MODEL_Y_SCALE:
             out = make(1, model.n_targets, model.y_scale);
             break;
-        case P4A_MODEL_WEIGHTS_W:
+        case N4M_MODEL_WEIGHTS_W:
             out = make(model.n_features, model.n_components, model.weights_w);
             break;
-        case P4A_MODEL_LOADINGS_P:
+        case N4M_MODEL_LOADINGS_P:
             out = make(model.n_features, model.n_components, model.loadings_p);
             break;
-        case P4A_MODEL_Y_LOADINGS_Q:
+        case N4M_MODEL_Y_LOADINGS_Q:
             out = make(model.n_targets, model.n_components, model.y_loadings_q);
             break;
-        case P4A_MODEL_ROTATIONS_R:
+        case N4M_MODEL_ROTATIONS_R:
             out = make(model.n_features, model.n_components, model.rotations_r);
             break;
-        case P4A_MODEL_SCORES_T:
+        case N4M_MODEL_SCORES_T:
             if (model.store_scores == 0 || model.scores_t.empty()) {
                 ctx.set_error("scores_T were not stored; enable store_scores before fit");
-                return P4A_ERR_UNSUPPORTED;
+                return N4M_ERR_UNSUPPORTED;
             }
             out = make(model.n_samples, model.n_components, model.scores_t);
             break;
-        case P4A_MODEL_Y_SCORES_U:
+        case N4M_MODEL_Y_SCORES_U:
             if (model.store_scores == 0 || model.y_scores_u.empty()) {
                 ctx.set_error("y_scores_U were not stored; enable store_scores before fit");
-                return P4A_ERR_UNSUPPORTED;
+                return N4M_ERR_UNSUPPORTED;
             }
             out = make(model.n_samples, model.n_components, model.y_scores_u);
             break;
         default:
             ctx.set_errorf("invalid model array tag %d", static_cast<int>(which));
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
     }
 
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

@@ -9,12 +9,12 @@
 #include <cstdint>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/config.hpp"
 #include "core/context.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct NPlsResult {
     std::int64_t n_samples{0};
@@ -36,20 +36,20 @@ struct NPlsResult {
 // Fit N-PLS via Bro's algorithm. `x_data` is the row-major (n × J × K)
 // tensor flattened as n × (J*K). `n_components` is the number of latent
 // components.
-[[nodiscard]] p4a_status_t fit_n_pls(
+[[nodiscard]] n4m_status_t fit_n_pls(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X_flat,
+    const n4m_matrix_view_t& X_flat,
     std::int32_t mode_j,
     std::int32_t mode_k,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& Y,
     NPlsResult& out);
 
 // Apply a fitted N-PLS model to new tensor data.
-[[nodiscard]] p4a_status_t predict_n_pls(
+[[nodiscard]] n4m_status_t predict_n_pls(
     Context& ctx,
     const NPlsResult& model,
-    const p4a_matrix_view_t& X_flat,
+    const n4m_matrix_view_t& X_flat,
     std::vector<double>& out_predictions);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

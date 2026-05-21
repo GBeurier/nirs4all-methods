@@ -13,10 +13,10 @@
 #include "core/config.hpp"
 #include "core/context.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct Array {
-    p4a_dtype_t dtype{P4A_DTYPE_F64};
+    n4m_dtype_t dtype{N4M_DTYPE_F64};
     std::int64_t rows{0};
     std::int64_t cols{0};
     std::vector<double> values;
@@ -24,9 +24,9 @@ struct Array {
 
 class Model {
   public:
-    p4a_algorithm_t algorithm{P4A_ALGO_PLS_REGRESSION};
-    p4a_solver_t solver{P4A_SOLVER_NIPALS};
-    p4a_deflation_t deflation{P4A_DEFLATION_REGRESSION};
+    n4m_algorithm_t algorithm{N4M_ALGO_PLS_REGRESSION};
+    n4m_solver_t solver{N4M_SOLVER_NIPALS};
+    n4m_deflation_t deflation{N4M_DEFLATION_REGRESSION};
 
     std::int64_t n_samples{0};
     std::int32_t n_features{0};
@@ -55,138 +55,138 @@ class Model {
     std::vector<double> y_scores_u;   // n_samples x n_components, optional
 };
 
-[[nodiscard]] p4a_status_t fit_pls_regression_nipals(
+[[nodiscard]] n4m_status_t fit_pls_regression_nipals(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t fit_pls_regression_simpls(
+[[nodiscard]] n4m_status_t fit_pls_regression_simpls(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t fit_pls_regression_orthogonal_scores(
+[[nodiscard]] n4m_status_t fit_pls_regression_orthogonal_scores(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t fit_pls_regression_svd(
+[[nodiscard]] n4m_status_t fit_pls_regression_svd(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t fit_pls_svd(
+[[nodiscard]] n4m_status_t fit_pls_svd(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t fit_pls_regression_power(
+[[nodiscard]] n4m_status_t fit_pls_regression_power(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t fit_pls_regression_randomized_svd(
+[[nodiscard]] n4m_status_t fit_pls_regression_randomized_svd(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t fit_pls_canonical_nipals(
+[[nodiscard]] n4m_status_t fit_pls_canonical_nipals(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t fit_pls_canonical_svd(
+[[nodiscard]] n4m_status_t fit_pls_canonical_svd(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t fit_opls_nipals(
+[[nodiscard]] n4m_status_t fit_opls_nipals(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t fit_pls_regression_kernel(
+[[nodiscard]] n4m_status_t fit_pls_regression_kernel(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t fit_pcr_svd(
+[[nodiscard]] n4m_status_t fit_pcr_svd(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t fit_pls_sparse_simpls(
+[[nodiscard]] n4m_status_t fit_pls_sparse_simpls(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t fit_pls_regression_nonlinear_kernel(
+[[nodiscard]] n4m_status_t fit_pls_regression_nonlinear_kernel(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t fit_di_pls(
+[[nodiscard]] n4m_status_t fit_di_pls(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X_source,
-    const p4a_matrix_view_t& Y_source,
-    const p4a_matrix_view_t& X_target,
+    const n4m_matrix_view_t& X_source,
+    const n4m_matrix_view_t& Y_source,
+    const n4m_matrix_view_t& X_target,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t fit_model(
+[[nodiscard]] n4m_status_t fit_model(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
-[[nodiscard]] p4a_status_t predict_into(
+[[nodiscard]] n4m_status_t predict_into(
     Context& ctx,
     const Model& model,
-    const p4a_matrix_view_t& X,
-    p4a_matrix_view_t& out);
+    const n4m_matrix_view_t& X,
+    n4m_matrix_view_t& out);
 
-[[nodiscard]] p4a_status_t transform_into(
+[[nodiscard]] n4m_status_t transform_into(
     Context& ctx,
     const Model& model,
-    const p4a_matrix_view_t& X,
-    p4a_matrix_view_t& out_scores);
+    const n4m_matrix_view_t& X,
+    n4m_matrix_view_t& out_scores);
 
-[[nodiscard]] p4a_status_t model_array(
+[[nodiscard]] n4m_status_t model_array(
     Context& ctx,
     const Model& model,
-    p4a_model_array_t which,
+    n4m_model_array_t which,
     std::unique_ptr<Array>& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core
 
-struct p4a_model_s : public ::pls4all::core::Model {};
-struct p4a_array_s : public ::pls4all::core::Array {};
+struct n4m_model_s : public ::n4m::core::Model {};
+struct n4m_array_s : public ::n4m::core::Array {};

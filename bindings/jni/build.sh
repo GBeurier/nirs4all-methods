@@ -3,14 +3,14 @@
 #
 # Build script for the pls4all JNI desktop binding. Compiles
 # Pls4all.java, generates the JNI header, and builds libp4a_jni.so
-# against the libp4a artifact produced by the CMake "dev-release"
+# against the libn4m artifact produced by the CMake "dev-release"
 # preset. Used by the parity test and by downstream JVM consumers.
 #
 # Environment overrides (all optional):
 #   JAVA_HOME            JDK root (must contain bin/javac, include/jni.h)
 #   PLS4ALL_INCLUDE_DIR  cpp/include (defaults to repo cpp/include)
 #   PLS4ALL_GEN_DIR      generated headers (defaults to build/dev-release/generated)
-#   PLS4ALL_LIB_DIR      libp4a search path (defaults to build/dev-release/cpp/src)
+#   PLS4ALL_LIB_DIR      libn4m search path (defaults to build/dev-release/cpp/src)
 #   CC                   C compiler (defaults to /usr/bin/gcc)
 #
 # Outputs to bindings/jni/build/ — gitignored.
@@ -60,7 +60,7 @@ fi
     -I"${JAVA_HOME}/include" -I"${JNI_INCLUDE_LINUX}" \
     -I"${PLS4ALL_INCLUDE_DIR}" -I"${PLS4ALL_GEN_DIR}" \
     -I"${REPO_ROOT}/bindings/jni/c" \
-    "${REPO_ROOT}/bindings/jni/c/p4a_jni.c" \
+    "${REPO_ROOT}/bindings/jni/c/n4m_jni.c" \
     -L"${PLS4ALL_LIB_DIR}" -lp4a \
     -Wl,-rpath,"${PLS4ALL_LIB_DIR}" \
     -o "${OUT_DIR}/libp4a_jni.so"

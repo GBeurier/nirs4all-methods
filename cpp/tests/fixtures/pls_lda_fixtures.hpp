@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct PlsLdaLabelRef {
     std::int64_t rows;
@@ -93,4 +93,4 @@ inline const PlsLdaFixture kPlsLdaFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

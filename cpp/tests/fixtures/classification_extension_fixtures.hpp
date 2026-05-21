@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct ClassificationExtensionLabelRef {
     std::int64_t rows;
@@ -117,4 +117,4 @@ inline const ClassificationExtensionFixture kClassificationExtensionFixtures[] =
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

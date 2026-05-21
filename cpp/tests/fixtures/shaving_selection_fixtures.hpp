@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct ShavingSelectionIndexRef {
     const std::int64_t* values;
@@ -186,4 +186,4 @@ inline const ShavingSelectionFixture kShavingSelectionFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

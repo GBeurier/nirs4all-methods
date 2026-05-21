@@ -40,7 +40,7 @@ export {
 /** ABI / project version reported by the loaded WASM module. */
 export function version(): string {
     const m = getModule();
-    const ptr = m.ccall("p4a_get_version_string", "number",
+    const ptr = m.ccall("n4m_get_version_string", "number",
                          [], []) as number;
     return ptr === 0 ? "" : m.UTF8ToString(ptr);
 }
@@ -49,9 +49,9 @@ export function version(): string {
 export function abiVersion(): readonly [number, number, number] {
     const m = getModule();
     return [
-        m.ccall("p4a_get_abi_version_major", "number", [], []) as number,
-        m.ccall("p4a_get_abi_version_minor", "number", [], []) as number,
-        m.ccall("p4a_get_abi_version_patch", "number", [], []) as number,
+        m.ccall("n4m_get_abi_version_major", "number", [], []) as number,
+        m.ccall("n4m_get_abi_version_minor", "number", [], []) as number,
+        m.ccall("n4m_get_abi_version_patch", "number", [], []) as number,
     ];
 }
 

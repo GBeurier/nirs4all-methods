@@ -2,11 +2,11 @@
  *
  * MATLAB / Octave MEX dispatcher for Model-based fits (PCR, OPLS).
  *
- *   [coefs, x_mean, y_mean, predictions] = p4a_model_fit_mex(algo, X, Y, n_components)
+ *   [coefs, x_mean, y_mean, predictions] = n4m_model_fit_mex(algo, X, Y, n_components)
  *
  * `algo` is one of:
- *   "pcr"   -> P4A_ALGO_PCR + P4A_SOLVER_SVD + P4A_DEFLATION_REGRESSION
- *   "opls"  -> P4A_ALGO_OPLS + P4A_SOLVER_NIPALS + P4A_DEFLATION_ORTHOGONAL
+ *   "pcr"   -> N4M_ALGO_PCR + N4M_SOLVER_SVD + N4M_DEFLATION_REGRESSION
+ *   "opls"  -> N4M_ALGO_OPLS + N4M_SOLVER_NIPALS + N4M_DEFLATION_ORTHOGONAL
  *
  * Inputs:
  *   algo         — string ("pcr" or "opls")
@@ -20,11 +20,11 @@
  *   y_mean       — (1 × q) row vector.
  *   predictions  — (n × q) in-sample predictions.
  *
- * Uses the full p4a_model_fit() API with configurable algorithm/solver/deflation.
+ * Uses the full n4m_model_fit() API with configurable algorithm/solver/deflation.
  */
 
 #include "mex.h"
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -67,7 +67,7 @@ static mxArray* rowmajor_to_colmajor(const double *src, int rows, int cols) {
     return out;
 }
 
-static mxArray* view_to_colmajor_mx(const p4a_matrix_view_t *view) {
+static mxArray* view_to_colmajor_mx(const n4m_matrix_view_t *view) {
     int rows = (int)view->rows;
     int cols = (int)view->cols;
     mxArray *out = mxCreateDoubleMatrix(rows, cols, mxREAL);
@@ -82,75 +82,75 @@ static mxArray* view_to_colmajor_mx(const p4a_matrix_view_t *view) {
     return out;
 }
 
-static mxArray* model_array_to_mx(p4a_context_t *ctx,
-                                   const p4a_model_t *model,
-                                   p4a_model_array_t which,
+static mxArray* model_array_to_mx(n4m_context_t *ctx,
+                                   const n4m_model_t *model,
+                                   n4m_model_array_t which,
                                    const char *name) {
-    p4a_array_t *arr = NULL;
-    p4a_status_t status = p4a_model_get_array(ctx, model, which, &arr);
-    if (status != P4A_OK || arr == NULL) {
+    n4m_array_t *arr = NULL;
+    n4m_status_t status = n4m_model_get_array(ctx, model, which, &arr);
+    if (status != N4M_OK || arr == NULL) {
         mexErrMsgIdAndTxt("pls4all:model_array",
-                          "p4a_model_get_array(%s) failed with status %d",
+                          "n4m_model_get_array(%s) failed with status %d",
                           name, (int)status);
     }
-    p4a_dtype_t dtype;
-    status = p4a_array_dtype(arr, &dtype);
-    if (status != P4A_OK || dtype != P4A_DTYPE_F64) {
-        p4a_array_free(arr);
+    n4m_dtype_t dtype;
+    status = n4m_array_dtype(arr, &dtype);
+    if (status != N4M_OK || dtype != N4M_DTYPE_F64) {
+        n4m_array_free(arr);
         mexErrMsgIdAndTxt("pls4all:model_array",
-                          "p4a_model_get_array(%s) returned non-f64 data",
+                          "n4m_model_get_array(%s) returned non-f64 data",
                           name);
     }
-    p4a_matrix_view_t view;
-    status = p4a_array_view(arr, &view);
-    if (status != P4A_OK) {
-        p4a_array_free(arr);
+    n4m_matrix_view_t view;
+    status = n4m_array_view(arr, &view);
+    if (status != N4M_OK) {
+        n4m_array_free(arr);
         mexErrMsgIdAndTxt("pls4all:model_array",
-                          "p4a_array_view(%s) failed with status %d",
+                          "n4m_array_view(%s) failed with status %d",
                           name, (int)status);
     }
     mxArray *out = view_to_colmajor_mx(&view);
-    p4a_array_free(arr);
+    n4m_array_free(arr);
     return out;
 }
 
-static mxArray* predict_to_mx(p4a_context_t *ctx,
-                               const p4a_model_t *model,
-                               const p4a_matrix_view_t *X_view) {
-    p4a_array_t *arr = NULL;
-    p4a_status_t status = p4a_model_predict_alloc(ctx, model, X_view, &arr);
-    if (status != P4A_OK || arr == NULL) {
+static mxArray* predict_to_mx(n4m_context_t *ctx,
+                               const n4m_model_t *model,
+                               const n4m_matrix_view_t *X_view) {
+    n4m_array_t *arr = NULL;
+    n4m_status_t status = n4m_model_predict_alloc(ctx, model, X_view, &arr);
+    if (status != N4M_OK || arr == NULL) {
         mexErrMsgIdAndTxt("pls4all:predict",
-                          "p4a_model_predict_alloc failed with status %d",
+                          "n4m_model_predict_alloc failed with status %d",
                           (int)status);
     }
-    p4a_matrix_view_t view;
-    status = p4a_array_view(arr, &view);
-    if (status != P4A_OK) {
-        p4a_array_free(arr);
+    n4m_matrix_view_t view;
+    status = n4m_array_view(arr, &view);
+    if (status != N4M_OK) {
+        n4m_array_free(arr);
         mexErrMsgIdAndTxt("pls4all:predict",
-                          "p4a_array_view(predictions) failed with status %d",
+                          "n4m_array_view(predictions) failed with status %d",
                           (int)status);
     }
     mxArray *out = view_to_colmajor_mx(&view);
-    p4a_array_free(arr);
+    n4m_array_free(arr);
     return out;
 }
 
 static int resolve_algo(const char *name,
-                        p4a_algorithm_t *out_algo,
-                        p4a_solver_t *out_solver,
-                        p4a_deflation_t *out_deflation) {
+                        n4m_algorithm_t *out_algo,
+                        n4m_solver_t *out_solver,
+                        n4m_deflation_t *out_deflation) {
     if (strcmp(name, "pcr") == 0 || strcmp(name, "pcr_svd") == 0) {
-        *out_algo = P4A_ALGO_PCR;
-        *out_solver = P4A_SOLVER_SVD;
-        *out_deflation = P4A_DEFLATION_REGRESSION;
+        *out_algo = N4M_ALGO_PCR;
+        *out_solver = N4M_SOLVER_SVD;
+        *out_deflation = N4M_DEFLATION_REGRESSION;
         return 1;
     }
     if (strcmp(name, "opls") == 0 || strcmp(name, "opls_nipals") == 0) {
-        *out_algo = P4A_ALGO_OPLS;
-        *out_solver = P4A_SOLVER_NIPALS;
-        *out_deflation = P4A_DEFLATION_ORTHOGONAL;
+        *out_algo = N4M_ALGO_OPLS;
+        *out_solver = N4M_SOLVER_NIPALS;
+        *out_deflation = N4M_DEFLATION_ORTHOGONAL;
         return 1;
     }
     return 0;
@@ -160,7 +160,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
                  int nrhs, const mxArray *prhs[]) {
     if (nrhs != 4) {
         mexErrMsgIdAndTxt("pls4all:nargin",
-                          "Usage: p4a_model_fit_mex(algo, X, Y, n_components)");
+                          "Usage: n4m_model_fit_mex(algo, X, Y, n_components)");
     }
     if (!mxIsChar(prhs[0])) {
         mexErrMsgIdAndTxt("pls4all:type",
@@ -181,9 +181,9 @@ void mexFunction(int nlhs, mxArray *plhs[],
         mexErrMsgIdAndTxt("pls4all:str", "algo name too long");
     }
 
-    p4a_algorithm_t algo;
-    p4a_solver_t solver;
-    p4a_deflation_t deflation;
+    n4m_algorithm_t algo;
+    n4m_solver_t solver;
+    n4m_deflation_t deflation;
     if (!resolve_algo(algo_name, &algo, &solver, &deflation)) {
         mexErrMsgIdAndTxt("pls4all:bad_arg",
                           "unknown algo: %s (supported: pcr, opls)", algo_name);
@@ -211,73 +211,73 @@ void mexFunction(int nlhs, mxArray *plhs[],
     int n = n_x;
 
     /* Create context */
-    p4a_context_t *ctx = NULL;
-    p4a_status_t status = p4a_context_create(&ctx);
-    if (status != P4A_OK) {
+    n4m_context_t *ctx = NULL;
+    n4m_status_t status = n4m_context_create(&ctx);
+    if (status != N4M_OK) {
         free(X); free(Y);
         mexErrMsgIdAndTxt("pls4all:ctx",
-                          "p4a_context_create failed with status %d",
+                          "n4m_context_create failed with status %d",
                           (int)status);
     }
 
     /* Create and configure config */
-    p4a_config_t *cfg = NULL;
-    status = p4a_config_create(&cfg);
-    if (status != P4A_OK) {
-        p4a_context_destroy(ctx);
+    n4m_config_t *cfg = NULL;
+    status = n4m_config_create(&cfg);
+    if (status != N4M_OK) {
+        n4m_context_destroy(ctx);
         free(X); free(Y);
         mexErrMsgIdAndTxt("pls4all:cfg",
-                          "p4a_config_create failed with status %d",
+                          "n4m_config_create failed with status %d",
                           (int)status);
     }
-    p4a_config_set_algorithm(cfg, algo);
-    p4a_config_set_solver(cfg, solver);
-    p4a_config_set_deflation(cfg, deflation);
-    p4a_config_set_n_components(cfg, n_components);
-    p4a_config_set_center_x(cfg, 1);
-    p4a_config_set_scale_x(cfg, 0);
-    p4a_config_set_center_y(cfg, 1);
-    p4a_config_set_scale_y(cfg, 0);
-    p4a_config_set_tol(cfg, 1e-6);
-    p4a_config_set_max_iter(cfg, 500);
-    p4a_config_set_store_scores(cfg, 0);
+    n4m_config_set_algorithm(cfg, algo);
+    n4m_config_set_solver(cfg, solver);
+    n4m_config_set_deflation(cfg, deflation);
+    n4m_config_set_n_components(cfg, n_components);
+    n4m_config_set_center_x(cfg, 1);
+    n4m_config_set_scale_x(cfg, 0);
+    n4m_config_set_center_y(cfg, 1);
+    n4m_config_set_scale_y(cfg, 0);
+    n4m_config_set_tol(cfg, 1e-6);
+    n4m_config_set_max_iter(cfg, 500);
+    n4m_config_set_store_scores(cfg, 0);
 
     /* Create matrix views */
-    p4a_matrix_view_t X_view, Y_view;
-    p4a_matrix_view_init_rowmajor(&X_view, X, n, p, P4A_DTYPE_F64);
-    p4a_matrix_view_init_rowmajor(&Y_view, Y, n, q, P4A_DTYPE_F64);
+    n4m_matrix_view_t X_view, Y_view;
+    n4m_matrix_view_init_rowmajor(&X_view, X, n, p, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&Y_view, Y, n, q, N4M_DTYPE_F64);
 
     /* Fit model */
-    p4a_model_t *model = NULL;
-    status = p4a_model_fit(ctx, cfg, &X_view, &Y_view, &model);
-    if (status != P4A_OK) {
-        const char *msg = p4a_context_last_error(ctx);
-        p4a_config_destroy(cfg);
-        p4a_context_destroy(ctx);
+    n4m_model_t *model = NULL;
+    status = n4m_model_fit(ctx, cfg, &X_view, &Y_view, &model);
+    if (status != N4M_OK) {
+        const char *msg = n4m_context_last_error(ctx);
+        n4m_config_destroy(cfg);
+        n4m_context_destroy(ctx);
         free(X); free(Y);
         if (msg && msg[0]) {
             mexErrMsgIdAndTxt("pls4all:fit",
-                              "p4a_model_fit failed: %s (%s)",
-                              p4a_status_to_string(status), msg);
+                              "n4m_model_fit failed: %s (%s)",
+                              n4m_status_to_string(status), msg);
         } else {
             mexErrMsgIdAndTxt("pls4all:fit",
-                              "p4a_model_fit failed with status %d",
+                              "n4m_model_fit failed with status %d",
                               (int)status);
         }
     }
 
-    plhs[0] = model_array_to_mx(ctx, model, P4A_MODEL_COEFFICIENTS,
+    plhs[0] = model_array_to_mx(ctx, model, N4M_MODEL_COEFFICIENTS,
                                 "coefficients");
     if (nlhs >= 2)
-        plhs[1] = model_array_to_mx(ctx, model, P4A_MODEL_X_MEAN, "x_mean");
+        plhs[1] = model_array_to_mx(ctx, model, N4M_MODEL_X_MEAN, "x_mean");
     if (nlhs >= 3)
-        plhs[2] = model_array_to_mx(ctx, model, P4A_MODEL_Y_MEAN, "y_mean");
+        plhs[2] = model_array_to_mx(ctx, model, N4M_MODEL_Y_MEAN, "y_mean");
     if (nlhs >= 4)
         plhs[3] = predict_to_mx(ctx, model, &X_view);
 
     /* Cleanup */
-    p4a_model_destroy(model);
-    p4a_config_destroy(cfg);
-    p4a_context_destroy(ctx);
+    n4m_model_destroy(model);
+    n4m_config_destroy(cfg);
+    n4m_context_destroy(ctx);
     free(X); free(Y);
 }

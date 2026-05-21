@@ -6,17 +6,17 @@
 
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/context.hpp"
 #include "core/operator_entry.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
-[[nodiscard]] p4a_status_t transform_aom_strict_operator(
+[[nodiscard]] n4m_status_t transform_aom_strict_operator(
     Context& ctx,
     const OperatorEntry& entry,
-    const p4a_matrix_view_t& X,
+    const n4m_matrix_view_t& X,
     std::vector<double>& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

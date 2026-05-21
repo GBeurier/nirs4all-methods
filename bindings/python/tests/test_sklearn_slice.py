@@ -2,7 +2,7 @@
 
 Run from the repo root:
 
-    P4A_LIB_PATH=$PWD/build/dev-release/cpp/src/libp4a.so \
+    N4M_LIB_PATH=$PWD/build/dev-release/cpp/src/libn4m.so \
         PYTHONPATH=bindings/python/src \
         parity/python_generator/.venv/bin/python -m pytest \
         bindings/python/tests/test_sklearn_slice.py -v

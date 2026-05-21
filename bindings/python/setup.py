@@ -8,7 +8,7 @@
 # pure-Python wheel tagged ``py3-none-any``. That tag is wrong for us
 # because:
 #
-# 1. The wheel embeds a native shared library (libp4a) shipped under
+# 1. The wheel embeds a native shared library (libn4m) shipped under
 #    ``pls4all/lib/``, so the artefact is platform-specific.
 # 2. cibuildwheel skips its ``CIBW_REPAIR_WHEEL_COMMAND_*`` step on
 #    pure wheels — auditwheel / delocate / delvewheel never runs and

@@ -44,14 +44,14 @@ namespace {
     return true;
 }
 
-[[nodiscard]] double read_value(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_value(const n4m_matrix_view_t& view,
                                 std::size_t row,
                                 std::size_t col) noexcept {
     const std::int64_t off =
         static_cast<std::int64_t>(row) * view.row_stride +
         static_cast<std::int64_t>(col) * view.col_stride;
     const auto uoff = static_cast<std::size_t>(off);
-    if (view.dtype == P4A_DTYPE_F64) {
+    if (view.dtype == N4M_DTYPE_F64) {
         const auto* ptr = static_cast<const double*>(view.data);
         return ptr[uoff];
     }
@@ -59,100 +59,100 @@ namespace {
     return static_cast<double>(ptr[uoff]);
 }
 
-[[nodiscard]] p4a_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
+[[nodiscard]] n4m_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
                                                   std::int64_t rows,
                                                   std::int64_t cols) noexcept {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = values.data();
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols > 0 ? cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
-[[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t validate_float_view(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& view,
                                                const char* name) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(view);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(view);
+    if (status != N4M_OK) {
         ctx.set_errorf("%s matrix view is invalid: %s",
                        name,
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
-    if (view.dtype != P4A_DTYPE_F64 && view.dtype != P4A_DTYPE_F32) {
+    if (view.dtype != N4M_DTYPE_F64 && view.dtype != N4M_DTYPE_F32) {
         ctx.set_errorf("%s dtype must be f64 or f32", name);
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t validate_request(::pls4all::core::Context& ctx,
-                                            const ::pls4all::core::Config& cfg,
-                                            const p4a_matrix_view_t& X,
-                                            const p4a_matrix_view_t& Y,
-                                            const ::pls4all::core::ValidationPlan& plan,
+[[nodiscard]] n4m_status_t validate_request(::n4m::core::Context& ctx,
+                                            const ::n4m::core::Config& cfg,
+                                            const n4m_matrix_view_t& X,
+                                            const n4m_matrix_view_t& Y,
+                                            const ::n4m::core::ValidationPlan& plan,
                                             const std::vector<double>& alpha,
                                             std::int32_t min_selected) {
-    p4a_status_t status = validate_float_view(ctx, X, "X");
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_float_view(ctx, X, "X");
+    if (status != N4M_OK) {
         return status;
     }
     status = validate_float_view(ctx, Y, "Y");
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     if (X.rows == 0 || X.cols == 0 || Y.cols == 0) {
         ctx.set_error("T2-PLS matrices must be non-empty");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.rows != Y.rows) {
         ctx.set_errorf("X rows (%lld) must match Y rows (%lld)",
                        static_cast<long long>(X.rows),
                        static_cast<long long>(Y.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (plan.n_samples != X.rows) {
         ctx.set_errorf("validation plan n_samples (%lld) must match X rows (%lld)",
                        static_cast<long long>(plan.n_samples),
                        static_cast<long long>(X.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (plan.folds.empty()) {
         ctx.set_error("T2-PLS requires at least one validation fold");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (alpha.empty()) {
         ctx.set_error("T2-PLS requires at least one alpha value");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     for (const double value : alpha) {
         if (!std::isfinite(value) || value <= 0.0 || value >= 1.0) {
             ctx.set_error("T2-PLS alpha values must be finite and in (0, 1)");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
     }
     if (cfg.n_components < 1 || static_cast<std::int64_t>(cfg.n_components) >= X.cols - 1) {
         ctx.set_errorf("n_components must be in [1, %lld) for T2-PLS; got %d",
                        static_cast<long long>(X.cols - 1),
                        static_cast<int>(cfg.n_components));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (min_selected < cfg.n_components || static_cast<std::int64_t>(min_selected) > X.cols) {
         ctx.set_errorf("min_selected must be in [n_components, %lld]; got %d",
                        static_cast<long long>(X.cols),
                        static_cast<int>(min_selected));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max()) ||
         Y.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max()) ||
         alpha.size() > static_cast<std::size_t>(std::numeric_limits<std::int32_t>::max())) {
         ctx.set_error("T2-PLS dimensions exceed int32 result storage");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
@@ -288,18 +288,18 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     return 0.5 * (lo + hi);
 }
 
-[[nodiscard]] p4a_status_t copy_columns(::pls4all::core::Context& ctx,
-                                        const p4a_matrix_view_t& X,
+[[nodiscard]] n4m_status_t copy_columns(::n4m::core::Context& ctx,
+                                        const n4m_matrix_view_t& X,
                                         const std::vector<std::int64_t>& columns,
                                         std::vector<double>& out) {
     if (columns.empty()) {
         ctx.set_error("T2-PLS column selection must not be empty");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::size_t n_values = 0;
     if (!checked_matrix_size(X.rows, static_cast<std::int64_t>(columns.size()), n_values)) {
         ctx.set_error("T2-PLS subset matrix shape is too large");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     out.assign(n_values, 0.0);
     const auto rows = static_cast<std::size_t>(X.rows);
@@ -308,73 +308,73 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
         const std::int64_t original_col = columns[local_col];
         if (original_col < 0 || original_col >= X.cols) {
             ctx.set_error("T2-PLS column index out of range");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         const auto src_col = static_cast<std::size_t>(original_col);
         for (std::size_t row = 0; row < rows; ++row) {
             const double value = read_value(X, row, src_col);
             if (!std::isfinite(value)) {
                 ctx.set_error("T2-PLS X contains NaN or Inf");
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out[idx(row, cols, local_col)] = value;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t subset_rmse(::pls4all::core::Context& ctx,
-                                       const ::pls4all::core::Config& cfg,
-                                       const p4a_matrix_view_t& X,
-                                       const p4a_matrix_view_t& Y,
-                                       const ::pls4all::core::ValidationPlan& plan,
+[[nodiscard]] n4m_status_t subset_rmse(::n4m::core::Context& ctx,
+                                       const ::n4m::core::Config& cfg,
+                                       const n4m_matrix_view_t& X,
+                                       const n4m_matrix_view_t& Y,
+                                       const ::n4m::core::ValidationPlan& plan,
                                        const std::vector<std::int64_t>& columns,
                                        double& out) {
     std::vector<double> subset_x;
-    p4a_status_t status = copy_columns(ctx, X, columns, subset_x);
-    if (status != P4A_OK) {
+    n4m_status_t status = copy_columns(ctx, X, columns, subset_x);
+    if (status != N4M_OK) {
         return status;
     }
-    p4a_matrix_view_t subset_view =
+    n4m_matrix_view_t subset_view =
         rowmajor_f64_view(subset_x, X.rows, static_cast<std::int64_t>(columns.size()));
-    ::pls4all::core::CrossValidationResult cv;
-    status = ::pls4all::core::cross_validate_regression(ctx, cfg, subset_view, Y, plan, cv);
-    if (status != P4A_OK) {
+    ::n4m::core::CrossValidationResult cv;
+    status = ::n4m::core::cross_validate_regression(ctx, cfg, subset_view, Y, plan, cv);
+    if (status != N4M_OK) {
         return status;
     }
     out = cv.metrics.rmse;
-    return P4A_OK;
+    return N4M_OK;
 }
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t select_by_t2(Context& ctx,
+n4m_status_t select_by_t2(Context& ctx,
                           const Config& cfg,
-                          const p4a_matrix_view_t& X,
-                          const p4a_matrix_view_t& Y,
+                          const n4m_matrix_view_t& X,
+                          const n4m_matrix_view_t& Y,
                           const ValidationPlan& plan,
                           const std::vector<double>& alpha,
                           std::int32_t min_selected,
                           T2SelectionResult& out) {
     try {
         out = T2SelectionResult{};
-        p4a_status_t status = validate_request(ctx, cfg, X, Y, plan, alpha, min_selected);
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_request(ctx, cfg, X, Y, plan, alpha, min_selected);
+        if (status != N4M_OK) {
             return status;
         }
 
         std::unique_ptr<Model> model;
         status = fit_model(ctx, cfg, X, Y, model);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         const auto p = static_cast<std::size_t>(X.cols);
         const auto a = static_cast<std::size_t>(cfg.n_components);
         if (!model || model->weights_w.size() != p * a) {
             ctx.set_error("T2-PLS fitted model returned inconsistent weights");
-            return P4A_ERR_INTERNAL;
+            return N4M_ERR_INTERNAL;
         }
 
         std::vector<double> mean(a, 0.0);
@@ -404,7 +404,7 @@ p4a_status_t select_by_t2(Context& ctx,
         std::vector<double> inverse;
         if (!invert_square(covariance, a, inverse)) {
             ctx.set_error("T2-PLS loading-weight covariance is singular");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
         out.t2_scores.assign(p, 0.0);
@@ -468,7 +468,7 @@ p4a_status_t select_by_t2(Context& ctx,
 
             double rmse = 0.0;
             status = subset_rmse(ctx, cfg, X, Y, plan, selected, rmse);
-            if (status != P4A_OK) {
+            if (status != N4M_OK) {
                 out = T2SelectionResult{};
                 return status;
             }
@@ -492,7 +492,7 @@ p4a_status_t select_by_t2(Context& ctx,
         if (best_error_index < 0 || min_set_index < 0) {
             ctx.set_error("T2-PLS did not produce a selected subset");
             out = T2SelectionResult{};
-            return P4A_ERR_INTERNAL;
+            return N4M_ERR_INTERNAL;
         }
         out.n_features = static_cast<std::int32_t>(X.cols);
         out.n_targets = static_cast<std::int32_t>(Y.cols);
@@ -506,16 +506,16 @@ p4a_status_t select_by_t2(Context& ctx,
         out.selected_indices_best_error = selected_by_alpha[static_cast<std::size_t>(best_error_index)];
         out.selected_indices_min_set = selected_by_alpha[static_cast<std::size_t>(min_set_index)];
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while running T2-PLS selection");
         out = T2SelectionResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while running T2-PLS selection");
         out = T2SelectionResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

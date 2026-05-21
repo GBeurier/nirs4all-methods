@@ -1,0 +1,23 @@
+{
+  "algorithm": "random_subspace_pls",
+  "backend": "ref_python_scikit_learn",
+  "max_runs": 1,
+  "n": 30,
+  "n_runs": 1,
+  "p": 30,
+  "prediction_seed": 1234567890,
+  "seed_base": 1234567890,
+  "source_predictions_path": "/home/delete/nirs4all/pls4all/benchmarks/cross_binding/data/.predictions/random_subspace_pls_ref_python_scikit_learn_30x30_t1_blas-omp_seed1234567890.npy",
+  "timing_statistic": "single",
+  "total_runs": 1,
+  "versions": {
+    "blas": "libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1",
+    "language": "Python 3.13.13",
+    "numpy": "2.3.5",
+    "reference_id": "python_scikit_learn",
+    "reference_library": "scikit-learn",
+    "reference_version": "1.8.0",
+    "timing_schema": "adaptive-v1"
+  },
+  "warmup_ms": 464.90528600406833
+}

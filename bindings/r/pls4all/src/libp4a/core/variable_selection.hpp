@@ -7,12 +7,12 @@
 #include <cstdint>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/context.hpp"
 #include "core/model.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 enum class VariableSelectionMethod : std::int32_t {
     Vip = 0,
@@ -27,12 +27,12 @@ struct VariableSelectionResult {
     std::vector<std::int64_t> selected_indices;
 };
 
-[[nodiscard]] p4a_status_t select_variables(
+[[nodiscard]] n4m_status_t select_variables(
     Context& ctx,
     const Model& model,
-    const p4a_matrix_view_t& X,
+    const n4m_matrix_view_t& X,
     VariableSelectionMethod method,
     std::int32_t top_k,
     VariableSelectionResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

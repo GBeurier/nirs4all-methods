@@ -12,9 +12,9 @@
 #include <utility>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct MethodResult {
     // Named double arrays. Shape is stored separately (rows, cols).
@@ -53,6 +53,6 @@ struct MethodResult {
     }
 };
 
-}  // namespace pls4all::core
+}  // namespace n4m::core
 
-struct p4a_method_result_s : public ::pls4all::core::MethodResult {};
+struct n4m_method_result_s : public ::n4m::core::MethodResult {};

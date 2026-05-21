@@ -1,0 +1,23 @@
+{
+  "algorithm": "n_pls",
+  "backend": "ref_python_tensorly",
+  "max_runs": 40,
+  "n": 100,
+  "n_runs": 39,
+  "p": 50,
+  "prediction_seed": 1234567928,
+  "seed_base": 1234567890,
+  "source_predictions_path": "/home/delete/nirs4all/pls4all/benchmarks/cross_binding/data/.predictions/n_pls_ref_python_tensorly_100x50_t8_blas-omp.npy",
+  "timing_statistic": "median",
+  "total_runs": 40,
+  "versions": {
+    "blas": "libscipy_openblas 0.3.30 blas=8; libscipy_openblas 0.3.30 blas=8; libgomp ? openmp=8",
+    "language": "Python 3.13.13",
+    "numpy": "2.3.5",
+    "reference_id": "python_tensorly",
+    "reference_library": "tensorly",
+    "reference_version": "0.9.0",
+    "timing_schema": "adaptive-v1"
+  },
+  "warmup_ms": 467.7591420186218
+}

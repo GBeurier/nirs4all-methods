@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct SimplsFixture {
     const char* id;
@@ -233,4 +233,4 @@ inline const SimplsFixture kSimplsFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

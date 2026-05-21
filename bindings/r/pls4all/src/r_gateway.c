@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 /*
- * R .Call gateway over the pls4all libp4a C ABI.
+ * R .Call gateway over the pls4all libn4m C ABI.
  *
- * The native shared library libp4a must be locatable at load time. R loads
- * pls4all.so first; its dependencies (libp4a) are then resolved by the
+ * The native shared library libn4m must be locatable at load time. R loads
+ * pls4all.so first; its dependencies (libn4m) are then resolved by the
  * runtime linker. Set the LD_LIBRARY_PATH / DYLD_LIBRARY_PATH / PATH
  * appropriately, or run `R CMD INSTALL --configure-args=...` to embed a
  * specific rpath in the Makevars.
@@ -17,7 +17,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 /* ---- helpers ---------------------------------------------------------- */
 
@@ -30,19 +30,19 @@ static SEXP r_make_string(const char* s) {
  * Rf_error. Doing the destroy BEFORE Rf_error prevents leaking the ctx
  * on the longjmp (longjmp skips any cleanup below the throw site).
  * Callers must have already freed any other C resources they owned. */
-static void r_throw_status(const char* fn, p4a_status_t status, p4a_context_t* ctx) {
-    const char* status_str = p4a_status_to_string(status);
+static void r_throw_status(const char* fn, n4m_status_t status, n4m_context_t* ctx) {
+    const char* status_str = n4m_status_to_string(status);
     char buf[4096];
     buf[0] = '\0';
     if (ctx != NULL) {
-        const char* msg = p4a_context_last_error(ctx);
+        const char* msg = n4m_context_last_error(ctx);
         if (msg != NULL && msg[0] != '\0') {
             size_t n = strlen(msg);
             if (n >= sizeof(buf)) n = sizeof(buf) - 1;
             memcpy(buf, msg, n);
             buf[n] = '\0';
         }
-        p4a_context_destroy(ctx);
+        n4m_context_destroy(ctx);
     }
     if (buf[0] != '\0') {
         Rf_error("%s failed: %s (%s)", fn, status_str, buf);
@@ -52,59 +52,59 @@ static void r_throw_status(const char* fn, p4a_status_t status, p4a_context_t* c
 }
 
 static int resolve_algo(const char* name,
-                        p4a_algorithm_t* out_algo,
-                        p4a_solver_t* out_solver,
-                        p4a_deflation_t* out_deflation) {
-    *out_deflation = P4A_DEFLATION_REGRESSION;
+                        n4m_algorithm_t* out_algo,
+                        n4m_solver_t* out_solver,
+                        n4m_deflation_t* out_deflation) {
+    *out_deflation = N4M_DEFLATION_REGRESSION;
     if (strcmp(name, "pls_nipals") == 0) {
-        *out_algo = P4A_ALGO_PLS_REGRESSION;
-        *out_solver = P4A_SOLVER_NIPALS;
+        *out_algo = N4M_ALGO_PLS_REGRESSION;
+        *out_solver = N4M_SOLVER_NIPALS;
         return 1;
     }
     if (strcmp(name, "pls_orthogonal_scores") == 0) {
-        *out_algo = P4A_ALGO_PLS_REGRESSION;
-        *out_solver = P4A_SOLVER_ORTHOGONAL_SCORES;
+        *out_algo = N4M_ALGO_PLS_REGRESSION;
+        *out_solver = N4M_SOLVER_ORTHOGONAL_SCORES;
         return 1;
     }
     if (strcmp(name, "pls_simpls") == 0) {
-        *out_algo = P4A_ALGO_PLS_REGRESSION;
-        *out_solver = P4A_SOLVER_SIMPLS;
+        *out_algo = N4M_ALGO_PLS_REGRESSION;
+        *out_solver = N4M_SOLVER_SIMPLS;
         return 1;
     }
     if (strcmp(name, "pls_kernel_algorithm") == 0) {
-        *out_algo = P4A_ALGO_PLS_REGRESSION;
-        *out_solver = P4A_SOLVER_KERNEL_ALGORITHM;
+        *out_algo = N4M_ALGO_PLS_REGRESSION;
+        *out_solver = N4M_SOLVER_KERNEL_ALGORITHM;
         return 1;
     }
     if (strcmp(name, "pls_wide_kernel") == 0) {
-        *out_algo = P4A_ALGO_PLS_REGRESSION;
-        *out_solver = P4A_SOLVER_WIDE_KERNEL;
+        *out_algo = N4M_ALGO_PLS_REGRESSION;
+        *out_solver = N4M_SOLVER_WIDE_KERNEL;
         return 1;
     }
     if (strcmp(name, "pls_svd") == 0) {
-        *out_algo = P4A_ALGO_PLS_REGRESSION;
-        *out_solver = P4A_SOLVER_SVD;
+        *out_algo = N4M_ALGO_PLS_REGRESSION;
+        *out_solver = N4M_SOLVER_SVD;
         return 1;
     }
     if (strcmp(name, "pls_power") == 0) {
-        *out_algo = P4A_ALGO_PLS_REGRESSION;
-        *out_solver = P4A_SOLVER_POWER;
+        *out_algo = N4M_ALGO_PLS_REGRESSION;
+        *out_solver = N4M_SOLVER_POWER;
         return 1;
     }
     if (strcmp(name, "pls_randomized_svd") == 0) {
-        *out_algo = P4A_ALGO_PLS_REGRESSION;
-        *out_solver = P4A_SOLVER_RANDOMIZED_SVD;
+        *out_algo = N4M_ALGO_PLS_REGRESSION;
+        *out_solver = N4M_SOLVER_RANDOMIZED_SVD;
         return 1;
     }
     if (strcmp(name, "pcr_svd") == 0 || strcmp(name, "pcr") == 0) {
-        *out_algo = P4A_ALGO_PCR;
-        *out_solver = P4A_SOLVER_SVD;
+        *out_algo = N4M_ALGO_PCR;
+        *out_solver = N4M_SOLVER_SVD;
         return 1;
     }
     if (strcmp(name, "opls") == 0 || strcmp(name, "opls_nipals") == 0) {
-        *out_algo = P4A_ALGO_OPLS;
-        *out_solver = P4A_SOLVER_NIPALS;
-        *out_deflation = P4A_DEFLATION_ORTHOGONAL;
+        *out_algo = N4M_ALGO_OPLS;
+        *out_solver = N4M_SOLVER_NIPALS;
+        *out_deflation = N4M_DEFLATION_ORTHOGONAL;
         return 1;
     }
     return 0;
@@ -114,9 +114,9 @@ static int resolve_algo(const char* name,
 
 static void r_model_finalize(SEXP ptr) {
     if (TYPEOF(ptr) != EXTPTRSXP) return;
-    p4a_model_t* model = (p4a_model_t*)R_ExternalPtrAddr(ptr);
+    n4m_model_t* model = (n4m_model_t*)R_ExternalPtrAddr(ptr);
     if (model != NULL) {
-        p4a_model_destroy(model);
+        n4m_model_destroy(model);
         R_ClearExternalPtr(ptr);
     }
 }
@@ -124,14 +124,14 @@ static void r_model_finalize(SEXP ptr) {
 /* ---- version queries -------------------------------------------------- */
 
 SEXP r_pls4all_version(void) {
-    return r_make_string(p4a_get_version_string());
+    return r_make_string(n4m_get_version_string());
 }
 
 SEXP r_pls4all_abi_version(void) {
     SEXP out = PROTECT(Rf_allocVector(INTSXP, 3));
-    INTEGER(out)[0] = (int)p4a_get_abi_version_major();
-    INTEGER(out)[1] = (int)p4a_get_abi_version_minor();
-    INTEGER(out)[2] = (int)p4a_get_abi_version_patch();
+    INTEGER(out)[0] = (int)n4m_get_abi_version_major();
+    INTEGER(out)[1] = (int)n4m_get_abi_version_minor();
+    INTEGER(out)[2] = (int)n4m_get_abi_version_patch();
     UNPROTECT(1);
     return out;
 }
@@ -182,9 +182,9 @@ SEXP r_pls4all_fit(SEXP X, SEXP Y, SEXP algo_sexp, SEXP n_components_sexp,
     if (n_rows != y_rows) Rf_error("nrow(X) must equal nrow(Y)");
 
     const char* algo_name = CHAR(STRING_ELT(algo_sexp, 0));
-    p4a_algorithm_t algo;
-    p4a_solver_t solver;
-    p4a_deflation_t deflation;
+    n4m_algorithm_t algo;
+    n4m_solver_t solver;
+    n4m_deflation_t deflation;
     if (!resolve_algo(algo_name, &algo, &solver, &deflation)) {
         Rf_error("unknown algo: %s", algo_name);
     }
@@ -211,43 +211,43 @@ SEXP r_pls4all_fit(SEXP X, SEXP Y, SEXP algo_sexp, SEXP n_components_sexp,
         }
     }
 
-    p4a_context_t* ctx = NULL;
-    p4a_status_t status = p4a_context_create(&ctx);
-    if (status != P4A_OK) r_throw_status("p4a_context_create", status, NULL);
+    n4m_context_t* ctx = NULL;
+    n4m_status_t status = n4m_context_create(&ctx);
+    if (status != N4M_OK) r_throw_status("n4m_context_create", status, NULL);
 
-    p4a_config_t* cfg = NULL;
-    status = p4a_config_create(&cfg);
-    if (status != P4A_OK) {
-        p4a_context_destroy(ctx);
-        r_throw_status("p4a_config_create", status, NULL);
+    n4m_config_t* cfg = NULL;
+    status = n4m_config_create(&cfg);
+    if (status != N4M_OK) {
+        n4m_context_destroy(ctx);
+        r_throw_status("n4m_config_create", status, NULL);
     }
-    p4a_config_set_algorithm(cfg, algo);
-    p4a_config_set_solver(cfg, solver);
-    p4a_config_set_deflation(cfg, deflation);
-    p4a_config_set_n_components(cfg, n_components);
+    n4m_config_set_algorithm(cfg, algo);
+    n4m_config_set_solver(cfg, solver);
+    n4m_config_set_deflation(cfg, deflation);
+    n4m_config_set_n_components(cfg, n_components);
     /* Match the public C ABI Config defaults (scale_x = scale_y = 1)
      * so the R binding produces byte-equivalent results to the Python
      * binding under default settings. */
-    p4a_config_set_center_x(cfg, center_x);
-    p4a_config_set_scale_x(cfg, scale_x);
-    p4a_config_set_center_y(cfg, center_y);
-    p4a_config_set_scale_y(cfg, scale_y);
-    p4a_config_set_store_scores(cfg, store_scores ? 1 : 0);
+    n4m_config_set_center_x(cfg, center_x);
+    n4m_config_set_scale_x(cfg, scale_x);
+    n4m_config_set_center_y(cfg, center_y);
+    n4m_config_set_scale_y(cfg, scale_y);
+    n4m_config_set_store_scores(cfg, store_scores ? 1 : 0);
 
-    p4a_matrix_view_t X_view;
-    p4a_matrix_view_t Y_view;
-    p4a_matrix_view_init_rowmajor(&X_view, xrm, n_rows, n_cols, P4A_DTYPE_F64);
-    p4a_matrix_view_init_rowmajor(&Y_view, yrm, n_rows, y_cols, P4A_DTYPE_F64);
+    n4m_matrix_view_t X_view;
+    n4m_matrix_view_t Y_view;
+    n4m_matrix_view_init_rowmajor(&X_view, xrm, n_rows, n_cols, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&Y_view, yrm, n_rows, y_cols, N4M_DTYPE_F64);
 
-    p4a_model_t* model = NULL;
-    status = p4a_model_fit(ctx, cfg, &X_view, &Y_view, &model);
-    p4a_config_destroy(cfg);
-    if (status != P4A_OK) {
+    n4m_model_t* model = NULL;
+    status = n4m_model_fit(ctx, cfg, &X_view, &Y_view, &model);
+    n4m_config_destroy(cfg);
+    if (status != N4M_OK) {
         UNPROTECT(2);
         /* r_throw_status copies the last_error message then destroys ctx. */
-        r_throw_status("p4a_model_fit", status, ctx);
+        r_throw_status("n4m_model_fit", status, ctx);
     }
-    p4a_context_destroy(ctx);
+    n4m_context_destroy(ctx);
     UNPROTECT(2);
 
     SEXP ptr = PROTECT(R_MakeExternalPtr(model, R_NilValue, R_NilValue));
@@ -257,8 +257,8 @@ SEXP r_pls4all_fit(SEXP X, SEXP Y, SEXP algo_sexp, SEXP n_components_sexp,
     SEXP n_targets_attr = PROTECT(Rf_allocVector(INTSXP, 1));
     int32_t nf = 0;
     int32_t nt = 0;
-    p4a_model_get_n_features(model, &nf);
-    p4a_model_get_n_targets(model, &nt);
+    n4m_model_get_n_features(model, &nf);
+    n4m_model_get_n_targets(model, &nt);
     INTEGER(n_features_attr)[0] = (int)nf;
     INTEGER(n_targets_attr)[0] = (int)nt;
     Rf_setAttrib(ptr, Rf_install("n_features"), n_features_attr);
@@ -272,7 +272,7 @@ SEXP r_pls4all_fit(SEXP X, SEXP Y, SEXP algo_sexp, SEXP n_components_sexp,
 SEXP r_pls4all_predict(SEXP model_ptr, SEXP X) {
     if (TYPEOF(model_ptr) != EXTPTRSXP) Rf_error("model must be an external pointer");
     if (TYPEOF(X) != REALSXP) Rf_error("X must be a numeric matrix");
-    p4a_model_t* model = (p4a_model_t*)R_ExternalPtrAddr(model_ptr);
+    n4m_model_t* model = (n4m_model_t*)R_ExternalPtrAddr(model_ptr);
     if (model == NULL) Rf_error("model handle is NULL (already freed?)");
 
     SEXP X_dim = Rf_getAttrib(X, R_DimSymbol);
@@ -290,27 +290,27 @@ SEXP r_pls4all_predict(SEXP model_ptr, SEXP X) {
     }
 
     int32_t n_targets = 0;
-    p4a_model_get_n_targets(model, &n_targets);
+    n4m_model_get_n_targets(model, &n_targets);
     SEXP out_rm = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)(n_rows * n_targets)));
     double* outrm = REAL(out_rm);
 
-    p4a_context_t* ctx = NULL;
-    p4a_status_t status = p4a_context_create(&ctx);
-    if (status != P4A_OK) {
+    n4m_context_t* ctx = NULL;
+    n4m_status_t status = n4m_context_create(&ctx);
+    if (status != N4M_OK) {
         UNPROTECT(2);
-        r_throw_status("p4a_context_create", status, NULL);
+        r_throw_status("n4m_context_create", status, NULL);
     }
-    p4a_matrix_view_t X_view;
-    p4a_matrix_view_init_rowmajor(&X_view, xrm, n_rows, n_cols, P4A_DTYPE_F64);
-    p4a_matrix_view_t out_view;
-    p4a_matrix_view_init_rowmajor(&out_view, outrm, n_rows, n_targets, P4A_DTYPE_F64);
-    status = p4a_model_predict(ctx, model, &X_view, &out_view);
-    if (status != P4A_OK) {
+    n4m_matrix_view_t X_view;
+    n4m_matrix_view_init_rowmajor(&X_view, xrm, n_rows, n_cols, N4M_DTYPE_F64);
+    n4m_matrix_view_t out_view;
+    n4m_matrix_view_init_rowmajor(&out_view, outrm, n_rows, n_targets, N4M_DTYPE_F64);
+    status = n4m_model_predict(ctx, model, &X_view, &out_view);
+    if (status != N4M_OK) {
         UNPROTECT(2);
         /* r_throw_status owns ctx destruction. */
-        r_throw_status("p4a_model_predict", status, ctx);
+        r_throw_status("n4m_model_predict", status, ctx);
     }
-    p4a_context_destroy(ctx);
+    n4m_context_destroy(ctx);
 
     /* Convert row-major predictions into a column-major R matrix. */
     SEXP out = PROTECT(Rf_allocMatrix(REALSXP, (int)n_rows, (int)n_targets));

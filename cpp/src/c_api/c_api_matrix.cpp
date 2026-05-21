@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
-// extern "C" wrappers for p4a_matrix_view_t.
+// extern "C" wrappers for n4m_matrix_view_t.
 
 #include <stddef.h>
 #include <stdint.h>
@@ -11,14 +11,14 @@
 
 extern "C" {
 
-P4A_API p4a_status_t p4a_matrix_view_init_rowmajor(
-    p4a_matrix_view_t* out, void* data,
-    int64_t rows, int64_t cols, p4a_dtype_t dtype) {
-    if (out == nullptr) return P4A_ERR_NULL_POINTER;
+N4M_API n4m_status_t n4m_matrix_view_init_rowmajor(
+    n4m_matrix_view_t* out, void* data,
+    int64_t rows, int64_t cols, n4m_dtype_t dtype) {
+    if (out == nullptr) return N4M_ERR_NULL_POINTER;
     try {
-        if (!::pls4all::core::dtype_is_valid(dtype)) return P4A_ERR_INVALID_ARGUMENT;
-        if (rows < 0 || cols < 0)                    return P4A_ERR_INVALID_ARGUMENT;
-        if (rows > 0 && cols > 0 && data == nullptr) return P4A_ERR_NULL_POINTER;
+        if (!::n4m::core::dtype_is_valid(dtype)) return N4M_ERR_INVALID_ARGUMENT;
+        if (rows < 0 || cols < 0)                    return N4M_ERR_INVALID_ARGUMENT;
+        if (rows > 0 && cols > 0 && data == nullptr) return N4M_ERR_NULL_POINTER;
 
         out->data        = data;
         out->rows        = rows;
@@ -30,20 +30,20 @@ P4A_API p4a_status_t p4a_matrix_view_init_rowmajor(
         out->col_stride  = 1;
         out->dtype       = dtype;
         out->reserved0   = 0;
-        return P4A_OK;
+        return N4M_OK;
     } catch (...) {
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_matrix_view_init_colmajor(
-    p4a_matrix_view_t* out, void* data,
-    int64_t rows, int64_t cols, p4a_dtype_t dtype) {
-    if (out == nullptr) return P4A_ERR_NULL_POINTER;
+N4M_API n4m_status_t n4m_matrix_view_init_colmajor(
+    n4m_matrix_view_t* out, void* data,
+    int64_t rows, int64_t cols, n4m_dtype_t dtype) {
+    if (out == nullptr) return N4M_ERR_NULL_POINTER;
     try {
-        if (!::pls4all::core::dtype_is_valid(dtype)) return P4A_ERR_INVALID_ARGUMENT;
-        if (rows < 0 || cols < 0)                    return P4A_ERR_INVALID_ARGUMENT;
-        if (rows > 0 && cols > 0 && data == nullptr) return P4A_ERR_NULL_POINTER;
+        if (!::n4m::core::dtype_is_valid(dtype)) return N4M_ERR_INVALID_ARGUMENT;
+        if (rows < 0 || cols < 0)                    return N4M_ERR_INVALID_ARGUMENT;
+        if (rows > 0 && cols > 0 && data == nullptr) return N4M_ERR_NULL_POINTER;
 
         out->data        = data;
         out->rows        = rows;
@@ -52,23 +52,23 @@ P4A_API p4a_status_t p4a_matrix_view_init_colmajor(
         out->col_stride  = rows > 0 ? rows : 1;
         out->dtype       = dtype;
         out->reserved0   = 0;
-        return P4A_OK;
+        return N4M_OK;
     } catch (...) {
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_matrix_view_init_strided(
-    p4a_matrix_view_t* out, void* data,
+N4M_API n4m_status_t n4m_matrix_view_init_strided(
+    n4m_matrix_view_t* out, void* data,
     int64_t rows, int64_t cols,
     int64_t row_stride, int64_t col_stride,
-    p4a_dtype_t dtype) {
-    if (out == nullptr) return P4A_ERR_NULL_POINTER;
+    n4m_dtype_t dtype) {
+    if (out == nullptr) return N4M_ERR_NULL_POINTER;
     try {
-        if (!::pls4all::core::dtype_is_valid(dtype)) return P4A_ERR_INVALID_ARGUMENT;
-        if (rows < 0 || cols < 0)                    return P4A_ERR_INVALID_ARGUMENT;
-        if (row_stride < 0 || col_stride < 0)        return P4A_ERR_STRIDE_INVALID;
-        if (rows > 0 && cols > 0 && data == nullptr) return P4A_ERR_NULL_POINTER;
+        if (!::n4m::core::dtype_is_valid(dtype)) return N4M_ERR_INVALID_ARGUMENT;
+        if (rows < 0 || cols < 0)                    return N4M_ERR_INVALID_ARGUMENT;
+        if (row_stride < 0 || col_stride < 0)        return N4M_ERR_STRIDE_INVALID;
+        if (rows > 0 && cols > 0 && data == nullptr) return N4M_ERR_NULL_POINTER;
 
         out->data        = data;
         out->rows        = rows;
@@ -80,18 +80,18 @@ P4A_API p4a_status_t p4a_matrix_view_init_strided(
         // Run the standard validator on what we just built so the
         // caller cannot smuggle in an invalid (rows>=2, row_stride==0)
         // configuration. Init helpers and _validate share the same rules.
-        return ::pls4all::core::validate_nonnull_view(*out);
+        return ::n4m::core::validate_nonnull_view(*out);
     } catch (...) {
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_matrix_view_validate(const p4a_matrix_view_t* v) {
-    if (v == nullptr) return P4A_ERR_NULL_POINTER;
+N4M_API n4m_status_t n4m_matrix_view_validate(const n4m_matrix_view_t* v) {
+    if (v == nullptr) return N4M_ERR_NULL_POINTER;
     try {
-        return ::pls4all::core::validate_nonnull_view(*v);
+        return ::n4m::core::validate_nonnull_view(*v);
     } catch (...) {
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 

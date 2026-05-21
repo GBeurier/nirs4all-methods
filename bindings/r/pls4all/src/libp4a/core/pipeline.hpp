@@ -7,11 +7,11 @@
 #include <cstdint>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 #include "core/context.hpp"
 #include "core/operator_entry.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 class Pipeline {
   public:
@@ -22,7 +22,7 @@ class Pipeline {
     Pipeline(Pipeline&&) noexcept = default;
     Pipeline& operator=(Pipeline&&) noexcept = default;
 
-    void add_operator(p4a_operator_kind_t kind, const double* params, std::int32_t n_params) {
+    void add_operator(n4m_operator_kind_t kind, const double* params, std::int32_t n_params) {
         entries_.emplace_back(kind, params, n_params);
         fitted_ = false;
         states_.clear();
@@ -37,16 +37,16 @@ class Pipeline {
         return fitted_;
     }
 
-    [[nodiscard]] p4a_status_t fit(Context& ctx,
-                                   const p4a_matrix_view_t& X,
-                                   const p4a_matrix_view_t* Y);
-    [[nodiscard]] p4a_status_t transform(Context& ctx,
-                                         const p4a_matrix_view_t& X,
-                                         p4a_matrix_view_t& out) const;
+    [[nodiscard]] n4m_status_t fit(Context& ctx,
+                                   const n4m_matrix_view_t& X,
+                                   const n4m_matrix_view_t* Y);
+    [[nodiscard]] n4m_status_t transform(Context& ctx,
+                                         const n4m_matrix_view_t& X,
+                                         n4m_matrix_view_t& out) const;
 
   private:
     struct OperatorState {
-        p4a_operator_kind_t kind{P4A_OP_IDENTITY};
+        n4m_operator_kind_t kind{N4M_OP_IDENTITY};
         std::int64_t n_features{0};
         std::vector<double> location;
         std::vector<double> scale;
@@ -59,6 +59,6 @@ class Pipeline {
     bool fitted_{false};
 };
 
-}  // namespace pls4all::core
+}  // namespace n4m::core
 
-struct p4a_pipeline_s : public ::pls4all::core::Pipeline {};
+struct n4m_pipeline_s : public ::n4m::core::Pipeline {};

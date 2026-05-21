@@ -20,14 +20,14 @@ namespace {
     return row * cols + col;
 }
 
-[[nodiscard]] double read_value(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_value(const n4m_matrix_view_t& view,
                                 std::size_t row,
                                 std::size_t col) noexcept {
     const std::int64_t off =
         static_cast<std::int64_t>(row) * view.row_stride +
         static_cast<std::int64_t>(col) * view.col_stride;
     const auto uoff = static_cast<std::size_t>(off);
-    if (view.dtype == P4A_DTYPE_F64) {
+    if (view.dtype == N4M_DTYPE_F64) {
         const auto* ptr = static_cast<const double*>(view.data);
         return ptr[uoff];
     }
@@ -51,73 +51,73 @@ namespace {
     return true;
 }
 
-[[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t validate_float_view(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& view,
                                                const char* name) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(view);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(view);
+    if (status != N4M_OK) {
         ctx.set_errorf("%s matrix view is invalid: %s",
                        name,
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
-    if (view.dtype != P4A_DTYPE_F64 && view.dtype != P4A_DTYPE_F32) {
+    if (view.dtype != N4M_DTYPE_F64 && view.dtype != N4M_DTYPE_F32) {
         ctx.set_errorf("%s dtype must be f64 or f32", name);
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t validate_request(::pls4all::core::Context& ctx,
-                                            const p4a_matrix_view_t& X,
-                                            const p4a_matrix_view_t& Y,
+[[nodiscard]] n4m_status_t validate_request(::n4m::core::Context& ctx,
+                                            const n4m_matrix_view_t& X,
+                                            const n4m_matrix_view_t& Y,
                                             std::int32_t n_components,
                                             std::int32_t top_k) {
-    p4a_status_t status = validate_float_view(ctx, X, "X");
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_float_view(ctx, X, "X");
+    if (status != N4M_OK) {
         return status;
     }
     status = validate_float_view(ctx, Y, "Y");
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     if (X.rows < 2 || X.cols < 2 || Y.cols != 1) {
         ctx.set_error("WVC-PLS requires at least 2 rows, 2 X columns and one numeric Y column");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.rows != Y.rows) {
         ctx.set_errorf("X rows (%lld) must match Y rows (%lld)",
                        static_cast<long long>(X.rows),
                        static_cast<long long>(Y.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (n_components < 1 || static_cast<std::int64_t>(n_components) >= X.cols) {
         ctx.set_errorf("n_components must be in [1, %lld); got %d",
                        static_cast<long long>(X.cols),
                        static_cast<int>(n_components));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (top_k < 1 || static_cast<std::int64_t>(top_k) > X.cols) {
         ctx.set_errorf("top_k must be in [1, %lld]; got %d",
                        static_cast<long long>(X.cols),
                        static_cast<int>(top_k));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max())) {
         ctx.set_error("WVC-PLS dimensions exceed int32 result storage");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t copy_matrix(::pls4all::core::Context& ctx,
-                                       const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t copy_matrix(::n4m::core::Context& ctx,
+                                       const n4m_matrix_view_t& view,
                                        const char* name,
                                        std::vector<double>& out) {
     std::size_t n_values = 0;
     if (!checked_matrix_size(view.rows, view.cols, n_values)) {
         ctx.set_errorf("%s matrix shape is too large", name);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     out.assign(n_values, 0.0);
     const auto rows = static_cast<std::size_t>(view.rows);
@@ -127,12 +127,12 @@ namespace {
             const double value = read_value(view, row, col);
             if (!std::isfinite(value)) {
                 ctx.set_errorf("%s contains NaN or Inf", name);
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out[idx(row, cols, col)] = value;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 void center_scale_columns(std::vector<double>& values,
@@ -171,30 +171,30 @@ void center_scale_columns(std::vector<double>& values,
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t select_by_wvc(Context& ctx,
-                           const p4a_matrix_view_t& X,
-                           const p4a_matrix_view_t& Y,
+n4m_status_t select_by_wvc(Context& ctx,
+                           const n4m_matrix_view_t& X,
+                           const n4m_matrix_view_t& Y,
                            std::int32_t n_components,
                            std::int32_t top_k,
                            bool normalize,
                            WvcSelectionResult& out) {
     try {
         out = WvcSelectionResult{};
-        p4a_status_t status = validate_request(ctx, X, Y, n_components, top_k);
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_request(ctx, X, Y, n_components, top_k);
+        if (status != N4M_OK) {
             return status;
         }
 
         std::vector<double> xwork;
         std::vector<double> ywork;
         status = copy_matrix(ctx, X, "X", xwork);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         status = copy_matrix(ctx, Y, "Y", ywork);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -221,7 +221,7 @@ p4a_status_t select_by_wvc(Context& ctx,
             if (!(w_norm > std::numeric_limits<double>::epsilon())) {
                 ctx.set_error("WVC-PLS covariance vector collapsed");
                 out = WvcSelectionResult{};
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             for (double& value : w) {
                 value /= w_norm;
@@ -251,7 +251,7 @@ p4a_status_t select_by_wvc(Context& ctx,
             if (!(score_ss > std::numeric_limits<double>::epsilon())) {
                 ctx.set_error("WVC-PLS score vector collapsed");
                 out = WvcSelectionResult{};
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
 
             std::vector<double> pvec(cols, 0.0);
@@ -285,7 +285,7 @@ p4a_status_t select_by_wvc(Context& ctx,
             if (!(std::fabs(denominator) > std::numeric_limits<double>::epsilon())) {
                 ctx.set_error("WVC-PLS denominator collapsed");
                 out = WvcSelectionResult{};
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             double max_wvc = 0.0;
             for (std::size_t col = 0; col < cols; ++col) {
@@ -335,21 +335,21 @@ p4a_status_t select_by_wvc(Context& ctx,
         out.top_k = top_k;
         out.normalize = normalize ? 1 : 0;
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while running WVC-PLS selection");
         out = WvcSelectionResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while running WVC-PLS selection");
         out = WvcSelectionResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-p4a_status_t select_by_wvc_threshold(Context& ctx,
-                                     const p4a_matrix_view_t& X,
-                                     const p4a_matrix_view_t& Y,
+n4m_status_t select_by_wvc_threshold(Context& ctx,
+                                     const n4m_matrix_view_t& X,
+                                     const n4m_matrix_view_t& Y,
                                      std::int32_t n_components,
                                      bool normalize,
                                      double score_threshold,
@@ -358,23 +358,23 @@ p4a_status_t select_by_wvc_threshold(Context& ctx,
                                      WvcThresholdSelectionResult& out) {
     try {
         out = WvcThresholdSelectionResult{};
-        p4a_status_t status = validate_request(ctx, X, Y, n_components, 1);
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_request(ctx, X, Y, n_components, 1);
+        if (status != N4M_OK) {
             return status;
         }
         if (!std::isfinite(score_threshold) || score_threshold < 0.0) {
             ctx.set_error("WVC threshold score_threshold must be finite and non-negative");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (!std::isfinite(threshold_factor) || threshold_factor < 0.0) {
             ctx.set_error("WVC threshold_factor must be finite and non-negative");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (min_selected < 1 || static_cast<std::int64_t>(min_selected) > X.cols) {
             ctx.set_errorf("min_selected must be in [1, %lld]; got %d",
                            static_cast<long long>(X.cols),
                            static_cast<int>(min_selected));
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
         WvcSelectionResult base;
@@ -385,7 +385,7 @@ p4a_status_t select_by_wvc_threshold(Context& ctx,
                                static_cast<std::int32_t>(X.cols),
                                normalize,
                                base);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             out = WvcThresholdSelectionResult{};
             return status;
         }
@@ -418,16 +418,16 @@ p4a_status_t select_by_wvc_threshold(Context& ctx,
         out.min_selected = min_selected;
         out.normalize = normalize ? 1 : 0;
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while running thresholded WVC-PLS selection");
         out = WvcThresholdSelectionResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while running thresholded WVC-PLS selection");
         out = WvcThresholdSelectionResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

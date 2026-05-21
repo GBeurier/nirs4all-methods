@@ -13,7 +13,7 @@
 
 namespace {
 
-void append_metrics_row(const ::pls4all::core::RegressionMetrics& metrics,
+void append_metrics_row(const ::n4m::core::RegressionMetrics& metrics,
                         std::vector<double>& out) {
     out.push_back(metrics.rmse);
     out.push_back(metrics.mae);
@@ -28,13 +28,13 @@ void append_metrics_row(const ::pls4all::core::RegressionMetrics& metrics,
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t cross_validate_component_prefixes(
+n4m_status_t cross_validate_component_prefixes(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     const ValidationPlan& plan,
     std::int32_t max_components,
     ComponentCvResult& out) {
@@ -43,17 +43,17 @@ p4a_status_t cross_validate_component_prefixes(
         if (max_components < 1) {
             ctx.set_errorf("max_components must be >= 1; got %d",
                            static_cast<int>(max_components));
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (plan.folds.empty()) {
             ctx.set_error("component CV requires at least one validation fold");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (static_cast<std::int64_t>(max_components) > X.cols) {
             ctx.set_errorf("max_components (%d) must be <= X cols (%lld)",
                            static_cast<int>(max_components),
                            static_cast<long long>(X.cols));
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
         out.max_components = max_components;
@@ -70,13 +70,13 @@ p4a_status_t cross_validate_component_prefixes(
             Config local_cfg = cfg;
             local_cfg.n_components = k;
             CrossValidationResult cv{};
-            const p4a_status_t status = cross_validate_regression(ctx,
+            const n4m_status_t status = cross_validate_regression(ctx,
                                                                   local_cfg,
                                                                   X,
                                                                   Y,
                                                                   plan,
                                                                   cv);
-            if (status != P4A_OK) {
+            if (status != N4M_OK) {
                 out = ComponentCvResult{};
                 return status;
             }
@@ -108,7 +108,7 @@ p4a_status_t cross_validate_component_prefixes(
                         static_cast<std::size_t>(sample) >= n_samples) {
                         out = ComponentCvResult{};
                         ctx.set_error("test index out of bounds in CV result");
-                        return P4A_ERR_INTERNAL;
+                        return N4M_ERR_INTERNAL;
                     }
                     for (std::size_t t = 0; t < n_targets; ++t) {
                         const double pred = cv.predictions[
@@ -134,31 +134,31 @@ p4a_status_t cross_validate_component_prefixes(
 
         out.one_se_n_components = out.best_n_components;
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while running component-count CV");
         out = ComponentCvResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while running component-count CV");
         out = ComponentCvResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-p4a_status_t select_one_se_components(Context& ctx,
+n4m_status_t select_one_se_components(Context& ctx,
                                        ComponentCvResult& result) {
     if (result.max_components < 1 || result.n_folds < 2) {
         ctx.set_error(
             "one-SE rule requires max_components >= 1 and n_folds >= 2");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (result.fold_rmse_matrix.size() !=
         static_cast<std::size_t>(result.max_components) *
             static_cast<std::size_t>(result.n_folds)) {
         ctx.set_error("fold_rmse_matrix is not populated; run "
                       "cross_validate_component_prefixes first");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
 
     // Mean RMSE per component (averaging across folds).
@@ -207,7 +207,7 @@ p4a_status_t select_one_se_components(Context& ctx,
     }
     result.one_se_n_components = selected;
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

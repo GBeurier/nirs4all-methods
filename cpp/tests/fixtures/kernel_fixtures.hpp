@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct KernelFixture {
     const char* id;
@@ -275,4 +275,4 @@ inline const KernelFixture kKernelFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

@@ -21,14 +21,14 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
     return static_cast<unsigned long long>(value);
 }
 
-[[nodiscard]] double read_value(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_value(const n4m_matrix_view_t& view,
                                 std::size_t row,
                                 std::size_t col) noexcept {
     const std::int64_t off =
         static_cast<std::int64_t>(row) * view.row_stride +
         static_cast<std::int64_t>(col) * view.col_stride;
     const std::size_t uoff = static_cast<std::size_t>(off);
-    if (view.dtype == P4A_DTYPE_F64) {
+    if (view.dtype == N4M_DTYPE_F64) {
         const auto* ptr = static_cast<const double*>(view.data);
         return ptr[uoff];
     }
@@ -36,29 +36,29 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
     return static_cast<double>(ptr[uoff]);
 }
 
-[[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t validate_float_view(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& view,
                                                const char* name) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(view);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(view);
+    if (status != N4M_OK) {
         ctx.set_errorf("%s matrix view is invalid: %s",
                        name,
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
-    if (view.dtype != P4A_DTYPE_F64 && view.dtype != P4A_DTYPE_F32) {
+    if (view.dtype != N4M_DTYPE_F64 && view.dtype != N4M_DTYPE_F32) {
         ctx.set_errorf("%s dtype must be f64 or f32", name);
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
     if (view.rows == 0 || view.cols == 0) {
         ctx.set_errorf("%s must contain at least one value", name);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t copy_checked(::pls4all::core::Context& ctx,
-                                        const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t copy_checked(::n4m::core::Context& ctx,
+                                        const n4m_matrix_view_t& view,
                                         const char* name,
                                         std::vector<double>& out) {
     const std::size_t rows = static_cast<std::size_t>(view.rows);
@@ -66,7 +66,7 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
     if (cols != 0U &&
         rows > static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max()) / cols) {
         ctx.set_errorf("%s shape is too large", name);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     out.clear();
     out.resize(rows * cols);
@@ -78,12 +78,12 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
                                name,
                                ull(row),
                                ull(col));
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out[row * cols + col] = value;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 [[nodiscard]] double percentile_linear(std::vector<double> sorted,
@@ -104,20 +104,20 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t compute_regression_metrics(Context& ctx,
-                                        const p4a_matrix_view_t& observed,
-                                        const p4a_matrix_view_t& predicted,
+n4m_status_t compute_regression_metrics(Context& ctx,
+                                        const n4m_matrix_view_t& observed,
+                                        const n4m_matrix_view_t& predicted,
                                         RegressionMetrics& out) {
     try {
         out = RegressionMetrics{};
-        p4a_status_t status = validate_float_view(ctx, observed, "observed");
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_float_view(ctx, observed, "observed");
+        if (status != N4M_OK) {
             return status;
         }
         status = validate_float_view(ctx, predicted, "predicted");
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         if (observed.rows != predicted.rows || observed.cols != predicted.cols) {
@@ -126,17 +126,17 @@ p4a_status_t compute_regression_metrics(Context& ctx,
                            static_cast<long long>(observed.cols),
                            static_cast<long long>(predicted.rows),
                            static_cast<long long>(predicted.cols));
-            return P4A_ERR_SHAPE_MISMATCH;
+            return N4M_ERR_SHAPE_MISMATCH;
         }
 
         std::vector<double> y_true;
         std::vector<double> y_pred;
         status = copy_checked(ctx, observed, "observed", y_true);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         status = copy_checked(ctx, predicted, "predicted", y_pred);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -194,14 +194,14 @@ p4a_status_t compute_regression_metrics(Context& ctx,
         out.intercept = intercept;
         out.rpd = stddev / ratio_denominator;
         out.rpiq = (q3 - q1) / ratio_denominator;
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while computing regression metrics");
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while computing regression metrics");
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

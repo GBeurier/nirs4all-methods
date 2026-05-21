@@ -17,16 +17,16 @@
 
 namespace {
 
-p4a_matrix_view_t make_view(const std::vector<double>& data,
+n4m_matrix_view_t make_view(const std::vector<double>& data,
                             std::int64_t rows,
                             std::int64_t cols) {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = const_cast<double*>(data.data());
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
@@ -53,13 +53,13 @@ TEST(o2pls_phase16, fits_predictive_orthogonal_components) {
         1.2, 0.4,
         1.3, 0.5,
     };
-    p4a_matrix_view_t X = make_view(Xv, 8, 4);
-    p4a_matrix_view_t Y = make_view(Yv, 8, 2);
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    ::pls4all::core::O2PlsResult result;
-    CHECK_EQ(::pls4all::core::fit_o2pls(ctx, cfg, X, Y, 1, 1, 1, result),
-             P4A_OK);
+    n4m_matrix_view_t X = make_view(Xv, 8, 4);
+    n4m_matrix_view_t Y = make_view(Yv, 8, 2);
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    ::n4m::core::O2PlsResult result;
+    CHECK_EQ(::n4m::core::fit_o2pls(ctx, cfg, X, Y, 1, 1, 1, result),
+             N4M_OK);
     CHECK_EQ(result.n_predictive, 1);
     CHECK_EQ(result.n_x_orthogonal, 1);
     CHECK_EQ(result.n_y_orthogonal, 1);
@@ -70,20 +70,20 @@ TEST(o2pls_phase16, fits_predictive_orthogonal_components) {
 TEST(o2pls_phase16, rejects_invalid_inputs) {
     std::vector<double> Xv = {0.1, 0.2};
     std::vector<double> Yv = {1.0};
-    p4a_matrix_view_t X = make_view(Xv, 2, 1);
-    p4a_matrix_view_t Y = make_view(Yv, 1, 1);
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    ::pls4all::core::O2PlsResult result;
-    CHECK_EQ(::pls4all::core::fit_o2pls(ctx, cfg, X, Y, 1, 0, 0, result),
-             P4A_ERR_SHAPE_MISMATCH);
+    n4m_matrix_view_t X = make_view(Xv, 2, 1);
+    n4m_matrix_view_t Y = make_view(Yv, 1, 1);
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    ::n4m::core::O2PlsResult result;
+    CHECK_EQ(::n4m::core::fit_o2pls(ctx, cfg, X, Y, 1, 0, 0, result),
+             N4M_ERR_SHAPE_MISMATCH);
 
     Y = make_view(Yv, 2, 1);
     // n_predictive = 0 → invalid
     Yv = {1.0, 0.5};
     Y = make_view(Yv, 2, 1);
-    CHECK_EQ(::pls4all::core::fit_o2pls(ctx, cfg, X, Y, 0, 0, 0, result),
-             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::fit_o2pls(ctx, cfg, X, Y, 0, 0, 0, result),
+             N4M_ERR_INVALID_ARGUMENT);
 }
 
 TEST(so_pls_phase17, sequential_predicts_finite_values) {
@@ -108,18 +108,18 @@ TEST(so_pls_phase17, sequential_predicts_finite_values) {
         0.6, 0.5,
     };
     std::vector<double> Yv = {1.1, 0.7, 0.4, 1.0, 0.9, 0.6, 1.2, 1.3};
-    p4a_matrix_view_t Xa_view = make_view(Xa, 8, 4);
-    p4a_matrix_view_t Xb_view = make_view(Xb, 8, 2);
-    p4a_matrix_view_t Y_view = make_view(Yv, 8, 1);
+    n4m_matrix_view_t Xa_view = make_view(Xa, 8, 4);
+    n4m_matrix_view_t Xb_view = make_view(Xb, 8, 2);
+    n4m_matrix_view_t Y_view = make_view(Yv, 8, 1);
 
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    ::pls4all::core::SoPlsResult result;
-    std::vector<p4a_matrix_view_t> blocks = {Xa_view, Xb_view};
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    ::n4m::core::SoPlsResult result;
+    std::vector<n4m_matrix_view_t> blocks = {Xa_view, Xb_view};
     std::vector<std::int32_t> ncomps = {2, 1};
-    CHECK_EQ(::pls4all::core::fit_so_pls(ctx, cfg, blocks, Y_view, ncomps,
+    CHECK_EQ(::n4m::core::fit_so_pls(ctx, cfg, blocks, Y_view, ncomps,
                                           result),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(result.n_blocks, 2);
     CHECK_EQ(result.predictions.size(), static_cast<std::size_t>(8));
     for (double v : result.predictions) CHECK(std::isfinite(v));
@@ -142,16 +142,16 @@ TEST(on_pls_phase18, extracts_joint_and_unique_components) {
         0.1, 0.7, 0.4,
         0.8, 0.3, 0.6,
     };
-    p4a_matrix_view_t Xa_view = make_view(Xa, 6, 4);
-    p4a_matrix_view_t Xb_view = make_view(Xb, 6, 3);
+    n4m_matrix_view_t Xa_view = make_view(Xa, 6, 4);
+    n4m_matrix_view_t Xb_view = make_view(Xb, 6, 3);
 
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    ::pls4all::core::OnPlsResult result;
-    std::vector<p4a_matrix_view_t> blocks = {Xa_view, Xb_view};
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    ::n4m::core::OnPlsResult result;
+    std::vector<n4m_matrix_view_t> blocks = {Xa_view, Xb_view};
     std::vector<std::int32_t> unique = {1, 1};
-    CHECK_EQ(::pls4all::core::fit_on_pls(ctx, cfg, blocks, 1, unique, result),
-             P4A_OK);
+    CHECK_EQ(::n4m::core::fit_on_pls(ctx, cfg, blocks, 1, unique, result),
+             N4M_OK);
     CHECK_EQ(result.n_blocks, 2);
     CHECK_EQ(result.n_joint, 1);
     CHECK_EQ(result.joint_loadings_per_block.size(),
@@ -184,16 +184,16 @@ TEST(rosa_phase19, selects_best_block_per_component) {
         0.6, 0.5,
     };
     std::vector<double> Yv = {1.1, 0.7, 0.4, 1.0, 0.9, 0.6, 1.2, 1.3};
-    p4a_matrix_view_t Xa_view = make_view(Xa, 8, 4);
-    p4a_matrix_view_t Xb_view = make_view(Xb, 8, 2);
-    p4a_matrix_view_t Y_view = make_view(Yv, 8, 1);
+    n4m_matrix_view_t Xa_view = make_view(Xa, 8, 4);
+    n4m_matrix_view_t Xb_view = make_view(Xb, 8, 2);
+    n4m_matrix_view_t Y_view = make_view(Yv, 8, 1);
 
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    ::pls4all::core::RosaResult result;
-    std::vector<p4a_matrix_view_t> blocks = {Xa_view, Xb_view};
-    CHECK_EQ(::pls4all::core::fit_rosa(ctx, cfg, blocks, Y_view, 3, result),
-             P4A_OK);
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    ::n4m::core::RosaResult result;
+    std::vector<n4m_matrix_view_t> blocks = {Xa_view, Xb_view};
+    CHECK_EQ(::n4m::core::fit_rosa(ctx, cfg, blocks, Y_view, 3, result),
+             N4M_OK);
     CHECK_EQ(result.n_components, 3);
     CHECK_EQ(result.selected_block_per_component.size(),
              static_cast<std::size_t>(3));

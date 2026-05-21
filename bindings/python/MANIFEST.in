@@ -1,4 +1,4 @@
-# Include the native shared library so the sdist + wheel ship libp4a
+# Include the native shared library so the sdist + wheel ship libn4m
 # even though setuptools' default discovery skips arch-specific files.
 recursive-include src/pls4all/lib *
 

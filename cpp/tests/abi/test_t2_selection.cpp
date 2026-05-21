@@ -16,21 +16,21 @@ namespace {
 constexpr double kAbsTol = 1e-8;
 constexpr double kRelTol = 1e-8;
 
-p4a_matrix_view_t matrix_view(const ::pls4all::test::fixtures::MatrixRef& ref) {
-    p4a_matrix_view_t view{};
+n4m_matrix_view_t matrix_view(const ::n4m::test::fixtures::MatrixRef& ref) {
+    n4m_matrix_view_t view{};
     view.data = const_cast<double*>(ref.values);
     view.rows = ref.rows;
     view.cols = ref.cols;
     view.row_stride = ref.cols > 0 ? ref.cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
 void check_close_values(int& failures,
                         const char* label,
                         const std::vector<double>& actual,
-                        const ::pls4all::test::fixtures::MatrixRef& expected) {
+                        const ::n4m::test::fixtures::MatrixRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -74,7 +74,7 @@ void check_close_scalar(int& failures, const char* label, double actual, double 
 void check_indices(int& failures,
                    const char* label,
                    const std::vector<std::int64_t>& actual,
-                   const ::pls4all::test::fixtures::T2SelectionIndexRef& expected) {
+                   const ::n4m::test::fixtures::T2SelectionIndexRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -98,30 +98,30 @@ void check_indices(int& failures,
     }
 }
 
-std::vector<double> alpha_values(const ::pls4all::test::fixtures::T2SelectionFixture& fixture) {
+std::vector<double> alpha_values(const ::n4m::test::fixtures::T2SelectionFixture& fixture) {
     return std::vector<double>(fixture.alpha.values, fixture.alpha.values + fixture.alpha.size);
 }
 
 void check_fixture(int& failures,
-                   const ::pls4all::test::fixtures::T2SelectionFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-    cfg.solver = P4A_SOLVER_NIPALS;
-    cfg.deflation = P4A_DEFLATION_REGRESSION;
+                   const ::n4m::test::fixtures::T2SelectionFixture& fixture) {
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+    cfg.solver = N4M_SOLVER_NIPALS;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
     cfg.n_components = fixture.n_components;
 
-    p4a_matrix_view_t X = matrix_view(fixture.X);
-    p4a_matrix_view_t Y = matrix_view(fixture.Y);
-    ::pls4all::core::ValidationPlan plan;
-    CHECK_EQ(::pls4all::core::make_kfold_validation_plan(ctx,
+    n4m_matrix_view_t X = matrix_view(fixture.X);
+    n4m_matrix_view_t Y = matrix_view(fixture.Y);
+    ::n4m::core::ValidationPlan plan;
+    CHECK_EQ(::n4m::core::make_kfold_validation_plan(ctx,
                                                          fixture.X.rows,
                                                          fixture.n_splits,
                                                          plan),
-             P4A_OK);
+             N4M_OK);
 
-    ::pls4all::core::T2SelectionResult result;
-    CHECK_EQ(::pls4all::core::select_by_t2(ctx,
+    ::n4m::core::T2SelectionResult result;
+    CHECK_EQ(::n4m::core::select_by_t2(ctx,
                                            cfg,
                                            X,
                                            Y,
@@ -129,7 +129,7 @@ void check_fixture(int& failures,
                                            alpha_values(fixture),
                                            fixture.min_selected,
                                            result),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(result.n_features, static_cast<std::int32_t>(fixture.X.cols));
     CHECK_EQ(result.n_targets, static_cast<std::int32_t>(fixture.Y.cols));
     CHECK_EQ(result.n_components, fixture.n_components);
@@ -157,29 +157,29 @@ void check_fixture(int& failures,
 }  // namespace
 
 TEST(t2_selection_phase5l, generated_fixture_matches_python_reference) {
-    for (const auto& fixture : ::pls4all::test::fixtures::kT2SelectionFixtures) {
+    for (const auto& fixture : ::n4m::test::fixtures::kT2SelectionFixtures) {
         check_fixture(failures, fixture);
     }
 }
 
 TEST(t2_selection_phase5l, rejects_invalid_t2_requests) {
-    const auto& fixture = ::pls4all::test::fixtures::kT2SelectionFixtures[0];
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
+    const auto& fixture = ::n4m::test::fixtures::kT2SelectionFixtures[0];
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
     cfg.n_components = fixture.n_components;
 
-    p4a_matrix_view_t X = matrix_view(fixture.X);
-    p4a_matrix_view_t Y = matrix_view(fixture.Y);
-    ::pls4all::core::ValidationPlan plan;
-    CHECK_EQ(::pls4all::core::make_kfold_validation_plan(ctx,
+    n4m_matrix_view_t X = matrix_view(fixture.X);
+    n4m_matrix_view_t Y = matrix_view(fixture.Y);
+    ::n4m::core::ValidationPlan plan;
+    CHECK_EQ(::n4m::core::make_kfold_validation_plan(ctx,
                                                          fixture.X.rows,
                                                          fixture.n_splits,
                                                          plan),
-             P4A_OK);
+             N4M_OK);
 
-    ::pls4all::core::T2SelectionResult result;
+    ::n4m::core::T2SelectionResult result;
     std::vector<double> alpha = alpha_values(fixture);
-    CHECK_EQ(::pls4all::core::select_by_t2(ctx,
+    CHECK_EQ(::n4m::core::select_by_t2(ctx,
                                            cfg,
                                            X,
                                            Y,
@@ -187,10 +187,10 @@ TEST(t2_selection_phase5l, rejects_invalid_t2_requests) {
                                            {},
                                            fixture.min_selected,
                                            result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
     std::vector<double> invalid_alpha = alpha;
     invalid_alpha[0] = 1.0;
-    CHECK_EQ(::pls4all::core::select_by_t2(ctx,
+    CHECK_EQ(::n4m::core::select_by_t2(ctx,
                                            cfg,
                                            X,
                                            Y,
@@ -198,8 +198,8 @@ TEST(t2_selection_phase5l, rejects_invalid_t2_requests) {
                                            invalid_alpha,
                                            fixture.min_selected,
                                            result),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::select_by_t2(ctx,
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::select_by_t2(ctx,
                                            cfg,
                                            X,
                                            Y,
@@ -207,9 +207,9 @@ TEST(t2_selection_phase5l, rejects_invalid_t2_requests) {
                                            alpha,
                                            cfg.n_components - 1,
                                            result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
     cfg.n_components = static_cast<std::int32_t>(fixture.X.cols - 1);
-    CHECK_EQ(::pls4all::core::select_by_t2(ctx,
+    CHECK_EQ(::n4m::core::select_by_t2(ctx,
                                            cfg,
                                            X,
                                            Y,
@@ -217,12 +217,12 @@ TEST(t2_selection_phase5l, rejects_invalid_t2_requests) {
                                            alpha,
                                            fixture.min_selected,
                                            result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 
     cfg.n_components = fixture.n_components;
-    p4a_matrix_view_t mismatched = Y;
+    n4m_matrix_view_t mismatched = Y;
     mismatched.rows = Y.rows - 1;
-    CHECK_EQ(::pls4all::core::select_by_t2(ctx,
+    CHECK_EQ(::n4m::core::select_by_t2(ctx,
                                            cfg,
                                            X,
                                            mismatched,
@@ -230,5 +230,5 @@ TEST(t2_selection_phase5l, rejects_invalid_t2_requests) {
                                            alpha,
                                            fixture.min_selected,
                                            result),
-             P4A_ERR_SHAPE_MISMATCH);
+             N4M_ERR_SHAPE_MISMATCH);
 }

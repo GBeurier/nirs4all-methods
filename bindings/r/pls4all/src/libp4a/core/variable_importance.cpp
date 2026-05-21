@@ -25,14 +25,14 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
     return static_cast<unsigned long long>(value);
 }
 
-[[nodiscard]] double read_value(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_value(const n4m_matrix_view_t& view,
                                 std::size_t row,
                                 std::size_t col) noexcept {
     const std::int64_t off =
         static_cast<std::int64_t>(row) * view.row_stride +
         static_cast<std::int64_t>(col) * view.col_stride;
     const auto uoff = static_cast<std::size_t>(off);
-    if (view.dtype == P4A_DTYPE_F64) {
+    if (view.dtype == N4M_DTYPE_F64) {
         const auto* ptr = static_cast<const double*>(view.data);
         return ptr[uoff];
     }
@@ -40,21 +40,21 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
     return static_cast<double>(ptr[uoff]);
 }
 
-[[nodiscard]] p4a_status_t validate_scores_available(::pls4all::core::Context& ctx,
-                                                     const ::pls4all::core::Model& model) {
+[[nodiscard]] n4m_status_t validate_scores_available(::n4m::core::Context& ctx,
+                                                     const ::n4m::core::Model& model) {
     if (model.store_scores == 0 || model.scores_t.empty()) {
         ctx.set_error("variable-importance metrics require store_scores=1 at fit time");
-        return P4A_ERR_UNSUPPORTED;
+        return N4M_ERR_UNSUPPORTED;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t validate_model_arrays(::pls4all::core::Context& ctx,
-                                                 const ::pls4all::core::Model& model) {
+[[nodiscard]] n4m_status_t validate_model_arrays(::n4m::core::Context& ctx,
+                                                 const ::n4m::core::Model& model) {
     if (model.n_samples <= 0 || model.n_features <= 0 ||
         model.n_targets <= 0 || model.n_components <= 0) {
         ctx.set_error("fitted model dimensions are invalid for variable importance");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const auto n = static_cast<std::size_t>(model.n_samples);
     const auto p = static_cast<std::size_t>(model.n_features);
@@ -67,23 +67,23 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
         model.x_mean.size() != p ||
         model.x_scale.size() != p) {
         ctx.set_error("fitted model arrays are inconsistent for variable importance");
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t validate_x(::pls4all::core::Context& ctx,
-                                      const ::pls4all::core::Model& model,
-                                      const p4a_matrix_view_t& X) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(X);
-    if (status != P4A_OK) {
+[[nodiscard]] n4m_status_t validate_x(::n4m::core::Context& ctx,
+                                      const ::n4m::core::Model& model,
+                                      const n4m_matrix_view_t& X) noexcept {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(X);
+    if (status != N4M_OK) {
         ctx.set_errorf("X matrix view is invalid: %s",
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
-    if (X.dtype != P4A_DTYPE_F64 && X.dtype != P4A_DTYPE_F32) {
+    if (X.dtype != N4M_DTYPE_F64 && X.dtype != N4M_DTYPE_F32) {
         ctx.set_error("X dtype must be f64 or f32");
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
     if (X.rows != model.n_samples || X.cols != model.n_features) {
         ctx.set_errorf("X shape (%lld, %lld) must match fitted training shape (%lld, %d)",
@@ -91,26 +91,26 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
                        static_cast<long long>(X.cols),
                        static_cast<long long>(model.n_samples),
                        static_cast<int>(model.n_features));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t compute_vip_scores(Context& ctx,
+n4m_status_t compute_vip_scores(Context& ctx,
                                 const Model& model,
                                 std::vector<double>& out) {
     try {
         out.clear();
-        p4a_status_t status = validate_scores_available(ctx, model);
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_scores_available(ctx, model);
+        if (status != N4M_OK) {
             return status;
         }
         status = validate_model_arrays(ctx, model);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -137,7 +137,7 @@ p4a_status_t compute_vip_scores(Context& ctx,
         }
         if (total_ssy <= kEps) {
             ctx.set_error("Y variance explained by components vanished while computing VIP");
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         out.assign(p, 0.0);
@@ -151,34 +151,34 @@ p4a_status_t compute_vip_scores(Context& ctx,
         }
 
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while computing VIP scores");
         out.clear();
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while computing VIP scores");
         out.clear();
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-p4a_status_t compute_selectivity_ratio(Context& ctx,
+n4m_status_t compute_selectivity_ratio(Context& ctx,
                                        const Model& model,
-                                       const p4a_matrix_view_t& X,
+                                       const n4m_matrix_view_t& X,
                                        std::vector<double>& out) {
     try {
         out.clear();
-        p4a_status_t status = validate_scores_available(ctx, model);
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_scores_available(ctx, model);
+        if (status != N4M_OK) {
             return status;
         }
         status = validate_model_arrays(ctx, model);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         status = validate_x(ctx, model, X);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -196,7 +196,7 @@ p4a_status_t compute_selectivity_ratio(Context& ctx,
                                    ull(row),
                                    ull(feature));
                     out.clear();
-                    return P4A_ERR_INVALID_ARGUMENT;
+                    return N4M_ERR_INVALID_ARGUMENT;
                 }
                 x_scaled -= model.x_mean[feature];
                 x_scaled /= model.x_scale[feature];
@@ -219,16 +219,16 @@ p4a_status_t compute_selectivity_ratio(Context& ctx,
         }
 
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while computing selectivity ratio");
         out.clear();
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while computing selectivity ratio");
         out.clear();
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

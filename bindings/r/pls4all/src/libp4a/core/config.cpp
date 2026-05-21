@@ -2,8 +2,8 @@
 
 #include "core/config.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 Config::Config() noexcept = default;
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

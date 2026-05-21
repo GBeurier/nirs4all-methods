@@ -7,13 +7,13 @@
 #include <cstdint>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/config.hpp"
 #include "core/context.hpp"
 #include "core/validation.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct BiplsSelectionResult {
     std::int32_t n_intervals{0};
@@ -29,15 +29,15 @@ struct BiplsSelectionResult {
     std::vector<std::int64_t> selected_feature_indices;
 };
 
-[[nodiscard]] p4a_status_t select_by_bipls(
+[[nodiscard]] n4m_status_t select_by_bipls(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     const ValidationPlan& plan,
     std::int32_t interval_width,
     std::int32_t min_intervals,
     BiplsSelectionResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core
 

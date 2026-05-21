@@ -10,7 +10,7 @@ the cross-validation / metrics / variable-selection surface) land in
 Phase 2 on top of the live C core.
 """
 
-from ._ffi import lib  # noqa: F401  — eagerly loads libp4a
+from ._ffi import lib  # noqa: F401  — eagerly loads libn4m
 from ._errors import Pls4allError
 from ._types import Algorithm, Backend, Deflation, Dtype, Solver, Status
 from ._context import Context
@@ -99,19 +99,19 @@ from ._methods import (
 
 def version() -> str:
     """Return the runtime library version string, e.g. 'X.Y.Z+abi.A.B.C'."""
-    return lib.p4a_get_version_string().decode("utf-8")
+    return lib.n4m_get_version_string().decode("utf-8")
 
 
 def abi_version() -> tuple[int, int, int]:
     return (
-        int(lib.p4a_get_abi_version_major()),
-        int(lib.p4a_get_abi_version_minor()),
-        int(lib.p4a_get_abi_version_patch()),
+        int(lib.n4m_get_abi_version_major()),
+        int(lib.n4m_get_abi_version_minor()),
+        int(lib.n4m_get_abi_version_patch()),
     )
 
 
 def build_info() -> str:
-    return lib.p4a_get_build_info().decode("utf-8")
+    return lib.n4m_get_build_info().decode("utf-8")
 
 
 __all__ = [

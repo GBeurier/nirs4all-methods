@@ -11,7 +11,7 @@
 
 #include "core/context.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct BinaryClassificationMetrics {
     std::int64_t count{0};
@@ -66,25 +66,25 @@ struct BinaryCalibrationCurve {
     std::vector<double> positive_rate;
 };
 
-[[nodiscard]] p4a_status_t compute_binary_classification_metrics(
+[[nodiscard]] n4m_status_t compute_binary_classification_metrics(
     Context& ctx,
-    const p4a_matrix_view_t& labels,
-    const p4a_matrix_view_t& scores,
+    const n4m_matrix_view_t& labels,
+    const n4m_matrix_view_t& scores,
     double threshold,
     BinaryClassificationMetrics& out);
 
-[[nodiscard]] p4a_status_t compute_multiclass_classification_metrics(
+[[nodiscard]] n4m_status_t compute_multiclass_classification_metrics(
     Context& ctx,
-    const p4a_matrix_view_t& labels,
-    const p4a_matrix_view_t& scores,
+    const n4m_matrix_view_t& labels,
+    const n4m_matrix_view_t& scores,
     std::int32_t n_classes,
     MulticlassClassificationMetrics& out);
 
-[[nodiscard]] p4a_status_t compute_binary_calibration_curve(
+[[nodiscard]] n4m_status_t compute_binary_calibration_curve(
     Context& ctx,
-    const p4a_matrix_view_t& labels,
-    const p4a_matrix_view_t& scores,
+    const n4m_matrix_view_t& labels,
+    const n4m_matrix_view_t& scores,
     std::int32_t n_bins,
     BinaryCalibrationCurve& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

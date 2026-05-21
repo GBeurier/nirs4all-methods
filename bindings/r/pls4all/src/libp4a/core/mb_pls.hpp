@@ -8,12 +8,12 @@
 #include <cstdint>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/config.hpp"
 #include "core/context.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct MbPlsResult {
     std::int64_t n_samples{0};
@@ -30,13 +30,13 @@ struct MbPlsResult {
     std::vector<double> block_weights; // n_blocks
 };
 
-[[nodiscard]] p4a_status_t fit_predict_mb_pls(
+[[nodiscard]] n4m_status_t fit_predict_mb_pls(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     const std::int64_t* block_sizes,
     std::size_t n_blocks,
     MbPlsResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

@@ -1,0 +1,23 @@
+{
+  "algorithm": "pso_select",
+  "backend": "ref_python_pyswarms",
+  "max_runs": 40,
+  "n": 100,
+  "n_runs": 19,
+  "p": 50,
+  "prediction_seed": 1234567908,
+  "seed_base": 1234567890,
+  "source_predictions_path": "/home/delete/nirs4all/pls4all/benchmarks/cross_binding/data/.predictions/pso_select_ref_python_pyswarms_100x50_t8_blas-omp.npy",
+  "timing_statistic": "median",
+  "total_runs": 20,
+  "versions": {
+    "blas": "libscipy_openblas 0.3.30 blas=8; libscipy_openblas 0.3.30 blas=8; libgomp ? openmp=8",
+    "language": "Python 3.13.13",
+    "numpy": "2.3.5",
+    "reference_id": "python_pyswarms",
+    "reference_library": "pyswarms",
+    "reference_version": "1.3.0",
+    "timing_schema": "adaptive-v1"
+  },
+  "warmup_ms": 577.7628229989205
+}

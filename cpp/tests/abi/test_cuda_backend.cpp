@@ -4,7 +4,7 @@
 // results numerically equivalent to the reference scalar loops on
 // the same shared fixture every other binding consumes.
 //
-// When P4A_USE_CUDA is defined the cuBLAS dispatch is exercised.
+// When N4M_USE_CUDA is defined the cuBLAS dispatch is exercised.
 // When it is not, the tests still compile and the parity assertion
 // hits the scalar / BLAS path. The smoke and availability tests
 // gracefully report whichever runtime state the host produces.
@@ -22,7 +22,7 @@
 #include "pls4all/p4a.h"
 #include "harness.hpp"
 
-#if defined(P4A_USE_CUDA)
+#if defined(N4M_USE_CUDA)
 #  include "core/cuda_dispatch.hpp"
 #endif
 
@@ -78,17 +78,17 @@ double rmse_rel(const double* actual, const double* expected, std::size_t n) {
                 : std::numeric_limits<double>::min());
 }
 
-#if defined(P4A_USE_CUDA)
+#if defined(N4M_USE_CUDA)
 bool cuda_runtime_active() {
-    return ::pls4all::cuda_dispatch::cuda_runtime_available();
+    return ::n4m::cuda_dispatch::cuda_runtime_available();
 }
 #endif
 
 }  // namespace
 
-TEST(cuda_backend, p4a_backend_is_available_reports_compile_and_runtime_state) {
-    const int reported = p4a_backend_is_available(P4A_BACKEND_CUDA);
-#if defined(P4A_USE_CUDA)
+TEST(cuda_backend, n4m_backend_is_available_reports_compile_and_runtime_state) {
+    const int reported = n4m_backend_is_available(N4M_BACKEND_CUDA);
+#if defined(N4M_USE_CUDA)
     // Compile-time support present; runtime result depends on whether
     // the host has a working GPU.
     CHECK(reported == 0 || reported == 1);
@@ -97,8 +97,8 @@ TEST(cuda_backend, p4a_backend_is_available_reports_compile_and_runtime_state) {
 #endif
 }
 
-TEST(cuda_backend, p4a_pls_fit_simple_matches_fixture) {
-#if defined(P4A_USE_CUDA)
+TEST(cuda_backend, n4m_pls_fit_simple_matches_fixture) {
+#if defined(N4M_USE_CUDA)
     if (!cuda_runtime_active()) {
         // No GPU at runtime — accept trivial pass so OFF / no-device
         // CI runners stay green.
@@ -115,11 +115,11 @@ TEST(cuda_backend, p4a_pls_fit_simple_matches_fixture) {
     std::vector<double> y_mean(static_cast<std::size_t>(kQ), 0.0);
     std::vector<double> preds(static_cast<std::size_t>(kN * kQ), 0.0);
 
-    const p4a_status_t status = p4a_pls_fit_simple(
+    const n4m_status_t status = n4m_pls_fit_simple(
         X.data(), Y.data(),
         kN, kP, kQ, kComponents,
         coefs.data(), x_mean.data(), y_mean.data(), preds.data());
-    CHECK_EQ(status, P4A_OK);
+    CHECK_EQ(status, N4M_OK);
 
     CHECK(rmse_rel(coefs.data(), kExpectedCoefs,
                     static_cast<std::size_t>(kP * kQ)) <= kRmseRelTol);
@@ -127,7 +127,7 @@ TEST(cuda_backend, p4a_pls_fit_simple_matches_fixture) {
 }
 
 TEST(cuda_backend, larger_matrix_predictions_remain_finite) {
-#if defined(P4A_USE_CUDA)
+#if defined(N4M_USE_CUDA)
     if (!cuda_runtime_active()) {
         CHECK(true);
         return;
@@ -155,11 +155,11 @@ TEST(cuda_backend, larger_matrix_predictions_remain_finite) {
     std::vector<double> y_mean(static_cast<std::size_t>(q), 0.0);
     std::vector<double> preds(static_cast<std::size_t>(n * q), 0.0);
 
-    CHECK_EQ(p4a_pls_fit_simple(X.data(), Y.data(),
+    CHECK_EQ(n4m_pls_fit_simple(X.data(), Y.data(),
                                   n, p, q, k,
                                   coefs.data(), x_mean.data(),
                                   y_mean.data(), preds.data()),
-              P4A_OK);
+              N4M_OK);
     for (double v : coefs) { CHECK(std::isfinite(v)); }
     for (double v : preds) { CHECK(std::isfinite(v)); }
 }

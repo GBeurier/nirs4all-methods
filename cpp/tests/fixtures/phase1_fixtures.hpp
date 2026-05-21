@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct MatrixRef {
     std::int64_t rows;
@@ -207,4 +207,4 @@ inline const Phase1Fixture kPhase1Fixtures[] = {
     },
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

@@ -13,14 +13,14 @@
  *   y_mean       — (1 × q) row vector.
  *   predictions  — (n × q) in-sample predictions.
  *
- * Calls the public C ABI helper `p4a_pls_fit_simple` (ABI 1.13+).
+ * Calls the public C ABI helper `n4m_pls_fit_simple` (ABI 1.13+).
  * Build via build_mex.m or the bundled CMake target. The MEX uses the
  * mxGetData / mxCreateDoubleMatrix C interface so it works on both
  * MATLAB (>= R2018a) and Octave (>= 6.0).
  */
 
 #include "mex.h"
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -67,7 +67,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
                  int nrhs, const mxArray *prhs[]) {
     if (nrhs != 3) {
         mexErrMsgIdAndTxt("pls4all:nargin",
-                          "Usage: p4a_pls_fit_mex(X, Y, n_components)");
+                          "Usage: n4m_pls_fit_mex(X, Y, n_components)");
     }
     if (!mxIsDouble(prhs[0]) || !mxIsDouble(prhs[1])) {
         mexErrMsgIdAndTxt("pls4all:type",
@@ -112,14 +112,14 @@ void mexFunction(int nlhs, mxArray *plhs[],
                           "out of memory allocating outputs");
     }
 
-    p4a_status_t status = p4a_pls_fit_simple(
+    n4m_status_t status = n4m_pls_fit_simple(
         X, Y, n, p, q, n_components,
         coefs, x_mean, y_mean, preds);
     free(X); free(Y);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         free(coefs); free(x_mean); free(y_mean); free(preds);
         mexErrMsgIdAndTxt("pls4all:fit",
-                          "p4a_pls_fit_simple failed with status %d",
+                          "n4m_pls_fit_simple failed with status %d",
                           (int)status);
     }
 

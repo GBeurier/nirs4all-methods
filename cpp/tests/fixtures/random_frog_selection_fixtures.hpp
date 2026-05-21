@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct RandomFrogSelectionIndexRef {
     const std::int64_t* values;
@@ -193,4 +193,4 @@ inline const RandomFrogSelectionFixture kRandomFrogSelectionFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

@@ -108,7 +108,7 @@ pls4all_add_warnings(pls4all_core)
 # Optional BLAS backend (Phase 43). Default OFF — when ON we route the hot
 # linear-algebra kernels in cpp/src/core/model.cpp through CBLAS via the
 # pls4all::linalg dispatch layer in cpp/src/core/linalg.hpp. The reference
-# scalar loops stay as the !P4A_USE_BLAS path so the default build is
+# scalar loops stay as the !N4M_USE_BLAS path so the default build is
 # bit-identical to pre-Phase-43.
 # ---------------------------------------------------------------------------
 if(PLS4ALL_WITH_BLAS)
@@ -140,7 +140,7 @@ if(PLS4ALL_WITH_BLAS)
             "openblas-devel on RHEL/Fedora, or Apple Accelerate on macOS) "
             "or pass -DBLAS_INCLUDE_DIRS=/path/to/include.")
     endif()
-    target_compile_definitions(pls4all_core PRIVATE P4A_USE_BLAS=1)
+    target_compile_definitions(pls4all_core PRIVATE N4M_USE_BLAS=1)
     if(BLAS_LINKER_FLAGS)
         target_link_options(pls4all_core PRIVATE ${BLAS_LINKER_FLAGS})
     endif()
@@ -159,7 +159,7 @@ endif()
 # ---------------------------------------------------------------------------
 # Optional OpenMP backend (Phase 44). Default OFF — when ON we annotate
 # the hot inner loops in model.cpp with #pragma omp parallel for via the
-# P4A_PARALLEL_FOR_STATIC macro in cpp/src/core/parallel.hpp. The OFF
+# N4M_PARALLEL_FOR_STATIC macro in cpp/src/core/parallel.hpp. The OFF
 # build is bit-identical to pre-Phase-44.
 #
 # Coexistence note: when both PLS4ALL_WITH_BLAS=ON and
@@ -171,7 +171,7 @@ endif()
 if(PLS4ALL_WITH_OPENMP)
     # OpenMP::OpenMP_CXX is created by find_package(OpenMP) in the
     # top-level CMakeLists.txt so both cpp/src/ and cpp/tests/ see it.
-    target_compile_definitions(pls4all_core PRIVATE P4A_USE_OPENMP=1)
+    target_compile_definitions(pls4all_core PRIVATE N4M_USE_OPENMP=1)
     target_link_libraries(pls4all_core PUBLIC OpenMP::OpenMP_CXX)
     message(STATUS "  OpenMP backend    : ON  (${OpenMP_CXX_FLAGS})")
     if(PLS4ALL_WITH_BLAS)
@@ -202,11 +202,11 @@ endif()
 #
 # Runtime safety: a build with PLS4ALL_WITH_CUDA=ON still loads cleanly
 # on a machine without a GPU. cuda_dispatch::cuda_runtime_available()
-# returns false in that case, and p4a_backend_is_available + set_backend
+# returns false in that case, and n4m_backend_is_available + set_backend
 # both report unavailability cleanly.
 # ---------------------------------------------------------------------------
 if(PLS4ALL_WITH_CUDA)
-    target_compile_definitions(pls4all_core PRIVATE P4A_USE_CUDA=1)
+    target_compile_definitions(pls4all_core PRIVATE N4M_USE_CUDA=1)
     target_include_directories(pls4all_core PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
     message(STATUS "  CUDA backend      : ON  (toolkit ${CUDAToolkit_VERSION})")
     if(PLS4ALL_WITH_BLAS)
@@ -214,14 +214,14 @@ if(PLS4ALL_WITH_CUDA)
             "PLS4ALL_WITH_CUDA=ON together with PLS4ALL_WITH_BLAS=ON: "
             "linalg dispatch prefers CUDA when both are present. The "
             "BLAS link is kept but the BLAS code paths in linalg.hpp "
-            "are not compiled (guarded by #elif on P4A_USE_CUDA).")
+            "are not compiled (guarded by #elif on N4M_USE_CUDA).")
     endif()
 else()
     message(STATUS "  CUDA backend      : OFF (no GPU dispatch)")
 endif()
 
 # ---------------------------------------------------------------------------
-# pls4all_c — public C ABI shared library (libp4a.{so,dll,dylib}).
+# pls4all_c — public C ABI shared library (libn4m.{so,dll,dylib}).
 # pls4all_c_static is the same surface, statically linked.
 # ---------------------------------------------------------------------------
 set(_pls4all_c_sources
@@ -256,7 +256,7 @@ function(pls4all_apply_c_target target)
         # Mirrors the define applied to pls4all_core, so the C-API
         # translation units (e.g. c_api_version.cpp) see the same BLAS
         # availability flag.
-        target_compile_definitions(${target} PRIVATE P4A_USE_BLAS=1)
+        target_compile_definitions(${target} PRIVATE N4M_USE_BLAS=1)
         # OBJECT libraries do not propagate PRIVATE link deps through
         # $<TARGET_OBJECTS:>, so the consuming target must link BLAS too.
         target_link_libraries(${target} PRIVATE ${BLAS_LIBRARIES})
@@ -265,14 +265,14 @@ function(pls4all_apply_c_target target)
         endif()
     endif()
     if(PLS4ALL_WITH_OPENMP)
-        target_compile_definitions(${target} PRIVATE P4A_USE_OPENMP=1)
+        target_compile_definitions(${target} PRIVATE N4M_USE_OPENMP=1)
         # OBJECT libraries do not propagate PRIVATE link deps through
         # $<TARGET_OBJECTS:>, so the consuming target must link the
         # OpenMP runtime as well.
         target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
     endif()
     if(PLS4ALL_WITH_CUDA)
-        target_compile_definitions(${target} PRIVATE P4A_USE_CUDA=1)
+        target_compile_definitions(${target} PRIVATE N4M_USE_CUDA=1)
         target_include_directories(${target} PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
         # OBJECT libraries do not propagate PRIVATE link deps through
         # $<TARGET_OBJECTS:>, so the consuming target must link cudart
@@ -286,16 +286,16 @@ if(PLS4ALL_BUILD_SHARED)
     add_library(pls4all_c SHARED ${_pls4all_c_sources})
     pls4all_apply_c_target(pls4all_c)
     # SOVERSION + VERSION are derived from the **ABI** semver (parsed from
-    # p4a_version.h in the top-level CMakeLists.txt), not from the project
+    # n4m_version.h in the top-level CMakeLists.txt), not from the project
     # semver. Rationale: the C ABI is stable across the project's 0.x → 1.x
-    # transition. Linux SONAME = libp4a.so.${P4A_ABI_VERSION_MAJOR}, real file
-    # = libp4a.so.${P4A_ABI_VERSION}. macOS dylib install name embeds
-    # P4A_ABI_VERSION_MAJOR via the standard CMake VERSION/SOVERSION machinery.
+    # transition. Linux SONAME = libn4m.so.${N4M_ABI_VERSION_MAJOR}, real file
+    # = libn4m.so.${N4M_ABI_VERSION}. macOS dylib install name embeds
+    # N4M_ABI_VERSION_MAJOR via the standard CMake VERSION/SOVERSION machinery.
     # Windows DLLs have no SONAME; the import lib name is unaffected.
     set_target_properties(pls4all_c PROPERTIES
         OUTPUT_NAME p4a
-        SOVERSION   ${P4A_ABI_VERSION_MAJOR}
-        VERSION     ${P4A_ABI_VERSION})
+        SOVERSION   ${N4M_ABI_VERSION_MAJOR}
+        VERSION     ${N4M_ABI_VERSION})
     target_compile_definitions(pls4all_c PRIVATE PLS4ALL_BUILDING_DLL=1)
 
     # Undefined-symbol enforcement + dead-code stripping at link time.
@@ -304,7 +304,7 @@ if(PLS4ALL_BUILD_SHARED)
             target_link_options(pls4all_c PRIVATE -Wl,--no-undefined)
         endif()
         target_link_options(pls4all_c PRIVATE
-            -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/c_api/p4a_linux.map
+            -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/c_api/n4m_linux.map
             $<$<NOT:$<CONFIG:Debug>>:-Wl,--gc-sections>)
     elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         target_link_options(pls4all_c PRIVATE
@@ -324,13 +324,13 @@ endif()
 if(PLS4ALL_BUILD_STATIC)
     add_library(pls4all_c_static STATIC ${_pls4all_c_sources})
     pls4all_apply_c_target(pls4all_c_static)
-    set_target_properties(pls4all_c_static PROPERTIES OUTPUT_NAME p4a_static)
+    set_target_properties(pls4all_c_static PROPERTIES OUTPUT_NAME n4m_static)
     target_compile_definitions(pls4all_c_static PUBLIC PLS4ALL_STATIC=1)
 endif()
 
 # ---------------------------------------------------------------------------
 # libn4m — donor-side methods compiled into a parallel shared library
-# libn4m.so. Coexists with libp4a.so until M5+M6 ABI rename merges them.
+# libn4m.so. Coexists with libn4m.so until M5+M6 ABI rename merges them.
 # ---------------------------------------------------------------------------
 if(NOT DEFINED PLS4ALL_BUILD_N4M)
     set(PLS4ALL_BUILD_N4M ON)

@@ -9,6 +9,6 @@ if nargin < 4
           "Usage: pls4all.weighted_pls(X, Y, K, sample_weights)");
 end
 params = struct("sample_weights", double(sample_weights(:)));
-res = pls4all.p4a_method_fit_mex("weighted_pls", double(X), double(Y), ...
+res = pls4all.n4m_method_fit_mex("weighted_pls", double(X), double(Y), ...
                                   int32(n_components), params);
 end

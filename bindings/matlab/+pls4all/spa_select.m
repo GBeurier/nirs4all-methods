@@ -10,7 +10,7 @@ if nargin < 4
     error("pls4all:nargin", "top_k is required");
 end
 params = struct("top_k", int32(top_k));
-res = pls4all.p4a_method_fit_mex("spa_select", double(X), double(Y), ...
+res = pls4all.n4m_method_fit_mex("spa_select", double(X), double(Y), ...
                                   int32(n_components), params);
 % The MEX dispatcher converts *_indices fields to 1-based MATLAB
 % indices on the way out; no further adjustment needed here.

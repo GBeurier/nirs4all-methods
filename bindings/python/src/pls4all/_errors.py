@@ -13,7 +13,7 @@ class Pls4allError(RuntimeError):
     """
 
     def __init__(self, status: int, last_error: str | None = None) -> None:
-        name = lib.p4a_status_to_string(status).decode("utf-8")
+        name = lib.n4m_status_to_string(status).decode("utf-8")
         if last_error:
             message = f"[{name}] {last_error}"
         else:

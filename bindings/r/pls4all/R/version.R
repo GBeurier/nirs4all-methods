@@ -1,4 +1,4 @@
-#' Runtime version string of the loaded libp4a.
+#' Runtime version string of the loaded libn4m.
 #'
 #' @return A character scalar like "0.67.0+abi.1.1.0".
 #' @export

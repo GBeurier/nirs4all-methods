@@ -45,13 +45,13 @@ Documentation = "https://gbeurier.github.io/pls4all/"
 where = ["src"]
 
 # Bundle the native shared library shipped inside the wheel.
-# cibuildwheel's build_libp4a_in_wheel.sh stages libp4a into
+# cibuildwheel's build_libp4a_in_wheel.sh stages libn4m into
 # src/pls4all/lib/ before the sdist/wheel is built; the patterns below
 # tell setuptools to ship every variant (Linux .so, macOS .dylib,
 # Windows .dll, the auditwheel-renamed forms, and the SONAME symlinks).
 [tool.setuptools.package-data]
 pls4all = [
-  "lib/libp4a*",
+  "lib/libn4m*",
   "lib/p4a*",
   "lib/*.so",
   "lib/*.so.*",

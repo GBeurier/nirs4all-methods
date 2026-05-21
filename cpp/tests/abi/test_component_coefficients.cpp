@@ -19,7 +19,7 @@ constexpr double kRelTol = 1e-8;
 void check_close_values(int& failures,
                         const char* label,
                         const std::vector<double>& actual,
-                        const ::pls4all::test::fixtures::MatrixRef& expected) {
+                        const ::n4m::test::fixtures::MatrixRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -47,35 +47,35 @@ void check_close_values(int& failures,
 }
 
 void check_fixture(int& failures,
-                   const ::pls4all::test::fixtures::ComponentCoefficientsFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
+                   const ::n4m::test::fixtures::ComponentCoefficientsFixture& fixture) {
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
     cfg.n_components = fixture.n_components;
 
-    p4a_matrix_view_t X{};
-    p4a_matrix_view_t Y{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X,
+    n4m_matrix_view_t X{};
+    n4m_matrix_view_t Y{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&X,
                                            const_cast<double*>(fixture.X.values),
                                            fixture.X.rows,
                                            fixture.X.cols,
-                                           P4A_DTYPE_F64),
-             P4A_OK);
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&Y,
+                                           N4M_DTYPE_F64),
+             N4M_OK);
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&Y,
                                            const_cast<double*>(fixture.Y.values),
                                            fixture.Y.rows,
                                            fixture.Y.cols,
-                                           P4A_DTYPE_F64),
-             P4A_OK);
+                                           N4M_DTYPE_F64),
+             N4M_OK);
 
-    std::unique_ptr<::pls4all::core::Model> model;
-    CHECK_EQ(::pls4all::core::fit_model(ctx, cfg, X, Y, model), P4A_OK);
+    std::unique_ptr<::n4m::core::Model> model;
+    CHECK_EQ(::n4m::core::fit_model(ctx, cfg, X, Y, model), N4M_OK);
     CHECK_NE(model.get(), nullptr);
 
     std::vector<double> coefficients;
-    CHECK_EQ(::pls4all::core::compute_regression_coefficients_by_component(ctx,
+    CHECK_EQ(::n4m::core::compute_regression_coefficients_by_component(ctx,
                                                                            *model,
                                                                            coefficients),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(fixture.coefficients_by_component.rows, fixture.n_components);
     CHECK_EQ(fixture.coefficients_by_component.cols, fixture.X.cols * fixture.Y.cols);
     check_close_values(failures,
@@ -84,16 +84,16 @@ void check_fixture(int& failures,
                        fixture.coefficients_by_component);
 
     model->weights_w.clear();
-    CHECK_EQ(::pls4all::core::compute_regression_coefficients_by_component(ctx,
+    CHECK_EQ(::n4m::core::compute_regression_coefficients_by_component(ctx,
                                                                            *model,
                                                                            coefficients),
-             P4A_ERR_INTERNAL);
+             N4M_ERR_INTERNAL);
 }
 
 }  // namespace
 
 TEST(component_coefficients_phase3p, generated_fixture_matches_sklearn_reference) {
-    for (const auto& fixture : ::pls4all::test::fixtures::kComponentCoefficientsFixtures) {
+    for (const auto& fixture : ::n4m::test::fixtures::kComponentCoefficientsFixtures) {
         check_fixture(failures, fixture);
     }
 }

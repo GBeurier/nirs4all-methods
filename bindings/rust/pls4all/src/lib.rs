@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
-//! Safe Rust wrappers around libp4a's `p4a_pls_fit_simple` C ABI helper.
+//! Safe Rust wrappers around libn4m's `n4m_pls_fit_simple` C ABI helper.
 //!
 //! Parity-gated against the shared cross-binding fixture
 //! (`bindings/js/test/parity_fixture.json`) at machine epsilon. See
@@ -13,11 +13,11 @@ use std::os::raw::{c_char, c_double, c_int};
 
 #[link(name = "p4a")]
 unsafe extern "C" {
-    fn p4a_get_version_string() -> *const c_char;
-    fn p4a_get_abi_version_major() -> u32;
-    fn p4a_get_abi_version_minor() -> u32;
-    fn p4a_get_abi_version_patch() -> u32;
-    fn p4a_pls_fit_simple(
+    fn n4m_get_version_string() -> *const c_char;
+    fn n4m_get_abi_version_major() -> u32;
+    fn n4m_get_abi_version_minor() -> u32;
+    fn n4m_get_abi_version_patch() -> u32;
+    fn n4m_pls_fit_simple(
         x: *const c_double,
         y: *const c_double,
         n: i32,
@@ -31,12 +31,12 @@ unsafe extern "C" {
     ) -> c_int;
 }
 
-/// Returns the libp4a runtime version, e.g. `"0.89.0+abi.1.13.0"`.
+/// Returns the libn4m runtime version, e.g. `"0.89.0+abi.1.13.0"`.
 pub fn version() -> String {
-    // SAFETY: `p4a_get_version_string` always returns a non-null
-    // NUL-terminated static string owned by libp4a.
+    // SAFETY: `n4m_get_version_string` always returns a non-null
+    // NUL-terminated static string owned by libn4m.
     unsafe {
-        let raw = p4a_get_version_string();
+        let raw = n4m_get_version_string();
         if raw.is_null() {
             String::new()
         } else {
@@ -45,14 +45,14 @@ pub fn version() -> String {
     }
 }
 
-/// Returns the libp4a ABI `(major, minor, patch)` version.
+/// Returns the libn4m ABI `(major, minor, patch)` version.
 pub fn abi_version() -> (u32, u32, u32) {
     // SAFETY: these are pure leaf getters returning POD values.
     unsafe {
         (
-            p4a_get_abi_version_major(),
-            p4a_get_abi_version_minor(),
-            p4a_get_abi_version_patch(),
+            n4m_get_abi_version_major(),
+            n4m_get_abi_version_minor(),
+            n4m_get_abi_version_patch(),
         )
     }
 }
@@ -99,7 +99,7 @@ impl std::fmt::Display for FitError {
                 write!(f, "n_components must be >= 1, got {k}")
             }
             FitError::Native(s) => {
-                write!(f, "p4a_pls_fit_simple failed with status {s}")
+                write!(f, "n4m_pls_fit_simple failed with status {s}")
             }
         }
     }
@@ -137,11 +137,11 @@ pub fn pls_fit(
     let mut predictions = vec![0.0; n * q];
 
     // SAFETY: all six pointers point to valid slice memory whose
-    // length we just checked. p4a_pls_fit_simple writes into the
+    // length we just checked. n4m_pls_fit_simple writes into the
     // four `_out` buffers up to (p*q, p, q, n*q) doubles respectively,
     // which matches the allocations above.
     let status = unsafe {
-        p4a_pls_fit_simple(
+        n4m_pls_fit_simple(
             x.as_ptr(),
             y.as_ptr(),
             n as i32,

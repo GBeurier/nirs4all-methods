@@ -19,7 +19,7 @@
 #include "core/linalg.hpp"
 #include "core/model.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 namespace {
 
@@ -75,25 +75,25 @@ void trsv_upper(const double* L, const double* b, double* x,
     }
 }
 
-// Read a row-major dense double matrix from a p4a_matrix_view_t. Local
+// Read a row-major dense double matrix from a n4m_matrix_view_t. Local
 // helper — extra_pls.cpp has the same one in its anonymous namespace.
-[[nodiscard]] p4a_status_t copy_view(Context& ctx,
-                                      const p4a_matrix_view_t& V,
+[[nodiscard]] n4m_status_t copy_view(Context& ctx,
+                                      const n4m_matrix_view_t& V,
                                       const char* name,
                                       std::vector<double>& out) {
-    if (V.dtype != P4A_DTYPE_F64) {
+    if (V.dtype != N4M_DTYPE_F64) {
         ctx.set_errorf("%s must be F64", name);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const std::size_t rows = static_cast<std::size_t>(V.rows);
     const std::size_t cols = static_cast<std::size_t>(V.cols);
     out.assign(rows * cols, 0.0);
     if (rows == 0 || cols == 0) {
-        return P4A_OK;
+        return N4M_OK;
     }
     if (V.data == nullptr) {
         ctx.set_errorf("%s has null data", name);
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     const auto* data = static_cast<const double*>(V.data);
     const std::size_t rs = static_cast<std::size_t>(V.row_stride);
@@ -103,7 +103,7 @@ void trsv_upper(const double* L, const double* b, double* x,
             out[r * cols + c] = data[r * rs + c * cs];
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 }  // namespace
@@ -112,7 +112,7 @@ void trsv_upper(const double* L, const double* b, double* x,
 // GP head — train (K + σ²I) α = y_centered via Cholesky.
 // Stores L, alpha, T_train so prediction can be replayed without retraining.
 // ---------------------------------------------------------------------------
-p4a_status_t fit_gp_on_scores(
+n4m_status_t fit_gp_on_scores(
         Context& ctx,
         const std::vector<double>& T,
         std::int32_t n_in,
@@ -125,15 +125,15 @@ p4a_status_t fit_gp_on_scores(
     if (n_in < 1 || k_in < 1) {
         ctx.set_errorf("fit_gp_on_scores: n=%d k=%d must be >= 1",
                         static_cast<int>(n_in), static_cast<int>(k_in));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (!(length_scale > 0.0)) {
         ctx.set_error("length_scale must be strictly positive");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (!(noise_level > 0.0)) {
         ctx.set_error("noise_level must be strictly positive");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const std::size_t n = static_cast<std::size_t>(n_in);
     const std::size_t k = static_cast<std::size_t>(k_in);
@@ -143,13 +143,13 @@ p4a_status_t fit_gp_on_scores(
         ctx.set_errorf("fit_gp_on_scores: T.size()=%llu but n*k=%llu",
                         static_cast<unsigned long long>(T.size()),
                         static_cast<unsigned long long>(n * k));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (y_centered.size() != n) {
         ctx.set_errorf("fit_gp_on_scores: y_centered.size()=%llu but n=%llu",
                         static_cast<unsigned long long>(y_centered.size()),
                         static_cast<unsigned long long>(n));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
 
     out.n_train = n_in;
@@ -181,24 +181,24 @@ p4a_status_t fit_gp_on_scores(
         ctx.set_error(
             "fit_gp_on_scores: Cholesky of (K + noise·I) failed — "
             "try a larger noise_level or fewer components");
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
 
     // Solve L @ z = y_centered, then L^T @ alpha = z.
     std::vector<double> z(n, 0.0);
     trsv_lower(out.L_lower.data(), y_centered.data(), z.data(), n);
     trsv_upper(out.L_lower.data(), z.data(), out.alpha.data(), n);
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---------------------------------------------------------------------------
 // Top-level GPR-on-PLS fit.
 // ---------------------------------------------------------------------------
-p4a_status_t fit_gpr_pls(
+n4m_status_t fit_gpr_pls(
         Context& ctx,
         const Config& cfg,
-        const p4a_matrix_view_t& X,
-        const p4a_matrix_view_t& Y,
+        const n4m_matrix_view_t& X,
+        const n4m_matrix_view_t& Y,
         double length_scale,
         double noise_level,
         std::uint64_t seed,
@@ -208,21 +208,21 @@ p4a_status_t fit_gpr_pls(
 
     if (!(length_scale > 0.0)) {
         ctx.set_error("length_scale must be strictly positive");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (!(noise_level > 0.0)) {
         ctx.set_error("noise_level must be strictly positive");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (Y.cols != 1) {
         ctx.set_error("fit_gpr_pls: Y must be n x 1 (single target only)");
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (X.rows != Y.rows) {
         ctx.set_errorf("fit_gpr_pls: X.rows=%lld != Y.rows=%lld",
                         static_cast<long long>(X.rows),
                         static_cast<long long>(Y.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     const auto n_in = static_cast<std::int32_t>(X.rows);
     const auto p_in = static_cast<std::int32_t>(X.cols);
@@ -232,14 +232,14 @@ p4a_status_t fit_gpr_pls(
             "fit_gpr_pls: n_components=%d out of range [1, min(%d,%d)]",
             static_cast<int>(k_in), static_cast<int>(n_in),
             static_cast<int>(p_in));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
 
     // Stage 1: fit PLS to obtain the rotation R (p x k).
     Config pls_cfg = cfg;
-    pls_cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-    pls_cfg.solver = P4A_SOLVER_SIMPLS;
-    pls_cfg.deflation = P4A_DEFLATION_REGRESSION;
+    pls_cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+    pls_cfg.solver = N4M_SOLVER_SIMPLS;
+    pls_cfg.deflation = N4M_DEFLATION_REGRESSION;
     pls_cfg.center_x = 1;
     pls_cfg.center_y = 1;
     // Force unit scaling so the rotation matches sklearn PLSRegression(scale=False).
@@ -247,14 +247,14 @@ p4a_status_t fit_gpr_pls(
     pls_cfg.scale_y = 0;
 
     std::unique_ptr<Model> model;
-    const p4a_status_t pls_status = fit_model(ctx, pls_cfg, X, Y, model);
-    if (pls_status != P4A_OK) {
+    const n4m_status_t pls_status = fit_model(ctx, pls_cfg, X, Y, model);
+    if (pls_status != N4M_OK) {
         return pls_status;
     }
     if (model->rotations_r.size() !=
         static_cast<std::size_t>(p_in) * static_cast<std::size_t>(k_in)) {
         ctx.set_error("fit_gpr_pls: rotation matrix has unexpected size");
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 
     const std::size_t n = static_cast<std::size_t>(n_in);
@@ -271,8 +271,8 @@ p4a_status_t fit_gpr_pls(
 
     // Stage 2a: compute training scores T = (X - x_mean) @ R (n x k).
     std::vector<double> X_buf;
-    p4a_status_t st = copy_view(ctx, X, "X", X_buf);
-    if (st != P4A_OK) {
+    n4m_status_t st = copy_view(ctx, X, "X", X_buf);
+    if (st != N4M_OK) {
         return st;
     }
     for (std::size_t i = 0; i < n; ++i) {
@@ -294,7 +294,7 @@ p4a_status_t fit_gpr_pls(
     // with sklearn `Y.ravel().mean()`.
     if (model->y_mean.empty()) {
         ctx.set_error("fit_gpr_pls: PLS y_mean missing");
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
     const double y_mean_scalar = model->y_mean[0];
     std::vector<double> y_centered(n, 0.0);
@@ -310,7 +310,7 @@ p4a_status_t fit_gpr_pls(
     // Stage 2c: fit GP head.
     st = fit_gp_on_scores(ctx, T, n_in, k_in, y_centered,
                            length_scale, noise_level, out.gp);
-    if (st != P4A_OK) {
+    if (st != N4M_OK) {
         return st;
     }
     out.gp.y_mean_scalar = y_mean_scalar;
@@ -348,7 +348,7 @@ p4a_status_t fit_gpr_pls(
         out.predictive_variance[i] = (var > 0.0) ? var : 0.0;
     }
 
-    return P4A_OK;
+    return N4M_OK;
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

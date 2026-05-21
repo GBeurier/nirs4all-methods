@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct AomOperatorIndexRef {
     const std::int64_t* values;
@@ -168,4 +168,4 @@ inline const AomOperatorFixture kAomOperatorFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

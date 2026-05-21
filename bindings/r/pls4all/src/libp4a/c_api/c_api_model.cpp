@@ -12,27 +12,27 @@
 #include <new>
 #include <vector>
 
-#include "pls4all/p4a.h"
-#include "pls4all/p4a_version.h"
+#include "n4m/n4m.h"
+#include "n4m/n4m_version.h"
 
 #include "core/context.hpp"
 #include "core/model.hpp"
 
 namespace {
 
-inline ::pls4all::core::Context* as_core(p4a_context_t* ctx) noexcept {
-    return static_cast<::pls4all::core::Context*>(ctx);
+inline ::n4m::core::Context* as_core(n4m_context_t* ctx) noexcept {
+    return static_cast<::n4m::core::Context*>(ctx);
 }
 
-inline const ::pls4all::core::Model* as_core(const p4a_model_t* model) noexcept {
-    return static_cast<const ::pls4all::core::Model*>(model);
+inline const ::n4m::core::Model* as_core(const n4m_model_t* model) noexcept {
+    return static_cast<const ::n4m::core::Model*>(model);
 }
 
-inline const ::pls4all::core::Array* as_core(const p4a_array_t* arr) noexcept {
-    return static_cast<const ::pls4all::core::Array*>(arr);
+inline const ::n4m::core::Array* as_core(const n4m_array_t* arr) noexcept {
+    return static_cast<const ::n4m::core::Array*>(arr);
 }
 
-void set_error(p4a_context_t* ctx, const char* message) noexcept {
+void set_error(n4m_context_t* ctx, const char* message) noexcept {
     if (ctx != nullptr) {
         as_core(ctx)->set_error(message);
     }
@@ -85,7 +85,7 @@ void set_error(p4a_context_t* ctx, const char* message) noexcept {
     return true;
 }
 
-[[nodiscard]] bool serialized_size(const ::pls4all::core::Model& model,
+[[nodiscard]] bool serialized_size(const ::n4m::core::Model& model,
                                    std::size_t& out) noexcept {
     std::size_t total = 0;
     if (!add_checked(total, 4U)) return false;                         // magic
@@ -243,7 +243,7 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
     return true;
 }
 
-[[nodiscard]] bool write_model_to_buffer(const ::pls4all::core::Model& model,
+[[nodiscard]] bool write_model_to_buffer(const ::n4m::core::Model& model,
                                          void* buffer,
                                          std::size_t buffer_size,
                                          std::size_t& written) noexcept {
@@ -251,10 +251,10 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
     Writer w{out, buffer_size};
     const char magic[4] = {'P', '4', 'A', 'M'};
     w.bytes(magic, sizeof(magic));
-    w.u32(P4A_SERIALIZATION_FORMAT_VERSION);
-    w.u32(P4A_ABI_VERSION_MAJOR);
-    w.u32(P4A_ABI_VERSION_MINOR);
-    w.u32(P4A_ABI_VERSION_PATCH);
+    w.u32(N4M_SERIALIZATION_FORMAT_VERSION);
+    w.u32(N4M_ABI_VERSION_MAJOR);
+    w.u32(N4M_ABI_VERSION_MINOR);
+    w.u32(N4M_ABI_VERSION_PATCH);
 
     w.u32(static_cast<std::uint32_t>(model.algorithm));
     w.u32(static_cast<std::uint32_t>(model.solver));
@@ -294,7 +294,7 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
     return true;
 }
 
-[[nodiscard]] p4a_status_t inspect_header(const void* buffer,
+[[nodiscard]] n4m_status_t inspect_header(const void* buffer,
                                           std::size_t buffer_size,
                                           std::uint32_t& format_version,
                                           std::uint32_t& abi_major,
@@ -305,23 +305,23 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
     abi_minor = 0;
     abi_patch = 0;
     if (buffer == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     if (buffer_size < 20U) {
-        return P4A_ERR_CORRUPT_BUFFER;
+        return N4M_ERR_CORRUPT_BUFFER;
     }
     auto* data = static_cast<const unsigned char*>(buffer);
     if (data[0] != static_cast<unsigned char>('P') ||
         data[1] != static_cast<unsigned char>('4') ||
         data[2] != static_cast<unsigned char>('A') ||
         data[3] != static_cast<unsigned char>('M')) {
-        return P4A_ERR_CORRUPT_BUFFER;
+        return N4M_ERR_CORRUPT_BUFFER;
     }
     Reader r{data + 4U, buffer_size - 4U};
     return (r.u32(format_version) &&
             r.u32(abi_major) &&
             r.u32(abi_minor) &&
-            r.u32(abi_patch)) ? P4A_OK : P4A_ERR_CORRUPT_BUFFER;
+            r.u32(abi_patch)) ? N4M_OK : N4M_ERR_CORRUPT_BUFFER;
 }
 
 [[nodiscard]] bool valid_flag(std::uint32_t value) noexcept {
@@ -330,7 +330,7 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
 
 [[nodiscard]] bool import_model_from_buffer(const void* buffer,
                                             std::size_t buffer_size,
-                                            std::unique_ptr<p4a_model_s>& out) {
+                                            std::unique_ptr<n4m_model_s>& out) {
     out.reset();
     if (buffer_size < 28U) {
         return false;
@@ -346,10 +346,10 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
     std::uint32_t abi_major = 0;
     std::uint32_t abi_minor = 0;
     std::uint32_t abi_patch = 0;
-    if (inspect_header(buffer, buffer_size, format, abi_major, abi_minor, abi_patch) != P4A_OK) {
+    if (inspect_header(buffer, buffer_size, format, abi_major, abi_minor, abi_patch) != N4M_OK) {
         return false;
     }
-    if (format != P4A_SERIALIZATION_FORMAT_VERSION) {
+    if (format != N4M_SERIALIZATION_FORMAT_VERSION) {
         return false;
     }
 
@@ -376,40 +376,40 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
         return false;
     }
     const bool regression_chassis_algorithm =
-        algorithm == static_cast<std::uint32_t>(P4A_ALGO_PLS_REGRESSION) ||
-        algorithm == static_cast<std::uint32_t>(P4A_ALGO_PLS_DA);
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_PLS_REGRESSION) ||
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_PLS_DA);
     const bool supported_pls_regression =
         regression_chassis_algorithm &&
-        (solver == static_cast<std::uint32_t>(P4A_SOLVER_NIPALS) ||
-         solver == static_cast<std::uint32_t>(P4A_SOLVER_ORTHOGONAL_SCORES) ||
-         solver == static_cast<std::uint32_t>(P4A_SOLVER_SIMPLS) ||
-         solver == static_cast<std::uint32_t>(P4A_SOLVER_KERNEL_ALGORITHM) ||
-         solver == static_cast<std::uint32_t>(P4A_SOLVER_WIDE_KERNEL) ||
-         solver == static_cast<std::uint32_t>(P4A_SOLVER_SVD) ||
-         solver == static_cast<std::uint32_t>(P4A_SOLVER_POWER) ||
-         solver == static_cast<std::uint32_t>(P4A_SOLVER_RANDOMIZED_SVD));
+        (solver == static_cast<std::uint32_t>(N4M_SOLVER_NIPALS) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_ORTHOGONAL_SCORES) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_SIMPLS) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_KERNEL_ALGORITHM) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_WIDE_KERNEL) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_SVD) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_POWER) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_RANDOMIZED_SVD));
     const bool supported_pls_canonical =
-        algorithm == static_cast<std::uint32_t>(P4A_ALGO_PLS_CANONICAL) &&
-        (solver == static_cast<std::uint32_t>(P4A_SOLVER_NIPALS) ||
-         solver == static_cast<std::uint32_t>(P4A_SOLVER_SVD));
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_PLS_CANONICAL) &&
+        (solver == static_cast<std::uint32_t>(N4M_SOLVER_NIPALS) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_SVD));
     const bool supported_pls_svd =
-        algorithm == static_cast<std::uint32_t>(P4A_ALGO_PLS_SVD) &&
-        solver == static_cast<std::uint32_t>(P4A_SOLVER_SVD);
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_PLS_SVD) &&
+        solver == static_cast<std::uint32_t>(N4M_SOLVER_SVD);
     const bool opls_chassis_algorithm =
-        algorithm == static_cast<std::uint32_t>(P4A_ALGO_OPLS) ||
-        algorithm == static_cast<std::uint32_t>(P4A_ALGO_OPLS_DA);
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_OPLS) ||
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_OPLS_DA);
     const bool supported_opls =
-        opls_chassis_algorithm && solver == static_cast<std::uint32_t>(P4A_SOLVER_NIPALS);
+        opls_chassis_algorithm && solver == static_cast<std::uint32_t>(N4M_SOLVER_NIPALS);
     const bool supported_pcr =
-        algorithm == static_cast<std::uint32_t>(P4A_ALGO_PCR) &&
-        solver == static_cast<std::uint32_t>(P4A_SOLVER_SVD);
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_PCR) &&
+        solver == static_cast<std::uint32_t>(N4M_SOLVER_SVD);
     const bool supported_deflation =
         ((supported_pls_regression || supported_pcr) &&
-         deflation == static_cast<std::uint32_t>(P4A_DEFLATION_REGRESSION)) ||
+         deflation == static_cast<std::uint32_t>(N4M_DEFLATION_REGRESSION)) ||
         ((supported_pls_canonical || supported_pls_svd) &&
-         deflation == static_cast<std::uint32_t>(P4A_DEFLATION_CANONICAL)) ||
+         deflation == static_cast<std::uint32_t>(N4M_DEFLATION_CANONICAL)) ||
         (supported_opls &&
-         deflation == static_cast<std::uint32_t>(P4A_DEFLATION_ORTHOGONAL));
+         deflation == static_cast<std::uint32_t>(N4M_DEFLATION_ORTHOGONAL));
     if ((!supported_pls_regression && !supported_pls_canonical && !supported_pls_svd &&
          !supported_opls && !supported_pcr) ||
         !supported_deflation) {
@@ -437,10 +437,10 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
         return false;
     }
 
-    auto model = std::make_unique<p4a_model_s>();
-    model->algorithm = static_cast<p4a_algorithm_t>(algorithm);
-    model->solver = static_cast<p4a_solver_t>(solver);
-    model->deflation = static_cast<p4a_deflation_t>(deflation);
+    auto model = std::make_unique<n4m_model_s>();
+    model->algorithm = static_cast<n4m_algorithm_t>(algorithm);
+    model->solver = static_cast<n4m_solver_t>(solver);
+    model->deflation = static_cast<n4m_deflation_t>(deflation);
     model->n_samples = static_cast<std::int64_t>(n_samples);
     model->n_features = static_cast<std::int32_t>(n_features);
     model->n_targets = static_cast<std::int32_t>(n_targets);
@@ -482,348 +482,348 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
 
 extern "C" {
 
-P4A_API p4a_status_t p4a_model_fit(
-    p4a_context_t* ctx,
-    const p4a_config_t* cfg,
-    const p4a_matrix_view_t* X,
-    const p4a_matrix_view_t* Y,
-    p4a_model_t** out_model) {
+N4M_API n4m_status_t n4m_model_fit(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    n4m_model_t** out_model) {
     if (out_model != nullptr) {
         *out_model = nullptr;
     }
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr || out_model == nullptr) {
-        set_error(ctx, "null pointer in p4a_model_fit");
-        return P4A_ERR_NULL_POINTER;
+        set_error(ctx, "null pointer in n4m_model_fit");
+        return N4M_ERR_NULL_POINTER;
     }
     try {
-        std::unique_ptr<::pls4all::core::Model> fitted;
-        const p4a_status_t status =
-            ::pls4all::core::fit_model(*as_core(ctx), *cfg, *X, *Y, fitted);
-        if (status != P4A_OK) {
+        std::unique_ptr<::n4m::core::Model> fitted;
+        const n4m_status_t status =
+            ::n4m::core::fit_model(*as_core(ctx), *cfg, *X, *Y, fitted);
+        if (status != N4M_OK) {
             return status;
         }
-        auto raw = std::make_unique<p4a_model_s>();
-        *static_cast<::pls4all::core::Model*>(raw.get()) = std::move(*fitted);
+        auto raw = std::make_unique<n4m_model_s>();
+        *static_cast<::n4m::core::Model*>(raw.get()) = std::move(*fitted);
         *out_model = raw.release();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in p4a_model_fit");
-        return P4A_ERR_OUT_OF_MEMORY;
+        set_error(ctx, "out of memory in n4m_model_fit");
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in p4a_model_fit");
-        return P4A_ERR_INTERNAL;
+        set_error(ctx, "internal error in n4m_model_fit");
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API void p4a_model_destroy(p4a_model_t* model) {
+N4M_API void n4m_model_destroy(n4m_model_t* model) {
     try {
         delete model;
     } catch (...) {
     }
 }
 
-P4A_API p4a_status_t p4a_model_predict(
-    p4a_context_t* ctx, const p4a_model_t* model,
-    const p4a_matrix_view_t* X, p4a_matrix_view_t* out) {
+N4M_API n4m_status_t n4m_model_predict(
+    n4m_context_t* ctx, const n4m_model_t* model,
+    const n4m_matrix_view_t* X, n4m_matrix_view_t* out) {
     if (ctx == nullptr || model == nullptr || X == nullptr || out == nullptr) {
-        set_error(ctx, "null pointer in p4a_model_predict");
-        return P4A_ERR_NULL_POINTER;
+        set_error(ctx, "null pointer in n4m_model_predict");
+        return N4M_ERR_NULL_POINTER;
     }
     try {
-        return ::pls4all::core::predict_into(*as_core(ctx), *as_core(model), *X, *out);
+        return ::n4m::core::predict_into(*as_core(ctx), *as_core(model), *X, *out);
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in p4a_model_predict");
-        return P4A_ERR_OUT_OF_MEMORY;
+        set_error(ctx, "out of memory in n4m_model_predict");
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in p4a_model_predict");
-        return P4A_ERR_INTERNAL;
+        set_error(ctx, "internal error in n4m_model_predict");
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_model_transform(
-    p4a_context_t* ctx, const p4a_model_t* model,
-    const p4a_matrix_view_t* X, p4a_matrix_view_t* out_scores) {
+N4M_API n4m_status_t n4m_model_transform(
+    n4m_context_t* ctx, const n4m_model_t* model,
+    const n4m_matrix_view_t* X, n4m_matrix_view_t* out_scores) {
     if (ctx == nullptr || model == nullptr || X == nullptr || out_scores == nullptr) {
-        set_error(ctx, "null pointer in p4a_model_transform");
-        return P4A_ERR_NULL_POINTER;
+        set_error(ctx, "null pointer in n4m_model_transform");
+        return N4M_ERR_NULL_POINTER;
     }
     try {
-        return ::pls4all::core::transform_into(*as_core(ctx), *as_core(model), *X, *out_scores);
+        return ::n4m::core::transform_into(*as_core(ctx), *as_core(model), *X, *out_scores);
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in p4a_model_transform");
-        return P4A_ERR_OUT_OF_MEMORY;
+        set_error(ctx, "out of memory in n4m_model_transform");
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in p4a_model_transform");
-        return P4A_ERR_INTERNAL;
+        set_error(ctx, "internal error in n4m_model_transform");
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_model_predict_alloc(
-    p4a_context_t* ctx, const p4a_model_t* model,
-    const p4a_matrix_view_t* X, p4a_array_t** out) {
+N4M_API n4m_status_t n4m_model_predict_alloc(
+    n4m_context_t* ctx, const n4m_model_t* model,
+    const n4m_matrix_view_t* X, n4m_array_t** out) {
     if (out != nullptr) {
         *out = nullptr;
     }
     if (ctx == nullptr || model == nullptr || X == nullptr || out == nullptr) {
-        set_error(ctx, "null pointer in p4a_model_predict_alloc");
-        return P4A_ERR_NULL_POINTER;
+        set_error(ctx, "null pointer in n4m_model_predict_alloc");
+        return N4M_ERR_NULL_POINTER;
     }
     try {
-        auto arr = std::make_unique<p4a_array_s>();
-        arr->dtype = P4A_DTYPE_F64;
+        auto arr = std::make_unique<n4m_array_s>();
+        arr->dtype = N4M_DTYPE_F64;
         arr->rows = X->rows;
         arr->cols = as_core(model)->n_targets;
         std::size_t n_values = 0;
         if (!output_element_count(arr->rows, arr->cols, n_values)) {
             set_error(ctx, "predict output shape is invalid or too large");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         arr->values.clear();
         arr->values.resize(n_values);
         std::fill(arr->values.begin(), arr->values.end(), 0.0);
-        p4a_matrix_view_t view{};
+        n4m_matrix_view_t view{};
         view.data = arr->values.data();
         view.rows = arr->rows;
         view.cols = arr->cols;
         view.row_stride = arr->cols > 0 ? arr->cols : 1;
         view.col_stride = 1;
-        view.dtype = P4A_DTYPE_F64;
-        const p4a_status_t status = ::pls4all::core::predict_into(
+        view.dtype = N4M_DTYPE_F64;
+        const n4m_status_t status = ::n4m::core::predict_into(
             *as_core(ctx), *as_core(model), *X, view);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         *out = arr.release();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in p4a_model_predict_alloc");
-        return P4A_ERR_OUT_OF_MEMORY;
+        set_error(ctx, "out of memory in n4m_model_predict_alloc");
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in p4a_model_predict_alloc");
-        return P4A_ERR_INTERNAL;
+        set_error(ctx, "internal error in n4m_model_predict_alloc");
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_model_transform_alloc(
-    p4a_context_t* ctx, const p4a_model_t* model,
-    const p4a_matrix_view_t* X, p4a_array_t** out_scores) {
+N4M_API n4m_status_t n4m_model_transform_alloc(
+    n4m_context_t* ctx, const n4m_model_t* model,
+    const n4m_matrix_view_t* X, n4m_array_t** out_scores) {
     if (out_scores != nullptr) {
         *out_scores = nullptr;
     }
     if (ctx == nullptr || model == nullptr || X == nullptr || out_scores == nullptr) {
-        set_error(ctx, "null pointer in p4a_model_transform_alloc");
-        return P4A_ERR_NULL_POINTER;
+        set_error(ctx, "null pointer in n4m_model_transform_alloc");
+        return N4M_ERR_NULL_POINTER;
     }
     try {
-        auto arr = std::make_unique<p4a_array_s>();
-        arr->dtype = P4A_DTYPE_F64;
+        auto arr = std::make_unique<n4m_array_s>();
+        arr->dtype = N4M_DTYPE_F64;
         arr->rows = X->rows;
         arr->cols = as_core(model)->n_components;
         std::size_t n_values = 0;
         if (!output_element_count(arr->rows, arr->cols, n_values)) {
             set_error(ctx, "transform output shape is invalid or too large");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         arr->values.clear();
         arr->values.resize(n_values);
         std::fill(arr->values.begin(), arr->values.end(), 0.0);
-        p4a_matrix_view_t view{};
+        n4m_matrix_view_t view{};
         view.data = arr->values.data();
         view.rows = arr->rows;
         view.cols = arr->cols;
         view.row_stride = arr->cols > 0 ? arr->cols : 1;
         view.col_stride = 1;
-        view.dtype = P4A_DTYPE_F64;
-        const p4a_status_t status = ::pls4all::core::transform_into(
+        view.dtype = N4M_DTYPE_F64;
+        const n4m_status_t status = ::n4m::core::transform_into(
             *as_core(ctx), *as_core(model), *X, view);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         *out_scores = arr.release();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in p4a_model_transform_alloc");
-        return P4A_ERR_OUT_OF_MEMORY;
+        set_error(ctx, "out of memory in n4m_model_transform_alloc");
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in p4a_model_transform_alloc");
-        return P4A_ERR_INTERNAL;
+        set_error(ctx, "internal error in n4m_model_transform_alloc");
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_model_get_array(
-    p4a_context_t* ctx, const p4a_model_t* model,
-    p4a_model_array_t which, p4a_array_t** out) {
+N4M_API n4m_status_t n4m_model_get_array(
+    n4m_context_t* ctx, const n4m_model_t* model,
+    n4m_model_array_t which, n4m_array_t** out) {
     if (out != nullptr) {
         *out = nullptr;
     }
     if (ctx == nullptr || model == nullptr || out == nullptr) {
-        set_error(ctx, "null pointer in p4a_model_get_array");
-        return P4A_ERR_NULL_POINTER;
+        set_error(ctx, "null pointer in n4m_model_get_array");
+        return N4M_ERR_NULL_POINTER;
     }
     try {
-        std::unique_ptr<::pls4all::core::Array> tmp;
-        const p4a_status_t status = ::pls4all::core::model_array(
+        std::unique_ptr<::n4m::core::Array> tmp;
+        const n4m_status_t status = ::n4m::core::model_array(
             *as_core(ctx), *as_core(model), which, tmp);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
-        auto arr = std::make_unique<p4a_array_s>();
-        *static_cast<::pls4all::core::Array*>(arr.get()) = std::move(*tmp);
+        auto arr = std::make_unique<n4m_array_s>();
+        *static_cast<::n4m::core::Array*>(arr.get()) = std::move(*tmp);
         *out = arr.release();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in p4a_model_get_array");
-        return P4A_ERR_OUT_OF_MEMORY;
+        set_error(ctx, "out of memory in n4m_model_get_array");
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in p4a_model_get_array");
-        return P4A_ERR_INTERNAL;
+        set_error(ctx, "internal error in n4m_model_get_array");
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_model_get_n_components(const p4a_model_t* model,
+N4M_API n4m_status_t n4m_model_get_n_components(const n4m_model_t* model,
                                                 int32_t* out) {
     if (model == nullptr || out == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     try {
         *out = as_core(model)->n_components;
-        return P4A_OK;
+        return N4M_OK;
     } catch (...) {
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_model_get_n_features(const p4a_model_t* model,
+N4M_API n4m_status_t n4m_model_get_n_features(const n4m_model_t* model,
                                               int32_t* out) {
     if (model == nullptr || out == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     try {
         *out = as_core(model)->n_features;
-        return P4A_OK;
+        return N4M_OK;
     } catch (...) {
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_model_get_n_targets(const p4a_model_t* model,
+N4M_API n4m_status_t n4m_model_get_n_targets(const n4m_model_t* model,
                                              int32_t* out) {
     if (model == nullptr || out == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     try {
         *out = as_core(model)->n_targets;
-        return P4A_OK;
+        return N4M_OK;
     } catch (...) {
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_model_export_size(const p4a_model_t* model,
+N4M_API n4m_status_t n4m_model_export_size(const n4m_model_t* model,
                                            size_t* out_size) {
     if (model == nullptr || out_size == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     try {
         std::size_t size = 0;
         if (!serialized_size(*as_core(model), size)) {
             *out_size = 0;
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         *out_size = size;
-        return P4A_OK;
+        return N4M_OK;
     } catch (...) {
         *out_size = 0;
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_model_export_to_buffer(
-    const p4a_model_t* model, void* buffer, size_t buffer_size,
+N4M_API n4m_status_t n4m_model_export_to_buffer(
+    const n4m_model_t* model, void* buffer, size_t buffer_size,
     size_t* out_written) {
     if (out_written != nullptr) {
         *out_written = 0;
     }
     if (model == nullptr || buffer == nullptr || out_written == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     try {
         std::size_t required = 0;
         if (!serialized_size(*as_core(model), required)) {
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (buffer_size < required) {
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         std::size_t written = 0;
         if (!write_model_to_buffer(*as_core(model), buffer, buffer_size, written) ||
             written != required) {
-            return P4A_ERR_INTERNAL;
+            return N4M_ERR_INTERNAL;
         }
         *out_written = written;
-        return P4A_OK;
+        return N4M_OK;
     } catch (...) {
         if (out_written != nullptr) {
             *out_written = 0;
         }
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_model_import_from_buffer(
-    p4a_context_t* ctx, const void* buffer, size_t buffer_size,
-    p4a_model_t** out_model) {
+N4M_API n4m_status_t n4m_model_import_from_buffer(
+    n4m_context_t* ctx, const void* buffer, size_t buffer_size,
+    n4m_model_t** out_model) {
     if (out_model != nullptr) {
         *out_model = nullptr;
     }
     if (ctx == nullptr || buffer == nullptr || out_model == nullptr) {
-        set_error(ctx, "null pointer in p4a_model_import_from_buffer");
-        return P4A_ERR_NULL_POINTER;
+        set_error(ctx, "null pointer in n4m_model_import_from_buffer");
+        return N4M_ERR_NULL_POINTER;
     }
     try {
         std::uint32_t format = 0;
         std::uint32_t abi_major = 0;
         std::uint32_t abi_minor = 0;
         std::uint32_t abi_patch = 0;
-        p4a_status_t status = inspect_header(
+        n4m_status_t status = inspect_header(
             buffer, buffer_size, format, abi_major, abi_minor, abi_patch);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             set_error(ctx, "corrupt model buffer header");
             return status;
         }
-        if (format != P4A_SERIALIZATION_FORMAT_VERSION) {
+        if (format != N4M_SERIALIZATION_FORMAT_VERSION) {
             set_error(ctx, "model serialization format version is not supported");
-            return P4A_ERR_VERSION_INCOMPATIBLE;
+            return N4M_ERR_VERSION_INCOMPATIBLE;
         }
-        std::unique_ptr<p4a_model_s> imported;
+        std::unique_ptr<n4m_model_s> imported;
         if (!import_model_from_buffer(buffer, buffer_size, imported)) {
             set_error(ctx, "corrupt model buffer payload");
-            return P4A_ERR_CORRUPT_BUFFER;
+            return N4M_ERR_CORRUPT_BUFFER;
         }
-        if (abi_major != P4A_ABI_VERSION_MAJOR ||
-            abi_minor != P4A_ABI_VERSION_MINOR ||
-            abi_patch != P4A_ABI_VERSION_PATCH) {
+        if (abi_major != N4M_ABI_VERSION_MAJOR ||
+            abi_minor != N4M_ABI_VERSION_MINOR ||
+            abi_patch != N4M_ABI_VERSION_PATCH) {
             as_core(ctx)->set_errorf(
                 "model writer ABI was %u.%u.%u; current ABI is %u.%u.%u",
                 abi_major, abi_minor, abi_patch,
-                static_cast<unsigned>(P4A_ABI_VERSION_MAJOR),
-                static_cast<unsigned>(P4A_ABI_VERSION_MINOR),
-                static_cast<unsigned>(P4A_ABI_VERSION_PATCH));
+                static_cast<unsigned>(N4M_ABI_VERSION_MAJOR),
+                static_cast<unsigned>(N4M_ABI_VERSION_MINOR),
+                static_cast<unsigned>(N4M_ABI_VERSION_PATCH));
         } else {
             as_core(ctx)->clear_error();
         }
         *out_model = imported.release();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in p4a_model_import_from_buffer");
-        return P4A_ERR_OUT_OF_MEMORY;
+        set_error(ctx, "out of memory in n4m_model_import_from_buffer");
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in p4a_model_import_from_buffer");
-        return P4A_ERR_INTERNAL;
+        set_error(ctx, "internal error in n4m_model_import_from_buffer");
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_serialization_inspect(
+N4M_API n4m_status_t n4m_serialization_inspect(
     const void* buffer, size_t buffer_size,
     uint32_t* out_format_version,
     uint32_t* out_writer_abi_major,
@@ -835,55 +835,55 @@ P4A_API p4a_status_t p4a_serialization_inspect(
     if (out_writer_abi_patch != nullptr) *out_writer_abi_patch = 0;
     if (out_format_version == nullptr || out_writer_abi_major == nullptr ||
         out_writer_abi_minor == nullptr || out_writer_abi_patch == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     std::uint32_t format = 0;
     std::uint32_t abi_major = 0;
     std::uint32_t abi_minor = 0;
     std::uint32_t abi_patch = 0;
-    const p4a_status_t status = inspect_header(
+    const n4m_status_t status = inspect_header(
         buffer, buffer_size, format, abi_major, abi_minor, abi_patch);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     *out_format_version = format;
     *out_writer_abi_major = abi_major;
     *out_writer_abi_minor = abi_minor;
     *out_writer_abi_patch = abi_patch;
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_array_dtype(const p4a_array_t* arr,
-                                     p4a_dtype_t* out) {
+N4M_API n4m_status_t n4m_array_dtype(const n4m_array_t* arr,
+                                     n4m_dtype_t* out) {
     if (arr == nullptr || out == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     try {
         *out = as_core(arr)->dtype;
-        return P4A_OK;
+        return N4M_OK;
     } catch (...) {
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_array_shape(const p4a_array_t* arr,
+N4M_API n4m_status_t n4m_array_shape(const n4m_array_t* arr,
                                      int64_t* rows, int64_t* cols) {
     if (arr == nullptr || rows == nullptr || cols == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     try {
         *rows = as_core(arr)->rows;
         *cols = as_core(arr)->cols;
-        return P4A_OK;
+        return N4M_OK;
     } catch (...) {
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API p4a_status_t p4a_array_view(const p4a_array_t* arr,
-                                    p4a_matrix_view_t* out) {
+N4M_API n4m_status_t n4m_array_view(const n4m_array_t* arr,
+                                    n4m_matrix_view_t* out) {
     if (arr == nullptr || out == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     try {
         const auto* core = as_core(arr);
@@ -896,13 +896,13 @@ P4A_API p4a_status_t p4a_array_view(const p4a_array_t* arr,
         out->col_stride = 1;
         out->dtype = core->dtype;
         out->reserved0 = 0;
-        return P4A_OK;
+        return N4M_OK;
     } catch (...) {
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API void p4a_array_free(p4a_array_t* arr) {
+N4M_API void n4m_array_free(n4m_array_t* arr) {
     try {
         delete arr;
     } catch (...) {

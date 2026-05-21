@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
 // Internal Config — POD-style storage for every knob declared on the
-// public p4a_config_t handle. Setter validation lives in the c_api_config
+// public n4m_config_t handle. Setter validation lives in the c_api_config
 // wrappers; the Config class itself only holds values.
 
 #pragma once
@@ -10,7 +10,7 @@
 
 #include "pls4all/p4a.h"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 class Config {
   public:
@@ -22,9 +22,9 @@ class Config {
     Config& operator=(Config&&) noexcept = default;
 
     // Algorithm / solver / deflation
-    p4a_algorithm_t algorithm{P4A_ALGO_PLS_REGRESSION};
-    p4a_solver_t    solver{P4A_SOLVER_NIPALS};
-    p4a_deflation_t deflation{P4A_DEFLATION_REGRESSION};
+    n4m_algorithm_t algorithm{N4M_ALGO_PLS_REGRESSION};
+    n4m_solver_t    solver{N4M_SOLVER_NIPALS};
+    n4m_deflation_t deflation{N4M_DEFLATION_REGRESSION};
 
     // Geometry / numerics
     std::int32_t n_components{2};
@@ -36,16 +36,16 @@ class Config {
     std::int32_t max_iter{500};
     std::int32_t store_scores{0};
     std::int32_t store_diagnostics{0};
-    p4a_dtype_t  dtype{P4A_DTYPE_F64};
+    n4m_dtype_t  dtype{N4M_DTYPE_F64};
 
     // Sparse PLS soft-threshold lambda. 0.0 means no sparsity; only
-    // consumed by `fit_pls_sparse_simpls` (P4A_ALGO_SPARSE_PLS). Each
+    // consumed by `fit_pls_sparse_simpls` (N4M_ALGO_SPARSE_PLS). Each
     // weight w[i] is replaced with sign(w[i]) * max(|w[i]| - lambda, 0)
     // before renormalization.
     double sparsity_lambda{0.0};
 
     // RBF / polynomial kernel parameters consumed by the kernel-algorithm
-    // PLS solver when kernel_type != P4A_KERNEL_LINEAR.
+    // PLS solver when kernel_type != N4M_KERNEL_LINEAR.
     std::int32_t kernel_type{0};      // 0=linear (default), 1=RBF, 2=polynomial
     double       kernel_gamma{0.0};   // RBF: kernel(x,y) = exp(-gamma * |x-y|^2); 0 means 1/n_features.
     double       kernel_coef0{1.0};   // polynomial: (gamma * x.y + coef0)^degree.
@@ -60,12 +60,12 @@ class Config {
     double recursive_forgetting{1.0};
 
     // Composability hooks (non-owning).
-    const p4a_pipeline_t*        pipeline{nullptr};
-    const p4a_operator_bank_t*   operator_bank{nullptr};
-    const p4a_gating_strategy_t* gating_strategy{nullptr};
+    const n4m_pipeline_t*        pipeline{nullptr};
+    const n4m_operator_bank_t*   operator_bank{nullptr};
+    const n4m_gating_strategy_t* gating_strategy{nullptr};
 };
 
-}  // namespace pls4all::core
+}  // namespace n4m::core
 
 // Opaque alias for the C ABI.
-struct p4a_config_s : public ::pls4all::core::Config {};
+struct n4m_config_s : public ::n4m::core::Config {};

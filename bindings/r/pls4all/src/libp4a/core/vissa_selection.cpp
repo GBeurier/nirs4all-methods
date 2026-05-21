@@ -38,14 +38,14 @@ constexpr double kDoubleUnit = 1.0 / 9007199254740992.0;  // 2^-53
     return static_cast<double>(splitmix64_next(state) >> 11U) * kDoubleUnit;
 }
 
-[[nodiscard]] double read_value(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_value(const n4m_matrix_view_t& view,
                                 std::size_t row,
                                 std::size_t col) noexcept {
     const std::int64_t off =
         static_cast<std::int64_t>(row) * view.row_stride +
         static_cast<std::int64_t>(col) * view.col_stride;
     const auto uoff = static_cast<std::size_t>(off);
-    if (view.dtype == P4A_DTYPE_F64) {
+    if (view.dtype == N4M_DTYPE_F64) {
         const auto* ptr = static_cast<const double*>(view.data);
         return ptr[uoff];
     }
@@ -53,112 +53,112 @@ constexpr double kDoubleUnit = 1.0 / 9007199254740992.0;  // 2^-53
     return static_cast<double>(ptr[uoff]);
 }
 
-[[nodiscard]] p4a_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
+[[nodiscard]] n4m_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
                                                    std::int64_t rows,
                                                    std::int64_t cols) noexcept {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = values.data();
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols > 0 ? cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
-[[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
-                                                const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t validate_float_view(::n4m::core::Context& ctx,
+                                                const n4m_matrix_view_t& view,
                                                 const char* name) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(view);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(view);
+    if (status != N4M_OK) {
         ctx.set_errorf("%s matrix view is invalid: %s",
                        name,
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
-    if (view.dtype != P4A_DTYPE_F64 && view.dtype != P4A_DTYPE_F32) {
+    if (view.dtype != N4M_DTYPE_F64 && view.dtype != N4M_DTYPE_F32) {
         ctx.set_errorf("%s dtype must be f64 or f32", name);
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t validate_request(::pls4all::core::Context& ctx,
-        const ::pls4all::core::Config& cfg,
-        const p4a_matrix_view_t& X,
-        const p4a_matrix_view_t& Y,
-        const ::pls4all::core::ValidationPlan& plan,
+[[nodiscard]] n4m_status_t validate_request(::n4m::core::Context& ctx,
+        const ::n4m::core::Config& cfg,
+        const n4m_matrix_view_t& X,
+        const n4m_matrix_view_t& Y,
+        const ::n4m::core::ValidationPlan& plan,
         std::int32_t n_iterations,
         std::int32_t n_submodels,
         double ratio_kept,
         double threshold,
         double floor_probability) {
-    p4a_status_t status = validate_float_view(ctx, X, "X");
-    if (status != P4A_OK) return status;
+    n4m_status_t status = validate_float_view(ctx, X, "X");
+    if (status != N4M_OK) return status;
     status = validate_float_view(ctx, Y, "Y");
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     if (X.rows == 0 || X.cols == 0 || Y.cols == 0) {
         ctx.set_error("VISSA-PLS matrices must be non-empty");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.rows != Y.rows) {
         ctx.set_errorf("X rows (%lld) must match Y rows (%lld)",
                        static_cast<long long>(X.rows),
                        static_cast<long long>(Y.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (plan.n_samples != X.rows) {
         ctx.set_errorf("validation plan n_samples (%lld) must match X rows (%lld)",
                        static_cast<long long>(plan.n_samples),
                        static_cast<long long>(X.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (plan.folds.empty()) {
         ctx.set_error("VISSA-PLS requires at least one validation fold");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (n_iterations < 1) {
         ctx.set_errorf("n_iterations must be >= 1; got %d", n_iterations);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (n_submodels < 1) {
         ctx.set_errorf("n_submodels must be >= 1; got %d", n_submodels);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (!std::isfinite(ratio_kept) || ratio_kept <= 0.0 || ratio_kept > 1.0) {
         ctx.set_error("ratio_kept must be in (0, 1]");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (!std::isfinite(threshold) || threshold < 0.0 || threshold > 1.0) {
         ctx.set_error("threshold must be in [0, 1]");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (!std::isfinite(floor_probability) ||
         floor_probability < 0.0 || floor_probability >= 0.5) {
         ctx.set_error("floor_probability must be in [0, 0.5)");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (cfg.n_components < 1 ||
         static_cast<std::int64_t>(cfg.n_components) > X.cols) {
         ctx.set_errorf("n_components must be in [1, %lld]; got %d",
                        static_cast<long long>(X.cols),
                        static_cast<int>(cfg.n_components));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max())) {
         ctx.set_error("VISSA-PLS feature count exceeds int32 result storage");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t copy_columns(::pls4all::core::Context& ctx,
-                                         const p4a_matrix_view_t& X,
+[[nodiscard]] n4m_status_t copy_columns(::n4m::core::Context& ctx,
+                                         const n4m_matrix_view_t& X,
                                          const std::vector<std::int64_t>& columns,
                                          std::vector<double>& out) {
     if (columns.empty()) {
         ctx.set_error("VISSA-PLS column selection must not be empty");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const auto rows = static_cast<std::size_t>(X.rows);
     const auto cols = columns.size();
@@ -167,50 +167,50 @@ constexpr double kDoubleUnit = 1.0 / 9007199254740992.0;  // 2^-53
         const std::int64_t original_col = columns[local_col];
         if (original_col < 0 || original_col >= X.cols) {
             ctx.set_error("VISSA-PLS column index out of range");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         const auto src_col = static_cast<std::size_t>(original_col);
         for (std::size_t row = 0; row < rows; ++row) {
             const double value = read_value(X, row, src_col);
             if (!std::isfinite(value)) {
                 ctx.set_error("VISSA-PLS X contains NaN or Inf");
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out[idx(row, cols, local_col)] = value;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t subset_rmse(::pls4all::core::Context& ctx,
-                                        const ::pls4all::core::Config& cfg,
-                                        const p4a_matrix_view_t& X,
-                                        const p4a_matrix_view_t& Y,
-                                        const ::pls4all::core::ValidationPlan& plan,
+[[nodiscard]] n4m_status_t subset_rmse(::n4m::core::Context& ctx,
+                                        const ::n4m::core::Config& cfg,
+                                        const n4m_matrix_view_t& X,
+                                        const n4m_matrix_view_t& Y,
+                                        const ::n4m::core::ValidationPlan& plan,
                                         const std::vector<std::int64_t>& columns,
                                         double& out) {
     std::vector<double> subset_x;
-    p4a_status_t status = copy_columns(ctx, X, columns, subset_x);
-    if (status != P4A_OK) return status;
-    p4a_matrix_view_t subset_view =
+    n4m_status_t status = copy_columns(ctx, X, columns, subset_x);
+    if (status != N4M_OK) return status;
+    n4m_matrix_view_t subset_view =
         rowmajor_f64_view(subset_x, X.rows,
                            static_cast<std::int64_t>(columns.size()));
-    ::pls4all::core::CrossValidationResult cv;
-    status = ::pls4all::core::cross_validate_regression(
+    ::n4m::core::CrossValidationResult cv;
+    status = ::n4m::core::cross_validate_regression(
         ctx, cfg, subset_view, Y, plan, cv);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     out = cv.metrics.rmse;
-    return P4A_OK;
+    return N4M_OK;
 }
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t select_by_vissa(Context& ctx,
+n4m_status_t select_by_vissa(Context& ctx,
                               const Config& cfg,
-                              const p4a_matrix_view_t& X,
-                              const p4a_matrix_view_t& Y,
+                              const n4m_matrix_view_t& X,
+                              const n4m_matrix_view_t& Y,
                               const ValidationPlan& plan,
                               std::int32_t n_iterations_in,
                               std::int32_t n_submodels_in,
@@ -220,11 +220,11 @@ p4a_status_t select_by_vissa(Context& ctx,
                               std::uint64_t seed,
                               VissaSelectionResult& out) {
     out = VissaSelectionResult{};
-    p4a_status_t status = validate_request(ctx, cfg, X, Y, plan,
+    n4m_status_t status = validate_request(ctx, cfg, X, Y, plan,
                                             n_iterations_in, n_submodels_in,
                                             ratio_kept, threshold,
                                             floor_probability);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
 
     const auto p = static_cast<std::size_t>(X.cols);
     const auto n_iter = static_cast<std::size_t>(n_iterations_in);
@@ -278,7 +278,7 @@ p4a_status_t select_by_vissa(Context& ctx,
             }
             double rmse = std::numeric_limits<double>::infinity();
             status = subset_rmse(ctx, cfg, X, Y, plan, idx_buf, rmse);
-            if (status != P4A_OK) return status;
+            if (status != N4M_OK) return status;
             masks.push_back(mask);
             rmses.push_back(rmse);
         }
@@ -289,7 +289,7 @@ p4a_status_t select_by_vissa(Context& ctx,
                 "than n_components active features. Try raising "
                 "floor_probability or n_submodels.",
                 static_cast<unsigned long long>(t));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         // --- Sort ascending by RMSE; keep first k_actual --------------
@@ -303,7 +303,7 @@ p4a_status_t select_by_vissa(Context& ctx,
                   });
         if (order.empty()) {
             ctx.set_error("VISSA-PLS: no valid submodels available after sorting.");
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         const std::size_t best_pos = order.front();
 
@@ -369,7 +369,7 @@ p4a_status_t select_by_vissa(Context& ctx,
     out.seed = seed;
 
     (void)best_indices_global;  // exposed via final_probabilities + threshold
-    return P4A_OK;
+    return N4M_OK;
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

@@ -12,7 +12,7 @@
 #include "core/config.hpp"
 #include "core/context.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct RandomizationSelectionResult {
     std::int32_t n_features{0};
@@ -28,15 +28,15 @@ struct RandomizationSelectionResult {
     std::vector<std::int64_t> selected_indices;
 };
 
-[[nodiscard]] p4a_status_t select_by_randomization_test(
+[[nodiscard]] n4m_status_t select_by_randomization_test(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::int32_t n_permutations,
     std::uint64_t randomization_seed,
     double alpha,
     RandomizationSelectionResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core
 

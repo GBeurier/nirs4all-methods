@@ -40,14 +40,14 @@ namespace {
     return true;
 }
 
-[[nodiscard]] double read_value(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_value(const n4m_matrix_view_t& view,
                                 std::size_t row,
                                 std::size_t col) noexcept {
     const std::int64_t off =
         static_cast<std::int64_t>(row) * view.row_stride +
         static_cast<std::int64_t>(col) * view.col_stride;
     const auto uoff = static_cast<std::size_t>(off);
-    if (view.dtype == P4A_DTYPE_F64) {
+    if (view.dtype == N4M_DTYPE_F64) {
         const auto* ptr = static_cast<const double*>(view.data);
         return ptr[uoff];
     }
@@ -55,42 +55,42 @@ namespace {
     return static_cast<double>(ptr[uoff]);
 }
 
-[[nodiscard]] p4a_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
+[[nodiscard]] n4m_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
                                                   std::int64_t rows,
                                                   std::int64_t cols) noexcept {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = values.data();
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols > 0 ? cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
-[[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t validate_float_view(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& view,
                                                const char* name) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(view);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(view);
+    if (status != N4M_OK) {
         ctx.set_errorf("%s matrix view is invalid: %s",
                        name,
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
-    if (view.dtype != P4A_DTYPE_F64 && view.dtype != P4A_DTYPE_F32) {
+    if (view.dtype != N4M_DTYPE_F64 && view.dtype != N4M_DTYPE_F32) {
         ctx.set_errorf("%s dtype must be f64 or f32", name);
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
     if (view.rows <= 0 || view.cols <= 0) {
         ctx.set_errorf("%s matrix must be non-empty", name);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t copy_rows(::pls4all::core::Context& ctx,
-                                     const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t copy_rows(::n4m::core::Context& ctx,
+                                     const n4m_matrix_view_t& view,
                                      const std::vector<std::int64_t>& rows,
                                      const char* name,
                                      std::vector<double>& out) {
@@ -99,7 +99,7 @@ namespace {
                              view.cols,
                              n_values)) {
         ctx.set_errorf("%s row selection shape is too large", name);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     out.assign(n_values, 0.0);
     const auto n_rows = static_cast<std::uint64_t>(view.rows);
@@ -110,51 +110,51 @@ namespace {
             ctx.set_errorf("%s row index out of range: %lld",
                            name,
                            static_cast<long long>(source));
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         const auto src_row = static_cast<std::size_t>(source);
         for (std::size_t col = 0; col < cols; ++col) {
             const double value = read_value(view, src_row, col);
             if (!std::isfinite(value)) {
                 ctx.set_errorf("%s contains NaN or Inf", name);
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out[idx(i, cols, col)] = value;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t validate_plan(::pls4all::core::Context& ctx,
-                                         const ::pls4all::core::ValidationPlan& plan,
+[[nodiscard]] n4m_status_t validate_plan(::n4m::core::Context& ctx,
+                                         const ::n4m::core::ValidationPlan& plan,
                                          std::int64_t n_samples) {
     if (plan.folds.empty()) {
         ctx.set_error("AOM selection requires at least one validation fold");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (plan.n_samples != 0 && plan.n_samples != n_samples) {
         ctx.set_errorf("validation plan sample count (%lld) must match X rows (%lld)",
                        static_cast<long long>(plan.n_samples),
                        static_cast<long long>(n_samples));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (n_samples <= 0) {
         ctx.set_error("AOM selection requires a positive sample count");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::vector<std::uint8_t> mask;
     try {
         mask.assign(static_cast<std::size_t>(n_samples), 0U);
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory validating AOM selection plan");
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     }
     for (std::size_t fold_idx = 0; fold_idx < plan.folds.size(); ++fold_idx) {
         const auto& fold = plan.folds[fold_idx];
         if (fold.train_indices.empty() || fold.test_indices.empty()) {
             ctx.set_errorf("AOM selection fold %lu has empty train or test split",
                            static_cast<unsigned long>(fold_idx));
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         std::fill(mask.begin(), mask.end(), static_cast<std::uint8_t>(0));
         for (const auto sample : fold.train_indices) {
@@ -163,14 +163,14 @@ namespace {
                                static_cast<unsigned long>(fold_idx),
                                static_cast<long long>(sample),
                                static_cast<long long>(n_samples));
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             auto& slot = mask[static_cast<std::size_t>(sample)];
             if (slot != 0U) {
                 ctx.set_errorf("AOM selection fold %lu train index %lld is duplicated",
                                static_cast<unsigned long>(fold_idx),
                                static_cast<long long>(sample));
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             slot = 1U;
         }
@@ -180,7 +180,7 @@ namespace {
                                static_cast<unsigned long>(fold_idx),
                                static_cast<long long>(sample),
                                static_cast<long long>(n_samples));
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             auto& slot = mask[static_cast<std::size_t>(sample)];
             if (slot == 1U) {
@@ -188,73 +188,73 @@ namespace {
                     "AOM selection fold %lu has test index %lld overlapping train set",
                     static_cast<unsigned long>(fold_idx),
                     static_cast<long long>(sample));
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             if (slot == 2U) {
                 ctx.set_errorf("AOM selection fold %lu test index %lld is duplicated",
                                static_cast<unsigned long>(fold_idx),
                                static_cast<long long>(sample));
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             slot = 2U;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t validate_request(::pls4all::core::Context& ctx,
-                                            const ::pls4all::core::Config& cfg,
-                                            const ::pls4all::core::OperatorBank& bank,
-                                            const p4a_matrix_view_t& X,
-                                            const p4a_matrix_view_t& Y,
-                                            const ::pls4all::core::ValidationPlan& plan,
+[[nodiscard]] n4m_status_t validate_request(::n4m::core::Context& ctx,
+                                            const ::n4m::core::Config& cfg,
+                                            const ::n4m::core::OperatorBank& bank,
+                                            const n4m_matrix_view_t& X,
+                                            const n4m_matrix_view_t& Y,
+                                            const ::n4m::core::ValidationPlan& plan,
                                             std::int32_t max_components) {
-    p4a_status_t status = validate_float_view(ctx, X, "X");
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_float_view(ctx, X, "X");
+    if (status != N4M_OK) {
         return status;
     }
     status = validate_float_view(ctx, Y, "Y");
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     if (X.rows != Y.rows) {
         ctx.set_error("X and Y must have the same number of rows");
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (bank.entries().empty()) {
         ctx.set_error("AOM selection requires at least one operator");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (bank.entries().size() >
         static_cast<std::size_t>(std::numeric_limits<std::int32_t>::max())) {
         ctx.set_error("AOM operator count is too large");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (max_components < 1) {
         ctx.set_error("max_components must be >= 1");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (max_components > X.cols || max_components >= X.rows) {
         ctx.set_error("max_components must be <= X cols and < X rows");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    if (cfg.algorithm != P4A_ALGO_PLS_REGRESSION ||
-        cfg.solver != P4A_SOLVER_SIMPLS ||
-        cfg.deflation != P4A_DEFLATION_REGRESSION) {
+    if (cfg.algorithm != N4M_ALGO_PLS_REGRESSION ||
+        cfg.solver != N4M_SOLVER_SIMPLS ||
+        cfg.deflation != N4M_DEFLATION_REGRESSION) {
         ctx.set_error("AOM selection currently supports SIMPLS regression only");
-        return P4A_ERR_UNSUPPORTED;
+        return N4M_ERR_UNSUPPORTED;
     }
     return validate_plan(ctx, plan, X.rows);
 }
 
-[[nodiscard]] p4a_status_t transform_with_operator(::pls4all::core::Context& ctx,
-                                                   const ::pls4all::core::OperatorEntry& entry,
-                                                   const p4a_matrix_view_t& apply_x,
+[[nodiscard]] n4m_status_t transform_with_operator(::n4m::core::Context& ctx,
+                                                   const ::n4m::core::OperatorEntry& entry,
+                                                   const n4m_matrix_view_t& apply_x,
                                                    std::vector<double>& transformed) {
-    return ::pls4all::core::transform_aom_strict_operator(ctx, entry, apply_x, transformed);
+    return ::n4m::core::transform_aom_strict_operator(ctx, entry, apply_x, transformed);
 }
 
-[[nodiscard]] double prefix_rmse(const ::pls4all::core::Model& model,
+[[nodiscard]] double prefix_rmse(const ::n4m::core::Model& model,
                                  const std::vector<double>& coefficients_by_component,
                                  std::int32_t prefix,
                                  const std::vector<double>& X,
@@ -279,12 +279,12 @@ namespace {
     return std::sqrt(sumsq / static_cast<double>(rows * q));
 }
 
-[[nodiscard]] p4a_status_t score_operator(::pls4all::core::Context& ctx,
-                                          const ::pls4all::core::Config& cfg,
-                                          const ::pls4all::core::OperatorEntry& entry,
-                                          const p4a_matrix_view_t& X,
-                                          const p4a_matrix_view_t& Y,
-                                          const ::pls4all::core::ValidationPlan& plan,
+[[nodiscard]] n4m_status_t score_operator(::n4m::core::Context& ctx,
+                                          const ::n4m::core::Config& cfg,
+                                          const ::n4m::core::OperatorEntry& entry,
+                                          const n4m_matrix_view_t& X,
+                                          const n4m_matrix_view_t& Y,
+                                          const ::n4m::core::ValidationPlan& plan,
                                           std::int32_t max_components,
                                           std::vector<double>& curve) {
     const double inf = std::numeric_limits<double>::infinity();
@@ -295,61 +295,61 @@ namespace {
     for (const auto& fold : plan.folds) {
         if (fold.train_indices.empty() || fold.test_indices.empty()) {
             ctx.set_error("AOM global selection received an empty validation fold");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
         std::vector<double> train_x;
         std::vector<double> train_y;
         std::vector<double> test_x;
         std::vector<double> test_y;
-        p4a_status_t status = copy_rows(ctx, X, fold.train_indices, "X train", train_x);
-        if (status != P4A_OK) {
+        n4m_status_t status = copy_rows(ctx, X, fold.train_indices, "X train", train_x);
+        if (status != N4M_OK) {
             return status;
         }
         status = copy_rows(ctx, Y, fold.train_indices, "Y train", train_y);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         status = copy_rows(ctx, X, fold.test_indices, "X test", test_x);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         status = copy_rows(ctx, Y, fold.test_indices, "Y test", test_y);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
-        p4a_matrix_view_t train_x_view = rowmajor_f64_view(train_x,
+        n4m_matrix_view_t train_x_view = rowmajor_f64_view(train_x,
                                                            static_cast<std::int64_t>(fold.train_indices.size()),
                                                            X.cols);
-        p4a_matrix_view_t train_y_view = rowmajor_f64_view(train_y,
+        n4m_matrix_view_t train_y_view = rowmajor_f64_view(train_y,
                                                            static_cast<std::int64_t>(fold.train_indices.size()),
                                                            Y.cols);
-        p4a_matrix_view_t test_x_view = rowmajor_f64_view(test_x,
+        n4m_matrix_view_t test_x_view = rowmajor_f64_view(test_x,
                                                           static_cast<std::int64_t>(fold.test_indices.size()),
                                                           X.cols);
 
         std::vector<double> train_xt;
         std::vector<double> test_xt;
         status = transform_with_operator(ctx, entry, train_x_view, train_xt);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         status = transform_with_operator(ctx, entry, test_x_view, test_xt);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
-        p4a_matrix_view_t train_xt_view = rowmajor_f64_view(train_xt,
+        n4m_matrix_view_t train_xt_view = rowmajor_f64_view(train_xt,
                                                             static_cast<std::int64_t>(fold.train_indices.size()),
                                                             X.cols);
-        ::pls4all::core::Config local_cfg = cfg;
+        ::n4m::core::Config local_cfg = cfg;
         local_cfg.n_components = max_components;
         local_cfg.scale_x = 0;
         local_cfg.scale_y = 0;
-        std::unique_ptr<::pls4all::core::Model> model;
-        status = ::pls4all::core::fit_model(ctx, local_cfg, train_xt_view, train_y_view, model);
-        if (status != P4A_OK || !model) {
+        std::unique_ptr<::n4m::core::Model> model;
+        status = ::n4m::core::fit_model(ctx, local_cfg, train_xt_view, train_y_view, model);
+        if (status != N4M_OK || !model) {
             for (std::int32_t k = 0; k < max_components; ++k) {
                 invalid[static_cast<std::size_t>(k)] = 1U;
             }
@@ -357,10 +357,10 @@ namespace {
         }
 
         std::vector<double> coefficients_by_component;
-        status = ::pls4all::core::compute_regression_coefficients_by_component(ctx,
+        status = ::n4m::core::compute_regression_coefficients_by_component(ctx,
                                                                                *model,
                                                                                coefficients_by_component);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             for (std::int32_t k = 0; k < max_components; ++k) {
                 invalid[static_cast<std::size_t>(k)] = 1U;
             }
@@ -396,39 +396,39 @@ namespace {
             curve[pos] /= static_cast<double>(counts[pos]);
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t fit_selected_predictions(::pls4all::core::Context& ctx,
-                                                    const ::pls4all::core::Config& cfg,
-                                                    const ::pls4all::core::OperatorEntry& entry,
-                                                    const p4a_matrix_view_t& X,
-                                                    const p4a_matrix_view_t& Y,
+[[nodiscard]] n4m_status_t fit_selected_predictions(::n4m::core::Context& ctx,
+                                                    const ::n4m::core::Config& cfg,
+                                                    const ::n4m::core::OperatorEntry& entry,
+                                                    const n4m_matrix_view_t& X,
+                                                    const n4m_matrix_view_t& Y,
                                                     std::int32_t n_components,
                                                     std::vector<double>& predictions) {
     std::vector<double> xt;
-    p4a_status_t status = transform_with_operator(ctx, entry, X, xt);
-    if (status != P4A_OK) {
+    n4m_status_t status = transform_with_operator(ctx, entry, X, xt);
+    if (status != N4M_OK) {
         return status;
     }
-    p4a_matrix_view_t xt_view = rowmajor_f64_view(xt, X.rows, X.cols);
-    ::pls4all::core::Config local_cfg = cfg;
+    n4m_matrix_view_t xt_view = rowmajor_f64_view(xt, X.rows, X.cols);
+    ::n4m::core::Config local_cfg = cfg;
     local_cfg.n_components = n_components;
     local_cfg.scale_x = 0;
     local_cfg.scale_y = 0;
-    std::unique_ptr<::pls4all::core::Model> model;
-    status = ::pls4all::core::fit_model(ctx, local_cfg, xt_view, Y, model);
-    if (status != P4A_OK || !model) {
-        return status == P4A_OK ? P4A_ERR_INTERNAL : status;
+    std::unique_ptr<::n4m::core::Model> model;
+    status = ::n4m::core::fit_model(ctx, local_cfg, xt_view, Y, model);
+    if (status != N4M_OK || !model) {
+        return status == N4M_OK ? N4M_ERR_INTERNAL : status;
     }
     std::size_t pred_values = 0;
     if (!checked_matrix_size(X.rows, Y.cols, pred_values)) {
         ctx.set_error("AOM prediction matrix shape is too large");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     predictions.assign(pred_values, 0.0);
-    p4a_matrix_view_t pred_view = rowmajor_f64_view(predictions, X.rows, Y.cols);
-    return ::pls4all::core::predict_into(ctx, *model, xt_view, pred_view);
+    n4m_matrix_view_t pred_view = rowmajor_f64_view(predictions, X.rows, Y.cols);
+    return ::n4m::core::predict_into(ctx, *model, xt_view, pred_view);
 }
 
 struct StrictOperatorMatrix {
@@ -442,8 +442,8 @@ struct PopFit {
     std::vector<double> loadings_q;  // q x n_components
 };
 
-[[nodiscard]] p4a_status_t copy_all_rows(::pls4all::core::Context& ctx,
-                                         const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t copy_all_rows(::n4m::core::Context& ctx,
+                                         const n4m_matrix_view_t& view,
                                          const char* name,
                                          std::vector<double>& out) {
     std::vector<std::int64_t> rows(static_cast<std::size_t>(view.rows), 0);
@@ -541,9 +541,9 @@ void center_by_means(const std::vector<double>& values,
     return true;
 }
 
-[[nodiscard]] p4a_status_t build_operator_matrices(
-    ::pls4all::core::Context& ctx,
-    const ::pls4all::core::OperatorBank& bank,
+[[nodiscard]] n4m_status_t build_operator_matrices(
+    ::n4m::core::Context& ctx,
+    const ::n4m::core::OperatorBank& bank,
     std::int64_t cols,
     std::vector<StrictOperatorMatrix>& matrices) {
     const auto p = static_cast<std::size_t>(cols);
@@ -551,20 +551,20 @@ void center_by_means(const std::vector<double>& values,
     for (std::size_t i = 0; i < p; ++i) {
         identity[idx(i, p, i)] = 1.0;
     }
-    p4a_matrix_view_t identity_view = rowmajor_f64_view(identity, cols, cols);
+    n4m_matrix_view_t identity_view = rowmajor_f64_view(identity, cols, cols);
     matrices.clear();
     matrices.reserve(bank.entries().size());
     for (const auto& entry : bank.entries()) {
         StrictOperatorMatrix matrix;
-        p4a_status_t status =
-            ::pls4all::core::transform_aom_strict_operator(ctx, entry, identity_view, matrix.adjoint);
-        if (status != P4A_OK) {
+        n4m_status_t status =
+            ::n4m::core::transform_aom_strict_operator(ctx, entry, identity_view, matrix.adjoint);
+        if (status != N4M_OK) {
             matrices.clear();
             return status;
         }
         matrices.push_back(std::move(matrix));
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 void cross_covariance(const std::vector<double>& X,
@@ -666,7 +666,7 @@ void dominant_left_direction(const std::vector<double>& covariance,
     }
 }
 
-[[nodiscard]] p4a_status_t fit_pop_sequence(::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t fit_pop_sequence(::n4m::core::Context& ctx,
                                             const std::vector<StrictOperatorMatrix>& matrices,
                                             const std::vector<std::int32_t>& op_indices,
                                             const std::vector<double>& X,
@@ -690,7 +690,7 @@ void dominant_left_direction(const std::vector<double>& covariance,
         const auto op_index = static_cast<std::size_t>(op_indices[comp]);
         if (op_index >= matrices.size()) {
             ctx.set_error("POP operator index is out of range");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
         std::vector<double> transformed_covariance;
@@ -778,10 +778,10 @@ void dominant_left_direction(const std::vector<double>& covariance,
             }
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t coefficients_for_prefix(::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t coefficients_for_prefix(::n4m::core::Context& ctx,
                                                    const PopFit& fit,
                                                    std::size_t p,
                                                    std::size_t q,
@@ -790,7 +790,7 @@ void dominant_left_direction(const std::vector<double>& covariance,
     coefficients.assign(p * q, 0.0);
     if (prefix == 0U || prefix > static_cast<std::size_t>(fit.n_components)) {
         ctx.set_error("POP coefficient prefix is out of range");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const auto components = static_cast<std::size_t>(fit.n_components);
     std::vector<double> ptz(prefix * prefix, 0.0);
@@ -807,7 +807,7 @@ void dominant_left_direction(const std::vector<double>& covariance,
     std::vector<double> ptz_inv;
     if (!invert_square_matrix(ptz, prefix, ptz_inv)) {
         coefficients.clear();
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
     for (std::size_t feature = 0; feature < p; ++feature) {
         for (std::size_t target = 0; target < q; ++target) {
@@ -823,19 +823,19 @@ void dominant_left_direction(const std::vector<double>& covariance,
             coefficients[idx(feature, q, target)] = coefficient;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t score_pop_sequence_cv(::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t score_pop_sequence_cv(::n4m::core::Context& ctx,
                                                  const std::vector<StrictOperatorMatrix>& matrices,
                                                  const std::vector<std::int32_t>& op_indices,
-                                                 const p4a_matrix_view_t& X,
-                                                 const p4a_matrix_view_t& Y,
-                                                 const ::pls4all::core::ValidationPlan& plan,
+                                                 const n4m_matrix_view_t& X,
+                                                 const n4m_matrix_view_t& Y,
+                                                 const ::n4m::core::ValidationPlan& plan,
                                                  double& score) {
     score = std::numeric_limits<double>::infinity();
     if (op_indices.empty()) {
-        return P4A_OK;
+        return N4M_OK;
     }
     const auto p = static_cast<std::size_t>(X.cols);
     const auto q = static_cast<std::size_t>(Y.cols);
@@ -844,27 +844,27 @@ void dominant_left_direction(const std::vector<double>& covariance,
     for (const auto& fold : plan.folds) {
         if (fold.train_indices.empty() || fold.test_indices.empty()) {
             ctx.set_error("POP selection received an empty validation fold");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
         std::vector<double> train_x;
         std::vector<double> train_y;
         std::vector<double> test_x;
         std::vector<double> test_y;
-        p4a_status_t status = copy_rows(ctx, X, fold.train_indices, "X train", train_x);
-        if (status != P4A_OK) {
+        n4m_status_t status = copy_rows(ctx, X, fold.train_indices, "X train", train_x);
+        if (status != N4M_OK) {
             return status;
         }
         status = copy_rows(ctx, Y, fold.train_indices, "Y train", train_y);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         status = copy_rows(ctx, X, fold.test_indices, "X test", test_x);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         status = copy_rows(ctx, Y, fold.test_indices, "Y test", test_y);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -889,12 +889,12 @@ void dominant_left_direction(const std::vector<double>& covariance,
                                   p,
                                   q,
                                   fit);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         std::vector<double> coefficients;
         status = coefficients_for_prefix(ctx, fit, p, q, op_indices.size(), coefficients);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             continue;
         }
 
@@ -938,26 +938,26 @@ void dominant_left_direction(const std::vector<double>& covariance,
     if (valid_folds == static_cast<std::int32_t>(plan.folds.size())) {
         score = total_rmse / static_cast<double>(valid_folds);
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t fit_pop_predictions(::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t fit_pop_predictions(::n4m::core::Context& ctx,
                                                const std::vector<StrictOperatorMatrix>& matrices,
                                                const std::vector<std::int32_t>& op_indices,
-                                               const p4a_matrix_view_t& X,
-                                               const p4a_matrix_view_t& Y,
+                                               const n4m_matrix_view_t& X,
+                                               const n4m_matrix_view_t& Y,
                                                std::vector<double>& predictions) {
     const auto rows = static_cast<std::size_t>(X.rows);
     const auto p = static_cast<std::size_t>(X.cols);
     const auto q = static_cast<std::size_t>(Y.cols);
     std::vector<double> x_values;
     std::vector<double> y_values;
-    p4a_status_t status = copy_all_rows(ctx, X, "X", x_values);
-    if (status != P4A_OK) {
+    n4m_status_t status = copy_all_rows(ctx, X, "X", x_values);
+    if (status != N4M_OK) {
         return status;
     }
     status = copy_all_rows(ctx, Y, "Y", y_values);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -972,12 +972,12 @@ void dominant_left_direction(const std::vector<double>& covariance,
 
     PopFit fit;
     status = fit_pop_sequence(ctx, matrices, op_indices, x_centered, y_centered, rows, p, q, fit);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     std::vector<double> coefficients;
     status = coefficients_for_prefix(ctx, fit, p, q, op_indices.size(), coefficients);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -992,25 +992,25 @@ void dominant_left_direction(const std::vector<double>& covariance,
             predictions[idx(row, q, target)] = prediction;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t select_aom_global(Context& ctx,
+n4m_status_t select_aom_global(Context& ctx,
                                const Config& cfg,
                                const OperatorBank& bank,
-                               const p4a_matrix_view_t& X,
-                               const p4a_matrix_view_t& Y,
+                               const n4m_matrix_view_t& X,
+                               const n4m_matrix_view_t& Y,
                                const ValidationPlan& plan,
                                std::int32_t max_components,
                                AomGlobalSelectionResult& out) {
     try {
         out = AomGlobalSelectionResult{};
-        p4a_status_t status = validate_request(ctx, cfg, bank, X, Y, plan, max_components);
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_request(ctx, cfg, bank, X, Y, plan, max_components);
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -1031,7 +1031,7 @@ p4a_status_t select_aom_global(Context& ctx,
             out.operator_kinds.push_back(static_cast<std::int64_t>(entry.kind));
             std::vector<double> curve;
             status = score_operator(ctx, cfg, entry, X, Y, plan, max_components, curve);
-            if (status != P4A_OK) {
+            if (status != N4M_OK) {
                 out = AomGlobalSelectionResult{};
                 return status;
             }
@@ -1054,7 +1054,7 @@ p4a_status_t select_aom_global(Context& ctx,
         if (!std::isfinite(best_score)) {
             ctx.set_error("AOM global selection found no finite candidate score");
             out = AomGlobalSelectionResult{};
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         out.selected_operator_index = best_op;
@@ -1068,42 +1068,42 @@ p4a_status_t select_aom_global(Context& ctx,
                                           Y,
                                           best_k,
                                           out.predictions);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             out = AomGlobalSelectionResult{};
             return status;
         }
 
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while running AOM global selection");
         out = AomGlobalSelectionResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while running AOM global selection");
         out = AomGlobalSelectionResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-p4a_status_t select_aom_per_component(Context& ctx,
+n4m_status_t select_aom_per_component(Context& ctx,
                                       const Config& cfg,
                                       const OperatorBank& bank,
-                                      const p4a_matrix_view_t& X,
-                                      const p4a_matrix_view_t& Y,
+                                      const n4m_matrix_view_t& X,
+                                      const n4m_matrix_view_t& Y,
                                       const ValidationPlan& plan,
                                       std::int32_t max_components,
                                       AomPerComponentSelectionResult& out) {
     try {
         out = AomPerComponentSelectionResult{};
-        p4a_status_t status = validate_request(ctx, cfg, bank, X, Y, plan, max_components);
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_request(ctx, cfg, bank, X, Y, plan, max_components);
+        if (status != N4M_OK) {
             return status;
         }
 
         std::vector<StrictOperatorMatrix> matrices;
         status = build_operator_matrices(ctx, bank, X.cols, matrices);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             out = AomPerComponentSelectionResult{};
             return status;
         }
@@ -1130,7 +1130,7 @@ p4a_status_t select_aom_per_component(Context& ctx,
                 candidate.push_back(static_cast<std::int32_t>(op));
                 double score = std::numeric_limits<double>::infinity();
                 status = score_pop_sequence_cv(ctx, matrices, candidate, X, Y, plan, score);
-                if (status != P4A_OK) {
+                if (status != N4M_OK) {
                     out = AomPerComponentSelectionResult{};
                     return status;
                 }
@@ -1143,7 +1143,7 @@ p4a_status_t select_aom_per_component(Context& ctx,
             if (!std::isfinite(best_score)) {
                 ctx.set_error("POP selection found no finite candidate score");
                 out = AomPerComponentSelectionResult{};
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
             selected.push_back(best_op);
         }
@@ -1154,7 +1154,7 @@ p4a_status_t select_aom_per_component(Context& ctx,
             std::vector<std::int32_t> prefix(selected.begin(), selected.begin() + k);
             double score = std::numeric_limits<double>::infinity();
             status = score_pop_sequence_cv(ctx, matrices, prefix, X, Y, plan, score);
-            if (status != P4A_OK) {
+            if (status != N4M_OK) {
                 out = AomPerComponentSelectionResult{};
                 return status;
             }
@@ -1167,7 +1167,7 @@ p4a_status_t select_aom_per_component(Context& ctx,
         if (!std::isfinite(best_prefix_score)) {
             ctx.set_error("POP selection found no finite prefix score");
             out = AomPerComponentSelectionResult{};
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
 
         out.selected_n_components = best_k;
@@ -1181,22 +1181,22 @@ p4a_status_t select_aom_per_component(Context& ctx,
                                      X,
                                      Y,
                                      out.predictions);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             out = AomPerComponentSelectionResult{};
             return status;
         }
 
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while running POP selection");
         out = AomPerComponentSelectionResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while running POP selection");
         out = AomPerComponentSelectionResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

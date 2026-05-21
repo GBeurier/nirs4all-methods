@@ -1,0 +1,23 @@
+{
+  "algorithm": "on_pls",
+  "backend": "ref_python_onpls",
+  "max_runs": 40,
+  "n": 1000,
+  "n_runs": 9,
+  "p": 500,
+  "prediction_seed": 1234567898,
+  "seed_base": 1234567890,
+  "source_predictions_path": "/home/delete/nirs4all/pls4all/benchmarks/cross_binding/data/.predictions/on_pls_ref_python_onpls_1000x500_t1_blas-omp.npy",
+  "timing_statistic": "median",
+  "total_runs": 10,
+  "versions": {
+    "blas": "libscipy_openblas 0.3.30 blas=1",
+    "language": "Python 3.13.13",
+    "numpy": "2.3.5",
+    "reference_id": "python_onpls",
+    "reference_library": "OnPLS",
+    "reference_version": "github tomlof/OnPLS",
+    "timing_schema": "adaptive-v1"
+  },
+  "warmup_ms": 1590.206090011634
+}

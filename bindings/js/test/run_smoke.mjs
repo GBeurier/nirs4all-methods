@@ -3,7 +3,7 @@
 // Node smoke + parity:
 // 1. Loads the WASM build, prints version / ABI.
 // 2. Fits a SIMPLS PLS regression on deterministic data via the
-//    `p4a_wasm_pls_fit` helper.
+//    `n4m_wasm_pls_fit` helper.
 // 3. Predicts in-sample.
 // 4. Loads the parity reference (fixture saved by
 //    `bindings/js/test/generate_parity_fixture.py`, which calls the
@@ -55,7 +55,7 @@ M.HEAPF64.set(Y, yPtr >>> 3);
 const status = M._p4a_pls_fit_simple(
     xPtr, yPtr, n, p, q, 3,
     coefsPtr, xmPtr, ymPtr, predsPtr);
-if (status !== 0) throw new Error(`p4a_pls_fit_simple failed: ${status}`);
+if (status !== 0) throw new Error(`n4m_pls_fit_simple failed: ${status}`);
 
 const coefs = new Float64Array(M.HEAPU8.buffer, coefsPtr, p * q).slice();
 const xMean = new Float64Array(M.HEAPU8.buffer, xmPtr, p).slice();

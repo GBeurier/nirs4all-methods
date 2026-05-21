@@ -17,29 +17,29 @@ namespace {
     return row * cols + col;
 }
 
-[[nodiscard]] p4a_status_t validate_top_k(::pls4all::core::Context& ctx,
-                                          const ::pls4all::core::Model& model,
+[[nodiscard]] n4m_status_t validate_top_k(::n4m::core::Context& ctx,
+                                          const ::n4m::core::Model& model,
                                           std::int32_t top_k) {
     if (model.n_features <= 0 || model.n_targets <= 0) {
         ctx.set_error("fitted model dimensions are invalid for variable selection");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (top_k <= 0 || top_k > model.n_features) {
         ctx.set_errorf("top_k must be in [1, %d]", static_cast<int>(model.n_features));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t compute_coefficient_magnitude(
-    ::pls4all::core::Context& ctx,
-    const ::pls4all::core::Model& model,
+[[nodiscard]] n4m_status_t compute_coefficient_magnitude(
+    ::n4m::core::Context& ctx,
+    const ::n4m::core::Model& model,
     std::vector<double>& out) {
     const auto p = static_cast<std::size_t>(model.n_features);
     const auto q = static_cast<std::size_t>(model.n_targets);
     if (model.coefficients.size() != p * q) {
         ctx.set_error("fitted model coefficients are inconsistent for variable selection");
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 
     out.assign(p, 0.0);
@@ -50,24 +50,24 @@ namespace {
         }
         out[feature] = max_abs;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t compute_scores(::pls4all::core::Context& ctx,
-                                          const ::pls4all::core::Model& model,
-                                          const p4a_matrix_view_t& X,
-                                          ::pls4all::core::VariableSelectionMethod method,
+[[nodiscard]] n4m_status_t compute_scores(::n4m::core::Context& ctx,
+                                          const ::n4m::core::Model& model,
+                                          const n4m_matrix_view_t& X,
+                                          ::n4m::core::VariableSelectionMethod method,
                                           std::vector<double>& scores) {
     switch (method) {
-    case ::pls4all::core::VariableSelectionMethod::Vip:
-        return ::pls4all::core::compute_vip_scores(ctx, model, scores);
-    case ::pls4all::core::VariableSelectionMethod::CoefficientMagnitude:
+    case ::n4m::core::VariableSelectionMethod::Vip:
+        return ::n4m::core::compute_vip_scores(ctx, model, scores);
+    case ::n4m::core::VariableSelectionMethod::CoefficientMagnitude:
         return compute_coefficient_magnitude(ctx, model, scores);
-    case ::pls4all::core::VariableSelectionMethod::SelectivityRatio:
-        return ::pls4all::core::compute_selectivity_ratio(ctx, model, X, scores);
+    case ::n4m::core::VariableSelectionMethod::SelectivityRatio:
+        return ::n4m::core::compute_selectivity_ratio(ctx, model, X, scores);
     }
     ctx.set_error("unknown variable-selection method");
-    return P4A_ERR_INVALID_ARGUMENT;
+    return N4M_ERR_INVALID_ARGUMENT;
 }
 
 [[nodiscard]] std::vector<std::int64_t> rank_descending(const std::vector<double>& scores) {
@@ -86,29 +86,29 @@ namespace {
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t select_variables(Context& ctx,
+n4m_status_t select_variables(Context& ctx,
                               const Model& model,
-                              const p4a_matrix_view_t& X,
+                              const n4m_matrix_view_t& X,
                               VariableSelectionMethod method,
                               std::int32_t top_k,
                               VariableSelectionResult& out) {
     try {
         out = VariableSelectionResult{};
-        p4a_status_t status = validate_top_k(ctx, model, top_k);
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_top_k(ctx, model, top_k);
+        if (status != N4M_OK) {
             return status;
         }
 
         std::vector<double> scores;
         status = compute_scores(ctx, model, X, method, scores);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         if (scores.size() != static_cast<std::size_t>(model.n_features)) {
             ctx.set_error("variable-selection score count does not match fitted feature count");
-            return P4A_ERR_INTERNAL;
+            return N4M_ERR_INTERNAL;
         }
 
         std::vector<std::int64_t> order = rank_descending(scores);
@@ -119,16 +119,16 @@ p4a_status_t select_variables(Context& ctx,
         out.scores = std::move(scores);
         out.selected_indices = std::move(order);
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while selecting variables");
         out = VariableSelectionResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while selecting variables");
         out = VariableSelectionResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

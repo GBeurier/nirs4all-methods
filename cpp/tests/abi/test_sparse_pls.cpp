@@ -25,24 +25,24 @@ namespace {
 
 constexpr double kAbsTol = 1e-10;
 
-p4a_matrix_view_t make_view(const std::vector<double>& data,
+n4m_matrix_view_t make_view(const std::vector<double>& data,
                             std::int64_t rows,
                             std::int64_t cols) {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = const_cast<double*>(data.data());
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
-::pls4all::core::Config make_config(double lambda) {
-    ::pls4all::core::Config cfg;
-    cfg.algorithm = P4A_ALGO_SPARSE_PLS;
-    cfg.solver = P4A_SOLVER_SIMPLS;
-    cfg.deflation = P4A_DEFLATION_REGRESSION;
+::n4m::core::Config make_config(double lambda) {
+    ::n4m::core::Config cfg;
+    cfg.algorithm = N4M_ALGO_SPARSE_PLS;
+    cfg.solver = N4M_SOLVER_SIMPLS;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
     cfg.n_components = 2;
     cfg.center_x = 1;
     cfg.scale_x = 0;
@@ -70,22 +70,22 @@ TEST(sparse_pls_phase8, lambda_zero_matches_plain_simpls) {
         0.50, 0.80, 0.70, 0.80, 0.40,
     };
     std::vector<double> Yv = {1.1, 0.7, 0.4, 1.0, 0.9, 0.6, 1.2, 1.3};
-    p4a_matrix_view_t X = make_view(Xv, 8, 5);
-    p4a_matrix_view_t Y = make_view(Yv, 8, 1);
+    n4m_matrix_view_t X = make_view(Xv, 8, 5);
+    n4m_matrix_view_t Y = make_view(Yv, 8, 1);
 
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg_sparse = make_config(0.0);
-    ::pls4all::core::Config cfg_plain = cfg_sparse;
-    cfg_plain.algorithm = P4A_ALGO_PLS_REGRESSION;
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg_sparse = make_config(0.0);
+    ::n4m::core::Config cfg_plain = cfg_sparse;
+    cfg_plain.algorithm = N4M_ALGO_PLS_REGRESSION;
 
-    std::unique_ptr<::pls4all::core::Model> m_sparse;
-    std::unique_ptr<::pls4all::core::Model> m_plain;
-    CHECK_EQ(::pls4all::core::fit_pls_sparse_simpls(ctx, cfg_sparse, X, Y,
+    std::unique_ptr<::n4m::core::Model> m_sparse;
+    std::unique_ptr<::n4m::core::Model> m_plain;
+    CHECK_EQ(::n4m::core::fit_pls_sparse_simpls(ctx, cfg_sparse, X, Y,
                                                     m_sparse),
-             P4A_OK);
-    CHECK_EQ(::pls4all::core::fit_pls_regression_simpls(ctx, cfg_plain, X, Y,
+             N4M_OK);
+    CHECK_EQ(::n4m::core::fit_pls_regression_simpls(ctx, cfg_plain, X, Y,
                                                         m_plain),
-             P4A_OK);
+             N4M_OK);
     CHECK(m_sparse != nullptr && m_plain != nullptr);
     CHECK_EQ(m_sparse->coefficients.size(), m_plain->coefficients.size());
     for (std::size_t i = 0; i < m_sparse->coefficients.size(); ++i) {
@@ -114,15 +114,15 @@ TEST(sparse_pls_phase8, lambda_positive_zeroes_small_weights) {
         0.50, 0.80, 0.70, 0.80, 0.40,
     };
     std::vector<double> Yv = {1.1, 0.7, 0.4, 1.0, 0.9, 0.6, 1.2, 1.3};
-    p4a_matrix_view_t X = make_view(Xv, 8, 5);
-    p4a_matrix_view_t Y = make_view(Yv, 8, 1);
+    n4m_matrix_view_t X = make_view(Xv, 8, 5);
+    n4m_matrix_view_t Y = make_view(Yv, 8, 1);
 
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg = make_config(0.15);  // moderate lambda
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg = make_config(0.15);  // moderate lambda
     cfg.n_components = 1;  // first component has enough mass to survive 0.15
-    std::unique_ptr<::pls4all::core::Model> model;
-    CHECK_EQ(::pls4all::core::fit_pls_sparse_simpls(ctx, cfg, X, Y, model),
-             P4A_OK);
+    std::unique_ptr<::n4m::core::Model> model;
+    CHECK_EQ(::n4m::core::fit_pls_sparse_simpls(ctx, cfg, X, Y, model),
+             N4M_OK);
     CHECK(model != nullptr);
     const auto& w = model->weights_w;  // p x a row-major
     int nonzero = 0;
@@ -135,8 +135,8 @@ TEST(sparse_pls_phase8, lambda_positive_zeroes_small_weights) {
 
     // Predict: must be finite and shape-correct.
     std::vector<double> pred(8, 0.0);
-    p4a_matrix_view_t pred_view = make_view(pred, 8, 1);
-    CHECK_EQ(::pls4all::core::predict_into(ctx, *model, X, pred_view), P4A_OK);
+    n4m_matrix_view_t pred_view = make_view(pred, 8, 1);
+    CHECK_EQ(::n4m::core::predict_into(ctx, *model, X, pred_view), N4M_OK);
     for (double v : pred) {
         CHECK(std::isfinite(v));
     }
@@ -148,32 +148,32 @@ TEST(sparse_pls_phase8, lambda_too_large_returns_numerical_failure) {
     // Make sure X has non-zero variance so SIMPLS would otherwise succeed.
     for (std::size_t i = 0; i < 40; ++i) Xv[i] += 0.01 * static_cast<double>(i);
     for (std::size_t i = 0; i < 8;  ++i) Yv[i] += 0.05 * static_cast<double>(i);
-    p4a_matrix_view_t X = make_view(Xv, 8, 5);
-    p4a_matrix_view_t Y = make_view(Yv, 8, 1);
+    n4m_matrix_view_t X = make_view(Xv, 8, 5);
+    n4m_matrix_view_t Y = make_view(Yv, 8, 1);
 
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg = make_config(1e9);  // wipes every weight
-    std::unique_ptr<::pls4all::core::Model> model;
-    const p4a_status_t status =
-        ::pls4all::core::fit_pls_sparse_simpls(ctx, cfg, X, Y, model);
-    CHECK_EQ(status, P4A_ERR_NUMERICAL_FAILURE);
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg = make_config(1e9);  // wipes every weight
+    std::unique_ptr<::n4m::core::Model> model;
+    const n4m_status_t status =
+        ::n4m::core::fit_pls_sparse_simpls(ctx, cfg, X, Y, model);
+    CHECK_EQ(status, N4M_ERR_NUMERICAL_FAILURE);
 }
 
 TEST(sparse_pls_phase8, rejects_non_simpls_solver) {
     std::vector<double> Xv = {1.0, 2.0, 3.0, 4.0};
     std::vector<double> Yv = {0.5, 0.6};
-    p4a_matrix_view_t X = make_view(Xv, 2, 2);
-    p4a_matrix_view_t Y = make_view(Yv, 2, 1);
+    n4m_matrix_view_t X = make_view(Xv, 2, 2);
+    n4m_matrix_view_t Y = make_view(Yv, 2, 1);
 
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg = make_config(0.1);
-    cfg.solver = P4A_SOLVER_NIPALS;
-    std::unique_ptr<::pls4all::core::Model> model;
-    CHECK_EQ(::pls4all::core::fit_pls_sparse_simpls(ctx, cfg, X, Y, model),
-             P4A_ERR_UNSUPPORTED);
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg = make_config(0.1);
+    cfg.solver = N4M_SOLVER_NIPALS;
+    std::unique_ptr<::n4m::core::Model> model;
+    CHECK_EQ(::n4m::core::fit_pls_sparse_simpls(ctx, cfg, X, Y, model),
+             N4M_ERR_UNSUPPORTED);
 
-    cfg.solver = P4A_SOLVER_SIMPLS;
+    cfg.solver = N4M_SOLVER_SIMPLS;
     cfg.sparsity_lambda = -1.0;
-    CHECK_EQ(::pls4all::core::fit_pls_sparse_simpls(ctx, cfg, X, Y, model),
-             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::fit_pls_sparse_simpls(ctx, cfg, X, Y, model),
+             N4M_ERR_INVALID_ARGUMENT);
 }

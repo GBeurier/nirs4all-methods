@@ -3,7 +3,7 @@
 // Minimal top-level C++ TU that exists solely to force R's build system
 // into C++ link mode. R-exts (§1.6) warns that R only auto-selects the
 // C++ linker when at least one C++ source lives directly under src/;
-// our actual C++ implementation is under src/libp4a/, so without this
+// our actual C++ implementation is under src/libn4m/, so without this
 // sentinel some platforms would link with `cc` instead of `c++`,
 // leaving libstdc++ symbols unresolved at runtime.
 //

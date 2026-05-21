@@ -2,7 +2,7 @@
 //
 // cuBLAS dispatch implementation (Phase 45).
 //
-// libp4a's matrices are row-major contiguous doubles. cuBLAS is
+// libn4m's matrices are row-major contiguous doubles. cuBLAS is
 // column-major. The standard trick to bridge them without copying:
 // a row-major (rows x cols) buffer is bit-equivalent to a
 // column-major (cols x rows) buffer. So we tell cuBLAS to operate on
@@ -32,7 +32,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace pls4all {
+namespace n4m {
 namespace cuda_dispatch {
 
 namespace {
@@ -301,4 +301,4 @@ void ger(std::size_t M, std::size_t N,
 }
 
 }  // namespace cuda_dispatch
-}  // namespace pls4all
+}  // namespace n4m

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
-// PLS regression model wrapper. Internally uses the `p4a_wasm_pls_fit`
+// PLS regression model wrapper. Internally uses the `n4m_wasm_pls_fit`
 // helper which takes raw double pointers and works around an Emscripten
 // 5.0.7 codegen issue for matrix-view-pointer args (see README "Status").
 
@@ -59,7 +59,7 @@ export function fitPls(X: Matrix, Y: Matrix, n_components: number
         // Uses the public ABI helper (1.13+): raw double pointers
         // + ints, no matrix-view structs in the JS↔WASM boundary.
         const status = M.ccall(
-            "p4a_pls_fit_simple", "number",
+            "n4m_pls_fit_simple", "number",
             ["number", "number", "number", "number", "number",
              "number", "number", "number", "number", "number"],
             [xBuf.ptr, yBuf.ptr, n, p, q, n_components,
@@ -101,7 +101,7 @@ export function predictPls(model: PlsModel, X_new: Matrix): Matrix {
         _copy_in(M, model.xMean, xmBuf.ptr);
         _copy_in(M, model.yMean, ymBuf.ptr);
         const status = M.ccall(
-            "p4a_wasm_pls_predict_from_coeffs", "number",
+            "n4m_wasm_pls_predict_from_coeffs", "number",
             ["number", "number", "number", "number",
              "number", "number", "number", "number"],
             [xBuf.ptr, n_new, p, q,

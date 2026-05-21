@@ -15,7 +15,7 @@
 
 namespace {
 
-void append_metrics_row(const ::pls4all::core::RegressionMetrics& metrics,
+void append_metrics_row(const ::n4m::core::RegressionMetrics& metrics,
                         std::vector<double>& out) {
     out.push_back(metrics.rmse);
     out.push_back(metrics.mae);
@@ -44,14 +44,14 @@ void append_metrics_row(const ::pls4all::core::RegressionMetrics& metrics,
     return true;
 }
 
-[[nodiscard]] double read_value(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_value(const n4m_matrix_view_t& view,
                                 std::size_t row,
                                 std::size_t col) noexcept {
     const std::int64_t off =
         static_cast<std::int64_t>(row) * view.row_stride +
         static_cast<std::int64_t>(col) * view.col_stride;
     const auto uoff = static_cast<std::size_t>(off);
-    if (view.dtype == P4A_DTYPE_F64) {
+    if (view.dtype == N4M_DTYPE_F64) {
         const auto* ptr = static_cast<const double*>(view.data);
         return ptr[uoff];
     }
@@ -59,100 +59,100 @@ void append_metrics_row(const ::pls4all::core::RegressionMetrics& metrics,
     return static_cast<double>(ptr[uoff]);
 }
 
-[[nodiscard]] p4a_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
+[[nodiscard]] n4m_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
                                                   std::int64_t rows,
                                                   std::int64_t cols) noexcept {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = values.data();
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols > 0 ? cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
-[[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t validate_float_view(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& view,
                                                const char* name) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(view);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(view);
+    if (status != N4M_OK) {
         ctx.set_errorf("%s matrix view is invalid: %s",
                        name,
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
-    if (view.dtype != P4A_DTYPE_F64 && view.dtype != P4A_DTYPE_F32) {
+    if (view.dtype != N4M_DTYPE_F64 && view.dtype != N4M_DTYPE_F32) {
         ctx.set_errorf("%s dtype must be f64 or f32", name);
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t validate_interval_request(
-    ::pls4all::core::Context& ctx,
-    const ::pls4all::core::Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
-    const ::pls4all::core::ValidationPlan& plan,
+[[nodiscard]] n4m_status_t validate_interval_request(
+    ::n4m::core::Context& ctx,
+    const ::n4m::core::Config& cfg,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
+    const ::n4m::core::ValidationPlan& plan,
     std::int32_t interval_width,
     std::int32_t step) {
-    p4a_status_t status = validate_float_view(ctx, X, "X");
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_float_view(ctx, X, "X");
+    if (status != N4M_OK) {
         return status;
     }
     status = validate_float_view(ctx, Y, "Y");
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     if (X.rows == 0 || X.cols == 0 || Y.cols == 0) {
         ctx.set_error("interval selection matrices must be non-empty");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.rows != Y.rows) {
         ctx.set_errorf("X rows (%lld) must match Y rows (%lld)",
                        static_cast<long long>(X.rows),
                        static_cast<long long>(Y.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (plan.n_samples != X.rows) {
         ctx.set_errorf("validation plan n_samples (%lld) must match X rows (%lld)",
                        static_cast<long long>(plan.n_samples),
                        static_cast<long long>(X.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (plan.folds.empty()) {
         ctx.set_error("interval selection requires at least one validation fold");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (interval_width < 1 || interval_width > X.cols) {
         ctx.set_errorf("interval_width must be in [1, %lld]; got %d",
                        static_cast<long long>(X.cols),
                        static_cast<int>(interval_width));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (step < 1) {
         ctx.set_errorf("interval step must be >= 1; got %d", static_cast<int>(step));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (cfg.n_components < 1 || cfg.n_components > interval_width) {
         ctx.set_errorf("n_components must be in [1, interval_width]; got %d for width %d",
                        static_cast<int>(cfg.n_components),
                        static_cast<int>(interval_width));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t copy_interval(::pls4all::core::Context& ctx,
-                                         const p4a_matrix_view_t& X,
+[[nodiscard]] n4m_status_t copy_interval(::n4m::core::Context& ctx,
+                                         const n4m_matrix_view_t& X,
                                          std::int64_t start,
                                          std::int32_t width,
                                          std::vector<double>& out) {
     std::size_t n_values = 0;
     if (!checked_matrix_size(X.rows, width, n_values)) {
         ctx.set_error("interval selection matrix shape is too large");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     out.assign(n_values, 0.0);
     const auto rows = static_cast<std::size_t>(X.rows);
@@ -163,31 +163,31 @@ void append_metrics_row(const ::pls4all::core::RegressionMetrics& metrics,
             out[row * uwidth + local_col] = read_value(X, row, ustart + local_col);
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t cross_validate_intervals(Context& ctx,
+n4m_status_t cross_validate_intervals(Context& ctx,
                                       const Config& cfg,
-                                      const p4a_matrix_view_t& X,
-                                      const p4a_matrix_view_t& Y,
+                                      const n4m_matrix_view_t& X,
+                                      const n4m_matrix_view_t& Y,
                                       const ValidationPlan& plan,
                                       std::int32_t interval_width,
                                       std::int32_t step,
                                       IntervalSelectionResult& out) {
     try {
         out = IntervalSelectionResult{};
-        p4a_status_t status = validate_interval_request(ctx,
+        n4m_status_t status = validate_interval_request(ctx,
                                                         cfg,
                                                         X,
                                                         Y,
                                                         plan,
                                                         interval_width,
                                                         step);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -199,17 +199,17 @@ p4a_status_t cross_validate_intervals(Context& ctx,
         for (std::int64_t start = 0; start + width <= p; start += step) {
             std::vector<double> interval_x;
             status = copy_interval(ctx, X, start, interval_width, interval_x);
-            if (status != P4A_OK) {
+            if (status != N4M_OK) {
                 out = IntervalSelectionResult{};
                 return status;
             }
 
-            p4a_matrix_view_t interval_x_view = rowmajor_f64_view(interval_x,
+            n4m_matrix_view_t interval_x_view = rowmajor_f64_view(interval_x,
                                                                   X.rows,
                                                                   interval_width);
             CrossValidationResult cv{};
             status = cross_validate_regression(ctx, cfg, interval_x_view, Y, plan, cv);
-            if (status != P4A_OK) {
+            if (status != N4M_OK) {
                 out = IntervalSelectionResult{};
                 return status;
             }
@@ -231,22 +231,22 @@ p4a_status_t cross_validate_intervals(Context& ctx,
         if (out.intervals.empty()) {
             ctx.set_error("interval selection produced no candidate intervals");
             out = IntervalSelectionResult{};
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
         out.interval_width = interval_width;
         out.step = step;
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while running interval selection");
         out = IntervalSelectionResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while running interval selection");
         out = IntervalSelectionResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

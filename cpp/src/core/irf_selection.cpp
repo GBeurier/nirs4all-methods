@@ -68,62 +68,62 @@ double standard_normal(std::uint64_t& state) {
     return true;
 }
 
-[[nodiscard]] double read_value(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_value(const n4m_matrix_view_t& view,
                                 std::size_t row,
                                 std::size_t col) noexcept {
     const std::int64_t off =
         static_cast<std::int64_t>(row) * view.row_stride +
         static_cast<std::int64_t>(col) * view.col_stride;
     const auto uoff = static_cast<std::size_t>(off);
-    if (view.dtype == P4A_DTYPE_F64) {
+    if (view.dtype == N4M_DTYPE_F64) {
         return static_cast<const double*>(view.data)[uoff];
     }
     return static_cast<double>(static_cast<const float*>(view.data)[uoff]);
 }
 
-[[nodiscard]] p4a_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
+[[nodiscard]] n4m_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
                                                   std::int64_t rows,
                                                   std::int64_t cols) noexcept {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = values.data();
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols > 0 ? cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
-[[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t validate_float_view(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& view,
                                                const char* name) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(view);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(view);
+    if (status != N4M_OK) {
         ctx.set_errorf("%s matrix view is invalid: %s",
                        name,
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
-    if (view.dtype != P4A_DTYPE_F64 && view.dtype != P4A_DTYPE_F32) {
+    if (view.dtype != N4M_DTYPE_F64 && view.dtype != N4M_DTYPE_F32) {
         ctx.set_errorf("%s dtype must be f64 or f32", name);
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t copy_columns(::pls4all::core::Context& ctx,
-                                        const p4a_matrix_view_t& X,
+[[nodiscard]] n4m_status_t copy_columns(::n4m::core::Context& ctx,
+                                        const n4m_matrix_view_t& X,
                                         const std::vector<std::int64_t>& columns,
                                         std::vector<double>& out) {
     if (columns.empty()) {
         ctx.set_error("IRF column selection must not be empty");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::size_t n_values = 0;
     if (!checked_matrix_size(X.rows, static_cast<std::int64_t>(columns.size()),
                               n_values)) {
         ctx.set_error("IRF subset matrix shape is too large");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     out.assign(n_values, 0.0);
     const auto rows = static_cast<std::size_t>(X.rows);
@@ -132,19 +132,19 @@ double standard_normal(std::uint64_t& state) {
         const std::int64_t original_col = columns[local_col];
         if (original_col < 0 || original_col >= X.cols) {
             ctx.set_error("IRF column index out of range");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         const auto src_col = static_cast<std::size_t>(original_col);
         for (std::size_t row = 0; row < rows; ++row) {
             const double value = read_value(X, row, src_col);
             if (!std::isfinite(value)) {
                 ctx.set_error("IRF X contains NaN or Inf");
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out[row * cols + local_col] = value;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // Compute the union of feature indices selected by interval subset V.
@@ -173,10 +173,10 @@ std::vector<std::int64_t> union_features(
     return out;
 }
 
-[[nodiscard]] p4a_status_t fit_pls_coefs(::pls4all::core::Context& ctx,
-                                         ::pls4all::core::Config cfg,
-                                         const p4a_matrix_view_t& subset_x,
-                                         const p4a_matrix_view_t& Y,
+[[nodiscard]] n4m_status_t fit_pls_coefs(::n4m::core::Context& ctx,
+                                         ::n4m::core::Config cfg,
+                                         const n4m_matrix_view_t& subset_x,
+                                         const n4m_matrix_view_t& Y,
                                          std::vector<double>& abs_coefs_max) {
     const auto p = static_cast<std::size_t>(subset_x.cols);
     const auto q = static_cast<std::size_t>(Y.cols);
@@ -184,12 +184,12 @@ std::vector<std::int64_t> union_features(
         cfg.n_components = static_cast<std::int32_t>(p);
     }
     if (cfg.n_components < 1) cfg.n_components = 1;
-    std::unique_ptr<::pls4all::core::Model> model;
-    p4a_status_t status = ::pls4all::core::fit_model(ctx, cfg, subset_x, Y, model);
-    if (status != P4A_OK) return status;
+    std::unique_ptr<::n4m::core::Model> model;
+    n4m_status_t status = ::n4m::core::fit_model(ctx, cfg, subset_x, Y, model);
+    if (status != N4M_OK) return status;
     if (!model || model->coefficients.size() != p * q) {
         ctx.set_error("IRF fitted model returned inconsistent coefficients");
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
     abs_coefs_max.assign(p, 0.0);
     for (std::size_t f = 0; f < p; ++f) {
@@ -200,32 +200,32 @@ std::vector<std::int64_t> union_features(
         }
         abs_coefs_max[f] = best;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t subset_rmse(::pls4all::core::Context& ctx,
-                                       ::pls4all::core::Config cfg,
-                                       const p4a_matrix_view_t& X,
-                                       const p4a_matrix_view_t& Y,
-                                       const ::pls4all::core::ValidationPlan& plan,
+[[nodiscard]] n4m_status_t subset_rmse(::n4m::core::Context& ctx,
+                                       ::n4m::core::Config cfg,
+                                       const n4m_matrix_view_t& X,
+                                       const n4m_matrix_view_t& Y,
+                                       const ::n4m::core::ValidationPlan& plan,
                                        const std::vector<std::int64_t>& columns,
                                        double& out) {
     std::vector<double> subset_x;
-    p4a_status_t status = copy_columns(ctx, X, columns, subset_x);
-    if (status != P4A_OK) return status;
-    p4a_matrix_view_t subset_view =
+    n4m_status_t status = copy_columns(ctx, X, columns, subset_x);
+    if (status != N4M_OK) return status;
+    n4m_matrix_view_t subset_view =
         rowmajor_f64_view(subset_x, X.rows,
                           static_cast<std::int64_t>(columns.size()));
     if (cfg.n_components > static_cast<std::int32_t>(columns.size())) {
         cfg.n_components = static_cast<std::int32_t>(columns.size());
     }
     if (cfg.n_components < 1) cfg.n_components = 1;
-    ::pls4all::core::CrossValidationResult cv;
-    status = ::pls4all::core::cross_validate_regression(ctx, cfg, subset_view, Y,
+    ::n4m::core::CrossValidationResult cv;
+    status = ::n4m::core::cross_validate_regression(ctx, cfg, subset_view, Y,
                                                         plan, cv);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     out = cv.metrics.rmse;
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // Build the "interval-score" vector: for each interval index in V, sum
@@ -313,11 +313,11 @@ void score_intervals_mean(
 //             intersection with the new union, and keep the top nV1 by
 //             that score.
 // Returns the new subset Vstar.
-p4a_status_t generate_new_model(
-    ::pls4all::core::Context& ctx,
-    const ::pls4all::core::Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+n4m_status_t generate_new_model(
+    ::n4m::core::Context& ctx,
+    const ::n4m::core::Config& cfg,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     const std::vector<std::vector<std::int64_t>>& intervals,
     const std::vector<std::int32_t>& V0,
     std::int32_t nV1,
@@ -329,7 +329,7 @@ p4a_status_t generate_new_model(
     const std::int32_t d = nV1 - nV0;
     if (d == 0) {
         out_Vstar = V0;
-        return P4A_OK;
+        return N4M_OK;
     }
 
     if (d < 0) {
@@ -350,7 +350,7 @@ p4a_status_t generate_new_model(
             out_Vstar.push_back(V0[order[i]]);
         }
         std::sort(out_Vstar.begin(), out_Vstar.end());
-        return P4A_OK;
+        return N4M_OK;
     }
 
     // d > 0: random candidates via Fisher-Yates from the unselected
@@ -368,7 +368,7 @@ p4a_status_t generate_new_model(
     if (kvar == 0) {
         out_Vstar = V0;
         std::sort(out_Vstar.begin(), out_Vstar.end());
-        return P4A_OK;
+        return N4M_OK;
     }
     const std::size_t pick = std::min(static_cast<std::size_t>(3 * d), kvar);
     // Fisher-Yates partial shuffle on `candidates`.
@@ -389,14 +389,14 @@ p4a_status_t generate_new_model(
     // intersection with the new union.
     std::vector<std::int64_t> U_star = union_features(combined, intervals);
     std::vector<double> subset_x;
-    p4a_status_t status = copy_columns(ctx, X, U_star, subset_x);
-    if (status != P4A_OK) return status;
-    p4a_matrix_view_t subset_view =
+    n4m_status_t status = copy_columns(ctx, X, U_star, subset_x);
+    if (status != N4M_OK) return status;
+    n4m_matrix_view_t subset_view =
         rowmajor_f64_view(subset_x, X.rows,
                           static_cast<std::int64_t>(U_star.size()));
     std::vector<double> abs_coefs_star;
     status = fit_pls_coefs(ctx, cfg, subset_view, Y, abs_coefs_star);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     std::vector<double> combined_scores;
     score_intervals_mean(combined, intervals, U_star, abs_coefs_star,
                          combined_scores);
@@ -418,17 +418,17 @@ p4a_status_t generate_new_model(
         out_Vstar.push_back(combined[order[i]]);
     }
     std::sort(out_Vstar.begin(), out_Vstar.end());
-    return P4A_OK;
+    return N4M_OK;
 }
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t select_by_irf(Context& ctx,
+n4m_status_t select_by_irf(Context& ctx,
                            const Config& cfg,
-                           const p4a_matrix_view_t& X,
-                           const p4a_matrix_view_t& Y,
+                           const n4m_matrix_view_t& X,
+                           const n4m_matrix_view_t& Y,
                            const ValidationPlan& plan,
                            std::int32_t n_iterations,
                            std::int32_t window_size,
@@ -438,44 +438,44 @@ p4a_status_t select_by_irf(Context& ctx,
                            IrfSelectionResult& out) {
     try {
         out = IrfSelectionResult{};
-        p4a_status_t status = validate_float_view(ctx, X, "X");
-        if (status != P4A_OK) return status;
+        n4m_status_t status = validate_float_view(ctx, X, "X");
+        if (status != N4M_OK) return status;
         status = validate_float_view(ctx, Y, "Y");
-        if (status != P4A_OK) return status;
+        if (status != N4M_OK) return status;
         if (X.rows == 0 || X.cols == 0 || Y.cols == 0) {
             ctx.set_error("IRF matrices must be non-empty");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (X.rows != Y.rows) {
             ctx.set_errorf("X rows (%lld) must match Y rows (%lld)",
                            static_cast<long long>(X.rows),
                            static_cast<long long>(Y.rows));
-            return P4A_ERR_SHAPE_MISMATCH;
+            return N4M_ERR_SHAPE_MISMATCH;
         }
         if (plan.n_samples != X.rows) {
             ctx.set_errorf("validation plan n_samples (%lld) must match X rows (%lld)",
                            static_cast<long long>(plan.n_samples),
                            static_cast<long long>(X.rows));
-            return P4A_ERR_SHAPE_MISMATCH;
+            return N4M_ERR_SHAPE_MISMATCH;
         }
         if (plan.folds.empty()) {
             ctx.set_error("IRF requires at least one validation fold");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (n_iterations <= 0) {
             ctx.set_errorf("n_iterations must be >= 1; got %d",
                            static_cast<int>(n_iterations));
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (window_size <= 0 || window_size > X.cols) {
             ctx.set_errorf("window_size must be in [1, %lld]; got %d",
                            static_cast<long long>(X.cols),
                            static_cast<int>(window_size));
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (cfg.n_components < 1) {
             ctx.set_error("cfg.n_components must be >= 1");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
         const std::int32_t n_intervals =
@@ -484,13 +484,13 @@ p4a_status_t select_by_irf(Context& ctx,
             ctx.set_errorf("initial_intervals must be in [1, %d]; got %d",
                            static_cast<int>(n_intervals),
                            static_cast<int>(initial_intervals));
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (top_k <= 0 || top_k > n_intervals) {
             ctx.set_errorf("top_k must be in [1, %d]; got %d",
                            static_cast<int>(n_intervals),
                            static_cast<int>(top_k));
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
         std::vector<std::vector<std::int64_t>> intervals(
@@ -540,7 +540,7 @@ p4a_status_t select_by_irf(Context& ctx,
         std::vector<std::int64_t> U0 = union_features(V0, intervals);
         double rmse_current = 0.0;
         status = subset_rmse(ctx, cfg, X, Y, plan, U0, rmse_current);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             out = IrfSelectionResult{};
             return status;
         }
@@ -554,15 +554,15 @@ p4a_status_t select_by_irf(Context& ctx,
             //    union U0.
             std::vector<double> subset_x;
             status = copy_columns(ctx, X, U0, subset_x);
-            if (status != P4A_OK) {
+            if (status != N4M_OK) {
                 out = IrfSelectionResult{};
                 return status;
             }
-            p4a_matrix_view_t subset_view = rowmajor_f64_view(
+            n4m_matrix_view_t subset_view = rowmajor_f64_view(
                 subset_x, X.rows, static_cast<std::int64_t>(U0.size()));
             std::vector<double> abs_coefs;
             status = fit_pls_coefs(ctx, cfg, subset_view, Y, abs_coefs);
-            if (status != P4A_OK) {
+            if (status != N4M_OK) {
                 out = IrfSelectionResult{};
                 return status;
             }
@@ -583,7 +583,7 @@ p4a_status_t select_by_irf(Context& ctx,
             status = generate_new_model(
                 ctx, cfg, X, Y, intervals, V0, nVstar, binterval_scores,
                 n_intervals, state, Vstar);
-            if (status != P4A_OK) {
+            if (status != N4M_OK) {
                 out = IrfSelectionResult{};
                 return status;
             }
@@ -596,7 +596,7 @@ p4a_status_t select_by_irf(Context& ctx,
                 rmse_star = rmse_current;
             } else {
                 status = subset_rmse(ctx, cfg, X, Y, plan, Ustar, rmse_star);
-                if (status != P4A_OK) {
+                if (status != N4M_OK) {
                     out = IrfSelectionResult{};
                     return status;
                 }
@@ -664,16 +664,16 @@ p4a_status_t select_by_irf(Context& ctx,
         out.selected_indices = union_features(top_V, intervals);
         out.best_rmse = best_rmse;
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while running IRF selection");
         out = IrfSelectionResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while running IRF selection");
         out = IrfSelectionResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

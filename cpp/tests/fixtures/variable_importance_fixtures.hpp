@@ -6,7 +6,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct VariableImportanceFixture {
     const char* id;
@@ -85,4 +85,4 @@ inline const VariableImportanceFixture kVariableImportanceFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

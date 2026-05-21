@@ -13,7 +13,7 @@
 #include "core/context.hpp"
 #include "core/validation.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct EmcuveSelectionResult {
     std::int32_t n_features{0};
@@ -31,11 +31,11 @@ struct EmcuveSelectionResult {
     std::vector<std::int64_t> selected_indices;
 };
 
-[[nodiscard]] p4a_status_t select_by_emcuve(
+[[nodiscard]] n4m_status_t select_by_emcuve(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     const ValidationPlan& plan,
     std::int32_t noise_features,
     std::uint64_t noise_seed,
@@ -43,5 +43,5 @@ struct EmcuveSelectionResult {
     double vote_threshold,
     EmcuveSelectionResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core
 

@@ -170,7 +170,7 @@ class _Pls4allModelEstimator:
       C handles for ``predict`` / ``transform`` hot paths.
 
     Both handles are dropped from ``__getstate__`` because they are
-    bound to a specific in-process libp4a.so and cannot be serialized.
+    bound to a specific in-process libn4m.so and cannot be serialized.
 
     **set_params on a fitted estimator**: this mixin deliberately does
     NOT invalidate the cached bundle when ``set_params`` is called on a

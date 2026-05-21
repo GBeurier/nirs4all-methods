@@ -7,12 +7,12 @@
 #include <cstdint>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/config.hpp"
 #include "core/context.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct LwPlsResult {
     std::int64_t n_samples{0};
@@ -25,12 +25,12 @@ struct LwPlsResult {
     std::vector<std::int64_t> neighbor_indices; // row-major n_samples x n_neighbors
 };
 
-[[nodiscard]] p4a_status_t fit_predict_lw_pls(
+[[nodiscard]] n4m_status_t fit_predict_lw_pls(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::int32_t n_neighbors,
     LwPlsResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

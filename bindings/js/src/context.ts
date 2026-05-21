@@ -2,7 +2,7 @@
 
 import { checkStatus, getModule } from "./ffi.js";
 
-/** RAII wrapper around p4a_context_t. */
+/** RAII wrapper around n4m_context_t. */
 export class Context {
     private _ptr: number;
 
@@ -16,7 +16,7 @@ export class Context {
         const out = m._malloc(4);
         try {
             const status = m.ccall(
-                "p4a_context_create", "number", ["number"], [out]) as number;
+                "n4m_context_create", "number", ["number"], [out]) as number;
             checkStatus(status);
             const ptr = m.getValue(out, "i32");
             return new Context(ptr);
@@ -25,7 +25,7 @@ export class Context {
         }
     }
 
-    /** Returns the raw `p4a_context_t*` pointer (handle). */
+    /** Returns the raw `n4m_context_t*` pointer (handle). */
     get handle(): number {
         return this._ptr;
     }
@@ -34,14 +34,14 @@ export class Context {
     destroy(): void {
         if (this._ptr === 0) return;
         getModule().ccall(
-            "p4a_context_destroy", null, ["number"], [this._ptr]);
+            "n4m_context_destroy", null, ["number"], [this._ptr]);
         this._ptr = 0;
     }
 
     /** Set the RNG seed used by stochastic algorithms. */
     setSeed(seed: bigint | number): void {
         const status = getModule().ccall(
-            "p4a_context_set_seed", "number",
+            "n4m_context_set_seed", "number",
             ["number", "number"],
             [this._ptr,
              typeof seed === "bigint" ? Number(seed) : seed]) as number;

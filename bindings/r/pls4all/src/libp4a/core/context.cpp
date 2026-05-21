@@ -5,52 +5,52 @@
 #include <cstdarg>
 #include <cstdio>
 
-#if defined(P4A_USE_CUDA)
+#if defined(N4M_USE_CUDA)
 #  include "core/cuda_dispatch.hpp"
 #endif
 
-namespace pls4all::core {
+namespace n4m::core {
 
 Context::Context() noexcept
     : seed_(0),
-      backend_(P4A_BACKEND_AUTO),
+      backend_(N4M_BACKEND_AUTO),
       num_threads_(0),
       user_data_(nullptr),
       error_buf_{} {
     error_buf_[0] = '\0';
 }
 
-p4a_status_t Context::set_backend(p4a_backend_t backend) noexcept {
+n4m_status_t Context::set_backend(n4m_backend_t backend) noexcept {
     switch (backend) {
-        case P4A_BACKEND_AUTO:
-        case P4A_BACKEND_REFERENCE_CPU:
+        case N4M_BACKEND_AUTO:
+        case N4M_BACKEND_REFERENCE_CPU:
             backend_ = backend;
-            return P4A_OK;
-        case P4A_BACKEND_CUDA:
-#if defined(P4A_USE_CUDA)
-            if (!::pls4all::cuda_dispatch::cuda_runtime_available()) {
-                set_errorf("P4A_BACKEND_CUDA: no CUDA-capable GPU available at runtime");
-                return P4A_ERR_BACKEND_UNAVAILABLE;
+            return N4M_OK;
+        case N4M_BACKEND_CUDA:
+#if defined(N4M_USE_CUDA)
+            if (!::n4m::cuda_dispatch::cuda_runtime_available()) {
+                set_errorf("N4M_BACKEND_CUDA: no CUDA-capable GPU available at runtime");
+                return N4M_ERR_BACKEND_UNAVAILABLE;
             }
             backend_ = backend;
-            return P4A_OK;
+            return N4M_OK;
 #else
-            set_errorf("backend %d is not compiled into this build of libp4a", static_cast<int>(backend));
-            return P4A_ERR_BACKEND_UNAVAILABLE;
+            set_errorf("backend %d is not compiled into this build of libn4m", static_cast<int>(backend));
+            return N4M_ERR_BACKEND_UNAVAILABLE;
 #endif
-        case P4A_BACKEND_NATIVE_CPU:
-        case P4A_BACKEND_BLAS:
-        case P4A_BACKEND_OPENMP:
-        case P4A_BACKEND_OPENCL:
-        case P4A_BACKEND_METAL:
+        case N4M_BACKEND_NATIVE_CPU:
+        case N4M_BACKEND_BLAS:
+        case N4M_BACKEND_OPENMP:
+        case N4M_BACKEND_OPENCL:
+        case N4M_BACKEND_METAL:
             // Phase 0 ships REFERENCE_CPU only. Future backends fail
             // softly with a status code; the caller can re-try with
-            // P4A_BACKEND_AUTO or REFERENCE_CPU.
-            set_errorf("backend %d is not compiled into this build of libp4a", static_cast<int>(backend));
-            return P4A_ERR_BACKEND_UNAVAILABLE;
+            // N4M_BACKEND_AUTO or REFERENCE_CPU.
+            set_errorf("backend %d is not compiled into this build of libn4m", static_cast<int>(backend));
+            return N4M_ERR_BACKEND_UNAVAILABLE;
         default:
             set_errorf("invalid backend value %d", static_cast<int>(backend));
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
     }
 }
 
@@ -83,4 +83,4 @@ void Context::set_errorf(const char* fmt, ...) noexcept {
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

@@ -17,16 +17,16 @@
 
 namespace {
 
-p4a_matrix_view_t make_view(const std::vector<double>& data,
+n4m_matrix_view_t make_view(const std::vector<double>& data,
                             std::int64_t rows,
                             std::int64_t cols) {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = const_cast<double*>(data.data());
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
@@ -51,17 +51,17 @@ TEST(n_pls_phase22, fits_simple_rank_one_tensor) {
     std::vector<double> Yv(8, 0.0);
     for (std::size_t i = 0; i < 8; ++i) Yv[i] = 2.0 * t_vals[i];
 
-    p4a_matrix_view_t X = make_view(Xv, 8, 6);
-    p4a_matrix_view_t Y = make_view(Yv, 8, 1);
+    n4m_matrix_view_t X = make_view(Xv, 8, 6);
+    n4m_matrix_view_t Y = make_view(Yv, 8, 1);
 
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
     cfg.n_components = 1;
     cfg.center_x = 1;
     cfg.center_y = 1;
-    ::pls4all::core::NPlsResult model;
-    CHECK_EQ(::pls4all::core::fit_n_pls(ctx, cfg, X, 3, 2, Y, model),
-             P4A_OK);
+    ::n4m::core::NPlsResult model;
+    CHECK_EQ(::n4m::core::fit_n_pls(ctx, cfg, X, 3, 2, Y, model),
+             N4M_OK);
     CHECK_EQ(model.mode_j, 3);
     CHECK_EQ(model.mode_k, 2);
     CHECK_EQ(model.n_components, 1);
@@ -69,7 +69,7 @@ TEST(n_pls_phase22, fits_simple_rank_one_tensor) {
     for (double v : model.coefficients) CHECK(std::isfinite(v));
 
     std::vector<double> preds;
-    CHECK_EQ(::pls4all::core::predict_n_pls(ctx, model, X, preds), P4A_OK);
+    CHECK_EQ(::n4m::core::predict_n_pls(ctx, model, X, preds), N4M_OK);
     CHECK_EQ(preds.size(), static_cast<std::size_t>(8));
 
     double rmse = 0.0;
@@ -87,21 +87,21 @@ TEST(n_pls_phase22, fits_simple_rank_one_tensor) {
 TEST(n_pls_phase22, rejects_invalid_inputs) {
     std::vector<double> Xv = {0.1, 0.2, 0.3, 0.4};
     std::vector<double> Yv = {1.0, 0.0};
-    p4a_matrix_view_t X = make_view(Xv, 2, 4);
-    p4a_matrix_view_t Y = make_view(Yv, 2, 1);
+    n4m_matrix_view_t X = make_view(Xv, 2, 4);
+    n4m_matrix_view_t Y = make_view(Yv, 2, 1);
 
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
     cfg.n_components = 1;
-    ::pls4all::core::NPlsResult model;
+    ::n4m::core::NPlsResult model;
     // J * K != cols
-    CHECK_EQ(::pls4all::core::fit_n_pls(ctx, cfg, X, 3, 2, Y, model),
-             P4A_ERR_SHAPE_MISMATCH);
+    CHECK_EQ(::n4m::core::fit_n_pls(ctx, cfg, X, 3, 2, Y, model),
+             N4M_ERR_SHAPE_MISMATCH);
     // negative mode
-    CHECK_EQ(::pls4all::core::fit_n_pls(ctx, cfg, X, -1, 2, Y, model),
-             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::fit_n_pls(ctx, cfg, X, -1, 2, Y, model),
+             N4M_ERR_INVALID_ARGUMENT);
     // n_components < 1
     cfg.n_components = 0;
-    CHECK_EQ(::pls4all::core::fit_n_pls(ctx, cfg, X, 2, 2, Y, model),
-             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::fit_n_pls(ctx, cfg, X, 2, 2, Y, model),
+             N4M_ERR_INVALID_ARGUMENT);
 }

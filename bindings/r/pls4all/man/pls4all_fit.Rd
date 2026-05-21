@@ -2,7 +2,7 @@
 % Please edit documentation in R/model.R
 \name{pls4all_fit}
 \alias{pls4all_fit}
-\title{Fit a PLS regression model via the libp4a C ABI.}
+\title{Fit a PLS regression model via the libn4m C ABI.}
 \usage{
 pls4all_fit(
   X,

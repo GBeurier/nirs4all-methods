@@ -8,7 +8,7 @@ export interface Matrix {
     cols: number;
 }
 
-/** Mirror of the C enum p4a_status_t. */
+/** Mirror of the C enum n4m_status_t. */
 export enum Status {
     OK = 0,
     ERR_INVALID_ARGUMENT = 1,
@@ -30,7 +30,7 @@ export enum Status {
     ERR_CANCELED = 17,
 }
 
-/** Mirror of p4a_dtype_t. */
+/** Mirror of n4m_dtype_t. */
 export enum Dtype {
     UNKNOWN = 0,
     F32 = 1,
@@ -40,7 +40,7 @@ export enum Dtype {
     U8 = 5,
 }
 
-/** Mirror of p4a_algorithm_t. Values must match cpp/include/pls4all/p4a.h. */
+/** Mirror of n4m_algorithm_t. Values must match cpp/include/pls4all/p4a.h. */
 export enum Algorithm {
     PLS_REGRESSION = 0,
     PLS_CANONICAL = 1,
@@ -55,7 +55,7 @@ export enum Algorithm {
     PCR = 10,
 }
 
-/** Mirror of p4a_solver_t. */
+/** Mirror of n4m_solver_t. */
 export enum Solver {
     NIPALS = 0,
     SIMPLS = 1,
@@ -67,7 +67,7 @@ export enum Solver {
     RANDOMIZED_SVD = 7,
 }
 
-/** Mirror of p4a_deflation_t. */
+/** Mirror of n4m_deflation_t. */
 export enum Deflation {
     REGRESSION = 0,
     CANONICAL = 1,

@@ -18,21 +18,21 @@ namespace {
 constexpr double kAbsTol = 1e-8;
 constexpr double kRelTol = 1e-8;
 
-p4a_matrix_view_t matrix_view(const ::pls4all::test::fixtures::MatrixRef& ref) {
-    p4a_matrix_view_t view{};
+n4m_matrix_view_t matrix_view(const ::n4m::test::fixtures::MatrixRef& ref) {
+    n4m_matrix_view_t view{};
     view.data = const_cast<double*>(ref.values);
     view.rows = ref.rows;
     view.cols = ref.cols;
     view.row_stride = ref.cols > 0 ? ref.cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
 void check_close_values(int& failures,
                         const char* label,
                         const std::vector<double>& actual,
-                        const ::pls4all::test::fixtures::MatrixRef& expected) {
+                        const ::n4m::test::fixtures::MatrixRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -59,26 +59,26 @@ void check_close_values(int& failures,
     }
 }
 
-::pls4all::core::OperatorBank operator_bank(
-    const ::pls4all::test::fixtures::AomSelectionFixture& fixture) {
-    ::pls4all::core::OperatorBank bank;
+::n4m::core::OperatorBank operator_bank(
+    const ::n4m::test::fixtures::AomSelectionFixture& fixture) {
+    ::n4m::core::OperatorBank bank;
     for (std::size_t op = 0; op < fixture.operator_kinds.size; ++op) {
         const auto start = static_cast<std::size_t>(fixture.operator_param_offsets.values[op]);
         const auto stop = static_cast<std::size_t>(fixture.operator_param_offsets.values[op + 1U]);
         const double* params = stop > start ? fixture.operator_params.values + start : nullptr;
-        bank.add(static_cast<p4a_operator_kind_t>(fixture.operator_kinds.values[op]),
+        bank.add(static_cast<n4m_operator_kind_t>(fixture.operator_kinds.values[op]),
                  params,
                  static_cast<std::int32_t>(stop - start));
     }
     return bank;
 }
 
-::pls4all::core::ValidationPlan validation_plan(
-    const ::pls4all::test::fixtures::AomSelectionFixture& fixture) {
-    ::pls4all::core::ValidationPlan plan;
+::n4m::core::ValidationPlan validation_plan(
+    const ::n4m::test::fixtures::AomSelectionFixture& fixture) {
+    ::n4m::core::ValidationPlan plan;
     plan.n_samples = fixture.X.rows;
     for (std::int32_t fold = 0; fold < fixture.n_folds; ++fold) {
-        ::pls4all::core::ValidationFold item;
+        ::n4m::core::ValidationFold item;
         const auto train_start = static_cast<std::size_t>(fixture.fold_train_offsets.values[fold]);
         const auto train_stop = static_cast<std::size_t>(fixture.fold_train_offsets.values[fold + 1]);
         const auto test_start = static_cast<std::size_t>(fixture.fold_test_offsets.values[fold]);
@@ -94,11 +94,11 @@ void check_close_values(int& failures,
     return plan;
 }
 
-::pls4all::core::Config simpls_config() {
-    ::pls4all::core::Config cfg;
-    cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-    cfg.solver = P4A_SOLVER_SIMPLS;
-    cfg.deflation = P4A_DEFLATION_REGRESSION;
+::n4m::core::Config simpls_config() {
+    ::n4m::core::Config cfg;
+    cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+    cfg.solver = N4M_SOLVER_SIMPLS;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
     cfg.center_x = 1;
     cfg.scale_x = 0;
     cfg.center_y = 1;
@@ -108,14 +108,14 @@ void check_close_values(int& failures,
 }
 
 void check_fixture(int& failures,
-                   const ::pls4all::test::fixtures::AomSelectionFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::OperatorBank bank = operator_bank(fixture);
-    ::pls4all::core::ValidationPlan plan = validation_plan(fixture);
-    p4a_matrix_view_t X = matrix_view(fixture.X);
-    p4a_matrix_view_t Y = matrix_view(fixture.Y);
-    ::pls4all::core::AomGlobalSelectionResult result;
-    CHECK_EQ(::pls4all::core::select_aom_global(ctx,
+                   const ::n4m::test::fixtures::AomSelectionFixture& fixture) {
+    ::n4m::core::Context ctx;
+    ::n4m::core::OperatorBank bank = operator_bank(fixture);
+    ::n4m::core::ValidationPlan plan = validation_plan(fixture);
+    n4m_matrix_view_t X = matrix_view(fixture.X);
+    n4m_matrix_view_t Y = matrix_view(fixture.Y);
+    ::n4m::core::AomGlobalSelectionResult result;
+    CHECK_EQ(::n4m::core::select_aom_global(ctx,
                                                 simpls_config(),
                                                 bank,
                                                 X,
@@ -123,7 +123,7 @@ void check_fixture(int& failures,
                                                 plan,
                                                 fixture.max_components,
                                                 result),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(result.n_operators, fixture.n_operators);
     CHECK_EQ(result.max_components, fixture.max_components);
     CHECK_EQ(result.selected_operator_index, fixture.selected_operator_index);
@@ -145,20 +145,20 @@ void check_fixture(int& failures,
 }  // namespace
 
 TEST(aom_selection_phase6b, generated_fixture_matches_bench_aom_v0_reference) {
-    for (const auto& fixture : ::pls4all::test::fixtures::kAomSelectionFixtures) {
+    for (const auto& fixture : ::n4m::test::fixtures::kAomSelectionFixtures) {
         check_fixture(failures, fixture);
     }
 }
 
 TEST(aom_selection_phase6b, rejects_invalid_requests) {
-    const auto& fixture = ::pls4all::test::fixtures::kAomSelectionFixtures[0];
-    ::pls4all::core::Context ctx;
-    p4a_matrix_view_t X = matrix_view(fixture.X);
-    p4a_matrix_view_t Y = matrix_view(fixture.Y);
-    ::pls4all::core::ValidationPlan plan = validation_plan(fixture);
-    ::pls4all::core::AomGlobalSelectionResult result;
-    ::pls4all::core::OperatorBank empty_bank;
-    CHECK_EQ(::pls4all::core::select_aom_global(ctx,
+    const auto& fixture = ::n4m::test::fixtures::kAomSelectionFixtures[0];
+    ::n4m::core::Context ctx;
+    n4m_matrix_view_t X = matrix_view(fixture.X);
+    n4m_matrix_view_t Y = matrix_view(fixture.Y);
+    ::n4m::core::ValidationPlan plan = validation_plan(fixture);
+    ::n4m::core::AomGlobalSelectionResult result;
+    ::n4m::core::OperatorBank empty_bank;
+    CHECK_EQ(::n4m::core::select_aom_global(ctx,
                                                 simpls_config(),
                                                 empty_bank,
                                                 X,
@@ -166,12 +166,12 @@ TEST(aom_selection_phase6b, rejects_invalid_requests) {
                                                 plan,
                                                 fixture.max_components,
                                                 result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 
-    ::pls4all::core::OperatorBank bank = operator_bank(fixture);
-    ::pls4all::core::Config bad_cfg = simpls_config();
-    bad_cfg.solver = P4A_SOLVER_NIPALS;
-    CHECK_EQ(::pls4all::core::select_aom_global(ctx,
+    ::n4m::core::OperatorBank bank = operator_bank(fixture);
+    ::n4m::core::Config bad_cfg = simpls_config();
+    bad_cfg.solver = N4M_SOLVER_NIPALS;
+    CHECK_EQ(::n4m::core::select_aom_global(ctx,
                                                 bad_cfg,
                                                 bank,
                                                 X,
@@ -179,11 +179,11 @@ TEST(aom_selection_phase6b, rejects_invalid_requests) {
                                                 plan,
                                                 fixture.max_components,
                                                 result),
-             P4A_ERR_UNSUPPORTED);
+             N4M_ERR_UNSUPPORTED);
 
-    ::pls4all::core::ValidationPlan empty_plan;
+    ::n4m::core::ValidationPlan empty_plan;
     empty_plan.n_samples = fixture.X.rows;
-    CHECK_EQ(::pls4all::core::select_aom_global(ctx,
+    CHECK_EQ(::n4m::core::select_aom_global(ctx,
                                                 simpls_config(),
                                                 bank,
                                                 X,
@@ -191,11 +191,11 @@ TEST(aom_selection_phase6b, rejects_invalid_requests) {
                                                 empty_plan,
                                                 fixture.max_components,
                                                 result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 
-    ::pls4all::core::OperatorBank non_strict_bank;
-    non_strict_bank.add(P4A_OP_SNV, nullptr, 0);
-    CHECK_EQ(::pls4all::core::select_aom_global(ctx,
+    ::n4m::core::OperatorBank non_strict_bank;
+    non_strict_bank.add(N4M_OP_SNV, nullptr, 0);
+    CHECK_EQ(::n4m::core::select_aom_global(ctx,
                                                 simpls_config(),
                                                 non_strict_bank,
                                                 X,
@@ -203,5 +203,5 @@ TEST(aom_selection_phase6b, rejects_invalid_requests) {
                                                 plan,
                                                 fixture.max_components,
                                                 result),
-             P4A_ERR_UNSUPPORTED);
+             N4M_ERR_UNSUPPORTED);
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/version.R
 \name{pls4all_version}
 \alias{pls4all_version}
-\title{Runtime version string of the loaded libp4a.}
+\title{Runtime version string of the loaded libn4m.}
 \usage{
 pls4all_version()
 }
@@ -10,5 +10,5 @@ pls4all_version()
 A character scalar like "0.67.0+abi.1.1.0".
 }
 \description{
-Runtime version string of the loaded libp4a.
+Runtime version string of the loaded libn4m.
 }

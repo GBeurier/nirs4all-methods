@@ -14,7 +14,7 @@ function [coefs, x_mean, y_mean, predictions] = pcr(X, Y, n_components)
 %   Y_MEAN       (1 x q) per-target mean.
 %   PRED         (n x q) in-sample predictions.
 %
-% Uses P4A_ALGO_PCR + P4A_SOLVER_SVD + P4A_DEFLATION_REGRESSION.
+% Uses N4M_ALGO_PCR + N4M_SOLVER_SVD + N4M_DEFLATION_REGRESSION.
 
 if nargin < 3
     error("pls4all:nargin", ...
@@ -22,5 +22,5 @@ if nargin < 3
 end
 
 [coefs, x_mean, y_mean, predictions] = ...
-    pls4all.p4a_model_fit_mex("pcr", double(X), double(Y), int32(n_components));
+    pls4all.n4m_model_fit_mex("pcr", double(X), double(Y), int32(n_components));
 end

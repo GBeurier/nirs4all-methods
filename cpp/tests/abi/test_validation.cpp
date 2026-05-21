@@ -12,7 +12,7 @@
 
 namespace {
 
-std::vector<std::int64_t> offsets_for_train(const ::pls4all::core::ValidationPlan& plan) {
+std::vector<std::int64_t> offsets_for_train(const ::n4m::core::ValidationPlan& plan) {
     std::vector<std::int64_t> offsets;
     offsets.reserve(plan.folds.size() + 1U);
     std::int64_t offset = 0;
@@ -24,7 +24,7 @@ std::vector<std::int64_t> offsets_for_train(const ::pls4all::core::ValidationPla
     return offsets;
 }
 
-std::vector<std::int64_t> offsets_for_test(const ::pls4all::core::ValidationPlan& plan) {
+std::vector<std::int64_t> offsets_for_test(const ::n4m::core::ValidationPlan& plan) {
     std::vector<std::int64_t> offsets;
     offsets.reserve(plan.folds.size() + 1U);
     std::int64_t offset = 0;
@@ -36,7 +36,7 @@ std::vector<std::int64_t> offsets_for_test(const ::pls4all::core::ValidationPlan
     return offsets;
 }
 
-std::vector<std::int64_t> flatten_train(const ::pls4all::core::ValidationPlan& plan) {
+std::vector<std::int64_t> flatten_train(const ::n4m::core::ValidationPlan& plan) {
     std::vector<std::int64_t> out;
     for (const auto& fold : plan.folds) {
         out.insert(out.end(), fold.train_indices.begin(), fold.train_indices.end());
@@ -44,7 +44,7 @@ std::vector<std::int64_t> flatten_train(const ::pls4all::core::ValidationPlan& p
     return out;
 }
 
-std::vector<std::int64_t> flatten_test(const ::pls4all::core::ValidationPlan& plan) {
+std::vector<std::int64_t> flatten_test(const ::n4m::core::ValidationPlan& plan) {
     std::vector<std::int64_t> out;
     for (const auto& fold : plan.folds) {
         out.insert(out.end(), fold.test_indices.begin(), fold.test_indices.end());
@@ -55,7 +55,7 @@ std::vector<std::int64_t> flatten_test(const ::pls4all::core::ValidationPlan& pl
 void check_index_ref(int& failures,
                      const char* label,
                      const std::vector<std::int64_t>& actual,
-                     const ::pls4all::test::fixtures::IndexRef& expected) {
+                     const ::n4m::test::fixtures::IndexRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -80,27 +80,27 @@ void check_index_ref(int& failures,
 }
 
 void check_fixture(int& failures,
-                   const ::pls4all::test::fixtures::ValidationFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::ValidationPlan plan;
+                   const ::n4m::test::fixtures::ValidationFixture& fixture) {
+    ::n4m::core::Context ctx;
+    ::n4m::core::ValidationPlan plan;
     if (std::strcmp(fixture.kind, "kfold") == 0) {
-        CHECK_EQ(::pls4all::core::make_kfold_validation_plan(ctx,
+        CHECK_EQ(::n4m::core::make_kfold_validation_plan(ctx,
                                                              fixture.n_samples,
                                                              fixture.n_splits,
                                                              plan),
-                 P4A_OK);
+                 N4M_OK);
     } else if (std::strcmp(fixture.kind, "leave_one_out") == 0) {
-        CHECK_EQ(::pls4all::core::make_leave_one_out_validation_plan(ctx,
+        CHECK_EQ(::n4m::core::make_leave_one_out_validation_plan(ctx,
                                                                      fixture.n_samples,
                                                                      plan),
-                 P4A_OK);
+                 N4M_OK);
     } else if (std::strcmp(fixture.kind, "holdout") == 0) {
-        CHECK_EQ(::pls4all::core::make_holdout_validation_plan(ctx,
+        CHECK_EQ(::n4m::core::make_holdout_validation_plan(ctx,
                                                                fixture.n_samples,
                                                                fixture.holdout_start,
                                                                fixture.holdout_count,
                                                                plan),
-                 P4A_OK);
+                 N4M_OK);
     } else {
         CHECK(false);
         return;
@@ -117,28 +117,28 @@ void check_fixture(int& failures,
 }  // namespace
 
 TEST(validation_phase3l, generated_split_fixtures_match_numpy_reference) {
-    for (const auto& fixture : ::pls4all::test::fixtures::kValidationFixtures) {
+    for (const auto& fixture : ::n4m::test::fixtures::kValidationFixtures) {
         check_fixture(failures, fixture);
     }
 }
 
 TEST(validation_phase3l, rejects_invalid_split_requests) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::ValidationPlan plan;
-    CHECK_EQ(::pls4all::core::make_kfold_validation_plan(ctx, 1, 2, plan),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::make_kfold_validation_plan(ctx, 4, 1, plan),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::make_kfold_validation_plan(ctx, 4, 5, plan),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::make_leave_one_out_validation_plan(ctx, 1, plan),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::make_holdout_validation_plan(ctx, 5, -1, 2, plan),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::make_holdout_validation_plan(ctx, 5, 1, 0, plan),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::make_holdout_validation_plan(ctx, 5, 4, 2, plan),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::make_holdout_validation_plan(ctx, 5, 0, 5, plan),
-             P4A_ERR_INVALID_ARGUMENT);
+    ::n4m::core::Context ctx;
+    ::n4m::core::ValidationPlan plan;
+    CHECK_EQ(::n4m::core::make_kfold_validation_plan(ctx, 1, 2, plan),
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::make_kfold_validation_plan(ctx, 4, 1, plan),
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::make_kfold_validation_plan(ctx, 4, 5, plan),
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::make_leave_one_out_validation_plan(ctx, 1, plan),
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::make_holdout_validation_plan(ctx, 5, -1, 2, plan),
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::make_holdout_validation_plan(ctx, 5, 1, 0, plan),
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::make_holdout_validation_plan(ctx, 5, 4, 2, plan),
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::make_holdout_validation_plan(ctx, 5, 0, 5, plan),
+             N4M_ERR_INVALID_ARGUMENT);
 }

@@ -7,6 +7,6 @@ if nargin < 4 || isempty(family), family = "gaussian"; end
 if isstring(family), family = char(family); end
 poisson = strcmpi(family, "poisson");
 params = struct("poisson", int32(poisson));
-res = pls4all.p4a_method_fit_mex("pls_glm", double(X), double(Y), ...
+res = pls4all.n4m_method_fit_mex("pls_glm", double(X), double(Y), ...
                                   int32(n_components), params);
 end

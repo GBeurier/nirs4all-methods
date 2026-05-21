@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: CECILL-2.1
  *
  * MATLAB / Octave MEX dispatcher covering ALL MethodResult-returning
- * entry points of libp4a v1.1.0 + selectors + diagnostics.
+ * entry points of libn4m v1.1.0 + selectors + diagnostics.
  *
- *   out_struct = p4a_method_fit_mex(algo, X, Y, n_components, params)
+ *   out_struct = n4m_method_fit_mex(algo, X, Y, n_components, params)
  *
  * `algo` is one of (see ALGO_TABLE below):
  *
@@ -43,7 +43,7 @@
  */
 
 #include "mex.h"
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,20 +78,20 @@ static mxArray* rowmajor_to_colmajor_mx(const double *src, int rows, int cols) {
 
 /* ---- MethodResult → struct field conversion ------------------------- */
 
-static mxArray* mr_matrix(const p4a_method_result_t *mr, const char *name) {
+static mxArray* mr_matrix(const n4m_method_result_t *mr, const char *name) {
     const double *data = NULL;
     int64_t rows = 0, cols = 0;
-    p4a_status_t st = p4a_method_result_get_double_matrix(mr, name,
+    n4m_status_t st = n4m_method_result_get_double_matrix(mr, name,
                                                           &data, &rows, &cols);
-    if (st != P4A_OK || !data) return mxCreateDoubleMatrix(0, 0, mxREAL);
+    if (st != N4M_OK || !data) return mxCreateDoubleMatrix(0, 0, mxREAL);
     return rowmajor_to_colmajor_mx(data, (int)rows, (int)cols);
 }
 
-static mxArray* mr_int_vector(const p4a_method_result_t *mr, const char *name) {
+static mxArray* mr_int_vector(const n4m_method_result_t *mr, const char *name) {
     const int32_t *data = NULL;
     int32_t size = 0;
-    p4a_status_t st = p4a_method_result_get_int_vector(mr, name, &data, &size);
-    if (st != P4A_OK || !data) return mxCreateDoubleMatrix(0, 0, mxREAL);
+    n4m_status_t st = n4m_method_result_get_int_vector(mr, name, &data, &size);
+    if (st != N4M_OK || !data) return mxCreateDoubleMatrix(0, 0, mxREAL);
     mxArray *mx = mxCreateDoubleMatrix(1, size, mxREAL);
     double *dst = mxGetPr(mx);
     for (int32_t i = 0; i < size; ++i) dst[i] = (double)data[i];
@@ -114,11 +114,11 @@ static int is_index_int64_name(const char *name) {
     return 0;
 }
 
-static mxArray* mr_int64_vector(const p4a_method_result_t *mr, const char *name) {
+static mxArray* mr_int64_vector(const n4m_method_result_t *mr, const char *name) {
     const int64_t *data = NULL;
     int64_t size = 0;
-    p4a_status_t st = p4a_method_result_get_int64_vector(mr, name, &data, &size);
-    if (st != P4A_OK || !data) return mxCreateDoubleMatrix(0, 0, mxREAL);
+    n4m_status_t st = n4m_method_result_get_int64_vector(mr, name, &data, &size);
+    if (st != N4M_OK || !data) return mxCreateDoubleMatrix(0, 0, mxREAL);
     mxArray *mx = mxCreateDoubleMatrix(1, (int)size, mxREAL);
     double *dst = mxGetPr(mx);
     int is_index_field = is_index_int64_name(name);
@@ -127,30 +127,30 @@ static mxArray* mr_int64_vector(const p4a_method_result_t *mr, const char *name)
     return mx;
 }
 
-static mxArray* mr_scalar(const p4a_method_result_t *mr, const char *name) {
+static mxArray* mr_scalar(const n4m_method_result_t *mr, const char *name) {
     double v = 0.0;
-    p4a_status_t st = p4a_method_result_get_scalar(mr, name, &v);
-    if (st != P4A_OK) return mxCreateDoubleMatrix(0, 0, mxREAL);
+    n4m_status_t st = n4m_method_result_get_scalar(mr, name, &v);
+    if (st != N4M_OK) return mxCreateDoubleMatrix(0, 0, mxREAL);
     return mxCreateDoubleScalar(v);
 }
 
 /* ---- Common Config builder ------------------------------------------ */
 
-static p4a_config_t* basic_cfg(int n_components) {
-    p4a_config_t *cfg = NULL;
-    if (p4a_config_create(&cfg) != P4A_OK)
-        mexErrMsgIdAndTxt("pls4all:cfg", "p4a_config_create failed");
-    p4a_config_set_algorithm(cfg, P4A_ALGO_PLS_REGRESSION);
-    p4a_config_set_solver(cfg, P4A_SOLVER_SIMPLS);
-    p4a_config_set_deflation(cfg, P4A_DEFLATION_REGRESSION);
-    p4a_config_set_n_components(cfg, n_components);
-    p4a_config_set_center_x(cfg, 1);
-    p4a_config_set_scale_x(cfg, 0);
-    p4a_config_set_center_y(cfg, 1);
-    p4a_config_set_scale_y(cfg, 0);
-    p4a_config_set_tol(cfg, 1e-6);
-    p4a_config_set_max_iter(cfg, 500);
-    p4a_config_set_store_scores(cfg, 0);
+static n4m_config_t* basic_cfg(int n_components) {
+    n4m_config_t *cfg = NULL;
+    if (n4m_config_create(&cfg) != N4M_OK)
+        mexErrMsgIdAndTxt("pls4all:cfg", "n4m_config_create failed");
+    n4m_config_set_algorithm(cfg, N4M_ALGO_PLS_REGRESSION);
+    n4m_config_set_solver(cfg, N4M_SOLVER_SIMPLS);
+    n4m_config_set_deflation(cfg, N4M_DEFLATION_REGRESSION);
+    n4m_config_set_n_components(cfg, n_components);
+    n4m_config_set_center_x(cfg, 1);
+    n4m_config_set_scale_x(cfg, 0);
+    n4m_config_set_center_y(cfg, 1);
+    n4m_config_set_scale_y(cfg, 0);
+    n4m_config_set_tol(cfg, 1e-6);
+    n4m_config_set_max_iter(cfg, 500);
+    n4m_config_set_store_scores(cfg, 0);
     return cfg;
 }
 
@@ -235,16 +235,16 @@ static int64_t* get_int64_vec_field(const mxArray *params, const char *name,
  * datasets still get at least 2 folds. Returns NULL on alloc / API
  * failure or when n < 4 (not enough rows for a meaningful CV).
  * Caller owns the result and must release it via
- * p4a_validation_plan_destroy. */
-static p4a_validation_plan_t* make_default_plan(int n, int requested_folds) {
+ * n4m_validation_plan_destroy. */
+static n4m_validation_plan_t* make_default_plan(int n, int requested_folds) {
     if (n < 4) return NULL;
     int n_folds = requested_folds;
     if (n_folds > n / 2) n_folds = n / 2;
     if (n_folds < 2) n_folds = 2;
-    p4a_validation_plan_t *plan = NULL;
-    if (p4a_validation_plan_create(&plan) != P4A_OK) return NULL;
-    if (p4a_validation_plan_set_n_samples(plan, (int64_t)n) != P4A_OK) {
-        p4a_validation_plan_destroy(plan);
+    n4m_validation_plan_t *plan = NULL;
+    if (n4m_validation_plan_create(&plan) != N4M_OK) return NULL;
+    if (n4m_validation_plan_set_n_samples(plan, (int64_t)n) != N4M_OK) {
+        n4m_validation_plan_destroy(plan);
         return NULL;
     }
     /* Match the canonical Python/registry plan: equal floor-sized
@@ -262,9 +262,9 @@ static p4a_validation_plan_t* make_default_plan(int n, int requested_folds) {
             if (i >= t_start && i < t_end) test[te++] = (int64_t)i;
             else                            train[ti++] = (int64_t)i;
         }
-        if (p4a_validation_plan_add_fold(plan, train, ti, test, te) != P4A_OK) {
+        if (n4m_validation_plan_add_fold(plan, train, ti, test, te) != N4M_OK) {
             mxFree(train); mxFree(test);
-            p4a_validation_plan_destroy(plan);
+            n4m_validation_plan_destroy(plan);
             return NULL;
         }
     }
@@ -273,15 +273,15 @@ static p4a_validation_plan_t* make_default_plan(int n, int requested_folds) {
 }
 
 /* Compact public nirs4all AOM bank: strict-linear primitives only. */
-static p4a_status_t make_compact_aom_bank(int n_ops,
-                                           p4a_operator_bank_t **out_bank) {
-    if (!out_bank) return P4A_ERR_INVALID_ARGUMENT;
+static n4m_status_t make_compact_aom_bank(int n_ops,
+                                           n4m_operator_bank_t **out_bank) {
+    if (!out_bank) return N4M_ERR_INVALID_ARGUMENT;
     *out_bank = NULL;
     if (n_ops < 1) n_ops = 1;
     if (n_ops > 9) n_ops = 9;
-    p4a_operator_bank_t *bank = NULL;
-    p4a_status_t st = p4a_operator_bank_create(&bank);
-    if (st != P4A_OK) return st;
+    n4m_operator_bank_t *bank = NULL;
+    n4m_status_t st = n4m_operator_bank_create(&bank);
+    if (st != N4M_OK) return st;
 
     const double sg11_p2[] = {11.0, 2.0};
     const double sg21_p3[] = {21.0, 3.0};
@@ -292,25 +292,25 @@ static p4a_status_t make_compact_aom_bank(int n_ops,
     const double detrend_2[] = {2.0};
     const double fd_1[] = {1.0};
 
-    for (int i = 0; st == P4A_OK && i < n_ops; ++i) {
+    for (int i = 0; st == N4M_OK && i < n_ops; ++i) {
         switch (i) {
-        case 0: st = p4a_operator_bank_add(bank, P4A_OP_IDENTITY, NULL, 0); break;
-        case 1: st = p4a_operator_bank_add(bank, P4A_OP_SAVGOL_SMOOTH, sg11_p2, 2); break;
-        case 2: st = p4a_operator_bank_add(bank, P4A_OP_SAVGOL_SMOOTH, sg21_p3, 2); break;
-        case 3: st = p4a_operator_bank_add(bank, P4A_OP_SAVGOL_DERIVATIVE, sg11_p2_d1, 3); break;
-        case 4: st = p4a_operator_bank_add(bank, P4A_OP_SAVGOL_DERIVATIVE, sg21_p3_d1, 3); break;
-        case 5: st = p4a_operator_bank_add(bank, P4A_OP_SAVGOL_DERIVATIVE, sg11_p2_d2, 3); break;
-        case 6: st = p4a_operator_bank_add(bank, P4A_OP_DETREND_POLY, detrend_1, 1); break;
-        case 7: st = p4a_operator_bank_add(bank, P4A_OP_DETREND_POLY, detrend_2, 1); break;
-        default: st = p4a_operator_bank_add(bank, P4A_OP_FINITE_DIFFERENCE, fd_1, 1); break;
+        case 0: st = n4m_operator_bank_add(bank, N4M_OP_IDENTITY, NULL, 0); break;
+        case 1: st = n4m_operator_bank_add(bank, N4M_OP_SAVGOL_SMOOTH, sg11_p2, 2); break;
+        case 2: st = n4m_operator_bank_add(bank, N4M_OP_SAVGOL_SMOOTH, sg21_p3, 2); break;
+        case 3: st = n4m_operator_bank_add(bank, N4M_OP_SAVGOL_DERIVATIVE, sg11_p2_d1, 3); break;
+        case 4: st = n4m_operator_bank_add(bank, N4M_OP_SAVGOL_DERIVATIVE, sg21_p3_d1, 3); break;
+        case 5: st = n4m_operator_bank_add(bank, N4M_OP_SAVGOL_DERIVATIVE, sg11_p2_d2, 3); break;
+        case 6: st = n4m_operator_bank_add(bank, N4M_OP_DETREND_POLY, detrend_1, 1); break;
+        case 7: st = n4m_operator_bank_add(bank, N4M_OP_DETREND_POLY, detrend_2, 1); break;
+        default: st = n4m_operator_bank_add(bank, N4M_OP_FINITE_DIFFERENCE, fd_1, 1); break;
         }
     }
-    if (st != P4A_OK) {
-        p4a_operator_bank_destroy(bank);
+    if (st != N4M_OK) {
+        n4m_operator_bank_destroy(bank);
         return st;
     }
     *out_bank = bank;
-    return P4A_OK;
+    return N4M_OK;
 }
 
 static mxArray* vector_from_i32(const int32_t *data, int32_t n, int shift) {
@@ -321,7 +321,7 @@ static mxArray* vector_from_i32(const int32_t *data, int32_t n, int shift) {
     return mx;
 }
 
-static mxArray* vector_from_op_kinds(const p4a_operator_kind_t *data, int32_t n) {
+static mxArray* vector_from_op_kinds(const n4m_operator_kind_t *data, int32_t n) {
     mxArray *mx = mxCreateDoubleMatrix(1, n, mxREAL);
     double *dst = mxGetPr(mx);
     for (int32_t i = 0; i < n; ++i) dst[i] = (double)data[i];
@@ -335,7 +335,7 @@ static mxArray* vector_from_f64(const double *data, int32_t n) {
     return mx;
 }
 
-static mxArray* pack_aom_global_result(p4a_aom_global_result_t *res) {
+static mxArray* pack_aom_global_result(n4m_aom_global_result_t *res) {
     const char *names[] = {
         "predictions", "operator_kinds", "operator_scores",
         "rmse_curves", "selected_operator_index",
@@ -344,20 +344,20 @@ static mxArray* pack_aom_global_result(p4a_aom_global_result_t *res) {
     };
     mxArray *out = mxCreateStructMatrix(1, 1, 9, names);
     const double *preds = NULL, *op_scores = NULL, *curves = NULL;
-    const p4a_operator_kind_t *kinds = NULL;
+    const n4m_operator_kind_t *kinds = NULL;
     int64_t pred_rows = 0, pred_cols = 0;
     int32_t n_kinds = 0, n_scores = 0, curve_rows = 0, curve_cols = 0;
     int32_t selected_op = 0, selected_k = 0, n_ops = 0, max_k = 0;
     double best_score = 0.0;
-    p4a_aom_global_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
-    p4a_aom_global_result_get_operator_kinds(res, &kinds, &n_kinds);
-    p4a_aom_global_result_get_operator_scores(res, &op_scores, &n_scores);
-    p4a_aom_global_result_get_rmse_curves(res, &curves, &curve_rows, &curve_cols);
-    p4a_aom_global_result_get_selected_operator_index(res, &selected_op);
-    p4a_aom_global_result_get_selected_n_components(res, &selected_k);
-    p4a_aom_global_result_get_n_operators(res, &n_ops);
-    p4a_aom_global_result_get_max_components(res, &max_k);
-    p4a_aom_global_result_get_best_score(res, &best_score);
+    n4m_aom_global_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
+    n4m_aom_global_result_get_operator_kinds(res, &kinds, &n_kinds);
+    n4m_aom_global_result_get_operator_scores(res, &op_scores, &n_scores);
+    n4m_aom_global_result_get_rmse_curves(res, &curves, &curve_rows, &curve_cols);
+    n4m_aom_global_result_get_selected_operator_index(res, &selected_op);
+    n4m_aom_global_result_get_selected_n_components(res, &selected_k);
+    n4m_aom_global_result_get_n_operators(res, &n_ops);
+    n4m_aom_global_result_get_max_components(res, &max_k);
+    n4m_aom_global_result_get_best_score(res, &best_score);
     mxSetField(out, 0, "predictions",
                rowmajor_to_colmajor_mx(preds, (int)pred_rows, (int)pred_cols));
     mxSetField(out, 0, "operator_kinds", vector_from_op_kinds(kinds, n_kinds));
@@ -371,11 +371,11 @@ static mxArray* pack_aom_global_result(p4a_aom_global_result_t *res) {
     mxSetField(out, 0, "n_operators", mxCreateDoubleScalar((double)n_ops));
     mxSetField(out, 0, "max_components", mxCreateDoubleScalar((double)max_k));
     mxSetField(out, 0, "best_score", mxCreateDoubleScalar(best_score));
-    p4a_aom_global_result_destroy(res);
+    n4m_aom_global_result_destroy(res);
     return out;
 }
 
-static mxArray* pack_aom_per_component_result(p4a_aom_per_component_result_t *res) {
+static mxArray* pack_aom_per_component_result(n4m_aom_per_component_result_t *res) {
     const char *names[] = {
         "predictions", "operator_kinds", "selected_operator_indices",
         "component_scores", "prefix_scores", "selected_n_components",
@@ -383,23 +383,23 @@ static mxArray* pack_aom_per_component_result(p4a_aom_per_component_result_t *re
     };
     mxArray *out = mxCreateStructMatrix(1, 1, 9, names);
     const double *preds = NULL, *component_scores = NULL, *prefix_scores = NULL;
-    const p4a_operator_kind_t *kinds = NULL;
+    const n4m_operator_kind_t *kinds = NULL;
     const int32_t *selected_ops = NULL;
     int64_t pred_rows = 0, pred_cols = 0;
     int32_t n_kinds = 0, n_selected = 0, comp_rows = 0, comp_cols = 0;
     int32_t n_prefix = 0, selected_k = 0, n_ops = 0, max_k = 0;
     double best_score = 0.0;
-    p4a_aom_per_component_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
-    p4a_aom_per_component_result_get_operator_kinds(res, &kinds, &n_kinds);
-    p4a_aom_per_component_result_get_selected_operator_indices(
+    n4m_aom_per_component_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
+    n4m_aom_per_component_result_get_operator_kinds(res, &kinds, &n_kinds);
+    n4m_aom_per_component_result_get_selected_operator_indices(
         res, &selected_ops, &n_selected);
-    p4a_aom_per_component_result_get_component_scores(
+    n4m_aom_per_component_result_get_component_scores(
         res, &component_scores, &comp_rows, &comp_cols);
-    p4a_aom_per_component_result_get_prefix_scores(res, &prefix_scores, &n_prefix);
-    p4a_aom_per_component_result_get_selected_n_components(res, &selected_k);
-    p4a_aom_per_component_result_get_n_operators(res, &n_ops);
-    p4a_aom_per_component_result_get_max_components(res, &max_k);
-    p4a_aom_per_component_result_get_best_score(res, &best_score);
+    n4m_aom_per_component_result_get_prefix_scores(res, &prefix_scores, &n_prefix);
+    n4m_aom_per_component_result_get_selected_n_components(res, &selected_k);
+    n4m_aom_per_component_result_get_n_operators(res, &n_ops);
+    n4m_aom_per_component_result_get_max_components(res, &max_k);
+    n4m_aom_per_component_result_get_best_score(res, &best_score);
     mxSetField(out, 0, "predictions",
                rowmajor_to_colmajor_mx(preds, (int)pred_rows, (int)pred_cols));
     mxSetField(out, 0, "operator_kinds", vector_from_op_kinds(kinds, n_kinds));
@@ -413,7 +413,7 @@ static mxArray* pack_aom_per_component_result(p4a_aom_per_component_result_t *re
     mxSetField(out, 0, "n_operators", mxCreateDoubleScalar((double)n_ops));
     mxSetField(out, 0, "max_components", mxCreateDoubleScalar((double)max_k));
     mxSetField(out, 0, "best_score", mxCreateDoubleScalar(best_score));
-    p4a_aom_per_component_result_destroy(res);
+    n4m_aom_per_component_result_destroy(res);
     return out;
 }
 
@@ -432,7 +432,7 @@ static const double* get_double_vec_field(const mxArray *params,
 /* Pack a MethodResult into a struct using key lists. `dmat_keys`,
  * `iv_keys`, `i64_keys`, `scalar_keys` are NULL-terminated arrays of
  * field names. The result destroys `mr` on the way out. */
-static mxArray* pack_result(p4a_method_result_t *mr,
+static mxArray* pack_result(n4m_method_result_t *mr,
                               const char **dmat, const char **iv,
                               const char **i64, const char **scalar) {
     int n_dmat = 0, n_iv = 0, n_i64 = 0, n_sc = 0;
@@ -458,26 +458,26 @@ static mxArray* pack_result(p4a_method_result_t *mr,
         mxSetFieldByNumber(out, 0, field++, mr_int64_vector(mr, i64[i]));
     for (int i = 0; i < n_sc; ++i)
         mxSetFieldByNumber(out, 0, field++, mr_scalar(mr, scalar[i]));
-    p4a_method_result_destroy(mr);
+    n4m_method_result_destroy(mr);
     return out;
 }
 
 /* Throw with the C ABI's per-context error if present. Always destroys
  * ctx + cfg + X/Y buffers before longjmp via mexErrMsgIdAndTxt. */
-static void throw_status(p4a_status_t st, const char *algo,
-                          p4a_context_t *ctx, p4a_config_t *cfg,
+static void throw_status(n4m_status_t st, const char *algo,
+                          n4m_context_t *ctx, n4m_config_t *cfg,
                           double *X, double *Y) {
     char buf[512];
-    const char *msg = ctx ? p4a_context_last_error(ctx) : NULL;
+    const char *msg = ctx ? n4m_context_last_error(ctx) : NULL;
     if (msg && msg[0]) {
         snprintf(buf, sizeof(buf), "%s failed: %s (%s)", algo,
-                  p4a_status_to_string(st), msg);
+                  n4m_status_to_string(st), msg);
     } else {
         snprintf(buf, sizeof(buf), "%s failed: %s", algo,
-                  p4a_status_to_string(st));
+                  n4m_status_to_string(st));
     }
-    if (cfg) p4a_config_destroy(cfg);
-    if (ctx) p4a_context_destroy(ctx);
+    if (cfg) n4m_config_destroy(cfg);
+    if (ctx) n4m_context_destroy(ctx);
     if (X) free(X);
     if (Y) free(Y);
     mexErrMsgIdAndTxt("pls4all:fit", "%s", buf);
@@ -489,7 +489,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     (void)nlhs;
     if (nrhs < 4) {
         mexErrMsgIdAndTxt("pls4all:nargin",
-                          "Usage: p4a_method_fit_mex(algo, X, Y, n_components, params)");
+                          "Usage: n4m_method_fit_mex(algo, X, Y, n_components, params)");
     }
     if (!mxIsChar(prhs[0]))
         mexErrMsgIdAndTxt("pls4all:type", "algo must be a string");
@@ -518,19 +518,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         mexErrMsgIdAndTxt("pls4all:shape", "size(X,1) must equal size(Y,1)");
     }
 
-    p4a_context_t *ctx = NULL;
-    if (p4a_context_create(&ctx) != P4A_OK) {
+    n4m_context_t *ctx = NULL;
+    if (n4m_context_create(&ctx) != N4M_OK) {
         free(X); free(Y);
-        mexErrMsgIdAndTxt("pls4all:ctx", "p4a_context_create failed");
+        mexErrMsgIdAndTxt("pls4all:ctx", "n4m_context_create failed");
     }
-    p4a_config_t *cfg = basic_cfg(n_components);
+    n4m_config_t *cfg = basic_cfg(n_components);
 
-    p4a_matrix_view_t Xv, Yv;
-    p4a_matrix_view_init_rowmajor(&Xv, X, n, p, P4A_DTYPE_F64);
-    p4a_matrix_view_init_rowmajor(&Yv, Y, n, q, P4A_DTYPE_F64);
+    n4m_matrix_view_t Xv, Yv;
+    n4m_matrix_view_init_rowmajor(&Xv, X, n, p, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&Yv, Y, n, q, N4M_DTYPE_F64);
 
-    p4a_method_result_t *mr = NULL;
-    p4a_status_t st = P4A_OK;
+    n4m_method_result_t *mr = NULL;
+    n4m_status_t st = N4M_OK;
     mxArray *out = NULL;
 
     /* Standard regressor output key sets. */
@@ -544,20 +544,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     if (strcmp(algo, "sparse_simpls") == 0) {
         double lambda = get_scalar_field(params, "sparsity_lambda", 0.05);
-        st = p4a_sparse_simpls_fit(ctx, cfg, &Xv, &Yv, lambda, &mr);
-        if (st == P4A_OK) {
+        st = n4m_sparse_simpls_fit(ctx, cfg, &Xv, &Yv, lambda, &mr);
+        if (st == N4M_OK) {
             static const char *dm[] = {"coefficients", "predictions", "x_mean",
                                           "y_mean", "weights_w", NULL};
             out = pack_result(mr, dm, NULL, NULL, REG_SCALAR);
         }
     } else if (strcmp(algo, "cppls") == 0) {
         double gamma = get_scalar_field(params, "gamma", 0.5);
-        st = p4a_cppls_fit(ctx, cfg, &Xv, &Yv, gamma, &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        st = n4m_cppls_fit(ctx, cfg, &Xv, &Yv, gamma, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "ecr") == 0) {
         double alpha = get_scalar_field(params, "alpha", 0.5);
-        st = p4a_ecr_fit(ctx, cfg, &Xv, &Yv, alpha, &mr);
-        if (st == P4A_OK) {
+        st = n4m_ecr_fit(ctx, cfg, &Xv, &Yv, alpha, &mr);
+        if (st == N4M_OK) {
             static const char *dm[] = {"coefficients", "predictions",
                                           "x_mean", "y_mean", "x_scale", "y_scale",
                                           "weights_w", "loadings_p", "y_loadings",
@@ -568,44 +568,44 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "di_pls") == 0) {
         const mxArray *xt = get_array_field(params, "X_target");
         if (!xt || !mxIsDouble(xt))
-            throw_status(P4A_ERR_INVALID_ARGUMENT, "di_pls (params.X_target)",
+            throw_status(N4M_ERR_INVALID_ARGUMENT, "di_pls (params.X_target)",
                           ctx, cfg, X, Y);
         int xt_rows = (int)mxGetM(xt), xt_cols = (int)mxGetN(xt);
         if (xt_cols != p)
-            throw_status(P4A_ERR_SHAPE_MISMATCH, "di_pls (X_target ncol)",
+            throw_status(N4M_ERR_SHAPE_MISMATCH, "di_pls (X_target ncol)",
                           ctx, cfg, X, Y);
         double *XT = colmajor_to_rowmajor_alloc(xt, &xt_rows, &xt_cols);
         double di_lambda = get_scalar_field(params, "di_lambda", 1.0);
-        p4a_matrix_view_t XTv;
-        p4a_matrix_view_init_rowmajor(&XTv, XT, xt_rows, xt_cols, P4A_DTYPE_F64);
-        st = p4a_di_pls_fit(ctx, cfg, &Xv, &Yv, &XTv, di_lambda, &mr);
+        n4m_matrix_view_t XTv;
+        n4m_matrix_view_init_rowmajor(&XTv, XT, xt_rows, xt_cols, N4M_DTYPE_F64);
+        st = n4m_di_pls_fit(ctx, cfg, &Xv, &Yv, &XTv, di_lambda, &mr);
         free(XT);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "weighted_pls") == 0) {
         int wn = 0;
         const double *w = get_double_vec_field(params, "sample_weights", &wn);
         if (!w || wn != n)
-            throw_status(P4A_ERR_SHAPE_MISMATCH, "weighted_pls (sample_weights)",
+            throw_status(N4M_ERR_SHAPE_MISMATCH, "weighted_pls (sample_weights)",
                           ctx, cfg, X, Y);
-        st = p4a_weighted_pls_fit(ctx, cfg, &Xv, &Yv, w, wn, &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        st = n4m_weighted_pls_fit(ctx, cfg, &Xv, &Yv, w, wn, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "robust_pls") == 0) {
         double k = get_scalar_field(params, "huber_k", 1.345);
         int it = get_int_field(params, "max_irls_iter", 20);
-        st = p4a_robust_pls_fit(ctx, cfg, &Xv, &Yv, k, it, &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        st = n4m_robust_pls_fit(ctx, cfg, &Xv, &Yv, k, it, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "ridge_pls") == 0) {
         double l = get_scalar_field(params, "ridge_lambda", 1.0);
-        st = p4a_ridge_pls_fit(ctx, cfg, &Xv, &Yv, l, &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        st = n4m_ridge_pls_fit(ctx, cfg, &Xv, &Yv, l, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "continuum_regression") == 0) {
         double t = get_scalar_field(params, "tau", 0.5);
-        st = p4a_continuum_regression_fit(ctx, cfg, &Xv, &Yv, t, &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        st = n4m_continuum_regression_fit(ctx, cfg, &Xv, &Yv, t, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "recursive_pls") == 0) {
         int w = get_int_field(params, "window_size", 50);
-        st = p4a_recursive_pls_run(ctx, cfg, &Xv, &Yv, w, &mr);
-        if (st == P4A_OK) {
+        st = n4m_recursive_pls_run(ctx, cfg, &Xv, &Yv, w, &mr);
+        if (st == N4M_OK) {
             static const char *dm[] = {"predictions", NULL};
             static const char *iv[] = {"in_window", NULL};
             static const char *sc[] = {"rmse_predictable", NULL};
@@ -615,19 +615,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int mj = get_int_field(params, "mode_j", 0);
         int mk = get_int_field(params, "mode_k", 0);
         if (mj <= 0 || mk <= 0 || mj * mk != p)
-            throw_status(P4A_ERR_SHAPE_MISMATCH,
+            throw_status(N4M_ERR_SHAPE_MISMATCH,
                           "n_pls (mode_j*mode_k must equal size(X,2))",
                           ctx, cfg, X, Y);
-        st = p4a_n_pls_fit(ctx, cfg, &Xv, mj, mk, &Yv, &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        st = n4m_n_pls_fit(ctx, cfg, &Xv, mj, mk, &Yv, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "kernel_pls") == 0) {
         int kt = get_int_field(params, "kernel_type", 1);
         double gamma = get_scalar_field(params, "gamma", 0.0);
         double coef0 = get_scalar_field(params, "coef0", 1.0);
         int degree = get_int_field(params, "degree", 3);
-        st = p4a_kernel_pls_fit(ctx, cfg, kt, gamma, coef0, degree,
+        st = n4m_kernel_pls_fit(ctx, cfg, kt, gamma, coef0, degree,
                                  &Xv, &Yv, &mr);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"predictions", "alpha", "y_mean", NULL};
             static const char *sc[] = {"rmse", "kernel_type", NULL};
             out = pack_result(mr, dm, NULL, NULL, sc);
@@ -636,8 +636,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int np = get_int_field(params, "n_predictive", 2);
         int nx = get_int_field(params, "n_x_orthogonal", 1);
         int ny2 = get_int_field(params, "n_y_orthogonal", 1);
-        st = p4a_o2pls_fit(ctx, cfg, &Xv, &Yv, np, nx, ny2, &mr);
-        if (st == P4A_OK) {
+        st = n4m_o2pls_fit(ctx, cfg, &Xv, &Yv, np, nx, ny2, &mr);
+        if (st == N4M_OK) {
             static const char *dm[] = {"coefficients", "predictions",
                                           "x_mean", "y_mean",
                                           "w_predictive", "c_predictive",
@@ -649,12 +649,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int nl = 0;
         int32_t *labels = get_int32_vec_field(params, "y_labels", &nl);
         if (!labels || nl != n)
-            throw_status(P4A_ERR_SHAPE_MISMATCH,
+            throw_status(N4M_ERR_SHAPE_MISMATCH,
                           "sparse_pls_da (y_labels length)",
                           ctx, cfg, X, Y);
-        st = p4a_sparse_pls_da_fit(ctx, cfg, &Xv, labels, nl, &mr);
+        st = n4m_sparse_pls_da_fit(ctx, cfg, &Xv, labels, nl, &mr);
         mxFree(labels);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"coefficients", "predictions",
                                           "x_mean", "y_mean",
                                           "class_priors", NULL};
@@ -664,21 +664,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int gn = 0;
         int32_t *groups = get_int32_vec_field(params, "group_assignment", &gn);
         if (!groups || gn != p)
-            throw_status(P4A_ERR_SHAPE_MISMATCH,
+            throw_status(N4M_ERR_SHAPE_MISMATCH,
                           "group_sparse_pls (group_assignment length)",
                           ctx, cfg, X, Y);
         double gl = get_scalar_field(params, "group_lambda", 0.05);
-        st = p4a_group_sparse_pls_fit(ctx, cfg, &Xv, &Yv, groups, gn, gl, &mr);
+        st = n4m_group_sparse_pls_fit(ctx, cfg, &Xv, &Yv, groups, gn, gl, &mr);
         mxFree(groups);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *sc[] = {"rmse", "n_groups", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
         }
     } else if (strcmp(algo, "fused_sparse_pls") == 0) {
         double l1 = get_scalar_field(params, "l1_lambda", 0.05);
         double fl = get_scalar_field(params, "fusion_lambda", 0.05);
-        st = p4a_fused_sparse_pls_fit(ctx, cfg, &Xv, &Yv, l1, fl, &mr);
-        if (st == P4A_OK) {
+        st = n4m_fused_sparse_pls_fit(ctx, cfg, &Xv, &Yv, l1, fl, &mr);
+        if (st == N4M_OK) {
             static const char *sc[] = {"rmse", "l1_lambda", "fusion_lambda", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
         }
@@ -689,20 +689,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int bsn = 0;
         int64_t *bs = get_int64_vec_field(params, "block_sizes", &bsn);
         if (!bs || bsn < 1)
-            throw_status(P4A_ERR_INVALID_ARGUMENT,
+            throw_status(N4M_ERR_INVALID_ARGUMENT,
                           "block fits require params.block_sizes",
                           ctx, cfg, X, Y);
         int64_t bsum = 0;
         for (int i = 0; i < bsn; ++i) bsum += bs[i];
         if (bsum != (int64_t)p) {
             mxFree(bs);
-            throw_status(P4A_ERR_SHAPE_MISMATCH,
+            throw_status(N4M_ERR_SHAPE_MISMATCH,
                           "sum(block_sizes) must equal size(X, 2)",
                           ctx, cfg, X, Y);
         }
         /* Build the per-block matrix views from the row-major X buffer. */
-        p4a_matrix_view_t *blocks = (p4a_matrix_view_t *)
-            mxMalloc(sizeof(p4a_matrix_view_t) * (size_t)bsn);
+        n4m_matrix_view_t *blocks = (n4m_matrix_view_t *)
+            mxMalloc(sizeof(n4m_matrix_view_t) * (size_t)bsn);
         double **block_bufs = (double **)
             mxMalloc(sizeof(double *) * (size_t)bsn);
         int64_t col_off = 0;
@@ -712,8 +712,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             for (int i = 0; i < n; ++i)
                 for (int64_t j = 0; j < bcols; ++j)
                     block_bufs[b][i * bcols + j] = X[i * p + col_off + j];
-            p4a_matrix_view_init_rowmajor(&blocks[b], block_bufs[b],
-                                            n, bcols, P4A_DTYPE_F64);
+            n4m_matrix_view_init_rowmajor(&blocks[b], block_bufs[b],
+                                            n, bcols, N4M_DTYPE_F64);
             col_off += bcols;
         }
         if (strcmp(algo, "so_pls") == 0) {
@@ -723,14 +723,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                 if (ncpb) mxFree(ncpb);
                 for (int b = 0; b < bsn; ++b) mxFree(block_bufs[b]);
                 mxFree(blocks); mxFree(block_bufs); mxFree(bs);
-                throw_status(P4A_ERR_INVALID_ARGUMENT,
+                throw_status(N4M_ERR_INVALID_ARGUMENT,
                               "so_pls requires n_components_per_block of length n_blocks",
                               ctx, cfg, X, Y);
             }
-            st = p4a_so_pls_fit(ctx, cfg, blocks, bsn, &Yv, ncpb, ncn, &mr);
+            st = n4m_so_pls_fit(ctx, cfg, blocks, bsn, &Yv, ncpb, ncn, &mr);
             mxFree(ncpb);
         } else if (strcmp(algo, "rosa") == 0) {
-            st = p4a_rosa_fit(ctx, cfg, blocks, bsn, &Yv, n_components, &mr);
+            st = n4m_rosa_fit(ctx, cfg, blocks, bsn, &Yv, n_components, &mr);
         } else {
             int njoint = get_int_field(params, "n_joint", 1);
             int upbn = 0;
@@ -739,16 +739,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                 if (upb) mxFree(upb);
                 for (int b = 0; b < bsn; ++b) mxFree(block_bufs[b]);
                 mxFree(blocks); mxFree(block_bufs); mxFree(bs);
-                throw_status(P4A_ERR_INVALID_ARGUMENT,
+                throw_status(N4M_ERR_INVALID_ARGUMENT,
                               "on_pls requires n_unique_per_block of length n_blocks",
                               ctx, cfg, X, Y);
             }
-            st = p4a_on_pls_fit(ctx, cfg, blocks, bsn, njoint, upb, upbn, &mr);
+            st = n4m_on_pls_fit(ctx, cfg, blocks, bsn, njoint, upb, upbn, &mr);
             mxFree(upb);
         }
         for (int b = 0; b < bsn; ++b) mxFree(block_bufs[b]);
         mxFree(blocks); mxFree(block_bufs); mxFree(bs);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"predictions", "y_mean",
                                           "joint_loadings_0",
                                           "unique_loadings_0",
@@ -762,16 +762,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "bagging_pls") == 0) {
         int ne = get_int_field(params, "n_estimators", 50);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        st = p4a_bagging_pls_fit(ctx, cfg, &Xv, &Yv, ne, seed, &mr);
-        if (st == P4A_OK) {
+        st = n4m_bagging_pls_fit(ctx, cfg, &Xv, &Yv, ne, seed, &mr);
+        if (st == N4M_OK) {
             static const char *sc[] = {"rmse", "n_estimators", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
         }
     } else if (strcmp(algo, "boosting_pls") == 0) {
         int ne = get_int_field(params, "n_estimators", 50);
         double lr = get_scalar_field(params, "learning_rate", 0.1);
-        st = p4a_boosting_pls_fit(ctx, cfg, &Xv, &Yv, ne, lr, &mr);
-        if (st == P4A_OK) {
+        st = n4m_boosting_pls_fit(ctx, cfg, &Xv, &Yv, ne, lr, &mr);
+        if (st == N4M_OK) {
             static const char *sc[] = {"rmse", "n_estimators", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
         }
@@ -779,8 +779,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int ne = get_int_field(params, "n_estimators", 50);
         int fps = get_int_field(params, "features_per_subspace", 10);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        st = p4a_random_subspace_pls_fit(ctx, cfg, &Xv, &Yv, ne, fps, seed, &mr);
-        if (st == P4A_OK) {
+        st = n4m_random_subspace_pls_fit(ctx, cfg, &Xv, &Yv, ne, fps, seed, &mr);
+        if (st == N4M_OK) {
             static const char *sc[] = {"rmse", "n_estimators", "features_per_subspace", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
         }
@@ -788,8 +788,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double ls = get_scalar_field(params, "length_scale", 1.0);
         double nl = get_scalar_field(params, "noise_level", 1e-4);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        st = p4a_gpr_pls_fit(ctx, cfg, &Xv, &Yv, ls, nl, seed, &mr);
-        if (st == P4A_OK) {
+        st = n4m_gpr_pls_fit(ctx, cfg, &Xv, &Yv, ls, nl, seed, &mr);
+        if (st == N4M_OK) {
             static const char *dm[] = {"rotation_r", "x_mean", "alpha", "L_lower",
                                           "training_scores", "predictions",
                                           "predictive_variance", NULL};
@@ -799,8 +799,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
     } else if (strcmp(algo, "pls_glm") == 0) {
         int poisson = get_int_field(params, "poisson", 0);
-        st = p4a_pls_glm_fit(ctx, cfg, &Xv, &Yv, poisson, &mr);
-        if (st == P4A_OK) {
+        st = n4m_pls_glm_fit(ctx, cfg, &Xv, &Yv, poisson, &mr);
+        if (st == N4M_OK) {
             static const char *dm[] = {"coefficients", "intercept",
                                           "predictions", "x_mean", NULL};
             static const char *sc[] = {"rmse", "poisson", NULL};
@@ -810,11 +810,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int nl = 0;
         int32_t *labels = get_int32_vec_field(params, "y_labels", &nl);
         if (!labels || nl != n)
-            throw_status(P4A_ERR_SHAPE_MISMATCH,
+            throw_status(N4M_ERR_SHAPE_MISMATCH,
                           "pls_qda (y_labels length)", ctx, cfg, X, Y);
-        st = p4a_pls_qda_fit(ctx, cfg, &Xv, labels, nl, &mr);
+        st = n4m_pls_qda_fit(ctx, cfg, &Xv, labels, nl, &mr);
         mxFree(labels);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"class_means", "class_covariances",
                                           "log_class_priors", "rotations_r",
                                           "x_mean", "predictions", NULL};
@@ -826,13 +826,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int32_t *ev = get_int32_vec_field(params, "event_indicators", &en);
         if (!sts || sn != n || !ev || en != n) {
             if (ev) mxFree(ev);
-            throw_status(P4A_ERR_SHAPE_MISMATCH,
+            throw_status(N4M_ERR_SHAPE_MISMATCH,
                           "pls_cox (survival_times / event_indicators length)",
                           ctx, cfg, X, Y);
         }
-        st = p4a_pls_cox_fit(ctx, cfg, &Xv, sts, sn, ev, en, &mr);
+        st = n4m_pls_cox_fit(ctx, cfg, &Xv, sts, sn, ev, en, &mr);
         mxFree(ev);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"coefficients", "baseline_hazard",
                                           "event_times", "x_mean",
                                           "predictions", NULL};
@@ -841,17 +841,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "pds") == 0) {
         const mxArray *xt = get_array_field(params, "X_target");
         if (!xt || !mxIsDouble(xt))
-            throw_status(P4A_ERR_INVALID_ARGUMENT,
+            throw_status(N4M_ERR_INVALID_ARGUMENT,
                           "pds (params.X_target)", ctx, cfg, X, Y);
         int xtr, xtc;
         double *XT = colmajor_to_rowmajor_alloc(xt, &xtr, &xtc);
         int hw = get_int_field(params, "window_half_width", 2);
-        p4a_matrix_view_t XTv;
-        p4a_matrix_view_init_rowmajor(&XTv, XT, xtr, xtc, P4A_DTYPE_F64);
+        n4m_matrix_view_t XTv;
+        n4m_matrix_view_init_rowmajor(&XTv, XT, xtr, xtc, N4M_DTYPE_F64);
         /* PDS: X = source, XTv = target */
-        st = p4a_pds_fit(ctx, &Xv, &XTv, hw, &mr);
+        st = n4m_pds_fit(ctx, &Xv, &XTv, hw, &mr);
         free(XT);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"transformation", "predictions", NULL};
             static const char *sc[] = {"rmse", "window_half_width", NULL};
             out = pack_result(mr, dm, NULL, NULL, sc);
@@ -859,44 +859,44 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "ds") == 0) {
         const mxArray *xt = get_array_field(params, "X_target");
         if (!xt || !mxIsDouble(xt))
-            throw_status(P4A_ERR_INVALID_ARGUMENT,
+            throw_status(N4M_ERR_INVALID_ARGUMENT,
                           "ds (params.X_target)", ctx, cfg, X, Y);
         int xtr, xtc;
         double *XT = colmajor_to_rowmajor_alloc(xt, &xtr, &xtc);
-        p4a_matrix_view_t XTv;
-        p4a_matrix_view_init_rowmajor(&XTv, XT, xtr, xtc, P4A_DTYPE_F64);
-        st = p4a_ds_fit(ctx, &Xv, &XTv, &mr);
+        n4m_matrix_view_t XTv;
+        n4m_matrix_view_init_rowmajor(&XTv, XT, xtr, xtc, N4M_DTYPE_F64);
+        st = n4m_ds_fit(ctx, &Xv, &XTv, &mr);
         free(XT);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"transformation", "bias",
                                           "predictions", NULL};
             out = pack_result(mr, dm, NULL, NULL, REG_SCALAR);
         }
     } else if (strcmp(algo, "mir_pls") == 0) {
-        st = p4a_mir_pls_fit(ctx, cfg, &Xv, &Yv, &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        st = n4m_mir_pls_fit(ctx, cfg, &Xv, &Yv, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "missing_aware_nipals") == 0) {
-        st = p4a_missing_aware_nipals_fit(ctx, cfg, &Xv, &Yv, &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        st = n4m_missing_aware_nipals_fit(ctx, cfg, &Xv, &Yv, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "mb_pls") == 0) {
         int bsn = 0;
         int64_t *bs = get_int64_vec_field(params, "block_sizes", &bsn);
         if (!bs || bsn < 1)
-            throw_status(P4A_ERR_INVALID_ARGUMENT,
+            throw_status(N4M_ERR_INVALID_ARGUMENT,
                           "mb_pls requires params.block_sizes",
                           ctx, cfg, X, Y);
         int64_t bsum = 0;
         for (int i = 0; i < bsn; ++i) bsum += bs[i];
         if (bsum != (int64_t)p) {
             mxFree(bs);
-            throw_status(P4A_ERR_SHAPE_MISMATCH,
+            throw_status(N4M_ERR_SHAPE_MISMATCH,
                           "sum(block_sizes) must equal size(X,2)",
                           ctx, cfg, X, Y);
         }
-        p4a_config_set_solver(cfg, P4A_SOLVER_NIPALS);
-        st = p4a_mb_pls_fit(ctx, cfg, &Xv, &Yv, bs, bsn, &mr);
+        n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS);
+        st = n4m_mb_pls_fit(ctx, cfg, &Xv, &Yv, bs, bsn, &mr);
         mxFree(bs);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"coefficients", "predictions",
                                           "x_mean", "x_scale", "intercept",
                                           "block_weights", NULL};
@@ -905,8 +905,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
     } else if (strcmp(algo, "lw_pls") == 0) {
         int nn = get_int_field(params, "n_neighbors", 30);
-        st = p4a_lw_pls_fit(ctx, cfg, &Xv, &Yv, nn, &mr);
-        if (st == P4A_OK) {
+        st = n4m_lw_pls_fit(ctx, cfg, &Xv, &Yv, nn, &mr);
+        if (st == N4M_OK) {
             static const char *dm[] = {"predictions", "neighbor_indices", NULL};
             static const char *i64[] = {"neighbor_indices_i64", NULL};
             static const char *sc[] = {"n_neighbors", "n_components", "rmse", NULL};
@@ -917,14 +917,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int32_t *labels = get_int32_vec_field(params, "y_labels", &nl);
         nc = get_int_field(params, "n_classes", 0);
         if (!labels || nl != n)
-            throw_status(P4A_ERR_SHAPE_MISMATCH,
+            throw_status(N4M_ERR_SHAPE_MISMATCH,
                           "pls_lda (y_labels)", ctx, cfg, X, Y);
         if (nc <= 0) {
             for (int i = 0; i < nl; ++i) if (labels[i] + 1 > nc) nc = labels[i] + 1;
         }
-        st = p4a_pls_lda_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
+        st = n4m_pls_lda_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
         mxFree(labels);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"decision_scores", NULL};
             static const char *iv[] = {"predictions", NULL};
             static const char *sc[] = {"n_classes", "n_components", NULL};
@@ -935,14 +935,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int32_t *labels = get_int32_vec_field(params, "y_labels", &nl);
         nc = get_int_field(params, "n_classes", 0);
         if (!labels || nl != n)
-            throw_status(P4A_ERR_SHAPE_MISMATCH,
+            throw_status(N4M_ERR_SHAPE_MISMATCH,
                           "pls_logistic (y_labels)", ctx, cfg, X, Y);
         if (nc <= 0) {
             for (int i = 0; i < nl; ++i) if (labels[i] + 1 > nc) nc = labels[i] + 1;
         }
-        st = p4a_pls_logistic_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
+        st = n4m_pls_logistic_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
         mxFree(labels);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"decision_scores", "probabilities",
                                           "intercepts", "coefficients", NULL};
             static const char *iv[] = {"predictions", NULL};
@@ -954,29 +954,29 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int mode = get_int_field(params, "gating_mode", 0);
         if (n_ops < 1) n_ops = 1;
         if (n_ops > 5) n_ops = 5;
-        p4a_operator_kind_t kinds[5] = {
-            P4A_OP_IDENTITY,
-            P4A_OP_CENTER,
-            P4A_OP_PARETO_SCALE,
-            P4A_OP_AUTOSCALE,
-            P4A_OP_SNV
+        n4m_operator_kind_t kinds[5] = {
+            N4M_OP_IDENTITY,
+            N4M_OP_CENTER,
+            N4M_OP_PARETO_SCALE,
+            N4M_OP_AUTOSCALE,
+            N4M_OP_SNV
         };
-        p4a_operator_bank_t *bank = NULL;
-        p4a_gating_strategy_t *gate = NULL;
-        st = p4a_operator_bank_create(&bank);
-        for (int i = 0; st == P4A_OK && i < n_ops; ++i) {
-            st = p4a_operator_bank_add(bank, kinds[i], NULL, 0);
+        n4m_operator_bank_t *bank = NULL;
+        n4m_gating_strategy_t *gate = NULL;
+        st = n4m_operator_bank_create(&bank);
+        for (int i = 0; st == N4M_OK && i < n_ops; ++i) {
+            st = n4m_operator_bank_add(bank, kinds[i], NULL, 0);
         }
-        if (st == P4A_OK) {
-            st = p4a_gating_strategy_create(
-                &gate, (p4a_gating_mode_t)mode);
+        if (st == N4M_OK) {
+            st = n4m_gating_strategy_create(
+                &gate, (n4m_gating_mode_t)mode);
         }
-        if (st == P4A_OK) {
-            st = p4a_aom_preprocess_fit(ctx, bank, gate, &Xv, &Yv, &mr);
+        if (st == N4M_OK) {
+            st = n4m_aom_preprocess_fit(ctx, bank, gate, &Xv, &Yv, &mr);
         }
-        if (gate) p4a_gating_strategy_destroy(gate);
-        if (bank) p4a_operator_bank_destroy(bank);
-        if (st == P4A_OK) {
+        if (gate) n4m_gating_strategy_destroy(gate);
+        if (bank) n4m_operator_bank_destroy(bank);
+        if (st == N4M_OK) {
             static const char *dm[] = {"transformed", "operator_outputs",
                                           "weights", NULL};
             static const char *i64[] = {"operator_kinds", NULL};
@@ -992,26 +992,26 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         if (max_components > p) max_components = p;
         if (max_components >= n) max_components = n - 1;
         if (cv < 2) cv = 2;
-        p4a_operator_bank_t *bank = NULL;
-        p4a_validation_plan_t *plan = NULL;
+        n4m_operator_bank_t *bank = NULL;
+        n4m_validation_plan_t *plan = NULL;
         st = make_compact_aom_bank(n_ops, &bank);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             plan = make_default_plan(n, cv);
-            if (!plan) st = P4A_ERR_INVALID_ARGUMENT;
+            if (!plan) st = N4M_ERR_INVALID_ARGUMENT;
         }
-        if (st == P4A_OK && strcmp(algo, "aom_pls") == 0) {
-            p4a_aom_global_result_t *aom = NULL;
-            st = p4a_aom_global_select(ctx, cfg, bank, &Xv, &Yv, plan,
+        if (st == N4M_OK && strcmp(algo, "aom_pls") == 0) {
+            n4m_aom_global_result_t *aom = NULL;
+            st = n4m_aom_global_select(ctx, cfg, bank, &Xv, &Yv, plan,
                                         max_components, &aom);
-            if (st == P4A_OK) out = pack_aom_global_result(aom);
-        } else if (st == P4A_OK) {
-            p4a_aom_per_component_result_t *pop = NULL;
-            st = p4a_aom_per_component_select(ctx, cfg, bank, &Xv, &Yv, plan,
+            if (st == N4M_OK) out = pack_aom_global_result(aom);
+        } else if (st == N4M_OK) {
+            n4m_aom_per_component_result_t *pop = NULL;
+            st = n4m_aom_per_component_select(ctx, cfg, bank, &Xv, &Yv, plan,
                                                max_components, &pop);
-            if (st == P4A_OK) out = pack_aom_per_component_result(pop);
+            if (st == N4M_OK) out = pack_aom_per_component_result(pop);
         }
-        if (plan) p4a_validation_plan_destroy(plan);
-        if (bank) p4a_operator_bank_destroy(bank);
+        if (plan) n4m_validation_plan_destroy(plan);
+        if (bank) n4m_operator_bank_destroy(bank);
     }
 
     /* ============================================================
@@ -1019,21 +1019,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
      * ============================================================ */
     else if (strcmp(algo, "variable_select_rank") == 0) {
         /* Convenience branch: fit an internal SIMPLS model on the given
-         * X/Y with store_scores=1, then call p4a_variable_select_rank
+         * X/Y with store_scores=1, then call n4m_variable_select_rank
          * with the requested method (0=VIP, 1=coef magnitude, 2=SR) and
          * top_k. The model is destroyed before returning. */
         int method = get_int_field(params, "method", 0);
         int top_k = get_int_field(params, "top_k", 10);
-        p4a_config_set_store_scores(cfg, 1);
-        p4a_model_t *model = NULL;
-        st = p4a_model_fit(ctx, cfg, &Xv, &Yv, &model);
-        if (st == P4A_OK) {
-            st = p4a_variable_select_rank(ctx, model, &Xv,
+        n4m_config_set_store_scores(cfg, 1);
+        n4m_model_t *model = NULL;
+        st = n4m_model_fit(ctx, cfg, &Xv, &Yv, &model);
+        if (st == N4M_OK) {
+            st = n4m_variable_select_rank(ctx, model, &Xv,
                                             (int32_t)method,
                                             (int32_t)top_k, &mr);
         }
-        if (model) p4a_model_destroy(model);
-        if (st == P4A_OK) {
+        if (model) n4m_model_destroy(model);
+        if (st == N4M_OK) {
             static const char *dm[] = {"scores", NULL};
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"n_features", "top_k", "method", NULL};
@@ -1041,8 +1041,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
     } else if (strcmp(algo, "spa_select") == 0) {
         int top_k = get_int_field(params, "top_k", 10);
-        st = p4a_spa_select(ctx, cfg, &Xv, &Yv, top_k, &mr);
-        if (st == P4A_OK) {
+        st = n4m_spa_select(ctx, cfg, &Xv, &Yv, top_k, &mr);
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1050,12 +1050,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "cars_select") == 0) {
         int it = get_int_field(params, "n_iterations", 50);
         int mf = get_int_field(params, "min_features", 5);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "cars_select", ctx, cfg, X, Y);
-            st = p4a_cars_select(ctx, cfg, &Xv, &Yv, _plan, it, mf, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "cars_select", ctx, cfg, X, Y);
+            st = n4m_cars_select(ctx, cfg, &Xv, &Yv, _plan, it, mf, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1063,24 +1063,24 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "interval_select") == 0) {
         int iw = get_int_field(params, "interval_width", 10);
         int step = get_int_field(params, "step", 1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "interval_select", ctx, cfg, X, Y);
-            st = p4a_interval_select(ctx, cfg, &Xv, &Yv, _plan, iw, step, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "interval_select", ctx, cfg, X, Y);
+            st = n4m_interval_select(ctx, cfg, &Xv, &Yv, _plan, iw, step, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
         }
     } else if (strcmp(algo, "stability_select") == 0) {
         int k = get_int_field(params, "top_k", 10);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "stability_select", ctx, cfg, X, Y);
-            st = p4a_stability_select(ctx, cfg, &Xv, &Yv, _plan, k, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "stability_select", ctx, cfg, X, Y);
+            st = n4m_stability_select(ctx, cfg, &Xv, &Yv, _plan, k, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1088,12 +1088,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "uve_select") == 0) {
         int nf = get_int_field(params, "noise_features", 0);
         uint64_t seed = get_u64_field(params, "noise_seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "uve_select", ctx, cfg, X, Y);
-            st = p4a_uve_select(ctx, cfg, &Xv, &Yv, _plan, nf, seed, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "uve_select", ctx, cfg, X, Y);
+            st = n4m_uve_select(ctx, cfg, &Xv, &Yv, _plan, nf, seed, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1105,12 +1105,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int maxz = get_int_field(params, "max_size", p);
         int tk = get_int_field(params, "top_k", 10);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "random_frog_select", ctx, cfg, X, Y);
-            st = p4a_random_frog_select(ctx, cfg, &Xv, &Yv, _plan, it, isz, minz, maxz, tk, seed, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "random_frog_select", ctx, cfg, X, Y);
+            st = n4m_random_frog_select(ctx, cfg, &Xv, &Yv, _plan, it, isz, minz, maxz, tk, seed, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1120,12 +1120,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int mf = get_int_field(params, "min_features", 5);
         double sf = get_scalar_field(params, "sample_fraction", 0.8);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "scars_select", ctx, cfg, X, Y);
-            st = p4a_scars_select(ctx, cfg, &Xv, &Yv, _plan, it, mf, sf, seed, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "scars_select", ctx, cfg, X, Y);
+            st = n4m_scars_select(ctx, cfg, &Xv, &Yv, _plan, it, mf, sf, seed, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1137,13 +1137,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int maxf = get_int_field(params, "max_features", p);
         double mr_rate = get_scalar_field(params, "mutation_rate", 0.01);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "ga_select", ctx, cfg, X, Y);
-            st = p4a_ga_select(ctx, cfg, &Xv, &Yv, _plan, g, psz, minf, maxf,
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "ga_select", ctx, cfg, X, Y);
+            st = n4m_ga_select(ctx, cfg, &Xv, &Yv, _plan, g, psz, minf, maxf,
                             mr_rate, seed, &mr);
-            p4a_validation_plan_destroy(_plan);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1156,12 +1156,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double c2 = get_scalar_field(params, "c2", 1.494);
         double vmax = get_scalar_field(params, "v_max", 4.0);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "pso_select", ctx, cfg, X, Y);
-            st = p4a_pso_select(ctx, cfg, &Xv, &Yv, _plan, sw, it, w, c1, c2, vmax, seed, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "pso_select", ctx, cfg, X, Y);
+            st = n4m_pso_select(ctx, cfg, &Xv, &Yv, _plan, sw, it, w, c1, c2, vmax, seed, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"inclusion_frequencies",
                                           "best_rmse_by_iteration",
                                           "mean_rmse_by_iteration", NULL};
@@ -1176,12 +1176,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double th = get_scalar_field(params, "threshold", 0.5);
         double fp = get_scalar_field(params, "floor_probability", 0.01);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "vissa_select", ctx, cfg, X, Y);
-            st = p4a_vissa_select(ctx, cfg, &Xv, &Yv, _plan, it, sub, rk, th, fp, seed, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "vissa_select", ctx, cfg, X, Y);
+            st = n4m_vissa_select(ctx, cfg, &Xv, &Yv, _plan, it, sub, rk, th, fp, seed, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"final_probabilities",
                                           "inclusion_frequencies",
                                           "best_rmse_by_iteration",
@@ -1195,12 +1195,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int ns = get_int_field(params, "n_steps", 10);
         int mf = get_int_field(params, "min_features", 5);
         double sf = get_scalar_field(params, "shave_fraction", 0.1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "shaving_select", ctx, cfg, X, Y);
-            st = p4a_shaving_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, sf, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "shaving_select", ctx, cfg, X, Y);
+            st = n4m_shaving_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, sf, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1208,12 +1208,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "bve_select") == 0) {
         int ns = get_int_field(params, "n_steps", 10);
         int mf = get_int_field(params, "min_features", 5);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "bve_select", ctx, cfg, X, Y);
-            st = p4a_bve_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "bve_select", ctx, cfg, X, Y);
+            st = n4m_bve_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1222,16 +1222,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int nt = 0;
         const double *thr = get_double_vec_field(params, "alpha_thresholds", &nt);
         if (!thr || nt < 1)
-            throw_status(P4A_ERR_INVALID_ARGUMENT,
+            throw_status(N4M_ERR_INVALID_ARGUMENT,
                           "t2_select requires params.alpha_thresholds",
                           ctx, cfg, X, Y);
         int ms = get_int_field(params, "min_selected", 1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "t2_select", ctx, cfg, X, Y);
-            st = p4a_t2_select(ctx, cfg, &Xv, &Yv, _plan, thr, nt, ms, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "t2_select", ctx, cfg, X, Y);
+            st = n4m_t2_select(ctx, cfg, &Xv, &Yv, _plan, thr, nt, ms, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1239,8 +1239,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "wvc_select") == 0) {
         int tk = get_int_field(params, "top_k", 10);
         int norm = get_int_field(params, "normalize", 1);
-        st = p4a_wvc_select(ctx, &Xv, &Yv, n_components, tk, norm, &mr);
-        if (st == P4A_OK) {
+        st = n4m_wvc_select(ctx, &Xv, &Yv, n_components, tk, norm, &mr);
+        if (st == N4M_OK) {
             static const char *dm[] = {"scores", NULL};
             static const char *i64[] = {"selected_indices", NULL};
             out = pack_result(mr, dm, NULL, i64, NULL);
@@ -1250,9 +1250,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double thr = get_scalar_field(params, "threshold", 0.0);
         double tf = get_scalar_field(params, "threshold_factor", 1.0);
         int ms = get_int_field(params, "min_selected", 1);
-        st = p4a_wvc_threshold_select(ctx, &Xv, &Yv, n_components, norm,
+        st = n4m_wvc_threshold_select(ctx, &Xv, &Yv, n_components, norm,
                                         thr, tf, ms, &mr);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"scores", NULL};
             static const char *i64[] = {"selected_indices", NULL};
             out = pack_result(mr, dm, NULL, i64, NULL);
@@ -1262,12 +1262,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         uint64_t seed = get_u64_field(params, "noise_seed", 0);
         int ne = get_int_field(params, "n_ensembles", 5);
         double vt = get_scalar_field(params, "vote_threshold", 0.5);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "emcuve_select", ctx, cfg, X, Y);
-            st = p4a_emcuve_select(ctx, cfg, &Xv, &Yv, _plan, nf, seed, ne, vt, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "emcuve_select", ctx, cfg, X, Y);
+            st = n4m_emcuve_select(ctx, cfg, &Xv, &Yv, _plan, nf, seed, ne, vt, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1276,8 +1276,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int np = get_int_field(params, "n_permutations", 100);
         uint64_t seed = get_u64_field(params, "randomization_seed", 0);
         double a = get_scalar_field(params, "alpha", 0.05);
-        st = p4a_randomization_select(ctx, cfg, &Xv, &Yv, np, seed, a, &mr);
-        if (st == P4A_OK) {
+        st = n4m_randomization_select(ctx, cfg, &Xv, &Yv, np, seed, a, &mr);
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1285,12 +1285,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "bipls_select") == 0) {
         int iw = get_int_field(params, "interval_width", 10);
         int mi = get_int_field(params, "min_intervals", 1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "bipls_select", ctx, cfg, X, Y);
-            st = p4a_bipls_select(ctx, cfg, &Xv, &Yv, _plan, iw, mi, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "bipls_select", ctx, cfg, X, Y);
+            st = n4m_bipls_select(ctx, cfg, &Xv, &Yv, _plan, iw, mi, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1298,12 +1298,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "sipls_select") == 0) {
         int iw = get_int_field(params, "interval_width", 10);
         int cs = get_int_field(params, "combination_size", 2);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "sipls_select", ctx, cfg, X, Y);
-            st = p4a_sipls_select(ctx, cfg, &Xv, &Yv, _plan, iw, cs, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "sipls_select", ctx, cfg, X, Y);
+            st = n4m_sipls_select(ctx, cfg, &Xv, &Yv, _plan, iw, cs, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1312,12 +1312,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int ns = get_int_field(params, "n_steps", 10);
         int mf = get_int_field(params, "min_features", 5);
         int rc = get_int_field(params, "remove_count", 1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "rep_select", ctx, cfg, X, Y);
-            st = p4a_rep_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, rc, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "rep_select", ctx, cfg, X, Y);
+            st = n4m_rep_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, rc, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1327,12 +1327,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int tk = get_int_field(params, "top_k", 10);
         double damp = get_scalar_field(params, "damping", 0.5);
         double wf = get_scalar_field(params, "weight_floor", 1e-6);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "ipw_select", ctx, cfg, X, Y);
-            st = p4a_ipw_select(ctx, cfg, &Xv, &Yv, _plan, it, tk, damp, wf, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "ipw_select", ctx, cfg, X, Y);
+            st = n4m_ipw_select(ctx, cfg, &Xv, &Yv, _plan, it, tk, damp, wf, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1341,16 +1341,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int nt = 0;
         const double *thr = get_double_vec_field(params, "thresholds", &nt);
         if (!thr || nt < 1)
-            throw_status(P4A_ERR_INVALID_ARGUMENT,
+            throw_status(N4M_ERR_INVALID_ARGUMENT,
                           "st_select requires params.thresholds",
                           ctx, cfg, X, Y);
         int ms = get_int_field(params, "min_selected", 1);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "st_select", ctx, cfg, X, Y);
-            st = p4a_st_select(ctx, cfg, &Xv, &Yv, _plan, thr, nt, ms, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "st_select", ctx, cfg, X, Y);
+            st = n4m_st_select(ctx, cfg, &Xv, &Yv, _plan, thr, nt, ms, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1358,12 +1358,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "iriv_select") == 0) {
         int mr_rounds = get_int_field(params, "max_rounds", 20);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "iriv_select", ctx, cfg, X, Y);
-            st = p4a_iriv_select(ctx, cfg, &Xv, &Yv, _plan, mr_rounds, seed, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "iriv_select", ctx, cfg, X, Y);
+            st = n4m_iriv_select(ctx, cfg, &Xv, &Yv, _plan, mr_rounds, seed, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"remaining_per_round",
                                           "removed_per_round", NULL};
             static const char *i64[] = {"selected_indices", NULL};
@@ -1376,12 +1376,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int ii = get_int_field(params, "initial_intervals", 10);
         int tk = get_int_field(params, "top_k", 5);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        { p4a_validation_plan_t *_plan = make_default_plan(n, 3);
-            if (!_plan) throw_status(P4A_ERR_OUT_OF_MEMORY, "irf_select", ctx, cfg, X, Y);
-            st = p4a_irf_select(ctx, cfg, &Xv, &Yv, _plan, it, ws, ii, tk, seed, &mr);
-            p4a_validation_plan_destroy(_plan);
+        { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
+            if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "irf_select", ctx, cfg, X, Y);
+            st = n4m_irf_select(ctx, cfg, &Xv, &Yv, _plan, it, ws, ii, tk, seed, &mr);
+            n4m_validation_plan_destroy(_plan);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"probability", "rmse_by_iteration",
                                           "subset_sizes", NULL};
             static const char *i64[] = {"selected_indices", "top_k_intervals", NULL};
@@ -1391,8 +1391,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "vip_spa_select") == 0) {
         double vt = get_scalar_field(params, "vip_threshold", 0.3);
         int tk = get_int_field(params, "top_k", 10);
-        st = p4a_vip_spa_select(ctx, cfg, &Xv, &Yv, vt, tk, &mr);
-        if (st == P4A_OK) {
+        st = n4m_vip_spa_select(ctx, cfg, &Xv, &Yv, vt, tk, &mr);
+        if (st == N4M_OK) {
             static const char *dm[] = {"vip_scores", "vip_mask",
                                           "selection_scores", NULL};
             static const char *i64[] = {"selected_indices", NULL};
@@ -1406,38 +1406,38 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
      * ============================================================ */
     else if (strcmp(algo, "pls_diagnostics_compute") == 0) {
         /* Fit SIMPLS model on X/Y (store_scores=1) and call
-         * p4a_pls_diagnostics_compute. params.X_reference (optional)
+         * n4m_pls_diagnostics_compute. params.X_reference (optional)
          * overrides the reference distribution; when absent we pass
          * NULL and the core falls back to the stored training scores. */
         const mxArray *xr = get_array_field(params, "X_reference");
         double *XR = NULL;
-        p4a_matrix_view_t XRv;
-        const p4a_matrix_view_t *xr_ptr = NULL;
+        n4m_matrix_view_t XRv;
+        const n4m_matrix_view_t *xr_ptr = NULL;
         if (xr) {
             if (!mxIsDouble(xr) || mxIsComplex(xr))
-                throw_status(P4A_ERR_INVALID_ARGUMENT,
+                throw_status(N4M_ERR_INVALID_ARGUMENT,
                               "pls_diagnostics_compute (params.X_reference must be real double)",
                               ctx, cfg, X, Y);
             int xrr, xrc;
             XR = colmajor_to_rowmajor_alloc(xr, &xrr, &xrc);
             if (xrc != p) {
                 free(XR);
-                throw_status(P4A_ERR_SHAPE_MISMATCH,
+                throw_status(N4M_ERR_SHAPE_MISMATCH,
                               "pls_diagnostics_compute (X_reference ncol)",
                               ctx, cfg, X, Y);
             }
-            p4a_matrix_view_init_rowmajor(&XRv, XR, xrr, xrc, P4A_DTYPE_F64);
+            n4m_matrix_view_init_rowmajor(&XRv, XR, xrr, xrc, N4M_DTYPE_F64);
             xr_ptr = &XRv;
         }
-        p4a_config_set_store_scores(cfg, 1);
-        p4a_model_t *model = NULL;
-        st = p4a_model_fit(ctx, cfg, &Xv, &Yv, &model);
-        if (st == P4A_OK) {
-            st = p4a_pls_diagnostics_compute(ctx, model, &Xv, xr_ptr, &mr);
+        n4m_config_set_store_scores(cfg, 1);
+        n4m_model_t *model = NULL;
+        st = n4m_model_fit(ctx, cfg, &Xv, &Yv, &model);
+        if (st == N4M_OK) {
+            st = n4m_pls_diagnostics_compute(ctx, model, &Xv, xr_ptr, &mr);
         }
-        if (model) p4a_model_destroy(model);
+        if (model) n4m_model_destroy(model);
         free(XR);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"t2", "q", "dmodx", NULL};
             static const char *sc[] = {"n_components", "n_features", NULL};
             out = pack_result(mr, dm, NULL, NULL, sc);
@@ -1450,29 +1450,29 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
          * derive reference thresholds. */
         const mxArray *xm = get_array_field(params, "X_monitor");
         if (!xm || !mxIsDouble(xm) || mxIsComplex(xm))
-            throw_status(P4A_ERR_INVALID_ARGUMENT,
+            throw_status(N4M_ERR_INVALID_ARGUMENT,
                           "pls_monitoring_run (params.X_monitor must be a real double matrix)",
                           ctx, cfg, X, Y);
         int xmr, xmc;
         double *XM = colmajor_to_rowmajor_alloc(xm, &xmr, &xmc);
         if (xmc != p) {
             free(XM);
-            throw_status(P4A_ERR_SHAPE_MISMATCH,
+            throw_status(N4M_ERR_SHAPE_MISMATCH,
                           "pls_monitoring_run (X_monitor must have same number of columns as X_reference)",
                           ctx, cfg, X, Y);
         }
         double alpha = get_scalar_field(params, "alpha", 0.05);
-        p4a_matrix_view_t XMv;
-        p4a_matrix_view_init_rowmajor(&XMv, XM, xmr, xmc, P4A_DTYPE_F64);
-        p4a_config_set_store_scores(cfg, 1);
-        p4a_model_t *model = NULL;
-        st = p4a_model_fit(ctx, cfg, &Xv, &Yv, &model);
-        if (st == P4A_OK) {
-            st = p4a_pls_monitoring_run(ctx, model, &Xv, &XMv, alpha, &mr);
+        n4m_matrix_view_t XMv;
+        n4m_matrix_view_init_rowmajor(&XMv, XM, xmr, xmc, N4M_DTYPE_F64);
+        n4m_config_set_store_scores(cfg, 1);
+        n4m_model_t *model = NULL;
+        st = n4m_model_fit(ctx, cfg, &Xv, &Yv, &model);
+        if (st == N4M_OK) {
+            st = n4m_pls_monitoring_run(ctx, model, &Xv, &XMv, alpha, &mr);
         }
-        if (model) p4a_model_destroy(model);
+        if (model) n4m_model_destroy(model);
         free(XM);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"t2", "q", "t2_reference",
                                           "q_reference", NULL};
             static const char *iv[] = {"t2_alarms", "q_alarms",
@@ -1482,8 +1482,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             out = pack_result(mr, dm, iv, NULL, sc);
         }
     } else if (strcmp(algo, "approximate_press_compute") == 0) {
-        st = p4a_approximate_press_compute(ctx, cfg, &Xv, &Yv, n_components, &mr);
-        if (st == P4A_OK) {
+        st = n4m_approximate_press_compute(ctx, cfg, &Xv, &Yv, n_components, &mr);
+        if (st == N4M_OK) {
             static const char *dm[] = {"press_per_component",
                                           "rmse_per_component", NULL};
             static const char *iv[] = {"selected_n_components", NULL};
@@ -1492,7 +1492,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "one_se_rule_compute") == 0) {
         const mxArray *fold_rmse = get_array_field(params, "fold_rmse_matrix");
         if (!fold_rmse || !mxIsDouble(fold_rmse))
-            throw_status(P4A_ERR_INVALID_ARGUMENT,
+            throw_status(N4M_ERR_INVALID_ARGUMENT,
                           "one_se_rule_compute requires params.fold_rmse_matrix",
                           ctx, cfg, X, Y);
         int max_k = (int)mxGetM(fold_rmse);
@@ -1500,9 +1500,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         /* Convert to row-major. */
         int rmr, rmc;
         double *fr_rm = colmajor_to_rowmajor_alloc(fold_rmse, &rmr, &rmc);
-        st = p4a_one_se_rule_compute(ctx, fr_rm, max_k, n_folds, &mr);
+        st = n4m_one_se_rule_compute(ctx, fr_rm, max_k, n_folds, &mr);
         free(fr_rm);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char *dm[] = {"mean_rmse_per_component", NULL};
             static const char *iv[] = {"best_n_components",
                                           "one_se_n_components", NULL};
@@ -1511,15 +1511,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             out = pack_result(mr, dm, iv, NULL, sc);
         }
     } else {
-        throw_status(P4A_ERR_INVALID_ARGUMENT, algo, ctx, cfg, X, Y);
+        throw_status(N4M_ERR_INVALID_ARGUMENT, algo, ctx, cfg, X, Y);
     }
 
-    p4a_config_destroy(cfg);
+    n4m_config_destroy(cfg);
     free(X); free(Y);
-    if (st != P4A_OK) {
+    if (st != N4M_OK) {
         /* throw_status doesn't return; do it now with NULLed-out cfg / X / Y. */
         throw_status(st, algo, ctx, NULL, NULL, NULL);
     }
-    p4a_context_destroy(ctx);
+    n4m_context_destroy(ctx);
     plhs[0] = out;
 }

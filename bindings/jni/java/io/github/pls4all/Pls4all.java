@@ -3,7 +3,7 @@ package io.github.pls4all;
 
 /**
  * pls4all — desktop JNI binding around the public C ABI helper
- * {@code p4a_pls_fit_simple}. Loads {@code libp4a_jni} on first use;
+ * {@code n4m_pls_fit_simple}. Loads {@code libp4a_jni} on first use;
  * the {@code -Djava.library.path=...} JVM option (or the
  * {@code PLS4ALL_JNI_LIB} env var pointing at the .so) tells the
  * JVM where the shared library lives.
@@ -18,7 +18,7 @@ public final class Pls4all {
         if (overridePath != null && !overridePath.isEmpty()) {
             System.load(overridePath);
         } else {
-            System.loadLibrary("p4a_jni");
+            System.loadLibrary("n4m_jni");
         }
     }
 
@@ -26,10 +26,10 @@ public final class Pls4all {
         /* static-only — keep instances out. */
     }
 
-    /** Returns the libp4a runtime version, e.g. {@code "0.87.0+abi.1.13.0"}. */
+    /** Returns the libn4m runtime version, e.g. {@code "0.87.0+abi.1.13.0"}. */
     public static native String version();
 
-    /** Returns the libp4a ABI {major, minor, patch}. */
+    /** Returns the libn4m ABI {major, minor, patch}. */
     public static native int[] abiVersion();
 
     /**
@@ -103,7 +103,7 @@ public final class Pls4all {
                                    coefs, xMean, yMean, preds);
         if (status != 0) {
             throw new RuntimeException(
-                "p4a_pls_fit_simple failed with status " + status);
+                "n4m_pls_fit_simple failed with status " + status);
         }
         return new FitResult(n, p, q, nComponents,
                               coefs, xMean, yMean, preds);

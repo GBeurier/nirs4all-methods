@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
-// .NET / C# binding around libp4a's `p4a_pls_fit_simple` C ABI helper.
+// .NET / C# binding around libn4m's `n4m_pls_fit_simple` C ABI helper.
 // Parity-gated against the shared cross-binding fixture
 // (bindings/js/test/parity_fixture.json) at machine epsilon.
 //
-// Load the matching libp4a.so/dylib/dll alongside the assembly, or
+// Load the matching libn4m.so/dylib/dll alongside the assembly, or
 // set LD_LIBRARY_PATH / PATH / DYLD_LIBRARY_PATH before the CLR
 // looks up DllImport targets.
 
@@ -20,20 +20,20 @@ public static class Pls4all
 {
     private const string LibraryName = "p4a";
 
-    [DllImport(LibraryName, EntryPoint = "p4a_get_version_string")]
-    private static extern IntPtr p4a_get_version_string_native();
+    [DllImport(LibraryName, EntryPoint = "n4m_get_version_string")]
+    private static extern IntPtr n4m_get_version_string_native();
 
-    [DllImport(LibraryName, EntryPoint = "p4a_get_abi_version_major")]
-    private static extern uint p4a_get_abi_version_major_native();
+    [DllImport(LibraryName, EntryPoint = "n4m_get_abi_version_major")]
+    private static extern uint n4m_get_abi_version_major_native();
 
-    [DllImport(LibraryName, EntryPoint = "p4a_get_abi_version_minor")]
-    private static extern uint p4a_get_abi_version_minor_native();
+    [DllImport(LibraryName, EntryPoint = "n4m_get_abi_version_minor")]
+    private static extern uint n4m_get_abi_version_minor_native();
 
-    [DllImport(LibraryName, EntryPoint = "p4a_get_abi_version_patch")]
-    private static extern uint p4a_get_abi_version_patch_native();
+    [DllImport(LibraryName, EntryPoint = "n4m_get_abi_version_patch")]
+    private static extern uint n4m_get_abi_version_patch_native();
 
-    [DllImport(LibraryName, EntryPoint = "p4a_pls_fit_simple")]
-    private static extern unsafe int p4a_pls_fit_simple_native(
+    [DllImport(LibraryName, EntryPoint = "n4m_pls_fit_simple")]
+    private static extern unsafe int n4m_pls_fit_simple_native(
         double* x, double* y,
         int n, int p, int q, int nComponents,
         double* coefficientsOut,
@@ -41,20 +41,20 @@ public static class Pls4all
         double* yMeanOut,
         double* predictionsOut);
 
-    /// <summary>Returns the libp4a runtime version, e.g. "0.90.0+abi.1.13.0".</summary>
+    /// <summary>Returns the libn4m runtime version, e.g. "0.90.0+abi.1.13.0".</summary>
     public static string Version()
     {
-        IntPtr raw = p4a_get_version_string_native();
+        IntPtr raw = n4m_get_version_string_native();
         return raw == IntPtr.Zero ? string.Empty : Marshal.PtrToStringUTF8(raw) ?? string.Empty;
     }
 
-    /// <summary>Returns the libp4a ABI (major, minor, patch).</summary>
+    /// <summary>Returns the libn4m ABI (major, minor, patch).</summary>
     public static (uint Major, uint Minor, uint Patch) AbiVersion()
     {
         return (
-            p4a_get_abi_version_major_native(),
-            p4a_get_abi_version_minor_native(),
-            p4a_get_abi_version_patch_native());
+            n4m_get_abi_version_major_native(),
+            n4m_get_abi_version_minor_native(),
+            n4m_get_abi_version_patch_native());
     }
 
     /// <summary>Bundle of arrays returned by <see cref="PlsFit"/>.</summary>
@@ -108,14 +108,14 @@ public static class Pls4all
             fixed (double* ymp = yMean)
             fixed (double* pp = preds)
             {
-                status = p4a_pls_fit_simple_native(
+                status = n4m_pls_fit_simple_native(
                     xp, yp, n, p, q, nComponents, cp, xmp, ymp, pp);
             }
         }
         if (status != 0)
         {
             throw new InvalidOperationException(
-                $"p4a_pls_fit_simple failed with status {status}");
+                $"n4m_pls_fit_simple failed with status {status}");
         }
         return new FitResult(n, p, q, nComponents, coefs, xMean, yMean, preds);
     }

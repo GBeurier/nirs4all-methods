@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
                    std::strcmp(argv[i], "-v") == 0) {
             verbose = true;
         } else if (std::strcmp(argv[i], "--list") == 0) {
-            for (const auto& tc : ::pls4all::test::Registry::instance().cases()) {
+            for (const auto& tc : ::n4m::test::Registry::instance().cases()) {
                 std::printf("%s/%s\n", tc.group, tc.name);
             }
             return 0;
@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
     int total_run       = 0;
     int total_skipped   = 0;
 
-    for (const auto& tc : ::pls4all::test::Registry::instance().cases()) {
+    for (const auto& tc : ::n4m::test::Registry::instance().cases()) {
         if (!matches_filter(tc.group, tc.name, filter)) {
             ++total_skipped;
             continue;

@@ -15,21 +15,21 @@ namespace {
 constexpr double kAbsTol = 1e-8;
 constexpr double kRelTol = 1e-8;
 
-p4a_matrix_view_t matrix_view(const ::pls4all::test::fixtures::MatrixRef& ref) {
-    p4a_matrix_view_t view{};
+n4m_matrix_view_t matrix_view(const ::n4m::test::fixtures::MatrixRef& ref) {
+    n4m_matrix_view_t view{};
     view.data = const_cast<double*>(ref.values);
     view.rows = ref.rows;
     view.cols = ref.cols;
     view.row_stride = ref.cols > 0 ? ref.cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
 void check_close_values(int& failures,
                         const char* label,
                         const std::vector<double>& actual,
-                        const ::pls4all::test::fixtures::MatrixRef& expected) {
+                        const ::n4m::test::fixtures::MatrixRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -57,25 +57,25 @@ void check_close_values(int& failures,
 }
 
 void check_fixture(int& failures,
-                   const ::pls4all::test::fixtures::MbPlsFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-    cfg.solver = P4A_SOLVER_NIPALS;
-    cfg.deflation = P4A_DEFLATION_REGRESSION;
+                   const ::n4m::test::fixtures::MbPlsFixture& fixture) {
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+    cfg.solver = N4M_SOLVER_NIPALS;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
     cfg.n_components = fixture.n_components;
 
-    p4a_matrix_view_t X = matrix_view(fixture.X);
-    p4a_matrix_view_t Y = matrix_view(fixture.Y);
-    ::pls4all::core::MbPlsResult result;
-    CHECK_EQ(::pls4all::core::fit_predict_mb_pls(ctx,
+    n4m_matrix_view_t X = matrix_view(fixture.X);
+    n4m_matrix_view_t Y = matrix_view(fixture.Y);
+    ::n4m::core::MbPlsResult result;
+    CHECK_EQ(::n4m::core::fit_predict_mb_pls(ctx,
                                                  cfg,
                                                  X,
                                                  Y,
                                                  fixture.block_sizes.values,
                                                  fixture.block_sizes.size,
                                                  result),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(result.n_samples, fixture.X.rows);
     CHECK_EQ(result.n_features, fixture.X.cols);
     CHECK_EQ(result.n_targets, fixture.Y.cols);
@@ -92,14 +92,14 @@ void check_fixture(int& failures,
 }  // namespace
 
 TEST(mb_pls_phase4r, generated_fixture_matches_python_reference) {
-    for (const auto& fixture : ::pls4all::test::fixtures::kMbPlsFixtures) {
+    for (const auto& fixture : ::n4m::test::fixtures::kMbPlsFixtures) {
         check_fixture(failures, fixture);
     }
 }
 
 TEST(mb_pls_phase4r, rejects_invalid_block_layouts) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
     cfg.n_components = 1;
     double x_values[] = {
         0.0, 0.1, 0.2,
@@ -111,26 +111,26 @@ TEST(mb_pls_phase4r, rejects_invalid_block_layouts) {
         0.3,
         0.6,
     };
-    p4a_matrix_view_t X{};
-    p4a_matrix_view_t Y{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X, x_values, 3, 3, P4A_DTYPE_F64), P4A_OK);
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&Y, y_values, 3, 1, P4A_DTYPE_F64), P4A_OK);
+    n4m_matrix_view_t X{};
+    n4m_matrix_view_t Y{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&X, x_values, 3, 3, N4M_DTYPE_F64), N4M_OK);
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&Y, y_values, 3, 1, N4M_DTYPE_F64), N4M_OK);
 
-    ::pls4all::core::MbPlsResult result;
-    CHECK_EQ(::pls4all::core::fit_predict_mb_pls(ctx, cfg, X, Y, nullptr, 0, result),
-             P4A_ERR_INVALID_ARGUMENT);
+    ::n4m::core::MbPlsResult result;
+    CHECK_EQ(::n4m::core::fit_predict_mb_pls(ctx, cfg, X, Y, nullptr, 0, result),
+             N4M_ERR_INVALID_ARGUMENT);
 
     const std::int64_t zero_block[] = {1, 0, 2};
-    CHECK_EQ(::pls4all::core::fit_predict_mb_pls(ctx, cfg, X, Y, zero_block, 3, result),
-             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::fit_predict_mb_pls(ctx, cfg, X, Y, zero_block, 3, result),
+             N4M_ERR_INVALID_ARGUMENT);
 
     const std::int64_t wrong_sum[] = {1, 1};
-    CHECK_EQ(::pls4all::core::fit_predict_mb_pls(ctx, cfg, X, Y, wrong_sum, 2, result),
-             P4A_ERR_SHAPE_MISMATCH);
+    CHECK_EQ(::n4m::core::fit_predict_mb_pls(ctx, cfg, X, Y, wrong_sum, 2, result),
+             N4M_ERR_SHAPE_MISMATCH);
 
-    p4a_matrix_view_t mismatched_y = Y;
+    n4m_matrix_view_t mismatched_y = Y;
     mismatched_y.rows = 2;
     const std::int64_t valid_blocks[] = {1, 2};
-    CHECK_EQ(::pls4all::core::fit_predict_mb_pls(ctx, cfg, X, mismatched_y, valid_blocks, 2, result),
-             P4A_ERR_SHAPE_MISMATCH);
+    CHECK_EQ(::n4m::core::fit_predict_mb_pls(ctx, cfg, X, mismatched_y, valid_blocks, 2, result),
+             N4M_ERR_SHAPE_MISMATCH);
 }

@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct CanonicalSvdFixture {
     const char* id;
@@ -276,4 +276,4 @@ inline const CanonicalSvdFixture kCanonicalSvdFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

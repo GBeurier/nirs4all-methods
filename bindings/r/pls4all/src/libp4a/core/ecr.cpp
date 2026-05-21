@@ -14,7 +14,7 @@
 
 #include "core/matrix_view.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 namespace {
 
@@ -22,31 +22,31 @@ constexpr double kEps = 1e-12;
 constexpr std::int32_t kPowerMaxIter = 500;
 constexpr double kPowerTol = 1e-9;
 
-[[nodiscard]] p4a_status_t copy_matrix(Context& ctx,
-                                        const p4a_matrix_view_t& V,
+[[nodiscard]] n4m_status_t copy_matrix(Context& ctx,
+                                        const n4m_matrix_view_t& V,
                                         const char* name,
                                         std::vector<double>& out) {
-    if (validate_nonnull_view(V) != P4A_OK ||
-        (V.dtype != P4A_DTYPE_F64 && V.dtype != P4A_DTYPE_F32)) {
+    if (validate_nonnull_view(V) != N4M_OK ||
+        (V.dtype != N4M_DTYPE_F64 && V.dtype != N4M_DTYPE_F32)) {
         ctx.set_errorf("%s must be a finite row-major matrix", name);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const auto rows = static_cast<std::size_t>(V.rows);
     const auto cols = static_cast<std::size_t>(V.cols);
     out.assign(rows * cols, 0.0);
     if (rows == 0 || cols == 0) {
-        return P4A_OK;
+        return N4M_OK;
     }
     const auto rs = static_cast<std::size_t>(V.row_stride);
     const auto cs = static_cast<std::size_t>(V.col_stride);
-    if (V.dtype == P4A_DTYPE_F64) {
+    if (V.dtype == N4M_DTYPE_F64) {
         const auto* data = static_cast<const double*>(V.data);
         for (std::size_t r = 0; r < rows; ++r) {
             for (std::size_t c = 0; c < cols; ++c) {
                 const double v = data[r * rs + c * cs];
                 if (!std::isfinite(v)) {
                     ctx.set_errorf("%s contains NaN or Inf", name);
-                    return P4A_ERR_INVALID_ARGUMENT;
+                    return N4M_ERR_INVALID_ARGUMENT;
                 }
                 out[r * cols + c] = v;
             }
@@ -58,13 +58,13 @@ constexpr double kPowerTol = 1e-9;
                 const double v = static_cast<double>(data[r * rs + c * cs]);
                 if (!std::isfinite(v)) {
                     ctx.set_errorf("%s contains NaN or Inf", name);
-                    return P4A_ERR_INVALID_ARGUMENT;
+                    return N4M_ERR_INVALID_ARGUMENT;
                 }
                 out[r * cols + c] = v;
             }
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 void column_means(const std::vector<double>& mat, std::size_t rows,
@@ -199,44 +199,44 @@ bool solve_dense(std::vector<double> A, std::vector<double>& b,
 
 }  // namespace
 
-p4a_status_t fit_ecr(Context& ctx,
+n4m_status_t fit_ecr(Context& ctx,
                      const Config& cfg,
-                     const p4a_matrix_view_t& X,
-                     const p4a_matrix_view_t& Y,
+                     const n4m_matrix_view_t& X,
+                     const n4m_matrix_view_t& Y,
                      double alpha,
                      EcrResult& out) {
     out = EcrResult{};
     if (!std::isfinite(alpha)) {
         ctx.set_error("alpha must be a finite real value");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (alpha < 0.0) alpha = 0.0;
     if (alpha > 1.0) alpha = 1.0;
     out.alpha = alpha;
 
     std::vector<double> X_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     std::vector<double> Y_buf;
     status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
 
     const auto n = static_cast<std::size_t>(X.rows);
     const auto p = static_cast<std::size_t>(X.cols);
     const auto q = static_cast<std::size_t>(Y.cols);
     if (n == 0 || p == 0 || q == 0) {
         ctx.set_error("ECR matrices must be non-empty");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.rows != Y.rows) {
         ctx.set_errorf("X rows (%lld) must match Y rows (%lld)",
                        static_cast<long long>(X.rows),
                        static_cast<long long>(Y.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (cfg.n_components < 1) {
         ctx.set_error("cfg.n_components must be >= 1");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
 
     // Center X and Y. libPLS 'center' method = mean only (no scaling).
@@ -426,7 +426,7 @@ p4a_status_t fit_ecr(Context& ctx,
             std::vector<double> x;
             if (!solve_dense(PtW, b, x, a)) {
                 ctx.set_error("ECR: P' W is singular; cannot compute Wstar / B");
-                return P4A_ERR_INTERNAL;
+                return N4M_ERR_INTERNAL;
             }
             for (std::size_t i = 0; i < a; ++i) inv[i * a + col] = x[i];
         }
@@ -471,7 +471,7 @@ p4a_status_t fit_ecr(Context& ctx,
             // Re-read centered Y for residuals.
             // Y_buf has been deflated; reconstruct original y via y_mean.
             const double orig_y = [&] {
-                if (Y.dtype == P4A_DTYPE_F64) {
+                if (Y.dtype == N4M_DTYPE_F64) {
                     const auto* data = static_cast<const double*>(Y.data);
                     const auto rs = static_cast<std::size_t>(Y.row_stride);
                     const auto cs = static_cast<std::size_t>(Y.col_stride);
@@ -490,7 +490,7 @@ p4a_status_t fit_ecr(Context& ctx,
     out.rmse = n_finite > 0 ? std::sqrt(ss_res / static_cast<double>(n_finite))
                             : 0.0;
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

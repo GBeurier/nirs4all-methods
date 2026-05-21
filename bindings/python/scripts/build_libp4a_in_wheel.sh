@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CECILL-2.1
 #
-# Build libp4a + stage it inside the Python source tree so the wheel ships
+# Build libn4m + stage it inside the Python source tree so the wheel ships
 # it as package data. Invoked by cibuildwheel via:
 #
 #   CIBW_BEFORE_ALL_LINUX:   bash bindings/python/scripts/build_libp4a_in_wheel.sh
@@ -12,7 +12,7 @@
 # wheel build for that target. The CWD is the project root.)
 #
 # Outputs:
-#   bindings/python/src/pls4all/lib/libp4a*  — the shared library + SONAME
+#   bindings/python/src/pls4all/lib/libn4m*  — the shared library + SONAME
 #                                              chain produced by CMake.
 # A pre-existing lib/ directory is wiped first to avoid leaking stale
 # artifacts from a previous matrix entry.
@@ -43,7 +43,7 @@ echo "  cmake : $(command -v cmake) — $(cmake --version | head -n1)"
 echo "  ninja : $(command -v ninja) — $(ninja --version)"
 echo "::endgroup::"
 
-echo "::group::pls4all libp4a build (preset=${PRESET})"
+echo "::group::pls4all libn4m build (preset=${PRESET})"
 
 # Fresh build to avoid stale-cache surprises when cibuildwheel runs the
 # script in a manylinux container that may already have a build directory
@@ -51,27 +51,27 @@ echo "::group::pls4all libp4a build (preset=${PRESET})"
 rm -rf "${BUILD_DIR}"
 
 cmake --preset "${PRESET}"
-cmake --build --preset "${PRESET}" --parallel --target pls4all_c
+cmake --build --preset "${PRESET}" --parallel --target n4m_c
 
 echo "::endgroup::"
 
-echo "::group::stage libp4a into ${SRC_LIB_DIR}"
+echo "::group::stage libn4m into ${SRC_LIB_DIR}"
 rm -rf "${SRC_LIB_DIR}"
 mkdir -p "${SRC_LIB_DIR}"
 
-# Copy every libp4a* file produced by CMake — on Linux that's the SONAME
-# symlinks (libp4a.so, libp4a.so.1) plus the real file
-# (libp4a.so.1.16.0); on macOS it's libp4a.dylib + libp4a.1.dylib; on
+# Copy every libn4m* file produced by CMake — on Linux that's the SONAME
+# symlinks (libn4m.so, libn4m.so.1) plus the real file
+# (libn4m.so.1.16.0); on macOS it's libn4m.dylib + libn4m.1.dylib; on
 # Windows it's p4a.dll (+ p4a.lib import lib, which we deliberately
 # leave out of the wheel — Python loaders don't need the import lib).
 case "$(uname -s)" in
     Linux*)
         # Preserve symlinks so the loader sees the conventional
-        # libp4a.so -> libp4a.so.1 -> libp4a.so.1.16.0 chain.
-        cp -a "${BUILD_DIR}/cpp/src/"libp4a.so*       "${SRC_LIB_DIR}/"
+        # libn4m.so -> libn4m.so.1 -> libn4m.so.1.16.0 chain.
+        cp -a "${BUILD_DIR}/cpp/src/"libn4m.so*       "${SRC_LIB_DIR}/"
         ;;
     Darwin*)
-        cp -a "${BUILD_DIR}/cpp/src/"libp4a*.dylib    "${SRC_LIB_DIR}/"
+        cp -a "${BUILD_DIR}/cpp/src/"libn4m*.dylib    "${SRC_LIB_DIR}/"
         ;;
     MINGW*|CYGWIN*|MSYS*)
         # MSVC multi-config generators (Visual Studio 17 2022 for our CI
@@ -85,7 +85,7 @@ case "$(uname -s)" in
         done
         if [[ ${#dll_paths[@]} -eq 0 ]]; then
             echo "ERROR: p4a.dll not found in ${BUILD_DIR}/cpp/src or Release/" >&2
-            find "${BUILD_DIR}/cpp/src" \( -name 'p4a*' -o -name 'libp4a*' \) -ls || true
+            find "${BUILD_DIR}/cpp/src" \( -name 'p4a*' -o -name 'libn4m*' \) -ls || true
             exit 1
         fi
         cp -a "${dll_paths[@]}" "${SRC_LIB_DIR}/"

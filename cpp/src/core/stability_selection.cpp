@@ -41,14 +41,14 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
     return true;
 }
 
-[[nodiscard]] double read_value(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_value(const n4m_matrix_view_t& view,
                                 std::size_t row,
                                 std::size_t col) noexcept {
     const std::int64_t off =
         static_cast<std::int64_t>(row) * view.row_stride +
         static_cast<std::int64_t>(col) * view.col_stride;
     const auto uoff = static_cast<std::size_t>(off);
-    if (view.dtype == P4A_DTYPE_F64) {
+    if (view.dtype == N4M_DTYPE_F64) {
         const auto* ptr = static_cast<const double*>(view.data);
         return ptr[uoff];
     }
@@ -56,100 +56,100 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
     return static_cast<double>(ptr[uoff]);
 }
 
-[[nodiscard]] p4a_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
+[[nodiscard]] n4m_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
                                                   std::int64_t rows,
                                                   std::int64_t cols) noexcept {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = values.data();
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols > 0 ? cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
-[[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t validate_float_view(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& view,
                                                const char* name) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(view);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(view);
+    if (status != N4M_OK) {
         ctx.set_errorf("%s matrix view is invalid: %s",
                        name,
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
-    if (view.dtype != P4A_DTYPE_F64 && view.dtype != P4A_DTYPE_F32) {
+    if (view.dtype != N4M_DTYPE_F64 && view.dtype != N4M_DTYPE_F32) {
         ctx.set_errorf("%s dtype must be f64 or f32", name);
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t validate_request(::pls4all::core::Context& ctx,
-                                            const ::pls4all::core::Config& cfg,
-                                            const p4a_matrix_view_t& X,
-                                            const p4a_matrix_view_t& Y,
-                                            const ::pls4all::core::ValidationPlan& plan,
+[[nodiscard]] n4m_status_t validate_request(::n4m::core::Context& ctx,
+                                            const ::n4m::core::Config& cfg,
+                                            const n4m_matrix_view_t& X,
+                                            const n4m_matrix_view_t& Y,
+                                            const ::n4m::core::ValidationPlan& plan,
                                             std::int32_t top_k) {
-    p4a_status_t status = validate_float_view(ctx, X, "X");
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_float_view(ctx, X, "X");
+    if (status != N4M_OK) {
         return status;
     }
     status = validate_float_view(ctx, Y, "Y");
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     if (X.rows == 0 || X.cols == 0 || Y.cols == 0) {
         ctx.set_error("stability-selection matrices must be non-empty");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.rows != Y.rows) {
         ctx.set_errorf("X rows (%lld) must match Y rows (%lld)",
                        static_cast<long long>(X.rows),
                        static_cast<long long>(Y.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (plan.n_samples != X.rows) {
         ctx.set_errorf("validation plan n_samples (%lld) must match X rows (%lld)",
                        static_cast<long long>(plan.n_samples),
                        static_cast<long long>(X.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (plan.folds.size() < 2U) {
         ctx.set_error("coefficient stability requires at least two Monte-Carlo folds");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (top_k <= 0 || top_k > X.cols) {
         ctx.set_errorf("top_k must be in [1, %lld]; got %d",
                        static_cast<long long>(X.cols),
                        static_cast<int>(top_k));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (cfg.n_components < 1 || static_cast<std::int64_t>(cfg.n_components) > X.cols) {
         ctx.set_errorf("n_components must be in [1, %lld]; got %d",
                        static_cast<long long>(X.cols),
                        static_cast<int>(cfg.n_components));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t copy_rows(::pls4all::core::Context& ctx,
-                                     const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t copy_rows(::n4m::core::Context& ctx,
+                                     const n4m_matrix_view_t& view,
                                      const std::vector<std::int64_t>& rows,
                                      const char* name,
                                      std::vector<double>& out) {
     if (rows.empty()) {
         ctx.set_errorf("%s row selection must not be empty", name);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::size_t n_values = 0;
     if (!checked_matrix_size(static_cast<std::int64_t>(rows.size()),
                              view.cols,
                              n_values)) {
         ctx.set_errorf("%s row selection shape is too large", name);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     out.assign(n_values, 0.0);
     const auto cols = static_cast<std::size_t>(view.cols);
@@ -160,14 +160,14 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
             ctx.set_errorf("%s row index out of range: %lld",
                            name,
                            static_cast<long long>(row));
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         const auto src_row = static_cast<std::size_t>(row);
         for (std::size_t col = 0; col < cols; ++col) {
             out[i * cols + col] = read_value(view, src_row, col);
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 [[nodiscard]] std::vector<std::int64_t> rank_descending(const std::vector<double>& scores) {
@@ -186,19 +186,19 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t select_by_coefficient_stability(Context& ctx,
+n4m_status_t select_by_coefficient_stability(Context& ctx,
                                              const Config& cfg,
-                                             const p4a_matrix_view_t& X,
-                                             const p4a_matrix_view_t& Y,
+                                             const n4m_matrix_view_t& X,
+                                             const n4m_matrix_view_t& Y,
                                              const ValidationPlan& plan,
                                              std::int32_t top_k,
                                              StabilitySelectionResult& out) {
     try {
         out = StabilitySelectionResult{};
-        p4a_status_t status = validate_request(ctx, cfg, X, Y, plan, top_k);
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_request(ctx, cfg, X, Y, plan, top_k);
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -213,35 +213,35 @@ p4a_status_t select_by_coefficient_stability(Context& ctx,
             std::vector<double> train_x;
             std::vector<double> train_y;
             status = copy_rows(ctx, X, fold.train_indices, "X train", train_x);
-            if (status != P4A_OK) {
+            if (status != N4M_OK) {
                 out = StabilitySelectionResult{};
                 return status;
             }
             status = copy_rows(ctx, Y, fold.train_indices, "Y train", train_y);
-            if (status != P4A_OK) {
+            if (status != N4M_OK) {
                 out = StabilitySelectionResult{};
                 return status;
             }
 
-            p4a_matrix_view_t train_x_view =
+            n4m_matrix_view_t train_x_view =
                 rowmajor_f64_view(train_x,
                                   static_cast<std::int64_t>(fold.train_indices.size()),
                                   X.cols);
-            p4a_matrix_view_t train_y_view =
+            n4m_matrix_view_t train_y_view =
                 rowmajor_f64_view(train_y,
                                   static_cast<std::int64_t>(fold.train_indices.size()),
                                   Y.cols);
 
             std::unique_ptr<Model> model;
             status = fit_model(ctx, cfg, train_x_view, train_y_view, model);
-            if (status != P4A_OK) {
+            if (status != N4M_OK) {
                 out = StabilitySelectionResult{};
                 return status;
             }
             if (!model || model->coefficients.size() != coef_count) {
                 ctx.set_error("Monte-Carlo fold fit returned inconsistent coefficients");
                 out = StabilitySelectionResult{};
-                return P4A_ERR_INTERNAL;
+                return N4M_ERR_INTERNAL;
             }
 
             const std::size_t offset = repeat * coef_count;
@@ -291,16 +291,16 @@ p4a_status_t select_by_coefficient_stability(Context& ctx,
         out.selected_indices = rank_descending(out.stability_scores);
         out.selected_indices.resize(static_cast<std::size_t>(top_k));
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while running coefficient stability selection");
         out = StabilitySelectionResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while running coefficient stability selection");
         out = StabilitySelectionResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

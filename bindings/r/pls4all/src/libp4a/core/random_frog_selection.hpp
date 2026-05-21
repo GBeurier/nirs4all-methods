@@ -7,13 +7,13 @@
 #include <cstdint>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/config.hpp"
 #include "core/context.hpp"
 #include "core/validation.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct RandomFrogSelectionResult {
     std::int32_t n_features{0};
@@ -35,11 +35,11 @@ struct RandomFrogSelectionResult {
     std::vector<std::int64_t> best_indices;
 };
 
-[[nodiscard]] p4a_status_t select_by_random_frog(
+[[nodiscard]] n4m_status_t select_by_random_frog(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     const ValidationPlan& plan,
     std::int32_t n_iterations,
     std::int32_t initial_size,
@@ -49,4 +49,4 @@ struct RandomFrogSelectionResult {
     std::uint64_t seed,
     RandomFrogSelectionResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

@@ -1,7 +1,7 @@
 """sklearn-compatible variable-selection wrappers.
 
 Selectors are MethodResult-based on the C side: the C ABI returns a
-scoring + selection report, not a re-fittable ``p4a_model_t``. Persistence
+scoring + selection report, not a re-fittable ``n4m_model_t``. Persistence
 therefore uses plain NumPy state (mask + scores) rather than the `.n4a`
 bundle path used by Model-based regressors.
 
@@ -42,7 +42,7 @@ def _default_plan(n_samples: int, *, n_folds: int = 3,
     Contiguous (non-shuffled) so the plan matches what the R + MATLAB
     binding-side helpers (`make_default_plan` in
     `bindings/r/pls4all/src/r_dispatch.c` and
-    `bindings/matlab/mex/p4a_method_fit_mex.c`) produce. With identical
+    `bindings/matlab/mex/n4m_method_fit_mex.c`) produce. With identical
     folds + the same per-selector `seed` (used only by the algorithm's
     own RNG, not the plan), every selector returns bit-identical masks
     across every binding. The `seed` argument is accepted for API

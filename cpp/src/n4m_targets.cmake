@@ -4,9 +4,9 @@
 # benchmark registry" gap. Builds the donor sources (lifted to
 # cpp/src/core/{preprocessing,augmentation,splitters,filters,utilities,common}/
 # by M3, with the common-core unified in M2.5) into a separate shared
-# library libn4m.so that lives alongside libp4a.so.
+# library libn4m.so that lives alongside libn4m.so.
 #
-# pls4all_tests and n4m_tests remain disjoint test binaries — each links
+# n4m_tests and n4m_tests remain disjoint test binaries — each links
 # its own library and tests its own ABI surface. Eventually (M5+M6 paired
 # session) the two ABIs collapse into a single n4m_* surface and the two
 # binaries merge; until then they coexist.
@@ -90,7 +90,7 @@ else()
 endif()
 target_compile_definitions(n4m_core PRIVATE N4M_BUILDING_CORE=1)
 
-# Use the same warning baseline as pls4all_core. The donor codebase has
+# Use the same warning baseline as n4m_core. The donor codebase has
 # been tested under those warnings.
 include(${CMAKE_SOURCE_DIR}/cmake/CompilerWarnings.cmake)
 pls4all_add_warnings(n4m_core)

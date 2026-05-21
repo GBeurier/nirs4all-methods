@@ -47,20 +47,20 @@ export function checkStatus(status: number, ctxPtr: number = 0): void {
     let msg = "";
     if (ctxPtr !== 0) {
         const m = getModule();
-        const cstr = m.ccall("p4a_context_last_error", "number",
+        const cstr = m.ccall("n4m_context_last_error", "number",
                               ["number"], [ctxPtr]) as number;
         if (cstr !== 0) msg = m.UTF8ToString(cstr);
     }
     if (msg === "") {
         const m = getModule();
-        const cstr = m.ccall("p4a_status_to_string", "number",
+        const cstr = m.ccall("n4m_status_to_string", "number",
                               ["number"], [status]) as number;
         if (cstr !== 0) msg = m.UTF8ToString(cstr);
     }
     throw new Pls4allError(status, msg);
 }
 
-// ---- p4a_matrix_view_t layout (mirrors cpp/include/pls4all/p4a.h) -------
+// ---- n4m_matrix_view_t layout (mirrors cpp/include/pls4all/p4a.h) -------
 //
 // struct {
 //     void*    data;       // 4 bytes (WASM is 32-bit; offset 0)
@@ -96,7 +96,7 @@ export function makeMatrixView(data: Float64Array, rows: number,
     }
     const viewPtr = m._malloc(MATRIX_VIEW_SIZE);
     const status = m.ccall(
-        "p4a_matrix_view_init_rowmajor",
+        "n4m_matrix_view_init_rowmajor",
         "number",
         ["number", "number", "number", "number", "number"],
         [viewPtr, dataPtr, rows, cols, dtype],

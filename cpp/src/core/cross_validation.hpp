@@ -14,7 +14,7 @@
 #include "core/metrics.hpp"
 #include "core/validation.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct CrossValidationResult {
     std::int64_t n_samples{0};
@@ -31,12 +31,12 @@ struct CrossValidationResult {
     RegressionMetrics metrics;
 };
 
-[[nodiscard]] p4a_status_t cross_validate_regression(
+[[nodiscard]] n4m_status_t cross_validate_regression(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     const ValidationPlan& plan,
     CrossValidationResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

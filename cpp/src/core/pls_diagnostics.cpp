@@ -19,7 +19,7 @@ namespace {
 // Project rows of X (n_rows x n_features) onto the model's latent space.
 // Returns row-major scores (n_rows x n_components). Uses model.rotations_r
 // and model.x_mean.
-void project_to_scores(const ::pls4all::core::Model& model,
+void project_to_scores(const ::n4m::core::Model& model,
                        const std::vector<double>& X,
                        std::size_t n_rows,
                        std::vector<double>& out_scores) {
@@ -39,24 +39,24 @@ void project_to_scores(const ::pls4all::core::Model& model,
     }
 }
 
-[[nodiscard]] ::p4a_status_t copy_x(::pls4all::core::Context& ctx,
-                                    const p4a_matrix_view_t& X,
-                                    const ::pls4all::core::Model& model,
+[[nodiscard]] ::n4m_status_t copy_x(::n4m::core::Context& ctx,
+                                    const n4m_matrix_view_t& X,
+                                    const ::n4m::core::Model& model,
                                     std::vector<double>& out) {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(X);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(X);
+    if (status != N4M_OK) {
         ctx.set_error("invalid X matrix view");
         return status;
     }
-    if (X.dtype != P4A_DTYPE_F64) {
+    if (X.dtype != N4M_DTYPE_F64) {
         ctx.set_error("X must be float64 for diagnostics");
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
     if (X.cols != model.n_features) {
         ctx.set_errorf("X.cols (%lld) must match model.n_features (%d)",
                        static_cast<long long>(X.cols),
                        static_cast<int>(model.n_features));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     const std::size_t rows = static_cast<std::size_t>(X.rows);
     const std::size_t cols = static_cast<std::size_t>(X.cols);
@@ -65,9 +65,9 @@ void project_to_scores(const ::pls4all::core::Model& model,
     if (data == nullptr) {
         if (rows > 0 && cols > 0) {
             ctx.set_error("X.data is null with non-zero shape");
-            return P4A_ERR_NULL_POINTER;
+            return N4M_ERR_NULL_POINTER;
         }
-        return P4A_OK;
+        return N4M_OK;
     }
     const std::size_t row_stride = static_cast<std::size_t>(X.row_stride);
     const std::size_t col_stride = static_cast<std::size_t>(X.col_stride);
@@ -76,32 +76,32 @@ void project_to_scores(const ::pls4all::core::Model& model,
             const double v = data[row * row_stride + col * col_stride];
             if (!std::isfinite(v)) {
                 ctx.set_error("X contains NaN or Inf");
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out[row * cols + col] = v;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t pls_hotelling_t2(
+n4m_status_t pls_hotelling_t2(
     Context& ctx,
     const Model& model,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t* X_reference,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t* X_reference,
     std::vector<double>& out_t2) {
     out_t2.clear();
     if (model.rotations_r.empty()) {
         ctx.set_error("model is not fitted (rotations missing)");
-        return P4A_ERR_NOT_FITTED;
+        return N4M_ERR_NOT_FITTED;
     }
     std::vector<double> x_buf;
-    p4a_status_t status = copy_x(ctx, X, model, x_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_x(ctx, X, model, x_buf);
+    if (status != N4M_OK) return status;
 
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t a = static_cast<std::size_t>(model.n_components);
@@ -111,7 +111,7 @@ p4a_status_t pls_hotelling_t2(
     if (X_reference != nullptr) {
         std::vector<double> ref_buf;
         status = copy_x(ctx, *X_reference, model, ref_buf);
-        if (status != P4A_OK) return status;
+        if (status != N4M_OK) return status;
         std::vector<double> ref_scores;
         project_to_scores(model, ref_buf,
                           static_cast<std::size_t>(X_reference->rows),
@@ -119,7 +119,7 @@ p4a_status_t pls_hotelling_t2(
         const std::size_t n_ref = static_cast<std::size_t>(X_reference->rows);
         if (n_ref < 2) {
             ctx.set_error("Hotelling T2 reference requires at least 2 rows");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         for (std::size_t comp = 0; comp < a; ++comp) {
             double mean = 0.0;
@@ -138,7 +138,7 @@ p4a_status_t pls_hotelling_t2(
         const std::size_t n_train = static_cast<std::size_t>(model.n_samples);
         if (n_train < 2) {
             ctx.set_error("Hotelling T2 fallback requires >= 2 stored scores");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         for (std::size_t comp = 0; comp < a; ++comp) {
             double mean = 0.0;
@@ -157,7 +157,7 @@ p4a_status_t pls_hotelling_t2(
     } else {
         ctx.set_error(
             "Hotelling T2 needs either X_reference or model.store_scores=1");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
 
     for (std::size_t comp = 0; comp < a; ++comp) {
@@ -165,7 +165,7 @@ p4a_status_t pls_hotelling_t2(
             ctx.set_errorf(
                 "Hotelling T2 reference variance is zero at component %llu",
                 static_cast<unsigned long long>(comp));
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
     }
 
@@ -180,22 +180,22 @@ p4a_status_t pls_hotelling_t2(
         }
         out_t2[row] = sum;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t pls_q_residuals(
+n4m_status_t pls_q_residuals(
     Context& ctx,
     const Model& model,
-    const p4a_matrix_view_t& X,
+    const n4m_matrix_view_t& X,
     std::vector<double>& out_q) {
     out_q.clear();
     if (model.loadings_p.empty() || model.rotations_r.empty()) {
         ctx.set_error("model is not fitted (loadings/rotations missing)");
-        return P4A_ERR_NOT_FITTED;
+        return N4M_ERR_NOT_FITTED;
     }
     std::vector<double> x_buf;
-    p4a_status_t status = copy_x(ctx, X, model, x_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_x(ctx, X, model, x_buf);
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(model.n_features);
     const std::size_t a = static_cast<std::size_t>(model.n_components);
@@ -219,25 +219,25 @@ p4a_status_t pls_q_residuals(
         }
         out_q[row] = sumsq;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t pls_dmodx(
+n4m_status_t pls_dmodx(
     Context& ctx,
     const Model& model,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t* X_reference,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t* X_reference,
     std::vector<double>& out_dmodx) {
     out_dmodx.clear();
     std::vector<double> q;
-    p4a_status_t status = pls_q_residuals(ctx, model, X, q);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = pls_q_residuals(ctx, model, X, q);
+    if (status != N4M_OK) return status;
     const std::size_t n = q.size();
     const std::size_t p = static_cast<std::size_t>(model.n_features);
     const std::size_t a = static_cast<std::size_t>(model.n_components);
     if (p <= a) {
         ctx.set_error("DModX requires n_features > n_components");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const double dof = static_cast<double>(p - a);
 
@@ -245,11 +245,11 @@ p4a_status_t pls_dmodx(
     if (X_reference != nullptr) {
         std::vector<double> q_ref;
         status = pls_q_residuals(ctx, model, *X_reference, q_ref);
-        if (status != P4A_OK) return status;
+        if (status != N4M_OK) return status;
         const std::size_t n_ref = q_ref.size();
         if (n_ref < a + 2U) {
             ctx.set_error("DModX reference requires at least n_components + 2 rows");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         double sum = 0.0;
         for (double q_value : q_ref) sum += q_value;
@@ -257,7 +257,7 @@ p4a_status_t pls_dmodx(
             static_cast<double>(n_ref) - static_cast<double>(a) - 1.0;
         if (!(dof_ref > 0.0)) {
             ctx.set_error("DModX reference DoF is non-positive");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         sigma = std::sqrt(sum / (dof * dof_ref));
         if (!(sigma > 0.0)) sigma = 1.0;
@@ -267,7 +267,7 @@ p4a_status_t pls_dmodx(
     for (std::size_t row = 0; row < n; ++row) {
         out_dmodx[row] = std::sqrt(q[row] / dof) / sigma;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

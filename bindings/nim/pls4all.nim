@@ -1,26 +1,26 @@
 # SPDX-License-Identifier: CECILL-2.1
 ##
-## Nim binding around libp4a's `p4a_pls_fit_simple` C ABI helper.
+## Nim binding around libn4m's `n4m_pls_fit_simple` C ABI helper.
 ## Uses Nim's built-in `{.importc, dynlib.}` pragmas — no nimble
 ## packages required. Parity-gated against the shared cross-binding
 ## fixture `bindings/js/test/parity_fixture.json` at machine epsilon.
 
 import std/strformat
 
-# libp4a shared-object name. Override at compile time with
-# `nim c -d:libp4aName=/abs/path/libp4a.so.0.93.0 ...` for an
+# libn4m shared-object name. Override at compile time with
+# `nim c -d:libp4aName=/abs/path/libn4m.so.0.93.0 ...` for an
 # explicit path; the runtime loader handles standard-name fallback
 # via LD_LIBRARY_PATH / DYLD_LIBRARY_PATH / PATH.
-const libp4aName {.strdefine: "libp4aName".} = "libp4a.so"
+const libp4aName {.strdefine: "libp4aName".} = "libn4m.so"
 
 {.push importc, dynlib: libp4aName.}
 
-proc p4a_get_version_string(): cstring
-proc p4a_get_abi_version_major(): cuint
-proc p4a_get_abi_version_minor(): cuint
-proc p4a_get_abi_version_patch(): cuint
+proc n4m_get_version_string(): cstring
+proc n4m_get_abi_version_major(): cuint
+proc n4m_get_abi_version_minor(): cuint
+proc n4m_get_abi_version_patch(): cuint
 
-proc p4a_pls_fit_simple(
+proc n4m_pls_fit_simple(
   x: ptr cdouble; y: ptr cdouble;
   n, p, q, nComponents: cint;
   coefficientsOut: ptr cdouble;
@@ -38,17 +38,17 @@ type FitResult* = object
   predictions*: seq[float64]    ## length n*q (row-major)
 
 proc version*(): string =
-  ## Returns the libp4a runtime version, e.g. "0.93.0+abi.1.13.0".
-  let raw = p4a_get_version_string()
+  ## Returns the libn4m runtime version, e.g. "0.93.0+abi.1.13.0".
+  let raw = n4m_get_version_string()
   if raw.isNil: result = ""
   else: result = $raw
 
 proc abiVersion*(): tuple[major, minor, patch: int] =
-  ## Returns the libp4a ABI (major, minor, patch).
+  ## Returns the libn4m ABI (major, minor, patch).
   result = (
-    int(p4a_get_abi_version_major()),
-    int(p4a_get_abi_version_minor()),
-    int(p4a_get_abi_version_patch()),
+    int(n4m_get_abi_version_major()),
+    int(n4m_get_abi_version_minor()),
+    int(n4m_get_abi_version_patch()),
   )
 
 proc plsFit*(
@@ -74,7 +74,7 @@ proc plsFit*(
 
   # `openArray[float64]` is contiguous, so the address of element 0
   # is the row-major buffer head. Same convention as Rust / Go.
-  let status = p4a_pls_fit_simple(
+  let status = n4m_pls_fit_simple(
     cast[ptr cdouble](unsafeAddr x[0]),
     cast[ptr cdouble](unsafeAddr y[0]),
     cint(n), cint(p), cint(q), cint(nComponents),
@@ -85,7 +85,7 @@ proc plsFit*(
   )
   if status != 0:
     raise newException(IOError,
-      &"p4a_pls_fit_simple failed with status {status}")
+      &"n4m_pls_fit_simple failed with status {status}")
 
   result = FitResult(
     n: n, p: p, q: q, nComponents: nComponents,

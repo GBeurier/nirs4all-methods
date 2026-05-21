@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct RandomizedSvdFixture {
     const char* id;
@@ -291,4 +291,4 @@ inline const RandomizedSvdFixture kRandomizedSvdFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

@@ -23,23 +23,23 @@ namespace {
 
 constexpr double kTol = 1e-8;
 
-p4a_matrix_view_t make_view(const std::vector<double>& data,
+n4m_matrix_view_t make_view(const std::vector<double>& data,
                             std::int64_t rows,
                             std::int64_t cols) {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = const_cast<double*>(data.data());
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
 // Fit a small SIMPLS model used by every diagnostic test.
 void fit_simpls(int& failures,
-                ::pls4all::core::Context& ctx,
-                std::unique_ptr<::pls4all::core::Model>& out_model,
+                ::n4m::core::Context& ctx,
+                std::unique_ptr<::n4m::core::Model>& out_model,
                 bool store_scores = true) {
     static const std::vector<double> Xv = {
         0.10, 0.50, 0.90, 0.20,
@@ -54,28 +54,28 @@ void fit_simpls(int& failures,
     static const std::vector<double> Yv = {
         1.1, 0.7, 0.4, 1.0, 0.9, 0.6, 1.2, 1.3,
     };
-    p4a_matrix_view_t X = make_view(Xv, 8, 4);
-    p4a_matrix_view_t Y = make_view(Yv, 8, 1);
+    n4m_matrix_view_t X = make_view(Xv, 8, 4);
+    n4m_matrix_view_t Y = make_view(Yv, 8, 1);
 
-    ::pls4all::core::Config cfg;
-    cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-    cfg.solver = P4A_SOLVER_SIMPLS;
-    cfg.deflation = P4A_DEFLATION_REGRESSION;
+    ::n4m::core::Config cfg;
+    cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+    cfg.solver = N4M_SOLVER_SIMPLS;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
     cfg.n_components = 2;
     cfg.center_x = 1;
     cfg.scale_x = 0;
     cfg.center_y = 1;
     cfg.scale_y = 0;
     cfg.store_scores = store_scores ? 1 : 0;
-    CHECK_EQ(::pls4all::core::fit_pls_regression_simpls(ctx, cfg, X, Y, out_model),
-             P4A_OK);
+    CHECK_EQ(::n4m::core::fit_pls_regression_simpls(ctx, cfg, X, Y, out_model),
+             N4M_OK);
 }
 
 }  // namespace
 
 TEST(pls_diagnostics_phase9, q_residual_zero_when_recovered) {
-    ::pls4all::core::Context ctx;
-    std::unique_ptr<::pls4all::core::Model> model;
+    ::n4m::core::Context ctx;
+    std::unique_ptr<::n4m::core::Model> model;
     fit_simpls(failures, ctx, model, /*store_scores=*/true);
 
     // Reuse the training samples — Q should be ~0 when latent space spans X.
@@ -92,9 +92,9 @@ TEST(pls_diagnostics_phase9, q_residual_zero_when_recovered) {
         0.70, 0.60, 0.30, 0.20,
         0.50, 0.80, 0.70, 0.80,
     };
-    p4a_matrix_view_t X = make_view(Xv, 8, 4);
+    n4m_matrix_view_t X = make_view(Xv, 8, 4);
     std::vector<double> q;
-    CHECK_EQ(::pls4all::core::pls_q_residuals(ctx, *model, X, q), P4A_OK);
+    CHECK_EQ(::n4m::core::pls_q_residuals(ctx, *model, X, q), N4M_OK);
     CHECK_EQ(q.size(), static_cast<std::size_t>(8));
     for (double q_value : q) {
         CHECK(std::isfinite(q_value));
@@ -103,8 +103,8 @@ TEST(pls_diagnostics_phase9, q_residual_zero_when_recovered) {
 }
 
 TEST(pls_diagnostics_phase9, hotelling_t2_uses_training_variance) {
-    ::pls4all::core::Context ctx;
-    std::unique_ptr<::pls4all::core::Model> model;
+    ::n4m::core::Context ctx;
+    std::unique_ptr<::n4m::core::Model> model;
     fit_simpls(failures, ctx, model, /*store_scores=*/true);
 
     std::vector<double> Xv = {
@@ -117,12 +117,12 @@ TEST(pls_diagnostics_phase9, hotelling_t2_uses_training_variance) {
         0.70, 0.60, 0.30, 0.20,
         0.50, 0.80, 0.70, 0.80,
     };
-    p4a_matrix_view_t X = make_view(Xv, 8, 4);
+    n4m_matrix_view_t X = make_view(Xv, 8, 4);
 
     std::vector<double> t2_stored;
-    CHECK_EQ(::pls4all::core::pls_hotelling_t2(ctx, *model, X, nullptr,
+    CHECK_EQ(::n4m::core::pls_hotelling_t2(ctx, *model, X, nullptr,
                                                t2_stored),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(t2_stored.size(), static_cast<std::size_t>(8));
     for (double v : t2_stored) {
         CHECK(std::isfinite(v));
@@ -130,8 +130,8 @@ TEST(pls_diagnostics_phase9, hotelling_t2_uses_training_variance) {
     }
 
     std::vector<double> t2_ref;
-    CHECK_EQ(::pls4all::core::pls_hotelling_t2(ctx, *model, X, &X, t2_ref),
-             P4A_OK);
+    CHECK_EQ(::n4m::core::pls_hotelling_t2(ctx, *model, X, &X, t2_ref),
+             N4M_OK);
     for (std::size_t i = 0; i < t2_stored.size(); ++i) {
         const double diff = std::fabs(t2_stored[i] - t2_ref[i]);
         if (diff > kTol) {
@@ -145,8 +145,8 @@ TEST(pls_diagnostics_phase9, hotelling_t2_uses_training_variance) {
 }
 
 TEST(pls_diagnostics_phase9, hotelling_t2_without_scores_requires_reference) {
-    ::pls4all::core::Context ctx;
-    std::unique_ptr<::pls4all::core::Model> model;
+    ::n4m::core::Context ctx;
+    std::unique_ptr<::n4m::core::Model> model;
     fit_simpls(failures, ctx, model, /*store_scores=*/false);
 
     std::vector<double> Xv = {
@@ -154,16 +154,16 @@ TEST(pls_diagnostics_phase9, hotelling_t2_without_scores_requires_reference) {
         0.30, 0.40, 0.80, 0.60,
         0.60, 0.10, 0.20, 0.70,
     };
-    p4a_matrix_view_t X = make_view(Xv, 3, 4);
+    n4m_matrix_view_t X = make_view(Xv, 3, 4);
 
     std::vector<double> t2;
-    CHECK_EQ(::pls4all::core::pls_hotelling_t2(ctx, *model, X, nullptr, t2),
-             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::pls_hotelling_t2(ctx, *model, X, nullptr, t2),
+             N4M_ERR_INVALID_ARGUMENT);
 }
 
 TEST(pls_diagnostics_phase9, dmodx_is_q_normalized) {
-    ::pls4all::core::Context ctx;
-    std::unique_ptr<::pls4all::core::Model> model;
+    ::n4m::core::Context ctx;
+    std::unique_ptr<::n4m::core::Model> model;
     fit_simpls(failures, ctx, model, /*store_scores=*/true);
 
     std::vector<double> Xv = {
@@ -176,15 +176,15 @@ TEST(pls_diagnostics_phase9, dmodx_is_q_normalized) {
         0.70, 0.60, 0.30, 0.20,
         0.50, 0.80, 0.70, 0.80,
     };
-    p4a_matrix_view_t X = make_view(Xv, 8, 4);
+    n4m_matrix_view_t X = make_view(Xv, 8, 4);
 
     std::vector<double> q;
     std::vector<double> dmodx_plain;
     std::vector<double> dmodx_ref;
-    CHECK_EQ(::pls4all::core::pls_q_residuals(ctx, *model, X, q), P4A_OK);
-    CHECK_EQ(::pls4all::core::pls_dmodx(ctx, *model, X, nullptr, dmodx_plain),
-             P4A_OK);
-    CHECK_EQ(::pls4all::core::pls_dmodx(ctx, *model, X, &X, dmodx_ref), P4A_OK);
+    CHECK_EQ(::n4m::core::pls_q_residuals(ctx, *model, X, q), N4M_OK);
+    CHECK_EQ(::n4m::core::pls_dmodx(ctx, *model, X, nullptr, dmodx_plain),
+             N4M_OK);
+    CHECK_EQ(::n4m::core::pls_dmodx(ctx, *model, X, &X, dmodx_ref), N4M_OK);
 
     const double dof = static_cast<double>(model->n_features -
                                             model->n_components);
@@ -208,13 +208,13 @@ TEST(pls_diagnostics_phase9, dmodx_is_q_normalized) {
 }
 
 TEST(pls_diagnostics_phase9, rejects_shape_and_dtype_mismatches) {
-    ::pls4all::core::Context ctx;
-    std::unique_ptr<::pls4all::core::Model> model;
+    ::n4m::core::Context ctx;
+    std::unique_ptr<::n4m::core::Model> model;
     fit_simpls(failures, ctx, model, /*store_scores=*/true);
 
     std::vector<double> Xv = {0.1, 0.2, 0.3};  // 1 row × 3 cols
-    p4a_matrix_view_t X = make_view(Xv, 1, 3);
+    n4m_matrix_view_t X = make_view(Xv, 1, 3);
     std::vector<double> q;
-    CHECK_EQ(::pls4all::core::pls_q_residuals(ctx, *model, X, q),
-             P4A_ERR_SHAPE_MISMATCH);
+    CHECK_EQ(::n4m::core::pls_q_residuals(ctx, *model, X, q),
+             N4M_ERR_SHAPE_MISMATCH);
 }

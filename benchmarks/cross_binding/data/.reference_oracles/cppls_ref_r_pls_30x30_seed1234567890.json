@@ -1,0 +1,19 @@
+{
+  "algorithm": "cppls",
+  "backend": "ref_r_pls",
+  "max_runs": 1,
+  "n": 30,
+  "n_runs": 1,
+  "p": 30,
+  "prediction_seed": 1234567890,
+  "seed_base": 1234567890,
+  "source_predictions_path": "/home/delete/nirs4all/pls4all/benchmarks/cross_binding/data/.predictions/cppls_ref_r_pls_30x30_t1_blas-omp_seed1234567890.npy",
+  "timing_statistic": "single",
+  "total_runs": 1,
+  "versions": {
+    "language": "R 4.3.3",
+    "pls": "2.8.5",
+    "timing_schema": "adaptive-v1"
+  },
+  "warmup_ms": 13.0154
+}

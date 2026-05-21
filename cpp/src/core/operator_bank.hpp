@@ -11,7 +11,7 @@
 #include "pls4all/p4a.h"
 #include "core/operator_entry.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 class OperatorBank {
   public:
@@ -22,7 +22,7 @@ class OperatorBank {
     OperatorBank(OperatorBank&&) noexcept = default;
     OperatorBank& operator=(OperatorBank&&) noexcept = default;
 
-    void add(p4a_operator_kind_t kind, const double* params, std::int32_t n_params) {
+    void add(n4m_operator_kind_t kind, const double* params, std::int32_t n_params) {
         entries_.emplace_back(kind, params, n_params);
     }
     [[nodiscard]] std::int32_t size() const noexcept {
@@ -36,6 +36,6 @@ class OperatorBank {
     std::vector<OperatorEntry> entries_;
 };
 
-}  // namespace pls4all::core
+}  // namespace n4m::core
 
-struct p4a_operator_bank_s : public ::pls4all::core::OperatorBank {};
+struct n4m_operator_bank_s : public ::n4m::core::OperatorBank {};

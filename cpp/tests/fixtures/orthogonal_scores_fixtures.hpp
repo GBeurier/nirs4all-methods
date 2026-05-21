@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct OrthogonalScoresFixture {
     const char* id;
@@ -283,4 +283,4 @@ inline const OrthogonalScoresFixture kOrthogonalScoresFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

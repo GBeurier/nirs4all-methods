@@ -10,7 +10,7 @@
 
 #include "core/context.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct RegressionMetrics {
     std::int64_t rows{0};
@@ -28,10 +28,10 @@ struct RegressionMetrics {
     double rpiq{0.0};
 };
 
-[[nodiscard]] p4a_status_t compute_regression_metrics(
+[[nodiscard]] n4m_status_t compute_regression_metrics(
     Context& ctx,
-    const p4a_matrix_view_t& observed,
-    const p4a_matrix_view_t& predicted,
+    const n4m_matrix_view_t& observed,
+    const n4m_matrix_view_t& predicted,
     RegressionMetrics& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

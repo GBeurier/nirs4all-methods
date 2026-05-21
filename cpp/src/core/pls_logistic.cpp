@@ -54,7 +54,7 @@ constexpr int kLineSearchSteps = 32;
     return true;
 }
 
-[[nodiscard]] double read_numeric(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_numeric(const n4m_matrix_view_t& view,
                                   std::size_t row,
                                   std::size_t col) noexcept {
     const std::int64_t off =
@@ -62,23 +62,23 @@ constexpr int kLineSearchSteps = 32;
         static_cast<std::int64_t>(col) * view.col_stride;
     const auto uoff = static_cast<std::size_t>(off);
     switch (view.dtype) {
-        case P4A_DTYPE_F64: {
+        case N4M_DTYPE_F64: {
             const auto* ptr = static_cast<const double*>(view.data);
             return ptr[uoff];
         }
-        case P4A_DTYPE_F32: {
+        case N4M_DTYPE_F32: {
             const auto* ptr = static_cast<const float*>(view.data);
             return static_cast<double>(ptr[uoff]);
         }
-        case P4A_DTYPE_I32: {
+        case N4M_DTYPE_I32: {
             const auto* ptr = static_cast<const std::int32_t*>(view.data);
             return static_cast<double>(ptr[uoff]);
         }
-        case P4A_DTYPE_I64: {
+        case N4M_DTYPE_I64: {
             const auto* ptr = static_cast<const std::int64_t*>(view.data);
             return static_cast<double>(ptr[uoff]);
         }
-        case P4A_DTYPE_UNKNOWN:
+        case N4M_DTYPE_UNKNOWN:
             return 0.0;
     }
     return 0.0;
@@ -90,38 +90,38 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     std::fill(values.begin(), values.end(), fill);
 }
 
-[[nodiscard]] p4a_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
+[[nodiscard]] n4m_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
                                                   std::int64_t rows,
                                                   std::int64_t cols) noexcept {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = values.data();
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols > 0 ? cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
-[[nodiscard]] p4a_status_t validate_labels(::pls4all::core::Context& ctx,
-                                           const p4a_matrix_view_t& labels,
+[[nodiscard]] n4m_status_t validate_labels(::n4m::core::Context& ctx,
+                                           const n4m_matrix_view_t& labels,
                                            std::int64_t n_samples,
                                            std::int32_t n_classes,
                                            std::vector<std::int32_t>& out) {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(labels);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(labels);
+    if (status != N4M_OK) {
         ctx.set_errorf("labels matrix view is invalid: %s",
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
     std::int64_t label_count = 0;
     if (!checked_mul_i64(labels.rows, labels.cols, label_count)) {
         ctx.set_error("label count overflows int64");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (label_count != n_samples) {
         ctx.set_error("label count must match X rows");
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     out.clear();
     out.reserve(static_cast<std::size_t>(label_count));
@@ -134,12 +134,12 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
                 value < 0.0 || value >= static_cast<double>(n_classes)) {
                 ctx.set_errorf("labels must be integer class ids in [0, %d)",
                                static_cast<int>(n_classes));
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out.push_back(static_cast<std::int32_t>(value));
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 [[nodiscard]] bool solve_linear_system(std::vector<double> a,
@@ -263,14 +263,14 @@ void compute_row_probabilities(const std::vector<double>& beta,
     return loss;
 }
 
-[[nodiscard]] p4a_status_t fit_baseline_logistic(::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t fit_baseline_logistic(::n4m::core::Context& ctx,
                                                  const std::vector<double>& scores,
                                                  const std::vector<std::int32_t>& labels,
                                                  std::size_t n_samples,
                                                  std::size_t n_components,
                                                  std::size_t n_classes,
                                                  std::int32_t max_iter,
-                                                 ::pls4all::core::PlsLogisticResult& out) {
+                                                 ::n4m::core::PlsLogisticResult& out) {
     const std::size_t n_terms = n_components + 1U;
     const std::size_t n_tail_classes = n_classes - 1U;
     std::size_t design_size = 0;
@@ -280,7 +280,7 @@ void compute_row_probabilities(const std::vector<double>& beta,
         !checked_mul_size(n_tail_classes, n_terms, param_count) ||
         !checked_mul_size(param_count, param_count, hessian_size)) {
         ctx.set_error("PLS-logistic working size overflows size_t");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
 
     std::vector<double> design(design_size, 0.0);
@@ -346,7 +346,7 @@ void compute_row_probabilities(const std::vector<double>& beta,
 
         if (!solve_linear_system(hessian, gradient, param_count, step)) {
             ctx.set_error("failed to solve PLS-logistic Newton system");
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         double max_step = 0.0;
         for (const double value : step) {
@@ -380,7 +380,7 @@ void compute_row_probabilities(const std::vector<double>& beta,
         }
         if (!accepted) {
             ctx.set_error("PLS-logistic Newton line search failed");
-            return P4A_ERR_CONVERGENCE_FAILED;
+            return N4M_ERR_CONVERGENCE_FAILED;
         }
         beta = candidate;
         if (alpha * max_step <= kLogisticTol) {
@@ -421,46 +421,46 @@ void compute_row_probabilities(const std::vector<double>& beta,
         }
         out.predictions[row] = static_cast<std::int32_t>(best_cls);
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t fit_predict_pls_logistic(Context& ctx,
+n4m_status_t fit_predict_pls_logistic(Context& ctx,
                                      const Config& cfg,
-                                     const p4a_matrix_view_t& X,
-                                     const p4a_matrix_view_t& labels,
+                                     const n4m_matrix_view_t& X,
+                                     const n4m_matrix_view_t& labels,
                                      std::int32_t n_classes,
                                      PlsLogisticResult& out) {
     try {
         out = PlsLogisticResult{};
-        const p4a_status_t x_status = validate_nonnull_view(X);
-        if (x_status != P4A_OK) {
+        const n4m_status_t x_status = validate_nonnull_view(X);
+        if (x_status != N4M_OK) {
             ctx.set_errorf("X matrix view is invalid: %s", status_to_string(x_status));
             return x_status;
         }
-        if (X.dtype != P4A_DTYPE_F64 && X.dtype != P4A_DTYPE_F32) {
+        if (X.dtype != N4M_DTYPE_F64 && X.dtype != N4M_DTYPE_F32) {
             ctx.set_error("X dtype must be f64 or f32");
-            return P4A_ERR_DTYPE_MISMATCH;
+            return N4M_ERR_DTYPE_MISMATCH;
         }
         if (X.rows <= 0 || X.cols <= 0) {
             ctx.set_error("X matrix must be non-empty");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (n_classes < 2) {
             ctx.set_errorf("n_classes must be >= 2; got %d", static_cast<int>(n_classes));
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (cfg.n_components < 1) {
             ctx.set_error("PLS-logistic requires at least one PLS component");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
         std::vector<std::int32_t> y_labels;
-        p4a_status_t status = validate_labels(ctx, labels, X.rows, n_classes, y_labels);
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_labels(ctx, labels, X.rows, n_classes, y_labels);
+        if (status != N4M_OK) {
             return status;
         }
         const auto n = static_cast<std::size_t>(X.rows);
@@ -471,7 +471,7 @@ p4a_status_t fit_predict_pls_logistic(Context& ctx,
         if (!checked_mul_size(n, c, n_times_c) ||
             !checked_mul_size(n, k, n_times_k)) {
             ctx.set_error("PLS-logistic working size overflows size_t");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
         std::vector<std::int64_t> class_counts(c, 0);
@@ -485,26 +485,26 @@ p4a_status_t fit_predict_pls_logistic(Context& ctx,
             if (class_counts[cls] == 0) {
                 ctx.set_errorf("class %llu has no labels",
                                static_cast<unsigned long long>(cls));
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
         }
 
         Config pls_cfg = cfg;
-        pls_cfg.algorithm = P4A_ALGO_PLS_DA;
-        pls_cfg.deflation = P4A_DEFLATION_REGRESSION;
-        p4a_matrix_view_t Y = rowmajor_f64_view(dummy_y, X.rows, n_classes);
+        pls_cfg.algorithm = N4M_ALGO_PLS_DA;
+        pls_cfg.deflation = N4M_DEFLATION_REGRESSION;
+        n4m_matrix_view_t Y = rowmajor_f64_view(dummy_y, X.rows, n_classes);
         std::unique_ptr<Model> pls_model;
         status = fit_model(ctx, pls_cfg, X, Y, pls_model);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
         std::vector<double> scores(n_times_k, 0.0);
-        p4a_matrix_view_t score_view = rowmajor_f64_view(scores,
+        n4m_matrix_view_t score_view = rowmajor_f64_view(scores,
                                                          X.rows,
                                                          cfg.n_components);
         status = transform_into(ctx, *pls_model, X, score_view);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -519,7 +519,7 @@ p4a_status_t fit_predict_pls_logistic(Context& ctx,
                                        c,
                                        cfg.max_iter,
                                        out);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             out = PlsLogisticResult{};
             return status;
         }
@@ -528,16 +528,16 @@ p4a_status_t fit_predict_pls_logistic(Context& ctx,
         out.n_components = cfg.n_components;
 
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while fitting PLS-logistic");
         out = PlsLogisticResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while fitting PLS-logistic");
         out = PlsLogisticResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

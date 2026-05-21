@@ -14,7 +14,7 @@
 #include "core/metrics.hpp"
 #include "core/validation.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct ComponentCvResult {
     std::int32_t max_components{0};
@@ -41,11 +41,11 @@ struct ComponentCvResult {
     double one_se_threshold{0.0};
 };
 
-[[nodiscard]] p4a_status_t cross_validate_component_prefixes(
+[[nodiscard]] n4m_status_t cross_validate_component_prefixes(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     const ValidationPlan& plan,
     std::int32_t max_components,
     ComponentCvResult& out);
@@ -54,8 +54,8 @@ struct ComponentCvResult {
 // the result in place: sets one_se_n_components, one_se_standard_error,
 // one_se_threshold. Requires `result.fold_rmse_matrix` to be populated by
 // `cross_validate_component_prefixes`.
-[[nodiscard]] p4a_status_t select_one_se_components(
+[[nodiscard]] n4m_status_t select_one_se_components(
     Context& ctx,
     ComponentCvResult& result);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

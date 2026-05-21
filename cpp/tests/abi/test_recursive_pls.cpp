@@ -17,16 +17,16 @@
 
 namespace {
 
-p4a_matrix_view_t make_view(const std::vector<double>& data,
+n4m_matrix_view_t make_view(const std::vector<double>& data,
                             std::int64_t rows,
                             std::int64_t cols) {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = const_cast<double*>(data.data());
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
@@ -51,24 +51,24 @@ TEST(recursive_pls_phase15, moving_window_predicts_in_streaming_order) {
     std::vector<double> Yv = {
         1.1, 0.7, 0.4, 1.0, 0.9, 0.6, 1.2, 1.3, 1.05, 0.72, 0.45, 1.02
     };
-    p4a_matrix_view_t X = make_view(Xv, 12, 3);
-    p4a_matrix_view_t Y = make_view(Yv, 12, 1);
+    n4m_matrix_view_t X = make_view(Xv, 12, 3);
+    n4m_matrix_view_t Y = make_view(Yv, 12, 1);
 
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-    cfg.solver = P4A_SOLVER_SIMPLS;
-    cfg.deflation = P4A_DEFLATION_REGRESSION;
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+    cfg.solver = N4M_SOLVER_SIMPLS;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
     cfg.n_components = 2;
     cfg.center_x = 1;
     cfg.scale_x = 0;
     cfg.center_y = 1;
     cfg.scale_y = 0;
 
-    ::pls4all::core::RecursivePlsResult result;
-    CHECK_EQ(::pls4all::core::fit_predict_recursive_pls(ctx, cfg, X, Y, 6,
+    ::n4m::core::RecursivePlsResult result;
+    CHECK_EQ(::n4m::core::fit_predict_recursive_pls(ctx, cfg, X, Y, 6,
                                                         result),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(result.n_samples, 12);
     CHECK_EQ(result.window_size, 6);
     CHECK_EQ(result.predictions.size(), static_cast<std::size_t>(12));
@@ -89,28 +89,28 @@ TEST(recursive_pls_phase15, moving_window_predicts_in_streaming_order) {
 TEST(recursive_pls_phase15, rejects_invalid_window) {
     std::vector<double> Xv = {0.1, 0.2, 0.3, 0.4};
     std::vector<double> Yv = {1.0, 0.0};
-    p4a_matrix_view_t X = make_view(Xv, 2, 2);
-    p4a_matrix_view_t Y = make_view(Yv, 2, 1);
+    n4m_matrix_view_t X = make_view(Xv, 2, 2);
+    n4m_matrix_view_t Y = make_view(Yv, 2, 1);
 
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-    cfg.solver = P4A_SOLVER_SIMPLS;
-    cfg.deflation = P4A_DEFLATION_REGRESSION;
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+    cfg.solver = N4M_SOLVER_SIMPLS;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
     cfg.n_components = 1;
-    ::pls4all::core::RecursivePlsResult result;
+    ::n4m::core::RecursivePlsResult result;
 
     // window_size < 2.
-    CHECK_EQ(::pls4all::core::fit_predict_recursive_pls(ctx, cfg, X, Y, 1,
+    CHECK_EQ(::n4m::core::fit_predict_recursive_pls(ctx, cfg, X, Y, 1,
                                                         result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
     // window_size > n_rows.
-    CHECK_EQ(::pls4all::core::fit_predict_recursive_pls(ctx, cfg, X, Y, 3,
+    CHECK_EQ(::n4m::core::fit_predict_recursive_pls(ctx, cfg, X, Y, 3,
                                                         result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
     // n_components >= window_size.
     cfg.n_components = 2;
-    CHECK_EQ(::pls4all::core::fit_predict_recursive_pls(ctx, cfg, X, Y, 2,
+    CHECK_EQ(::n4m::core::fit_predict_recursive_pls(ctx, cfg, X, Y, 2,
                                                         result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 }

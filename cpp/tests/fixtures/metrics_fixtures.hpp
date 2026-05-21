@@ -4,7 +4,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct MetricsFixture {
     const char* id;
@@ -42,4 +42,4 @@ inline const MetricsFixture kMetricsFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

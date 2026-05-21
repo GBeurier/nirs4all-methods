@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct SpaSelectionIndexRef {
     const std::int64_t* values;
@@ -131,4 +131,4 @@ inline const SpaSelectionFixture kSpaSelectionFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

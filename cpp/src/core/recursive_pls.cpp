@@ -11,7 +11,7 @@
 #include "core/matrix_view.hpp"
 #include "core/model.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 namespace {
 
@@ -19,61 +19,61 @@ namespace {
     return row * cols + col;
 }
 
-p4a_matrix_view_t make_rowmajor_view(double* data,
+n4m_matrix_view_t make_rowmajor_view(double* data,
                                       std::int64_t rows,
                                       std::int64_t cols) {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = data;
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols > 0 ? cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
 }  // namespace
 
-p4a_status_t fit_predict_recursive_pls(Context& ctx,
+n4m_status_t fit_predict_recursive_pls(Context& ctx,
                                         const Config& cfg,
-                                        const p4a_matrix_view_t& X,
-                                        const p4a_matrix_view_t& Y,
+                                        const n4m_matrix_view_t& X,
+                                        const n4m_matrix_view_t& Y,
                                         std::int32_t window_size,
                                         RecursivePlsResult& out) {
     out = RecursivePlsResult{};
-    if (validate_nonnull_view(X) != P4A_OK ||
-        validate_nonnull_view(Y) != P4A_OK) {
+    if (validate_nonnull_view(X) != N4M_OK ||
+        validate_nonnull_view(Y) != N4M_OK) {
         ctx.set_error("invalid matrix view");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.rows != Y.rows) {
         ctx.set_error("X and Y must have the same row count");
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
-    if (X.dtype != P4A_DTYPE_F64 || Y.dtype != P4A_DTYPE_F64) {
+    if (X.dtype != N4M_DTYPE_F64 || Y.dtype != N4M_DTYPE_F64) {
         ctx.set_error("recursive PLS requires F64 inputs");
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
     if (window_size < 2) {
         ctx.set_errorf("window_size must be >= 2; got %d",
                        static_cast<int>(window_size));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (cfg.n_components < 1) {
         ctx.set_error("n_components must be >= 1");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (static_cast<std::int64_t>(window_size) > X.rows) {
         ctx.set_errorf("window_size (%d) must be <= X.rows (%lld)",
                        static_cast<int>(window_size),
                        static_cast<long long>(X.rows));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (cfg.n_components >= window_size) {
         ctx.set_errorf("n_components (%d) must be < window_size (%d)",
                        static_cast<int>(cfg.n_components),
                        static_cast<int>(window_size));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
 
     try {
@@ -119,37 +119,37 @@ p4a_status_t fit_predict_recursive_pls(Context& ctx,
             }
 
             Config local = cfg;
-            if (local.algorithm != P4A_ALGO_PCR &&
-                local.algorithm != P4A_ALGO_PLS_REGRESSION) {
-                local.algorithm = P4A_ALGO_PLS_REGRESSION;
+            if (local.algorithm != N4M_ALGO_PCR &&
+                local.algorithm != N4M_ALGO_PLS_REGRESSION) {
+                local.algorithm = N4M_ALGO_PLS_REGRESSION;
             }
-            if (local.solver != P4A_SOLVER_NIPALS &&
-                local.solver != P4A_SOLVER_SIMPLS &&
-                local.solver != P4A_SOLVER_SVD) {
-                local.solver = P4A_SOLVER_SIMPLS;
+            if (local.solver != N4M_SOLVER_NIPALS &&
+                local.solver != N4M_SOLVER_SIMPLS &&
+                local.solver != N4M_SOLVER_SVD) {
+                local.solver = N4M_SOLVER_SIMPLS;
             }
-            local.deflation = P4A_DEFLATION_REGRESSION;
+            local.deflation = N4M_DEFLATION_REGRESSION;
 
-            p4a_matrix_view_t x_view = make_rowmajor_view(
+            n4m_matrix_view_t x_view = make_rowmajor_view(
                 x_window.data(), static_cast<std::int64_t>(w),
                 static_cast<std::int64_t>(p));
-            p4a_matrix_view_t y_view = make_rowmajor_view(
+            n4m_matrix_view_t y_view = make_rowmajor_view(
                 y_window.data(), static_cast<std::int64_t>(w),
                 static_cast<std::int64_t>(q));
             std::unique_ptr<Model> model;
-            const p4a_status_t status =
+            const n4m_status_t status =
                 fit_model(ctx, local, x_view, y_view, model);
-            if (status != P4A_OK) {
+            if (status != N4M_OK) {
                 out = RecursivePlsResult{};
                 return status;
             }
-            p4a_matrix_view_t query_view = make_rowmajor_view(
+            n4m_matrix_view_t query_view = make_rowmajor_view(
                 query.data(), 1, static_cast<std::int64_t>(p));
-            p4a_matrix_view_t pred_view = make_rowmajor_view(
+            n4m_matrix_view_t pred_view = make_rowmajor_view(
                 query_pred.data(), 1, static_cast<std::int64_t>(q));
-            const p4a_status_t predict_status =
+            const n4m_status_t predict_status =
                 predict_into(ctx, *model, query_view, pred_view);
-            if (predict_status != P4A_OK) {
+            if (predict_status != N4M_OK) {
                 out = RecursivePlsResult{};
                 return predict_status;
             }
@@ -160,16 +160,16 @@ p4a_status_t fit_predict_recursive_pls(Context& ctx,
         }
 
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory in recursive PLS");
         out = RecursivePlsResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception in recursive PLS");
         out = RecursivePlsResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

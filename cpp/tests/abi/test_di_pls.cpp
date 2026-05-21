@@ -20,16 +20,16 @@
 
 namespace {
 
-p4a_matrix_view_t make_view(const std::vector<double>& data,
+n4m_matrix_view_t make_view(const std::vector<double>& data,
                             std::int64_t rows,
                             std::int64_t cols) {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = const_cast<double*>(data.data());
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
@@ -50,15 +50,15 @@ TEST(di_pls_phase13, lambda_zero_matches_plain_simpls) {
     // X_target shifted slightly along feature 0.
     std::vector<double> Xt = Xs;
     for (std::size_t row = 0; row < 8; ++row) Xt[row * 4] += 0.5;
-    p4a_matrix_view_t Xs_view = make_view(Xs, 8, 4);
-    p4a_matrix_view_t Ys_view = make_view(Ys, 8, 1);
-    p4a_matrix_view_t Xt_view = make_view(Xt, 8, 4);
+    n4m_matrix_view_t Xs_view = make_view(Xs, 8, 4);
+    n4m_matrix_view_t Ys_view = make_view(Ys, 8, 1);
+    n4m_matrix_view_t Xt_view = make_view(Xt, 8, 4);
 
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-    cfg.solver = P4A_SOLVER_SIMPLS;
-    cfg.deflation = P4A_DEFLATION_REGRESSION;
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+    cfg.solver = N4M_SOLVER_SIMPLS;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
     cfg.n_components = 2;
     cfg.center_x = 1;
     cfg.scale_x = 0;
@@ -67,13 +67,13 @@ TEST(di_pls_phase13, lambda_zero_matches_plain_simpls) {
     cfg.store_scores = 0;
     cfg.di_lambda = 0.0;
 
-    std::unique_ptr<::pls4all::core::Model> m_di;
-    std::unique_ptr<::pls4all::core::Model> m_plain;
-    CHECK_EQ(::pls4all::core::fit_di_pls(ctx, cfg, Xs_view, Ys_view, Xt_view, m_di),
-             P4A_OK);
-    CHECK_EQ(::pls4all::core::fit_pls_regression_simpls(ctx, cfg, Xs_view, Ys_view,
+    std::unique_ptr<::n4m::core::Model> m_di;
+    std::unique_ptr<::n4m::core::Model> m_plain;
+    CHECK_EQ(::n4m::core::fit_di_pls(ctx, cfg, Xs_view, Ys_view, Xt_view, m_di),
+             N4M_OK);
+    CHECK_EQ(::n4m::core::fit_pls_regression_simpls(ctx, cfg, Xs_view, Ys_view,
                                                         m_plain),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(m_di->coefficients.size(), m_plain->coefficients.size());
     for (std::size_t i = 0; i < m_di->coefficients.size(); ++i) {
         const double diff = std::fabs(m_di->coefficients[i] -
@@ -102,29 +102,29 @@ TEST(di_pls_phase13, lambda_positive_reduces_diff_projection) {
     std::vector<double> Ys = {1.1, 0.7, 0.4, 1.0, 0.9, 0.6, 1.2, 1.3};
     std::vector<double> Xt = Xs;
     for (std::size_t row = 0; row < 8; ++row) Xt[row * 4] += 0.5;
-    p4a_matrix_view_t Xs_view = make_view(Xs, 8, 4);
-    p4a_matrix_view_t Ys_view = make_view(Ys, 8, 1);
-    p4a_matrix_view_t Xt_view = make_view(Xt, 8, 4);
+    n4m_matrix_view_t Xs_view = make_view(Xs, 8, 4);
+    n4m_matrix_view_t Ys_view = make_view(Ys, 8, 1);
+    n4m_matrix_view_t Xt_view = make_view(Xt, 8, 4);
 
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-    cfg.solver = P4A_SOLVER_SIMPLS;
-    cfg.deflation = P4A_DEFLATION_REGRESSION;
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+    cfg.solver = N4M_SOLVER_SIMPLS;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
     cfg.n_components = 1;
     cfg.center_x = 1;
     cfg.scale_x = 0;
     cfg.center_y = 1;
     cfg.scale_y = 0;
 
-    std::unique_ptr<::pls4all::core::Model> m_low;
-    std::unique_ptr<::pls4all::core::Model> m_high;
+    std::unique_ptr<::n4m::core::Model> m_low;
+    std::unique_ptr<::n4m::core::Model> m_high;
     cfg.di_lambda = 0.0;
-    CHECK_EQ(::pls4all::core::fit_di_pls(ctx, cfg, Xs_view, Ys_view, Xt_view, m_low),
-             P4A_OK);
+    CHECK_EQ(::n4m::core::fit_di_pls(ctx, cfg, Xs_view, Ys_view, Xt_view, m_low),
+             N4M_OK);
     cfg.di_lambda = 100.0;
-    CHECK_EQ(::pls4all::core::fit_di_pls(ctx, cfg, Xs_view, Ys_view, Xt_view, m_high),
-             P4A_OK);
+    CHECK_EQ(::n4m::core::fit_di_pls(ctx, cfg, Xs_view, Ys_view, Xt_view, m_high),
+             N4M_OK);
 
     // Compute source-target diff in the centered space.
     std::vector<double> diff(4, 0.0);
@@ -162,23 +162,23 @@ TEST(di_pls_phase13, rejects_invalid_inputs) {
     std::vector<double> Xs = {0.1, 0.2, 0.3, 0.4};
     std::vector<double> Ys = {0.5, 0.6};
     std::vector<double> Xt_bad = {0.1};  // wrong cols
-    p4a_matrix_view_t Xs_view = make_view(Xs, 2, 2);
-    p4a_matrix_view_t Ys_view = make_view(Ys, 2, 1);
-    p4a_matrix_view_t Xt_view = make_view(Xt_bad, 1, 1);
+    n4m_matrix_view_t Xs_view = make_view(Xs, 2, 2);
+    n4m_matrix_view_t Ys_view = make_view(Ys, 2, 1);
+    n4m_matrix_view_t Xt_view = make_view(Xt_bad, 1, 1);
 
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-    cfg.solver = P4A_SOLVER_SIMPLS;
-    cfg.deflation = P4A_DEFLATION_REGRESSION;
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+    cfg.solver = N4M_SOLVER_SIMPLS;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
     cfg.n_components = 1;
 
-    std::unique_ptr<::pls4all::core::Model> m;
-    CHECK_EQ(::pls4all::core::fit_di_pls(ctx, cfg, Xs_view, Ys_view, Xt_view, m),
-             P4A_ERR_SHAPE_MISMATCH);
+    std::unique_ptr<::n4m::core::Model> m;
+    CHECK_EQ(::n4m::core::fit_di_pls(ctx, cfg, Xs_view, Ys_view, Xt_view, m),
+             N4M_ERR_SHAPE_MISMATCH);
 
     cfg.di_lambda = -1.0;
-    p4a_matrix_view_t Xt_ok = make_view(Xs, 2, 2);
-    CHECK_EQ(::pls4all::core::fit_di_pls(ctx, cfg, Xs_view, Ys_view, Xt_ok, m),
-             P4A_ERR_INVALID_ARGUMENT);
+    n4m_matrix_view_t Xt_ok = make_view(Xs, 2, 2);
+    CHECK_EQ(::n4m::core::fit_di_pls(ctx, cfg, Xs_view, Ys_view, Xt_ok, m),
+             N4M_ERR_INVALID_ARGUMENT);
 }

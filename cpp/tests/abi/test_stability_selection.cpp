@@ -15,21 +15,21 @@ namespace {
 constexpr double kAbsTol = 1e-8;
 constexpr double kRelTol = 1e-8;
 
-p4a_matrix_view_t matrix_view(const ::pls4all::test::fixtures::MatrixRef& ref) {
-    p4a_matrix_view_t view{};
+n4m_matrix_view_t matrix_view(const ::n4m::test::fixtures::MatrixRef& ref) {
+    n4m_matrix_view_t view{};
     view.data = const_cast<double*>(ref.values);
     view.rows = ref.rows;
     view.cols = ref.cols;
     view.row_stride = ref.cols > 0 ? ref.cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
 void check_close_values(int& failures,
                         const char* label,
                         const std::vector<double>& actual,
-                        const ::pls4all::test::fixtures::MatrixRef& expected) {
+                        const ::n4m::test::fixtures::MatrixRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -59,7 +59,7 @@ void check_close_values(int& failures,
 void check_indices(int& failures,
                    const char* label,
                    const std::vector<std::int64_t>& actual,
-                   const ::pls4all::test::fixtures::StabilitySelectionIndexRef& expected) {
+                   const ::n4m::test::fixtures::StabilitySelectionIndexRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -84,34 +84,34 @@ void check_indices(int& failures,
 }
 
 void check_fixture(int& failures,
-                   const ::pls4all::test::fixtures::StabilitySelectionFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-    cfg.solver = P4A_SOLVER_NIPALS;
-    cfg.deflation = P4A_DEFLATION_REGRESSION;
+                   const ::n4m::test::fixtures::StabilitySelectionFixture& fixture) {
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+    cfg.solver = N4M_SOLVER_NIPALS;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
     cfg.n_components = fixture.n_components;
 
-    p4a_matrix_view_t X = matrix_view(fixture.X);
-    p4a_matrix_view_t Y = matrix_view(fixture.Y);
-    ::pls4all::core::ValidationPlan plan;
-    CHECK_EQ(::pls4all::core::make_monte_carlo_validation_plan(ctx,
+    n4m_matrix_view_t X = matrix_view(fixture.X);
+    n4m_matrix_view_t Y = matrix_view(fixture.Y);
+    ::n4m::core::ValidationPlan plan;
+    CHECK_EQ(::n4m::core::make_monte_carlo_validation_plan(ctx,
                                                                fixture.X.rows,
                                                                fixture.test_count,
                                                                fixture.n_repeats,
                                                                fixture.seed,
                                                                plan),
-             P4A_OK);
+             N4M_OK);
 
-    ::pls4all::core::StabilitySelectionResult result;
-    CHECK_EQ(::pls4all::core::select_by_coefficient_stability(ctx,
+    ::n4m::core::StabilitySelectionResult result;
+    CHECK_EQ(::n4m::core::select_by_coefficient_stability(ctx,
                                                               cfg,
                                                               X,
                                                               Y,
                                                               plan,
                                                               fixture.top_k,
                                                               result),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(result.n_features, static_cast<std::int32_t>(fixture.X.cols));
     CHECK_EQ(result.n_targets, static_cast<std::int32_t>(fixture.Y.cols));
     CHECK_EQ(result.n_repeats, fixture.n_repeats);
@@ -125,65 +125,65 @@ void check_fixture(int& failures,
 }  // namespace
 
 TEST(stability_selection_phase5c, generated_fixture_matches_sklearn_reference) {
-    for (const auto& fixture : ::pls4all::test::fixtures::kStabilitySelectionFixtures) {
+    for (const auto& fixture : ::n4m::test::fixtures::kStabilitySelectionFixtures) {
         check_fixture(failures, fixture);
     }
 }
 
 TEST(stability_selection_phase5c, rejects_invalid_stability_requests) {
-    const auto& fixture = ::pls4all::test::fixtures::kStabilitySelectionFixtures[0];
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
+    const auto& fixture = ::n4m::test::fixtures::kStabilitySelectionFixtures[0];
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
     cfg.n_components = fixture.n_components;
 
-    p4a_matrix_view_t X = matrix_view(fixture.X);
-    p4a_matrix_view_t Y = matrix_view(fixture.Y);
-    ::pls4all::core::ValidationPlan plan;
-    CHECK_EQ(::pls4all::core::make_monte_carlo_validation_plan(ctx,
+    n4m_matrix_view_t X = matrix_view(fixture.X);
+    n4m_matrix_view_t Y = matrix_view(fixture.Y);
+    ::n4m::core::ValidationPlan plan;
+    CHECK_EQ(::n4m::core::make_monte_carlo_validation_plan(ctx,
                                                                fixture.X.rows,
                                                                fixture.test_count,
                                                                fixture.n_repeats,
                                                                fixture.seed,
                                                                plan),
-             P4A_OK);
+             N4M_OK);
 
-    ::pls4all::core::StabilitySelectionResult result;
-    CHECK_EQ(::pls4all::core::select_by_coefficient_stability(ctx, cfg, X, Y, plan, 0, result),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::select_by_coefficient_stability(ctx,
+    ::n4m::core::StabilitySelectionResult result;
+    CHECK_EQ(::n4m::core::select_by_coefficient_stability(ctx, cfg, X, Y, plan, 0, result),
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::select_by_coefficient_stability(ctx,
                                                               cfg,
                                                               X,
                                                               Y,
                                                               plan,
                                                               static_cast<std::int32_t>(fixture.X.cols + 1),
                                                               result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 
-    ::pls4all::core::ValidationPlan one_fold;
-    CHECK_EQ(::pls4all::core::make_monte_carlo_validation_plan(ctx,
+    ::n4m::core::ValidationPlan one_fold;
+    CHECK_EQ(::n4m::core::make_monte_carlo_validation_plan(ctx,
                                                                fixture.X.rows,
                                                                fixture.test_count,
                                                                1,
                                                                fixture.seed,
                                                                one_fold),
-             P4A_OK);
-    CHECK_EQ(::pls4all::core::select_by_coefficient_stability(ctx,
+             N4M_OK);
+    CHECK_EQ(::n4m::core::select_by_coefficient_stability(ctx,
                                                               cfg,
                                                               X,
                                                               Y,
                                                               one_fold,
                                                               fixture.top_k,
                                                               result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 
-    p4a_matrix_view_t mismatched = Y;
+    n4m_matrix_view_t mismatched = Y;
     mismatched.rows = Y.rows - 1;
-    CHECK_EQ(::pls4all::core::select_by_coefficient_stability(ctx,
+    CHECK_EQ(::n4m::core::select_by_coefficient_stability(ctx,
                                                               cfg,
                                                               X,
                                                               mismatched,
                                                               plan,
                                                               fixture.top_k,
                                                               result),
-             P4A_ERR_SHAPE_MISMATCH);
+             N4M_ERR_SHAPE_MISMATCH);
 }

@@ -38,7 +38,7 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
     return true;
 }
 
-[[nodiscard]] double read_numeric(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_numeric(const n4m_matrix_view_t& view,
                                   std::size_t row,
                                   std::size_t col) noexcept {
     const std::int64_t off =
@@ -46,68 +46,68 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
         static_cast<std::int64_t>(col) * view.col_stride;
     const auto uoff = static_cast<std::size_t>(off);
     switch (view.dtype) {
-        case P4A_DTYPE_F64: {
+        case N4M_DTYPE_F64: {
             const auto* ptr = static_cast<const double*>(view.data);
             return ptr[uoff];
         }
-        case P4A_DTYPE_F32: {
+        case N4M_DTYPE_F32: {
             const auto* ptr = static_cast<const float*>(view.data);
             return static_cast<double>(ptr[uoff]);
         }
-        case P4A_DTYPE_I32: {
+        case N4M_DTYPE_I32: {
             const auto* ptr = static_cast<const std::int32_t*>(view.data);
             return static_cast<double>(ptr[uoff]);
         }
-        case P4A_DTYPE_I64: {
+        case N4M_DTYPE_I64: {
             const auto* ptr = static_cast<const std::int64_t*>(view.data);
             return static_cast<double>(ptr[uoff]);
         }
-        case P4A_DTYPE_UNKNOWN:
+        case N4M_DTYPE_UNKNOWN:
             return 0.0;
     }
     return 0.0;
 }
 
-[[nodiscard]] bool is_label_dtype(p4a_dtype_t dtype) noexcept {
-    return dtype == P4A_DTYPE_F64 || dtype == P4A_DTYPE_F32 ||
-           dtype == P4A_DTYPE_I32 || dtype == P4A_DTYPE_I64;
+[[nodiscard]] bool is_label_dtype(n4m_dtype_t dtype) noexcept {
+    return dtype == N4M_DTYPE_F64 || dtype == N4M_DTYPE_F32 ||
+           dtype == N4M_DTYPE_I32 || dtype == N4M_DTYPE_I64;
 }
 
-[[nodiscard]] bool is_score_dtype(p4a_dtype_t dtype) noexcept {
-    return dtype == P4A_DTYPE_F64 || dtype == P4A_DTYPE_F32;
+[[nodiscard]] bool is_score_dtype(n4m_dtype_t dtype) noexcept {
+    return dtype == N4M_DTYPE_F64 || dtype == N4M_DTYPE_F32;
 }
 
-[[nodiscard]] p4a_status_t validate_view(::pls4all::core::Context& ctx,
-                                         const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t validate_view(::n4m::core::Context& ctx,
+                                         const n4m_matrix_view_t& view,
                                          const char* name,
                                          bool score) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(view);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(view);
+    if (status != N4M_OK) {
         ctx.set_errorf("%s matrix view is invalid: %s",
                        name,
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
     if (view.rows == 0 || view.cols == 0) {
         ctx.set_errorf("%s must contain at least one value", name);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (score ? !is_score_dtype(view.dtype) : !is_label_dtype(view.dtype)) {
         ctx.set_errorf("%s dtype is unsupported for binary classification metrics", name);
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t copy_inputs(::pls4all::core::Context& ctx,
-                                       const p4a_matrix_view_t& labels,
-                                       const p4a_matrix_view_t& scores,
+[[nodiscard]] n4m_status_t copy_inputs(::n4m::core::Context& ctx,
+                                       const n4m_matrix_view_t& labels,
+                                       const n4m_matrix_view_t& scores,
                                        std::vector<std::int32_t>& out_labels,
                                        std::vector<double>& out_scores) {
     std::size_t n_values = 0;
     if (!checked_element_count(labels.rows, labels.cols, n_values)) {
         ctx.set_error("classification metric input shape is too large");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     out_labels.clear();
     out_scores.clear();
@@ -124,27 +124,27 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
                 ctx.set_errorf("labels contains NaN or Inf at row %llu col %llu",
                                ull(row),
                                ull(col));
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             if (label_value != 0.0 && label_value != 1.0) {
                 ctx.set_errorf("labels must be binary 0/1; got %.17g at row %llu col %llu",
                                label_value,
                                ull(row),
                                ull(col));
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             if (!std::isfinite(score_value)) {
                 ctx.set_errorf("scores contains NaN or Inf at row %llu col %llu",
                                ull(row),
                                ull(col));
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             const std::size_t flat = row * cols + col;
             out_labels[flat] = label_value == 1.0 ? 1 : 0;
             out_scores[flat] = score_value;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 [[nodiscard]] double auc_with_average_ranks(const std::vector<std::int32_t>& labels,
@@ -183,14 +183,14 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
     return (positive_rank_sum - pos * (pos + 1.0) * 0.5) / (pos * neg);
 }
 
-[[nodiscard]] p4a_status_t copy_multiclass_labels(::pls4all::core::Context& ctx,
-                                                  const p4a_matrix_view_t& labels,
+[[nodiscard]] n4m_status_t copy_multiclass_labels(::n4m::core::Context& ctx,
+                                                  const n4m_matrix_view_t& labels,
                                                   std::int32_t n_classes,
                                                   std::vector<std::int32_t>& out) {
     std::size_t n_values = 0;
     if (!checked_element_count(labels.rows, labels.cols, n_values)) {
         ctx.set_error("multiclass label input shape is too large");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     out.clear();
     out.reserve(n_values);
@@ -203,7 +203,7 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
                 ctx.set_errorf("labels contains NaN or Inf at row %llu col %llu",
                                ull(row),
                                ull(col));
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             if (std::floor(label_value) != label_value ||
                 label_value < 0.0 ||
@@ -211,12 +211,12 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
                 ctx.set_errorf("labels must be integer class ids in [0, %d); got %.17g",
                                static_cast<int>(n_classes),
                                label_value);
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out.push_back(static_cast<std::int32_t>(label_value));
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 [[nodiscard]] double mean_or_zero(const std::vector<double>& values) noexcept {
@@ -232,12 +232,12 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t compute_binary_classification_metrics(
+n4m_status_t compute_binary_classification_metrics(
     Context& ctx,
-    const p4a_matrix_view_t& labels,
-    const p4a_matrix_view_t& scores,
+    const n4m_matrix_view_t& labels,
+    const n4m_matrix_view_t& scores,
     double threshold,
     BinaryClassificationMetrics& out) {
     try {
@@ -246,15 +246,15 @@ p4a_status_t compute_binary_classification_metrics(
 
         if (!std::isfinite(threshold)) {
             ctx.set_error("classification threshold must be finite");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
-        p4a_status_t status = validate_view(ctx, labels, "labels", false);
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_view(ctx, labels, "labels", false);
+        if (status != N4M_OK) {
             return status;
         }
         status = validate_view(ctx, scores, "scores", true);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         if (labels.rows != scores.rows || labels.cols != scores.cols) {
@@ -263,13 +263,13 @@ p4a_status_t compute_binary_classification_metrics(
                            static_cast<long long>(labels.cols),
                            static_cast<long long>(scores.rows),
                            static_cast<long long>(scores.cols));
-            return P4A_ERR_SHAPE_MISMATCH;
+            return N4M_ERR_SHAPE_MISMATCH;
         }
 
         std::vector<std::int32_t> y_true;
         std::vector<double> y_score;
         status = copy_inputs(ctx, labels, scores, y_true, y_score);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -295,7 +295,7 @@ p4a_status_t compute_binary_classification_metrics(
         if (out.positives == 0 || out.negatives == 0) {
             ctx.set_error("binary classification metrics require both positive and negative labels");
             out = BinaryClassificationMetrics{};
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
         const double tp = static_cast<double>(out.true_positive);
@@ -322,56 +322,56 @@ p4a_status_t compute_binary_classification_metrics(
         out.auc = auc_with_average_ranks(y_true, y_score, out.positives, out.negatives);
 
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while computing binary classification metrics");
         out = BinaryClassificationMetrics{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while computing binary classification metrics");
         out = BinaryClassificationMetrics{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-p4a_status_t compute_multiclass_classification_metrics(
+n4m_status_t compute_multiclass_classification_metrics(
     Context& ctx,
-    const p4a_matrix_view_t& labels,
-    const p4a_matrix_view_t& scores,
+    const n4m_matrix_view_t& labels,
+    const n4m_matrix_view_t& scores,
     std::int32_t n_classes,
     MulticlassClassificationMetrics& out) {
     try {
         out = MulticlassClassificationMetrics{};
         if (n_classes < 2) {
             ctx.set_errorf("n_classes must be >= 2; got %d", static_cast<int>(n_classes));
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
-        p4a_status_t status = validate_view(ctx, labels, "labels", false);
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_view(ctx, labels, "labels", false);
+        if (status != N4M_OK) {
             return status;
         }
         status = validate_view(ctx, scores, "scores", true);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         if (scores.cols != n_classes) {
             ctx.set_errorf("scores cols (%lld) must equal n_classes (%d)",
                            static_cast<long long>(scores.cols),
                            static_cast<int>(n_classes));
-            return P4A_ERR_SHAPE_MISMATCH;
+            return N4M_ERR_SHAPE_MISMATCH;
         }
 
         std::vector<std::int32_t> y_true;
         status = copy_multiclass_labels(ctx, labels, n_classes, y_true);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         if (static_cast<std::int64_t>(y_true.size()) != scores.rows) {
             ctx.set_errorf("label count (%llu) must match score rows (%lld)",
                            ull(y_true.size()),
                            static_cast<long long>(scores.rows));
-            return P4A_ERR_SHAPE_MISMATCH;
+            return N4M_ERR_SHAPE_MISMATCH;
         }
 
         const auto n_samples = static_cast<std::size_t>(scores.rows);
@@ -386,7 +386,7 @@ p4a_status_t compute_multiclass_classification_metrics(
                     ctx.set_errorf("scores contains NaN or Inf at row %llu col %llu",
                                    ull(row),
                                    ull(cls));
-                    return P4A_ERR_INVALID_ARGUMENT;
+                    return N4M_ERR_INVALID_ARGUMENT;
                 }
                 score_values[row * n_cls + cls] = value;
             }
@@ -394,7 +394,7 @@ p4a_status_t compute_multiclass_classification_metrics(
         for (std::size_t cls = 0; cls < n_cls; ++cls) {
             if (class_counts[cls] == 0) {
                 ctx.set_errorf("class %llu has no labels", ull(cls));
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
         }
 
@@ -484,37 +484,37 @@ p4a_status_t compute_multiclass_classification_metrics(
                 (out.micro_precision + out.micro_recall);
 
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while computing multiclass classification metrics");
         out = MulticlassClassificationMetrics{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while computing multiclass classification metrics");
         out = MulticlassClassificationMetrics{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-p4a_status_t compute_binary_calibration_curve(
+n4m_status_t compute_binary_calibration_curve(
     Context& ctx,
-    const p4a_matrix_view_t& labels,
-    const p4a_matrix_view_t& scores,
+    const n4m_matrix_view_t& labels,
+    const n4m_matrix_view_t& scores,
     std::int32_t n_bins,
     BinaryCalibrationCurve& out) {
     try {
         out = BinaryCalibrationCurve{};
         if (n_bins < 1) {
             ctx.set_errorf("n_bins must be >= 1; got %d", static_cast<int>(n_bins));
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
-        p4a_status_t status = validate_view(ctx, labels, "labels", false);
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_view(ctx, labels, "labels", false);
+        if (status != N4M_OK) {
             return status;
         }
         status = validate_view(ctx, scores, "scores", true);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         if (labels.rows != scores.rows || labels.cols != scores.cols) {
@@ -523,13 +523,13 @@ p4a_status_t compute_binary_calibration_curve(
                            static_cast<long long>(labels.cols),
                            static_cast<long long>(scores.rows),
                            static_cast<long long>(scores.cols));
-            return P4A_ERR_SHAPE_MISMATCH;
+            return N4M_ERR_SHAPE_MISMATCH;
         }
 
         std::vector<std::int32_t> y_true;
         std::vector<double> y_score;
         status = copy_inputs(ctx, labels, scores, y_true, y_score);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -552,7 +552,7 @@ p4a_status_t compute_binary_calibration_curve(
             if (score < 0.0 || score > 1.0) {
                 ctx.set_errorf("calibration scores must be in [0, 1]; got %.17g", score);
                 out = BinaryCalibrationCurve{};
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             std::size_t bin = static_cast<std::size_t>(std::floor(score * static_cast<double>(bins)));
             if (bin >= bins) {
@@ -571,16 +571,16 @@ p4a_status_t compute_binary_calibration_curve(
         }
 
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while computing binary calibration curve");
         out = BinaryCalibrationCurve{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while computing binary calibration curve");
         out = BinaryCalibrationCurve{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

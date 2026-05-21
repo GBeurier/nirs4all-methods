@@ -12,6 +12,6 @@ if nargin < 4
     error("pls4all:nargin", "block_sizes is required");
 end
 params = struct("block_sizes", int32(block_sizes(:)));
-res = pls4all.p4a_method_fit_mex("mb_pls", double(X), double(Y), ...
+res = pls4all.n4m_method_fit_mex("mb_pls", double(X), double(Y), ...
                                   int32(n_components), params);
 end

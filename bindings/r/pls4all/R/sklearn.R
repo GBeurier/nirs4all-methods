@@ -22,7 +22,7 @@
 #'
 #' @return An object of class `c("pls4all_fit", "pls_fit")` with
 #'   components:
-#'   * `model`         — external pointer to the libp4a model handle
+#'   * `model`         — external pointer to the libn4m model handle
 #'   * `formula`       — the call's formula
 #'   * `terms`         — the `terms()` object describing the model
 #'   * `xlevels`       — factor levels of the predictors, for
@@ -208,11 +208,11 @@ predict.pls4all_fit <- function(object, newdata = NULL, ...) {
 coef.pls4all_fit <- function(object, ...) {
     # The tier-1 binding currently doesn't expose model arrays directly;
     # callers can use the formula-driven predict path, or reach for the
-    # underlying handle via `object$model`. Once `p4a_model_get_array` is
+    # underlying handle via `object$model`. Once `n4m_model_get_array` is
     # bound on the R side, this generic will return the (p x q)
     # coefficient matrix.
     stop("coef.pls4all_fit is not yet implemented; the R binding does ",
-         "not currently expose `p4a_model_get_array` for coefficient ",
+         "not currently expose `n4m_model_get_array` for coefficient ",
          "retrieval. Tracked in roadmap/phase-54a-r-tier2.md.")
 }
 

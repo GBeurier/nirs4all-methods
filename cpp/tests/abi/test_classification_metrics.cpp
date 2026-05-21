@@ -35,30 +35,30 @@ void check_metric(int& failures,
 }
 
 void check_fixture(int& failures,
-                   const ::pls4all::test::fixtures::ClassificationMetricsFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    p4a_matrix_view_t labels{};
-    p4a_matrix_view_t scores{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&labels,
+                   const ::n4m::test::fixtures::ClassificationMetricsFixture& fixture) {
+    ::n4m::core::Context ctx;
+    n4m_matrix_view_t labels{};
+    n4m_matrix_view_t scores{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&labels,
                                            const_cast<std::int32_t*>(fixture.labels.values),
                                            fixture.labels.rows,
                                            fixture.labels.cols,
-                                           P4A_DTYPE_I32),
-             P4A_OK);
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&scores,
+                                           N4M_DTYPE_I32),
+             N4M_OK);
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&scores,
                                            const_cast<double*>(fixture.scores.values),
                                            fixture.scores.rows,
                                            fixture.scores.cols,
-                                           P4A_DTYPE_F64),
-             P4A_OK);
+                                           N4M_DTYPE_F64),
+             N4M_OK);
 
-    ::pls4all::core::BinaryClassificationMetrics metrics{};
-    CHECK_EQ(::pls4all::core::compute_binary_classification_metrics(ctx,
+    ::n4m::core::BinaryClassificationMetrics metrics{};
+    CHECK_EQ(::n4m::core::compute_binary_classification_metrics(ctx,
                                                                     labels,
                                                                     scores,
                                                                     fixture.threshold,
                                                                     metrics),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(fixture.expected.size, static_cast<std::size_t>(16U));
     const double* expected = fixture.expected.values;
     check_metric(failures, "count", static_cast<double>(metrics.count), expected[0]);
@@ -82,79 +82,79 @@ void check_fixture(int& failures,
 }  // namespace
 
 TEST(classification_metrics_phase3n, generated_binary_fixture_matches_numpy_reference) {
-    for (const auto& fixture : ::pls4all::test::fixtures::kClassificationMetricsFixtures) {
+    for (const auto& fixture : ::n4m::test::fixtures::kClassificationMetricsFixtures) {
         check_fixture(failures, fixture);
     }
 }
 
 TEST(classification_metrics_phase3n, rejects_invalid_inputs) {
-    ::pls4all::core::Context ctx;
+    ::n4m::core::Context ctx;
     std::int32_t labels_values[] = {0, 1, 0, 1};
     double scores_values[] = {0.1, 0.8, 0.4, 0.7};
-    p4a_matrix_view_t labels{};
-    p4a_matrix_view_t scores{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&labels, labels_values, 4, 1, P4A_DTYPE_I32), P4A_OK);
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&scores, scores_values, 4, 1, P4A_DTYPE_F64), P4A_OK);
+    n4m_matrix_view_t labels{};
+    n4m_matrix_view_t scores{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&labels, labels_values, 4, 1, N4M_DTYPE_I32), N4M_OK);
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&scores, scores_values, 4, 1, N4M_DTYPE_F64), N4M_OK);
 
-    ::pls4all::core::BinaryClassificationMetrics metrics{};
-    p4a_matrix_view_t mismatched = scores;
+    ::n4m::core::BinaryClassificationMetrics metrics{};
+    n4m_matrix_view_t mismatched = scores;
     mismatched.rows = 3;
-    CHECK_EQ(::pls4all::core::compute_binary_classification_metrics(ctx,
+    CHECK_EQ(::n4m::core::compute_binary_classification_metrics(ctx,
                                                                     labels,
                                                                     mismatched,
                                                                     0.5,
                                                                     metrics),
-             P4A_ERR_SHAPE_MISMATCH);
+             N4M_ERR_SHAPE_MISMATCH);
 
     std::int32_t int_scores_values[] = {0, 1, 0, 1};
-    p4a_matrix_view_t int_scores{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&int_scores, int_scores_values, 4, 1, P4A_DTYPE_I32),
-             P4A_OK);
-    CHECK_EQ(::pls4all::core::compute_binary_classification_metrics(ctx,
+    n4m_matrix_view_t int_scores{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&int_scores, int_scores_values, 4, 1, N4M_DTYPE_I32),
+             N4M_OK);
+    CHECK_EQ(::n4m::core::compute_binary_classification_metrics(ctx,
                                                                     labels,
                                                                     int_scores,
                                                                     0.5,
                                                                     metrics),
-             P4A_ERR_DTYPE_MISMATCH);
+             N4M_ERR_DTYPE_MISMATCH);
 
     std::int32_t bad_labels_values[] = {0, 1, 2, 1};
-    p4a_matrix_view_t bad_labels{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&bad_labels, bad_labels_values, 4, 1, P4A_DTYPE_I32),
-             P4A_OK);
-    CHECK_EQ(::pls4all::core::compute_binary_classification_metrics(ctx,
+    n4m_matrix_view_t bad_labels{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&bad_labels, bad_labels_values, 4, 1, N4M_DTYPE_I32),
+             N4M_OK);
+    CHECK_EQ(::n4m::core::compute_binary_classification_metrics(ctx,
                                                                     bad_labels,
                                                                     scores,
                                                                     0.5,
                                                                     metrics),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 
     double bad_scores_values[] = {0.1, 0.8, std::numeric_limits<double>::quiet_NaN(), 0.7};
-    p4a_matrix_view_t bad_scores{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&bad_scores, bad_scores_values, 4, 1, P4A_DTYPE_F64),
-             P4A_OK);
-    CHECK_EQ(::pls4all::core::compute_binary_classification_metrics(ctx,
+    n4m_matrix_view_t bad_scores{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&bad_scores, bad_scores_values, 4, 1, N4M_DTYPE_F64),
+             N4M_OK);
+    CHECK_EQ(::n4m::core::compute_binary_classification_metrics(ctx,
                                                                     labels,
                                                                     bad_scores,
                                                                     0.5,
                                                                     metrics),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 
     std::int32_t one_class_values[] = {1, 1, 1, 1};
-    p4a_matrix_view_t one_class{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&one_class, one_class_values, 4, 1, P4A_DTYPE_I32),
-             P4A_OK);
-    CHECK_EQ(::pls4all::core::compute_binary_classification_metrics(ctx,
+    n4m_matrix_view_t one_class{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&one_class, one_class_values, 4, 1, N4M_DTYPE_I32),
+             N4M_OK);
+    CHECK_EQ(::n4m::core::compute_binary_classification_metrics(ctx,
                                                                     one_class,
                                                                     scores,
                                                                     0.5,
                                                                     metrics),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 
-    CHECK_EQ(::pls4all::core::compute_binary_classification_metrics(
+    CHECK_EQ(::n4m::core::compute_binary_classification_metrics(
                  ctx,
                  labels,
                  scores,
                  std::numeric_limits<double>::quiet_NaN(),
                  metrics),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 }

@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct RandomizationSelectionIndexRef {
     const std::int64_t* values;
@@ -155,4 +155,4 @@ inline const RandomizationSelectionFixture kRandomizationSelectionFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

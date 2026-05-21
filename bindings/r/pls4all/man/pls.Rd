@@ -36,7 +36,7 @@ match the R `pls` package's default.}
 \value{
 An object of class `c("pls4all_fit", "pls_fit")` with
   components:
-  * `model`         — external pointer to the libp4a model handle
+  * `model`         — external pointer to the libn4m model handle
   * `formula`       — the call's formula
   * `terms`         — the `terms()` object describing the model
   * `xlevels`       — factor levels of the predictors, for

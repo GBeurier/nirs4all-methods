@@ -5,7 +5,7 @@ The pls4all Python binding is ctypes-only — no CPython extension is
 compiled, no symbols are linked against a specific CPython ABI. Yet
 ``cibuildwheel`` produces wheels tagged ``cp3X-cp3X-${platform}``
 because the :file:`setup.py` shim forces ``has_ext_modules() == True``
-(so the repair step bundles libp4a). We *want* the platform tag, but
+(so the repair step bundles libn4m). We *want* the platform tag, but
 not the CPython-ABI prefix.
 
 This script post-processes a directory of wheels (typically

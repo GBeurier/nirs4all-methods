@@ -13,7 +13,7 @@
 #include "core/matrix_view.hpp"
 #include "core/model.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 namespace {
 
@@ -23,13 +23,13 @@ constexpr double kEps = 1e-12;
     return row * cols + col;
 }
 
-[[nodiscard]] p4a_status_t copy_matrix(::pls4all::core::Context& ctx,
-                                        const p4a_matrix_view_t& V,
+[[nodiscard]] n4m_status_t copy_matrix(::n4m::core::Context& ctx,
+                                        const n4m_matrix_view_t& V,
                                         const char* name,
                                         std::vector<double>& out) {
-    if (validate_nonnull_view(V) != P4A_OK || V.dtype != P4A_DTYPE_F64) {
+    if (validate_nonnull_view(V) != N4M_OK || V.dtype != N4M_DTYPE_F64) {
         ctx.set_errorf("%s must be a finite F64 row-major matrix", name);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const std::size_t rows = static_cast<std::size_t>(V.rows);
     const std::size_t cols = static_cast<std::size_t>(V.cols);
@@ -38,9 +38,9 @@ constexpr double kEps = 1e-12;
     if (data == nullptr) {
         if (rows > 0 && cols > 0) {
             ctx.set_errorf("%s has null data", name);
-            return P4A_ERR_NULL_POINTER;
+            return N4M_ERR_NULL_POINTER;
         }
-        return P4A_OK;
+        return N4M_OK;
     }
     const std::size_t rs = static_cast<std::size_t>(V.row_stride);
     const std::size_t cs = static_cast<std::size_t>(V.col_stride);
@@ -49,12 +49,12 @@ constexpr double kEps = 1e-12;
             const double v = data[r * rs + c * cs];
             if (!std::isfinite(v)) {
                 ctx.set_errorf("%s contains NaN or Inf", name);
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out[r * cols + c] = v;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 void column_means(const std::vector<double>& mat, std::size_t rows,
@@ -95,7 +95,7 @@ double dot(const std::vector<double>& a, const std::vector<double>& b) {
 // x-loadings P (p × k), regression coefficients (p × q) computed in
 // centered space. Y must be (n × q). Operates on already-centered xk/yk;
 // the caller restores intercepts.
-[[nodiscard]] p4a_status_t nipals_pls(std::vector<double>& xk,
+[[nodiscard]] n4m_status_t nipals_pls(std::vector<double>& xk,
                                        std::vector<double>& yk,
                                        std::size_t n, std::size_t p,
                                        std::size_t q, std::size_t k,
@@ -204,7 +204,7 @@ double dot(const std::vector<double>& a, const std::vector<double>& b) {
             }
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // Compute coefficients = W (P' W)^{-1} diag(B) Q' for NIPALS results.
@@ -342,10 +342,10 @@ void coefficients_from_nipals(const std::vector<double>& W,
 
 // ---------- O2PLS --------------------------------------------------------
 
-p4a_status_t fit_o2pls(Context& ctx,
+n4m_status_t fit_o2pls(Context& ctx,
                        const Config& cfg,
-                       const p4a_matrix_view_t& X,
-                       const p4a_matrix_view_t& Y,
+                       const n4m_matrix_view_t& X,
+                       const n4m_matrix_view_t& Y,
                        std::int32_t n_predictive,
                        std::int32_t n_x_orthogonal,
                        std::int32_t n_y_orthogonal,
@@ -354,29 +354,29 @@ p4a_status_t fit_o2pls(Context& ctx,
     out = O2PlsResult{};
     if (n_predictive < 1) {
         ctx.set_error("O2PLS needs at least one predictive component");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (n_x_orthogonal < 0 || n_y_orthogonal < 0) {
         ctx.set_error("orthogonal counts must be >= 0");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.rows != Y.rows) {
         ctx.set_error("X and Y must have the same row count");
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
 
     std::vector<double> X_buf, Y_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
 
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
     if (n < 2 || p < 1 || q < 1) {
         ctx.set_error("O2PLS requires at least 2 rows and 1 column on each side");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
 
     column_means(X_buf, n, p, out.x_mean);
@@ -516,7 +516,7 @@ p4a_status_t fit_o2pls(Context& ctx,
     status = nipals_pls(Xk, Yk, n, p, q,
                         static_cast<std::size_t>(n_predictive),
                         W, T, P_load, Q_load, B);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     out.w_predictive = std::move(W);
     out.c_predictive = std::move(Q_load);
     out.b_predictive = std::move(B);
@@ -529,38 +529,38 @@ p4a_status_t fit_o2pls(Context& ctx,
                               out.coefficients);
 
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---------- SO-PLS ------------------------------------------------------
 
-p4a_status_t fit_so_pls(Context& ctx,
+n4m_status_t fit_so_pls(Context& ctx,
                         const Config& cfg,
-                        const std::vector<p4a_matrix_view_t>& X_blocks,
-                        const p4a_matrix_view_t& Y,
+                        const std::vector<n4m_matrix_view_t>& X_blocks,
+                        const n4m_matrix_view_t& Y,
                         const std::vector<std::int32_t>& n_components_per_block,
                         SoPlsResult& out) {
     (void)cfg;
     out = SoPlsResult{};
     if (X_blocks.empty()) {
         ctx.set_error("SO-PLS requires at least one X block");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (n_components_per_block.size() != X_blocks.size()) {
         ctx.set_error("n_components_per_block must have one entry per block");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const std::int64_t n_rows = Y.rows;
     for (const auto& X : X_blocks) {
         if (X.rows != n_rows) {
             ctx.set_error("all X blocks must have the same row count as Y");
-            return P4A_ERR_SHAPE_MISMATCH;
+            return N4M_ERR_SHAPE_MISMATCH;
         }
     }
 
     std::vector<double> Y_buf;
-    p4a_status_t status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, Y, "Y", Y_buf);
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(n_rows);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
     column_means(Y_buf, n, q, out.y_mean);
@@ -581,10 +581,10 @@ p4a_status_t fit_so_pls(Context& ctx,
     block_scores.reserve(X_blocks.size());
 
     for (std::size_t block = 0; block < X_blocks.size(); ++block) {
-        const p4a_matrix_view_t& Xv = X_blocks[block];
+        const n4m_matrix_view_t& Xv = X_blocks[block];
         std::vector<double> X_buf;
         status = copy_matrix(ctx, Xv, "X_block", X_buf);
-        if (status != P4A_OK) return status;
+        if (status != N4M_OK) return status;
         const std::size_t p = static_cast<std::size_t>(Xv.cols);
         std::vector<double> x_mean;
         column_means(X_buf, n, p, x_mean);
@@ -621,7 +621,7 @@ p4a_status_t fit_so_pls(Context& ctx,
         std::vector<double> W, T, P_load, Q_load, B;
         status = nipals_pls(X_buf, Y_centered, n, p, q, k_b,
                             W, T, P_load, Q_load, B);
-        if (status != P4A_OK) return status;
+        if (status != N4M_OK) return status;
         // Block coefficients (p × q).
         std::vector<double> coefs;
         coefficients_from_nipals(W, P_load, Q_load, B, p, q, k_b, coefs);
@@ -650,14 +650,14 @@ p4a_status_t fit_so_pls(Context& ctx,
     }
 
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---------- OnPLS -------------------------------------------------------
 
-p4a_status_t fit_on_pls(Context& ctx,
+n4m_status_t fit_on_pls(Context& ctx,
                         const Config& cfg,
-                        const std::vector<p4a_matrix_view_t>& X_blocks,
+                        const std::vector<n4m_matrix_view_t>& X_blocks,
                         std::int32_t n_joint,
                         const std::vector<std::int32_t>& n_unique_per_block,
                         OnPlsResult& out) {
@@ -665,22 +665,22 @@ p4a_status_t fit_on_pls(Context& ctx,
     out = OnPlsResult{};
     if (X_blocks.size() < 2) {
         ctx.set_error("OnPLS requires at least 2 X blocks");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (n_unique_per_block.size() != X_blocks.size()) {
         ctx.set_error("n_unique_per_block must have one entry per block");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const std::int64_t n_rows = X_blocks[0].rows;
     for (const auto& X : X_blocks) {
         if (X.rows != n_rows) {
             ctx.set_error("all blocks must share row count");
-            return P4A_ERR_SHAPE_MISMATCH;
+            return N4M_ERR_SHAPE_MISMATCH;
         }
     }
     if (n_joint < 0) {
         ctx.set_error("n_joint must be >= 0");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
 
     const std::size_t n = static_cast<std::size_t>(n_rows);
@@ -688,9 +688,9 @@ p4a_status_t fit_on_pls(Context& ctx,
     std::vector<std::vector<double>> centered(n_blocks);
     std::vector<std::size_t> p_block(n_blocks, 0);
     for (std::size_t b = 0; b < n_blocks; ++b) {
-        p4a_status_t status =
+        n4m_status_t status =
             copy_matrix(ctx, X_blocks[b], "X_block", centered[b]);
-        if (status != P4A_OK) return status;
+        if (status != N4M_OK) return status;
         p_block[b] = static_cast<std::size_t>(X_blocks[b].cols);
         std::vector<double> mean;
         column_means(centered[b], n, p_block[b], mean);
@@ -808,38 +808,38 @@ p4a_status_t fit_on_pls(Context& ctx,
     }
 
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---------- ROSA --------------------------------------------------------
 
-p4a_status_t fit_rosa(Context& ctx,
+n4m_status_t fit_rosa(Context& ctx,
                       const Config& cfg,
-                      const std::vector<p4a_matrix_view_t>& X_blocks,
-                      const p4a_matrix_view_t& Y,
+                      const std::vector<n4m_matrix_view_t>& X_blocks,
+                      const n4m_matrix_view_t& Y,
                       std::int32_t n_components,
                       RosaResult& out) {
     (void)cfg;
     out = RosaResult{};
     if (X_blocks.empty()) {
         ctx.set_error("ROSA requires at least one X block");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (n_components < 1) {
         ctx.set_error("ROSA n_components must be >= 1");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const std::int64_t n_rows = Y.rows;
     for (const auto& X : X_blocks) {
         if (X.rows != n_rows) {
             ctx.set_error("all X blocks must match Y row count");
-            return P4A_ERR_SHAPE_MISMATCH;
+            return N4M_ERR_SHAPE_MISMATCH;
         }
     }
 
     std::vector<double> Y_buf;
-    p4a_status_t status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, Y, "Y", Y_buf);
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(n_rows);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
     const std::size_t n_blocks = X_blocks.size();
@@ -847,7 +847,7 @@ p4a_status_t fit_rosa(Context& ctx,
     std::vector<std::size_t> p_block(n_blocks, 0);
     for (std::size_t b = 0; b < n_blocks; ++b) {
         status = copy_matrix(ctx, X_blocks[b], "X_block", X_bufs[b]);
-        if (status != P4A_OK) return status;
+        if (status != N4M_OK) return status;
         p_block[b] = static_cast<std::size_t>(X_blocks[b].cols);
         std::vector<double> mean;
         column_means(X_bufs[b], n, p_block[b], mean);
@@ -982,7 +982,7 @@ p4a_status_t fit_rosa(Context& ctx,
     }
 
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

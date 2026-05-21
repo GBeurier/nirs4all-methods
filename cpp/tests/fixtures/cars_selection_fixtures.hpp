@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct CarsSelectionIndexRef {
     const std::int64_t* values;
@@ -187,4 +187,4 @@ inline const CarsSelectionFixture kCarsSelectionFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

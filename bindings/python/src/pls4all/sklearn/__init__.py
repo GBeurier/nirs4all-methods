@@ -11,8 +11,8 @@ Persistence strategy per family:
 * **Model-based** estimators (`PLSRegression`, `OPLSRegression`,
   `PCR`, `SparsePLSRegression`, `PLSCanonical`, `PLSSVD`,
   `PLSDAClassifier`, `OPLSDAClassifier`) round-trip via the C ABI
-  `.n4a` bundle (`p4a_model_export_to_buffer` /
-  `p4a_model_import_from_buffer`). State survives pickle bit-exactly.
+  `.n4a` bundle (`n4m_model_export_to_buffer` /
+  `n4m_model_import_from_buffer`). State survives pickle bit-exactly.
 * **MethodResult-based regressors** that carry coefficients
   (`SparseSimplsRegression`, `CPPLSRegression`, `ECRegression`,
   `DIPLSRegression`, `MIRPLSRegression`, `MBPLSRegression`,

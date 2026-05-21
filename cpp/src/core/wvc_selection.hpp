@@ -11,7 +11,7 @@
 
 #include "core/context.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct WvcSelectionResult {
     std::int32_t n_features{0};
@@ -44,17 +44,17 @@ struct WvcThresholdSelectionResult {
     std::vector<std::int64_t> selected_indices;
 };
 
-[[nodiscard]] p4a_status_t select_by_wvc(Context& ctx,
-                                         const p4a_matrix_view_t& X,
-                                         const p4a_matrix_view_t& Y,
+[[nodiscard]] n4m_status_t select_by_wvc(Context& ctx,
+                                         const n4m_matrix_view_t& X,
+                                         const n4m_matrix_view_t& Y,
                                          std::int32_t n_components,
                                          std::int32_t top_k,
                                          bool normalize,
                                          WvcSelectionResult& out);
 
-[[nodiscard]] p4a_status_t select_by_wvc_threshold(Context& ctx,
-                                                   const p4a_matrix_view_t& X,
-                                                   const p4a_matrix_view_t& Y,
+[[nodiscard]] n4m_status_t select_by_wvc_threshold(Context& ctx,
+                                                   const n4m_matrix_view_t& X,
+                                                   const n4m_matrix_view_t& Y,
                                                    std::int32_t n_components,
                                                    bool normalize,
                                                    double score_threshold,
@@ -62,4 +62,4 @@ struct WvcThresholdSelectionResult {
                                                    std::int32_t min_selected,
                                                    WvcThresholdSelectionResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

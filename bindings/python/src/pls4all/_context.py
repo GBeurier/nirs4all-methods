@@ -1,4 +1,4 @@
-"""Pythonic wrapper around p4a_context_t."""
+"""Pythonic wrapper around n4m_context_t."""
 
 from __future__ import annotations
 
@@ -14,25 +14,25 @@ def _check(status_int: int, ctx_handle: int | None = None) -> None:
         return
     msg = None
     if ctx_handle is not None:
-        raw = lib.p4a_context_last_error(ctx_handle)
+        raw = lib.n4m_context_last_error(ctx_handle)
         if raw:
             msg = raw.decode("utf-8")
     raise Pls4allError(status_int, msg)
 
 
 class Context:
-    """Owning handle around a p4a_context_t.
+    """Owning handle around a n4m_context_t.
 
     Usable as a context manager (``with Context() as ctx: ...``) for
     deterministic cleanup. Single-threaded use only; create one Context per
-    thread (the underlying p4a_context_t is documented as such).
+    thread (the underlying n4m_context_t is documented as such).
     """
 
     def __init__(self) -> None:
         handle = ctypes.c_void_p(0)
-        status = lib.p4a_context_create(ctypes.byref(handle))
+        status = lib.n4m_context_create(ctypes.byref(handle))
         if status != Status.OK or not handle:
-            raise Pls4allError(status, "p4a_context_create failed")
+            raise Pls4allError(status, "n4m_context_create failed")
         self._h = handle
 
     def __enter__(self) -> "Context":
@@ -49,7 +49,7 @@ class Context:
 
     def close(self) -> None:
         if self._h:
-            lib.p4a_context_destroy(self._h)
+            lib.n4m_context_destroy(self._h)
             self._h = ctypes.c_void_p(0)
 
     @property
@@ -60,40 +60,40 @@ class Context:
     @property
     def seed(self) -> int:
         out = ctypes.c_uint64(0)
-        _check(lib.p4a_context_get_seed(self._h, ctypes.byref(out)), self._h.value)
+        _check(lib.n4m_context_get_seed(self._h, ctypes.byref(out)), self._h.value)
         return int(out.value)
 
     @seed.setter
     def seed(self, value: int) -> None:
-        _check(lib.p4a_context_set_seed(self._h, ctypes.c_uint64(int(value))), self._h.value)
+        _check(lib.n4m_context_set_seed(self._h, ctypes.c_uint64(int(value))), self._h.value)
 
     # ---- backend ----
     @property
     def backend(self) -> Backend:
         out = ctypes.c_int(0)
-        _check(lib.p4a_context_get_backend(self._h, ctypes.byref(out)), self._h.value)
+        _check(lib.n4m_context_get_backend(self._h, ctypes.byref(out)), self._h.value)
         return Backend(out.value)
 
     @backend.setter
     def backend(self, value: Backend) -> None:
-        _check(lib.p4a_context_set_backend(self._h, int(value)), self._h.value)
+        _check(lib.n4m_context_set_backend(self._h, int(value)), self._h.value)
 
     # ---- num_threads ----
     @property
     def num_threads(self) -> int:
         out = ctypes.c_int32(0)
-        _check(lib.p4a_context_get_num_threads(self._h, ctypes.byref(out)), self._h.value)
+        _check(lib.n4m_context_get_num_threads(self._h, ctypes.byref(out)), self._h.value)
         return int(out.value)
 
     @num_threads.setter
     def num_threads(self, value: int) -> None:
-        _check(lib.p4a_context_set_num_threads(self._h, ctypes.c_int32(int(value))), self._h.value)
+        _check(lib.n4m_context_set_num_threads(self._h, ctypes.c_int32(int(value))), self._h.value)
 
     # ---- error buffer ----
     @property
     def last_error(self) -> str:
-        raw = lib.p4a_context_last_error(self._h)
+        raw = lib.n4m_context_last_error(self._h)
         return raw.decode("utf-8") if raw else ""
 
     def clear_error(self) -> None:
-        lib.p4a_context_clear_error(self._h)
+        lib.n4m_context_clear_error(self._h)

@@ -16,21 +16,21 @@ namespace {
 constexpr double kAbsTol = 1e-10;
 constexpr double kRelTol = 1e-10;
 
-p4a_matrix_view_t matrix_view(const ::pls4all::test::fixtures::MatrixRef& ref) {
-    p4a_matrix_view_t view{};
+n4m_matrix_view_t matrix_view(const ::n4m::test::fixtures::MatrixRef& ref) {
+    n4m_matrix_view_t view{};
     view.data = const_cast<double*>(ref.values);
     view.rows = ref.rows;
     view.cols = ref.cols;
     view.row_stride = ref.cols > 0 ? ref.cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
 void check_close_values(int& failures,
                         const char* label,
                         const std::vector<double>& actual,
-                        const ::pls4all::test::fixtures::MatrixRef& expected) {
+                        const ::n4m::test::fixtures::MatrixRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -60,7 +60,7 @@ void check_close_values(int& failures,
 void check_indices(int& failures,
                    const char* label,
                    const std::vector<std::int64_t>& actual,
-                   const ::pls4all::test::fixtures::AomPreprocessingIndexRef& expected) {
+                   const ::n4m::test::fixtures::AomPreprocessingIndexRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -84,30 +84,30 @@ void check_indices(int& failures,
     }
 }
 
-::pls4all::core::OperatorBank operator_bank(
-    const ::pls4all::test::fixtures::AomPreprocessingIndexRef& kinds) {
-    ::pls4all::core::OperatorBank bank;
+::n4m::core::OperatorBank operator_bank(
+    const ::n4m::test::fixtures::AomPreprocessingIndexRef& kinds) {
+    ::n4m::core::OperatorBank bank;
     for (std::size_t i = 0; i < kinds.size; ++i) {
-        bank.add(static_cast<p4a_operator_kind_t>(kinds.values[i]), nullptr, 0);
+        bank.add(static_cast<n4m_operator_kind_t>(kinds.values[i]), nullptr, 0);
     }
     return bank;
 }
 
 void check_fixture(int& failures,
-                   const ::pls4all::test::fixtures::AomPreprocessingFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::OperatorBank bank = operator_bank(fixture.operator_kinds);
-    ::pls4all::core::GatingStrategy gate(static_cast<p4a_gating_mode_t>(fixture.gating_mode));
-    p4a_matrix_view_t X = matrix_view(fixture.X);
+                   const ::n4m::test::fixtures::AomPreprocessingFixture& fixture) {
+    ::n4m::core::Context ctx;
+    ::n4m::core::OperatorBank bank = operator_bank(fixture.operator_kinds);
+    ::n4m::core::GatingStrategy gate(static_cast<n4m_gating_mode_t>(fixture.gating_mode));
+    n4m_matrix_view_t X = matrix_view(fixture.X);
 
-    ::pls4all::core::AomPreprocessingResult result;
-    CHECK_EQ(::pls4all::core::apply_aom_preprocessing(ctx,
+    ::n4m::core::AomPreprocessingResult result;
+    CHECK_EQ(::n4m::core::apply_aom_preprocessing(ctx,
                                                       bank,
                                                       gate,
                                                       X,
                                                       nullptr,
                                                       result),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(result.n_samples, fixture.X.rows);
     CHECK_EQ(result.n_features, fixture.X.cols);
     CHECK_EQ(result.n_operators, fixture.n_operators);
@@ -121,44 +121,44 @@ void check_fixture(int& failures,
 }  // namespace
 
 TEST(aom_preprocessing_phase6a, generated_fixture_matches_python_reference) {
-    for (const auto& fixture : ::pls4all::test::fixtures::kAomPreprocessingFixtures) {
+    for (const auto& fixture : ::n4m::test::fixtures::kAomPreprocessingFixtures) {
         check_fixture(failures, fixture);
     }
 }
 
 TEST(aom_preprocessing_phase6a, rejects_invalid_aom_preprocessing_requests) {
-    const auto& fixture = ::pls4all::test::fixtures::kAomPreprocessingFixtures[0];
-    ::pls4all::core::Context ctx;
-    p4a_matrix_view_t X = matrix_view(fixture.X);
+    const auto& fixture = ::n4m::test::fixtures::kAomPreprocessingFixtures[0];
+    ::n4m::core::Context ctx;
+    n4m_matrix_view_t X = matrix_view(fixture.X);
 
-    ::pls4all::core::OperatorBank empty_bank;
-    ::pls4all::core::GatingStrategy soft_gate(P4A_GATING_SOFT);
-    ::pls4all::core::AomPreprocessingResult result;
-    CHECK_EQ(::pls4all::core::apply_aom_preprocessing(ctx,
+    ::n4m::core::OperatorBank empty_bank;
+    ::n4m::core::GatingStrategy soft_gate(N4M_GATING_SOFT);
+    ::n4m::core::AomPreprocessingResult result;
+    CHECK_EQ(::n4m::core::apply_aom_preprocessing(ctx,
                                                       empty_bank,
                                                       soft_gate,
                                                       X,
                                                       nullptr,
                                                       result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 
-    ::pls4all::core::OperatorBank bank = operator_bank(fixture.operator_kinds);
-    ::pls4all::core::GatingStrategy unsupported_gate(P4A_GATING_PER_COMPONENT);
-    CHECK_EQ(::pls4all::core::apply_aom_preprocessing(ctx,
+    ::n4m::core::OperatorBank bank = operator_bank(fixture.operator_kinds);
+    ::n4m::core::GatingStrategy unsupported_gate(N4M_GATING_PER_COMPONENT);
+    CHECK_EQ(::n4m::core::apply_aom_preprocessing(ctx,
                                                       bank,
                                                       unsupported_gate,
                                                       X,
                                                       nullptr,
                                                       result),
-             P4A_ERR_UNSUPPORTED);
+             N4M_ERR_UNSUPPORTED);
 
-    p4a_matrix_view_t empty_x = X;
+    n4m_matrix_view_t empty_x = X;
     empty_x.rows = 0;
-    CHECK_EQ(::pls4all::core::apply_aom_preprocessing(ctx,
+    CHECK_EQ(::n4m::core::apply_aom_preprocessing(ctx,
                                                       bank,
                                                       soft_gate,
                                                       empty_x,
                                                       nullptr,
                                                       result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 }

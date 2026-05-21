@@ -19,7 +19,7 @@ constexpr double kRelTol = 1e-8;
 void check_close_values(int& failures,
                         const char* label,
                         const std::vector<double>& actual,
-                        const ::pls4all::test::fixtures::MatrixRef& expected) {
+                        const ::n4m::test::fixtures::MatrixRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -47,8 +47,8 @@ void check_close_values(int& failures,
 }
 
 void check_close_metrics(int& failures,
-                         const ::pls4all::core::RegressionMetrics& actual,
-                         const ::pls4all::test::fixtures::MatrixRef& expected) {
+                         const ::n4m::core::RegressionMetrics& actual,
+                         const ::n4m::test::fixtures::MatrixRef& expected) {
     CHECK_EQ(expected.size, static_cast<std::size_t>(9U));
     const double values[] = {
         actual.rmse,
@@ -68,7 +68,7 @@ void check_close_metrics(int& failures,
 void check_index_ref(int& failures,
                      const char* label,
                      const std::vector<std::int64_t>& actual,
-                     const ::pls4all::test::fixtures::CvIndexRef& expected) {
+                     const ::n4m::test::fixtures::CvIndexRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -93,37 +93,37 @@ void check_index_ref(int& failures,
 }
 
 void check_fixture(int& failures,
-                   const ::pls4all::test::fixtures::CrossValidationFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-    cfg.solver = P4A_SOLVER_NIPALS;
-    cfg.deflation = P4A_DEFLATION_REGRESSION;
+                   const ::n4m::test::fixtures::CrossValidationFixture& fixture) {
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+    cfg.solver = N4M_SOLVER_NIPALS;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
     cfg.n_components = fixture.n_components;
 
-    p4a_matrix_view_t X{};
-    p4a_matrix_view_t Y{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X,
+    n4m_matrix_view_t X{};
+    n4m_matrix_view_t Y{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&X,
                                            const_cast<double*>(fixture.X.values),
                                            fixture.X.rows,
                                            fixture.X.cols,
-                                           P4A_DTYPE_F64),
-             P4A_OK);
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&Y,
+                                           N4M_DTYPE_F64),
+             N4M_OK);
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&Y,
                                            const_cast<double*>(fixture.Y.values),
                                            fixture.Y.rows,
                                            fixture.Y.cols,
-                                           P4A_DTYPE_F64),
-             P4A_OK);
+                                           N4M_DTYPE_F64),
+             N4M_OK);
 
-    ::pls4all::core::ValidationPlan plan;
-    CHECK_EQ(::pls4all::core::make_kfold_validation_plan(ctx,
+    ::n4m::core::ValidationPlan plan;
+    CHECK_EQ(::n4m::core::make_kfold_validation_plan(ctx,
                                                          fixture.X.rows,
                                                          fixture.n_splits,
                                                          plan),
-             P4A_OK);
-    ::pls4all::core::CrossValidationResult result;
-    CHECK_EQ(::pls4all::core::cross_validate_regression(ctx, cfg, X, Y, plan, result), P4A_OK);
+             N4M_OK);
+    ::n4m::core::CrossValidationResult result;
+    CHECK_EQ(::n4m::core::cross_validate_regression(ctx, cfg, X, Y, plan, result), N4M_OK);
     CHECK_EQ(result.n_samples, fixture.X.rows);
     CHECK_EQ(result.n_targets, fixture.Y.cols);
     CHECK_EQ(result.n_folds, static_cast<std::int64_t>(fixture.n_splits));
@@ -136,14 +136,14 @@ void check_fixture(int& failures,
 }  // namespace
 
 TEST(cross_validation_phase3m, generated_kfold_fixtures_match_sklearn_reference) {
-    for (const auto& fixture : ::pls4all::test::fixtures::kCrossValidationFixtures) {
+    for (const auto& fixture : ::n4m::test::fixtures::kCrossValidationFixtures) {
         check_fixture(failures, fixture);
     }
 }
 
 TEST(cross_validation_phase3m, rejects_malformed_validation_plans) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
     cfg.n_components = 1;
 
     double x_values[] = {
@@ -155,40 +155,40 @@ TEST(cross_validation_phase3m, rejects_malformed_validation_plans) {
         2.0, 2.1,
     };
     double y_values[] = {0.1, 0.5, 1.0, 1.2, 1.7, 2.2};
-    p4a_matrix_view_t X{};
-    p4a_matrix_view_t Y{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X, x_values, 6, 2, P4A_DTYPE_F64), P4A_OK);
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&Y, y_values, 6, 1, P4A_DTYPE_F64), P4A_OK);
+    n4m_matrix_view_t X{};
+    n4m_matrix_view_t Y{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&X, x_values, 6, 2, N4M_DTYPE_F64), N4M_OK);
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&Y, y_values, 6, 1, N4M_DTYPE_F64), N4M_OK);
 
-    ::pls4all::core::CrossValidationResult result;
-    ::pls4all::core::ValidationPlan empty;
+    ::n4m::core::CrossValidationResult result;
+    ::n4m::core::ValidationPlan empty;
     empty.n_samples = 6;
-    CHECK_EQ(::pls4all::core::cross_validate_regression(ctx, cfg, X, Y, empty, result),
-             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::cross_validate_regression(ctx, cfg, X, Y, empty, result),
+             N4M_ERR_INVALID_ARGUMENT);
 
-    ::pls4all::core::ValidationPlan mismatch;
+    ::n4m::core::ValidationPlan mismatch;
     mismatch.n_samples = 5;
     mismatch.folds.push_back({{2, 3, 4, 5}, {0, 1}});
-    CHECK_EQ(::pls4all::core::cross_validate_regression(ctx, cfg, X, Y, mismatch, result),
-             P4A_ERR_SHAPE_MISMATCH);
+    CHECK_EQ(::n4m::core::cross_validate_regression(ctx, cfg, X, Y, mismatch, result),
+             N4M_ERR_SHAPE_MISMATCH);
 
-    ::pls4all::core::ValidationPlan overlap;
+    ::n4m::core::ValidationPlan overlap;
     overlap.n_samples = 6;
     overlap.folds.push_back({{0, 1, 2, 4}, {2, 3}});
-    CHECK_EQ(::pls4all::core::cross_validate_regression(ctx, cfg, X, Y, overlap, result),
-             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::cross_validate_regression(ctx, cfg, X, Y, overlap, result),
+             N4M_ERR_INVALID_ARGUMENT);
 
-    ::pls4all::core::ValidationPlan duplicate_test;
+    ::n4m::core::ValidationPlan duplicate_test;
     duplicate_test.n_samples = 6;
     duplicate_test.folds.push_back({{2, 3, 4, 5}, {0, 1}});
     duplicate_test.folds.push_back({{0, 3, 4, 5}, {1, 2}});
-    CHECK_EQ(::pls4all::core::cross_validate_regression(ctx, cfg, X, Y, duplicate_test, result),
-             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::cross_validate_regression(ctx, cfg, X, Y, duplicate_test, result),
+             N4M_ERR_INVALID_ARGUMENT);
 
-    ::pls4all::core::ValidationPlan missing_test;
+    ::n4m::core::ValidationPlan missing_test;
     missing_test.n_samples = 6;
     missing_test.folds.push_back({{2, 3, 4, 5}, {0, 1}});
     missing_test.folds.push_back({{0, 1, 4, 5}, {2, 3}});
-    CHECK_EQ(::pls4all::core::cross_validate_regression(ctx, cfg, X, Y, missing_test, result),
-             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::cross_validate_regression(ctx, cfg, X, Y, missing_test, result),
+             N4M_ERR_INVALID_ARGUMENT);
 }

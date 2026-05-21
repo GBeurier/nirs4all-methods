@@ -16,32 +16,32 @@ namespace {
 constexpr double kAbsTol = 1e-8;
 constexpr double kRelTol = 1e-8;
 
-p4a_matrix_view_t matrix_view(const ::pls4all::test::fixtures::MatrixRef& ref) {
-    p4a_matrix_view_t view{};
+n4m_matrix_view_t matrix_view(const ::n4m::test::fixtures::MatrixRef& ref) {
+    n4m_matrix_view_t view{};
     view.data = const_cast<double*>(ref.values);
     view.rows = ref.rows;
     view.cols = ref.cols;
     view.row_stride = ref.cols > 0 ? ref.cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
-p4a_matrix_view_t label_view(const ::pls4all::test::fixtures::PlsLogisticLabelRef& ref) {
-    p4a_matrix_view_t view{};
+n4m_matrix_view_t label_view(const ::n4m::test::fixtures::PlsLogisticLabelRef& ref) {
+    n4m_matrix_view_t view{};
     view.data = const_cast<std::int32_t*>(ref.values);
     view.rows = ref.rows;
     view.cols = ref.cols;
     view.row_stride = ref.cols > 0 ? ref.cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_I32;
+    view.dtype = N4M_DTYPE_I32;
     return view;
 }
 
 void check_close_values(int& failures,
                         const char* label,
                         const std::vector<double>& actual,
-                        const ::pls4all::test::fixtures::MatrixRef& expected) {
+                        const ::n4m::test::fixtures::MatrixRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -70,7 +70,7 @@ void check_close_values(int& failures,
 
 void check_predictions(int& failures,
                        const std::vector<std::int32_t>& actual,
-                       const ::pls4all::test::fixtures::PlsLogisticLabelRef& expected) {
+                       const ::n4m::test::fixtures::PlsLogisticLabelRef& expected) {
     CHECK_EQ(actual.size(), expected.size);
     const std::size_t n = std::min(actual.size(), expected.size);
     for (std::size_t i = 0; i < n; ++i) {
@@ -87,7 +87,7 @@ void check_predictions(int& failures,
 }
 
 void check_probability_rows(int& failures,
-                            const ::pls4all::core::PlsLogisticResult& result) {
+                            const ::n4m::core::PlsLogisticResult& result) {
     const auto rows = static_cast<std::size_t>(result.n_samples);
     const auto cols = static_cast<std::size_t>(result.n_classes);
     for (std::size_t row = 0; row < rows; ++row) {
@@ -117,24 +117,24 @@ void check_probability_rows(int& failures,
 }
 
 void check_fixture(int& failures,
-                   const ::pls4all::test::fixtures::PlsLogisticFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    cfg.algorithm = P4A_ALGO_PLS_DA;
-    cfg.solver = P4A_SOLVER_NIPALS;
-    cfg.deflation = P4A_DEFLATION_REGRESSION;
+                   const ::n4m::test::fixtures::PlsLogisticFixture& fixture) {
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    cfg.algorithm = N4M_ALGO_PLS_DA;
+    cfg.solver = N4M_SOLVER_NIPALS;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
     cfg.n_components = fixture.n_components;
 
-    p4a_matrix_view_t X = matrix_view(fixture.X);
-    p4a_matrix_view_t labels = label_view(fixture.labels);
-    ::pls4all::core::PlsLogisticResult result;
-    CHECK_EQ(::pls4all::core::fit_predict_pls_logistic(ctx,
+    n4m_matrix_view_t X = matrix_view(fixture.X);
+    n4m_matrix_view_t labels = label_view(fixture.labels);
+    ::n4m::core::PlsLogisticResult result;
+    CHECK_EQ(::n4m::core::fit_predict_pls_logistic(ctx,
                                                        cfg,
                                                        X,
                                                        labels,
                                                        fixture.n_classes,
                                                        result),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(result.n_samples, fixture.X.rows);
     CHECK_EQ(result.n_classes, fixture.n_classes);
     CHECK_EQ(result.n_components, fixture.n_components);
@@ -149,14 +149,14 @@ void check_fixture(int& failures,
 }  // namespace
 
 TEST(pls_logistic_phase4q, generated_fixture_matches_python_reference) {
-    for (const auto& fixture : ::pls4all::test::fixtures::kPlsLogisticFixtures) {
+    for (const auto& fixture : ::n4m::test::fixtures::kPlsLogisticFixtures) {
         check_fixture(failures, fixture);
     }
 }
 
 TEST(pls_logistic_phase4q, rejects_invalid_inputs) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
     cfg.n_components = 1;
     double x_values[] = {
         0.0, 0.1,
@@ -165,23 +165,23 @@ TEST(pls_logistic_phase4q, rejects_invalid_inputs) {
         1.2, 1.3,
     };
     std::int32_t labels_values[] = {0, 0, 1, 1};
-    p4a_matrix_view_t X{};
-    p4a_matrix_view_t labels{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X, x_values, 4, 2, P4A_DTYPE_F64), P4A_OK);
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&labels, labels_values, 4, 1, P4A_DTYPE_I32), P4A_OK);
+    n4m_matrix_view_t X{};
+    n4m_matrix_view_t labels{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&X, x_values, 4, 2, N4M_DTYPE_F64), N4M_OK);
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&labels, labels_values, 4, 1, N4M_DTYPE_I32), N4M_OK);
 
-    ::pls4all::core::PlsLogisticResult result;
-    CHECK_EQ(::pls4all::core::fit_predict_pls_logistic(ctx, cfg, X, labels, 1, result),
-             P4A_ERR_INVALID_ARGUMENT);
+    ::n4m::core::PlsLogisticResult result;
+    CHECK_EQ(::n4m::core::fit_predict_pls_logistic(ctx, cfg, X, labels, 1, result),
+             N4M_ERR_INVALID_ARGUMENT);
 
     std::int32_t missing_class_values[] = {0, 0, 0, 1};
-    p4a_matrix_view_t missing{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&missing, missing_class_values, 4, 1, P4A_DTYPE_I32), P4A_OK);
-    CHECK_EQ(::pls4all::core::fit_predict_pls_logistic(ctx, cfg, X, missing, 3, result),
-             P4A_ERR_INVALID_ARGUMENT);
+    n4m_matrix_view_t missing{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&missing, missing_class_values, 4, 1, N4M_DTYPE_I32), N4M_OK);
+    CHECK_EQ(::n4m::core::fit_predict_pls_logistic(ctx, cfg, X, missing, 3, result),
+             N4M_ERR_INVALID_ARGUMENT);
 
-    p4a_matrix_view_t mismatched = labels;
+    n4m_matrix_view_t mismatched = labels;
     mismatched.rows = 3;
-    CHECK_EQ(::pls4all::core::fit_predict_pls_logistic(ctx, cfg, X, mismatched, 2, result),
-             P4A_ERR_SHAPE_MISMATCH);
+    CHECK_EQ(::n4m::core::fit_predict_pls_logistic(ctx, cfg, X, mismatched, 2, result),
+             N4M_ERR_SHAPE_MISMATCH);
 }

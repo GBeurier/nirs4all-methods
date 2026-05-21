@@ -49,14 +49,14 @@ struct EvaluatedSubset {
     return true;
 }
 
-[[nodiscard]] double read_value(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_value(const n4m_matrix_view_t& view,
                                 std::size_t row,
                                 std::size_t col) noexcept {
     const std::int64_t off =
         static_cast<std::int64_t>(row) * view.row_stride +
         static_cast<std::int64_t>(col) * view.col_stride;
     const auto uoff = static_cast<std::size_t>(off);
-    if (view.dtype == P4A_DTYPE_F64) {
+    if (view.dtype == N4M_DTYPE_F64) {
         const auto* ptr = static_cast<const double*>(view.data);
         return ptr[uoff];
     }
@@ -64,124 +64,124 @@ struct EvaluatedSubset {
     return static_cast<double>(ptr[uoff]);
 }
 
-[[nodiscard]] p4a_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
+[[nodiscard]] n4m_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
                                                   std::int64_t rows,
                                                   std::int64_t cols) noexcept {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = values.data();
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols > 0 ? cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
-[[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t validate_float_view(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& view,
                                                const char* name) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(view);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(view);
+    if (status != N4M_OK) {
         ctx.set_errorf("%s matrix view is invalid: %s",
                        name,
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
-    if (view.dtype != P4A_DTYPE_F64 && view.dtype != P4A_DTYPE_F32) {
+    if (view.dtype != N4M_DTYPE_F64 && view.dtype != N4M_DTYPE_F32) {
         ctx.set_errorf("%s dtype must be f64 or f32", name);
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t validate_request(::pls4all::core::Context& ctx,
-                                            const ::pls4all::core::Config& cfg,
-                                            const p4a_matrix_view_t& X,
-                                            const p4a_matrix_view_t& Y,
-                                            const ::pls4all::core::ValidationPlan& plan,
+[[nodiscard]] n4m_status_t validate_request(::n4m::core::Context& ctx,
+                                            const ::n4m::core::Config& cfg,
+                                            const n4m_matrix_view_t& X,
+                                            const n4m_matrix_view_t& Y,
+                                            const ::n4m::core::ValidationPlan& plan,
                                             std::int32_t n_generations,
                                             std::int32_t population_size,
                                             std::int32_t min_features,
                                             std::int32_t max_features,
                                             double mutation_rate) {
-    p4a_status_t status = validate_float_view(ctx, X, "X");
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_float_view(ctx, X, "X");
+    if (status != N4M_OK) {
         return status;
     }
     status = validate_float_view(ctx, Y, "Y");
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     if (X.rows == 0 || X.cols == 0 || Y.cols == 0) {
         ctx.set_error("GA-PLS matrices must be non-empty");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.rows != Y.rows) {
         ctx.set_errorf("X rows (%lld) must match Y rows (%lld)",
                        static_cast<long long>(X.rows),
                        static_cast<long long>(Y.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (plan.n_samples != X.rows) {
         ctx.set_errorf("validation plan n_samples (%lld) must match X rows (%lld)",
                        static_cast<long long>(plan.n_samples),
                        static_cast<long long>(X.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (plan.folds.empty()) {
         ctx.set_error("GA-PLS requires at least one validation fold");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (n_generations <= 0) {
         ctx.set_errorf("n_generations must be >= 1; got %d", static_cast<int>(n_generations));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (population_size < 2) {
         ctx.set_errorf("population_size must be >= 2; got %d", static_cast<int>(population_size));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (cfg.n_components < 1 || static_cast<std::int64_t>(cfg.n_components) > X.cols) {
         ctx.set_errorf("n_components must be in [1, %lld]; got %d",
                        static_cast<long long>(X.cols),
                        static_cast<int>(cfg.n_components));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (min_features < cfg.n_components || min_features > X.cols) {
         ctx.set_errorf("min_features must be in [n_components, %lld]; got %d",
                        static_cast<long long>(X.cols),
                        static_cast<int>(min_features));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (max_features < min_features || max_features > X.cols) {
         ctx.set_errorf("max_features must be in [min_features, %lld]; got %d",
                        static_cast<long long>(X.cols),
                        static_cast<int>(max_features));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (!std::isfinite(mutation_rate) || mutation_rate < 0.0 || mutation_rate > 1.0) {
         ctx.set_error("mutation_rate must be finite and in [0, 1]");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max()) ||
         Y.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max())) {
         ctx.set_error("GA-PLS matrix dimensions exceed int32 result storage");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t copy_columns(::pls4all::core::Context& ctx,
-                                        const p4a_matrix_view_t& X,
+[[nodiscard]] n4m_status_t copy_columns(::n4m::core::Context& ctx,
+                                        const n4m_matrix_view_t& X,
                                         const std::vector<std::int64_t>& columns,
                                         std::vector<double>& out) {
     if (columns.empty()) {
         ctx.set_error("GA-PLS column selection must not be empty");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::size_t n_values = 0;
     if (!checked_matrix_size(X.rows, static_cast<std::int64_t>(columns.size()), n_values)) {
         ctx.set_error("GA-PLS subset matrix shape is too large");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     out.assign(n_values, 0.0);
     const auto rows = static_cast<std::size_t>(X.rows);
@@ -190,36 +190,36 @@ struct EvaluatedSubset {
         const std::int64_t original_col = columns[local_col];
         if (original_col < 0 || original_col >= X.cols) {
             ctx.set_error("GA-PLS column index out of range");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         const auto src_col = static_cast<std::size_t>(original_col);
         for (std::size_t row = 0; row < rows; ++row) {
             const double value = read_value(X, row, src_col);
             if (!std::isfinite(value)) {
                 ctx.set_error("GA-PLS X contains NaN or Inf");
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out[idx(row, cols, local_col)] = value;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t compute_subset_scores(::pls4all::core::Context& ctx,
-                                                 const ::pls4all::core::Config& cfg,
-                                                 const p4a_matrix_view_t& subset_x,
-                                                 const p4a_matrix_view_t& Y,
+[[nodiscard]] n4m_status_t compute_subset_scores(::n4m::core::Context& ctx,
+                                                 const ::n4m::core::Config& cfg,
+                                                 const n4m_matrix_view_t& subset_x,
+                                                 const n4m_matrix_view_t& Y,
                                                  std::vector<double>& out) {
-    std::unique_ptr<::pls4all::core::Model> model;
-    p4a_status_t status = ::pls4all::core::fit_model(ctx, cfg, subset_x, Y, model);
-    if (status != P4A_OK) {
+    std::unique_ptr<::n4m::core::Model> model;
+    n4m_status_t status = ::n4m::core::fit_model(ctx, cfg, subset_x, Y, model);
+    if (status != N4M_OK) {
         return status;
     }
     const auto p = static_cast<std::size_t>(subset_x.cols);
     const auto q = static_cast<std::size_t>(Y.cols);
     if (!model || model->coefficients.size() != p * q) {
         ctx.set_error("GA-PLS fitted model returned inconsistent coefficients");
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 
     out.assign(p, 0.0);
@@ -230,30 +230,30 @@ struct EvaluatedSubset {
         }
         out[feature] = best;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t subset_rmse(::pls4all::core::Context& ctx,
-                                       const ::pls4all::core::Config& cfg,
-                                       const p4a_matrix_view_t& X,
-                                       const p4a_matrix_view_t& Y,
-                                       const ::pls4all::core::ValidationPlan& plan,
+[[nodiscard]] n4m_status_t subset_rmse(::n4m::core::Context& ctx,
+                                       const ::n4m::core::Config& cfg,
+                                       const n4m_matrix_view_t& X,
+                                       const n4m_matrix_view_t& Y,
+                                       const ::n4m::core::ValidationPlan& plan,
                                        const std::vector<std::int64_t>& columns,
                                        double& out) {
     std::vector<double> subset_x;
-    p4a_status_t status = copy_columns(ctx, X, columns, subset_x);
-    if (status != P4A_OK) {
+    n4m_status_t status = copy_columns(ctx, X, columns, subset_x);
+    if (status != N4M_OK) {
         return status;
     }
-    p4a_matrix_view_t subset_view =
+    n4m_matrix_view_t subset_view =
         rowmajor_f64_view(subset_x, X.rows, static_cast<std::int64_t>(columns.size()));
-    ::pls4all::core::CrossValidationResult cv;
-    status = ::pls4all::core::cross_validate_regression(ctx, cfg, subset_view, Y, plan, cv);
-    if (status != P4A_OK) {
+    ::n4m::core::CrossValidationResult cv;
+    status = ::n4m::core::cross_validate_regression(ctx, cfg, subset_view, Y, plan, cv);
+    if (status != N4M_OK) {
         return status;
     }
     out = cv.metrics.rmse;
-    return P4A_OK;
+    return N4M_OK;
 }
 
 [[nodiscard]] std::uint64_t splitmix64_next(std::uint64_t& state) noexcept {
@@ -514,12 +514,12 @@ struct EvaluatedSubset {
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t select_by_ga(Context& ctx,
+n4m_status_t select_by_ga(Context& ctx,
                           const Config& cfg,
-                          const p4a_matrix_view_t& X,
-                          const p4a_matrix_view_t& Y,
+                          const n4m_matrix_view_t& X,
+                          const n4m_matrix_view_t& Y,
                           const ValidationPlan& plan,
                           std::int32_t n_generations,
                           std::int32_t population_size,
@@ -530,7 +530,7 @@ p4a_status_t select_by_ga(Context& ctx,
                           GaSelectionResult& out) {
     try {
         out = GaSelectionResult{};
-        p4a_status_t status = validate_request(ctx,
+        n4m_status_t status = validate_request(ctx,
                                                cfg,
                                                X,
                                                Y,
@@ -540,7 +540,7 @@ p4a_status_t select_by_ga(Context& ctx,
                                                min_features,
                                                max_features,
                                                mutation_rate);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -549,20 +549,20 @@ p4a_status_t select_by_ga(Context& ctx,
         std::iota(all_columns.begin(), all_columns.end(), static_cast<std::int64_t>(0));
         std::vector<double> full_x;
         status = copy_columns(ctx, X, all_columns, full_x);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             out = GaSelectionResult{};
             return status;
         }
-        p4a_matrix_view_t full_x_view = rowmajor_f64_view(full_x, X.rows, X.cols);
+        n4m_matrix_view_t full_x_view = rowmajor_f64_view(full_x, X.rows, X.cols);
         status = compute_subset_scores(ctx, cfg, full_x_view, Y, out.global_scores);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             out = GaSelectionResult{};
             return status;
         }
         if (out.global_scores.size() != p) {
             ctx.set_error("GA-PLS global score count is inconsistent");
             out = GaSelectionResult{};
-            return P4A_ERR_INTERNAL;
+            return N4M_ERR_INTERNAL;
         }
 
         std::uint64_t state = seed;
@@ -592,7 +592,7 @@ p4a_status_t select_by_ga(Context& ctx,
             for (const auto& individual : population) {
                 double rmse = 0.0;
                 status = subset_rmse(ctx, cfg, X, Y, plan, individual, rmse);
-                if (status != P4A_OK) {
+                if (status != N4M_OK) {
                     out = GaSelectionResult{};
                     return status;
                 }
@@ -671,16 +671,16 @@ p4a_status_t select_by_ga(Context& ctx,
         out.best_rmse = best_rmse;
         out.selected_indices = std::move(best_indices);
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while running GA-PLS selection");
         out = GaSelectionResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while running GA-PLS selection");
         out = GaSelectionResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

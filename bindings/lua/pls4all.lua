@@ -1,6 +1,6 @@
 -- SPDX-License-Identifier: CECILL-2.1
 --
--- Lua / LuaJIT binding around libp4a's `p4a_pls_fit_simple` C ABI
+-- Lua / LuaJIT binding around libn4m's `n4m_pls_fit_simple` C ABI
 -- helper. Uses LuaJIT's built-in FFI library — no external rocks
 -- required. Parity-gated against the shared cross-binding fixture
 -- `bindings/js/test/parity_fixture.json` at machine epsilon.
@@ -12,12 +12,12 @@
 local ffi = require("ffi")
 
 ffi.cdef[[
-typedef int p4a_status_t;
-const char* p4a_get_version_string(void);
-unsigned int p4a_get_abi_version_major(void);
-unsigned int p4a_get_abi_version_minor(void);
-unsigned int p4a_get_abi_version_patch(void);
-p4a_status_t p4a_pls_fit_simple(
+typedef int n4m_status_t;
+const char* n4m_get_version_string(void);
+unsigned int n4m_get_abi_version_major(void);
+unsigned int n4m_get_abi_version_minor(void);
+unsigned int n4m_get_abi_version_patch(void);
+n4m_status_t n4m_pls_fit_simple(
     const double* x, const double* y,
     int n, int p, int q, int n_components,
     double* coefficients_out,
@@ -31,14 +31,14 @@ local function load_libp4a()
   local candidates = {}
   if override and override ~= "" then table.insert(candidates, override) end
   table.insert(candidates, "p4a")          -- standard loader
-  table.insert(candidates, "libp4a.so")
-  table.insert(candidates, "libp4a.dylib")
+  table.insert(candidates, "libn4m.so")
+  table.insert(candidates, "libn4m.dylib")
 
   -- Walk up from this file to find a CMake dev-release build.
   local source = debug.getinfo(1, "S").source:sub(2)
   local cur = source:match("^(.*)/[^/]+$") or "."
   while cur and cur ~= "/" and cur ~= "" do
-    for _, name in ipairs({ "libp4a.so", "libp4a.dylib" }) do
+    for _, name in ipairs({ "libn4m.so", "libn4m.dylib" }) do
       local path = cur .. "/build/dev-release/cpp/src/" .. name
       table.insert(candidates, path)
     end
@@ -51,26 +51,26 @@ local function load_libp4a()
     local ok, lib = pcall(ffi.load, path)
     if ok then return lib end
   end
-  error("could not load libp4a (set PLS4ALL_LIB to its absolute path)")
+  error("could not load libn4m (set PLS4ALL_LIB to its absolute path)")
 end
 
 local lib = load_libp4a()
 
 local M = {}
 
---- Returns the libp4a runtime version, e.g. "0.92.0+abi.1.13.0".
+--- Returns the libn4m runtime version, e.g. "0.92.0+abi.1.13.0".
 function M.version()
-  local raw = lib.p4a_get_version_string()
+  local raw = lib.n4m_get_version_string()
   if raw == nil then return "" end
   return ffi.string(raw)
 end
 
---- Returns {major, minor, patch} from the libp4a ABI.
+--- Returns {major, minor, patch} from the libn4m ABI.
 function M.abi_version()
   return {
-    tonumber(lib.p4a_get_abi_version_major()),
-    tonumber(lib.p4a_get_abi_version_minor()),
-    tonumber(lib.p4a_get_abi_version_patch()),
+    tonumber(lib.n4m_get_abi_version_major()),
+    tonumber(lib.n4m_get_abi_version_minor()),
+    tonumber(lib.n4m_get_abi_version_patch()),
   }
 end
 
@@ -99,10 +99,10 @@ function M.pls_fit(x, y, n, p, q, n_components)
   local ym    = ffi.new("double[?]", q)
   local preds = ffi.new("double[?]", n * q)
 
-  local status = lib.p4a_pls_fit_simple(
+  local status = lib.n4m_pls_fit_simple(
     x_buf, y_buf, n, p, q, n_components, coefs, xm, ym, preds)
   if status ~= 0 then
-    error(string.format("p4a_pls_fit_simple failed with status %d", status))
+    error(string.format("n4m_pls_fit_simple failed with status %d", status))
   end
 
   local function to_table(buf, len)

@@ -6,7 +6,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct ComponentCoefficientsFixture {
     const char* id;
@@ -76,4 +76,4 @@ inline const ComponentCoefficientsFixture kComponentCoefficientsFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

@@ -11,13 +11,13 @@
 // source file (see M4/SPLIT_PLAN.md + M4/EXTRACTION_RECIPE.md).
 //
 // The extraction is deferred to a focused refactor session because
-// each cut must keep pls4all_tests (265/265) green between commits.
+// each cut must keep n4m_tests (265/265) green between commits.
 // Anonymous-namespace helpers MUST be extracted to _common.{cpp,hpp}
 // first (Phase 1 of the plan); algorithm files can then be extracted
 // one by one (Phases 2-7).
 //
 // Until the extraction lands, the function body lives in the source
-// file listed above; pls4all_core links the original monoliths.
+// file listed above; n4m_core links the original monoliths.
 
 #ifndef N4M_MODELS_CORE__COMMON_HPP_INCLUDED
 #define N4M_MODELS_CORE__COMMON_HPP_INCLUDED

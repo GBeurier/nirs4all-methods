@@ -1,10 +1,10 @@
 """Python parity smoke test for the AOM global and POP public C ABI.
 
-Drives the new p4a_aom_global_select / p4a_aom_per_component_select entry
+Drives the new n4m_aom_global_select / n4m_aom_per_component_select entry
 points through the ctypes Python binding and compares every output against
 the canonical bench-AOM_v0 fixtures committed under `parity/fixtures/`.
 
-Run after building libp4a::
+Run after building libn4m::
 
     cmake --build --preset dev-release --parallel
     python bindings/python/smoke_aom_pop.py

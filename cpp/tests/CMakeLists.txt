@@ -75,25 +75,25 @@ target_include_directories(pls4all_tests
         ${PROJECT_SOURCE_DIR}/cpp/src
         ${PROJECT_BINARY_DIR}/generated)
 if(PLS4ALL_WITH_BLAS)
-    # test_blas_backend.cpp uses #if defined(P4A_USE_BLAS) to pick its
-    # expected return value from p4a_backend_is_available.
-    target_compile_definitions(pls4all_tests PRIVATE P4A_USE_BLAS=1)
+    # test_blas_backend.cpp uses #if defined(N4M_USE_BLAS) to pick its
+    # expected return value from n4m_backend_is_available.
+    target_compile_definitions(pls4all_tests PRIVATE N4M_USE_BLAS=1)
     # pls4all_tests embeds pls4all_core OBJECTS directly (via the
     # PRIVATE pls4all_core link). Those objects reference cblas_* under
-    # P4A_USE_BLAS, so the test target must also carry the BLAS link.
+    # N4M_USE_BLAS, so the test target must also carry the BLAS link.
     target_link_libraries(pls4all_tests PRIVATE ${BLAS_LIBRARIES})
     if(BLAS_LINKER_FLAGS)
         target_link_options(pls4all_tests PRIVATE ${BLAS_LINKER_FLAGS})
     endif()
 endif()
 if(PLS4ALL_WITH_OPENMP)
-    target_compile_definitions(pls4all_tests PRIVATE P4A_USE_OPENMP=1)
+    target_compile_definitions(pls4all_tests PRIVATE N4M_USE_OPENMP=1)
     # Same gotcha as BLAS: the test target embeds pls4all_core objects
     # directly, so it must carry the OpenMP runtime link.
     target_link_libraries(pls4all_tests PRIVATE OpenMP::OpenMP_CXX)
 endif()
 if(PLS4ALL_WITH_CUDA)
-    target_compile_definitions(pls4all_tests PRIVATE P4A_USE_CUDA=1)
+    target_compile_definitions(pls4all_tests PRIVATE N4M_USE_CUDA=1)
     target_include_directories(pls4all_tests PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
     # Same gotcha as BLAS / OpenMP — the test target embeds pls4all_core
     # objects directly so it needs the CUDA runtime + cuBLAS link.

@@ -19,33 +19,33 @@ namespace {
     return row * cols + col;
 }
 
-[[nodiscard]] p4a_status_t element_count(::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t element_count(::n4m::core::Context& ctx,
                                          std::int64_t rows,
                                          std::int64_t cols,
                                          std::size_t& out) noexcept {
     if (rows < 0 || cols < 0) {
         ctx.set_error("AOM operator matrix shape is invalid");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const auto urows = static_cast<std::uint64_t>(rows);
     const auto ucols = static_cast<std::uint64_t>(cols);
     if (ucols != 0U &&
         urows > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()) / ucols) {
         ctx.set_error("AOM operator matrix shape is too large");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     out = static_cast<std::size_t>(urows * ucols);
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] double read_value(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_value(const n4m_matrix_view_t& view,
                                 std::size_t row,
                                 std::size_t col) noexcept {
     const std::int64_t off =
         static_cast<std::int64_t>(row) * view.row_stride +
         static_cast<std::int64_t>(col) * view.col_stride;
     const auto uoff = static_cast<std::size_t>(off);
-    if (view.dtype == P4A_DTYPE_F64) {
+    if (view.dtype == N4M_DTYPE_F64) {
         const auto* ptr = static_cast<const double*>(view.data);
         return ptr[uoff];
     }
@@ -53,33 +53,33 @@ namespace {
     return static_cast<double>(ptr[uoff]);
 }
 
-[[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t validate_float_view(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& view,
                                                const char* name) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(view);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(view);
+    if (status != N4M_OK) {
         ctx.set_errorf("%s matrix view is invalid: %s",
                        name,
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
-    if (view.dtype != P4A_DTYPE_F64 && view.dtype != P4A_DTYPE_F32) {
+    if (view.dtype != N4M_DTYPE_F64 && view.dtype != N4M_DTYPE_F32) {
         ctx.set_errorf("%s dtype must be f64 or f32", name);
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
     if (view.rows <= 0 || view.cols <= 0) {
         ctx.set_errorf("%s matrix must be non-empty", name);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t copy_matrix_checked(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& src,
+[[nodiscard]] n4m_status_t copy_matrix_checked(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& src,
                                                std::vector<double>& out) {
     std::size_t n_values = 0;
-    p4a_status_t status = element_count(ctx, src.rows, src.cols, n_values);
-    if (status != P4A_OK) {
+    n4m_status_t status = element_count(ctx, src.rows, src.cols, n_values);
+    if (status != N4M_OK) {
         return status;
     }
     out.assign(n_values, 0.0);
@@ -90,12 +90,12 @@ namespace {
             const double value = read_value(src, row, col);
             if (!std::isfinite(value)) {
                 ctx.set_error("AOM operator input contains NaN or Inf");
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out[idx(row, cols, col)] = value;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 [[nodiscard]] bool solve_linear_system(std::vector<double> matrix,
@@ -142,17 +142,17 @@ namespace {
     return true;
 }
 
-[[nodiscard]] p4a_status_t require_no_params(::pls4all::core::Context& ctx,
-                                             const ::pls4all::core::OperatorEntry& entry,
+[[nodiscard]] n4m_status_t require_no_params(::n4m::core::Context& ctx,
+                                             const ::n4m::core::OperatorEntry& entry,
                                              const char* name) {
     if (!entry.params.empty()) {
         ctx.set_errorf("%s does not accept parameters", name);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t parse_integer_param(::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t parse_integer_param(::n4m::core::Context& ctx,
                                                double raw,
                                                std::int32_t min_value,
                                                std::int32_t max_value,
@@ -166,22 +166,22 @@ namespace {
                        name,
                        static_cast<int>(min_value),
                        static_cast<int>(max_value));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     out = static_cast<std::int32_t>(rounded);
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t parse_degree(::pls4all::core::Context& ctx,
-                                        const ::pls4all::core::OperatorEntry& entry,
+[[nodiscard]] n4m_status_t parse_degree(::n4m::core::Context& ctx,
+                                        const ::n4m::core::OperatorEntry& entry,
                                         std::int32_t& degree) {
     degree = 1;
     if (entry.params.empty()) {
-        return P4A_OK;
+        return N4M_OK;
     }
     if (entry.params.size() != 1U) {
         ctx.set_error("AOM detrend expects zero params or one degree param");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     return parse_integer_param(ctx, entry.params[0], 0, 5, "AOM detrend degree", degree);
 }
@@ -200,29 +200,29 @@ struct SavGolParams {
     return out;
 }
 
-[[nodiscard]] p4a_status_t validate_savgol_params(::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t validate_savgol_params(::n4m::core::Context& ctx,
                                                   const SavGolParams& params) {
     if ((params.window % 2) == 0 || params.window < 3 || params.window > 501) {
         ctx.set_error("AOM Savitzky-Golay window length must be an odd integer in [3, 501]");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (params.poly_degree < 0 || params.poly_degree >= params.window) {
         ctx.set_error("AOM Savitzky-Golay polynomial degree must be non-negative and smaller than the window length");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (params.derivative_order < 0 || params.derivative_order > 2) {
         ctx.set_error("AOM Savitzky-Golay derivative order must be 0, 1 or 2");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (params.derivative_order > params.poly_degree) {
         ctx.set_error("AOM Savitzky-Golay derivative order must not exceed polynomial degree");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t parse_savgol_smooth(::pls4all::core::Context& ctx,
-                                               const ::pls4all::core::OperatorEntry& entry,
+[[nodiscard]] n4m_status_t parse_savgol_smooth(::n4m::core::Context& ctx,
+                                               const ::n4m::core::OperatorEntry& entry,
                                                SavGolParams& params) {
     params = SavGolParams{};
     params.derivative_order = 0;
@@ -231,15 +231,15 @@ struct SavGolParams {
     }
     if (entry.params.size() != 2U) {
         ctx.set_error("AOM Savitzky-Golay smooth expects zero params or window/poly_degree");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    p4a_status_t status = parse_integer_param(ctx,
+    n4m_status_t status = parse_integer_param(ctx,
                                               entry.params[0],
                                               3,
                                               501,
                                               "AOM Savitzky-Golay window length",
                                               params.window);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = parse_integer_param(ctx,
@@ -248,14 +248,14 @@ struct SavGolParams {
                                  500,
                                  "AOM Savitzky-Golay polynomial degree",
                                  params.poly_degree);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     return validate_savgol_params(ctx, params);
 }
 
-[[nodiscard]] p4a_status_t parse_savgol_derivative(::pls4all::core::Context& ctx,
-                                                   const ::pls4all::core::OperatorEntry& entry,
+[[nodiscard]] n4m_status_t parse_savgol_derivative(::n4m::core::Context& ctx,
+                                                   const ::n4m::core::OperatorEntry& entry,
                                                    SavGolParams& params) {
     params = SavGolParams{};
     params.derivative_order = 1;
@@ -264,15 +264,15 @@ struct SavGolParams {
     }
     if (entry.params.size() != 3U) {
         ctx.set_error("AOM Savitzky-Golay derivative expects zero params or window/poly_degree/derivative_order");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    p4a_status_t status = parse_integer_param(ctx,
+    n4m_status_t status = parse_integer_param(ctx,
                                               entry.params[0],
                                               3,
                                               501,
                                               "AOM Savitzky-Golay window length",
                                               params.window);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = parse_integer_param(ctx,
@@ -281,7 +281,7 @@ struct SavGolParams {
                                  500,
                                  "AOM Savitzky-Golay polynomial degree",
                                  params.poly_degree);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = parse_integer_param(ctx,
@@ -290,13 +290,13 @@ struct SavGolParams {
                                  2,
                                  "AOM Savitzky-Golay derivative order",
                                  params.derivative_order);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     return validate_savgol_params(ctx, params);
 }
 
-[[nodiscard]] p4a_status_t compute_savgol_coeffs(::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t compute_savgol_coeffs(::n4m::core::Context& ctx,
                                                  const SavGolParams& params,
                                                  std::vector<double>& coeffs) {
     const auto window = static_cast<std::size_t>(params.window);
@@ -330,7 +330,7 @@ struct SavGolParams {
     std::vector<double> projection;
     if (!solve_linear_system(gram, rhs, terms, projection)) {
         ctx.set_error("failed to solve AOM Savitzky-Golay normal equations");
-        return P4A_ERR_NUMERICAL_FAILURE;
+        return N4M_ERR_NUMERICAL_FAILURE;
     }
 
     coeffs.assign(window, 0.0);
@@ -341,16 +341,16 @@ struct SavGolParams {
         }
         coeffs[sample] = coeff;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t apply_xcorr_zero_pad(const std::vector<double>& values,
+[[nodiscard]] n4m_status_t apply_xcorr_zero_pad(const std::vector<double>& values,
                                                 std::size_t rows,
                                                 std::size_t cols,
                                                 const std::vector<double>& kernel,
                                                 std::vector<double>& out) {
     if (kernel.empty()) {
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const std::int64_t half = static_cast<std::int64_t>((kernel.size() - 1U) / 2U);
     out.assign(rows * cols, 0.0);
@@ -368,24 +368,24 @@ struct SavGolParams {
             out[idx(row, cols, col)] = sum;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t apply_savgol(::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t apply_savgol(::n4m::core::Context& ctx,
                                         const std::vector<double>& values,
                                         std::size_t rows,
                                         std::size_t cols,
                                         const SavGolParams& params,
                                         std::vector<double>& out) {
     std::vector<double> coeffs;
-    p4a_status_t status = compute_savgol_coeffs(ctx, params, coeffs);
-    if (status != P4A_OK) {
+    n4m_status_t status = compute_savgol_coeffs(ctx, params, coeffs);
+    if (status != N4M_OK) {
         return status;
     }
     return apply_xcorr_zero_pad(values, rows, cols, coeffs, out);
 }
 
-[[nodiscard]] p4a_status_t apply_detrend_poly(::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t apply_detrend_poly(::n4m::core::Context& ctx,
                                               const std::vector<double>& values,
                                               std::size_t rows,
                                               std::size_t cols,
@@ -393,11 +393,11 @@ struct SavGolParams {
                                               std::vector<double>& out) {
     if (degree < 0) {
         ctx.set_error("AOM detrend degree must be non-negative");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (static_cast<std::size_t>(degree) >= cols) {
         ctx.set_error("AOM detrend degree must be smaller than the column count");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const auto terms = static_cast<std::size_t>(degree) + 1U;
     std::vector<double> x(cols, 0.0);
@@ -440,7 +440,7 @@ struct SavGolParams {
         std::vector<double> coeffs;
         if (!solve_linear_system(gram, rhs, terms, coeffs)) {
             ctx.set_error("failed to solve AOM detrend normal equations");
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (std::size_t col = 0; col < cols; ++col) {
             double trend = 0.0;
@@ -450,11 +450,11 @@ struct SavGolParams {
             out[idx(row, cols, col)] = values[idx(row, cols, col)] - trend;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t apply_finite_difference(::pls4all::core::Context& ctx,
-                                                   const ::pls4all::core::OperatorEntry& entry,
+[[nodiscard]] n4m_status_t apply_finite_difference(::n4m::core::Context& ctx,
+                                                   const ::n4m::core::OperatorEntry& entry,
                                                    const std::vector<double>& values,
                                                    std::size_t rows,
                                                    std::size_t cols,
@@ -463,15 +463,15 @@ struct SavGolParams {
     if (!entry.params.empty()) {
         if (entry.params.size() != 1U) {
             ctx.set_error("AOM finite difference expects zero params or one order param");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
-        const p4a_status_t status = parse_integer_param(ctx,
+        const n4m_status_t status = parse_integer_param(ctx,
                                                         entry.params[0],
                                                         1,
                                                         2,
                                                         "AOM finite difference order",
                                                         order);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
     }
@@ -490,24 +490,24 @@ struct NorrisWilliamsParams {
     std::int32_t derivative_order{1};
 };
 
-[[nodiscard]] p4a_status_t parse_norris_williams(::pls4all::core::Context& ctx,
-                                                 const ::pls4all::core::OperatorEntry& entry,
+[[nodiscard]] n4m_status_t parse_norris_williams(::n4m::core::Context& ctx,
+                                                 const ::n4m::core::OperatorEntry& entry,
                                                  NorrisWilliamsParams& params) {
     params = NorrisWilliamsParams{};
     if (entry.params.empty()) {
-        return P4A_OK;
+        return N4M_OK;
     }
     if (entry.params.size() != 3U) {
         ctx.set_error("AOM Norris-Williams expects zero params or smoothing/gap/derivative_order");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    p4a_status_t status = parse_integer_param(ctx,
+    n4m_status_t status = parse_integer_param(ctx,
                                               entry.params[0],
                                               1,
                                               101,
                                               "AOM Norris-Williams smoothing",
                                               params.smoothing);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = parse_integer_param(ctx,
@@ -516,7 +516,7 @@ struct NorrisWilliamsParams {
                                  101,
                                  "AOM Norris-Williams gap",
                                  params.gap);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     status = parse_integer_param(ctx,
@@ -525,14 +525,14 @@ struct NorrisWilliamsParams {
                                  2,
                                  "AOM Norris-Williams derivative order",
                                  params.derivative_order);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     if ((params.smoothing % 2) == 0) {
         ctx.set_error("AOM Norris-Williams smoothing must be odd");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 [[nodiscard]] std::vector<double> convolve(const std::vector<double>& left,
@@ -546,15 +546,15 @@ struct NorrisWilliamsParams {
     return out;
 }
 
-[[nodiscard]] p4a_status_t apply_norris_williams(::pls4all::core::Context& ctx,
-                                                 const ::pls4all::core::OperatorEntry& entry,
+[[nodiscard]] n4m_status_t apply_norris_williams(::n4m::core::Context& ctx,
+                                                 const ::n4m::core::OperatorEntry& entry,
                                                  const std::vector<double>& values,
                                                  std::size_t rows,
                                                  std::size_t cols,
                                                  std::vector<double>& out) {
     NorrisWilliamsParams params;
-    p4a_status_t status = parse_norris_williams(ctx, entry, params);
-    if (status != P4A_OK) {
+    n4m_status_t status = parse_norris_williams(ctx, entry, params);
+    if (status != N4M_OK) {
         return status;
     }
     std::vector<double> smooth(static_cast<std::size_t>(params.smoothing),
@@ -569,8 +569,8 @@ struct NorrisWilliamsParams {
     return apply_xcorr_zero_pad(values, rows, cols, kernel, out);
 }
 
-[[nodiscard]] p4a_status_t apply_whittaker(::pls4all::core::Context& ctx,
-                                           const ::pls4all::core::OperatorEntry& entry,
+[[nodiscard]] n4m_status_t apply_whittaker(::n4m::core::Context& ctx,
+                                           const ::n4m::core::OperatorEntry& entry,
                                            const std::vector<double>& values,
                                            std::size_t rows,
                                            std::size_t cols,
@@ -579,13 +579,13 @@ struct NorrisWilliamsParams {
     if (!entry.params.empty()) {
         if (entry.params.size() != 1U) {
             ctx.set_error("AOM Whittaker expects zero params or one lambda param");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         lambda = entry.params[0];
     }
     if (!std::isfinite(lambda) || lambda <= 0.0) {
         ctx.set_error("AOM Whittaker lambda must be finite and positive");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
 
     std::vector<double> system(cols * cols, 0.0);
@@ -618,13 +618,13 @@ struct NorrisWilliamsParams {
         std::vector<double> solution;
         if (!solve_linear_system(system, rhs, cols, solution)) {
             ctx.set_error("failed to solve AOM Whittaker system");
-            return P4A_ERR_NUMERICAL_FAILURE;
+            return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (std::size_t col = 0; col < cols; ++col) {
             out[idx(row, cols, col)] = solution[col];
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 struct FckParams {
@@ -634,59 +634,59 @@ struct FckParams {
     double sigma{3.0};
 };
 
-[[nodiscard]] p4a_status_t parse_fck(::pls4all::core::Context& ctx,
-                                     const ::pls4all::core::OperatorEntry& entry,
+[[nodiscard]] n4m_status_t parse_fck(::n4m::core::Context& ctx,
+                                     const ::n4m::core::OperatorEntry& entry,
                                      FckParams& params) {
     params = FckParams{};
     if (entry.params.empty()) {
-        return P4A_OK;
+        return N4M_OK;
     }
     if (entry.params.size() != 1U && entry.params.size() != 4U) {
         ctx.set_error("AOM FCK expects zero params, alpha, or alpha/scale/kernel_size/sigma");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     params.alpha = entry.params[0];
     if (entry.params.size() == 4U) {
         params.scale = entry.params[1];
-        p4a_status_t status = parse_integer_param(ctx,
+        n4m_status_t status = parse_integer_param(ctx,
                                                   entry.params[2],
                                                   3,
                                                   501,
                                                   "AOM FCK kernel size",
                                                   params.kernel_size);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         params.sigma = entry.params[3];
     }
     if (!std::isfinite(params.alpha) || params.alpha < 0.0) {
         ctx.set_error("AOM FCK alpha must be finite and non-negative");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (!std::isfinite(params.scale) || params.scale <= 0.0) {
         ctx.set_error("AOM FCK scale must be finite and positive");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if ((params.kernel_size % 2) == 0) {
         ctx.set_error("AOM FCK kernel size must be odd");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (!std::isfinite(params.sigma) || params.sigma <= 0.0) {
         ctx.set_error("AOM FCK sigma must be finite and positive");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t apply_fck(::pls4all::core::Context& ctx,
-                                     const ::pls4all::core::OperatorEntry& entry,
+[[nodiscard]] n4m_status_t apply_fck(::n4m::core::Context& ctx,
+                                     const ::n4m::core::OperatorEntry& entry,
                                      const std::vector<double>& values,
                                      std::size_t rows,
                                      std::size_t cols,
                                      std::vector<double>& out) {
     FckParams params;
-    p4a_status_t status = parse_fck(ctx, entry, params);
-    if (status != P4A_OK) {
+    n4m_status_t status = parse_fck(ctx, entry, params);
+    if (status != N4M_OK) {
         return status;
     }
 
@@ -726,21 +726,21 @@ struct FckParams {
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t transform_aom_strict_operator(Context& ctx,
+n4m_status_t transform_aom_strict_operator(Context& ctx,
                                            const OperatorEntry& entry,
-                                           const p4a_matrix_view_t& X,
+                                           const n4m_matrix_view_t& X,
                                            std::vector<double>& out) {
-    p4a_status_t status = validate_float_view(ctx, X, "X");
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_float_view(ctx, X, "X");
+    if (status != N4M_OK) {
         out.clear();
         return status;
     }
 
     std::vector<double> values;
     status = copy_matrix_checked(ctx, X, values);
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         out.clear();
         return status;
     }
@@ -748,61 +748,61 @@ p4a_status_t transform_aom_strict_operator(Context& ctx,
     const auto rows = static_cast<std::size_t>(X.rows);
     const auto cols = static_cast<std::size_t>(X.cols);
     switch (entry.kind) {
-        case P4A_OP_IDENTITY:
+        case N4M_OP_IDENTITY:
             status = require_no_params(ctx, entry, "AOM identity");
-            if (status == P4A_OK) {
+            if (status == N4M_OK) {
                 out = std::move(values);
             }
             break;
-        case P4A_OP_DETREND_POLY: {
+        case N4M_OP_DETREND_POLY: {
             std::int32_t degree = 1;
             status = parse_degree(ctx, entry, degree);
-            if (status == P4A_OK) {
+            if (status == N4M_OK) {
                 status = apply_detrend_poly(ctx, values, rows, cols, degree, out);
             }
             break;
         }
-        case P4A_OP_SAVGOL_SMOOTH: {
+        case N4M_OP_SAVGOL_SMOOTH: {
             SavGolParams params;
             status = parse_savgol_smooth(ctx, entry, params);
-            if (status == P4A_OK) {
+            if (status == N4M_OK) {
                 status = apply_savgol(ctx, values, rows, cols, params, out);
             }
             break;
         }
-        case P4A_OP_SAVGOL_DERIVATIVE: {
+        case N4M_OP_SAVGOL_DERIVATIVE: {
             SavGolParams params;
             status = parse_savgol_derivative(ctx, entry, params);
-            if (status == P4A_OK) {
+            if (status == N4M_OK) {
                 status = apply_savgol(ctx, values, rows, cols, params, out);
             }
             break;
         }
-        case P4A_OP_NORRIS_WILLIAMS:
+        case N4M_OP_NORRIS_WILLIAMS:
             status = apply_norris_williams(ctx, entry, values, rows, cols, out);
             break;
-        case P4A_OP_FINITE_DIFFERENCE:
+        case N4M_OP_FINITE_DIFFERENCE:
             status = apply_finite_difference(ctx, entry, values, rows, cols, out);
             break;
-        case P4A_OP_WHITTAKER:
+        case N4M_OP_WHITTAKER:
             status = apply_whittaker(ctx, entry, values, rows, cols, out);
             break;
-        case P4A_OP_FCK:
+        case N4M_OP_FCK:
             status = apply_fck(ctx, entry, values, rows, cols, out);
             break;
         default:
             ctx.set_errorf("operator %d is not a supported strict-linear AOM operator",
                            static_cast<int>(entry.kind));
-            status = P4A_ERR_UNSUPPORTED;
+            status = N4M_ERR_UNSUPPORTED;
             break;
     }
 
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         out.clear();
         return status;
     }
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

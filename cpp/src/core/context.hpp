@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
-// Internal Context — the C++ object pointed to by the opaque p4a_context_s
+// Internal Context — the C++ object pointed to by the opaque n4m_context_s
 // handle. Owns the seed, backend choice, thread-count hint, the 4 KiB
 // per-context error buffer, and a binding-side user-pointer.
 //
@@ -21,12 +21,12 @@
 #include "pls4all/p4a.h"
 
 #if defined(__GNUC__) || defined(__clang__)
-#  define P4A_PRINTF_LIKE(fmt_index, first_arg) __attribute__((format(printf, fmt_index, first_arg)))
+#  define N4M_PRINTF_LIKE(fmt_index, first_arg) __attribute__((format(printf, fmt_index, first_arg)))
 #else
-#  define P4A_PRINTF_LIKE(fmt_index, first_arg)
+#  define N4M_PRINTF_LIKE(fmt_index, first_arg)
 #endif
 
-namespace pls4all::core {
+namespace n4m::core {
 
 class Context {
   public:
@@ -41,11 +41,11 @@ class Context {
     void set_seed(std::uint64_t seed) noexcept { seed_ = seed; }
     [[nodiscard]] std::uint64_t seed() const noexcept { return seed_; }
 
-    // Returns P4A_OK on success, P4A_ERR_INVALID_ARGUMENT for an
-    // out-of-range backend value, or P4A_ERR_BACKEND_UNAVAILABLE if the
+    // Returns N4M_OK on success, N4M_ERR_INVALID_ARGUMENT for an
+    // out-of-range backend value, or N4M_ERR_BACKEND_UNAVAILABLE if the
     // backend is not compiled into this build.
-    p4a_status_t set_backend(p4a_backend_t backend) noexcept;
-    [[nodiscard]] p4a_backend_t backend() const noexcept { return backend_; }
+    n4m_status_t set_backend(n4m_backend_t backend) noexcept;
+    [[nodiscard]] n4m_backend_t backend() const noexcept { return backend_; }
 
     // Negative or zero means "library default" (interpreted later by the
     // accelerated backends). Phase 0 just stores the value.
@@ -63,20 +63,20 @@ class Context {
     // Writes a NUL-terminated, safely-truncated message into the error
     // buffer. Always succeeds. Pre-existing content is overwritten.
     void set_error(const char* msg) noexcept;
-    void set_errorf(const char* fmt, ...) noexcept P4A_PRINTF_LIKE(2, 3);
+    void set_errorf(const char* fmt, ...) noexcept N4M_PRINTF_LIKE(2, 3);
 
   private:
     std::uint64_t seed_;
-    p4a_backend_t backend_;
+    n4m_backend_t backend_;
     std::int32_t  num_threads_;
     void*         user_data_;
-    char          error_buf_[P4A_ERROR_BUFFER_BYTES];
+    char          error_buf_[N4M_ERROR_BUFFER_BYTES];
 };
 
-}  // namespace pls4all::core
+}  // namespace n4m::core
 
-// Opaque struct alias. p4a.h declares `struct p4a_context_s; typedef … p4a_context_t;`;
+// Opaque struct alias. p4a.h declares `struct n4m_context_s; typedef … n4m_context_t;`;
 // we attach the C++ Context implementation directly to that tag.
-struct p4a_context_s : public ::pls4all::core::Context {};
+struct n4m_context_s : public ::n4m::core::Context {};
 
-#undef P4A_PRINTF_LIKE
+#undef N4M_PRINTF_LIKE

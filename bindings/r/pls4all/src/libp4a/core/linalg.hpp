@@ -8,11 +8,11 @@
 //   gemm   — C = a op(A) op(B) + b C (cross-covariance + rotation GEMMs)
 //   ger    — A += a * x * y^T (rank-1 deflations)
 //
-// When P4A_USE_BLAS is not defined the implementations are the same
+// When N4M_USE_BLAS is not defined the implementations are the same
 // row-major double loops that lived in model.cpp pre-Phase 43, so the
 // default-OFF build is bit-identical to the scalar engine.
 //
-// When P4A_USE_BLAS is defined we dispatch to the system CBLAS
+// When N4M_USE_BLAS is defined we dispatch to the system CBLAS
 // implementation (OpenBLAS, MKL, Accelerate, Netlib — whichever the
 // CMake `find_package(BLAS)` resolved). All buffers stay row-major and
 // contiguous; lda equals cols for every internal working buffer, so
@@ -24,7 +24,7 @@
 #include <cstddef>
 #include <vector>
 
-#if defined(P4A_USE_BLAS)
+#if defined(N4M_USE_BLAS)
 #  if defined(__APPLE__) && __has_include(<Accelerate/Accelerate.h>) && !__has_include(<cblas.h>)
 #    include <Accelerate/Accelerate.h>
 #  else
@@ -32,23 +32,23 @@
 #  endif
 #endif
 
-#if defined(P4A_USE_CUDA)
+#if defined(N4M_USE_CUDA)
 #  include "core/cuda_dispatch.hpp"
 #endif
 
-namespace pls4all {
+namespace n4m {
 namespace linalg {
 
 // ---------------------------------------------------------------------------
 // Transpose flag. Defined as a tiny enum on the reference path so the call
 // sites can stay #ifdef-free.
 // ---------------------------------------------------------------------------
-// When P4A_USE_CUDA is defined the dispatch goes to cuda_dispatch which
+// When N4M_USE_CUDA is defined the dispatch goes to cuda_dispatch which
 // uses plain ints (0 = NoTrans, 1 = Trans). The BLAS branch below is
 // only compiled when CUDA is OFF (it's gated by `#elif` in the body of
 // each dispatch function), so we use the plain enum whenever CUDA is on
 // to keep call-site types consistent.
-#if defined(P4A_USE_BLAS) && !defined(P4A_USE_CUDA)
+#if defined(N4M_USE_BLAS) && !defined(N4M_USE_CUDA)
 using Trans_t = CBLAS_TRANSPOSE;
 constexpr CBLAS_TRANSPOSE Trans_No  = CblasNoTrans;
 constexpr CBLAS_TRANSPOSE Trans_Yes = CblasTrans;
@@ -73,11 +73,11 @@ inline void gemv(Trans_t trans,
     if (rows == 0 || cols == 0) {
         return;
     }
-#if defined(P4A_USE_CUDA)
-    pls4all::cuda_dispatch::gemv(
+#if defined(N4M_USE_CUDA)
+    n4m::cuda_dispatch::gemv(
         (trans == Trans_No) ? 0 : 1,
         rows, cols, alpha, A, x, beta, y);
-#elif defined(P4A_USE_BLAS)
+#elif defined(N4M_USE_BLAS)
     cblas_dgemv(CblasRowMajor, trans,
                 static_cast<int>(rows), static_cast<int>(cols),
                 alpha,
@@ -170,13 +170,13 @@ inline void gemm(Trans_t trans_a,
     if (M == 0 || N == 0) {
         return;
     }
-#if defined(P4A_USE_CUDA)
-    pls4all::cuda_dispatch::gemm(
+#if defined(N4M_USE_CUDA)
+    n4m::cuda_dispatch::gemm(
         (trans_a == Trans_No) ? 0 : 1,
         (trans_b == Trans_No) ? 0 : 1,
         M, N, K, alpha,
         A, lda, B, ldb, beta, C, ldc);
-#elif defined(P4A_USE_BLAS)
+#elif defined(N4M_USE_BLAS)
     cblas_dgemm(CblasRowMajor, trans_a, trans_b,
                 static_cast<int>(M), static_cast<int>(N), static_cast<int>(K),
                 alpha,
@@ -272,9 +272,9 @@ inline void ger(std::size_t M, std::size_t N,
     if (M == 0 || N == 0 || alpha == 0.0) {
         return;
     }
-#if defined(P4A_USE_CUDA)
-    pls4all::cuda_dispatch::ger(M, N, alpha, x, y, A, lda);
-#elif defined(P4A_USE_BLAS)
+#if defined(N4M_USE_CUDA)
+    n4m::cuda_dispatch::ger(M, N, alpha, x, y, A, lda);
+#elif defined(N4M_USE_BLAS)
     cblas_dger(CblasRowMajor,
                static_cast<int>(M), static_cast<int>(N),
                alpha,
@@ -292,6 +292,6 @@ inline void ger(std::size_t M, std::size_t N,
 }
 
 }  // namespace linalg
-}  // namespace pls4all
+}  // namespace n4m
 
 #endif  // PLS4ALL_CORE_LINALG_HPP

@@ -13,7 +13,7 @@
 #include "core/context.hpp"
 #include "core/validation.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct IpwSelectionResult {
     std::int32_t n_features{0};
@@ -37,10 +37,10 @@ struct IpwSelectionResult {
     std::vector<std::int64_t> selected_indices;
 };
 
-[[nodiscard]] p4a_status_t select_by_ipw(Context& ctx,
+[[nodiscard]] n4m_status_t select_by_ipw(Context& ctx,
                                          const Config& cfg,
-                                         const p4a_matrix_view_t& X,
-                                         const p4a_matrix_view_t& Y,
+                                         const n4m_matrix_view_t& X,
+                                         const n4m_matrix_view_t& Y,
                                          const ValidationPlan& plan,
                                          std::int32_t n_iterations,
                                          std::int32_t top_k,
@@ -48,4 +48,4 @@ struct IpwSelectionResult {
                                          double weight_floor,
                                          IpwSelectionResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

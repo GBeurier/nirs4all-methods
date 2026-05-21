@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct AomPreprocessingIndexRef {
     const std::int64_t* values;
@@ -132,4 +132,4 @@ inline const AomPreprocessingFixture kAomPreprocessingFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

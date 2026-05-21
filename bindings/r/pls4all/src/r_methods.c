@@ -11,8 +11,8 @@
  *   - rowmajor-copy X (and Y) so the C ABI gets contiguous row-major
  *     views (R matrices are column-major)
  *   - build a Config with sane defaults (PLS_REGRESSION + SIMPLS)
- *   - call the p4a_*_fit / p4a_*_select function
- *   - marshall the p4a_method_result_t into an R named list
+ *   - call the n4m_*_fit / n4m_*_select function
+ *   - marshall the n4m_method_result_t into an R named list
  *   - destroy ctx, cfg, mr in all paths.
  */
 
@@ -24,7 +24,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 /* ---- shared helpers ------------------------------------------------- */
 
@@ -33,29 +33,29 @@
  * downstream paths are unreachable. Ctx destruction must happen
  * BEFORE Rf_error: longjmp skips any cleanup below the call site. */
 #if defined(__GNUC__) || defined(__clang__)
-#  define P4A_R_NORETURN __attribute__((noreturn))
+#  define N4M_R_NORETURN __attribute__((noreturn))
 #else
-#  define P4A_R_NORETURN
+#  define N4M_R_NORETURN
 #endif
 
-static void r_throw(const char* fn, p4a_status_t status, p4a_context_t* ctx)
-    P4A_R_NORETURN;
+static void r_throw(const char* fn, n4m_status_t status, n4m_context_t* ctx)
+    N4M_R_NORETURN;
 
-static void r_throw(const char* fn, p4a_status_t status, p4a_context_t* ctx) {
-    const char* status_str = p4a_status_to_string(status);
+static void r_throw(const char* fn, n4m_status_t status, n4m_context_t* ctx) {
+    const char* status_str = n4m_status_to_string(status);
     char buf[4096];
     buf[0] = '\0';
     if (ctx != NULL) {
-        const char* msg = p4a_context_last_error(ctx);
+        const char* msg = n4m_context_last_error(ctx);
         if (msg != NULL && msg[0] != '\0') {
             /* Truncating copy: per-context error buffer is bounded at
-             * P4A_ERROR_BUFFER_BYTES = 4096 anyway. */
+             * N4M_ERROR_BUFFER_BYTES = 4096 anyway. */
             size_t n = strlen(msg);
             if (n >= sizeof(buf)) n = sizeof(buf) - 1;
             memcpy(buf, msg, n);
             buf[n] = '\0';
         }
-        p4a_context_destroy(ctx);
+        n4m_context_destroy(ctx);
     }
     if (buf[0] != '\0') {
         Rf_error("%s failed: %s (%s)", fn, status_str, buf);
@@ -82,42 +82,42 @@ static void rowmajor_to_colmajor(const double* src, double* dst,
     }
 }
 
-static p4a_config_t* basic_cfg(int n_components) {
-    p4a_config_t* cfg = NULL;
-    p4a_status_t status = p4a_config_create(&cfg);
-    if (status != P4A_OK) Rf_error("p4a_config_create failed");
-    p4a_config_set_algorithm(cfg, P4A_ALGO_PLS_REGRESSION);
-    p4a_config_set_solver(cfg, P4A_SOLVER_SIMPLS);
-    p4a_config_set_deflation(cfg, P4A_DEFLATION_REGRESSION);
-    p4a_config_set_n_components(cfg, n_components);
-    p4a_config_set_center_x(cfg, 1);
-    p4a_config_set_scale_x(cfg, 0);
-    p4a_config_set_center_y(cfg, 1);
-    p4a_config_set_scale_y(cfg, 0);
-    p4a_config_set_tol(cfg, 1e-6);
-    p4a_config_set_max_iter(cfg, 500);
+static n4m_config_t* basic_cfg(int n_components) {
+    n4m_config_t* cfg = NULL;
+    n4m_status_t status = n4m_config_create(&cfg);
+    if (status != N4M_OK) Rf_error("n4m_config_create failed");
+    n4m_config_set_algorithm(cfg, N4M_ALGO_PLS_REGRESSION);
+    n4m_config_set_solver(cfg, N4M_SOLVER_SIMPLS);
+    n4m_config_set_deflation(cfg, N4M_DEFLATION_REGRESSION);
+    n4m_config_set_n_components(cfg, n_components);
+    n4m_config_set_center_x(cfg, 1);
+    n4m_config_set_scale_x(cfg, 0);
+    n4m_config_set_center_y(cfg, 1);
+    n4m_config_set_scale_y(cfg, 0);
+    n4m_config_set_tol(cfg, 1e-6);
+    n4m_config_set_max_iter(cfg, 500);
     return cfg;
 }
 
 /* Extract a named double matrix as a column-major R matrix.
  * Returns R_NilValue when the name is absent. */
-static SEXP mr_matrix(const p4a_method_result_t* mr, const char* name) {
+static SEXP mr_matrix(const n4m_method_result_t* mr, const char* name) {
     const double* data = NULL;
     int64_t rows = 0, cols = 0;
-    p4a_status_t st = p4a_method_result_get_double_matrix(mr, name,
+    n4m_status_t st = n4m_method_result_get_double_matrix(mr, name,
                                                           &data, &rows, &cols);
-    if (st != P4A_OK || data == NULL) return R_NilValue;
+    if (st != N4M_OK || data == NULL) return R_NilValue;
     SEXP out = PROTECT(Rf_allocMatrix(REALSXP, (int)rows, (int)cols));
     rowmajor_to_colmajor(data, REAL(out), rows, cols);
     UNPROTECT(1);
     return out;
 }
 
-static SEXP mr_int_vector(const p4a_method_result_t* mr, const char* name) {
+static SEXP mr_int_vector(const n4m_method_result_t* mr, const char* name) {
     const int32_t* data = NULL;
     int32_t size = 0;
-    p4a_status_t st = p4a_method_result_get_int_vector(mr, name, &data, &size);
-    if (st != P4A_OK || data == NULL) return R_NilValue;
+    n4m_status_t st = n4m_method_result_get_int_vector(mr, name, &data, &size);
+    if (st != N4M_OK || data == NULL) return R_NilValue;
     SEXP out = PROTECT(Rf_allocVector(INTSXP, size));
     for (int32_t i = 0; i < size; ++i) INTEGER(out)[i] = data[i];
     UNPROTECT(1);
@@ -125,21 +125,21 @@ static SEXP mr_int_vector(const p4a_method_result_t* mr, const char* name) {
 }
 
 /* R has no int64, so widen to double to preserve magnitude. */
-static SEXP mr_int64_as_double(const p4a_method_result_t* mr, const char* name) {
+static SEXP mr_int64_as_double(const n4m_method_result_t* mr, const char* name) {
     const int64_t* data = NULL;
     int64_t size = 0;
-    p4a_status_t st = p4a_method_result_get_int64_vector(mr, name, &data, &size);
-    if (st != P4A_OK || data == NULL) return R_NilValue;
+    n4m_status_t st = n4m_method_result_get_int64_vector(mr, name, &data, &size);
+    if (st != N4M_OK || data == NULL) return R_NilValue;
     SEXP out = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)size));
     for (int64_t i = 0; i < size; ++i) REAL(out)[i] = (double)data[i];
     UNPROTECT(1);
     return out;
 }
 
-static SEXP mr_scalar(const p4a_method_result_t* mr, const char* name) {
+static SEXP mr_scalar(const n4m_method_result_t* mr, const char* name) {
     double v = 0.0;
-    p4a_status_t st = p4a_method_result_get_scalar(mr, name, &v);
-    if (st != P4A_OK) return R_NilValue;
+    n4m_status_t st = n4m_method_result_get_scalar(mr, name, &v);
+    if (st != N4M_OK) return R_NilValue;
     return Rf_ScalarReal(v);
 }
 
@@ -190,7 +190,7 @@ static void grab_xy(SEXP X, SEXP Y,
 }
 
 /* Pack result keys into a named list, then destroy the MethodResult. */
-static SEXP pack_and_destroy(p4a_method_result_t* mr,
+static SEXP pack_and_destroy(n4m_method_result_t* mr,
                               const char** keys, int n_keys,
                               const char* extra_int_key /* may be NULL */,
                               const char* extra_int64_key /* may be NULL */) {
@@ -218,7 +218,7 @@ static SEXP pack_and_destroy(p4a_method_result_t* mr,
     }
     SEXP out = make_named_list(all_keys, slots, slot_count);
     UNPROTECT(slot_count);
-    p4a_method_result_destroy(mr);
+    n4m_method_result_destroy(mr);
     return out;
 }
 
@@ -233,21 +233,21 @@ SEXP r_p4a_sparse_simpls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
     int64_t n_rows = 0, n_cols = 0, y_cols = 0;
     SEXP X_rm, Y_rm;
     grab_xy(X, Y, &n_rows, &n_cols, &y_cols, &X_rm, &Y_rm);
-    p4a_context_t* ctx = NULL;
-    p4a_status_t st = p4a_context_create(&ctx);
-    if (st != P4A_OK) { UNPROTECT(2); Rf_error("p4a_context_create failed"); }
-    p4a_config_t* cfg = basic_cfg(nc);
-    p4a_matrix_view_t Xv, Yv;
-    p4a_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, P4A_DTYPE_F64);
-    p4a_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, P4A_DTYPE_F64);
-    p4a_method_result_t* mr = NULL;
-    st = p4a_sparse_simpls_fit(ctx, cfg, &Xv, &Yv, lambda, &mr);
-    p4a_config_destroy(cfg);
-    if (st != P4A_OK) {
+    n4m_context_t* ctx = NULL;
+    n4m_status_t st = n4m_context_create(&ctx);
+    if (st != N4M_OK) { UNPROTECT(2); Rf_error("n4m_context_create failed"); }
+    n4m_config_t* cfg = basic_cfg(nc);
+    n4m_matrix_view_t Xv, Yv;
+    n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
+    n4m_method_result_t* mr = NULL;
+    st = n4m_sparse_simpls_fit(ctx, cfg, &Xv, &Yv, lambda, &mr);
+    n4m_config_destroy(cfg);
+    if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("p4a_sparse_simpls_fit", st, ctx);
+        r_throw("n4m_sparse_simpls_fit", st, ctx);
     }
-    p4a_context_destroy(ctx);
+    n4m_context_destroy(ctx);
     UNPROTECT(2);
     const char* keys[] = {"coefficients", "predictions", "x_mean", "y_mean",
                             "weights_w", "rmse"};
@@ -260,21 +260,21 @@ SEXP r_p4a_cppls_fit(SEXP X, SEXP Y, SEXP n_components_sexp, SEXP gamma_sexp) {
     int64_t n_rows = 0, n_cols = 0, y_cols = 0;
     SEXP X_rm, Y_rm;
     grab_xy(X, Y, &n_rows, &n_cols, &y_cols, &X_rm, &Y_rm);
-    p4a_context_t* ctx = NULL;
-    p4a_status_t st = p4a_context_create(&ctx);
-    if (st != P4A_OK) { UNPROTECT(2); Rf_error("p4a_context_create failed"); }
-    p4a_config_t* cfg = basic_cfg(nc);
-    p4a_matrix_view_t Xv, Yv;
-    p4a_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, P4A_DTYPE_F64);
-    p4a_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, P4A_DTYPE_F64);
-    p4a_method_result_t* mr = NULL;
-    st = p4a_cppls_fit(ctx, cfg, &Xv, &Yv, gamma, &mr);
-    p4a_config_destroy(cfg);
-    if (st != P4A_OK) {
+    n4m_context_t* ctx = NULL;
+    n4m_status_t st = n4m_context_create(&ctx);
+    if (st != N4M_OK) { UNPROTECT(2); Rf_error("n4m_context_create failed"); }
+    n4m_config_t* cfg = basic_cfg(nc);
+    n4m_matrix_view_t Xv, Yv;
+    n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
+    n4m_method_result_t* mr = NULL;
+    st = n4m_cppls_fit(ctx, cfg, &Xv, &Yv, gamma, &mr);
+    n4m_config_destroy(cfg);
+    if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("p4a_cppls_fit", st, ctx);
+        r_throw("n4m_cppls_fit", st, ctx);
     }
-    p4a_context_destroy(ctx);
+    n4m_context_destroy(ctx);
     UNPROTECT(2);
     const char* keys[] = {"coefficients", "predictions", "x_mean", "y_mean", "rmse"};
     return pack_and_destroy(mr, keys, 5, NULL, NULL);
@@ -293,23 +293,23 @@ SEXP r_p4a_weighted_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
         Rf_error("length(sample_weights) (%d) must equal nrow(X) (%lld)",
                   Rf_length(sample_weights_sexp), (long long)n_rows);
     }
-    p4a_context_t* ctx = NULL;
-    p4a_status_t st = p4a_context_create(&ctx);
-    if (st != P4A_OK) { UNPROTECT(2); Rf_error("p4a_context_create failed"); }
-    p4a_config_t* cfg = basic_cfg(nc);
-    p4a_matrix_view_t Xv, Yv;
-    p4a_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, P4A_DTYPE_F64);
-    p4a_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, P4A_DTYPE_F64);
-    p4a_method_result_t* mr = NULL;
-    st = p4a_weighted_pls_fit(ctx, cfg, &Xv, &Yv,
+    n4m_context_t* ctx = NULL;
+    n4m_status_t st = n4m_context_create(&ctx);
+    if (st != N4M_OK) { UNPROTECT(2); Rf_error("n4m_context_create failed"); }
+    n4m_config_t* cfg = basic_cfg(nc);
+    n4m_matrix_view_t Xv, Yv;
+    n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
+    n4m_method_result_t* mr = NULL;
+    st = n4m_weighted_pls_fit(ctx, cfg, &Xv, &Yv,
                                REAL(sample_weights_sexp),
                                (int64_t)Rf_length(sample_weights_sexp), &mr);
-    p4a_config_destroy(cfg);
-    if (st != P4A_OK) {
+    n4m_config_destroy(cfg);
+    if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("p4a_weighted_pls_fit", st, ctx);
+        r_throw("n4m_weighted_pls_fit", st, ctx);
     }
-    p4a_context_destroy(ctx);
+    n4m_context_destroy(ctx);
     UNPROTECT(2);
     const char* keys[] = {"coefficients", "predictions", "x_mean", "y_mean", "rmse"};
     return pack_and_destroy(mr, keys, 5, NULL, NULL);
@@ -338,22 +338,22 @@ SEXP r_p4a_mb_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
         Rf_error("sum(block_sizes)=%lld must equal ncol(X)=%lld",
                   (long long)bs_sum, (long long)n_cols);
     }
-    p4a_context_t* ctx = NULL;
-    p4a_status_t st = p4a_context_create(&ctx);
-    if (st != P4A_OK) { UNPROTECT(2); Rf_error("p4a_context_create failed"); }
-    p4a_config_t* cfg = basic_cfg(nc);
-    p4a_config_set_solver(cfg, P4A_SOLVER_NIPALS); /* MB-PLS requires NIPALS */
-    p4a_matrix_view_t Xv, Yv;
-    p4a_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, P4A_DTYPE_F64);
-    p4a_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, P4A_DTYPE_F64);
-    p4a_method_result_t* mr = NULL;
-    st = p4a_mb_pls_fit(ctx, cfg, &Xv, &Yv, bs, n_blocks, &mr);
-    p4a_config_destroy(cfg);
-    if (st != P4A_OK) {
+    n4m_context_t* ctx = NULL;
+    n4m_status_t st = n4m_context_create(&ctx);
+    if (st != N4M_OK) { UNPROTECT(2); Rf_error("n4m_context_create failed"); }
+    n4m_config_t* cfg = basic_cfg(nc);
+    n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS); /* MB-PLS requires NIPALS */
+    n4m_matrix_view_t Xv, Yv;
+    n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
+    n4m_method_result_t* mr = NULL;
+    st = n4m_mb_pls_fit(ctx, cfg, &Xv, &Yv, bs, n_blocks, &mr);
+    n4m_config_destroy(cfg);
+    if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("p4a_mb_pls_fit", st, ctx);
+        r_throw("n4m_mb_pls_fit", st, ctx);
     }
-    p4a_context_destroy(ctx);
+    n4m_context_destroy(ctx);
     UNPROTECT(2);
     const char* keys[] = {"coefficients", "predictions", "x_mean", "x_scale",
                             "intercept", "block_weights", "rmse"};
@@ -366,21 +366,21 @@ SEXP r_p4a_pls_glm_fit(SEXP X, SEXP Y, SEXP n_components_sexp, SEXP poisson_sexp
     int64_t n_rows = 0, n_cols = 0, y_cols = 0;
     SEXP X_rm, Y_rm;
     grab_xy(X, Y, &n_rows, &n_cols, &y_cols, &X_rm, &Y_rm);
-    p4a_context_t* ctx = NULL;
-    p4a_status_t st = p4a_context_create(&ctx);
-    if (st != P4A_OK) { UNPROTECT(2); Rf_error("p4a_context_create failed"); }
-    p4a_config_t* cfg = basic_cfg(nc);
-    p4a_matrix_view_t Xv, Yv;
-    p4a_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, P4A_DTYPE_F64);
-    p4a_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, P4A_DTYPE_F64);
-    p4a_method_result_t* mr = NULL;
-    st = p4a_pls_glm_fit(ctx, cfg, &Xv, &Yv, poisson, &mr);
-    p4a_config_destroy(cfg);
-    if (st != P4A_OK) {
+    n4m_context_t* ctx = NULL;
+    n4m_status_t st = n4m_context_create(&ctx);
+    if (st != N4M_OK) { UNPROTECT(2); Rf_error("n4m_context_create failed"); }
+    n4m_config_t* cfg = basic_cfg(nc);
+    n4m_matrix_view_t Xv, Yv;
+    n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
+    n4m_method_result_t* mr = NULL;
+    st = n4m_pls_glm_fit(ctx, cfg, &Xv, &Yv, poisson, &mr);
+    n4m_config_destroy(cfg);
+    if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("p4a_pls_glm_fit", st, ctx);
+        r_throw("n4m_pls_glm_fit", st, ctx);
     }
-    p4a_context_destroy(ctx);
+    n4m_context_destroy(ctx);
     UNPROTECT(2);
     const char* keys[] = {"coefficients", "intercept", "predictions",
                             "x_mean", "rmse"};
@@ -392,21 +392,21 @@ SEXP r_p4a_mir_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp) {
     int64_t n_rows = 0, n_cols = 0, y_cols = 0;
     SEXP X_rm, Y_rm;
     grab_xy(X, Y, &n_rows, &n_cols, &y_cols, &X_rm, &Y_rm);
-    p4a_context_t* ctx = NULL;
-    p4a_status_t st = p4a_context_create(&ctx);
-    if (st != P4A_OK) { UNPROTECT(2); Rf_error("p4a_context_create failed"); }
-    p4a_config_t* cfg = basic_cfg(nc);
-    p4a_matrix_view_t Xv, Yv;
-    p4a_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, P4A_DTYPE_F64);
-    p4a_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, P4A_DTYPE_F64);
-    p4a_method_result_t* mr = NULL;
-    st = p4a_mir_pls_fit(ctx, cfg, &Xv, &Yv, &mr);
-    p4a_config_destroy(cfg);
-    if (st != P4A_OK) {
+    n4m_context_t* ctx = NULL;
+    n4m_status_t st = n4m_context_create(&ctx);
+    if (st != N4M_OK) { UNPROTECT(2); Rf_error("n4m_context_create failed"); }
+    n4m_config_t* cfg = basic_cfg(nc);
+    n4m_matrix_view_t Xv, Yv;
+    n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
+    n4m_method_result_t* mr = NULL;
+    st = n4m_mir_pls_fit(ctx, cfg, &Xv, &Yv, &mr);
+    n4m_config_destroy(cfg);
+    if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("p4a_mir_pls_fit", st, ctx);
+        r_throw("n4m_mir_pls_fit", st, ctx);
     }
-    p4a_context_destroy(ctx);
+    n4m_context_destroy(ctx);
     UNPROTECT(2);
     const char* keys[] = {"coefficients", "predictions", "x_mean", "y_mean", "rmse"};
     return pack_and_destroy(mr, keys, 5, NULL, NULL);
@@ -423,7 +423,7 @@ SEXP r_p4a_variable_select_rank(SEXP model_ptr, SEXP X, SEXP method_sexp,
                                  SEXP top_k_sexp) {
     if (TYPEOF(model_ptr) != EXTPTRSXP) Rf_error("model must be an external pointer");
     if (TYPEOF(X) != REALSXP) Rf_error("X must be numeric");
-    p4a_model_t* model = (p4a_model_t*)R_ExternalPtrAddr(model_ptr);
+    n4m_model_t* model = (n4m_model_t*)R_ExternalPtrAddr(model_ptr);
     if (model == NULL) Rf_error("model handle is NULL");
     const int method = INTEGER(method_sexp)[0];
     const int top_k = INTEGER(top_k_sexp)[0];
@@ -432,18 +432,18 @@ SEXP r_p4a_variable_select_rank(SEXP model_ptr, SEXP X, SEXP method_sexp,
     const int64_t n_cols = INTEGER(X_dim)[1];
     SEXP X_rm = PROTECT(Rf_allocMatrix(REALSXP, (int)n_rows, (int)n_cols));
     colmajor_to_rowmajor(REAL(X), REAL(X_rm), n_rows, n_cols);
-    p4a_context_t* ctx = NULL;
-    p4a_status_t st = p4a_context_create(&ctx);
-    if (st != P4A_OK) { UNPROTECT(1); Rf_error("p4a_context_create failed"); }
-    p4a_matrix_view_t Xv;
-    p4a_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, P4A_DTYPE_F64);
-    p4a_method_result_t* mr = NULL;
-    st = p4a_variable_select_rank(ctx, model, &Xv, method, top_k, &mr);
-    if (st != P4A_OK) {
+    n4m_context_t* ctx = NULL;
+    n4m_status_t st = n4m_context_create(&ctx);
+    if (st != N4M_OK) { UNPROTECT(1); Rf_error("n4m_context_create failed"); }
+    n4m_matrix_view_t Xv;
+    n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
+    n4m_method_result_t* mr = NULL;
+    st = n4m_variable_select_rank(ctx, model, &Xv, method, top_k, &mr);
+    if (st != N4M_OK) {
         UNPROTECT(1);
-        r_throw("p4a_variable_select_rank", st, ctx);
+        r_throw("n4m_variable_select_rank", st, ctx);
     }
-    p4a_context_destroy(ctx);
+    n4m_context_destroy(ctx);
     UNPROTECT(1);
     const char* keys[] = {"scores"};
     return pack_and_destroy(mr, keys, 1, NULL, "selected_indices");
@@ -455,21 +455,21 @@ SEXP r_p4a_spa_select(SEXP X, SEXP Y, SEXP n_components_sexp, SEXP top_k_sexp) {
     int64_t n_rows = 0, n_cols = 0, y_cols = 0;
     SEXP X_rm, Y_rm;
     grab_xy(X, Y, &n_rows, &n_cols, &y_cols, &X_rm, &Y_rm);
-    p4a_context_t* ctx = NULL;
-    p4a_status_t st = p4a_context_create(&ctx);
-    if (st != P4A_OK) { UNPROTECT(2); Rf_error("p4a_context_create failed"); }
-    p4a_config_t* cfg = basic_cfg(nc);
-    p4a_matrix_view_t Xv, Yv;
-    p4a_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, P4A_DTYPE_F64);
-    p4a_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, P4A_DTYPE_F64);
-    p4a_method_result_t* mr = NULL;
-    st = p4a_spa_select(ctx, cfg, &Xv, &Yv, top_k, &mr);
-    p4a_config_destroy(cfg);
-    if (st != P4A_OK) {
+    n4m_context_t* ctx = NULL;
+    n4m_status_t st = n4m_context_create(&ctx);
+    if (st != N4M_OK) { UNPROTECT(2); Rf_error("n4m_context_create failed"); }
+    n4m_config_t* cfg = basic_cfg(nc);
+    n4m_matrix_view_t Xv, Yv;
+    n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
+    n4m_method_result_t* mr = NULL;
+    st = n4m_spa_select(ctx, cfg, &Xv, &Yv, top_k, &mr);
+    n4m_config_destroy(cfg);
+    if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("p4a_spa_select", st, ctx);
+        r_throw("n4m_spa_select", st, ctx);
     }
-    p4a_context_destroy(ctx);
+    n4m_context_destroy(ctx);
     UNPROTECT(2);
     const char* keys[] = {"best_rmse"};
     return pack_and_destroy(mr, keys, 1, NULL, "selected_indices");
@@ -485,21 +485,21 @@ SEXP r_p4a_cars_select(SEXP X, SEXP Y, SEXP n_components_sexp,
     int64_t n_rows = 0, n_cols = 0, y_cols = 0;
     SEXP X_rm, Y_rm;
     grab_xy(X, Y, &n_rows, &n_cols, &y_cols, &X_rm, &Y_rm);
-    p4a_context_t* ctx = NULL;
-    p4a_status_t st = p4a_context_create(&ctx);
-    if (st != P4A_OK) { UNPROTECT(2); Rf_error("p4a_context_create failed"); }
-    p4a_config_t* cfg = basic_cfg(nc);
-    p4a_matrix_view_t Xv, Yv;
-    p4a_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, P4A_DTYPE_F64);
-    p4a_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, P4A_DTYPE_F64);
-    p4a_method_result_t* mr = NULL;
-    st = p4a_cars_select(ctx, cfg, &Xv, &Yv, NULL, n_iter, min_f, &mr);
-    p4a_config_destroy(cfg);
-    if (st != P4A_OK) {
+    n4m_context_t* ctx = NULL;
+    n4m_status_t st = n4m_context_create(&ctx);
+    if (st != N4M_OK) { UNPROTECT(2); Rf_error("n4m_context_create failed"); }
+    n4m_config_t* cfg = basic_cfg(nc);
+    n4m_matrix_view_t Xv, Yv;
+    n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
+    n4m_method_result_t* mr = NULL;
+    st = n4m_cars_select(ctx, cfg, &Xv, &Yv, NULL, n_iter, min_f, &mr);
+    n4m_config_destroy(cfg);
+    if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("p4a_cars_select", st, ctx);
+        r_throw("n4m_cars_select", st, ctx);
     }
-    p4a_context_destroy(ctx);
+    n4m_context_destroy(ctx);
     UNPROTECT(2);
     const char* keys[] = {"best_rmse"};
     return pack_and_destroy(mr, keys, 1, NULL, "selected_indices");
@@ -515,25 +515,25 @@ SEXP r_p4a_cars_select(SEXP X, SEXP Y, SEXP n_components_sexp,
 SEXP r_p4a_pls_diagnostics_compute(SEXP model_ptr, SEXP X) {
     if (TYPEOF(model_ptr) != EXTPTRSXP) Rf_error("model must be an external pointer");
     if (TYPEOF(X) != REALSXP) Rf_error("X must be numeric");
-    p4a_model_t* model = (p4a_model_t*)R_ExternalPtrAddr(model_ptr);
+    n4m_model_t* model = (n4m_model_t*)R_ExternalPtrAddr(model_ptr);
     if (model == NULL) Rf_error("model handle is NULL");
     SEXP X_dim = Rf_getAttrib(X, R_DimSymbol);
     const int64_t n_rows = INTEGER(X_dim)[0];
     const int64_t n_cols = INTEGER(X_dim)[1];
     SEXP X_rm = PROTECT(Rf_allocMatrix(REALSXP, (int)n_rows, (int)n_cols));
     colmajor_to_rowmajor(REAL(X), REAL(X_rm), n_rows, n_cols);
-    p4a_context_t* ctx = NULL;
-    p4a_status_t st = p4a_context_create(&ctx);
-    if (st != P4A_OK) { UNPROTECT(1); Rf_error("p4a_context_create failed"); }
-    p4a_matrix_view_t Xv;
-    p4a_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, P4A_DTYPE_F64);
-    p4a_method_result_t* mr = NULL;
-    st = p4a_pls_diagnostics_compute(ctx, model, &Xv, NULL, &mr);
-    if (st != P4A_OK) {
+    n4m_context_t* ctx = NULL;
+    n4m_status_t st = n4m_context_create(&ctx);
+    if (st != N4M_OK) { UNPROTECT(1); Rf_error("n4m_context_create failed"); }
+    n4m_matrix_view_t Xv;
+    n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
+    n4m_method_result_t* mr = NULL;
+    st = n4m_pls_diagnostics_compute(ctx, model, &Xv, NULL, &mr);
+    if (st != N4M_OK) {
         UNPROTECT(1);
-        r_throw("p4a_pls_diagnostics_compute", st, ctx);
+        r_throw("n4m_pls_diagnostics_compute", st, ctx);
     }
-    p4a_context_destroy(ctx);
+    n4m_context_destroy(ctx);
     UNPROTECT(1);
     const char* keys[] = {"t2", "q", "dmodx"};
     return pack_and_destroy(mr, keys, 3, NULL, NULL);
@@ -544,21 +544,21 @@ SEXP r_p4a_approximate_press_compute(SEXP X, SEXP Y, SEXP max_components_sexp) {
     int64_t n_rows = 0, n_cols = 0, y_cols = 0;
     SEXP X_rm, Y_rm;
     grab_xy(X, Y, &n_rows, &n_cols, &y_cols, &X_rm, &Y_rm);
-    p4a_context_t* ctx = NULL;
-    p4a_status_t st = p4a_context_create(&ctx);
-    if (st != P4A_OK) { UNPROTECT(2); Rf_error("p4a_context_create failed"); }
-    p4a_config_t* cfg = basic_cfg(max_k);
-    p4a_matrix_view_t Xv, Yv;
-    p4a_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, P4A_DTYPE_F64);
-    p4a_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, P4A_DTYPE_F64);
-    p4a_method_result_t* mr = NULL;
-    st = p4a_approximate_press_compute(ctx, cfg, &Xv, &Yv, max_k, &mr);
-    p4a_config_destroy(cfg);
-    if (st != P4A_OK) {
+    n4m_context_t* ctx = NULL;
+    n4m_status_t st = n4m_context_create(&ctx);
+    if (st != N4M_OK) { UNPROTECT(2); Rf_error("n4m_context_create failed"); }
+    n4m_config_t* cfg = basic_cfg(max_k);
+    n4m_matrix_view_t Xv, Yv;
+    n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
+    n4m_method_result_t* mr = NULL;
+    st = n4m_approximate_press_compute(ctx, cfg, &Xv, &Yv, max_k, &mr);
+    n4m_config_destroy(cfg);
+    if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("p4a_approximate_press_compute", st, ctx);
+        r_throw("n4m_approximate_press_compute", st, ctx);
     }
-    p4a_context_destroy(ctx);
+    n4m_context_destroy(ctx);
     UNPROTECT(2);
     const char* keys[] = {"press_per_component", "rmse_per_component"};
     return pack_and_destroy(mr, keys, 2, "selected_n_components", NULL);
@@ -569,7 +569,7 @@ SEXP r_p4a_pls_monitoring_run(SEXP model_ptr, SEXP X_ref, SEXP X_mon,
     if (TYPEOF(model_ptr) != EXTPTRSXP) Rf_error("model must be an external pointer");
     if (TYPEOF(X_ref) != REALSXP || TYPEOF(X_mon) != REALSXP)
         Rf_error("X_reference and X_monitor must be numeric matrices");
-    p4a_model_t* model = (p4a_model_t*)R_ExternalPtrAddr(model_ptr);
+    n4m_model_t* model = (n4m_model_t*)R_ExternalPtrAddr(model_ptr);
     if (model == NULL) Rf_error("model handle is NULL");
     const double alpha = REAL(alpha_sexp)[0];
     SEXP rd = Rf_getAttrib(X_ref, R_DimSymbol);
@@ -583,19 +583,19 @@ SEXP r_p4a_pls_monitoring_run(SEXP model_ptr, SEXP X_ref, SEXP X_mon,
     SEXP M_rm = PROTECT(Rf_allocMatrix(REALSXP, (int)mrr, (int)mc));
     colmajor_to_rowmajor(REAL(X_ref), REAL(R_rm), rr, rc);
     colmajor_to_rowmajor(REAL(X_mon), REAL(M_rm), mrr, mc);
-    p4a_context_t* ctx = NULL;
-    p4a_status_t st = p4a_context_create(&ctx);
-    if (st != P4A_OK) { UNPROTECT(2); Rf_error("p4a_context_create failed"); }
-    p4a_matrix_view_t Rv, Mv;
-    p4a_matrix_view_init_rowmajor(&Rv, REAL(R_rm), rr, rc, P4A_DTYPE_F64);
-    p4a_matrix_view_init_rowmajor(&Mv, REAL(M_rm), mrr, mc, P4A_DTYPE_F64);
-    p4a_method_result_t* mr = NULL;
-    st = p4a_pls_monitoring_run(ctx, model, &Rv, &Mv, alpha, &mr);
-    if (st != P4A_OK) {
+    n4m_context_t* ctx = NULL;
+    n4m_status_t st = n4m_context_create(&ctx);
+    if (st != N4M_OK) { UNPROTECT(2); Rf_error("n4m_context_create failed"); }
+    n4m_matrix_view_t Rv, Mv;
+    n4m_matrix_view_init_rowmajor(&Rv, REAL(R_rm), rr, rc, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&Mv, REAL(M_rm), mrr, mc, N4M_DTYPE_F64);
+    n4m_method_result_t* mr = NULL;
+    st = n4m_pls_monitoring_run(ctx, model, &Rv, &Mv, alpha, &mr);
+    if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("p4a_pls_monitoring_run", st, ctx);
+        r_throw("n4m_pls_monitoring_run", st, ctx);
     }
-    p4a_context_destroy(ctx);
+    n4m_context_destroy(ctx);
     UNPROTECT(2);
 
     /* monitoring exposes a mix of double matrices, int vectors, and
@@ -613,6 +613,6 @@ SEXP r_p4a_pls_monitoring_run(SEXP model_ptr, SEXP X_ref, SEXP X_mon,
     SEXP vals[] = {t2, q, t2a, qa, aa, t2t, qt};
     SEXP out = make_named_list(nm, vals, 7);
     UNPROTECT(7);
-    p4a_method_result_destroy(mr);
+    n4m_method_result_destroy(mr);
     return out;
 }

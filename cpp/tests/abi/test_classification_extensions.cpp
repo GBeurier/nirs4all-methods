@@ -35,32 +35,32 @@ void check_metric(int& failures,
     }
 }
 
-p4a_matrix_view_t label_view(const ::pls4all::test::fixtures::ClassificationExtensionLabelRef& ref) {
-    p4a_matrix_view_t view{};
+n4m_matrix_view_t label_view(const ::n4m::test::fixtures::ClassificationExtensionLabelRef& ref) {
+    n4m_matrix_view_t view{};
     view.data = const_cast<std::int32_t*>(ref.values);
     view.rows = ref.rows;
     view.cols = ref.cols;
     view.row_stride = ref.cols > 0 ? ref.cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_I32;
+    view.dtype = N4M_DTYPE_I32;
     return view;
 }
 
-p4a_matrix_view_t score_view(const ::pls4all::test::fixtures::MatrixRef& ref) {
-    p4a_matrix_view_t view{};
+n4m_matrix_view_t score_view(const ::n4m::test::fixtures::MatrixRef& ref) {
+    n4m_matrix_view_t view{};
     view.data = const_cast<double*>(ref.values);
     view.rows = ref.rows;
     view.cols = ref.cols;
     view.row_stride = ref.cols > 0 ? ref.cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
 void check_vector_ref(int& failures,
                       const char* label,
                       const std::vector<double>& actual,
-                      const ::pls4all::test::fixtures::MatrixRef& expected) {
+                      const ::n4m::test::fixtures::MatrixRef& expected) {
     CHECK_EQ(actual.size(), expected.size);
     const std::size_t n = std::min(actual.size(), expected.size);
     for (std::size_t i = 0; i < n; ++i) {
@@ -71,17 +71,17 @@ void check_vector_ref(int& failures,
 }
 
 void check_multiclass_fixture(int& failures,
-                              const ::pls4all::test::fixtures::ClassificationExtensionFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    p4a_matrix_view_t labels = label_view(fixture.labels);
-    p4a_matrix_view_t scores = score_view(fixture.scores);
-    ::pls4all::core::MulticlassClassificationMetrics metrics{};
-    CHECK_EQ(::pls4all::core::compute_multiclass_classification_metrics(ctx,
+                              const ::n4m::test::fixtures::ClassificationExtensionFixture& fixture) {
+    ::n4m::core::Context ctx;
+    n4m_matrix_view_t labels = label_view(fixture.labels);
+    n4m_matrix_view_t scores = score_view(fixture.scores);
+    ::n4m::core::MulticlassClassificationMetrics metrics{};
+    CHECK_EQ(::n4m::core::compute_multiclass_classification_metrics(ctx,
                                                                         labels,
                                                                         scores,
                                                                         fixture.n_classes,
                                                                         metrics),
-             P4A_OK);
+             N4M_OK);
 
     CHECK_EQ(fixture.summary_metrics.size, static_cast<std::size_t>(11U));
     const double* expected = fixture.summary_metrics.values;
@@ -117,17 +117,17 @@ void check_multiclass_fixture(int& failures,
 }
 
 void check_calibration_fixture(int& failures,
-                               const ::pls4all::test::fixtures::ClassificationExtensionFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    p4a_matrix_view_t labels = label_view(fixture.labels);
-    p4a_matrix_view_t scores = score_view(fixture.scores);
-    ::pls4all::core::BinaryCalibrationCurve curve{};
-    CHECK_EQ(::pls4all::core::compute_binary_calibration_curve(ctx,
+                               const ::n4m::test::fixtures::ClassificationExtensionFixture& fixture) {
+    ::n4m::core::Context ctx;
+    n4m_matrix_view_t labels = label_view(fixture.labels);
+    n4m_matrix_view_t scores = score_view(fixture.scores);
+    ::n4m::core::BinaryCalibrationCurve curve{};
+    CHECK_EQ(::n4m::core::compute_binary_calibration_curve(ctx,
                                                                labels,
                                                                scores,
                                                                fixture.n_bins,
                                                                curve),
-             P4A_OK);
+             N4M_OK);
 
     std::vector<double> flat;
     flat.reserve(static_cast<std::size_t>(curve.n_bins) * 5U);
@@ -144,7 +144,7 @@ void check_calibration_fixture(int& failures,
 }  // namespace
 
 TEST(classification_extensions_phase3r, generated_extension_fixtures_match_numpy_reference) {
-    for (const auto& fixture : ::pls4all::test::fixtures::kClassificationExtensionFixtures) {
+    for (const auto& fixture : ::n4m::test::fixtures::kClassificationExtensionFixtures) {
         if (std::strcmp(fixture.kind, "multiclass") == 0) {
             check_multiclass_fixture(failures, fixture);
         } else if (std::strcmp(fixture.kind, "calibration") == 0) {
@@ -156,7 +156,7 @@ TEST(classification_extensions_phase3r, generated_extension_fixtures_match_numpy
 }
 
 TEST(classification_extensions_phase3r, rejects_invalid_extension_inputs) {
-    ::pls4all::core::Context ctx;
+    ::n4m::core::Context ctx;
     std::int32_t labels_values[] = {0, 1, 2, 0};
     double scores_values[] = {
         0.7, 0.2, 0.1,
@@ -164,59 +164,59 @@ TEST(classification_extensions_phase3r, rejects_invalid_extension_inputs) {
         0.1, 0.3, 0.6,
         0.4, 0.5, 0.1,
     };
-    p4a_matrix_view_t labels{};
-    p4a_matrix_view_t scores{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&labels, labels_values, 4, 1, P4A_DTYPE_I32), P4A_OK);
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&scores, scores_values, 4, 3, P4A_DTYPE_F64), P4A_OK);
+    n4m_matrix_view_t labels{};
+    n4m_matrix_view_t scores{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&labels, labels_values, 4, 1, N4M_DTYPE_I32), N4M_OK);
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&scores, scores_values, 4, 3, N4M_DTYPE_F64), N4M_OK);
 
-    ::pls4all::core::MulticlassClassificationMetrics metrics{};
-    CHECK_EQ(::pls4all::core::compute_multiclass_classification_metrics(ctx,
+    ::n4m::core::MulticlassClassificationMetrics metrics{};
+    CHECK_EQ(::n4m::core::compute_multiclass_classification_metrics(ctx,
                                                                         labels,
                                                                         scores,
                                                                         1,
                                                                         metrics),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::compute_multiclass_classification_metrics(ctx,
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::compute_multiclass_classification_metrics(ctx,
                                                                         labels,
                                                                         scores,
                                                                         4,
                                                                         metrics),
-             P4A_ERR_SHAPE_MISMATCH);
+             N4M_ERR_SHAPE_MISMATCH);
 
     std::int32_t missing_class_labels_values[] = {0, 1, 1, 0};
-    p4a_matrix_view_t missing_class_labels{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&missing_class_labels,
+    n4m_matrix_view_t missing_class_labels{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&missing_class_labels,
                                            missing_class_labels_values,
                                            4,
                                            1,
-                                           P4A_DTYPE_I32),
-             P4A_OK);
-    CHECK_EQ(::pls4all::core::compute_multiclass_classification_metrics(ctx,
+                                           N4M_DTYPE_I32),
+             N4M_OK);
+    CHECK_EQ(::n4m::core::compute_multiclass_classification_metrics(ctx,
                                                                         missing_class_labels,
                                                                         scores,
                                                                         3,
                                                                         metrics),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 
-    ::pls4all::core::BinaryCalibrationCurve curve{};
+    ::n4m::core::BinaryCalibrationCurve curve{};
     double binary_scores_values[] = {0.1, 0.4, 0.8, 1.1};
-    p4a_matrix_view_t binary_scores{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&binary_scores,
+    n4m_matrix_view_t binary_scores{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&binary_scores,
                                            binary_scores_values,
                                            4,
                                            1,
-                                           P4A_DTYPE_F64),
-             P4A_OK);
-    CHECK_EQ(::pls4all::core::compute_binary_calibration_curve(ctx,
+                                           N4M_DTYPE_F64),
+             N4M_OK);
+    CHECK_EQ(::n4m::core::compute_binary_calibration_curve(ctx,
                                                                labels,
                                                                binary_scores,
                                                                0,
                                                                curve),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::compute_binary_calibration_curve(ctx,
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::compute_binary_calibration_curve(ctx,
                                                                labels,
                                                                binary_scores,
                                                                4,
                                                                curve),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 }

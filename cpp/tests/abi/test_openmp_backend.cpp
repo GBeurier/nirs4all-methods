@@ -76,16 +76,16 @@ double rmse_rel(const double* actual, const double* expected, std::size_t n) {
 
 }  // namespace
 
-TEST(openmp_backend, p4a_backend_is_available_reports_compile_time_state) {
-    const int reported = p4a_backend_is_available(P4A_BACKEND_OPENMP);
-#if defined(P4A_USE_OPENMP)
+TEST(openmp_backend, n4m_backend_is_available_reports_compile_time_state) {
+    const int reported = n4m_backend_is_available(N4M_BACKEND_OPENMP);
+#if defined(N4M_USE_OPENMP)
     CHECK_EQ(reported, 1);
 #else
     CHECK_EQ(reported, 0);
 #endif
 }
 
-TEST(openmp_backend, p4a_pls_fit_simple_matches_fixture_within_omp_tolerance) {
+TEST(openmp_backend, n4m_pls_fit_simple_matches_fixture_within_omp_tolerance) {
     std::vector<double> X;
     std::vector<double> Y;
     build_inputs(X, Y);
@@ -95,11 +95,11 @@ TEST(openmp_backend, p4a_pls_fit_simple_matches_fixture_within_omp_tolerance) {
     std::vector<double> y_mean(static_cast<std::size_t>(kQ), 0.0);
     std::vector<double> preds(static_cast<std::size_t>(kN * kQ), 0.0);
 
-    const p4a_status_t status = p4a_pls_fit_simple(
+    const n4m_status_t status = n4m_pls_fit_simple(
         X.data(), Y.data(),
         kN, kP, kQ, kComponents,
         coefs.data(), x_mean.data(), y_mean.data(), preds.data());
-    CHECK_EQ(status, P4A_OK);
+    CHECK_EQ(status, N4M_OK);
 
     CHECK(rmse_rel(coefs.data(), kExpectedCoefs,
                     static_cast<std::size_t>(kP * kQ)) <= kRmseRelTol);
@@ -131,11 +131,11 @@ TEST(openmp_backend, larger_matrix_predictions_remain_finite) {
     std::vector<double> y_mean(static_cast<std::size_t>(q), 0.0);
     std::vector<double> preds(static_cast<std::size_t>(n * q), 0.0);
 
-    CHECK_EQ(p4a_pls_fit_simple(X.data(), Y.data(),
+    CHECK_EQ(n4m_pls_fit_simple(X.data(), Y.data(),
                                   n, p, q, k,
                                   coefs.data(), x_mean.data(),
                                   y_mean.data(), preds.data()),
-              P4A_OK);
+              N4M_OK);
     for (double v : coefs) { CHECK(std::isfinite(v)); }
     for (double v : preds) { CHECK(std::isfinite(v)); }
 }

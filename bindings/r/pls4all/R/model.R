@@ -1,4 +1,4 @@
-#' Fit a PLS regression model via the libp4a C ABI.
+#' Fit a PLS regression model via the libn4m C ABI.
 #'
 #' Accepts a numeric matrix X (n x p) and a numeric vector or matrix Y
 #' (n x q). Both are coerced to double precision and row-major contiguous

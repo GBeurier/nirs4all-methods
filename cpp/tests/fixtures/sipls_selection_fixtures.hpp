@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct SiplsSelectionIndexRef {
     const std::int64_t* values;
@@ -190,4 +190,4 @@ inline const SiplsSelectionFixture kSiplsSelectionFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

@@ -9,7 +9,7 @@
 
 #include "core/pls_diagnostics.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 namespace {
 
@@ -31,27 +31,27 @@ namespace {
 
 }  // namespace
 
-p4a_status_t pls_monitoring_fit(Context& ctx,
+n4m_status_t pls_monitoring_fit(Context& ctx,
                                  const Model& model,
-                                 const p4a_matrix_view_t& X_reference,
+                                 const n4m_matrix_view_t& X_reference,
                                  double alpha,
                                  MonitoringThresholds& out) {
     out = MonitoringThresholds{};
     if (!(alpha > 0.0 && alpha < 1.0)) {
         ctx.set_errorf("alpha must be in (0, 1); got %.6g", alpha);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::vector<double> t2;
-    p4a_status_t status = pls_hotelling_t2(ctx, model, X_reference,
+    n4m_status_t status = pls_hotelling_t2(ctx, model, X_reference,
                                             &X_reference, t2);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     std::vector<double> q;
     status = pls_q_residuals(ctx, model, X_reference, q);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
 
     if (t2.size() != q.size() || t2.empty()) {
         ctx.set_error("reference statistics produced inconsistent sizes");
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 
     out.alpha = alpha;
@@ -62,32 +62,32 @@ p4a_status_t pls_monitoring_fit(Context& ctx,
     out.t2_threshold = percentile(t2, quantile);
     out.q_threshold = percentile(q, quantile);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t pls_monitoring_evaluate(Context& ctx,
+n4m_status_t pls_monitoring_evaluate(Context& ctx,
                                       const Model& model,
                                       const MonitoringThresholds& thresholds,
-                                      const p4a_matrix_view_t& X,
+                                      const n4m_matrix_view_t& X,
                                       MonitoringResult& out) {
     out = MonitoringResult{};
     if (thresholds.n_reference <= 0 || thresholds.t2_reference.empty()) {
         ctx.set_error("monitoring thresholds are not fitted");
-        return P4A_ERR_NOT_FITTED;
+        return N4M_ERR_NOT_FITTED;
     }
     // Score variances are baked into the model.scores_t when the model
     // was fitted with store_scores=1. The fit step in pls_monitoring_fit
     // also produced t2_reference using those variances; the new samples
     // here re-use that same reference.
     std::vector<double> t2;
-    p4a_status_t status = pls_hotelling_t2(ctx, model, X, nullptr, t2);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = pls_hotelling_t2(ctx, model, X, nullptr, t2);
+    if (status != N4M_OK) return status;
     std::vector<double> q;
     status = pls_q_residuals(ctx, model, X, q);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     if (t2.size() != q.size()) {
         ctx.set_error("monitoring statistics produced inconsistent sizes");
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
     out.t2 = std::move(t2);
     out.q = std::move(q);
@@ -102,7 +102,7 @@ p4a_status_t pls_monitoring_evaluate(Context& ctx,
             (out.t2_alarms[i] != 0 || out.q_alarms[i] != 0) ? 1 : 0;
     }
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

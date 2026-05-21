@@ -38,14 +38,14 @@ namespace {
     return true;
 }
 
-[[nodiscard]] double read_value(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_value(const n4m_matrix_view_t& view,
                                 std::size_t row,
                                 std::size_t col) noexcept {
     const std::int64_t off =
         static_cast<std::int64_t>(row) * view.row_stride +
         static_cast<std::int64_t>(col) * view.col_stride;
     const auto uoff = static_cast<std::size_t>(off);
-    if (view.dtype == P4A_DTYPE_F64) {
+    if (view.dtype == N4M_DTYPE_F64) {
         const auto* ptr = static_cast<const double*>(view.data);
         return ptr[uoff];
     }
@@ -53,73 +53,73 @@ namespace {
     return static_cast<double>(ptr[uoff]);
 }
 
-[[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t validate_float_view(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& view,
                                                const char* name) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(view);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(view);
+    if (status != N4M_OK) {
         ctx.set_errorf("%s matrix view is invalid: %s",
                        name,
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
-    if (view.dtype != P4A_DTYPE_F64 && view.dtype != P4A_DTYPE_F32) {
+    if (view.dtype != N4M_DTYPE_F64 && view.dtype != N4M_DTYPE_F32) {
         ctx.set_errorf("%s dtype must be f64 or f32", name);
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t validate_request(::pls4all::core::Context& ctx,
-                                            const ::pls4all::core::Config& cfg,
-                                            const p4a_matrix_view_t& X,
-                                            const p4a_matrix_view_t& Y,
+[[nodiscard]] n4m_status_t validate_request(::n4m::core::Context& ctx,
+                                            const ::n4m::core::Config& cfg,
+                                            const n4m_matrix_view_t& X,
+                                            const n4m_matrix_view_t& Y,
                                             std::int32_t top_k) {
-    p4a_status_t status = validate_float_view(ctx, X, "X");
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_float_view(ctx, X, "X");
+    if (status != N4M_OK) {
         return status;
     }
     status = validate_float_view(ctx, Y, "Y");
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     if (X.rows == 0 || X.cols == 0 || Y.cols == 0) {
         ctx.set_error("SPA matrices must be non-empty");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.rows != Y.rows) {
         ctx.set_errorf("X rows (%lld) must match Y rows (%lld)",
                        static_cast<long long>(X.rows),
                        static_cast<long long>(Y.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (top_k <= 0 || top_k > X.cols) {
         ctx.set_errorf("top_k must be in [1, %lld]; got %d",
                        static_cast<long long>(X.cols),
                        static_cast<int>(top_k));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (cfg.n_components < 1 || static_cast<std::int64_t>(cfg.n_components) > X.cols) {
         ctx.set_errorf("n_components must be in [1, %lld]; got %d",
                        static_cast<long long>(X.cols),
                        static_cast<int>(cfg.n_components));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max()) ||
         Y.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max())) {
         ctx.set_error("SPA matrix dimensions exceed int32 result storage");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t copy_standardized_x(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& X,
+[[nodiscard]] n4m_status_t copy_standardized_x(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& X,
                                                std::vector<double>& out) {
     std::size_t n_values = 0;
     if (!checked_matrix_size(X.rows, X.cols, n_values)) {
         ctx.set_error("SPA matrix shape is too large");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     out.assign(n_values, 0.0);
     const auto rows = static_cast<std::size_t>(X.rows);
@@ -130,7 +130,7 @@ namespace {
             const double value = read_value(X, row, col);
             if (!std::isfinite(value)) {
                 ctx.set_error("SPA X contains NaN or Inf");
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out[idx(row, cols, col)] = value;
         }
@@ -161,24 +161,24 @@ namespace {
             out[idx(row, cols, col)] /= scale;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t compute_coefficient_scores(::pls4all::core::Context& ctx,
-                                                      const ::pls4all::core::Config& cfg,
-                                                      const p4a_matrix_view_t& X,
-                                                      const p4a_matrix_view_t& Y,
+[[nodiscard]] n4m_status_t compute_coefficient_scores(::n4m::core::Context& ctx,
+                                                      const ::n4m::core::Config& cfg,
+                                                      const n4m_matrix_view_t& X,
+                                                      const n4m_matrix_view_t& Y,
                                                       std::vector<double>& out) {
-    std::unique_ptr<::pls4all::core::Model> model;
-    p4a_status_t status = ::pls4all::core::fit_model(ctx, cfg, X, Y, model);
-    if (status != P4A_OK) {
+    std::unique_ptr<::n4m::core::Model> model;
+    n4m_status_t status = ::n4m::core::fit_model(ctx, cfg, X, Y, model);
+    if (status != N4M_OK) {
         return status;
     }
     const auto p = static_cast<std::size_t>(X.cols);
     const auto q = static_cast<std::size_t>(Y.cols);
     if (!model || model->coefficients.size() != p * q) {
         ctx.set_error("SPA fitted model returned inconsistent coefficients");
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 
     out.assign(p, 0.0);
@@ -189,7 +189,7 @@ namespace {
         }
         out[feature] = best;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 [[nodiscard]] std::int64_t argmax_desc_index_asc(const std::vector<double>& scores) noexcept {
@@ -274,30 +274,30 @@ void subtract_projection(std::vector<double>& vector,
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t select_by_spa(Context& ctx,
+n4m_status_t select_by_spa(Context& ctx,
                            const Config& cfg,
-                           const p4a_matrix_view_t& X,
-                           const p4a_matrix_view_t& Y,
+                           const n4m_matrix_view_t& X,
+                           const n4m_matrix_view_t& Y,
                            std::int32_t top_k,
                            SpaSelectionResult& out) {
     try {
         out = SpaSelectionResult{};
-        p4a_status_t status = validate_request(ctx, cfg, X, Y, top_k);
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_request(ctx, cfg, X, Y, top_k);
+        if (status != N4M_OK) {
             return status;
         }
 
         std::vector<double> standardized_x;
         status = copy_standardized_x(ctx, X, standardized_x);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
         std::vector<double> coefficient_scores;
         status = compute_coefficient_scores(ctx, cfg, X, Y, coefficient_scores);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             out = SpaSelectionResult{};
             return status;
         }
@@ -334,7 +334,7 @@ p4a_status_t select_by_spa(Context& ctx,
             if (best_feature < 0 || !std::isfinite(best_score)) {
                 ctx.set_error("SPA selection failed to find a finite candidate");
                 out = SpaSelectionResult{};
-                return P4A_ERR_INTERNAL;
+                return N4M_ERR_INTERNAL;
             }
             selected.push_back(best_feature);
             is_selected[static_cast<std::size_t>(best_feature)] = 1U;
@@ -349,16 +349,16 @@ p4a_status_t select_by_spa(Context& ctx,
         out.selection_scores = std::move(selection_scores);
         out.selected_indices = std::move(selected);
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while running SPA selection");
         out = SpaSelectionResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while running SPA selection");
         out = SpaSelectionResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

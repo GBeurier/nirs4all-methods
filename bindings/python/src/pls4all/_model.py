@@ -1,7 +1,7 @@
-"""Python wrappers for `p4a_model_fit`, `p4a_model_predict_alloc`,
-`p4a_model_get_array` and the `p4a_array_t` accessors.
+"""Python wrappers for `n4m_model_fit`, `n4m_model_predict_alloc`,
+`n4m_model_get_array` and the `n4m_array_t` accessors.
 
-Uses NumPy zero-copy `p4a_matrix_view_t` when an ndarray is contiguous and
+Uses NumPy zero-copy `n4m_matrix_view_t` when an ndarray is contiguous and
 float64. Falls back to `numpy.ascontiguousarray` (one copy) otherwise.
 """
 
@@ -25,7 +25,7 @@ def _check(status_int: int, ctx: Context | None = None) -> None:
         return
     msg = None
     if ctx is not None:
-        raw = lib.p4a_context_last_error(ctx.handle)
+        raw = lib.n4m_context_last_error(ctx.handle)
         if raw:
             msg = raw.decode("utf-8")
     raise Pls4allError(status_int, msg)
@@ -72,7 +72,7 @@ class ModelArrayKind(IntEnum):
 
 
 class _Array:
-    """Owning wrapper for `p4a_array_t*`.
+    """Owning wrapper for `n4m_array_t*`.
 
     Provides a NumPy view that shares the array's underlying buffer; the
     caller must keep the `_Array` alive while the NumPy view is in use.
@@ -95,18 +95,18 @@ class _Array:
 
     def close(self) -> None:
         if self._h:
-            lib.p4a_array_free(self._h)
+            lib.n4m_array_free(self._h)
             self._h = ctypes.c_void_p(0)
 
     def shape(self) -> tuple[int, int]:
         rows = ctypes.c_int64(0)
         cols = ctypes.c_int64(0)
-        _check(lib.p4a_array_shape(self._h, ctypes.byref(rows), ctypes.byref(cols)))
+        _check(lib.n4m_array_shape(self._h, ctypes.byref(rows), ctypes.byref(cols)))
         return int(rows.value), int(cols.value)
 
     def view(self) -> np.ndarray:
         mv = MatrixView()
-        _check(lib.p4a_array_view(self._h, ctypes.byref(mv)))
+        _check(lib.n4m_array_view(self._h, ctypes.byref(mv)))
         if mv.rows == 0 or mv.cols == 0:
             return np.empty((mv.rows, mv.cols), dtype=np.float64)
         # numpy.ctypeslib.as_array borrows the buffer; we re-cast to float64.
@@ -121,7 +121,7 @@ class _Array:
 
 
 class Model:
-    """Owning handle around `p4a_model_t`. Constructed by `Model.fit(...)`.
+    """Owning handle around `n4m_model_t`. Constructed by `Model.fit(...)`.
 
     Stores a reference to the input arrays during fit so the NumPy buffers
     remain valid for the duration of the C call.
@@ -138,7 +138,7 @@ class Model:
         x_view = _matrix_view(X_arr)
         y_view = _matrix_view(Y_arr)
         out = ctypes.c_void_p(0)
-        status = lib.p4a_model_fit(
+        status = lib.n4m_model_fit(
             ctx.handle, cfg.handle,
             ctypes.byref(x_view), ctypes.byref(y_view),
             ctypes.byref(out),
@@ -146,11 +146,11 @@ class Model:
         _check(status, ctx)
         if not out:
             raise Pls4allError(int(Status.ERR_INTERNAL),
-                               "p4a_model_fit returned NULL handle")
+                               "n4m_model_fit returned NULL handle")
         try:
             return cls(out)
         except BaseException:
-            lib.p4a_model_destroy(out)
+            lib.n4m_model_destroy(out)
             raise
 
     def __enter__(self) -> "Model":
@@ -173,7 +173,7 @@ class Model:
 
     def close(self) -> None:
         if self._h:
-            lib.p4a_model_destroy(self._h)
+            lib.n4m_model_destroy(self._h)
             self._h = ctypes.c_void_p(0)
 
     @property
@@ -183,19 +183,19 @@ class Model:
     @property
     def n_components(self) -> int:
         out = ctypes.c_int32(0)
-        _check(lib.p4a_model_get_n_components(self._h, ctypes.byref(out)))
+        _check(lib.n4m_model_get_n_components(self._h, ctypes.byref(out)))
         return int(out.value)
 
     @property
     def n_features(self) -> int:
         out = ctypes.c_int32(0)
-        _check(lib.p4a_model_get_n_features(self._h, ctypes.byref(out)))
+        _check(lib.n4m_model_get_n_features(self._h, ctypes.byref(out)))
         return int(out.value)
 
     @property
     def n_targets(self) -> int:
         out = ctypes.c_int32(0)
-        _check(lib.p4a_model_get_n_targets(self._h, ctypes.byref(out)))
+        _check(lib.n4m_model_get_n_targets(self._h, ctypes.byref(out)))
         return int(out.value)
 
     def predict(self, ctx: Context, X: Any) -> np.ndarray:
@@ -203,7 +203,7 @@ class Model:
         x_view = _matrix_view(X_arr)
         out_handle = ctypes.c_void_p(0)
         _check(
-            lib.p4a_model_predict_alloc(
+            lib.n4m_model_predict_alloc(
                 ctx.handle, self._h,
                 ctypes.byref(x_view), ctypes.byref(out_handle),
             ),
@@ -220,7 +220,7 @@ class Model:
         x_view = _matrix_view(X_arr)
         out_handle = ctypes.c_void_p(0)
         _check(
-            lib.p4a_model_transform_alloc(
+            lib.n4m_model_transform_alloc(
                 ctx.handle, self._h,
                 ctypes.byref(x_view), ctypes.byref(out_handle),
             ),
@@ -235,7 +235,7 @@ class Model:
     def get_array(self, ctx: Context, kind: ModelArrayKind) -> np.ndarray:
         out_handle = ctypes.c_void_p(0)
         _check(
-            lib.p4a_model_get_array(
+            lib.n4m_model_get_array(
                 ctx.handle, self._h, int(kind),
                 ctypes.byref(out_handle),
             ),
@@ -254,17 +254,17 @@ class Model:
 
     def to_bytes(self) -> bytes:
         """Serialize the fitted model to a portable byte buffer (.n4a wire
-        format, P4A_SERIALIZATION_FORMAT_VERSION = 1). The buffer is
+        format, N4M_SERIALIZATION_FORMAT_VERSION = 1). The buffer is
         forward-compatible across pls4all minor versions; round-trip is
         bit-exact for all model arrays."""
         size = ctypes.c_size_t(0)
-        _check(lib.p4a_model_export_size(self._h, ctypes.byref(size)))
+        _check(lib.n4m_model_export_size(self._h, ctypes.byref(size)))
         if size.value == 0:
             raise Pls4allError(int(Status.ERR_INTERNAL),
-                                "p4a_model_export_size returned 0")
+                                "n4m_model_export_size returned 0")
         buf = (ctypes.c_uint8 * int(size.value))()
         written = ctypes.c_size_t(0)
-        _check(lib.p4a_model_export_to_buffer(
+        _check(lib.n4m_model_export_to_buffer(
             self._h, buf, size, ctypes.byref(written)))
         return bytes(bytearray(buf)[: int(written.value)])
 
@@ -278,16 +278,16 @@ class Model:
                                 "from_bytes: empty payload")
         buf = (ctypes.c_uint8 * len(payload)).from_buffer_copy(payload)
         out = ctypes.c_void_p(0)
-        _check(lib.p4a_model_import_from_buffer(
+        _check(lib.n4m_model_import_from_buffer(
             ctx.handle, buf, ctypes.c_size_t(len(payload)),
             ctypes.byref(out)), ctx)
         if not out:
             raise Pls4allError(int(Status.ERR_INTERNAL),
-                                "p4a_model_import_from_buffer returned NULL")
+                                "n4m_model_import_from_buffer returned NULL")
         try:
             return cls(out)
         except BaseException:
-            lib.p4a_model_destroy(out)
+            lib.n4m_model_destroy(out)
             raise
 
 

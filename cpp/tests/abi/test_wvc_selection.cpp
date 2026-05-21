@@ -17,21 +17,21 @@ namespace {
 constexpr double kAbsTol = 1e-8;
 constexpr double kRelTol = 1e-8;
 
-p4a_matrix_view_t matrix_view(const ::pls4all::test::fixtures::MatrixRef& ref) {
-    p4a_matrix_view_t view{};
+n4m_matrix_view_t matrix_view(const ::n4m::test::fixtures::MatrixRef& ref) {
+    n4m_matrix_view_t view{};
     view.data = const_cast<double*>(ref.values);
     view.rows = ref.rows;
     view.cols = ref.cols;
     view.row_stride = ref.cols > 0 ? ref.cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
 void check_close_values(int& failures,
                         const char* label,
                         const std::vector<double>& actual,
-                        const ::pls4all::test::fixtures::MatrixRef& expected) {
+                        const ::n4m::test::fixtures::MatrixRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -101,20 +101,20 @@ void check_scalar(int& failures, const char* label, double actual, double expect
 }
 
 void check_fixture(int& failures,
-                   const ::pls4all::test::fixtures::WvcSelectionFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    p4a_matrix_view_t X = matrix_view(fixture.X);
-    p4a_matrix_view_t Y = matrix_view(fixture.Y);
+                   const ::n4m::test::fixtures::WvcSelectionFixture& fixture) {
+    ::n4m::core::Context ctx;
+    n4m_matrix_view_t X = matrix_view(fixture.X);
+    n4m_matrix_view_t Y = matrix_view(fixture.Y);
 
-    ::pls4all::core::WvcSelectionResult result;
-    CHECK_EQ(::pls4all::core::select_by_wvc(ctx,
+    ::n4m::core::WvcSelectionResult result;
+    CHECK_EQ(::n4m::core::select_by_wvc(ctx,
                                             X,
                                             Y,
                                             fixture.n_components,
                                             fixture.top_k,
                                             fixture.normalize,
                                             result),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(result.n_features, static_cast<std::int32_t>(fixture.X.cols));
     CHECK_EQ(result.n_targets, static_cast<std::int32_t>(fixture.Y.cols));
     CHECK_EQ(result.n_components, fixture.n_components);
@@ -130,13 +130,13 @@ void check_fixture(int& failures,
 
 void check_threshold_fixture(
     int& failures,
-    const ::pls4all::test::fixtures::WvcThresholdSelectionFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    p4a_matrix_view_t X = matrix_view(fixture.X);
-    p4a_matrix_view_t Y = matrix_view(fixture.Y);
+    const ::n4m::test::fixtures::WvcThresholdSelectionFixture& fixture) {
+    ::n4m::core::Context ctx;
+    n4m_matrix_view_t X = matrix_view(fixture.X);
+    n4m_matrix_view_t Y = matrix_view(fixture.Y);
 
-    ::pls4all::core::WvcThresholdSelectionResult result;
-    CHECK_EQ(::pls4all::core::select_by_wvc_threshold(ctx,
+    ::n4m::core::WvcThresholdSelectionResult result;
+    CHECK_EQ(::n4m::core::select_by_wvc_threshold(ctx,
                                                       X,
                                                       Y,
                                                       fixture.n_components,
@@ -145,7 +145,7 @@ void check_threshold_fixture(
                                                       fixture.threshold_factor,
                                                       fixture.min_selected,
                                                       result),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(result.n_features, static_cast<std::int32_t>(fixture.X.cols));
     CHECK_EQ(result.n_targets, static_cast<std::int32_t>(fixture.Y.cols));
     CHECK_EQ(result.n_components, fixture.n_components);
@@ -163,80 +163,80 @@ void check_threshold_fixture(
 }  // namespace
 
 TEST(wvc_selection_phase5m, generated_fixture_matches_python_reference) {
-    for (const auto& fixture : ::pls4all::test::fixtures::kWvcSelectionFixtures) {
+    for (const auto& fixture : ::n4m::test::fixtures::kWvcSelectionFixtures) {
         check_fixture(failures, fixture);
     }
 }
 
 TEST(wvc_selection_phase5m, rejects_invalid_wvc_requests) {
-    const auto& fixture = ::pls4all::test::fixtures::kWvcSelectionFixtures[0];
-    ::pls4all::core::Context ctx;
-    p4a_matrix_view_t X = matrix_view(fixture.X);
-    p4a_matrix_view_t Y = matrix_view(fixture.Y);
-    ::pls4all::core::WvcSelectionResult result;
+    const auto& fixture = ::n4m::test::fixtures::kWvcSelectionFixtures[0];
+    ::n4m::core::Context ctx;
+    n4m_matrix_view_t X = matrix_view(fixture.X);
+    n4m_matrix_view_t Y = matrix_view(fixture.Y);
+    ::n4m::core::WvcSelectionResult result;
 
-    CHECK_EQ(::pls4all::core::select_by_wvc(ctx,
+    CHECK_EQ(::n4m::core::select_by_wvc(ctx,
                                             X,
                                             Y,
                                             0,
                                             fixture.top_k,
                                             fixture.normalize,
                                             result),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::select_by_wvc(ctx,
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::select_by_wvc(ctx,
                                             X,
                                             Y,
                                             fixture.n_components,
                                             0,
                                             fixture.normalize,
                                             result),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::select_by_wvc(ctx,
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::select_by_wvc(ctx,
                                             X,
                                             Y,
                                             static_cast<std::int32_t>(fixture.X.cols),
                                             fixture.top_k,
                                             fixture.normalize,
                                             result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 
-    p4a_matrix_view_t bad_y = Y;
+    n4m_matrix_view_t bad_y = Y;
     bad_y.cols = 2;
-    CHECK_EQ(::pls4all::core::select_by_wvc(ctx,
+    CHECK_EQ(::n4m::core::select_by_wvc(ctx,
                                             X,
                                             bad_y,
                                             fixture.n_components,
                                             fixture.top_k,
                                             fixture.normalize,
                                             result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 
-    p4a_matrix_view_t mismatched = Y;
+    n4m_matrix_view_t mismatched = Y;
     mismatched.rows = Y.rows - 1;
-    CHECK_EQ(::pls4all::core::select_by_wvc(ctx,
+    CHECK_EQ(::n4m::core::select_by_wvc(ctx,
                                             X,
                                             mismatched,
                                             fixture.n_components,
                                             fixture.top_k,
                                             fixture.normalize,
                                             result),
-             P4A_ERR_SHAPE_MISMATCH);
+             N4M_ERR_SHAPE_MISMATCH);
 }
 
 TEST(wvc_threshold_selection_phase5r, generated_fixture_matches_python_reference) {
-    for (const auto& fixture : ::pls4all::test::fixtures::kWvcThresholdSelectionFixtures) {
+    for (const auto& fixture : ::n4m::test::fixtures::kWvcThresholdSelectionFixtures) {
         check_threshold_fixture(failures, fixture);
     }
 }
 
 TEST(wvc_threshold_selection_phase5r, rejects_invalid_threshold_requests) {
-    const auto& fixture = ::pls4all::test::fixtures::kWvcThresholdSelectionFixtures[0];
-    ::pls4all::core::Context ctx;
-    p4a_matrix_view_t X = matrix_view(fixture.X);
-    p4a_matrix_view_t Y = matrix_view(fixture.Y);
-    ::pls4all::core::WvcThresholdSelectionResult result;
+    const auto& fixture = ::n4m::test::fixtures::kWvcThresholdSelectionFixtures[0];
+    ::n4m::core::Context ctx;
+    n4m_matrix_view_t X = matrix_view(fixture.X);
+    n4m_matrix_view_t Y = matrix_view(fixture.Y);
+    ::n4m::core::WvcThresholdSelectionResult result;
 
-    CHECK_EQ(::pls4all::core::select_by_wvc_threshold(ctx,
+    CHECK_EQ(::n4m::core::select_by_wvc_threshold(ctx,
                                                       X,
                                                       Y,
                                                       0,
@@ -245,8 +245,8 @@ TEST(wvc_threshold_selection_phase5r, rejects_invalid_threshold_requests) {
                                                       fixture.threshold_factor,
                                                       fixture.min_selected,
                                                       result),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::select_by_wvc_threshold(ctx,
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::select_by_wvc_threshold(ctx,
                                                       X,
                                                       Y,
                                                       fixture.n_components,
@@ -255,8 +255,8 @@ TEST(wvc_threshold_selection_phase5r, rejects_invalid_threshold_requests) {
                                                       fixture.threshold_factor,
                                                       fixture.min_selected,
                                                       result),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::select_by_wvc_threshold(ctx,
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::select_by_wvc_threshold(ctx,
                                                       X,
                                                       Y,
                                                       fixture.n_components,
@@ -265,8 +265,8 @@ TEST(wvc_threshold_selection_phase5r, rejects_invalid_threshold_requests) {
                                                       -0.1,
                                                       fixture.min_selected,
                                                       result),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::select_by_wvc_threshold(ctx,
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::select_by_wvc_threshold(ctx,
                                                       X,
                                                       Y,
                                                       fixture.n_components,
@@ -275,5 +275,5 @@ TEST(wvc_threshold_selection_phase5r, rejects_invalid_threshold_requests) {
                                                       fixture.threshold_factor,
                                                       0,
                                                       result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 }

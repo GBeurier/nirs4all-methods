@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
-// Owning wrapper around p4a_method_result_t — the universal output
+// Owning wrapper around n4m_method_result_t — the universal output
 // container used by every method shipped in Batches 1-12 of the C ABI.
 
 import { checkStatus, getModule } from "./ffi.js";
@@ -28,7 +28,7 @@ export class MethodResult {
         try {
             m.stringToUTF8(name, namePtr, nameBytes + 1);
             const status = m.ccall(
-                "p4a_method_result_get_double_matrix", "number",
+                "n4m_method_result_get_double_matrix", "number",
                 ["number", "number", "number", "number", "number"],
                 [this._ptr, namePtr, dataPtrPtr, rowsPtr, colsPtr]) as number;
             checkStatus(status);
@@ -60,7 +60,7 @@ export class MethodResult {
         try {
             m.stringToUTF8(name, namePtr, nameBytes + 1);
             const status = m.ccall(
-                "p4a_method_result_get_int_vector", "number",
+                "n4m_method_result_get_int_vector", "number",
                 ["number", "number", "number", "number"],
                 [this._ptr, namePtr, dataPtrPtr, sizePtr]) as number;
             checkStatus(status);
@@ -87,7 +87,7 @@ export class MethodResult {
         try {
             m.stringToUTF8(name, namePtr, nameBytes + 1);
             const status = m.ccall(
-                "p4a_method_result_get_scalar", "number",
+                "n4m_method_result_get_scalar", "number",
                 ["number", "number", "number"],
                 [this._ptr, namePtr, outPtr]) as number;
             if (status !== 0) return NaN;
@@ -101,7 +101,7 @@ export class MethodResult {
     destroy(): void {
         if (this._ptr === 0) return;
         getModule().ccall(
-            "p4a_method_result_destroy", null, ["number"], [this._ptr]);
+            "n4m_method_result_destroy", null, ["number"], [this._ptr]);
         this._ptr = 0;
     }
 }

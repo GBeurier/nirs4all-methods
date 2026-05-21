@@ -6,6 +6,6 @@
 
 #include "core/operator_bank.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 // Intentionally empty.
-}  // namespace pls4all::core
+}  // namespace n4m::core

@@ -7,12 +7,12 @@
 #include <cstdint>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/config.hpp"
 #include "core/context.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct SpaSelectionResult {
     std::int32_t n_features{0};
@@ -25,12 +25,12 @@ struct SpaSelectionResult {
     std::vector<std::int64_t> selected_indices;
 };
 
-[[nodiscard]] p4a_status_t select_by_spa(
+[[nodiscard]] n4m_status_t select_by_spa(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::int32_t top_k,
     SpaSelectionResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

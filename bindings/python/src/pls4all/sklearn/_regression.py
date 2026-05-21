@@ -104,7 +104,7 @@ class PLSRegression(_PlsRegressorBase):
     * `solver` selects the inner algorithm (NIPALS, SIMPLS, SVD, …)
       directly — sklearn only exposes 'nipals' / 'svd'.
     * Round-trip via `pickle.dumps` is bit-exact, backed by the C ABI
-      `.n4a` bundle (`p4a_model_export_to_buffer`).
+      `.n4a` bundle (`n4m_model_export_to_buffer`).
 
     Parameters
     ----------

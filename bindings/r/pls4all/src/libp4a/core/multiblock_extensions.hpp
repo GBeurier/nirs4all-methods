@@ -8,12 +8,12 @@
 #include <cstdint>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/config.hpp"
 #include "core/context.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 // O2PLS: bi-directional OPLS with predictive + X-orthogonal + Y-orthogonal
 // components.
@@ -35,11 +35,11 @@ struct O2PlsResult {
     std::vector<double> coefficients;      // p × q
 };
 
-[[nodiscard]] p4a_status_t fit_o2pls(
+[[nodiscard]] n4m_status_t fit_o2pls(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     std::int32_t n_predictive,
     std::int32_t n_x_orthogonal,
     std::int32_t n_y_orthogonal,
@@ -57,11 +57,11 @@ struct SoPlsResult {
     std::vector<double> predictions;  // n_samples × n_targets, row-major
 };
 
-[[nodiscard]] p4a_status_t fit_so_pls(
+[[nodiscard]] n4m_status_t fit_so_pls(
     Context& ctx,
     const Config& cfg,
-    const std::vector<p4a_matrix_view_t>& X_blocks,
-    const p4a_matrix_view_t& Y,
+    const std::vector<n4m_matrix_view_t>& X_blocks,
+    const n4m_matrix_view_t& Y,
     const std::vector<std::int32_t>& n_components_per_block,
     SoPlsResult& out);
 
@@ -76,10 +76,10 @@ struct OnPlsResult {
     std::vector<std::vector<double>> joint_scores_per_block;       // n × n_joint
 };
 
-[[nodiscard]] p4a_status_t fit_on_pls(
+[[nodiscard]] n4m_status_t fit_on_pls(
     Context& ctx,
     const Config& cfg,
-    const std::vector<p4a_matrix_view_t>& X_blocks,
+    const std::vector<n4m_matrix_view_t>& X_blocks,
     std::int32_t n_joint,
     const std::vector<std::int32_t>& n_unique_per_block,
     OnPlsResult& out);
@@ -95,12 +95,12 @@ struct RosaResult {
     std::vector<double> predictions;
 };
 
-[[nodiscard]] p4a_status_t fit_rosa(
+[[nodiscard]] n4m_status_t fit_rosa(
     Context& ctx,
     const Config& cfg,
-    const std::vector<p4a_matrix_view_t>& X_blocks,
-    const p4a_matrix_view_t& Y,
+    const std::vector<n4m_matrix_view_t>& X_blocks,
+    const n4m_matrix_view_t& Y,
     std::int32_t n_components,
     RosaResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

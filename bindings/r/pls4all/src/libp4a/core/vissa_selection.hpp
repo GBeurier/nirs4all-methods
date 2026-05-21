@@ -15,13 +15,13 @@
 #include <cstdint>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/config.hpp"
 #include "core/context.hpp"
 #include "core/validation.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct VissaSelectionResult {
     std::int32_t n_features{0};
@@ -43,11 +43,11 @@ struct VissaSelectionResult {
     std::vector<std::int64_t> selected_indices;  // {j : w_j > threshold}
 };
 
-[[nodiscard]] p4a_status_t select_by_vissa(
+[[nodiscard]] n4m_status_t select_by_vissa(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     const ValidationPlan& plan,
     std::int32_t n_iterations,
     std::int32_t n_submodels,
@@ -57,4 +57,4 @@ struct VissaSelectionResult {
     std::uint64_t seed,
     VissaSelectionResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

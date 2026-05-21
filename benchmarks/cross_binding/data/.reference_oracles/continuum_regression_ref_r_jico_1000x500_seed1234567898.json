@@ -1,0 +1,24 @@
+{
+  "algorithm": "continuum_regression",
+  "backend": "ref_r_jico",
+  "max_runs": 40,
+  "n": 1000,
+  "n_runs": 9,
+  "p": 500,
+  "prediction_seed": 1234567898,
+  "seed_base": 1234567890,
+  "source_predictions_path": "/home/delete/nirs4all/pls4all/benchmarks/cross_binding/data/.predictions/continuum_regression_ref_r_jico_1000x500_t1_blas-omp.npy",
+  "timing_statistic": "median",
+  "total_runs": 10,
+  "versions": {
+    "blas": "libscipy_openblas 0.3.30 blas=1",
+    "language": "R (host Linux x86_64)",
+    "numpy": "2.3.5",
+    "reference_id": "r_jico",
+    "reference_library": "JICO",
+    "reference_version": "0.1",
+    "timing_driver": "rscript-batch",
+    "timing_schema": "adaptive-v1"
+  },
+  "warmup_ms": 4287.69702148438
+}

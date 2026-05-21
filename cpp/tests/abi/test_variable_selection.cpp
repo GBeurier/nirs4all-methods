@@ -20,7 +20,7 @@ constexpr double kRelTol = 1e-8;
 void check_close_values(int& failures,
                         const char* label,
                         const std::vector<double>& actual,
-                        const ::pls4all::test::fixtures::MatrixRef& expected) {
+                        const ::n4m::test::fixtures::MatrixRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -50,7 +50,7 @@ void check_close_values(int& failures,
 void check_indices(int& failures,
                    const char* label,
                    const std::vector<std::int64_t>& actual,
-                   const ::pls4all::test::fixtures::VariableSelectionIndexRef& expected) {
+                   const ::n4m::test::fixtures::VariableSelectionIndexRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -75,43 +75,43 @@ void check_indices(int& failures,
 }
 
 void fit_fixture(int& failures,
-                 const ::pls4all::test::fixtures::VariableSelectionFixture& fixture,
+                 const ::n4m::test::fixtures::VariableSelectionFixture& fixture,
                  bool store_scores,
-                 ::pls4all::core::Context& ctx,
-                 std::unique_ptr<::pls4all::core::Model>& model,
-                 p4a_matrix_view_t& X,
-                 p4a_matrix_view_t& Y) {
-    ::pls4all::core::Config cfg;
+                 ::n4m::core::Context& ctx,
+                 std::unique_ptr<::n4m::core::Model>& model,
+                 n4m_matrix_view_t& X,
+                 n4m_matrix_view_t& Y) {
+    ::n4m::core::Config cfg;
     cfg.n_components = fixture.n_components;
     cfg.store_scores = store_scores ? 1 : 0;
 
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X,
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&X,
                                            const_cast<double*>(fixture.X.values),
                                            fixture.X.rows,
                                            fixture.X.cols,
-                                           P4A_DTYPE_F64),
-             P4A_OK);
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&Y,
+                                           N4M_DTYPE_F64),
+             N4M_OK);
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&Y,
                                            const_cast<double*>(fixture.Y.values),
                                            fixture.Y.rows,
                                            fixture.Y.cols,
-                                           P4A_DTYPE_F64),
-             P4A_OK);
-    CHECK_EQ(::pls4all::core::fit_model(ctx, cfg, X, Y, model), P4A_OK);
+                                           N4M_DTYPE_F64),
+             N4M_OK);
+    CHECK_EQ(::n4m::core::fit_model(ctx, cfg, X, Y, model), N4M_OK);
     CHECK_NE(model.get(), nullptr);
 }
 
 void check_method(int& failures,
                   const char* label,
-                  ::pls4all::core::Context& ctx,
-                  const ::pls4all::core::Model& model,
-                  const p4a_matrix_view_t& X,
-                  ::pls4all::core::VariableSelectionMethod method,
+                  ::n4m::core::Context& ctx,
+                  const ::n4m::core::Model& model,
+                  const n4m_matrix_view_t& X,
+                  ::n4m::core::VariableSelectionMethod method,
                   std::int32_t top_k,
-                  const ::pls4all::test::fixtures::MatrixRef& expected_scores,
-                  const ::pls4all::test::fixtures::VariableSelectionIndexRef& expected_indices) {
-    ::pls4all::core::VariableSelectionResult result;
-    CHECK_EQ(::pls4all::core::select_variables(ctx, model, X, method, top_k, result), P4A_OK);
+                  const ::n4m::test::fixtures::MatrixRef& expected_scores,
+                  const ::n4m::test::fixtures::VariableSelectionIndexRef& expected_indices) {
+    ::n4m::core::VariableSelectionResult result;
+    CHECK_EQ(::n4m::core::select_variables(ctx, model, X, method, top_k, result), N4M_OK);
     CHECK_EQ(result.n_features, static_cast<std::int32_t>(expected_scores.size));
     CHECK_EQ(result.top_k, top_k);
     check_close_values(failures, label, result.scores, expected_scores);
@@ -119,11 +119,11 @@ void check_method(int& failures,
 }
 
 void check_fixture(int& failures,
-                   const ::pls4all::test::fixtures::VariableSelectionFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    std::unique_ptr<::pls4all::core::Model> model;
-    p4a_matrix_view_t X{};
-    p4a_matrix_view_t Y{};
+                   const ::n4m::test::fixtures::VariableSelectionFixture& fixture) {
+    ::n4m::core::Context ctx;
+    std::unique_ptr<::n4m::core::Model> model;
+    n4m_matrix_view_t X{};
+    n4m_matrix_view_t Y{};
     fit_fixture(failures, fixture, true, ctx, model, X, Y);
 
     check_method(failures,
@@ -131,7 +131,7 @@ void check_fixture(int& failures,
                  ctx,
                  *model,
                  X,
-                 ::pls4all::core::VariableSelectionMethod::Vip,
+                 ::n4m::core::VariableSelectionMethod::Vip,
                  fixture.top_k,
                  fixture.vip_scores,
                  fixture.vip_indices);
@@ -140,7 +140,7 @@ void check_fixture(int& failures,
                  ctx,
                  *model,
                  X,
-                 ::pls4all::core::VariableSelectionMethod::CoefficientMagnitude,
+                 ::n4m::core::VariableSelectionMethod::CoefficientMagnitude,
                  fixture.top_k,
                  fixture.coefficient_scores,
                  fixture.coefficient_indices);
@@ -149,7 +149,7 @@ void check_fixture(int& failures,
                  ctx,
                  *model,
                  X,
-                 ::pls4all::core::VariableSelectionMethod::SelectivityRatio,
+                 ::n4m::core::VariableSelectionMethod::SelectivityRatio,
                  fixture.top_k,
                  fixture.selectivity_ratio_scores,
                  fixture.selectivity_ratio_indices);
@@ -158,71 +158,71 @@ void check_fixture(int& failures,
 }  // namespace
 
 TEST(variable_selection_phase5a, generated_fixture_matches_sklearn_reference) {
-    for (const auto& fixture : ::pls4all::test::fixtures::kVariableSelectionFixtures) {
+    for (const auto& fixture : ::n4m::test::fixtures::kVariableSelectionFixtures) {
         check_fixture(failures, fixture);
     }
 }
 
 TEST(variable_selection_phase5a, rejects_invalid_top_k_missing_scores_and_bad_x) {
-    const auto& fixture = ::pls4all::test::fixtures::kVariableSelectionFixtures[0];
-    ::pls4all::core::Context ctx;
-    std::unique_ptr<::pls4all::core::Model> model;
-    p4a_matrix_view_t X{};
-    p4a_matrix_view_t Y{};
+    const auto& fixture = ::n4m::test::fixtures::kVariableSelectionFixtures[0];
+    ::n4m::core::Context ctx;
+    std::unique_ptr<::n4m::core::Model> model;
+    n4m_matrix_view_t X{};
+    n4m_matrix_view_t Y{};
     fit_fixture(failures, fixture, false, ctx, model, X, Y);
 
-    ::pls4all::core::VariableSelectionResult result;
-    CHECK_EQ(::pls4all::core::select_variables(ctx,
+    ::n4m::core::VariableSelectionResult result;
+    CHECK_EQ(::n4m::core::select_variables(ctx,
                                                *model,
                                                X,
-                                               ::pls4all::core::VariableSelectionMethod::CoefficientMagnitude,
+                                               ::n4m::core::VariableSelectionMethod::CoefficientMagnitude,
                                                0,
                                                result),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::select_variables(ctx,
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::select_variables(ctx,
                                                *model,
                                                X,
-                                               ::pls4all::core::VariableSelectionMethod::CoefficientMagnitude,
+                                               ::n4m::core::VariableSelectionMethod::CoefficientMagnitude,
                                                static_cast<std::int32_t>(fixture.X.cols + 1),
                                                result),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::select_variables(ctx,
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::select_variables(ctx,
                                                *model,
                                                X,
-                                               ::pls4all::core::VariableSelectionMethod::Vip,
+                                               ::n4m::core::VariableSelectionMethod::Vip,
                                                fixture.top_k,
                                                result),
-             P4A_ERR_UNSUPPORTED);
+             N4M_ERR_UNSUPPORTED);
     CHECK_EQ(result.scores.size(), static_cast<std::size_t>(0));
     CHECK_EQ(result.selected_indices.size(), static_cast<std::size_t>(0));
 
     model.reset();
     fit_fixture(failures, fixture, true, ctx, model, X, Y);
 
-    p4a_matrix_view_t mismatched = X;
+    n4m_matrix_view_t mismatched = X;
     mismatched.cols = X.cols - 1;
-    CHECK_EQ(::pls4all::core::select_variables(ctx,
+    CHECK_EQ(::n4m::core::select_variables(ctx,
                                                *model,
                                                mismatched,
-                                               ::pls4all::core::VariableSelectionMethod::SelectivityRatio,
+                                               ::n4m::core::VariableSelectionMethod::SelectivityRatio,
                                                fixture.top_k,
                                                result),
-             P4A_ERR_SHAPE_MISMATCH);
+             N4M_ERR_SHAPE_MISMATCH);
 
     std::vector<double> bad_x(fixture.X.values, fixture.X.values + fixture.X.size);
     bad_x[3] = std::numeric_limits<double>::quiet_NaN();
-    p4a_matrix_view_t bad_view{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&bad_view,
+    n4m_matrix_view_t bad_view{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&bad_view,
                                            bad_x.data(),
                                            fixture.X.rows,
                                            fixture.X.cols,
-                                           P4A_DTYPE_F64),
-             P4A_OK);
-    CHECK_EQ(::pls4all::core::select_variables(ctx,
+                                           N4M_DTYPE_F64),
+             N4M_OK);
+    CHECK_EQ(::n4m::core::select_variables(ctx,
                                                *model,
                                                bad_view,
-                                               ::pls4all::core::VariableSelectionMethod::SelectivityRatio,
+                                               ::n4m::core::VariableSelectionMethod::SelectivityRatio,
                                                fixture.top_k,
                                                result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 }

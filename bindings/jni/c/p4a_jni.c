@@ -1,15 +1,15 @@
 /* SPDX-License-Identifier: CECILL-2.1
  *
- * JNI shim that bridges io.github.pls4all.Pls4all to the libp4a
+ * JNI shim that bridges io.github.pls4all.Pls4all to the libn4m
  * public C ABI. Compiles into libp4a_jni.so which links against
- * libp4a (the same .so used by every other binding).
+ * libn4m (the same .so used by every other binding).
  *
  * The Java arrays are row-major, same as the C ABI, so we can
  * use GetPrimitiveArrayCritical to pin them without copying.
  */
 
 #include "io_github_pls4all_Pls4all.h"
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +17,7 @@
 JNIEXPORT jstring JNICALL
 Java_io_github_pls4all_Pls4all_version(JNIEnv *env, jclass cls) {
     (void)cls;
-    const char *v = p4a_get_version_string();
+    const char *v = n4m_get_version_string();
     return (*env)->NewStringUTF(env, v == NULL ? "" : v);
 }
 
@@ -25,9 +25,9 @@ JNIEXPORT jintArray JNICALL
 Java_io_github_pls4all_Pls4all_abiVersion(JNIEnv *env, jclass cls) {
     (void)cls;
     jint vals[3];
-    vals[0] = (jint)p4a_get_abi_version_major();
-    vals[1] = (jint)p4a_get_abi_version_minor();
-    vals[2] = (jint)p4a_get_abi_version_patch();
+    vals[0] = (jint)n4m_get_abi_version_major();
+    vals[1] = (jint)n4m_get_abi_version_minor();
+    vals[2] = (jint)n4m_get_abi_version_patch();
     jintArray out = (*env)->NewIntArray(env, 3);
     if (out == NULL) {
         return NULL;
@@ -56,10 +56,10 @@ Java_io_github_pls4all_Pls4all_plsFitNative(
     jdouble *ym = (*env)->GetPrimitiveArrayCritical(env, j_y_mean, NULL);
     jdouble *pr = (*env)->GetPrimitiveArrayCritical(env, j_preds, NULL);
 
-    p4a_status_t status = -1;
+    n4m_status_t status = -1;
     if (x != NULL && y != NULL && coefs != NULL && xm != NULL &&
         ym != NULL && pr != NULL) {
-        status = p4a_pls_fit_simple(
+        status = n4m_pls_fit_simple(
             (const double *)x, (const double *)y,
             (int32_t)n, (int32_t)p, (int32_t)q, (int32_t)n_components,
             (double *)coefs, (double *)xm, (double *)ym, (double *)pr);

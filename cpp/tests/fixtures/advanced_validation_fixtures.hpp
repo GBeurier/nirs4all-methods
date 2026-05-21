@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct IndexRef {
     const std::int64_t* values;
@@ -268,4 +268,4 @@ inline const AdvancedValidationFixture kAdvancedValidationFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

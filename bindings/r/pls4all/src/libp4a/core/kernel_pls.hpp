@@ -10,12 +10,12 @@
 #include <cstdint>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/config.hpp"
 #include "core/context.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 enum class KernelType : std::int32_t {
     LINEAR     = 0,
@@ -44,21 +44,21 @@ struct KernelPlsResult {
     double               K_train_global_mean{0.0};
 };
 
-[[nodiscard]] p4a_status_t fit_kernel_pls(
+[[nodiscard]] n4m_status_t fit_kernel_pls(
     Context& ctx,
     const Config& cfg,
     KernelType kernel,
     double gamma,
     double coef0,
     std::int32_t degree,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     KernelPlsResult& out);
 
-[[nodiscard]] p4a_status_t predict_kernel_pls(
+[[nodiscard]] n4m_status_t predict_kernel_pls(
     Context& ctx,
     const KernelPlsResult& model,
-    const p4a_matrix_view_t& X,
+    const n4m_matrix_view_t& X,
     std::vector<double>& out_predictions);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

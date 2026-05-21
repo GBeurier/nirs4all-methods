@@ -20,14 +20,14 @@ namespace {
     return row * cols + col;
 }
 
-[[nodiscard]] double read_value(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_value(const n4m_matrix_view_t& view,
                                 std::size_t row,
                                 std::size_t col) noexcept {
     const std::int64_t off =
         static_cast<std::int64_t>(row) * view.row_stride +
         static_cast<std::int64_t>(col) * view.col_stride;
     const auto uoff = static_cast<std::size_t>(off);
-    if (view.dtype == P4A_DTYPE_F64) {
+    if (view.dtype == N4M_DTYPE_F64) {
         const auto* ptr = static_cast<const double*>(view.data);
         return ptr[uoff];
     }
@@ -35,34 +35,34 @@ namespace {
     return static_cast<double>(ptr[uoff]);
 }
 
-[[nodiscard]] p4a_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
+[[nodiscard]] n4m_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
                                                   std::int64_t rows,
                                                   std::int64_t cols) noexcept {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = values.data();
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols > 0 ? cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
-[[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t validate_float_view(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& view,
                                                const char* name) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(view);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(view);
+    if (status != N4M_OK) {
         ctx.set_errorf("%s matrix view is invalid: %s",
                        name,
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
-    if (view.dtype != P4A_DTYPE_F64 && view.dtype != P4A_DTYPE_F32) {
+    if (view.dtype != N4M_DTYPE_F64 && view.dtype != N4M_DTYPE_F32) {
         ctx.set_errorf("%s dtype must be f64 or f32", name);
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 [[nodiscard]] std::vector<std::int64_t> make_intervals(std::int64_t n_features,
@@ -111,71 +111,71 @@ namespace {
     return out;
 }
 
-[[nodiscard]] p4a_status_t validate_request(::pls4all::core::Context& ctx,
-                                            const ::pls4all::core::Config& cfg,
-                                            const p4a_matrix_view_t& X,
-                                            const p4a_matrix_view_t& Y,
-                                            const ::pls4all::core::ValidationPlan& plan,
+[[nodiscard]] n4m_status_t validate_request(::n4m::core::Context& ctx,
+                                            const ::n4m::core::Config& cfg,
+                                            const n4m_matrix_view_t& X,
+                                            const n4m_matrix_view_t& Y,
+                                            const ::n4m::core::ValidationPlan& plan,
                                             std::int32_t interval_width,
                                             std::int32_t min_intervals,
                                             const std::vector<std::int64_t>& intervals) {
-    p4a_status_t status = validate_float_view(ctx, X, "X");
-    if (status != P4A_OK) {
+    n4m_status_t status = validate_float_view(ctx, X, "X");
+    if (status != N4M_OK) {
         return status;
     }
     status = validate_float_view(ctx, Y, "Y");
-    if (status != P4A_OK) {
+    if (status != N4M_OK) {
         return status;
     }
     if (X.rows <= 0 || X.cols <= 0 || Y.cols <= 0) {
         ctx.set_error("biPLS matrices must be non-empty");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.rows != Y.rows) {
         ctx.set_errorf("X rows (%lld) must match Y rows (%lld)",
                        static_cast<long long>(X.rows),
                        static_cast<long long>(Y.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (plan.n_samples != X.rows) {
         ctx.set_errorf("validation plan n_samples (%lld) must match X rows (%lld)",
                        static_cast<long long>(plan.n_samples),
                        static_cast<long long>(X.rows));
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (plan.folds.empty()) {
         ctx.set_error("biPLS requires at least one validation fold");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (interval_width < 1 || interval_width > X.cols) {
         ctx.set_errorf("interval_width must be in [1, %lld]; got %d",
                        static_cast<long long>(X.cols),
                        static_cast<int>(interval_width));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const auto n_intervals = static_cast<std::int32_t>(intervals.size() / 2U);
     if (min_intervals < 1 || min_intervals > n_intervals) {
         ctx.set_errorf("min_intervals must be in [1, %d]; got %d",
                        static_cast<int>(n_intervals),
                        static_cast<int>(min_intervals));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (cfg.n_components < 1 || cfg.n_components > X.cols) {
         ctx.set_errorf("n_components must be in [1, %lld]; got %d",
                        static_cast<long long>(X.cols),
                        static_cast<int>(cfg.n_components));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (minimum_column_count_after_selection(intervals, min_intervals) <
         static_cast<std::size_t>(cfg.n_components)) {
         ctx.set_error("min_intervals can leave fewer columns than n_components");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t copy_active_columns(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& X,
+[[nodiscard]] n4m_status_t copy_active_columns(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& X,
                                                const std::vector<std::int64_t>& intervals,
                                                const std::vector<std::int64_t>& active,
                                                std::vector<double>& out,
@@ -184,12 +184,12 @@ namespace {
     const std::size_t cols = active_column_count(intervals, active);
     if (cols == 0U) {
         ctx.set_error("biPLS active interval set is empty");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (cols > static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max()) ||
         rows > std::numeric_limits<std::size_t>::max() / cols) {
         ctx.set_error("biPLS active matrix shape is too large");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     out.assign(rows * cols, 0.0);
     for (std::size_t row = 0; row < rows; ++row) {
@@ -205,31 +205,31 @@ namespace {
         }
     }
     out_cols = static_cast<std::int64_t>(cols);
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t cv_rmse(::pls4all::core::Context& ctx,
-                                   const ::pls4all::core::Config& cfg,
-                                   const p4a_matrix_view_t& X,
-                                   const p4a_matrix_view_t& Y,
-                                   const ::pls4all::core::ValidationPlan& plan,
+[[nodiscard]] n4m_status_t cv_rmse(::n4m::core::Context& ctx,
+                                   const ::n4m::core::Config& cfg,
+                                   const n4m_matrix_view_t& X,
+                                   const n4m_matrix_view_t& Y,
+                                   const ::n4m::core::ValidationPlan& plan,
                                    const std::vector<std::int64_t>& intervals,
                                    const std::vector<std::int64_t>& active,
                                    double& rmse) {
     std::vector<double> active_x;
     std::int64_t active_cols = 0;
-    p4a_status_t status = copy_active_columns(ctx, X, intervals, active, active_x, active_cols);
-    if (status != P4A_OK) {
+    n4m_status_t status = copy_active_columns(ctx, X, intervals, active, active_x, active_cols);
+    if (status != N4M_OK) {
         return status;
     }
-    p4a_matrix_view_t active_x_view = rowmajor_f64_view(active_x, X.rows, active_cols);
-    ::pls4all::core::CrossValidationResult cv{};
-    status = ::pls4all::core::cross_validate_regression(ctx, cfg, active_x_view, Y, plan, cv);
-    if (status != P4A_OK) {
+    n4m_matrix_view_t active_x_view = rowmajor_f64_view(active_x, X.rows, active_cols);
+    ::n4m::core::CrossValidationResult cv{};
+    status = ::n4m::core::cross_validate_regression(ctx, cfg, active_x_view, Y, plan, cv);
+    if (status != N4M_OK) {
         return status;
     }
     rmse = cv.metrics.rmse;
-    return P4A_OK;
+    return N4M_OK;
 }
 
 [[nodiscard]] std::vector<std::int64_t> without_interval(
@@ -262,12 +262,12 @@ namespace {
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t select_by_bipls(Context& ctx,
+n4m_status_t select_by_bipls(Context& ctx,
                              const Config& cfg,
-                             const p4a_matrix_view_t& X,
-                             const p4a_matrix_view_t& Y,
+                             const n4m_matrix_view_t& X,
+                             const n4m_matrix_view_t& Y,
                              const ValidationPlan& plan,
                              std::int32_t interval_width,
                              std::int32_t min_intervals,
@@ -275,7 +275,7 @@ p4a_status_t select_by_bipls(Context& ctx,
     try {
         out = BiplsSelectionResult{};
         std::vector<std::int64_t> intervals = make_intervals(X.cols, interval_width);
-        p4a_status_t status = validate_request(ctx,
+        n4m_status_t status = validate_request(ctx,
                                                cfg,
                                                X,
                                                Y,
@@ -283,7 +283,7 @@ p4a_status_t select_by_bipls(Context& ctx,
                                                interval_width,
                                                min_intervals,
                                                intervals);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -292,7 +292,7 @@ p4a_status_t select_by_bipls(Context& ctx,
         std::vector<std::int64_t> best_active = active;
         double best_rmse = 0.0;
         status = cv_rmse(ctx, cfg, X, Y, plan, intervals, active, best_rmse);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             out = BiplsSelectionResult{};
             return status;
         }
@@ -310,7 +310,7 @@ p4a_status_t select_by_bipls(Context& ctx,
                 std::vector<std::int64_t> trial = without_interval(active, interval_index);
                 double candidate_rmse = 0.0;
                 status = cv_rmse(ctx, cfg, X, Y, plan, intervals, trial, candidate_rmse);
-                if (status != P4A_OK) {
+                if (status != N4M_OK) {
                     out = BiplsSelectionResult{};
                     return status;
                 }
@@ -340,16 +340,16 @@ p4a_status_t select_by_bipls(Context& ctx,
         out.interval_width = interval_width;
         out.min_intervals = min_intervals;
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while running biPLS selection");
         out = BiplsSelectionResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while running biPLS selection");
         out = BiplsSelectionResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

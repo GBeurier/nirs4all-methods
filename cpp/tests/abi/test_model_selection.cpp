@@ -16,21 +16,21 @@ namespace {
 constexpr double kAbsTol = 1e-8;
 constexpr double kRelTol = 1e-8;
 
-p4a_matrix_view_t matrix_view(const ::pls4all::test::fixtures::MatrixRef& ref) {
-    p4a_matrix_view_t view{};
+n4m_matrix_view_t matrix_view(const ::n4m::test::fixtures::MatrixRef& ref) {
+    n4m_matrix_view_t view{};
     view.data = const_cast<double*>(ref.values);
     view.rows = ref.rows;
     view.cols = ref.cols;
     view.row_stride = ref.cols > 0 ? ref.cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
 void check_close_values(int& failures,
                         const char* label,
                         const std::vector<double>& actual,
-                        const ::pls4all::test::fixtures::MatrixRef& expected) {
+                        const ::n4m::test::fixtures::MatrixRef& expected) {
     if (actual.size() != expected.size) {
         ++failures;
         std::fprintf(stderr,
@@ -58,36 +58,36 @@ void check_close_values(int& failures,
 }
 
 void check_fixture(int& failures,
-                   const ::pls4all::test::fixtures::ComponentCvFixture& fixture) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-    cfg.deflation = P4A_DEFLATION_REGRESSION;
+                   const ::n4m::test::fixtures::ComponentCvFixture& fixture) {
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
     if (std::strcmp(fixture.solver, "simpls") == 0) {
-        cfg.solver = P4A_SOLVER_SIMPLS;
+        cfg.solver = N4M_SOLVER_SIMPLS;
     } else {
         CHECK(false);
         return;
     }
 
-    p4a_matrix_view_t X = matrix_view(fixture.X);
-    p4a_matrix_view_t Y = matrix_view(fixture.Y);
-    ::pls4all::core::ValidationPlan plan;
-    CHECK_EQ(::pls4all::core::make_kfold_validation_plan(ctx,
+    n4m_matrix_view_t X = matrix_view(fixture.X);
+    n4m_matrix_view_t Y = matrix_view(fixture.Y);
+    ::n4m::core::ValidationPlan plan;
+    CHECK_EQ(::n4m::core::make_kfold_validation_plan(ctx,
                                                          fixture.X.rows,
                                                          fixture.n_splits,
                                                          plan),
-             P4A_OK);
+             N4M_OK);
 
-    ::pls4all::core::ComponentCvResult result;
-    CHECK_EQ(::pls4all::core::cross_validate_component_prefixes(ctx,
+    ::n4m::core::ComponentCvResult result;
+    CHECK_EQ(::n4m::core::cross_validate_component_prefixes(ctx,
                                                                 cfg,
                                                                 X,
                                                                 Y,
                                                                 plan,
                                                                 fixture.n_components_max,
                                                                 result),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(result.max_components, fixture.n_components_max);
     CHECK_EQ(result.best_n_components, fixture.best_n_components);
     CHECK_EQ(result.metrics_by_component.size(),
@@ -101,14 +101,14 @@ void check_fixture(int& failures,
 }  // namespace
 
 TEST(model_selection_phase4o, generated_component_cv_fixture_matches_numpy_reference) {
-    for (const auto& fixture : ::pls4all::test::fixtures::kComponentCvFixtures) {
+    for (const auto& fixture : ::n4m::test::fixtures::kComponentCvFixtures) {
         check_fixture(failures, fixture);
     }
 }
 
 TEST(model_selection_phase4o, rejects_invalid_component_cv_requests) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
     cfg.n_components = 1;
     double x_values[] = {
         0.0, 0.2,
@@ -117,49 +117,49 @@ TEST(model_selection_phase4o, rejects_invalid_component_cv_requests) {
         1.3, 1.4,
     };
     double y_values[] = {0.1, 0.5, 1.0, 1.2};
-    p4a_matrix_view_t X{};
-    p4a_matrix_view_t Y{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X, x_values, 4, 2, P4A_DTYPE_F64), P4A_OK);
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&Y, y_values, 4, 1, P4A_DTYPE_F64), P4A_OK);
-    ::pls4all::core::ValidationPlan plan;
-    CHECK_EQ(::pls4all::core::make_kfold_validation_plan(ctx, 4, 2, plan), P4A_OK);
+    n4m_matrix_view_t X{};
+    n4m_matrix_view_t Y{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&X, x_values, 4, 2, N4M_DTYPE_F64), N4M_OK);
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&Y, y_values, 4, 1, N4M_DTYPE_F64), N4M_OK);
+    ::n4m::core::ValidationPlan plan;
+    CHECK_EQ(::n4m::core::make_kfold_validation_plan(ctx, 4, 2, plan), N4M_OK);
 
-    ::pls4all::core::ComponentCvResult result;
-    CHECK_EQ(::pls4all::core::cross_validate_component_prefixes(ctx,
+    ::n4m::core::ComponentCvResult result;
+    CHECK_EQ(::n4m::core::cross_validate_component_prefixes(ctx,
                                                                 cfg,
                                                                 X,
                                                                 Y,
                                                                 plan,
                                                                 0,
                                                                 result),
-             P4A_ERR_INVALID_ARGUMENT);
-    CHECK_EQ(::pls4all::core::cross_validate_component_prefixes(ctx,
+             N4M_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::cross_validate_component_prefixes(ctx,
                                                                 cfg,
                                                                 X,
                                                                 Y,
                                                                 plan,
                                                                 3,
                                                                 result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 
-    ::pls4all::core::ValidationPlan empty;
+    ::n4m::core::ValidationPlan empty;
     empty.n_samples = 4;
-    CHECK_EQ(::pls4all::core::cross_validate_component_prefixes(ctx,
+    CHECK_EQ(::n4m::core::cross_validate_component_prefixes(ctx,
                                                                 cfg,
                                                                 X,
                                                                 Y,
                                                                 empty,
                                                                 1,
                                                                 result),
-             P4A_ERR_INVALID_ARGUMENT);
+             N4M_ERR_INVALID_ARGUMENT);
 }
 
 TEST(model_selection_phase10, one_se_rule_picks_smaller_model_when_within_se) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::Config cfg;
-    cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-    cfg.solver = P4A_SOLVER_SIMPLS;
-    cfg.deflation = P4A_DEFLATION_REGRESSION;
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+    cfg.solver = N4M_SOLVER_SIMPLS;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
     cfg.n_components = 1;
     cfg.center_x = 1;
     cfg.scale_x = 0;
@@ -188,20 +188,20 @@ TEST(model_selection_phase10, one_se_rule_picks_smaller_model_when_within_se) {
         1.1, 0.7, 0.4, 1.0, 0.9, 0.6, 1.2, 1.3,
         1.05, 0.72, 0.45, 1.02,
     };
-    p4a_matrix_view_t X{};
-    p4a_matrix_view_t Y{};
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&X, x_values, 12, 4, P4A_DTYPE_F64),
-             P4A_OK);
-    CHECK_EQ(p4a_matrix_view_init_rowmajor(&Y, y_values, 12, 1, P4A_DTYPE_F64),
-             P4A_OK);
-    ::pls4all::core::ValidationPlan plan;
-    CHECK_EQ(::pls4all::core::make_kfold_validation_plan(ctx, 12, 4, plan),
-             P4A_OK);
+    n4m_matrix_view_t X{};
+    n4m_matrix_view_t Y{};
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&X, x_values, 12, 4, N4M_DTYPE_F64),
+             N4M_OK);
+    CHECK_EQ(n4m_matrix_view_init_rowmajor(&Y, y_values, 12, 1, N4M_DTYPE_F64),
+             N4M_OK);
+    ::n4m::core::ValidationPlan plan;
+    CHECK_EQ(::n4m::core::make_kfold_validation_plan(ctx, 12, 4, plan),
+             N4M_OK);
 
-    ::pls4all::core::ComponentCvResult result;
-    CHECK_EQ(::pls4all::core::cross_validate_component_prefixes(ctx, cfg, X, Y,
+    ::n4m::core::ComponentCvResult result;
+    CHECK_EQ(::n4m::core::cross_validate_component_prefixes(ctx, cfg, X, Y,
                                                                 plan, 3, result),
-             P4A_OK);
+             N4M_OK);
     CHECK_EQ(result.fold_rmse_matrix.size(),
              static_cast<std::size_t>(3 * 4));
     CHECK_EQ(result.n_folds, 4);
@@ -210,7 +210,7 @@ TEST(model_selection_phase10, one_se_rule_picks_smaller_model_when_within_se) {
     // applied.
     CHECK_EQ(result.one_se_n_components, result.best_n_components);
 
-    CHECK_EQ(::pls4all::core::select_one_se_components(ctx, result), P4A_OK);
+    CHECK_EQ(::n4m::core::select_one_se_components(ctx, result), N4M_OK);
     CHECK(result.one_se_standard_error >= 0.0);
     CHECK(result.one_se_threshold >=
           result.metrics_by_component[
@@ -220,13 +220,13 @@ TEST(model_selection_phase10, one_se_rule_picks_smaller_model_when_within_se) {
 }
 
 TEST(model_selection_phase10, one_se_rule_rejects_unpopulated_result) {
-    ::pls4all::core::Context ctx;
-    ::pls4all::core::ComponentCvResult result;
-    CHECK_EQ(::pls4all::core::select_one_se_components(ctx, result),
-             P4A_ERR_INVALID_ARGUMENT);
+    ::n4m::core::Context ctx;
+    ::n4m::core::ComponentCvResult result;
+    CHECK_EQ(::n4m::core::select_one_se_components(ctx, result),
+             N4M_ERR_INVALID_ARGUMENT);
 
     result.max_components = 3;
     result.n_folds = 1;
-    CHECK_EQ(::pls4all::core::select_one_se_components(ctx, result),
-             P4A_ERR_INVALID_ARGUMENT);
+    CHECK_EQ(::n4m::core::select_one_se_components(ctx, result),
+             N4M_ERR_INVALID_ARGUMENT);
 }

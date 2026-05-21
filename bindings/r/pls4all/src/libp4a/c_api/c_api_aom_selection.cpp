@@ -14,7 +14,7 @@
 #include <utility>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/aom_selection.hpp"
 #include "core/config.hpp"
@@ -24,20 +24,20 @@
 
 namespace {
 
-inline ::pls4all::core::Context* as_core(p4a_context_t* ctx) noexcept {
-    return static_cast<::pls4all::core::Context*>(ctx);
+inline ::n4m::core::Context* as_core(n4m_context_t* ctx) noexcept {
+    return static_cast<::n4m::core::Context*>(ctx);
 }
-inline const ::pls4all::core::Config* as_core(const p4a_config_t* cfg) noexcept {
-    return static_cast<const ::pls4all::core::Config*>(cfg);
+inline const ::n4m::core::Config* as_core(const n4m_config_t* cfg) noexcept {
+    return static_cast<const ::n4m::core::Config*>(cfg);
 }
-inline const ::pls4all::core::OperatorBank* as_core(const p4a_operator_bank_t* bank) noexcept {
-    return static_cast<const ::pls4all::core::OperatorBank*>(bank);
+inline const ::n4m::core::OperatorBank* as_core(const n4m_operator_bank_t* bank) noexcept {
+    return static_cast<const ::n4m::core::OperatorBank*>(bank);
 }
-inline const ::pls4all::core::ValidationPlan* as_core(const p4a_validation_plan_t* plan) noexcept {
-    return static_cast<const ::pls4all::core::ValidationPlan*>(plan);
+inline const ::n4m::core::ValidationPlan* as_core(const n4m_validation_plan_t* plan) noexcept {
+    return static_cast<const ::n4m::core::ValidationPlan*>(plan);
 }
 
-void set_error(p4a_context_t* ctx, const char* msg) noexcept {
+void set_error(n4m_context_t* ctx, const char* msg) noexcept {
     if (ctx == nullptr) return;
     try {
         as_core(ctx)->set_error(msg);
@@ -46,33 +46,33 @@ void set_error(p4a_context_t* ctx, const char* msg) noexcept {
     }
 }
 
-[[nodiscard]] p4a_status_t validate_select_inputs(
-    p4a_context_t* ctx,
-    const p4a_config_t* cfg,
-    const p4a_operator_bank_t* bank,
-    const p4a_matrix_view_t* X,
-    const p4a_matrix_view_t* Y,
-    const p4a_validation_plan_t* plan,
+[[nodiscard]] n4m_status_t validate_select_inputs(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_operator_bank_t* bank,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    const n4m_validation_plan_t* plan,
     int32_t max_components) {
-    if (ctx == nullptr) return P4A_ERR_NULL_POINTER;
+    if (ctx == nullptr) return N4M_ERR_NULL_POINTER;
     if (cfg == nullptr || bank == nullptr || X == nullptr || Y == nullptr || plan == nullptr) {
         set_error(ctx, "null pointer argument to AOM selection");
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     if (max_components <= 0) {
         set_error(ctx, "max_components must be >= 1");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 void populate_typed_operator_kinds(
     const std::vector<std::int64_t>& src,
-    std::vector<p4a_operator_kind_t>& dst) {
+    std::vector<n4m_operator_kind_t>& dst) {
     dst.clear();
     dst.reserve(src.size());
     for (const auto kind : src) {
-        dst.push_back(static_cast<p4a_operator_kind_t>(kind));
+        dst.push_back(static_cast<n4m_operator_kind_t>(kind));
     }
 }
 
@@ -94,28 +94,28 @@ extern "C" {
 /*  AOM global selection                                              */
 /* ------------------------------------------------------------------ */
 
-P4A_API p4a_status_t p4a_aom_global_select(
-    p4a_context_t* ctx,
-    const p4a_config_t* cfg,
-    const p4a_operator_bank_t* bank,
-    const p4a_matrix_view_t* X,
-    const p4a_matrix_view_t* Y,
-    const p4a_validation_plan_t* plan,
+N4M_API n4m_status_t n4m_aom_global_select(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_operator_bank_t* bank,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    const n4m_validation_plan_t* plan,
     int32_t max_components,
-    p4a_aom_global_result_t** out_result) {
-    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    n4m_aom_global_result_t** out_result) {
+    if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
 
-    const p4a_status_t pre = validate_select_inputs(
+    const n4m_status_t pre = validate_select_inputs(
         ctx, cfg, bank, X, Y, plan, max_components);
-    if (pre != P4A_OK) return pre;
+    if (pre != N4M_OK) return pre;
 
     try {
-        auto handle = std::make_unique<p4a_aom_global_result_s>();
-        const p4a_status_t status = ::pls4all::core::select_aom_global(
+        auto handle = std::make_unique<n4m_aom_global_result_s>();
+        const n4m_status_t status = ::n4m::core::select_aom_global(
             *as_core(ctx), *as_core(cfg), *as_core(bank),
             *X, *Y, *as_core(plan), max_components, handle->inner);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         handle->predictions_rows = X->rows;
@@ -123,17 +123,17 @@ P4A_API p4a_status_t p4a_aom_global_select(
         populate_typed_operator_kinds(
             handle->inner.operator_kinds, handle->operator_kinds_typed);
         *out_result = handle.release();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in p4a_aom_global_select");
-        return P4A_ERR_OUT_OF_MEMORY;
+        set_error(ctx, "out of memory in n4m_aom_global_select");
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in p4a_aom_global_select");
-        return P4A_ERR_INTERNAL;
+        set_error(ctx, "internal error in n4m_aom_global_select");
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API void p4a_aom_global_result_destroy(p4a_aom_global_result_t* result) {
+N4M_API void n4m_aom_global_result_destroy(n4m_aom_global_result_t* result) {
     try {
         delete result;
     } catch (...) {
@@ -141,119 +141,119 @@ P4A_API void p4a_aom_global_result_destroy(p4a_aom_global_result_t* result) {
     }
 }
 
-P4A_API p4a_status_t p4a_aom_global_result_get_n_operators(
-    const p4a_aom_global_result_t* result, int32_t* out) {
-    if (result == nullptr || out == nullptr) return P4A_ERR_NULL_POINTER;
+N4M_API n4m_status_t n4m_aom_global_result_get_n_operators(
+    const n4m_aom_global_result_t* result, int32_t* out) {
+    if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.n_operators;
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_global_result_get_max_components(
-    const p4a_aom_global_result_t* result, int32_t* out) {
-    if (result == nullptr || out == nullptr) return P4A_ERR_NULL_POINTER;
+N4M_API n4m_status_t n4m_aom_global_result_get_max_components(
+    const n4m_aom_global_result_t* result, int32_t* out) {
+    if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.max_components;
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_global_result_get_selected_operator_index(
-    const p4a_aom_global_result_t* result, int32_t* out) {
-    if (result == nullptr || out == nullptr) return P4A_ERR_NULL_POINTER;
+N4M_API n4m_status_t n4m_aom_global_result_get_selected_operator_index(
+    const n4m_aom_global_result_t* result, int32_t* out) {
+    if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.selected_operator_index;
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_global_result_get_selected_n_components(
-    const p4a_aom_global_result_t* result, int32_t* out) {
-    if (result == nullptr || out == nullptr) return P4A_ERR_NULL_POINTER;
+N4M_API n4m_status_t n4m_aom_global_result_get_selected_n_components(
+    const n4m_aom_global_result_t* result, int32_t* out) {
+    if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.selected_n_components;
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_global_result_get_best_score(
-    const p4a_aom_global_result_t* result, double* out) {
-    if (result == nullptr || out == nullptr) return P4A_ERR_NULL_POINTER;
+N4M_API n4m_status_t n4m_aom_global_result_get_best_score(
+    const n4m_aom_global_result_t* result, double* out) {
+    if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.best_score;
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_global_result_get_operator_kinds(
-    const p4a_aom_global_result_t* result,
-    const p4a_operator_kind_t** out_data, int32_t* out_size) {
+N4M_API n4m_status_t n4m_aom_global_result_get_operator_kinds(
+    const n4m_aom_global_result_t* result,
+    const n4m_operator_kind_t** out_data, int32_t* out_size) {
     if (result == nullptr || out_data == nullptr || out_size == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     *out_data = result->operator_kinds_typed.empty()
         ? nullptr : result->operator_kinds_typed.data();
     *out_size = static_cast<int32_t>(result->operator_kinds_typed.size());
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_global_result_get_operator_scores(
-    const p4a_aom_global_result_t* result,
+N4M_API n4m_status_t n4m_aom_global_result_get_operator_scores(
+    const n4m_aom_global_result_t* result,
     const double** out_data, int32_t* out_size) {
     if (result == nullptr || out_data == nullptr || out_size == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     *out_data = result->inner.operator_scores.empty()
         ? nullptr : result->inner.operator_scores.data();
     *out_size = static_cast<int32_t>(result->inner.operator_scores.size());
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_global_result_get_rmse_curves(
-    const p4a_aom_global_result_t* result,
+N4M_API n4m_status_t n4m_aom_global_result_get_rmse_curves(
+    const n4m_aom_global_result_t* result,
     const double** out_data, int32_t* out_rows, int32_t* out_cols) {
     if (result == nullptr || out_data == nullptr ||
         out_rows == nullptr || out_cols == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     *out_data = result->inner.rmse_curves.empty()
         ? nullptr : result->inner.rmse_curves.data();
     *out_rows = result->inner.n_operators;
     *out_cols = result->inner.max_components;
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_global_result_get_predictions(
-    const p4a_aom_global_result_t* result,
+N4M_API n4m_status_t n4m_aom_global_result_get_predictions(
+    const n4m_aom_global_result_t* result,
     const double** out_data, int64_t* out_rows, int64_t* out_cols) {
     if (result == nullptr || out_data == nullptr ||
         out_rows == nullptr || out_cols == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     *out_data = result->inner.predictions.empty()
         ? nullptr : result->inner.predictions.data();
     *out_rows = result->predictions_rows;
     *out_cols = result->predictions_cols;
-    return P4A_OK;
+    return N4M_OK;
 }
 
 /* ------------------------------------------------------------------ */
 /*  AOM per-component (POP) selection                                 */
 /* ------------------------------------------------------------------ */
 
-P4A_API p4a_status_t p4a_aom_per_component_select(
-    p4a_context_t* ctx,
-    const p4a_config_t* cfg,
-    const p4a_operator_bank_t* bank,
-    const p4a_matrix_view_t* X,
-    const p4a_matrix_view_t* Y,
-    const p4a_validation_plan_t* plan,
+N4M_API n4m_status_t n4m_aom_per_component_select(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_operator_bank_t* bank,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    const n4m_validation_plan_t* plan,
     int32_t max_components,
-    p4a_aom_per_component_result_t** out_result) {
-    if (out_result == nullptr) return P4A_ERR_NULL_POINTER;
+    n4m_aom_per_component_result_t** out_result) {
+    if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
 
-    const p4a_status_t pre = validate_select_inputs(
+    const n4m_status_t pre = validate_select_inputs(
         ctx, cfg, bank, X, Y, plan, max_components);
-    if (pre != P4A_OK) return pre;
+    if (pre != N4M_OK) return pre;
 
     try {
-        auto handle = std::make_unique<p4a_aom_per_component_result_s>();
-        const p4a_status_t status = ::pls4all::core::select_aom_per_component(
+        auto handle = std::make_unique<n4m_aom_per_component_result_s>();
+        const n4m_status_t status = ::n4m::core::select_aom_per_component(
             *as_core(ctx), *as_core(cfg), *as_core(bank),
             *X, *Y, *as_core(plan), max_components, handle->inner);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         handle->predictions_rows = X->rows;
@@ -264,114 +264,114 @@ P4A_API p4a_status_t p4a_aom_per_component_select(
             handle->inner.selected_operator_indices,
             handle->selected_operator_indices_i32);
         *out_result = handle.release();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in p4a_aom_per_component_select");
-        return P4A_ERR_OUT_OF_MEMORY;
+        set_error(ctx, "out of memory in n4m_aom_per_component_select");
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in p4a_aom_per_component_select");
-        return P4A_ERR_INTERNAL;
+        set_error(ctx, "internal error in n4m_aom_per_component_select");
+        return N4M_ERR_INTERNAL;
     }
 }
 
-P4A_API void p4a_aom_per_component_result_destroy(
-    p4a_aom_per_component_result_t* result) {
+N4M_API void n4m_aom_per_component_result_destroy(
+    n4m_aom_per_component_result_t* result) {
     try {
         delete result;
     } catch (...) {
     }
 }
 
-P4A_API p4a_status_t p4a_aom_per_component_result_get_n_operators(
-    const p4a_aom_per_component_result_t* result, int32_t* out) {
-    if (result == nullptr || out == nullptr) return P4A_ERR_NULL_POINTER;
+N4M_API n4m_status_t n4m_aom_per_component_result_get_n_operators(
+    const n4m_aom_per_component_result_t* result, int32_t* out) {
+    if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.n_operators;
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_per_component_result_get_max_components(
-    const p4a_aom_per_component_result_t* result, int32_t* out) {
-    if (result == nullptr || out == nullptr) return P4A_ERR_NULL_POINTER;
+N4M_API n4m_status_t n4m_aom_per_component_result_get_max_components(
+    const n4m_aom_per_component_result_t* result, int32_t* out) {
+    if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.max_components;
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_per_component_result_get_selected_n_components(
-    const p4a_aom_per_component_result_t* result, int32_t* out) {
-    if (result == nullptr || out == nullptr) return P4A_ERR_NULL_POINTER;
+N4M_API n4m_status_t n4m_aom_per_component_result_get_selected_n_components(
+    const n4m_aom_per_component_result_t* result, int32_t* out) {
+    if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.selected_n_components;
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_per_component_result_get_best_score(
-    const p4a_aom_per_component_result_t* result, double* out) {
-    if (result == nullptr || out == nullptr) return P4A_ERR_NULL_POINTER;
+N4M_API n4m_status_t n4m_aom_per_component_result_get_best_score(
+    const n4m_aom_per_component_result_t* result, double* out) {
+    if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.best_score;
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_per_component_result_get_operator_kinds(
-    const p4a_aom_per_component_result_t* result,
-    const p4a_operator_kind_t** out_data, int32_t* out_size) {
+N4M_API n4m_status_t n4m_aom_per_component_result_get_operator_kinds(
+    const n4m_aom_per_component_result_t* result,
+    const n4m_operator_kind_t** out_data, int32_t* out_size) {
     if (result == nullptr || out_data == nullptr || out_size == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     *out_data = result->operator_kinds_typed.empty()
         ? nullptr : result->operator_kinds_typed.data();
     *out_size = static_cast<int32_t>(result->operator_kinds_typed.size());
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_per_component_result_get_selected_operator_indices(
-    const p4a_aom_per_component_result_t* result,
+N4M_API n4m_status_t n4m_aom_per_component_result_get_selected_operator_indices(
+    const n4m_aom_per_component_result_t* result,
     const int32_t** out_data, int32_t* out_size) {
     if (result == nullptr || out_data == nullptr || out_size == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     *out_data = result->selected_operator_indices_i32.empty()
         ? nullptr : result->selected_operator_indices_i32.data();
     *out_size = static_cast<int32_t>(result->selected_operator_indices_i32.size());
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_per_component_result_get_component_scores(
-    const p4a_aom_per_component_result_t* result,
+N4M_API n4m_status_t n4m_aom_per_component_result_get_component_scores(
+    const n4m_aom_per_component_result_t* result,
     const double** out_data, int32_t* out_rows, int32_t* out_cols) {
     if (result == nullptr || out_data == nullptr ||
         out_rows == nullptr || out_cols == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     *out_data = result->inner.component_scores.empty()
         ? nullptr : result->inner.component_scores.data();
     *out_rows = result->inner.max_components;
     *out_cols = result->inner.n_operators;
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_per_component_result_get_prefix_scores(
-    const p4a_aom_per_component_result_t* result,
+N4M_API n4m_status_t n4m_aom_per_component_result_get_prefix_scores(
+    const n4m_aom_per_component_result_t* result,
     const double** out_data, int32_t* out_size) {
     if (result == nullptr || out_data == nullptr || out_size == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     *out_data = result->inner.prefix_scores.empty()
         ? nullptr : result->inner.prefix_scores.data();
     *out_size = static_cast<int32_t>(result->inner.prefix_scores.size());
-    return P4A_OK;
+    return N4M_OK;
 }
 
-P4A_API p4a_status_t p4a_aom_per_component_result_get_predictions(
-    const p4a_aom_per_component_result_t* result,
+N4M_API n4m_status_t n4m_aom_per_component_result_get_predictions(
+    const n4m_aom_per_component_result_t* result,
     const double** out_data, int64_t* out_rows, int64_t* out_cols) {
     if (result == nullptr || out_data == nullptr ||
         out_rows == nullptr || out_cols == nullptr) {
-        return P4A_ERR_NULL_POINTER;
+        return N4M_ERR_NULL_POINTER;
     }
     *out_data = result->inner.predictions.empty()
         ? nullptr : result->inner.predictions.data();
     *out_rows = result->predictions_rows;
     *out_cols = result->predictions_cols;
-    return P4A_OK;
+    return N4M_OK;
 }
 
 }  // extern "C"

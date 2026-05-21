@@ -23,5 +23,5 @@ if nargin < 3
 end
 
 [coefs, x_mean, y_mean, predictions] = ...
-    pls4all.p4a_pls_fit_mex(double(X), double(Y), int32(n_components));
+    pls4all.n4m_pls_fit_mex(double(X), double(Y), int32(n_components));
 end

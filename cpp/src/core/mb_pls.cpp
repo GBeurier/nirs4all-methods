@@ -31,14 +31,14 @@ namespace {
     return true;
 }
 
-[[nodiscard]] double read_float(const p4a_matrix_view_t& view,
+[[nodiscard]] double read_float(const n4m_matrix_view_t& view,
                                 std::size_t row,
                                 std::size_t col) noexcept {
     const std::int64_t off =
         static_cast<std::int64_t>(row) * view.row_stride +
         static_cast<std::int64_t>(col) * view.col_stride;
     const auto uoff = static_cast<std::size_t>(off);
-    if (view.dtype == P4A_DTYPE_F64) {
+    if (view.dtype == N4M_DTYPE_F64) {
         const auto* ptr = static_cast<const double*>(view.data);
         return ptr[uoff];
     }
@@ -52,38 +52,38 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     std::fill(values.begin(), values.end(), fill);
 }
 
-[[nodiscard]] p4a_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
+[[nodiscard]] n4m_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
                                                   std::int64_t rows,
                                                   std::int64_t cols) noexcept {
-    p4a_matrix_view_t view{};
+    n4m_matrix_view_t view{};
     view.data = values.data();
     view.rows = rows;
     view.cols = cols;
     view.row_stride = cols > 0 ? cols : 1;
     view.col_stride = 1;
-    view.dtype = P4A_DTYPE_F64;
+    view.dtype = N4M_DTYPE_F64;
     return view;
 }
 
-[[nodiscard]] p4a_status_t validate_float_view(::pls4all::core::Context& ctx,
-                                               const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t validate_float_view(::n4m::core::Context& ctx,
+                                               const n4m_matrix_view_t& view,
                                                const char* name) noexcept {
-    const p4a_status_t status = ::pls4all::core::validate_nonnull_view(view);
-    if (status != P4A_OK) {
+    const n4m_status_t status = ::n4m::core::validate_nonnull_view(view);
+    if (status != N4M_OK) {
         ctx.set_errorf("%s matrix view is invalid: %s",
                        name,
-                       ::pls4all::core::status_to_string(status));
+                       ::n4m::core::status_to_string(status));
         return status;
     }
-    if (view.dtype != P4A_DTYPE_F64 && view.dtype != P4A_DTYPE_F32) {
+    if (view.dtype != N4M_DTYPE_F64 && view.dtype != N4M_DTYPE_F32) {
         ctx.set_errorf("%s dtype must be f64 or f32", name);
-        return P4A_ERR_DTYPE_MISMATCH;
+        return N4M_ERR_DTYPE_MISMATCH;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t copy_float_matrix(::pls4all::core::Context& ctx,
-                                             const p4a_matrix_view_t& view,
+[[nodiscard]] n4m_status_t copy_float_matrix(::n4m::core::Context& ctx,
+                                             const n4m_matrix_view_t& view,
                                              const char* name,
                                              std::vector<double>& out) {
     const auto rows = static_cast<std::size_t>(view.rows);
@@ -91,7 +91,7 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     std::size_t total = 0;
     if (!checked_mul_size(rows, cols, total)) {
         ctx.set_errorf("%s matrix size overflows size_t", name);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     resize_fill(out, total, 0.0);
     for (std::size_t row = 0; row < rows; ++row) {
@@ -99,16 +99,16 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
             const double value = read_float(view, row, col);
             if (!std::isfinite(value)) {
                 ctx.set_errorf("%s contains NaN or Inf", name);
-                return P4A_ERR_INVALID_ARGUMENT;
+                return N4M_ERR_INVALID_ARGUMENT;
             }
             out[idx(row, cols, col)] = value;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
-[[nodiscard]] p4a_status_t transform_blocks(::pls4all::core::Context& ctx,
-                                            const p4a_matrix_view_t& X,
+[[nodiscard]] n4m_status_t transform_blocks(::n4m::core::Context& ctx,
+                                            const n4m_matrix_view_t& X,
                                             const std::int64_t* block_sizes,
                                             std::size_t n_blocks,
                                             std::vector<double>& transformed,
@@ -118,27 +118,27 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
                                             std::vector<double>& block_weights) {
     if (block_sizes == nullptr || n_blocks == 0) {
         ctx.set_error("MB-PLS requires at least one block size");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (X.rows < 2 || X.cols < 1) {
         ctx.set_error("MB-PLS requires at least 2 rows and 1 X column");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::int64_t total_cols = 0;
     for (std::size_t block = 0; block < n_blocks; ++block) {
         if (block_sizes[block] <= 0) {
             ctx.set_error("MB-PLS block sizes must be positive");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (total_cols > std::numeric_limits<std::int64_t>::max() - block_sizes[block]) {
             ctx.set_error("MB-PLS block sizes overflow int64");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         total_cols += block_sizes[block];
     }
     if (total_cols != X.cols) {
         ctx.set_error("MB-PLS block sizes must sum to X columns");
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
 
     const auto rows = static_cast<std::size_t>(X.rows);
@@ -146,7 +146,7 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     std::size_t total = 0;
     if (!checked_mul_size(rows, cols, total)) {
         ctx.set_error("MB-PLS transformed matrix size overflows size_t");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     resize_fill(transformed, total, 0.0);
     resize_fill(x_mean, cols, 0.0);
@@ -166,7 +166,7 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
                 const double value = read_float(X, row, col);
                 if (!std::isfinite(value)) {
                     ctx.set_error("X contains NaN or Inf");
-                    return P4A_ERR_INVALID_ARGUMENT;
+                    return N4M_ERR_INVALID_ARGUMENT;
                 }
                 sum += value;
             }
@@ -190,47 +190,47 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
         }
         start = stop;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t fit_predict_mb_pls(Context& ctx,
+n4m_status_t fit_predict_mb_pls(Context& ctx,
                                const Config& cfg,
-                               const p4a_matrix_view_t& X,
-                               const p4a_matrix_view_t& Y,
+                               const n4m_matrix_view_t& X,
+                               const n4m_matrix_view_t& Y,
                                const std::int64_t* block_sizes,
                                std::size_t n_blocks,
                                MbPlsResult& out) {
     try {
         out = MbPlsResult{};
-        p4a_status_t status = validate_float_view(ctx, X, "X");
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_float_view(ctx, X, "X");
+        if (status != N4M_OK) {
             return status;
         }
         status = validate_float_view(ctx, Y, "Y");
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             return status;
         }
         if (X.rows != Y.rows) {
             ctx.set_error("X and Y row counts must match");
-            return P4A_ERR_SHAPE_MISMATCH;
+            return N4M_ERR_SHAPE_MISMATCH;
         }
         if (Y.cols < 1) {
             ctx.set_error("Y must have at least one target column");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (X.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max()) ||
             Y.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max()) ||
             n_blocks > static_cast<std::size_t>(std::numeric_limits<std::int32_t>::max())) {
             ctx.set_error("MB-PLS dimensions exceed ABI limits");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (cfg.n_components < 1) {
             ctx.set_error("MB-PLS requires at least one PLS component");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
         std::vector<double> transformed;
@@ -244,30 +244,30 @@ p4a_status_t fit_predict_mb_pls(Context& ctx,
                                   out.x_scale,
                                   feature_weights,
                                   out.block_weights);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             out = MbPlsResult{};
             return status;
         }
 
         std::vector<double> y_values;
         status = copy_float_matrix(ctx, Y, "Y", y_values);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             out = MbPlsResult{};
             return status;
         }
 
         Config pls_cfg = cfg;
-        pls_cfg.algorithm = P4A_ALGO_PLS_REGRESSION;
-        pls_cfg.deflation = P4A_DEFLATION_REGRESSION;
+        pls_cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+        pls_cfg.deflation = N4M_DEFLATION_REGRESSION;
         pls_cfg.center_x = 1;
         pls_cfg.scale_x = 0;
         pls_cfg.center_y = 1;
         pls_cfg.scale_y = 0;
-        p4a_matrix_view_t Xt = rowmajor_f64_view(transformed, X.rows, X.cols);
-        p4a_matrix_view_t Yt = rowmajor_f64_view(y_values, Y.rows, Y.cols);
+        n4m_matrix_view_t Xt = rowmajor_f64_view(transformed, X.rows, X.cols);
+        n4m_matrix_view_t Yt = rowmajor_f64_view(y_values, Y.rows, Y.cols);
         std::unique_ptr<Model> model;
         status = fit_model(ctx, pls_cfg, Xt, Yt, model);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             out = MbPlsResult{};
             return status;
         }
@@ -281,13 +281,13 @@ p4a_status_t fit_predict_mb_pls(Context& ctx,
             !checked_mul_size(cols, targets, coef_size)) {
             ctx.set_error("MB-PLS output size overflows size_t");
             out = MbPlsResult{};
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
 
         out.predictions.assign(pred_size, 0.0);
-        p4a_matrix_view_t pred_view = rowmajor_f64_view(out.predictions, X.rows, Y.cols);
+        n4m_matrix_view_t pred_view = rowmajor_f64_view(out.predictions, X.rows, Y.cols);
         status = predict_into(ctx, *model, Xt, pred_view);
-        if (status != P4A_OK) {
+        if (status != N4M_OK) {
             out = MbPlsResult{};
             return status;
         }
@@ -318,16 +318,16 @@ p4a_status_t fit_predict_mb_pls(Context& ctx,
         out.n_components = cfg.n_components;
         out.n_blocks = static_cast<std::int32_t>(n_blocks);
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while fitting MB-PLS");
         out = MbPlsResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while fitting MB-PLS");
         out = MbPlsResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

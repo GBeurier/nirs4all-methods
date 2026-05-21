@@ -13,7 +13,7 @@
 
 #include "core/matrix_view.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 namespace {
 
@@ -23,13 +23,13 @@ constexpr double kEps = 1e-12;
     return row * cols + col;
 }
 
-[[nodiscard]] p4a_status_t copy_matrix(Context& ctx,
-                                        const p4a_matrix_view_t& V,
+[[nodiscard]] n4m_status_t copy_matrix(Context& ctx,
+                                        const n4m_matrix_view_t& V,
                                         const char* name,
                                         std::vector<double>& out) {
-    if (validate_nonnull_view(V) != P4A_OK || V.dtype != P4A_DTYPE_F64) {
+    if (validate_nonnull_view(V) != N4M_OK || V.dtype != N4M_DTYPE_F64) {
         ctx.set_errorf("%s must be a finite F64 row-major matrix", name);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const std::size_t rows = static_cast<std::size_t>(V.rows);
     const std::size_t cols = static_cast<std::size_t>(V.cols);
@@ -38,9 +38,9 @@ constexpr double kEps = 1e-12;
     if (data == nullptr) {
         if (rows > 0 && cols > 0) {
             ctx.set_errorf("%s has null data", name);
-            return P4A_ERR_NULL_POINTER;
+            return N4M_ERR_NULL_POINTER;
         }
-        return P4A_OK;
+        return N4M_OK;
     }
     const std::size_t rs = static_cast<std::size_t>(V.row_stride);
     const std::size_t cs = static_cast<std::size_t>(V.col_stride);
@@ -52,7 +52,7 @@ constexpr double kEps = 1e-12;
             out[r * cols + c] = v;
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 double squared_norm(const std::vector<double>& v) {
@@ -304,33 +304,33 @@ void simple_simpls(std::vector<double> xk,
 
 // ---- Sparse PLS-DA -----------------------------------------------------
 
-p4a_status_t fit_sparse_pls_da(Context& ctx,
+n4m_status_t fit_sparse_pls_da(Context& ctx,
                                 const Config& cfg,
-                                const p4a_matrix_view_t& X,
+                                const n4m_matrix_view_t& X,
                                 const std::vector<std::int32_t>& y_labels,
                                 SparsePlsDaResult& out) {
     out = SparsePlsDaResult{};
     if (y_labels.size() != static_cast<std::size_t>(X.rows)) {
         ctx.set_error("y_labels length must equal X.rows");
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     std::vector<double> X_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     std::int32_t max_label = 0;
     for (auto lbl : y_labels) {
         if (lbl < 0) {
             ctx.set_error("class labels must be non-negative");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
         if (lbl > max_label) max_label = lbl;
     }
     const std::size_t q = static_cast<std::size_t>(max_label) + 1;
     if (q < 2) {
         ctx.set_error("sparse PLS-DA needs at least two classes");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::vector<double> Yv(n * q, 0.0);
     out.class_priors.assign(q, 0.0);
@@ -359,28 +359,28 @@ p4a_status_t fit_sparse_pls_da(Context& ctx,
     out.n_classes = static_cast<std::int32_t>(q);
     out.coefficients = std::move(coefs);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---- Group sparse PLS --------------------------------------------------
 
-p4a_status_t fit_group_sparse_pls(Context& ctx,
+n4m_status_t fit_group_sparse_pls(Context& ctx,
                                    const Config& cfg,
-                                   const p4a_matrix_view_t& X,
-                                   const p4a_matrix_view_t& Y,
+                                   const n4m_matrix_view_t& X,
+                                   const n4m_matrix_view_t& Y,
                                    const std::vector<std::int32_t>& group_assignment,
                                    double group_lambda,
                                    GroupSparsePlsResult& out) {
     out = GroupSparsePlsResult{};
     if (group_assignment.size() != static_cast<std::size_t>(X.cols)) {
         ctx.set_error("group_assignment must have one entry per feature");
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     std::vector<double> X_buf, Y_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
@@ -437,23 +437,23 @@ p4a_status_t fit_group_sparse_pls(Context& ctx,
     out.n_targets = static_cast<std::int32_t>(q);
     out.coefficients = std::move(coefs);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---- Fused sparse PLS --------------------------------------------------
 
-p4a_status_t fit_fused_sparse_pls(Context& ctx,
+n4m_status_t fit_fused_sparse_pls(Context& ctx,
                                    const Config& cfg,
-                                   const p4a_matrix_view_t& X,
-                                   const p4a_matrix_view_t& Y,
+                                   const n4m_matrix_view_t& X,
+                                   const n4m_matrix_view_t& Y,
                                    double l1_lambda,
                                    double fusion_lambda,
                                    GroupSparsePlsResult& out) {
     (void)fusion_lambda;  // applied during weight smoothing below
     std::vector<std::int32_t> trivial(static_cast<std::size_t>(X.cols), 0);
-    p4a_status_t status = fit_group_sparse_pls(ctx, cfg, X, Y, trivial,
+    n4m_status_t status = fit_group_sparse_pls(ctx, cfg, X, Y, trivial,
                                                 l1_lambda, out);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     // Apply fusion: smooth consecutive coefficients toward each other.
     if (fusion_lambda > 0.0 && out.n_features > 1) {
         const std::size_t p = static_cast<std::size_t>(out.n_features);
@@ -473,27 +473,27 @@ p4a_status_t fit_fused_sparse_pls(Context& ctx,
             }
         }
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---- CPPLS -------------------------------------------------------------
 
-p4a_status_t fit_cppls(Context& ctx,
+n4m_status_t fit_cppls(Context& ctx,
                         const Config& cfg,
-                        const p4a_matrix_view_t& X,
-                        const p4a_matrix_view_t& Y,
+                        const n4m_matrix_view_t& X,
+                        const n4m_matrix_view_t& Y,
                         double gamma,
                         CpplsResult& out) {
     out = CpplsResult{};
     if (!(gamma >= 0.0 && gamma <= 1.0)) {
         ctx.set_error("CPPLS gamma must be in [0, 1]");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::vector<double> X_buf, Y_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
@@ -543,33 +543,33 @@ p4a_status_t fit_cppls(Context& ctx,
     out.gamma = gamma;
     out.coefficients = std::move(coefs);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---- Weighted PLS ------------------------------------------------------
 
-p4a_status_t fit_weighted_pls(Context& ctx,
+n4m_status_t fit_weighted_pls(Context& ctx,
                                const Config& cfg,
-                               const p4a_matrix_view_t& X,
-                               const p4a_matrix_view_t& Y,
+                               const n4m_matrix_view_t& X,
+                               const n4m_matrix_view_t& Y,
                                const std::vector<double>& sample_weights,
                                WeightedPlsResult& out) {
     out = WeightedPlsResult{};
     if (sample_weights.size() != static_cast<std::size_t>(X.rows)) {
         ctx.set_error("sample_weights length must equal X.rows");
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     for (double w : sample_weights) {
         if (!(w > 0.0) || !std::isfinite(w)) {
             ctx.set_error("sample weights must be positive and finite");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
     }
     std::vector<double> X_buf, Y_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
@@ -609,35 +609,35 @@ p4a_status_t fit_weighted_pls(Context& ctx,
     out.n_targets = static_cast<std::int32_t>(q);
     out.n_components = static_cast<std::int32_t>(a);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---- Robust PLS --------------------------------------------------------
 
-p4a_status_t fit_robust_pls(Context& ctx,
+n4m_status_t fit_robust_pls(Context& ctx,
                              const Config& cfg,
-                             const p4a_matrix_view_t& X,
-                             const p4a_matrix_view_t& Y,
+                             const n4m_matrix_view_t& X,
+                             const n4m_matrix_view_t& Y,
                              double huber_k,
                              std::int32_t max_irls_iter,
                              WeightedPlsResult& out) {
     if (!(huber_k > 0.0) || !std::isfinite(huber_k)) {
         ctx.set_error("huber_k must be > 0");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (max_irls_iter < 1) max_irls_iter = 5;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     std::vector<double> weights(n, 1.0);
-    p4a_status_t status = P4A_OK;
+    n4m_status_t status = N4M_OK;
     for (std::int32_t iter = 0; iter < max_irls_iter; ++iter) {
         status = fit_weighted_pls(ctx, cfg, X, Y, weights, out);
-        if (status != P4A_OK) return status;
+        if (status != N4M_OK) return status;
         // Compute residual scale (median absolute deviation).
         std::vector<double> X_buf, Y_buf;
-        const p4a_status_t cx = copy_matrix(ctx, X, "X", X_buf);
-        const p4a_status_t cy = copy_matrix(ctx, Y, "Y", Y_buf);
-        if (cx != P4A_OK) return cx;
-        if (cy != P4A_OK) return cy;
+        const n4m_status_t cx = copy_matrix(ctx, X, "X", X_buf);
+        const n4m_status_t cy = copy_matrix(ctx, Y, "Y", Y_buf);
+        if (cx != N4M_OK) return cx;
+        if (cy != N4M_OK) return cy;
         const std::size_t p = static_cast<std::size_t>(X.cols);
         const std::size_t q = static_cast<std::size_t>(Y.cols);
         std::vector<double> residual_norms(n, 0.0);
@@ -675,22 +675,22 @@ p4a_status_t fit_robust_pls(Context& ctx,
 
 // ---- Ridge PLS ---------------------------------------------------------
 
-p4a_status_t fit_ridge_pls(Context& ctx,
+n4m_status_t fit_ridge_pls(Context& ctx,
                             const Config& cfg,
-                            const p4a_matrix_view_t& X,
-                            const p4a_matrix_view_t& Y,
+                            const n4m_matrix_view_t& X,
+                            const n4m_matrix_view_t& Y,
                             double ridge_lambda,
                             WeightedPlsResult& out) {
     out = WeightedPlsResult{};
     if (!(ridge_lambda >= 0.0) || !std::isfinite(ridge_lambda)) {
         ctx.set_error("ridge_lambda must be >= 0");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::vector<double> X_buf, Y_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
@@ -729,30 +729,30 @@ p4a_status_t fit_ridge_pls(Context& ctx,
     out.n_targets = static_cast<std::int32_t>(q);
     out.n_components = static_cast<std::int32_t>(a);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---- Continuum regression ---------------------------------------------
 
-p4a_status_t fit_continuum_regression(Context& ctx,
+n4m_status_t fit_continuum_regression(Context& ctx,
                                        const Config& cfg,
-                                       const p4a_matrix_view_t& X,
-                                       const p4a_matrix_view_t& Y,
+                                       const n4m_matrix_view_t& X,
+                                       const n4m_matrix_view_t& Y,
                                        double tau,
                                        WeightedPlsResult& out) {
     if (!(tau >= 0.0 && tau <= 1.0)) {
         ctx.set_error("tau must be in [0, 1]");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     // Implementation hack: rescale X by var^(1-tau) so that PCA-like vs
     // OLS-like behaviour interpolates with tau. tau=0 ≈ PLS (no rescaling),
     // tau=1 ≈ OLS (rescale by sqrt of variance to whiten X).
     out = WeightedPlsResult{};
     std::vector<double> X_buf, Y_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
@@ -792,24 +792,24 @@ p4a_status_t fit_continuum_regression(Context& ctx,
     out.n_targets = static_cast<std::int32_t>(q);
     out.n_components = static_cast<std::int32_t>(a);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---- PLS-GLM ----------------------------------------------------------
 
-p4a_status_t fit_pls_glm(Context& ctx,
+n4m_status_t fit_pls_glm(Context& ctx,
                          const Config& cfg,
-                         const p4a_matrix_view_t& X,
-                         const p4a_matrix_view_t& Y,
+                         const n4m_matrix_view_t& X,
+                         const n4m_matrix_view_t& Y,
                          bool poisson,
                          PlsGlmResult& out) {
     out = PlsGlmResult{};
     out.poisson = poisson;
     std::vector<double> X_buf, Y_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
@@ -839,24 +839,24 @@ p4a_status_t fit_pls_glm(Context& ctx,
     out.n_classes = static_cast<std::int32_t>(q);
     out.n_components = static_cast<std::int32_t>(a);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---- PLS-QDA -----------------------------------------------------------
 
-p4a_status_t fit_pls_qda(Context& ctx,
+n4m_status_t fit_pls_qda(Context& ctx,
                           const Config& cfg,
-                          const p4a_matrix_view_t& X,
+                          const n4m_matrix_view_t& X,
                           const std::vector<std::int32_t>& y_labels,
                           PlsQdaResult& out) {
     out = PlsQdaResult{};
     if (y_labels.size() != static_cast<std::size_t>(X.rows)) {
         ctx.set_error("y_labels length must equal X.rows");
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     std::vector<double> X_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     std::int32_t max_label = 0;
@@ -937,14 +937,14 @@ p4a_status_t fit_pls_qda(Context& ctx,
     out.n_components = static_cast<std::int32_t>(a);
     out.rotations_r = std::move(W);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---- PLS-Cox ----------------------------------------------------------
 
-p4a_status_t fit_pls_cox(Context& ctx,
+n4m_status_t fit_pls_cox(Context& ctx,
                           const Config& cfg,
-                          const p4a_matrix_view_t& X,
+                          const n4m_matrix_view_t& X,
                           const std::vector<double>& survival_times,
                           const std::vector<std::int32_t>& event_indicators,
                           PlsCoxResult& out) {
@@ -952,17 +952,17 @@ p4a_status_t fit_pls_cox(Context& ctx,
     const std::size_t n = static_cast<std::size_t>(X.rows);
     if (survival_times.size() != n || event_indicators.size() != n) {
         ctx.set_error("survival_times and event_indicators must match X.rows");
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     for (double t : survival_times) {
         if (!(t > 0.0) || !std::isfinite(t)) {
             ctx.set_error("survival times must be positive and finite");
-            return P4A_ERR_INVALID_ARGUMENT;
+            return N4M_ERR_INVALID_ARGUMENT;
         }
     }
     std::vector<double> X_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     const std::size_t p = static_cast<std::size_t>(X.cols);
     column_means(X_buf, n, p, out.x_mean);
     subtract_means(X_buf, n, p, out.x_mean);
@@ -1022,30 +1022,30 @@ p4a_status_t fit_pls_cox(Context& ctx,
     out.n_features = static_cast<std::int32_t>(p);
     out.n_components = static_cast<std::int32_t>(a);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---- PDS / DS / MIR-PLS / missing-aware NIPALS -------------------------
 
-p4a_status_t fit_pds(Context& ctx,
-                      const p4a_matrix_view_t& X_source,
-                      const p4a_matrix_view_t& X_target,
+n4m_status_t fit_pds(Context& ctx,
+                      const n4m_matrix_view_t& X_source,
+                      const n4m_matrix_view_t& X_target,
                       std::int32_t window_half_width,
                       PdsResult& out) {
     out = PdsResult{};
     if (X_source.rows != X_target.rows) {
         ctx.set_error("source and target rows must match");
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     if (window_half_width < 0) {
         ctx.set_error("window_half_width must be >= 0");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::vector<double> Xs, Xt;
-    p4a_status_t status = copy_matrix(ctx, X_source, "X_source", Xs);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X_source, "X_source", Xs);
+    if (status != N4M_OK) return status;
     status = copy_matrix(ctx, X_target, "X_target", Xt);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X_source.rows);
     const std::size_t ps = static_cast<std::size_t>(X_source.cols);
     const std::size_t pt = static_cast<std::size_t>(X_target.cols);
@@ -1135,23 +1135,23 @@ p4a_status_t fit_pds(Context& ctx,
         }
     }
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_ds(Context& ctx,
-                     const p4a_matrix_view_t& X_source,
-                     const p4a_matrix_view_t& X_target,
+n4m_status_t fit_ds(Context& ctx,
+                     const n4m_matrix_view_t& X_source,
+                     const n4m_matrix_view_t& X_target,
                      DsResult& out) {
     out = DsResult{};
     if (X_source.rows != X_target.rows) {
         ctx.set_error("source and target rows must match");
-        return P4A_ERR_SHAPE_MISMATCH;
+        return N4M_ERR_SHAPE_MISMATCH;
     }
     std::vector<double> Xs, Xt;
-    p4a_status_t status = copy_matrix(ctx, X_source, "X_source", Xs);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X_source, "X_source", Xs);
+    if (status != N4M_OK) return status;
     status = copy_matrix(ctx, X_target, "X_target", Xt);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X_source.rows);
     const std::size_t ps = static_cast<std::size_t>(X_source.cols);
     const std::size_t pt = static_cast<std::size_t>(X_target.cols);
@@ -1237,13 +1237,13 @@ p4a_status_t fit_ds(Context& ctx,
         out.bias[j] = s;
     }
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_mir_pls(Context& ctx,
+n4m_status_t fit_mir_pls(Context& ctx,
                           const Config& cfg,
-                          const p4a_matrix_view_t& X,
-                          const p4a_matrix_view_t& Y,
+                          const n4m_matrix_view_t& X,
+                          const n4m_matrix_view_t& Y,
                           MirPlsResult& out) {
     out = MirPlsResult{};
     // MIR-PLS: invert the X-Y relationship to obtain X = f(Y) regression
@@ -1251,10 +1251,10 @@ p4a_status_t fit_mir_pls(Context& ctx,
     // implementation: run SIMPLS on the swapped (Y, X) pair and invert
     // the resulting coefficients.
     std::vector<double> X_buf, Y_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
@@ -1327,20 +1327,20 @@ p4a_status_t fit_mir_pls(Context& ctx,
         }
     }
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_missing_aware_nipals(Context& ctx,
+n4m_status_t fit_missing_aware_nipals(Context& ctx,
                                        const Config& cfg,
-                                       const p4a_matrix_view_t& X,
-                                       const p4a_matrix_view_t& Y,
+                                       const n4m_matrix_view_t& X,
+                                       const n4m_matrix_view_t& Y,
                                        WeightedPlsResult& out) {
     out = WeightedPlsResult{};
     std::vector<double> X_buf, Y_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
@@ -1390,28 +1390,28 @@ p4a_status_t fit_missing_aware_nipals(Context& ctx,
     out.n_targets = static_cast<std::int32_t>(q);
     out.n_components = static_cast<std::int32_t>(a);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---- approximate-PRESS -------------------------------------------------
 
-p4a_status_t approximate_press(Context& ctx,
+n4m_status_t approximate_press(Context& ctx,
                                 const Config& cfg,
-                                const p4a_matrix_view_t& X,
-                                const p4a_matrix_view_t& Y,
+                                const n4m_matrix_view_t& X,
+                                const n4m_matrix_view_t& Y,
                                 std::int32_t max_components,
                                 ApproximatePressResult& out) {
     (void)cfg;
     out = ApproximatePressResult{};
     if (max_components < 1) {
         ctx.set_error("max_components must be >= 1");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::vector<double> X_buf, Y_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
@@ -1457,7 +1457,7 @@ p4a_status_t approximate_press(Context& ctx,
     }
     out.selected_n_components = best_k;
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
 // ---- Ensembles ---------------------------------------------------------
@@ -1474,23 +1474,23 @@ void accumulate_coefficients(std::vector<double>& accumulator,
 
 }  // namespace
 
-p4a_status_t fit_bagging_pls(Context& ctx,
+n4m_status_t fit_bagging_pls(Context& ctx,
                               const Config& cfg,
-                              const p4a_matrix_view_t& X,
-                              const p4a_matrix_view_t& Y,
+                              const n4m_matrix_view_t& X,
+                              const n4m_matrix_view_t& Y,
                               std::int32_t n_estimators,
                               std::uint64_t seed,
                               EnsemblePlsResult& out) {
     out = EnsemblePlsResult{};
     if (n_estimators < 1) {
         ctx.set_error("n_estimators must be >= 1");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::vector<double> X_buf, Y_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
@@ -1525,26 +1525,26 @@ p4a_status_t fit_bagging_pls(Context& ctx,
     out.n_targets = static_cast<std::int32_t>(q);
     out.n_components = static_cast<std::int32_t>(a);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_boosting_pls(Context& ctx,
+n4m_status_t fit_boosting_pls(Context& ctx,
                                const Config& cfg,
-                               const p4a_matrix_view_t& X,
-                               const p4a_matrix_view_t& Y,
+                               const n4m_matrix_view_t& X,
+                               const n4m_matrix_view_t& Y,
                                std::int32_t n_estimators,
                                double learning_rate,
                                EnsemblePlsResult& out) {
     out = EnsemblePlsResult{};
     if (n_estimators < 1 || !(learning_rate > 0.0 && learning_rate <= 1.0)) {
         ctx.set_error("n_estimators >= 1 and learning_rate in (0, 1] required");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::vector<double> X_buf, Y_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
@@ -1577,13 +1577,13 @@ p4a_status_t fit_boosting_pls(Context& ctx,
     out.n_targets = static_cast<std::int32_t>(q);
     out.n_components = static_cast<std::int32_t>(a);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-p4a_status_t fit_random_subspace_pls(Context& ctx,
+n4m_status_t fit_random_subspace_pls(Context& ctx,
                                       const Config& cfg,
-                                      const p4a_matrix_view_t& X,
-                                      const p4a_matrix_view_t& Y,
+                                      const n4m_matrix_view_t& X,
+                                      const n4m_matrix_view_t& Y,
                                       std::int32_t n_estimators,
                                       std::int32_t features_per_subspace,
                                       std::uint64_t seed,
@@ -1591,19 +1591,19 @@ p4a_status_t fit_random_subspace_pls(Context& ctx,
     out = EnsemblePlsResult{};
     if (n_estimators < 1 || features_per_subspace < 1) {
         ctx.set_error("n_estimators and features_per_subspace must be >= 1");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     std::vector<double> X_buf, Y_buf;
-    p4a_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != P4A_OK) return status;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
     status = copy_matrix(ctx, Y, "Y", Y_buf);
-    if (status != P4A_OK) return status;
+    if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
     if (static_cast<std::size_t>(features_per_subspace) > p) {
         ctx.set_error("features_per_subspace cannot exceed n_features");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     column_means(X_buf, n, p, out.x_mean);
     subtract_means(X_buf, n, p, out.x_mean);
@@ -1641,7 +1641,7 @@ p4a_status_t fit_random_subspace_pls(Context& ctx,
     out.n_targets = static_cast<std::int32_t>(q);
     out.n_components = static_cast<std::int32_t>(a);
     ctx.clear_error();
-    return P4A_OK;
+    return N4M_OK;
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

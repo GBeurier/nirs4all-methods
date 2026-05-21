@@ -13,7 +13,7 @@
 #include "core/context.hpp"
 #include "core/model.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 // Compute training-side Hotelling T2 statistics for each row of X.
 //
@@ -24,11 +24,11 @@ namespace pls4all::core {
 // or from t_reference = (X_reference - x_mean) @ rotations_R otherwise.
 //
 // out_t2 is resized to X.rows.
-[[nodiscard]] p4a_status_t pls_hotelling_t2(
+[[nodiscard]] n4m_status_t pls_hotelling_t2(
     Context& ctx,
     const Model& model,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t* X_reference,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t* X_reference,
     std::vector<double>& out_t2);
 
 // Squared prediction error of X reconstruction from latent scores.
@@ -37,10 +37,10 @@ namespace pls4all::core {
 // where x_hat = t @ loadings_P^T, t = (X - x_mean) @ rotations_R.
 //
 // out_q is resized to X.rows.
-[[nodiscard]] p4a_status_t pls_q_residuals(
+[[nodiscard]] n4m_status_t pls_q_residuals(
     Context& ctx,
     const Model& model,
-    const p4a_matrix_view_t& X,
+    const n4m_matrix_view_t& X,
     std::vector<double>& out_q);
 
 // Distance-to-model X (DModX).
@@ -50,11 +50,11 @@ namespace pls4all::core {
 // X_reference is provided. When X_reference is NULL the function reports
 // the unnormalized residual standard deviation per sample, i.e.
 // sqrt(Q[i] / max(1, n_features - n_components)).
-[[nodiscard]] p4a_status_t pls_dmodx(
+[[nodiscard]] n4m_status_t pls_dmodx(
     Context& ctx,
     const Model& model,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t* X_reference,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t* X_reference,
     std::vector<double>& out_dmodx);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

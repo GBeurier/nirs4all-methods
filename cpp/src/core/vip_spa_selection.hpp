@@ -16,7 +16,7 @@
 #include "core/config.hpp"
 #include "core/context.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct VipSpaSelectionResult {
     std::int32_t n_features{0};
@@ -33,13 +33,13 @@ struct VipSpaSelectionResult {
     std::vector<std::int64_t> selected_indices;
 };
 
-[[nodiscard]] p4a_status_t select_by_vip_spa(
+[[nodiscard]] n4m_status_t select_by_vip_spa(
     Context& ctx,
     const Config& cfg,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     double vip_threshold,
     std::int32_t top_k,
     VipSpaSelectionResult& out);
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

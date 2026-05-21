@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: CECILL-2.1
  *
  * R .Call dispatcher covering ALL MethodResult-returning entry points
- * of libp4a (33 method-result fits + 24 selectors + 4 diagnostics).
+ * of libn4m (33 method-result fits + 24 selectors + 4 diagnostics).
  *
  *   res <- .Call("r_p4a_dispatch_fit",
  *                  algo, X, Y, n_components, params,
@@ -24,7 +24,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -32,24 +32,24 @@
 /* ---- shared helpers (file-local) ----------------------------------- */
 
 #if defined(__GNUC__) || defined(__clang__)
-#  define P4A_R_NORETURN __attribute__((noreturn))
-#  define P4A_R_PRINTF(a, b) __attribute__((format(printf, a, b)))
+#  define N4M_R_NORETURN __attribute__((noreturn))
+#  define N4M_R_PRINTF(a, b) __attribute__((format(printf, a, b)))
 #else
-#  define P4A_R_NORETURN
-#  define P4A_R_PRINTF(a, b)
+#  define N4M_R_NORETURN
+#  define N4M_R_PRINTF(a, b)
 #endif
 
 /* Destroy ctx + cfg and longjmp via Rf_error. Used by validation
  * branches that need to bail out AFTER ctx/cfg have been allocated.
  * SEXP PROTECTs are unwound by R itself on the longjmp. */
-static void cleanup_err(p4a_context_t* ctx, p4a_config_t* cfg,
-                         const char* fmt, ...) P4A_R_NORETURN
-                                                  P4A_R_PRINTF(3, 4);
+static void cleanup_err(n4m_context_t* ctx, n4m_config_t* cfg,
+                         const char* fmt, ...) N4M_R_NORETURN
+                                                  N4M_R_PRINTF(3, 4);
 
-static void cleanup_err(p4a_context_t* ctx, p4a_config_t* cfg,
+static void cleanup_err(n4m_context_t* ctx, n4m_config_t* cfg,
                          const char* fmt, ...) {
-    if (cfg) p4a_config_destroy(cfg);
-    if (ctx) p4a_context_destroy(ctx);
+    if (cfg) n4m_config_destroy(cfg);
+    if (ctx) n4m_context_destroy(ctx);
     char buf[1024];
     va_list ap;
     va_start(ap, fmt);
@@ -60,7 +60,7 @@ static void cleanup_err(p4a_context_t* ctx, p4a_config_t* cfg,
 
 /* Validate that a SEXP is a 2D REAL matrix; cleanup_err on failure.
  * Returns the dim vector. */
-static SEXP need_real_matrix(SEXP v, p4a_context_t* ctx, p4a_config_t* cfg,
+static SEXP need_real_matrix(SEXP v, n4m_context_t* ctx, n4m_config_t* cfg,
                               const char* what) {
     if (TYPEOF(v) != REALSXP)
         cleanup_err(ctx, cfg, "%s must be a numeric matrix", what);
@@ -71,22 +71,22 @@ static SEXP need_real_matrix(SEXP v, p4a_context_t* ctx, p4a_config_t* cfg,
     return dim;
 }
 
-static void r_throw(const char* fn, p4a_status_t status, p4a_context_t* ctx)
-    P4A_R_NORETURN;
+static void r_throw(const char* fn, n4m_status_t status, n4m_context_t* ctx)
+    N4M_R_NORETURN;
 
-static void r_throw(const char* fn, p4a_status_t status, p4a_context_t* ctx) {
-    const char* status_str = p4a_status_to_string(status);
+static void r_throw(const char* fn, n4m_status_t status, n4m_context_t* ctx) {
+    const char* status_str = n4m_status_to_string(status);
     char buf[4096];
     buf[0] = '\0';
     if (ctx) {
-        const char* msg = p4a_context_last_error(ctx);
+        const char* msg = n4m_context_last_error(ctx);
         if (msg && msg[0]) {
             size_t n = strlen(msg);
             if (n >= sizeof(buf)) n = sizeof(buf) - 1;
             memcpy(buf, msg, n);
             buf[n] = '\0';
         }
-        p4a_context_destroy(ctx);
+        n4m_context_destroy(ctx);
     }
     if (buf[0])
         Rf_error("%s failed: %s (%s)", fn, status_str, buf);
@@ -141,11 +141,11 @@ static uint64_t get_u64(SEXP list, const char* name, uint64_t dflt) {
 
 /* ---- MethodResult → R list ----------------------------------------- */
 
-static SEXP mr_matrix(const p4a_method_result_t* mr, const char* name) {
+static SEXP mr_matrix(const n4m_method_result_t* mr, const char* name) {
     const double* data = NULL;
     int64_t rows = 0, cols = 0;
-    if (p4a_method_result_get_double_matrix(mr, name,
-                                             &data, &rows, &cols) != P4A_OK || !data)
+    if (n4m_method_result_get_double_matrix(mr, name,
+                                             &data, &rows, &cols) != N4M_OK || !data)
         return R_NilValue;
     SEXP out = PROTECT(Rf_allocMatrix(REALSXP, (int)rows, (int)cols));
     rowmajor_to_colmajor(data, REAL(out), rows, cols);
@@ -153,10 +153,10 @@ static SEXP mr_matrix(const p4a_method_result_t* mr, const char* name) {
     return out;
 }
 
-static SEXP mr_int_vector(const p4a_method_result_t* mr, const char* name) {
+static SEXP mr_int_vector(const n4m_method_result_t* mr, const char* name) {
     const int32_t* data = NULL;
     int32_t size = 0;
-    if (p4a_method_result_get_int_vector(mr, name, &data, &size) != P4A_OK || !data)
+    if (n4m_method_result_get_int_vector(mr, name, &data, &size) != N4M_OK || !data)
         return R_NilValue;
     SEXP out = PROTECT(Rf_allocVector(INTSXP, size));
     for (int32_t i = 0; i < size; ++i) INTEGER(out)[i] = data[i];
@@ -177,10 +177,10 @@ static int is_index_int64_name(const char* name) {
     return 0;
 }
 
-static SEXP mr_int64_vector(const p4a_method_result_t* mr, const char* name) {
+static SEXP mr_int64_vector(const n4m_method_result_t* mr, const char* name) {
     const int64_t* data = NULL;
     int64_t size = 0;
-    if (p4a_method_result_get_int64_vector(mr, name, &data, &size) != P4A_OK || !data)
+    if (n4m_method_result_get_int64_vector(mr, name, &data, &size) != N4M_OK || !data)
         return R_NilValue;
     SEXP out = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)size));
     int shift = is_index_int64_name(name);
@@ -190,9 +190,9 @@ static SEXP mr_int64_vector(const p4a_method_result_t* mr, const char* name) {
     return out;
 }
 
-static SEXP mr_scalar(const p4a_method_result_t* mr, const char* name) {
+static SEXP mr_scalar(const n4m_method_result_t* mr, const char* name) {
     double v = 0.0;
-    if (p4a_method_result_get_scalar(mr, name, &v) != P4A_OK) return R_NilValue;
+    if (n4m_method_result_get_scalar(mr, name, &v) != N4M_OK) return R_NilValue;
     return Rf_ScalarReal(v);
 }
 
@@ -215,7 +215,7 @@ static SEXP make_list(const char** names, SEXP* vals, int n) {
 }
 
 /* Pack a MethodResult by category. NULL-terminated key arrays. */
-static SEXP pack_result(p4a_method_result_t* mr,
+static SEXP pack_result(n4m_method_result_t* mr,
                           const char** dmat, const char** iv,
                           const char** i64, const char** sc) {
     int n_dmat = 0, n_iv = 0, n_i64 = 0, n_sc = 0;
@@ -245,7 +245,7 @@ static SEXP pack_result(p4a_method_result_t* mr,
     }
     SEXP out = make_list(names, vals, total);
     UNPROTECT(total);
-    p4a_method_result_destroy(mr);
+    n4m_method_result_destroy(mr);
     return out;
 }
 
@@ -276,23 +276,23 @@ static void grab_xy(SEXP X, SEXP Y,
 
 /* ---- Config builder with caller-controlled center/scale flags ------- */
 
-static p4a_config_t* build_cfg(int n_components,
+static n4m_config_t* build_cfg(int n_components,
                                 int center_x, int scale_x,
                                 int center_y, int scale_y) {
-    p4a_config_t* cfg = NULL;
-    if (p4a_config_create(&cfg) != P4A_OK)
-        Rf_error("p4a_config_create failed");
-    p4a_config_set_algorithm(cfg, P4A_ALGO_PLS_REGRESSION);
-    p4a_config_set_solver(cfg, P4A_SOLVER_SIMPLS);
-    p4a_config_set_deflation(cfg, P4A_DEFLATION_REGRESSION);
-    p4a_config_set_n_components(cfg, n_components);
-    p4a_config_set_center_x(cfg, center_x);
-    p4a_config_set_scale_x(cfg,  scale_x);
-    p4a_config_set_center_y(cfg, center_y);
-    p4a_config_set_scale_y(cfg,  scale_y);
-    p4a_config_set_tol(cfg, 1e-6);
-    p4a_config_set_max_iter(cfg, 500);
-    p4a_config_set_store_scores(cfg, 0);
+    n4m_config_t* cfg = NULL;
+    if (n4m_config_create(&cfg) != N4M_OK)
+        Rf_error("n4m_config_create failed");
+    n4m_config_set_algorithm(cfg, N4M_ALGO_PLS_REGRESSION);
+    n4m_config_set_solver(cfg, N4M_SOLVER_SIMPLS);
+    n4m_config_set_deflation(cfg, N4M_DEFLATION_REGRESSION);
+    n4m_config_set_n_components(cfg, n_components);
+    n4m_config_set_center_x(cfg, center_x);
+    n4m_config_set_scale_x(cfg,  scale_x);
+    n4m_config_set_center_y(cfg, center_y);
+    n4m_config_set_scale_y(cfg,  scale_y);
+    n4m_config_set_tol(cfg, 1e-6);
+    n4m_config_set_max_iter(cfg, 500);
+    n4m_config_set_store_scores(cfg, 0);
     return cfg;
 }
 
@@ -326,15 +326,15 @@ static int64_t* coerce_int64_vec(SEXP v, int* n_out) {
 
 /* ---- Default ValidationPlan helper --------------------------------- */
 
-static p4a_validation_plan_t* make_default_plan(int n, int requested_folds) {
+static n4m_validation_plan_t* make_default_plan(int n, int requested_folds) {
     if (n < 4) return NULL;
     int k = requested_folds;
     if (k > n / 2) k = n / 2;
     if (k < 2)     k = 2;
-    p4a_validation_plan_t* plan = NULL;
-    if (p4a_validation_plan_create(&plan) != P4A_OK) return NULL;
-    if (p4a_validation_plan_set_n_samples(plan, (int64_t)n) != P4A_OK) {
-        p4a_validation_plan_destroy(plan);
+    n4m_validation_plan_t* plan = NULL;
+    if (n4m_validation_plan_create(&plan) != N4M_OK) return NULL;
+    if (n4m_validation_plan_set_n_samples(plan, (int64_t)n) != N4M_OK) {
+        n4m_validation_plan_destroy(plan);
         return NULL;
     }
     /* Match the canonical Python/registry plan: equal floor-sized
@@ -351,8 +351,8 @@ static p4a_validation_plan_t* make_default_plan(int n, int requested_folds) {
             if (i >= t0 && i < t1) test[te++] = (int64_t)i;
             else                    train[ti++] = (int64_t)i;
         }
-        if (p4a_validation_plan_add_fold(plan, train, ti, test, te) != P4A_OK) {
-            p4a_validation_plan_destroy(plan);
+        if (n4m_validation_plan_add_fold(plan, train, ti, test, te) != N4M_OK) {
+            n4m_validation_plan_destroy(plan);
             return NULL;
         }
     }
@@ -361,22 +361,22 @@ static p4a_validation_plan_t* make_default_plan(int n, int requested_folds) {
 
 /* ---- AOM / POP selector helpers ------------------------------------ */
 
-static p4a_status_t add_bank_op(p4a_operator_bank_t* bank,
-                                 p4a_operator_kind_t kind,
+static n4m_status_t add_bank_op(n4m_operator_bank_t* bank,
+                                 n4m_operator_kind_t kind,
                                  const double* params,
                                  int32_t n_params) {
-    return p4a_operator_bank_add(bank, kind, params, n_params);
+    return n4m_operator_bank_add(bank, kind, params, n_params);
 }
 
-static p4a_status_t make_compact_aom_bank(int n_ops,
-                                           p4a_operator_bank_t** out_bank) {
-    if (!out_bank) return P4A_ERR_INVALID_ARGUMENT;
+static n4m_status_t make_compact_aom_bank(int n_ops,
+                                           n4m_operator_bank_t** out_bank) {
+    if (!out_bank) return N4M_ERR_INVALID_ARGUMENT;
     *out_bank = NULL;
     if (n_ops < 1) n_ops = 1;
     if (n_ops > 9) n_ops = 9;
-    p4a_operator_bank_t* bank = NULL;
-    p4a_status_t st = p4a_operator_bank_create(&bank);
-    if (st != P4A_OK) return st;
+    n4m_operator_bank_t* bank = NULL;
+    n4m_status_t st = n4m_operator_bank_create(&bank);
+    if (st != N4M_OK) return st;
 
     const double sg11_p2[] = {11.0, 2.0};
     const double sg21_p3[] = {21.0, 3.0};
@@ -387,43 +387,43 @@ static p4a_status_t make_compact_aom_bank(int n_ops,
     const double detrend_2[] = {2.0};
     const double fd_1[] = {1.0};
 
-    for (int i = 0; st == P4A_OK && i < n_ops; ++i) {
+    for (int i = 0; st == N4M_OK && i < n_ops; ++i) {
         switch (i) {
         case 0:
-            st = add_bank_op(bank, P4A_OP_IDENTITY, NULL, 0);
+            st = add_bank_op(bank, N4M_OP_IDENTITY, NULL, 0);
             break;
         case 1:
-            st = add_bank_op(bank, P4A_OP_SAVGOL_SMOOTH, sg11_p2, 2);
+            st = add_bank_op(bank, N4M_OP_SAVGOL_SMOOTH, sg11_p2, 2);
             break;
         case 2:
-            st = add_bank_op(bank, P4A_OP_SAVGOL_SMOOTH, sg21_p3, 2);
+            st = add_bank_op(bank, N4M_OP_SAVGOL_SMOOTH, sg21_p3, 2);
             break;
         case 3:
-            st = add_bank_op(bank, P4A_OP_SAVGOL_DERIVATIVE, sg11_p2_d1, 3);
+            st = add_bank_op(bank, N4M_OP_SAVGOL_DERIVATIVE, sg11_p2_d1, 3);
             break;
         case 4:
-            st = add_bank_op(bank, P4A_OP_SAVGOL_DERIVATIVE, sg21_p3_d1, 3);
+            st = add_bank_op(bank, N4M_OP_SAVGOL_DERIVATIVE, sg21_p3_d1, 3);
             break;
         case 5:
-            st = add_bank_op(bank, P4A_OP_SAVGOL_DERIVATIVE, sg11_p2_d2, 3);
+            st = add_bank_op(bank, N4M_OP_SAVGOL_DERIVATIVE, sg11_p2_d2, 3);
             break;
         case 6:
-            st = add_bank_op(bank, P4A_OP_DETREND_POLY, detrend_1, 1);
+            st = add_bank_op(bank, N4M_OP_DETREND_POLY, detrend_1, 1);
             break;
         case 7:
-            st = add_bank_op(bank, P4A_OP_DETREND_POLY, detrend_2, 1);
+            st = add_bank_op(bank, N4M_OP_DETREND_POLY, detrend_2, 1);
             break;
         default:
-            st = add_bank_op(bank, P4A_OP_FINITE_DIFFERENCE, fd_1, 1);
+            st = add_bank_op(bank, N4M_OP_FINITE_DIFFERENCE, fd_1, 1);
             break;
         }
     }
-    if (st != P4A_OK) {
-        p4a_operator_bank_destroy(bank);
+    if (st != N4M_OK) {
+        n4m_operator_bank_destroy(bank);
         return st;
     }
     *out_bank = bank;
-    return P4A_OK;
+    return N4M_OK;
 }
 
 static SEXP double_matrix_from_rowmajor(const double* data,
@@ -443,7 +443,7 @@ static SEXP double_vector_from_i32(const int32_t* data, int32_t n,
     return out;
 }
 
-static SEXP double_vector_from_op_kinds(const p4a_operator_kind_t* data,
+static SEXP double_vector_from_op_kinds(const n4m_operator_kind_t* data,
                                          int32_t n) {
     SEXP out = PROTECT(Rf_allocVector(REALSXP, n));
     for (int32_t i = 0; i < n; ++i)
@@ -459,10 +459,10 @@ static SEXP double_vector_from_f64(const double* data, int32_t n) {
     return out;
 }
 
-static SEXP pack_aom_global_result(p4a_aom_global_result_t* res) {
+static SEXP pack_aom_global_result(n4m_aom_global_result_t* res) {
     const double* preds = NULL;
     int64_t pred_rows = 0, pred_cols = 0;
-    const p4a_operator_kind_t* kinds = NULL;
+    const n4m_operator_kind_t* kinds = NULL;
     int32_t n_kinds = 0;
     const double* op_scores = NULL;
     int32_t n_scores = 0;
@@ -471,15 +471,15 @@ static SEXP pack_aom_global_result(p4a_aom_global_result_t* res) {
     int32_t selected_op = 0, selected_k = 0, n_ops = 0, max_k = 0;
     double best_score = 0.0;
 
-    p4a_aom_global_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
-    p4a_aom_global_result_get_operator_kinds(res, &kinds, &n_kinds);
-    p4a_aom_global_result_get_operator_scores(res, &op_scores, &n_scores);
-    p4a_aom_global_result_get_rmse_curves(res, &curves, &curve_rows, &curve_cols);
-    p4a_aom_global_result_get_selected_operator_index(res, &selected_op);
-    p4a_aom_global_result_get_selected_n_components(res, &selected_k);
-    p4a_aom_global_result_get_n_operators(res, &n_ops);
-    p4a_aom_global_result_get_max_components(res, &max_k);
-    p4a_aom_global_result_get_best_score(res, &best_score);
+    n4m_aom_global_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
+    n4m_aom_global_result_get_operator_kinds(res, &kinds, &n_kinds);
+    n4m_aom_global_result_get_operator_scores(res, &op_scores, &n_scores);
+    n4m_aom_global_result_get_rmse_curves(res, &curves, &curve_rows, &curve_cols);
+    n4m_aom_global_result_get_selected_operator_index(res, &selected_op);
+    n4m_aom_global_result_get_selected_n_components(res, &selected_k);
+    n4m_aom_global_result_get_n_operators(res, &n_ops);
+    n4m_aom_global_result_get_max_components(res, &max_k);
+    n4m_aom_global_result_get_best_score(res, &best_score);
 
     const char* names[] = {
         "predictions", "operator_kinds", "operator_scores",
@@ -499,14 +499,14 @@ static SEXP pack_aom_global_result(p4a_aom_global_result_t* res) {
     vals[8] = PROTECT(Rf_ScalarReal(best_score));
     SEXP out = make_list(names, vals, 9);
     UNPROTECT(9);
-    p4a_aom_global_result_destroy(res);
+    n4m_aom_global_result_destroy(res);
     return out;
 }
 
-static SEXP pack_aom_per_component_result(p4a_aom_per_component_result_t* res) {
+static SEXP pack_aom_per_component_result(n4m_aom_per_component_result_t* res) {
     const double* preds = NULL;
     int64_t pred_rows = 0, pred_cols = 0;
-    const p4a_operator_kind_t* kinds = NULL;
+    const n4m_operator_kind_t* kinds = NULL;
     int32_t n_kinds = 0;
     const int32_t* selected_ops = NULL;
     int32_t n_selected = 0;
@@ -517,17 +517,17 @@ static SEXP pack_aom_per_component_result(p4a_aom_per_component_result_t* res) {
     int32_t selected_k = 0, n_ops = 0, max_k = 0;
     double best_score = 0.0;
 
-    p4a_aom_per_component_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
-    p4a_aom_per_component_result_get_operator_kinds(res, &kinds, &n_kinds);
-    p4a_aom_per_component_result_get_selected_operator_indices(
+    n4m_aom_per_component_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
+    n4m_aom_per_component_result_get_operator_kinds(res, &kinds, &n_kinds);
+    n4m_aom_per_component_result_get_selected_operator_indices(
         res, &selected_ops, &n_selected);
-    p4a_aom_per_component_result_get_component_scores(
+    n4m_aom_per_component_result_get_component_scores(
         res, &component_scores, &comp_rows, &comp_cols);
-    p4a_aom_per_component_result_get_prefix_scores(res, &prefix_scores, &n_prefix);
-    p4a_aom_per_component_result_get_selected_n_components(res, &selected_k);
-    p4a_aom_per_component_result_get_n_operators(res, &n_ops);
-    p4a_aom_per_component_result_get_max_components(res, &max_k);
-    p4a_aom_per_component_result_get_best_score(res, &best_score);
+    n4m_aom_per_component_result_get_prefix_scores(res, &prefix_scores, &n_prefix);
+    n4m_aom_per_component_result_get_selected_n_components(res, &selected_k);
+    n4m_aom_per_component_result_get_n_operators(res, &n_ops);
+    n4m_aom_per_component_result_get_max_components(res, &max_k);
+    n4m_aom_per_component_result_get_best_score(res, &best_score);
 
     const char* names[] = {
         "predictions", "operator_kinds", "selected_operator_indices",
@@ -547,7 +547,7 @@ static SEXP pack_aom_per_component_result(p4a_aom_per_component_result_t* res) {
     vals[8] = PROTECT(Rf_ScalarReal(best_score));
     SEXP out = make_list(names, vals, 9);
     UNPROTECT(9);
-    p4a_aom_per_component_result_destroy(res);
+    n4m_aom_per_component_result_destroy(res);
     return out;
 }
 
@@ -575,20 +575,20 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     grab_xy(X, Y, &n_rows, &n_cols, &y_cols, &X_rm, &Y_rm);
     int n = (int)n_rows, p = (int)n_cols, q = (int)y_cols;
 
-    p4a_context_t* ctx = NULL;
-    p4a_config_t* cfg = NULL;
-    if (p4a_context_create(&ctx) != P4A_OK) {
+    n4m_context_t* ctx = NULL;
+    n4m_config_t* cfg = NULL;
+    if (n4m_context_create(&ctx) != N4M_OK) {
         UNPROTECT(2);
-        cleanup_err(NULL, NULL, "p4a_context_create failed");
+        cleanup_err(NULL, NULL, "n4m_context_create failed");
     }
     cfg = build_cfg(n_components, center_x, scale_x, center_y, scale_y);
 
-    p4a_matrix_view_t Xv, Yv;
-    p4a_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n, p, P4A_DTYPE_F64);
-    p4a_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n, q, P4A_DTYPE_F64);
+    n4m_matrix_view_t Xv, Yv;
+    n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n, p, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n, q, N4M_DTYPE_F64);
 
-    p4a_method_result_t* mr = NULL;
-    p4a_status_t st = P4A_OK;
+    n4m_method_result_t* mr = NULL;
+    n4m_status_t st = N4M_OK;
     SEXP out = R_NilValue;
 
 
@@ -621,20 +621,20 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
 
     if (strcmp(algo, "sparse_simpls") == 0) {
         double l = get_double(params, "sparsity_lambda", 0.05);
-        st = p4a_sparse_simpls_fit(ctx, cfg, &Xv, &Yv, l, &mr);
-        if (st == P4A_OK) {
+        st = n4m_sparse_simpls_fit(ctx, cfg, &Xv, &Yv, l, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "predictions", "x_mean",
                                           "y_mean", "weights_w", NULL};
             out = pack_result(mr, dm, NULL, NULL, REG_SCALAR);
         }
     } else if (strcmp(algo, "cppls") == 0) {
         double g = get_double(params, "gamma", 0.5);
-        st = p4a_cppls_fit(ctx, cfg, &Xv, &Yv, g, &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        st = n4m_cppls_fit(ctx, cfg, &Xv, &Yv, g, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "ecr") == 0) {
         double a = get_double(params, "alpha", 0.5);
-        st = p4a_ecr_fit(ctx, cfg, &Xv, &Yv, a, &mr);
-        if (st == P4A_OK) {
+        st = n4m_ecr_fit(ctx, cfg, &Xv, &Yv, a, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "predictions",
                                           "x_mean", "y_mean", "x_scale", "y_scale",
                                           "weights_w", "loadings_p", "y_loadings",
@@ -652,35 +652,35 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         SEXP XT_rm = PROTECT(Rf_allocMatrix(REALSXP, xt_n, xt_p));
         colmajor_to_rowmajor(REAL(xt), REAL(XT_rm), xt_n, xt_p);
         double dl = get_double(params, "di_lambda", 1.0);
-        p4a_matrix_view_t XTv;
-        p4a_matrix_view_init_rowmajor(&XTv, REAL(XT_rm), xt_n, xt_p, P4A_DTYPE_F64);
-        st = p4a_di_pls_fit(ctx, cfg, &Xv, &Yv, &XTv, dl, &mr);
+        n4m_matrix_view_t XTv;
+        n4m_matrix_view_init_rowmajor(&XTv, REAL(XT_rm), xt_n, xt_p, N4M_DTYPE_F64);
+        st = n4m_di_pls_fit(ctx, cfg, &Xv, &Yv, &XTv, dl, &mr);
         UNPROTECT(1);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "weighted_pls") == 0) {
         SEXP w = get_list_element(params, "sample_weights");
         if (w == R_NilValue || TYPEOF(w) != REALSXP || Rf_length(w) != n)
             cleanup_err(ctx, cfg, "weighted_pls requires numeric params$sample_weights of length n");
-        st = p4a_weighted_pls_fit(ctx, cfg, &Xv, &Yv,
+        st = n4m_weighted_pls_fit(ctx, cfg, &Xv, &Yv,
                                    REAL(w), (int64_t)Rf_length(w), &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "robust_pls") == 0) {
         double k = get_double(params, "huber_k", 1.345);
         int it = get_int(params, "max_irls_iter", 20);
-        st = p4a_robust_pls_fit(ctx, cfg, &Xv, &Yv, k, it, &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        st = n4m_robust_pls_fit(ctx, cfg, &Xv, &Yv, k, it, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "ridge_pls") == 0) {
         double l = get_double(params, "ridge_lambda", 1.0);
-        st = p4a_ridge_pls_fit(ctx, cfg, &Xv, &Yv, l, &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        st = n4m_ridge_pls_fit(ctx, cfg, &Xv, &Yv, l, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "continuum_regression") == 0) {
         double t = get_double(params, "tau", 0.5);
-        st = p4a_continuum_regression_fit(ctx, cfg, &Xv, &Yv, t, &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        st = n4m_continuum_regression_fit(ctx, cfg, &Xv, &Yv, t, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "recursive_pls") == 0) {
         int w = get_int(params, "window_size", 50);
-        st = p4a_recursive_pls_run(ctx, cfg, &Xv, &Yv, w, &mr);
-        if (st == P4A_OK) {
+        st = n4m_recursive_pls_run(ctx, cfg, &Xv, &Yv, w, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"predictions", NULL};
             static const char* iv[] = {"in_window", NULL};
             static const char* sc[] = {"rmse_predictable", NULL};
@@ -691,15 +691,15 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int mk = get_int(params, "mode_k", 0);
         if (mj <= 0 || mk <= 0 || mj * mk != p)
             cleanup_err(ctx, cfg, "n_pls requires mode_j * mode_k == ncol(X)");
-        st = p4a_n_pls_fit(ctx, cfg, &Xv, mj, mk, &Yv, &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        st = n4m_n_pls_fit(ctx, cfg, &Xv, mj, mk, &Yv, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "kernel_pls") == 0) {
         int kt = get_int(params, "kernel_type", 1);
         double gamma = get_double(params, "gamma", 0.0);
         double coef0 = get_double(params, "coef0", 1.0);
         int deg = get_int(params, "degree", 3);
-        st = p4a_kernel_pls_fit(ctx, cfg, kt, gamma, coef0, deg, &Xv, &Yv, &mr);
-        if (st == P4A_OK) {
+        st = n4m_kernel_pls_fit(ctx, cfg, kt, gamma, coef0, deg, &Xv, &Yv, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"predictions", "alpha", "y_mean", NULL};
             static const char* sc[] = {"rmse", "kernel_type", NULL};
             out = pack_result(mr, dm, NULL, NULL, sc);
@@ -708,8 +708,8 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int np = get_int(params, "n_predictive", 2);
         int nx = get_int(params, "n_x_orthogonal", 1);
         int ny2 = get_int(params, "n_y_orthogonal", 1);
-        st = p4a_o2pls_fit(ctx, cfg, &Xv, &Yv, np, nx, ny2, &mr);
-        if (st == P4A_OK) {
+        st = n4m_o2pls_fit(ctx, cfg, &Xv, &Yv, np, nx, ny2, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "predictions",
                                           "x_mean", "y_mean",
                                           "w_predictive", "c_predictive",
@@ -723,8 +723,8 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int nl = 0;
         int32_t* labels = coerce_int32_vec(yl, &nl);
         if (nl != n) cleanup_err(ctx, cfg, "y_labels must have length n");
-        st = p4a_sparse_pls_da_fit(ctx, cfg, &Xv, labels, nl, &mr);
-        if (st == P4A_OK) {
+        st = n4m_sparse_pls_da_fit(ctx, cfg, &Xv, labels, nl, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "predictions",
                                           "x_mean", "y_mean",
                                           "class_priors", NULL};
@@ -737,16 +737,16 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int32_t* groups = coerce_int32_vec(g, &gn);
         if (gn != p) cleanup_err(ctx, cfg, "group_assignment must have length ncol(X)");
         double gl = get_double(params, "group_lambda", 0.05);
-        st = p4a_group_sparse_pls_fit(ctx, cfg, &Xv, &Yv, groups, gn, gl, &mr);
-        if (st == P4A_OK) {
+        st = n4m_group_sparse_pls_fit(ctx, cfg, &Xv, &Yv, groups, gn, gl, &mr);
+        if (st == N4M_OK) {
             static const char* sc[] = {"rmse", "n_groups", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
         }
     } else if (strcmp(algo, "fused_sparse_pls") == 0) {
         double l1 = get_double(params, "l1_lambda", 0.05);
         double fl = get_double(params, "fusion_lambda", 0.05);
-        st = p4a_fused_sparse_pls_fit(ctx, cfg, &Xv, &Yv, l1, fl, &mr);
-        if (st == P4A_OK) {
+        st = n4m_fused_sparse_pls_fit(ctx, cfg, &Xv, &Yv, l1, fl, &mr);
+        if (st == N4M_OK) {
             static const char* sc[] = {"rmse", "l1_lambda", "fusion_lambda", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
         }
@@ -770,8 +770,8 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
                          "sum(block_sizes)=%lld must equal ncol(X)=%d",
                          (long long)bsum, p);
         /* Build per-block row-major copies. */
-        p4a_matrix_view_t* blocks = (p4a_matrix_view_t*)
-            R_alloc((size_t)bsn, sizeof(p4a_matrix_view_t));
+        n4m_matrix_view_t* blocks = (n4m_matrix_view_t*)
+            R_alloc((size_t)bsn, sizeof(n4m_matrix_view_t));
         int64_t col_off = 0;
         for (int b = 0; b < bsn; ++b) {
             int64_t bcols = bsv[b];
@@ -779,7 +779,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             for (int i = 0; i < n; ++i)
                 for (int64_t j = 0; j < bcols; ++j)
                     buf[i * bcols + j] = REAL(X_rm)[i * p + col_off + j];
-            p4a_matrix_view_init_rowmajor(&blocks[b], buf, n, bcols, P4A_DTYPE_F64);
+            n4m_matrix_view_init_rowmajor(&blocks[b], buf, n, bcols, N4M_DTYPE_F64);
             col_off += bcols;
         }
         if (strcmp(algo, "so_pls") == 0) {
@@ -789,9 +789,9 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             int ncn = 0;
             int32_t* ncpb = coerce_int32_vec(ncpb_sexp, &ncn);
             if (ncn != bsn) cleanup_err(ctx, cfg, "n_components_per_block must have length n_blocks");
-            st = p4a_so_pls_fit(ctx, cfg, blocks, bsn, &Yv, ncpb, ncn, &mr);
+            st = n4m_so_pls_fit(ctx, cfg, blocks, bsn, &Yv, ncpb, ncn, &mr);
         } else if (strcmp(algo, "rosa") == 0) {
-            st = p4a_rosa_fit(ctx, cfg, blocks, bsn, &Yv, n_components, &mr);
+            st = n4m_rosa_fit(ctx, cfg, blocks, bsn, &Yv, n_components, &mr);
         } else {
             int njoint = get_int(params, "n_joint", 1);
             SEXP upb_sexp = get_list_element(params, "n_unique_per_block");
@@ -800,9 +800,9 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             int upbn = 0;
             int32_t* upb = coerce_int32_vec(upb_sexp, &upbn);
             if (upbn != bsn) cleanup_err(ctx, cfg, "n_unique_per_block must have length n_blocks");
-            st = p4a_on_pls_fit(ctx, cfg, blocks, bsn, njoint, upb, upbn, &mr);
+            st = n4m_on_pls_fit(ctx, cfg, blocks, bsn, njoint, upb, upbn, &mr);
         }
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char* dm[] = {"predictions", "y_mean",
                                           "joint_loadings_0",
                                           "unique_loadings_0",
@@ -816,16 +816,16 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "bagging_pls") == 0) {
         int ne = get_int(params, "n_estimators", 50);
         uint64_t seed = get_u64(params, "seed", 0);
-        st = p4a_bagging_pls_fit(ctx, cfg, &Xv, &Yv, ne, seed, &mr);
-        if (st == P4A_OK) {
+        st = n4m_bagging_pls_fit(ctx, cfg, &Xv, &Yv, ne, seed, &mr);
+        if (st == N4M_OK) {
             static const char* sc[] = {"rmse", "n_estimators", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
         }
     } else if (strcmp(algo, "boosting_pls") == 0) {
         int ne = get_int(params, "n_estimators", 50);
         double lr = get_double(params, "learning_rate", 0.1);
-        st = p4a_boosting_pls_fit(ctx, cfg, &Xv, &Yv, ne, lr, &mr);
-        if (st == P4A_OK) {
+        st = n4m_boosting_pls_fit(ctx, cfg, &Xv, &Yv, ne, lr, &mr);
+        if (st == N4M_OK) {
             static const char* sc[] = {"rmse", "n_estimators", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
         }
@@ -833,8 +833,8 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int ne = get_int(params, "n_estimators", 50);
         int fps = get_int(params, "features_per_subspace", 10);
         uint64_t seed = get_u64(params, "seed", 0);
-        st = p4a_random_subspace_pls_fit(ctx, cfg, &Xv, &Yv, ne, fps, seed, &mr);
-        if (st == P4A_OK) {
+        st = n4m_random_subspace_pls_fit(ctx, cfg, &Xv, &Yv, ne, fps, seed, &mr);
+        if (st == N4M_OK) {
             static const char* sc[] = {"rmse", "n_estimators", "features_per_subspace", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
         }
@@ -842,8 +842,8 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         double ls = get_double(params, "length_scale", 1.0);
         double nl = get_double(params, "noise_level", 1e-4);
         uint64_t seed = get_u64(params, "seed", 0);
-        st = p4a_gpr_pls_fit(ctx, cfg, &Xv, &Yv, ls, nl, seed, &mr);
-        if (st == P4A_OK) {
+        st = n4m_gpr_pls_fit(ctx, cfg, &Xv, &Yv, ls, nl, seed, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"rotation_r", "x_mean", "alpha", "L_lower",
                                           "training_scores", "predictions",
                                           "predictive_variance", NULL};
@@ -853,8 +853,8 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         }
     } else if (strcmp(algo, "pls_glm") == 0) {
         int poisson = get_int(params, "poisson", 0);
-        st = p4a_pls_glm_fit(ctx, cfg, &Xv, &Yv, poisson, &mr);
-        if (st == P4A_OK) {
+        st = n4m_pls_glm_fit(ctx, cfg, &Xv, &Yv, poisson, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "intercept",
                                           "predictions", "x_mean", NULL};
             static const char* sc[] = {"rmse", "poisson", NULL};
@@ -866,8 +866,8 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int nl = 0;
         int32_t* labels = coerce_int32_vec(yl, &nl);
         if (nl != n) cleanup_err(ctx, cfg, "y_labels must have length n");
-        st = p4a_pls_qda_fit(ctx, cfg, &Xv, labels, nl, &mr);
-        if (st == P4A_OK) {
+        st = n4m_pls_qda_fit(ctx, cfg, &Xv, labels, nl, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"class_means", "class_covariances",
                                           "log_class_priors", "rotations_r",
                                           "x_mean", "predictions", NULL};
@@ -885,9 +885,9 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int en = 0;
         int32_t* ev = coerce_int32_vec(ev_sexp, &en);
         if (en != n) cleanup_err(ctx, cfg, "event_indicators must have length n");
-        st = p4a_pls_cox_fit(ctx, cfg, &Xv, REAL(sts_sexp), Rf_length(sts_sexp),
+        st = n4m_pls_cox_fit(ctx, cfg, &Xv, REAL(sts_sexp), Rf_length(sts_sexp),
                               ev, en, &mr);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "baseline_hazard",
                                           "event_times", "x_mean",
                                           "predictions", NULL};
@@ -902,11 +902,11 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         SEXP XT_rm = PROTECT(Rf_allocMatrix(REALSXP, xtn, xtp));
         colmajor_to_rowmajor(REAL(xt), REAL(XT_rm), xtn, xtp);
         int hw = get_int(params, "window_half_width", 2);
-        p4a_matrix_view_t XTv;
-        p4a_matrix_view_init_rowmajor(&XTv, REAL(XT_rm), xtn, xtp, P4A_DTYPE_F64);
-        st = p4a_pds_fit(ctx, &Xv, &XTv, hw, &mr);
+        n4m_matrix_view_t XTv;
+        n4m_matrix_view_init_rowmajor(&XTv, REAL(XT_rm), xtn, xtp, N4M_DTYPE_F64);
+        st = n4m_pds_fit(ctx, &Xv, &XTv, hw, &mr);
         UNPROTECT(1);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char* dm[] = {"transformation", "predictions", NULL};
             static const char* sc[] = {"rmse", "window_half_width", NULL};
             out = pack_result(mr, dm, NULL, NULL, sc);
@@ -919,21 +919,21 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int xtn = INTEGER(xtd)[0], xtp = INTEGER(xtd)[1];
         SEXP XT_rm = PROTECT(Rf_allocMatrix(REALSXP, xtn, xtp));
         colmajor_to_rowmajor(REAL(xt), REAL(XT_rm), xtn, xtp);
-        p4a_matrix_view_t XTv;
-        p4a_matrix_view_init_rowmajor(&XTv, REAL(XT_rm), xtn, xtp, P4A_DTYPE_F64);
-        st = p4a_ds_fit(ctx, &Xv, &XTv, &mr);
+        n4m_matrix_view_t XTv;
+        n4m_matrix_view_init_rowmajor(&XTv, REAL(XT_rm), xtn, xtp, N4M_DTYPE_F64);
+        st = n4m_ds_fit(ctx, &Xv, &XTv, &mr);
         UNPROTECT(1);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             static const char* dm[] = {"transformation", "bias",
                                           "predictions", NULL};
             out = pack_result(mr, dm, NULL, NULL, REG_SCALAR);
         }
     } else if (strcmp(algo, "mir_pls") == 0) {
-        st = p4a_mir_pls_fit(ctx, cfg, &Xv, &Yv, &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        st = n4m_mir_pls_fit(ctx, cfg, &Xv, &Yv, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "missing_aware_nipals") == 0) {
-        st = p4a_missing_aware_nipals_fit(ctx, cfg, &Xv, &Yv, &mr);
-        if (st == P4A_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        st = n4m_missing_aware_nipals_fit(ctx, cfg, &Xv, &Yv, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "mb_pls") == 0) {
         SEXP bs = get_list_element(params, "block_sizes");
         if (bs == R_NilValue) cleanup_err(ctx, cfg, "mb_pls requires params$block_sizes");
@@ -951,9 +951,9 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             cleanup_err(ctx, cfg,
                          "sum(block_sizes)=%lld must equal ncol(X)=%d",
                          (long long)bsum, p);
-        p4a_config_set_solver(cfg, P4A_SOLVER_NIPALS);
-        st = p4a_mb_pls_fit(ctx, cfg, &Xv, &Yv, bsv, bsn, &mr);
-        if (st == P4A_OK) {
+        n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS);
+        st = n4m_mb_pls_fit(ctx, cfg, &Xv, &Yv, bsv, bsn, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "predictions",
                                           "x_mean", "x_scale", "intercept",
                                           "block_weights", NULL};
@@ -962,8 +962,8 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         }
     } else if (strcmp(algo, "lw_pls") == 0) {
         int nn = get_int(params, "n_neighbors", 30);
-        st = p4a_lw_pls_fit(ctx, cfg, &Xv, &Yv, nn, &mr);
-        if (st == P4A_OK) {
+        st = n4m_lw_pls_fit(ctx, cfg, &Xv, &Yv, nn, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"predictions", "neighbor_indices", NULL};
             static const char* i64[] = {"neighbor_indices_i64", NULL};
             static const char* sc[] = {"n_neighbors", "n_components", "rmse", NULL};
@@ -978,8 +978,8 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         if (nc <= 0) {
             for (int i = 0; i < nl; ++i) if (labels[i] + 1 > nc) nc = labels[i] + 1;
         }
-        st = p4a_pls_lda_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
-        if (st == P4A_OK) {
+        st = n4m_pls_lda_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"decision_scores", NULL};
             static const char* iv[] = {"predictions", NULL};
             static const char* sc[] = {"n_classes", "n_components", NULL};
@@ -994,8 +994,8 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         if (nc <= 0) {
             for (int i = 0; i < nl; ++i) if (labels[i] + 1 > nc) nc = labels[i] + 1;
         }
-        st = p4a_pls_logistic_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
-        if (st == P4A_OK) {
+        st = n4m_pls_logistic_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"decision_scores", "probabilities",
                                           "intercepts", "coefficients", NULL};
             static const char* iv[] = {"predictions", NULL};
@@ -1007,29 +1007,29 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int mode = get_int(params, "gating_mode", 0);
         if (n_ops < 1) n_ops = 1;
         if (n_ops > 5) n_ops = 5;
-        p4a_operator_kind_t kinds[5] = {
-            P4A_OP_IDENTITY,
-            P4A_OP_CENTER,
-            P4A_OP_PARETO_SCALE,
-            P4A_OP_AUTOSCALE,
-            P4A_OP_SNV
+        n4m_operator_kind_t kinds[5] = {
+            N4M_OP_IDENTITY,
+            N4M_OP_CENTER,
+            N4M_OP_PARETO_SCALE,
+            N4M_OP_AUTOSCALE,
+            N4M_OP_SNV
         };
-        p4a_operator_bank_t* bank = NULL;
-        p4a_gating_strategy_t* gate = NULL;
-        st = p4a_operator_bank_create(&bank);
-        for (int i = 0; st == P4A_OK && i < n_ops; ++i) {
-            st = p4a_operator_bank_add(bank, kinds[i], NULL, 0);
+        n4m_operator_bank_t* bank = NULL;
+        n4m_gating_strategy_t* gate = NULL;
+        st = n4m_operator_bank_create(&bank);
+        for (int i = 0; st == N4M_OK && i < n_ops; ++i) {
+            st = n4m_operator_bank_add(bank, kinds[i], NULL, 0);
         }
-        if (st == P4A_OK) {
-            st = p4a_gating_strategy_create(
-                &gate, (p4a_gating_mode_t)mode);
+        if (st == N4M_OK) {
+            st = n4m_gating_strategy_create(
+                &gate, (n4m_gating_mode_t)mode);
         }
-        if (st == P4A_OK) {
-            st = p4a_aom_preprocess_fit(ctx, bank, gate, &Xv, &Yv, &mr);
+        if (st == N4M_OK) {
+            st = n4m_aom_preprocess_fit(ctx, bank, gate, &Xv, &Yv, &mr);
         }
-        if (gate) p4a_gating_strategy_destroy(gate);
-        if (bank) p4a_operator_bank_destroy(bank);
-        if (st == P4A_OK) {
+        if (gate) n4m_gating_strategy_destroy(gate);
+        if (bank) n4m_operator_bank_destroy(bank);
+        if (st == N4M_OK) {
             static const char* dm[] = {"transformed", "operator_outputs",
                                           "weights", NULL};
             static const char* i64[] = {"operator_kinds", NULL};
@@ -1046,33 +1046,33 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         if (max_components >= n) max_components = n - 1;
         if (cv < 2) cv = 2;
 
-        p4a_operator_bank_t* bank = NULL;
-        p4a_validation_plan_t* plan = NULL;
+        n4m_operator_bank_t* bank = NULL;
+        n4m_validation_plan_t* plan = NULL;
         st = make_compact_aom_bank(n_ops, &bank);
-        if (st == P4A_OK) {
+        if (st == N4M_OK) {
             plan = make_default_plan(n, cv);
-            if (!plan) st = P4A_ERR_INVALID_ARGUMENT;
+            if (!plan) st = N4M_ERR_INVALID_ARGUMENT;
         }
-        if (st == P4A_OK && strcmp(algo, "aom_pls") == 0) {
-            p4a_aom_global_result_t* aom = NULL;
-            st = p4a_aom_global_select(ctx, cfg, bank, &Xv, &Yv, plan,
+        if (st == N4M_OK && strcmp(algo, "aom_pls") == 0) {
+            n4m_aom_global_result_t* aom = NULL;
+            st = n4m_aom_global_select(ctx, cfg, bank, &Xv, &Yv, plan,
                                         max_components, &aom);
-            if (st == P4A_OK) out = pack_aom_global_result(aom);
-        } else if (st == P4A_OK) {
-            p4a_aom_per_component_result_t* pop = NULL;
-            st = p4a_aom_per_component_select(ctx, cfg, bank, &Xv, &Yv, plan,
+            if (st == N4M_OK) out = pack_aom_global_result(aom);
+        } else if (st == N4M_OK) {
+            n4m_aom_per_component_result_t* pop = NULL;
+            st = n4m_aom_per_component_select(ctx, cfg, bank, &Xv, &Yv, plan,
                                                max_components, &pop);
-            if (st == P4A_OK) out = pack_aom_per_component_result(pop);
+            if (st == N4M_OK) out = pack_aom_per_component_result(pop);
         }
-        if (plan) p4a_validation_plan_destroy(plan);
-        if (bank) p4a_operator_bank_destroy(bank);
+        if (plan) n4m_validation_plan_destroy(plan);
+        if (bank) n4m_operator_bank_destroy(bank);
     }
 
     /* ---------------- Selectors ---------------- */
     else if (strcmp(algo, "spa_select") == 0) {
         int tk = get_int(params, "top_k", 10);
-        st = p4a_spa_select(ctx, cfg, &Xv, &Yv, tk, &mr);
-        if (st == P4A_OK) {
+        st = n4m_spa_select(ctx, cfg, &Xv, &Yv, tk, &mr);
+        if (st == N4M_OK) {
             static const char* i64[] = {"selected_indices", NULL};
             static const char* sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1080,8 +1080,8 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "wvc_select") == 0) {
         int tk = get_int(params, "top_k", 10);
         int norm = get_int(params, "normalize", 1);
-        st = p4a_wvc_select(ctx, &Xv, &Yv, n_components, tk, norm, &mr);
-        if (st == P4A_OK) {
+        st = n4m_wvc_select(ctx, &Xv, &Yv, n_components, tk, norm, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"scores", NULL};
             static const char* i64[] = {"selected_indices", NULL};
             out = pack_result(mr, dm, NULL, i64, NULL);
@@ -1091,8 +1091,8 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         double thr = get_double(params, "threshold", 0.0);
         double tf = get_double(params, "threshold_factor", 1.0);
         int ms = get_int(params, "min_selected", 1);
-        st = p4a_wvc_threshold_select(ctx, &Xv, &Yv, n_components, norm, thr, tf, ms, &mr);
-        if (st == P4A_OK) {
+        st = n4m_wvc_threshold_select(ctx, &Xv, &Yv, n_components, norm, thr, tf, ms, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"scores", NULL};
             static const char* i64[] = {"selected_indices", NULL};
             out = pack_result(mr, dm, NULL, i64, NULL);
@@ -1101,8 +1101,8 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int np = get_int(params, "n_permutations", 100);
         uint64_t seed = get_u64(params, "randomization_seed", 0);
         double a = get_double(params, "alpha", 0.05);
-        st = p4a_randomization_select(ctx, cfg, &Xv, &Yv, np, seed, a, &mr);
-        if (st == P4A_OK) {
+        st = n4m_randomization_select(ctx, cfg, &Xv, &Yv, np, seed, a, &mr);
+        if (st == N4M_OK) {
             static const char* i64[] = {"selected_indices", NULL};
             static const char* sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1110,8 +1110,8 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "vip_spa_select") == 0) {
         double vt = get_double(params, "vip_threshold", 0.3);
         int tk = get_int(params, "top_k", 10);
-        st = p4a_vip_spa_select(ctx, cfg, &Xv, &Yv, vt, tk, &mr);
-        if (st == P4A_OK) {
+        st = n4m_vip_spa_select(ctx, cfg, &Xv, &Yv, vt, tk, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"vip_scores", "vip_mask", "selection_scores", NULL};
             static const char* i64[] = {"selected_indices", NULL};
             static const char* sc[] = {"n_selected", "vip_threshold", NULL};
@@ -1121,38 +1121,38 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     /* Selectors that need a ValidationPlan share boilerplate via a macro. */
 #define DISPATCH_PLAN_SELECT(name, call_args, dmat_keys, iv_keys, i64_keys, sc_keys) \
     else if (strcmp(algo, name) == 0) { \
-        p4a_validation_plan_t* _plan = make_default_plan(n, 3); \
+        n4m_validation_plan_t* _plan = make_default_plan(n, 3); \
         if (!_plan) cleanup_err(ctx, cfg, name " could not build a default validation plan"); \
         st = call_args; \
-        p4a_validation_plan_destroy(_plan); \
-        if (st == P4A_OK) \
+        n4m_validation_plan_destroy(_plan); \
+        if (st == N4M_OK) \
             out = pack_result(mr, dmat_keys, iv_keys, i64_keys, sc_keys); \
     }
     DISPATCH_PLAN_SELECT("cars_select",
-        p4a_cars_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_cars_select(ctx, cfg, &Xv, &Yv, _plan,
                          get_int(params, "n_iterations", 50),
                          get_int(params, "min_features", 5), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("interval_select",
-        p4a_interval_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_interval_select(ctx, cfg, &Xv, &Yv, _plan,
                              get_int(params, "interval_width", 10),
                              get_int(params, "step", 1), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("stability_select",
-        p4a_stability_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_stability_select(ctx, cfg, &Xv, &Yv, _plan,
                               get_int(params, "top_k", 10), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("uve_select",
-        p4a_uve_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_uve_select(ctx, cfg, &Xv, &Yv, _plan,
                         get_int(params, "noise_features", p),
                         get_u64(params, "noise_seed", 0), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("random_frog_select",
-        p4a_random_frog_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_random_frog_select(ctx, cfg, &Xv, &Yv, _plan,
                                 get_int(params, "n_iterations", 100),
                                 get_int(params, "initial_size", 30),
                                 get_int(params, "min_size", n_components),
@@ -1162,7 +1162,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("scars_select",
-        p4a_scars_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_scars_select(ctx, cfg, &Xv, &Yv, _plan,
                           get_int(params, "n_iterations", 50),
                           get_int(params, "min_features", 5),
                           get_double(params, "sample_fraction", 0.8),
@@ -1170,7 +1170,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("ga_select",
-        p4a_ga_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_ga_select(ctx, cfg, &Xv, &Yv, _plan,
                        get_int(params, "n_generations", 50),
                        get_int(params, "population_size", 50),
                        get_int(params, "min_features", n_components),
@@ -1180,7 +1180,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("pso_select",
-        p4a_pso_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_pso_select(ctx, cfg, &Xv, &Yv, _plan,
                         get_int(params, "n_swarm", 30),
                         get_int(params, "n_iterations", 50),
                         get_double(params, "w", 0.729),
@@ -1192,7 +1192,7 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("vissa_select",
-        p4a_vissa_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_vissa_select(ctx, cfg, &Xv, &Yv, _plan,
                           get_int(params, "n_iterations", 20),
                           get_int(params, "n_submodels", 100),
                           get_double(params, "ratio_kept", 0.1),
@@ -1203,20 +1203,20 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("shaving_select",
-        p4a_shaving_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_shaving_select(ctx, cfg, &Xv, &Yv, _plan,
                             get_int(params, "n_steps", 10),
                             get_int(params, "min_features", 5),
                             get_double(params, "shave_fraction", 0.1), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("bve_select",
-        p4a_bve_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_bve_select(ctx, cfg, &Xv, &Yv, _plan,
                         get_int(params, "n_steps", 10),
                         get_int(params, "min_features", 5), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("emcuve_select",
-        p4a_emcuve_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_emcuve_select(ctx, cfg, &Xv, &Yv, _plan,
                            get_int(params, "noise_features", p),
                            get_u64(params, "noise_seed", 0),
                            get_int(params, "n_ensembles", 5),
@@ -1224,26 +1224,26 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("bipls_select",
-        p4a_bipls_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_bipls_select(ctx, cfg, &Xv, &Yv, _plan,
                           get_int(params, "interval_width", 10),
                           get_int(params, "min_intervals", 1), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("sipls_select",
-        p4a_sipls_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_sipls_select(ctx, cfg, &Xv, &Yv, _plan,
                           get_int(params, "interval_width", 10),
                           get_int(params, "combination_size", 2), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("rep_select",
-        p4a_rep_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_rep_select(ctx, cfg, &Xv, &Yv, _plan,
                         get_int(params, "n_steps", 10),
                         get_int(params, "min_features", 5),
                         get_int(params, "remove_count", 1), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("ipw_select",
-        p4a_ipw_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_ipw_select(ctx, cfg, &Xv, &Yv, _plan,
                         get_int(params, "n_iterations", 10),
                         get_int(params, "top_k", 10),
                         get_double(params, "damping", 0.5),
@@ -1251,14 +1251,14 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("iriv_select",
-        p4a_iriv_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_iriv_select(ctx, cfg, &Xv, &Yv, _plan,
                          get_int(params, "max_rounds", 20),
                          get_u64(params, "seed", 0), &mr),
         IRIV_DMAT,
         NULL, SEL_IDX,
         IRIV_SC)
     DISPATCH_PLAN_SELECT("irf_select",
-        p4a_irf_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_irf_select(ctx, cfg, &Xv, &Yv, _plan,
                         get_int(params, "n_iterations", 100),
                         get_int(params, "window_size", 10),
                         get_int(params, "initial_intervals", 10),
@@ -1274,12 +1274,12 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         if (thr == R_NilValue || TYPEOF(thr) != REALSXP)
             cleanup_err(ctx, cfg, "t2_select requires numeric params$alpha_thresholds");
         int ms = get_int(params, "min_selected", n_components);
-        p4a_validation_plan_t* _plan = make_default_plan(n, 3);
+        n4m_validation_plan_t* _plan = make_default_plan(n, 3);
         if (!_plan) cleanup_err(ctx, cfg, "t2_select plan creation failed");
-        st = p4a_t2_select(ctx, cfg, &Xv, &Yv, _plan,
+        st = n4m_t2_select(ctx, cfg, &Xv, &Yv, _plan,
                             REAL(thr), Rf_length(thr), ms, &mr);
-        p4a_validation_plan_destroy(_plan);
-        if (st == P4A_OK) {
+        n4m_validation_plan_destroy(_plan);
+        if (st == N4M_OK) {
             static const char* i64[] = {"selected_indices", NULL};
             static const char* sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1289,12 +1289,12 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         if (thr == R_NilValue || TYPEOF(thr) != REALSXP)
             cleanup_err(ctx, cfg, "st_select requires numeric params$thresholds");
         int ms = get_int(params, "min_selected", n_components);
-        p4a_validation_plan_t* _plan = make_default_plan(n, 3);
+        n4m_validation_plan_t* _plan = make_default_plan(n, 3);
         if (!_plan) cleanup_err(ctx, cfg, "st_select plan creation failed");
-        st = p4a_st_select(ctx, cfg, &Xv, &Yv, _plan,
+        st = n4m_st_select(ctx, cfg, &Xv, &Yv, _plan,
                             REAL(thr), Rf_length(thr), ms, &mr);
-        p4a_validation_plan_destroy(_plan);
-        if (st == P4A_OK) {
+        n4m_validation_plan_destroy(_plan);
+        if (st == N4M_OK) {
             static const char* i64[] = {"selected_indices", NULL};
             static const char* sc[] = {"best_rmse", NULL};
             out = pack_result(mr, NULL, NULL, i64, sc);
@@ -1303,8 +1303,8 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
 
     /* ---------------- Diagnostics ---------------- */
     else if (strcmp(algo, "approximate_press_compute") == 0) {
-        st = p4a_approximate_press_compute(ctx, cfg, &Xv, &Yv, n_components, &mr);
-        if (st == P4A_OK) {
+        st = n4m_approximate_press_compute(ctx, cfg, &Xv, &Yv, n_components, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"press_per_component",
                                           "rmse_per_component", NULL};
             static const char* iv[] = {"selected_n_components", NULL};
@@ -1318,22 +1318,22 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int max_k = INTEGER(fr_dim)[0], n_folds = INTEGER(fr_dim)[1];
         double* fr_rm = (double*)R_alloc((size_t)max_k * n_folds, sizeof(double));
         colmajor_to_rowmajor(REAL(fr), fr_rm, max_k, n_folds);
-        st = p4a_one_se_rule_compute(ctx, fr_rm, max_k, n_folds, &mr);
-        if (st == P4A_OK) {
+        st = n4m_one_se_rule_compute(ctx, fr_rm, max_k, n_folds, &mr);
+        if (st == N4M_OK) {
             static const char* dm[] = {"mean_rmse_per_component", NULL};
             static const char* iv[] = {"best_n_components", "one_se_n_components", NULL};
             static const char* sc[] = {"one_se_standard_error", "one_se_threshold", NULL};
             out = pack_result(mr, dm, iv, NULL, sc);
         }
     } else {
-        p4a_config_destroy(cfg);
+        n4m_config_destroy(cfg);
         UNPROTECT(2);
-        r_throw("unknown algo", P4A_ERR_INVALID_ARGUMENT, ctx);
+        r_throw("unknown algo", N4M_ERR_INVALID_ARGUMENT, ctx);
     }
 
-    p4a_config_destroy(cfg);
+    n4m_config_destroy(cfg);
     UNPROTECT(2);  /* X_rm, Y_rm */
-    if (st != P4A_OK) r_throw(algo, st, ctx);
-    p4a_context_destroy(ctx);
+    if (st != N4M_OK) r_throw(algo, st, ctx);
+    n4m_context_destroy(ctx);
     return out;
 }

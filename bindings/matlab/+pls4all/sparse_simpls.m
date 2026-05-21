@@ -24,6 +24,6 @@ if nargin < 4 || isempty(sparsity_lambda)
     sparsity_lambda = 0.05;
 end
 params = struct("sparsity_lambda", double(sparsity_lambda));
-res = pls4all.p4a_method_fit_mex("sparse_simpls", double(X), double(Y), ...
+res = pls4all.n4m_method_fit_mex("sparse_simpls", double(X), double(Y), ...
                                   int32(n_components), params);
 end

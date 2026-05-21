@@ -7,25 +7,25 @@
 
 #include "pls4all/p4a.h"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 class GatingStrategy {
   public:
-    explicit GatingStrategy(p4a_gating_mode_t mode = P4A_GATING_HARD) noexcept
+    explicit GatingStrategy(n4m_gating_mode_t mode = N4M_GATING_HARD) noexcept
         : mode_(mode) {}
 
-    [[nodiscard]] p4a_gating_mode_t mode() const noexcept { return mode_; }
+    [[nodiscard]] n4m_gating_mode_t mode() const noexcept { return mode_; }
 
   private:
-    p4a_gating_mode_t mode_;
+    n4m_gating_mode_t mode_;
 };
 
-[[nodiscard]] inline bool gating_mode_is_valid(p4a_gating_mode_t m) noexcept {
-    return m >= P4A_GATING_HARD && m <= P4A_GATING_PER_TARGET;
+[[nodiscard]] inline bool gating_mode_is_valid(n4m_gating_mode_t m) noexcept {
+    return m >= N4M_GATING_HARD && m <= N4M_GATING_PER_TARGET;
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core
 
-struct p4a_gating_strategy_s : public ::pls4all::core::GatingStrategy {
-    using ::pls4all::core::GatingStrategy::GatingStrategy;
+struct n4m_gating_strategy_s : public ::n4m::core::GatingStrategy {
+    using ::n4m::core::GatingStrategy::GatingStrategy;
 };

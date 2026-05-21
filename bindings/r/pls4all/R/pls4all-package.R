@@ -2,7 +2,7 @@
 #'
 #' Implements a portable Partial Least Squares (PLS) and Near-Infrared
 #' Spectroscopy (NIRS) engine. The C++17 numerical core is vendored under
-#' the package's `src/libp4a/` and compiled from source at install time;
+#' the package's `src/libn4m/` and compiled from source at install time;
 #' no external system library is required.
 #'
 #' The package exposes:

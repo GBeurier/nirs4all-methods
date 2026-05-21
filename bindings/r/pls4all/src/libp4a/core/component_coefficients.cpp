@@ -70,11 +70,11 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     return true;
 }
 
-[[nodiscard]] p4a_status_t validate_model(::pls4all::core::Context& ctx,
-                                          const ::pls4all::core::Model& model) {
+[[nodiscard]] n4m_status_t validate_model(::n4m::core::Context& ctx,
+                                          const ::n4m::core::Model& model) {
     if (model.n_features <= 0 || model.n_targets <= 0 || model.n_components <= 0) {
         ctx.set_error("fitted model dimensions are invalid for component coefficients");
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     const auto p = static_cast<std::size_t>(model.n_features);
     const auto q = static_cast<std::size_t>(model.n_targets);
@@ -85,22 +85,22 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
         model.x_scale.size() != p ||
         model.y_scale.size() != q) {
         ctx.set_error("fitted model arrays are inconsistent for component coefficients");
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t compute_regression_coefficients_by_component(Context& ctx,
+n4m_status_t compute_regression_coefficients_by_component(Context& ctx,
                                                           const Model& model,
                                                           std::vector<double>& out) {
     try {
         out.clear();
-        const p4a_status_t status = validate_model(ctx, model);
-        if (status != P4A_OK) {
+        const n4m_status_t status = validate_model(ctx, model);
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -127,7 +127,7 @@ p4a_status_t compute_regression_coefficients_by_component(Context& ctx,
             if (!invert_square(ptw, prefix, ptw_inv)) {
                 ctx.set_error("failed to invert P_k.T @ W_k while computing component coefficients");
                 out.clear();
-                return P4A_ERR_NUMERICAL_FAILURE;
+                return N4M_ERR_NUMERICAL_FAILURE;
             }
 
             const std::size_t block = (prefix - 1U) * p * q;
@@ -149,16 +149,16 @@ p4a_status_t compute_regression_coefficients_by_component(Context& ctx,
         }
 
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while computing component coefficients");
         out.clear();
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while computing component coefficients");
         out.clear();
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

@@ -7,14 +7,14 @@
 #include <cstdint>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/config.hpp"
 #include "core/context.hpp"
 #include "core/operator_bank.hpp"
 #include "core/validation.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 
 struct AomGlobalSelectionResult {
     std::int32_t n_operators{0};
@@ -42,22 +42,22 @@ struct AomPerComponentSelectionResult {
     std::vector<double> predictions;                      // row-major n_samples x n_targets
 };
 
-[[nodiscard]] p4a_status_t select_aom_global(
+[[nodiscard]] n4m_status_t select_aom_global(
     Context& ctx,
     const Config& cfg,
     const OperatorBank& bank,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     const ValidationPlan& plan,
     std::int32_t max_components,
     AomGlobalSelectionResult& out);
 
-[[nodiscard]] p4a_status_t select_aom_per_component(
+[[nodiscard]] n4m_status_t select_aom_per_component(
     Context& ctx,
     const Config& cfg,
     const OperatorBank& bank,
-    const p4a_matrix_view_t& X,
-    const p4a_matrix_view_t& Y,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
     const ValidationPlan& plan,
     std::int32_t max_components,
     AomPerComponentSelectionResult& out);
@@ -69,20 +69,20 @@ struct PublicAomGlobalResult {
     AomGlobalSelectionResult inner;
     std::int64_t predictions_rows{0};
     std::int64_t predictions_cols{0};
-    std::vector<p4a_operator_kind_t> operator_kinds_typed;
+    std::vector<n4m_operator_kind_t> operator_kinds_typed;
 };
 
 struct PublicAomPerComponentResult {
     AomPerComponentSelectionResult inner;
     std::int64_t predictions_rows{0};
     std::int64_t predictions_cols{0};
-    std::vector<p4a_operator_kind_t> operator_kinds_typed;
+    std::vector<n4m_operator_kind_t> operator_kinds_typed;
     std::vector<std::int32_t> selected_operator_indices_i32;
 };
 
-}  // namespace pls4all::core
+}  // namespace n4m::core
 
-struct p4a_aom_global_result_s
-    : public ::pls4all::core::PublicAomGlobalResult {};
-struct p4a_aom_per_component_result_s
-    : public ::pls4all::core::PublicAomPerComponentResult {};
+struct n4m_aom_global_result_s
+    : public ::n4m::core::PublicAomGlobalResult {};
+struct n4m_aom_per_component_result_s
+    : public ::n4m::core::PublicAomPerComponentResult {};

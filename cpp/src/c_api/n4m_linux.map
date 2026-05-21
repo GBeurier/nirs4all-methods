@@ -1,6 +1,6 @@
 {
     global:
-        p4a_*;
+        n4m_*;
     local:
         *;
 };

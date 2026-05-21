@@ -17,12 +17,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT"
 
-LIB="${P4A_LIB_PATH:-$ROOT/build/dev-release/cpp/src/libp4a.so}"
+LIB="${N4M_LIB_PATH:-$ROOT/build/dev-release/cpp/src/libn4m.so}"
 PY="${PY:-$ROOT/parity/python_generator/.venv/bin/python}"
 OCT_HOME="${OCTAVE_HOME:-/home/delete/miniconda3/envs/pls4all_r}"
 
 if [ ! -e "$LIB" ]; then
-    echo "ERROR: libp4a not found at $LIB" >&2
+    echo "ERROR: libn4m not found at $LIB" >&2
     echo "Hint: build with 'cmake --build build/dev-release' first." >&2
     exit 2
 fi
@@ -31,7 +31,7 @@ if [ ! -x "$PY" ]; then
     exit 2
 fi
 
-P4A_LIB_PATH="$LIB" \
+N4M_LIB_PATH="$LIB" \
 OCTAVE_HOME="$OCT_HOME" \
 LD_LIBRARY_PATH="$OCT_HOME/lib:${LD_LIBRARY_PATH:-}" \
 OCTAVE_EXECUTABLE="$OCT_HOME/bin/octave-cli" \

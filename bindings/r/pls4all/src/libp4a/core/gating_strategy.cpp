@@ -2,7 +2,7 @@
 
 #include "core/gating_strategy.hpp"
 
-namespace pls4all::core {
+namespace n4m::core {
 // Intentionally empty — class methods are inline. Translation unit kept as
 // a linker anchor.
-}  // namespace pls4all::core
+}  // namespace n4m::core

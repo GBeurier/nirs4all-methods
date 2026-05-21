@@ -42,30 +42,30 @@ constexpr std::uint64_t kSplitMixGolden = 0x9E3779B97F4A7C15ull;
     return selected;
 }
 
-[[nodiscard]] p4a_status_t validate_request(::pls4all::core::Context& ctx,
+[[nodiscard]] n4m_status_t validate_request(::n4m::core::Context& ctx,
                                             std::int32_t n_ensembles,
                                             double vote_threshold) {
     if (n_ensembles <= 0) {
         ctx.set_errorf("n_ensembles must be >= 1; got %d",
                        static_cast<int>(n_ensembles));
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
     if (!std::isfinite(vote_threshold) || vote_threshold <= 0.0 || vote_threshold > 1.0) {
         ctx.set_errorf("vote_threshold must be finite and in (0, 1]; got %.17g",
                        vote_threshold);
-        return P4A_ERR_INVALID_ARGUMENT;
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    return P4A_OK;
+    return N4M_OK;
 }
 
 }  // namespace
 
-namespace pls4all::core {
+namespace n4m::core {
 
-p4a_status_t select_by_emcuve(Context& ctx,
+n4m_status_t select_by_emcuve(Context& ctx,
                               const Config& cfg,
-                              const p4a_matrix_view_t& X,
-                              const p4a_matrix_view_t& Y,
+                              const n4m_matrix_view_t& X,
+                              const n4m_matrix_view_t& Y,
                               const ValidationPlan& plan,
                               std::int32_t noise_features,
                               std::uint64_t noise_seed,
@@ -74,8 +74,8 @@ p4a_status_t select_by_emcuve(Context& ctx,
                               EmcuveSelectionResult& out) {
     try {
         out = EmcuveSelectionResult{};
-        p4a_status_t status = validate_request(ctx, n_ensembles, vote_threshold);
-        if (status != P4A_OK) {
+        n4m_status_t status = validate_request(ctx, n_ensembles, vote_threshold);
+        if (status != N4M_OK) {
             return status;
         }
 
@@ -96,7 +96,7 @@ p4a_status_t select_by_emcuve(Context& ctx,
                                    noise_features,
                                    member_seed,
                                    member);
-            if (status != P4A_OK) {
+            if (status != N4M_OK) {
                 out = EmcuveSelectionResult{};
                 return status;
             }
@@ -115,7 +115,7 @@ p4a_status_t select_by_emcuve(Context& ctx,
                        member.n_noise_features != out.n_noise_features) {
                 ctx.set_error("EMCUVE member result dimensions are inconsistent");
                 out = EmcuveSelectionResult{};
-                return P4A_ERR_INTERNAL;
+                return N4M_ERR_INTERNAL;
             }
 
             out.noise_thresholds[ensemble] = member.noise_threshold;
@@ -127,7 +127,7 @@ p4a_status_t select_by_emcuve(Context& ctx,
                     static_cast<std::size_t>(feature) >= vote_counts.size()) {
                     ctx.set_error("EMCUVE member selected index is out of range");
                     out = EmcuveSelectionResult{};
-                    return P4A_ERR_INTERNAL;
+                    return N4M_ERR_INTERNAL;
                 }
                 vote_counts[static_cast<std::size_t>(feature)] += 1.0;
             }
@@ -148,16 +148,16 @@ p4a_status_t select_by_emcuve(Context& ctx,
         out.noise_seed = noise_seed;
         out.vote_threshold = vote_threshold;
         ctx.clear_error();
-        return P4A_OK;
+        return N4M_OK;
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while running EMCUVE selection");
         out = EmcuveSelectionResult{};
-        return P4A_ERR_OUT_OF_MEMORY;
+        return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         ctx.set_error("unexpected exception while running EMCUVE selection");
         out = EmcuveSelectionResult{};
-        return P4A_ERR_INTERNAL;
+        return N4M_ERR_INTERNAL;
     }
 }
 
-}  // namespace pls4all::core
+}  // namespace n4m::core

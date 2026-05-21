@@ -7,7 +7,7 @@
 
 #include "phase1_fixtures.hpp"
 
-namespace pls4all::test::fixtures {
+namespace n4m::test::fixtures {
 
 struct IpwSelectionIndexRef {
     const std::int64_t* values;
@@ -215,4 +215,4 @@ inline const IpwSelectionFixture kIpwSelectionFixtures[] = {
     }
 };
 
-}  // namespace pls4all::test::fixtures
+}  // namespace n4m::test::fixtures

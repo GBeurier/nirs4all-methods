@@ -179,13 +179,13 @@ def aom_preprocess(X, y=None, *, n_operators: int = 3,
     import ctypes
     from .._ffi import lib
 
-    if not hasattr(lib.p4a_gating_strategy_create, "restype") or \
-            lib.p4a_gating_strategy_create.restype is None:
-        lib.p4a_gating_strategy_create.restype = ctypes.c_int
-        lib.p4a_gating_strategy_create.argtypes = [
+    if not hasattr(lib.n4m_gating_strategy_create, "restype") or \
+            lib.n4m_gating_strategy_create.restype is None:
+        lib.n4m_gating_strategy_create.restype = ctypes.c_int
+        lib.n4m_gating_strategy_create.argtypes = [
             ctypes.POINTER(ctypes.c_void_p), ctypes.c_int]
-        lib.p4a_gating_strategy_destroy.restype = None
-        lib.p4a_gating_strategy_destroy.argtypes = [ctypes.c_void_p]
+        lib.n4m_gating_strategy_destroy.restype = None
+        lib.n4m_gating_strategy_destroy.argtypes = [ctypes.c_void_p]
 
     bank = OperatorBank()
     for kind in [
@@ -198,12 +198,12 @@ def aom_preprocess(X, y=None, *, n_operators: int = 3,
         bank.add(kind)
 
     gate_handle = ctypes.c_void_p(0)
-    status = lib.p4a_gating_strategy_create(
+    status = lib.n4m_gating_strategy_create(
         ctypes.byref(gate_handle), int(gating_mode))
     if status != 0 or not gate_handle:
         bank.close()
         raise RuntimeError(
-            f"p4a_gating_strategy_create failed (status={status})")
+            f"n4m_gating_strategy_create failed (status={status})")
     ctx = Context()
     try:
         Y = None if y is None else np.ascontiguousarray(y, dtype=np.float64)
@@ -217,7 +217,7 @@ def aom_preprocess(X, y=None, *, n_operators: int = 3,
         finally:
             res.close()
     finally:
-        lib.p4a_gating_strategy_destroy(gate_handle)
+        lib.n4m_gating_strategy_destroy(gate_handle)
         bank.close()
 
 
