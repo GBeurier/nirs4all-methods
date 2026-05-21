@@ -1,0 +1,30 @@
+Vendored algorithm reimplementations — derived from scikit-learn.
+================================================================
+
+The C implementations of IsolationForest, Local Outlier Factor (LOF), and
+Minimum Covariance Determinant (MCD) under this directory are NOT verbatim
+copies of scikit-learn source code; they are independent C reimplementations
+written specifically for the n4m / nirs4all-methods library, following the
+algorithmic descriptions in:
+
+  - scikit-learn library (BSD-3-Clause)
+    https://github.com/scikit-learn/scikit-learn
+
+  - Original references:
+    Liu, F. T., Ting, K. M., & Zhou, Z.-H. (2008). Isolation forest. ICDM.
+    Breunig, M. M., Kriegel, H.-P., Ng, R. T., & Sander, J. (2000). LOF.
+    Rousseeuw, P. J., & Van Driessen, K. (1999). A fast algorithm for the
+        minimum covariance determinant estimator. Technometrics, 41(3).
+
+In recognition of the BSD-3-Clause license that governs scikit-learn (the
+algorithmic reference), the following attribution is provided per BSD-3
+clause 2:
+
+  This product includes software developed by:
+    - scikit-learn developers (https://scikit-learn.org/) — algorithmic
+      descriptions of IsolationForest, LOF, and MCD.
+
+The n4m source files in this directory are licensed under CECILL-2.1
+(see the repository-level LICENSE file). This NOTICE serves as
+clarification that the algorithms are derived from BSD-3-licensed
+reference implementations; the C code itself is original.
