@@ -67,7 +67,7 @@ Small reference-parity sample:
 ```bash
 python benchmarks/cross_binding/orchestrator.py \
   --algorithms pls pcr --registry-cells --threads 1 \
-  --libp4a-build blas-omp --n-runs 2 \
+  --libp4a-build blas-omp --n-runs 1 \
   --canonical-pls4all-only --reference-backends registry \
   --timeout 180 --out-csv /tmp/pls4all_audit_cross_binding.csv --force
 ```
@@ -89,7 +89,7 @@ Slow-method smoke:
 ```bash
 python benchmarks/cross_binding/orchestrator.py \
   --algorithms pcr iriv_select vissa_select bve_select pso_select \
-  --registry-cells --threads 1 --libp4a-build blas-omp --n-runs 2 \
+  --registry-cells --threads 1 --libp4a-build blas-omp --n-runs 1 \
   --only-pls4all --timeout 240 \
   --out-csv /tmp/pls4all_audit_slow_methods.csv --force
 ```

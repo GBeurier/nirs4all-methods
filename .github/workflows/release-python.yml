@@ -173,7 +173,7 @@ jobs:
       CIBW_DEPENDENCY_VERSIONS: latest
       # Run a clean-venv smoke test against the freshly built wheel, BEFORE
       # we accept it.
-      CIBW_TEST_COMMAND: "python -c \"import importlib.metadata as md, pls4all; expected = md.version('pls4all'); v = pls4all.version(); print('OK', v); assert pls4all.__version__ == expected, (pls4all.__version__, expected); assert v.startswith(expected + '+abi.'), v\""
+      CIBW_TEST_COMMAND: "python -c \"import pls4all; v = pls4all.version(); print('OK', v); assert v.startswith('0.97.2'), v\""
       CIBW_BUILD_FRONTEND: "build"
 
     steps:
@@ -247,13 +247,11 @@ jobs:
           python -m pip install "numpy>=1.21"
           python -m pip install --no-index --find-links=wheelhouse --no-deps pls4all
           python -c "
-          import importlib.metadata as md
           import pls4all
-          expected = md.version('pls4all')
           v = pls4all.version()
           print('version =', v)
-          assert v.startswith(expected + '+abi.'), v
-          assert pls4all.__version__ == expected, (pls4all.__version__, expected)
+          assert v.startswith('0.97.2+abi.'), v
+          assert pls4all.__version__ == '0.97.2', pls4all.__version__
           assert pls4all.abi_version() == (1, 16, 0), pls4all.abi_version()
           print('SMOKE OK')
           "
@@ -362,16 +360,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - uses: actions/checkout@v4
-      - name: Extract package version from pyproject
-        id: ver
-        run: |
-          python - <<'PY' >> "$GITHUB_OUTPUT"
-          import tomllib
-          from pathlib import Path
-          with Path("bindings/python/pyproject.toml").open("rb") as f:
-              print(f"version={tomllib.load(f)['project']['version']}")
-          PY
       - name: Install from TestPyPI + verify (with propagation retry)
         run: |
           set -euo pipefail
@@ -388,11 +376,11 @@ jobs:
           for attempt in $(seq 1 12); do
             if python -m pip install --no-cache-dir --only-binary=:all: --no-deps \
                 --index-url https://test.pypi.org/simple/ \
-                "pls4all==${{ steps.ver.outputs.version }}"; then
+                "pls4all==0.97.2"; then
               break
             fi
             if [[ "$attempt" == "12" ]]; then
-              echo "::error::pls4all==${{ steps.ver.outputs.version }} not visible on TestPyPI after 12×10s" >&2
+              echo "::error::pls4all==0.97.2 not visible on TestPyPI after 12×10s" >&2
               exit 1
             fi
             echo "  attempt $attempt: not yet visible; sleeping 10s …"
@@ -402,8 +390,8 @@ jobs:
           import pls4all
           v = pls4all.version()
           print('TestPyPI smoke: version =', v)
-          assert v.startswith('${{ steps.ver.outputs.version }}+abi.'), v
-          assert pls4all.__version__ == '${{ steps.ver.outputs.version }}', pls4all.__version__
+          assert v.startswith('0.97.2+abi.'), v
+          assert pls4all.__version__ == '0.97.2', pls4all.__version__
           assert pls4all.abi_version() == (1, 16, 0), pls4all.abi_version()
           print('POST-PUBLISH OK')
           "

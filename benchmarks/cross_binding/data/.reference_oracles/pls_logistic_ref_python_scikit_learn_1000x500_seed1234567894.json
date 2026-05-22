@@ -1,0 +1,19 @@
+{
+  "algorithm": "pls_logistic",
+  "backend": "ref_python_scikit_learn",
+  "n": 1000,
+  "n_runs": 5,
+  "p": 500,
+  "prediction_seed": 1234567894,
+  "seed_base": 1234567890,
+  "source_predictions_path": "/tmp/pls4all-main-merge/benchmarks/cross_binding/data/.predictions/pls_logistic_ref_python_scikit_learn_1000x500_t1_blas-omp.npy",
+  "versions": {
+    "blas": "libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1",
+    "language": "Python 3.13.13",
+    "numpy": "2.3.5",
+    "reference_id": "python_scikit_learn",
+    "reference_library": "scikit-learn",
+    "reference_version": "1.8.0",
+    "timing_schema": "warmup-v3"
+  }
+}

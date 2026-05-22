@@ -4,7 +4,7 @@ Markdown page (docs/source/benchmarks/cross_binding.md).
 
 Layout: one section per (algo, threads) with a pivot table whose rows
 are dataset sizes and columns are backends. Each cell shows
-`<reported_ms> <gate_icon>` where the gate is reference parity for
+`<median_ms> <gate_icon>` where the gate is reference parity for
 C++/external columns and binding parity for internal bindings.
 
 Footnote: collected versions per backend.
@@ -375,8 +375,8 @@ def render(csv_path: Path, out_path: Path,
     if only_threads is not None:
         keep = set(only_threads)
         rows = [r for r in rows if int(r.get("threads", "0")) in keep]
-    run_counts = sorted({int(float(r.get("total_runs") or r.get("n_runs") or 0))
-                         for r in rows if r.get("total_runs") or r.get("n_runs")})
+    run_counts = sorted({int(float(r.get("n_runs", "0") or 0))
+                         for r in rows if r.get("n_runs")})
     if not run_counts:
         run_text = "the recorded number of timed runs"
     elif len(run_counts) == 1:
@@ -395,7 +395,7 @@ def render(csv_path: Path, out_path: Path,
     if page_intro is None:
         page_intro = (
             "For every (algorithm × backend × dataset size × thread "
-            "count) cell, we report the **adaptive wall-clock time** "
+            "count) cell, we report the **median wall-clock time** "
             "and one visible **parity verdict**. C++/external columns "
             "show reference parity; internal bindings show binding "
             "parity. Every backend reads the same orchestrator-generated "
@@ -420,7 +420,7 @@ def render(csv_path: Path, out_path: Path,
     out.append(f"| **Python**         | {info['python']} |\n")
 
     out.append("\n## How to read a cell\n")
-    out.append("Each cell shows `<reported_ms> <gate>`. C++ and external "
+    out.append("Each cell shows `<median_ms> <gate>`. C++ and external "
                 "library cells use Gate 2, the reference parity against "
                 "the method's canonical oracle. Internal binding cells "
                 "use Gate 1, the binding parity against the native C++ "
@@ -429,7 +429,7 @@ def render(csv_path: Path, out_path: Path,
     out.append(f"- {ICON_WARN} **drift** — finite mismatch, below 10× the "
                 "method's gate-2 tolerance or below the binding drift band")
     out.append(f"- {ICON_FAIL} **divergent** — outside the gate's tolerance band")
-    out.append(f"- {ICON_TIMEOUT} cell hit the 24 h wall-clock guard")
+    out.append(f"- {ICON_TIMEOUT} cell timed out (300 s wall-clock)")
     out.append(f"- `—` see *Why a cell is empty* below\n")
 
     out.append("**Bold** = fastest cell on the row, **counted only among "
@@ -438,14 +438,10 @@ def render(csv_path: Path, out_path: Path,
                 "it is Gate 2. Drift / divergent / empty cells never carry "
                 "the bold.\n")
 
-    out.append("Timing uses the adaptive protocol: run #1 is the "
-                "warmstart; if run #1 exceeds 5 min it is reported and "
-                "the cell stops. Otherwise run #2 is the first scored "
-                "sample and the warmstart is excluded. A 2-run cell "
-                "reports run #2 alone; a 3-run cell reports the mean of "
-                "runs #2-#3; 10/20/40-run cells report the median of "
-                "runs after the warmstart. All backends in a single cell "
-                "read the same orchestrator-generated CSV dataset. See "
+    out.append(f"Timing is the **median of {run_text}** after "
+                "up to three unmeasured warmups. All "
+                "backends in a single cell read the same "
+                "orchestrator-generated CSV dataset. See "
                 "[methodology.md](methodology.md) for the full details.\n")
 
     out.append("\n## Why a cell is empty (`—`)\n")
@@ -471,8 +467,10 @@ def render(csv_path: Path, out_path: Path,
                 "A few cells can fail because a binding bench script "
                 "doesn't yet route a specific algorithm to its underlying "
                 "call. Pure tooling gap, no library impact.")
-    out.append("4. **Run too slow / OOM / crashed.** The cell hit the "
-                "24 h guard (`⏳`) or raised a runtime error.")
+    out.append("4. **Run too slow / OOM / crashed.** The cell timed "
+                "out (`⏳`) or hit a runtime error. Rare in this "
+                "matrix (300 s timeout is generous for the included "
+                "sizes).")
     out.append("")
     out.append("Each `—` represents one of these four reasons. The CSV "
                 "(`results/full_matrix.csv`) carries a `reason` column "
@@ -561,13 +559,13 @@ def render(csv_path: Path, out_path: Path,
                 r = match[0]
                 if not _is_true(r.get("ok")):
                     col_data.append((float("nan"),
-                                       fmt_ms(r.get("reported_ms") or r.get("median_ms", "")),
+                                       fmt_ms(r.get("median_ms", "")),
                                        dual_parity_label(r),
                                        effective_parity_icon(r)))
                 else:
-                    raw = cell_ms_value(r.get("reported_ms") or r.get("median_ms", ""))
+                    raw = cell_ms_value(r.get("median_ms", ""))
                     col_data.append((raw,
-                                       fmt_ms(r.get("reported_ms") or r.get("median_ms", "")),
+                                       fmt_ms(r.get("median_ms", "")),
                                        dual_parity_label(r),
                                        effective_parity_icon(r)))
             # Bold the fastest backend in the row, BUT only among
@@ -663,12 +661,9 @@ def render(csv_path: Path, out_path: Path,
                 "`reference_parity_tolerance` by newer CSVs)")
     out.append("- All backends read the same orchestrator-generated CSV dataset "
                 "(`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`)")
-    out.append("- Adaptive timing: warmstart run #1; if there is any "
-               "subsequent run, run #1 is excluded from the score. "
-               "2 total runs report run #2 alone; 3 total runs report "
-               "the mean of runs #2-#3; 10/20/40 total runs report the "
-               "median after the warmstart.")
-    out.append("- Per-cell timeout guard: 24 h")
+    out.append(f"- {run_text} per cell after one unmeasured "
+               "warmup, median reported")
+    out.append("- Per-cell timeout: 300 s")
     out.append("- Thread control via `OMP_NUM_THREADS = OPENBLAS_NUM_THREADS = "
                 "MKL_NUM_THREADS = BLIS_NUM_THREADS` set in the subprocess env, "
                 "plus `Context.num_threads` for Python pls4all and "

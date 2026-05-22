@@ -76,12 +76,8 @@
 
     // sphinx-design uses :checked + .sd-tab-label + .sd-tab-content
     // sibling chains, so we mustn't reorder DOM. Insert the combo at
-    // the very start of the tab-set — labels stay hidden via CSS,
-    // but only on tab-sets we have actually enhanced (the
-    // `p4-combo-ready` marker lets CSS opt-in scope label hiding so
-    // single-tab sets and no-JS fallback keep working).
+    // the very start of the tab-set — labels stay hidden via CSS.
     tabset.insertBefore(wrap, tabset.firstChild);
-    tabset.classList.add('p4-combo-ready');
 
     // Keep the combo in sync when the user (or :sync code) toggles
     // a radio input directly — e.g. a synced tab in another tab-set

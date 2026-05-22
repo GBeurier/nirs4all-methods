@@ -342,80 +342,10 @@ def reference_tolerance(row: dict) -> float | None:
     return _method_tolerances().get(row.get("algorithm") or row.get("algo"))
 
 
-def _quality_from_tol(tol: float | None) -> str:
-    """Tolerance-band classifier (kept aligned with registry._truth_source_quality)."""
-    if tol is None:
-        return "unknown"
-    if tol <= 1e-6:
-        return "strict"
-    if tol < 1e-1:
-        return "relaxed"
-    return "qualitative"
-
-
-def _format_divergence(value: float | None) -> str:
-    if value is None or value != value:
-        return ""
-    if value == 0:
-        return "0"
-    av = abs(value)
-    if av < 1e-3 or av >= 100:
-        return f"{value:.0e}"
-    if av < 0.1:
-        return f"{value:.1e}"
-    return f"{value:.2f}"
-
-
-def divergence_fields(row: dict) -> dict:
-    """Build per-cell divergence fields for the dashboard.
-
-    Source rules (Codex spec):
-      - kind == "pls4all_binding"            → binding gate (vs C++)
-      - kind in {"pls4all_core", "external"} → reference gate (vs MethodSpec ref)
-      - is_canonical_reference=True          → basis="self", no numeric value
-
-    Returns a dict ready for cell merge:
-        {"divergence": float|None, "divergence_fmt": str|None,
-         "divergence_basis": "binding"|"reference"|"self",
-         "divergence_quality": "strict"|"relaxed"|"qualitative"|"binding"|"unknown"}
-    Empty dict if the row can't supply a value.
-    """
-    kind = (row.get("kind") or "").strip().lower()
-    if is_true(row.get("is_canonical_reference")):
-        return {
-            "divergence": None,
-            "divergence_fmt": "source",
-            "divergence_basis": "self",
-            "divergence_quality": "self",
-        }
-    if kind == "pls4all_binding":
-        diff = _float_or_none(row.get("binding_parity_max_diff")
-                              or row.get("parity_max_diff"))
-        return {
-            "divergence": diff,
-            "divergence_fmt": _format_divergence(diff) if diff is not None else "—",
-            "divergence_basis": "binding",
-            "divergence_quality": "binding",
-        }
-    if kind in ("pls4all_core", "external"):
-        # rmse_rel only — the tooltip says "rmse_rel" so falling back to
-        # rmse_abs (different units, very different magnitude scale)
-        # would be a silent lie about what the number means.
-        diff = _float_or_none(row.get("reference_parity_rmse_rel"))
-        tol = reference_tolerance(row)
-        return {
-            "divergence": diff,
-            "divergence_fmt": _format_divergence(diff) if diff is not None else "—",
-            "divergence_basis": "reference",
-            "divergence_quality": _quality_from_tol(tol),
-        }
-    return {}
-
-
 def parity_code(row: dict) -> str:
     """Legacy binding-consistency parity code (gate 1 only).
 
-    exact | drift | divergent | error | deferred | not_run | not_available.
+    exact | drift | divergent | error | not_run | not_available.
 
     Distinguishes hard runtime errors (ModuleNotFoundError, ImportError,
     crash) from libraries that do not expose an algorithm so the dashboard
@@ -423,8 +353,6 @@ def parity_code(row: dict) -> str:
     Reads `binding_parity_*` first, falls back to legacy `parity_*`.
     """
     if not is_true(row.get("ok")):
-        if (row.get("timing_statistic") or "").strip().lower() == "deferred":
-            return "deferred"
         algo = row.get("algorithm") or row.get("algo") or ""
         backend = row.get("backend") or ""
         supported = FIXED_EXTERNAL_SUPPORT.get(backend)
@@ -483,8 +411,6 @@ def reference_parity_code(row: dict) -> str:
       drift          — finite but above tolerance, < 10× method tolerance.
       divergent      — >= 10× method tolerance.
       not_available  — `reference_kind=paper_only` (no executable truth).
-      deferred       — intentionally skipped in the CRAN-fast dashboard build;
-                       catch-up benchmark jobs fill these cells later.
       not_run        — legacy value only; new builds classify missing
                        implementations as not_available and runtime
                        failures as error.
@@ -603,7 +529,7 @@ def build_payload(results_dir: Path) -> dict:
         return str(versions.get("timing_schema") or "")
 
     def _schema_rank(schema: str) -> int:
-        return {"adaptive-v1": 3, "warmup-v3": 2, "warmup-v2": 1}.get(schema, 0)
+        return {"warmup-v3": 2, "warmup-v2": 1}.get(schema, 0)
 
     def _row_rank(row: dict) -> tuple:
         return (
@@ -613,8 +539,7 @@ def build_payload(results_dir: Path) -> dict:
         )
 
     # Dedupe: same (algo, backend, build, n, p, threads). Prefer the current
-    # Prefer the current adaptive timing schema over legacy warmup/cold-run
-    # CSV rows, then newest file.
+    # warmup timing schema over legacy cold-run CSV rows, then newest file.
     seen: dict[tuple, dict] = {}
     for r in rows_in:
         if not r.get("algorithm"):
@@ -802,8 +727,7 @@ def build_payload(results_dir: Path) -> dict:
         verdict = parity_code(r)
         ref_verdict = reference_parity_code(r)
         try:
-            raw_ms = r.get("reported_ms") or r.get("median_ms")
-            ms = float(raw_ms) if raw_ms else None
+            ms = float(r["median_ms"]) if r.get("median_ms") else None
         except ValueError:
             ms = None
         ok = is_true(r.get("ok"))
@@ -815,22 +739,9 @@ def build_payload(results_dir: Path) -> dict:
                 "binding_parity": verdict, "ok": ok,
                 "_source_is_ref": r["backend"].startswith("ref_"),
                 "_rank": _row_rank(r)}
-        # Divergence fields — feed the dashboard's "divergence δ" viz.
-        # Source rule depends on `kind`: binding-gate for pls4all_binding,
-        # reference-gate for pls4all_core/external, basis="self" for the
-        # canonical reference row. See divergence_fields() docstring.
-        cell.update(divergence_fields(r))
         if ms is not None and ms == ms:   # not NaN
             cell["ms"] = round(ms, 3)
-            cell["fmt"] = fmt_ms(raw_ms)
-        if r.get("timing_statistic"):
-            cell["timing_statistic"] = r["timing_statistic"]
-        if r.get("n_runs"):
-            cell["n_runs"] = int(float(r["n_runs"]))
-        if r.get("total_runs"):
-            cell["total_runs"] = int(float(r["total_runs"]))
-        if r.get("warmup_ms"):
-            cell["warmup_ms"] = round(float(r["warmup_ms"]), 3)
+            cell["fmt"] = fmt_ms(r["median_ms"])
         tol = reference_tolerance(r)
         if tol is not None:
             cell["reference_parity_tolerance"] = tol
@@ -842,13 +753,13 @@ def build_payload(results_dir: Path) -> dict:
         # Capture the failure reason so the dashboard tooltip can show
         # "ModuleNotFoundError: foo" instead of a silent dash.
         reason = (r.get("reason") or "").strip()
-        if reason and verdict in ("error", "deferred", "not_run", "not_available",
+        if reason and verdict in ("error", "not_run", "not_available",
                                   "divergent", "drift"):
             cell["reason"] = reason[:200]
         # Keep every explicit verdict emitted by the orchestrator so the
         # dashboard can distinguish "not run" from "not available in lib".
         if ms is not None or verdict in (
-                "deferred", "not_run", "not_available", "divergent", "drift", "error"):
+                "not_run", "not_available", "divergent", "drift", "error"):
             existing = pivot[rkey].get(cid)
             if existing is None:
                 pivot[rkey][cid] = cell
@@ -905,18 +816,6 @@ def build_payload(results_dir: Path) -> dict:
                         existing["binding_parity"] = cell["binding_parity"]
                         if incoming_ok:
                             existing.pop("reason", None)
-                    # When the ref_* alias collapses onto a legacy column
-                    # (e.g. ref_python_scikit_learn → sklearn), the
-                    # divergence value the user wants is the ref-gate
-                    # self-comparison from the alias row, not the legacy
-                    # row's binding diff. Only copy if the alias actually
-                    # ran — a failed canonical ref must not falsely tag
-                    # the merged cell as "source" (basis=self).
-                    if incoming_ok:
-                        for k in ("divergence", "divergence_fmt",
-                                  "divergence_basis", "divergence_quality"):
-                            if k in cell:
-                                existing[k] = cell[k]
                 if cell.get("reference_kind") and not existing.get("reference_kind"):
                     existing["reference_kind"] = cell["reference_kind"]
                 if cell.get("reference_parity_tolerance") is not None:
@@ -964,12 +863,6 @@ def build_payload(results_dir: Path) -> dict:
             mirror["fmt"] = src["fmt"]
         if "reference_kind" in src:
             mirror["reference_kind"] = src["reference_kind"]
-        # Carry divergence info onto the synthetic reference column so the
-        # divergence-δ viz can render "source" instead of "—".
-        for k in ("divergence", "divergence_fmt",
-                  "divergence_basis", "divergence_quality"):
-            if k in src:
-                mirror[k] = src[k]
         cells[REF_COL_ID] = mirror
 
     for cells in pivot.values():

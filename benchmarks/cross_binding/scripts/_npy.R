@@ -70,110 +70,45 @@ pls4all_bench_load_x_target <- function(x_target_dir, n, p, seed) {
     as.matrix(read.csv(path, header = FALSE))
 }
 
-# Adaptive timed runs (same convention as Python _common).
+# Timed runs (small unmeasured warmup set, same convention as Python _common).
 pls4all_bench_now_ms <- function() {
     as.numeric(Sys.time()) * 1000.0
 }
 
-pls4all_bench_adaptive_target <- function(probe_ms, max_runs) {
-    max_runs <- max(2L, as.integer(max_runs))
-    if (probe_ms > 60000.0) {
-        return(list(target = 2L, statistic = "single",
-                    decision = "probe_gt_60s"))
-    }
-    if (probe_ms > 30000.0) {
-        return(list(target = min(max_runs, 2L), statistic = "single",
-                    decision = "probe_gt_30s"))
-    }
-    if (probe_ms > 5000.0) {
-        return(list(target = min(max_runs, 3L), statistic = "mean",
-                    decision = "probe_gt_5s"))
-    }
-    if (probe_ms > 1000.0) {
-        return(list(target = min(max_runs, 10L), statistic = "median",
-                    decision = "probe_gt_1s"))
-    }
-    if (probe_ms > 100.0) {
-        return(list(target = min(max_runs, 20L), statistic = "median",
-                    decision = "probe_gt_100ms"))
-    }
-    list(target = min(max_runs, 40L), statistic = "median",
-         decision = "probe_le_100ms")
-}
-
-pls4all_bench_stats <- function(samples, statistic, warmup_ms, decision,
-                                max_runs, total_runs,
-                                warmup_included = FALSE) {
-    if (length(samples) == 1L) {
-        statistic <- "single"
-    }
-    reported <- if (identical(statistic, "mean")) mean(samples) else median(samples)
-    list(
-        ok = TRUE,
-        n_runs = length(samples),
-        median_ms = unname(reported),
-        reported_ms = unname(reported),
-        sample_median_ms = unname(median(samples)),
-        mean_ms = unname(mean(samples)),
-        min_ms = unname(min(samples)),
-        max_ms = unname(max(samples)),
-        warmup_ms = unname(warmup_ms),
-        warmup_included = warmup_included,
-        timing_statistic = statistic,
-        timing_decision = decision,
-        max_runs = max(1L, as.integer(max_runs)),
-        total_runs = max(1L, as.integer(total_runs))
-    )
+pls4all_bench_warmup_count <- function(runs) {
+    max(1L, min(3L, as.integer(runs)))
 }
 
 pls4all_bench_time_runs <- function(fit_predict_seeded, runs, seed_base) {
-    max_runs <- max(1L, as.integer(runs))
-
-    t0 <- pls4all_bench_now_ms()
-    warmup_preds <- fit_predict_seeded(seed_base)
-    warmup_ms <- pls4all_bench_now_ms() - t0
-    if (warmup_ms > 300000.0) {
-        return(list(
-            stats = pls4all_bench_stats(
-                c(warmup_ms), "single", warmup_ms, "warmup_gt_5min",
-                max_runs, 1L, TRUE),
-            last_preds = warmup_preds
-        ))
+    if (runs < 1L) {
+        stop("runs must be >= 1")
     }
-    if (max_runs < 2L) {
-        return(list(
-            stats = pls4all_bench_stats(
-                c(warmup_ms), "single", warmup_ms,
-                "max_runs_1_warmup_only", max_runs, 1L, TRUE),
-            last_preds = warmup_preds
-        ))
+    for (w in seq_len(pls4all_bench_warmup_count(runs))) {
+        fit_predict_seeded(seed_base)
     }
-
-    samples <- numeric(0)
-    t0 <- pls4all_bench_now_ms()
-    last_preds <- fit_predict_seeded(seed_base)
-    samples <- c(samples, pls4all_bench_now_ms() - t0)
-
-    target <- pls4all_bench_adaptive_target(samples[[1]], max_runs)
-    target_samples <- max(1L, target$target - 1L)
-    if (target_samples > 1L) {
-        for (i in 2:target_samples) {
-            t0 <- pls4all_bench_now_ms()
-            last_preds <- fit_predict_seeded(seed_base + (i - 1L))
-            samples <- c(samples, pls4all_bench_now_ms() - t0)
-        }
+    samples <- numeric(runs)
+    last_preds <- NULL
+    for (i in seq_len(runs)) {
+        t0 <- pls4all_bench_now_ms()
+        last_preds <- fit_predict_seeded(seed_base + (i - 1L))
+        samples[i] <- pls4all_bench_now_ms() - t0
     }
-    list(stats = pls4all_bench_stats(samples, target$statistic, warmup_ms,
-                                     target$decision, max_runs,
-                                     1L + length(samples)),
+    list(stats = list(
+            ok = TRUE,
+            n_runs = length(samples),
+            median_ms = median(samples),
+            min_ms = min(samples),
+            max_ms = max(samples)
+         ),
          last_preds = last_preds)
 }
 
-# Common 8-arg parse — `runs` is the adaptive total-run cap.
+# Common 8-arg parse — returns a named list with algo / csv_dir / n / p /
+# nc / runs / seed_base / pred_path.
 pls4all_bench_parse_args <- function() {
     argv <- commandArgs(trailingOnly = TRUE)
     if (length(argv) != 8L) {
-        stop("usage: SCRIPT algo csv_dir n p n_components max_total_runs seed_base predictions_path")
+        stop("usage: SCRIPT algo csv_dir n p n_components n_runs seed_base predictions_path")
     }
     list(
         algo       = argv[[1]],

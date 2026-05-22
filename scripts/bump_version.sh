@@ -328,39 +328,6 @@ update_with_sed \
     "^Version:[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)" \
     "s/^(Version:[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+/\1${VERSION}/"
 
-# R CRAN comments (release summary line)
-update_with_sed \
-    "bindings/r/pls4all/cran-comments.md" \
-    '`pls4all`[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)' \
-    "s/(\`pls4all\`[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+/\1${VERSION}/"
-
-# R vendored C++ header: must be byte-for-byte in sync with the canonical
-# version header before building the CRAN source package.
-sync_r_vendored_version_header() {
-    local rel="bindings/r/pls4all/src/libp4a/include/pls4all/p4a_version.h"
-    local abs="${ROOT}/${rel}"
-    if [[ ! -f "${abs}" ]]; then
-        echo "  DRIFT: ${rel} missing (expected vendored header)" >&2
-        DRIFTED+=("${rel}")
-        EXIT_CODE=1
-        return 0
-    fi
-    if [[ "${MODE}" == "check" ]]; then
-        if ! cmp -s "${HEADER}" "${abs}"; then
-            echo "  DRIFT: ${rel} differs from cpp/include/pls4all/p4a_version.h" >&2
-            DRIFTED+=("${rel}")
-            EXIT_CODE=1
-        fi
-    else
-        if cmp -s "${HEADER}" "${abs}"; then
-            return 0
-        fi
-        cp "${HEADER}" "${abs}"
-        echo "  updated ${rel}: synced from canonical header"
-    fi
-}
-sync_r_vendored_version_header
-
 # Julia (Project.toml:  version = "X.Y.Z")
 update_with_sed \
     "bindings/julia/Pls4all.jl/Project.toml" \

@@ -14,11 +14,11 @@ with a parity icon next to each timing.
 
 Usage:
   # smoke (PLS at 500×200, 1 thread)
-  python orchestrator.py --algorithms pls --sizes 500x200 --threads 1
+  python orchestrator.py --algorithms pls --sizes 500x200 --threads 1 --n-runs 3
 
   # complete canonical method/reference matrix
   python orchestrator.py --algorithms all --registry-cells \
-    --threads 1 3 10 --reference-backends all
+    --threads 1 3 10 --n-runs 5 --reference-backends all
 """
 from __future__ import annotations
 
@@ -57,10 +57,11 @@ from benchmarks.parity_timing.registry import (  # noqa: E402
 )
 
 # Default base seed. uint32-safe so it round-trips losslessly through
-# R/Octave doubles and accepts as sklearn random_state. +1 per timed run
-# inside each cell, up to the adaptive protocol's max-run cap.
+# R/Octave doubles and accepts as sklearn random_state. +1 per run
+# inside each cell, so the 5 seeds used are [B, B+1, B+2, B+3, B+4] —
+# still uint32, still 'long int enough' to look intentional and avoid
+# collision with other ad-hoc seeds elsewhere in the test suite.
 DEFAULT_SEED_BASE = 1_234_567_890
-DEFAULT_MAX_RUNS = 40
 
 # 11 sizes (10000×2500 skipped per user decision).
 DEFAULT_SIZES = [
@@ -70,10 +71,9 @@ DEFAULT_SIZES = [
     (10000, 50), (10000, 500),
 ]
 
-# Per-cell wall-clock guard (seconds). Slow-cell runtime is controlled by
-# adaptive early-stop rules, not by a short timeout.
-DEFAULT_TIMEOUT_S = 24 * 60 * 60
-TIMING_SCHEMA = "adaptive-v1"
+# Per-cell wall-clock timeout (seconds).
+DEFAULT_TIMEOUT_S = 300
+TIMING_SCHEMA = "warmup-v3"
 
 # (name, script, language, tier, kind)
 #   kind ∈ {"pls4all_core", "pls4all_binding", "external"}
@@ -213,8 +213,6 @@ def record_prediction_seed(record: dict) -> int:
         measured_runs_int = int(measured_runs)
     except (TypeError, ValueError):
         measured_runs_int = 1
-    if record_timing_schema(record) == TIMING_SCHEMA:
-        return seed_base + max(1, measured_runs_int) - 1
     # Legacy CSVs did not record the exact last timed seed. Use seed_base as
     # the safest value for one-shot runs. For warmup-discarded rows, bench
     # scripts stored n_runs=input_runs-1, so the last seed is base+n_runs.
@@ -241,10 +239,6 @@ def write_prediction_metadata(record: dict) -> None:
         "seed_base": record.get("seed_base"),
         "prediction_seed": record_prediction_seed(record),
         "n_runs": record.get("n_runs"),
-        "total_runs": record.get("total_runs"),
-        "max_runs": record.get("max_runs"),
-        "warmup_ms": record.get("warmup_ms"),
-        "timing_statistic": record.get("timing_statistic"),
         "versions": record.get("versions") or {},
     }
     meta_path = prediction_metadata_path(path)
@@ -280,9 +274,9 @@ def snapshot_reference_oracle(record: dict) -> None:
     dst = reference_oracle_path(
         record["algorithm"], canonical_backend,
         int(record["n"]), int(record["p"]), prediction_seed)
-    tmp_oracle = dst.with_name(f"{dst.name}.tmp.{os.getpid()}")
-    shutil.copy2(Path(pred_path), tmp_oracle)
-    os.replace(tmp_oracle, dst)
+    tmp = dst.with_name(f"{dst.name}.tmp.{os.getpid()}")
+    shutil.copy2(Path(pred_path), tmp)
+    os.replace(tmp, dst)
     meta = {
         "algorithm": record.get("algorithm"),
         "backend": canonical_backend,
@@ -291,10 +285,6 @@ def snapshot_reference_oracle(record: dict) -> None:
         "seed_base": record.get("seed_base"),
         "prediction_seed": prediction_seed,
         "n_runs": record.get("n_runs"),
-        "total_runs": record.get("total_runs"),
-        "max_runs": record.get("max_runs"),
-        "warmup_ms": record.get("warmup_ms"),
-        "timing_statistic": record.get("timing_statistic"),
         "source_predictions_path": str(pred_path),
         "versions": record.get("versions") or {},
     }
@@ -406,7 +396,6 @@ def run_backend(name: str, script: str, language: str, tier: str,
     env["BLIS_NUM_THREADS"]     = str(threads)
     env["BENCH_THREADS"]        = str(threads)
     env["BENCH_SEED_BASE"]      = str(seed_base)
-    env["BENCH_CELL_TIMEOUT"]   = str(timeout)
     # Externals don't care about libp4a build; pls4all backends do.
     lib_dir = LIBP4A_BUILDS[libp4a_build]
     env["PLS4ALL_LIB_DIR"] = lib_dir
@@ -535,8 +524,6 @@ def run_backend(name: str, script: str, language: str, tier: str,
     rec["backend"] = name
     rec["subprocess_s"] = elapsed
     rec.setdefault("ok", True)
-    if rec.get("reported_ms") in (None, "") and rec.get("median_ms") not in (None, ""):
-        rec["reported_ms"] = rec.get("median_ms")
     return rec
 
 
@@ -730,9 +717,7 @@ def parse_sizes(args_sizes) -> list[tuple[int, int]]:
 CSV_COLUMNS = [
     "algorithm", "backend", "language", "tier", "kind",
     "n", "p", "threads", "libp4a_build", "seed_base", "prediction_seed",
-    "ok", "reported_ms", "median_ms", "sample_median_ms", "mean_ms",
-    "min_ms", "max_ms", "n_runs", "total_runs", "max_runs", "warmup_ms",
-    "warmup_included", "timing_statistic", "timing_decision",
+    "ok", "median_ms", "min_ms", "max_ms", "n_runs",
     # Legacy alias columns — mirror the binding-consistency gate so the
     # existing dashboard renderer still works during the migration.
     "parity_ref", "parity_max_diff", "parity_ok", "parity_note",
@@ -777,14 +762,12 @@ def _to_float(value):
 def coerce_csv_record(row: dict) -> dict:
     out = dict(row)
     for name in ("n", "p", "threads", "seed_base", "prediction_seed",
-                 "n_runs", "total_runs", "max_runs"):
+                 "n_runs"):
         out[name] = _to_int(out.get(name))
     for name in ("ok", "parity_ok", "binding_parity_ok",
-                 "reference_parity_ok", "is_canonical_reference",
-                 "warmup_included"):
+                 "reference_parity_ok", "is_canonical_reference"):
         out[name] = _to_bool(out.get(name))
-    for name in ("reported_ms", "median_ms", "sample_median_ms",
-                 "mean_ms", "min_ms", "max_ms", "warmup_ms",
+    for name in ("median_ms", "min_ms", "max_ms",
                  "parity_max_diff", "binding_parity_max_diff",
                  "reference_parity_rmse_abs", "reference_parity_rmse_rel",
                  "reference_parity_tolerance", "subprocess_s"):
@@ -803,50 +786,6 @@ def load_existing_records(path: Path) -> list[dict]:
         return [coerce_csv_record(r) for r in csv.DictReader(f)]
 
 
-def load_defer_rules(path: str | None) -> list[dict]:
-    """Load wildcard cell rules used to defer expensive benchmark cells.
-
-    CSV columns are optional among: algorithm, backend, language, tier, kind,
-    n, p, threads, libp4a_build, reason. Empty values and "*" are wildcards.
-    """
-    if not path:
-        return []
-    p = Path(path)
-    if not p.exists():
-        raise FileNotFoundError(f"defer rules file not found: {p}")
-    with p.open(newline="") as f:
-        return [dict(r) for r in csv.DictReader(f)]
-
-
-def _rule_matches_value(rule_value, actual) -> bool:
-    value = str(rule_value or "").strip()
-    if not value or value == "*":
-        return True
-    return value == str(actual)
-
-
-def defer_reason(rules: list[dict], *, algorithm: str, backend: str,
-                 language: str, tier: str, kind: str, n: int, p: int,
-                 threads: int, libp4a_build: str) -> str | None:
-    cell = {
-        "algorithm": algorithm,
-        "backend": backend,
-        "language": language,
-        "tier": tier,
-        "kind": kind,
-        "n": n,
-        "p": p,
-        "threads": threads,
-        "libp4a_build": libp4a_build,
-    }
-    for rule in rules:
-        if all(_rule_matches_value(rule.get(key), value)
-               for key, value in cell.items()):
-            return (rule.get("reason") or
-                    "deferred slow cell for CRAN-fast benchmark")
-    return None
-
-
 def slot_key(record: dict) -> tuple:
     return (record.get("algorithm"), record.get("backend"),
             int(record.get("n")), int(record.get("p")),
@@ -855,7 +794,7 @@ def slot_key(record: dict) -> tuple:
 
 def strict_key(record: dict) -> tuple:
     sb = record.get("seed_base")
-    nr = record.get("max_runs") if record_timing_schema(record) == TIMING_SCHEMA else record.get("n_runs")
+    nr = record.get("n_runs")
     return (*slot_key(record),
             int(sb) if sb is not None else None,
             int(nr) if nr is not None else None)
@@ -865,8 +804,8 @@ def planned_keys(algo: str, backend_name: str, n: int, p: int,
                  threads: int, build: str, seed_base: int,
                  n_runs: int) -> tuple[tuple, tuple]:
     slot = (algo, backend_name, n, p, threads, build)
-    # Adaptive rows emit n_runs = actual timed samples and max_runs = the
-    # planning cap. Resume strictness therefore keys on the cap.
+    # Bench scripts emit n_runs = number of timed samples. Warmup is always
+    # unmeasured; see scripts/_common.py::time_runs_seeded.
     strict = (*slot, seed_base, n_runs)
     return slot, strict
 
@@ -890,16 +829,8 @@ def write_records(csv_out: Path, records: list[dict]) -> None:
                 r.get("n"), r.get("p"), r.get("threads"),
                 r.get("libp4a_build"), r.get("seed_base"),
                 r.get("prediction_seed") or record_prediction_seed(r),
-                r.get("ok"),
-                r.get("reported_ms") if r.get("reported_ms") not in (None, "") else r.get("median_ms"),
-                r.get("median_ms"),
-                r.get("sample_median_ms"),
-                r.get("mean_ms"),
-                r.get("min_ms"), r.get("max_ms"), r.get("n_runs"),
-                r.get("total_runs"), r.get("max_runs"), r.get("warmup_ms"),
-                r.get("warmup_included"),
-                r.get("timing_statistic"),
-                r.get("timing_decision"),
+                r.get("ok"), r.get("median_ms"), r.get("min_ms"),
+                r.get("max_ms"), r.get("n_runs"),
                 # Legacy alias columns (mirror gate 1).
                 r.get("parity_ref"), r.get("parity_max_diff"),
                 r.get("parity_ok"), r.get("parity_note", ""),
@@ -943,8 +874,8 @@ def main():
                               "dev-release + blas-omp; 'all-cpu' = native + "
                               "blas + omp + blasomp; 'all' = the full "
                               "5-build sweep including cuda-on.")
-    parser.add_argument("--n-runs", type=int, default=DEFAULT_MAX_RUNS,
-                         help="Maximum timed runs per cell under the adaptive protocol")
+    parser.add_argument("--n-runs", type=int, default=5,
+                         help="Timed runs per cell; up to three warmups are unmeasured")
     parser.add_argument("--n-components", type=int, default=5)
     parser.add_argument("--seed-base", type=int, default=DEFAULT_SEED_BASE)
     parser.add_argument("--only-pls4all", action="store_true",
@@ -971,7 +902,7 @@ def main():
                          help="Output CSV path (default: results/full_matrix.csv)")
     parser.add_argument("--resume-existing", action="store_true",
                          help="Load --out-csv when it exists and skip cells "
-                              "already computed with the same seed/max-runs.")
+                              "already computed with the same seed/n_runs.")
     parser.add_argument("--force", action="store_true",
                          help="Recompute planned cells even when present in "
                               "--out-csv.")
@@ -979,19 +910,13 @@ def main():
                          help="With --resume-existing, rerun existing failed "
                               "cells instead of preserving their recorded "
                               "failure.")
-    parser.add_argument("--defer-cells-file",
-                         help="CSV wildcard rules for cells to mark as "
-                              "deferred instead of executing. Used for "
-                              "CRAN-fast benchmark publication while slow "
-                              "cells run later.")
     parser.add_argument("--flush-each-cell", action="store_true",
                          help="Rewrite --out-csv after each newly completed "
-                              "cell so long sharded runs are resumable and "
-                              "observable before the final parity pass.")
+                              "cell. This makes long sharded runs resumable "
+                              "before the final parity pass completes.")
     args = parser.parse_args()
     if args.registry_cells:
         os.environ["BENCH_REGISTRY_CELLS"] = "1"
-    defer_rules = load_defer_rules(args.defer_cells_file)
 
     algos = list(args.algorithms)
     if args.algorithms_file:
@@ -1065,20 +990,22 @@ def main():
            f"{len(threads)} threads × dynamic backends "
            f"(builds={builds}) ≈ {total} cells")
     print(f"# seed_base={args.seed_base} timeout={args.timeout}s "
-           f"adaptive_max_runs={args.n_runs}")
-    if defer_rules:
-        print(f"# defer_rules={args.defer_cells_file} ({len(defer_rules)} rules)")
+           f"n_runs={args.n_runs}")
 
     cell_count = 0
     for algo in algos:
         algo_sizes = sizes_for_algo(algo)
         algo_backends = backends_for_algo(algo)
         for n, p in algo_sizes:
-            # Pre-generate CSV cache for the adaptive seed window. Python,
-            # R and MATLAB all read these files so each backend sees the
-            # exact same input bits for any run count selected at runtime.
+            # Pre-generate CSV cache for the first run's seed (other
+            # runs regenerate inline in Python; R/MATLAB always read CSV
+            # so they need it. Each run uses seed_base+i but for parity
+            # we compare predictions from the LAST run, so we cache the
+            # LAST seed's CSV.
             last_seed = args.seed_base + args.n_runs - 1
             gen_dataset_csv(n, p, last_seed)
+            # Pre-generate all warmup seeds too, for backends that always
+            # reread the CSV per run.
             for i in range(args.n_runs):
                 gen_dataset_csv(n, p, args.seed_base + i)
             try:
@@ -1125,40 +1052,6 @@ def main():
                             print(f"SKIP existing {status}")
                             continue
 
-                        reason = defer_reason(
-                            defer_rules,
-                            algorithm=algo, backend=name, language=lang,
-                            tier=tier, kind=kind, n=n, p=p, threads=thr,
-                            libp4a_build=build)
-                        if reason:
-                            rec = {
-                                "backend": name,
-                                "ok": False,
-                                "skipped": True,
-                                "reason": reason,
-                                "algorithm": algo,
-                                "n": n, "p": p,
-                                "threads": thr,
-                                "libp4a_build": build,
-                                "language": lang,
-                                "tier": tier,
-                                "kind": kind,
-                                "seed_base": args.seed_base,
-                                "prediction_seed": args.seed_base,
-                                "n_runs": 0,
-                                "total_runs": 0,
-                                "max_runs": args.n_runs,
-                                "timing_statistic": "deferred",
-                                "timing_decision": "deferred",
-                                "subprocess_s": 0.0,
-                                "versions": {"timing_schema": TIMING_SCHEMA},
-                            }
-                            records.append(rec)
-                            print(f"DEFER — {reason[:100]}")
-                            if args.flush_each_cell:
-                                write_records(csv_out, records)
-                            continue
-
                         rec = run_backend(name, script, lang, tier, kind,
                                             algo, n, p, args.n_components,
                                             args.n_runs, thr, build,
@@ -1172,17 +1065,14 @@ def main():
                             "tier": tier,
                             "kind": kind,
                             "seed_base": args.seed_base,
+                            "prediction_seed": args.seed_base + args.n_runs - 1,
                         })
-                        rec["prediction_seed"] = record_prediction_seed(rec)
                         write_prediction_metadata(rec)
                         snapshot_reference_oracle(rec)
                         records.append(rec)
                         ran_records.append(rec)
                         if rec.get("ok"):
-                            score = rec.get("reported_ms", rec.get("median_ms", 0))
-                            stat = rec.get("timing_statistic", "time")
-                            runs_done = rec.get("n_runs", "?")
-                            print(f"{stat}={float(score):.2f}ms n={runs_done}")
+                            print(f"median={rec.get('median_ms', 0):.2f}ms")
                         else:
                             print(f"FAIL — {rec.get('reason', '?')[:100]}")
                         if args.flush_each_cell:

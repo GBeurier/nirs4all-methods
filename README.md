@@ -257,8 +257,7 @@ python -m pip install -r benchmarks/cross_binding/requirements-git.txt
 # Complete overnight canonical method/reference matrix.
 # Default: registry cells + registry-declared external references only.
 # Skips cells already present in results/full_matrix.csv.
-# Env overrides: FORCE=1 RERUN_FAILED=1 THREADS="1 3 10" N_RUNS=40.
-# N_RUNS is the adaptive total-run cap, including the warmstart.
+# Env overrides: FORCE=1 RERUN_FAILED=1 THREADS="1 3 10" N_RUNS=5.
 benchmarks/cross_binding/run_overnight.sh
 
 # Exhaustive stress matrix: all pls4all bindings/tiers, all CPU libp4a
@@ -305,7 +304,7 @@ recognised by French law).
   title   = {pls4all: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/pls4all},
-  version = {0.97.3}
+  version = {0.97.2}
 }
 ```
 

@@ -1,0 +1,15 @@
+{
+  "algorithm": "opls",
+  "backend": "ref_r_ropls",
+  "n": 1000,
+  "n_runs": 5,
+  "p": 500,
+  "prediction_seed": 1234567894,
+  "seed_base": 1234567890,
+  "source_predictions_path": "/tmp/pls4all-main-merge/benchmarks/cross_binding/data/.predictions/opls_ref_r_ropls_1000x500_t1_blas-omp.npy",
+  "versions": {
+    "language": "R 4.3.3",
+    "ropls": "1.34.0",
+    "timing_schema": "warmup-v3"
+  }
+}

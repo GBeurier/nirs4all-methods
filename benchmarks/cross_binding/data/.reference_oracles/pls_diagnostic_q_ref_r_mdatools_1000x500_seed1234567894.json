@@ -1,0 +1,20 @@
+{
+  "algorithm": "pls_diagnostic_q",
+  "backend": "ref_r_mdatools",
+  "n": 1000,
+  "n_runs": 5,
+  "p": 500,
+  "prediction_seed": 1234567894,
+  "seed_base": 1234567890,
+  "source_predictions_path": "/tmp/pls4all-main-merge/benchmarks/cross_binding/data/.predictions/pls_diagnostic_q_ref_r_mdatools_1000x500_t1_blas-omp.npy",
+  "versions": {
+    "blas": "libscipy_openblas 0.3.30 blas=1",
+    "language": "R (host Linux x86_64)",
+    "numpy": "2.3.5",
+    "reference_id": "r_mdatools",
+    "reference_library": "mdatools",
+    "reference_version": "0.15.0",
+    "timing_driver": "rscript-batch",
+    "timing_schema": "warmup-v3"
+  }
+}

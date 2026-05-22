@@ -1136,48 +1136,6 @@ BACKEND_DISPLAY = {
     "r_ropls":          "ropls",
     "r_mixomics":       "mixOmics",
     "matlab_pls":       "plsregress",
-    # pls4all-side R facade packages (mimic upstream `pls` / `mdatools`
-    # APIs without depending on those packages). They are
-    # `kind="pls4all_binding"` in the orchestrator, so they belong in
-    # the R · pls4all band, not Other.
-    "r_pls_compat":      "pls4all.R.pls",
-    "r_mdatools_compat": "pls4all.R.mdatools",
-}
-
-# Editorial filter rules for the published parity tables. The CSV still
-# carries these rows for the benchmark gate; we just keep them out of
-# the docs to reduce noise.
-#
-#   DOC_HIDDEN_BACKENDS: always dropped. `registry_pls4all` is an
-#   internal MethodSpec harness (bench_registry_pls4all.py) that calls
-#   `MethodSpec.pls4all_fn` through pls4all.Context/Config — useful for
-#   the parity gate, not a user-facing API surface.
-#
-#   FIXED_EXTERNAL_LIBRARY: when a method declares a registry parity
-#   reference for the same (language, library) pair, the fixed cross-
-#   binding row that runs the same external is hidden — its `ref.*`
-#   sibling carries the parity story and the 📐 truth-source mark.
-DOC_HIDDEN_BACKENDS = {"registry_pls4all"}
-FIXED_EXTERNAL_LIBRARY: dict[str, tuple[str, str]] = {
-    "sklearn":     ("python", "scikit-learn"),
-    "ikpls":       ("python", "ikpls"),
-    "r_pls":       ("r", "pls"),
-    "r_ropls":     ("r", "ropls"),
-    "r_mixomics":  ("r", "mixomics"),
-    "matlab_pls":  ("matlab", "plsregress"),
-}
-# Static (cid -> (language, library)) fallback. `load_truth_source_metadata()`
-# is host-sensitive — it omits refs when optional resolution factories fail
-# (e.g. no `mixOmics` installed on the docs build host). The collapse rule
-# must still fire when the `ref.*` row is in the CSV, so we map the canonical
-# reference CIDs to their (language, library) pair directly. Used in
-# parity_table() in addition to truth_sources.
-REF_CID_LIBRARY: dict[str, tuple[str, str]] = {
-    "ref.python_scikit_learn": ("python", "scikit-learn"),
-    "ref.python_ikpls":        ("python", "ikpls"),
-    "ref.r_pls":               ("r", "pls"),
-    "ref.r_ropls":             ("r", "ropls"),
-    "ref.r_mixomics":          ("r", "mixomics"),
 }
 REF_DISPLAY_OVERRIDE = {
     "ref_python_nirs4all":                                  "nirs4all",
@@ -1314,8 +1272,8 @@ def parse_csv(path: Path) -> dict[str, list[dict]]:
 
     Method pages should agree with the dashboard: `full_matrix.csv` is the
     baseline, while `dashboard_refresh_*.csv` files can supersede stale cells.
-    Prefer the current adaptive timing schema over old warmup/cold-run rows,
-    then the newest source
+    Prefer the current warmup timing schema over old cold-run rows, then
+    the newest source
     file. Non-C++ bindings collapse to the production blas-omp row for their
     displayed column.
     """
@@ -1344,8 +1302,7 @@ def parse_csv(path: Path) -> dict[str, list[dict]]:
                 key = (algo, cid, n, p, t)
                 build = r.get("libp4a_build", "")
                 rank = (
-                    {"adaptive-v1": 3, "warmup-v3": 2,
-                     "warmup-v2": 1}.get(
+                    {"warmup-v3": 2, "warmup-v2": 1}.get(
                         _timing_schema(r), 0),
                     1 if build == "blas-omp" else 0,
                     float(source_mtime),
@@ -1926,10 +1883,7 @@ def _band_of(cid: str) -> str:
         return "cpp"
     if cid in ("pls4all.python", "pls4all.sklearn", "pls4all.registry"):
         return "python-pls4all"
-    # Prefix match so future compat shims (pls4all.R.pls, pls4all.R.mdatools,
-    # pls4all.R.formula, …) all land in the R · pls4all band without
-    # needing a new explicit branch.
-    if cid == "pls4all.R" or cid.startswith("pls4all.R."):
+    if cid in ("pls4all.R", "pls4all.R.formula"):
         return "r-pls4all"
     if cid in ("pls4all.matlab", "pls4all.matlab.classdef"):
         return "matlab-pls4all"
@@ -1951,160 +1905,6 @@ def _truth_quality_class(quality: str) -> str:
         "relaxed":     "truth-source-relaxed",
         "qualitative": "truth-source-qualitative",
     }.get(quality, "truth-source")
-
-
-def _quality_from_tol(tol):
-    """Tolerance-band classifier — kept aligned with the registry's
-    `_truth_source_quality()` in `parity_timing/registry.py`. Used both
-    for the per-row badge styling and for the method-level legend chip.
-    """
-    if tol is None:
-        return "unknown"
-    try:
-        t = float(tol)
-    except (TypeError, ValueError):
-        return "unknown"
-    if t != t:  # NaN
-        return "unknown"
-    if t <= 1e-6:
-        return "strict"
-    if t < 1e-1:
-        return "relaxed"
-    return "qualitative"
-
-
-def _format_diff(diff_str):
-    """Format `1.23e-04` → `1e-04`. Returns (formatted_or_empty, abs_value)."""
-    if not diff_str:
-        return "", 0.0
-    try:
-        d = float(diff_str)
-    except (TypeError, ValueError):
-        return "", 0.0
-    if d != d:
-        return "", 0.0
-    if d == 0:
-        return "", 0.0
-    return f"{d:.0e}", abs(d)
-
-
-def _row_worst_diff(cells_in_row, cid):
-    """Aggregate `parity_metric()` across visible sizes for one row.
-
-    The single parity badge per row should reflect the WORST observed
-    metric across the columns shown, not just the first cell. Keeps
-    the basis from the first valid cell since basis is invariant per
-    row.
-    """
-    basis = ""
-    worst_str = ""
-    worst_abs = -1.0
-    for r in cells_in_row:
-        if r is None:
-            continue
-        b, d = parity_metric(r, cid)
-        if not basis:
-            basis = b
-        try:
-            v = abs(float(d)) if d else 0.0
-        except (TypeError, ValueError):
-            continue
-        if v != v:  # NaN
-            continue
-        if v > worst_abs:
-            worst_abs = v
-            worst_str = d
-    return basis, worst_str
-
-
-# Verdict severity ladder for REAL outcomes only (test ran, has a
-# result). `not_run` and `not_available` are absence-of-data, not
-# failure modes — they must NOT outrank an "exact" pass on another
-# size for the same row. Otherwise a row that passed at 100×50 and
-# wasn't measured at 100×500 would render as "not run", erasing the
-# real verdict.
-_REAL_VERDICT_RANK = {
-    "exact":      0,
-    "drift":      1,
-    "error":      4,
-    "divergent":  5,
-}
-
-
-def _row_worst_verdict(cells_in_row, cid):
-    """Worst-severity verdict across visible sizes.
-
-    Prefers the worst REAL outcome (exact/drift/divergent/error) so a
-    row with any real result is judged by its weakest cell. Falls back
-    to the first cell's absence-of-data verdict only when no size has
-    a real outcome.
-    """
-    real_worst = None
-    real_rank = -1
-    fallback = "not_available"
-    fallback_set = False
-    for r in cells_in_row:
-        if r is None:
-            continue
-        v = verdict(r, cid)
-        if not fallback_set:
-            fallback = v
-            fallback_set = True
-        if v in _REAL_VERDICT_RANK:
-            rk = _REAL_VERDICT_RANK[v]
-            if rk > real_rank:
-                real_rank = rk
-                real_worst = v
-    return real_worst if real_worst is not None else fallback
-
-
-def _parity_badge_html(verdict_, basis, diff, quality, is_self):
-    """Compose one parity-cell HTML, accounting for tolerance band.
-
-    For non-exact verdicts the badge keeps its existing icon+signed-diff
-    format. For "exact" verdicts the rendering splits by:
-      - reference parity + canonical-self        → `source`
-      - reference parity + strict tolerance      → ✓ ref (phosphor)
-      - reference parity + relaxed tolerance     → ≈ ref (amber)
-      - reference parity + qualitative tolerance → ~ shape (grey)
-      - reference parity + unknown tolerance     → ? ref (grey, italic)
-      - binding parity (pls4all binding ↔ C++)   → ✓ bind (phosphor)
-    so a tol ≥ 1 "pass" no longer looks identical to a bit-exact one.
-
-    The `is_self` short-circuit must happen *after* the failure paths so
-    a canonical reference row whose self-run errored or diverged still
-    shows the failure, not a confident grey "source".
-    """
-    if verdict_ != "exact":
-        icon = VERDICT_ICON[verdict_]
-        fmt, _ = _format_diff(diff)
-        if fmt:
-            sign = "+" if diff and not str(diff).startswith("-") else ""
-            return f"parity parity-{verdict_}", f"{icon} {sign}{fmt}"
-        return f"parity parity-{verdict_}", icon
-    if is_self and basis == "reference":
-        return "parity parity-ref-source", "source"
-    fmt, _ = _format_diff(diff)
-    if basis == "binding":
-        # Binding parity = pls4all binding vs C++ binding. ABI-level
-        # consistency, not the loose reference gate — always phosphor.
-        label = fmt if fmt else "bind"
-        return "parity parity-exact", f"✓ {label}"
-    # Reference-gate exact pass — quality-aware split.
-    if quality == "strict":
-        return ("parity parity-ref-strict",
-                f"✓ ref {fmt}" if fmt else "✓ ref")
-    if quality == "relaxed":
-        return ("parity parity-ref-relaxed",
-                f"≈ ref {fmt}" if fmt else "≈ ref")
-    if quality == "qualitative":
-        return ("parity parity-ref-qualitative",
-                f"~ shape {fmt}" if fmt else "~ shape")
-    # `quality == "unknown"`: missing or non-finite registry tolerance.
-    # Don't lend phosphor authority to a row whose gate strength we
-    # can't classify — render a neutral grey badge with the diff value.
-    return ("parity parity-ref-unknown",
-            f"? ref {fmt}" if fmt else "? ref")
 
 
 def _truth_quality_label(quality: str, tol: float) -> str:
@@ -2149,56 +1949,6 @@ def parity_table(method: str, rows: list[dict],
     if not rows:
         return "_No benchmark rows recorded for this method._"
 
-    # Editorial filter (see DOC_HIDDEN_BACKENDS / FIXED_EXTERNAL_LIBRARY).
-    # First pass: which (language, library) ref.* rows are actually
-    # present for this method? That set controls which fixed-external
-    # cross-binding rows we collapse — we only hide a duplicate when
-    # its sibling reference row is genuinely in the table.
-    #
-    # We seed the set from two sources to stay robust against
-    # host-sensitive metadata: (a) the registry's resolved truth-source
-    # entries (truth_sources, which may be partial if optional packages
-    # don't resolve on the docs host), and (b) a static REF_CID_LIBRARY
-    # fallback keyed by the rendered ref.* CID.
-    rows_cids = {column_id(r["backend"], r.get("libp4a_build", ""))
-                 for r in rows}
-    present_ref_pairs: set[tuple[str, str]] = set()
-    for cid, meta in truth_sources.items():
-        if cid not in rows_cids:
-            continue
-        lang = str(meta.get("language") or "").strip().lower()
-        lib = str(meta.get("library") or "").strip().lower()
-        if lang and lib:
-            present_ref_pairs.add((lang, lib))
-    for cid, pair in REF_CID_LIBRARY.items():
-        if cid in rows_cids:
-            present_ref_pairs.add(pair)
-
-    def _is_doc_hidden(r: dict) -> bool:
-        backend = r.get("backend", "")
-        if backend in DOC_HIDDEN_BACKENDS:
-            return True
-        pair = FIXED_EXTERNAL_LIBRARY.get(backend)
-        if pair and pair in present_ref_pairs:
-            return True
-        return False
-
-    rows = [r for r in rows if not _is_doc_hidden(r)]
-    if not rows:
-        return "_No benchmark rows recorded for this method._"
-
-    # Pre-filter: drop rows for backends that don't implement this
-    # method at all (every measured cell is `not_available`). If
-    # that empties the entire set we render a friendlier note rather
-    # than an empty table — `_row_is_present()` below uses the same
-    # rule per-thread.
-    def _is_unsupported_only(r: dict) -> bool:
-        cid = column_id(r["backend"], r.get("libp4a_build", ""))
-        return verdict(r, cid) == "not_available"
-    if rows and all(_is_unsupported_only(r) for r in rows):
-        return ("_No backend implements this method yet — only "
-                "registry-declared parity references exist._")
-
     cells: dict[tuple[str, int, int, int], dict] = {}
     for r in rows:
         try:
@@ -2228,87 +1978,35 @@ def parity_table(method: str, rows: list[dict],
         if r is None:
             return float("nan")
         try:
-            return float(r.get("reported_ms") or r.get("median_ms") or "nan")
+            return float(r.get("median_ms") or "nan")
         except (TypeError, ValueError):
             return float("nan")
 
-    # Method-level reference tolerance — used to band the parity badge
-    # (strict / relaxed / qualitative). Prefer the registry's truth-source
-    # metadata; fall back to the first row that records a finite
-    # `reference_parity_tolerance` so the badge stays honest even when
-    # `load_truth_source_metadata()` produced an empty dict.
-    method_tol = None
-    for meta in truth_sources.values():
-        try:
-            method_tol = float(meta.get("tolerance"))
-            if method_tol == method_tol:
-                break
-        except (TypeError, ValueError):
-            continue
-    if method_tol is None or method_tol != method_tol:
-        for r in rows:
-            try:
-                t = float(r.get("reference_parity_tolerance"))
-                if t == t:
-                    method_tol = t
-                    break
-            except (TypeError, ValueError):
-                continue
-    method_quality = _quality_from_tol(method_tol)
-
     lines: list[str] = []
     lines.append("### Benchmarks\n")
-    legend_lines = [
-        "Adaptive wall-clock per cell measured against "
-        "[`full_matrix.csv`](../benchmarks/overview.md). "
-        "Only backends that implement this method are listed; "
-        "libraries without the method are omitted.",
-        "",
-        "**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a "
-        "reference-gate pass at strict / relaxed / qualitative "
-        "tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees "
-        "with the C++ baseline &nbsp;·&nbsp; ✗ divergent "
-        "&nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The "
-        "fastest backend per column is marked 🏆.",
-    ]
-    if method_tol is not None and method_tol == method_tol:
-        if method_quality == "strict":
-            legend_lines += [
-                "",
-                f"**Reference gate**: strict — numeric equivalence "
-                f"(`rmse_rel_tol ≤ {method_tol:.0e}`).",
-            ]
-        elif method_quality == "relaxed":
-            legend_lines += [
-                "",
-                f"**Reference gate**: relaxed — known algorithmic "
-                f"drift between pls4all and the external reference "
-                f"(`rmse_rel_tol ≤ {method_tol:.0e}`).",
-            ]
-        elif method_quality == "qualitative":
-            legend_lines += [
-                "",
-                f"**Reference gate**: qualitative — shape/smoke "
-                f"comparison only. The external library and pls4all "
-                f"do not produce numerically equivalent output for "
-                f"this method (see the MethodSpec notes); the "
-                f"`rmse_rel_tol ≤ {method_tol:.0e}` budget is set "
-                f"wide on purpose. Treat ~ shape as *“we ran both, "
-                f"both finished”*, not as numerical agreement.",
-            ]
+    legend = (
+        "Median wall-clock per cell from "
+        "[`benchmarks/cross_binding/results/full_matrix.csv`]"
+        "(../benchmarks/overview.md). Verdict legend: ✓ exact · "
+        "≈ drift · ✗ divergent · ⊘ not available in lib · — not run · "
+        "⚠ error. The fastest backend per column is marked with a "
+        "🏆 medal."
+    )
     if truth_sources:
-        legend_lines += [
-            "",
-            f"Rows tagged with **{TRUTH_SOURCE_ICON}** are the "
-            "canonical parity references for this method "
-            "(declared in "
-            "[`parity_timing.registry`](../benchmarks/methodology.md)). "
-            "C++ and external rows show reference parity; pls4all "
-            "language bindings show binding parity against the C++ "
-            "backend. Hover the icon for role and tolerance band.",
-        ]
-    legend_lines.append("")
-    lines.append("\n".join(legend_lines))
+        legend += (
+            f" Rows tagged with **{TRUTH_SOURCE_ICON}** are *also* "
+            "declared in [`benchmarks/parity_timing/registry.py`]"
+            "(../benchmarks/methodology.md) as the canonical parity "
+            "references for this method "
+            "(`python_reference` / `r_reference` / `extra_references`). "
+            "C++ and external rows show reference parity; pls4all language "
+            "bindings show binding parity against the C++ backend. "
+            f"The {TRUTH_SOURCE_ICON} icon points at the *library-of-record* "
+            "the parity gate ultimately answers to. Hover the icon to "
+            "see the role and tolerance band."
+        )
+    legend += "\n"
+    lines.append(legend)
 
     lines.append("::::{tab-set}\n:class: parity-tabs\n")
     for t in threads:
@@ -2350,26 +2048,10 @@ def parity_table(method: str, rows: list[dict],
             '</tr></thead>',
         ]
 
-        # Pre-scan rows so we can drop backends that don't implement
-        # this method (or that simply didn't run any size). A row is
-        # "present" only when at least one of its visible cells has a
-        # REAL outcome — exact/drift/divergent/error. Cells whose
-        # verdict is `not_available` (library doesn't ship the method)
-        # or `not_run` (size deferred / timeout / not scheduled) are
-        # absence-of-data, not evidence of presence.
-        _PRESENCE_VERDICTS = {"exact", "drift", "divergent", "error"}
-        def _row_is_present(cid: str) -> bool:
-            for (n, p_) in sizes:
-                r = cells.get((cid, n, p_, t))
-                if r is None:
-                    continue
-                if _row_verdict(r, cid) in _PRESENCE_VERDICTS:
-                    return True
-            return False
-
         for band_key, band_label in BAND_ORDER:
             band_cids = [c for c in grouped[band_key]
-                         if _row_is_present(c)]
+                         if any(cells.get((c, n, p_, t)) is not None
+                                for (n, p_) in sizes)]
             if not band_cids:
                 continue
             lang_tag = BAND_LANG[band_key]
@@ -2388,15 +2070,21 @@ def parity_table(method: str, rows: list[dict],
                                None)
                 if primary is None:
                     continue
-                # Use the worst |diff| AND worst verdict across visible
-                # sizes so the single badge reflects the whole row, not
-                # just the first cell. A row whose first cell passed
-                # but a later size diverged must render as divergent.
-                v = _row_worst_verdict(cells_in_row, cid)
-                basis, diff = _row_worst_diff(cells_in_row, cid)
-                is_self = is_true(primary.get("is_canonical_reference"))
-                p_class, p_cell = _parity_badge_html(
-                    v, basis, diff, method_quality, is_self)
+                v = _row_verdict(primary, cid)
+                icon = VERDICT_ICON[v]
+                basis, diff = parity_metric(primary, cid)
+                if v == "exact":
+                    label = "ref" if basis == "reference" else "bind"
+                    p_cell = (f"{icon} {label}"
+                              if not diff or diff in ("0", "0.0")
+                              else f"{icon} {float(diff):.0e}")
+                else:
+                    try:
+                        d = float(diff) if diff else float("nan")
+                        p_cell = (f"{icon} {d:+.0e}" if d == d else icon)
+                    except ValueError:
+                        p_cell = icon
+                p_class = f"parity parity-{v}"
                 truth_meta = truth_sources.get(cid)
                 bk_row_class = "bk-row"
                 if truth_meta:
@@ -2422,7 +2110,7 @@ def parity_table(method: str, rows: list[dict],
                         row.append('<td class="ms ms-empty">—</td>')
                         continue
                     ms = _row_ms(r)
-                    fmt = fmt_ms(r.get("reported_ms") or r.get("median_ms", "")) \
+                    fmt = fmt_ms(r.get("median_ms", "")) \
                         if ms == ms else "—"
                     best = column_min.get((n, p_))
                     is_best = (best is not None and best[1] == cid)
