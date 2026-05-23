@@ -2,7 +2,7 @@
 
 Phase 7c scaffolding. Minimal `.Call` gateway over `libp4a` with
 fit/predict wrappers for every shipped PLS regression solver. Builds and
-installs from `bindings/r/pls4all/`.
+installs from `bindings/r/n4m/`.
 
 ## Build / install
 
@@ -21,7 +21,7 @@ cd bindings/r
 R CMD INSTALL \
     --configure-vars="PLS4ALL_INCLUDE_DIR=$PWD/../../cpp/include \
                       PLS4ALL_LIB_DIR=$PWD/../../build/dev-release/cpp/src" \
-    pls4all
+    n4m
 ```
 
 At load time R needs to find `libp4a`. Either install the shared library
@@ -31,20 +31,20 @@ on the system path or export `LD_LIBRARY_PATH` (Linux) /
 ## Smoke
 
 ```R
-library(pls4all)
+library(n4m)
 
-pls4all_version()
+n4m_version()
 # "0.96.0+abi.1.13.0"
 
-pls4all_abi_version()
+n4m_abi_version()
 # c(1, 13, 0)
 
 set.seed(42)
 X <- matrix(rnorm(2000), nrow = 200)
 y <- X %*% rnorm(10) + 0.1 * rnorm(200)
 
-model <- pls4all_fit(X, y, algo = "pls_simpls", n_components = 5)
-preds <- pls4all_predict(model, X)
+model <- n4m_fit(X, y, algo = "pls_simpls", n_components = 5)
+preds <- n4m_predict(model, X)
 sqrt(mean((preds - y) ^ 2))
 ```
 

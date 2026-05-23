@@ -1,113 +1,52 @@
 # cpp/tests/CMakeLists.txt — Phase 0 test runner.
 #
-# Uses a hand-rolled zero-dependency harness (cpp/tests/harness.hpp +
-# main.cpp) so we honour the zero-mandatory-deps promise. doctest can be
-# vendored in a future PR if richer ergonomics become worth the policy
-# departure.
+# Hand-rolled zero-dependency harness in harness.hpp + main.cpp.
+# Each subsequent phase appends its test files to the source list.
 
 add_executable(n4m_tests
     main.cpp
-    abi/test_aom_global_public_abi.cpp
-    abi/test_aom_operators.cpp
-    abi/test_aom_pop_public_abi.cpp
-    abi/test_aom_pop_selection.cpp
-    abi/test_aom_preprocessing.cpp
-    abi/test_aom_selection.cpp
-    abi/test_di_pls.cpp
-    abi/test_extra_pls.cpp
-    abi/test_kernel_pls.cpp
-    abi/test_multiblock_extensions.cpp
-    abi/test_pls_diagnostics.cpp
-    abi/test_pls_monitoring.cpp
-    abi/test_recursive_pls.cpp
-    abi/test_sparse_pls.cpp
-    abi/test_tensor_pls.cpp
-    abi/test_validation_plan_abi.cpp
-    abi/test_bipls_selection.cpp
-    abi/test_bve_selection.cpp
-    abi/test_emcuve_selection.cpp
-    abi/test_t2_selection.cpp
-    abi/test_wvc_selection.cpp
-    abi/test_lifecycle.cpp
-    abi/test_cars_selection.cpp
-    abi/test_classification_extensions.cpp
-    abi/test_classification_metrics.cpp
-    abi/test_lw_pls.cpp
-    abi/test_component_coefficients.cpp
-    abi/test_config_setters.cpp
-    abi/test_cross_validation.cpp
-    abi/test_ga_selection.cpp
-    abi/test_interval_selection.cpp
-    abi/test_ipw_selection.cpp
-    abi/test_status_codes.cpp
-    abi/test_variable_importance.cpp
-    abi/test_variable_selection.cpp
-    abi/test_version.cpp
-    abi/test_matrix_view.cpp
-    abi/test_mb_pls.cpp
-    abi/test_error_messages.cpp
-    abi/test_oom_paths.cpp
-    abi/test_metrics.cpp
-    abi/test_model_selection.cpp
-    abi/test_pipeline.cpp
-    abi/test_pls_lda.cpp
-    abi/test_pls_logistic.cpp
-    abi/test_randomization_selection.cpp
-    abi/test_random_frog_selection.cpp
-    abi/test_rep_selection.cpp
-    abi/test_scars_selection.cpp
-    abi/test_shaving_selection.cpp
-    abi/test_sipls_selection.cpp
-    abi/test_spa_selection.cpp
-    abi/test_stability_selection.cpp
-    abi/test_st_selection.cpp
-    abi/test_uve_selection.cpp
-    abi/test_validation.cpp
-    abi/test_validation_advanced.cpp
-    abi/test_model_stubs.cpp
-    abi/test_blas_backend.cpp
-    abi/test_openmp_backend.cpp
-    abi/test_cuda_backend.cpp)
-target_link_libraries(n4m_tests PRIVATE n4m_c n4m_core n4m_core)
-target_include_directories(n4m_tests
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${PROJECT_SOURCE_DIR}/cpp/src
-        ${PROJECT_BINARY_DIR}/generated)
-if(PLS4ALL_WITH_BLAS)
-    # test_blas_backend.cpp uses #if defined(N4M_USE_BLAS) to pick its
-    # expected return value from n4m_backend_is_available.
-    target_compile_definitions(n4m_tests PRIVATE N4M_USE_BLAS=1)
-    # n4m_tests embeds n4m_core OBJECTS directly (via the
-    # PRIVATE n4m_core link). Those objects reference cblas_* under
-    # N4M_USE_BLAS, so the test target must also carry the BLAS link.
-    target_link_libraries(n4m_tests PRIVATE ${BLAS_LIBRARIES})
-    if(BLAS_LINKER_FLAGS)
-        target_link_options(n4m_tests PRIVATE ${BLAS_LINKER_FLAGS})
-    endif()
-endif()
-if(PLS4ALL_WITH_OPENMP)
-    target_compile_definitions(n4m_tests PRIVATE N4M_USE_OPENMP=1)
-    # Same gotcha as BLAS: the test target embeds n4m_core objects
-    # directly, so it must carry the OpenMP runtime link.
-    target_link_libraries(n4m_tests PRIVATE OpenMP::OpenMP_CXX)
-endif()
-if(PLS4ALL_WITH_CUDA)
-    target_compile_definitions(n4m_tests PRIVATE N4M_USE_CUDA=1)
-    target_include_directories(n4m_tests PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
-    # Same gotcha as BLAS / OpenMP — the test target embeds n4m_core
-    # objects directly so it needs the CUDA runtime + cuBLAS link.
-    target_link_libraries(n4m_tests PRIVATE CUDA::cudart CUDA::cublas)
-endif()
-pls4all_add_warnings(n4m_tests)
+    test_augmenters_noise_drift.cpp
+    test_augmenters_phase17.cpp
+    test_augmenters_edge_splines_random.cpp
+    test_augmenters_wavelength_spectral.cpp
+    test_fck.cpp
+    test_filter_x_outlier.cpp
+    test_filters_meta.cpp
+    test_filters_y.cpp
+    test_metrics.cpp
+    test_preprocessing_baselines.cpp
+    test_preprocessing_feature_selection.cpp
+    test_preprocessing_orthogonalization.cpp
+    test_preprocessing_resampling.cpp
+    test_preprocessing_signal_conversion.cpp
+    test_preprocessing_smoothing.cpp
+    test_preprocessing_stateful.cpp
+    test_preprocessing_stateless.cpp
+    test_preprocessing_wavelets.cpp
+    test_rng_pcg64.cpp
+    test_signal_type.cpp
+    test_splitters.cpp
+    test_transfer_metrics.cpp)
+target_link_libraries(n4m_tests PRIVATE n4m_c)
+target_include_directories(n4m_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${PROJECT_BINARY_DIR}/generated)
+# Pass the parity fixture directory so test_rng_pcg64.cpp can load the JSON
+# without relying on a working directory. Quote-wrapping survives the CMake
+# generator and ends up as a stringised C++ token at compile time.
+target_compile_definitions(n4m_tests PRIVATE
+    N4M_PARITY_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/parity/fixtures")
+n4m_add_warnings(n4m_tests)
 
-if(WIN32 AND TARGET n4m_c)
+if(WIN32)
     add_custom_command(TARGET n4m_tests POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                $<TARGET_FILE:n4m_c>
-                $<TARGET_FILE_DIR:n4m_tests>)
+            $<TARGET_RUNTIME_DLLS:n4m_tests>
+            $<TARGET_FILE_DIR:n4m_tests>
+        COMMAND_EXPAND_LISTS)
 endif()
 
-add_test(NAME n4m_tests
-         COMMAND n4m_tests)
-set_tests_properties(n4m_tests PROPERTIES TIMEOUT 60)
+add_test(NAME n4m_tests COMMAND n4m_tests)
+set_tests_properties(n4m_tests PROPERTIES
+    LABELS "smoke;abi;parity"
+    TIMEOUT 60)

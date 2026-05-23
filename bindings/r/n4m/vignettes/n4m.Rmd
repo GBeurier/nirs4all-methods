@@ -1,0 +1,95 @@
+---
+title: "Introduction to n4m"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to n4m}
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+`n4m` is a portable Partial Least Squares (PLS) and Near-Infrared
+Spectroscopy (NIRS) engine. The C++17 implementation is vendored and
+compiled from source at install time; no external system library is
+required.
+
+## Quick start (matrix API)
+
+```{r quickstart}
+library(n4m)
+
+set.seed(42)
+n <- 50
+p <- 8
+X <- matrix(rnorm(n * p), nrow = n, ncol = p)
+beta <- c(2, -1, 0.5, rep(0, p - 3))
+y <- matrix(as.numeric(X %*% beta + rnorm(n, sd = 0.1)), ncol = 1)
+
+fit <- n4m_fit(X, y, algo = "pls_nipals", n_components = 3L)
+preds <- n4m_predict(fit, X)
+
+cat("RMSE:", sqrt(mean((preds - y)^2)), "\n")
+```
+
+## Formula interface
+
+The base-R formula API mirrors `lm()` and other standard regression
+modelling conventions.
+
+```{r formula}
+df <- as.data.frame(X)
+df$y <- as.numeric(y)
+fit_form <- pls(y ~ ., data = df, ncomp = 3L)
+class(fit_form)
+```
+
+## Version and ABI
+
+The runtime version string embeds both the project semver and the
+stable C ABI version. Downstream consumers can assert ABI
+compatibility before calling lower-level entry points.
+
+```{r version}
+n4m_version()
+n4m_abi_version()
+```
+
+## Supported algorithms
+
+`n4m_fit()` selects the solver via the `algo` argument. Recognised
+values include `"pls_nipals"` (default), `"pls_simpls"`, `"pls_svd"`,
+`"pls_kernel_algorithm"`, `"pls_wide_kernel"`,
+`"pls_orthogonal_scores"`, `"pls_power"`, `"pls_randomized_svd"`, and
+`"pcr_svd"`. The full algorithm taxonomy is documented in the package
+website.
+
+```{r algos}
+fit_simpls <- n4m_fit(X, y, algo = "pls_simpls", n_components = 3L)
+fit_svd    <- n4m_fit(X, y, algo = "pls_svd",    n_components = 3L)
+
+# Same numerical answers up to algorithmic tolerance.
+all.equal(n4m_predict(fit_simpls, X[1:5, ]),
+          n4m_predict(fit_svd,    X[1:5, ]),
+          tolerance = 1e-10)
+```
+
+## Further reading
+
+* The `dispatch_fit()` entry point exposes the full method catalogue
+  (sparse SIMPLS, CPPLS, weighted, robust, ridge, continuum,
+  multi-block, GLM, MIR, PDS, DS, and others) with a unified
+  parameter-list interface.
+* Variable-selection wrappers (`spa_select`, `cars_select`,
+  `variable_select_rank`) return a ranked feature index suitable for
+  downstream model retraining.
+* Diagnostics (`pls_diagnostics_compute`, `approximate_press_compute`,
+  `pls_monitoring_run`) implement Hotelling T-squared, Q residuals,
+  DModX, and process-monitoring alarms.
+
+See the project [website](https://gbeurier.github.io/n4m/) and the
+cross-binding parity reports at
+<https://github.com/GBeurier/pls4all/tree/main/docs/parity> for the
+full feature matrix.

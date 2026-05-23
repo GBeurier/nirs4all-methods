@@ -1,12 +1,12 @@
 # cmake/CompilerWarnings.cmake
-# Provides pls4all_add_warnings(<target>) — applies the canonical warning set.
+# Provides n4m_add_warnings(<target>) — applies the canonical warning set.
 
-if(DEFINED _PLS4ALL_COMPILER_WARNINGS_INCLUDED)
+if(DEFINED _N4M_COMPILER_WARNINGS_INCLUDED)
     return()
 endif()
-set(_PLS4ALL_COMPILER_WARNINGS_INCLUDED ON)
+set(_N4M_COMPILER_WARNINGS_INCLUDED ON)
 
-set(_pls4all_gnu_clang_warnings
+set(_n4m_gnu_clang_warnings
     -Wall
     -Wextra
     -Wpedantic
@@ -31,11 +31,11 @@ set(_pls4all_gnu_clang_warnings
 
 # Selectively disable a few warnings that are unreasonably noisy on
 # generated code (CMake-configured headers) or in C-friendly hot paths.
-set(_pls4all_gnu_clang_disables
+set(_n4m_gnu_clang_disables
     -Wno-unknown-pragmas
 )
 
-set(_pls4all_msvc_warnings
+set(_n4m_msvc_warnings
     /W4
     /permissive-
     /Zc:__cplusplus
@@ -45,19 +45,19 @@ set(_pls4all_msvc_warnings
     /wd4324  # struct padded due to alignas — expected in matrix view
 )
 
-function(pls4all_add_warnings target)
+function(n4m_add_warnings target)
     if(NOT TARGET ${target})
-        message(FATAL_ERROR "pls4all_add_warnings: '${target}' is not a target.")
+        message(FATAL_ERROR "n4m_add_warnings: '${target}' is not a target.")
     endif()
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
         target_compile_options(${target} PRIVATE
-            ${_pls4all_gnu_clang_warnings}
-            ${_pls4all_gnu_clang_disables})
+            ${_n4m_gnu_clang_warnings}
+            ${_n4m_gnu_clang_disables})
     elseif(MSVC)
-        target_compile_options(${target} PRIVATE ${_pls4all_msvc_warnings})
+        target_compile_options(${target} PRIVATE ${_n4m_msvc_warnings})
     endif()
 
-    if(PLS4ALL_WARNINGS_AS_ERRORS)
+    if(N4M_WARNINGS_AS_ERRORS)
         if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
             target_compile_options(${target} PRIVATE -Werror)
         elseif(MSVC)

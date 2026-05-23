@@ -1,0 +1,56 @@
+# Makevars for the n4m R package.
+#
+# The package vendors the entire libp4a C++ source tree under `libp4a/`
+# and compiles it statically into the package shared object (n4m.so).
+# No system-level libp4a is required at install or runtime — this is
+# the CRAN-friendly distribution path.
+#
+# Requires GNU make (declared via SystemRequirements in DESCRIPTION) so
+# we can use $(wildcard ...) and pattern substitution. R always invokes
+# `make` with the R-supplied include paths; we add our own via
+# PKG_CPPFLAGS and supply all object files via OBJECTS.
+
+# ---- libp4a object enumeration -------------------------------------------
+LIBP4A_DIR     = libp4a
+LIBP4A_C_API   = $(wildcard $(LIBP4A_DIR)/c_api/*.cpp)
+LIBP4A_CORE    = $(wildcard $(LIBP4A_DIR)/core/*.cpp)
+# cuda_dispatch.cpp is the CUDA backend implementation — gated by
+# PLS4ALL_WITH_CUDA in the standalone CMake build. The R package
+# always builds with CUDA OFF (no cublas at install time on CRAN
+# farms), so the file is filtered out and its functions become
+# unreferenced symbols. The reference build path (the default) never
+# calls them, so the link succeeds.
+LIBP4A_CORE_NOCUDA = $(filter-out $(LIBP4A_DIR)/core/cuda_dispatch.cpp, $(LIBP4A_CORE))
+LIBP4A_SOURCES = $(LIBP4A_C_API) $(LIBP4A_CORE_NOCUDA)
+LIBP4A_OBJECTS = $(LIBP4A_SOURCES:.cpp=.o)
+
+# ---- R-side wrapper objects (top-level src/*.c) -------------------------
+R_C_SOURCES = r_init.c r_gateway.c r_dispatch.c r_methods.c
+R_C_OBJECTS = $(R_C_SOURCES:.c=.o)
+
+# Top-level C++ sentinel forces R into C++ link mode (R-exts §1.6).
+# Without a .cpp at the top of src/, R may pick the C linker and miss
+# libstdc++ symbols at runtime.
+R_CXX_SOURCES = n4m_cxx.cpp
+R_CXX_OBJECTS = $(R_CXX_SOURCES:.cpp=.o)
+
+# Final object list R uses to link n4m.so.
+OBJECTS = $(R_C_OBJECTS) $(R_CXX_OBJECTS) $(LIBP4A_OBJECTS)
+
+# ---- Compile flags -------------------------------------------------------
+# The vendored copy is a STATIC build, so define PLS4ALL_STATIC to make
+# p4a_export.h's P4A_API expand to nothing. PLS4ALL_BUILDING_CORE /
+# PLS4ALL_BUILDING_DLL macros are not set — there is no DLL boundary.
+PKG_CPPFLAGS = -DPLS4ALL_STATIC=1 \
+               -I$(LIBP4A_DIR)/include \
+               -I$(LIBP4A_DIR) \
+               -I.
+
+# C++17 is mandatory for the vendored core. Setting CXX_STD = CXX17 tells
+# R to invoke the C++ compiler with the appropriate -std flag for the
+# platform (R handles the per-compiler flag mapping). Avoid hard-coding
+# -std=c++17 directly in flags — CRAN rejects that.
+CXX_STD = CXX17
+
+# Everything is linked statically from $(OBJECTS); no external library.
+PKG_LIBS =

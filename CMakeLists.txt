@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 # ============================================================================
-# Single source of truth: cpp/include/pls4all/n4m_version.h
+# Single source of truth: cpp/include/n4m/n4m_version.h
 # ============================================================================
 # Both the project semver (N4M_PROJECT_VERSION_*) and the ABI semver
 # (N4M_ABI_VERSION_*) live in n4m_version.h. We parse the header at configure
@@ -16,10 +16,10 @@ cmake_minimum_required(VERSION 3.21)
 # manifest. The version-sync.yml workflow fails any PR where a manifest has
 # drifted from the header.
 
-set(_p4a_version_h "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/pls4all/n4m_version.h")
+set(_p4a_version_h "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/n4m/n4m_version.h")
 if(NOT EXISTS "${_p4a_version_h}")
     message(FATAL_ERROR
-        "pls4all: canonical version header not found at ${_p4a_version_h}")
+        "n4m: canonical version header not found at ${_p4a_version_h}")
 endif()
 file(READ "${_p4a_version_h}" _p4a_version_h_content)
 
@@ -32,7 +32,7 @@ foreach(_macro IN ITEMS
     if(NOT _p4a_version_h_content MATCHES
             "(^|\n)[ \t]*#[ \t]*define[ \t]+${_macro}[ \t]+([0-9]+)")
         message(FATAL_ERROR
-            "pls4all: ${_macro} not found in n4m_version.h — header drift?")
+            "n4m: ${_macro} not found in n4m_version.h — header drift?")
     endif()
     set(${_macro} "${CMAKE_MATCH_2}")
 endforeach()
@@ -47,16 +47,16 @@ set(N4M_PROJECT_VERSION
 if(NOT _p4a_version_h_content MATCHES
         "(^|\n)[ \t]*#[ \t]*define[ \t]+N4M_PROJECT_VERSION_STRING[ \t]+\"([^\"]+)\"")
     message(FATAL_ERROR
-        "pls4all: N4M_PROJECT_VERSION_STRING not found in n4m_version.h")
+        "n4m: N4M_PROJECT_VERSION_STRING not found in n4m_version.h")
 endif()
 if(NOT "${CMAKE_MATCH_2}" STREQUAL "${N4M_PROJECT_VERSION}")
     message(FATAL_ERROR
-        "pls4all: N4M_PROJECT_VERSION_STRING (\"${CMAKE_MATCH_2}\") disagrees "
+        "n4m: N4M_PROJECT_VERSION_STRING (\"${CMAKE_MATCH_2}\") disagrees "
         "with numeric macros (${N4M_PROJECT_VERSION}). Run "
         "scripts/bump_version.sh to re-sync.")
 endif()
 
-project(pls4all
+project(n4m
     VERSION ${N4M_PROJECT_VERSION}
     DESCRIPTION "Portable PLS/NIRS engine with stable C ABI"
     HOMEPAGE_URL "https://github.com/GBeurier/pls4all"
@@ -81,27 +81,27 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 # Out-of-source builds only.
 if(CMAKE_BINARY_DIR STREQUAL PROJECT_SOURCE_DIR)
     message(FATAL_ERROR
-        "pls4all does not support in-source builds. "
+        "n4m does not support in-source builds. "
         "Run `cmake --preset dev-debug` (or dev-release / a ci-* preset).")
 endif()
 
-# Toplevel detection so consumers using find_package(pls4all) or
+# Toplevel detection so consumers using find_package(n4m) or
 # add_subdirectory() don't accidentally compile our tests.
 if(PROJECT_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    set(PLS4ALL_IS_TOPLEVEL ON)
+    set(N4M_IS_TOPLEVEL ON)
 else()
-    set(PLS4ALL_IS_TOPLEVEL OFF)
+    set(N4M_IS_TOPLEVEL OFF)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-include(Pls4allOptions)
+include(N4mOptions)
 include(CompilerWarnings)
 include(SanitizersToolchain)
 
 # OpenMP must be discovered at the top-level so its imported target
 # (OpenMP::OpenMP_CXX) is visible in both cpp/src/ and cpp/tests/.
-# When PLS4ALL_WITH_OPENMP=OFF this is a no-op.
-if(PLS4ALL_WITH_OPENMP)
+# When N4M_WITH_OPENMP=OFF this is a no-op.
+if(N4M_WITH_OPENMP)
     find_package(OpenMP REQUIRED COMPONENTS CXX)
 endif()
 
@@ -109,14 +109,14 @@ endif()
 # CUDA::cudart / CUDA::cublas imported targets are visible everywhere.
 # Phase 45 uses host-side cuBLAS only, no .cu compilation, so we do
 # NOT enable_language(CUDA).
-if(PLS4ALL_WITH_CUDA)
+if(N4M_WITH_CUDA)
     find_package(CUDAToolkit REQUIRED)
 endif()
 
-# pls4all needs at least one library output to be useful.
-if(NOT PLS4ALL_BUILD_SHARED AND NOT PLS4ALL_BUILD_STATIC)
+# n4m needs at least one library output to be useful.
+if(NOT N4M_BUILD_SHARED AND NOT N4M_BUILD_STATIC)
     message(FATAL_ERROR
-        "PLS4ALL_BUILD_SHARED and PLS4ALL_BUILD_STATIC are both OFF — "
+        "N4M_BUILD_SHARED and N4M_BUILD_STATIC are both OFF — "
         "nothing to build. Enable at least one.")
 endif()
 
@@ -126,104 +126,104 @@ endif()
 # ============================================================================
 # enable_testing() before add_subdirectory(cpp/src) so n4m_tests (added inside
 # n4m_targets.cmake) is registered with the root CTest project.
-if(PLS4ALL_BUILD_TESTS)
+if(N4M_BUILD_TESTS)
     enable_testing()
 endif()
 add_subdirectory(cpp/src)
 
-if(PLS4ALL_BUILD_TESTS AND EXISTS "${PROJECT_SOURCE_DIR}/cpp/tests/CMakeLists.txt")
+if(N4M_BUILD_TESTS AND EXISTS "${PROJECT_SOURCE_DIR}/cpp/tests/CMakeLists.txt")
     add_subdirectory(cpp/tests)
 endif()
-if(PLS4ALL_BUILD_CLI AND EXISTS "${PROJECT_SOURCE_DIR}/cpp/cli/CMakeLists.txt")
+if(N4M_BUILD_CLI AND EXISTS "${PROJECT_SOURCE_DIR}/cpp/cli/CMakeLists.txt")
     add_subdirectory(cpp/cli)
 endif()
 
 # Add this so install rules below detect n4m_cli.
 # (Empty placeholder kept to preserve commit context.)
-if(PLS4ALL_BUILD_EXAMPLES AND EXISTS "${PROJECT_SOURCE_DIR}/examples/c/CMakeLists.txt")
+if(N4M_BUILD_EXAMPLES AND EXISTS "${PROJECT_SOURCE_DIR}/examples/c/CMakeLists.txt")
     add_subdirectory(examples/c)
 endif()
-if(PLS4ALL_BUILD_BENCH AND EXISTS "${PROJECT_SOURCE_DIR}/bench/cpp/CMakeLists.txt")
+if(N4M_BUILD_BENCH AND EXISTS "${PROJECT_SOURCE_DIR}/bench/cpp/CMakeLists.txt")
     add_subdirectory(bench/cpp)
 endif()
-if(PLS4ALL_BUILD_BINDINGS_R AND EXISTS "${PROJECT_SOURCE_DIR}/bindings/r/pls4all/CMakeLists.txt")
-    add_subdirectory(bindings/r/pls4all)
+if(N4M_BUILD_BINDINGS_R AND EXISTS "${PROJECT_SOURCE_DIR}/bindings/r/n4m/CMakeLists.txt")
+    add_subdirectory(bindings/r/n4m)
 endif()
-if(PLS4ALL_BUILD_BINDINGS_JS AND EXISTS "${PROJECT_SOURCE_DIR}/bindings/js/CMakeLists.txt")
+if(N4M_BUILD_BINDINGS_JS AND EXISTS "${PROJECT_SOURCE_DIR}/bindings/js/CMakeLists.txt")
     add_subdirectory(bindings/js)
 endif()
 
 # ============================================================================
-# Install + export — wired up so downstream `find_package(pls4all)` works
+# Install + export — wired up so downstream `find_package(n4m)` works
 # once at least one target is built.
 # ============================================================================
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-set(_pls4all_install_targets "")
-if(PLS4ALL_BUILD_SHARED AND TARGET n4m_c)
+set(_n4m_install_targets "")
+if(N4M_BUILD_SHARED AND TARGET n4m_c)
     if(TARGET n4m_c)
-        list(APPEND _pls4all_install_targets n4m_c)
+        list(APPEND _n4m_install_targets n4m_c)
     endif()
 endif()
-if(PLS4ALL_BUILD_STATIC AND TARGET n4m_c_static)
-    list(APPEND _pls4all_install_targets n4m_c_static)
+if(N4M_BUILD_STATIC AND TARGET n4m_c_static)
+    list(APPEND _n4m_install_targets n4m_c_static)
 endif()
-if(PLS4ALL_BUILD_CLI AND TARGET n4m_cli)
-    list(APPEND _pls4all_install_targets n4m_cli)
+if(N4M_BUILD_CLI AND TARGET n4m_cli)
+    list(APPEND _n4m_install_targets n4m_cli)
 endif()
 # n4m_core is an OBJECT library, so it is consumed via $<TARGET_OBJECTS:...>
 # inside n4m_c / n4m_c_static and never installed on its own.
 
-if(_pls4all_install_targets)
-    install(TARGETS ${_pls4all_install_targets}
-            EXPORT  pls4all_targets
+if(_n4m_install_targets)
+    install(TARGETS ${_n4m_install_targets}
+            EXPORT  n4m_targets
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
-    install(DIRECTORY cpp/include/pls4all
+    install(DIRECTORY cpp/include/n4m
             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
             FILES_MATCHING PATTERN "*.h")
 
     # Generated visibility macro header — installed alongside the source headers
-    # so consumers find it under <prefix>/include/pls4all/n4m_export.h.
-    install(FILES ${PROJECT_BINARY_DIR}/generated/pls4all/n4m_export.h
-            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/pls4all)
+    # so consumers find it under <prefix>/include/n4m/n4m_export.h.
+    install(FILES ${PROJECT_BINARY_DIR}/generated/n4m/n4m_export.h
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/n4m)
 
     configure_package_config_file(
-        cmake/Pls4allConfig.cmake.in
-        ${CMAKE_CURRENT_BINARY_DIR}/Pls4allConfig.cmake
-        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pls4all)
+        cmake/N4mConfig.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/N4mConfig.cmake
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/n4m)
     write_basic_package_version_file(
-        ${CMAKE_CURRENT_BINARY_DIR}/Pls4allConfigVersion.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/N4mConfigVersion.cmake
         VERSION ${PROJECT_VERSION}
         COMPATIBILITY SameMajorVersion)
     install(FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/Pls4allConfig.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/Pls4allConfigVersion.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pls4all)
-    install(EXPORT pls4all_targets
-            FILE Pls4allTargets.cmake
-            NAMESPACE pls4all::
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pls4all)
+        ${CMAKE_CURRENT_BINARY_DIR}/N4mConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/N4mConfigVersion.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/n4m)
+    install(EXPORT n4m_targets
+            FILE N4mTargets.cmake
+            NAMESPACE n4m::
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/n4m)
 endif()
 
 # ============================================================================
 # Configuration summary — printed at the end of configure on the top level.
 # ============================================================================
-if(PLS4ALL_IS_TOPLEVEL)
+if(N4M_IS_TOPLEVEL)
     message(STATUS "")
-    message(STATUS "pls4all ${PROJECT_VERSION}")
+    message(STATUS "n4m ${PROJECT_VERSION}")
     message(STATUS "  CMake             : ${CMAKE_VERSION}")
     message(STATUS "  Build type        : ${CMAKE_BUILD_TYPE}")
     message(STATUS "  C compiler        : ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
     message(STATUS "  C++ compiler      : ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
-    message(STATUS "  Build shared      : ${PLS4ALL_BUILD_SHARED}")
-    message(STATUS "  Build static      : ${PLS4ALL_BUILD_STATIC}")
-    message(STATUS "  Build tests       : ${PLS4ALL_BUILD_TESTS}")
-    message(STATUS "  Build CLI         : ${PLS4ALL_BUILD_CLI}")
-    message(STATUS "  Sanitizers (A/U/T): ${PLS4ALL_ENABLE_ASAN}/${PLS4ALL_ENABLE_UBSAN}/${PLS4ALL_ENABLE_TSAN}")
-    message(STATUS "  Warnings as errs  : ${PLS4ALL_WARNINGS_AS_ERRORS}")
+    message(STATUS "  Build shared      : ${N4M_BUILD_SHARED}")
+    message(STATUS "  Build static      : ${N4M_BUILD_STATIC}")
+    message(STATUS "  Build tests       : ${N4M_BUILD_TESTS}")
+    message(STATUS "  Build CLI         : ${N4M_BUILD_CLI}")
+    message(STATUS "  Sanitizers (A/U/T): ${N4M_ENABLE_ASAN}/${N4M_ENABLE_UBSAN}/${N4M_ENABLE_TSAN}")
+    message(STATUS "  Warnings as errs  : ${N4M_WARNINGS_AS_ERRORS}")
     message(STATUS "")
 endif()
