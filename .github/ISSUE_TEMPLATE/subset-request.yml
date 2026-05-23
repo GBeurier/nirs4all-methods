@@ -1,0 +1,55 @@
+name: Subset request
+description: Request a new packaging subset that re-exports part of n4m
+title: "[Subset] <subset_id>"
+labels: [subset-request, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Subset packages (e.g. `pls4all`, `nirs4all-preprocessing`, `nirs4all-selection`)
+        ship the **same** `libn4m` binary and only re-export a curated slice of the
+        catalog in the host language. Lands via
+        [`subset.md`](../../compare/main...HEAD?template=subset.md).
+
+  - type: input
+    id: subset_id
+    attributes:
+      label: Proposed subset id
+      placeholder: "e.g. pls-ensembles, nirs4all-classification"
+    validations:
+      required: true
+
+  - type: textarea
+    id: audience
+    attributes:
+      label: Audience
+      description: Who is this subset for, and what do they currently do without it?
+    validations:
+      required: true
+
+  - type: textarea
+    id: methods
+    attributes:
+      label: Methods to include
+      description: |
+        List of `method_id`s from `catalog/methods/` that this subset should re-export.
+        Be exhaustive — the catalog is the source of truth.
+    validations:
+      required: true
+
+  - type: textarea
+    id: languages
+    attributes:
+      label: Target languages / registries
+      description: "Which registries should ship this subset? (PyPI, CRAN, npm, MATLAB FX, ...)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: maintenance_cost
+    attributes:
+      label: Maintenance cost vs. user value
+      description: |
+        Subset packaging is not free — each subset expands the CI matrix and the
+        doc surface. Justify the per-subset cost: how many users? how distinct
+        from existing subsets? would a `pip extras` group suffice instead?

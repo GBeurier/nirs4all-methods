@@ -133,18 +133,5 @@ if(N4M_WITH_BLAS AND DEFINED BLAS_LIBRARIES)
     target_link_libraries(n4m_c PRIVATE ${BLAS_LIBRARIES})
 endif()
 
-# ---------------------------------------------------------------------------
-# n4m_cli — small CLI for ABI introspection / selfcheck
-# ---------------------------------------------------------------------------
-if(EXISTS "${CMAKE_SOURCE_DIR}/cpp/cli/CMakeLists.txt")
-    add_subdirectory(${CMAKE_SOURCE_DIR}/cpp/cli
-                     ${CMAKE_BINARY_DIR}/cpp/cli)
-endif()
-
-# ---------------------------------------------------------------------------
-# n4m_tests — internal harness against the C ABI surface
-# ---------------------------------------------------------------------------
-if(EXISTS "${CMAKE_SOURCE_DIR}/cpp/tests/CMakeLists.txt")
-    add_subdirectory(${CMAKE_SOURCE_DIR}/cpp/tests
-                     ${CMAKE_BINARY_DIR}/cpp/tests)
-endif()
+# n4m_cli (cpp/cli/) and n4m_tests (cpp/tests/) are wired by the
+# top-level CMakeLists.txt; don't add them again here.

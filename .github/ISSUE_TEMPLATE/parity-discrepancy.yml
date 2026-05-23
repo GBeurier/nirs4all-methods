@@ -1,0 +1,92 @@
+name: Parity discrepancy
+description: Report a numerical mismatch between n4m and a reference implementation
+title: "[Parity] <method_id> vs <reference>"
+labels: [parity, bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template when `n4m`'s output for a given method diverges from a
+        reference implementation beyond the tolerance declared in
+        `catalog/methods/<method_id>.yaml`. For `paper_only` methods, use it when
+        a `self_consistency` check fails. Lands via
+        [`parity-fix.md`](../../compare/main...HEAD?template=parity-fix.md).
+
+  - type: input
+    id: method_id
+    attributes:
+      label: Method id
+      placeholder: "e.g. pls_simpls"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: reference
+    attributes:
+      label: Which reference
+      options:
+        - canonical (`reference.canonical`)
+        - alternate (`reference.alternates[…]`)
+        - inter-binding (C++ raw vs another binding)
+        - self_consistency (paper_only method)
+    validations:
+      required: true
+
+  - type: input
+    id: scenario_id
+    attributes:
+      label: Scenario id (from parity/scenarios/<method_id>.yaml)
+      placeholder: "e.g. small_random_seed42"
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed n4m output (or the diverging field)
+      description: |
+        Paste the relevant slice of the output (coefficients, predictions, scores, …).
+        Keep it small — link to a gist for larger artefacts.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected reference output
+      description: Same slice as above, taken from the pinned reference.
+    validations:
+      required: true
+
+  - type: textarea
+    id: metrics
+    attributes:
+      label: Comparator metrics
+      description: |
+        `rmse_rel`, `max_abs`, `sign_agreement` (where applicable) reported by
+        the comparator. Indicate whether each metric is within or beyond the
+        declared tolerance.
+
+  - type: textarea
+    id: reproducer
+    attributes:
+      label: Minimal reproducer
+      description: Exact commands or code to reproduce the discrepancy.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        - OS + CPU
+        - BLAS backend / threading config (`OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, ...)
+        - libn4m version + commit
+        - Reference framework / package / pinned version
+    validations:
+      required: true
+
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Hypothesis (optional)
+      description: Where do you think the discrepancy comes from? (sign convention, BLAS implementation drift, RNG seed, …)

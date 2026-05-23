@@ -1,0 +1,124 @@
+name: Method request
+description: Request a new method to be added to n4m
+title: "[Method] <short name>"
+labels: [method-request, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting: please check `catalog/methods/` and the dashboard to confirm
+        the method isn't already covered or in draft. If accepted, you'll be invited to
+        submit a PR using the [`method-add.md`](../../compare/main...HEAD?template=method-add.md)
+        template.
+
+  - type: input
+    id: name
+    attributes:
+      label: Method canonical name
+      placeholder: "e.g. Recursive Sparse PLS"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Target category
+      options:
+        - pls
+        - preprocessing
+        - augmentation
+        - selection
+        - splitters
+        - filters
+        - diagnostics
+        - other
+    validations:
+      required: true
+
+  - type: input
+    id: publication_doi
+    attributes:
+      label: Reference publication DOI
+      placeholder: "10.xxxx/xxxxx"
+    validations:
+      required: true
+
+  - type: textarea
+    id: publication_meta
+    attributes:
+      label: Title, authors, year
+      placeholder: "de Jong, S. (1993). SIMPLS — an alternative approach to partial least squares regression."
+    validations:
+      required: true
+
+  - type: textarea
+    id: math_summary
+    attributes:
+      label: Math summary
+      description: Inline LaTeX or a pointer to the relevant section of the paper.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: external_reference_exists
+    attributes:
+      label: Does an external reference implementation exist?
+      options:
+        - Yes — packaged in a public library
+        - No — paper-only (will need self-consistency block)
+    validations:
+      required: true
+
+  - type: textarea
+    id: external_reference_details
+    attributes:
+      label: External reference details (if any)
+      description: |
+        framework (python / r / matlab / octave / julia / ...), package name, symbol,
+        pinned version, invocation hint (class / pipeline / script).
+      placeholder: |
+        framework: python
+        package: scikit-learn
+        symbol: sklearn.cross_decomposition.PLSRegression
+        pinned_version: 1.5.0
+        invocation: class
+
+  - type: textarea
+    id: parameters
+    attributes:
+      label: Expected parameters
+      description: List parameters with types, defaults, valid ranges, and short descriptions.
+
+  - type: textarea
+    id: inputs_outputs
+    attributes:
+      label: Expected inputs and outputs
+      description: "Input shapes/types (e.g. X: (n_samples, n_features)) and output shapes/types."
+
+  - type: textarea
+    id: scenarios
+    attributes:
+      label: Suggested test scenarios / datasets
+      description: |
+        Real datasets (corn / beer / alpine) and/or synthetic generators with sizes and seeds.
+        These will become entries in `parity/scenarios/<method_id>.yaml`.
+
+  - type: textarea
+    id: bindings_priority
+    attributes:
+      label: Priority bindings (optional)
+      description: Which language bindings / idiomatic profiles should expose this method first?
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Real-world use case
+      description: Why do you need this method? What problem does it solve in your domain?
+    validations:
+      required: true
+
+  - type: textarea
+    id: subset_targeting
+    attributes:
+      label: Target subset packages (optional)
+      description: "Should this method be exposed in any specific subset (pls4all, nirs4all-preprocessing, ...)?"

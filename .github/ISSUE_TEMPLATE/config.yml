@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussion
+    url: https://github.com/GBeurier/nirs4all-methods/discussions
+    about: Open-ended questions and design conversations belong in Discussions, not Issues.
+  - name: Security advisory
+    url: https://github.com/GBeurier/nirs4all-methods/security/advisories/new
+    about: For security-sensitive reports, please open a private advisory instead of a public issue.

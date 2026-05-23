@@ -1,13 +1,21 @@
-# pls4all
+# nirs4all-methods (n4m)
 
-> A portable PLS / NIRS engine in C++17 with a stable C ABI and thin
-> first-class bindings for **Python, R, MATLAB / Octave**, plus JS /
-> WebAssembly, Go, Rust, Julia, Ruby, .NET, Lua, Nim, and Android.
+> A portable PLS / NIRS engine in **C++17** with a stable **C ABI**
+> (`libn4m`) and thin first-class bindings for **Python, R, MATLAB /
+> Octave**, plus JS / WebAssembly, Julia, JNI / Android. PoC bindings
+> for Go, Rust, .NET, Ruby, Lua, Nim live under `bindings/_archive/`
+> and can be revived on demand.
 
 The same numerical core powers every binding: a model trained in Python,
 R, MATLAB, a browser, or Android is checked against the same C++ parity
 contract and tolerance policy. Cross-checked against scikit-learn, R
-`pls`, `ropls`, `mixOmics`, `ikpls`, MATLAB `plsregress`.
+`pls`, `ropls`, `mixOmics`, `ikpls`, Octave `plsregress`.
+
+> **Status**: post-merge refactor in progress. See
+> [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md) for the founding
+> document and `roadmap/` for phase-by-phase tracking. `pls4all` is now
+> a packaging subset name (slim PLS-only re-export of `n4m`); the
+> underlying binary is always `libn4m`.
 
 ---
 
@@ -43,6 +51,9 @@ pip install -e bindings/python
 ```
 
 ```python
+# Full surface (will become the canonical import after Phase F-bootstrap)
+from n4m.sklearn import PLSRegression
+# Slim PLS-only re-export (the long-standing subset package)
 from pls4all.sklearn import PLSRegression
 import numpy as np
 
@@ -58,13 +69,13 @@ print(m.score(X, y))            # sklearn-compatible
 ### R
 
 ```bash
-PLS4ALL_INCLUDE_DIR=$PWD/cpp/include \
-  PLS4ALL_LIB_DIR=$PWD/build/blas-omp/cpp/src \
-  R CMD INSTALL bindings/r/pls4all
+N4M_INCLUDE_DIR=$PWD/cpp/include \
+  N4M_LIB_DIR=$PWD/build/blas-omp/cpp/src \
+  R CMD INSTALL bindings/r/n4m
 ```
 
 ```r
-library(pls4all)
+library(n4m)
 
 # Base R formula+S3
 fit <- pls(y ~ ., data = df, ncomp = 5)
@@ -84,10 +95,11 @@ predict(fit, x = Xnew)
 
 ```matlab
 addpath(genpath('bindings/matlab'))
-mdl = pls4all.fit("sparse_simpls", X, y, "NumComponents", 5, "Lambda", 0.05);
+mdl = n4m.fit("sparse_simpls", X, y, "NumComponents", 5, "Lambda", 0.05);
 predict(mdl, Xnew)
 % 18 classdefs available: Regression, SparsePlsRegression, EcrRegression,
 % MbPlsRegression, GlmRegression, MirRegression, …
+% (CI runs Octave; MATLAB-only divergences declared in bindings/matlab/COMPAT.md)
 ```
 
 ---
@@ -203,7 +215,7 @@ implementation.
 - 🧪 **[Cross-binding runbook](benchmarks/cross_binding/README.md)** — registry refs, clean sweeps, git-pinned refs, and legacy fixed-reference modes
 - 🔬 **[Methodology](docs/benchmarks/methodology.md)** — reference policy, tolerances, threading, hardware
 - 🏗️ **[Architecture](docs/architecture/overview.md)** — memory model · error model · threading · serialization
-- 📜 **[ABI reference](docs/abi/reference.md)** — 96 `p4a_*` symbols, stability policy, changes log
+- 📜 **[ABI reference](docs/abi/reference.md)** — `n4m_*` C ABI surface, stability policy, changes log
 - 🔌 **Bindings** — [Python](docs/bindings/python.md) · [R](docs/bindings/r.md) · [MATLAB](docs/bindings/matlab.md) · [JS / WASM](docs/bindings/js.md) · [Android](docs/bindings/android.md)
 - ✅ **[Parity methodology](docs/parity/methodology.md)** — every algorithm cross-checked against an external library
 - 🛠️ **[Dev workflow](docs/dev/workflow.md)** · [build](docs/dev/build.md) · [testing](docs/dev/testing.md)

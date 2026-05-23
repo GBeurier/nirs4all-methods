@@ -1,0 +1,34 @@
+# Docker Compose entry for contributors not using VS Code's
+# "Reopen in Container". Use:
+#
+#   docker compose -f .devcontainer/docker-compose.yml run --rm dev bash
+#
+# `make shell` is the convenience proxy for this.
+
+services:
+  dev:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    image: n4m-dev:local
+    volumes:
+      - ..:/workspaces/nirs4all-methods
+      - n4m-ccache:/root/.ccache
+      - n4m-uv-cache:/root/.cache/uv
+      - n4m-r-libs:/usr/local/lib/R/site-library
+      - n4m-npm-cache:/root/.npm
+      # Host docker socket — required for parity-snapshots.yml local runs
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - CCACHE_DIR=/root/.ccache
+      - UV_CACHE_DIR=/root/.cache/uv
+    working_dir: /workspaces/nirs4all-methods
+    stdin_open: true
+    tty: true
+    init: true
+
+volumes:
+  n4m-ccache:
+  n4m-uv-cache:
+  n4m-r-libs:
+  n4m-npm-cache:

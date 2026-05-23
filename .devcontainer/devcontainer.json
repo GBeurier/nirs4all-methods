@@ -1,0 +1,41 @@
+{
+  "name": "n4m dev shell",
+  "build": {
+    "context": "..",
+    "dockerfile": "Dockerfile"
+  },
+  "workspaceFolder": "/workspaces/nirs4all-methods",
+  "mounts": [
+    "source=n4m-ccache,target=/root/.ccache,type=volume",
+    "source=n4m-uv-cache,target=/root/.cache/uv,type=volume",
+    "source=n4m-r-libs,target=/usr/local/lib/R/site-library,type=volume",
+    "source=n4m-npm-cache,target=/root/.npm,type=volume",
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+  "runArgs": [
+    "--init"
+  ],
+  "remoteEnv": {
+    "CCACHE_DIR": "/root/.ccache",
+    "UV_CACHE_DIR": "/root/.cache/uv"
+  },
+  "postCreateCommand": ".devcontainer/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "twxs.cmake",
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "REditorSupport.r",
+        "Gimly81.matlab",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "cmake.configureOnOpen": false,
+        "cmake.buildDirectory": "${workspaceFolder}/build/${variant:buildType}"
+      }
+    }
+  }
+}

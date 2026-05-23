@@ -1,0 +1,63 @@
+name: Binding update
+description: Add an idiomatic profile to an existing binding, or update a wrapper
+title: "[Binding update] <language>: <profile>"
+labels: [binding-update, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to propose a new idiomatic wrapper on top of an existing
+        binding (e.g. a TensorFlow.js layer on top of the JS binding), or a change
+        to an existing wrapper's API. Lands via
+        [`binding-update.md`](../../compare/main...HEAD?template=binding-update.md).
+
+  - type: input
+    id: binding
+    attributes:
+      label: Binding language
+      placeholder: "e.g. python, r, matlab, js, julia, rust, ..."
+    validations:
+      required: true
+
+  - type: input
+    id: profile_id
+    attributes:
+      label: Profile id
+      placeholder: "e.g. js_tfjs, python_keras, r_mdatools_compat"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of update
+      options:
+        - New idiomatic profile
+        - Update existing profile (API change)
+        - Update existing profile (template / docs only)
+    validations:
+      required: true
+
+  - type: textarea
+    id: api_contract
+    attributes:
+      label: Idiomatic API contract
+      description: |
+        What does the wrapper look like to a user of the target framework? Paste a
+        minimal usage snippet showing the expected idiomatic call.
+    validations:
+      required: true
+
+  - type: textarea
+    id: catalog_impact
+    attributes:
+      label: Catalog impact
+      description: |
+        Which `catalog/methods/<id>.yaml` entries gain a `bindings.<lang>.idiomatic[]`
+        item under this profile?
+
+  - type: textarea
+    id: framework_dep
+    attributes:
+      label: Framework runtime dep
+      description: Optional or required? Version range? Documented in the binding's README?

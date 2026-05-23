@@ -1,0 +1,58 @@
+name: Binding request
+description: Request a new language binding for n4m
+title: "[Binding] <language>"
+labels: [binding-request, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Once accepted, land the new binding via
+        [`binding-add.md`](../../compare/main...HEAD?template=binding-add.md).
+
+  - type: input
+    id: language
+    attributes:
+      label: Target language
+      placeholder: "e.g. Swift, Kotlin, Zig"
+    validations:
+      required: true
+
+  - type: textarea
+    id: target_framework
+    attributes:
+      label: Target framework(s) for idiomatic wrappers
+      description: |
+        Beyond the raw FFI, which idiomatic API should the binding expose first?
+        (e.g. CoreML for Swift, Smile for Kotlin, ndarray-rs for Rust.)
+    validations:
+      required: true
+
+  - type: textarea
+    id: ffi_strategy
+    attributes:
+      label: FFI strategy
+      description: |
+        How will the language load `libn4m`? cdecl FFI, JNI, P/Invoke, ctypes, …
+        Any quirks (calling convention, struct packing, string encoding)?
+
+  - type: textarea
+    id: packaging
+    attributes:
+      label: Packaging registry
+      description: "Where will the binding ship? (PyPI, CRAN, npm, Maven Central, NuGet, crates.io, MATLAB FX, ...)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_userbase
+    attributes:
+      label: Expected userbase
+      description: Who will use this binding, and for which scenarios?
+    validations:
+      required: true
+
+  - type: textarea
+    id: maintenance_commitment
+    attributes:
+      label: Maintenance commitment
+      description: Will you maintain this binding, or are you proposing the maintainer pick it up?

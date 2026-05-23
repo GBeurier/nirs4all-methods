@@ -1,0 +1,65 @@
+name: Bug report
+description: Report a defect that does not involve numerical parity
+title: "[Bug] <short description>"
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For numerical-correctness issues (parity discrepancy vs a reference), please
+        use the [parity-discrepancy.yml](./parity-discrepancy.yml) template instead.
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - C ABI (libn4m)
+        - Python binding
+        - R binding
+        - MATLAB / Octave binding
+        - JS / WASM binding
+        - Other binding (specify in description)
+        - Build / CMake
+        - CI / workflows
+        - Docs
+        - Dashboard / website
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug. Include exact error messages.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproducer
+    attributes:
+      label: Minimal reproducer
+      description: |
+        Code or commands that reliably reproduce the bug. Smaller is better.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        - OS + version
+        - Compiler / language runtime versions
+        - libn4m version (`n4m_cli --version` or equivalent)
+        - Build preset used (`dev-debug` / `blas-omp` / ...)
+    validations:
+      required: true

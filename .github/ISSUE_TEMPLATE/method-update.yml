@@ -1,0 +1,70 @@
+name: Method update
+description: Request a change to an existing method's behaviour, parameters, or numerics
+title: "[Method update] <method_id>"
+labels: [method-update, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to propose a behavioural / signature / numerics change to a
+        method already shipped in `catalog/methods/`. Once triaged, the implementation
+        lands via the [`method-update.md`](../../compare/main...HEAD?template=method-update.md)
+        PR template.
+
+  - type: input
+    id: method_id
+    attributes:
+      label: Method id (catalog slug)
+      placeholder: "e.g. pls_simpls"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: change_type
+    attributes:
+      label: Type of change
+      options:
+        - Parameter signature (rename / add / remove)
+        - Numerical algorithm (impl change with parity impact)
+        - Default value change
+        - Output schema change (new field / removed field / renamed)
+        - Tolerance / parity policy change
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Rationale
+      description: What is wrong / suboptimal about the current behaviour? Cite the spec change or publication that motivates the update.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_change
+    attributes:
+      label: Proposed change
+      description: Exact before / after for the affected parameters, outputs, or algorithm steps.
+    validations:
+      required: true
+
+  - type: textarea
+    id: parity_impact
+    attributes:
+      label: Parity impact
+      description: |
+        Does the change break parity vs the current canonical reference? If so,
+        which tolerances need to be re-calibrated, and is a new reference required?
+
+  - type: textarea
+    id: catalog_version_bump
+    attributes:
+      label: catalog_version bump needed?
+      description: Does the change require bumping `catalog_version` and running `migrate_schema.py`?
+
+  - type: textarea
+    id: bindings_impact
+    attributes:
+      label: Bindings impact
+      description: Which idiomatic profiles need re-rendering? Any breaking change to the public API in any binding?

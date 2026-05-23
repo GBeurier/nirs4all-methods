@@ -1,0 +1,85 @@
+name: External reference request
+description: Add or pin a new external reference implementation for an existing method
+title: "[Reference] <method_id> ← <framework>:<package>"
+labels: [external-reference, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this to suggest a new entry under `reference.alternates[]` in an existing
+        method's catalog YAML, or to pin a newer version of a reference already
+        declared. Once triaged, land via
+        [`external-reference.md`](../../compare/main...HEAD?template=external-reference.md).
+
+  - type: input
+    id: method_id
+    attributes:
+      label: Method id
+      placeholder: "e.g. pls_simpls"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Add or pin?
+      options:
+        - Add new external implementation under alternates[]
+        - Bump pinned_version of an existing reference
+        - Replace canonical reference
+    validations:
+      required: true
+
+  - type: dropdown
+    id: framework
+    attributes:
+      label: Framework
+      options:
+        - python
+        - r
+        - octave
+        - matlab
+        - julia
+        - other
+    validations:
+      required: true
+
+  - type: input
+    id: package
+    attributes:
+      label: Package name
+      placeholder: "e.g. scikit-learn, pls, ropls, mixOmics, ikpls"
+    validations:
+      required: true
+
+  - type: input
+    id: symbol
+    attributes:
+      label: Symbol / entry point
+      placeholder: "e.g. sklearn.cross_decomposition.PLSRegression"
+    validations:
+      required: true
+
+  - type: input
+    id: pinned_version
+    attributes:
+      label: Pinned version
+      placeholder: "e.g. 1.5.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: env_recipe
+    attributes:
+      label: Environment recipe (if new)
+      description: |
+        If this introduces a framework / version not yet under `parity/environments/`,
+        outline the Dockerfile + lockfile we'll need. Skip if reusing an existing env_id.
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Why add this reference?
+      description: Is there a known parity gap with the canonical? Drift between frameworks worth quantifying? User-requested by a specific community?
+    validations:
+      required: true
