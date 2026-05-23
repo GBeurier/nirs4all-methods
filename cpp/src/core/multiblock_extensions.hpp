@@ -65,15 +65,23 @@ struct SoPlsResult {
     const std::vector<std::int32_t>& n_components_per_block,
     SoPlsResult& out);
 
-// OnPLS: generalized orthogonal projection for multi-block PLS. Removes
-// joint and unique components per block.
+// OnPLS: generalized orthogonal projection for multi-block PLS
+// (Löfstedt & Trygg, 2011). For each block, separates joint (globally
+// shared) and unique (block-orthogonal) variation. `joint_*` arrays hold
+// the predictive nPLS components computed after the unique components
+// have been filtered out. `unique_*` arrays hold the per-block orthogonal
+// projections. `block_reconstruction_per_block[b]` (n × p_b) is the
+// in-sample reconstruction of block b from the joint components of the
+// other connected blocks — the natural OnPLS prediction (sign- and
+// rotation-invariant under the algorithm's gauge freedom).
 struct OnPlsResult {
     std::int32_t n_blocks{0};
     std::int32_t n_joint{0};
     std::vector<std::int32_t> n_unique_per_block;
-    std::vector<std::vector<double>> joint_loadings_per_block;     // p_b × n_joint
-    std::vector<std::vector<double>> unique_loadings_per_block;    // p_b × n_unique_b
-    std::vector<std::vector<double>> joint_scores_per_block;       // n × n_joint
+    std::vector<std::vector<double>> joint_loadings_per_block;        // p_b × n_joint
+    std::vector<std::vector<double>> unique_loadings_per_block;       // p_b × n_unique_b
+    std::vector<std::vector<double>> joint_scores_per_block;          // n × n_joint
+    std::vector<std::vector<double>> block_reconstruction_per_block;  // n × p_b
 };
 
 [[nodiscard]] n4m_status_t fit_on_pls(

@@ -24,7 +24,7 @@
  */
 
 #include "mex.h"
-#include "n4m/n4m.h"
+#include "pls4all/p4a.h"
 
 #include <stdlib.h>
 #include <string.h>

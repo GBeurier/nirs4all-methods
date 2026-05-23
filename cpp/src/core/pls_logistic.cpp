@@ -489,8 +489,15 @@ n4m_status_t fit_predict_pls_logistic(Context& ctx,
             }
         }
 
+        // Match the sklearn convention by default: PLS-regression chassis
+        // on the one-hot label matrix. The caller is responsible for
+        // picking the solver (NIPALS to mirror scikit-learn, SIMPLS for
+        // the legacy single-pass path). PLS-DA is left as an opt-in by
+        // passing ``cfg.algorithm = N4M_ALGO_PLS_DA`` explicitly.
         Config pls_cfg = cfg;
-        pls_cfg.algorithm = N4M_ALGO_PLS_DA;
+        if (pls_cfg.algorithm != N4M_ALGO_PLS_DA) {
+            pls_cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+        }
         pls_cfg.deflation = N4M_DEFLATION_REGRESSION;
         n4m_matrix_view_t Y = rowmajor_f64_view(dummy_y, X.rows, n_classes);
         std::unique_ptr<Model> pls_model;

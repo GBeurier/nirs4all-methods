@@ -143,6 +143,16 @@ if(_N4M_FITPACK_ENABLED)
     target_link_libraries(n4m_c PRIVATE ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
 endif()
 
+# pls4all_core is an OBJECT library, so its transitive link-deps (OpenMP,
+# BLAS) don't propagate via $<TARGET_OBJECTS:>. Re-link them explicitly so
+# the n4m_c shared library resolves omp_/cblas_ symbols at load time.
+if(PLS4ALL_WITH_OPENMP AND TARGET OpenMP::OpenMP_CXX)
+    target_link_libraries(n4m_c PRIVATE OpenMP::OpenMP_CXX)
+endif()
+if(PLS4ALL_WITH_BLAS AND DEFINED BLAS_LIBRARIES)
+    target_link_libraries(n4m_c PRIVATE ${BLAS_LIBRARIES})
+endif()
+
 # ---------------------------------------------------------------------------
 # n4m_cli — small CLI for ABI introspection / selfcheck
 # ---------------------------------------------------------------------------

@@ -185,6 +185,18 @@ lib.n4m_config_set_store_scores.restype  = ctypes.c_int
 lib.n4m_config_set_store_scores.argtypes = [ctypes.c_void_p, ctypes.c_int32]
 lib.n4m_config_get_store_scores.restype  = ctypes.c_int
 lib.n4m_config_get_store_scores.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
+lib.n4m_config_set_sparse_simpls_legacy.restype  = ctypes.c_int
+lib.n4m_config_set_sparse_simpls_legacy.argtypes = [ctypes.c_void_p, ctypes.c_int32]
+lib.n4m_config_get_sparse_simpls_legacy.restype  = ctypes.c_int
+lib.n4m_config_get_sparse_simpls_legacy.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
+lib.n4m_config_set_robust_pls_legacy.restype  = ctypes.c_int
+lib.n4m_config_set_robust_pls_legacy.argtypes = [ctypes.c_void_p, ctypes.c_int32]
+lib.n4m_config_get_robust_pls_legacy.restype  = ctypes.c_int
+lib.n4m_config_get_robust_pls_legacy.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
+lib.n4m_config_set_approximate_press_legacy.restype  = ctypes.c_int
+lib.n4m_config_set_approximate_press_legacy.argtypes = [ctypes.c_void_p, ctypes.c_int32]
+lib.n4m_config_get_approximate_press_legacy.restype  = ctypes.c_int
+lib.n4m_config_get_approximate_press_legacy.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
 
 # ---- n4m_operator_bank_* ----
 lib.n4m_operator_bank_create.restype  = ctypes.c_int

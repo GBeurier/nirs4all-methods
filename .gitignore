@@ -27,7 +27,7 @@ Testing/
 compile_commands.json
 
 # Generated headers (CMake configure-time)
-cpp/include/pls4all/p4a_export.h
+cpp/include/n4m/n4m_export.h
 
 # ============================================================
 # Python (bindings + parity generator)
@@ -100,7 +100,6 @@ bindings/android/.cxx/
 .vscode/
 .idea/
 .cache/
-.devcontainer/
 *.swp
 *.swo
 *.swn
@@ -119,9 +118,11 @@ newplot*.png
 *:Zone.Identifier
 todo.local.md
 
-# Cross-binding benchmark caches (regenerated per run)
+# Cross-binding benchmark caches (regenerated per run, kept local)
 benchmarks/cross_binding/data/*.csv
 benchmarks/cross_binding/data/.predictions/
-benchmarks/cross_binding/results/*
-!benchmarks/cross_binding/results/dashboard_refresh_*.csv
+benchmarks/cross_binding/data/.reference_oracles/
+benchmarks/cross_binding/data/.x_target/
+benchmarks/cross_binding/results/
+
 docs/_build/

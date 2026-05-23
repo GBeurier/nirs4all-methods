@@ -30,7 +30,7 @@ src_files = {
 out_dir = fullfile(matlab_root, "+pls4all");
 
 cflags = sprintf("-I%s -I%s", inc_dir, gen_dir);
-ldflags = sprintf("-L%s -lp4a -Wl,-rpath,%s", lib_dir, lib_dir);
+ldflags = sprintf("-L%s -ln4m -Wl,-rpath,%s", lib_dir, lib_dir);
 
 for k = 1:length(src_files)
     src = src_files{k};

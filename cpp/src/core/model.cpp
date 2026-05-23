@@ -3918,32 +3918,16 @@ n4m_status_t predict_into(Context& ctx,
     return N4M_OK;
 }
 
-n4m_status_t fit_di_pls(Context& ctx,
-                         const Config& cfg,
-                         const n4m_matrix_view_t& X_source,
-                         const n4m_matrix_view_t& Y_source,
-                         const n4m_matrix_view_t& X_target,
-                         std::unique_ptr<Model>& out_model) {
-    out_model.reset();
-    if (cfg.solver != N4M_SOLVER_SIMPLS) {
-        ctx.set_error("DI-PLS currently requires the SIMPLS solver");
-        return N4M_ERR_UNSUPPORTED;
-    }
-    if (cfg.deflation != N4M_DEFLATION_REGRESSION) {
-        ctx.set_error("DI-PLS requires regression deflation");
-        return N4M_ERR_UNSUPPORTED;
-    }
-    if (!(cfg.di_lambda >= 0.0) || !std::isfinite(cfg.di_lambda)) {
-        ctx.set_error("di_lambda must be >= 0 and finite");
-        return N4M_ERR_INVALID_ARGUMENT;
-    }
-    if (X_source.cols != X_target.cols) {
-        ctx.set_error("X_source and X_target must have the same number of columns");
-        return N4M_ERR_SHAPE_MISMATCH;
-    }
-
-    // Build a temporary regression Config so validate_fit_request accepts
-    // the source dataset using the regression chassis.
+// Pre-0.97.4 di-PLS: SIMPLS direction with a scalar `lambda/(1+lambda)`
+// projection along the (mu_source - mu_target) difference vector. Kept
+// behind `cfg.di_pls_legacy = 1` for reproducibility of older bundles and
+// for the di_pls_phase13 unit tests that exercise this specific geometry.
+static n4m_status_t fit_di_pls_legacy(Context& ctx,
+                                       const Config& cfg,
+                                       const n4m_matrix_view_t& X_source,
+                                       const n4m_matrix_view_t& Y_source,
+                                       const n4m_matrix_view_t& X_target,
+                                       std::unique_ptr<Model>& out_model) {
     Config local = cfg;
     local.algorithm = N4M_ALGO_PLS_REGRESSION;
 
@@ -4018,7 +4002,6 @@ n4m_status_t fit_di_pls(Context& ctx,
     std::vector<double> covariance;
     resize_fill(covariance, p * q, 0.0);
     // Cross-covariance: covariance = X^T * Y  (p x q).
-    // X is (n x p) row-major; Y is (n x q) row-major.
     n4m::linalg::gemm(
         n4m::linalg::Trans_Yes, n4m::linalg::Trans_No,
         p, q, n,
@@ -4074,9 +4057,6 @@ n4m_status_t fit_di_pls(Context& ctx,
         for (double& value : x_score) value /= x_score_norm;
         for (double& value : direction) value /= x_score_norm;
 
-        // x_loadings = X^T * x_score, y_loadings = Y^T * x_score
-        // (BLAS gemv — see comment on fit_pls_regression_simpls for
-        // perf/parity rationale).
         std::vector<double> x_loadings(p, 0.0);
         n4m::linalg::gemv(
             n4m::linalg::Trans_Yes, n, p, 1.0,
@@ -4160,34 +4140,698 @@ n4m_status_t fit_di_pls(Context& ctx,
     return N4M_OK;
 }
 
-n4m_status_t fit_pls_sparse_simpls(Context& ctx,
-                                    const Config& cfg,
-                                    const n4m_matrix_view_t& X,
-                                    const n4m_matrix_view_t& Y,
-                                    std::unique_ptr<Model>& out_model) {
+// Householder tridiagonalization of a symmetric (p x p) matrix in place.
+// On entry `A` is row-major symmetric. On exit:
+//   * `diag[i]` = tridiagonal diagonal
+//   * `subd[i]` = subdiagonal between row i and row i+1 (length p - 1)
+//   * `Q` (row-major p x p) accumulates the orthogonal transform such
+//     that `A_original = Q * T * Q^T` where `T` is tridiagonal.
+//
+// Uses the standard Golub-Van Loan algorithm 8.3.1: at each step build a
+// Householder reflector that zeros entries below the subdiagonal in column
+// `k`, apply it to the trailing submatrix, and accumulate into `Q`.
+// Complexity: ~4/3 p^3 flops (vs Jacobi's ~5 p^3 per sweep).
+static void householder_tridiag(std::vector<double>& A,
+                                 std::size_t p,
+                                 std::vector<double>& diag,
+                                 std::vector<double>& subd,
+                                 std::vector<double>& Q) {
+    diag.assign(p, 0.0);
+    subd.assign(p > 0 ? p - 1 : 0, 0.0);
+    Q.assign(p * p, 0.0);
+    for (std::size_t i = 0; i < p; ++i) Q[idx(i, p, i)] = 1.0;
+    if (p <= 1U) {
+        if (p == 1U) diag[0] = A[0];
+        return;
+    }
+
+    std::vector<double> v(p, 0.0);
+    std::vector<double> w(p, 0.0);
+    for (std::size_t k = 0; k + 2U <= p; ++k) {
+        const std::size_t m = p - k - 1;  // length of vector below A[k, k]
+        // Compute alpha = -sign(A[k+1, k]) * ||A[k+1:p, k]||
+        double sigma = 0.0;
+        for (std::size_t i = k + 1; i < p; ++i) {
+            const double x = A[idx(i, p, k)];
+            sigma += x * x;
+        }
+        const double sub = A[idx(k + 1, p, k)];
+        if (sigma <= std::numeric_limits<double>::min()) {
+            // Already tridiagonal at this column; skip.
+            continue;
+        }
+        const double norm_x = std::sqrt(sigma);
+        const double alpha = (sub >= 0.0 ? -norm_x : norm_x);
+        // v = x - alpha*e_1
+        std::fill(v.begin(), v.end(), 0.0);
+        for (std::size_t i = k + 1; i < p; ++i) {
+            v[i] = A[idx(i, p, k)];
+        }
+        v[k + 1] -= alpha;
+        // ||v||^2 = 2 * (sigma - alpha * sub)
+        const double vtv = 2.0 * (sigma - alpha * sub);
+        if (vtv <= std::numeric_limits<double>::min()) continue;
+        const double beta = 2.0 / vtv;
+
+        // Apply H = I - beta * v v^T from both sides:
+        //   A := H * A * H
+        // Compute p_vec = beta * A * v   (only lower trailing p - k - 1 block
+        // matters; but since A is dense symmetric we work over the whole
+        // trailing block A[k+1:p, k+1:p] for now). Actually since v is zero
+        // above index k, A * v only touches rows/cols k+1:p.
+        // 1. w = beta * A[k+1:p, k+1:p] * v[k+1:p]
+        std::fill(w.begin(), w.end(), 0.0);
+        for (std::size_t i = k + 1; i < p; ++i) {
+            double sum = 0.0;
+            for (std::size_t j = k + 1; j < p; ++j) {
+                sum += A[idx(i, p, j)] * v[j];
+            }
+            w[i] = beta * sum;
+        }
+        // 2. K = beta/2 * v^T * w
+        double k_val = 0.0;
+        for (std::size_t i = k + 1; i < p; ++i) {
+            k_val += v[i] * w[i];
+        }
+        k_val *= 0.5 * beta;
+        for (std::size_t i = k + 1; i < p; ++i) {
+            w[i] -= k_val * v[i];
+        }
+        // 3. A := A - v w^T - w v^T  (in trailing block)
+        for (std::size_t i = k + 1; i < p; ++i) {
+            const double vi = v[i];
+            const double wi = w[i];
+            for (std::size_t j = k + 1; j < p; ++j) {
+                A[idx(i, p, j)] -= vi * w[j] + wi * v[j];
+            }
+        }
+        // 4. Zero out below-subdiagonal entries in column k (and row k by
+        //    symmetry); record subdiagonal value.
+        A[idx(k + 1, p, k)] = alpha;
+        A[idx(k, p, k + 1)] = alpha;
+        for (std::size_t i = k + 2; i < p; ++i) {
+            A[idx(i, p, k)] = 0.0;
+            A[idx(k, p, i)] = 0.0;
+        }
+        // 5. Accumulate Q := Q * H = Q - (beta * Q * v) v^T
+        //    Compute u = Q * v (length p), then Q -= beta * u v^T.
+        std::fill(w.begin(), w.end(), 0.0);
+        for (std::size_t i = 0; i < p; ++i) {
+            double sum = 0.0;
+            for (std::size_t j = k + 1; j < p; ++j) {
+                sum += Q[idx(i, p, j)] * v[j];
+            }
+            w[i] = beta * sum;
+        }
+        for (std::size_t i = 0; i < p; ++i) {
+            const double wi = w[i];
+            for (std::size_t j = k + 1; j < p; ++j) {
+                Q[idx(i, p, j)] -= wi * v[j];
+            }
+        }
+        (void)m;
+    }
+    for (std::size_t i = 0; i < p; ++i) {
+        diag[i] = A[idx(i, p, i)];
+    }
+    for (std::size_t i = 0; i + 1 < p; ++i) {
+        subd[i] = A[idx(i + 1, p, i)];
+    }
+}
+
+// Symmetric tridiagonal QL with implicit Wilkinson shift (Numerical
+// Recipes `tqli`). Operates on the tridiagonal (`diag`, `subd`) produced
+// by `householder_tridiag`, accumulating Givens rotations into `Q`
+// (already initialized to the Householder transform) so that the final
+// `Q` columns are the eigenvectors of the original symmetric matrix.
+// On exit `diag` holds the eigenvalues (unsorted).
+//
+// `subd` is conceptually of length p-1 but the algorithm pads with a
+// trailing zero so subd[i] is accessed for i in [0, p-1]; in our storage
+// we keep subd at length p with subd[p-1] = 0.
+[[nodiscard]] static n4m_status_t symmetric_qr_tridiag(
+    ::n4m::core::Context& ctx,
+    std::vector<double>& diag,
+    std::vector<double>& subd,
+    std::vector<double>& Q,
+    std::size_t p,
+    double tol,
+    const char* label) {
+    if (p <= 1U) return N4M_OK;
+    // Pad subd to length p (treat the last subdiagonal as 0).
+    subd.resize(p, 0.0);
+    constexpr std::size_t kMaxIter = 30U;  // per-eigenvalue cap (NR)
+    const double safe_tol = std::max(tol, 1e-15);
+
+    for (std::size_t l = 0; l < p; ++l) {
+        std::size_t iter = 0;
+        std::size_t m = 0;
+        while (true) {
+            // Find m >= l with subd[m] negligible relative to the
+            // surrounding diagonals.
+            for (m = l; m + 1 < p; ++m) {
+                const double dd = std::fabs(diag[m]) + std::fabs(diag[m + 1]);
+                if (std::fabs(subd[m]) <= safe_tol * dd) {
+                    break;
+                }
+            }
+            if (m == l) break;
+            if (iter++ >= kMaxIter) {
+                ctx.set_errorf("%s symmetric QR failed to converge", label);
+                return N4M_ERR_CONVERGENCE_FAILED;
+            }
+            // Wilkinson shift from the trailing 2x2 starting at l.
+            double g = (diag[l + 1] - diag[l]) / (2.0 * subd[l]);
+            double r = std::hypot(g, 1.0);
+            const double sign_r = (g >= 0.0 ? 1.0 : -1.0);
+            g = diag[m] - diag[l] + subd[l] / (g + sign_r * r);
+            double s = 1.0;
+            double c = 1.0;
+            double pp = 0.0;
+            // Implicit QL sweep, walking from index m-1 down to l.
+            for (std::size_t ii = m; ii-- > l;) {
+                double f = s * subd[ii];
+                double b = c * subd[ii];
+                r = std::hypot(f, g);
+                subd[ii + 1] = r;
+                if (r == 0.0) {
+                    diag[ii + 1] -= pp;
+                    subd[m] = 0.0;
+                    break;
+                }
+                s = f / r;
+                c = g / r;
+                g = diag[ii + 1] - pp;
+                r = (diag[ii] - g) * s + 2.0 * c * b;
+                pp = s * r;
+                diag[ii + 1] = g + pp;
+                g = c * r - b;
+                // Accumulate rotation into eigenvector matrix Q.
+                for (std::size_t row = 0; row < p; ++row) {
+                    const double qi = Q[idx(row, p, ii + 1)];
+                    const double qj = Q[idx(row, p, ii)];
+                    Q[idx(row, p, ii + 1)] = s * qj + c * qi;
+                    Q[idx(row, p, ii)]     = c * qj - s * qi;
+                }
+                if (ii == l) break;  // bounded explicitly because ii is size_t
+            }
+            if (r == 0.0 && m > l) continue;
+            diag[l] -= pp;
+            subd[l] = g;
+            subd[m] = 0.0;
+        }
+    }
+    return N4M_OK;
+}
+
+// Full symmetric eigendecomposition: matrix -> (eigvals, eigvecs) such
+// that  matrix = eigvecs * diag(eigvals) * eigvecs^T. Composes Householder
+// tridiagonalization with implicit-shift symmetric QR; substantially
+// faster than cyclic Jacobi at p >= a few hundred where Jacobi's many
+// full-matrix sweeps dominate cost.
+[[nodiscard]] static n4m_status_t symmetric_eigh(
+    ::n4m::core::Context& ctx,
+    std::vector<double> matrix,
+    std::size_t p,
+    double tol,
+    const char* label,
+    std::vector<double>& eigvals_out,
+    std::vector<double>& eigvecs_out) {
+    eigvals_out.assign(p, 0.0);
+    eigvecs_out.assign(p * p, 0.0);
+    for (std::size_t i = 0; i < p; ++i) eigvecs_out[idx(i, p, i)] = 1.0;
+    if (p == 0U) return N4M_OK;
+    if (p == 1U) {
+        eigvals_out[0] = matrix[0];
+        return N4M_OK;
+    }
+
+    std::vector<double> diag;
+    std::vector<double> subd;
+    householder_tridiag(matrix, p, diag, subd, eigvecs_out);
+    const n4m_status_t status =
+        symmetric_qr_tridiag(ctx, diag, subd, eigvecs_out, p,
+                              std::max(tol, 1e-14), label);
+    if (status != N4M_OK) return status;
+    eigvals_out = std::move(diag);
+    return N4M_OK;
+}
+
+// Apply the diPLSlib regularizer in the eigenbasis V:
+//   reg = I + alpha * V * diag(|d|) * V^T
+//       = V * (I + alpha * |d|) * V^T,
+//   reg^-1 * w_pls = V * (V^T w_pls / (1 + alpha * |d|)).
+// `eigvecs` is (p x p) row-major with eigvecs[row, col] at idx(row, p, col)
+// — column `col` is the eigenvector for eigvals[col]. `w_pls` is the input
+// ordinary-PLS weight; `w_out` receives reg^-1 w_pls.
+static void apply_diplslib_penalty(const std::vector<double>& eigvecs,
+                                    const std::vector<double>& eigvals,
+                                    const std::vector<double>& w_pls,
+                                    double alpha,
+                                    std::size_t p,
+                                    std::vector<double>& w_out) {
+    // proj = V^T * w_pls  (length p)
+    std::vector<double> proj(p, 0.0);
+    n4m::linalg::gemv(n4m::linalg::Trans_Yes,
+                       p, p, 1.0,
+                       eigvecs.data(), w_pls.data(), 0.0, proj.data());
+    for (std::size_t i = 0; i < p; ++i) {
+        const double denom = 1.0 + alpha * std::fabs(eigvals[i]);
+        proj[i] /= denom;
+    }
+    // w_out = V * proj
+    w_out.assign(p, 0.0);
+    n4m::linalg::gemv(n4m::linalg::Trans_No,
+                       p, p, 1.0,
+                       eigvecs.data(), proj.data(), 0.0, w_out.data());
+}
+
+// Nikzad-Langerodi 2018 di-PLS (matches `diPLSlib.models.DIPLS` with
+// `centering=True`, `rescale='Target'`, single ndarray target domain).
+//
+// Per component i:
+//   w_pls = (y^T x) / (y^T y)                  (1 x k)
+//   if lambda > 0:
+//       rot = (1/ns Xs^T Xs - 1/nt Xt^T Xt)    (k x k, symmetric)
+//       D   = V diag(|eigvals(rot)|) V^T       (convex relaxation)
+//       reg = I + (lambda / (y^T y)) * D
+//       w   = solve(reg^T, w_pls^T) = V * (V^T w_pls) / (1 + alpha |d|)
+//   w  /= ||w||
+//   t   = x w        ; ts = xs w ; tt = xt w
+//   c   = (y^T t) / (t^T t)
+//   p   = (t^T x) / (t^T t)
+//   ps  = (ts^T xs) / (ts^T ts)
+//   pt  = (tt^T xt) / (tt^T tt)
+//   deflate: x -= t p, xs -= ts ps, xt -= tt pt, y -= t c
+//
+// At inference time the regression vector is `b = W * (P^T W)^{-1} * C` and
+// predictions follow `yhat = (X - mu_target) @ b + mean(y_train)`. To make
+// `predict_into` produce the same number we store `mu_target` in
+// `model.x_mean` (instead of the source mean used by every other PLS path)
+// and write `coefficients = b`, `y_mean = mean(y_train)`.
+static n4m_status_t fit_di_pls_diplslib(Context& ctx,
+                                         const Config& cfg,
+                                         const n4m_matrix_view_t& X_source,
+                                         const n4m_matrix_view_t& Y_source,
+                                         const n4m_matrix_view_t& X_target,
+                                         std::unique_ptr<Model>& out_model) {
+    Config local = cfg;
+    local.algorithm = N4M_ALGO_PLS_REGRESSION;
+
+    n4m_status_t status = validate_fit_request(ctx, local, X_source, Y_source);
+    if (status != N4M_OK) return status;
+
+    std::vector<double> x_source_buf;
+    std::vector<double> y_source_buf;
+    std::vector<double> x_target_buf;
+    status = copy_matrix_checked(ctx, X_source, "X_source", x_source_buf);
+    if (status != N4M_OK) return status;
+    status = copy_matrix_checked(ctx, Y_source, "Y_source", y_source_buf);
+    if (status != N4M_OK) return status;
+    status = copy_matrix_checked(ctx, X_target, "X_target", x_target_buf);
+    if (status != N4M_OK) return status;
+
+    const std::size_t n = static_cast<std::size_t>(X_source.rows);
+    const std::size_t n_target = static_cast<std::size_t>(X_target.rows);
+    const std::size_t p = static_cast<std::size_t>(X_source.cols);
+    const std::size_t q = static_cast<std::size_t>(Y_source.cols);
+    const std::size_t a = static_cast<std::size_t>(cfg.n_components);
+    const double lambda = cfg.di_lambda;
+
+    if (q != 1U) {
+        ctx.set_error("DI-PLS (diPLSlib algorithm) currently supports a "
+                       "single response variable (q=1)");
+        return N4M_ERR_UNSUPPORTED;
+    }
+    if (n_target == 0U) {
+        ctx.set_error("DI-PLS X_target must have at least one row");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    // diPLSlib has no notion of scaling — it strictly centers. Refuse the
+    // request rather than silently producing a result that would diverge
+    // from the canonical reference; tooling that needs scaled DI-PLS can
+    // fall back to `cfg.di_pls_legacy = 1` (the legacy SIMPLS path applies
+    // standard PLS-regression scale correction at the end).
+    if (cfg.scale_x != 0 || cfg.scale_y != 0) {
+        ctx.set_error("DI-PLS (diPLSlib algorithm) does not support scaling; "
+                       "set cfg.scale_x = 0 and cfg.scale_y = 0, or use "
+                       "cfg.di_pls_legacy = 1 for the pre-0.97.4 SIMPLS path");
+        return N4M_ERR_UNSUPPORTED;
+    }
+
+    auto model = std::make_unique<Model>();
+    model->algorithm = cfg.algorithm;
+    model->solver = cfg.solver;
+    model->deflation = cfg.deflation;
+    model->n_samples = X_source.rows;
+    model->n_features = static_cast<std::int32_t>(X_source.cols);
+    model->n_targets = static_cast<std::int32_t>(Y_source.cols);
+    model->n_components = cfg.n_components;
+    model->center_x = cfg.center_x;
+    model->scale_x = cfg.scale_x;
+    model->center_y = cfg.center_y;
+    model->scale_y = cfg.scale_y;
+    model->store_scores = cfg.store_scores;
+    model->tol = cfg.tol;
+    model->max_iter = cfg.max_iter;
+
+    // Center xs by mu_s and xt by mu_t. y is centered by b0 = mean(y).
+    // Source mean (for diagnostics + the source-centering step on x/xs).
+    std::vector<double> mu_s_buf;
+    std::vector<double> mu_s_scale;
+    std::vector<double> xs;  // (n x p), centered by mu_s
+    center_scale_in_place(x_source_buf, n, p,
+                           cfg.center_x != 0, /*scale=*/false,
+                           mu_s_buf, mu_s_scale, xs);
+
+    std::vector<double> mu_t(p, 0.0);
+    if (cfg.center_x != 0) {
+        for (std::size_t row = 0; row < n_target; ++row) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                mu_t[feature] += x_target_buf[idx(row, p, feature)];
+            }
+        }
+        const double inv_nt = 1.0 / static_cast<double>(n_target);
+        for (double& value : mu_t) value *= inv_nt;
+    }
+    std::vector<double> xt(n_target * p, 0.0);
+    for (std::size_t row = 0; row < n_target; ++row) {
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            xt[idx(row, p, feature)] =
+                x_target_buf[idx(row, p, feature)] - mu_t[feature];
+        }
+    }
+
+    // y is (n x 1) so we keep it as a flat vector.
+    std::vector<double> y_mean_buf;
+    std::vector<double> y_scale_buf;
+    std::vector<double> yk;
+    center_scale_in_place(y_source_buf, n, q,
+                           cfg.center_y != 0, /*scale=*/false,
+                           y_mean_buf, y_scale_buf, yk);
+
+    // We deflate two distinct copies of x: one as the "x" used for the
+    // PLS regression (= xs in diPLSlib code), one as the "xs" used to
+    // build the convex relaxation. In our setup xs == x (matches the
+    // pls4all parity adapter that passes the same matrix for both).
+    std::vector<double> x = xs;  // deflated alongside xs
+
+    // Per-component buffers.
+    std::vector<double> W(p * a, 0.0);
+    std::vector<double> P(p * a, 0.0);
+    std::vector<double> C(a, 0.0);
+
+    std::vector<double> scores_t;
+    std::vector<double> y_scores_u;
+    if (cfg.store_scores != 0) {
+        resize_fill(scores_t, n * a, 0.0);
+        resize_fill(y_scores_u, n * a, 0.0);
+    }
+
+    std::vector<double> w_pls(p, 0.0);
+    std::vector<double> w_comp(p, 0.0);
+    std::vector<double> t_score(n, 0.0);
+    std::vector<double> ts_score(n, 0.0);
+    std::vector<double> tt_score(n_target, 0.0);
+    std::vector<double> p_load(p, 0.0);
+    std::vector<double> ps_load(p, 0.0);
+    std::vector<double> pt_load(p, 0.0);
+
+    // Convex-relaxation buffers (only used when lambda > 0).
+    std::vector<double> rot;
+    std::vector<double> eigvals;
+    std::vector<double> eigvecs;
+
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        // y^T y  (scalar — q == 1).
+        double yty = 0.0;
+        for (std::size_t row = 0; row < n; ++row) {
+            yty += yk[row] * yk[row];
+        }
+        if (!(yty > std::numeric_limits<double>::epsilon())) {
+            ctx.set_errorf("DI-PLS y residual vanished at component %llu",
+                            ull(comp));
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+
+        // w_pls = (y^T x) / (y^T y), shape (1 x p).
+        std::fill(w_pls.begin(), w_pls.end(), 0.0);
+        n4m::linalg::gemv(n4m::linalg::Trans_Yes,
+                          n, p, 1.0,
+                          x.data(), yk.data(), 0.0, w_pls.data());
+        const double inv_yty = 1.0 / yty;
+        for (double& value : w_pls) value *= inv_yty;
+
+        if (lambda > 0.0) {
+            // rot = (1/ns) xs^T xs - (1/nt) xt^T xt   (k x k, symmetric).
+            rot.assign(p * p, 0.0);
+            n4m::linalg::gemm(n4m::linalg::Trans_Yes, n4m::linalg::Trans_No,
+                               p, p, n,
+                               1.0 / static_cast<double>(n),
+                               xs.data(), p,
+                               xs.data(), p,
+                               0.0,
+                               rot.data(), p);
+            n4m::linalg::gemm(n4m::linalg::Trans_Yes, n4m::linalg::Trans_No,
+                               p, p, n_target,
+                               -1.0 / static_cast<double>(n_target),
+                               xt.data(), p,
+                               xt.data(), p,
+                               1.0,
+                               rot.data(), p);
+
+            // Eigh tol is tightened to 1e-10 — well below the 1e-6
+            // prediction parity budget but loose enough to keep the
+            // implicit-shift QR sweep count near the textbook ~30 per
+            // eigenvalue ceiling.
+            const double eigh_tol = std::min(cfg.tol, 1e-10);
+            status = symmetric_eigh(ctx, rot, p, eigh_tol,
+                                     "DI-PLS convex relaxation",
+                                     eigvals, eigvecs);
+            if (status != N4M_OK) return status;
+
+            const double alpha = lambda * inv_yty;
+            apply_diplslib_penalty(eigvecs, eigvals, w_pls, alpha, p, w_comp);
+        } else {
+            w_comp = w_pls;
+        }
+
+        // Normalize w.
+        const double w_norm = std::sqrt(squared_norm(w_comp));
+        if (!(w_norm > std::numeric_limits<double>::epsilon())) {
+            ctx.set_errorf("DI-PLS direction vanished at component %llu",
+                            ull(comp));
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : w_comp) value /= w_norm;
+
+        // t = x w
+        n4m::linalg::gemv(n4m::linalg::Trans_No, n, p, 1.0,
+                          x.data(), w_comp.data(), 0.0, t_score.data());
+        // ts = xs w
+        n4m::linalg::gemv(n4m::linalg::Trans_No, n, p, 1.0,
+                          xs.data(), w_comp.data(), 0.0, ts_score.data());
+        // tt = xt w
+        n4m::linalg::gemv(n4m::linalg::Trans_No, n_target, p, 1.0,
+                          xt.data(), w_comp.data(), 0.0, tt_score.data());
+
+        const double ttt = squared_norm(t_score);
+        if (!(ttt > std::numeric_limits<double>::epsilon())) {
+            ctx.set_errorf("DI-PLS x score vanished at component %llu",
+                            ull(comp));
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        const double tsts = squared_norm(ts_score);
+        // tt^T tt can be zero if the algorithm exhausts target signal —
+        // diPLSlib treats that by zeroing pt deflation; emulate.
+        const double tttt = squared_norm(tt_score);
+
+        // c = (y^T t) / (t^T t)
+        double ytt = 0.0;
+        for (std::size_t row = 0; row < n; ++row) {
+            ytt += yk[row] * t_score[row];
+        }
+        const double c_value = ytt / ttt;
+
+        // p = (t^T x) / (t^T t)
+        n4m::linalg::gemv(n4m::linalg::Trans_Yes, n, p, 1.0,
+                          x.data(), t_score.data(), 0.0, p_load.data());
+        for (double& value : p_load) value /= ttt;
+
+        // ps = (ts^T xs) / (ts^T ts)
+        if (tsts > std::numeric_limits<double>::epsilon()) {
+            n4m::linalg::gemv(n4m::linalg::Trans_Yes, n, p, 1.0,
+                              xs.data(), ts_score.data(), 0.0, ps_load.data());
+            for (double& value : ps_load) value /= tsts;
+        } else {
+            std::fill(ps_load.begin(), ps_load.end(), 0.0);
+        }
+
+        // pt = (tt^T xt) / (tt^T tt)
+        if (tttt > std::numeric_limits<double>::epsilon()) {
+            n4m::linalg::gemv(n4m::linalg::Trans_Yes, n_target, p, 1.0,
+                              xt.data(), tt_score.data(), 0.0, pt_load.data());
+            for (double& value : pt_load) value /= tttt;
+        } else {
+            std::fill(pt_load.begin(), pt_load.end(), 0.0);
+        }
+
+        // Deflate x, xs, xt, y.
+        // x  -= t * p
+        n4m::linalg::ger(n, p, -1.0, t_score.data(), p_load.data(),
+                          x.data(), p);
+        // xs -= ts * ps
+        n4m::linalg::ger(n, p, -1.0, ts_score.data(), ps_load.data(),
+                          xs.data(), p);
+        // xt -= tt * pt
+        if (tttt > std::numeric_limits<double>::epsilon()) {
+            n4m::linalg::ger(n_target, p, -1.0, tt_score.data(), pt_load.data(),
+                              xt.data(), p);
+        }
+        // y  -= t * c
+        for (std::size_t row = 0; row < n; ++row) {
+            yk[row] -= t_score[row] * c_value;
+        }
+
+        // Store W, P, C.
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            W[idx(feature, a, comp)] = w_comp[feature];
+            P[idx(feature, a, comp)] = p_load[feature];
+        }
+        C[comp] = c_value;
+
+        if (cfg.store_scores != 0) {
+            for (std::size_t row = 0; row < n; ++row) {
+                scores_t[idx(row, a, comp)] = t_score[row];
+            }
+        }
+    }
+
+    // b = W * inv(P^T W) * C   -- shape (p x 1).
+    // First build P^T W (a x a), then invert.
+    std::vector<double> ptw(a * a, 0.0);
+    for (std::size_t row_comp = 0; row_comp < a; ++row_comp) {
+        for (std::size_t col_comp = 0; col_comp < a; ++col_comp) {
+            double sum = 0.0;
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                sum += P[idx(feature, a, row_comp)] * W[idx(feature, a, col_comp)];
+            }
+            ptw[idx(row_comp, a, col_comp)] = sum;
+        }
+    }
+    std::vector<double> ptw_inv;
+    if (!invert_square(ptw, a, ptw_inv)) {
+        ctx.set_error("DI-PLS failed to invert P^T W");
+        return N4M_ERR_NUMERICAL_FAILURE;
+    }
+
+    // rotations = W * ptw_inv   (p x a)
+    std::vector<double> rotations(p * a, 0.0);
+    for (std::size_t feature = 0; feature < p; ++feature) {
+        for (std::size_t comp = 0; comp < a; ++comp) {
+            double sum = 0.0;
+            for (std::size_t inner = 0; inner < a; ++inner) {
+                sum += W[idx(feature, a, inner)] * ptw_inv[idx(inner, a, comp)];
+            }
+            rotations[idx(feature, a, comp)] = sum;
+        }
+    }
+    // b = rotations * C   (p x 1)
+    std::vector<double> b(p, 0.0);
+    for (std::size_t feature = 0; feature < p; ++feature) {
+        double sum = 0.0;
+        for (std::size_t comp = 0; comp < a; ++comp) {
+            sum += rotations[idx(feature, a, comp)] * C[comp];
+        }
+        b[feature] = sum;
+    }
+
+    // Predictions follow `(X - mu_t) @ b + mean(y_train)`. Store mu_t in
+    // x_mean (overriding the source-mean populated by center_scale_in_place
+    // on `mu_s_buf`) so that `predict_into` reproduces diPLSlib's
+    // `rescale='Target'` exactly. y_mean already carries mean(y_train) (q=1).
+    model->x_mean = (cfg.center_x != 0) ? mu_t : std::vector<double>(p, 0.0);
+    model->x_scale.assign(p, 1.0);
+    model->y_mean = std::move(y_mean_buf);
+    model->y_scale = std::move(y_scale_buf);
+
+    // Store fitted matrices on the model in the same row-major (p x a)
+    // layout used by every other PLS path so downstream code (the SHAP
+    // wrapper, bundle export, scores accessors) Just Works.
+    model->weights_w = std::move(W);
+    model->loadings_p = std::move(P);
+
+    // Coefficients (p x q == p x 1) with the standard `b * y_scale /
+    // x_scale` correction — but here x_scale = 1 and y_scale = 1 (we
+    // disabled scale_x/scale_y above), so it's just `b`.
+    model->coefficients.assign(p, 0.0);
+    for (std::size_t feature = 0; feature < p; ++feature) {
+        model->coefficients[feature] = b[feature];
+    }
+
+    model->rotations_r = std::move(rotations);
+
+    // y_loadings q is (q x a); for q==1 this is just C[i] per component.
+    model->y_loadings_q.assign(a, 0.0);
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        model->y_loadings_q[idx(0, a, comp)] = C[comp];
+    }
+
+    if (cfg.store_scores != 0) {
+        model->scores_t = std::move(scores_t);
+        // y_scores_u left empty; diPLSlib doesn't expose them.
+    }
+
+    out_model = std::move(model);
+    ctx.clear_error();
+    return N4M_OK;
+}
+
+n4m_status_t fit_di_pls(Context& ctx,
+                         const Config& cfg,
+                         const n4m_matrix_view_t& X_source,
+                         const n4m_matrix_view_t& Y_source,
+                         const n4m_matrix_view_t& X_target,
+                         std::unique_ptr<Model>& out_model) {
     out_model.reset();
     if (cfg.solver != N4M_SOLVER_SIMPLS) {
-        ctx.set_error("sparse PLS currently requires the SIMPLS solver");
+        ctx.set_error("DI-PLS currently requires the SIMPLS solver");
         return N4M_ERR_UNSUPPORTED;
     }
     if (cfg.deflation != N4M_DEFLATION_REGRESSION) {
-        ctx.set_error("sparse PLS requires regression deflation");
+        ctx.set_error("DI-PLS requires regression deflation");
         return N4M_ERR_UNSUPPORTED;
     }
-    if (!(cfg.sparsity_lambda >= 0.0) || !std::isfinite(cfg.sparsity_lambda)) {
-        ctx.set_error("sparsity_lambda must be >= 0 and finite");
+    if (!(cfg.di_lambda >= 0.0) || !std::isfinite(cfg.di_lambda)) {
+        ctx.set_error("di_lambda must be >= 0 and finite");
         return N4M_ERR_INVALID_ARGUMENT;
     }
-
-    // When lambda == 0 the sparse path is identical to plain SIMPLS — call
-    // the existing solver to avoid behavioural drift and reuse its test
-    // coverage.
-    if (cfg.sparsity_lambda == 0.0) {
-        Config relaxed = cfg;
-        relaxed.algorithm = N4M_ALGO_PLS_REGRESSION;
-        return fit_pls_regression_simpls(ctx, relaxed, X, Y, out_model);
+    if (X_source.cols != X_target.cols) {
+        ctx.set_error("X_source and X_target must have the same number of columns");
+        return N4M_ERR_SHAPE_MISMATCH;
     }
 
+    if (cfg.di_pls_legacy != 0) {
+        return fit_di_pls_legacy(ctx, cfg, X_source, Y_source, X_target,
+                                  out_model);
+    }
+    return fit_di_pls_diplslib(ctx, cfg, X_source, Y_source, X_target,
+                                out_model);
+}
+
+// Pre-0.97.4 sparse SIMPLS: soft-threshold the dominant left-singular
+// direction of the running X^T Y at every component with the absolute
+// `sparsity_lambda`, then renormalize. Kept opt-in via
+// `cfg.sparse_simpls_legacy` for reproducibility of older bundles; the
+// default path is the Chun & Keles spls algorithm in
+// `fit_pls_sparse_simpls_chun_keles`, which matches the R `spls`
+// package.
+static n4m_status_t fit_pls_sparse_simpls_legacy(
+    Context& ctx,
+    const Config& cfg,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
+    std::unique_ptr<Model>& out_model) {
     n4m_status_t status = validate_fit_request(ctx, cfg, X, Y);
     if (status != N4M_OK) {
         return status;
@@ -4383,6 +5027,417 @@ n4m_status_t fit_pls_sparse_simpls(Context& ctx,
     out_model = std::move(model);
     ctx.clear_error();
     return N4M_OK;
+}
+
+// --- Chun & Keles 2010 sparse PLS (matches R `spls::spls`) --------------
+//
+// The R `spls` algorithm is variable-selection + ordinary PLS rather than
+// a per-component soft-threshold of the SIMPLS recurrence. Concretely,
+// for each k in 1..K it (1) computes a sparse direction vector `what` by
+// soft-thresholding `Z = X1^T Y1` with `eta * max(|Z|)`, (2) unions the
+// non-zero indices with the previously active set `A`, then (3) fits an
+// ordinary SIMPLS regression of `Y` onto `X[, A]` with `min(k, |A|)`
+// components, and (4) deflates `Y1 = Y - X @ betahat` (the `pls2` default
+// `select` mode). The final regression coefficient is `betahat` from the
+// last iteration, embedded as zeros for the inactive features.
+
+namespace {
+
+// Soft universal threshold of Chun & Keles: `ust(b, eta) = sign(b) *
+// max(|b| - eta * max(|b|), 0)`. Operates in-place over a contiguous
+// span; `len` is the number of doubles in `b`.
+void chun_keles_ust(double* b, std::size_t len, double eta) noexcept {
+    if (len == 0) return;
+    double max_abs = 0.0;
+    for (std::size_t i = 0; i < len; ++i) {
+        const double v = std::fabs(b[i]);
+        if (v > max_abs) max_abs = v;
+    }
+    if (eta >= 1.0 || max_abs == 0.0) {
+        // R `ust` returns zeros whenever eta >= 1 or input is identically
+        // zero; mirror that.
+        std::fill(b, b + len, 0.0);
+        return;
+    }
+    const double threshold = eta * max_abs;
+    for (std::size_t i = 0; i < len; ++i) {
+        const double v = b[i];
+        const double av = std::fabs(v);
+        if (av > threshold) {
+            b[i] = std::copysign(av - threshold, v);
+        } else {
+            b[i] = 0.0;
+        }
+    }
+}
+
+// Sparse direction vector from Z (p x q): median-normalize, then either
+// apply `ust` (q == 1) or run the kappa=0.5 power iteration (q > 1).
+// Writes the p-vector into `out`.
+n4m_status_t chun_keles_spls_dv(
+    Context& ctx,
+    const std::vector<double>& Z,
+    std::size_t p,
+    std::size_t q,
+    double eta,
+    double eps,
+    std::int32_t max_iter,
+    std::vector<double>& out) {
+    resize_fill(out, p, 0.0);
+    if (p == 0 || q == 0) return N4M_OK;
+
+    // Median of |Z| — R `spls.dv` divides by this to keep the threshold
+    // scale-invariant. R's `median` averages the two middle elements for
+    // even-length inputs; replicate that to stay bit-for-bit.
+    std::vector<double> abs_z;
+    abs_z.reserve(p * q);
+    for (double value : Z) {
+        abs_z.push_back(std::fabs(value));
+    }
+    std::sort(abs_z.begin(), abs_z.end());
+    double median_abs;
+    if (abs_z.empty()) {
+        median_abs = 0.0;
+    } else if ((abs_z.size() % 2U) == 1U) {
+        median_abs = abs_z[abs_z.size() / 2U];
+    } else {
+        const std::size_t hi = abs_z.size() / 2U;
+        median_abs = 0.5 * (abs_z[hi - 1U] + abs_z[hi]);
+    }
+    if (median_abs == 0.0 || !std::isfinite(median_abs)) {
+        median_abs = 1.0;
+    }
+
+    std::vector<double> z_scaled(p * q, 0.0);
+    for (std::size_t i = 0; i < p * q; ++i) {
+        z_scaled[i] = Z[i] / median_abs;
+    }
+
+    if (q == 1U) {
+        for (std::size_t i = 0; i < p; ++i) {
+            out[i] = z_scaled[i];
+        }
+        chun_keles_ust(out.data(), p, eta);
+        return N4M_OK;
+    }
+
+    // q > 1, kappa == 0.5 branch. R loops:
+    //   M = Z Z^T  (p x p)
+    //   c = rep(10, p, 1); c_old = c
+    //   repeat:
+    //     a = svd(M c).u %*% t(svd(M c).v)   ; for p x 1 input this is M c / |M c|.
+    //     c_new = ust(M a, eta)
+    //     dis  = max|c_new - c_old|;  break if dis < eps or i > maxstep
+    std::vector<double> M(p * p, 0.0);
+    // M = z_scaled @ z_scaled^T (p x p). z_scaled is p x q row-major.
+    n4m::linalg::gemm(
+        n4m::linalg::Trans_No, n4m::linalg::Trans_Yes,
+        p, p, q,
+        1.0,
+        z_scaled.data(), q,
+        z_scaled.data(), q,
+        0.0,
+        M.data(), p);
+
+    std::vector<double> c_curr(p, 10.0);
+    std::vector<double> c_prev = c_curr;
+    std::vector<double> mc(p, 0.0);
+    std::vector<double> a_vec(p, 0.0);
+    const std::int32_t step_cap = (max_iter > 0) ? max_iter : 100;
+    bool converged = false;
+    for (std::int32_t step = 0; step < step_cap; ++step) {
+        // mc = M c
+        n4m::linalg::gemv(
+            n4m::linalg::Trans_No, p, p, 1.0,
+            M.data(), c_curr.data(), 0.0, mc.data());
+        double mc_norm_sq = 0.0;
+        for (double v : mc) mc_norm_sq += v * v;
+        const double mc_norm = std::sqrt(mc_norm_sq);
+        if (mc_norm <= std::numeric_limits<double>::epsilon()) {
+            // Power iteration collapsed; stop with zeros.
+            std::fill(c_curr.begin(), c_curr.end(), 0.0);
+            converged = true;
+            break;
+        }
+        const double inv_norm = 1.0 / mc_norm;
+        for (std::size_t i = 0; i < p; ++i) {
+            a_vec[i] = mc[i] * inv_norm;
+        }
+        std::vector<double> ma(p, 0.0);
+        n4m::linalg::gemv(
+            n4m::linalg::Trans_No, p, p, 1.0,
+            M.data(), a_vec.data(), 0.0, ma.data());
+        chun_keles_ust(ma.data(), p, eta);
+        double dis = 0.0;
+        for (std::size_t i = 0; i < p; ++i) {
+            const double d = std::fabs(ma[i] - c_prev[i]);
+            if (d > dis) dis = d;
+        }
+        c_prev = ma;
+        c_curr = ma;
+        if (dis < eps) {
+            converged = true;
+            break;
+        }
+    }
+    (void)converged;  // R does not error on non-convergence; we accept the
+                      // last iterate too.
+    for (std::size_t i = 0; i < p; ++i) {
+        out[i] = c_curr[i];
+    }
+    (void)ctx;
+    return N4M_OK;
+}
+
+// Build a contiguous (n x m) row-major submatrix of `src` (n x p) by
+// picking the columns listed in `cols`. `src` and `dst` are row-major
+// f64 buffers; `dst` is resized to n*m.
+void slice_columns(const std::vector<double>& src,
+                   std::size_t n,
+                   std::size_t p,
+                   const std::vector<std::size_t>& cols,
+                   std::vector<double>& dst) {
+    const std::size_t m = cols.size();
+    dst.assign(n * m, 0.0);
+    for (std::size_t row = 0; row < n; ++row) {
+        const double* in_row = src.data() + row * p;
+        double* out_row = dst.data() + row * m;
+        for (std::size_t k = 0; k < m; ++k) {
+            out_row[k] = in_row[cols[k]];
+        }
+    }
+}
+
+}  // namespace
+
+[[nodiscard]] static n4m_status_t fit_pls_sparse_simpls_chun_keles(
+    Context& ctx,
+    const Config& cfg,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
+    std::unique_ptr<Model>& out_model) {
+    n4m_status_t status = validate_fit_request(ctx, cfg, X, Y);
+    if (status != N4M_OK) return status;
+
+    std::vector<double> x_original;
+    std::vector<double> y_original;
+    status = copy_matrix_checked(ctx, X, "X", x_original);
+    if (status != N4M_OK) return status;
+    status = copy_matrix_checked(ctx, Y, "Y", y_original);
+    if (status != N4M_OK) return status;
+
+    const std::size_t n = static_cast<std::size_t>(X.rows);
+    const std::size_t p = static_cast<std::size_t>(X.cols);
+    const std::size_t q = static_cast<std::size_t>(Y.cols);
+    const std::size_t K = static_cast<std::size_t>(cfg.n_components);
+    const double eta = cfg.sparsity_lambda;
+
+    if (eta < 0.0 || eta >= 1.0 || !std::isfinite(eta)) {
+        ctx.set_errorf(
+            "sparse PLS (Chun & Keles): sparsity_lambda must be in [0, 1) "
+            "(got %g). For the per-component absolute-threshold variant set "
+            "cfg.sparse_simpls_legacy = 1.",
+            eta);
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+
+    auto model = std::make_unique<Model>();
+    model->algorithm = cfg.algorithm;
+    model->solver = cfg.solver;
+    model->deflation = cfg.deflation;
+    model->n_samples = X.rows;
+    model->n_features = static_cast<std::int32_t>(X.cols);
+    model->n_targets = static_cast<std::int32_t>(Y.cols);
+    model->n_components = cfg.n_components;
+    model->center_x = cfg.center_x;
+    model->scale_x = cfg.scale_x;
+    model->center_y = cfg.center_y;
+    model->scale_y = cfg.scale_y;
+    model->store_scores = cfg.store_scores;
+    model->tol = cfg.tol;
+    model->max_iter = cfg.max_iter;
+
+    // Center / scale per cfg. R `spls::spls` defaults: center X, center Y,
+    // scale.x = TRUE, scale.y = FALSE. We honour cfg here so callers can
+    // override; the registry uses the defaults from `n4m_config_create`
+    // which match R.
+    std::vector<double> xc;   // centered+scaled X (n x p)
+    std::vector<double> yc;   // centered Y (n x q)
+    center_scale_in_place(x_original, n, p, cfg.center_x != 0, cfg.scale_x != 0,
+                          model->x_mean, model->x_scale, xc);
+    center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
+                          model->y_mean, model->y_scale, yc);
+
+    // R's outer state mirrors `x1, y1` — both start as the scaled-centered
+    // X, Y. y1 is deflated each iteration; x1 is unchanged in the `pls2`
+    // default `select`. We keep `xc` constant and only carry `y1`.
+    std::vector<double> y1 = yc;
+
+    // betahat is in standardized-X space (p x q row-major).
+    std::vector<double> betahat(p * q, 0.0);
+    std::vector<bool> ever_active(p, false);
+    std::vector<std::size_t> active_indices;
+    std::vector<double> Z(p * q, 0.0);
+    std::vector<double> what;
+
+    const double inner_eps = (cfg.tol > 0.0) ? cfg.tol : 1e-4;
+    const std::int32_t inner_max_iter =
+        (cfg.max_iter > 0) ? cfg.max_iter : 100;
+
+    for (std::size_t k = 1; k <= K; ++k) {
+        // Z = xc^T y1   (p x q)
+        n4m::linalg::gemm(
+            n4m::linalg::Trans_Yes, n4m::linalg::Trans_No,
+            p, q, n,
+            1.0,
+            xc.data(), p,
+            y1.data(), q,
+            0.0,
+            Z.data(), q);
+
+        status = chun_keles_spls_dv(ctx, Z, p, q, eta, inner_eps,
+                                    inner_max_iter, what);
+        if (status != N4M_OK) return status;
+
+        // Active set: union of new non-zeros and ever-active mask.
+        for (std::size_t j = 0; j < p; ++j) {
+            if (what[j] != 0.0) ever_active[j] = true;
+        }
+        active_indices.clear();
+        for (std::size_t j = 0; j < p; ++j) {
+            if (ever_active[j]) active_indices.push_back(j);
+        }
+        if (active_indices.empty()) {
+            // No features ever picked. R returns betahat=0 here; just skip
+            // the inner PLS but keep iterating (subsequent steps may pick
+            // features, though for pls2 deflation y1 stays unchanged and so
+            // the loop is idempotent — equivalent to early-stop).
+            continue;
+        }
+
+        // Build xA (n x m) row-major. m = |A|.
+        const std::size_t m = active_indices.size();
+        std::vector<double> xA;
+        slice_columns(xc, n, p, active_indices, xA);
+
+        // Fit ordinary SIMPLS on (xA, yc) with min(k, m) components.
+        const std::int32_t ncomp = static_cast<std::int32_t>(
+            std::min(k, m));
+        n4m_matrix_view_t xa_view{
+            xA.data(), static_cast<std::int64_t>(n), static_cast<std::int64_t>(m),
+            static_cast<std::int64_t>(m), 1, N4M_DTYPE_F64, 0};
+        std::vector<double> yc_copy = yc;
+        n4m_matrix_view_t yc_view{
+            yc_copy.data(), static_cast<std::int64_t>(n), static_cast<std::int64_t>(q),
+            static_cast<std::int64_t>(q), 1, N4M_DTYPE_F64, 0};
+
+        Config inner = cfg;
+        inner.algorithm = N4M_ALGO_PLS_REGRESSION;
+        inner.solver = N4M_SOLVER_SIMPLS;
+        inner.deflation = N4M_DEFLATION_REGRESSION;
+        inner.n_components = ncomp;
+        // R `plsr(scale=FALSE)` does NOT scale, but `plsr` always centers
+        // (intercept). Both inputs are already centered so re-centering is
+        // idempotent; keep it on for symmetry with `plsr`.
+        inner.center_x = 1;
+        inner.scale_x = 0;
+        inner.center_y = 1;
+        inner.scale_y = 0;
+        inner.store_scores = 0;
+        inner.store_diagnostics = 0;
+        inner.sparsity_lambda = 0.0;
+        inner.sparse_simpls_legacy = 0;
+
+        std::unique_ptr<Model> inner_model;
+        status = fit_pls_regression_simpls(
+            ctx, inner, xa_view, yc_view, inner_model);
+        if (status != N4M_OK) return status;
+
+        // Embed inner coefficients (m x q) back into betahat (p x q).
+        std::fill(betahat.begin(), betahat.end(), 0.0);
+        for (std::size_t r = 0; r < m; ++r) {
+            const std::size_t j = active_indices[r];
+            for (std::size_t t = 0; t < q; ++t) {
+                betahat[idx(j, q, t)] =
+                    inner_model->coefficients[idx(r, q, t)];
+            }
+        }
+
+        // Deflate y1 = yc - xc @ betahat (pls2 default `select`).
+        y1 = yc;
+        n4m::linalg::gemm(
+            n4m::linalg::Trans_No, n4m::linalg::Trans_No,
+            n, q, p,
+            -1.0,
+            xc.data(), p,
+            betahat.data(), q,
+            1.0,
+            y1.data(), q);
+    }
+
+    // Map standardized-space betahat back to raw-centered-X coefficients
+    // for `predict_into` (which computes y_hat = y_mean + (X-x_mean) @
+    // coefficients). With `scale_y=0` and `center_y=1`, y_mean is mu and
+    // model.y_scale[t] is 1, so coefficients[j, t] = betahat[j, t] /
+    // x_scale[j] reproduces R's prediction
+    // (newx - meanx) / normx @ betahat[A,:] + mu.
+    resize_fill(model->coefficients, p * q, 0.0);
+    for (std::size_t j = 0; j < p; ++j) {
+        const double inv_x_scale =
+            (cfg.scale_x != 0 && model->x_scale[j] != 0.0)
+                ? (1.0 / model->x_scale[j])
+                : 1.0;
+        for (std::size_t t = 0; t < q; ++t) {
+            const double y_factor =
+                (cfg.scale_y != 0) ? model->y_scale[t] : 1.0;
+            model->coefficients[idx(j, q, t)] =
+                betahat[idx(j, q, t)] * inv_x_scale * y_factor;
+        }
+    }
+
+    // Leave weights_w / loadings_p / rotations_r / scores untouched —
+    // they aren't well-defined for the variable-selection chassis (the
+    // active set differs per iteration). The result handle's "weights_w"
+    // entry is conditional in c_api_method_result.cpp and is omitted when
+    // the vector is empty.
+    (void)inner_max_iter;  // suppress unused warnings if changed later
+
+    out_model = std::move(model);
+    ctx.clear_error();
+    return N4M_OK;
+}
+
+n4m_status_t fit_pls_sparse_simpls(Context& ctx,
+                                    const Config& cfg,
+                                    const n4m_matrix_view_t& X,
+                                    const n4m_matrix_view_t& Y,
+                                    std::unique_ptr<Model>& out_model) {
+    out_model.reset();
+    if (cfg.solver != N4M_SOLVER_SIMPLS) {
+        ctx.set_error("sparse PLS currently requires the SIMPLS solver");
+        return N4M_ERR_UNSUPPORTED;
+    }
+    if (cfg.deflation != N4M_DEFLATION_REGRESSION) {
+        ctx.set_error("sparse PLS requires regression deflation");
+        return N4M_ERR_UNSUPPORTED;
+    }
+    if (!(cfg.sparsity_lambda >= 0.0) || !std::isfinite(cfg.sparsity_lambda)) {
+        ctx.set_error("sparsity_lambda must be >= 0 and finite");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+
+    // lambda == 0 is plain SIMPLS in both algorithms; route to the
+    // standard solver so we share its test coverage.
+    if (cfg.sparsity_lambda == 0.0) {
+        Config relaxed = cfg;
+        relaxed.algorithm = N4M_ALGO_PLS_REGRESSION;
+        return fit_pls_regression_simpls(ctx, relaxed, X, Y, out_model);
+    }
+
+    if (cfg.sparse_simpls_legacy != 0) {
+        return fit_pls_sparse_simpls_legacy(ctx, cfg, X, Y, out_model);
+    }
+    return fit_pls_sparse_simpls_chun_keles(ctx, cfg, X, Y, out_model);
 }
 
 n4m_status_t fit_model(Context& ctx,

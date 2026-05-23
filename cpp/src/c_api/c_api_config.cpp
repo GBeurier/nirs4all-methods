@@ -209,6 +209,63 @@ N4M_API n4m_status_t n4m_config_set_store_diagnostics(n4m_config_t* cfg, int32_t
     N4M_CFG_TRY_END
 }
 
+N4M_API n4m_status_t n4m_config_set_sparse_simpls_legacy(
+    n4m_config_t* cfg, int32_t enabled) {
+    if (cfg == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        if (enabled != 0 && enabled != 1) return N4M_ERR_INVALID_ARGUMENT;
+        as_core(cfg)->sparse_simpls_legacy = enabled;
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_get_sparse_simpls_legacy(
+    const n4m_config_t* cfg, int32_t* out_enabled) {
+    if (cfg == nullptr || out_enabled == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        *out_enabled = as_core(cfg)->sparse_simpls_legacy;
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_set_robust_pls_legacy(
+    n4m_config_t* cfg, int32_t enabled) {
+    if (cfg == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        if (enabled != 0 && enabled != 1) return N4M_ERR_INVALID_ARGUMENT;
+        as_core(cfg)->robust_pls_legacy = enabled;
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_get_robust_pls_legacy(
+    const n4m_config_t* cfg, int32_t* out_enabled) {
+    if (cfg == nullptr || out_enabled == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        *out_enabled = as_core(cfg)->robust_pls_legacy;
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_set_approximate_press_legacy(
+    n4m_config_t* cfg, int32_t enabled) {
+    if (cfg == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        if (enabled != 0 && enabled != 1) return N4M_ERR_INVALID_ARGUMENT;
+        as_core(cfg)->approximate_press_legacy = enabled;
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_get_approximate_press_legacy(
+    const n4m_config_t* cfg, int32_t* out_enabled) {
+    if (cfg == nullptr || out_enabled == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        *out_enabled = as_core(cfg)->approximate_press_legacy;
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
 N4M_API n4m_status_t n4m_config_set_dtype(n4m_config_t* cfg, n4m_dtype_t v) {
     if (cfg == nullptr) return N4M_ERR_NULL_POINTER;
     N4M_CFG_TRY_BEGIN

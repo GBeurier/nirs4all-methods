@@ -25,15 +25,28 @@ from bench_registry_common import (adapted_params, benchmark_inputs,
 def _libp4a():
     lib_dir = os.environ.get(
         "PLS4ALL_LIB_DIR",
-        "/home/delete/nirs4all/pls4all/build/blas-omp/cpp/src")
-    return ctypes.CDLL(os.path.join(lib_dir, "libp4a.so"))
+        "/home/delete/nirs4all/nirs4all-methods/build/blas-omp/cpp/src")
+    # Post-merge rename: libp4a.so -> libn4m.so. Prefer the new name and
+    # fall back to the legacy one for older build directories.
+    for cand in ("libn4m.so", "libp4a.so"):
+        p = os.path.join(lib_dir, cand)
+        if os.path.exists(p):
+            return ctypes.CDLL(p)
+    raise FileNotFoundError(
+        f"No libn4m.so or libp4a.so found under {lib_dir}")
 
 
 def main():
     algo, csv_dir, n, p, nc, runs, seed_base, pred_path = parse_args()
     so = _libp4a()
-    so.p4a_get_version_string.restype = ctypes.c_char_p
-    libp4a_v = so.p4a_get_version_string().decode()
+    # Post-merge: the C ABI version symbol was renamed p4a_* -> n4m_*.
+    # Probe the new name first and fall back to the legacy one.
+    if hasattr(so, "n4m_get_version_string"):
+        so.n4m_get_version_string.restype = ctypes.c_char_p
+        libp4a_v = so.n4m_get_version_string().decode()
+    else:
+        so.p4a_get_version_string.restype = ctypes.c_char_p
+        libp4a_v = so.p4a_get_version_string().decode()
 
     import pls4all
 

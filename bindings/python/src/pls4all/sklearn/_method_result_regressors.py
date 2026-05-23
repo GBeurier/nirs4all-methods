@@ -60,14 +60,26 @@ class SparseSimplsRegression(_MethodResultRegressor):
 
 
 class CPPLSRegression(_MethodResultRegressor):
-    """Canonical Powered PLS (Indahl 2005)."""
+    """Canonical Powered PLS (Indahl, Liland & Næs 2009).
 
-    def __init__(self, n_components: int = 2, *, gamma: float = 0.5) -> None:
+    Default convention matches R `pls::cppls` with `lower=upper=0.5`:
+    NIPALS PLS1 with X-only deflation, no column rescaling. The
+    `gamma` parameter is recorded for downstream inspection but has
+    no effect in this canonical path. To opt into the legacy
+    `column-σ^γ-rescaled SIMPLS` recipe, set
+    ``solver=pls4all.Solver.SIMPLS``.
+    """
+
+    def __init__(self, n_components: int = 2, *, gamma: float = 0.5,
+                 solver=None) -> None:
         self.n_components = n_components
         self.gamma = gamma
+        self.solver = solver
 
     def _fit_method_result(self, ctx, X, y):
+        from .._types import Solver
         with _ManagedConfig(int(self.n_components)) as cfg:
+            cfg.solver = self.solver if self.solver is not None else Solver.NIPALS
             return _methods.cppls_fit(
                 ctx, cfg, X, y, gamma=float(self.gamma))
 

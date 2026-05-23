@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 
 #include "mex.h"
-#include "n4m/n4m.h"
+#include "pls4all/p4a.h"
 
 void mexFunction(int nlhs, mxArray *plhs[],
                  int nrhs, const mxArray *prhs[]) {

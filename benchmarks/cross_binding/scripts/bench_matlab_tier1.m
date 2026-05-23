@@ -1,6 +1,6 @@
 % MATLAB / Octave tier-1 dispatcher — registry-driven.
 %
-% Routes through `pls4all.p4a_method_fit_mex(algo, X, Y, n_components,
+% Routes through `pls4all.n4m_method_fit_mex(algo, X, Y, n_components,
 % params_struct)`, the MEX-level dispatcher that the 66 per-algo MATLAB
 % wrappers wrap. Per-algo params arrive as a JSON string in env
 % `BENCH_MATLAB_PARAMS_JSON` (built by the orchestrator from the same
@@ -249,7 +249,7 @@ function preds = fit_predict(dispatch_algo, algo, csv_dir, n, p, nc, ...
         Y_call = Y(1:split, :);
     end
 
-    res = pls4all.p4a_method_fit_mex(char(dispatch_algo), ...
+    res = pls4all.n4m_method_fit_mex(char(dispatch_algo), ...
                                        double(X_call), double(Y_call), ...
                                        int32(nc), params);
 

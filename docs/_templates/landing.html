@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>pls4all · cross-binding benchmark</title>
-  <meta name="description" content="Interactive cross-binding benchmark dashboard for the pls4all PLS/NIRS library. Same algorithm, same generated data, 17 implementations across C++, Python, R, MATLAB.">
+  <title>nirs4all-methods · cross-binding benchmark</title>
+  <meta name="description" content="Interactive cross-binding benchmark dashboard for the nirs4all-methods (formerly pls4all) PLS/NIRS engine. Same algorithm, same generated data, 17 implementations across C++, Python, R, MATLAB.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500;600;700;800&family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -540,6 +540,26 @@
       border-left: 2px solid var(--line-2);
     }
 
+    /* Row-level tint: pls4all (cross_binding registry) rows are tinted with a
+       faint phosphor wash so the donor-merged n4m methods (augmentation,
+       filter, splitter, preprocessing, baseline, signal, wavelet) read as
+       a distinct band when both groups are visible. */
+    table.bench tbody tr.row-pls4all td.algo-cell,
+    table.bench tbody tr.row-pls4all td.size-cell,
+    table.bench tbody tr.row-pls4all td.thread-cell {
+      background: linear-gradient(90deg, var(--pls4all-wash) 0%, var(--ink-2) 100%);
+    }
+    table.bench tbody tr.row-pls4all:hover td.algo-cell,
+    table.bench tbody tr.row-pls4all:hover td.size-cell,
+    table.bench tbody tr.row-pls4all:hover td.thread-cell {
+      background: linear-gradient(90deg, var(--pls4all-wash-hover) 0%, var(--ink-3) 100%);
+    }
+    table.bench tbody tr.row-pls4all td.algo-cell::before {
+      content: "◆ ";
+      color: var(--phosphor);
+      opacity: 0.5;
+      font-size: 0.7em;
+    }
     /* pls4all binding columns get a faint phosphor wash so users can
        visually distinguish "ours" from the externals they mimic. Same
        short label can recur across the divide (pls4all.sklearn vs
@@ -1291,7 +1311,7 @@
       <div class="brand">
         <span class="brand-led"></span>
         <div>
-          <div class="wordmark"><span class="accent">pls4all</span><span class="sep">/</span><span class="light">cross-binding benchmark</span></div>
+          <div class="wordmark"><span class="accent">nirs4all-methods</span><span class="sep">/</span><span class="light">cross-binding benchmark</span></div>
           <div class="tagline" id="tagline">
             same algorithm <span class="dot">·</span> same generated data <span class="dot">·</span> <span id="tagline-count">—</span> implementations
           </div>
@@ -1354,6 +1374,10 @@
       <span class="chip active crimson" data-parity="error"><span class="ico p-error">!</span>error</span>
       <span class="chip active gray" data-parity="deferred"><span class="ico p-deferred">…</span>deferred</span>
       <span class="chip active gray" data-parity="not_available"><span class="ico p-not_available">-</span>not available</span>
+    </div>
+    <div class="filter-chips" id="origin-chips" title="filter rows by method origin">
+      <span class="chip active" data-origin="pls4all" title="cross_binding registry methods (PLS-style)">pls4all</span>
+      <span class="chip active" data-origin="n4m_donor" title="donor-merged n4m methods (augmentation, filter, splitter, preprocessing, baseline, signal, wavelet…)">n4m donor</span>
     </div>
     <div class="control">
       <span class="control-label">search</span>
@@ -1491,7 +1515,13 @@ const ALGO_ALIASES = {
 };
 
 // ---------- state + url persistence ----------
-const URL_KEYS = ['algo','group','lang','libGroup','lib','size','threads','parity','search','cols','sort','density','viz'];
+const URL_KEYS = ['algo','group','lang','libGroup','lib','size','threads','parity','origin','search','cols','sort','density','viz'];
+const ORIGIN_VALUES = ['pls4all', 'n4m_donor'];
+function parseOrigin(raw) {
+  if (!raw) return new Set(ORIGIN_VALUES);
+  const keys = raw.split(',').map(x => x.trim()).filter(x => ORIGIN_VALUES.includes(x));
+  return keys.length ? new Set(keys) : new Set(ORIGIN_VALUES);
+}
 const DENSITY_VALUES = ['comfortable', 'compact', 'ultra'];
 const PARITY_VALUES = ['exact', 'drift', 'divergent', 'error', 'deferred', 'not_run', 'not_available'];
 const PARITY_ALIASES = {
@@ -1532,6 +1562,7 @@ function loadState() {
     size:    p.get('size')    || '',
     threads: p.get('threads') || '',
     parity:  parseParity(p.get('parity')),
+    origin:  parseOrigin(p.get('origin')),
     search:  p.get('search')  || '',
     cols:    new Set((p.get('cols') || '').split('|').filter(Boolean)),
     sort:    parseSort(p.get('sort')),
@@ -1564,15 +1595,26 @@ function saveState() {
   if (state.sort) p.set('sort', `${state.sort.col}:${state.sort.dir === 1 ? 'asc' : 'desc'}`);
   if (state.density && state.density !== 'comfortable') p.set('density', state.density);
   if (state.viz && state.viz !== 'duration') p.set('viz', state.viz);
+  if (state.origin && state.origin.size !== ORIGIN_VALUES.length) {
+    p.set('origin', [...state.origin].join(','));
+  }
   const h = p.toString();
   history.replaceState(null, '', h ? `#${h}` : location.pathname + location.search);
 }
 
 const state = loadState();
-// default: show ALL columns if no selection persisted (so users can see
-// the full coverage matrix immediately and narrow via presets).
+// default: load the "headline" preset on first visit so the table shows
+// a focused 8–10 column view instead of all 40+ columns at once. Users
+// can click any preset chip or "show all" to widen, and the choice is
+// persisted in the URL hash for next time.
 if (state.cols.size === 0) {
-  for (const c of DATA.columns) state.cols.add(c.id);
+  const headline = (DATA.presets && DATA.presets.headline) || null;
+  if (headline && Array.isArray(headline.cols) && headline.cols.length) {
+    for (const id of headline.cols) state.cols.add(id);
+  } else {
+    // No headline preset configured — fall back to all columns.
+    for (const c of DATA.columns) state.cols.add(c.id);
+  }
 }
 
 function nativeBaselineCol() {
@@ -1655,11 +1697,14 @@ function fmtDurationPct(pct) {
 function applyRowFilters() {
   const q = searchNorm(state.search.trim());
   const groupMap = DATA.algo_to_group || {};
+  const originMap = DATA.algo_origin || {};
   return DATA.rows.filter(row => {
     if (state.algo    && row.algo !== state.algo) return false;
     if (state.group   && groupMap[row.algo] !== state.group) return false;
     if (state.size    && sizeKey(row.n, row.p) !== state.size) return false;
     if (state.threads && String(row.threads) !== state.threads) return false;
+    const origin = originMap[row.algo] || 'pls4all';
+    if (state.origin && !state.origin.has(origin)) return false;
     if (q) {
       const hay = searchNorm([row.algo, algoDisplay(row.algo),
         ALGO_ALIASES[row.algo] || ''].join(' '));
@@ -1726,17 +1771,24 @@ function restoreRowColumnFocus() {
   return true;
 }
 
-function toggleColumnSet(ids) {
+function toggleColumnSet(ids, opts = {}) {
+  // `replace` (default): set state.cols to exactly the preset (intuitive
+  // "show only these"). `additive: true` keeps existing selection and
+  // toggles preset cols (legacy behaviour, used by ctrl/shift-click).
   const present = new Set(DATA.columns.map(c => c.id));
   const target = [...new Set(ids)]
     .filter(id => present.has(id))
     .filter(id => !fixedCol(id));
   if (!target.length) return;
   clearRowColumnFocus();
-  const allOn = target.every(id => state.cols.has(id));
-  for (const id of target) {
-    if (allOn) state.cols.delete(id);
-    else state.cols.add(id);
+  if (opts.additive) {
+    const allOn = target.every(id => state.cols.has(id));
+    for (const id of target) {
+      if (allOn) state.cols.delete(id);
+      else state.cols.add(id);
+    }
+  } else {
+    state.cols = new Set(target);
   }
   ensureFixedColumns();
 }
@@ -2065,6 +2117,16 @@ function renderControls() {
     chip.classList.toggle('active', state.parity.has(chip.dataset.parity));
   }
 
+  // origin chips (pls4all vs n4m_donor)
+  const originChips = $('origin-chips');
+  if (originChips) {
+    for (const chip of originChips.children) {
+      const k = chip.dataset.origin;
+      if (!k) continue;
+      chip.classList.toggle('active', state.origin.has(k));
+    }
+  }
+
   $('viz-mode').value = state.viz;
   $('density-select').value = state.density;
   document.body.classList.remove('density-comfortable', 'density-compact', 'density-ultra');
@@ -2253,7 +2315,9 @@ function renderTable() {
       const focusTitle = focusActive
         ? 'restore previous column selection'
         : 'keep only columns with a score on this row';
-      let tr = `<tr><td class="algo-cell"><div class="algo-wrap"><a href="methods/${row.algo}.html" title="open ${rowAlgoLabel} method documentation">${rowAlgoLabel}</a><button type="button" class="row-score-toggle${focusActive ? ' active' : ''}" data-row-key="${escAttr(rKey)}" title="${focusTitle}" aria-label="${focusTitle}">◫</button></div></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
+      const rowOrigin = (DATA.algo_origin || {})[row.algo] || 'pls4all';
+      const rowCls = rowOrigin === 'pls4all' ? 'row-pls4all' : 'row-n4m';
+      let tr = `<tr class="${rowCls}"><td class="algo-cell"><div class="algo-wrap"><a href="methods/${row.algo}.html" title="open ${rowAlgoLabel} method documentation">${rowAlgoLabel}</a><button type="button" class="row-score-toggle${focusActive ? ' active' : ''}" data-row-key="${escAttr(rKey)}" title="${focusTitle}" aria-label="${focusTitle}">◫</button></div></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
       for (const id of cols) {
         const meta = colsById[id];
         // The synthetic "canonical reference" leading column needs a
@@ -2398,9 +2462,8 @@ function renderTable() {
         // Highlight classes only make sense for the duration view.
         // Speed-up, duration-%, and divergence already encode their own
         // colour meaning per cell — adding the violet "row-best" tint
-        // on top would compete and mislead.
-        const baselineDrivenViz = speedupMode || durationPctMode
-                                || state.viz === 'divergence';
+        // on top would compete and mislead. `baselineDrivenViz` was
+        // already declared earlier in this iteration; reuse it.
         if (!baselineDrivenViz) {
           if (canHighlight && id === fastestId) tdCls.push('cell-fastest-bg');
           if (canHighlight && langWinner && langWinner.id === id) {
@@ -2647,6 +2710,23 @@ function wire() {
     if (state.parity.has(k)) state.parity.delete(k); else state.parity.add(k);
     rerender();
   });
+  const originChips = $('origin-chips');
+  if (originChips) {
+    originChips.addEventListener('click', e => {
+      const chip = e.target.closest('.chip');
+      if (!chip) return;
+      const k = chip.dataset.origin;
+      if (!k) return;
+      if (state.origin.has(k)) state.origin.delete(k); else state.origin.add(k);
+      // Never let both chips be off (it would empty the table) — restore
+      // the clicked one to "off" and the other to "on" if user toggles
+      // last active chip.
+      if (state.origin.size === 0) {
+        for (const v of ORIGIN_VALUES) state.origin.add(v);
+      }
+      rerender();
+    });
+  }
   $('density-select').addEventListener('change', e => {
     state.density = DENSITY_VALUES.includes(e.target.value) ? e.target.value : 'comfortable';
     rerender();
@@ -2666,13 +2746,16 @@ function wire() {
     rerender();
   });
 
-  // preset rail
+  // preset rail. Plain click replaces the visible column set with the
+  // preset (intuitive "show only these"); shift/ctrl-click is the legacy
+  // additive toggle (keep current selection + add or remove preset cols).
   $('preset-rail').addEventListener('click', e => {
     const pill = e.target.closest('.preset-pill');
     if (!pill) return;
     const key = pill.dataset.preset;
     if (!key || !DATA.presets[key]) return;
-    toggleColumnSet(DATA.presets[key].cols);
+    const additive = e.shiftKey || e.ctrlKey || e.metaKey;
+    toggleColumnSet(DATA.presets[key].cols, {additive});
     rerender();
   });
 

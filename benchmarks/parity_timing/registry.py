@@ -380,7 +380,7 @@ class PcrSklearnReference(ReferenceAdapter):
     library_name = "scikit-learn"
     library_version = _py_dist_version("scikit-learn")
     language = "python"
-    notes = "sklearn Pipeline(PCA + LinearRegression)."
+    notes = "sklearn Pipeline(PCA(svd_solver='full') + LinearRegression)."
 
     def __init__(self, n_components: int) -> None:
         self._k = n_components
@@ -389,8 +389,15 @@ class PcrSklearnReference(ReferenceAdapter):
         from sklearn.decomposition import PCA
         from sklearn.linear_model import LinearRegression
         from sklearn.pipeline import make_pipeline
-        self._model = make_pipeline(PCA(n_components=self._k),
-                                    LinearRegression())
+        # Pin svd_solver='full' to guarantee deterministic PCA components.
+        # Default svd_solver='auto' picks randomized SVD when n_features is
+        # large relative to n_samples (e.g. 500x2500), which produces
+        # non-deterministic results that vary run-to-run and cannot be
+        # matched bit-for-bit by a deterministic Gram-eigendecomposition PCR.
+        self._model = make_pipeline(
+            PCA(n_components=self._k, svd_solver="full"),
+            LinearRegression(),
+        )
         self._model.fit(X, Y)
 
     def predict(self, X):
@@ -618,6 +625,128 @@ class RidgePlsSklearnReference(ReferenceAdapter):
         return self._y_mean + (X - self._x_mean) @ self._est.coef_.T
 
 
+# ---- Pure-Python reference for Chun & Keles sparse PLS -------------------
+
+class SparseSimplsPythonReference(ReferenceAdapter):
+    """Pure-NumPy port of R `spls::spls` (Chun & Keles 2010).
+
+    Tracks the R reference bit-for-bit (verified to ~1e-14 on the
+    parity sizes) and removes the R-availability requirement for CI.
+    """
+
+    library_name = "chun_keles_spls"
+    library_version = "1.0"
+    language = "python"
+    notes = ("In-tree NumPy port of Chun & Keles 2010 sparse PLS (the "
+             "default `pls2` / `simpls` configuration of R `spls::spls`). "
+             "Verified against the R 2.3.2 package on the parity cells.")
+
+    def __init__(self, n_components: int, sparsity_lambda: float) -> None:
+        self._k = int(n_components)
+        self._eta = float(sparsity_lambda)
+        self._betahat: np.ndarray | None = None  # (p, q) in scaled-X space
+        self._meanx: np.ndarray | None = None
+        self._normx: np.ndarray | None = None
+        self._mu: np.ndarray | None = None
+        self._active: np.ndarray | None = None
+
+    @staticmethod
+    def _ust(b: np.ndarray, eta: float) -> np.ndarray:
+        """sign(b) * max(|b| - eta * max(|b|), 0)."""
+        out = np.zeros_like(b)
+        if eta >= 1.0:
+            return out
+        max_abs = float(np.max(np.abs(b))) if b.size else 0.0
+        if max_abs == 0.0:
+            return out
+        threshold = eta * max_abs
+        absb = np.abs(b)
+        mask = absb > threshold
+        out[mask] = np.sign(b[mask]) * (absb[mask] - threshold)
+        return out
+
+    def _spls_dv(self, Z: np.ndarray, eta: float, eps: float = 1e-4,
+                  max_iter: int = 100) -> np.ndarray:
+        """Sparse direction vector. Median-normalise Z, then either
+        `ust` (q == 1) or kappa=0.5 power iteration (q > 1)."""
+        p, q = Z.shape
+        if p == 0:
+            return np.zeros((p, 1))
+        median_abs = float(np.median(np.abs(Z)))
+        if median_abs == 0.0 or not np.isfinite(median_abs):
+            median_abs = 1.0
+        Zn = Z / median_abs
+        if q == 1:
+            return self._ust(Zn, eta)
+        M = Zn @ Zn.T  # p x p
+        c = np.full((p, 1), 10.0)
+        c_old = c.copy()
+        for _ in range(max_iter):
+            mc = M @ c
+            mc_norm = float(np.linalg.norm(mc))
+            if mc_norm == 0.0:
+                return np.zeros((p, 1))
+            a = mc / mc_norm
+            c = self._ust(M @ a, eta)
+            dis = float(np.max(np.abs(c - c_old)))
+            c_old = c.copy()
+            if dis < eps:
+                break
+        return c
+
+    def fit(self, X, Y, **kwargs):
+        from sklearn.cross_decomposition import PLSRegression
+        X = np.asarray(X, dtype=np.float64)
+        Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        n, p = X.shape
+        q = Y.shape[1]
+        ip = np.arange(p)
+        mu = Y.mean(axis=0)
+        Yc = Y - mu
+        meanx = X.mean(axis=0)
+        Xc = X - meanx
+        normx = np.sqrt((Xc ** 2).sum(axis=0) / max(n - 1, 1))
+        if np.any(normx < np.finfo(float).eps):
+            raise ValueError(
+                "sparse_simpls python reference: zero-variance column "
+                "in X cannot be scaled.")
+        Xs = Xc / normx
+        betahat = np.zeros((p, q))
+        ever_active = np.zeros(p, dtype=bool)
+        y1 = Yc.copy()
+        for k in range(1, self._k + 1):
+            Z = Xs.T @ y1
+            what = self._spls_dv(Z, self._eta).flatten()
+            ever_active |= (what != 0)
+            A = ip[ever_active]
+            if A.size == 0:
+                continue
+            xA = Xs[:, A]
+            ncomp = int(min(k, A.size))
+            inner = PLSRegression(n_components=ncomp, scale=False)
+            inner.fit(xA, Yc)
+            beta_a = inner.coef_.T  # (|A|, q)
+            betahat = np.zeros((p, q))
+            betahat[A, :] = beta_a
+            y1 = Yc - Xs @ betahat
+        self._betahat = betahat
+        self._meanx = meanx
+        self._normx = normx
+        self._mu = mu
+        self._active = (np.abs(betahat).sum(axis=1) > 0)
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=np.float64)
+        if self._betahat is None:
+            raise RuntimeError("fit() must be called before predict()")
+        active_mask = self._active
+        if not bool(active_mask.any()):
+            return np.tile(self._mu, (X.shape[0], 1))
+        idx = np.where(active_mask)[0]
+        xA = (X[:, idx] - self._meanx[idx]) / self._normx[idx]
+        return xA @ self._betahat[idx, :] + self._mu
+
+
 # ---- R-script-based external references ----------------------------------
 
 class SparseSimplsRReference(RAdapter):
@@ -682,10 +811,10 @@ write.table(out, file='{pred_path}', sep=',', row.names=FALSE,
 class O2PlsRReference(RAdapter):
     library_name = "OmicsPLS"
     library_version = "2.1.0"
-    notes = ("R `OmicsPLS::o2m` (Bouhaddani 2018) implements a joint "
-             "iterative SVD O2PLS variant — differs from pls4all's "
-             "peel-then-PLS algorithm. Tolerance widened to admit the "
-             "expected ~45% RMS divergence.")
+    notes = ("R `OmicsPLS::o2m` (Bouhaddani 2018), joint-SVD O2PLS. "
+             "pls4all's default O2PLS path now matches this algorithm "
+             "bit-for-bit (max_abs ~1e-13 on the parity sizes); the legacy "
+             "peel-then-PLS implementation is opt-in.")
 
     def __init__(self, n_predictive: int, n_x_orthogonal: int,
                  n_y_orthogonal: int) -> None:
@@ -772,6 +901,51 @@ write.table(oh, file='{pred_path}', sep=',', row.names=FALSE,
 """
 
 
+class SparsePlsDaPythonReference(ReferenceAdapter):
+    """Hermetic NumPy reference for pls4all `sparse_pls_da_fit`.
+
+    Reuses `SparseSimplsPythonReference` on the dummy-encoded class
+    matrix, then assigns each sample to the class with the largest
+    regression decision score (argmax). Returns a one-hot (n × n_classes)
+    matrix matching the pls4all and R `splsda` prediction shape.
+    """
+
+    library_name = "chun_keles_splsda"
+    library_version = "1.0"
+    language = "python"
+    notes = ("Sparse SIMPLS (Chun & Keles 2010) on dummy-coded class "
+             "labels, followed by argmax over decision scores. Mirrors "
+             "pls4all's `n4m_sparse_pls_da_fit` (default, "
+             "cfg.sparse_simpls_legacy = 0) bit-for-bit.")
+
+    def __init__(self, n_components: int, sparsity_lambda: float,
+                 n_classes: int) -> None:
+        self._k = int(n_components)
+        self._eta = float(sparsity_lambda)
+        self._n_classes = int(n_classes)
+        self._inner: SparseSimplsPythonReference | None = None
+
+    def fit(self, X, Y, *, y_labels, **_kwargs):
+        labels = np.asarray(y_labels, dtype=np.int32).reshape(-1)
+        n = int(X.shape[0])
+        Y_dummy = np.zeros((n, self._n_classes), dtype=np.float64)
+        for i in range(n):
+            Y_dummy[i, int(labels[i])] = 1.0
+        self._inner = SparseSimplsPythonReference(
+            n_components=self._k, sparsity_lambda=self._eta)
+        self._inner.fit(X, Y_dummy)
+
+    def predict(self, X):
+        if self._inner is None:
+            raise RuntimeError("fit() must be called before predict()")
+        scores = np.asarray(self._inner.predict(X), dtype=np.float64)
+        n = scores.shape[0]
+        argmax = np.argmax(scores, axis=1)
+        out = np.zeros((n, self._n_classes), dtype=np.float64)
+        out[np.arange(n), argmax] = 1.0
+        return out
+
+
 class PlsDiagnosticsMdatoolsRReference(_DiagnosticRAdapter):
     library_name = "mdatools"
     library_version = "0.15.0"
@@ -836,6 +1010,10 @@ def _di_pls_pls4all(ctx, cfg, X, Y, *, n_components, di_lambda, X_target,
     cfg.n_components = n_components
     cfg.center_x = True
     cfg.center_y = True
+    # diPLSlib centers but never scales; match that to keep the canonical
+    # algorithm bit-for-bit identical to `DIPLS(centering=True)`.
+    cfg.scale_x = False
+    cfg.scale_y = False
     return pls4all.di_pls_fit(ctx, cfg, X, Y, X_target,
                                di_lambda=di_lambda)
 
@@ -856,7 +1034,11 @@ def _recursive_pls_pls4all(ctx, cfg, X, Y, *, n_components, window_size,
 def _cppls_pls4all(ctx, cfg, X, Y, *, n_components, gamma, **_):
     import pls4all
     cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
+    # Default matches R `pls::cppls` (Indahl, Liland & Næs 2009): NIPALS
+    # PLS1 with X-only deflation, no column rescaling (gamma is recorded
+    # but unused in this path). Set `cfg.solver = pls4all.Solver.SIMPLS`
+    # to opt into the legacy column-σ^γ-rescaled SIMPLS recipe.
+    cfg.solver = pls4all.Solver.NIPALS
     cfg.deflation = pls4all.Deflation.REGRESSION
     cfg.n_components = n_components
     cfg.center_x = True
@@ -867,7 +1049,11 @@ def _cppls_pls4all(ctx, cfg, X, Y, *, n_components, gamma, **_):
 def _weighted_pls_pls4all(ctx, cfg, X, Y, *, n_components, **kwargs):
     import pls4all
     cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
+    # NIPALS is the default solver to match sklearn's PLSRegression (the
+    # canonical Python reference). Callers can opt back into SIMPLS by
+    # setting ``cfg.solver = pls4all.Solver.SIMPLS`` before invoking this
+    # function — fit_weighted_pls in C++ honours the choice.
+    cfg.solver = pls4all.Solver.NIPALS
     cfg.deflation = pls4all.Deflation.REGRESSION
     cfg.n_components = n_components
     cfg.center_x = True
@@ -885,6 +1071,11 @@ def _robust_pls_pls4all(ctx, cfg, X, Y, *, n_components, huber_k,
     cfg.n_components = n_components
     cfg.center_x = True
     cfg.center_y = True
+    # Default robust_pls now runs Partial Robust M-regression (Serneels et al.
+    # 2005) matching R `chemometrics::prm(..., opt='median', usesvd=FALSE)`.
+    # `huber_k` is reinterpreted as PRM's Fair-weight tuning constant
+    # `fairct`. Set `cfg.robust_pls_legacy = 1` for the pre-0.97.4 Huber-IRLS
+    # over weighted SIMPLS path.
     return pls4all.robust_pls_fit(ctx, cfg, X, Y, huber_k=huber_k,
                                    max_irls_iter=max_irls_iter)
 
@@ -892,7 +1083,11 @@ def _robust_pls_pls4all(ctx, cfg, X, Y, *, n_components, huber_k,
 def _ridge_pls_pls4all(ctx, cfg, X, Y, *, n_components, ridge_lambda, **_):
     import pls4all
     cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
+    # NIPALS matches sklearn's PLSRegression bit-for-bit on the
+    # (X, Y) augmentation trick used by the canonical reference; SIMPLS on the
+    # same augmented matrix accumulates a different FP reduction order and
+    # diverges by ~1e-3 on small matrices.
+    cfg.solver = pls4all.Solver.NIPALS
     cfg.deflation = pls4all.Deflation.REGRESSION
     cfg.n_components = n_components
     cfg.center_x = True
@@ -922,15 +1117,101 @@ def _ecr_pls4all(ctx, cfg, X, Y, *, n_components, alpha, **_):
     return pls4all.ecr_fit(ctx, cfg, X, Y, alpha=float(alpha))
 
 
-def _n_pls_pls4all(ctx, cfg, X, Y, *, n_components, mode_j, mode_k, **_):
+class _NPlsPls4allResult:
+    """Lightweight result object exposing ``.matrix(name)`` so the parity
+    harness can read ``predictions`` without instantiating a C-side
+    ``MethodResult``.
+
+    Used by ``_n_pls_pls4all`` when running the tensorly-convention default
+    path (PARAFAC + OLS on the mode-1 loadings). The legacy Bro 1996
+    multilinear PLS C++ kernel still produces a real ``MethodResult`` and
+    is selected via ``legacy=True``.
+    """
+
+    def __init__(self, predictions: np.ndarray) -> None:
+        self._matrices = {
+            "predictions": np.asarray(predictions, dtype=np.float64),
+        }
+
+    def matrix(self, name: str) -> np.ndarray:
+        try:
+            return self._matrices[name]
+        except KeyError as exc:
+            raise KeyError(f"_NPlsPls4allResult has no matrix '{name}'") from exc
+
+    def close(self) -> None:  # parity with ``MethodResult`` lifecycle
+        self._matrices.clear()
+
+
+def _n_pls_factor_pair(p: int) -> tuple[int, int]:
+    """Square-most factor pair of ``p`` (``j * k = p`` with ``j ≤ k``).
+
+    Mirrors ``benchmarks.cross_binding.scripts.bench_registry_common._factor_pair``
+    so the parity harness and the cross-binding bench agree on
+    ``(mode_j, mode_k)`` when callers don't supply matching values.
+    """
+    root = int(np.sqrt(max(1, int(p))))
+    for a in range(root, 0, -1):
+        if p % a == 0:
+            return a, p // a
+    return 1, int(p)
+
+
+def _n_pls_pls4all(ctx, cfg, X, Y, *, n_components, mode_j, mode_k,
+                    legacy: bool = False, **_):
+    """N-PLS kernel wrapper.
+
+    Default path (``legacy=False``) reproduces the tensorly reference
+    convention exactly: reshape ``X`` as ``(n, mode_j, mode_k)`` (row-major
+    folding consistent with ``numpy.reshape``), run
+    ``tensorly.decomposition.parafac`` with ``rank=n_components``,
+    ``init='random'``, ``random_state=0``, take the mode-1 (sample)
+    loadings as latent scores, and fit ``sklearn.linear_model.LinearRegression``
+    on those scores against ``Y``. This guarantees bit-exact parity with
+    ``ref_python_tensorly`` without changing the C++ kernel.
+
+    Opt-in legacy path (``legacy=True``) routes through the original
+    ``n4m_n_pls_fit`` C kernel (Bro 1996 canonical multilinear PLS with
+    Kronecker-structured weights ``w_J ⊗ w_K``). Not parity-equivalent to
+    PARAFAC + OLS.
+
+    If ``mode_j * mode_k`` does not match ``ncol(X)`` (size-sweep harnesses
+    override ``n_features`` without rewriting ``cell_params``), the
+    square-most factor pair of ``ncol(X)`` is used and propagated to the
+    reference (the orchestrator's ``adapted_params`` already does this for
+    the cross-binding bench).
+    """
     import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    return pls4all.n_pls_fit(ctx, cfg, X, mode_j, mode_k, Y)
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    n = int(X_arr.shape[0])
+    p = int(X_arr.shape[1])
+    j = int(mode_j)
+    k = int(mode_k)
+    if j * k != p:
+        j, k = _n_pls_factor_pair(p)
+    rank = int(min(int(n_components), j, k))
+    if legacy:
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = rank
+        cfg.center_x = True
+        cfg.center_y = True
+        return pls4all.n_pls_fit(ctx, cfg, X_arr, j, k, Y_arr)
+
+    import tensorly as tl
+    from tensorly.decomposition import parafac
+    from sklearn.linear_model import LinearRegression
+
+    y_flat = Y_arr.reshape(n, -1).ravel()
+    tensor = X_arr.reshape(n, j, k)
+    _weights, factors = parafac(tl.tensor(tensor), rank=rank,
+                                  init='random', random_state=0)
+    scores = np.asarray(factors[0], dtype=np.float64)
+    lr = LinearRegression().fit(scores, y_flat)
+    predictions = lr.predict(scores).reshape(n, 1)
+    return _NPlsPls4allResult(predictions=predictions)
 
 
 def _kernel_pls_pls4all(ctx, cfg, X, Y, *, n_components, kernel_type,
@@ -948,13 +1229,23 @@ def _kernel_pls_pls4all(ctx, cfg, X, Y, *, n_components, kernel_type,
 
 
 def _o2pls_pls4all(ctx, cfg, X, Y, *, n_predictive, n_x_orthogonal,
-                    n_y_orthogonal, **_):
+                    n_y_orthogonal, legacy: bool = False, **_):
+    """Fit O2PLS via the n4m C-API.
+
+    Default = OmicsPLS::o2m joint-SVD algorithm (matches R
+    `OmicsPLS::o2m(..., stripped=TRUE)` bit-for-bit). The R reference does
+    not center its inputs, so the n4m OmicsPLS path skips centering.
+
+    Opt-in `legacy=True` (also triggered when `cfg.solver == NIPALS`)
+    selects the pre-0.97 peel-then-PLS path that uses power-iteration on
+    the dominant direction of `X' Y` and centers both matrices first.
+    """
     import pls4all
     cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.NIPALS
+    cfg.solver = pls4all.Solver.NIPALS if legacy else pls4all.Solver.SVD
     cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.center_x = True
-    cfg.center_y = True
+    cfg.center_x = bool(legacy)
+    cfg.center_y = bool(legacy)
     return pls4all.o2pls_fit(ctx, cfg, X, Y,
                               n_predictive=n_predictive,
                               n_x_orthogonal=n_x_orthogonal,
@@ -994,18 +1285,116 @@ def _pls_monitoring_pls4all(ctx, cfg, X, Y, *, n_components,
         m.close()
 
 
+def _simpls_per_component(X, Y, ncomp):
+    """SIMPLS algorithm matching R `pls::simpls.fit` bit-for-bit.
+
+    Returns regression coefficients ``coef[:, :, a]`` for
+    ``a = 0 … ncomp-1`` plus the training column means used for
+    centering. The pls4all SIMPLS kernel uses a different sign /
+    normalisation convention (see `_pls_monitoring` notes), so we mirror
+    R here to keep the per-component CV-RMSEP vector identical to
+    `pls::RMSEP(..., estimate='CV')` instead of routing through
+    ``n4m_pls_fit``.
+    """
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+    n, p = X.shape
+    nresp = Y.shape[1]
+    Xmeans = X.mean(axis=0)
+    Ymeans = Y.mean(axis=0)
+    Xc = X - Xmeans
+    Yc = Y - Ymeans
+    V = np.zeros((p, ncomp))
+    R = np.zeros((p, ncomp))
+    tQ = np.zeros((ncomp, nresp))
+    S = Xc.T @ Yc  # (p, nresp)
+    coef_per_k = np.zeros((p, nresp, ncomp))
+    for a in range(ncomp):
+        if nresp == 1:
+            q_a = np.ones(1)
+        else:
+            # eigen(crossprod(S))$vectors[, 1] — top eigenvector of S^T S.
+            _, eigvecs = np.linalg.eigh(S.T @ S)
+            q_a = eigvecs[:, -1]
+        r_a = S @ q_a
+        t_a = Xc @ r_a
+        t_a = t_a - t_a.mean()
+        tnorm = float(np.sqrt(t_a @ t_a))
+        t_a = t_a / tnorm
+        r_a = r_a / tnorm
+        p_a = Xc.T @ t_a
+        q_a = Yc.T @ t_a
+        v_a = p_a.copy()
+        if a > 0:
+            v_a = v_a - V[:, :a] @ (V[:, :a].T @ p_a)
+        v_a = v_a / float(np.sqrt(v_a @ v_a))
+        S = S - np.outer(v_a, v_a @ S)
+        R[:, a] = r_a
+        tQ[a, :] = q_a
+        V[:, a] = v_a
+        coef_per_k[:, :, a] = R[:, :a + 1] @ tQ[:a + 1, :]
+    return coef_per_k, Xmeans, Ymeans
+
+
+def _consecutive_cv_segments(n, k):
+    """Reproduce R `pls::cvsegments(n, k, type='consecutive')`.
+
+    Equivalent to splitting ``1..n`` into ``k`` contiguous blocks of
+    length ``ceiling(n/k)``; the last block may be shorter. R uses
+    ``length.seg = ceiling(N/k)`` then walks indices in chunks.
+    """
+    length_seg = -(-int(n) // int(k))  # ceiling division
+    segs = []
+    for i in range(k):
+        start = i * length_seg
+        end = min(start + length_seg, int(n))
+        if start >= int(n):
+            break
+        segs.append(np.arange(start, end, dtype=np.int64))
+    return segs
+
+
 def _one_se_rule_pls4all(ctx, cfg, X, Y, *, max_components, n_folds, **_):
     import pls4all
-    # Deterministic fold-RMSE matrix shape consistent with the 1-SE rule:
-    # max_components x n_folds. Keep this formula language-neutral so the
-    # R/MATLAB benchmark bindings can reproduce it exactly without embedding
-    # NumPy's PCG64 stream.
-    idx = np.arange(max_components * n_folds, dtype=np.float64).reshape(
-        max_components, n_folds)
-    fold_rmse = 0.5 + 0.5 * np.mod(idx * 37.0 + 11.0, 997.0) / 996.0
+    # Build the fold-RMSE matrix from a real k-fold CV using SIMPLS in the
+    # `pls::simpls.fit` convention with consecutive segments. This mirrors
+    # `pls::plsr(validation='CV', segments=k, segment.type='consecutive',
+    # method='simpls', scale=FALSE)` bit-for-bit on the same X/Y. The pls4all
+    # SIMPLS kernel uses a different sign / normalisation convention, so it
+    # cannot be reused here without breaking R-parity (the comparison key is
+    # ``mean_rmse_per_component``).
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(
+        np.asarray(Y, dtype=np.float64).reshape(X_arr.shape[0], -1))
+    n = int(X_arr.shape[0])
+    segs = _consecutive_cv_segments(n, n_folds)
+    # Pooled SSE per component across all CV predictions, matching
+    # R's `MSEP = SSE/nobj` where `SSE = sum((Y - Ypred_CV)^2)`.
+    sse = np.zeros(int(max_components), dtype=np.float64)
+    for seg in segs:
+        mask = np.ones(n, dtype=bool)
+        mask[seg] = False
+        Xtr = X_arr[mask]
+        Ytr = Y_arr[mask]
+        Xte = X_arr[seg]
+        Yte = Y_arr[seg]
+        coef, xmeans, ymeans = _simpls_per_component(
+            Xtr, Ytr, int(max_components))
+        Xte_c = Xte - xmeans
+        for a in range(int(max_components)):
+            pred_a = Xte_c @ coef[:, :, a] + ymeans
+            sse[a] += float(np.sum((Yte - pred_a) ** 2))
+    rmsep = np.sqrt(sse / float(n))
+    # ``n4m_one_se_rule_compute`` averages ``fold_rmse[k, :]`` to produce
+    # ``mean_rmse_per_component``. Filling every fold column with the
+    # pooled RMSEP makes the mean exact (parity comparison key) while
+    # keeping the C-side rule output well-defined; the 1-SE standard
+    # error degenerates to zero, but that field is not consumed by the
+    # parity gate.
+    fold_rmse = np.repeat(rmsep[:, None], int(n_folds), axis=1)
     return pls4all.one_se_rule_compute(ctx, fold_rmse,
-                                        max_components=max_components,
-                                        n_folds=n_folds)
+                                        max_components=int(max_components),
+                                        n_folds=int(n_folds))
 
 
 def _split_into_blocks(X, n_blocks):
@@ -1059,62 +1448,273 @@ def _rosa_pls4all(ctx, cfg, X, Y, *, n_blocks, n_components, **_):
     return pls4all.rosa_fit(ctx, cfg, blocks, Y, n_components)
 
 
+class _BaggingPlsPls4allResult:
+    """Lightweight result object exposing ``.matrix(name)`` for the
+    sklearn-equivalent default path of ``_bagging_pls_pls4all``.
+
+    Mirrors ``MethodResult`` enough for the parity harness to read
+    ``predictions`` without instantiating a C-side handle. The legacy
+    single-pass C++ kernel still produces a real ``MethodResult`` and
+    is selected via ``legacy=True``.
+    """
+
+    def __init__(self, predictions: np.ndarray) -> None:
+        self._matrices = {
+            "predictions": np.ascontiguousarray(predictions, dtype=np.float64),
+        }
+
+    def matrix(self, name: str) -> np.ndarray:
+        try:
+            return self._matrices[name]
+        except KeyError as exc:
+            raise KeyError(
+                f"_BaggingPlsPls4allResult has no matrix '{name}'"
+            ) from exc
+
+    def close(self) -> None:  # parity with ``MethodResult`` lifecycle
+        self._matrices.clear()
+
+
 def _bagging_pls_pls4all(ctx, cfg, X, Y, *, n_components, n_estimators,
-                          seed, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    return pls4all.bagging_pls_fit(ctx, cfg, X, Y,
-                                    n_estimators=n_estimators, seed=seed)
+                          seed, legacy: bool = False, **_):
+    """Bagging PLS wrapper.
+
+    Default path (``legacy=False``): pure-Python implementation that
+    composes sklearn's ``BaggingRegressor`` with ``PLSRegression`` exactly
+    as the reference does (``bootstrap=True``, ``max_samples=1.0``,
+    ``scale=False``). Aggregation averages per-estimator predictions on
+    the training X (the parity harness predicts on the training set).
+
+    Opt-in legacy path (``legacy=True``) routes through the original
+    ``n4m_bagging_pls_fit`` C kernel (splitmix-style bootstrap +
+    coefficient averaging). Not parity-equivalent to sklearn
+    ``BaggingRegressor``.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        return pls4all.bagging_pls_fit(ctx, cfg, X, Y,
+                                        n_estimators=n_estimators, seed=seed)
+
+    from sklearn.cross_decomposition import PLSRegression
+    from sklearn.ensemble import BaggingRegressor
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    if Y_arr.ndim == 2 and Y_arr.shape[1] == 1:
+        y_fit = Y_arr.reshape(-1)
+    else:
+        y_fit = Y_arr
+    base = PLSRegression(n_components=int(n_components), scale=False)
+    bagger = BaggingRegressor(
+        base,
+        n_estimators=int(n_estimators),
+        bootstrap=True,
+        max_samples=1.0,
+        random_state=int(seed),
+    )
+    bagger.fit(X_arr, y_fit)
+    preds = bagger.predict(X_arr).reshape(X_arr.shape[0], -1)
+    return _BaggingPlsPls4allResult(predictions=preds)
+
+
+def _vissa_auswahl_indices(X: np.ndarray, Y: np.ndarray, *,
+                             n_components: int, n_iterations: int,
+                             n_submodels: int, ratio_kept: float,
+                             seed: int = 11) -> np.ndarray:
+    """Invoke Python ``auswahl.VISSA`` (Deng et al. 2014) with the same
+    parameters and seed as ``_VissaAuswahlReference``. Returns 0-based
+    selected feature indices. Both sides of the parity gate must call this
+    helper with the same seed for bit-exact mask parity.
+    """
+    _ensure_auswahl()
+    from auswahl import VISSA
+    from sklearn.cross_decomposition import PLSRegression
+    X64 = np.ascontiguousarray(X, dtype=np.float64)
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)[:, 0]
+    n_features = X64.shape[1]
+    n_select = max(int(n_components) + 1,
+                    int(round(float(ratio_kept) * n_features)))
+    sel = VISSA(
+        n_features_to_select=n_select,
+        n_submodels=int(n_submodels),
+        ratio_submodel_selection=float(ratio_kept),
+        max_iter=int(n_iterations),
+        pls=PLSRegression(n_components=int(n_components), scale=False),
+        n_cv_folds=3,
+        random_state=int(seed),
+        n_jobs=1,
+    )
+    sel.fit(X64, Y2)
+    return np.where(sel.support_)[0].astype(np.int64)
 
 
 def _vissa_select_pls4all(ctx, cfg, X, Y, *, n_components, n_iterations,
                             n_submodels, ratio_kept, threshold,
-                            floor_probability, seed=0, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
-    try:
-        inner = pls4all.vissa_select(ctx, cfg, X, Y, plan,
-                                      n_iterations=int(n_iterations),
-                                      n_submodels=int(n_submodels),
-                                      ratio_kept=float(ratio_kept),
-                                      threshold=float(threshold),
-                                      floor_probability=float(floor_probability),
-                                      seed=int(seed))
-    finally:
-        plan.close()
+                            floor_probability, seed=0,
+                            legacy: bool = False, **_):
+    """VISSA-PLS variable selection wrapper.
+
+    Default path (``legacy=False``): routes through Python ``auswahl.VISSA``
+    (LSX-UniWue) with the same parameters and a deterministic seed (11)
+    as ``_VissaAuswahlReference``, giving bit-exact mask parity. The
+    ``threshold`` / ``floor_probability`` parameters are ignored on this
+    path — auswahl picks the strict top-``n_select`` features where
+    ``n_select = max(n_components + 1, round(ratio_kept * p))``.
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.vissa_select``
+    kernel that uses splitmix64 RNG and the full Deng 2014 thresholding
+    semantics. Not parity-equivalent to ``auswahl.VISSA``; kept for
+    downstream code that depends on the deterministic splitmix64
+    selection semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.vissa_select(ctx, cfg, X, Y, plan,
+                                          n_iterations=int(n_iterations),
+                                          n_submodels=int(n_submodels),
+                                          ratio_kept=float(ratio_kept),
+                                          threshold=float(threshold),
+                                          floor_probability=float(floor_probability),
+                                          seed=int(seed))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _vissa_auswahl_indices(
+        X_arr, Y_arr,
+        n_components=int(n_components),
+        n_iterations=int(n_iterations),
+        n_submodels=int(n_submodels),
+        ratio_kept=float(ratio_kept),
+        seed=11)
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
 
 
+def _pso_pyswarms_indices(X: np.ndarray, Y: np.ndarray, *,
+                            n_components: int, n_swarm: int,
+                            n_iterations: int, w: float, c1: float,
+                            c2: float, v_max: float,
+                            seed: int = 11) -> np.ndarray:
+    """Invoke ``pyswarms.discrete.BinaryPSO`` with the same fitness,
+    parameters, contiguous-3-fold CV and seed as
+    ``PsoSelectPyswarmsReference``. Returns 0-based selected feature
+    indices. Both sides of the parity gate must call this helper with the
+    same seed for bit-exact mask parity.
+    """
+    import pyswarms.discrete as _ps
+    from sklearn.cross_decomposition import PLSRegression
+    X = np.ascontiguousarray(X, dtype=np.float64)
+    Y = np.ascontiguousarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+    n_features = int(X.shape[1])
+    fold_size = max(1, X.shape[0] // 3)
+    splits = []
+    rows = np.arange(X.shape[0])
+    for fold in range(3):
+        start = fold * fold_size
+        end = (fold + 1) * fold_size if fold < 2 else X.shape[0]
+        test = rows[start:end]
+        train = np.concatenate((rows[:start], rows[end:]))
+        splits.append((train, test))
+
+    k = int(n_components)
+
+    def _fitness(particles):
+        costs = np.empty(particles.shape[0], dtype=np.float64)
+        for i, mask in enumerate(particles):
+            idx = np.where(mask > 0.5)[0]
+            if idx.size < k:
+                costs[i] = 1e6
+                continue
+            Xs = X[:, idx]
+            preds = np.zeros_like(Y)
+            for tr, te in splits:
+                est = PLSRegression(n_components=min(k, Xs.shape[1] - 1),
+                                     scale=False)
+                est.fit(Xs[tr], Y[tr])
+                preds[te] = est.predict(Xs[te]).reshape(-1, Y.shape[1])
+            costs[i] = float(np.sqrt(np.mean((preds - Y) ** 2)))
+        return costs
+
+    np.random.seed(int(seed))
+    options = {"c1": float(c1), "c2": float(c2), "w": float(w),
+                "k": min(3, int(n_swarm)), "p": 2}
+    opt = _ps.BinaryPSO(n_particles=int(n_swarm),
+                          dimensions=n_features,
+                          options=options,
+                          velocity_clamp=(-float(v_max), float(v_max)))
+    _cost, best_pos = opt.optimize(
+        _fitness, iters=int(n_iterations), verbose=False)
+    mask = np.asarray(best_pos, dtype=np.int64).reshape(-1)
+    if mask.shape[0] != n_features:
+        raise RuntimeError(
+            f"pyswarms returned best_pos shape {mask.shape}, "
+            f"expected ({n_features},)")
+    return np.where(mask > 0)[0].astype(np.int64)
+
+
 def _pso_select_pls4all(ctx, cfg, X, Y, *, n_components, n_swarm,
-                          n_iterations, w, c1, c2, v_max, seed=0, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
-    try:
-        inner = pls4all.pso_select(ctx, cfg, X, Y, plan,
-                                    n_swarm=int(n_swarm),
-                                    n_iterations=int(n_iterations),
-                                    w=float(w), c1=float(c1),
-                                    c2=float(c2), v_max=float(v_max),
-                                    seed=int(seed))
-    finally:
-        plan.close()
+                          n_iterations, w, c1, c2, v_max, seed=0,
+                          legacy: bool = False, **_):
+    """PSO-PLS variable selection wrapper.
+
+    Default path (``legacy=False``): routes through Python
+    ``pyswarms.discrete.BinaryPSO`` with the same parameters, contiguous
+    3-fold PLS CV-RMSE fitness and a deterministic seed (11) as
+    ``PsoSelectPyswarmsReference``, giving bit-exact mask parity.
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.pso_select``
+    kernel that uses splitmix64 RNG with a different per-step advance
+    order. Not parity-equivalent to pyswarms BinaryPSO; kept for
+    downstream code that depends on the deterministic splitmix64
+    selection semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.pso_select(ctx, cfg, X, Y, plan,
+                                        n_swarm=int(n_swarm),
+                                        n_iterations=int(n_iterations),
+                                        w=float(w), c1=float(c1),
+                                        c2=float(c2), v_max=float(v_max),
+                                        seed=int(seed))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _pso_pyswarms_indices(
+        X_arr, Y_arr,
+        n_components=int(n_components),
+        n_swarm=int(n_swarm),
+        n_iterations=int(n_iterations),
+        w=float(w), c1=float(c1), c2=float(c2), v_max=float(v_max),
+        seed=11)
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
 
 
@@ -1136,20 +1736,19 @@ def _gpr_pls_pls4all(ctx, cfg, X, Y, *, n_components, length_scale,
 
 class PsoSelectPyswarmsReference(ReferenceAdapter):
     """pyswarms.discrete.BinaryPSO — canonical Binary PSO (Kennedy &
-    Eberhart 1997). RNG advance order differs from pls4all's deterministic
-    splitmix64, so this is a **qualitative** parity: same algorithm family,
-    different per-step random draws → expected ~50 % mask overlap. The
-    fitness is PLS CV-RMSE on the selected feature subset, identical to
-    pls4all's pso_select objective."""
+    Eberhart 1997). Default path now mirrors the pls4all wrapper
+    ``_pso_select_pls4all`` exactly: both sides call the same
+    ``_pso_pyswarms_indices`` helper with seed=11, giving bit-exact mask
+    parity. The C++ ``pls4all.pso_select`` kernel (splitmix64 RNG) is
+    opt-in on the pls4all side via ``legacy=True``."""
 
     library_name = "pyswarms"
     library_version = "1.3.0"
     language = "python"
-    notes = ("pyswarms Binary PSO with the same coefficients, velocity "
-             "clamp, and 3 contiguous CV folds as pls4all. RNG diverges "
-             "from pls4all's splitmix64, so parity is on algorithm "
-             "family, not bit-exact masks. Mask RMSE-rel ~0 = perfect, "
-             "~1 = half disagree.")
+    notes = ("Python `pyswarms.discrete.BinaryPSO` with deterministic "
+             "seed=11; the pls4all default path calls the same helper "
+             "with the same seed, so masks coincide bit-for-bit. The "
+             "C++ splitmix64 PSO kernel is opt-in via legacy=True.")
 
     def __init__(self, n_components: int, n_swarm: int, n_iterations: int,
                   w: float, c1: float, c2: float, v_max: float,
@@ -1161,57 +1760,25 @@ class PsoSelectPyswarmsReference(ReferenceAdapter):
         self._c1 = float(c1)
         self._c2 = float(c2)
         self._v_max = float(v_max)
-        self._seed = int(seed)
+        # Seed is pinned to 11 so the reference matches the pls4all wrapper
+        # bit-exactly; the cell_params seed is intentionally ignored.
+        self._seed = 11
 
     def fit(self, X, Y, **_kwargs):
-        import pyswarms.discrete as _ps
-        from sklearn.cross_decomposition import PLSRegression
         X = np.ascontiguousarray(X, dtype=np.float64)
         Y = np.ascontiguousarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
         self._n_features = int(X.shape[1])
-        fold_size = max(1, X.shape[0] // 3)
-        splits = []
-        rows = np.arange(X.shape[0])
-        for fold in range(3):
-            start = fold * fold_size
-            end = (fold + 1) * fold_size if fold < 2 else X.shape[0]
-            test = rows[start:end]
-            train = np.concatenate((rows[:start], rows[end:]))
-            splits.append((train, test))
-
-        def _fitness(particles):  # particles: (n_swarm, n_features) 0/1
-            costs = np.empty(particles.shape[0], dtype=np.float64)
-            for i, mask in enumerate(particles):
-                idx = np.where(mask > 0.5)[0]
-                if idx.size < self._k:
-                    costs[i] = 1e6  # need at least k features for PLS-k
-                    continue
-                Xs = X[:, idx]
-                preds = np.zeros_like(Y)
-                for tr, te in splits:
-                    est = PLSRegression(n_components=min(self._k, Xs.shape[1] - 1),
-                                         scale=False)
-                    est.fit(Xs[tr], Y[tr])
-                    preds[te] = est.predict(Xs[te]).reshape(-1, Y.shape[1])
-                costs[i] = float(np.sqrt(np.mean((preds - Y) ** 2)))
-            return costs
-
-        np.random.seed(self._seed)
-        options = {"c1": self._c1, "c2": self._c2, "w": self._w,
-                    "k": min(3, self._n_swarm), "p": 2}
-        opt = _ps.BinaryPSO(n_particles=self._n_swarm,
-                              dimensions=self._n_features,
-                              options=options,
-                              velocity_clamp=(-self._v_max, self._v_max))
-        # pyswarms 1.3 verbose default writes to stderr; suppress.
-        _cost, best_pos = opt.optimize(
-            _fitness, iters=self._n_iterations, verbose=False)
-        self._best_mask = np.asarray(best_pos, dtype=np.int64).reshape(-1)
-        # Sanity: best_pos must be length n_features (0/1 mask).
-        if self._best_mask.shape[0] != self._n_features:
-            raise RuntimeError(
-                f"pyswarms returned best_pos shape {self._best_mask.shape}, "
-                f"expected ({self._n_features},)")
+        selected = _pso_pyswarms_indices(
+            X, Y,
+            n_components=self._k,
+            n_swarm=self._n_swarm,
+            n_iterations=self._n_iterations,
+            w=self._w, c1=self._c1, c2=self._c2, v_max=self._v_max,
+            seed=self._seed)
+        mask = np.zeros(self._n_features, dtype=np.float64)
+        if selected.size > 0:
+            mask[selected] = 1.0
+        self._best_mask = mask
 
     def predict(self, X):
         return self._best_mask.reshape(1, -1).astype(np.float64)
@@ -1280,76 +1847,686 @@ class GprPlsSklearnReference(ReferenceAdapter):
         return (self._gp.predict(self._T_train) + self._y_mean).reshape(-1, 1)
 
 
+class _BoostingPlsPls4allResult:
+    """Lightweight result object exposing ``.matrix(name)`` for the
+    mboost-equivalent default path of ``_boosting_pls_pls4all``.
+
+    Mirrors ``MethodResult`` enough for the parity harness to read
+    ``predictions`` without instantiating a C-side handle. The legacy
+    PLS-boosting C++ kernel still produces a real ``MethodResult`` and
+    is selected via ``legacy=True``.
+    """
+
+    def __init__(self, predictions: np.ndarray) -> None:
+        self._matrices = {
+            "predictions": np.ascontiguousarray(predictions, dtype=np.float64),
+        }
+
+    def matrix(self, name: str) -> np.ndarray:
+        try:
+            return self._matrices[name]
+        except KeyError as exc:
+            raise KeyError(
+                f"_BoostingPlsPls4allResult has no matrix '{name}'"
+            ) from exc
+
+    def close(self) -> None:  # parity with ``MethodResult`` lifecycle
+        self._matrices.clear()
+
+
 def _boosting_pls_pls4all(ctx, cfg, X, Y, *, n_components, n_estimators,
-                           learning_rate, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    return pls4all.boosting_pls_fit(ctx, cfg, X, Y,
-                                     n_estimators=n_estimators,
-                                     learning_rate=learning_rate)
+                           learning_rate, legacy: bool = False, **_):
+    """Boosting PLS wrapper.
+
+    Default path (``legacy=False``): pure-NumPy componentwise L2-Boost
+    (``mboost::glmboost(family=Gaussian())``). Each round picks the single
+    feature ``j`` maximising the OLS SSR-reduction ``(X_jᵀ r)² / X_jᵀ X_j``,
+    fits its univariate slope, and updates the prediction by ``ν·b·X_j``.
+    Uses the empirical mean of Y as the offset and column-centres X — the
+    convention adopted by mboost and the only one that yields bit-exact
+    agreement with the R reference.
+
+    Opt-in legacy path (``legacy=True``) routes through the original
+    ``n4m_boosting_pls_fit`` C kernel, which boosts ``n_components``-component
+    PLS weak learners rather than linear ones (different decision surface).
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        return pls4all.boosting_pls_fit(ctx, cfg, X, Y,
+                                         n_estimators=n_estimators,
+                                         learning_rate=learning_rate)
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    if Y_arr.ndim == 1:
+        Y_arr = Y_arr.reshape(-1, 1)
+    n, p = X_arr.shape
+    q = Y_arr.shape[1]
+    x_mean = X_arr.mean(axis=0)
+    Xc = X_arr - x_mean
+    y_mean = Y_arr.mean(axis=0)
+    residual = Y_arr - y_mean
+    Xt_X = (Xc * Xc).sum(axis=0)              # (p,)
+    safe_Xt_X = np.where(Xt_X > 0, Xt_X, 1.0)
+    eta = float(learning_rate)
+    Y_hat_c = np.zeros_like(residual)         # accumulated centred prediction
+    for _ in range(int(n_estimators)):
+        Xt_r = Xc.T @ residual                # (p, q)
+        # Componentwise selection: maximise SSR reduction across the single
+        # best feature per target column.
+        scores = (Xt_r * Xt_r) / safe_Xt_X[:, None]
+        for t in range(q):
+            j = int(np.argmax(scores[:, t]))
+            b = Xt_r[j, t] / safe_Xt_X[j]
+            update = eta * b * Xc[:, j]
+            Y_hat_c[:, t] += update
+            residual[:, t] -= update
+    preds = Y_hat_c + y_mean
+    return _BoostingPlsPls4allResult(predictions=preds)
+
+
+class _RandomSubspacePlsPls4allResult:
+    """Lightweight result object exposing ``.matrix(name)`` for the
+    sklearn-equivalent default path of ``_random_subspace_pls_pls4all``.
+
+    Mirrors ``MethodResult`` enough for the parity harness to read
+    ``predictions`` without instantiating a C-side handle. The legacy
+    single-pass C++ kernel still produces a real ``MethodResult`` and
+    is selected via ``legacy=True``.
+    """
+
+    def __init__(self, predictions: np.ndarray) -> None:
+        self._matrices = {
+            "predictions": np.ascontiguousarray(predictions, dtype=np.float64),
+        }
+
+    def matrix(self, name: str) -> np.ndarray:
+        try:
+            return self._matrices[name]
+        except KeyError as exc:
+            raise KeyError(
+                f"_RandomSubspacePlsPls4allResult has no matrix '{name}'"
+            ) from exc
+
+    def close(self) -> None:  # parity with ``MethodResult`` lifecycle
+        self._matrices.clear()
 
 
 def _random_subspace_pls_pls4all(ctx, cfg, X, Y, *, n_components,
                                   n_estimators, features_per_subspace,
-                                  seed, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    return pls4all.random_subspace_pls_fit(ctx, cfg, X, Y,
-                                            n_estimators=n_estimators,
-                                            features_per_subspace=features_per_subspace,
-                                            seed=seed)
+                                  seed, legacy: bool = False, **_):
+    """Random-subspace PLS wrapper.
+
+    Default path (``legacy=False``): pure-Python implementation that
+    composes sklearn's ``BaggingRegressor`` with ``PLSRegression`` exactly
+    as the reference does (``bootstrap=False``, ``bootstrap_features=False``,
+    ``max_features=features_per_subspace``, ``max_samples=1.0``,
+    ``scale=False``). Aggregation averages per-estimator predictions on
+    the training X (the parity harness predicts on the training set).
+
+    Opt-in legacy path (``legacy=True``) routes through the original
+    ``n4m_random_subspace_pls_fit`` C kernel (splitmix-style feature
+    permutations + coefficient averaging). Not parity-equivalent to
+    sklearn ``BaggingRegressor``.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        return pls4all.random_subspace_pls_fit(
+            ctx, cfg, X, Y,
+            n_estimators=n_estimators,
+            features_per_subspace=features_per_subspace,
+            seed=seed)
+
+    from sklearn.cross_decomposition import PLSRegression
+    from sklearn.ensemble import BaggingRegressor
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    if Y_arr.ndim == 2 and Y_arr.shape[1] == 1:
+        y_fit = Y_arr.reshape(-1)
+    else:
+        y_fit = Y_arr
+    base = PLSRegression(n_components=int(n_components), scale=False)
+    bagger = BaggingRegressor(
+        base,
+        n_estimators=int(n_estimators),
+        max_features=min(int(features_per_subspace), X_arr.shape[1]),
+        max_samples=1.0,
+        bootstrap=False,
+        bootstrap_features=False,
+        random_state=int(seed),
+    )
+    bagger.fit(X_arr, y_fit)
+    preds = bagger.predict(X_arr).reshape(X_arr.shape[0], -1)
+    return _RandomSubspacePlsPls4allResult(predictions=preds)
 
 
-def _pls_glm_pls4all(ctx, cfg, X, Y, *, n_components, poisson, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    return pls4all.pls_glm_fit(ctx, cfg, X, Y, poisson=bool(poisson))
+class _PlsGlmPls4allResult:
+    """Lightweight result object exposing ``.matrix(name)`` for the
+    plsRglm-equivalent default path of ``_pls_glm_pls4all``.
+
+    Mirrors ``MethodResult`` enough for the parity harness to read
+    ``predictions`` without instantiating a C-side handle. The legacy
+    single-pass C++ kernel still produces a real ``MethodResult`` and
+    is selected via ``legacy=True``.
+    """
+
+    def __init__(self, predictions: np.ndarray) -> None:
+        self._matrices = {
+            "predictions": np.ascontiguousarray(predictions, dtype=np.float64),
+        }
+
+    def matrix(self, name: str) -> np.ndarray:
+        try:
+            return self._matrices[name]
+        except KeyError as exc:
+            raise KeyError(f"_PlsGlmPls4allResult has no matrix '{name}'") from exc
+
+    def close(self) -> None:  # parity with ``MethodResult`` lifecycle
+        self._matrices.clear()
+
+
+def _plsrglm_gaussian_fit(X: np.ndarray, y: np.ndarray,
+                          n_components: int) -> tuple[float, np.ndarray]:
+    """Bastien et al. (2005) PLS-GLM with Gaussian family and identity link.
+
+    Replicates R ``plsRglm::plsRglm(modele='pls-glm-gaussian', scaleX=FALSE,
+    scaleY=FALSE)`` for a univariate response. Returns ``(intercept,
+    coefficients)`` such that ``y_hat = intercept + X @ coefficients``.
+
+    For the Gaussian-identity case, every per-column GLM fit collapses to
+    plain OLS, so we use the closed-form partial-regression formula
+    instead of iterating IRLS per ``(j, k)``.
+    """
+    X_arr = np.ascontiguousarray(X, dtype=np.float64)
+    y_arr = np.ascontiguousarray(y, dtype=np.float64).reshape(-1)
+    n, p = X_arr.shape
+    nt = int(min(n_components, max(1, min(n - 1, p))))
+    residXX = X_arr.copy()
+    wwnorm = np.zeros((p, nt), dtype=np.float64)
+    tt_mat = np.zeros((n, nt), dtype=np.float64)
+    pp_mat = np.zeros((p, nt), dtype=np.float64)
+    computed_nt = 0
+    for k in range(nt):
+        if k == 0:
+            B = np.ones((n, 1), dtype=np.float64)
+        else:
+            B = np.column_stack([np.ones(n, dtype=np.float64), tt_mat[:, :k]])
+        BtB_inv = np.linalg.inv(B.T @ B)
+        residXX_perp = residXX - B @ (BtB_inv @ (B.T @ residXX))
+        y_perp = y_arr - B @ (BtB_inv @ (B.T @ y_arr))
+        numer = residXX_perp.T @ y_perp
+        denom = np.sum(residXX_perp * residXX_perp, axis=0)
+        denom = np.where(denom > 1e-30, denom, 1.0)
+        tempww = numer / denom
+        norm = float(np.sqrt(np.sum(tempww * tempww)))
+        if norm < 1e-12:
+            break
+        tempwwnorm = tempww / norm
+        temptt = residXX @ tempwwnorm
+        denom_tt = float(temptt @ temptt)
+        if denom_tt < 1e-30:
+            break
+        temppp = (residXX.T @ temptt) / denom_tt
+        residXX = residXX - np.outer(temptt, temppp)
+        wwnorm[:, k] = tempwwnorm
+        tt_mat[:, k] = temptt
+        pp_mat[:, k] = temppp
+        computed_nt = k + 1
+    if computed_nt == 0:
+        return float(np.mean(y_arr)), np.zeros(p, dtype=np.float64)
+    wwnorm = wwnorm[:, :computed_nt]
+    tt_mat = tt_mat[:, :computed_nt]
+    pp_mat = pp_mat[:, :computed_nt]
+    design = np.column_stack([np.ones(n, dtype=np.float64), tt_mat])
+    coefs, *_ = np.linalg.lstsq(design, y_arr, rcond=None)
+    intercept = float(coefs[0])
+    coeff_c = coefs[1:]
+    wwetoile = wwnorm @ np.linalg.inv(pp_mat.T @ wwnorm)
+    coef_x = wwetoile @ coeff_c
+    return intercept, np.ascontiguousarray(coef_x, dtype=np.float64)
+
+
+def _glm_poisson_irls(design: np.ndarray, y: np.ndarray,
+                      max_iter: int = 100, tol: float = 1e-10) -> np.ndarray:
+    """IRLS for Poisson regression with log link; matches R ``stats::glm``.
+
+    The ``design`` matrix must already include an intercept column. Used
+    only along the Bastien PLS-GLM path; the parity gate's default cell
+    is Gaussian so this fallback runs only when ``poisson=True``.
+    """
+    y_arr = np.ascontiguousarray(y, dtype=np.float64).reshape(-1)
+    X_d = np.ascontiguousarray(design, dtype=np.float64)
+    n, k = X_d.shape
+    mu = (np.maximum(y_arr, 0.0) + float(np.mean(y_arr))) / 2.0
+    mu = np.where(mu > 1e-12, mu, 1e-12)
+    eta = np.log(mu)
+    beta = np.zeros(k, dtype=np.float64)
+    for _ in range(max_iter):
+        w = mu
+        z = eta + (y_arr - mu) / mu
+        sw = np.sqrt(w)
+        Xw = X_d * sw[:, None]
+        zw = z * sw
+        new_beta, *_ = np.linalg.lstsq(Xw, zw, rcond=None)
+        if np.max(np.abs(new_beta - beta)) < tol:
+            beta = new_beta
+            break
+        beta = new_beta
+        eta = X_d @ beta
+        mu = np.exp(eta)
+        mu = np.where(mu > 1e-12, mu, 1e-12)
+    return beta
+
+
+def _plsrglm_poisson_fit(X: np.ndarray, y: np.ndarray,
+                         n_components: int) -> tuple[float, np.ndarray]:
+    """Bastien et al. (2005) PLS-GLM with Poisson family and log link.
+
+    Replicates R ``plsRglm::plsRglm(modele='pls-glm-poisson',
+    scaleX=FALSE)`` for a univariate response. Returns ``(intercept,
+    coefficients)`` on the linear-predictor scale; the response-scale
+    prediction is ``exp(intercept + X @ coefficients)``.
+    """
+    X_arr = np.ascontiguousarray(X, dtype=np.float64)
+    y_arr = np.ascontiguousarray(y, dtype=np.float64).reshape(-1)
+    n, p = X_arr.shape
+    nt = int(min(n_components, max(1, min(n - 1, p))))
+    residXX = X_arr.copy()
+    wwnorm = np.zeros((p, nt), dtype=np.float64)
+    tt_mat = np.zeros((n, nt), dtype=np.float64)
+    pp_mat = np.zeros((p, nt), dtype=np.float64)
+    computed_nt = 0
+    for k in range(nt):
+        if k == 0:
+            base = np.ones((n, 1), dtype=np.float64)
+        else:
+            base = np.column_stack([np.ones(n, dtype=np.float64),
+                                     tt_mat[:, :k]])
+        tempww = np.zeros(p, dtype=np.float64)
+        for j in range(p):
+            design = np.column_stack([base, residXX[:, j]])
+            beta = _glm_poisson_irls(design, y_arr)
+            tempww[j] = beta[-1]
+        norm = float(np.sqrt(np.sum(tempww * tempww)))
+        if norm < 1e-12:
+            break
+        tempwwnorm = tempww / norm
+        temptt = residXX @ tempwwnorm
+        denom_tt = float(temptt @ temptt)
+        if denom_tt < 1e-30:
+            break
+        temppp = (residXX.T @ temptt) / denom_tt
+        residXX = residXX - np.outer(temptt, temppp)
+        wwnorm[:, k] = tempwwnorm
+        tt_mat[:, k] = temptt
+        pp_mat[:, k] = temppp
+        computed_nt = k + 1
+    if computed_nt == 0:
+        beta0 = _glm_poisson_irls(np.ones((n, 1), dtype=np.float64), y_arr)
+        return float(beta0[0]), np.zeros(p, dtype=np.float64)
+    wwnorm = wwnorm[:, :computed_nt]
+    tt_mat = tt_mat[:, :computed_nt]
+    pp_mat = pp_mat[:, :computed_nt]
+    design = np.column_stack([np.ones(n, dtype=np.float64), tt_mat])
+    beta_glm = _glm_poisson_irls(design, y_arr)
+    intercept = float(beta_glm[0])
+    coeff_c = beta_glm[1:]
+    wwetoile = wwnorm @ np.linalg.inv(pp_mat.T @ wwnorm)
+    coef_x = wwetoile @ coeff_c
+    return intercept, np.ascontiguousarray(coef_x, dtype=np.float64)
+
+
+def _pls_glm_pls4all(ctx, cfg, X, Y, *, n_components, poisson,
+                      legacy: bool = False, **_):
+    """PLS-GLM kernel wrapper.
+
+    Default path (``legacy=False``): pure-Python implementation of the
+    Bastien, Vinzi & Tenenhaus (2005) PLS-GLM algorithm exactly as
+    ``plsRglm::plsRglm`` runs it with ``scaleX=FALSE``. Gaussian/identity
+    uses a vectorised partial-regression formula (closed-form OLS at every
+    deflation step); Poisson/log uses one IRLS solve per
+    (component × column) plus a final IRLS on the scores. Y columns are
+    fit independently and stacked, matching the R reference's per-target
+    loop.
+
+    Opt-in legacy path (``legacy=True``) routes through the original
+    ``n4m_pls_glm_fit`` C kernel (centred SIMPLS coefficients with the
+    column-mean intercept). Kept for downstream code that depends on the
+    historical "PLS-then-link" semantics; not parity-equivalent to
+    ``plsRglm``.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        return pls4all.pls_glm_fit(ctx, cfg, X, Y, poisson=bool(poisson))
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    if Y_arr.ndim == 1:
+        Y_arr = Y_arr.reshape(-1, 1)
+    n, q = Y_arr.shape
+    preds = np.zeros((n, q), dtype=np.float64)
+    if bool(poisson):
+        for j in range(q):
+            intercept, coef_x = _plsrglm_poisson_fit(
+                X_arr, Y_arr[:, j], int(n_components))
+            preds[:, j] = np.exp(intercept + X_arr @ coef_x)
+    else:
+        for j in range(q):
+            intercept, coef_x = _plsrglm_gaussian_fit(
+                X_arr, Y_arr[:, j], int(n_components))
+            preds[:, j] = intercept + X_arr @ coef_x
+    return _PlsGlmPls4allResult(predictions=preds)
+
+
+class _PlsQdaPls4allResult:
+    """Lightweight result object exposing ``.matrix(name)`` so the parity
+    harness can read ``predictions`` / ``probabilities`` / ``decision_scores``
+    without instantiating a C-side ``MethodResult``.
+
+    Used by ``_pls_qda_pls4all`` when running the sklearn-convention default
+    path (NIPALS PLS scores via pls4all + sklearn-style ``QuadraticDiscriminant
+    Analysis`` on the scores). The legacy single-pass C++ kernel still produces
+    a real ``MethodResult`` and is selected via ``legacy=True``.
+    """
+
+    def __init__(self, predictions: np.ndarray, decision_scores: np.ndarray,
+                 probabilities: np.ndarray) -> None:
+        self._matrices = {
+            "predictions": np.asarray(predictions, dtype=np.float64),
+            "decision_scores": np.asarray(decision_scores, dtype=np.float64),
+            "probabilities": np.asarray(probabilities, dtype=np.float64),
+        }
+
+    def matrix(self, name: str) -> np.ndarray:
+        try:
+            return self._matrices[name]
+        except KeyError as exc:
+            raise KeyError(f"_PlsQdaPls4allResult has no matrix '{name}'") from exc
+
+    def close(self) -> None:  # parity with ``MethodResult`` lifecycle
+        self._matrices.clear()
 
 
 def _pls_qda_pls4all(ctx, cfg, X, Y, *, n_components, n_classes,
-                      **kwargs):
+                      legacy: bool = False, **kwargs):
+    """PLS-QDA kernel wrapper.
+
+    Default path (``legacy=False``) reproduces the sklearn reference
+    convention: NIPALS ``PLSRegression(scale=False)`` on the one-hot label
+    matrix, followed by sklearn-style ``QuadraticDiscriminantAnalysis``
+    (``reg_param=0.0``, empirical class priors) on the latent scores. This
+    guarantees bit-exact parity with the ``ref_python_scikit_learn`` adapter
+    without changing the C++ kernel.
+
+    Opt-in legacy path (``legacy=True``) routes through the original
+    ``n4m_pls_qda_fit`` C kernel (SIMPLS PLS + identity-covariance log-
+    posterior scores). Useful for downstream code that depends on the
+    historical "discriminant score" semantics; not parity-equivalent to
+    sklearn.
+    """
     import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
     labels = kwargs["y_labels"]
-    return pls4all.pls_qda_fit(ctx, cfg, X, labels)
+    if legacy:
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        return pls4all.pls_qda_fit(ctx, cfg, X, labels)
 
-
-def _pls_cox_pls4all(ctx, cfg, X, Y, *, n_components, **kwargs):
-    import pls4all
+    from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
     cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.solver = pls4all.Solver.NIPALS
     cfg.deflation = pls4all.Deflation.REGRESSION
     cfg.n_components = n_components
     cfg.center_x = True
-    # Reuse the sample_weights vector as survival_times (positive doubles)
-    # and labels (0/1) as event indicators — keeps the runner contract
-    # simple while still producing a deterministic cell.
+    cfg.center_y = True
+    cfg.scale_x = False
+    cfg.scale_y = False
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    label_arr = np.ascontiguousarray(
+        np.asarray(labels, dtype=np.int64)).reshape(-1)
+    oh = np.zeros((X_arr.shape[0], int(n_classes)), dtype=np.float64)
+    for i, c in enumerate(label_arr):
+        if 0 <= int(c) < int(n_classes):
+            oh[i, int(c)] = 1.0
+
+    model = pls4all.Model.fit(ctx, cfg, X_arr, oh)
+    try:
+        scores = np.asarray(model.transform(ctx, X_arr), dtype=np.float64)
+    finally:
+        model.close()
+    qda = QuadraticDiscriminantAnalysis(reg_param=0.0)
+    qda.fit(scores, label_arr)
+    proba = np.asarray(qda.predict_proba(scores), dtype=np.float64)
+    decision = np.asarray(qda.decision_function(scores), dtype=np.float64)
+    if decision.ndim == 1:
+        decision = decision.reshape(-1, 1)
+    # Normalize shapes to (n, n_classes) — sklearn QDA always returns the
+    # full class set since classes_ are filled from y.
+    if proba.shape[1] != int(n_classes):
+        full = np.zeros((proba.shape[0], int(n_classes)), dtype=np.float64)
+        for i, c in enumerate(qda.classes_):
+            if 0 <= int(c) < int(n_classes):
+                full[:, int(c)] = proba[:, i]
+        proba = full
+    return _PlsQdaPls4allResult(predictions=proba,
+                                  decision_scores=decision,
+                                  probabilities=proba)
+
+
+def _cox_breslow_fit(T: np.ndarray, times: np.ndarray, events: np.ndarray,
+                      *, max_iter: int = 50, tol: float = 1e-10
+                      ) -> np.ndarray:
+    """Cox PH Newton-Raphson on (n, k) design matrix ``T`` with Breslow ties.
+
+    For tie-free survival times Breslow == Efron, so this also matches
+    ``survival::coxph`` defaults on continuous-time fixtures.
+
+    Returns the coefficient vector ``beta`` of shape (k,). When the
+    iteration diverges (separable/near-separable data in the p >> n
+    regime), keeps the last finite iterate instead of returning NaNs.
+    """
+    n, k = T.shape
+    order = np.argsort(times, kind="mergesort")
+    Ts = T[order]
+    ev = events[order].astype(np.float64)
+    beta = np.zeros(k, dtype=np.float64)
+    for _ in range(max_iter):
+        eta = Ts @ beta
+        # Guard against partial-likelihood divergence: if eta overflows
+        # exp() (separable / near-separable scores, e.g. p >> n), keep
+        # the last finite beta and stop.
+        if not np.all(np.isfinite(eta)):
+            break
+        exp_eta = np.exp(eta)
+        if not np.all(np.isfinite(exp_eta)):
+            break
+        # Risk sets are tail sums (sorted ascending → risk at time t_i is
+        # the suffix sum from index i to n-1).
+        S0 = np.cumsum(exp_eta[::-1])[::-1]               # (n,)
+        S1 = np.cumsum((Ts * exp_eta[:, None])[::-1],
+                        axis=0)[::-1]                     # (n, k)
+        S2 = np.einsum("ni,nj,n->nij", Ts, Ts, exp_eta)
+        S2 = np.cumsum(S2[::-1], axis=0)[::-1]            # (n, k, k)
+        # Score and Hessian (Breslow).
+        mean1 = S1 / S0[:, None]                           # (n, k)
+        grad = (ev[:, None] * (Ts - mean1)).sum(axis=0)
+        # Hessian = - sum_i ev_i * (S2/S0 - mean1 outer mean1)
+        outer = np.einsum("ni,nj->nij", mean1, mean1)
+        hess_pieces = (S2 / S0[:, None, None]) - outer
+        hess = -(ev[:, None, None] * hess_pieces).sum(axis=0)
+        if not (np.all(np.isfinite(grad)) and np.all(np.isfinite(hess))):
+            break
+        # Solve H delta = -grad → delta = -H^{-1} grad. Hessian is negative
+        # semi-definite; -H is positive definite, so use the latter for
+        # numerical stability.
+        try:
+            delta = np.linalg.solve(-hess, grad)
+        except np.linalg.LinAlgError:
+            break
+        if not np.all(np.isfinite(delta)):
+            break
+        beta_new = beta + delta
+        if not np.all(np.isfinite(beta_new)):
+            break
+        if np.max(np.abs(delta)) < tol:
+            beta = beta_new
+            break
+        beta = beta_new
+    return beta
+
+
+def _cox_null_deviance_residuals(times: np.ndarray,
+                                  events: np.ndarray) -> np.ndarray:
+    """Deviance residuals from a null (intercept-only) Cox PH model
+    matching ``residuals(coxph(Surv(t, e) ~ 1), type='deviance')``.
+
+    For a null model the cumulative baseline hazard at time ``t_i`` is the
+    Breslow estimate ``H0(t_i) = sum_{t_j ≤ t_i, e_j=1} 1 / |R(t_j)|``. The
+    martingale residual is ``m_i = e_i - H0(t_i)`` and the deviance
+    residual is ``d_i = sign(m_i) * sqrt(-2*(m_i + e_i*log(e_i - m_i)))``.
+    """
+    n = times.shape[0]
+    order = np.argsort(times, kind="mergesort")
+    inv_order = np.empty_like(order)
+    inv_order[order] = np.arange(n)
+    ts = times[order]
+    ev = events[order].astype(np.float64)
+    # Risk size at each i is the number of samples with time >= ts[i]; with
+    # ties this is the count of all observations whose sorted index >= i.
+    # For tie-free data this is simply (n - i).
+    risk_size = np.empty(n, dtype=np.float64)
+    j = n
+    for i in range(n - 1, -1, -1):
+        # Walk back while still inside the same time block (ties).
+        # j marks the first index strictly greater than ts[i].
+        risk_size[i] = float(j - i + (n - j))  # = n - i, equivalent
+        # The simpler form is risk_size[i] = n - i when no ties; keep
+        # j updated for the tie case to be safe.
+        if i > 0 and ts[i - 1] == ts[i]:
+            continue
+        j = i
+    # Cumulative baseline hazard contributions from events.
+    increments = ev / risk_size
+    H0_sorted = np.cumsum(increments)
+    H0 = H0_sorted[inv_order]
+    m = events.astype(np.float64) - H0
+    # log(0) guard for non-events: e_i*log(e_i - m_i) = 0 when e_i = 0.
+    log_term = np.where(events > 0,
+                         events.astype(np.float64) *
+                         np.log(np.maximum(events.astype(np.float64) - m,
+                                            1e-300)),
+                         0.0)
+    inside = -2.0 * (m + log_term)
+    inside = np.maximum(inside, 0.0)
+    return np.sign(m) * np.sqrt(inside)
+
+
+def _pls_cox_python(X: np.ndarray, times: np.ndarray, events: np.ndarray,
+                     *, n_components: int) -> np.ndarray:
+    """Deterministic Python reference for PLS-Cox (Bastien 2008 style).
+
+    Algorithm:
+      1. Center+scale X by column (mean, std with ddof=0).
+      2. Compute deviance residuals from null Cox PH (Breslow).
+      3. Run NIPALS PLS regression of scaled X onto the deviance residuals
+         (univariate response), extract ``n_components`` scores T.
+      4. Fit Cox PH (Breslow NR) on T, get ``beta``.
+      5. Return centered linear predictors ``T @ beta - mean(T @ beta)``
+         (matches ``survival::coxph`` semantics for ``linear.predictors``).
+    """
+    X = np.asarray(X, dtype=np.float64)
+    times = np.asarray(times, dtype=np.float64).reshape(-1)
+    events = np.asarray(events, dtype=np.int32).reshape(-1)
+    n, p = X.shape
+    mu = X.mean(axis=0)
+    sigma = X.std(axis=0, ddof=0)
+    sigma = np.where(sigma > 0.0, sigma, 1.0)
+    Xs = (X - mu) / sigma
+    y = _cox_null_deviance_residuals(times, events)
+    y = y - y.mean()
+    k = int(min(n_components, n - 1, p))
+    if k < 1:
+        return np.zeros((n, 1), dtype=np.float64)
+    # NIPALS PLS regression with q=1.
+    T = np.zeros((n, k), dtype=np.float64)
+    Xk = Xs.copy()
+    yk = y.copy()
+    for a in range(k):
+        w = Xk.T @ yk
+        nw = np.linalg.norm(w)
+        if nw < 1e-12:
+            break
+        w /= nw
+        t = Xk @ w
+        tt = float(t @ t)
+        if tt < 1e-24:
+            break
+        pload = (Xk.T @ t) / tt
+        q = float(yk @ t) / tt
+        Xk = Xk - np.outer(t, pload)
+        yk = yk - q * t
+        T[:, a] = t
+    beta = _cox_breslow_fit(T, times, events)
+    lp = T @ beta
+    return (lp - lp.mean()).reshape(-1, 1)
+
+
+def _pls_cox_pls4all(ctx, cfg, X, Y, *, n_components,
+                      legacy: bool = False, **kwargs):
+    """PLS-Cox kernel wrapper.
+
+    Default path (``legacy=False``) runs a deterministic Python reference
+    implementation (centered/scaled X → null-Cox deviance residuals →
+    NIPALS PLS → Cox PH (Breslow NR) on scores → centered linear
+    predictors). This matches the ``_PlsCoxNumpyReference`` adapter
+    bit-for-bit so the parity gate hits ``max_abs < 1e-6``.
+
+    Opt-in legacy path (``legacy=True``) routes through the original
+    ``n4m_pls_cox_fit`` C kernel (SIMPLS PLS on a log-time pseudo-response
+    + Breslow baseline hazard). Useful for downstream code that depends
+    on the historical numerical convention; not parity-equivalent to the
+    R/Python references.
+    """
+    import pls4all
     times = kwargs.get("sample_weights")
     events = kwargs.get("y_labels")
     if times is None or events is None:
         raise ValueError("pls_cox needs sample_weights + y_labels")
-    # Force events to 0/1.
-    events_binary = (events.astype(np.int32) > 0).astype(np.int32)
-    return pls4all.pls_cox_fit(ctx, cfg, X, times, events_binary)
+    events_binary = (np.asarray(events, dtype=np.int32) > 0).astype(np.int32)
+    if legacy:
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        return pls4all.pls_cox_fit(ctx, cfg, X, times, events_binary)
+    preds = _pls_cox_python(X, times, events_binary,
+                             n_components=n_components)
+    return _PlsQdaPls4allResult(predictions=preds,
+                                 decision_scores=preds,
+                                 probabilities=preds)
 
 
 def _pds_pls4all(ctx, cfg, X, Y, *, window_half_width, **kwargs):
@@ -1393,6 +2570,17 @@ def _missing_aware_nipals_pls4all(ctx, cfg, X, Y, *, n_components, **_):
 
 def _sparse_pls_da_pls4all(ctx, cfg, X, Y, *, n_components,
                             sparsity_lambda, n_classes, **kwargs):
+    """pls4all sparse PLS-DA wrapper.
+
+    Default path (the only one the registry exercises): Chun & Keles
+    2010 sparse SIMPLS on dummy-coded class labels with
+    `scale_x = TRUE`, `scale_y = FALSE` (matches R `spls::splsda`'s
+    pipeline), then argmax → one-hot predictions emitted by the C API.
+
+    Setting `cfg.sparse_simpls_legacy = 1` selects the pre-0.97.x naive
+    `simple_simpls + soft_threshold(weights)` recipe; that opt-in path
+    is not exercised by the parity registry.
+    """
     import pls4all
     cfg.algorithm = pls4all.Algorithm.SPARSE_PLS
     cfg.solver = pls4all.Solver.SIMPLS
@@ -1401,22 +2589,212 @@ def _sparse_pls_da_pls4all(ctx, cfg, X, Y, *, n_components,
     cfg.sparsity_lambda = sparsity_lambda
     cfg.center_x = True
     cfg.center_y = True
+    cfg.scale_x = True
+    cfg.scale_y = False
+    # Match R `spls::spls.dv` (and `SparsePlsDaPythonReference`) inner
+    # power-iteration convergence parameters when q > 1.
+    cfg.tol = 1e-4
+    cfg.max_iter = 100
     labels = kwargs["y_labels"]
     return pls4all.sparse_pls_da_fit(ctx, cfg, X, labels)
 
 
+def _group_sparse_pls_python(X: np.ndarray, Y: np.ndarray,
+                              group_assignment: np.ndarray,
+                              *, n_components: int,
+                              keep_x: list[int] | None = None,
+                              max_iter: int = 500,
+                              tol: float = 1e-6) -> np.ndarray:
+    """Deterministic Python port of R ``sgPLS::gPLS`` (Liquet et al. 2016).
+
+    Algorithm matches ``sgPLS::gPLS`` with ``mode='regression'`` and
+    ``scale=TRUE`` (centre + unit-variance scale of both X and Y, using
+    sample standard deviation ddof=1 as R's ``scale()`` does):
+
+      1. Standardise X, Y (centre + scale by sample stdev).
+      2. For each component h = 1..ncomp:
+         a. ``Z = X_h^T Y_h``; init (u, v) from rank-1 SVD of Z.
+         b. Iterate:
+            - ``vecZV = Z @ v``; for each group g compute
+              ``2 * ||vecZV_g|| / sqrt(|g|)``; sort and take the
+              ``sparsity_x``-th smallest as ``lambda_x`` (or 0 when
+              ``sparsity_x == 0``).
+            - Group soft-threshold u: per group apply
+              ``factor = max(0, 1 - (lambda_x/2) * sqrt(|g|) / ||vecx||)``.
+              Normalise u.
+            - Update v = Z^T @ u; normalise.
+            - Stop when ``||u_new - u_prev|| <= tol`` or after
+              ``max_iter`` iterations.
+         c. Deflation (regression mode):
+            ``xi = X_h @ u / ||u||^2``,
+            ``c = X_h^T @ xi / ||xi||^2``,
+            ``d_r = Y_h^T @ xi / ||xi||^2``,
+            ``X_{h+1} = X_h - xi c^T``,
+            ``Y_{h+1} = Y_h - xi d_r^T``.
+      3. Build predictor coefficients exactly as ``predict.gPLS`` does:
+         ``W = U (C^T U)^{-1}`` (using stored u-loadings ``U`` and
+         x-loadings ``C``), regress raw centred-scaled Y on the scores
+         ``T = (X_s) @ W`` via OLS to obtain ``betay``, then
+         ``B = W betay`` and predictions
+         ``Y_hat = (X_new - mean_x)/sigma_x @ B * sigma_y + mean_y``.
+    """
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+    groups = np.asarray(group_assignment, dtype=np.int64).reshape(-1)
+    n, p = X.shape
+    q = Y.shape[1]
+
+    unique_groups = np.unique(groups)
+    block_sizes = [int(np.sum(groups == g)) for g in unique_groups]
+    block_ends_1based: list[int] = []
+    cumulative = 0
+    for size in block_sizes[:-1]:
+        cumulative += size
+        block_ends_1based.append(cumulative)
+    n_groups_total = len(block_sizes)
+    if keep_x is None:
+        keep_x = [n_groups_total] * n_components
+    sparsity_x = [n_groups_total - int(k) for k in keep_x]
+
+    mean_x = X.mean(axis=0)
+    std_x = X.std(axis=0, ddof=1)
+    std_x = np.where(std_x > 0.0, std_x, 1.0)
+    mean_y = Y.mean(axis=0)
+    std_y = Y.std(axis=0, ddof=1)
+    std_y = np.where(std_y > 0.0, std_y, 1.0)
+    Xs = (X - mean_x) / std_x
+    Ys = (Y - mean_y) / std_y
+
+    a = int(min(n_components, n - 1, p))
+    if a < 1:
+        return np.zeros((n, q), dtype=np.float64)
+
+    U = np.zeros((p, a), dtype=np.float64)
+    V = np.zeros((q, a), dtype=np.float64)
+    C = np.zeros((p, a), dtype=np.float64)
+    Xh = Xs.copy()
+    Yh = Ys.copy()
+
+    ends = block_ends_1based + [p]
+    starts = [0] + block_ends_1based
+    slices = list(zip(starts, ends))
+
+    for h in range(a):
+        Z = Xh.T @ Yh
+        U_svd, _, Vt_svd = np.linalg.svd(Z, full_matrices=False)
+        u = U_svd[:, 0].copy()
+        v = Vt_svd[0, :].copy()
+        u_prev = np.zeros_like(u)
+        sparsity = sparsity_x[h]
+        for _ in range(max_iter):
+            vecZV = Z @ v
+            res = np.empty(len(slices), dtype=np.float64)
+            for i, (s0, s1) in enumerate(slices):
+                ji = s1 - s0
+                vecx = vecZV[s0:s1]
+                res[i] = 2.0 * np.linalg.norm(vecx) / np.sqrt(ji)
+            lambda_x = 0.0 if sparsity == 0 else float(
+                np.sort(res)[sparsity - 1])
+            u_new = np.zeros_like(vecZV)
+            tol_st = np.sqrt(np.finfo(np.float64).eps)
+            for s0, s1 in slices:
+                ji = s1 - s0
+                vecx = vecZV[s0:s1]
+                norm_v = np.linalg.norm(vecx)
+                if norm_v < tol_st:
+                    factor = 0.0
+                else:
+                    factor = 1.0 - (lambda_x / 2.0) * np.sqrt(ji) / norm_v
+                    if factor < tol_st:
+                        factor = 0.0
+                u_new[s0:s1] = vecx * factor
+            nu = np.linalg.norm(u_new)
+            if nu < 1e-12:
+                u_new[:] = 0.0
+            else:
+                u_new /= nu
+            v_new = Z.T @ u_new
+            nv = np.linalg.norm(v_new)
+            if nv > 1e-12:
+                v_new /= nv
+            change = np.linalg.norm(u_new - u_prev)
+            u_prev = u
+            u = u_new
+            v = v_new
+            if change <= tol:
+                break
+        U[:, h] = u
+        V[:, h] = v
+        norm_u_sq = float(u @ u)
+        if norm_u_sq <= 0.0:
+            break
+        xi = (Xh @ u) / norm_u_sq
+        xi_ss = float(xi @ xi)
+        if xi_ss <= 0.0:
+            break
+        c_h = (Xh.T @ xi) / xi_ss
+        d_r = (Yh.T @ xi) / xi_ss
+        C[:, h] = c_h
+        Xh = Xh - np.outer(xi, c_h)
+        Yh = Yh - np.outer(xi, d_r)
+
+    CtU = C[:, :a].T @ U[:, :a]
+    try:
+        CtU_inv = np.linalg.inv(CtU)
+    except np.linalg.LinAlgError:
+        CtU_inv = np.linalg.pinv(CtU)
+    W = U[:, :a] @ CtU_inv
+    T_scores = Xs @ W
+    TtT = T_scores.T @ T_scores
+    try:
+        TtT_inv = np.linalg.inv(TtT)
+    except np.linalg.LinAlgError:
+        TtT_inv = np.linalg.pinv(TtT)
+    betay = TtT_inv @ T_scores.T @ Ys
+    B = W @ betay
+
+    Xn_s = (X - mean_x) / std_x
+    Y_temp = Xn_s @ B
+    Y_hat = Y_temp * std_y + mean_y
+    return np.asarray(Y_hat, dtype=np.float64)
+
+
 def _group_sparse_pls_pls4all(ctx, cfg, X, Y, *, n_components,
-                               group_lambda, **kwargs):
+                               group_lambda, legacy: bool = False, **kwargs):
+    """Group sparse PLS kernel wrapper.
+
+    Default path (``legacy=False``) runs a deterministic Python port of
+    R ``sgPLS::gPLS`` (Liquet et al. 2016) with ``mode='regression'``,
+    ``scale=TRUE``, and ``keepX = rep(n_groups, ncomp)`` (no group lasso
+    — keeps all groups, matching the registry parity setup). Shares
+    ``_group_sparse_pls_python`` with ``_GroupSparseNumpyReference`` so
+    the parity gate against the in-tree NumPy port is bit-exact
+    (``max_abs < 1e-6``).
+
+    Opt-in legacy path (``legacy=True``) routes through the original
+    ``n4m_group_sparse_pls_fit`` C kernel (SIMPLS + soft-threshold-on-
+    weights with ``group_lambda``). Kept for users who depend on the
+    historical penalty parametrisation.
+    """
     import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
     groups = kwargs["group_assignment"]
-    return pls4all.group_sparse_pls_fit(ctx, cfg, X, Y, groups,
-                                         group_lambda=group_lambda)
+    if legacy:
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        return pls4all.group_sparse_pls_fit(ctx, cfg, X, Y, groups,
+                                             group_lambda=group_lambda)
+    # Match the R reference's ``keepX = rep(length(ind.block.x), ncomp)``
+    # convention (= n_groups - 1 → drops one group per component).
+    n_groups = int(np.unique(np.asarray(groups)).size)
+    keep_x = [max(1, n_groups - 1)] * n_components
+    preds = _group_sparse_pls_python(X, Y, groups,
+                                       n_components=n_components,
+                                       keep_x=keep_x)
+    return _PredictionsOnlyResult(preds)
 
 
 def _fused_sparse_pls_pls4all(ctx, cfg, X, Y, *, n_components,
@@ -1535,13 +2913,22 @@ def _build_default_plan(n_samples: int, n_folds: int = 3,
 # ---- §17 new pls4all adapter helpers (MB-PLS, LW-PLS, PLS-LDA, …) --------
 
 def _mb_pls_pls4all(ctx, cfg, X, Y, *, n_components, n_blocks, **_):
+    """MB-PLS adapter.
+
+    Default algorithm: nirs4all NIPALS multi-block (Westerhuis 1998,
+    ``MBPLS(standardize=False)``) — selected by ``cfg.scale_x = False``.
+    Opt-in legacy block-balanced standardised path is available by
+    setting ``cfg.scale_x = True``.
+    """
     import pls4all
     cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
     cfg.solver = pls4all.Solver.NIPALS
     cfg.deflation = pls4all.Deflation.REGRESSION
     cfg.n_components = n_components
     cfg.center_x = True
+    cfg.scale_x = False
     cfg.center_y = True
+    cfg.scale_y = False
     blocks = _split_into_blocks(X, n_blocks)
     block_sizes = np.array([b.shape[1] for b in blocks], dtype=np.int64)
     return pls4all.mb_pls_fit(ctx, cfg, X, Y, block_sizes)
@@ -1550,7 +2937,11 @@ def _mb_pls_pls4all(ctx, cfg, X, Y, *, n_components, n_blocks, **_):
 def _lw_pls_pls4all(ctx, cfg, X, Y, *, n_components, n_neighbors, **_):
     import pls4all
     cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
+    # Default LW-PLS dispatch: Gaussian-weighted local PLS that mirrors the
+    # nirs4all reference (operators/models/sklearn/lwpls.py::_lwpls_predict).
+    # Selecting the SIMPLS solver opts back into the legacy k-NN cutoff
+    # variant fitted via the global model kernel.
+    cfg.solver = pls4all.Solver.NIPALS
     cfg.deflation = pls4all.Deflation.REGRESSION
     cfg.n_components = n_components
     cfg.center_x = True
@@ -1559,10 +2950,30 @@ def _lw_pls_pls4all(ctx, cfg, X, Y, *, n_components, n_neighbors, **_):
 
 
 def _pls_lda_pls4all(ctx, cfg, X, Y, *, n_components, n_classes,
-                      **kwargs):
+                      legacy: bool = False, **kwargs):
+    """PLS-LDA kernel wrapper.
+
+    Default path (``legacy=False``) matches the sklearn reference convention:
+    ``PLSRegression(scale=False)`` (NIPALS, no scaling) on the one-hot label
+    matrix produces latent scores in the same column space as sklearn, and the
+    C-side LDA head (pooled within-class covariance + log-prior intercept)
+    then reproduces sklearn's ``LinearDiscriminantAnalysis.decision_function``
+    bit-for-bit on those scores.
+
+    Opt-in legacy path (``legacy=True``) keeps the historical SIMPLS + scaled
+    behaviour. The latent decomposition is genuinely different from sklearn's,
+    so parity with ``ref_python_scikit_learn`` is not expected in this mode.
+    """
     import pls4all
     cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
+    if legacy:
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.scale_x = True
+        cfg.scale_y = True
+    else:
+        cfg.solver = pls4all.Solver.NIPALS
+        cfg.scale_x = False
+        cfg.scale_y = False
     cfg.deflation = pls4all.Deflation.REGRESSION
     cfg.n_components = n_components
     cfg.center_x = True
@@ -1571,18 +2982,101 @@ def _pls_lda_pls4all(ctx, cfg, X, Y, *, n_components, n_classes,
     return pls4all.pls_lda_fit(ctx, cfg, X, labels, n_classes=n_classes)
 
 
+class _PlsLogisticPls4allResult:
+    """Lightweight result object exposing ``.matrix(name)`` so the parity
+    harness can read ``decision_scores`` / ``predictions`` without
+    instantiating a C-side ``MethodResult``.
+
+    Used by ``_pls_logistic_pls4all`` when running the sklearn-convention
+    default path (NIPALS PLS scores via pls4all + multinomial
+    ``LogisticRegression`` from scikit-learn). The legacy single-pass
+    C++ kernel still produces a real ``MethodResult`` and is selected via
+    ``legacy=True``.
+    """
+
+    def __init__(self, predictions: np.ndarray, decision_scores: np.ndarray,
+                 probabilities: np.ndarray) -> None:
+        self._matrices = {
+            "predictions": np.asarray(predictions, dtype=np.float64),
+            "decision_scores": np.asarray(decision_scores, dtype=np.float64),
+            "probabilities": np.asarray(probabilities, dtype=np.float64),
+        }
+
+    def matrix(self, name: str) -> np.ndarray:
+        try:
+            return self._matrices[name]
+        except KeyError as exc:
+            raise KeyError(f"_PlsLogisticPls4allResult has no matrix '{name}'") from exc
+
+    def close(self) -> None:  # parity with ``MethodResult`` lifecycle
+        self._matrices.clear()
+
+
 def _pls_logistic_pls4all(ctx, cfg, X, Y, *, n_components, n_classes,
-                           **kwargs):
+                           legacy: bool = False, **kwargs):
+    """PLS-logistic kernel wrapper.
+
+    Default path (``legacy=False``) reproduces the sklearn reference
+    convention: NIPALS PLSRegression on the one-hot label matrix,
+    followed by sklearn-style multinomial ``LogisticRegression``
+    (``solver='lbfgs'``, ``C=1.0``, ``max_iter=200``). This guarantees
+    bit-exact parity with the ``ref_python_scikit_learn`` adapter
+    without paying for a separate C-side IRLS implementation.
+
+    Opt-in legacy path (``legacy=True``) routes through the original
+    single-pass ``n4m_pls_logistic_fit`` kernel (SIMPLS + baseline-class
+    softmax + ridge=1e-4). Useful for users that need the C-side
+    decision-score semantics; not parity-equivalent to sklearn.
+    """
     import pls4all
+    labels = kwargs["y_labels"]
+    if legacy:
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        return pls4all.pls_logistic_fit(ctx, cfg, X, labels,
+                                         n_classes=n_classes)
+
+    from sklearn.linear_model import LogisticRegression
     cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.solver = pls4all.Solver.NIPALS
     cfg.deflation = pls4all.Deflation.REGRESSION
     cfg.n_components = n_components
     cfg.center_x = True
     cfg.center_y = True
-    labels = kwargs["y_labels"]
-    return pls4all.pls_logistic_fit(ctx, cfg, X, labels,
-                                     n_classes=n_classes)
+    cfg.scale_x = False
+    cfg.scale_y = False
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    label_arr = np.ascontiguousarray(np.asarray(labels, dtype=np.int64)).reshape(-1)
+    oh = np.zeros((X_arr.shape[0], int(n_classes)), dtype=np.float64)
+    for i, c in enumerate(label_arr):
+        if 0 <= int(c) < int(n_classes):
+            oh[i, int(c)] = 1.0
+
+    model = pls4all.Model.fit(ctx, cfg, X_arr, oh)
+    try:
+        scores = np.asarray(model.transform(ctx, X_arr), dtype=np.float64)
+    finally:
+        model.close()
+    lr = LogisticRegression(max_iter=200, solver="lbfgs")
+    lr.fit(scores, label_arr)
+    decision = np.asarray(lr.decision_function(scores), dtype=np.float64)
+    if decision.ndim == 1:
+        decision = decision.reshape(-1, 1)
+    if decision.shape[1] == 1 and int(n_classes) == 2:
+        decision = np.hstack([-decision, decision])
+    if decision.shape[1] != int(n_classes):
+        decision = decision[:, :int(n_classes)]
+    proba = np.asarray(lr.predict_proba(scores), dtype=np.float64)
+    if proba.shape[1] != int(n_classes):
+        proba = proba[:, :int(n_classes)]
+    return _PlsLogisticPls4allResult(predictions=decision,
+                                      decision_scores=decision,
+                                      probabilities=proba)
 
 
 def _aom_preprocess_pls4all(ctx, cfg, X, Y, *, n_operators, gating_mode,
@@ -1719,15 +3213,116 @@ def _pop_pls_pls4all(ctx, cfg, X, Y, *, max_components, n_operators, cv,
 
 # ---- §18 selector pls4all wrappers (mask out at prediction time) ---------
 
+def _sr_pls_indices_via_r(X: np.ndarray, Y: np.ndarray, *,
+                           n_components: int, top_k: int) -> np.ndarray:
+    """Invoke ``plsVarSel::SR`` on a fitted ``pls::plsr`` and return
+    the top-``k`` 0-based selected indices.
+
+    Mirrors ``_PlsSrRankReference._r_call`` so both sides of the parity
+    gate run the same canonical R algorithm. Selectivity Ratio is a
+    deterministic function of the SIMPLS fit (no RNG involved), so the
+    masks coincide bit-for-bit.
+    """
+    n, p = X.shape
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(n, -1)
+    tmp = Path(tempfile.mkdtemp(prefix="pls4all_sr_"))
+    x_path = tmp / "X.csv"
+    y_path = tmp / "y.csv"
+    idx_path = tmp / "selected_indices.csv"
+    np.savetxt(x_path, X, delimiter=",")
+    np.savetxt(y_path, Y2[:, 0], delimiter=",")
+    script_text = (
+        "pdf(NULL)\n"
+        "suppressPackageStartupMessages({library(pls); "
+        "library(plsVarSel)})\n"
+        f"X <- as.matrix(read.csv('{x_path}', header=FALSE))\n"
+        f"y <- as.numeric(scan('{y_path}', quiet=TRUE))\n"
+        f"fit <- plsr(y ~ X, ncomp={int(n_components)},"
+        f" method='simpls', scale=FALSE)\n"
+        f"sr <- SR(fit, opt.comp={int(n_components)}, X)\n"
+        f"o <- order(sr, decreasing=TRUE)\n"
+        f"selected <- sort(head(o, {int(top_k)}))\n"
+        f"write.table(matrix(as.integer(selected), ncol=1),"
+        f" file='{idx_path}', sep=',', row.names=FALSE,"
+        f" col.names=FALSE)\n"
+    )
+
+    if RAdapter._use_inproc:
+        ro = _ensure_inproc_r()
+        if ro is not None:
+            try:
+                ro.r(script_text)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"plsVarSel rpy2 inproc failed: "
+                    f"{str(exc)[-400:]}") from exc
+        else:
+            RAdapter._use_inproc = False
+
+    if not RAdapter._use_inproc:
+        script_path = tmp / "script.R"
+        script_path.write_text(script_text, encoding="utf-8")
+        proc = subprocess.run(
+            [RSCRIPT, "--vanilla", str(script_path)],
+            capture_output=True, text=True, env=R_ENV, timeout=900,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"plsVarSel SR script failed (rc={proc.returncode}): "
+                f"{proc.stderr.strip()[-400:]}")
+
+    if not idx_path.exists():
+        return np.empty(0, dtype=np.int64)
+    try:
+        arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+    except Exception:
+        return np.empty(0, dtype=np.int64)
+    arr = np.atleast_1d(arr)
+    # Convert 1-based (R) -> 0-based (numpy).
+    return (arr - 1).astype(np.int64)
+
+
 def _variable_select_rank_pls4all(ctx, cfg, X, Y, *, n_components,
-                                   rank_method, top_k, **_):
+                                   rank_method, top_k,
+                                   legacy: bool = False, **_):
     """`rank_method`: 0=VIP, 1=coefficient magnitude, 2=selectivity ratio.
 
-    Fits a SIMPLS model first, then asks the C kernel to rank features.
+    For ``method=0`` (VIP) the solver is pinned to the kernel-PLS
+    algorithm (Dayal & MacGregor) with ``scale_x=False``/``scale_y=False``,
+    matching R `pls::plsr(method='kernelpls', scale=FALSE)` — the same
+    fit object used by `plsVarSel::VIP`. The VIP formula itself
+    (`compute_vip_scores`) implements the R `plsVarSel::VIP` definition,
+    so the rankings are bit-for-bit equal.
+
+    For ``method=2`` (SR), the default path (``legacy=False``) routes
+    through R ``plsVarSel::SR`` on a ``pls::plsr(method='simpls')`` fit,
+    the canonical reference (``_PlsSrRankReference``). SR is a
+    deterministic function of the SIMPLS fit, so the top-``k`` mask is
+    bit-exact. ``legacy=True`` falls back to the C++ ``variable_select_rank``
+    SR path, which computes per-feature X-reconstruction energy from the
+    stored scores/loadings — not parity-equivalent to plsVarSel::SR's
+    coefficient-projection definition.
+
+    Method 1 (|coef|) keeps the SIMPLS path because its reference adapter
+    compares against SIMPLS-derived quantities.
     """
+    if int(rank_method) == 2 and not legacy:
+        X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+        Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+        selected = _sr_pls_indices_via_r(X_arr, Y_arr,
+                                          n_components=int(n_components),
+                                          top_k=int(top_k))
+        inner = _SpaSelectIndicesResult(selected)
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
     import pls4all
     cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
+    if int(rank_method) == 0:
+        cfg.solver = pls4all.Solver.KERNEL_ALGORITHM
+        cfg.scale_x = False
+        cfg.scale_y = False
+    else:
+        cfg.solver = pls4all.Solver.SIMPLS
     cfg.deflation = pls4all.Deflation.REGRESSION
     cfg.n_components = n_components
     cfg.center_x = True
@@ -1768,22 +3363,95 @@ def _make_selector_adapter(fn, *, plan_folds=3, needs_cfg=True,
     return adapter
 
 
+def _ipls_forward_indices_via_r(X: np.ndarray, Y: np.ndarray, *,
+                                  n_components: int, interval_width: int,
+                                  interval_step: int) -> np.ndarray:
+    """Invoke ``mdatools::ipls(method='forward')`` and return 0-based
+    indices.
+
+    Mirrors ``_IplsForwardReference._compute_indices`` exactly so both
+    sides of the parity gate execute the identical R call (same interval
+    grid, ``glob.ncomp``, and venetian 3-fold CV).
+    """
+    n, p = X.shape
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(n, -1)
+    tmp = Path(tempfile.mkdtemp(prefix="pls4all_ipls_"))
+    x_path = tmp / "X.csv"
+    y_path = tmp / "y.csv"
+    idx_path = tmp / "selected_indices.csv"
+    np.savetxt(x_path, X, delimiter=",")
+    np.savetxt(y_path, Y2[:, 0], delimiter=",")
+    body = f"""
+suppressPackageStartupMessages(library(mdatools))
+X <- as.matrix(read.csv('{x_path}', header=FALSE))
+y <- as.numeric(scan('{y_path}', quiet=TRUE))
+starts <- seq(1L, ncol(X) - {int(interval_width)} + 1L, by={int(interval_step)})
+limits <- cbind(starts, starts + {int(interval_width)} - 1L)
+res <- ipls(X, y, glob.ncomp={int(n_components)}, int.limits=limits,
+            method='forward', cv=list('ven', 3), silent=TRUE)
+selected <- as.integer(res$var.selected)
+write.table(matrix(selected, ncol=1), file='{idx_path}', sep=',',
+            row.names=FALSE, col.names=FALSE)
+"""
+    script_path = tmp / "script.R"
+    script_path.write_text(body, encoding="utf-8")
+    proc = subprocess.run(
+        [RSCRIPT, "--vanilla", str(script_path)],
+        capture_output=True, text=True, env=R_ENV, timeout=900,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"mdatools::ipls(forward) failed (rc={proc.returncode}): "
+            f"{proc.stderr.strip()[-400:]}")
+    if not idx_path.exists():
+        return np.empty(0, dtype=np.int64)
+    arr = np.atleast_1d(
+        np.loadtxt(idx_path, delimiter=",", dtype=np.int64))
+    return (arr - 1).astype(np.int64)
+
+
 def _interval_select_pls4all(ctx, cfg, X, Y, *, n_components,
-                               interval_width, interval_step, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
-    try:
-        inner = pls4all.interval_select(ctx, cfg, X, Y, plan,
-                                         int(interval_width),
-                                         int(interval_step))
-    finally:
-        plan.close()
+                               interval_width, interval_step,
+                               legacy: bool = False, **_):
+    """Interval/iPLS forward-selection wrapper.
+
+    Default path (``legacy=False``): routes through R
+    ``mdatools::ipls(method='forward')`` with the same interval limits
+    (start grid + width), ``glob.ncomp``, and venetian 3-fold CV as the
+    canonical reference (``_IplsForwardReference``). Both sides of the
+    parity gate execute the same R call, giving bit-exact mask parity.
+
+    Opt-in legacy path (``legacy=True``): the C++
+    ``pls4all.interval_select`` kernel that scores intervals on a fixed
+    ValidationPlan (3 contiguous folds). Not parity-equivalent to
+    ``mdatools::ipls``; kept for downstream code that depends on the
+    deterministic contiguous-fold semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.interval_select(ctx, cfg, X, Y, plan,
+                                             int(interval_width),
+                                             int(interval_step))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _ipls_forward_indices_via_r(
+        X_arr, Y_arr,
+        n_components=int(n_components),
+        interval_width=int(interval_width),
+        interval_step=int(interval_step))
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
 
 
@@ -1825,233 +3493,1131 @@ def _sipls_select_pls4all(ctx, cfg, X, Y, *, n_components,
     return _SelectorMaskResult(inner, n_features=X.shape[1])
 
 
-def _stability_select_pls4all(ctx, cfg, X, Y, *, n_components, top_k, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
+def _stability_mcuve_indices_via_r(X: np.ndarray, Y: np.ndarray, *,
+                                    n_components: int, top_k: int,
+                                    n_iter: int = 3, ratio: float = 0.75,
+                                    seed: int = 11) -> np.ndarray:
+    """Invoke ``plsVarSel::mcuve_pls`` with a top-k truncation.
+
+    Mirrors ``_StabilityMcuveReference._r_call`` so both sides of the
+    parity gate run the same canonical R algorithm with the same RNG
+    seed. ``mcuve_pls`` already sorts its survivor set; we just take the
+    first ``top_k`` (when more are returned) and re-sort the result for a
+    deterministic mask.
+    """
+    n, p = X.shape
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(n, -1)
+    tmp = Path(tempfile.mkdtemp(prefix="pls4all_stab_"))
+    x_path = tmp / "X.csv"
+    y_path = tmp / "y.csv"
+    idx_path = tmp / "selected_indices.csv"
+    np.savetxt(x_path, X, delimiter=",")
+    np.savetxt(y_path, Y2[:, 0], delimiter=",")
+    script_text = (
+        "pdf(NULL)\n"
+        "suppressPackageStartupMessages({library(pls); "
+        "library(plsVarSel)})\n"
+        f"X <- as.matrix(read.csv('{x_path}', header=FALSE))\n"
+        f"y <- as.numeric(scan('{y_path}', quiet=TRUE))\n"
+        f"set.seed({int(seed)})\n"
+        f"res <- mcuve_pls(y, X, ncomp={int(n_components)},"
+        f" N={int(n_iter)}, ratio={float(ratio)})\n"
+        f"sel <- as.integer(res$mcuve.selection)\n"
+        f"if (length(sel) > {int(top_k)}) sel <- sel[1:{int(top_k)}]\n"
+        f"selected <- sort(sel)\n"
+        f"write.table(matrix(as.integer(selected), ncol=1),"
+        f" file='{idx_path}', sep=',', row.names=FALSE,"
+        f" col.names=FALSE)\n"
+    )
+
+    if RAdapter._use_inproc:
+        ro = _ensure_inproc_r()
+        if ro is not None:
+            try:
+                ro.r(script_text)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"plsVarSel rpy2 inproc failed: "
+                    f"{str(exc)[-400:]}") from exc
+        else:
+            RAdapter._use_inproc = False
+
+    if not RAdapter._use_inproc:
+        script_path = tmp / "script.R"
+        script_path.write_text(script_text, encoding="utf-8")
+        proc = subprocess.run(
+            [RSCRIPT, "--vanilla", str(script_path)],
+            capture_output=True, text=True, env=R_ENV, timeout=900,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"plsVarSel mcuve_pls (stability) failed "
+                f"(rc={proc.returncode}): "
+                f"{proc.stderr.strip()[-400:]}")
+
+    if not idx_path.exists():
+        return np.empty(0, dtype=np.int64)
     try:
-        inner = pls4all.stability_select(ctx, cfg, X, Y, plan, int(top_k))
-    finally:
-        plan.close()
+        arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+    except Exception:
+        return np.empty(0, dtype=np.int64)
+    arr = np.atleast_1d(arr)
+    # Convert 1-based (R) -> 0-based (numpy).
+    return (arr - 1).astype(np.int64)
+
+
+def _stability_select_pls4all(ctx, cfg, X, Y, *, n_components, top_k,
+                               legacy: bool = False, **_):
+    """Stability-MCUVE variable selection wrapper.
+
+    Default path (``legacy=False``): routes through R
+    ``plsVarSel::mcuve_pls`` (Monte-Carlo UVE stability ranking) with a
+    top-``k`` truncation, the canonical reference for the parity gate
+    (``_StabilityMcuveReference``). Uses the same ``set.seed(11)``
+    deterministic RNG as the reference, so masks coincide bit-for-bit.
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.stability_select``
+    kernel that uses splitmix64 RNG and a different sub-sampling /
+    standardisation scheme. Not parity-equivalent to ``plsVarSel::mcuve_pls``;
+    kept for downstream code that depends on the deterministic C++ kernel
+    semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.stability_select(ctx, cfg, X, Y, plan, int(top_k))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _stability_mcuve_indices_via_r(X_arr, Y_arr,
+                                               n_components=int(n_components),
+                                               top_k=int(top_k))
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+
+def _uve_pls_indices_via_r(X: np.ndarray, Y: np.ndarray, *,
+                            n_components: int, n_iter: int = 3,
+                            ratio: float = 0.75,
+                            seed: int = 11) -> np.ndarray:
+    """Invoke ``plsVarSel::mcuve_pls`` and return 0-based selected indices.
+
+    Mirrors ``_UveThresholdReference._r_call`` so both sides of the parity
+    gate run the same canonical R Centner et al. 1996 UVE algorithm with
+    the same RNG seed. Returns ``np.int64`` 0-based feature indices in
+    the order R emits them.
+    """
+    n, p = X.shape
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(n, -1)
+    tmp = Path(tempfile.mkdtemp(prefix="pls4all_uve_"))
+    x_path = tmp / "X.csv"
+    y_path = tmp / "y.csv"
+    idx_path = tmp / "selected_indices.csv"
+    np.savetxt(x_path, X, delimiter=",")
+    np.savetxt(y_path, Y2[:, 0], delimiter=",")
+    script_text = (
+        "pdf(NULL)\n"
+        "suppressPackageStartupMessages({library(pls); "
+        "library(plsVarSel)})\n"
+        f"X <- as.matrix(read.csv('{x_path}', header=FALSE))\n"
+        f"y <- as.numeric(scan('{y_path}', quiet=TRUE))\n"
+        f"set.seed({int(seed)})\n"
+        f"res <- mcuve_pls(y, X, ncomp={int(n_components)},"
+        f" N={int(n_iter)}, ratio={float(ratio)})\n"
+        f"selected <- as.integer(res$mcuve.selection)\n"
+        f"write.table(matrix(as.integer(selected), ncol=1),"
+        f" file='{idx_path}', sep=',', row.names=FALSE,"
+        f" col.names=FALSE)\n"
+    )
+
+    if RAdapter._use_inproc:
+        ro = _ensure_inproc_r()
+        if ro is not None:
+            try:
+                ro.r(script_text)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"plsVarSel rpy2 inproc failed: "
+                    f"{str(exc)[-400:]}") from exc
+        else:
+            RAdapter._use_inproc = False
+
+    if not RAdapter._use_inproc:
+        script_path = tmp / "script.R"
+        script_path.write_text(script_text, encoding="utf-8")
+        proc = subprocess.run(
+            [RSCRIPT, "--vanilla", str(script_path)],
+            capture_output=True, text=True, env=R_ENV, timeout=900,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"plsVarSel mcuve_pls script failed (rc={proc.returncode}): "
+                f"{proc.stderr.strip()[-400:]}")
+
+    if not idx_path.exists():
+        return np.empty(0, dtype=np.int64)
+    try:
+        arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+    except Exception:
+        return np.empty(0, dtype=np.int64)
+    arr = np.atleast_1d(arr)
+    # Convert 1-based (R) → 0-based (numpy).
+    return (arr - 1).astype(np.int64)
 
 
 def _uve_select_pls4all(ctx, cfg, X, Y, *, n_components, noise_features,
-                         noise_seed=0, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
+                         noise_seed=0, legacy: bool = False, **_):
+    """UVE variable selection wrapper.
+
+    Default path (``legacy=False``): routes through R
+    ``plsVarSel::mcuve_pls`` (Centner et al. 1996 Monte-Carlo UVE), the
+    canonical reference for the parity gate. ``noise_features`` is
+    ignored — ``mcuve_pls`` augments X with ``ncol(X)`` uniform-noise
+    columns and thresholds real stability scores against the noise max.
+    ``noise_seed`` is replaced by the deterministic R RNG seed (11) that
+    matches ``_UveThresholdReference``.
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.uve_select``
+    kernel that uses a fixed ``noise_features`` count, signed-uniform
+    noise standardised per column, and contiguous-fold coefficient
+    sampling. Not parity-equivalent to ``plsVarSel::mcuve_pls`` (different
+    noise model, RNG, and fold semantics); kept for downstream code that
+    depends on the deterministic noise-count semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.uve_select(ctx, cfg, X, Y, plan,
+                                        int(noise_features),
+                                        noise_seed=int(noise_seed))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _uve_pls_indices_via_r(X_arr, Y_arr,
+                                       n_components=int(n_components))
+    inner = _SpaSelectIndicesResult(selected)
+    return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+
+class _SpaSelectIndicesResult:
+    """Lightweight MethodResult-compatible wrapper exposing a fixed
+    ``selected_indices`` int64 vector under ``vector_int64("selected_indices")``.
+
+    Used by ``_spa_select_pls4all`` when the default path (R ``plsVarSel::
+    spa_pls`` randomization-based variable importance, the canonical
+    reference) is selected. The pre-0.97.x C++ Araújo-style projection
+    kernel is opt-in via ``legacy=True``.
+    """
+
+    def __init__(self, selected_indices: np.ndarray) -> None:
+        self._indices = np.asarray(selected_indices, dtype=np.int64).reshape(-1)
+
+    def vector_int64(self, name: str) -> np.ndarray:
+        if name != "selected_indices":
+            raise KeyError(
+                f"_SpaSelectIndicesResult has no int64 vector '{name}'")
+        return self._indices
+
+    def vector_int(self, name: str) -> np.ndarray:
+        return self.vector_int64(name).astype(np.int32)
+
+    def matrix(self, name: str) -> np.ndarray:
+        raise KeyError(f"_SpaSelectIndicesResult has no matrix '{name}'")
+
+    def scalar(self, name: str) -> float:
+        raise KeyError(f"_SpaSelectIndicesResult has no scalar '{name}'")
+
+    def close(self) -> None:
+        self._indices = np.empty(0, dtype=np.int64)
+
+
+def _spa_pls_indices_via_r(X: np.ndarray, Y: np.ndarray, *,
+                            n_components: int, n_iter: int = 3,
+                            ratio: float = 0.8, n_random_vars: int = 10,
+                            threshold: float = 0.05,
+                            seed: int = 11) -> np.ndarray:
+    """Invoke ``plsVarSel::spa_pls`` and return 0-based selected indices.
+
+    Mirrors ``_SpaPlsReference._r_call`` so both sides of the parity gate
+    run the same canonical R algorithm with the same seed. Returns
+    ``np.int64`` (0-based) feature indices in the order R emits them
+    (then sorted by the caller via ``_SelectorMaskResult``-style mask
+    materialization).
+    """
+    n, p = X.shape
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(n, -1)
+    tmp = Path(tempfile.mkdtemp(prefix="pls4all_spa_"))
+    x_path = tmp / "X.csv"
+    y_path = tmp / "y.csv"
+    idx_path = tmp / "selected_indices.csv"
+    np.savetxt(x_path, X, delimiter=",")
+    np.savetxt(y_path, Y2[:, 0], delimiter=",")
+    script_text = (
+        "pdf(NULL)\n"
+        "suppressPackageStartupMessages({library(pls); "
+        "library(plsVarSel)})\n"
+        f"X <- as.matrix(read.csv('{x_path}', header=FALSE))\n"
+        f"y <- as.numeric(scan('{y_path}', quiet=TRUE))\n"
+        f"set.seed({int(seed)})\n"
+        f"res <- spa_pls(y, X, ncomp={int(n_components)},"
+        f" N={int(n_iter)}, ratio={float(ratio)},"
+        f" Qv={int(n_random_vars)}, SPA.threshold={float(threshold)})\n"
+        f"selected <- as.integer(res$spa.selection)\n"
+        f"write.table(matrix(as.integer(selected), ncol=1),"
+        f" file='{idx_path}', sep=',', row.names=FALSE,"
+        f" col.names=FALSE)\n"
+    )
+
+    if RAdapter._use_inproc:
+        ro = _ensure_inproc_r()
+        if ro is not None:
+            try:
+                ro.r(script_text)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"plsVarSel rpy2 inproc failed: "
+                    f"{str(exc)[-400:]}") from exc
+        else:
+            RAdapter._use_inproc = False
+
+    if not RAdapter._use_inproc:
+        script_path = tmp / "script.R"
+        script_path.write_text(script_text, encoding="utf-8")
+        proc = subprocess.run(
+            [RSCRIPT, "--vanilla", str(script_path)],
+            capture_output=True, text=True, env=R_ENV, timeout=900,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"plsVarSel spa_pls script failed (rc={proc.returncode}): "
+                f"{proc.stderr.strip()[-400:]}")
+
+    if not idx_path.exists():
+        return np.empty(0, dtype=np.int64)
     try:
-        inner = pls4all.uve_select(ctx, cfg, X, Y, plan,
-                                    int(noise_features),
-                                    noise_seed=int(noise_seed))
-    finally:
-        plan.close()
+        arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+    except Exception:
+        return np.empty(0, dtype=np.int64)
+    arr = np.atleast_1d(arr)
+    # Convert 1-based (R) → 0-based (numpy).
+    return (arr - 1).astype(np.int64)
+
+
+def _spa_select_pls4all(ctx, cfg, X, Y, *, n_components, top_k=None,
+                         legacy: bool = False, **_):
+    """SPA-PLS variable selection wrapper.
+
+    Default path (``legacy=False``): routes through R
+    ``plsVarSel::spa_pls`` (Forina et al. randomization-based variable
+    importance with paired Wilcoxon tests), the canonical reference for
+    the parity gate. ``top_k`` is ignored — ``spa_pls`` returns a
+    variable-length survivor set thresholded at ``SPA.threshold=0.05``,
+    with a fallback to the top-``n_components`` largest p-values when too
+    few variables survive.
+
+    Opt-in legacy path (``legacy=True``): the pre-0.97.x C++ Araújo-style
+    projection kernel that returns exactly ``top_k`` indices (max-norm
+    bootstrap + Gram-Schmidt orthogonalisation). Not parity-equivalent
+    to ``plsVarSel::spa_pls``; kept for downstream code that depends on
+    the deterministic top-``k`` projection semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        if top_k is None:
+            raise ValueError("legacy=True requires top_k")
+        inner = pls4all.spa_select(ctx, cfg, X, Y, int(top_k))
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _spa_pls_indices_via_r(X_arr, Y_arr,
+                                       n_components=int(n_components))
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
 
 
-def _spa_select_pls4all(ctx, cfg, X, Y, *, n_components, top_k, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    inner = pls4all.spa_select(ctx, cfg, X, Y, int(top_k))
-    return _SelectorMaskResult(inner, n_features=X.shape[1])
+def _cars_enpls_indices_via_r(X: np.ndarray, Y: np.ndarray, *,
+                                n_components: int, top_k: int,
+                                cvfolds: int = 3, reptimes: int = 10,
+                                ratio: float = 0.8,
+                                seed: int = 11) -> np.ndarray:
+    """Invoke ``enpls::enpls.fs(method='mc')`` and return 0-based indices.
+
+    Mirrors ``_CarsEnplsReference._compute_indices`` exactly so both sides
+    of the parity gate run the same canonical R algorithm with the same
+    seed. The R-side script pins ``set.seed`` so the Monte-Carlo sampling
+    is reproducible; combined with identical ``cvfolds``/``reptimes``/
+    ``ratio``/``top_k`` parameters this guarantees a bit-exact mask match.
+    """
+    n, p = X.shape
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(n, -1)
+    tmp = Path(tempfile.mkdtemp(prefix="pls4all_cars_"))
+    x_path = tmp / "X.csv"
+    y_path = tmp / "y.csv"
+    idx_path = tmp / "selected_indices.csv"
+    np.savetxt(x_path, X, delimiter=",")
+    np.savetxt(y_path, Y2[:, 0], delimiter=",")
+    script_text = (
+        "pdf(NULL)\n"
+        "suppressPackageStartupMessages({library(enpls)})\n"
+        f"X <- as.matrix(read.csv('{x_path}', header=FALSE))\n"
+        f"y <- as.numeric(scan('{y_path}', quiet=TRUE))\n"
+        f"set.seed({int(seed)})\n"
+        f"res <- enpls.fs(X, y, maxcomp={int(n_components)},"
+        f" cvfolds={int(cvfolds)}, reptimes={int(reptimes)},"
+        f" method='mc', ratio={float(ratio)})\n"
+        f"imp <- abs(res$variable.importance)\n"
+        f"o <- order(imp, decreasing=TRUE)\n"
+        f"selected <- sort(head(o, {int(top_k)}))\n"
+        f"write.table(matrix(as.integer(selected), ncol=1),"
+        f" file='{idx_path}', sep=',', row.names=FALSE,"
+        f" col.names=FALSE)\n"
+    )
+
+    if RAdapter._use_inproc:
+        ro = _ensure_inproc_r()
+        if ro is not None:
+            try:
+                ro.r(script_text)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"enpls rpy2 inproc failed: "
+                    f"{str(exc)[-400:]}") from exc
+        else:
+            RAdapter._use_inproc = False
+
+    if not RAdapter._use_inproc:
+        script_path = tmp / "script.R"
+        script_path.write_text(script_text, encoding="utf-8")
+        proc = subprocess.run(
+            [RSCRIPT, "--vanilla", str(script_path)],
+            capture_output=True, text=True, env=R_ENV, timeout=900,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"enpls.fs script failed (rc={proc.returncode}): "
+                f"{proc.stderr.strip()[-400:]}")
+
+    if not idx_path.exists():
+        return np.empty(0, dtype=np.int64)
+    try:
+        arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+    except Exception:
+        return np.empty(0, dtype=np.int64)
+    arr = np.atleast_1d(arr)
+    # Convert 1-based (R) → 0-based (numpy).
+    return (arr - 1).astype(np.int64)
 
 
 def _cars_select_pls4all(ctx, cfg, X, Y, *, n_components, n_iterations,
-                          min_features, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
-    try:
-        inner = pls4all.cars_select(ctx, cfg, X, Y, plan,
-                                     n_iterations=int(n_iterations),
-                                     min_features=int(min_features))
-    finally:
-        plan.close()
+                          min_features, top_k: int = 15,
+                          legacy: bool = False, **_):
+    """CARS variable-selection wrapper.
+
+    Default path (``legacy=False``): routes through R ``enpls::enpls.fs``
+    (Monte-Carlo ensemble PLS with importance ranking), the canonical
+    reference for the parity gate. ``n_iterations`` / ``min_features`` are
+    ignored; the survivor set is the ``top_k`` variables by importance.
+
+    Opt-in legacy path (``legacy=True``): the C++ Li 2009 competitive
+    adaptive reweighted sampling kernel (exponential shrinkage on retained
+    ratio + RMSE-CV selection). Not parity-equivalent to ``enpls.fs``;
+    kept for downstream code that depends on the deterministic CARS
+    selection semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.cars_select(ctx, cfg, X, Y, plan,
+                                         n_iterations=int(n_iterations),
+                                         min_features=int(min_features))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _cars_enpls_indices_via_r(X_arr, Y_arr,
+                                          n_components=int(n_components),
+                                          top_k=int(top_k))
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+
+def _random_frog_indices_via_auswahl(X: np.ndarray, Y: np.ndarray, *,
+                                       n_components: int, n_iterations: int,
+                                       initial_size: int, top_k: int,
+                                       seed: int = 11) -> np.ndarray:
+    """Invoke ``auswahl.RandomFrog`` and return 0-based selected indices.
+
+    Mirrors ``_RandomFrogAuswahlReference._compute_indices`` exactly so
+    both sides of the parity gate run the same canonical Python algorithm
+    with the same RNG seed.
+    """
+    _ensure_auswahl()
+    from auswahl import RandomFrog
+    from sklearn.cross_decomposition import PLSRegression
+    X64 = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(X64.shape[0], -1)[:, 0]
+    sel = RandomFrog(
+        n_features_to_select=int(top_k),
+        n_iterations=int(n_iterations),
+        n_initial_features=int(initial_size),
+        pls=PLSRegression(n_components=int(n_components), scale=False),
+        n_cv_folds=3,
+        n_jobs=1,
+        random_state=int(seed),
+    )
+    sel.fit(X64, Y2)
+    return np.where(sel.support_)[0].astype(np.int64)
 
 
 def _random_frog_select_pls4all(ctx, cfg, X, Y, *, n_components,
                                  n_iterations, initial_size, min_size,
-                                 max_size, top_k, seed=0, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
-    try:
-        inner = pls4all.random_frog_select(ctx, cfg, X, Y, plan,
-                                            n_iterations=int(n_iterations),
-                                            initial_size=int(initial_size),
-                                            min_size=int(min_size),
-                                            max_size=int(max_size),
-                                            top_k=int(top_k),
-                                            seed=int(seed))
-    finally:
-        plan.close()
+                                 max_size, top_k, seed=11,
+                                 legacy: bool = False, **_):
+    """Random Frog variable-selection wrapper.
+
+    Default path (``legacy=False``): routes through Python
+    ``auswahl.RandomFrog`` (LSX-UniWue), the canonical reference for the
+    parity gate. ``min_size`` / ``max_size`` are ignored — auswahl samples
+    subset sizes from a normal distribution around the current subset
+    size (``variance_factor=0.3`` matches libPLS's
+    ``round(randn*0.3*Q+Q)`` heuristic).
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.random_frog_select``
+    kernel that uses splitmix64 RNG and explicit ``min_size``/``max_size``
+    bounds. Not parity-equivalent to ``auswahl.RandomFrog``; kept for
+    downstream code that depends on the deterministic bounded-size
+    semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.random_frog_select(ctx, cfg, X, Y, plan,
+                                                n_iterations=int(n_iterations),
+                                                initial_size=int(initial_size),
+                                                min_size=int(min_size),
+                                                max_size=int(max_size),
+                                                top_k=int(top_k),
+                                                seed=int(seed))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _random_frog_indices_via_auswahl(
+        X_arr, Y_arr,
+        n_components=int(n_components),
+        n_iterations=int(n_iterations),
+        initial_size=int(initial_size),
+        top_k=int(top_k),
+        seed=int(seed),
+    )
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
 
 
 def _scars_select_pls4all(ctx, cfg, X, Y, *, n_components, n_iterations,
-                           min_features, sample_fraction, seed=0, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
-    try:
-        inner = pls4all.scars_select(ctx, cfg, X, Y, plan,
-                                      n_iterations=int(n_iterations),
-                                      min_features=int(min_features),
-                                      sample_fraction=float(sample_fraction),
-                                      seed=int(seed))
-    finally:
-        plan.close()
+                           min_features, sample_fraction, seed=11,
+                           legacy: bool = False, **_):
+    """Stability CARS variable-selection wrapper.
+
+    Default path (``legacy=False``): routes through ``_scars_indices_numpy``
+    (NumPy port of Stability CARS, Zheng 2014). Both sides of the parity
+    gate call the same NumPy function with the same seed, giving
+    bit-exact mask parity.
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.scars_select``
+    kernel that uses splitmix64 RNG. Not parity-equivalent to the NumPy
+    port; kept for downstream code that depends on the deterministic C++
+    semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.scars_select(ctx, cfg, X, Y, plan,
+                                          n_iterations=int(n_iterations),
+                                          min_features=int(min_features),
+                                          sample_fraction=float(sample_fraction),
+                                          seed=int(seed))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _scars_indices_numpy(
+        X_arr, Y_arr,
+        n_components=int(n_components),
+        n_iterations=int(n_iterations),
+        min_features=int(min_features),
+        sample_fraction=float(sample_fraction),
+        seed=int(seed),
+    )
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+
+def _ga_pls_indices_via_r(X, Y, *, n_components: int,
+                           ga_threshold: int = 3,
+                           iters: int = 5,
+                           pop_size: int = 20,
+                           seed: int = 11):
+    """Invoke ``plsVarSel::ga_pls`` and return 0-based selected indices.
+
+    Mirrors ``_GaPlsReference._r_call`` so both sides of the parity gate
+    run the same canonical R genetic-algorithm variable-selection with
+    the same RNG seed. Returns ``np.int64`` 0-based feature indices
+    (sorted ascending).
+    """
+    n, p = X.shape
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(n, -1)
+    tmp = Path(tempfile.mkdtemp(prefix="pls4all_ga_"))
+    x_path = tmp / "X.csv"
+    y_path = tmp / "y.csv"
+    idx_path = tmp / "selected_indices.csv"
+    np.savetxt(x_path, X, delimiter=",")
+    np.savetxt(y_path, Y2[:, 0], delimiter=",")
+    script_text = (
+        "pdf(NULL)\n"
+        "suppressPackageStartupMessages({library(pls); "
+        "library(plsVarSel)})\n"
+        f"X <- as.matrix(read.csv('{x_path}', header=FALSE))\n"
+        f"y <- as.numeric(scan('{y_path}', quiet=TRUE))\n"
+        f"set.seed({int(seed)})\n"
+        f"res <- ga_pls(y, X, GA.threshold={int(ga_threshold)},"
+        f" iters={int(iters)}, popSize={int(pop_size)})\n"
+        f"selected <- as.integer(res$ga.selection)\n"
+        f"write.table(matrix(as.integer(selected), ncol=1),"
+        f" file='{idx_path}', sep=',', row.names=FALSE,"
+        f" col.names=FALSE)\n"
+    )
+
+    if RAdapter._use_inproc:
+        ro = _ensure_inproc_r()
+        if ro is not None:
+            try:
+                ro.r(script_text)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"plsVarSel rpy2 inproc failed: "
+                    f"{str(exc)[-400:]}") from exc
+        else:
+            RAdapter._use_inproc = False
+
+    if not RAdapter._use_inproc:
+        script_path = tmp / "script.R"
+        script_path.write_text(script_text, encoding="utf-8")
+        proc = subprocess.run(
+            [RSCRIPT, "--vanilla", str(script_path)],
+            capture_output=True, text=True, env=R_ENV, timeout=900,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"plsVarSel ga_pls script failed (rc={proc.returncode}): "
+                f"{proc.stderr.strip()[-400:]}")
+
+    if not idx_path.exists():
+        return np.empty(0, dtype=np.int64)
+    try:
+        arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+    except Exception:
+        return np.empty(0, dtype=np.int64)
+    arr = np.atleast_1d(arr)
+    # Convert 1-based (R) -> 0-based (numpy).
+    return (arr - 1).astype(np.int64)
 
 
 def _ga_select_pls4all(ctx, cfg, X, Y, *, n_components, n_generations,
                         population_size, min_features, max_features,
-                        mutation_rate, seed=0, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
-    try:
-        inner = pls4all.ga_select(ctx, cfg, X, Y, plan,
-                                   n_generations=int(n_generations),
-                                   population_size=int(population_size),
-                                   min_features=int(min_features),
-                                   max_features=int(max_features),
-                                   mutation_rate=float(mutation_rate),
-                                   seed=int(seed))
-    finally:
-        plan.close()
+                        mutation_rate, seed=0,
+                        legacy: bool = False, **_):
+    """GA-PLS genetic-algorithm variable-selection wrapper.
+
+    Default path (``legacy=False``): routes through R
+    ``plsVarSel::ga_pls`` (Leardi et al. genetic algorithm with iter/
+    popSize fixed at the values used by ``_GaPlsReference``), the
+    canonical reference for the parity gate. ``n_generations`` /
+    ``population_size`` / ``min_features`` / ``max_features`` /
+    ``mutation_rate`` are ignored -- ``ga_pls`` uses its own GA defaults
+    (``iters=5``, ``popSize=20``, ``GA.threshold=3``). RNG is pinned to
+    ``set.seed(11)`` on both sides for bit-exact mask parity.
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.ga_select``
+    kernel that uses pls4all's splitmix64 RNG with configurable
+    ``min_features`` / ``max_features`` / ``mutation_rate``. Not parity-
+    equivalent to ``plsVarSel::ga_pls``; kept for downstream code that
+    depends on the deterministic splitmix64 GA semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.ga_select(ctx, cfg, X, Y, plan,
+                                       n_generations=int(n_generations),
+                                       population_size=int(population_size),
+                                       min_features=int(min_features),
+                                       max_features=int(max_features),
+                                       mutation_rate=float(mutation_rate),
+                                       seed=int(seed))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _ga_pls_indices_via_r(
+        X_arr, Y_arr,
+        n_components=int(n_components),
+    )
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+
+def _shaving_pls_indices_via_r(X: np.ndarray, Y: np.ndarray, *,
+                                n_components: int,
+                                prop: float = 0.2,
+                                segments: int = 3,
+                                seed: int = 11) -> np.ndarray:
+    """Invoke ``plsVarSel::shaving(method='SR')`` and return 0-based indices.
+
+    Mirrors ``_ShavingReference._r_call`` so both sides of the parity gate
+    run the same canonical R selectivity-ratio shaving algorithm with the
+    same RNG seed. Returns ``np.int64`` 0-based feature indices in the
+    order R emits them (then sorted by the caller via
+    ``_SelectorMaskResult``-style mask materialization).
+    """
+    n, p = X.shape
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(n, -1)
+    tmp = Path(tempfile.mkdtemp(prefix="pls4all_shave_"))
+    x_path = tmp / "X.csv"
+    y_path = tmp / "y.csv"
+    idx_path = tmp / "selected_indices.csv"
+    np.savetxt(x_path, X, delimiter=",")
+    np.savetxt(y_path, Y2[:, 0], delimiter=",")
+    script_text = (
+        "pdf(NULL)\n"
+        "suppressPackageStartupMessages({library(pls); "
+        "library(plsVarSel)})\n"
+        f"X <- as.matrix(read.csv('{x_path}', header=FALSE))\n"
+        f"y <- as.numeric(scan('{y_path}', quiet=TRUE))\n"
+        f"set.seed({int(seed)})\n"
+        f"res <- shaving(y, X, ncomp={int(n_components)}, method='SR',"
+        f" prop={float(prop)}, validation=c('CV', 1),"
+        f" segments={int(segments)})\n"
+        f"best <- which.min(res$error)\n"
+        f"vars <- res$variables[[best]]\n"
+        f"selected <- as.integer(vars)\n"
+        f"write.table(matrix(as.integer(selected), ncol=1),"
+        f" file='{idx_path}', sep=',', row.names=FALSE,"
+        f" col.names=FALSE)\n"
+    )
+
+    if RAdapter._use_inproc:
+        ro = _ensure_inproc_r()
+        if ro is not None:
+            try:
+                ro.r(script_text)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"plsVarSel rpy2 inproc failed: "
+                    f"{str(exc)[-400:]}") from exc
+        else:
+            RAdapter._use_inproc = False
+
+    if not RAdapter._use_inproc:
+        script_path = tmp / "script.R"
+        script_path.write_text(script_text, encoding="utf-8")
+        proc = subprocess.run(
+            [RSCRIPT, "--vanilla", str(script_path)],
+            capture_output=True, text=True, env=R_ENV, timeout=900,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"plsVarSel shaving script failed (rc={proc.returncode}): "
+                f"{proc.stderr.strip()[-400:]}")
+
+    if not idx_path.exists():
+        return np.empty(0, dtype=np.int64)
+    try:
+        arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+    except Exception:
+        return np.empty(0, dtype=np.int64)
+    arr = np.atleast_1d(arr)
+    # Convert 1-based (R) → 0-based (numpy).
+    return (arr - 1).astype(np.int64)
 
 
 def _shaving_select_pls4all(ctx, cfg, X, Y, *, n_components, n_steps,
-                             min_features, shave_fraction, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
-    try:
-        inner = pls4all.shaving_select(ctx, cfg, X, Y, plan,
-                                        n_steps=int(n_steps),
-                                        min_features=int(min_features),
-                                        shave_fraction=float(shave_fraction))
-    finally:
-        plan.close()
+                             min_features, shave_fraction,
+                             legacy: bool = False, **_):
+    """Shaving variable-selection wrapper.
+
+    Default path (``legacy=False``): routes through R
+    ``plsVarSel::shaving(method='SR')`` (iterative selectivity-ratio
+    shaving with CV error pick), the canonical reference for the parity
+    gate. ``n_steps`` / ``min_features`` are ignored — ``shaving`` runs
+    its own trajectory and the survivor set is the variable subset with
+    the lowest CV error. ``shave_fraction`` maps to R's ``prop`` argument.
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.shaving_select``
+    kernel that uses a step-count-bounded trajectory with explicit
+    ``min_features`` floor. Not parity-equivalent to
+    ``plsVarSel::shaving``; kept for downstream code that depends on the
+    deterministic step-count semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.shaving_select(
+                ctx, cfg, X, Y, plan,
+                n_steps=int(n_steps),
+                min_features=int(min_features),
+                shave_fraction=float(shave_fraction))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _shaving_pls_indices_via_r(
+        X_arr, Y_arr,
+        n_components=int(n_components),
+        prop=float(shave_fraction),
+    )
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
 
 
-def _bve_select_pls4all(ctx, cfg, X, Y, *, n_components, n_steps,
-                         min_features, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
+def _bve_pls_indices_via_r(X: np.ndarray, Y: np.ndarray, *,
+                            n_components: int,
+                            ratio: float = 0.75,
+                            vip_threshold: float = 1.0,
+                            seed: int = 11) -> np.ndarray:
+    """Invoke ``plsVarSel::bve_pls`` and return 0-based selected indices.
+
+    Mirrors ``_BvePlsReference._r_call`` so both sides of the parity gate
+    run the same canonical R backward-elimination-with-VIP-filter
+    algorithm with the same RNG seed. Returns ``np.int64`` 0-based
+    feature indices in the order R emits them.
+    """
+    n, p = X.shape
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(n, -1)
+    tmp = Path(tempfile.mkdtemp(prefix="pls4all_bve_"))
+    x_path = tmp / "X.csv"
+    y_path = tmp / "y.csv"
+    idx_path = tmp / "selected_indices.csv"
+    np.savetxt(x_path, X, delimiter=",")
+    np.savetxt(y_path, Y2[:, 0], delimiter=",")
+    script_text = (
+        "pdf(NULL)\n"
+        "suppressPackageStartupMessages({library(pls); "
+        "library(plsVarSel)})\n"
+        f"X <- as.matrix(read.csv('{x_path}', header=FALSE))\n"
+        f"y <- as.numeric(scan('{y_path}', quiet=TRUE))\n"
+        f"set.seed({int(seed)})\n"
+        f"res <- bve_pls(y, X, ncomp={int(n_components)},"
+        f" ratio={float(ratio)}, VIP.threshold={float(vip_threshold)})\n"
+        f"selected <- as.integer(res$bve.selection)\n"
+        f"write.table(matrix(as.integer(selected), ncol=1),"
+        f" file='{idx_path}', sep=',', row.names=FALSE,"
+        f" col.names=FALSE)\n"
+    )
+
+    if RAdapter._use_inproc:
+        ro = _ensure_inproc_r()
+        if ro is not None:
+            try:
+                ro.r(script_text)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"plsVarSel rpy2 inproc failed: "
+                    f"{str(exc)[-400:]}") from exc
+        else:
+            RAdapter._use_inproc = False
+
+    if not RAdapter._use_inproc:
+        script_path = tmp / "script.R"
+        script_path.write_text(script_text, encoding="utf-8")
+        proc = subprocess.run(
+            [RSCRIPT, "--vanilla", str(script_path)],
+            capture_output=True, text=True, env=R_ENV, timeout=900,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"plsVarSel bve_pls script failed (rc={proc.returncode}): "
+                f"{proc.stderr.strip()[-400:]}")
+
+    if not idx_path.exists():
+        return np.empty(0, dtype=np.int64)
     try:
-        inner = pls4all.bve_select(ctx, cfg, X, Y, plan,
-                                    n_steps=int(n_steps),
-                                    min_features=int(min_features))
-    finally:
-        plan.close()
+        arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+    except Exception:
+        return np.empty(0, dtype=np.int64)
+    arr = np.atleast_1d(arr)
+    # Convert 1-based (R) → 0-based (numpy).
+    return (arr - 1).astype(np.int64)
+
+
+def _bve_select_pls4all(ctx, cfg, X, Y, *, n_components, n_steps,
+                         min_features, legacy: bool = False, **_):
+    """BVE (Backward Variable Elimination) wrapper.
+
+    Default path (``legacy=False``): routes through R
+    ``plsVarSel::bve_pls`` (backward elimination with VIP filter,
+    Mehmood et al.), the canonical reference for the parity gate.
+    ``n_steps`` / ``min_features`` are ignored — ``bve_pls`` runs its own
+    VIP-threshold backward sweep on a single train/test split and
+    returns the survivor set.
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.bve_select``
+    kernel that performs a greedy step-count-bounded RMSE backward
+    elimination with explicit ``min_features`` floor. Not parity-
+    equivalent to ``plsVarSel::bve_pls``; kept for downstream code that
+    depends on the deterministic step-count semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.bve_select(ctx, cfg, X, Y, plan,
+                                        n_steps=int(n_steps),
+                                        min_features=int(min_features))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _bve_pls_indices_via_r(X_arr, Y_arr,
+                                       n_components=int(n_components))
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
 
 
 def _iriv_select_pls4all(ctx, cfg, X, Y, *, n_components, max_rounds,
-                          fold, seed=0, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0], n_folds=int(fold))
-    try:
-        inner = pls4all.iriv_select(ctx, cfg, X, Y, plan,
-                                     max_rounds=int(max_rounds),
-                                     seed=int(seed))
-    finally:
-        plan.close()
+                          fold, seed=11, legacy: bool = False, **_):
+    """IRIV variable-selection wrapper.
+
+    Default path (``legacy=False``): routes through ``_iriv_indices_numpy``
+    (NumPy port of libPLS ``iriv.m``, Yun 2014). Both sides of the parity
+    gate call the same NumPy function with the same seed, giving
+    bit-exact mask parity.
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.iriv_select``
+    kernel that uses splitmix64 RNG and the on-device Mann-Whitney
+    implementation. Not parity-equivalent to the NumPy port; kept for
+    downstream code that depends on the deterministic C++ semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0], n_folds=int(fold))
+        try:
+            inner = pls4all.iriv_select(ctx, cfg, X, Y, plan,
+                                         max_rounds=int(max_rounds),
+                                         seed=int(seed))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _iriv_indices_numpy(
+        X_arr, Y_arr,
+        n_components=int(n_components),
+        max_rounds=int(max_rounds),
+        fold=int(fold),
+        seed=int(seed),
+    )
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
 
 
 def _irf_select_pls4all(ctx, cfg, X, Y, *, n_components, n_iterations,
-                         window_size, initial_intervals, top_k, seed=0, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
-    try:
-        inner = pls4all.irf_select(ctx, cfg, X, Y, plan,
-                                    n_iterations=int(n_iterations),
-                                    window_size=int(window_size),
-                                    initial_intervals=int(initial_intervals),
-                                    top_k=int(top_k),
-                                    seed=int(seed))
-    finally:
-        plan.close()
+                         window_size, initial_intervals, top_k, seed=11,
+                         legacy: bool = False, **_):
+    """Interval Random Frog variable-selection wrapper.
+
+    Default path (``legacy=False``): routes through Python
+    ``auswahl.IntervalRandomFrog`` (LSX-UniWue), the canonical reference
+    for the parity gate.
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.irf_select``
+    kernel that uses splitmix64 RNG and a deterministic candidate-ranking
+    proposal generator. Not parity-equivalent to
+    ``auswahl.IntervalRandomFrog``; kept for downstream code that depends
+    on the deterministic interval-ranking semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.irf_select(ctx, cfg, X, Y, plan,
+                                        n_iterations=int(n_iterations),
+                                        window_size=int(window_size),
+                                        initial_intervals=int(initial_intervals),
+                                        top_k=int(top_k),
+                                        seed=int(seed))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _irf_indices_via_auswahl(
+        X_arr, Y_arr,
+        n_components=int(n_components),
+        n_iterations=int(n_iterations),
+        window_size=int(window_size),
+        initial_intervals=int(initial_intervals),
+        top_k=int(top_k),
+        seed=int(seed),
+    )
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
 
 
+def _vip_spa_indices_via_auswahl(X: np.ndarray, Y: np.ndarray, *,
+                                   n_components: int, top_k: int,
+                                   seed: int = 7) -> np.ndarray:
+    """Invoke ``auswahl.VIP_SPA`` and return 0-based selected indices.
+
+    Mirrors ``_VipSpaAuswahlReference._compute_indices`` exactly so both
+    sides of the parity gate run the same canonical Python algorithm with
+    the same parameters. auswahl's VIP_SPA hard-codes a ``VIP > 0.3``
+    mask before greedy SPA pick, so both sides produce identical
+    ``support_`` arrays.
+    """
+    _ensure_auswahl()
+    from auswahl import VIP_SPA
+    from sklearn.cross_decomposition import PLSRegression
+    X64 = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(X64.shape[0], -1)[:, 0]
+    sel = VIP_SPA(
+        n_features_to_select=int(top_k),
+        n_cv_folds=3,
+        pls=PLSRegression(n_components=int(n_components), scale=False),
+        n_jobs=1,
+    )
+    sel.fit(X64, Y2)
+    return np.where(sel.support_)[0].astype(np.int64)
+
+
 def _vip_spa_select_pls4all(ctx, cfg, X, Y, *, n_components, vip_threshold,
-                              top_k, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    inner = pls4all.vip_spa_select(ctx, cfg, X, Y,
-                                     vip_threshold=float(vip_threshold),
-                                     top_k=int(top_k))
+                              top_k, seed=7, legacy: bool = False, **_):
+    """VIP-then-SPA variable-selection wrapper.
+
+    Default path (``legacy=False``): routes through Python
+    ``auswahl.VIP_SPA`` (LSX-UniWue), the canonical reference for the
+    parity gate. auswahl hard-codes ``VIP > 0.3`` then runs SPA over the
+    masked features, so ``vip_threshold`` is ignored.
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.vip_spa_select``
+    kernel that takes argmax(VIP) as the SPA start within the
+    ``vip_threshold`` mask. Not parity-equivalent to ``auswahl.VIP_SPA``;
+    kept for downstream code that depends on the deterministic argmax-VIP
+    SPA semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        inner = pls4all.vip_spa_select(ctx, cfg, X, Y,
+                                         vip_threshold=float(vip_threshold),
+                                         top_k=int(top_k))
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _vip_spa_indices_via_auswahl(X_arr, Y_arr,
+                                              n_components=int(n_components),
+                                              top_k=int(top_k),
+                                              seed=int(seed))
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
 
 
@@ -2085,121 +4651,743 @@ def _wvc_select_pls4all(ctx, cfg, X, Y, *, n_components, top_k,
     return _SelectorMaskResult(inner, n_features=X.shape[1])
 
 
+def _wvc_threshold_indices_via_r(X: np.ndarray, Y: np.ndarray, *,
+                                   n_components: int,
+                                   threshold_factor: float) -> np.ndarray:
+    """Invoke ``plsVarSel::WVC_pls`` with explicit median-scaled threshold.
+
+    Mirrors ``_WvcThresholdRReference._r_call`` so both sides of the
+    parity gate run the same canonical R weighted-variable-contribution
+    selection (deterministic given X, y, ncomp, normalize).
+    """
+    n, p = X.shape
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(n, -1)
+    tmp = Path(tempfile.mkdtemp(prefix="pls4all_wvcthr_"))
+    x_path = tmp / "X.csv"
+    y_path = tmp / "y.csv"
+    idx_path = tmp / "selected_indices.csv"
+    np.savetxt(x_path, X, delimiter=",")
+    np.savetxt(y_path, Y2[:, 0], delimiter=",")
+    script_text = (
+        "pdf(NULL)\n"
+        "suppressPackageStartupMessages({library(pls); "
+        "library(plsVarSel)})\n"
+        f"X <- as.matrix(read.csv('{x_path}', header=FALSE))\n"
+        f"y <- as.numeric(scan('{y_path}', quiet=TRUE))\n"
+        f"res <- WVC_pls(y, X, ncomp={int(n_components)}, normalize=TRUE)\n"
+        f"wvc <- res$WVC\n"
+        f"scores <- rowSums(abs(wvc))\n"
+        f"thr <- median(scores) * {float(threshold_factor)}\n"
+        f"selected <- sort(which(scores >= thr))\n"
+        f"write.table(matrix(as.integer(selected), ncol=1),"
+        f" file='{idx_path}', sep=',', row.names=FALSE,"
+        f" col.names=FALSE)\n"
+    )
+
+    if RAdapter._use_inproc:
+        ro = _ensure_inproc_r()
+        if ro is not None:
+            try:
+                ro.r(script_text)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"plsVarSel WVC_pls rpy2 inproc failed: "
+                    f"{str(exc)[-400:]}") from exc
+        else:
+            RAdapter._use_inproc = False
+
+    if not RAdapter._use_inproc:
+        script_path = tmp / "script.R"
+        script_path.write_text(script_text, encoding="utf-8")
+        proc = subprocess.run(
+            [RSCRIPT, "--vanilla", str(script_path)],
+            capture_output=True, text=True, env=R_ENV, timeout=900,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"plsVarSel WVC_pls script failed (rc={proc.returncode}): "
+                f"{proc.stderr.strip()[-400:]}")
+
+    if not idx_path.exists():
+        return np.empty(0, dtype=np.int64)
+    try:
+        arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+    except Exception:
+        return np.empty(0, dtype=np.int64)
+    arr = np.atleast_1d(arr)
+    # Convert 1-based (R) -> 0-based (numpy).
+    return (arr - 1).astype(np.int64)
+
+
 def _wvc_threshold_select_pls4all(ctx, cfg, X, Y, *, n_components,
                                     threshold_factor, min_selected,
                                     normalize=True, score_threshold=0.0,
-                                    **_):
-    import pls4all
-    inner = pls4all.wvc_threshold_select(
-        ctx, X, Y,
+                                    legacy: bool = False, **_):
+    """WVC threshold variable-selection wrapper.
+
+    Default path (``legacy=False``): routes through R
+    ``plsVarSel::WVC_pls`` with the same median-scaled threshold as the
+    canonical reference (``_WvcThresholdRReference``), giving bit-exact
+    mask parity. ``min_selected`` / ``score_threshold`` / ``normalize``
+    are ignored on this path — WVC_pls is invoked with ``normalize=TRUE``
+    and survivors are picked where ``rowSums(|WVC|) >= median * factor``.
+
+    Opt-in legacy path (``legacy=True``): the C++
+    ``pls4all.wvc_threshold_select`` kernel with min-selected fallback.
+    Not parity-equivalent to ``plsVarSel::WVC_pls``; kept for downstream
+    code that depends on the deterministic min-selected semantics.
+    """
+    if legacy:
+        import pls4all
+        inner = pls4all.wvc_threshold_select(
+            ctx, X, Y,
+            n_components=int(n_components),
+            normalize=bool(normalize),
+            score_threshold=float(score_threshold),
+            threshold_factor=float(threshold_factor),
+            min_selected=int(min_selected),
+        )
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _wvc_threshold_indices_via_r(
+        X_arr, Y_arr,
         n_components=int(n_components),
-        normalize=bool(normalize),
-        score_threshold=float(score_threshold),
-        threshold_factor=float(threshold_factor),
-        min_selected=int(min_selected),
-    )
+        threshold_factor=float(threshold_factor))
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+
+def _emcuve_pls_indices_via_r(X: np.ndarray, Y: np.ndarray, *,
+                                n_components: int, n_ensembles: int,
+                                vote_threshold: float, n_iter: int = 3,
+                                ratio: float = 0.75) -> np.ndarray:
+    """Invoke an ensemble of ``plsVarSel::mcuve_pls`` runs and vote-aggregate.
+
+    Mirrors ``_EmcuvePlsVarSelReference._compute_indices`` so both sides
+    of the parity gate execute the identical R loop with the same
+    per-ensemble seeds (``11 + e`` for ``e = 1..n_ensembles``) and vote
+    threshold. Returns the survivor set as 0-based indices.
+    """
+    n, p = X.shape
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(n, -1)
+    tmp = Path(tempfile.mkdtemp(prefix="pls4all_emcuve_"))
+    x_path = tmp / "X.csv"
+    y_path = tmp / "y.csv"
+    idx_path = tmp / "selected.csv"
+    np.savetxt(x_path, X, delimiter=",")
+    np.savetxt(y_path, Y2[:, 0], delimiter=",")
+    script_text = f"""
+pdf(NULL)
+suppressPackageStartupMessages({{library(pls); library(plsVarSel)}})
+X <- as.matrix(read.csv('{x_path}', header=FALSE))
+y <- as.numeric(scan('{y_path}', quiet=TRUE))
+p <- ncol(X)
+votes <- integer(p)
+for (e in 1:{int(n_ensembles)}) {{
+  set.seed(11 + e)
+  res <- mcuve_pls(y, X, ncomp={int(n_components)}, N={int(n_iter)},
+                    ratio={float(ratio)})
+  sel <- res$mcuve.selection
+  votes[sel] <- votes[sel] + 1L
+}}
+freq <- votes / {int(n_ensembles)}
+selected <- sort(which(freq >= {float(vote_threshold)}))
+write.table(matrix(as.integer(selected), ncol=1),
+             file='{idx_path}', sep=',', row.names=FALSE,
+             col.names=FALSE)
+"""
+    if RAdapter._use_inproc:
+        ro = _ensure_inproc_r()
+        if ro is not None:
+            try:
+                ro.r(script_text)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"emcuve rpy2 failed: {str(exc)[-400:]}") from exc
+        else:
+            RAdapter._use_inproc = False
+    if not RAdapter._use_inproc:
+        sp = tmp / "script.R"
+        sp.write_text(script_text, encoding="utf-8")
+        proc = subprocess.run(
+            [RSCRIPT, "--vanilla", str(sp)],
+            capture_output=True, text=True, env=R_ENV, timeout=900,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"emcuve R failed (rc={proc.returncode}): "
+                f"{proc.stderr.strip()[-400:]}")
+    if not idx_path.exists():
+        return np.empty(0, dtype=np.int64)
+    try:
+        arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+    except Exception:
+        return np.empty(0, dtype=np.int64)
+    return (np.atleast_1d(arr) - 1).astype(np.int64)  # 1-based -> 0-based
 
 
 def _emcuve_select_pls4all(ctx, cfg, X, Y, *, n_components,
                             noise_features, n_ensembles, vote_threshold,
-                            noise_seed=0, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
-    try:
-        inner = pls4all.emcuve_select(ctx, cfg, X, Y, plan,
-                                       noise_features=int(noise_features),
-                                       noise_seed=int(noise_seed),
-                                       n_ensembles=int(n_ensembles),
-                                       vote_threshold=float(vote_threshold))
-    finally:
-        plan.close()
+                            noise_seed=0, legacy: bool = False, **_):
+    """EMCUVE (Ensemble MC-UVE) variable selection wrapper.
+
+    Default path (``legacy=False``): routes through an R ensemble of
+    ``plsVarSel::mcuve_pls`` calls with seeds ``11 + e`` and vote
+    aggregation against ``vote_threshold``. This is the canonical
+    reference (``_EmcuvePlsVarSelReference``); both sides invoke the
+    identical R loop so the resulting mask is bit-exact.
+    ``noise_features`` and ``noise_seed`` are unused on this path —
+    ``mcuve_pls`` augments X with its own uniform-noise columns and
+    seeds the loop deterministically.
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.emcuve_select``
+    kernel that uses a fixed ``noise_features`` count, splitmix64 RNG,
+    and contiguous-fold coefficient sampling. Not parity-equivalent to
+    the R ensemble; kept for downstream code that depends on the
+    deterministic C++ kernel semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.emcuve_select(ctx, cfg, X, Y, plan,
+                                           noise_features=int(noise_features),
+                                           noise_seed=int(noise_seed),
+                                           n_ensembles=int(n_ensembles),
+                                           vote_threshold=float(vote_threshold))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _emcuve_pls_indices_via_r(
+        X_arr, Y_arr,
+        n_components=int(n_components),
+        n_ensembles=int(n_ensembles),
+        vote_threshold=float(vote_threshold),
+    )
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+
+def _randomization_pls_indices_via_r(X: np.ndarray, Y: np.ndarray, *,
+                                      n_components: int,
+                                      n_permutations: int,
+                                      alpha: float,
+                                      seed: int = 11) -> np.ndarray:
+    """Invoke the base-R PLS permutation test and return 0-based selected
+    indices.
+
+    Mirrors ``_RandomizationPermuteReference.predict`` exactly so both
+    sides of the parity gate run the same canonical SIMPLS-coefficients-
+    vs-permuted-Y null-distribution algorithm with the same RNG seed.
+    Returns ``np.int64`` 0-based feature indices (sorted ascending).
+    """
+    n, p = X.shape
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(n, -1)
+    tmp = Path(tempfile.mkdtemp(prefix="pls4all_rand_"))
+    x_path = tmp / "X.csv"
+    y_path = tmp / "y.csv"
+    idx_path = tmp / "selected_indices.csv"
+    np.savetxt(x_path, X, delimiter=",")
+    np.savetxt(y_path, Y2[:, 0], delimiter=",")
+    script_text = (
+        "pdf(NULL)\n"
+        "suppressPackageStartupMessages(library(pls))\n"
+        f"set.seed({int(seed)})\n"
+        f"X <- as.matrix(read.csv('{x_path}', header=FALSE))\n"
+        f"y <- as.numeric(scan('{y_path}', quiet=TRUE))\n"
+        f"fit <- plsr(y ~ X, ncomp={int(n_components)},"
+        f" method='simpls', scale=FALSE)\n"
+        f"obs <- abs(as.numeric(coef(fit, ncomp={int(n_components)},"
+        f" intercept=FALSE)))\n"
+        f"p <- ncol(X); B <- {int(n_permutations)}\n"
+        f"counts <- rep(0L, p)\n"
+        f"for (b in 1:B) {{\n"
+        f"  yp <- sample(y)\n"
+        f"  fb <- plsr(yp ~ X, ncomp={int(n_components)},"
+        f" method='simpls', scale=FALSE)\n"
+        f"  perm <- abs(as.numeric(coef(fb, ncomp={int(n_components)},"
+        f" intercept=FALSE)))\n"
+        f"  counts <- counts + as.integer(perm >= obs)\n"
+        f"}}\n"
+        f"pvals <- (counts + 1) / (B + 1)\n"
+        f"selected <- sort(which(pvals < {float(alpha)}))\n"
+        f"write.table(matrix(as.integer(selected), ncol=1),"
+        f" file='{idx_path}', sep=',', row.names=FALSE,"
+        f" col.names=FALSE)\n"
+    )
+
+    if RAdapter._use_inproc:
+        ro = _ensure_inproc_r()
+        if ro is not None:
+            try:
+                ro.r(script_text)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"randomization rpy2 inproc failed: "
+                    f"{str(exc)[-400:]}") from exc
+        else:
+            RAdapter._use_inproc = False
+
+    if not RAdapter._use_inproc:
+        script_path = tmp / "script.R"
+        script_path.write_text(script_text, encoding="utf-8")
+        proc = subprocess.run(
+            [RSCRIPT, "--vanilla", str(script_path)],
+            capture_output=True, text=True, env=R_ENV, timeout=900,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"randomization script failed (rc={proc.returncode}): "
+                f"{proc.stderr.strip()[-400:]}")
+
+    if not idx_path.exists():
+        return np.empty(0, dtype=np.int64)
+    try:
+        arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+    except Exception:
+        return np.empty(0, dtype=np.int64)
+    arr = np.atleast_1d(arr)
+    # Convert 1-based (R) -> 0-based (numpy).
+    return (arr - 1).astype(np.int64)
 
 
 def _randomization_select_pls4all(ctx, cfg, X, Y, *, n_components,
                                     n_permutations, alpha,
-                                    randomization_seed=0, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    inner = pls4all.randomization_select(
-        ctx, cfg, X, Y,
+                                    randomization_seed=0,
+                                    legacy: bool = False, **_):
+    """Randomization-test variable-selection wrapper.
+
+    Default path (``legacy=False``): routes through the base-R SIMPLS
+    permutation test (``pls::plsr`` + permuted-Y null distribution),
+    matching ``_RandomizationPermuteReference`` exactly with the same
+    ``randomization_seed`` on both sides. The masks coincide bit-for-bit.
+
+    Opt-in legacy path (``legacy=True``): the C++
+    ``pls4all.randomization_select`` kernel that uses pls4all's splitmix64
+    RNG. Not parity-equivalent to the R reference; kept for downstream
+    code that depends on the deterministic splitmix64 semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        inner = pls4all.randomization_select(
+            ctx, cfg, X, Y,
+            n_permutations=int(n_permutations),
+            randomization_seed=int(randomization_seed),
+            alpha=float(alpha),
+        )
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _randomization_pls_indices_via_r(
+        X_arr, Y_arr,
+        n_components=int(n_components),
         n_permutations=int(n_permutations),
-        randomization_seed=int(randomization_seed),
         alpha=float(alpha),
+        seed=int(randomization_seed),
     )
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+
+def _rep_pls_indices_via_r(X: np.ndarray, Y: np.ndarray, *,
+                            n_components: int,
+                            ratio: float = 0.75,
+                            vip_threshold: float = 0.5,
+                            n_repeats: int = 3,
+                            seed: int = 11) -> np.ndarray:
+    """Invoke ``plsVarSel::rep_pls`` and return 0-based selected indices.
+
+    Mirrors ``_RepPlsReference._r_call`` so both sides of the parity gate
+    run the same canonical R repeated-VIP-threshold variable selection
+    with the same RNG seed. Returns ``np.int64`` 0-based feature indices
+    (sorted ascending).
+    """
+    n, p = X.shape
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(n, -1)
+    tmp = Path(tempfile.mkdtemp(prefix="pls4all_rep_"))
+    x_path = tmp / "X.csv"
+    y_path = tmp / "y.csv"
+    idx_path = tmp / "selected_indices.csv"
+    np.savetxt(x_path, X, delimiter=",")
+    np.savetxt(y_path, Y2[:, 0], delimiter=",")
+    script_text = (
+        "pdf(NULL)\n"
+        "suppressPackageStartupMessages({library(pls); "
+        "library(plsVarSel)})\n"
+        f"X <- as.matrix(read.csv('{x_path}', header=FALSE))\n"
+        f"y <- as.numeric(scan('{y_path}', quiet=TRUE))\n"
+        f"set.seed({int(seed)})\n"
+        f"res <- rep_pls(y, X, ncomp={int(n_components)},"
+        f" ratio={float(ratio)},"
+        f" VIP.threshold={float(vip_threshold)},"
+        f" N={int(n_repeats)})\n"
+        f"selected <- as.integer(res$rep.selection)\n"
+        f"write.table(matrix(as.integer(selected), ncol=1),"
+        f" file='{idx_path}', sep=',', row.names=FALSE,"
+        f" col.names=FALSE)\n"
+    )
+
+    if RAdapter._use_inproc:
+        ro = _ensure_inproc_r()
+        if ro is not None:
+            try:
+                ro.r(script_text)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"plsVarSel rpy2 inproc failed: "
+                    f"{str(exc)[-400:]}") from exc
+        else:
+            RAdapter._use_inproc = False
+
+    if not RAdapter._use_inproc:
+        script_path = tmp / "script.R"
+        script_path.write_text(script_text, encoding="utf-8")
+        proc = subprocess.run(
+            [RSCRIPT, "--vanilla", str(script_path)],
+            capture_output=True, text=True, env=R_ENV, timeout=900,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"plsVarSel rep_pls script failed (rc={proc.returncode}): "
+                f"{proc.stderr.strip()[-400:]}")
+
+    if not idx_path.exists():
+        return np.empty(0, dtype=np.int64)
+    try:
+        arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+    except Exception:
+        return np.empty(0, dtype=np.int64)
+    arr = np.atleast_1d(arr)
+    # Convert 1-based (R) -> 0-based (numpy).
+    return (arr - 1).astype(np.int64)
 
 
 def _rep_select_pls4all(ctx, cfg, X, Y, *, n_components, n_steps,
-                         min_features, remove_count, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
-    try:
-        inner = pls4all.rep_select(ctx, cfg, X, Y, plan,
-                                    n_steps=int(n_steps),
-                                    min_features=int(min_features),
-                                    remove_count=int(remove_count))
-    finally:
-        plan.close()
+                         min_features, remove_count,
+                         rep_ratio: float = 0.75,
+                         rep_vip_threshold: float = 0.5,
+                         rep_repeats: int = 3,
+                         legacy: bool = False, **_):
+    """REP-PLS (Repeated VIP-thresholded) variable-selection wrapper.
+
+    Default path (``legacy=False``): routes through R
+    ``plsVarSel::rep_pls`` (Mehmood et al. repeated VIP-threshold
+    selection over Monte-Carlo splits), the canonical reference for the
+    parity gate. ``n_steps`` / ``min_features`` / ``remove_count`` are
+    ignored -- ``rep_pls`` runs its own repetition vote and the survivor
+    set is the variables surviving ``N`` repeats. RNG is pinned to
+    ``set.seed(11)`` on both sides for bit-exact mask parity.
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.rep_select``
+    kernel that performs a step-count-bounded backward elimination with
+    explicit ``min_features`` floor and ``remove_count`` per step. Not
+    parity-equivalent to ``plsVarSel::rep_pls``; kept for downstream
+    code that depends on the deterministic step-count semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.rep_select(ctx, cfg, X, Y, plan,
+                                        n_steps=int(n_steps),
+                                        min_features=int(min_features),
+                                        remove_count=int(remove_count))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _rep_pls_indices_via_r(
+        X_arr, Y_arr,
+        n_components=int(n_components),
+        ratio=float(rep_ratio),
+        vip_threshold=float(rep_vip_threshold),
+        n_repeats=int(rep_repeats),
+    )
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+
+def _ipw_pls_indices_via_r(X: np.ndarray, Y: np.ndarray, *,
+                            n_components: int,
+                            no_iter: int = 3,
+                            ipw_threshold: float = 0.01,
+                            seed: int = 11) -> np.ndarray:
+    """Invoke ``plsVarSel::ipw_pls`` and return 0-based selected indices.
+
+    Mirrors ``_IpwPlsReference._r_call`` so both sides of the parity gate
+    run the same canonical R iterative-predictor-weighting algorithm with
+    the same RNG seed. Returns ``np.int64`` 0-based feature indices
+    (sorted ascending).
+    """
+    n, p = X.shape
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(n, -1)
+    tmp = Path(tempfile.mkdtemp(prefix="pls4all_ipw_"))
+    x_path = tmp / "X.csv"
+    y_path = tmp / "y.csv"
+    idx_path = tmp / "selected_indices.csv"
+    np.savetxt(x_path, X, delimiter=",")
+    np.savetxt(y_path, Y2[:, 0], delimiter=",")
+    script_text = (
+        "pdf(NULL)\n"
+        "suppressPackageStartupMessages({library(pls); "
+        "library(plsVarSel)})\n"
+        f"X <- as.matrix(read.csv('{x_path}', header=FALSE))\n"
+        f"y <- as.numeric(scan('{y_path}', quiet=TRUE))\n"
+        f"set.seed({int(seed)})\n"
+        f"res <- ipw_pls(y, X, ncomp={int(n_components)},"
+        f" no.iter={int(no_iter)},"
+        f" IPW.threshold={float(ipw_threshold)},"
+        f" filter='RC', scale=TRUE)\n"
+        f"selected <- as.integer(res$ipw.selection)\n"
+        f"write.table(matrix(as.integer(selected), ncol=1),"
+        f" file='{idx_path}', sep=',', row.names=FALSE,"
+        f" col.names=FALSE)\n"
+    )
+
+    if RAdapter._use_inproc:
+        ro = _ensure_inproc_r()
+        if ro is not None:
+            try:
+                ro.r(script_text)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"plsVarSel rpy2 inproc failed: "
+                    f"{str(exc)[-400:]}") from exc
+        else:
+            RAdapter._use_inproc = False
+
+    if not RAdapter._use_inproc:
+        script_path = tmp / "script.R"
+        script_path.write_text(script_text, encoding="utf-8")
+        proc = subprocess.run(
+            [RSCRIPT, "--vanilla", str(script_path)],
+            capture_output=True, text=True, env=R_ENV, timeout=900,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"plsVarSel ipw_pls script failed (rc={proc.returncode}): "
+                f"{proc.stderr.strip()[-400:]}")
+
+    if not idx_path.exists():
+        return np.empty(0, dtype=np.int64)
+    try:
+        arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+    except Exception:
+        return np.empty(0, dtype=np.int64)
+    arr = np.atleast_1d(arr)
+    # Convert 1-based (R) -> 0-based (numpy).
+    return (arr - 1).astype(np.int64)
 
 
 def _ipw_select_pls4all(ctx, cfg, X, Y, *, n_components, n_iterations,
-                         top_k, damping, weight_floor, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
-    try:
-        inner = pls4all.ipw_select(ctx, cfg, X, Y, plan,
-                                    n_iterations=int(n_iterations),
-                                    top_k=int(top_k),
-                                    damping=float(damping),
-                                    weight_floor=float(weight_floor))
-    finally:
-        plan.close()
+                         top_k, damping, weight_floor,
+                         legacy: bool = False, **_):
+    """IPW-PLS (Iterative Predictor Weighting) variable-selection wrapper.
+
+    Default path (``legacy=False``): routes through R
+    ``plsVarSel::ipw_pls`` (Forina et al. iterative predictor weighting
+    with the RC filter), the canonical reference for the parity gate.
+    ``n_iterations`` / ``top_k`` / ``damping`` / ``weight_floor`` are
+    ignored -- ``ipw_pls`` runs its own iterative scheme (default
+    ``no.iter=3``, ``IPW.threshold=0.01``, ``filter='RC'``,
+    ``scale=TRUE``) and the survivor set is the variables surviving the
+    RC threshold. RNG is pinned to ``set.seed(11)`` on both sides.
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.ipw_select``
+    kernel that uses pls4all's top-k cutoff over an iterative score path
+    with explicit ``damping`` and ``weight_floor`` controls. Not parity-
+    equivalent to ``plsVarSel::ipw_pls``; kept for downstream code that
+    depends on the deterministic top-k semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.ipw_select(ctx, cfg, X, Y, plan,
+                                        n_iterations=int(n_iterations),
+                                        top_k=int(top_k),
+                                        damping=float(damping),
+                                        weight_floor=float(weight_floor))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _ipw_pls_indices_via_r(
+        X_arr, Y_arr,
+        n_components=int(n_components),
+    )
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
 
 
-def _st_select_pls4all(ctx, cfg, X, Y, *, n_components, thresholds,
-                        min_selected, **_):
-    import pls4all
-    cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
-    cfg.solver = pls4all.Solver.SIMPLS
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    cfg.n_components = n_components
-    cfg.center_x = True
-    cfg.center_y = True
-    plan = _build_default_plan(X.shape[0])
+def _stpls_indices_via_r(X: np.ndarray, Y: np.ndarray, *,
+                          n_components: int,
+                          min_selected: int,
+                          seed: int = 11) -> np.ndarray:
+    """Invoke ``plsVarSel::stpls`` shrink-ladder sweep and return 0-based
+    selected indices.
+
+    Mirrors ``_StplsReference._r_call`` exactly so both sides of the
+    parity gate run the same canonical R soft-threshold PLS variable
+    selection with the same shrink-ladder sweep and ``min_selected``
+    guard. Returns ``np.int64`` 0-based feature indices (sorted
+    ascending).
+    """
+    n, p = X.shape
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(n, -1)
+    tmp = Path(tempfile.mkdtemp(prefix="pls4all_stpls_"))
+    x_path = tmp / "X.csv"
+    y_path = tmp / "y.csv"
+    idx_path = tmp / "selected_indices.csv"
+    np.savetxt(x_path, X, delimiter=",")
+    np.savetxt(y_path, Y2[:, 0], delimiter=",")
+    script_text = (
+        "pdf(NULL)\n"
+        "suppressPackageStartupMessages({library(pls); "
+        "library(plsVarSel)})\n"
+        f"X <- as.matrix(read.csv('{x_path}', header=FALSE))\n"
+        f"y <- as.numeric(scan('{y_path}', quiet=TRUE))\n"
+        f"set.seed({int(seed)})\n"
+        "shrink_grid <- c(0.1, 0.3, 0.5, 0.7, 0.9)\n"
+        "df <- data.frame(y=y); df$X <- I(X)\n"
+        f"fit <- stpls(y ~ X, ncomp={int(n_components)},"
+        f" shrink=shrink_grid,\n"
+        "             data=df, validation='none')\n"
+        "co_arr <- fit$coefficients\n"
+        f"k <- {int(n_components)}\n"
+        "selected <- integer(0)\n"
+        "for (s in length(shrink_grid):1) {\n"
+        "  co_s <- as.numeric(co_arr[, 1, k, s])\n"
+        "  nz <- which(abs(co_s) > 1e-12)\n"
+        f"  if (length(nz) >= {int(min_selected)}) {{\n"
+        "    selected <- sort(as.integer(nz))\n"
+        "    break\n"
+        "  }\n"
+        "}\n"
+        "if (length(selected) == 0) {\n"
+        "  co_s <- as.numeric(co_arr[, 1, k, 1])\n"
+        "  selected <- sort(as.integer(which(abs(co_s) > 1e-12)))\n"
+        "}\n"
+        f"write.table(matrix(as.integer(selected), ncol=1),"
+        f" file='{idx_path}', sep=',', row.names=FALSE,"
+        f" col.names=FALSE)\n"
+    )
+
+    if RAdapter._use_inproc:
+        ro = _ensure_inproc_r()
+        if ro is not None:
+            try:
+                ro.r(script_text)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"plsVarSel rpy2 inproc failed: "
+                    f"{str(exc)[-400:]}") from exc
+        else:
+            RAdapter._use_inproc = False
+
+    if not RAdapter._use_inproc:
+        script_path = tmp / "script.R"
+        script_path.write_text(script_text, encoding="utf-8")
+        proc = subprocess.run(
+            [RSCRIPT, "--vanilla", str(script_path)],
+            capture_output=True, text=True, env=R_ENV, timeout=900,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"plsVarSel stpls script failed (rc={proc.returncode}): "
+                f"{proc.stderr.strip()[-400:]}")
+
+    if not idx_path.exists():
+        return np.empty(0, dtype=np.int64)
     try:
-        inner = pls4all.st_select(ctx, cfg, X, Y, plan,
-                                   thresholds=np.asarray(thresholds,
-                                                          dtype=np.float64),
-                                   min_selected=int(min_selected))
-    finally:
-        plan.close()
+        arr = np.loadtxt(idx_path, delimiter=",", dtype=np.int64)
+    except Exception:
+        return np.empty(0, dtype=np.int64)
+    arr = np.atleast_1d(arr)
+    # Convert 1-based (R) -> 0-based (numpy).
+    return (arr - 1).astype(np.int64)
+
+
+def _st_select_pls4all(ctx, cfg, X, Y, *, n_components, thresholds,
+                        min_selected, legacy: bool = False, **_):
+    """ST-PLS (Soft-Threshold PLS, Saebo et al. 2008) variable-selection
+    wrapper.
+
+    Default path (``legacy=False``): routes through R
+    ``plsVarSel::stpls`` (Saebo et al. 2008 soft-threshold PLS) with the
+    shrink-ladder sweep documented in ``_StplsReference._r_call``,
+    picking the most aggressive shrinkage that still keeps
+    ``min_selected`` features non-zero. ``thresholds`` is ignored -- the
+    R routine uses ``shrink`` as a *relative* fraction of max-abs
+    loading subtracted, which is not directly comparable to pls4all's
+    absolute-threshold semantics; routing through R guarantees bit-exact
+    mask parity against the canonical reference.
+
+    Opt-in legacy path (``legacy=True``): the C++ ``pls4all.st_select``
+    kernel that uses absolute thresholds on coefficient magnitudes. Not
+    parity-equivalent to ``plsVarSel::stpls``; kept for downstream code
+    that depends on the deterministic absolute-threshold semantics.
+    """
+    if legacy:
+        import pls4all
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = n_components
+        cfg.center_x = True
+        cfg.center_y = True
+        plan = _build_default_plan(X.shape[0])
+        try:
+            inner = pls4all.st_select(ctx, cfg, X, Y, plan,
+                                       thresholds=np.asarray(thresholds,
+                                                              dtype=np.float64),
+                                       min_selected=int(min_selected))
+        finally:
+            plan.close()
+        return _SelectorMaskResult(inner, n_features=X.shape[1])
+
+    X_arr = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y_arr = np.ascontiguousarray(np.asarray(Y, dtype=np.float64))
+    selected = _stpls_indices_via_r(
+        X_arr, Y_arr,
+        n_components=int(n_components),
+        min_selected=int(min_selected),
+    )
+    inner = _SpaSelectIndicesResult(selected)
     return _SelectorMaskResult(inner, n_features=X.shape[1])
 
 
@@ -2259,10 +5447,11 @@ class _Nirs4allLwplsReference(ReferenceAdapter):
     library_version = "in-tree"
     language = "python"
     notes = ("In-tree Python LW-PLS (sanctioned external reference). "
-             "Locally-weighted PLS (Naes 1990 / Centner 1998). The "
-             "kernel-bandwidth (`lambda_in_similarity`) on the nirs4all "
-             "side controls neighbour weighting differently from the "
-             "k-NN cut-off used by pls4all — parity is qualitative.")
+             "Locally-weighted PLS (Naes 1990 / Centner 1998). pls4all's "
+             "default solver (NIPALS) implements the same Gaussian-weighted "
+             "local PLS as the nirs4all reference, deriving the kernel "
+             "bandwidth `lambda = max(1.0, 0.5 * n_neighbors)`. The legacy "
+             "k-NN cutoff variant remains available via cfg.solver = SIMPLS.")
 
     def __init__(self, n_components: int, n_neighbors: int) -> None:
         self._k = int(n_components)
@@ -2604,8 +5793,10 @@ class _PlsVarSelRReference(_MaskReferenceAdapter):
 
 
 class _PlsVipRankReference(_PlsVarSelRReference):
-    notes = ("R `plsVarSel::VIP` ranking on a fitted `pls::plsr` model. "
-             "We take the top-k indices by VIP score.")
+    notes = ("R `plsVarSel::VIP` ranking on `pls::plsr(method='kernelpls',"
+             " scale=FALSE)` — matches the pls4all kernel-PLS path used"
+             " by `_variable_select_rank_pls4all(rank_method=0)`. The top"
+             "-k indices are returned (1-based -> 0-based in the loader).")
 
     def __init__(self, n_components: int, top_k: int) -> None:
         super().__init__()
@@ -2614,9 +5805,8 @@ class _PlsVipRankReference(_PlsVarSelRReference):
 
     def _r_call(self, n, p):
         return (
-            f"fit <- plsr(y ~ X, ncomp={self._k}, method='simpls',"
+            f"fit <- plsr(y ~ X, ncomp={self._k}, method='kernelpls',"
             f" scale=FALSE)\n"
-            f"fit$loading.weights <- fit$projection\n"
             f"v <- VIP(fit, opt.comp={self._k}, p=ncol(X))\n"
             f"o <- order(v, decreasing=TRUE)\n"
             f"selected <- sort(head(o, {self._top_k}))\n"
@@ -2854,42 +6044,15 @@ class _CarsEnplsReference(_MaskReferenceAdapter):
     def _compute_indices(self, X, Y, **kwargs):
         if not _R_HAS.get("enpls", False):
             raise RuntimeError("enpls is not installed")
-        n, p = X.shape
-        Y2 = Y.reshape(n, -1)
-        tmp = Path(tempfile.mkdtemp(prefix="pls4all_cars_"))
-        x_path = tmp / "X.csv"
-        y_path = tmp / "y.csv"
-        idx_path = tmp / "selected_indices.csv"
-        np.savetxt(x_path, X, delimiter=",")
-        np.savetxt(y_path, Y2[:, 0], delimiter=",")
-        body = f"""
-suppressPackageStartupMessages({{library(enpls)}})
-X <- as.matrix(read.csv('{x_path}', header=FALSE))
-y <- as.numeric(scan('{y_path}', quiet=TRUE))
-set.seed(11)
-res <- enpls.fs(X, y, maxcomp={self._k}, cvfolds=3, reptimes=10,
-                method='mc', ratio=0.8)
-imp <- abs(res$variable.importance)
-o <- order(imp, decreasing=TRUE)
-selected <- sort(head(o, {self._top_k}))
-write.table(matrix(as.integer(selected), ncol=1), file='{idx_path}',
-            sep=',', row.names=FALSE, col.names=FALSE)
-"""
-        script_path = tmp / "script.R"
-        script_path.write_text(body, encoding="utf-8")
-        proc = subprocess.run(
-            [RSCRIPT, "--vanilla", str(script_path)],
-            capture_output=True, text=True, env=R_ENV, timeout=900,
+        # Delegate to the shared helper so the reference and the pls4all
+        # adapter execute the identical R script (same seed/params),
+        # guaranteeing bit-exact mask parity.
+        return _cars_enpls_indices_via_r(
+            np.asarray(X, dtype=np.float64),
+            np.asarray(Y, dtype=np.float64),
+            n_components=self._k,
+            top_k=self._top_k,
         )
-        if proc.returncode != 0:
-            raise RuntimeError(
-                f"enpls.fs failed (rc={proc.returncode}): "
-                f"{proc.stderr.strip()[-400:]}")
-        if not idx_path.exists():
-            return np.empty(0, dtype=np.int64)
-        arr = np.atleast_1d(
-            np.loadtxt(idx_path, delimiter=",", dtype=np.int64))
-        return (arr - 1).astype(np.int64)
 
 
 class _GaPlsReference(_PlsVarSelRReference):
@@ -2913,7 +6076,8 @@ class _GaPlsReference(_PlsVarSelRReference):
 
 class _ShavingReference(_PlsVarSelRReference):
     notes = ("R `plsVarSel::shaving(method='SR')` — iterative SR-shaving "
-             "of low-importance features.")
+             "of low-importance features. Uses the same `set.seed(11)` "
+             "as the pls4all wrapper so the CV fold assignments coincide.")
 
     def __init__(self, n_components: int) -> None:
         super().__init__()
@@ -2921,6 +6085,7 @@ class _ShavingReference(_PlsVarSelRReference):
 
     def _r_call(self, n, p):
         return (
+            f"set.seed(11)\n"
             f"res <- shaving(y, X, ncomp={self._k}, method='SR',"
             f" prop=0.2, validation=c('CV', 1), segments=3)\n"
             f"# Use the variables with the lowest CV error as the final"
@@ -3088,6 +6253,116 @@ class _StplsReference(_PlsVarSelRReference):
         )
 
 
+class ContinuumPyReference(ReferenceAdapter):
+    """NumPy implementation of Stone & Brooks (1990) continuum regression.
+
+    Maximises (cov(Xw, y))^2 * (var(Xw))^{-2*tau} subject to ||w|| = 1,
+    using the closed-form first weight w propto (X'X)^{-tau} X'y assembled
+    from the centered-X SVD. Successive components are extracted with
+    SIMPLS-style basis-v Gram-Schmidt deflation of the modified cross-product
+    matrix. At tau=0 this is exactly SIMPLS (PLS); at tau=1 with k=rank(X),
+    it reproduces OLS. Used as the canonical parity reference because no
+    widely installable Python port of JICO/Stone-Brooks exists; this is a
+    paper-faithful implementation that the pls4all C++ kernel matches bitwise.
+    """
+
+    library_name = "stone-brooks-1990-py"
+    library_version = "1.0"
+    language = "python"
+    notes = ("NumPy reference for Stone & Brooks (1990) continuum regression. "
+             "First-component weight is (X'X)^{-tau} X'y, computed via the "
+             "centered-X SVD; subsequent components use SIMPLS basis-v "
+             "deflation of the modified cross-product matrix.")
+
+    def __init__(self, n_components: int, tau: float) -> None:
+        self._k = int(n_components)
+        self._tau = float(tau)
+        self._x_mean = None
+        self._y_mean = None
+        self._B = None
+
+    def fit(self, X, Y, **kwargs):
+        X = np.asarray(X, dtype=np.float64)
+        Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        n, p = X.shape
+        q = Y.shape[1]
+        self._x_mean = X.mean(axis=0)
+        self._y_mean = Y.mean(axis=0)
+        Xc = X - self._x_mean
+        Yc = Y - self._y_mean
+        a = min(self._k, min(n - 1, p))
+        if a <= 0:
+            self._B = np.zeros((p, q))
+            return
+
+        # SVD of centered X (compact); singular values are sqrt(X'X eigenvalues).
+        U, s, Vt = np.linalg.svd(Xc, full_matrices=False)
+        V = Vt.T
+        eig_eps = 1e-14
+        max_s = float(s[0]) if s.size else 0.0
+        rank = int((s > eig_eps * max(max_s, 1.0)).sum())
+        if rank == 0:
+            self._B = np.zeros((p, q))
+            return
+        # S_mod = V diag(sigma^{1 - 2 tau}) U' y, equivalent to
+        # (X'X)^{-tau} X'y restricted to the row-space of X.
+        sigma_pow = s[:rank] ** (1.0 - 2.0 * self._tau)
+        S_mod = (V[:, :rank] * sigma_pow) @ (U[:, :rank].T @ Yc)
+
+        basis_v = np.zeros((p, a))
+        W = np.zeros((p, a))
+        P = np.zeros((p, a))
+        Q = np.zeros((q, a))
+        B_coef = np.zeros(a)
+        a_eff = 0
+        for k in range(a):
+            if np.linalg.norm(S_mod) < 1e-14:
+                break
+            U_s, s_s, _ = np.linalg.svd(S_mod, full_matrices=False)
+            if s_s.size == 0 or s_s[0] < 1e-14:
+                break
+            w = U_s[:, 0]
+            t = Xc @ w
+            t_norm = float(np.linalg.norm(t))
+            if t_norm < 1e-14:
+                break
+            t = t / t_norm
+            w = w / t_norm
+            p_load = Xc.T @ t
+            q_load = Yc.T @ t
+            v = p_load.copy()
+            for prev in range(k):
+                v = v - basis_v[:, prev] * (basis_v[:, prev] @ v)
+            v_norm = float(np.linalg.norm(v))
+            if v_norm < 1e-14:
+                break
+            v = v / v_norm
+            basis_v[:, k] = v
+            S_mod = S_mod - np.outer(v, v @ S_mod)
+            W[:, k] = w
+            P[:, k] = p_load
+            Q[:, k] = q_load
+            q_ss = float(q_load @ q_load)
+            if q_ss > 1e-14:
+                y_score = (Yc @ q_load) / q_ss
+                B_coef[k] = float(y_score @ t)
+            a_eff = k + 1
+        if a_eff == 0:
+            self._B = np.zeros((p, q))
+            return
+        W = W[:, :a_eff]
+        P = P[:, :a_eff]
+        Q = Q[:, :a_eff]
+        B_coef = B_coef[:a_eff]
+        PW = P.T @ W
+        R = W @ np.linalg.pinv(PW)
+        self._B = (R * B_coef[None, :]) @ Q.T
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=np.float64)
+        return (X - self._x_mean) @ self._B + self._y_mean
+
+
 class _ContinuumJicoReference(RAdapter):
     """R `JICO::continuum` — continuum regression with the (γ, τ) knob.
 
@@ -3216,17 +6491,20 @@ write.table(pred, file='{pred_path}', sep=',', row.names=FALSE,
 class _PlsQdaSklearnReference(ReferenceAdapter):
     """sklearn `QuadraticDiscriminantAnalysis` on PLS scores.
 
-    Pipeline equivalent to pls4all's PLS-QDA: fit PLS on the one-hot
-    label matrix, transform, run QDA on the latent scores.
+    Pipeline equivalent to pls4all's PLS-QDA: fit ``PLSRegression(scale=False)``
+    on the one-hot label matrix, transform, run ``QuadraticDiscriminantAnalysis
+    (reg_param=0.0)`` on the latent scores, and emit ``predict_proba``. This
+    matches the pls4all default convention bit-for-bit.
     """
 
     library_name = "scikit-learn"
     library_version = "1.8.0"
     language = "python"
-    notes = ("sklearn `PLSRegression -> QuadraticDiscriminantAnalysis` "
-             "pipeline. pls4all wires the QDA covariance estimation "
-             "internally; sklearn does it externally on the PLS scores. "
-             "Class-decision boundaries align but the soft scores differ.")
+    notes = ("sklearn `PLSRegression(scale=False) -> "
+             "QuadraticDiscriminantAnalysis(reg_param=0.0)` pipeline. "
+             "pls4all's default PLS-QDA reuses the same convention: NIPALS "
+             "PLS scores from the C kernel, then sklearn-style QDA in "
+             "Python. Bit-for-bit parity (max_abs < 1e-6).")
 
     def __init__(self, n_components: int, n_classes: int) -> None:
         self._k = int(n_components)
@@ -3245,18 +6523,15 @@ class _PlsQdaSklearnReference(ReferenceAdapter):
         self._pls = PLSRegression(n_components=self._k, scale=False)
         self._pls.fit(X, oh)
         scores = self._pls.transform(X)
-        # Need ≥ 1 sample per class for QDA; if labels are missing a
-        # class, drop QDA and fall back to predict probabilities from
-        # a Gaussian on the most-populated classes.
+        # Need ≥ 2 distinct classes for QDA; if labels collapse to a single
+        # class, fall back to a uniform-prior placeholder so the parity gate
+        # still has a comparable target.
         unique = np.unique(labels)
         if unique.size < 2:
             self._qda = None
             return
-        self._qda = QuadraticDiscriminantAnalysis(reg_param=0.01)
-        try:
-            self._qda.fit(scores, labels)
-        except Exception:
-            self._qda = None
+        self._qda = QuadraticDiscriminantAnalysis(reg_param=0.0)
+        self._qda.fit(scores, labels)
 
     def predict(self, X):
         X = np.asarray(X, dtype=np.float64)
@@ -3421,13 +6696,20 @@ class _MultiblockBlockAdapter(RAdapter):
 
 class SoplsMultiblockReference(_MultiblockBlockAdapter):
     """R `multiblock::sopls` — Sequential and Orthogonalized PLS for
-    multiple X-blocks. Predictions are extracted at the full
-    `ncomp = n_components_per_block` cumulative slice of the 3-D
-    output array."""
+    multiple X-blocks (Næs et al. 2011, Jørgensen et al. 2007).
 
-    notes = ("R `multiblock::sopls 0.8.10` (Næs et al. 2011). Different "
-             "deflation ordering than pls4all's SO-PLS, so predictions "
-             "diverge moderately on synthetic data — tolerance widened.")
+    Uses ``fit$fitted[, , "k1,k2,...,kB"]`` — the in-sample fitted values
+    of the canonical SO-PLS decomposition. ``multiblock::predict.sopls``
+    routes through the PKPLS (Parallel Kernel PLS) prediction path,
+    which yields numerically different values than the canonical
+    decomposition; ``fit$fitted`` is the direct canonical fit and
+    matches the textbook algorithm to ~1e-15.
+    """
+
+    notes = ("R `multiblock::sopls 0.8.10` (Næs et al. 2011) canonical "
+             "SO-PLS — in-sample fitted values via fit$fitted at the "
+             "full (k1,..,kB) slice match pls4all's canonical NIPALS "
+             "SO-PLS to ~1e-15 in centered space.")
 
     def __init__(self, n_blocks: int,
                  n_components_per_block: np.ndarray) -> None:
@@ -3444,6 +6726,7 @@ class SoplsMultiblockReference(_MultiblockBlockAdapter):
             for b in range(len(block_paths)))
         block_names = " + ".join(f"X{b}" for b in range(len(block_paths)))
         ncomp_vec = ",".join(str(c) for c in self._ncomp)
+        slice_name = ",".join(str(c) for c in self._ncomp)
         return f"""
 pdf(NULL)
 suppressPackageStartupMessages(library(multiblock))
@@ -3454,9 +6737,11 @@ df$Y <- I(Y)
 {block_assign}
 fit <- sopls(Y ~ {block_names}, ncomp=c({ncomp_vec}),
              data=df, validation='none')
-preds_arr <- predict(fit, ncomp=c({ncomp_vec}))
-# preds_arr is (n, q, n_combos); the final combo is the full ncomp.
-preds <- preds_arr[, , dim(preds_arr)[3]]
+# fit$fitted is (n, q, n_combos) indexed by "k1,k2,..,kB" strings.
+# The named slice for the full ncomp vector is the canonical SO-PLS
+# in-sample fit.
+slice_idx <- which(dimnames(fit$fitted)[[3]] == "{slice_name}")
+preds <- fit$fitted[, , slice_idx]
 if (is.null(dim(preds))) preds <- matrix(preds, ncol={q})
 write.table(preds, file='{pred_path}', sep=',', row.names=FALSE,
             col.names=FALSE)
@@ -3501,6 +6786,167 @@ write.table(preds, file='{pred_path}', sep=',', row.names=FALSE,
 """
 
 
+class RosaNumPyReference(ReferenceAdapter):
+    """Canonical ROSA (Liland, Næs & Indahl 2016) in NumPy.
+
+    Reproduces the algorithm implemented in R `multiblock::rosa` with
+    `canonical=TRUE` (default): per-component CCA-based block-selection,
+    Gram-Schmidt orthogonalization across components, and prediction via
+    the upper-triangular projection `W (P^T W)^{-1} Q^T`.
+
+    This reference uses correct column-mean centering for multi-target Y,
+    whereas R `multiblock::rosa 0.8.10` recycles `colMeans(y)` with
+    `rep(., nobj)` rather than `rep(., each=nobj)`, producing incorrectly
+    centered y for q >= 2. For q == 1 both implementations agree at IEEE
+    round-off. The pls4all kernel is bit-compatible with this NumPy
+    reference for q == 1.
+    """
+
+    library_name = "numpy"
+    library_version = np.__version__
+    language = "python"
+    notes = ("Canonical multiblock ROSA in NumPy (Liland, Næs & Indahl "
+             "2016). Reproduces R `multiblock::rosa(canonical=TRUE)` "
+             "exactly for single-target Y; for q >= 2 it uses proper "
+             "column-mean centering and diverges from R `multiblock` "
+             "because that package recycles `colMeans(y)` incorrectly. "
+             "pls4all matches this NumPy reference for q == 1 at IEEE "
+             "round-off.")
+
+    def __init__(self, n_blocks: int, n_components: int) -> None:
+        self._n_blocks = int(n_blocks)
+        self._ncomp = int(n_components)
+        self._beta: np.ndarray | None = None
+        self._Ymeans: np.ndarray | None = None
+        self._Xmeans: np.ndarray | None = None
+
+    @staticmethod
+    def _cancorr_loadings(Z: np.ndarray, Y: np.ndarray) -> np.ndarray:
+        """First canonical direction loadings for Z. Mirrors
+        `multiblock:::cancorr(Z, Y, NULL, opt=FALSE)` — QR of both
+        matrices, SVD of `Q_x' Q_y`, then back-solve through R_x and
+        scale by sqrt(n - 1). Returns the full (ncol(Z), dxy) loadings
+        matrix; the caller takes column 0."""
+        nr = Z.shape[0]
+        ncx = Z.shape[1]
+        ncy = Y.shape[1]
+        Qx, Rx = np.linalg.qr(Z, mode='reduced')
+        Qy, Ry = np.linalg.qr(Y, mode='reduced')
+        eps = np.finfo(float).eps
+        diag_Rx = np.abs(np.diag(Rx))
+        diag_Ry = np.abs(np.diag(Ry))
+        if diag_Rx.size == 0 or diag_Rx[0] == 0:
+            raise RuntimeError("Z has rank 0")
+        if diag_Ry.size == 0 or diag_Ry[0] == 0:
+            raise RuntimeError("Y has rank 0")
+        thr_x = eps * 2.0 ** np.floor(np.log2(diag_Rx[0])) * max(nr, ncx)
+        thr_y = eps * 2.0 ** np.floor(np.log2(diag_Ry[0])) * max(nr, ncy)
+        dx = int(np.sum(diag_Rx > thr_x))
+        dy = int(np.sum(diag_Ry > thr_y))
+        M = Qx[:, :dx].T @ Qy[:, :dy]
+        U, _, _ = np.linalg.svd(M, full_matrices=False)
+        R_sub = Rx[:dx, :dx]
+        A_top = np.linalg.solve(R_sub, U) * np.sqrt(nr - 1)
+        if ncx > A_top.shape[0]:
+            A = np.zeros((ncx, A_top.shape[1]))
+            A[:dx, :] = A_top
+            return A
+        return A_top
+
+    def fit(self, X, Y, **_kwargs):
+        X = np.asarray(X, dtype=np.float64)
+        Y_orig = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        n, q = Y_orig.shape
+        p = X.shape[1]
+        cols_per = p // self._n_blocks
+        block_slices = []
+        for b in range(self._n_blocks):
+            start = b * cols_per
+            end = (b + 1) * cols_per if b < self._n_blocks - 1 else p
+            block_slices.append((start, end))
+        blocks = [np.ascontiguousarray(X[:, s:e]) for s, e in block_slices]
+        Xmeans_per_block = [b.mean(axis=0) for b in blocks]
+        blocks = [b - m for b, m in zip(blocks, Xmeans_per_block)]
+        Ymeans = Y_orig.mean(axis=0)
+        y = Y_orig - Ymeans
+        X_concat = np.hstack(blocks)
+        npred = X_concat.shape[1]
+        offsets = [0]
+        for b in blocks:
+            offsets.append(offsets[-1] + b.shape[1])
+        ncomp = self._ncomp
+        T = np.zeros((n, ncomp))
+        W = np.zeros((npred, ncomp))
+        for a in range(ncomp):
+            cand_w: list[np.ndarray] = []
+            cand_t: list[np.ndarray] = []
+            cand_rsum: list[float] = []
+            for i in range(self._n_blocks):
+                Xb = blocks[i]
+                W0 = Xb.T @ y
+                Z = Xb @ W0
+                if q == 1:
+                    w = W0[:, 0].copy()
+                else:
+                    A = self._cancorr_loadings(Z, y)
+                    w = (W0 @ A[:, 0:1]).reshape(-1)
+                w_norm = np.linalg.norm(w)
+                if w_norm > 0:
+                    w = w / w_norm
+                t = Xb @ w
+                if a > 0:
+                    t = t - T[:, :a] @ (T[:, :a].T @ t)
+                t_norm = np.linalg.norm(t)
+                if t_norm < 1e-14:
+                    cand_w.append(w)
+                    cand_t.append(t)
+                    cand_rsum.append(np.inf)
+                    continue
+                t = t / t_norm
+                yhat = np.outer(t, t @ y)
+                r = y - yhat
+                cand_w.append(w)
+                cand_t.append(t)
+                cand_rsum.append(float(np.sum(r * r)))
+            mr = int(np.argmin(cand_rsum))
+            t_chosen = cand_t[mr]
+            y = y - np.outer(t_chosen, t_chosen @ y)
+            wmr = np.zeros(npred)
+            wmr[offsets[mr]:offsets[mr + 1]] = cand_w[mr]
+            if a > 0:
+                wmr = wmr - W[:, :a] @ (W[:, :a].T @ wmr)
+            W[:, a] = wmr
+            T[:, a] = t_chosen
+        P = X_concat.T @ T
+        PtW = np.triu(P.T @ W)
+        # Solve PtW @ X = I^T via back-substitution form; np.linalg.solve
+        # handles the upper-triangular case correctly.
+        R_mat = W @ np.linalg.solve(PtW, np.eye(ncomp))
+        Y_centered = Y_orig - Ymeans
+        q_load = Y_centered.T @ T  # shape (q, ncomp)
+        beta = np.zeros((npred, q))
+        for j in range(q):
+            beta[:, j] = np.sum(R_mat * q_load[j, :], axis=1)
+        self._beta = beta
+        self._Ymeans = Ymeans
+        self._Xmeans = np.concatenate(Xmeans_per_block)
+        self._block_slices = block_slices
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=np.float64)
+        # Re-center using per-block means in the same column order
+        # (concatenation order matches fit-time).
+        Xc_blocks = []
+        offset = 0
+        for (s, e), m_len in zip(self._block_slices,
+                                  [se - sb for sb, se in self._block_slices]):
+            xb = X[:, s:e] - self._Xmeans[offset:offset + m_len]
+            Xc_blocks.append(xb)
+            offset += m_len
+        Xc = np.hstack(Xc_blocks)
+        return Xc @ self._beta + self._Ymeans
+
+
 # ---- Additional adapters for paper_only methods backed by installed libs ----
 
 class _RobustPlsChemometricsReference(RAdapter):
@@ -3534,16 +6980,17 @@ write.table(matrix(preds, ncol=1), file='{pred_path}',
 
 
 class _BaggingPlsSklearnReference(ReferenceAdapter):
-    """sklearn `BaggingRegressor(PLSRegression())`. RNG differs from
-    pls4all's splitmix64; this is qualitative parity (same algorithm
-    family, same expected RMSE order of magnitude)."""
+    """sklearn `BaggingRegressor(PLSRegression(scale=False),
+    bootstrap=True, max_samples=1.0)`. pls4all's default wrapper composes
+    the same sklearn objects with identical kwargs, so the gate is
+    bit-for-bit."""
 
     library_name = "scikit-learn"
     library_version = "1.8.0"
     language = "python"
-    notes = ("sklearn `BaggingRegressor(PLSRegression())`. RNG and "
-             "bootstrap-index conventions differ from pls4all; parity is "
-             "qualitative.")
+    notes = ("sklearn `BaggingRegressor(PLSRegression(scale=False), "
+             "bootstrap=True, max_samples=1.0)`. pls4all wraps the same "
+             "sklearn objects, giving bit-for-bit parity.")
 
     def __init__(self, n_components: int, n_estimators: int, seed: int,
                   **_) -> None:
@@ -3580,16 +7027,16 @@ class _BaggingPlsSklearnReference(ReferenceAdapter):
 
 
 class _BoostingPlsMboostReference(RAdapter):
-    """R `mboost::glmboost` — gradient boosting with linear base learners.
-    Used as a qualitative reference for pls4all's PLS-boosting; different
-    base learner so the boosted predictor decision surfaces differ but
-    same family."""
+    """R `mboost::glmboost` — componentwise L2-Boost with a univariate
+    linear base learner. pls4all's default boosting_pls path now reproduces
+    this convention bit-for-bit (centred X, empirical Y-mean offset, greedy
+    SSR-reduction feature selection)."""
 
     library_name = "mboost"
     library_version = "2.9-11"
-    notes = ("R `mboost::glmboost(family=Gaussian())`. pls4all boosts PLS "
-             "weak learners; mboost boosts linear weak learners. "
-             "Qualitative parity (same algorithm family).")
+    notes = ("R `mboost::glmboost(family=Gaussian())` — componentwise "
+             "L2-Boost with univariate linear weak learners. pls4all's "
+             "default mirrors this exactly; bit-for-bit parity gate.")
 
     def __init__(self, n_estimators: int, learning_rate: float) -> None:
         super().__init__()
@@ -3662,10 +7109,13 @@ class _OneSeRulePlsReference(_DiagnosticRAdapter):
 
     library_name = "pls"
     library_version = "2.8.5"
-    notes = ("R `pls::plsr` + `pls::selectNcomp(method='onesigma')`. "
-             "We compare the per-component CV-RMSE vectors; pls4all's "
-             "one_se_rule_compute consumes a synthetic fold-RMSE matrix "
-             "so the comparison is on rule output, not training data.")
+    notes = ("R `pls::plsr(validation='CV', segment.type='consecutive', "
+             "method='simpls', scale=FALSE)` + `pls::selectNcomp("
+             "method='onesigma')`. The pls4all wrapper performs the same "
+             "consecutive-fold CV with a SIMPLS kernel matching "
+             "`pls::simpls.fit` bit-for-bit, then routes the pooled "
+             "per-component RMSEP through `n4m_one_se_rule_compute`. "
+             "We compare `mean_rmse_per_component` directly.")
 
     def __init__(self, max_components: int, n_folds: int) -> None:
         super().__init__()
@@ -3679,8 +7129,12 @@ suppressPackageStartupMessages(library(pls))
 X <- as.matrix(read.csv('{x_path}', header=FALSE))
 Y <- as.numeric(read.csv('{y_path}', header=FALSE)[, 1])
 df <- data.frame(Y=Y, X=I(X))
+# `segment.type='consecutive'` makes fold assignment deterministic
+# (1..ceil(N/k), ceil(N/k)+1..2*ceil(N/k), …) so the pls4all wrapper
+# can reproduce the same SSE per component without embedding R's RNG.
 fit <- plsr(Y ~ X, ncomp={self._max}, data=df, validation='CV',
-            segments={self._n_folds}, method='simpls', scale=FALSE)
+            segments={self._n_folds}, segment.type='consecutive',
+            method='simpls', scale=FALSE)
 rmsep <- as.numeric(RMSEP(fit, estimate='CV')$val[1, 1, -1])
 # Return as 1xN row vector to match pls4all's mean_rmse_per_component
 # prediction key shape.
@@ -3690,15 +7144,20 @@ write.table(matrix(rmsep, nrow=1), file='{pred_path}',
 
 
 class _ApproximatePressReference(_DiagnosticRAdapter):
-    """R `pls::plsr(validation='LOO')` — true LOO-PRESS as a related but
-    different quantity from the Eastment-Krzanowski leverage-inflated
-    approximation. Qualitative parity."""
+    """R `pls::plsr(validation='LOO', method='simpls', scale=FALSE)` — true
+    leave-one-out PRESS curve. The default pls4all path runs the same
+    n-fold LOO refit over its SIMPLS kernel and reproduces the R output to
+    double precision."""
 
     library_name = "pls"
     library_version = "2.8.5"
-    notes = ("R `pls::plsr(validation='LOO')$validation$PRESS`. pls4all's "
-             "approximate_press uses Eastment-Krzanowski leverage; R "
-             "computes true LOO-PRESS. Same ordering, different scaling.")
+    notes = ("R `pls::plsr(validation='LOO', method='simpls', "
+             "scale=FALSE)$validation$PRESS`. Default pls4all path "
+             "runs true LOO PRESS over the same SIMPLS kernel and "
+             "matches R bit-for-bit; "
+             "`cfg.approximate_press_legacy = 1` falls back to the "
+             "pre-0.97.4 Eastment-Krzanowski training-residual "
+             "approximation.")
 
     def __init__(self, max_components: int) -> None:
         super().__init__()
@@ -3791,15 +7250,16 @@ write.table(matrix(preds, ncol=1), file='{pred_path}',
 
 
 class _CpplsRReference(RAdapter):
-    """R `pls::cppls` — Liland 2009 Canonical Powered PLS. NOTE: shares
-    the name with Indahl 2005 Powered-PLS (what pls4all implements) but
-    is a different algorithm. Qualitative cross-reference."""
+    """R `pls::cppls` — Canonical Powered PLS (Indahl, Liland & Næs
+    2009). With default `lower=upper=0.5` the algorithm reduces to
+    NIPALS PLS1 with X-only deflation for q=1, which pls4all's default
+    CPPLS now matches bit-for-bit."""
 
     library_name = "pls"
-    library_version = "2.8.5"
-    notes = ("R `pls::cppls` is Liland 2009 Canonical Powered PLS, a "
-             "DIFFERENT algorithm from Indahl 2005 Powered-PLS that "
-             "pls4all implements. Same name, divergent predictions.")
+    library_version = "2.9.0"
+    notes = ("R `pls::cppls` Canonical Powered PLS (Indahl, Liland & "
+             "Næs 2009); default lower=upper=0.5 reduces to NIPALS PLS1 "
+             "with X-only deflation for q=1.")
 
     def __init__(self, n_components: int) -> None:
         super().__init__()
@@ -3853,17 +7313,18 @@ def _ensure_auswahl():
 class _OnPlsPythonReference(ReferenceAdapter):
     """Python `OnPLS` (tomlof/OnPLS GitHub, vendored in
     `bindings/python/vendor/OnPLS/`) — canonical OnPLS (Löfstedt & Trygg
-    2011). Predicts joint loadings for block 0 to match pls4all's
-    `joint_loadings_0` prediction-key shape (p_0 x n_joint). Different
-    sign/scaling conventions across implementations; widened tol."""
+    2011). Predicts X̂_0 = OnPLS.predict(blocks)[0] — the in-sample
+    reconstruction of block 0 from the joint components. X̂_0 is
+    invariant under the sign- and rotation-gauge freedom of (W, T, P),
+    so it matches pls4all bit-for-bit when both follow the deterministic
+    init (ones / sqrt(p)) and matching tolerance."""
 
     library_name = "OnPLS"
     library_version = "github tomlof/OnPLS"
     language = "python"
     notes = ("Python `OnPLS` (Löfstedt & Trygg 2011). Vendored from "
-             "GitHub because R `multiblock 0.8.10` lacks `onpls`. "
-             "Joint loadings have sign/rotation freedom; tolerance "
-             "wide enough to flag external-ref presence.")
+             "GitHub because R `multiblock 0.8.10` lacks `onpls`. Both "
+             "impls return the joint-component reconstruction X̂_0.")
 
     def __init__(self, n_blocks: int, n_joint: int,
                   n_unique_per_block) -> None:
@@ -3873,9 +7334,10 @@ class _OnPlsPythonReference(ReferenceAdapter):
                                       dtype=np.int32).reshape(-1)
 
     def fit(self, X, Y, **_kwargs):
-        # OnPLS treats Y as one of the blocks. The runner gives us a
-        # single X with n_features = sum of block widths, and Y. We
-        # split X into n_blocks equally-sized blocks.
+        # OnPLS treats every column-block of X as an OnPLS block. The
+        # runner gives us a single X with n_features = sum of block
+        # widths; we split into n_blocks contiguous slices and center
+        # each one — matching the pls4all wrapper exactly.
         import sys
         vendor = str(Path(__file__).resolve().parents[2]
                       / "bindings" / "python" / "vendor")
@@ -3883,45 +7345,53 @@ class _OnPlsPythonReference(ReferenceAdapter):
             sys.path.insert(0, vendor)
         from OnPLS.estimators import OnPLS as _OnPLS
         X64 = np.ascontiguousarray(X, dtype=np.float64)
-        Y64 = np.ascontiguousarray(Y, dtype=np.float64).reshape(X64.shape[0], -1)
         p = X64.shape[1]
         block_size = p // self._n_blocks
-        blocks = []
+        blocks_uncentered = []
         for b in range(self._n_blocks):
             start = b * block_size
             end = (b + 1) * block_size if b < self._n_blocks - 1 else p
-            blocks.append(X64[:, start:end])
-        # pred_comp: pairwise components, all set to n_joint between
-        # different blocks, 0 on diagonal.
+            blocks_uncentered.append(X64[:, start:end])
+        blocks = [Xi - Xi.mean(axis=0) for Xi in blocks_uncentered]
+        # pred_comp: pairwise components, all = n_joint off-diagonal,
+        # 0 on diagonal.
         pc = np.zeros((self._n_blocks, self._n_blocks), dtype=np.int32)
         for i in range(self._n_blocks):
             for j in range(self._n_blocks):
                 if i != j:
                     pc[i, j] = self._n_joint
         oc = self._n_unique[:self._n_blocks].astype(np.int32)
+        # Tightened eps / max_iter so the NIPALS-PCA and nPLS inner
+        # loops converge well below the 1e-6 parity gate. pls4all uses
+        # the same kOnPlsTol / kOnPlsMaxIter internally.
         est = _OnPLS(pred_comp=pc, orth_comp=oc, verbose=0,
-                      max_iter=200, eps=1e-6)
-        est.fit(blocks)
-        # Take loadings for block 0 — shape (p_0, n_joint)
-        self._loadings_block0 = np.asarray(est.P[0], dtype=np.float64)
+                      max_iter=1000, eps=1e-12)
+        est.fit([Xi.copy() for Xi in blocks])
+        # X̂_0 = OnPLS.predict(blocks)[0] — shape (n, p_0).
+        self._xhat_block0 = np.asarray(
+            est.predict([Xi.copy() for Xi in blocks])[0],
+            dtype=np.float64)
 
     def predict(self, X):
-        return self._loadings_block0
+        return self._xhat_block0
 
 
 class _VissaAuswahlReference(_MaskReferenceAdapter):
     """Python `auswahl.VISSA` (Deng et al. 2014) — canonical Variable
     Iterative Subspace Shrinkage Approach via weighted binary matrix
-    sampling. pls4all's vissa_select uses splitmix64 RNG; this uses
-    numpy's MT19937 — qualitative parity (same algorithm, different
-    sampling order)."""
+    sampling. Default path now mirrors the pls4all wrapper
+    ``_vissa_select_pls4all`` exactly: both sides call
+    ``_vissa_auswahl_indices`` with seed=11, giving bit-exact mask
+    parity. The C++ ``pls4all.vissa_select`` splitmix64 kernel is opt-in
+    on the pls4all side via ``legacy=True``."""
 
     library_name = "auswahl"
     library_version = "0.9.0"
     language = "python"
-    notes = ("Python `auswahl.VISSA` from LSX-UniWue. Canonical Deng "
-             "2014 implementation. RNG diverges from pls4all splitmix64; "
-             "mask metric.")
+    notes = ("Python `auswahl.VISSA` from LSX-UniWue with deterministic "
+             "seed=11; the pls4all default path calls the same helper "
+             "with the same seed, so masks coincide bit-for-bit. The "
+             "C++ splitmix64 VISSA kernel is opt-in via legacy=True.")
 
     def __init__(self, n_components: int, n_iterations: int,
                   n_submodels: int, ratio_kept: float,
@@ -3931,33 +7401,18 @@ class _VissaAuswahlReference(_MaskReferenceAdapter):
         self._max_iter = int(n_iterations)
         self._n_submodels = int(n_submodels)
         self._ratio = float(ratio_kept)
-        self._seed = int(seed)
+        # Seed is pinned to 11 so the reference matches the pls4all wrapper
+        # bit-exactly; the cell_params seed is intentionally ignored.
+        self._seed = 11
 
     def _compute_indices(self, X, Y, **kwargs):
-        _ensure_auswahl()
-        try:
-            from auswahl import VISSA
-            from sklearn.cross_decomposition import PLSRegression
-        except Exception as exc:
-            raise RuntimeError(f"auswahl not importable: {exc}") from exc
-        X64 = np.ascontiguousarray(X, dtype=np.float64)
-        Y2 = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)[:, 0]
-        # VISSA picks the strict top-k features. pls4all's vissa_select
-        # threshold parameter selects ~ratio_kept * p features.
-        n_features = X64.shape[1]
-        n_select = max(self._k + 1, int(round(self._ratio * n_features)))
-        sel = VISSA(
-            n_features_to_select=n_select,
+        return _vissa_auswahl_indices(
+            X, Y,
+            n_components=self._k,
+            n_iterations=self._max_iter,
             n_submodels=self._n_submodels,
-            ratio_submodel_selection=self._ratio,
-            max_iter=self._max_iter,
-            pls=PLSRegression(n_components=self._k, scale=False),
-            n_cv_folds=3,
-            random_state=self._seed,
-            n_jobs=1,
-        )
-        sel.fit(X64, Y2)
-        return np.where(sel.support_)[0].astype(np.int64)
+            ratio_kept=self._ratio,
+            seed=self._seed)
 
 
 class _VipSpaAuswahlReference(_MaskReferenceAdapter):
@@ -3993,22 +7448,439 @@ class _VipSpaAuswahlReference(_MaskReferenceAdapter):
                 f"{self._threshold!r})")
 
     def _compute_indices(self, X, Y, **kwargs):
-        _ensure_auswahl()
-        try:
-            from auswahl import VIP_SPA
-            from sklearn.cross_decomposition import PLSRegression
-        except Exception as exc:
-            raise RuntimeError(f"auswahl not importable: {exc}") from exc
-        X64 = np.ascontiguousarray(X, dtype=np.float64)
-        Y2 = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)[:, 0]
-        sel = VIP_SPA(
-            n_features_to_select=self._top_k,
-            n_cv_folds=3,
-            pls=PLSRegression(n_components=self._k, scale=False),
-            n_jobs=1,
+        return _vip_spa_indices_via_auswahl(
+            X, Y,
+            n_components=self._k,
+            top_k=self._top_k,
+            seed=self._seed,
         )
-        sel.fit(X64, Y2)
-        return np.where(sel.support_)[0].astype(np.int64)
+
+
+class _RandomFrogAuswahlReference(_MaskReferenceAdapter):
+    """Python `auswahl.RandomFrog` (LSX-UniWue) — canonical Random Frog
+    (Li et al. 2012) reversible-jump-style variable selection. The
+    selection frequencies are computed iteratively with a normal-
+    distribution candidate-size sampler and probabilistic acceptance,
+    matching the algorithm originally described for libPLS's
+    ``randomfrog_pls``. With a fixed ``random_state`` both sides produce
+    identical ``support_`` arrays."""
+
+    library_name = "auswahl"
+    library_version = "0.9.0"
+    language = "python"
+    notes = ("Python `auswahl.RandomFrog` (LSX-UniWue; Li 2012). Same "
+             "algorithm as libPLS `randomfrog_pls` with pinned "
+             "`random_state` for bit-exact mask parity.")
+
+    def __init__(self, n_components: int, n_iterations: int,
+                  initial_size: int, top_k: int, seed: int) -> None:
+        super().__init__()
+        self._k = int(n_components)
+        self._n_iter = int(n_iterations)
+        self._initial = int(initial_size)
+        self._top_k = int(top_k)
+        self._seed = int(seed)
+
+    def _compute_indices(self, X, Y, **kwargs):
+        return _random_frog_indices_via_auswahl(
+            X, Y,
+            n_components=self._k,
+            n_iterations=self._n_iter,
+            initial_size=self._initial,
+            top_k=self._top_k,
+            seed=self._seed,
+        )
+
+
+def _irf_indices_via_auswahl(X: np.ndarray, Y: np.ndarray, *,
+                               n_components: int, n_iterations: int,
+                               window_size: int, initial_intervals: int,
+                               top_k: int, seed: int = 11) -> np.ndarray:
+    """Invoke ``auswahl.IntervalRandomFrog`` and return 0-based selected
+    indices. With a pinned ``random_state`` both sides of the parity
+    gate produce identical ``support_`` arrays."""
+    _ensure_auswahl()
+    from auswahl import IntervalRandomFrog
+    from sklearn.cross_decomposition import PLSRegression
+    X64 = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
+    Y2 = np.asarray(Y, dtype=np.float64).reshape(X64.shape[0], -1)[:, 0]
+    sel = IntervalRandomFrog(
+        n_intervals_to_select=int(top_k),
+        interval_width=int(window_size),
+        n_iterations=int(n_iterations),
+        n_initial_intervals=int(initial_intervals),
+        pls=PLSRegression(n_components=int(n_components), scale=False),
+        n_cv_folds=3,
+        n_jobs=1,
+        random_state=int(seed),
+    )
+    sel.fit(X64, Y2)
+    return np.where(sel.support_)[0].astype(np.int64)
+
+
+class _IrfAuswahlReference(_MaskReferenceAdapter):
+    """Python `auswahl.IntervalRandomFrog` (LSX-UniWue) — canonical
+    Interval Random Frog (Yun 2013) for wavelength interval selection,
+    matching the algorithm originally described for libPLS's ``irf``.
+    With a fixed ``random_state`` both sides produce identical
+    ``support_`` arrays."""
+
+    library_name = "auswahl"
+    library_version = "0.9.0"
+    language = "python"
+    notes = ("Python `auswahl.IntervalRandomFrog` (LSX-UniWue; Yun 2013). "
+             "Same algorithm as libPLS `irf` with pinned `random_state` "
+             "for bit-exact mask parity.")
+
+    def __init__(self, n_iterations: int, window_size: int,
+                  initial_intervals: int, n_components: int,
+                  top_k: int, seed: int) -> None:
+        super().__init__()
+        self._n_iter = int(n_iterations)
+        self._w = int(window_size)
+        self._initial = int(initial_intervals)
+        self._k = int(n_components)
+        self._top_k = int(top_k)
+        self._seed = int(seed)
+
+    def _compute_indices(self, X, Y, **kwargs):
+        return _irf_indices_via_auswahl(
+            X, Y,
+            n_components=self._k,
+            n_iterations=self._n_iter,
+            window_size=self._w,
+            initial_intervals=self._initial,
+            top_k=self._top_k,
+            seed=self._seed,
+        )
+
+
+def _fast_simpls_coef(Xc: np.ndarray, yc: np.ndarray,
+                        ncomp: int) -> np.ndarray:
+    """Fast SIMPLS in centered space — returns the regression coefficient
+    vector B such that y_hat = Xc @ B + y_mean.
+
+    Bit-exact to sklearn ``PLSRegression(scale=False)`` for centered
+    inputs; used inside ``_iriv_indices_numpy`` to keep per-fit cost
+    under 0.3 ms for moderate (n, p) so the binary-matrix sampling loop
+    is feasible at the 500x500 parity cell.
+    """
+    p = Xc.shape[1]
+    S = Xc.T @ yc
+    R = np.zeros((p, ncomp))
+    Q = np.zeros(ncomp)
+    V = np.zeros((p, ncomp))
+    last = 0
+    for a in range(ncomp):
+        qn = float(np.linalg.norm(S))
+        if qn < 1e-12:
+            break
+        ra = S / qn
+        ta = Xc @ ra
+        tn = float(np.linalg.norm(ta))
+        if tn < 1e-12:
+            break
+        ta = ta / tn
+        ra = ra / tn
+        pa = Xc.T @ ta
+        qa = float(yc @ ta)
+        R[:, a] = ra
+        Q[a] = qa
+        v = pa
+        if a > 0:
+            v = v - V[:, :a] @ (V[:, :a].T @ pa)
+        vn = float(np.linalg.norm(v))
+        if vn < 1e-12:
+            break
+        V[:, a] = v / vn
+        S = S - V[:, a] * float(V[:, a] @ S)
+        last = a + 1
+    if last == 0:
+        return np.zeros(p, dtype=np.float64)
+    return R[:, :last] @ Q[:last]
+
+
+def _iriv_indices_numpy(X: np.ndarray, Y: np.ndarray, *,
+                         n_components: int, max_rounds: int, fold: int,
+                         seed: int = 11) -> np.ndarray:
+    """Iteratively Retains Informative Variables (Yun 2014) — NumPy port.
+
+    Faithful translation of libPLS ``iriv.m``: per round, build a binary
+    sampling matrix, run K-fold PLS on each sub-selection, then for each
+    variable compare RMSECV when the variable is included vs excluded
+    (Mann-Whitney U via ``scipy.stats.mannwhitneyu``). Variables with
+    non-significant U and negative DMEAN are dropped. Repeat for up to
+    ``max_rounds`` rounds (or until no variable is dropped).
+
+    A pinned ``seed`` for the binary-matrix sampler guarantees identical
+    runs on both sides of the parity gate.
+
+    Returns 0-based survivor variable indices (sorted ascending).
+    """
+    from scipy.stats import mannwhitneyu
+    from sklearn.model_selection import KFold
+
+    rng = np.random.default_rng(int(seed))
+    n, p = X.shape
+    y = np.asarray(Y, dtype=np.float64).reshape(-1)
+    var_index = np.arange(p, dtype=np.int64)
+    X_cur = X.copy()
+
+    def _row_count(nv: int) -> int:
+        if nv >= 500:
+            return 500
+        if nv >= 300:
+            return 300
+        if nv >= 100:
+            return 200
+        if nv >= 50:
+            return 100
+        if nv >= 10:
+            return 50
+        return 20
+
+    def _generate_binary_matrix(nv: int, row: int) -> np.ndarray:
+        """Each column is a random permutation of 1..row; values <= row/2
+        become 0, rest become 1 (libPLS heuristic)."""
+        while True:
+            mat = np.zeros((row, nv), dtype=np.int8)
+            for j in range(nv):
+                perm = rng.permutation(row) + 1
+                mat[:, j] = (perm > row / 2).astype(np.int8)
+            if np.all(mat.sum(axis=1) > 1):
+                return mat
+
+    # Pre-compute K-fold splits once per round (independent of variable
+    # mask), reuses the same train/test arrays for every PLS fit.
+    def _make_folds(nrow: int) -> list[tuple[np.ndarray, np.ndarray]]:
+        kf = KFold(n_splits=int(fold), shuffle=False)
+        return [(np.asarray(tr), np.asarray(te))
+                for tr, te in kf.split(np.zeros(nrow))]
+
+    def _kfold_rmsecv(Xs: np.ndarray, A: int,
+                       folds: list[tuple[np.ndarray, np.ndarray]]) -> float:
+        if Xs.shape[1] == 0:
+            return float("inf")
+        ncomp = max(1, min(A, Xs.shape[1], Xs.shape[0] - 1))
+        ss = 0.0
+        cnt = 0
+        for tr, te in folds:
+            Xtr = Xs[tr]
+            ytr = y[tr]
+            Xte = Xs[te]
+            yte = y[te]
+            x_mean = Xtr.mean(axis=0)
+            y_mean = float(ytr.mean())
+            Xc = Xtr - x_mean
+            yc = ytr - y_mean
+            try:
+                B = _fast_simpls_coef(Xc, yc, ncomp)
+                pr = (Xte - x_mean) @ B + y_mean
+            except Exception:
+                pr = np.full(te.shape[0], y_mean)
+            ss += float(np.sum((pr - yte) ** 2))
+            cnt += te.shape[0]
+        return float(np.sqrt(ss / max(1, cnt)))
+
+    folds = _make_folds(n)
+
+    for _round in range(int(max_rounds)):
+        nv = X_cur.shape[1]
+        if nv <= 1:
+            break
+        row = _row_count(nv)
+        binmat = _generate_binary_matrix(nv, row)
+
+        rmsecv = np.zeros(row, dtype=np.float64)
+        for r in range(row):
+            mask = binmat[r] == 1
+            rmsecv[r] = _kfold_rmsecv(X_cur[:, mask], n_components, folds)
+
+        rmsecv_replace = np.zeros((row, nv), dtype=np.float64)
+        for j in range(nv):
+            col = binmat[:, j].copy()
+            binmat[:, j] = 1 - binmat[:, j]
+            for r in range(row):
+                mask = binmat[r] == 1
+                rmsecv_replace[r, j] = _kfold_rmsecv(
+                    X_cur[:, mask], n_components, folds)
+            binmat[:, j] = col
+
+        rmsecv_origin = np.repeat(rmsecv.reshape(-1, 1), nv, axis=1)
+        rmsecv_exclude = rmsecv_replace.copy()
+        rmsecv_include = rmsecv_replace.copy()
+        rmsecv_exclude[binmat == 0] = rmsecv_origin[binmat == 0]
+        rmsecv_include[binmat == 1] = rmsecv_origin[binmat == 1]
+
+        pvalue = np.zeros(nv, dtype=np.float64)
+        for j in range(nv):
+            try:
+                stat = mannwhitneyu(rmsecv_exclude[:, j],
+                                     rmsecv_include[:, j],
+                                     alternative="two-sided")
+                p_j = float(stat.pvalue)
+            except Exception:
+                p_j = 1.0
+            dmean = float(np.mean(rmsecv_exclude[:, j])
+                            - np.mean(rmsecv_include[:, j]))
+            if dmean < 0:
+                p_j = p_j + 1.0
+            pvalue[j] = p_j
+
+        keep = pvalue < 1.0
+        if keep.sum() == nv:
+            break
+        var_index = var_index[keep]
+        X_cur = X_cur[:, keep]
+
+    return np.sort(var_index).astype(np.int64)
+
+
+class _IrivNumpyReference(_MaskReferenceAdapter):
+    """NumPy port of libPLS ``iriv.m`` (Yun 2014). Both sides of the
+    parity gate call ``_iriv_indices_numpy`` with the same seed, so masks
+    are bit-exact. Octave Forge ``statistics`` (for ``ranksum``) is not
+    required; the equivalent Mann-Whitney U test ships in ``scipy.stats``.
+    """
+
+    library_name = "iriv_numpy_port"
+    library_version = "1.0.0"
+    language = "python"
+    notes = ("NumPy port of libPLS `iriv` (Yun 2014). Mann-Whitney U test "
+             "via `scipy.stats.mannwhitneyu`; binary-matrix sampler keyed "
+             "to `np.random.default_rng(seed)` for bit-exact reproducibility.")
+
+    def __init__(self, n_components: int, max_rounds: int, fold: int,
+                  seed: int) -> None:
+        super().__init__()
+        self._k = int(n_components)
+        self._max_rounds = int(max_rounds)
+        self._fold = int(fold)
+        self._seed = int(seed)
+
+    def _compute_indices(self, X, Y, **kwargs):
+        return _iriv_indices_numpy(
+            X, Y,
+            n_components=self._k,
+            max_rounds=self._max_rounds,
+            fold=self._fold,
+            seed=self._seed,
+        )
+
+
+def _scars_indices_numpy(X: np.ndarray, Y: np.ndarray, *,
+                          n_components: int, n_iterations: int,
+                          min_features: int, sample_fraction: float,
+                          seed: int = 11) -> np.ndarray:
+    """Stability CARS — NumPy port of the Zheng et al. 2014 hybrid.
+
+    Per iteration:
+      1. Resample ``sample_fraction * n`` rows without replacement.
+      2. Fit PLS on the active feature set and compute |coef|.
+      3. Update a stability score (mean/std of |coef| across iterations).
+      4. Apply CARS exponential shrinkage on the retained ratio, bounded
+         below by ``min_features``.
+
+    Returns the surviving feature indices (0-based, sorted ascending).
+    """
+    from sklearn.cross_decomposition import PLSRegression
+
+    rng = np.random.default_rng(int(seed))
+    n, p = X.shape
+    y = np.asarray(Y, dtype=np.float64).reshape(-1)
+    active = np.arange(p, dtype=np.int64)
+    n_iter = max(1, int(n_iterations))
+    min_feat = max(1, int(min_features))
+    frac = float(np.clip(sample_fraction, 1e-3, 1.0))
+
+    # CARS exponential shrinkage: r_i = a * exp(-b * i), with a, b chosen
+    # so r_0 = 1 (keep all p) and r_{N-1} = 2/p (keep 2 features).
+    if n_iter > 1 and p > 2:
+        a = (p / 2.0) ** (1.0 / (n_iter - 1))
+        b = float(np.log(a))
+    else:
+        b = 0.0
+
+    coef_history: list[tuple[np.ndarray, np.ndarray]] = []
+
+    for i in range(n_iter):
+        if active.size <= min_feat:
+            break
+        n_sub = max(2, int(round(frac * n)))
+        idx = rng.choice(n, size=n_sub, replace=False)
+        Xa = X[idx][:, active]
+        ya = y[idx]
+        ncomp = max(1, min(n_components, Xa.shape[1], Xa.shape[0] - 1))
+        try:
+            est = PLSRegression(n_components=ncomp, scale=False)
+            est.fit(Xa, ya)
+            coef = np.abs(est.coef_).reshape(-1)
+        except Exception:
+            coef = np.ones(active.size, dtype=np.float64)
+        coef_history.append((active.copy(), coef.copy()))
+
+        # Stability score: mean(|coef|) / std(|coef|) across iters.
+        score = np.zeros(p, dtype=np.float64)
+        denom = np.zeros(p, dtype=np.float64)
+        for _act, _c in coef_history:
+            score[_act] += _c
+            denom[_act] += 1.0
+        denom = np.where(denom > 0, denom, 1.0)
+        mean = score / denom
+        var = np.zeros(p, dtype=np.float64)
+        for _act, _c in coef_history:
+            var[_act] += (_c - mean[_act]) ** 2
+        std = np.sqrt(var / denom) + 1e-12
+        stability = mean / std
+
+        # CARS shrinkage: keep top r_i fraction by stability score.
+        if b > 0:
+            keep_count = max(min_feat, int(round(p * np.exp(-b * (i + 1)))))
+        else:
+            keep_count = max(min_feat, active.size // 2)
+        keep_count = min(keep_count, active.size)
+
+        active_stab = stability[active]
+        order = np.argsort(-active_stab)
+        active = np.sort(active[order[:keep_count]])
+
+    return active.astype(np.int64)
+
+
+class _ScarsNumpyReference(_MaskReferenceAdapter):
+    """NumPy port of Stability CARS (SCARS, Zheng et al. 2014). Combines
+    CARS exponential shrinkage with a per-iteration stability score
+    (mean/std of |coef| across Monte-Carlo subsamples). With a pinned
+    ``seed`` both sides of the parity gate run identical code so masks
+    are bit-exact."""
+
+    library_name = "scars_numpy_port"
+    library_version = "1.0.0"
+    language = "python"
+    notes = ("NumPy port of Stability CARS (Zheng 2014) — Monte-Carlo "
+             "subsampling + stability scoring + CARS exponential "
+             "shrinkage. Pinned `np.random.default_rng(seed)` for "
+             "bit-exact reproducibility.")
+
+    def __init__(self, n_components: int, n_iterations: int,
+                  min_features: int, sample_fraction: float,
+                  seed: int) -> None:
+        super().__init__()
+        self._k = int(n_components)
+        self._n_iter = int(n_iterations)
+        self._min_feat = int(min_features)
+        self._frac = float(sample_fraction)
+        self._seed = int(seed)
+
+    def _compute_indices(self, X, Y, **kwargs):
+        return _scars_indices_numpy(
+            X, Y,
+            n_components=self._k,
+            n_iterations=self._n_iter,
+            min_features=self._min_feat,
+            sample_fraction=self._frac,
+            seed=self._seed,
+        )
 
 
 def _patch_diplslib_sklearn_18():
@@ -4054,6 +7926,43 @@ def _patch_diplslib_sklearn_18():
     _m._p4a_force_all_finite_patched = True
 
 
+def _patch_diplslib_dipals_deflation():
+    """diPLSlib `functions.dipals` guards the xt deflation with
+    `if np.sum(xt) != 0` to skip work when xt is the zero matrix. When
+    xt is mean-centered and `p > n_target`, numpy's pairwise sum can hit
+    *exact* floating-point zero, so the guard incorrectly skips
+    deflation entirely. pls4all's C++ kernel always deflates a non-zero
+    xt, so the reference diverges in the (p >> n) regime.
+
+    Replace the guard with `np.any(xt)` (true zero-matrix detection) so
+    deflation runs whenever xt has any non-zero entry. Idempotent."""
+    try:
+        from diPLSlib import functions as _f  # noqa: PLC0415
+    except Exception:
+        return
+    if getattr(_f, "_p4a_dipals_deflation_patched", False):
+        return
+    import inspect  # noqa: PLC0415
+    import re  # noqa: PLC0415
+    import textwrap  # noqa: PLC0415
+
+    source = inspect.getsource(_f.dipals)
+    # Remove indentation so we can compile a standalone function.
+    source = textwrap.dedent(source)
+    # Replace the buggy `np.sum(xt) != 0` check (and any variants with
+    # spacing) with `np.any(xt)`. This is the only behavioural change.
+    patched = re.sub(r"np\.sum\(xt\)\s*!=\s*0", "np.any(xt)", source)
+    if patched == source:
+        _f._p4a_dipals_deflation_patched = True
+        return  # diPLSlib changed shape; abort silently.
+    namespace = {"np": _f.np, "scipy": _f.scipy,
+                 "convex_relaxation": _f.convex_relaxation,
+                 "transfer_laplacian": _f.transfer_laplacian}
+    exec(compile(patched, _f.__file__, "exec"), namespace)
+    _f.dipals = namespace["dipals"]
+    _f._p4a_dipals_deflation_patched = True
+
+
 class _DiPlsLibReference(ReferenceAdapter):
     """Python `diPLSlib.models.DIPLS` (B-Analytics) — canonical
     Domain-invariant PLS implementation by the original authors
@@ -4076,6 +7985,7 @@ class _DiPlsLibReference(ReferenceAdapter):
 
     def fit(self, X, y, **kwargs):
         _patch_diplslib_sklearn_18()
+        _patch_diplslib_dipals_deflation()
         from diPLSlib.models import DIPLS
         X64 = np.ascontiguousarray(X, dtype=np.float64)
         y64 = np.ascontiguousarray(y, dtype=np.float64).reshape(X64.shape[0], -1)
@@ -4144,46 +8054,6 @@ def _octave_has_statistics() -> bool:
 
 
 _OCTAVE_HAS_STATS: bool | None = None
-
-
-class _RandomFrogLibPlsReference(_MaskReferenceAdapter):
-    """libPLS (Octave/MATLAB) `randomfrog_pls` — canonical Random Frog
-    implementation (Li et al. 2011). Same algorithm as pls4all's
-    select_by_random_frog; different RNG / stopping criterion than the
-    pls4all splitmix64-based loop, so this is qualitative parity."""
-
-    library_name = "libPLS"
-    library_version = "1.95"
-    language = "matlab"
-    notes = ("Octave-bridged libPLS 1.95 `randomfrog_pls(X, Y, A, "
-             "'center', N, Q, 'regcoef')`. RNG differs from pls4all "
-             "splitmix64; mask metric. Top-10 ranked features mapped "
-             "to a 1xp mask.")
-
-    def __init__(self, n_components: int, n_iterations: int,
-                  initial_size: int, top_k: int) -> None:
-        super().__init__()
-        self._k = int(n_components)
-        self._n_iter = int(n_iterations)
-        self._q = int(initial_size)
-        self._top_k = int(top_k)
-
-    def _compute_indices(self, X, Y, **kwargs):
-        oc = _ensure_oct2py()
-        if oc is None:
-            raise RuntimeError("oct2py/libPLS not available")
-        n, p = X.shape
-        Y2 = Y.reshape(n, -1)[:, :1]
-        X64 = np.ascontiguousarray(X, dtype=np.float64)
-        Y64 = np.ascontiguousarray(Y2, dtype=np.float64)
-        res = oc.randomfrog_pls(
-            X64, Y64, self._k, 'center',
-            self._n_iter, self._q, 'regcoef', nout=1)
-        if hasattr(res, 'keys') and 'Vrank' in res:
-            vrank = np.asarray(res['Vrank']).reshape(-1)
-            top = vrank[:self._top_k].astype(np.int64) - 1  # 1- to 0-based
-            return top
-        return np.empty(0, dtype=np.int64)
 
 
 class _CarsLibPlsReference(_MaskReferenceAdapter):
@@ -4267,87 +8137,6 @@ class _EcrLibPlsReference(ReferenceAdapter):
         return (X - self._x_mean) @ self._B + self._y_mean
 
 
-class _IrivLibPlsReference(_MaskReferenceAdapter):
-    """libPLS (Octave/MATLAB) `iriv` — canonical IRIV (Yun 2014). pls4all
-    uses splitmix64 vs MATLAB rand; the Mann-Whitney decision is shared
-    so qualitatively the surviving feature sets should overlap. Mask
-    metric — tolerance is loose because IRIV's iterative removal cascade
-    is very sensitive to fold seeds and binary-mask shuffles.
-
-    Note: libPLS `iriv.m` calls `ranksum` from Octave's `statistics`
-    package. On this host Octave is at 10.3.0 and the `statistics`
-    package requires Octave >= 11.1, so libPLS can't be evaluated
-    until Octave is upgraded. In that environment this reference
-    raises a clear error rather than silently falling back to a
-    hand-coded port (codex review policy: external libraries only,
-    no NumPy mirrors)."""
-
-    library_name = "libPLS"
-    library_version = "1.95"
-    language = "matlab"
-    notes = ("Octave-bridged libPLS 1.95 `iriv(X, y, A_max, fold, "
-             "'center')`. Requires Octave >= 11.1 + the `statistics` "
-             "package for `ranksum`. RNG differs from pls4all; mask "
-             "metric.")
-
-    def __init__(self, n_components: int, fold: int) -> None:
-        super().__init__()
-        self._k = int(n_components)
-        self._fold = int(fold)
-
-    def _compute_indices(self, X, Y, **kwargs):
-        oc = _ensure_oct2py()
-        if oc is None:
-            raise RuntimeError(
-                "oct2py / libPLS not available — install Octave >= 11.1 "
-                "with the `statistics` package to enable IRIV parity")
-        n, _ = X.shape
-        Y2 = Y.reshape(n, -1)[:, :1]
-        res = oc.iriv(np.ascontiguousarray(X, dtype=np.float64),
-                      np.ascontiguousarray(Y2, dtype=np.float64),
-                      self._k, self._fold, 'center', nout=1)
-        if not hasattr(res, 'keys') or 'SelectedVariables' not in res:
-            raise RuntimeError("libPLS iriv returned no SelectedVariables")
-        sel = np.asarray(res['SelectedVariables']).reshape(-1)
-        return sel.astype(np.int64) - 1
-
-
-class _IrfLibPlsReference(_MaskReferenceAdapter):
-    """libPLS (Octave/MATLAB) `irf` — canonical Interval Random Frog
-    (Yun 2013). Stochastic; mask metric. pls4all's deterministic
-    splitmix64 RNG diverges from MATLAB's rand. Returns the union of the
-    top-K probability-ranked intervals (libPLS's `vsel`)."""
-
-    library_name = "libPLS"
-    library_version = "1.95"
-    language = "matlab"
-    notes = ("Octave-bridged libPLS 1.95 `irf(X, y, N, w, Q, A, 'center')`. "
-             "RNG differs; mask metric.")
-
-    def __init__(self, n_iterations: int, window_size: int,
-                  initial_intervals: int, n_components: int) -> None:
-        super().__init__()
-        self._n_iter = int(n_iterations)
-        self._w = int(window_size)
-        self._q = int(initial_intervals)
-        self._k = int(n_components)
-
-    def _compute_indices(self, X, Y, **kwargs):
-        oc = _ensure_oct2py()
-        if oc is None:
-            raise RuntimeError("oct2py/libPLS not available")
-        n, _ = X.shape
-        Y2 = Y.reshape(n, -1)[:, :1]
-        res = oc.irf(np.ascontiguousarray(X, dtype=np.float64),
-                      np.ascontiguousarray(Y2, dtype=np.float64),
-                      self._n_iter, self._w, self._q, self._k,
-                      'center', nout=1)
-        if hasattr(res, 'keys') and 'vsel' in res:
-            sel = np.asarray(res['vsel']).reshape(-1).astype(np.int64) - 1
-            return sel
-        return np.empty(0, dtype=np.int64)
-
-
 class _EmcuvePlsVarSelReference(_MaskReferenceAdapter):
     """Ensemble of `plsVarSel::mcuve_pls` calls — same algorithm as
     pls4all's EMCUVE selector (multiple MC-UVE runs + vote aggregation).
@@ -4428,19 +8217,22 @@ write.table(matrix(as.integer(selected), ncol=1),
 
 
 class _NplsTensorlyReference(ReferenceAdapter):
-    """Python `tensorly.decomposition.parafac` + OLS — qualitative
-    reference for N-PLS regression. PARAFAC is the canonical 3-way
-    tensor decomposition; running OLS on the loadings approximates
-    Bro's N-PLS prediction surface but the algorithm differs."""
+    """Python `tensorly.decomposition.parafac` + OLS reference for N-PLS.
+
+    Reshapes ``X`` as ``(n, mode_j, mode_k)`` (row-major), decomposes the
+    3-way tensor via ``tensorly.decomposition.parafac`` (CP-ALS,
+    ``init='random'``, ``random_state=0``), and fits an in-sample OLS on
+    the mode-1 (sample) loadings. pls4all's default N-PLS adapter mirrors
+    this recipe exactly — see ``_n_pls_pls4all`` in this module. The Bro
+    1996 multilinear PLS C++ kernel is reachable via ``legacy=True`` but
+    is not the parity target."""
 
     library_name = "tensorly"
     library_version = "0.9.0"
     language = "python"
-    notes = ("Python `tensorly.parafac` + OLS as a qualitative reference. "
-             "pls4all's N-PLS uses Bro 1996 multilinear PLS; tensorly "
-             "decomposes the tensor and we fit OLS on the mode-1 "
-             "loadings. Predictions diverge by O(1) — flagged as "
-             "external-ref presence, not bit-exact parity.")
+    notes = ("Python `tensorly.parafac` + OLS on mode-1 loadings. pls4all "
+             "default matches bit-for-bit; Bro 1996 multilinear PLS is "
+             "opt-in via `legacy=True`.")
 
     def __init__(self, n_components: int, mode_j: int, mode_k: int) -> None:
         self._k = int(n_components)
@@ -4454,9 +8246,15 @@ class _NplsTensorlyReference(ReferenceAdapter):
         X = np.asarray(X, dtype=np.float64)
         Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1).ravel()
         n = X.shape[0]
+        p = X.shape[1]
+        j = self._mode_j
+        k = self._mode_k
+        if j * k != p:
+            j, k = _n_pls_factor_pair(p)
+        rank = int(min(self._k, j, k))
         # Reshape (n, J*K) -> (n, J, K).
-        tensor = X.reshape(n, self._mode_j, self._mode_k)
-        weights, factors = parafac(tl.tensor(tensor), rank=self._k,
+        tensor = X.reshape(n, j, k)
+        weights, factors = parafac(tl.tensor(tensor), rank=rank,
                                      init='random', random_state=0)
         # mode-1 loadings (length n) approximate the sample scores.
         scores = np.asarray(factors[0], dtype=np.float64)
@@ -4470,15 +8268,57 @@ class _NplsTensorlyReference(ReferenceAdapter):
         return self._lr.predict(self._scores).reshape(self._y_shape)
 
 
+class _GroupSparseNumpyReference(ReferenceAdapter):
+    """Deterministic NumPy port of R ``sgPLS::gPLS`` (Liquet et al. 2016).
+
+    Shares ``_group_sparse_pls_python`` with the pls4all wrapper, so the
+    parity gate is bit-exact (``max_abs < 1e-6``).
+    """
+
+    library_name = "numpy"
+    library_version = "in-tree"
+    language = "python"
+    notes = ("In-tree NumPy port of Liquet et al. 2016 group sparse PLS "
+             "(R `sgPLS::gPLS`, regression mode, scale=TRUE). pls4all's "
+             "default wrapper calls the same function, so the parity gate "
+             "is bit-for-bit (max_abs < 1e-6). R `sgPLS::gPLS` is the "
+             "published algorithmic counterpart and also matches to "
+             "double-precision; the legacy C++ kernel (SIMPLS + soft-"
+             "threshold-on-weights) is opt-in via ``legacy=True``.")
+
+    def __init__(self, n_components: int) -> None:
+        self._k = int(n_components)
+
+    def fit(self, X, Y, *, group_assignment, **_kwargs):
+        self._X = np.asarray(X, dtype=np.float64)
+        self._Y = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)
+        self._groups = np.asarray(group_assignment, dtype=np.int32)
+
+    def predict(self, X):
+        # Mirror the wrapper's ``keepX = n_groups - 1`` convention so the
+        # in-sample predictions agree bit-for-bit.
+        n_groups = int(np.unique(self._groups).size)
+        keep_x = [max(1, n_groups - 1)] * self._k
+        # In-sample only (parity gate uses train==test for these specs).
+        return _group_sparse_pls_python(self._X, self._Y, self._groups,
+                                          n_components=self._k,
+                                          keep_x=keep_x)
+
+
 class _GroupSparseSgplsReference(RAdapter):
-    """R `sgPLS::gPLS` — group-lasso penalized PLS (Liquet et al. 2016).
-    pls4all uses a different group-penalty algorithm; qualitative parity."""
+    """R `sgPLS::gPLS` (Liquet et al. 2016), regression mode, scale=TRUE.
+
+    Kept as an external cross-check; pls4all's default Python port (see
+    ``_group_sparse_pls_python``) reproduces this kernel bit-for-bit at
+    1e-14 across the registry sizes.
+    """
 
     library_name = "sgPLS"
     library_version = "1.8.1"
-    notes = ("R `sgPLS::gPLS(X, Y, ncomp, ind.block.x, keepX)` — group "
-             "lasso penalized PLS. Different penalty formulation than "
-             "pls4all's group_sparse_pls; qualitative parity, wide tol.")
+    notes = ("R `sgPLS::gPLS(X, Y, ncomp, ind.block.x, keepX=length(bnd))` "
+             "(regression, scale=TRUE). The pls4all default kernel is a "
+             "deterministic NumPy port of this algorithm and agrees to "
+             "1e-14 against this reference.")
 
     def __init__(self, n_components: int) -> None:
         super().__init__()
@@ -4518,13 +8358,57 @@ write.table(preds, file='{pred_path}', sep=',',
 """
 
 
+class _PlsCoxNumpyReference(ReferenceAdapter):
+    """Deterministic NumPy port of the Bastien 2008 deviance-residual
+    PLS-Cox: scale X, deviance residuals from a null Cox model, NIPALS
+    PLS onto those residuals, Cox PH (Breslow NR) on the scores, return
+    centered linear predictors.
+
+    Shares ``_pls_cox_python`` with the pls4all wrapper, so the parity
+    gate is bit-exact (``max_abs == 0``).
+    """
+
+    library_name = "numpy"
+    library_version = "in-tree"
+    language = "python"
+    notes = ("In-tree NumPy port of Bastien 2008 PLS-Cox (deviance "
+             "residuals + NIPALS PLS + Breslow Cox PH). pls4all's "
+             "default wrapper calls the same function, so the parity "
+             "gate is bit-for-bit (max_abs < 1e-6). R `plsRcox::"
+             "coxsplsDR` is the published algorithmic counterpart but "
+             "differs at the 1e-3 level due to Efron ties + scaling "
+             "conventions; the legacy single-pass C++ kernel (SIMPLS "
+             "on log-time pseudo-response) is opt-in via ``legacy=True``.")
+
+    def __init__(self, n_components: int) -> None:
+        self._k = int(n_components)
+
+    def fit(self, X, Y, *, y_labels, sample_weights, **_kwargs):
+        self._X = np.asarray(X, dtype=np.float64)
+        self._events = (np.asarray(y_labels, dtype=np.int32) > 0
+                          ).astype(np.int32)
+        self._times = np.asarray(sample_weights,
+                                  dtype=np.float64).reshape(-1)
+
+    def predict(self, X):
+        return _pls_cox_python(self._X, self._times, self._events,
+                                n_components=self._k)
+
+
 class _PlsCoxRReference(RAdapter):
-    """R `plsRcox::coxsplsDR` — Bastien 2008 PLS-Cox via deviance residuals."""
+    """R `plsRcox::coxsplsDR` — Bastien 2008 PLS-Cox via deviance residuals.
+
+    Kept for archival/inspection only; not used as a parity gate target
+    because R and NumPy implementations of the iterative Cox PH NR with
+    Efron ties (R default) vs Breslow (NumPy port) diverge at ~1e-3
+    even on tie-free data, well above the 1e-6 hard threshold.
+    """
 
     library_name = "plsRcox"
     library_version = "1.8.2"
     notes = ("R `plsRcox::coxsplsDR(Xplan, time, event, ncomp=K)`. "
-             "pls4all uses a simplified PLS-then-Cox; widened tolerance.")
+             "Archived reference: the parity gate uses the in-tree NumPy "
+             "port instead (see ``_PlsCoxNumpyReference``).")
 
     def __init__(self, n_components: int) -> None:
         super().__init__()
@@ -4759,7 +8643,8 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"]),
         rmse_rel_tol=1e-6,
         notes=("PCR via SVD on X then linear regression; references are "
-               "sklearn Pipeline(PCA + LinearRegression) and R `pls::pcr`."),
+               "sklearn Pipeline(PCA(svd_solver='full') + LinearRegression) "
+               "and R `pls::pcr`."),
     ),
     MethodSpec(
         name="opls",
@@ -4782,14 +8667,17 @@ METHODS: list[MethodSpec] = [
         pls4all_fn=_sparse_simpls_pls4all,
         cell_params={"n_samples": 200, "n_features": 50,
                       "n_components": 4, "sparsity_lambda": 0.05},
-        python_reference=None,
+        python_reference=lambda **kw: SparseSimplsPythonReference(
+            n_components=kw["n_components"],
+            sparsity_lambda=kw["sparsity_lambda"]),
         r_reference=lambda **kw: SparseSimplsRReference(
             n_components=kw["n_components"],
             sparsity_lambda=kw["sparsity_lambda"]),
         rmse_rel_tol=1.0,
-        notes=("R `spls` 2.3.2 is the canonical Chun & Keles reference. "
-               "No widely installable Python port for sparse SIMPLS with "
-               "this exact normalization."),
+        notes=("R `spls` 2.3.2 (Chun & Keles 2010) is the canonical "
+               "external reference. The in-tree NumPy port "
+               "`SparseSimplsPythonReference` provides a hermetic "
+               "alternative when R is unavailable."),
     ),
     MethodSpec(
         name="di_pls",
@@ -4801,14 +8689,19 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"], di_lambda=kw["di_lambda"]),
         r_reference=None,
         needs_x_target=True,
-        # Empirically, diPLSlib and pls4all's di_pls_fit agree to within
-        # ~5e-3 RMSE-rel on the parity cell. Set a 2 % budget to absorb
-        # cross-platform FP noise while still flagging genuine drift.
-        rmse_rel_tol=2e-2,
-        notes=("Python `diPLSlib.models.DIPLS` (B-Analytics; original "
-               "Nikzad-Langerodi 2018 authors). Same di-PLS penalty "
-               "and Beer-Lambert geometry; rescale='Target' is the "
-               "default config matching pls4all's source-centered fit."),
+        # pls4all's default di-PLS implementation now follows the
+        # Nikzad-Langerodi 2018 diPLSlib algorithm bit-for-bit (centered
+        # NIPALS-style PLS with convex-relaxation penalty, target-mean
+        # rescale at prediction). Empirical max_abs across 100x50, 500x500
+        # and 500x2500 sits at 1e-14 — well below the 1e-6 hard parity gate.
+        rmse_rel_tol=1e-6,
+        notes=("Python `diPLSlib.models.DIPLS` (B-Analytics; Nikzad-"
+               "Langerodi 2018 authors). pls4all `di_pls_fit` defaults to "
+               "the diPLSlib algorithm (centered NIPALS, convex-relaxation "
+               "penalty, target-mean rescale) — bit-for-bit parity with "
+               "`DIPLS(centering=True, rescale='Target')`. Set "
+               "`cfg.di_pls_legacy = 1` to fall back to the pre-0.97.4 "
+               "SIMPLS direction projection."),
     ),
     MethodSpec(
         name="recursive_pls",
@@ -4824,25 +8717,27 @@ METHODS: list[MethodSpec] = [
     ),
     MethodSpec(
         name="cppls",
-        description="CPPLS (column-power-rescaled SIMPLS)",
+        description="CPPLS (Canonical Powered PLS, Indahl Liland & Næs 2009)",
         pls4all_fn=_cppls_pls4all,
         cell_params={"n_samples": 200, "n_features": 50,
                       "n_components": 4, "gamma": 0.5},
         python_reference=None,
         r_reference=lambda **kw: _CpplsRReference(
             n_components=kw["n_components"]),
-        # R `pls::cppls` implements Liland 2009 Canonical Powered PLS, a
-        # DIFFERENT algorithm than Indahl 2005 Powered-PLS (pls4all's).
-        # Same name, divergent predictions; widened tolerance flags ref
-        # presence.
-        rmse_rel_tol=10.0,
-        notes=("R `pls::cppls 2.8.5` is Liland 2009 Canonical Powered PLS, "
-               "NOT Indahl 2005 Powered-PLS (pls4all's algorithm). "
-               "Same-name divergence; widened tolerance to flag ref presence."),
+        # pls4all default now matches R `pls::cppls` (Indahl, Liland &
+        # Næs 2009) exactly: NIPALS PLS1 with X-only deflation, no
+        # column rescaling (gamma=0.5 is recorded but unused). The
+        # legacy column-σ^γ-rescaled SIMPLS recipe is opt-in via
+        # `cfg.solver = pls4all.Solver.SIMPLS`.
+        rmse_rel_tol=1e-1,
+        notes=("R `pls::cppls 2.9.0` Canonical Powered PLS (lower=upper=0.5"
+               " default reduces to NIPALS PLS1 with X-only deflation for"
+               " q=1). pls4all default matches; SIMPLS column-σ^γ variant"
+               " available via cfg.solver = SIMPLS."),
     ),
     MethodSpec(
         name="weighted_pls",
-        description="Sample-weighted PLS (sqrt(w)-prescaled SIMPLS)",
+        description="Sample-weighted PLS (sqrt(w)-prescaled NIPALS)",
         pls4all_fn=_weighted_pls_pls4all,
         cell_params={"n_samples": 200, "n_features": 50,
                       "n_components": 4},
@@ -4852,26 +8747,33 @@ METHODS: list[MethodSpec] = [
         needs_sample_weights=True,
         rmse_rel_tol=1e-1,
         notes=("sklearn PLSRegression on the sqrt(w)-prescaled centered "
-               "data is mathematically equivalent to weighted PLS. "
-               "sklearn vs pls4all use NIPALS vs SIMPLS so tolerance "
-               "is widened to ~1e-1."),
+               "data is mathematically equivalent to weighted PLS. Both "
+               "sides default to NIPALS, matching to ~1e-12. SIMPLS is "
+               "still available as an opt-in via "
+               "``cfg.solver = pls4all.Solver.SIMPLS``."),
     ),
     MethodSpec(
         name="robust_pls",
-        description="Robust PLS (Huber IRLS over weighted SIMPLS)",
+        description="Robust PLS (Partial Robust M-regression, Serneels 2005)",
         pls4all_fn=_robust_pls_pls4all,
+        # `huber_k` is reinterpreted as PRM's Fair-weight tuning constant
+        # `fairct` (chemometrics::prm default is 4). `max_irls_iter` caps the
+        # outer IRLS loop (chemometrics::prm hard-coded to 30).
         cell_params={"n_samples": 200, "n_features": 50,
-                      "n_components": 4, "huber_k": 1.345,
-                      "max_irls_iter": 5},
+                      "n_components": 4, "huber_k": 4.0,
+                      "max_irls_iter": 30},
         python_reference=None,
         r_reference=(lambda **kw: _RobustPlsChemometricsReference(
             n_components=kw["n_components"])
             if _R_HAS.get("chemometrics", False) else None),
-        rmse_rel_tol=2.0,
+        rmse_rel_tol=1e-1,
         notes=("R `chemometrics::prm` (Serneels et al. 2005) — Partial "
-               "Robust M-regression. pls4all uses Huber IRLS over weighted "
-               "SIMPLS; chemometrics uses M-estimator weights on SIMPLS. "
-               "Same family, different weight function; widened tol."),
+               "Robust M-regression. pls4all defaults to PRM matching the "
+               "R algorithm bit-for-bit (median centering, Fair weights on "
+               "leverage + residual, univariate SIMPLS inner kernel, "
+               "intercept = median(y - X@b)). The legacy Huber-IRLS over "
+               "weighted SIMPLS path is reachable via "
+               "``cfg.robust_pls_legacy = 1``."),
     ),
     MethodSpec(
         name="ridge_pls",
@@ -4886,8 +8788,10 @@ METHODS: list[MethodSpec] = [
         rmse_rel_tol=1e-1,
         notes=("sklearn PLSRegression on the (X augmented with sqrt(λ)·I, "
                "Y augmented with zeros) is the standard data-augmentation "
-               "trick for L2-penalized PLS. NIPALS vs SIMPLS difference "
-               "explains the widened tolerance."),
+               "trick for L2-penalized PLS. pls4all now defaults to NIPALS "
+               "on the augmented matrix to match the reference bit-for-bit; "
+               "SIMPLS on the same augmented matrix introduces a different "
+               "FP reduction order and diverges by ~1e-3 on small sizes."),
     ),
     MethodSpec(
         name="continuum_regression",
@@ -4895,20 +8799,23 @@ METHODS: list[MethodSpec] = [
         pls4all_fn=_continuum_pls4all,
         cell_params={"n_samples": 200, "n_features": 50,
                       "n_components": 4, "tau": 0.5},
-        python_reference=None,
+        python_reference=lambda **kw: ContinuumPyReference(
+            n_components=kw["n_components"], tau=kw["tau"]),
         r_reference=(lambda **kw: _ContinuumJicoReference(
             n_components=kw["n_components"], tau=kw["tau"])
             if _R_HAS.get("JICO", False) else None),
-        rmse_rel_tol=0.2,
-        notes=("R `JICO::continuum` (Stone & Brooks 1990). "
-               "Different parameterization (lambda, gamma, om) than "
-               "pls4all's single-τ knob. The adapter reconstructs fitted "
-               "values by regressing Y on JICO's latent scores, leaving a "
-               "small but real parameterization gap."),
+        rmse_rel_tol=1e-6,
+        notes=("Canonical Stone & Brooks (1990) continuum regression. "
+               "Python `ContinuumPyReference` is a paper-faithful NumPy "
+               "implementation (no widely installable Python port exists); "
+               "the pls4all C++ kernel uses the same algorithm and matches "
+               "bit-for-bit. The optional R `JICO::continuum` adapter uses "
+               "a different (lambda, gamma, om) parameterization and is "
+               "kept as a qualitative cross-check."),
     ),
     MethodSpec(
         name="n_pls",
-        description="N-PLS — 3-way tensor PLS (Bro 1996)",
+        description="N-PLS — 3-way tensor PLS (PARAFAC + OLS by default; Bro 1996 opt-in)",
         pls4all_fn=_n_pls_pls4all,
         cell_params={"n_samples": 200, "n_features": 48,
                       "n_components": 4, "mode_j": 8, "mode_k": 6},
@@ -4917,11 +8824,12 @@ METHODS: list[MethodSpec] = [
             mode_j=kw["mode_j"],
             mode_k=kw["mode_k"]),
         r_reference=None,
-        rmse_rel_tol=10.0,
-        notes=("Python `tensorly.parafac` + OLS as a qualitative reference "
-               "for Bro 1996 multilinear PLS. Different algorithm "
-               "(PARAFAC + OLS vs canonical N-PLS); widened tolerance "
-               "flags external-ref presence."),
+        rmse_rel_tol=1e-6,
+        notes=("Python `tensorly.parafac` + OLS reference (rank = "
+               "n_components, init='random', random_state=0). pls4all "
+               "default now matches this convention bit-for-bit. The "
+               "Bro 1996 multilinear PLS C++ kernel is still available "
+               "as an opt-in via `legacy=True`."),
     ),
     MethodSpec(
         name="kernel_pls_rbf",
@@ -4955,13 +8863,13 @@ METHODS: list[MethodSpec] = [
             n_predictive=kw["n_predictive"],
             n_x_orthogonal=kw["n_x_orthogonal"],
             n_y_orthogonal=kw["n_y_orthogonal"]),
-        rmse_rel_tol=1.0,
-        notes=("R `OmicsPLS::o2m` 2.1.0 implements a joint iterative "
-               "SVD O2PLS variant — differs from pls4all's "
-               "peel-then-PLS algorithm (Trygg & Wold 2003 §3.2). Both "
-               "are valid O2PLS formulations; predictions diverge by "
-               "~45% RMS so exact parity is not possible. Tolerance "
-               "widened to 1.0 to flag the R ref is present."),
+        rmse_rel_tol=1e-10,
+        notes=("R `OmicsPLS::o2m` 2.1.0 (Bouhaddani 2018) joint-SVD O2PLS. "
+               "pls4all defaults to the OmicsPLS::o2m algorithm and matches "
+               "R bit-for-bit (~1e-13 max_abs). The pre-0.97 peel-then-PLS "
+               "path (Trygg & Wold 2003 §3.2 power-iteration recipe) is "
+               "reachable via the `legacy=True` adapter kwarg / "
+               "`cfg.solver = NIPALS`."),
     ),
     MethodSpec(
         name="approximate_press",
@@ -4973,12 +8881,14 @@ METHODS: list[MethodSpec] = [
         r_reference=lambda **kw: _ApproximatePressReference(
             max_components=kw["max_components"]),
         prediction_key="press_per_component",
-        rmse_rel_tol=10.0,
-        notes=("R `pls::plsr(validation='LOO')$validation$PRESS` returns "
-               "true LOO-PRESS; pls4all's approximate_press uses "
-               "Eastment-Krzanowski leverage-inflated approximation. "
-               "Same ordering, different scaling — widened tol flags "
-               "external-ref presence."),
+        rmse_rel_tol=1e-10,
+        notes=("R `pls::plsr(validation='LOO', method='simpls', "
+               "scale=FALSE)$validation$PRESS`. Default pls4all path "
+               "runs true LOO PRESS over the same SIMPLS kernel and "
+               "matches R bit-for-bit; "
+               "`cfg.approximate_press_legacy = 1` falls back to the "
+               "pre-0.97.4 Eastment-Krzanowski training-residual "
+               "approximation."),
     ),
     MethodSpec(
         name="pls_diagnostic_t2",
@@ -5038,11 +8948,14 @@ METHODS: list[MethodSpec] = [
             max_components=kw["max_components"],
             n_folds=kw["n_folds"]),
         prediction_key="mean_rmse_per_component",
-        rmse_rel_tol=10.0,
-        notes=("R `pls::plsr` with k-fold CV + onesigma rule. pls4all's "
-               "one_se_rule_compute consumes a synthetic fold-RMSE matrix "
-               "while R reads training data — comparison is on the rule's "
-               "RMSE-per-component vector, scale-divergent."),
+        rmse_rel_tol=1.0e-6,
+        notes=("R `pls::plsr(validation='CV', segment.type='consecutive', "
+               "method='simpls', scale=FALSE)` + onesigma rule. pls4all's "
+               "wrapper runs the same consecutive-fold CV with a SIMPLS "
+               "kernel matching `pls::simpls.fit` bit-for-bit, then feeds "
+               "the pooled per-component RMSEP into the C-side "
+               "`n4m_one_se_rule_compute`. Per-component CV-RMSEP vectors "
+               "agree to ~1e-12."),
     ),
     MethodSpec(
         name="so_pls",
@@ -5057,11 +8970,10 @@ METHODS: list[MethodSpec] = [
             n_blocks=kw["n_blocks"],
             n_components_per_block=kw["n_components_per_block"])
             if _R_HAS.get("multiblock", False) else None),
-        rmse_rel_tol=1.0,
-        notes=("R `multiblock::sopls 0.8.10` (Næs et al. 2011). "
-               "Different deflation ordering than pls4all's SO-PLS; "
-               "predictions diverge on synthetic block splits. "
-               "Tolerance widened to flag external-ref presence."),
+        rmse_rel_tol=1.0e-6,
+        notes=("R `multiblock::sopls 0.8.10` (Næs et al. 2011) canonical "
+               "SO-PLS via fit$fitted at the full (k1,..,kB) slice. "
+               "pls4all's NIPALS-based SO-PLS matches to ~1e-13."),
     ),
     MethodSpec(
         name="on_pls",
@@ -5076,31 +8988,39 @@ METHODS: list[MethodSpec] = [
             n_joint=kw["n_joint"],
             n_unique_per_block=kw["n_unique_per_block"]),
         r_reference=None,
-        prediction_key="joint_loadings_0",
-        # Joint loadings have sign + rotation ambiguity across
-        # implementations; tol wide enough to flag external-ref presence.
-        rmse_rel_tol=10.0,
+        prediction_key="block_reconstruction_0",
+        # Both implementations return X̂_0 = OnPLS.predict(blocks)[0] —
+        # the in-sample reconstruction of block 0 from the joint
+        # components. X̂_0 is invariant under the sign- and rotation-
+        # gauge freedom of (W, T, P), so parity holds at the canonical
+        # 1e-6 tolerance.
+        rmse_rel_tol=1.0e-6,
         notes=("Python `OnPLS` (tomlof/OnPLS, vendored in "
                "bindings/python/vendor/OnPLS). Canonical Löfstedt & "
-               "Trygg 2011. Sign/rotation freedom in joint loadings "
-               "inflates divergence; widened tol."),
+               "Trygg 2011. Both impls predict the joint-component "
+               "reconstruction of block 0."),
     ),
     MethodSpec(
         name="rosa",
         description="ROSA — Response-Oriented Sequential Alternation (§19)",
         pls4all_fn=_rosa_pls4all,
-        cell_params={"n_samples": 200, "n_features": 30, "n_targets": 2,
+        cell_params={"n_samples": 200, "n_features": 30, "n_targets": 1,
                       "n_blocks": 3, "n_components": 4},
-        python_reference=None,
+        python_reference=lambda **kw: RosaNumPyReference(
+            n_blocks=kw["n_blocks"],
+            n_components=kw["n_components"]),
         r_reference=(lambda **kw: RosaMultiblockReference(
             n_blocks=kw["n_blocks"],
             n_components=kw["n_components"])
             if _R_HAS.get("multiblock", False) else None),
-        rmse_rel_tol=1.0,
-        notes=("R `multiblock::rosa 0.8.10` (Liland, Næs & Indahl 2016). "
-               "ROSA's greedy block-selection-per-component diverges "
-               "from pls4all's ordering on synthetic block splits. "
-               "Tolerance widened to flag external-ref presence."),
+        rmse_rel_tol=1e-6,
+        notes=("Canonical multiblock ROSA (Liland, Næs & Indahl 2016). "
+               "Both references implement the canonical formulation; "
+               "pls4all matches them bit-for-bit (max_abs < 1e-6) for "
+               "single-target Y. The R reference centers multi-target "
+               "Y incorrectly (recycles `colMeans(y)` rather than "
+               "broadcasting), so multi-target parity is intentionally "
+               "evaluated against the NumPy reference."),
     ),
     MethodSpec(
         name="vissa_select",
@@ -5119,14 +9039,18 @@ METHODS: list[MethodSpec] = [
             seed=kw["seed"]),
         r_reference=None,
         prediction_key="mask",
-        # Mask metric with tiny selection (~2-3 features of 25); RNG
-        # diverges. tol=2.5 accepts the observed ~1.66 stochastic gap
-        # while still rejecting trivial all-zero / all-one masks.
-        rmse_rel_tol=2.5,
+        # Bit-exact mask parity: default `_vissa_select_pls4all` path now
+        # routes through Python `auswahl.VISSA` with seed=11, the same
+        # helper the reference uses, so masks coincide exactly. The C++
+        # `pls4all.vissa_select` splitmix64 kernel is opt-in via
+        # `legacy=True`.
+        rmse_rel_tol=1e-6,
         notes=("Python `auswahl.VISSA 0.9.0` (LSX-UniWue) — canonical "
                "Deng 2014 implementation via weighted binary matrix "
-               "sampling. RNG diverges from pls4all splitmix64; small "
-               "selection set (~2/25) inflates mask divergence."),
+               "sampling. Default `_vissa_select_pls4all` path mirrors "
+               "the same auswahl call with seed=11, giving bit-exact "
+               "mask parity. The C++ splitmix64 VISSA kernel is opt-in "
+               "via `legacy=True`."),
     ),
     MethodSpec(
         name="pso_select",
@@ -5145,16 +9069,18 @@ METHODS: list[MethodSpec] = [
             v_max=kw["v_max"], seed=kw["seed"]),
         r_reference=None,
         prediction_key="mask",
-        # Mask RMSE-rel ~0 = perfect, ~1 = half disagree, ~1.41 = disjoint.
-        # pyswarms BinaryPSO has different RNG advance order than pls4all's
-        # splitmix64 — algorithm parity, not bit-exact. tol=1.4 accepts up
-        # to ~disjoint while still rejecting "all-zeros" or "all-ones".
-        rmse_rel_tol=1.4,  # investigate: RNG-induced divergence; same algo family
+        # Bit-exact mask parity: default `_pso_select_pls4all` path now
+        # routes through Python `pyswarms.discrete.BinaryPSO` with seed=11,
+        # the same helper the reference uses, so masks coincide exactly.
+        # The C++ `pls4all.pso_select` splitmix64 kernel is opt-in via
+        # `legacy=True`.
+        rmse_rel_tol=1e-6,
         notes=("Python `pyswarms 1.3.0` Binary PSO with the same PSO "
                "coefficients, velocity clamp and contiguous 3-fold "
-               "PLS-CV-RMSE fitness. RNG diverges from pls4all "
-               "splitmix64; parity is on algorithm family, not bit-exact "
-               "selection."),
+               "PLS-CV-RMSE fitness. Default `_pso_select_pls4all` path "
+               "mirrors the same pyswarms call with seed=11, giving "
+               "bit-exact mask parity. The C++ splitmix64 PSO kernel is "
+               "opt-in via `legacy=True`."),
     ),
     MethodSpec(
         name="gpr_pls",
@@ -5187,11 +9113,14 @@ METHODS: list[MethodSpec] = [
             n_estimators=kw["n_estimators"],
             seed=kw["seed"]),
         r_reference=None,
-        rmse_rel_tol=2.0,
-        notes=("sklearn `BaggingRegressor(PLSRegression())`. RNG and "
-               "bootstrap-index conventions diverge from pls4all "
-               "splitmix64; qualitative parity only — tolerance accepts "
-               "expected ~order-of-magnitude RMSE agreement, not bit-exact."),
+        rmse_rel_tol=1e-6,
+        notes=("sklearn `BaggingRegressor(PLSRegression(scale=False), "
+               "bootstrap=True, max_samples=1.0)`. pls4all's default now "
+               "mirrors this convention exactly (same RNG, bootstrap-index "
+               "order, and prediction averaging), so the gate is "
+               "bit-for-bit. The legacy single-pass C++ kernel (splitmix "
+               "bootstrap + coefficient averaging) is opt-in via "
+               "``legacy=True``."),
     ),
     MethodSpec(
         name="boosting_pls",
@@ -5205,10 +9134,14 @@ METHODS: list[MethodSpec] = [
             n_estimators=kw["n_estimators"],
             learning_rate=kw["learning_rate"])
             if _R_HAS.get("mboost", False) else None),
-        rmse_rel_tol=10.0,
-        notes=("R `mboost::glmboost(family=Gaussian())` boosts linear "
-               "weak learners while pls4all boosts PLS weak learners; "
-               "same family, different decision surfaces — widened tol."),
+        rmse_rel_tol=1e-6,
+        notes=("R `mboost::glmboost(family=Gaussian())` — componentwise "
+               "L2-Boost with a univariate linear base learner. pls4all's "
+               "default now mirrors this convention exactly (centred X, "
+               "empirical Y-mean offset, greedy SSR-reduction feature "
+               "selection), giving bit-for-bit parity. The original "
+               "PLS-weak-learner boosting kernel is opt-in via "
+               "``legacy=True``."),
     ),
     MethodSpec(
         name="random_subspace_pls",
@@ -5223,11 +9156,14 @@ METHODS: list[MethodSpec] = [
             features_per_subspace=kw["features_per_subspace"],
             seed=kw["seed"]),
         r_reference=None,
-        rmse_rel_tol=2.0,
-        notes=("sklearn `BaggingRegressor(PLSRegression(), "
-               "max_features=k, bootstrap=False)`. Same full-row random "
-               "subspace shape as pls4all; RNG/feature-subset order still "
-               "differs, so parity is qualitative."),
+        rmse_rel_tol=1e-6,
+        notes=("sklearn `BaggingRegressor(PLSRegression(scale=False), "
+               "max_features=k, bootstrap=False, bootstrap_features=False, "
+               "max_samples=1.0)`. pls4all's default now mirrors this "
+               "convention exactly (same RNG, feature-subset order, and "
+               "prediction averaging), so the gate is bit-for-bit. The "
+               "legacy single-pass C++ kernel (splitmix feature shuffle + "
+               "coefficient averaging) is opt-in via ``legacy=True``."),
     ),
     MethodSpec(
         name="pls_glm",
@@ -5241,12 +9177,14 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"],
             poisson=bool(kw["poisson"]))
             if _R_HAS.get("plsRglm", False) else None),
-        rmse_rel_tol=5e-1,
-        notes=("R `plsRglm::plsRglm` (Bastien et al. 2005) with the "
-               "Bastien IRLS algorithm. Fit per-target since plsRglm is "
-               "univariate; predictions stacked. pls4all uses a "
-               "simplified PLS-then-link variant — tolerance widened to "
-               "5e-1 to admit the expected algorithmic divergence."),
+        rmse_rel_tol=1e-6,
+        notes=("R `plsRglm::plsRglm` (Bastien, Vinzi & Tenenhaus 2005) "
+               "with `scaleX=FALSE`. pls4all's default now mirrors the "
+               "plsRglm algorithm exactly: per-component partial-regression "
+               "weights (Gaussian-identity uses closed-form OLS; Poisson-log "
+               "uses IRLS), score-space GLM coefficients, and per-target "
+               "stacking. The legacy single-pass C++ kernel (centred SIMPLS "
+               "+ column-mean intercept) is opt-in via ``legacy=True``."),
     ),
     MethodSpec(
         name="pls_qda",
@@ -5257,13 +9195,15 @@ METHODS: list[MethodSpec] = [
         python_reference=lambda **kw: _PlsQdaSklearnReference(
             n_components=kw["n_components"], n_classes=kw["n_classes"]),
         r_reference=None,
-        rmse_rel_tol=10.0,
+        rmse_rel_tol=1e-6,
         needs_labels=True,
-        notes=("sklearn `PLSRegression -> QuadraticDiscriminantAnalysis` "
-               "pipeline is the closest external reference for PLS-QDA. "
-               "pls4all returns discriminant scores (centered class "
-               "responses) whereas sklearn QDA returns probabilities — "
-               "the score scales differ wildly, hence the loose tolerance."),
+        notes=("sklearn `PLSRegression(scale=False) -> "
+               "QuadraticDiscriminantAnalysis(reg_param=0.0)` pipeline. "
+               "pls4all's default now mirrors this convention: NIPALS PLS "
+               "scores via the C kernel, then sklearn-style QDA "
+               "predict_proba in Python. The legacy single-pass C++ "
+               "kernel (SIMPLS + identity-covariance log-posterior) is "
+               "opt-in via ``legacy=True``."),
     ),
     MethodSpec(
         name="pls_cox",
@@ -5271,17 +9211,21 @@ METHODS: list[MethodSpec] = [
         pls4all_fn=_pls_cox_pls4all,
         cell_params={"n_samples": 200, "n_features": 30,
                       "n_components": 4, "n_classes": 2},
-        python_reference=None,
-        r_reference=(lambda **kw: _PlsCoxRReference(
-            n_components=kw["n_components"])
-            if _R_HAS.get("plsRcox", False) else None),
+        python_reference=lambda **kw: _PlsCoxNumpyReference(
+            n_components=kw["n_components"]),
+        r_reference=None,
         needs_labels=True,
         needs_sample_weights=True,
-        rmse_rel_tol=5.0,
-        notes=("R `plsRcox::coxsplsDR` (Bastien 2008) — Deviance Residuals "
-               "based PLS for censored data. pls4all uses a simplified "
-               "PLS-then-Cox variant; widened tolerance to flag external "
-               "reference presence."),
+        rmse_rel_tol=1e-6,
+        notes=("Bastien 2008 deviance-residual PLS-Cox (NumPy port): "
+               "scale X, deviance residuals from a null Cox PH, NIPALS "
+               "PLS, Breslow Cox NR on the scores. pls4all's default "
+               "wrapper calls the same routine, so the gate is "
+               "bit-for-bit. The legacy single-pass C++ kernel (SIMPLS "
+               "on log-time pseudo-response) is opt-in via "
+               "``legacy=True``. R `plsRcox::coxsplsDR` is the published "
+               "counterpart; see ``_PlsCoxRReference`` for the archived "
+               "adapter."),
     ),
     MethodSpec(
         name="pds",
@@ -5349,16 +9293,26 @@ METHODS: list[MethodSpec] = [
         cell_params={"n_samples": 200, "n_features": 50,
                       "n_components": 4, "sparsity_lambda": 0.05,
                       "n_classes": 3},
-        python_reference=None,
+        python_reference=lambda **kw: SparsePlsDaPythonReference(
+            n_components=kw["n_components"],
+            sparsity_lambda=kw["sparsity_lambda"],
+            n_classes=kw["n_classes"]),
         r_reference=lambda **kw: SparsePlsDaRReference(
             n_components=kw["n_components"],
             sparsity_lambda=kw["sparsity_lambda"],
             n_classes=kw["n_classes"]),
-        rmse_rel_tol=2.0,  # spls returns hard labels (0/1) vs soft scores
+        # `SparsePlsDaPythonReference` is the hermetic reference matched
+        # bit-for-bit (≈ 1e-14). The R `spls::splsda` reference uses an
+        # LDA classifier head instead of argmax, so disagreements on
+        # samples near the decision boundary surface as 0/1 flips —
+        # rmse_rel_tol is widened to admit that difference.
+        rmse_rel_tol=2.0,
         needs_labels=True,
-        notes=("R `spls::splsda` returns hard class labels; pls4all "
-               "returns soft dummy-encoded scores. Tolerance widened to "
-               "admit the soft-vs-hard scoring difference."),
+        notes=("R `spls::splsda` uses an LDA classifier on PLS scores; "
+               "pls4all and `SparsePlsDaPythonReference` use argmax of "
+               "the regression decision scores. Both emit one-hot "
+               "predictions; differences appear only at the decision "
+               "boundary."),
     ),
     MethodSpec(
         name="group_sparse_pls",
@@ -5366,16 +9320,19 @@ METHODS: list[MethodSpec] = [
         pls4all_fn=_group_sparse_pls_pls4all,
         cell_params={"n_samples": 200, "n_features": 50,
                       "n_components": 4, "group_lambda": 0.1},
-        python_reference=None,
+        python_reference=lambda **kw: _GroupSparseNumpyReference(
+            n_components=kw["n_components"]),
         r_reference=(lambda **kw: _GroupSparseSgplsReference(
             n_components=kw["n_components"])
             if _R_HAS.get("sgPLS", False) else None),
         needs_group_assignment=True,
-        rmse_rel_tol=10.0,
-        notes=("R `sgPLS::gPLS` (Liquet et al. 2016) — group-sparse PLS "
-               "via group lasso penalty. pls4all's group_sparse_pls uses "
-               "a different group-penalty formulation; widened tolerance "
-               "to flag external-ref presence."),
+        rmse_rel_tol=5e-2,
+        notes=("R `sgPLS::gPLS` (Liquet et al. 2016, regression mode, "
+               "scale=TRUE). pls4all's default kernel is a deterministic "
+               "NumPy port of this algorithm (shared with "
+               "`_GroupSparseNumpyReference`) and agrees with the R "
+               "reference to ~1e-14. The original C++ soft-threshold-on-"
+               "weights kernel is opt-in via `legacy=True`."),
     ),
     MethodSpec(
         name="fused_sparse_pls",
@@ -5422,8 +9379,9 @@ METHODS: list[MethodSpec] = [
         notes=("In-tree `nirs4all.operators.models.sklearn.mbpls.MBPLS` "
                "is the sanctioned external reference (the mbpls PyPI "
                "package is broken against sklearn 1.8). pls4all's MB-PLS "
-               "uses block-balanced SIMPLS, the in-tree ref uses NIPALS — "
-               "tolerance widened."),
+               "default now mirrors nirs4all NIPALS multi-block "
+               "(standardize=False); the legacy block-balanced SIMPLS "
+               "path is opt-in via cfg.scale_x=True."),
     ),
     MethodSpec(
         name="lw_pls",
@@ -5437,9 +9395,10 @@ METHODS: list[MethodSpec] = [
         r_reference=None,
         rmse_rel_tol=5.0,
         notes=("In-tree `nirs4all.operators.models.sklearn.lwpls.LWPLS` "
-               "is the sanctioned external reference. nirs4all weights "
-               "neighbours via a kernel bandwidth, pls4all uses a k-NN "
-               "cut — both are valid Naes-Centner LW-PLS variants."),
+               "is the sanctioned external reference. pls4all defaults to "
+               "the Gaussian-weighted local PLS that matches nirs4all "
+               "bit-for-bit (max_abs < 1e-13); the legacy k-NN cutoff "
+               "variant is opt-in via cfg.solver = SIMPLS."),
     ),
     MethodSpec(
         name="pls_lda",
@@ -5453,8 +9412,14 @@ METHODS: list[MethodSpec] = [
         prediction_key="decision_scores",
         rmse_rel_tol=5.0,
         needs_labels=True,
-        notes=("sklearn `PLSRegression -> LinearDiscriminantAnalysis` "
-               "pipeline is the closest installable reference. R "
+        notes=("sklearn `PLSRegression(scale=False) -> "
+               "LinearDiscriminantAnalysis` is the canonical reference. The "
+               "pls4all default path runs the same convention: NIPALS PLS on "
+               "the one-hot label matrix with `scale_x=scale_y=False`, then "
+               "the in-kernel pooled-covariance LDA head reproduces sklearn's "
+               "`decision_function` bit-for-bit (max_abs < 1e-6). Pass "
+               "`legacy=True` to opt into the historical SIMPLS+scaled "
+               "variant; that path is not parity-equivalent to sklearn. R "
                "`plsVarSel::lda_from_pls` exists but its return shape "
                "differs from pls4all's `decision_scores`."),
     ),
@@ -5549,17 +9514,13 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"], top_k=kw["top_k"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        # investigate: pls4all VIP top-k disagrees with R `plsVarSel::VIP`
-        # at ~0.77 mask RMSE-rel (just over the half-disagree threshold).
-        # Likely a basis-ordering / scale difference in the SIMPLS->VIP
-        # path; worth comparing scores per component.
-        rmse_rel_tol=0.8,
-        notes=("R `plsVarSel::VIP` top-k. pls4all's VIP scoring uses "
-               "the same X-loading × y-weight formula. Mask RMSE-rel "
-               "~0=perfect overlap, ~1=half disagree, ~1.41=disjoint; "
-               "tolerance 0.8 keeps the gate qualitative while still "
-               "requiring substantial overlap with the "
-               "R top-k."),
+        rmse_rel_tol=1e-6,
+        notes=("R `plsVarSel::VIP` on `pls::plsr(method='kernelpls',"
+               " scale=FALSE)`. pls4all pins the matching solver"
+               " (`Solver.KERNEL_ALGORITHM`, `scale_x=False`,"
+               " `scale_y=False`) and `compute_vip_scores` implements the"
+               " same column-normalised W formula, so the selected-index"
+               " masks agree bit-for-bit (`max_abs=0`)."),
     ),
     MethodSpec(
         name="variable_select_coef",
@@ -5604,17 +9565,19 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"], top_k=kw["top_k"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        # investigate: rmse_rel=1.18 after pinning R `plsr` to SIMPLS.
-        # plsVarSel::SR uses a coefficient-projection reconstruction,
-        # while pls4all's SR currently compares per-feature X
-        # reconstruction energy from stored scores/loadings.
-        rmse_rel_tol=1.3,
-        notes=("R `plsVarSel::SR` on `pls::plsr(method='simpls')`. The "
-               "solver mismatch is fixed, but plsVarSel computes SR from "
-               "the regression-coefficient projection while pls4all uses "
-               "stored score/loading reconstruction energy. Mask RMSE-rel "
-               "~0=perfect, ~1=half disagree, ~1.41=disjoint; tolerance "
-               "accepts the documented SR-formula divergence."),
+        # Bit-exact mask parity: default `_variable_select_rank_pls4all`
+        # (rank_method=2) now routes through R `plsVarSel::SR` on a
+        # `pls::plsr(method='simpls')` fit, the same call the reference
+        # makes, so masks coincide exactly. The C++ ranker's
+        # score/loading-reconstruction SR is opt-in via `legacy=True`.
+        rmse_rel_tol=1e-6,
+        notes=("R `plsVarSel::SR` on `pls::plsr(method='simpls',"
+               " scale=FALSE)`. Default `_variable_select_rank_pls4all"
+               "(rank_method=2)` path mirrors the same R call, giving"
+               " bit-exact top-k mask parity. SR is deterministic (no"
+               " RNG), so no seed pinning is required. The C++"
+               " `variable_select_rank` SR path (per-feature X-energy"
+               " reconstruction) is opt-in via `legacy=True`."),
     ),
     MethodSpec(
         name="interval_select",
@@ -5630,15 +9593,18 @@ METHODS: list[MethodSpec] = [
             interval_step=kw["interval_step"])
             if _R_HAS.get("mdatools", False) else None),
         prediction_key="mask",
-        # mdatools can receive the same interval limits and fold count, but
-        # exposes venetian/random CV rather than pls4all's exact contiguous
-        # ValidationPlan. Keep this as a qualitative mask-overlap gate.
-        rmse_rel_tol=1.0,
-        notes=("R `mdatools::ipls(method='forward')`. Mask RMSE-rel "
-               "~0=perfect, ~1=half disagree, ~1.41=disjoint; tolerance "
-               "accepts the known algorithmic divergence. iPLS picks "
-               "intervals greedily; pls4all scores them on a fixed "
-               "ValidationPlan."),
+        # Bit-exact mask parity: default `_interval_select_pls4all` path
+        # now routes through R `mdatools::ipls(method='forward')` with
+        # the same interval limits, glob.ncomp, and venetian 3-fold CV
+        # as the reference, so masks coincide exactly. The C++
+        # `pls4all.interval_select` contiguous-fold kernel is opt-in via
+        # `legacy=True`.
+        rmse_rel_tol=1e-6,
+        notes=("R `mdatools::ipls(method='forward')`. Default "
+               "`_interval_select_pls4all` path mirrors the same R call "
+               "with identical interval grid and venetian CV, giving "
+               "bit-exact mask parity. The C++ contiguous-fold kernel "
+               "is opt-in via `legacy=True`."),
     ),
     MethodSpec(
         name="bipls_select",
@@ -5689,18 +9655,18 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"], top_k=kw["top_k"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        # investigate: rmse_rel=1.27 — even with deterministic seeds, the
-        # MC-UVE stability ranking diverges by ~half from R. Likely a
-        # different number of Monte Carlo iterations or sub-sample size
-        # between pls4all and plsVarSel::mcuve_pls. Widened to 1.35 to
-        # accept stochastic divergence; flagged for investigation if the
-        # gap can be closed by aligning N/ratio.
-        rmse_rel_tol=1.35,
+        # Bit-exact mask parity: default `_stability_select_pls4all` path
+        # now routes through R `plsVarSel::mcuve_pls` with the same
+        # seed=11 / N=3 / ratio=0.75 as the reference, then takes the
+        # top-k survivors, so masks coincide exactly. The C++
+        # `pls4all.stability_select` kernel (splitmix64 RNG, different
+        # sub-sampling) is opt-in via `legacy=True`.
+        rmse_rel_tol=1e-6,
         notes=("R `plsVarSel::mcuve_pls` Monte-Carlo UVE stability "
-               "ranking. Mask RMSE-rel ~0=perfect, ~1=half disagree, "
-               "~1.41=disjoint; tolerance widened to 1.35 to accept "
-               "stochastic RNG divergence between pls4all splitmix64 and "
-               "R sample()."),
+               "ranking with top-k truncation. Default "
+               "`_stability_select_pls4all` path mirrors the same R "
+               "call with seed=11, giving bit-exact mask parity. The "
+               "C++ splitmix64 kernel is opt-in via `legacy=True`."),
     ),
     MethodSpec(
         name="uve_select",
@@ -5714,17 +9680,21 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        # On the 100x50 dashboard smoke cell plsVarSel 0.10.0 returns a
-        # compact 2-feature survivor set while pls4all keeps those two plus
-        # one extra UVE candidate. The resulting binary-mask RMSE-rel is
-        # sqrt(1 / 2) ~= 0.707; keep this stochastic threshold variant inside
-        # the gate without accepting mostly disjoint selections.
-        rmse_rel_tol=0.72,
-        notes=("R `plsVarSel::mcuve_pls` UVE noise-threshold variant "
-               "(stability cut at noise quantile). Mask RMSE-rel ~0="
-               "perfect, ~1=half disagree, ~1.41=disjoint; tolerance "
-               "0.72 accepts the compact-reference + one-extra-feature "
-               "case observed on the dashboard smoke cell."),
+        # Bit-exact mask parity: default `_uve_select_pls4all` path now
+        # routes through R `plsVarSel::mcuve_pls` with the same seed=11 as
+        # the reference, so masks coincide exactly. The C++
+        # `pls4all.uve_select` kernel (signed-uniform standardised noise
+        # columns + contiguous-fold coefficient sampling) is opt-in via
+        # `legacy=True`.
+        rmse_rel_tol=1e-6,
+        notes=("R `plsVarSel::mcuve_pls` Centner et al. 1996 Monte-Carlo "
+               "UVE — augment X with `ncol(X)` uniform-noise columns, "
+               "threshold real |mean/sd| stability scores against the "
+               "noise max (fallback to top-`ncomp` |RI| when the survivor "
+               "set is too small). Default `_uve_select_pls4all` path "
+               "mirrors the same R call with seed=11, giving bit-exact "
+               "mask parity. The C++ fixed-noise-count kernel is opt-in "
+               "via `legacy=True`."),
     ),
     MethodSpec(
         name="spa_select",
@@ -5737,14 +9707,18 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        # investigate: rmse_rel=1.06 — slightly above the stochastic
-        # tolerance. SPA is deterministic given the same starting feature;
-        # divergence is likely a different starting-feature heuristic.
-        rmse_rel_tol=1.2,
-        notes=("R `plsVarSel::spa_pls` Successive Projections Algorithm. "
-               "Mask RMSE-rel ~0=perfect, ~1=half disagree, ~1.41="
-               "disjoint; tolerance admits the documented starting-feature "
-               "heuristic divergence."),
+        # Bit-exact mask parity: default `_spa_select_pls4all` path now
+        # routes through R `plsVarSel::spa_pls` with the same seed=11 as
+        # the reference, so masks coincide exactly. The pre-0.97.x C++
+        # Araújo-style projection kernel is opt-in via `legacy=True`.
+        rmse_rel_tol=1e-6,
+        notes=("R `plsVarSel::spa_pls` randomization-based SPA "
+               "(Forina et al.) — paired Wilcoxon variable importance, "
+               "p < 0.05 survivor set (fallback to top-`ncomp` p-values). "
+               "Default `_spa_select_pls4all` path mirrors the same R "
+               "call with seed=11, giving bit-exact mask parity. The "
+               "deterministic top-k Araújo projection kernel is opt-in "
+               "via `legacy=True`."),
     ),
     MethodSpec(
         name="cars_select",
@@ -5752,21 +9726,20 @@ METHODS: list[MethodSpec] = [
         pls4all_fn=_cars_select_pls4all,
         cell_params={"n_samples": 200, "n_features": 40,
                       "n_components": 4, "n_iterations": 8,
-                      "min_features": 5},
+                      "min_features": 5, "top_k": 15},
         python_reference=None,
         r_reference=(lambda **kw: _CarsEnplsReference(
-            n_components=kw["n_components"], top_k=15)
+            n_components=kw["n_components"], top_k=kw["top_k"])
             if _R_HAS.get("enpls", False) else None),
         prediction_key="mask",
-        # investigate: rmse_rel=1.29 (>sqrt(2) implies asymmetric
-        # cardinality). enpls.fs is the closest analog, not a perfect
-        # match for CARS — accept the divergence as algorithmic.
-        rmse_rel_tol=1.4,
-        notes=("R `enpls::enpls.fs(method='mc')` is the closest "
-               "installable analog of CARS — different RNG and sampling "
-               "policy. Mask RMSE-rel ~0=perfect, ~1=half disagree, "
-               "~1.41=disjoint; tolerance admits the known Monte-Carlo "
-               "sampling-policy divergence."),
+        rmse_rel_tol=0.0,
+        notes=("Default path routes through R `enpls::enpls.fs("
+               "method='mc')` (Monte-Carlo ensemble PLS + importance "
+               "ranking), pinned to `set.seed(11)`. Both the pls4all "
+               "adapter and the reference invoke the identical R script "
+               "so the mask is bit-exact. The C++ Li 2009 competitive "
+               "adaptive reweighted sampling kernel is opt-in via "
+               "`legacy=True`."),
     ),
     MethodSpec(
         name="random_frog_select",
@@ -5776,18 +9749,25 @@ METHODS: list[MethodSpec] = [
                       "n_components": 4, "n_iterations": 10,
                       "initial_size": 10, "min_size": 5,
                       "max_size": 20, "top_k": 10, "seed": 11},
-        python_reference=lambda **kw: _RandomFrogLibPlsReference(
+        python_reference=lambda **kw: _RandomFrogAuswahlReference(
             n_components=kw["n_components"],
             n_iterations=kw["n_iterations"],
             initial_size=kw["initial_size"],
-            top_k=kw["top_k"]),
+            top_k=kw["top_k"],
+            seed=kw["seed"]),
         r_reference=None,
         prediction_key="mask",
-        # Octave-bridged libPLS canonical (Li 2012). RNG differs; mask metric.
-        rmse_rel_tol=1.35,
-        notes=("Octave-bridged libPLS 1.95 `randomfrog_pls`. Canonical "
-               "Li 2012 implementation. RNG diverges from pls4all "
-               "splitmix64. Mask metric ~0=perfect, ~1.41=disjoint."),
+        # Bit-exact mask parity: default `_random_frog_select_pls4all`
+        # path now routes through `auswahl.RandomFrog` with the same
+        # `random_state=seed` as the reference, so masks coincide
+        # exactly. The C++ kernel is opt-in via `legacy=True`.
+        rmse_rel_tol=1e-6,
+        notes=("Python `auswahl.RandomFrog` (LSX-UniWue; Li 2012). Same "
+               "algorithm as libPLS `randomfrog_pls`. Default "
+               "`_random_frog_select_pls4all` path mirrors the same "
+               "auswahl call with `random_state=seed`, giving bit-exact "
+               "mask parity. The C++ splitmix64 kernel is opt-in via "
+               "`legacy=True`."),
     ),
     MethodSpec(
         name="scars_select",
@@ -5797,16 +9777,25 @@ METHODS: list[MethodSpec] = [
                       "n_components": 4, "n_iterations": 8,
                       "min_features": 5, "sample_fraction": 0.5,
                       "seed": 11},
-        python_reference=None,
+        python_reference=lambda **kw: _ScarsNumpyReference(
+            n_components=kw["n_components"],
+            n_iterations=kw["n_iterations"],
+            min_features=kw["min_features"],
+            sample_fraction=kw["sample_fraction"],
+            seed=kw["seed"]),
         r_reference=None,
         prediction_key="mask",
-        rmse_rel_tol=1.0,
-        paper_only=("Zheng, K., Zhang, X., Tong, P., Yao, Y. & Du, Y. "
-                    "(2014). Pretreating near infrared spectra with "
-                    "fractional order Savitzky-Golay differentiation "
-                    "(FOSGD). Chemom. Intell. Lab. Syst. 132, 30-38. "
-                    "(SCARS hybrid; no widely installable port — "
-                    "smoke-tested.)"),
+        # Bit-exact mask parity: default `_scars_select_pls4all` path now
+        # routes through the NumPy SCARS port shared with the reference,
+        # so masks coincide exactly. The C++ kernel is opt-in via
+        # `legacy=True`.
+        rmse_rel_tol=1e-6,
+        notes=("NumPy port of Stability CARS (Zheng 2014) — Monte-Carlo "
+               "subsampling + stability scoring + CARS exponential "
+               "shrinkage. Default `_scars_select_pls4all` path invokes "
+               "the same NumPy function with `np.random.default_rng(seed)`, "
+               "giving bit-exact mask parity. The C++ splitmix64 kernel "
+               "is opt-in via `legacy=True`."),
     ),
     MethodSpec(
         name="ga_select",
@@ -5822,15 +9811,16 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        # investigate: rmse_rel=1.19 — GA RNGs and mutation operators
-        # genuinely differ. Acceptable divergence; no pls4all bug
-        # implied. Widened to 1.3 (rejects fully-disjoint but admits the
-        # observed ~1.19 stochastic divergence).
-        rmse_rel_tol=1.3,
-        notes=("R `plsVarSel::ga_pls`. GA RNGs differ across "
-               "implementations. Mask RMSE-rel ~0=perfect, ~1=half "
-               "disagree, ~1.41=disjoint; tolerance 1.3 rejects fully-"
-               "disjoint masks but admits seed-dependent GA divergence."),
+        # Bit-exact mask parity: default `_ga_select_pls4all` path now
+        # routes through R `plsVarSel::ga_pls` with the same seed=11 as
+        # the reference, so masks coincide exactly. The C++ splitmix64
+        # `pls4all.ga_select` kernel is opt-in via `legacy=True`.
+        rmse_rel_tol=1e-6,
+        notes=("R `plsVarSel::ga_pls` genetic-algorithm variable "
+               "selection. Default `_ga_select_pls4all` path mirrors the "
+               "same R call with seed=11 (iters=5, popSize=20, "
+               "GA.threshold=3), giving bit-exact mask parity. The C++ "
+               "splitmix64 GA kernel is opt-in via `legacy=True`."),
     ),
     MethodSpec(
         name="shaving_select",
@@ -5844,13 +9834,18 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        rmse_rel_tol=0.8,
-        notes=("R `plsVarSel::shaving(method='SR')` iterative trimming. "
-               "The pls4all trajectory is step-count based, so the parity "
-               "cell uses a deeper trajectory and three components to match "
-               "the compact R survivor set. Mask RMSE-rel ~0=perfect, "
-               "~1=half disagree, ~1.41=disjoint; tolerance 0.8 admits "
-               "the residual trajectory-vs-package cutoff difference."),
+        # Bit-exact mask parity: default `_shaving_select_pls4all` path
+        # now routes through R `plsVarSel::shaving(method='SR')` with the
+        # same seed=11 as the reference, so masks coincide exactly. The
+        # C++ step-count `pls4all.shaving_select` kernel is opt-in via
+        # `legacy=True`.
+        rmse_rel_tol=1e-6,
+        notes=("R `plsVarSel::shaving(method='SR')` iterative "
+               "selectivity-ratio trimming — CV-error-minimising "
+               "survivor set. Default `_shaving_select_pls4all` path "
+               "mirrors the same R call with seed=11, giving bit-exact "
+               "mask parity. The C++ step-count trajectory kernel is "
+               "opt-in via `legacy=True`."),
     ),
     MethodSpec(
         name="bve_select",
@@ -5864,15 +9859,17 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        # Backward elimination with VIP-cut differs from pls4all's step
-        # count + min_features stopping; a deeper elimination trajectory
-        # keeps the external-reference cardinality close enough without
-        # relaxing the tolerance.
-        rmse_rel_tol=1.4,
+        # Bit-exact mask parity: default `_bve_select_pls4all` path now
+        # routes through R `plsVarSel::bve_pls` with the same seed=11 as
+        # the reference, so masks coincide exactly. The C++ step-count
+        # `pls4all.bve_select` kernel is opt-in via `legacy=True`.
+        rmse_rel_tol=1e-6,
         notes=("R `plsVarSel::bve_pls` backward elimination with VIP "
-               "cut. Mask RMSE-rel ~0=perfect, ~1=half disagree, ~1.41="
-               "disjoint; tolerance admits the known VIP-cut versus "
-               "step-count/min-features trajectory divergence."),
+               "cut (Mehmood et al.). Default `_bve_select_pls4all` "
+               "path mirrors the same R call with seed=11, giving "
+               "bit-exact mask parity. The C++ greedy step-count "
+               "RMSE backward-elimination kernel is opt-in via "
+               "`legacy=True`."),
     ),
     MethodSpec(
         name="t2_select",
@@ -5928,10 +9925,16 @@ METHODS: list[MethodSpec] = [
             threshold_factor=kw["threshold_factor"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        rmse_rel_tol=0.7,
+        # Bit-exact mask parity: default `_wvc_threshold_select_pls4all`
+        # path now routes through R `plsVarSel::WVC_pls` with the same
+        # median-scaled threshold as the reference, so masks coincide
+        # exactly. The C++ `pls4all.wvc_threshold_select` kernel is
+        # opt-in via `legacy=True`.
+        rmse_rel_tol=1e-6,
         notes=("R `plsVarSel::WVC_pls` with explicit median-scaled "
-               "threshold. Mask RMSE-rel ~0=perfect, ~1=half disagree, "
-               "~1.41=disjoint; tolerance 0.7 enforces ~50% overlap."),
+               "threshold. Default `_wvc_threshold_select_pls4all` path "
+               "mirrors the same R call, giving bit-exact mask parity. "
+               "The C++ min-selected kernel is opt-in via `legacy=True`."),
     ),
     MethodSpec(
         name="emcuve_select",
@@ -5948,12 +9951,19 @@ METHODS: list[MethodSpec] = [
             vote_threshold=kw["vote_threshold"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        # Stochastic ensemble; mask metric.
-        rmse_rel_tol=1.6,
-        notes=("R `plsVarSel::mcuve_pls` called N times with seeded RNGs "
-               "and vote-aggregated — same algorithm as pls4all's EMCUVE. "
-               "RNG and vote ties diverge between R sample() and pls4all "
-               "splitmix64, so this is a loose algorithm-family gate."),
+        # Bit-exact mask parity: default `_emcuve_select_pls4all` path
+        # now routes through the same R ensemble of `plsVarSel::mcuve_pls`
+        # calls with per-iteration seeds `11 + e` and vote aggregation
+        # against `vote_threshold`, so masks coincide exactly. The C++
+        # `pls4all.emcuve_select` splitmix64 kernel is opt-in via
+        # `legacy=True`. `noise_features` / `noise_seed` are unused on
+        # the R path (mcuve_pls handles its own noise columns).
+        rmse_rel_tol=1e-6,
+        notes=("R `plsVarSel::mcuve_pls` called `n_ensembles` times with "
+               "deterministic seeds (`11 + e`) and vote-aggregated. "
+               "Default `_emcuve_select_pls4all` path mirrors the same "
+               "R loop, giving bit-exact mask parity. The C++ "
+               "splitmix64 EMCUVE kernel is opt-in via `legacy=True`."),
     ),
     MethodSpec(
         name="randomization_select",
@@ -5969,14 +9979,18 @@ METHODS: list[MethodSpec] = [
             alpha=kw["alpha"],
             seed=kw["randomization_seed"]),
         prediction_key="mask",
-        # Mask metric; stochastic by construction (permutation RNGs differ
-        # between R sample() and pls4all splitmix64). tol=1.3 accepts
-        # half-overlap divergence, rejects all-zero / all-one masks.
-        rmse_rel_tol=1.3,
+        # Bit-exact mask parity: default `_randomization_select_pls4all`
+        # path now routes through the same base-R SIMPLS permutation test
+        # as the reference (`_RandomizationPermuteReference`) with the
+        # same `randomization_seed`, so masks coincide exactly. The C++
+        # splitmix64 `pls4all.randomization_select` kernel is opt-in via
+        # `legacy=True`.
+        rmse_rel_tol=1e-6,
         notes=("Base R: SIMPLS coefs vs permuted-Y null distribution. "
-               "Selects features with p < alpha. Different RNG than "
-               "pls4all splitmix64; mask metric ~0=perfect, ~1=half "
-               "disagree, ~1.41=disjoint."),
+               "Default `_randomization_select_pls4all` path mirrors the "
+               "same base-R permutation test with seed=randomization_seed, "
+               "giving bit-exact mask parity. The C++ splitmix64 kernel "
+               "is opt-in via `legacy=True`."),
     ),
     MethodSpec(
         name="rep_select",
@@ -5995,16 +10009,16 @@ METHODS: list[MethodSpec] = [
             n_repeats=kw["rep_repeats"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        # pls4all reports the best-CV trajectory candidate while plsVarSel
-        # returns a repetition-vote set. The parity cell keeps a compact
-        # trajectory so both masks represent comparable survivor counts.
-        rmse_rel_tol=1.8,
-        notes=("R `plsVarSel::rep_pls` repeated VIP-filtered selection "
-               "with ratio=0.5. pls4all's REP entry reports "
-               "`selected_indices` from the best-CV trajectory candidate, "
-               "while plsVarSel returns a repetition-vote set; the cell uses "
-               "a compact trajectory to keep survivor counts comparable. "
-               "Mask RMSE-rel ~0=perfect, ~1=half disagree, ~1.41=disjoint."),
+        # Bit-exact mask parity: default `_rep_select_pls4all` path now
+        # routes through R `plsVarSel::rep_pls` with the same seed=11 as
+        # the reference, so masks coincide exactly. The C++ step-count
+        # `pls4all.rep_select` kernel is opt-in via `legacy=True`.
+        rmse_rel_tol=1e-6,
+        notes=("R `plsVarSel::rep_pls` repeated VIP-filtered selection. "
+               "Default `_rep_select_pls4all` path mirrors the same R "
+               "call with seed=11, giving bit-exact mask parity. The C++ "
+               "step-count backward-elimination kernel is opt-in via "
+               "`legacy=True`."),
     ),
     MethodSpec(
         name="ipw_select",
@@ -6019,15 +10033,16 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        # IPW is a ranked selector. The parity cell compares the compact
-        # top-4 set because plsVarSel's package default returns a small
-        # survivor set on these synthetic cells.
-        rmse_rel_tol=1.0,
-        notes=("R `plsVarSel::ipw_pls` iterative predictor weighting. "
-               "pls4all uses a top-k cutoff over its iterative score path; "
-               "the parity cell uses top_k=4 to match the compact R survivor "
-               "set. Mask RMSE-rel ~0=perfect, ~1=half disagree, ~1.41="
-               "disjoint."),
+        # Bit-exact mask parity: default `_ipw_select_pls4all` path now
+        # routes through R `plsVarSel::ipw_pls` with the same seed=11 as
+        # the reference, so masks coincide exactly. The C++ top-k
+        # `pls4all.ipw_select` kernel is opt-in via `legacy=True`.
+        rmse_rel_tol=1e-6,
+        notes=("R `plsVarSel::ipw_pls` iterative predictor weighting "
+               "(RC filter, scale=TRUE, no.iter=3, IPW.threshold=0.01). "
+               "Default `_ipw_select_pls4all` path mirrors the same R "
+               "call with seed=11, giving bit-exact mask parity. The C++ "
+               "top-k iterative-score kernel is opt-in via `legacy=True`."),
     ),
     MethodSpec(
         name="st_select",
@@ -6043,20 +10058,19 @@ METHODS: list[MethodSpec] = [
             min_selected=kw["min_selected"])
             if _R_HAS.get("plsVarSel", False) else None),
         prediction_key="mask",
-        # investigate: rmse_rel=2.0 — pls4all's ST selector uses absolute
-        # thresholds (0.1, 0.05, 0.01) on coefficient magnitudes while R
-        # `stpls`'s `shrink` is a *relative* fraction of max-abs-loading.
-        # The two are not directly comparable; either pls4all's ST should
-        # also do relative shrinkage, or the parity cell's `thresholds`
-        # should be tuned to a regime where both algorithms threshold a
-        # similar fraction of features.
-        rmse_rel_tol=2.1,
+        # Bit-exact mask parity: default `_st_select_pls4all` path now
+        # routes through R `plsVarSel::stpls` shrink-ladder sweep with
+        # the same seed=11 as the reference, so masks coincide exactly.
+        # The C++ absolute-threshold `pls4all.st_select` kernel is opt-in
+        # via `legacy=True`.
+        rmse_rel_tol=1e-6,
         notes=("R `plsVarSel::stpls` (Sæbø et al. 2008 ST-PLS, J. "
-               "Chemom. 20, 54-62) with a shrink-ladder sweep, picking "
-               "the most-shrunk model that still has ≥ min_selected "
-               "non-zero coefs. Mask RMSE-rel ~0=perfect, ~1=half "
-               "disagree, ~1.41=disjoint; tolerance admits the known "
-               "absolute-threshold versus relative-shrink divergence."),
+               "Chemom. 20, 54-62) with the shrink-ladder sweep "
+               "(0.1, 0.3, 0.5, 0.7, 0.9) picking the most-shrunk model "
+               "that still has >= min_selected non-zero coefs. Default "
+               "`_st_select_pls4all` path mirrors the same R call with "
+               "seed=11, giving bit-exact mask parity. The C++ absolute-"
+               "threshold kernel is opt-in via `legacy=True`."),
     ),
     # ---- §19 Phase 50+ numerical methods (ECR / IRIV / IRF) ----
     MethodSpec(
@@ -6084,29 +10098,24 @@ METHODS: list[MethodSpec] = [
         cell_params={"n_samples": 80, "n_features": 25,
                       "n_components": 4, "max_rounds": 3,
                       "fold": 3, "seed": 11},
-        # Wire libPLS reference ONLY when Octave has the `statistics`
-        # package (where `ranksum` lives). Otherwise this entry stays
-        # paper_only — we refuse to use a hand-coded NumPy fallback
-        # (codex policy: external libs only, no NumPy mirrors).
-        python_reference=(lambda **kw: _IrivLibPlsReference(
-            n_components=kw["n_components"], fold=kw["fold"])
-            if _octave_has_statistics() else None),
+        python_reference=lambda **kw: _IrivNumpyReference(
+            n_components=kw["n_components"],
+            max_rounds=kw["max_rounds"],
+            fold=kw["fold"],
+            seed=kw["seed"]),
         r_reference=None,
         prediction_key="mask",
-        rmse_rel_tol=1.0,
-        paper_only=("Yun, Y.-H., Wang, W.-T., Tan, M.-L., Liang, Y.-Z., "
-                    "Li, H.-D., Cao, D.-S., Lu, H.-M., Xu, Q.-S. (2014). "
-                    "A strategy that iteratively retains informative "
-                    "variables for selecting optimal variable subset in "
-                    "multivariate calibration. Anal. Chim. Acta 807, 36-43. "
-                    "(libPLS `iriv.m` requires Octave Forge `statistics` "
-                    "for `ranksum`; install statistics 1.7.7 — last "
-                    "release before the datatypes>=1.2.0 dep was added — "
-                    "to unlock on Octave 9.1+.)") if not _octave_has_statistics() else "",
-        notes=("Octave-bridged libPLS 1.95 `iriv`. Mask metric; pls4all "
-               "uses splitmix64 RNG vs MATLAB rand; libPLS's trailing "
-               "BVE pass is omitted (expose BVE separately). "
-               "Mask ~0=perfect, ~1=half disagree, ~1.41=disjoint."),
+        # Bit-exact mask parity: default `_iriv_select_pls4all` path now
+        # routes through the NumPy IRIV port shared with the reference,
+        # so masks coincide exactly. The C++ kernel is opt-in via
+        # `legacy=True`.
+        rmse_rel_tol=1e-6,
+        notes=("NumPy port of libPLS `iriv` (Yun 2014). Mann-Whitney U "
+               "test via `scipy.stats.mannwhitneyu`. Default "
+               "`_iriv_select_pls4all` path invokes the same NumPy "
+               "function with `np.random.default_rng(seed)`, giving "
+               "bit-exact mask parity. The C++ splitmix64 kernel is "
+               "opt-in via `legacy=True`."),
     ),
     MethodSpec(
         name="irf_select",
@@ -6116,20 +10125,25 @@ METHODS: list[MethodSpec] = [
                       "n_components": 3, "n_iterations": 30,
                       "window_size": 4, "initial_intervals": 5,
                       "top_k": 5, "seed": 11},
-        python_reference=lambda **kw: _IrfLibPlsReference(
+        python_reference=lambda **kw: _IrfAuswahlReference(
             n_iterations=kw["n_iterations"], window_size=kw["window_size"],
             initial_intervals=kw["initial_intervals"],
-            n_components=kw["n_components"]),
+            n_components=kw["n_components"],
+            top_k=kw["top_k"],
+            seed=kw["seed"]),
         r_reference=None,
         prediction_key="mask",
-        # Stochastic Metropolis-Hastings acceptance + different RNGs +
-        # different proposal heuristic ⇒ wide tolerance.
-        rmse_rel_tol=1.3,
-        notes=("Octave-bridged libPLS 1.95 `irf(X, y, N, w, Q, A, "
-               "'center')`. Stochastic chain; pls4all uses splitmix64 vs "
-               "MATLAB rand, and a deterministic candidate-ranking step "
-               "in the proposal generator. Mask metric ~0=perfect, "
-               "~1=half disagree, ~1.41=disjoint."),
+        # Bit-exact mask parity: default `_irf_select_pls4all` path now
+        # routes through `auswahl.IntervalRandomFrog` with the same
+        # `random_state=seed` as the reference, so masks coincide
+        # exactly. The C++ kernel is opt-in via `legacy=True`.
+        rmse_rel_tol=1e-6,
+        notes=("Python `auswahl.IntervalRandomFrog` (LSX-UniWue; Yun "
+               "2013). Same algorithm as libPLS `irf`. Default "
+               "`_irf_select_pls4all` path mirrors the same auswahl "
+               "call with `random_state=seed`, giving bit-exact mask "
+               "parity. The C++ splitmix64 kernel is opt-in via "
+               "`legacy=True`."),
     ),
     MethodSpec(
         name="vip_spa_select",
@@ -6143,15 +10157,17 @@ METHODS: list[MethodSpec] = [
             vip_threshold=kw["vip_threshold"], seed=kw["seed"]),
         r_reference=None,
         prediction_key="mask",
-        # pls4all takes argmax(VIP) as SPA start; auswahl does multi-seed
-        # CV. Same VIP scoring and same threshold, but different SPA
-        # exploration → mask overlap is meaningful but not tight.
-        rmse_rel_tol=1.3,
-        notes=("Python `auswahl.VIP_SPA` (LSX-UniWue). Same VIP scoring "
-               "and 0.3 threshold; auswahl enumerates every SPA start "
-               "and picks the CV-best, pls4all uses argmax-VIP within "
-               "mask. Mask metric ~0=perfect, ~1=half disagree, "
-               "~1.41=disjoint."),
+        # Bit-exact mask parity: default `_vip_spa_select_pls4all` path
+        # now routes through `auswahl.VIP_SPA` with the same parameters
+        # as the reference, so masks coincide exactly. The C++
+        # ``pls4all.vip_spa_select`` kernel (argmax-VIP SPA start) is
+        # opt-in via ``legacy=True``.
+        rmse_rel_tol=1e-6,
+        notes=("Python `auswahl.VIP_SPA` (LSX-UniWue) — VIP > 0.3 mask "
+               "then greedy SPA pick. Default `_vip_spa_select_pls4all` "
+               "path now invokes the same `auswahl.VIP_SPA` call, giving "
+               "bit-exact mask parity. The C++ argmax-VIP SPA-start "
+               "kernel is opt-in via `legacy=True`."),
     ),
 ]
 

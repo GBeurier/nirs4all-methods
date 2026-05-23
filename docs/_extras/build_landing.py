@@ -124,7 +124,11 @@ BACKEND_GROUP = {
 ALGO_GROUPS_ORDER = [
     "core", "ensemble", "sparse", "robust", "nonlinear",
     "multi-block", "calibration-transfer", "classification",
-    "missing", "regularized", "adaptive", "other",
+    "missing", "regularized", "adaptive",
+    "selection", "diagnostics",
+    "preprocessing", "baseline", "signal", "wavelet", "transform",
+    "augmentation", "filter", "splitter", "metric", "rng",
+    "other",
 ]
 ALGO_GROUP_LABELS = {
     "core":                 "Core PLS",
@@ -138,6 +142,18 @@ ALGO_GROUP_LABELS = {
     "missing":              "Missing data",
     "regularized":          "Regularized",
     "adaptive":             "Adaptive operators",
+    "selection":            "Variable selection",
+    "diagnostics":          "Diagnostics / monitoring",
+    "preprocessing":        "Preprocessing",
+    "baseline":             "Baseline correction",
+    "signal":               "Signal / derivatives",
+    "wavelet":              "Wavelet",
+    "transform":            "Signal-type conversion",
+    "augmentation":         "Augmentation",
+    "filter":               "Sample / outlier filtering",
+    "splitter":             "Train/test splitters",
+    "metric":               "Metrics",
+    "rng":                  "RNG / seeding",
     "other":                "Other",
 }
 ALGO_GROUP = {
@@ -170,7 +186,124 @@ ALGO_GROUP = {
     "aom_preprocess":       "adaptive",
     "aom_pls":              "adaptive",
     "pop_pls":              "adaptive",
+    # New extras still in the cross_binding registry (PLS-style).
+    "kernel_pls_rbf":       "nonlinear",
+    "n_pls":                "multi-block",
+    "mb_pls":               "multi-block",
+    "so_pls":               "multi-block",
+    "rosa":                 "multi-block",
+    "on_pls":               "multi-block",
+    "random_subspace_pls":  "ensemble",
+    "recursive_pls":        "core",
+    "di_pls":               "calibration-transfer",
+    "pcr":                  "core",
+    "opls":                 "core",
+    "approximate_press":    "diagnostics",
+    "one_se_rule":          "diagnostics",
+    "pls_monitoring":       "diagnostics",
+    "pls_diagnostic_dmodx": "diagnostics",
+    "pls_diagnostic_q":     "diagnostics",
+    "pls_diagnostic_t2":    "diagnostics",
+    # Selection methods (all live in the cross_binding registry).
+    "spa_select":            "selection",
+    "uve_select":            "selection",
+    "cars_select":           "selection",
+    "variable_select_vip":   "selection",
+    "variable_select_sr":    "selection",
+    "variable_select_coef":  "selection",
+    "stability_select":      "selection",
+    "emcuve_select":         "selection",
+    "bve_select":            "selection",
+    "shaving_select":        "selection",
+    "rep_select":            "selection",
+    "ipw_select":            "selection",
+    "st_select":             "selection",
+    "randomization_select":  "selection",
+    "ga_select":             "selection",
+    "random_frog_select":    "selection",
+    "irf_select":            "selection",
+    "scars_select":          "selection",
+    "vip_spa_select":        "selection",
+    "pso_select":            "selection",
+    "vissa_select":          "selection",
+    "wvc_select":            "selection",
+    "wvc_threshold_select":  "selection",
+    "interval_select":       "selection",
+    "bipls_select":          "selection",
+    "sipls_select":          "selection",
+    "iriv_select":           "selection",
+    "t2_select":             "selection",
 }
+
+# Donor methods from the merged nirs4all-methods donor — preprocessing,
+# augmentation, filters, splitters, signals. Tagged here by prefix so the
+# group filter naturally separates them from the PLS-style registry rows.
+DONOR_ALGO_PREFIX_GROUP = [
+    ("aug_",               "augmentation"),
+    ("filter_",            "filter"),
+    ("split_",             "splitter"),
+    ("wavelet",            "wavelet"),
+    ("band_",              "augmentation"),
+    ("channel_",           "augmentation"),
+    ("first_derivative",   "signal"),
+    ("second_derivative",  "signal"),
+    ("derivate",           "signal"),
+    ("savgol",             "signal"),
+    ("norris_williams",    "signal"),
+    ("gaussian",           "signal"),
+    ("haar",               "wavelet"),
+    ("emsc",               "preprocessing"),
+    ("epo",                "preprocessing"),
+    ("osc",                "preprocessing"),
+    ("snv",                "preprocessing"),
+    ("lsnv",               "preprocessing"),
+    ("rnv",                "preprocessing"),
+    ("msc",                "preprocessing"),
+    ("detrend",            "preprocessing"),
+    ("baseline_center",    "preprocessing"),
+    ("normalize",          "preprocessing"),
+    ("area_norm",          "preprocessing"),
+    ("simple_scale",       "preprocessing"),
+    ("crop",               "preprocessing"),
+    ("resample",           "preprocessing"),
+    ("airpls",             "baseline"),
+    ("arpls",              "baseline"),
+    ("asls",               "baseline"),
+    ("iasls",              "baseline"),
+    ("imodpoly",           "baseline"),
+    ("modpoly",            "baseline"),
+    ("rolling_ball",       "baseline"),
+    ("snip",               "baseline"),
+    ("beads",              "baseline"),
+    ("kbins_disc",         "preprocessing"),
+    ("range_disc",         "preprocessing"),
+    ("kubelka_munk",       "transform"),
+    ("from_absorbance",    "transform"),
+    ("to_absorbance",      "transform"),
+    ("log_transform",      "transform"),
+    ("frac_to_pct",        "transform"),
+    ("pct_to_frac",        "transform"),
+    ("signal_type",        "transform"),
+    ("hotelling_t2",       "diagnostics"),
+    ("q_residuals",        "diagnostics"),
+    ("flexible_pca",       "diagnostics"),
+    ("flexible_svd",       "diagnostics"),
+    ("nirs_metrics",       "metric"),
+    ("transfer",           "metric"),
+    ("fck",                "transform"),
+    ("rng_pcg64",          "rng"),
+]
+
+
+def _algo_group_for(algo: str) -> str:
+    """Resolve the group for an algorithm, falling back to donor prefix
+    matching for the n4m donor methods that aren't in ALGO_GROUP."""
+    if algo in ALGO_GROUP:
+        return ALGO_GROUP[algo]
+    for prefix, group in DONOR_ALGO_PREFIX_GROUP:
+        if algo.startswith(prefix):
+            return group
+    return "other"
 
 SELECTOR_ALGOS = {
     "vip_select", "coefficient_select", "selectivity_ratio_select",
@@ -847,8 +980,11 @@ def build_payload(results_dir: Path) -> dict:
             cell["reason"] = reason[:200]
         # Keep every explicit verdict emitted by the orchestrator so the
         # dashboard can distinguish "not run" from "not available in lib".
+        # "exact" is included so fixture-validated rows that have no live
+        # timing (n4m donor methods) still surface a ✓ in the dashboard.
         if ms is not None or verdict in (
-                "deferred", "not_run", "not_available", "divergent", "drift", "error"):
+                "exact", "deferred", "not_run", "not_available",
+                "divergent", "drift", "error"):
             existing = pivot[rkey].get(cid)
             if existing is None:
                 pivot[rkey][cid] = cell
@@ -1147,7 +1283,7 @@ def build_payload(results_dir: Path) -> dict:
 
     # Algo → group mapping (only for algos actually present in the data).
     present_algos = sorted({r["algo"] for r in rows_out})
-    algo_to_group = {a: ALGO_GROUP.get(a, "other") for a in present_algos}
+    algo_to_group = {a: _algo_group_for(a) for a in present_algos}
     # Groups actually present, in canonical order.
     present_group_keys = [g for g in ALGO_GROUPS_ORDER
                             if any(algo_to_group[a] == g for a in present_algos)]
@@ -1156,6 +1292,18 @@ def build_payload(results_dir: Path) -> dict:
          "algos": [a for a in present_algos if algo_to_group[a] == g]}
         for g in present_group_keys
     ]
+    # Origin: distinguish the original pls4all PLS-style cross_binding
+    # registry methods from the donor-merged n4m methods (augmentation,
+    # filters, splitters, preprocessing, baseline, signals, …). Used by
+    # the dashboard to render a chip filter and a row-level highlight.
+    PLS4ALL_GROUPS = {"core", "ensemble", "sparse", "robust", "nonlinear",
+                      "multi-block", "calibration-transfer", "classification",
+                      "missing", "regularized", "adaptive",
+                      "selection", "diagnostics"}
+    algo_origin = {
+        a: "pls4all" if algo_to_group[a] in PLS4ALL_GROUPS else "n4m_donor"
+        for a in present_algos
+    }
     # Languages actually present in the columns.
     present_langs = []
     seen_lang = set()
@@ -1194,6 +1342,7 @@ def build_payload(results_dir: Path) -> dict:
         "versions":     versions,
         "algo_to_group":algo_to_group,
         "algo_groups":  algo_groups,
+        "algo_origin":  algo_origin,
         "languages":    present_langs,
         "stats": {
             "algos":    len(present_algos),

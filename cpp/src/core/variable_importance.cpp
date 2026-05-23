@@ -120,6 +120,7 @@ n4m_status_t compute_vip_scores(Context& ctx,
         const auto a = static_cast<std::size_t>(model.n_components);
 
         std::vector<double> component_ssy(a, 0.0);
+        std::vector<double> weights_col_ss(a, 0.0);
         double total_ssy = 0.0;
         for (std::size_t comp = 0; comp < a; ++comp) {
             double tss = 0.0;
@@ -132,7 +133,20 @@ n4m_status_t compute_vip_scores(Context& ctx,
                 const double value = model.y_loadings_q[idx(target, a, comp)];
                 qss += value * value;
             }
+            double wss = 0.0;
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                const double w = model.weights_w[idx(feature, a, comp)];
+                wss += w * w;
+            }
             component_ssy[comp] = tss * qss;
+            // R `plsVarSel::VIP` normalises each weight column to unit
+            // sum-of-squares (WW = W*W / colSums(W*W)) before mixing with
+            // the per-component Y-variance proxy. NIPALS naturally yields
+            // unit-norm weight columns so the normalisation is a no-op,
+            // but SIMPLS stores R = W / ||X w|| (||R_a|| != 1), so without
+            // this rescale the VIP ranking diverges from R when the SIMPLS
+            // solver is used.
+            weights_col_ss[comp] = wss;
             total_ssy += component_ssy[comp];
         }
         if (total_ssy <= kEps) {
@@ -144,8 +158,12 @@ n4m_status_t compute_vip_scores(Context& ctx,
         for (std::size_t feature = 0; feature < p; ++feature) {
             double weighted = 0.0;
             for (std::size_t comp = 0; comp < a; ++comp) {
+                const double wss = weights_col_ss[comp];
+                if (wss <= kEps) {
+                    continue;
+                }
                 const double w = model.weights_w[idx(feature, a, comp)];
-                weighted += component_ssy[comp] * w * w;
+                weighted += component_ssy[comp] * (w * w) / wss;
             }
             out[feature] = std::sqrt(static_cast<double>(p) * weighted / total_ssy);
         }

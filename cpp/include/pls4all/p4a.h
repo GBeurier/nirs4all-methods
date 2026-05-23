@@ -188,6 +188,31 @@ N4M_API n4m_status_t n4m_config_set_tol              (n4m_config_t*, double tol)
 N4M_API n4m_status_t n4m_config_set_max_iter         (n4m_config_t*, int32_t max_iter);
 N4M_API n4m_status_t n4m_config_set_store_scores     (n4m_config_t*, int32_t enabled);
 N4M_API n4m_status_t n4m_config_set_store_diagnostics(n4m_config_t*, int32_t enabled);
+/* Switch `n4m_sparse_simpls_fit` between the default Chun & Keles 2010
+ * spls algorithm (enabled=0; matches R `spls::spls`) and the legacy
+ * per-component absolute soft-threshold of the SIMPLS direction
+ * (enabled=1; behaviour of pls4all <= 0.97.3). */
+N4M_API n4m_status_t n4m_config_set_sparse_simpls_legacy(n4m_config_t*,
+                                                          int32_t enabled);
+N4M_API n4m_status_t n4m_config_get_sparse_simpls_legacy(const n4m_config_t*,
+                                                          int32_t* out_enabled);
+/* Switch `n4m_robust_pls_fit` between Partial Robust M-regression
+ * (enabled=0; default; matches R `chemometrics::prm` bit-for-bit) and the
+ * legacy Huber-IRLS over weighted SIMPLS (enabled=1; behaviour of pls4all
+ * <= 0.97.3). */
+N4M_API n4m_status_t n4m_config_set_robust_pls_legacy(n4m_config_t*,
+                                                       int32_t enabled);
+N4M_API n4m_status_t n4m_config_get_robust_pls_legacy(const n4m_config_t*,
+                                                       int32_t* out_enabled);
+/* Switch `n4m_approximate_press_compute` between true leave-one-out PRESS
+ * (enabled=0; default; matches R `pls::plsr(validation='LOO', method='simpls',
+ * scale=FALSE)` bit-for-bit) and the legacy Eastment-Krzanowski leverage-
+ * inflated training-residual approximation (enabled=1; behaviour of pls4all
+ * <= 0.97.3). */
+N4M_API n4m_status_t n4m_config_set_approximate_press_legacy(n4m_config_t*,
+                                                              int32_t enabled);
+N4M_API n4m_status_t n4m_config_get_approximate_press_legacy(const n4m_config_t*,
+                                                              int32_t* out_enabled);
 N4M_API n4m_status_t n4m_config_set_dtype            (n4m_config_t*, n4m_dtype_t);
 
 /* Composability hooks — these are non-owning pointers; the lifetime of the

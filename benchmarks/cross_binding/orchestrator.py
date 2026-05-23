@@ -29,7 +29,9 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Iterable
 
@@ -432,7 +434,11 @@ def run_backend(name: str, script: str, language: str, tier: str,
     # it the per-build sweep silently runs against whichever libp4a the
     # importer finds first (auditwheel sibling / pip-installed wheel /
     # build/dev-release), making the build column degenerate.
-    env["PLS4ALL_LIB_PATH"] = os.path.join(lib_dir, "libp4a.so")
+    # Post-merge rename: libp4a.so -> libn4m.so. Prefer the new name and
+    # fall back to the legacy one for build trees that still produce libp4a.
+    _libn4m = os.path.join(lib_dir, "libn4m.so")
+    _libp4a = os.path.join(lib_dir, "libp4a.so")
+    env["PLS4ALL_LIB_PATH"] = _libn4m if os.path.exists(_libn4m) else _libp4a
     env["BENCH_LIBP4A_BUILD"] = libp4a_build
     env["LD_LIBRARY_PATH"] = ":".join([
         lib_dir,
@@ -984,6 +990,12 @@ def main():
     parser.add_argument("--only", nargs="*",
                          help="Restrict to a subset of backends by name")
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_S)
+    parser.add_argument(
+        "--workers", type=int, default=max(1, (os.cpu_count() or 2) // 2),
+        help="Number of parallel cells to run. Each cell already binds OMP/BLAS "
+             "threads via --threads, so the default (logical_cores/2) leaves "
+             "headroom for the kernel parallelism in each cell. Set to 1 for "
+             "purely sequential execution.")
     parser.add_argument("--out-csv", default=None,
                          help="Output CSV path (default: results/full_matrix.csv)")
     parser.add_argument("--resume-existing", action="store_true",
@@ -1086,14 +1098,10 @@ def main():
     if defer_rules:
         print(f"# defer_rules={args.defer_cells_file} ({len(defer_rules)} rules)")
 
-    cell_count = 0
+    # ---- Phase 1: pre-generate dataset CSVs serially so workers don't race ----
+    needs_xtarget: dict[tuple[int, int], bool] = {}
     for algo in algos:
-        algo_sizes = sizes_for_algo(algo)
-        algo_backends = backends_for_algo(algo)
-        for n, p in algo_sizes:
-            # Pre-generate CSV cache for the adaptive seed window. Python,
-            # R and MATLAB all read these files so each backend sees the
-            # exact same input bits for any run count selected at runtime.
+        for n, p in sizes_for_algo(algo):
             last_seed = args.seed_base + args.n_runs - 1
             gen_dataset_csv(n, p, last_seed)
             for i in range(args.n_runs):
@@ -1103,107 +1111,167 @@ def main():
             except KeyError:
                 method = None
             if method is not None and method.needs_x_target:
+                needs_xtarget[(n, p)] = True
                 for i in range(args.n_runs):
                     gen_x_target_csv(n, p, args.seed_base + i)
 
+    # ---- Phase 2: enumerate cells (algo × size × thread × backend × build) ----
+    cells_to_run: list[dict] = []
+    for algo in algos:
+        algo_sizes = sizes_for_algo(algo)
+        algo_backends = backends_for_algo(algo)
+        for n, p in algo_sizes:
             for thr in threads:
                 for backend in algo_backends:
                     name, script, lang, tier, kind = backend
-                    # pls4all bindings sweep over `builds`; externals
-                    # always use blas-omp (most realistic config for
-                    # an external user on a modern install).
                     if kind == "external":
                         per_backend_builds = ["blas-omp"]
                     else:
                         per_backend_builds = list(builds)
                     for build in per_backend_builds:
-                        cell_count += 1
-                        prefix = (f"[{cell_count}] {algo:<22s} "
-                                  f"{n:>5d}×{p:<4d} t={thr:<2d} "
-                                  f"{build:<11s} {name:<14s}: ")
-                        print(prefix, end="", flush=True)
-                        slot, strict = planned_keys(
-                            algo, name, n, p, thr, build,
-                            args.seed_base, args.n_runs)
-                        # Accept the raw input count for current rows. The
-                        # timing_schema guard keeps legacy cold-run CSV rows
-                        # from being reused under --resume-existing.
-                        strict_alt = (*slot, args.seed_base, args.n_runs)
-                        planned_slots.add(slot)
-                        existing = existing_by_slot.get(slot)
-                        if (args.resume_existing and not args.force
-                                and existing is not None
-                                and record_timing_schema(existing) == TIMING_SCHEMA
-                                and strict_key(existing) in (strict, strict_alt)
-                                and (existing.get("ok") or not args.rerun_failed)):
-                            records.append(existing)
-                            skipped_existing += 1
-                            status = "ok" if existing.get("ok") else "failed"
-                            print(f"SKIP existing {status}")
-                            continue
-
-                        reason = defer_reason(
-                            defer_rules,
-                            algorithm=algo, backend=name, language=lang,
-                            tier=tier, kind=kind, n=n, p=p, threads=thr,
-                            libp4a_build=build)
-                        if reason:
-                            rec = {
-                                "backend": name,
-                                "ok": False,
-                                "skipped": True,
-                                "reason": reason,
-                                "algorithm": algo,
-                                "n": n, "p": p,
-                                "threads": thr,
-                                "libp4a_build": build,
-                                "language": lang,
-                                "tier": tier,
-                                "kind": kind,
-                                "seed_base": args.seed_base,
-                                "prediction_seed": args.seed_base,
-                                "n_runs": 0,
-                                "total_runs": 0,
-                                "max_runs": args.n_runs,
-                                "timing_statistic": "deferred",
-                                "timing_decision": "deferred",
-                                "subprocess_s": 0.0,
-                                "versions": {"timing_schema": TIMING_SCHEMA},
-                            }
-                            records.append(rec)
-                            print(f"DEFER — {reason[:100]}")
-                            if args.flush_each_cell:
-                                write_records(csv_out, records)
-                            continue
-
-                        rec = run_backend(name, script, lang, tier, kind,
-                                            algo, n, p, args.n_components,
-                                            args.n_runs, thr, build,
-                                            args.seed_base, args.timeout)
-                        rec.update({
-                            "algorithm": algo,
-                            "n": n, "p": p,
-                            "threads": thr,
-                            "libp4a_build": build,
-                            "language": lang,
-                            "tier": tier,
-                            "kind": kind,
-                            "seed_base": args.seed_base,
+                        cells_to_run.append({
+                            "algo": algo, "n": n, "p": p, "thr": thr,
+                            "name": name, "script": script, "lang": lang,
+                            "tier": tier, "kind": kind, "build": build,
                         })
-                        rec["prediction_seed"] = record_prediction_seed(rec)
-                        write_prediction_metadata(rec)
-                        snapshot_reference_oracle(rec)
-                        records.append(rec)
-                        ran_records.append(rec)
-                        if rec.get("ok"):
-                            score = rec.get("reported_ms", rec.get("median_ms", 0))
-                            stat = rec.get("timing_statistic", "time")
-                            runs_done = rec.get("n_runs", "?")
-                            print(f"{stat}={float(score):.2f}ms n={runs_done}")
-                        else:
-                            print(f"FAIL — {rec.get('reason', '?')[:100]}")
-                        if args.flush_each_cell:
-                            write_records(csv_out, records)
+
+    # ---- Phase 3: resolve resume / defer rules per cell (sequential, fast) ----
+    pending_cells: list[dict] = []
+    cell_count = 0
+    print_lock = threading.Lock()
+    for cell in cells_to_run:
+        algo, name, n, p, thr, build = (cell["algo"], cell["name"], cell["n"],
+                                         cell["p"], cell["thr"], cell["build"])
+        lang, tier, kind = cell["lang"], cell["tier"], cell["kind"]
+        cell_count += 1
+        prefix = (f"[{cell_count}/{len(cells_to_run)}] {algo:<22s} "
+                  f"{n:>5d}×{p:<4d} t={thr:<2d} "
+                  f"{build:<11s} {name:<14s}: ")
+        slot, strict = planned_keys(
+            algo, name, n, p, thr, build,
+            args.seed_base, args.n_runs)
+        strict_alt = (*slot, args.seed_base, args.n_runs)
+        planned_slots.add(slot)
+        existing = existing_by_slot.get(slot)
+        if (args.resume_existing and not args.force
+                and existing is not None
+                and record_timing_schema(existing) == TIMING_SCHEMA
+                and strict_key(existing) in (strict, strict_alt)
+                and (existing.get("ok") or not args.rerun_failed)):
+            records.append(existing)
+            skipped_existing += 1
+            status = "ok" if existing.get("ok") else "failed"
+            print(prefix + f"SKIP existing {status}")
+            continue
+
+        reason = defer_reason(
+            defer_rules,
+            algorithm=algo, backend=name, language=lang,
+            tier=tier, kind=kind, n=n, p=p, threads=thr,
+            libp4a_build=build)
+        if reason:
+            rec = {
+                "backend": name,
+                "ok": False,
+                "skipped": True,
+                "reason": reason,
+                "algorithm": algo,
+                "n": n, "p": p,
+                "threads": thr,
+                "libp4a_build": build,
+                "language": lang,
+                "tier": tier,
+                "kind": kind,
+                "seed_base": args.seed_base,
+                "prediction_seed": args.seed_base,
+                "n_runs": 0,
+                "total_runs": 0,
+                "max_runs": args.n_runs,
+                "timing_statistic": "deferred",
+                "timing_decision": "deferred",
+                "subprocess_s": 0.0,
+                "versions": {"timing_schema": TIMING_SCHEMA},
+            }
+            records.append(rec)
+            print(prefix + f"DEFER — {reason[:100]}")
+            if args.flush_each_cell:
+                write_records(csv_out, records)
+            continue
+
+        cell["prefix"] = prefix
+        pending_cells.append(cell)
+
+    # ---- Phase 4: run pending cells in a ThreadPoolExecutor ----
+    workers = max(1, int(args.workers))
+    if pending_cells:
+        print(f"# Running {len(pending_cells)} cells with {workers} parallel "
+              f"worker{'s' if workers != 1 else ''} (logical cores: "
+              f"{os.cpu_count()}). Each cell runs OMP/BLAS at --threads "
+              f"({threads}), so effective oversubscription is workers×threads.")
+
+    def _execute(cell: dict) -> dict:
+        rec = run_backend(cell["name"], cell["script"], cell["lang"],
+                           cell["tier"], cell["kind"], cell["algo"],
+                           cell["n"], cell["p"], args.n_components,
+                           args.n_runs, cell["thr"], cell["build"],
+                           args.seed_base, args.timeout)
+        rec.update({
+            "algorithm": cell["algo"],
+            "n": cell["n"], "p": cell["p"],
+            "threads": cell["thr"],
+            "libp4a_build": cell["build"],
+            "language": cell["lang"],
+            "tier": cell["tier"],
+            "kind": cell["kind"],
+            "seed_base": args.seed_base,
+        })
+        rec["prediction_seed"] = record_prediction_seed(rec)
+        # write_prediction_metadata + snapshot_reference_oracle touch
+        # different paths per (algo, backend, n, p), so concurrent
+        # writes don't collide.
+        write_prediction_metadata(rec)
+        snapshot_reference_oracle(rec)
+        return cell, rec
+
+    records_lock = threading.Lock()
+    if workers == 1 or not pending_cells:
+        # Keep the sequential path for --workers 1 (deterministic output order)
+        for cell in pending_cells:
+            _, rec = _execute(cell)
+            with records_lock:
+                records.append(rec)
+                ran_records.append(rec)
+                if rec.get("ok"):
+                    score = rec.get("reported_ms", rec.get("median_ms", 0))
+                    stat = rec.get("timing_statistic", "time")
+                    runs_done = rec.get("n_runs", "?")
+                    print(cell["prefix"] + f"{stat}={float(score):.2f}ms n={runs_done}")
+                else:
+                    print(cell["prefix"] + f"FAIL — {rec.get('reason', '?')[:100]}")
+                if args.flush_each_cell:
+                    write_records(csv_out, records)
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(_execute, c): c for c in pending_cells}
+            done = 0
+            for fut in as_completed(futures):
+                cell, rec = fut.result()
+                done += 1
+                with records_lock:
+                    records.append(rec)
+                    ran_records.append(rec)
+                    if rec.get("ok"):
+                        score = rec.get("reported_ms", rec.get("median_ms", 0))
+                        stat = rec.get("timing_statistic", "time")
+                        runs_done = rec.get("n_runs", "?")
+                        status = f"{stat}={float(score):.2f}ms n={runs_done}"
+                    else:
+                        status = f"FAIL — {rec.get('reason', '?')[:100]}"
+                    print(f"[{done}/{len(pending_cells)}] {cell['algo']:<22s} "
+                          f"{cell['n']:>5d}×{cell['p']:<4d} t={cell['thr']:<2d} "
+                          f"{cell['build']:<11s} {cell['name']:<14s}: {status}")
+                    if args.flush_each_cell:
+                        write_records(csv_out, records)
 
     if existing_records:
         preserved = [r for r in existing_records

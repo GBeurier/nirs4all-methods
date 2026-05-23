@@ -846,28 +846,44 @@ N4M_API n4m_status_t n4m_sparse_pls_da_fit(
         handle->set_double_matrix("y_mean", res.y_mean, 1, q);
         handle->set_double_matrix("class_priors", res.class_priors, 1, q);
 
-        // Soft-assignment predictions: rebuild dummy-encoded Y for RMSE.
-        std::vector<double> predictions;
+        // Compute regression decision scores then collapse via argmax to
+        // one-hot class predictions. This matches the R `spls::splsda`
+        // prediction contract (and our `SparsePlsDaPythonReference`).
+        std::vector<double> decision_scores;
         std::int64_t pred_rows = 0;
         std::int64_t pred_cols = 0;
         predict_from_coefficients(*X, res.coefficients, res.x_mean,
-                                    res.y_mean, p, q, predictions,
+                                    res.y_mean, p, q, decision_scores,
                                     pred_rows, pred_cols);
         const auto n = static_cast<std::size_t>(X->rows);
-        std::vector<double> y_dummy(n * static_cast<std::size_t>(q), 0.0);
+        const auto qz = static_cast<std::size_t>(q);
+        std::vector<double> predictions(n * qz, 0.0);
+        for (std::size_t i = 0; i < n; ++i) {
+            std::size_t best = 0;
+            double best_val = decision_scores[i * qz];
+            for (std::size_t c = 1; c < qz; ++c) {
+                const double v = decision_scores[i * qz + c];
+                if (v > best_val) {
+                    best_val = v;
+                    best = c;
+                }
+            }
+            predictions[i * qz + best] = 1.0;
+        }
+        // RMSE between dummy-encoded truth and one-hot prediction.
+        std::vector<double> y_dummy(n * qz, 0.0);
         for (std::size_t i = 0; i < n; ++i) {
             const std::size_t lbl =
                 static_cast<std::size_t>(labels[i]);
-            y_dummy[i * static_cast<std::size_t>(q) + lbl] = 1.0;
+            y_dummy[i * qz + lbl] = 1.0;
         }
-        // Compute RMSE manually since `Y` is the dummy matrix.
         double sumsq = 0.0;
-        for (std::size_t i = 0; i < n * static_cast<std::size_t>(q); ++i) {
+        for (std::size_t i = 0; i < n * qz; ++i) {
             const double d = y_dummy[i] - predictions[i];
             sumsq += d * d;
         }
         const double rmse = std::sqrt(sumsq /
-            static_cast<double>(n * static_cast<std::size_t>(q)));
+            static_cast<double>(n * qz));
         handle->set_double_matrix("predictions", std::move(predictions),
                                    pred_rows, pred_cols);
         handle->set_scalar("rmse", rmse);
@@ -1270,6 +1286,9 @@ N4M_API n4m_status_t n4m_on_pls_fit(
             handle->set_double_matrix(
                 "joint_scores_" + std::to_string(b),
                 res.joint_scores_per_block[bi], n, res.n_joint);
+            handle->set_double_matrix(
+                "block_reconstruction_" + std::to_string(b),
+                res.block_reconstruction_per_block[bi], n, pb);
         }
         handle->set_scalar("n_blocks",
                             static_cast<double>(res.n_blocks));

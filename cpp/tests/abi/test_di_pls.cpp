@@ -3,6 +3,12 @@
 // Domain-invariant PLS (§13 of Overview.md). Verifies (a) di_lambda=0
 // matches plain SIMPLS exactly, (b) di_lambda>0 reduces the projection
 // of the weight vector onto the source-target difference direction.
+//
+// These geometric invariants are specific to the legacy SIMPLS-direction
+// projection algorithm; the post-0.97.4 default is the Nikzad-Langerodi
+// 2018 diPLSlib algorithm whose penalty matrix is a covariance discrepancy
+// (zero on identical-covariance source/target pairs) rather than a scalar
+// mean-diff projection. Tests therefore pin `cfg.di_pls_legacy = 1`.
 
 #include <cmath>
 #include <cstddef>
@@ -66,6 +72,7 @@ TEST(di_pls_phase13, lambda_zero_matches_plain_simpls) {
     cfg.scale_y = 0;
     cfg.store_scores = 0;
     cfg.di_lambda = 0.0;
+    cfg.di_pls_legacy = 1;
 
     std::unique_ptr<::n4m::core::Model> m_di;
     std::unique_ptr<::n4m::core::Model> m_plain;
@@ -116,6 +123,7 @@ TEST(di_pls_phase13, lambda_positive_reduces_diff_projection) {
     cfg.scale_x = 0;
     cfg.center_y = 1;
     cfg.scale_y = 0;
+    cfg.di_pls_legacy = 1;
 
     std::unique_ptr<::n4m::core::Model> m_low;
     std::unique_ptr<::n4m::core::Model> m_high;

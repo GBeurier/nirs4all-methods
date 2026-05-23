@@ -152,3 +152,44 @@ class Config:
     @store_scores.setter
     def store_scores(self, value: int | bool) -> None:
         self._set_int32(lib.n4m_config_set_store_scores, value)
+
+    @property
+    def sparse_simpls_legacy(self) -> int:
+        """Switch sparse_simpls_fit to the pre-0.97.4 absolute soft-threshold
+        algorithm. 0 (default) uses Chun & Keles 2010 spls (matches R `spls`)."""
+        out = ctypes.c_int32(0)
+        _check(lib.n4m_config_get_sparse_simpls_legacy(self._h, ctypes.byref(out)))
+        return int(out.value)
+
+    @sparse_simpls_legacy.setter
+    def sparse_simpls_legacy(self, value: int | bool) -> None:
+        self._set_int32(lib.n4m_config_set_sparse_simpls_legacy, value)
+
+    @property
+    def robust_pls_legacy(self) -> int:
+        """Switch robust_pls_fit to the pre-0.97.4 Huber-IRLS over weighted
+        SIMPLS algorithm. 0 (default) uses Partial Robust M-regression
+        (Serneels et al. 2005) matching R `chemometrics::prm` bit-for-bit."""
+        out = ctypes.c_int32(0)
+        _check(lib.n4m_config_get_robust_pls_legacy(self._h, ctypes.byref(out)))
+        return int(out.value)
+
+    @robust_pls_legacy.setter
+    def robust_pls_legacy(self, value: int | bool) -> None:
+        self._set_int32(lib.n4m_config_set_robust_pls_legacy, value)
+
+    @property
+    def approximate_press_legacy(self) -> int:
+        """Switch approximate_press_compute to the pre-0.97.4 Eastment-
+        Krzanowski leverage-inflated training-residual approximation.
+        0 (default) runs true leave-one-out PRESS over the SIMPLS kernel
+        and matches R `pls::plsr(validation='LOO', method='simpls',
+        scale=FALSE)$validation$PRESS` bit-for-bit."""
+        out = ctypes.c_int32(0)
+        _check(lib.n4m_config_get_approximate_press_legacy(
+            self._h, ctypes.byref(out)))
+        return int(out.value)
+
+    @approximate_press_legacy.setter
+    def approximate_press_legacy(self, value: int | bool) -> None:
+        self._set_int32(lib.n4m_config_set_approximate_press_legacy, value)
