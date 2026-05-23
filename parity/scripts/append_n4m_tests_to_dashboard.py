@@ -221,7 +221,7 @@ def main() -> int:
                 "backend": "cpp",
                 "language": "C++",
                 "tier": "direct",
-                "kind": "pls4all_core",
+                "kind": "n4m_core",
             })
             rows.append(cpp_row)
 

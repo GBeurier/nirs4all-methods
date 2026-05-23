@@ -26,7 +26,7 @@ match the external oracle selected for each method.
 | **Backends** | pls4all bindings + registry-driven external reference columns (`ref.<library>`) |
 | **Sizes** | Default 11-size sweep, or one canonical MethodSpec cell per method with `--registry-cells` |
 | **Thread counts** | 1, 3, 10 |
-| **libp4a build** | `blas-omp` by default (OpenBLAS + OpenMP); `dev-release` available for the single-thread reference column |
+| **libn4m build** | `blas-omp` by default (OpenBLAS + OpenMP); `dev-release` available for the single-thread reference column |
 
 A "skip" record is emitted when an external backend does not implement a
 given algorithm. In `--reference-backends registry` mode those rows
@@ -80,7 +80,7 @@ There are two references.
 For **binding parity**, each `(algorithm, n, p)` group uses:
 
 1. **`cpp` at 1 thread, `blas-omp` build** when present (default for all
-   algos with a libp4a entry point); else
+   algos with a libn4m entry point); else
 2. **`python_tier1` at 1 thread** as fallback (covers algos that don't
    have a direct ctypes path on the C++ side).
 
@@ -188,7 +188,7 @@ FULL_MATRIX=1 REFERENCE_BACKENDS=registry benchmarks/cross_binding/run_overnight
 # Legacy fixed/all audit; unsupported external pairs produce NOT_IMPLEMENTED.
 FULL_MATRIX=1 REFERENCE_BACKENDS=all benchmarks/cross_binding/run_overnight.sh
 
-# Include the CUDA libp4a build too when CUDA is available.
+# Include the CUDA libn4m build too when CUDA is available.
 FULL_MATRIX=1 LIBP4A_BUILD=all benchmarks/cross_binding/run_overnight.sh
 
 # Same run on the Pages branch (main), then commit/push docs/_static +
@@ -211,7 +211,7 @@ RERUN_FAILED=1 benchmarks/cross_binding/run_overnight.sh
 python benchmarks/cross_binding/orchestrator.py \
   --algorithms pls --threads 1 3 10 --n-runs 5 \
   --resume-existing \
-  --libp4a-build blas-omp --reference-backends registry \
+  --libn4m-build blas-omp --reference-backends registry \
   --out-csv benchmarks/cross_binding/results/full_matrix.csv
 
 # Render

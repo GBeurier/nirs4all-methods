@@ -11,7 +11,7 @@ successful implementation against the registry-declared external oracle.
    the relevant visible parity verdict: reference parity for C++/external
    rows, binding parity for internal binding rows.
 
-2. **Accelerated backend timing** — same SIMPLS, libp4a built five
+2. **Accelerated backend timing** — same SIMPLS, libn4m built five
    ways (`ref`, `blas`, `omp`, `blas_omp`, `cuda`). Shows the speedup
    stack at the C++ layer.
 

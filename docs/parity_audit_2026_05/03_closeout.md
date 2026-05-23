@@ -52,9 +52,9 @@ against libPLS:
 
 | Method | C++ | ABI symbol | Parity vs libPLS |
 |--------|----:|------------|------------------|
-| **ECR** (Liu 2013 Elastic Component Regression) | ~560 LOC | `p4a_ecr_fit` | rmse_rel ≈ 1e-7 (tight) |
-| **IRIV** (Yun 2014 Iteratively Retains Informative Variables) | ~560 LOC | `p4a_iriv_select` | rmse_rel ≈ 0.7 (mask) |
-| **IRF** (Yun 2013 Interval Random Frog) | ~650 LOC | `p4a_irf_select` | rmse_rel ≈ 0.8 (mask) |
+| **ECR** (Liu 2013 Elastic Component Regression) | ~560 LOC | `n4m_ecr_fit` | rmse_rel ≈ 1e-7 (tight) |
+| **IRIV** (Yun 2014 Iteratively Retains Informative Variables) | ~560 LOC | `n4m_iriv_select` | rmse_rel ≈ 0.7 (mask) |
+| **IRF** (Yun 2013 Interval Random Frog) | ~650 LOC | `n4m_irf_select` | rmse_rel ≈ 0.8 (mask) |
 
 ABI bumped 1.14 → 1.15.
 
@@ -63,7 +63,7 @@ ABI bumped 1.14 → 1.15.
   new pls4all method, mirroring `auswahl.VIP_SPA`. SPA greedy projections
   run on **raw masked X** to match `auswahl._spa._fit_spa` exactly; start
   is `argmax(VIP)` within the surviving subset. ABI bumped 1.15 → 1.16,
-  symbol `p4a_vip_spa_select`. Parity vs auswahl: rmse_rel = 1.08 (mask).
+  symbol `n4m_vip_spa_select`. Parity vs auswahl: rmse_rel = 1.08 (mask).
 - **DI-PLS** moved from `paper_only` to `ok`: `diPLSlib 2.5.0`
   (B-Analytics; Nikzad-Langerodi 2018 authors) wired as reference.
   rmse_rel = 5e-3 with tol = 2e-2.

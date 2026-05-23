@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/aom_preprocessing.hpp"
 #include "core/bipls_selection.hpp"

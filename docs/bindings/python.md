@@ -19,7 +19,7 @@ with pls4all.Context() as ctx:
         ctx.backend = pls4all.Backend.CUDA
     except pls4all.Pls4allError as exc:
         print(exc.status_name)    # "backend unavailable"
-        print(exc.last_error)     # "backend 5 is not compiled into this build of libp4a"
+        print(exc.last_error)     # "backend 5 is not compiled into this build of libn4m"
 
 with pls4all.Config() as cfg:
     cfg.algorithm = pls4all.Algorithm.PCR
@@ -35,4 +35,4 @@ with pls4all.Config() as cfg:
 ```
 
 Phase 2 expands the surface to a full sklearn-compatible estimator with
-zero-copy NumPy `p4a_matrix_view_t` round-trips.
+zero-copy NumPy `n4m_matrix_view_t` round-trips.

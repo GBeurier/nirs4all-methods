@@ -89,7 +89,7 @@ into shared `_common.cpp` files, before any algorithm extraction:
 | 7 | Core dispatch + header consolidation | 2 |
 
 Total: **~34 commits** if each extraction is its own commit (best for blame
-preservation). Per-commit gate: `pls4all_tests` 265/265 still green and no
+preservation). Per-commit gate: `n4m_tests` 265/265 still green and no
 function moves are functional changes.
 
 ## Notes from the agent's analysis

@@ -67,7 +67,7 @@ M3 moves are purely additive from pls4all's build-system perspective:
 ```
 $ cmake --build --preset dev-release
 ninja: no work to do.
-$ ./build/dev-release/cpp/tests/pls4all_tests
+$ ./build/dev-release/cpp/tests/n4m_tests
 === 265 run, 0 failures, 0 skipped ===
 ```
 
@@ -108,8 +108,8 @@ Per roadmap §9, the following stay open and land later:
   `extra_pls.cpp` (1647 L) split into ~28 target files. Detailed plan at
   `docs/merge/M4/SPLIT_PLAN.md` (produced by an Explore agent
   in parallel with M3).
-- **M5 — ABI rename**: `p4a_*` → `n4m_*` mechanical pass. Until then,
-  pls4all's flat sources still use `p4a_*` symbols.
+- **M5 — ABI rename**: `n4m_*` → `n4m_*` mechanical pass. Until then,
+  pls4all's flat sources still use `n4m_*` symbols.
 - **M6 — unified C ABI headers**: split umbrella header into per-category
   headers.
 - **M7 — unified parity gate**: wires both halves into one runner.

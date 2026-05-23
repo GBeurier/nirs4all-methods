@@ -63,8 +63,8 @@ The benefits stack:
 └────────────────────────┬─────────────────────────────────────┘
                          │
 ┌────────────────────────▼─────────────────────────────────────┐
-│  Tier-0 — C ABI (libp4a)                                     │
-│    p4a_*  symbols  (96 of them, frozen at ABI 1.x)           │
+│  Tier-0 — C ABI (libn4m)                                     │
+│    n4m_*  symbols  (96 of them, frozen at ABI 1.x)           │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -86,7 +86,7 @@ Python or R.
   a per-PR ABI symbol gate. See [abi/reference](../abi/reference.md).
 - **A `.n4a` bundle format** — content-addressed serialisation of a
   fitted model, portable across languages.
-- **Acceleration matrix** — five libp4a builds (`ref`, `blas`, `omp`,
+- **Acceleration matrix** — five libn4m builds (`ref`, `blas`, `omp`,
   `blas+omp`, `cuda`) so every cell can also serve as a benchmark of
   the acceleration stack itself.
 

@@ -1,22 +1,22 @@
 cmake_minimum_required(VERSION 3.21)
 
 # ============================================================================
-# Single source of truth: cpp/include/pls4all/p4a_version.h
+# Single source of truth: cpp/include/pls4all/n4m_version.h
 # ============================================================================
-# Both the project semver (P4A_PROJECT_VERSION_*) and the ABI semver
-# (P4A_ABI_VERSION_*) live in p4a_version.h. We parse the header at configure
+# Both the project semver (N4M_PROJECT_VERSION_*) and the ABI semver
+# (N4M_ABI_VERSION_*) live in n4m_version.h. We parse the header at configure
 # time so:
-#   - PROJECT_VERSION is derived from P4A_PROJECT_VERSION_*  (used for
+#   - PROJECT_VERSION is derived from N4M_PROJECT_VERSION_*  (used for
 #     find_package(), packaging, install metadata).
 #   - The shared library SONAME (cpp/src/CMakeLists.txt) is derived from
 #     N4M_ABI_VERSION_MAJOR — independent of project semver so the ABI can
 #     stay at 1.x while project moves from 0.x to 1.x.
 #
-# scripts/bump_version.sh edits p4a_version.h and rewrites every downstream
+# scripts/bump_version.sh edits n4m_version.h and rewrites every downstream
 # manifest. The version-sync.yml workflow fails any PR where a manifest has
 # drifted from the header.
 
-set(_p4a_version_h "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/pls4all/p4a_version.h")
+set(_p4a_version_h "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/pls4all/n4m_version.h")
 if(NOT EXISTS "${_p4a_version_h}")
     message(FATAL_ERROR
         "pls4all: canonical version header not found at ${_p4a_version_h}")
@@ -32,7 +32,7 @@ foreach(_macro IN ITEMS
     if(NOT _p4a_version_h_content MATCHES
             "(^|\n)[ \t]*#[ \t]*define[ \t]+${_macro}[ \t]+([0-9]+)")
         message(FATAL_ERROR
-            "pls4all: ${_macro} not found in p4a_version.h — header drift?")
+            "pls4all: ${_macro} not found in n4m_version.h — header drift?")
     endif()
     set(${_macro} "${CMAKE_MATCH_2}")
 endforeach()
@@ -47,7 +47,7 @@ set(N4M_PROJECT_VERSION
 if(NOT _p4a_version_h_content MATCHES
         "(^|\n)[ \t]*#[ \t]*define[ \t]+N4M_PROJECT_VERSION_STRING[ \t]+\"([^\"]+)\"")
     message(FATAL_ERROR
-        "pls4all: N4M_PROJECT_VERSION_STRING not found in p4a_version.h")
+        "pls4all: N4M_PROJECT_VERSION_STRING not found in n4m_version.h")
 endif()
 if(NOT "${CMAKE_MATCH_2}" STREQUAL "${N4M_PROJECT_VERSION}")
     message(FATAL_ERROR
@@ -73,7 +73,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Hidden by default — only P4A_API-decorated symbols escape pls4all_c.
+# Hidden by default — only N4M_API-decorated symbols escape n4m_c.
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_C_VISIBILITY_PRESET   hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
@@ -138,7 +138,7 @@ if(PLS4ALL_BUILD_CLI AND EXISTS "${PROJECT_SOURCE_DIR}/cpp/cli/CMakeLists.txt")
     add_subdirectory(cpp/cli)
 endif()
 
-# Add this so install rules below detect pls4all_cli.
+# Add this so install rules below detect n4m_cli.
 # (Empty placeholder kept to preserve commit context.)
 if(PLS4ALL_BUILD_EXAMPLES AND EXISTS "${PROJECT_SOURCE_DIR}/examples/c/CMakeLists.txt")
     add_subdirectory(examples/c)
@@ -161,19 +161,19 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 set(_pls4all_install_targets "")
-if(PLS4ALL_BUILD_SHARED AND TARGET pls4all_c)
+if(PLS4ALL_BUILD_SHARED AND TARGET n4m_c)
     if(TARGET n4m_c)
         list(APPEND _pls4all_install_targets n4m_c)
     endif()
 endif()
-if(PLS4ALL_BUILD_STATIC AND TARGET pls4all_c_static)
-    list(APPEND _pls4all_install_targets pls4all_c_static)
+if(PLS4ALL_BUILD_STATIC AND TARGET n4m_c_static)
+    list(APPEND _pls4all_install_targets n4m_c_static)
 endif()
-if(PLS4ALL_BUILD_CLI AND TARGET pls4all_cli)
-    list(APPEND _pls4all_install_targets pls4all_cli)
+if(PLS4ALL_BUILD_CLI AND TARGET n4m_cli)
+    list(APPEND _pls4all_install_targets n4m_cli)
 endif()
-# pls4all_core is an OBJECT library, so it is consumed via $<TARGET_OBJECTS:...>
-# inside pls4all_c / pls4all_c_static and never installed on its own.
+# n4m_core is an OBJECT library, so it is consumed via $<TARGET_OBJECTS:...>
+# inside n4m_c / n4m_c_static and never installed on its own.
 
 if(_pls4all_install_targets)
     install(TARGETS ${_pls4all_install_targets}
@@ -187,8 +187,8 @@ if(_pls4all_install_targets)
             FILES_MATCHING PATTERN "*.h")
 
     # Generated visibility macro header — installed alongside the source headers
-    # so consumers find it under <prefix>/include/pls4all/p4a_export.h.
-    install(FILES ${PROJECT_BINARY_DIR}/generated/pls4all/p4a_export.h
+    # so consumers find it under <prefix>/include/pls4all/n4m_export.h.
+    install(FILES ${PROJECT_BINARY_DIR}/generated/pls4all/n4m_export.h
             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/pls4all)
 
     configure_package_config_file(

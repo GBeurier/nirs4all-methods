@@ -117,10 +117,10 @@ candidates with install instructions.
 | 14 | OPLS-DA                | `pyopls 20.3` (transformer-only — not a full DA classifier) | **PRIMARY: `ropls::opls(y=factor, predI=k, orthoI=m)`** | — | HIGH (R) | Same: prefer Bioc. |
 | 15 | OPLS-DA (multiclass)   | `pyopls` (loops one-vs-rest) | **PRIMARY: `ropls::opls`** with one-vs-rest loop | — | MED | One-vs-rest stacking convention may diverge between implementations. |
 | 16 | PCR                    | `sklearn.decomposition.PCA + LinearRegression` (or `sklearn.pipeline.Pipeline`) | `pls::pcr` | — | HIGH | sklearn direct. |
-| 17 | MB-PLS  (ABI gap → being added) | **PRIMARY: `nirs4all.operators.models.sklearn.mbpls.MBPLS`** (in-tree, full reimpl); also `mbpls 1.0.4` (Baum & Vermue) | `multiblock 0.8.10` (CRAN; `mbpls`); `mdatools` MB helpers | — | HIGH | Adding `p4a_mb_pls_fit` ABI shim in Step 3. (codex catch: install only `mbpls`, not `Multiblock-PLS` — namespace clash.) |
-| 18 | LW-PLS  (ABI gap → being added) | **PRIMARY: `nirs4all.operators.models.sklearn.lwpls.LWPLS`** (in-tree, full reimpl) | `plsVarSel::LW` (loadings-weights, related but not identical) | Octave libPLS `lwpls.m` | HIGH | Adding `p4a_lw_pls_fit` ABI shim in Step 3. |
-| 19 | PLS-LDA  (ABI gap → being added) | sklearn `PLSRegression + LDA` pipeline | `plsVarSel::lda_from_pls`, `lda_from_pls_cv` | — | HIGH | Adding `p4a_pls_lda_fit` ABI shim in Step 3. |
-| 20 | PLS-Logistic (ABI gap → being added) | sklearn `LogisticRegression` on PLS scores | `pls::plsr` + `stats::glm` | — | HIGH | Adding `p4a_pls_logistic_fit` ABI shim in Step 3. |
+| 17 | MB-PLS  (ABI gap → being added) | **PRIMARY: `nirs4all.operators.models.sklearn.mbpls.MBPLS`** (in-tree, full reimpl); also `mbpls 1.0.4` (Baum & Vermue) | `multiblock 0.8.10` (CRAN; `mbpls`); `mdatools` MB helpers | — | HIGH | Adding `n4m_mb_pls_fit` ABI shim in Step 3. (codex catch: install only `mbpls`, not `Multiblock-PLS` — namespace clash.) |
+| 18 | LW-PLS  (ABI gap → being added) | **PRIMARY: `nirs4all.operators.models.sklearn.lwpls.LWPLS`** (in-tree, full reimpl) | `plsVarSel::LW` (loadings-weights, related but not identical) | Octave libPLS `lwpls.m` | HIGH | Adding `n4m_lw_pls_fit` ABI shim in Step 3. |
+| 19 | PLS-LDA  (ABI gap → being added) | sklearn `PLSRegression + LDA` pipeline | `plsVarSel::lda_from_pls`, `lda_from_pls_cv` | — | HIGH | Adding `n4m_pls_lda_fit` ABI shim in Step 3. |
+| 20 | PLS-Logistic (ABI gap → being added) | sklearn `LogisticRegression` on PLS scores | `pls::plsr` + `stats::glm` | — | HIGH | Adding `n4m_pls_logistic_fit` ABI shim in Step 3. |
 
 ### §3 Existing extra-PLS public-fit (already in registry)
 
@@ -137,7 +137,7 @@ These already have entries; library upgrades to consider:
 | 27 | `ridge_pls` | sklearn | already covered. |
 | 28 | `continuum_regression` | paper-only | **R `JICO::continuum`** (CRAN — Hsu/Park/Yang 2024 implementation of Stone-Brooks 1990 continuum regression). Codex catch: `chemometrics::cr_method` does NOT exist. JICO is the right reference. |
 | 29 | `n_pls` | paper-only | R `multiway` ships `parafac` + `tucker` (PARAFAC isn't N-PLS but adjacent); R `npls` (NOT on CRAN — Bro's Toolbox is MATLAB-only). MATLAB nway toolbox via Octave + `oct2py` is the canonical reference. |
-| 30 | `kernel_pls_*` (codex catch: `p4a_kernel_pls_fit` supports `kernel_type ∈ {0,1,2,3}` = LINEAR / RBF / POLYNOMIAL / SIGMOID — wire 4 sub-cells, not just RBF) | paper-only | LINEAR: `pls::kernelpls.fit`. RBF/POLY/SIGMOID: `kernlab::kernelMatrix(rbfdot/polydot/tanhdot)` Gram + `pls::plsr` on K. Python `ikpls 4.0.1` covers linear KPLS only. |
+| 30 | `kernel_pls_*` (codex catch: `n4m_kernel_pls_fit` supports `kernel_type ∈ {0,1,2,3}` = LINEAR / RBF / POLYNOMIAL / SIGMOID — wire 4 sub-cells, not just RBF) | paper-only | LINEAR: `pls::kernelpls.fit`. RBF/POLY/SIGMOID: `kernlab::kernelMatrix(rbfdot/polydot/tanhdot)` Gram + `pls::plsr` on K. Python `ikpls 4.0.1` covers linear KPLS only. |
 | 31 | `o2pls` | R `OmicsPLS` | already covered (qualitative). |
 | 32 | `approximate_press` | paper-only | R `pls::plsr(validation='LOO')` returns true LOO-PRESS, useful as qualitative cross-ref. |
 | 33 | `sparse_pls_da` | R `spls::splsda` | already covered. |
@@ -200,8 +200,8 @@ strict-linear AOM-only operators (FCK, Whittaker, finite-difference) the
 ### §6 Variable selection methods
 
 These were NOT exposed via the C ABI. **User decision (2026-05-16): add
-the ABI shims now (Option A).** Plan: one `p4a_<selector>_select` symbol
-per selector returning the existing generic `p4a_method_result_t**`,
+the ABI shims now (Option A).** Plan: one `n4m_<selector>_select` symbol
+per selector returning the existing generic `n4m_method_result_t**`,
 which already has `_get_double_matrix` / `_get_int_vector` /
 `_get_scalar` accessors keyed by string. So the cost is **23 new ABI
 symbols** + ~5 new result keys per selector — not 180 — because the

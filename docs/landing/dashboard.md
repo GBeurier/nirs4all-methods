@@ -42,7 +42,7 @@ synthetic `reference` column is pinned before those backend bands:
 | Group key | Display label | What's in it |
 |---|---|---|
 | `reference` | canonical reference          | Synthetic provenance column naming the oracle for each method. |
-| `cpp`     | pls4all · C++ (libp4a)        | `pls4all.cpp.native`, `pls4all.cpp.blas`, `pls4all.cpp.omp`, `pls4all.cpp.blas+omp`, `pls4all.cpp.cuda` |
+| `cpp`     | pls4all · C++ (libn4m)        | `pls4all.cpp.native`, `pls4all.cpp.blas`, `pls4all.cpp.omp`, `pls4all.cpp.blas+omp`, `pls4all.cpp.cuda` |
 | `python`  | pls4all · Python               | `pls4all.python` (tier-1 ctypes), `pls4all.sklearn` (tier-2 BaseEstimator), `pls4all.registry` (canonical entry point) |
 | `r`       | pls4all · R                    | `pls4all.R` (tier-1 dispatcher), `pls4all.R.formula` (tier-2 formula + S3), `pls4all.R.pls_compat`, `pls4all.R.mdatools_compat` |
 | `matlab`  | pls4all · MATLAB/Octave        | `pls4all.matlab` (tier-1 MEX dispatcher), `pls4all.matlab.classdef` (tier-2 classdef) |
@@ -51,7 +51,7 @@ synthetic `reference` column is pinned before those backend bands:
 | `ext-ml`  | external · MATLAB/Octave       | `plsregress`, registry-declared `ref.matlab_*` libs |
 
 The C++ tier suffix (`native`, `blas`, `omp`, `blas+omp`, `cuda`) maps
-1:1 to the libp4a build flags. Current binding-parity calculations use
+1:1 to the libn4m build flags. Current binding-parity calculations use
 the one-thread native baseline selected by the orchestrator, currently
 `cpp` from the `blas-omp` build when present. `cuda` only appears when
 CUDA was available at build time.
@@ -78,7 +78,7 @@ The toolbar exposes the following filters:
     Raw low-level bindings (ctypes, R dispatcher, MEX) are excluded —
     this is the apples-to-apples view.
   - `pls4all` — all pls4all bindings, no externals.
-  - `cpp-tiers` — the five libp4a builds side-by-side.
+  - `cpp-tiers` — the five libn4m builds side-by-side.
   - `externals` — only the reference libraries.
   - `thread-sweep` — a tight subset suitable for comparing 1 vs 3 vs
     10 thread scaling.

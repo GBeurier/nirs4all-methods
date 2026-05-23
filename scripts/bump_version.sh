@@ -3,7 +3,7 @@
 #
 # bump_version.sh — pls4all version source-of-truth syncer.
 #
-# Reads the canonical project version from cpp/include/pls4all/p4a_version.h
+# Reads the canonical project version from cpp/include/pls4all/n4m_version.h
 # and propagates it to every downstream manifest.
 #
 # Usage:
@@ -12,8 +12,8 @@
 #   scripts/bump_version.sh --bump X.Y.Z   # rewrite header to X.Y.Z then sync
 #   scripts/bump_version.sh --help
 #
-# The script targets the **project semver** only (P4A_PROJECT_VERSION_*). The
-# ABI semver (P4A_ABI_VERSION_*) is bumped manually with a dedicated commit
+# The script targets the **project semver** only (N4M_PROJECT_VERSION_*). The
+# ABI semver (N4M_ABI_VERSION_*) is bumped manually with a dedicated commit
 # whenever the C ABI surface changes — those two semvers are intentionally
 # independent (see CMakeLists.txt comments).
 #
@@ -23,7 +23,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-HEADER="${ROOT}/cpp/include/pls4all/p4a_version.h"
+HEADER="${ROOT}/cpp/include/pls4all/n4m_version.h"
 
 if [[ ! -f "${HEADER}" ]]; then
     echo "error: canonical version header not found at ${HEADER}" >&2
@@ -100,33 +100,33 @@ if [[ "${MODE}" == "bump" ]]; then
     IFS='.' read -r NV_MAJOR NV_MINOR NV_PATCH <<<"${NEW_VERSION}"
 
     sed -i -E \
-        -e "s/^(#define[[:space:]]+P4A_PROJECT_VERSION_MAJOR[[:space:]]+)[0-9]+/\1${NV_MAJOR}/" \
-        -e "s/^(#define[[:space:]]+P4A_PROJECT_VERSION_MINOR[[:space:]]+)[0-9]+/\1${NV_MINOR}/" \
-        -e "s/^(#define[[:space:]]+P4A_PROJECT_VERSION_PATCH[[:space:]]+)[0-9]+/\1${NV_PATCH}/" \
-        -e "s/^(#define[[:space:]]+P4A_PROJECT_VERSION_STRING[[:space:]]+\")[^\"]+(\".*)$/\1${NEW_VERSION}\2/" \
+        -e "s/^(#define[[:space:]]+N4M_PROJECT_VERSION_MAJOR[[:space:]]+)[0-9]+/\1${NV_MAJOR}/" \
+        -e "s/^(#define[[:space:]]+N4M_PROJECT_VERSION_MINOR[[:space:]]+)[0-9]+/\1${NV_MINOR}/" \
+        -e "s/^(#define[[:space:]]+N4M_PROJECT_VERSION_PATCH[[:space:]]+)[0-9]+/\1${NV_PATCH}/" \
+        -e "s/^(#define[[:space:]]+N4M_PROJECT_VERSION_STRING[[:space:]]+\")[^\"]+(\".*)$/\1${NEW_VERSION}\2/" \
         "${HEADER}"
-    echo "  bumped p4a_version.h to ${NEW_VERSION}"
+    echo "  bumped n4m_version.h to ${NEW_VERSION}"
     MODE="sync"
 fi
 
 # ---------------------------------------------------------------------------
 # 4. Re-read header (post --bump if any) and cross-check internal consistency
 # ---------------------------------------------------------------------------
-PMAJOR=$(read_header_macro P4A_PROJECT_VERSION_MAJOR)
-PMINOR=$(read_header_macro P4A_PROJECT_VERSION_MINOR)
-PPATCH=$(read_header_macro P4A_PROJECT_VERSION_PATCH)
+PMAJOR=$(read_header_macro N4M_PROJECT_VERSION_MAJOR)
+PMINOR=$(read_header_macro N4M_PROJECT_VERSION_MINOR)
+PPATCH=$(read_header_macro N4M_PROJECT_VERSION_PATCH)
 VERSION="${PMAJOR}.${PMINOR}.${PPATCH}"
 
-VSTRING=$(read_header_string P4A_PROJECT_VERSION_STRING)
+VSTRING=$(read_header_string N4M_PROJECT_VERSION_STRING)
 if [[ "${VSTRING}" != "${VERSION}" ]]; then
-    echo "error: P4A_PROJECT_VERSION_STRING (\"${VSTRING}\") disagrees with" \
+    echo "error: N4M_PROJECT_VERSION_STRING (\"${VSTRING}\") disagrees with" \
          "numeric macros (\"${VERSION}\") in ${HEADER}" >&2
     exit 2
 fi
 
-AMAJOR=$(read_header_macro P4A_ABI_VERSION_MAJOR)
-AMINOR=$(read_header_macro P4A_ABI_VERSION_MINOR)
-APATCH=$(read_header_macro P4A_ABI_VERSION_PATCH)
+AMAJOR=$(read_header_macro N4M_ABI_VERSION_MAJOR)
+AMINOR=$(read_header_macro N4M_ABI_VERSION_MINOR)
+APATCH=$(read_header_macro N4M_ABI_VERSION_PATCH)
 ABI_VERSION="${AMAJOR}.${AMINOR}.${APATCH}"
 
 if [[ "${MODE}" == "check" ]]; then
@@ -337,7 +337,7 @@ update_with_sed \
 # R vendored C++ header: must be byte-for-byte in sync with the canonical
 # version header before building the CRAN source package.
 sync_r_vendored_version_header() {
-    local rel="bindings/r/pls4all/src/libp4a/include/pls4all/p4a_version.h"
+    local rel="bindings/r/pls4all/src/libn4m/include/pls4all/n4m_version.h"
     local abs="${ROOT}/${rel}"
     if [[ ! -f "${abs}" ]]; then
         echo "  DRIFT: ${rel} missing (expected vendored header)" >&2
@@ -347,7 +347,7 @@ sync_r_vendored_version_header() {
     fi
     if [[ "${MODE}" == "check" ]]; then
         if ! cmp -s "${HEADER}" "${abs}"; then
-            echo "  DRIFT: ${rel} differs from cpp/include/pls4all/p4a_version.h" >&2
+            echo "  DRIFT: ${rel} differs from cpp/include/pls4all/n4m_version.h" >&2
             DRIFTED+=("${rel}")
             EXIT_CODE=1
         fi
@@ -505,10 +505,10 @@ update_with_sed \
 # ---------------------------------------------------------------------------
 if [[ "${MODE}" == "check" ]]; then
     if [[ ${EXIT_CODE} -eq 0 ]]; then
-        echo "  OK: every manifest is in sync with p4a_version.h (${VERSION})"
+        echo "  OK: every manifest is in sync with n4m_version.h (${VERSION})"
     else
         echo "" >&2
-        echo "FAIL: ${#DRIFTED[@]} manifest(s) drifted from p4a_version.h." >&2
+        echo "FAIL: ${#DRIFTED[@]} manifest(s) drifted from n4m_version.h." >&2
         echo "      Run scripts/bump_version.sh to re-sync." >&2
     fi
 fi

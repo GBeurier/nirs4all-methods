@@ -1,5 +1,5 @@
-# cpp/src/CMakeLists.txt — pls4all_core (internal OBJECT) + pls4all_c (C ABI
-# shared) + pls4all_c_static (C ABI static, for embedders).
+# cpp/src/CMakeLists.txt — n4m_core (internal OBJECT) + n4m_c (C ABI
+# shared) + n4m_c_static (C ABI static, for embedders).
 #
 # At PR 2 (cmake-skeleton) both targets compile from placeholder TUs only;
 # PRs 3–7 replace the placeholders with the real version / status / context /
@@ -10,18 +10,18 @@
 # Generated visibility macro header
 # ---------------------------------------------------------------------------
 configure_file(
-    ${PROJECT_SOURCE_DIR}/cpp/include/pls4all/p4a_export.h.in
-    ${PROJECT_BINARY_DIR}/generated/pls4all/p4a_export.h
+    ${PROJECT_SOURCE_DIR}/cpp/include/pls4all/n4m_export.h.in
+    ${PROJECT_BINARY_DIR}/generated/pls4all/n4m_export.h
     @ONLY)
 
 # ---------------------------------------------------------------------------
-# pls4all_core — internal OBJECT library. Embedded inside pls4all_c and
-# pls4all_c_static via $<TARGET_OBJECTS:pls4all_core>. Never installed.
+# n4m_core — internal OBJECT library. Embedded inside n4m_c and
+# n4m_c_static via $<TARGET_OBJECTS:n4m_core>. Never installed.
 # Object libraries solve the "static lib that depends on an internal static
 # lib" install-set problem by simply not being archive files in their own
 # right.
 # ---------------------------------------------------------------------------
-add_library(pls4all_core OBJECT
+add_library(n4m_core OBJECT
     core/aom_operators.cpp
     core/aom_preprocessing.cpp
     core/aom_selection.cpp
@@ -76,17 +76,17 @@ add_library(pls4all_core OBJECT
     core/vip_spa_selection.cpp
     core/vissa_selection.cpp)
 if(PLS4ALL_WITH_CUDA)
-    target_sources(pls4all_core PRIVATE core/cuda_dispatch.cpp)
+    target_sources(n4m_core PRIVATE core/cuda_dispatch.cpp)
 endif()
-target_include_directories(pls4all_core
+target_include_directories(n4m_core
     PUBLIC  ${PROJECT_SOURCE_DIR}/cpp/include
             ${PROJECT_BINARY_DIR}/generated
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_features(pls4all_core PUBLIC cxx_std_17)
-target_compile_definitions(pls4all_core PRIVATE PLS4ALL_BUILDING_CORE=1)
-set_target_properties(pls4all_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_features(n4m_core PUBLIC cxx_std_17)
+target_compile_definitions(n4m_core PRIVATE PLS4ALL_BUILDING_CORE=1)
+set_target_properties(n4m_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 if(PLS4ALL_ENABLE_FAULT_INJECTION)
-    target_compile_definitions(pls4all_core PUBLIC PLS4ALL_ENABLE_FAULT_INJECTION=1)
+    target_compile_definitions(n4m_core PUBLIC PLS4ALL_ENABLE_FAULT_INJECTION=1)
 endif()
 set(_pls4all_sanitizer_build OFF)
 if(PLS4ALL_ENABLE_ASAN OR PLS4ALL_ENABLE_UBSAN OR PLS4ALL_ENABLE_TSAN)
@@ -94,11 +94,11 @@ if(PLS4ALL_ENABLE_ASAN OR PLS4ALL_ENABLE_UBSAN OR PLS4ALL_ENABLE_TSAN)
 endif()
 # Dead-code stripping in non-Debug configs (multi-config-safe).
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-    target_compile_options(pls4all_core PRIVATE
+    target_compile_options(n4m_core PRIVATE
         $<$<NOT:$<CONFIG:Debug>>:-ffunction-sections>
         $<$<NOT:$<CONFIG:Debug>>:-fdata-sections>)
 endif()
-pls4all_add_warnings(pls4all_core)
+pls4all_add_warnings(n4m_core)
 
 # ---------------------------------------------------------------------------
 # Optional BLAS backend (Phase 43). Default OFF — when ON we route the hot
@@ -136,15 +136,15 @@ if(PLS4ALL_WITH_BLAS)
             "openblas-devel on RHEL/Fedora, or Apple Accelerate on macOS) "
             "or pass -DBLAS_INCLUDE_DIRS=/path/to/include.")
     endif()
-    target_compile_definitions(pls4all_core PRIVATE N4M_USE_BLAS=1)
+    target_compile_definitions(n4m_core PRIVATE N4M_USE_BLAS=1)
     if(BLAS_LINKER_FLAGS)
-        target_link_options(pls4all_core PRIVATE ${BLAS_LINKER_FLAGS})
+        target_link_options(n4m_core PRIVATE ${BLAS_LINKER_FLAGS})
     endif()
     if(BLAS_INCLUDE_DIRS)
-        target_include_directories(pls4all_core PRIVATE ${BLAS_INCLUDE_DIRS})
+        target_include_directories(n4m_core PRIVATE ${BLAS_INCLUDE_DIRS})
     endif()
     # The actual link to ${BLAS_LIBRARIES} happens inside
-    # pls4all_apply_c_target() for pls4all_c and pls4all_c_static.
+    # pls4all_apply_c_target() for n4m_c and n4m_c_static.
     # Linking it here on the OBJECT library is inert because PRIVATE
     # link deps do not propagate through $<TARGET_OBJECTS:>.
     message(STATUS "  BLAS backend      : ON  (${BLAS_LIBRARIES})")
@@ -167,8 +167,8 @@ endif()
 if(PLS4ALL_WITH_OPENMP)
     # OpenMP::OpenMP_CXX is created by find_package(OpenMP) in the
     # top-level CMakeLists.txt so both cpp/src/ and cpp/tests/ see it.
-    target_compile_definitions(pls4all_core PRIVATE N4M_USE_OPENMP=1)
-    target_link_libraries(pls4all_core PUBLIC OpenMP::OpenMP_CXX)
+    target_compile_definitions(n4m_core PRIVATE N4M_USE_OPENMP=1)
+    target_link_libraries(n4m_core PUBLIC OpenMP::OpenMP_CXX)
     message(STATUS "  OpenMP backend    : ON  (${OpenMP_CXX_FLAGS})")
     if(PLS4ALL_WITH_BLAS)
         message(WARNING
@@ -202,8 +202,8 @@ endif()
 # both report unavailability cleanly.
 # ---------------------------------------------------------------------------
 if(PLS4ALL_WITH_CUDA)
-    target_compile_definitions(pls4all_core PRIVATE N4M_USE_CUDA=1)
-    target_include_directories(pls4all_core PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
+    target_compile_definitions(n4m_core PRIVATE N4M_USE_CUDA=1)
+    target_include_directories(n4m_core PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
     message(STATUS "  CUDA backend      : ON  (toolkit ${CUDAToolkit_VERSION})")
     if(PLS4ALL_WITH_BLAS)
         message(WARNING
@@ -217,8 +217,8 @@ else()
 endif()
 
 # ---------------------------------------------------------------------------
-# pls4all_c — public C ABI shared library (libn4m.{so,dll,dylib}).
-# pls4all_c_static is the same surface, statically linked.
+# n4m_c — public C ABI shared library (libn4m.{so,dll,dylib}).
+# n4m_c_static is the same surface, statically linked.
 # ---------------------------------------------------------------------------
 set(_pls4all_c_sources
     c_api/c_api_config.cpp
@@ -231,10 +231,10 @@ set(_pls4all_c_sources
     c_api/c_api_method_result.cpp)
 
 function(pls4all_apply_c_target target)
-    # Embed all pls4all_core objects directly into the C-API target so that
-    # neither pls4all_c nor pls4all_c_static needs pls4all_core at install /
+    # Embed all n4m_core objects directly into the C-API target so that
+    # neither n4m_c nor n4m_c_static needs n4m_core at install /
     # link time on the consumer side.
-    target_sources(${target} PRIVATE $<TARGET_OBJECTS:pls4all_core>)
+    target_sources(${target} PRIVATE $<TARGET_OBJECTS:n4m_core>)
     target_include_directories(${target}
         PUBLIC  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/cpp/include>
                 $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/generated>
@@ -246,7 +246,7 @@ function(pls4all_apply_c_target target)
             $<$<NOT:$<CONFIG:Debug>>:-fdata-sections>)
     endif()
     if(PLS4ALL_WITH_BLAS)
-        # Mirrors the define applied to pls4all_core, so the C-API
+        # Mirrors the define applied to n4m_core, so the C-API
         # availability flag.
         target_compile_definitions(${target} PRIVATE N4M_USE_BLAS=1)
         # OBJECT libraries do not propagate PRIVATE link deps through
@@ -286,10 +286,10 @@ if(PLS4ALL_BUILD_N4M AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/n4m_targets.cmake")
 endif()
 
 if(PLS4ALL_BUILD_SHARED)
-    # pls4all_c is now an alias for n4m_c — single unified libn4m.so output.
-    # Historical reasons for the separate pls4all_c target are addressed by
+    # n4m_c is now an alias for n4m_c — single unified libn4m.so output.
+    # Historical reasons for the separate n4m_c target are addressed by
     # the M5+M6 ABI rename which collapsed both halves under n4m_*.
-    add_library(pls4all_c ALIAS n4m_c)
+    add_library(n4m_c ALIAS n4m_c)
 endif()
 
 

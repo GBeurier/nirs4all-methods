@@ -3,8 +3,8 @@
 include(CMakeFindDependencyMacro)
 
 # pls4all has no mandatory dependencies. Optional accelerated backends are
-# detected at runtime via p4a_context_set_backend(); CMake consumers never
-# need to find anything else to use libp4a.
+# detected at runtime via n4m_context_set_backend(); CMake consumers never
+# need to find anything else to use libn4m.
 
 include("${CMAKE_CURRENT_LIST_DIR}/Pls4allTargets.cmake")
 

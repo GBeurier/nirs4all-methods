@@ -111,7 +111,7 @@ file(GLOB _PLS_C_API_CPP
     CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/cpp/src/c_api/*.cpp"
 )
-add_library(n4m_c SHARED ${_N4M_C_API_CPP} ${_PLS_C_API_CPP} ${_N4M_LINK_OBJS} $<TARGET_OBJECTS:pls4all_core>)
+add_library(n4m_c SHARED ${_N4M_C_API_CPP} ${_PLS_C_API_CPP} ${_N4M_LINK_OBJS} $<TARGET_OBJECTS:n4m_core>)
 target_include_directories(n4m_c
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/cpp/include>
@@ -143,7 +143,7 @@ if(_N4M_FITPACK_ENABLED)
     target_link_libraries(n4m_c PRIVATE ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
 endif()
 
-# pls4all_core is an OBJECT library, so its transitive link-deps (OpenMP,
+# n4m_core is an OBJECT library, so its transitive link-deps (OpenMP,
 # BLAS) don't propagate via $<TARGET_OBJECTS:>. Re-link them explicitly so
 # the n4m_c shared library resolves omp_/cblas_ symbols at load time.
 if(PLS4ALL_WITH_OPENMP AND TARGET OpenMP::OpenMP_CXX)

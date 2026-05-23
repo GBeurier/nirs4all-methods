@@ -6,13 +6,13 @@ Branch: `release/m2-cran`.
 
 Selector parity depends on two deterministic inputs:
 
-1. the `p4a_validation_plan_t*` used for cross-validated scoring;
+1. the `n4m_validation_plan_t*` used for cross-validated scoring;
 2. the explicit selector RNG seed passed through the method parameters.
 
 The C++ kernel does not create or shuffle validation folds internally.
 Every selector that scores candidates by cross-validation consumes the
 folds exactly as supplied by the binding through
-`p4a_validation_plan_add_fold`.
+`n4m_validation_plan_add_fold`.
 
 The remaining selector RNGs are seeded explicitly from the registry cell
 parameters. No selector binding should depend on the host language RNG.
@@ -40,7 +40,7 @@ R tier 1, and MATLAB tier 1 build the same plan.
   compatibility but no longer changes fold composition.
 - `bindings/r/pls4all/src/r_dispatch.c::make_default_plan`
   uses the same floor-sized 3-fold split.
-- `bindings/matlab/mex/p4a_method_fit_mex.c::make_default_plan`
+- `bindings/matlab/mex/n4m_method_fit_mex.c::make_default_plan`
   uses the same floor-sized 3-fold split.
 
 R and MATLAB selector dispatch call sites now request `make_default_plan(n, 3)`.

@@ -39,7 +39,7 @@ Note: the prior review file contains **10 critical, 15 important, 6 minor** acti
 **Critical**
 - resolved — Phase 1 model ABI surface added: §4.7, §4.10.
 - partial — serialization functions added, but §4.8 still lacks an ABI-version field/constant in the serialized format.
-- partial — SIMPLS moved to solver, but §4.5 keeps `P4A_ALGO_KERNEL_PLS` and references nonexistent `KERNEL_RBF`/future kernel setters.
+- partial — SIMPLS moved to solver, but §4.5 keeps `N4M_ALGO_KERNEL_PLS` and references nonexistent `KERNEL_RBF`/future kernel setters.
 - resolved — AOM/POP composable bank/gating surface added: §4.5, §4.6.
 - resolved — preprocessing pipeline fit/transform ABI added: §4.3, §4.5, §4.6.
 - resolved — blanket `noexcept`/catch rule added: §4.0, §7.1.
@@ -57,7 +57,7 @@ Note: the prior review file contains **10 critical, 15 important, 6 minor** acti
 - partial — `parity-gate.yml` is required, but §5.8 says "after PR 15" while §9 creates it in PR 17.
 - resolved — fuzzing targets added; serialization fuzzer explicitly deferred to Phase 1: §7.3.
 - resolved — TSAN + multi-context stress + same-context policy added: §5.2, §7.2, §8.
-- partial — fork test added, but async-signal policy contradicts itself: §7.2 says `last_error` is safe-ish; §7.5 says nothing in `p4a_*` is safe.
+- partial — fork test added, but async-signal policy contradicts itself: §7.2 says `last_error` is safe-ish; §7.5 says nothing in `n4m_*` is safe.
 - partial — NaN/Inf policy still not explicit for algorithm inputs; §7.5 defers data behavior to Phase 1 and says "NaN/Inf inputs to matrix-view setters", which is not meaningful for integer shape/stride setters.
 - partial — §6.4 paragraph is correct, but table rows omit intercept/means/scales and one cross-algorithm row still mentions W/P/Q/R sign-invariance.
 - resolved — tolerances relaxed and AOM marked TBD: §6.4.
@@ -69,13 +69,13 @@ Note: the prior review file contains **10 critical, 15 important, 6 minor** acti
 - resolved — `PLS4ALL_BUILD_SHARED` now guards shared target/install: §3.1, §3.3.
 - resolved — CLI install guarded: §3.1.
 - resolved — `OPLS` names fixed: §4.5.
-- resolved — `P4A_SOLVER_KERNEL_ALGORITHM` rename done: §4.5.
+- resolved — `N4M_SOLVER_KERNEL_ALGORITHM` rename done: §4.5.
 - resolved — operations notes moved out of technical risks: §10, §11.
 - partial — doctest has tag + SHA-256, but §11 still does not name the source URL explicitly.
 
 **New Issues Introduced**
-- §3.1/§3.3: generated `p4a_export.h` is used from `${CMAKE_BINARY_DIR}/generated`, but install only copies `cpp/include/pls4all`; installed headers will miss `p4a_export.h`.
-- §3.3: `pls4all_c_static` lacks the generated include directory, unlike `pls4all_c`; static build can fail to include generated `p4a_export.h`.
+- §3.1/§3.3: generated `n4m_export.h` is used from `${CMAKE_BINARY_DIR}/generated`, but install only copies `cpp/include/pls4all`; installed headers will miss `n4m_export.h`.
+- §3.3: `n4m_c_static` lacks the generated include directory, unlike `n4m_c`; static build can fail to include generated `n4m_export.h`.
 - §4.5: "Getters mirror setters identically; signatures elided" leaves public ABI symbols unspecified despite §4 saying Phase 0 declares the surface.
 - §4.5: "every PLS knob ... declared NOW" conflicts with "kernel ML solvers ... declared by ... setters in Phase 4".
 - §4.2/§7.5/§8: `_COUNT` is removed, but docs still reference `_COUNT` stability notes; confusing and stale.
@@ -87,21 +87,21 @@ All 16 items addressed in revision 3. Per the project's review rule, no items we
 
 | # | Concern | Resolution in rev 3 |
 |---|---------|---------------------|
-| 1 | §4.8 missing ABI version in serialized format | Added `p4a_serialization_inspect` function + ABI-version-in-buffer commentary. |
-| 2 | §4.5 `P4A_ALGO_KERNEL_PLS` references nonexistent future setters | Removed `KERNEL_PLS` from `p4a_algorithm_t`; deferred kernel-type surface to Phase 4 explicitly. |
+| 1 | §4.8 missing ABI version in serialized format | Added `n4m_serialization_inspect` function + ABI-version-in-buffer commentary. |
+| 2 | §4.5 `N4M_ALGO_KERNEL_PLS` references nonexistent future setters | Removed `KERNEL_PLS` from `n4m_algorithm_t`; deferred kernel-type surface to Phase 4 explicitly. |
 | 3 | §3.5 preset names don't match §5.1 labels | Renamed all CI presets to match table labels exactly (`ci-linux-gcc12-release`, etc.). |
 | 4 | §3.3 `CMAKE_BUILD_TYPE` breaks multi-config | Switched to generator expressions (`$<$<NOT:$<CONFIG:Debug>>:…>`) for both compile and link options. |
 | 5 | §3.3 C API sources missed `-ffunction-sections -fdata-sections` | Extracted `pls4all_apply_c_target` helper that applies the flags to both shared and static C API targets. |
 | 6 | §5.3 forbidden list incomplete | Added `embind`, `nlohmann-json`, `yaml-cpp` + cross-referenced to §1 acceptance criterion. |
 | 7 | §5.8 vs §9 parity-gate PR number disagreement | Aligned to PR 17 in both places. |
-| 8 | §7.2 vs §7.5 async-signal contradiction | Unified policy: no `p4a_*` is async-signal-safe, full stop. |
+| 8 | §7.2 vs §7.5 async-signal contradiction | Unified policy: no `n4m_*` is async-signal-safe, full stop. |
 | 9 | §7.5 NaN/Inf claim about "matrix-view setters" misleading | Reworded: NaN/Inf rejected by scalar `set_tol`; matrix-view inits take only integers; data NaN/Inf handled per-algorithm in Phase 1. |
 | 10 | §6.4 cross-algo row still mentions sign-invariance | Updated comparison-set column to list explicit fields (`predictions, coefficients, intercept, x/y means and scales`); removed all sign-invariance mentions for cross-algorithm rows. |
 | 11 | §11 doctest missing source URL | Added <https://github.com/doctest/doctest> and <https://github.com/nlohmann/json>. |
-| 12 | Generated `p4a_export.h` not installed | Added explicit `install(FILES ${CMAKE_BINARY_DIR}/generated/pls4all/p4a_export.h DESTINATION include/pls4all)`. |
-| 13 | `pls4all_c_static` missing generated include | Both targets now go through the shared `pls4all_apply_c_target()` helper that sets include dirs identically. |
+| 12 | Generated `n4m_export.h` not installed | Added explicit `install(FILES ${CMAKE_BINARY_DIR}/generated/pls4all/n4m_export.h DESTINATION include/pls4all)`. |
+| 13 | `n4m_c_static` missing generated include | Both targets now go through the shared `pls4all_apply_c_target()` helper that sets include dirs identically. |
 | 14 | §4.5 "getters elided" | Fully listed every getter signature paired with each setter. |
 | 15 | §4.5 "every knob declared NOW" vs "kernel solvers in Phase 4" | Removed the contradicting comment; the only forward-deferred piece is the **nonlinear** kernel-type enum (not a knob, a new enum). |
-| 16 | §4.2/§7.5/§8 stale `_COUNT` mentions | Removed the leftover "P4A_BACKEND__COUNT is not part of public ABI" comment; clarified in §7.5 that `_COUNT` lives only inside internal C++ via `static_assert`. |
+| 16 | §4.2/§7.5/§8 stale `_COUNT` mentions | Removed the leftover "N4M_BACKEND__COUNT is not part of public ABI" comment; clarified in §7.5 that `_COUNT` lives only inside internal C++ via `static_assert`. |
 
 Next step: revision 3 is committed alongside both review transcripts. Phase 0 implementation begins immediately. Per-PR Codex reviews catch any further drift.

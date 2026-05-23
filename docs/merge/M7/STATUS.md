@@ -80,7 +80,7 @@ The roadmap M8 requires the same kind of follow-on work:
 
 `pls4all` build and tests **unchanged** at this commit:
 ```
-$ cmake --build --preset dev-release && ./build/dev-release/cpp/tests/pls4all_tests
+$ cmake --build --preset dev-release && ./build/dev-release/cpp/tests/n4m_tests
 === 265 run, 0 failures, 0 skipped ===
 ```
 

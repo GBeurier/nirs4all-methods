@@ -68,23 +68,23 @@ Every pls4all binding tab dispatches into the same C kernel; the external librar
 ::::{tab-set}
 :class: pls4all-bindings
 
-:::{tab-item} C ABI · libp4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-/* C ABI — libp4a (Model.fit path) */
-p4a_context_t* ctx = p4a_context_create();
-p4a_config_t*  cfg = p4a_config_create();
-p4a_config_set_algorithm(cfg, P4A_ALGORITHM_OPLS);
-p4a_config_set_solver   (cfg, P4A_SOLVER_NIPALS);
-p4a_config_set_n_components(cfg, 4);
-p4a_model_t* mdl = NULL;
-p4a_model_fit(ctx, cfg, &x_view, &y_view, &mdl);
-p4a_model_predict(ctx, mdl, &x_test_view, &y_hat_view);
-p4a_model_destroy(mdl);
-p4a_config_destroy(cfg);
-p4a_context_destroy(ctx);
+/* C ABI — libn4m (Model.fit path) */
+n4m_context_t* ctx = n4m_context_create();
+n4m_config_t*  cfg = n4m_config_create();
+n4m_config_set_algorithm(cfg, N4M_ALGORITHM_OPLS);
+n4m_config_set_solver   (cfg, N4M_SOLVER_NIPALS);
+n4m_config_set_n_components(cfg, 4);
+n4m_model_t* mdl = NULL;
+n4m_model_fit(ctx, cfg, &x_view, &y_view, &mdl);
+n4m_model_predict(ctx, mdl, &x_test_view, &y_hat_view);
+n4m_model_destroy(mdl);
+n4m_config_destroy(cfg);
+n4m_context_destroy(ctx);
 ```
 
 :::
@@ -196,7 +196,7 @@ Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.c
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">100×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libp4a</th></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas</code></td><td class="parity parity-exact">✓ 1e-14</td><td class="ms">1.13 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-exact">✓ 2e-15</td><td class="ms">1.06 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.omp</code></td><td class="parity parity-exact">✓ 2e-15</td><td class="ms">1.03 ms</td></tr>

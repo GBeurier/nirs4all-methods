@@ -6,7 +6,7 @@
 
 #include <new>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/operator_bank.hpp"
 

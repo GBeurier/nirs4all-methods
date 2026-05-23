@@ -50,7 +50,7 @@ Because $\mathbf{B}$ lives in the *original* feature space, **the fitted model i
 
 ### Implementation
 
-`p4a_aom_global_select` via the Python/R/MATLAB dispatchers. The compact strict-linear bank shipped by pls4all (`compact_bank`: identity, Savitzky–Golay smooth/derivative, polynomial detrending, finite differences) mirrors the `default_bank` used in the paper experiments. Reference: git-pinned oracle `nirs4all.operators.models.sklearn.aom_pls.AOMPLSRegressor` (sanctioned exception).
+`n4m_aom_global_select` via the Python/R/MATLAB dispatchers. The compact strict-linear bank shipped by pls4all (`compact_bank`: identity, Savitzky–Golay smooth/derivative, polynomial detrending, finite differences) mirrors the `default_bank` used in the paper experiments. Reference: git-pinned oracle `nirs4all.operators.models.sklearn.aom_pls.AOMPLSRegressor` (sanctioned exception).
 
 R roxygen note (`methods_extra.R::aom_pls`):
 
@@ -71,29 +71,29 @@ Every pls4all binding tab dispatches into the same C kernel; the external librar
 ::::{tab-set}
 :class: pls4all-bindings
 
-:::{tab-item} C ABI · libp4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-/* C ABI — libp4a AOM/POP selector path */
-p4a_context_t* ctx = p4a_context_create();
-p4a_config_t*  cfg = p4a_config_create();
-p4a_operator_bank_t* bank = NULL;
-p4a_validation_plan_t* plan = NULL;
-p4a_aom_global_result_t* res = NULL;
-p4a_operator_bank_create(&bank);
+/* C ABI — libn4m AOM/POP selector path */
+n4m_context_t* ctx = n4m_context_create();
+n4m_config_t*  cfg = n4m_config_create();
+n4m_operator_bank_t* bank = NULL;
+n4m_validation_plan_t* plan = NULL;
+n4m_aom_global_result_t* res = NULL;
+n4m_operator_bank_create(&bank);
 /* add compact nirs4all-style operators: identity, SG, detrend, FD */
-p4a_validation_plan_create(&plan);
+n4m_validation_plan_create(&plan);
 /* fill CV folds on plan */
-p4a_aom_global_select(ctx, cfg, bank, &x_view, &y_view, plan,
+n4m_aom_global_select(ctx, cfg, bank, &x_view, &y_view, plan,
               /* max_components */ 2, &res);
 /* read predictions and selection diagnostics via result getters */
-p4a_aom_global_result_destroy(res);
-p4a_validation_plan_destroy(plan);
-p4a_operator_bank_destroy(bank);
-p4a_config_destroy(cfg);
-p4a_context_destroy(ctx);
+n4m_aom_global_result_destroy(res);
+n4m_validation_plan_destroy(plan);
+n4m_operator_bank_destroy(bank);
+n4m_config_destroy(cfg);
+n4m_context_destroy(ctx);
 ```
 
 :::
@@ -201,7 +201,7 @@ Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.c
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">100×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libp4a</th></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas</code></td><td class="parity parity-exact">✓ 7e-16</td><td class="ms">2.60 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-exact">✓ 7e-16</td><td class="ms">2.64 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.omp</code></td><td class="parity parity-exact">✓ 7e-16</td><td class="ms">2.63 ms</td></tr>

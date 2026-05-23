@@ -3,7 +3,7 @@
 #include <cstring>
 #include <cstdio>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 #include "harness.hpp"
 
 TEST(error_messages, fresh_context_has_empty_last_error) {

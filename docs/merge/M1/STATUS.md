@@ -15,9 +15,9 @@
 | 3 | `git fetch donor` | ✅ 45 commits + 18 archive tags fetched |
 | 4 | `git subtree add --prefix=_donor/nirs4all-methods donor main` | ✅ Merge commit `2ca4aa8` created |
 | 5 | `cmake --preset dev-release` configure | ✅ no collision; pls4all 0.97.3 configured cleanly |
-| 6 | `cmake --build --preset dev-release -j 4` | ✅ 24 build steps; libp4a.so.1.16.0 + pls4all_cli + pls4all_tests + libp4a_static.a all linked |
-| 7 | `ctest --preset dev-release` (pls4all_tests binary) | ✅ **265 run, 0 failures, 0 skipped** |
-| 8 | `pls4all_cli --selfcheck` | ✅ "selfcheck OK", project version `0.97.3+abi.1.16.0` |
+| 6 | `cmake --build --preset dev-release -j 4` | ✅ 24 build steps; libn4m.so.1.16.0 + n4m_cli + n4m_tests + libp4a_static.a all linked |
+| 7 | `ctest --preset dev-release` (n4m_tests binary) | ✅ **265 run, 0 failures, 0 skipped** |
+| 8 | `n4m_cli --selfcheck` | ✅ "selfcheck OK", project version `0.97.3+abi.1.16.0` |
 | 9 | `git push -u origin merge/import-donor` | ✅ |
 
 ## Merge commit structure
@@ -58,7 +58,7 @@ Both histories are reachable from the merge commit. `git log --first-parent` wal
 
 > M1 gate per `MERGE_ROADMAP.md` row M1: *"both symbol tables co-exist; ctest can build pls4all only at this stage"*
 
-- Both ABI symbol tables coexist on disk: pls4all `p4a_*` + donor `n4m_*` (each in its own header tree)
+- Both ABI symbol tables coexist on disk: pls4all `n4m_*` + donor `n4m_*` (each in its own header tree)
 - pls4all builds and tests at 265/265 green
 - Donor tree is dormant — neither pls4all's `CMakeLists.txt` nor any other build glue picks it up yet. That's correct for M1; M2.5 will start consolidating the common-core under `cpp/src/core/common/`.
 

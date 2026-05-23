@@ -12,7 +12,7 @@ All sub-gates green:
 - [ ] M2.5 common-core landed at `cpp/src/core/common/` — ✅ done
 - [ ] M3 donor sources lifted to `cpp/src/core/<category>/` — ✅ done
 - [ ] M4 source split executed (Phase 1 helpers + Phases 2-7 algorithms) — ❌ deferred
-- [ ] M5 ABI rename `p4a_*` → `n4m_*` executed across whole tree — ❌ deferred (script ready)
+- [ ] M5 ABI rename `n4m_*` → `n4m_*` executed across whole tree — ❌ deferred (script ready)
 - [ ] M6 per-category headers populated (umbrella + 11 cat headers) — ❌ deferred (stubs only)
 - [ ] M7 unified parity gate green (Stage 0-4) — ❌ deferred (donor infrastructure parked)
 - [ ] M8 unified benchmark dashboard live (per-category filters) — ❌ deferred (orchestrator de-hardcoded only)
@@ -37,7 +37,7 @@ git pull --ff-only
 # Build verification:
 cmake --preset dev-release && cmake --build --preset dev-release -j
 ctest --preset dev-release --output-on-failure
-./build/dev-release/cpp/cli/n4m_cli --selfcheck   # post-M5: was pls4all_cli
+./build/dev-release/cpp/cli/n4m_cli --selfcheck   # post-M5: was n4m_cli
 
 # Parity gate:
 python parity/python_generator/scripts/run_parity_gate.py --build-dir build/dev-release

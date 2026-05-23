@@ -1186,9 +1186,9 @@ Organized into **6 sequential phases** (each phase can take multiple PRs). Respe
 | # | Task | Files / folders | Decision |
 |---|------|------------------|----------|
 | A1 | Run `scripts/migrate_p4a_to_n4m.py --apply` across the whole repo | ~600 files, ~18.5k replacements | preserve code, change symbols only |
-| A2 | Delete legacy header dir | `cpp/include/pls4all/p4a.h`, `cpp/include/pls4all/p4a_version.h`, `cpp/include/pls4all/p4a_export.h.in` | wipe |
+| A2 | Delete legacy header dir | `cpp/include/pls4all/p4a.h`, `cpp/include/pls4all/n4m_version.h`, `cpp/include/pls4all/n4m_export.h.in` | wipe |
 | A3 | Delete legacy ABI wrappers | `cpp/src/c_api/` (whole folder, after confirming no missing symbol vs `c_api_n4m/`) | wipe |
-| A4 | Delete old CLI | `cpp/cli/p4a_cli.cpp` | wipe; rename `cpp/cli_n4m/` → `cpp/cli/` |
+| A4 | Delete old CLI | `cpp/cli/n4m_cli.cpp` | wipe; rename `cpp/cli_n4m/` → `cpp/cli/` |
 | A5 | Delete old test tree | `cpp/tests/` (118 files) | wipe; rename `cpp/tests_n4m/` → `cpp/tests/` |
 | A6 | Rename ABI snapshot dir | `cpp/abi_n4m/` → `cpp/abi/` | rename |
 | A7 | Delete Python binding stubs | `bindings/python_nirs4all_methods/`, `bindings/python_pls4all/` | wipe |
@@ -1213,7 +1213,7 @@ Organized into **6 sequential phases** (each phase can take multiple PRs). Respe
 | A26 | Update `CLAUDE.md` | Reflect the post-Phase-A layout + dev shell entry points | rewrite |
 | A27 | Final audit: `grep -rE "\\b(p4a\|pls4all)\\b"` must only return historical doc (changelog); `make doctor` is green on a fresh devcontainer; `cmake --preset dev-release && ctest` is green inside the dev shell | whole repo | verify |
 
-**Phase A exit criterion**: `cmake --preset dev-release && ctest` is green inside the devcontainer (and on bare metal for the maintainer), `nm` on `libn4m.so` contains no `p4a_*`, the repo `tree -L 2` shows no legacy names, `make doctor` runs clean in a fresh devcontainer, every method-/binding-/subset-related issue and PR template renders correctly on GitHub.
+**Phase A exit criterion**: `cmake --preset dev-release && ctest` is green inside the devcontainer (and on bare metal for the maintainer), `nm` on `libn4m.so` contains no `n4m_*`, the repo `tree -L 2` shows no legacy names, `make doctor` runs clean in a fresh devcontainer, every method-/binding-/subset-related issue and PR template renders correctly on GitHub.
 
 ### Phase B — Unified catalog + auto-generation
 

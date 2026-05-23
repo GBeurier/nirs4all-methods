@@ -70,7 +70,7 @@ dev/release_process
 
 ## Current Status
 
-The C ABI surface is feature-complete (96 `p4a_*` symbols). Lifecycle for
+The C ABI surface is feature-complete (96 `n4m_*` symbols). Lifecycle for
 context / config / matrix-view / operator-bank / gating-strategy / pipeline
 is implemented, and pipeline fit/transform is live for identity, center,
 autoscale, Pareto scaling, SNV, MSC, EMSC, polynomial detrending and

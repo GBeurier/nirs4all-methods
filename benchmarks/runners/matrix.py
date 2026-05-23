@@ -3,7 +3,7 @@
 For every (algorithm, n_samples, n_features) cell, time fit + predict
 on every available language path. Records:
 
-  - Native C++ (via `pls4all_cli --bench`).
+  - Native C++ (via `n4m_cli --bench`).
   - pls4all-Python (via the ctypes Model wrapper).
   - pls4all-R (via the `pls4all` R package, when R + the package are
     installed; skipped with a status of `r_not_available` otherwise).
@@ -59,7 +59,7 @@ from . import pls_regression  # for synthetic dataset + sklearn helpers
 from ._harness import host_info, round_float
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CLI_PATH = REPO_ROOT / "build" / "dev-release" / "cpp" / "cli" / "pls4all_cli"
+CLI_PATH = REPO_ROOT / "build" / "dev-release" / "cpp" / "cli" / "n4m_cli"
 PLS4ALL_PY_SRC = REPO_ROOT / "bindings" / "python" / "src"
 R_PACKAGE_DIR = REPO_ROOT / "bindings" / "r" / "pls4all"
 sys.path.insert(0, str(PLS4ALL_PY_SRC))
@@ -201,7 +201,7 @@ def _time_sklearn(algo: str, cell: _Cell, X: np.ndarray, y: np.ndarray,
 
 
 def _time_native_cli(algo: str, cell: _Cell, repeats: int) -> tuple[list[float], str]:
-    """Spawn pls4all_cli --bench. The CLI runs its own dataset generator
+    """Spawn n4m_cli --bench. The CLI runs its own dataset generator
     and reports median + min internally; for the matrix we collect the
     median wall-time it reports as the cell timing.
     """

@@ -12,11 +12,11 @@ Le détail des parity gates par méthode est dans `benchmarks/results/parity_gat
 | Section de l'Overview | Statut | Détail |
 |----------------------|--------|---------|
 | §1 Famille cœur (PLS1/PLS2/PLSRegression/PLSSVD/PCR/CPPLS) | livré sauf CPPLS | PLS1/PLS2, PLSRegression, PLSCanonical, PLSSVD, PCR — CPPLS reporté. |
-| §2 Solveurs numériques (NIPALS, OrthScores, SIMPLS, Kernel, WideKernel, SVD, Power, Randomized-SVD) | livré | les 8 solveurs sont actifs dans `p4a_model_fit`. |
+| §2 Solveurs numériques (NIPALS, OrthScores, SIMPLS, Kernel, WideKernel, SVD, Power, Randomized-SVD) | livré | les 8 solveurs sont actifs dans `n4m_model_fit`. |
 | §3 Modes de déflection (regression, canonical, orthogonal) | livré pour les modèles déjà actifs | déflection X-only / Y-only / symmetric repoussée. |
 | §4–§5 PLS-DA / PLS-LDA / PLS-logistic | livré | dummy-coding PLS-DA, têtes LDA/logistic déterministes en NumPy. |
 | §6 OPLS / OPLS-DA / multi-réponses prédictives partagées | livré | déflection orthogonale, scores prédictifs partagés. |
-| §7 Sparse / pénalisée | livré (interne) | Sparse SIMPLS via soft-thresholding (`P4A_ALGO_SPARSE_PLS`), `fit_sparse_pls_da`, `fit_group_sparse_pls`, `fit_fused_sparse_pls`. |
+| §7 Sparse / pénalisée | livré (interne) | Sparse SIMPLS via soft-thresholding (`N4M_ALGO_SPARSE_PLS`), `fit_sparse_pls_da`, `fit_group_sparse_pls`, `fit_fused_sparse_pls`. |
 | §8 Multi-blocs | livré (interne) | MB-PLS livré ; `fit_o2pls`, `fit_so_pls`, `fit_on_pls`, `fit_rosa` ajoutés. sPLS-DA dans §7. |
 | §9 Multiway / tensor PLS | livré (interne) | `fit_n_pls` + `predict_n_pls` (Bro 3-way). PARAFAC-PLS / Tucker-PLS comme variantes futures. |
 | §10.1 Kernel algorithm linéaire / wide-kernel | livré | solveurs `KERNEL_ALGORITHM` et `WIDE_KERNEL`. |

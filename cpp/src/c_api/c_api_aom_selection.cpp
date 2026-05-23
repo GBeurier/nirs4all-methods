@@ -14,7 +14,7 @@
 #include <utility>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/aom_selection.hpp"
 #include "core/config.hpp"

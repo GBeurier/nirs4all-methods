@@ -569,7 +569,7 @@ def time_methods(methods: list[str] | None = None,
                 result.matrix(method.prediction_key)
                 result.close()
 
-        p4a_median, p4a_min, p4a_status = _measure_wall_ms(_run_pls4all, repeats)
+        n4m_median, n4m_min, n4m_status = _measure_wall_ms(_run_pls4all, repeats)
 
         # --- 2. Python reference ----------------------------------------
         py_ms, py_lib = float("nan"), "(none)"
@@ -612,13 +612,13 @@ def time_methods(methods: list[str] | None = None,
 
         row = TimingRow(
             method=method.name, n_samples=n, n_features=p,
-            pls4all_ms=p4a_median, pls4all_min_ms=p4a_min,
+            pls4all_ms=n4m_median, pls4all_min_ms=n4m_min,
             python_ref_ms=py_ms, python_ref_lib=py_lib,
             r_ref_ms=r_ms, r_ref_lib=r_lib,
-            repeats=repeats, status=p4a_status,
+            repeats=repeats, status=n4m_status,
         )
         rows.append(row)
-        print(f"=== {method.name}: pls4all={p4a_median:.1f}ms "
+        print(f"=== {method.name}: pls4all={n4m_median:.1f}ms "
               f"py[{py_lib}]={py_ms:.1f}ms r[{r_lib}]={r_ms:.1f}ms ===")
     return rows
 

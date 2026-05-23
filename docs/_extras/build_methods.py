@@ -80,7 +80,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "which is the variant most closely matching MATLAB's "
             "`plsregress`."),
         "implementation": (
-            "`p4a_pls_fit` in libp4a, dispatched through "
+            "`n4m_pls_fit` in libn4m, dispatched through "
             "`Algorithm.PLS_REGRESSION` + `Solver.SIMPLS`. Variants NIPALS, "
             "SVD, power-iteration and randomized-SVD are also available "
             "via the `Solver` enum."),
@@ -96,7 +96,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "`PCA(n_components=k)` + `LinearRegression` from scikit-learn "
             "and `pls::pcr` in R."),
         "implementation": (
-            "`Algorithm.PCR` + `Solver.SVD` in libp4a, sharing the same "
+            "`Algorithm.PCR` + `Solver.SVD` in libn4m, sharing the same "
             "Model.fit / Model.predict surface as PLS."),
     },
     "opls": {
@@ -126,7 +126,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "weights at each component. The penalty `sparsity_lambda` "
             "trades off prediction accuracy against feature selection."),
         "implementation": (
-            "`p4a_sparse_simpls_fit` — MethodResult entry point; "
+            "`n4m_sparse_simpls_fit` — MethodResult entry point; "
             "coefficients map back to original feature space. Reference: "
             "R `spls` 2.3.2."),
     },
@@ -143,7 +143,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Useful when measurement conditions drift between calibration "
             "and prediction sets."),
         "implementation": (
-            "`p4a_di_pls_fit` — needs `X_target` at fit time. Reference: "
+            "`n4m_di_pls_fit` — needs `X_target` at fit time. Reference: "
             "Python `diPLSlib.models.DIPLS` (B-Analytics)."),
     },
     "recursive_pls": {
@@ -157,7 +157,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Update the PLS fit incrementally over a sliding window of "
             "samples. Suitable for streaming / drifting processes."),
         "implementation": (
-            "`p4a_recursive_pls_run`. References: sklearn rolling-window "
+            "`n4m_recursive_pls_run`. References: sklearn rolling-window "
             "PLS, R `pls` window refits."),
     },
     "cppls": {
@@ -170,7 +170,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "before the projection step, which moves the latent direction "
             "between PCA (`γ=0`) and PLS (`γ=1`)."),
         "implementation": (
-            "`p4a_cppls_fit`. NOTE: R `pls::cppls` is **Liland 2009 "
+            "`n4m_cppls_fit`. NOTE: R `pls::cppls` is **Liland 2009 "
             "Canonical Powered PLS**, a different algorithm — same name, "
             "different mathematics. Use the tier-1 reference only with "
             "this caveat."),
@@ -184,7 +184,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "SIMPLS on `√w`-prescaled, centred data. Equivalent to "
             "running a standard PLS on a weighted residual problem."),
         "implementation": (
-            "`p4a_weighted_pls_fit` — in-sample only (no global coef "
+            "`n4m_weighted_pls_fit` — in-sample only (no global coef "
             "export). Needs a sample-weight vector at fit time."),
     },
     "robust_pls": {
@@ -197,7 +197,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Iteratively reweighted PLS with a Huber loss on the "
             "residuals. Down-weights outliers without removing them."),
         "implementation": (
-            "`p4a_robust_pls_fit`. Reference: R `chemometrics::prm`."),
+            "`n4m_robust_pls_fit`. Reference: R `chemometrics::prm`."),
     },
     "ridge_pls": {
         "group": "regularized",
@@ -209,7 +209,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Augment the PLS regression step with an L2 ridge penalty "
             "on the latent-space coefficients. Useful when `k` is close "
             "to the rank of X and the spectra are highly collinear."),
-        "implementation": "`p4a_ridge_pls_fit` (in-sample only).",
+        "implementation": "`n4m_ridge_pls_fit` (in-sample only).",
     },
     "continuum_regression": {
         "group": "nonlinear",
@@ -222,7 +222,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "A one-parameter family `τ ∈ [0, 1]` interpolating OLS "
             "(`τ=0`), PLS (`τ=0.5`) and PCR (`τ=1`)."),
-        "implementation": "`p4a_continuum_regression_fit`.",
+        "implementation": "`n4m_continuum_regression_fit`.",
     },
     "n_pls": {
         "group": "multi-block",
@@ -233,7 +233,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Tensor-mode PLS for X arranged as an `n × j × k` tensor. "
             "Decomposes X into rank-one tensor components."),
         "implementation": (
-            "`p4a_n_pls_fit` — takes a flattened X plus `mode_j` and "
+            "`n4m_n_pls_fit` — takes a flattened X plus `mode_j` and "
             "`mode_k` shape parameters. Reference: `tensorly` and the "
             "original Bro paper code."),
     },
@@ -247,7 +247,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "PLS in the feature space of an RBF / polynomial / linear "
             "kernel. Captures nonlinear relationships between X and y."),
         "implementation": (
-            "`p4a_kernel_pls_fit`. Predict-on-new-X is currently "
+            "`n4m_kernel_pls_fit`. Predict-on-new-X is currently "
             "in-sample-only in the Python sklearn wrapper because the "
             "ABI does not yet export the kernel-centering."),
     },
@@ -261,7 +261,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Symmetric two-block PLS that separates joint, X-orthogonal "
             "and Y-orthogonal variation."),
         "implementation": (
-            "`p4a_o2pls_fit`. Reference: CRAN `OmicsPLS` 2.1.0."),
+            "`n4m_o2pls_fit`. Reference: CRAN `OmicsPLS` 2.1.0."),
     },
     "approximate_press": {
         "group": "diagnostic",
@@ -272,7 +272,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "An O(n) approximation of the predicted residual sum of "
             "squares using the hat-matrix diagonal."),
-        "implementation": "`p4a_approximate_press_compute`.",
+        "implementation": "`n4m_approximate_press_compute`.",
     },
     "pls_diagnostic_t2": {
         "group": "diagnostic",
@@ -283,7 +283,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Sum of squared standardized PLS scores per sample. Flags "
             "samples that are unusual in the latent space."),
-        "implementation": "`p4a_pls_diagnostics_compute` with stat=\"t2\".",
+        "implementation": "`n4m_pls_diagnostics_compute` with stat=\"t2\".",
     },
     "pls_diagnostic_q": {
         "group": "diagnostic",
@@ -295,7 +295,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Squared prediction error in feature space (X minus its "
             "PLS reconstruction). Flags samples whose X is not well "
             "represented by the model."),
-        "implementation": "`p4a_pls_diagnostics_compute` with stat=\"q\".",
+        "implementation": "`n4m_pls_diagnostics_compute` with stat=\"q\".",
     },
     "pls_monitoring": {
         "group": "diagnostic",
@@ -306,7 +306,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Combines T² and Q charts with control limits derived "
             "from the calibration set. Returns per-sample alarms."),
-        "implementation": "`p4a_pls_monitoring_run`.",
+        "implementation": "`n4m_pls_monitoring_run`.",
     },
     "one_se_rule": {
         "group": "diagnostic",
@@ -316,7 +316,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Pick the smallest `k` whose CV-RMSE is within one "
             "standard error of the minimum. Reduces over-fitting."),
-        "implementation": "`p4a_one_se_rule_compute`.",
+        "implementation": "`n4m_one_se_rule_compute`.",
     },
     "so_pls": {
         "group": "multi-block",
@@ -329,7 +329,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "remaining blocks against the first block's scores and "
             "iterate. Captures block-specific contributions."),
         "implementation": (
-            "`p4a_so_pls_fit`. Reference: R `multiblock` package."),
+            "`n4m_so_pls_fit`. Reference: R `multiblock` package."),
     },
     "on_pls": {
         "group": "multi-block",
@@ -342,7 +342,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Multi-block extension of OPLS — separates joint and "
             "unique components per block."),
         "implementation": (
-            "`p4a_on_pls_fit`. The vendored `OnPLS` Python port is "
+            "`n4m_on_pls_fit`. The vendored `OnPLS` Python port is "
             "carried in `bindings/python/vendor/OnPLS/` because the CRAN "
             "package was archived."),
     },
@@ -357,7 +357,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "At each component, ROSA picks the block whose addition "
             "best explains y, in a forward greedy manner."),
         "implementation": (
-            "`p4a_rosa_fit`. Reference: R `multiblock`."),
+            "`n4m_rosa_fit`. Reference: R `multiblock`."),
     },
     "vissa_select": {
         "group": "selector",
@@ -369,7 +369,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Population of random subsets refined by Monte-Carlo "
             "subsampling; variables in surviving subsets are retained."),
-        "implementation": "`p4a_vissa_select`.",
+        "implementation": "`n4m_vissa_select`.",
     },
     "pso_select": {
         "group": "selector",
@@ -380,7 +380,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Wrap a particle-swarm optimiser around PLS cross-validated "
             "RMSE; each particle's position encodes a subset of features."),
         "implementation": (
-            "`p4a_pso_select`. Reference: Python `pyswarms`."),
+            "`n4m_pso_select`. Reference: Python `pyswarms`."),
     },
     "gpr_pls": {
         "group": "nonlinear",
@@ -391,7 +391,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Project X into the PLS latent space, then fit a GP on the "
             "scores. Reference: sklearn's `GaussianProcessRegressor` "
             "with an RBF kernel on the score matrix."),
-        "implementation": "`p4a_gpr_pls_fit`.",
+        "implementation": "`n4m_gpr_pls_fit`.",
     },
     "bagging_pls": {
         "group": "ensemble",
@@ -402,7 +402,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Bootstrap-aggregated PLS — fit `n_estimators` PLS models "
             "on bootstrap samples, average their predictions."),
         "implementation": (
-            "`p4a_bagging_pls_fit`. Reference: R `enpls`."),
+            "`n4m_bagging_pls_fit`. Reference: R `enpls`."),
     },
     "boosting_pls": {
         "group": "ensemble",
@@ -414,7 +414,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Gradient boosting where each weak learner is a small PLS "
             "model. The reference is R `mboost::glmboost` with a PLS "
             "base learner."),
-        "implementation": "`p4a_boosting_pls_fit`.",
+        "implementation": "`n4m_boosting_pls_fit`.",
     },
     "random_subspace_pls": {
         "group": "ensemble",
@@ -426,7 +426,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Each ensemble member trains on a random feature subset "
             "of size `features_per_subspace`. Reduces variance for "
             "high-dimensional spectra."),
-        "implementation": "`p4a_random_subspace_pls_fit`.",
+        "implementation": "`n4m_random_subspace_pls_fit`.",
     },
     "pls_glm": {
         "group": "classification",
@@ -437,7 +437,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Iteratively reweighted PLS fitting a GLM with Gaussian or "
             "Poisson link. The reference is CRAN `plsRglm`."),
-        "implementation": "`p4a_pls_glm_fit`.",
+        "implementation": "`n4m_pls_glm_fit`.",
     },
     "pls_qda": {
         "group": "classification",
@@ -449,7 +449,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Project X via PLS, then fit Quadratic Discriminant "
             "Analysis on the latent scores. Class-specific covariances."),
-        "implementation": "`p4a_pls_qda_fit`.",
+        "implementation": "`n4m_pls_qda_fit`.",
     },
     "pls_cox": {
         "group": "classification",
@@ -462,7 +462,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "PLS on deviance residuals from a Cox proportional-hazards "
             "model. Survival times + censoring indicators required."),
         "implementation": (
-            "`p4a_pls_cox_fit`. Reference: CRAN `plsRcox`."),
+            "`n4m_pls_cox_fit`. Reference: CRAN `plsRcox`."),
     },
     "pds": {
         "group": "calibration-transfer",
@@ -474,7 +474,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Map secondary-instrument spectra to the primary instrument "
             "via a banded transfer matrix. Window of half-width `w`."),
         "implementation": (
-            "`p4a_pds_fit` — TransformerMixin in tier 2. Reference: "
+            "`n4m_pds_fit` — TransformerMixin in tier 2. Reference: "
             "R `prospectr::pds`."),
     },
     "ds": {
@@ -484,7 +484,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Single global transfer matrix between two instruments. "
             "Simpler than PDS, sometimes higher variance."),
-        "implementation": "`p4a_ds_fit`. Reference: R `chemometrics::stdize`.",
+        "implementation": "`n4m_ds_fit`. Reference: R `chemometrics::stdize`.",
     },
     "mir_pls": {
         "group": "multi-block",
@@ -495,7 +495,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "PLS with kernel regularisation tuned to mid-IR spectra. "
             "In-tree sanctioned port; no widely installable library "
             "equivalent."),
-        "implementation": "`p4a_mir_pls_fit`.",
+        "implementation": "`n4m_mir_pls_fit`.",
     },
     "missing_aware_nipals": {
         "group": "missing",
@@ -506,7 +506,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "NIPALS PLS that handles `NaN` entries by skipping them in "
             "the inner-product and norm computations."),
         "implementation": (
-            "`p4a_missing_aware_nipals_fit`. Reference: R `softImpute` "
+            "`n4m_missing_aware_nipals_fit`. Reference: R `softImpute` "
             "for the imputation step (sanctioned)."),
     },
     "sparse_pls_da": {
@@ -519,7 +519,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Sparse PLS-DA — soft-threshold loadings to select a "
             "discriminative subset per component."),
         "implementation": (
-            "`p4a_sparse_pls_da_fit`. Reference: Bioconductor `mixOmics::splsda`."),
+            "`n4m_sparse_pls_da_fit`. Reference: Bioconductor `mixOmics::splsda`."),
     },
     "group_sparse_pls": {
         "group": "sparse",
@@ -530,7 +530,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Apply group-lasso style sparsity at the loading-weight "
             "level — entire groups of features enter or leave together."),
         "implementation": (
-            "`p4a_group_sparse_pls_fit`. Reference: CRAN `sgPLS`."),
+            "`n4m_group_sparse_pls_fit`. Reference: CRAN `sgPLS`."),
     },
     "fused_sparse_pls": {
         "group": "sparse",
@@ -540,7 +540,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "L1 + fused-L1 penalty on PLS loadings — neighbouring "
             "features (along the wavelength axis) tend to share weights."),
-        "implementation": "`p4a_fused_sparse_pls_fit`.",
+        "implementation": "`n4m_fused_sparse_pls_fit`.",
     },
     "pls_diagnostic_dmodx": {
         "group": "diagnostic",
@@ -551,7 +551,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Per-sample residual sum of squares after PLS "
             "reconstruction, normalised by the model's residual "
             "degrees of freedom."),
-        "implementation": "`p4a_pls_diagnostics_compute` with stat=\"dmodx\".",
+        "implementation": "`n4m_pls_diagnostics_compute` with stat=\"dmodx\".",
     },
     "mb_pls": {
         "group": "multi-block",
@@ -564,7 +564,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Multi-block PLS with block-autoscaling and block weights, "
             "mapping coefficients back to original feature space."),
         "implementation": (
-            "`p4a_mb_pls_fit`. Reference: sanctioned git-pinned port "
+            "`n4m_mb_pls_fit`. Reference: sanctioned git-pinned port "
             "`nirs4all.operators.models.sklearn.mbpls`."),
     },
     "lw_pls": {
@@ -577,7 +577,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "For each prediction point, refit PLS on its k-nearest "
             "neighbours in the calibration set."),
         "implementation": (
-            "`p4a_lw_pls_fit`. Reference: sanctioned git-pinned port "
+            "`n4m_lw_pls_fit`. Reference: sanctioned git-pinned port "
             "`nirs4all.operators.models.sklearn.lwpls`."),
     },
     "pls_lda": {
@@ -589,7 +589,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Project X via PLS, then fit Linear Discriminant Analysis "
             "on the latent scores."),
-        "implementation": "`p4a_pls_lda_fit`. Reference: composite (PLSRegression + LDA).",
+        "implementation": "`n4m_pls_lda_fit`. Reference: composite (PLSRegression + LDA).",
     },
     "pls_logistic": {
         "group": "classification",
@@ -601,7 +601,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Iteratively reweighted PLS with a logit link function "
             "for binary / multinomial classification."),
-        "implementation": "`p4a_pls_logistic_fit`. Reference: R `plsRglm`.",
+        "implementation": "`n4m_pls_logistic_fit`. Reference: R `plsRglm`.",
     },
     "aom_preprocess": {
         "group": "diagnostic",
@@ -613,7 +613,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "An operator-mixture bank of preprocessing transforms with "
             "soft (equal weights) or hard (first operator) gating. "
             "Forms the building block of AOM-SIMPLS and POP-PLS."),
-        "implementation": "`p4a_aom_preprocess_fit`.",
+        "implementation": "`n4m_aom_preprocess_fit`.",
     },
     "aom_pls": {
         "group": "adaptive",
@@ -624,7 +624,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "over the compact "
             "strict-linear nirs4all bank, selecting the operator and "
             "component count by cross-validated RMSE."),
-        "implementation": "`p4a_aom_global_select`.",
+        "implementation": "`n4m_aom_global_select`.",
     },
     "pop_pls": {
         "group": "adaptive",
@@ -634,7 +634,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Per-component adaptive operator selection (nirs4all "
             "POPPLSRegressor) over the compact "
             "strict-linear nirs4all bank, followed by best-prefix selection."),
-        "implementation": "`p4a_aom_per_component_select`.",
+        "implementation": "`n4m_aom_per_component_select`.",
     },
     "variable_select_vip": {
         "group": "selector",
@@ -646,7 +646,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Variable Importance in Projection — weighted average of "
             "loadings, normalised so a value `> 1` indicates an "
             "important variable."),
-        "implementation": "`p4a_variable_select_rank` with metric=VIP.",
+        "implementation": "`n4m_variable_select_rank` with metric=VIP.",
     },
     "variable_select_coef": {
         "group": "selector",
@@ -656,7 +656,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Rank features by the magnitude of their PLS regression "
             "coefficient in the original feature scale."),
-        "implementation": "`p4a_variable_select_rank` with metric=COEF.",
+        "implementation": "`n4m_variable_select_rank` with metric=COEF.",
     },
     "variable_select_sr": {
         "group": "selector",
@@ -667,7 +667,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Ratio of explained to residual variance per feature, "
             "computed from the PLS target-projected coefficients."),
-        "implementation": "`p4a_variable_select_rank` with metric=SR.",
+        "implementation": "`n4m_variable_select_rank` with metric=SR.",
     },
     "interval_select": {
         "group": "selector",
@@ -679,7 +679,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Slide a fixed-width window across wavelengths; pick the "
             "interval whose PLS CV-RMSE is lowest."),
-        "implementation": "`p4a_interval_select`. Reference: R `plsVarSel`.",
+        "implementation": "`n4m_interval_select`. Reference: R `plsVarSel`.",
     },
     "bipls_select": {
         "group": "selector",
@@ -691,7 +691,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Start with all intervals and recursively eliminate the "
             "weakest by CV-RMSE."),
-        "implementation": "`p4a_bipls_select`. Reference: R `plsVarSel`.",
+        "implementation": "`n4m_bipls_select`. Reference: R `plsVarSel`.",
     },
     "sipls_select": {
         "group": "selector",
@@ -700,7 +700,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Exhaustively score every combination of `m` fixed-size "
             "intervals; pick the combination with the lowest CV-RMSE."),
-        "implementation": "`p4a_sipls_select`. Reference: R `plsVarSel`.",
+        "implementation": "`n4m_sipls_select`. Reference: R `plsVarSel`.",
     },
     "stability_select": {
         "group": "selector",
@@ -712,7 +712,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Compute coefficient mean / std ratio over Monte-Carlo "
             "subsamples; rank features by this ratio."),
-        "implementation": "`p4a_stability_select`. Reference: R `plsVarSel`.",
+        "implementation": "`n4m_stability_select`. Reference: R `plsVarSel`.",
     },
     "uve_select": {
         "group": "selector",
@@ -724,7 +724,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Augment X with deterministic artificial noise variables; "
             "any real feature whose stability is below the noise "
             "threshold is eliminated."),
-        "implementation": "`p4a_uve_select`. Reference: R `plsVarSel`.",
+        "implementation": "`n4m_uve_select`. Reference: R `plsVarSel`.",
     },
     "spa_select": {
         "group": "selector",
@@ -736,7 +736,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Greedy projection-orthogonal forward selection seeded by "
             "the coefficient with largest magnitude."),
-        "implementation": "`p4a_spa_select`.",
+        "implementation": "`n4m_spa_select`.",
     },
     "cars_select": {
         "group": "selector",
@@ -748,7 +748,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Exponential-decay retention combined with weighted "
             "sampling; iteratively retains only the strongest features."),
-        "implementation": "`p4a_cars_select`. Reference: R `enpls`.",
+        "implementation": "`n4m_cars_select`. Reference: R `enpls`.",
     },
     "random_frog_select": {
         "group": "selector",
@@ -759,7 +759,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "MCMC-like random walk through feature subsets; rank by "
             "inclusion frequency."),
-        "implementation": "`p4a_random_frog_select`.",
+        "implementation": "`n4m_random_frog_select`.",
     },
     "scars_select": {
         "group": "selector",
@@ -771,7 +771,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "CARS where the retention weights are stability-of-"
             "coefficient-sign over Monte-Carlo subsamples."),
-        "implementation": "`p4a_scars_select`.",
+        "implementation": "`n4m_scars_select`.",
     },
     "ga_select": {
         "group": "selector",
@@ -782,7 +782,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Wrap a binary GA around PLS CV-RMSE; population evolves "
             "via crossover, mutation, elitism."),
-        "implementation": "`p4a_ga_select`.",
+        "implementation": "`n4m_ga_select`.",
     },
     "shaving_select": {
         "group": "selector",
@@ -793,7 +793,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Recursively shave away the lowest-scoring fraction of "
             "features; pick the subset with lowest CV-RMSE."),
-        "implementation": "`p4a_shaving_select`.",
+        "implementation": "`n4m_shaving_select`.",
     },
     "bve_select": {
         "group": "selector",
@@ -805,7 +805,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "At each step greedily evaluate every one-variable "
             "removal by CV-RMSE; remove the one whose loss is smallest."),
-        "implementation": "`p4a_bve_select`.",
+        "implementation": "`n4m_bve_select`.",
     },
     "t2_select": {
         "group": "selector",
@@ -814,7 +814,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Compute Hotelling T² on PLS loading weights, threshold by "
             "an α-specific upper control limit, fall back to top-k."),
-        "implementation": "`p4a_t2_select`.",
+        "implementation": "`n4m_t2_select`.",
     },
     "wvc_select": {
         "group": "selector",
@@ -828,7 +828,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Normalised weighted-variable-contribution score from SVD "
             "PLS components; deterministic top-k selection."),
-        "implementation": "`p4a_wvc_select`.",
+        "implementation": "`n4m_wvc_select`.",
     },
     "wvc_threshold_select": {
         "group": "selector",
@@ -837,7 +837,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Fixed-threshold and factor-of-mean rules over WVC scores; "
             "minimum-selected fallback."),
-        "implementation": "`p4a_wvc_threshold_select`.",
+        "implementation": "`n4m_wvc_threshold_select`.",
     },
     "emcuve_select": {
         "group": "selector",
@@ -846,7 +846,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Ensemble MC-UVE rounds with a deterministic vote rule; "
             "robust against single-bag instability."),
-        "implementation": "`p4a_emcuve_select`.",
+        "implementation": "`n4m_emcuve_select`.",
     },
     "randomization_select": {
         "group": "selector",
@@ -857,7 +857,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Compare observed PLS coefficient scores against scores "
             "from deterministic Y-permutations; empirical p-values."),
-        "implementation": "`p4a_randomization_select`.",
+        "implementation": "`n4m_randomization_select`.",
     },
     "rep_select": {
         "group": "selector",
@@ -866,7 +866,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Remove a fixed count of weak coefficient-score variables "
             "per recursive step; keep the lowest-CV-error subset."),
-        "implementation": "`p4a_rep_select`.",
+        "implementation": "`n4m_rep_select`.",
     },
     "ipw_select": {
         "group": "selector",
@@ -875,7 +875,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Iteratively reweight coefficient scores; expose score "
             "and weight paths; keep the lowest-CV-error top-k subset."),
-        "implementation": "`p4a_ipw_select`.",
+        "implementation": "`n4m_ipw_select`.",
     },
     "st_select": {
         "group": "selector",
@@ -884,7 +884,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Apply deterministic score thresholds with min-selected "
             "fallbacks; keep the lowest-CV-error subset."),
-        "implementation": "`p4a_st_select`.",
+        "implementation": "`n4m_st_select`.",
     },
     "ecr": {
         "group": "calibration-transfer",
@@ -894,7 +894,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Penalised regression matching empirical calibration "
             "between two instruments, balanced by an α coefficient."),
-        "implementation": "`p4a_ecr_fit`.",
+        "implementation": "`n4m_ecr_fit`.",
     },
     "iriv_select": {
         "group": "selector",
@@ -907,7 +907,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
             "Classify each variable as strongly / weakly informative / "
             "uninformative / interfering across rounds; keep only "
             "strongly + weakly informative."),
-        "implementation": "`p4a_iriv_select`.",
+        "implementation": "`n4m_iriv_select`.",
     },
     "irf_select": {
         "group": "selector",
@@ -918,7 +918,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Iteratively re-weight Random Forest feature-importances "
             "and refit. Adapted for PLS prediction."),
-        "implementation": "`p4a_irf_select`.",
+        "implementation": "`n4m_irf_select`.",
     },
     "vip_spa_select": {
         "group": "selector",
@@ -929,7 +929,7 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
         "principle": (
             "Use VIP scores to seed SPA's projection-orthogonal "
             "forward selection."),
-        "implementation": "`p4a_vip_spa_select`.",
+        "implementation": "`n4m_vip_spa_select`.",
     },
 }
 
@@ -1749,7 +1749,7 @@ METHOD_TO_R_MDATOOLS: dict[str, tuple[str, str]] = {
     "cppls": ("pls_mdatools", "cppls"),
 }
 
-# Registry method → libp4a C ABI function (the `p4a_<fn>` symbol exposed
+# Registry method → libn4m C ABI function (the `n4m_<fn>` symbol exposed
 # as `pls4all._methods.<fn>` on the Python side). Most methods follow the
 # convention `<method>_fit`; the entries below cover the exceptions
 # (variable-rank shared kernel, diagnostic / monitoring helpers,
@@ -1899,13 +1899,13 @@ def method_group(name: str) -> str:
 # ---------------------------------------------------------------------------
 # Language-band classification for the benchmark rows.
 #
-# Rendered in this order from top to bottom; the C++ native libp4a row
+# Rendered in this order from top to bottom; the C++ native libn4m row
 # is always first, then the pls4all language bindings, then external
 # reference libraries.
 # ---------------------------------------------------------------------------
 
 BAND_ORDER = [
-    ("cpp",            "C++ native · libp4a"),
+    ("cpp",            "C++ native · libn4m"),
     ("python-pls4all", "Python · pls4all"),
     ("r-pls4all",      "R · pls4all"),
     ("matlab-pls4all", "MATLAB · pls4all"),
@@ -2480,9 +2480,9 @@ def usage_section(method: str, spec: dict, cat: dict | None,
     needs_y = spec.get("needs_labels")
     needs_g = spec.get("needs_group_assignment")
 
-    # ---- native (libp4a C ABI) ----
+    # ---- native (libn4m C ABI) ----
     # Model-based methods (`pls`, `pcr`, `opls`) reach the C core through
-    # `p4a_model_fit`, not a `p4a_<method>_fit` shim. Detect that and emit
+    # `n4m_model_fit`, not a `n4m_<method>_fit` shim. Detect that and emit
     # the Model.fit path for both the C and Python snippets. For every
     # other method, prefer the explicit METHOD_TO_C_FUNCTION mapping; fall
     # back to the catalog's `c_function`; final fallback is
@@ -2496,32 +2496,32 @@ def usage_section(method: str, spec: dict, cat: dict | None,
             or f"{name}_fit")
 
     if name in {"aom_pls", "pop_pls"}:
-        selector_fn = ("p4a_aom_per_component_select"
-                       if name == "pop_pls" else "p4a_aom_global_select")
-        result_t = ("p4a_aom_per_component_result_t"
-                    if name == "pop_pls" else "p4a_aom_global_result_t")
-        destroy_fn = ("p4a_aom_per_component_result_destroy"
-                      if name == "pop_pls" else "p4a_aom_global_result_destroy")
+        selector_fn = ("n4m_aom_per_component_select"
+                       if name == "pop_pls" else "n4m_aom_global_select")
+        result_t = ("n4m_aom_per_component_result_t"
+                    if name == "pop_pls" else "n4m_aom_global_result_t")
+        destroy_fn = ("n4m_aom_per_component_result_destroy"
+                      if name == "pop_pls" else "n4m_aom_global_result_destroy")
         native = textwrap.dedent(f"""\
             ```c
-            /* C ABI — libp4a AOM/POP selector path */
-            p4a_context_t* ctx = p4a_context_create();
-            p4a_config_t*  cfg = p4a_config_create();
-            p4a_operator_bank_t* bank = NULL;
-            p4a_validation_plan_t* plan = NULL;
+            /* C ABI — libn4m AOM/POP selector path */
+            n4m_context_t* ctx = n4m_context_create();
+            n4m_config_t*  cfg = n4m_config_create();
+            n4m_operator_bank_t* bank = NULL;
+            n4m_validation_plan_t* plan = NULL;
             {result_t}* res = NULL;
-            p4a_operator_bank_create(&bank);
+            n4m_operator_bank_create(&bank);
             /* add compact nirs4all-style operators: identity, SG, detrend, FD */
-            p4a_validation_plan_create(&plan);
+            n4m_validation_plan_create(&plan);
             /* fill CV folds on plan */
             {selector_fn}(ctx, cfg, bank, &x_view, &y_view, plan,
                           /* max_components */ {nc}, &res);
             /* read predictions and selection diagnostics via result getters */
             {destroy_fn}(res);
-            p4a_validation_plan_destroy(plan);
-            p4a_operator_bank_destroy(bank);
-            p4a_config_destroy(cfg);
-            p4a_context_destroy(ctx);
+            n4m_validation_plan_destroy(plan);
+            n4m_operator_bank_destroy(bank);
+            n4m_config_destroy(cfg);
+            n4m_context_destroy(ctx);
             ```""")
     elif use_model_path:
         # All three MODEL_FIT_METHODS (pls / pcr / opls) have a YAML
@@ -2530,32 +2530,32 @@ def usage_section(method: str, spec: dict, cat: dict | None,
         solver_enum = cat_solver or "SIMPLS"
         native = textwrap.dedent(f"""\
             ```c
-            /* C ABI — libp4a (Model.fit path) */
-            p4a_context_t* ctx = p4a_context_create();
-            p4a_config_t*  cfg = p4a_config_create();
-            p4a_config_set_algorithm(cfg, P4A_ALGORITHM_{algo_enum});
-            p4a_config_set_solver   (cfg, P4A_SOLVER_{solver_enum});
-            p4a_config_set_n_components(cfg, {nc});
-            p4a_model_t* mdl = NULL;
-            p4a_model_fit(ctx, cfg, &x_view, &y_view, &mdl);
-            p4a_model_predict(ctx, mdl, &x_test_view, &y_hat_view);
-            p4a_model_destroy(mdl);
-            p4a_config_destroy(cfg);
-            p4a_context_destroy(ctx);
+            /* C ABI — libn4m (Model.fit path) */
+            n4m_context_t* ctx = n4m_context_create();
+            n4m_config_t*  cfg = n4m_config_create();
+            n4m_config_set_algorithm(cfg, N4M_ALGORITHM_{algo_enum});
+            n4m_config_set_solver   (cfg, N4M_SOLVER_{solver_enum});
+            n4m_config_set_n_components(cfg, {nc});
+            n4m_model_t* mdl = NULL;
+            n4m_model_fit(ctx, cfg, &x_view, &y_view, &mdl);
+            n4m_model_predict(ctx, mdl, &x_test_view, &y_hat_view);
+            n4m_model_destroy(mdl);
+            n4m_config_destroy(cfg);
+            n4m_context_destroy(ctx);
             ```""")
     else:
         native = textwrap.dedent(f"""\
             ```c
-            /* C ABI — libp4a */
-            p4a_context_t* ctx = p4a_context_create();
-            p4a_config_t*  cfg = p4a_config_create();
-            p4a_method_result_t* res = NULL;
-            p4a_{c_fn}(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
+            /* C ABI — libn4m */
+            n4m_context_t* ctx = n4m_context_create();
+            n4m_config_t*  cfg = n4m_config_create();
+            n4m_method_result_t* res = NULL;
+            n4m_{c_fn}(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
             /* … read coefficients / mask / scores via */
-            /* p4a_method_result_get_double_matrix / vector / scalar … */
-            p4a_method_result_destroy(res);
-            p4a_config_destroy(cfg);
-            p4a_context_destroy(ctx);
+            /* n4m_method_result_get_double_matrix / vector / scalar … */
+            n4m_method_result_destroy(res);
+            n4m_config_destroy(cfg);
+            n4m_context_destroy(ctx);
             ```""")
 
     # ---- pls4all.python (tier-1) ----
@@ -2809,7 +2809,7 @@ def usage_section(method: str, spec: dict, cat: dict | None,
     # tab-set 1: pls4all bindings -------------------------------------
     parts.append("**pls4all bindings**\n")
     parts.append("::::{tab-set}\n:class: pls4all-bindings\n")
-    parts.append(_tab_open("C ABI · libp4a", "c", "c"))
+    parts.append(_tab_open("C ABI · libn4m", "c", "c"))
     parts.append(native + "\n")
     parts.append(_tab_close())
     parts.append(_tab_open(
@@ -3024,7 +3024,7 @@ def render_method_page(spec: dict, cat: dict | None,
                   "_Standard derivation — see the cited reference._")
     parts.append("\n### Implementation\n")
     parts.append(bib.get("implementation") or
-                  f"`p4a_{name}_fit` in libp4a.")
+                  f"`n4m_{name}_fit` in libn4m.")
 
     # R roxygen — pull the first paragraph of the formula-style wrapper
     # if available; otherwise the raw-function one.

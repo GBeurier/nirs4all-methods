@@ -83,7 +83,7 @@ across languages would not be meaningful.
 
 Binding parity is only for pls4all rows:
 
-- `pls4all_core`
+- `n4m_core`
 - `pls4all_binding`
 
 The comparator is the canonical native row for the same
@@ -174,14 +174,14 @@ benchmarks/cross_binding/run_overnight.sh
 # Internal pls4all smoke only. Gate 2 uses stored oracle snapshots.
 python benchmarks/cross_binding/orchestrator.py \
   --algorithms all --sizes 100x50 --threads 1 \
-  --libp4a-build blas-omp --n-runs 2 --only-pls4all \
+  --libn4m-build blas-omp --n-runs 2 --only-pls4all \
   --timeout 120 --out-csv /tmp/pls4all_only.csv
 
 # Small reference-parity sample.
 python benchmarks/cross_binding/orchestrator.py \
   --algorithms pls pcr --registry-cells \
   --canonical-pls4all-only --reference-backends registry \
-  --threads 1 --libp4a-build blas-omp --n-runs 2 \
+  --threads 1 --libn4m-build blas-omp --n-runs 2 \
   --timeout 180 --out-csv /tmp/pls4all_refs.csv --force
 
 # Exhaustive stress matrix.

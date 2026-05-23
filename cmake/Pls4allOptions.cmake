@@ -8,11 +8,11 @@ endif()
 set(_PLS4ALL_OPTIONS_INCLUDED ON)
 
 # ---- Build targets ---------------------------------------------------------
-option(PLS4ALL_BUILD_SHARED        "Build pls4all_c shared library (libp4a.so/.dll/.dylib)" ON)
-option(PLS4ALL_BUILD_STATIC        "Build pls4all_c_static (for Android predict-only embedders)" ON)
+option(PLS4ALL_BUILD_SHARED        "Build n4m_c shared library (libn4m.so/.dll/.dylib)" ON)
+option(PLS4ALL_BUILD_STATIC        "Build n4m_c_static (for Android predict-only embedders)" ON)
 option(PLS4ALL_BUILD_TESTS         "Build the doctest-based unit/ABI test suite"            ON)
 option(PLS4ALL_BUILD_FUZZ          "Build libFuzzer harnesses (requires clang)"             OFF)
-option(PLS4ALL_BUILD_CLI           "Build the pls4all_cli executable"                       ON)
+option(PLS4ALL_BUILD_CLI           "Build the n4m_cli executable"                       ON)
 option(PLS4ALL_BUILD_EXAMPLES      "Build examples/c/*"                                     OFF)
 option(PLS4ALL_BUILD_BENCH         "Build bench/cpp/*"                                      OFF)
 

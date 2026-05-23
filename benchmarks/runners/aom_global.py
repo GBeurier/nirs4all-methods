@@ -1,6 +1,6 @@
 """AOM-PLS global selection benchmark.
 
-Compares the public C ABI surface (`p4a_aom_global_select`) against the local
+Compares the public C ABI surface (`n4m_aom_global_select`) against the local
 `nirs4all/bench/AOM_v0/aompls` oracle on small synthetic datasets. Identical
 validation folds are passed to both sides so the comparison is exact.
 
@@ -32,7 +32,7 @@ DEFAULT_BENCH_DIR = REPO_ROOT.parent
 
 sys.path.insert(0, str(PLS4ALL_PY_SRC))
 
-import pls4all  # noqa: E402  — ctypes wrapper for libp4a
+import pls4all  # noqa: E402  — ctypes wrapper for libn4m
 
 
 BENCH_OPERATOR_NAMES = ["identity", "detrend_d1"]

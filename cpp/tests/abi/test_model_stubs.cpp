@@ -3,7 +3,7 @@
 // Phase 1 model tests. The file name is kept stable so the CMake test list
 // from Phase 0 does not need churn.
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include <cmath>
 #include <cstdio>

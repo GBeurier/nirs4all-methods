@@ -19,7 +19,7 @@ Contents preserved:
 - 8 modified + 9 new JS-binding `.ts` files (sklearn/aom/methods/native model/ffi/types)
 - 5 modified + 7 new Julia-binding files (`MLJ.jl`, `TablesSupport.jl`, `Methods.jl`, `runtests.jl`, `test_methods.jl`, `test_tables_mlj.jl`, README)
 - 3 modified Python-binding files (`__init__.py`, `_ffi.py`, README)
-- 3 modified R-binding vendored files (`extra_pls.cpp`, `model.cpp`, `wvc_selection.cpp` under `bindings/r/pls4all/src/libp4a/core/`)
+- 3 modified R-binding vendored files (`extra_pls.cpp`, `model.cpp`, `wvc_selection.cpp` under `bindings/r/pls4all/src/libn4m/core/`)
 - 2 modified `cpp/src/core/` files (`extra_pls.cpp`, `wvc_selection.cpp`)
 - 13 new `benchmarks/validation/` files (registry-based validation framework)
 - 3 modified benchmark code files (`render_docs.py`, `tests/test_orchestrator_parity.py`, `parity_timing/registry.py`)

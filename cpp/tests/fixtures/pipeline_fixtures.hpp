@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 #include "phase1_fixtures.hpp"
 
 namespace n4m::test::fixtures {

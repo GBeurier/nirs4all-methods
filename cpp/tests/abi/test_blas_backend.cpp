@@ -23,7 +23,7 @@
 #include <limits>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 #include "harness.hpp"
 
 namespace {

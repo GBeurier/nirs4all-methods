@@ -541,7 +541,7 @@ def generate(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         f"struct {struct_name} {{",
         "    const char* id;",
@@ -619,7 +619,7 @@ def generate(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -627,25 +627,25 @@ def generate(fixture_ids: Sequence[str],
 
 def _pipeline_operator(name: str) -> tuple[str, list[float]]:
     mapping = {
-        "identity": "P4A_OP_IDENTITY",
-        "center": "P4A_OP_CENTER",
-        "autoscale": "P4A_OP_AUTOSCALE",
-        "pareto": "P4A_OP_PARETO_SCALE",
-        "snv": "P4A_OP_SNV",
-        "msc": "P4A_OP_MSC",
+        "identity": "N4M_OP_IDENTITY",
+        "center": "N4M_OP_CENTER",
+        "autoscale": "N4M_OP_AUTOSCALE",
+        "pareto": "N4M_OP_PARETO_SCALE",
+        "snv": "N4M_OP_SNV",
+        "msc": "N4M_OP_MSC",
     }
     if name.startswith("detrend_poly_"):
         degree = float(int(name.rsplit("_", 1)[1]))
-        return "P4A_OP_DETREND_POLY", [degree]
+        return "N4M_OP_DETREND_POLY", [degree]
     if name.startswith("emsc_"):
         degree = float(int(name.rsplit("_", 1)[1]))
-        return "P4A_OP_EMSC", [degree]
+        return "N4M_OP_EMSC", [degree]
     if name.startswith("savgol_smooth_"):
         _prefix, _kind, window, poly_degree = name.split("_")
-        return "P4A_OP_SAVGOL_SMOOTH", [float(window), float(poly_degree)]
+        return "N4M_OP_SAVGOL_SMOOTH", [float(window), float(poly_degree)]
     if name.startswith("savgol_derivative_"):
         _prefix, _kind, window, poly_degree, derivative_order, delta = name.split("_")
-        return "P4A_OP_SAVGOL_DERIVATIVE", [
+        return "N4M_OP_SAVGOL_DERIVATIVE", [
             float(window),
             float(poly_degree),
             float(derivative_order),
@@ -653,37 +653,37 @@ def _pipeline_operator(name: str) -> tuple[str, list[float]]:
         ]
     if name.startswith("asls_"):
         _prefix, lam, asymmetry, iterations = name.split("_")
-        return "P4A_OP_ASLS_BASELINE", [
+        return "N4M_OP_ASLS_BASELINE", [
             float(lam),
             float(asymmetry),
             float(iterations),
         ]
     if name.startswith("norris_williams_"):
         _prefix, _kind, segment, gap, derivative_order = name.split("_")
-        return "P4A_OP_NORRIS_WILLIAMS", [
+        return "N4M_OP_NORRIS_WILLIAMS", [
             float(segment),
             float(gap),
             float(derivative_order),
         ]
     if name.startswith("wavelet_haar_"):
         _prefix, _kind, levels, threshold = name.split("_")
-        return "P4A_OP_WAVELET_DENOISE", [
+        return "N4M_OP_WAVELET_DENOISE", [
             float(levels),
             float(threshold),
         ]
     if name == "osc":
-        return "P4A_OP_OSC", []
+        return "N4M_OP_OSC", []
     if name.startswith("osc_"):
         _prefix, max_iter, tol = name.split("_")
-        return "P4A_OP_OSC", [
+        return "N4M_OP_OSC", [
             float(max_iter),
             float(tol),
         ]
     if name == "epo":
-        return "P4A_OP_EPO", []
+        return "N4M_OP_EPO", []
     if name.startswith("epo_"):
         _prefix, max_iter, tol = name.split("_")
-        return "P4A_OP_EPO", [
+        return "N4M_OP_EPO", [
             float(max_iter),
             float(tol),
         ]
@@ -705,14 +705,14 @@ def generate_pipeline(fixture_ids: Sequence[str],
         "#include <cstddef>",
         "#include <cstdint>",
         "",
-        '#include "pls4all/p4a.h"',
+        '#include "n4m/n4m.h"',
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         f"struct {struct_name} {{",
         "    const char* id;",
-        "    const p4a_operator_kind_t* operators;",
+        "    const n4m_operator_kind_t* operators;",
         "    std::size_t n_operators;",
         "    const double* params;",
         "    const std::int32_t* n_params;",
@@ -743,7 +743,7 @@ def generate_pipeline(fixture_ids: Sequence[str],
         n_params = [len(params) for _symbol_name, params in parsed_ops]
         params_name = f"{prefix}_params"
         n_params_name = f"{prefix}_n_params"
-        lines.append(f"inline const p4a_operator_kind_t {ops_name}[] = {{")
+        lines.append(f"inline const n4m_operator_kind_t {ops_name}[] = {{")
         lines.append(f"    {', '.join(operators)},")
         lines.append("};")
         lines.append("")
@@ -762,7 +762,7 @@ def generate_pipeline(fixture_ids: Sequence[str],
             "    {\n"
             f'        "{fid}",\n'
             f"        {ops_name},\n"
-            f"        sizeof({ops_name}) / sizeof(p4a_operator_kind_t),\n"
+            f"        sizeof({ops_name}) / sizeof(n4m_operator_kind_t),\n"
             f"        {params_name},\n"
             f"        {n_params_name},\n"
             f"        {_matrix_ref(x_name, fixture['data']['X'])},\n"
@@ -775,7 +775,7 @@ def generate_pipeline(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -798,7 +798,7 @@ def generate_aom_preprocessing(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct AomPreprocessingIndexRef {",
         "    const std::int64_t* values;",
@@ -850,7 +850,7 @@ def generate_aom_preprocessing(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -873,7 +873,7 @@ def generate_aom_operators(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct AomOperatorIndexRef {",
         "    const std::int64_t* values;",
@@ -923,7 +923,7 @@ def generate_aom_operators(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -946,7 +946,7 @@ def generate_aom_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct AomSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -1035,7 +1035,7 @@ def generate_aom_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -1058,7 +1058,7 @@ def generate_aom_pop_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct AomPopSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -1149,7 +1149,7 @@ def generate_aom_pop_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -1169,7 +1169,7 @@ def generate_metrics(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         f"struct {struct_name} {{",
         "    const char* id;",
@@ -1203,7 +1203,7 @@ def generate_metrics(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -1268,7 +1268,7 @@ def generate_validation(fixture_ids: Sequence[str],
         "#include <cstddef>",
         "#include <cstdint>",
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct IndexRef {",
         "    const std::int64_t* values;",
@@ -1323,7 +1323,7 @@ def generate_validation(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -1344,7 +1344,7 @@ def generate_advanced_validation(fixture_ids: Sequence[str],
         "#include <cstddef>",
         "#include <cstdint>",
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct IndexRef {",
         "    const std::int64_t* values;",
@@ -1436,7 +1436,7 @@ def generate_advanced_validation(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -1459,7 +1459,7 @@ def generate_classification_metrics(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct ClassLabelRef {",
         "    std::int64_t rows;",
@@ -1503,7 +1503,7 @@ def generate_classification_metrics(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -1526,7 +1526,7 @@ def generate_classification_extensions(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct ClassificationExtensionLabelRef {",
         "    std::int64_t rows;",
@@ -1590,7 +1590,7 @@ def generate_classification_extensions(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -1613,7 +1613,7 @@ def generate_pls_lda(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct PlsLdaLabelRef {",
         "    std::int64_t rows;",
@@ -1665,7 +1665,7 @@ def generate_pls_lda(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -1688,7 +1688,7 @@ def generate_pls_logistic(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct PlsLogisticLabelRef {",
         "    std::int64_t rows;",
@@ -1752,7 +1752,7 @@ def generate_pls_logistic(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -1775,7 +1775,7 @@ def generate_mb_pls(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct MbPlsBlockRef {",
         "    const std::int64_t* values;",
@@ -1842,7 +1842,7 @@ def generate_mb_pls(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -1865,7 +1865,7 @@ def generate_lw_pls(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct LwPlsIndexRef {",
         "    std::int64_t rows;",
@@ -1917,7 +1917,7 @@ def generate_lw_pls(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -1939,7 +1939,7 @@ def generate_variable_importance(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         f"struct {struct_name} {{",
         "    const char* id;",
@@ -1980,7 +1980,7 @@ def generate_variable_importance(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -2003,7 +2003,7 @@ def generate_variable_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct VariableSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -2068,7 +2068,7 @@ def generate_variable_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -2091,7 +2091,7 @@ def generate_interval_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct IntervalSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -2154,7 +2154,7 @@ def generate_interval_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -2177,7 +2177,7 @@ def generate_bipls_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct BiplsSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -2248,7 +2248,7 @@ def generate_bipls_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -2271,7 +2271,7 @@ def generate_sipls_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct SiplsSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -2338,7 +2338,7 @@ def generate_sipls_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -2361,7 +2361,7 @@ def generate_stability_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct StabilitySelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -2424,7 +2424,7 @@ def generate_stability_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -2447,7 +2447,7 @@ def generate_uve_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct UveSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -2510,7 +2510,7 @@ def generate_uve_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -2533,7 +2533,7 @@ def generate_emcuve_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct EmcuveSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -2602,7 +2602,7 @@ def generate_emcuve_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -2625,7 +2625,7 @@ def generate_randomization_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct RandomizationSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -2686,7 +2686,7 @@ def generate_randomization_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -2709,7 +2709,7 @@ def generate_spa_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct SpaSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -2762,7 +2762,7 @@ def generate_spa_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -2785,7 +2785,7 @@ def generate_cars_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct CarsSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -2850,7 +2850,7 @@ def generate_cars_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -2873,7 +2873,7 @@ def generate_random_frog_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct RandomFrogSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -2952,7 +2952,7 @@ def generate_random_frog_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -2975,7 +2975,7 @@ def generate_scars_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct ScarsSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -3050,7 +3050,7 @@ def generate_scars_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -3073,7 +3073,7 @@ def generate_ga_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct GaSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -3152,7 +3152,7 @@ def generate_ga_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -3175,7 +3175,7 @@ def generate_shaving_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct ShavingSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -3242,7 +3242,7 @@ def generate_shaving_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -3265,7 +3265,7 @@ def generate_rep_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct RepSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -3340,7 +3340,7 @@ def generate_rep_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -3363,7 +3363,7 @@ def generate_ipw_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct IpwSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -3440,7 +3440,7 @@ def generate_ipw_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -3463,7 +3463,7 @@ def generate_st_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct StSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -3542,7 +3542,7 @@ def generate_st_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -3565,7 +3565,7 @@ def generate_bve_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct BveSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -3634,7 +3634,7 @@ def generate_bve_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -3657,7 +3657,7 @@ def generate_t2_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct T2SelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -3745,7 +3745,7 @@ def generate_t2_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -3768,7 +3768,7 @@ def generate_wvc_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct WvcSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -3835,7 +3835,7 @@ def generate_wvc_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -3858,7 +3858,7 @@ def generate_wvc_threshold_selection(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct WvcThresholdSelectionIndexRef {",
         "    const std::int64_t* values;",
@@ -3921,7 +3921,7 @@ def generate_wvc_threshold_selection(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -3943,7 +3943,7 @@ def generate_component_coefficients(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         f"struct {struct_name} {{",
         "    const char* id;",
@@ -3980,7 +3980,7 @@ def generate_component_coefficients(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -4003,7 +4003,7 @@ def generate_cross_validation(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         "struct CvIndexRef {",
         "    const std::int64_t* values;",
@@ -4060,7 +4060,7 @@ def generate_cross_validation(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
@@ -4082,7 +4082,7 @@ def generate_component_cv(fixture_ids: Sequence[str],
         "",
         '#include "phase1_fixtures.hpp"',
         "",
-        "namespace pls4all::test::fixtures {",
+        "namespace n4m::test::fixtures {",
         "",
         f"struct {struct_name} {{",
         "    const char* id;",
@@ -4126,7 +4126,7 @@ def generate_component_cv(fixture_ids: Sequence[str],
     lines.append(",\n".join(entries))
     lines.append("};")
     lines.append("")
-    lines.append("}  // namespace pls4all::test::fixtures")
+    lines.append("}  // namespace n4m::test::fixtures")
     lines.append("")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8", newline="\n")

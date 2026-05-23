@@ -36,7 +36,7 @@ def test_external_rows_are_reference_checked_not_binding_checked(
 
     ref = np.array([1.0, 2.0, 3.0])
     records = [
-        _record(tmp_path, "cpp", "pls4all_core", ref),
+        _record(tmp_path, "cpp", "n4m_core", ref),
         _record(tmp_path, "ref_python_scikit_learn", "external", ref),
         _record(tmp_path, "ref_r_pls", "external", ref),
     ]
@@ -64,7 +64,7 @@ def test_pls4all_only_rows_use_stored_reference_oracle(tmp_path, monkeypatch):
     np.save(oracle, ref, allow_pickle=False)
 
     records = [
-        _record(tmp_path, "cpp", "pls4all_core", ref),
+        _record(tmp_path, "cpp", "n4m_core", ref),
         _record(tmp_path, "python_tier1", "pls4all_binding", ref),
     ]
 
@@ -82,7 +82,7 @@ def test_missing_stored_reference_oracle_is_a_gate_failure(
     orchestrator.ORACLES_DIR.mkdir()
 
     records = [
-        _record(tmp_path, "cpp", "pls4all_core",
+        _record(tmp_path, "cpp", "n4m_core",
                 np.array([1.0, 2.0, 3.0])),
     ]
 

@@ -12,8 +12,8 @@
 #include <new>
 #include <vector>
 
-#include "pls4all/p4a.h"
-#include "pls4all/p4a_version.h"
+#include "n4m/n4m.h"
+#include "n4m/n4m_version.h"
 
 #include "core/common/context.hpp"
 #include "core/model.hpp"

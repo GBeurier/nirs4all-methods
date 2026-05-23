@@ -45,7 +45,7 @@ mdl  = pls4all.fitrpls(X, y, "NumComponents", 5);
 yhat = predict(mdl, Xnew);
 ```
 
-The C ABI handles `p4a_context_t*`, `p4a_config_t*`, `p4a_model_t*`
+The C ABI handles `n4m_context_t*`, `n4m_config_t*`, `n4m_model_t*`
 are the same objects underneath.
 
 ## 2. Two API tiers
@@ -65,7 +65,7 @@ the reverse — the `.n4a` bundle is the lingua franca.
 
 ## 3. Five C++ acceleration builds
 
-`libp4a` is built five ways. The build is a property of the dynamic
+`libn4m` is built five ways. The build is a property of the dynamic
 library you load, not of the API — every binding sees the same
 function names regardless.
 

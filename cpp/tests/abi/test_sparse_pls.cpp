@@ -15,7 +15,7 @@
 #include <cstdio>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/config.hpp"
 #include "core/context.hpp"

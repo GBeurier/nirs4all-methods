@@ -24,7 +24,7 @@ Local audit results:
 | small cross-binding PLS/PCR sample | confirmed external rows can be mislabeled as binding failures |
 | slow-method pls4all smoke | confirmed selector/PCR timing and adapter issues need focused work |
 | `scripts/bump_version.sh --check` | passed |
-| ABI symbol diff | failed: the current library exports additional `p4a_*` symbols absent from `cpp/abi/expected_symbols_linux.txt` |
+| ABI symbol diff | failed: the current library exports additional `n4m_*` symbols absent from `cpp/abi/expected_symbols_linux.txt` |
 
 ## Implementation status
 
@@ -53,7 +53,7 @@ Stabilization status:
 ## P0 — make gates truthful
 
 1. In `benchmarks/cross_binding/orchestrator.py`, compute binding parity
-   only for `pls4all_core` and `pls4all_binding` rows. External rows must
+   only for `n4m_core` and `pls4all_binding` rows. External rows must
    get `binding_parity_ok = None` or an explicit not-applicable code.
 2. Keep reference parity for every successful row, including external
    libraries, against the canonical registry reference.
@@ -108,7 +108,7 @@ Stabilization status:
    SVD/LAPACK or partial top-component solver, and use an `n x n` path when
    `p >> n`. **Partially done:** PCR now batches component projections and
    avoids score storage when not requested.
-2. R vendoring: regenerate the vendored libp4a copy instead of manually
+2. R vendoring: regenerate the vendored libn4m copy instead of manually
    carrying divergent `model.cpp` code.
 3. Selectors: introduce a shared fitness evaluator that reuses buffers,
    validation folds and prediction arrays instead of reallocating for every
@@ -123,7 +123,7 @@ Stabilization status:
 ## P4 — packaging and release gates
 
 1. Refresh the ABI snapshot intentionally. The audit saw more exported
-   `p4a_*` symbols than `cpp/abi/expected_symbols_linux.txt` records.
+   `n4m_*` symbols than `cpp/abi/expected_symbols_linux.txt` records.
 2. Ensure Python sdist is either a real source build with CMake inputs
    included, or do not publish sdists until that path is supported.
 3. Keep Python wheels smoke-tested from the built artifact, not from the

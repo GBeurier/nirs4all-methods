@@ -281,7 +281,7 @@ end
 
 versions = struct();
 versions.language = sprintf("Octave %s", OCTAVE_VERSION);
-versions.pls4all = "from libp4a-linked MEX + classdefs";
+versions.pls4all = "from libn4m-linked MEX + classdefs";
 versions.registry_method = algo;
 versions.blas = "linked-BLAS";
 

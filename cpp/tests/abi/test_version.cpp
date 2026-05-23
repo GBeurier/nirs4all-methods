@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstring>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 #include "harness.hpp"
 
 TEST(version, runtime_matches_compile_time) {

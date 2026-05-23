@@ -93,7 +93,7 @@ jobs:
 
       - name: Run CLI selfcheck (Linux/macOS)
         if: runner.os != 'Windows'
-        run: ./build/${{ matrix.cfg.preset }}/cpp/cli/pls4all_cli --selfcheck
+        run: ./build/${{ matrix.cfg.preset }}/cpp/cli/n4m_cli --selfcheck
 
       - name: Upload Release artefacts
         if: contains(matrix.cfg.label, 'release')
@@ -104,5 +104,5 @@ jobs:
           path: |
             build/${{ matrix.cfg.preset }}/cpp/src/**/p4a*
             build/${{ matrix.cfg.preset }}/cpp/src/**/libn4m*
-            build/${{ matrix.cfg.preset }}/cpp/cli/pls4all_cli*
+            build/${{ matrix.cfg.preset }}/cpp/cli/n4m_cli*
           if-no-files-found: warn

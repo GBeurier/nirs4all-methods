@@ -62,7 +62,7 @@ BACKEND_DISPLAY: dict[str, str] = {
 BACKEND_LONG: dict[str, tuple[str, str, str]] = {
     # name → (Language, Tier, What it runs)
     "registry_pls4all": ("Python",       "pls4all canonical", "`benchmarks.parity_timing.registry.MethodSpec.pls4all_fn` — the canonical per-method pls4all entry point"),
-    "cpp":          ("C++",          "pls4all native", "libp4a called via ctypes — same C kernel as every pls4all binding, no high-level wrapper"),
+    "cpp":          ("C++",          "pls4all native", "libn4m called via ctypes — same C kernel as every pls4all binding, no high-level wrapper"),
     "python_tier1": ("Python",       "pls4all raw",       "`pls4all._methods.<algo>_fit(ctx, cfg, X, y, …)` — direct FFI binding"),
     "python_tier2": ("Python",       "pls4all idiomatic", "`pls4all.sklearn.<Class>` — sklearn-style BaseEstimator with `.fit() / .predict()`"),
     "sklearn":      ("Python",       "external",          "`sklearn.cross_decomposition.PLSRegression`, `sklearn.decomposition.PCA + LinearRegression / Ridge / GaussianProcessRegressor` (proxies)"),
@@ -86,10 +86,10 @@ REF_DISPLAY_OVERRIDE = {
 
 def disp(b: str, build: str = "blas-omp") -> str:
     """Display label for a (backend, libp4a_build) pair. For the cpp
-    backend the libp4a build is part of the column identity so we can
+    backend the libn4m build is part of the column identity so we can
     surface the BLAS / OpenMP / CUDA acceleration tiers side-by-side."""
     if b == "cpp":
-        # Map libp4a build → suffix that says what's enabled.
+        # Map libn4m build → suffix that says what's enabled.
         suffix = {
             "dev-release": "native",    # no BLAS, no OMP
             "blas-on":     "blas",
@@ -106,7 +106,7 @@ def disp(b: str, build: str = "blas-omp") -> str:
 
 
 def column_key(row: dict) -> str:
-    """Canonical column identity. cpp splits per-libp4a-build; everything
+    """Canonical column identity. cpp splits per-libn4m-build; everything
     else collapses to the bare backend name."""
     b = row.get("backend", "")
     if b == "cpp":
@@ -499,7 +499,7 @@ def render(csv_path: Path, out_path: Path,
         groups[(r["algorithm"], int(r["threads"]))].append(r)
 
     # Column keys present. Order them deterministically:
-    #   1. pls4all.cpp.* in libp4a-build order (ref → blas → omp →
+    #   1. pls4all.cpp.* in libn4m-build order (ref → blas → omp →
     #      blas+omp → cuda) — left-most, since they're the reference.
     #   2. pls4all.python / pls4all.sklearn
     #   3. pls4all.R / pls4all.R.formula
@@ -602,18 +602,18 @@ def render(csv_path: Path, out_path: Path,
                 "shipped by its own maintainers.\n")
     out.append("| Column | Language | Tier | What it actually runs |")
     out.append("|---|---|---|---|")
-    # Backend defs: distinguish the cpp libp4a tiers as separate rows.
+    # Backend defs: distinguish the cpp libn4m tiers as separate rows.
     CPP_TIER_DESC = {
         "dev-release": ("C++", "pls4all native scalar",
-                          "libp4a built with `PLS4ALL_WITH_BLAS=OFF, OPENMP=OFF` — pure scalar native C++ loops, no acceleration. Used as one C++ implementation column; binding parity still uses cpp @ blas-omp when available."),
+                          "libn4m built with `PLS4ALL_WITH_BLAS=OFF, OPENMP=OFF` — pure scalar native C++ loops, no acceleration. Used as one C++ implementation column; binding parity still uses cpp @ blas-omp when available."),
         "blas-on":     ("C++", "pls4all + BLAS",
-                          "libp4a built with `PLS4ALL_WITH_BLAS=ON` only — links system BLAS (OpenBLAS in this env), benefits from BLAS thread parallelism."),
+                          "libn4m built with `PLS4ALL_WITH_BLAS=ON` only — links system BLAS (OpenBLAS in this env), benefits from BLAS thread parallelism."),
         "omp-on":      ("C++", "pls4all + OpenMP",
-                          "libp4a built with `PLS4ALL_WITH_OPENMP=ON` only — OpenMP parallelism in the C kernel loops, no BLAS."),
+                          "libn4m built with `PLS4ALL_WITH_OPENMP=ON` only — OpenMP parallelism in the C kernel loops, no BLAS."),
         "blas-omp":    ("C++", "pls4all + BLAS + OpenMP",
-                          "libp4a built with both `PLS4ALL_WITH_BLAS=ON` and `PLS4ALL_WITH_OPENMP=ON` — the recommended production config."),
+                          "libn4m built with both `PLS4ALL_WITH_BLAS=ON` and `PLS4ALL_WITH_OPENMP=ON` — the recommended production config."),
         "cuda-on":     ("C++", "pls4all + CUDA",
-                          "libp4a built with `PLS4ALL_WITH_CUDA=ON` — GEMM kernels offloaded to GPU via cuBLAS. Overhead-dominated at small matrix sizes; wins at large ones."),
+                          "libn4m built with `PLS4ALL_WITH_CUDA=ON` — GEMM kernels offloaded to GPU via cuBLAS. Overhead-dominated at small matrix sizes; wins at large ones."),
     }
     for key in seen_keys:
         if key.startswith("cpp::"):
@@ -629,7 +629,7 @@ def render(csv_path: Path, out_path: Path,
     out.append("")
 
     # Versions: collect by (backend, libp4a_build) so we can show the
-    # libp4a version per cpp tier.
+    # libn4m version per cpp tier.
     versions_seen = {}
     for r in rows:
         key = column_key(r)
@@ -653,7 +653,7 @@ def render(csv_path: Path, out_path: Path,
         out.append(f"| `{column_disp(key)}` | {items} |")
 
     out.append("\n## Methodology\n")
-    out.append("- Gate 1 reference: `cpp` cell at 1 thread (libp4a via "
+    out.append("- Gate 1 reference: `cpp` cell at 1 thread (libn4m via "
                 "ctypes), or `python_tier1` when `cpp` is unavailable "
                 "for an algorithm")
     out.append("- Gate 2 reference: the registry-declared canonical "
@@ -673,7 +673,7 @@ def render(csv_path: Path, out_path: Path,
                 "MKL_NUM_THREADS = BLIS_NUM_THREADS` set in the subprocess env, "
                 "plus `Context.num_threads` for Python pls4all and "
                 "`maxNumCompThreads()` for Octave")
-    out.append("- pls4all libp4a build: `build/blas-omp/cpp/src/libp4a.so` "
+    out.append("- pls4all libn4m build: `build/blas-omp/cpp/src/libn4m.so` "
                 "(BLAS + OpenMP enabled)\n")
 
     out_path.write_text("\n".join(out))

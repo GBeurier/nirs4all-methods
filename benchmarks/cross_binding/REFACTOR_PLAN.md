@@ -77,7 +77,7 @@ instead of crashing.
 ### 2. `bench_pls4all_native.py` — replaces `bench_cpp.py` + `bench_python_tier1.py`
 
 Both old scripts do the exact same thing (Python ctypes call into
-`libp4a.so` with a Config + Context). The only difference between them and
+`libn4m.so` with a Config + Context). The only difference between them and
 `bench_registry_pls4all.py` is which dispatcher they used.
 
 ```
@@ -86,7 +86,7 @@ bench_pls4all_native.py
     method.pls4all_fn(ctx, cfg, X, Y, **adapted_params, **benchmark_inputs)
 ```
 
-Same env-var contract (`PLS4ALL_LIB_DIR` → the 4 libp4a builds). One script
+Same env-var contract (`PLS4ALL_LIB_DIR` → the 4 libn4m builds). One script
 × 4 build columns in the matrix = 4 cpp.* columns, all populated.
 
 Drop `_common.dispatch_pls4all_fit()` entirely.
@@ -157,7 +157,7 @@ Coverage is ~25 classes; the rest render `—`.
 
 ```python
 BACKENDS = [
-    ("native",            "bench_pls4all_native.py",            "Python",  "registry",  "pls4all_core"),
+    ("native",            "bench_pls4all_native.py",            "Python",  "registry",  "n4m_core"),
     ("sklearn_idiomatic", "bench_pls4all_sklearn.py",           "Python",  "sklearn",   "pls4all_binding"),
     ("r_direct",          "bench_pls4all_r_direct.R",           "R",       "direct",    "pls4all_binding"),
     ("r_formula",         "bench_pls4all_r_formula.R",          "R",       "formula",   "pls4all_binding"),
@@ -175,7 +175,7 @@ in `full_matrix.csv` need a one-shot migration pass (rename + dedupe).
 
 Update `BACKEND_DISPLAY` so the new backend names map to the column titles
 listed in the target layout (cpp.native, cpp.blas, …, python, R.direct,
-R.formula, matlab.procedural, matlab.classdef). The libp4a-build × backend
+R.formula, matlab.procedural, matlab.classdef). The libn4m-build × backend
 matrix used by the renderer already understands per-build expansion; we
 just point the new `native` backend at it.
 
@@ -235,7 +235,7 @@ docs/benchmarks/cross_binding{,_threads}.md
    python benchmarks/cross_binding/orchestrator.py \
        --algorithms pls cppls di_pls mb_pls so_pls pls_lda gpr_pls \
        --sizes 100x50 --threads 1 --n-runs 1 \
-       --libp4a-build blas-omp --reference-backends none \
+       --libn4m-build blas-omp --reference-backends none \
        --out-csv /tmp/smoke.csv
    ```
    Expect: every pls4all backend OK on every of the 7 algos; no `TypeError`
@@ -283,7 +283,7 @@ docs/benchmarks/cross_binding{,_threads}.md
   `MethodSpec`. `MethodSpec.cross_binding: CrossBindingSpec` keeps the
   parity-gate surface clean.
 - **Per-backend build sweep**: today every non-external backend sweeps all
-  libp4a builds. Only `native` should expand to 4 builds; sklearn / R /
+  libn4m builds. Only `native` should expand to 4 builds; sklearn / R /
   MATLAB backends force `blas-omp`. Add explicit `build_sweep: bool` on
   the backend tuple in `BACKENDS` and gate the build loop on it.
 - **Array extras serialisation**: R/MATLAB cannot regenerate NumPy PCG64
@@ -319,7 +319,7 @@ docs/benchmarks/cross_binding{,_threads}.md
    `bench_pls4all_matlab.m`, `bench_pls4all_matlab_classdef.m`.
 4. **Smoke each new script** at `--algorithms pls cppls di_pls so_pls
    weighted_pls bve_select pls_diagnostic_dmodx --sizes 100x50
-   --threads 1 --n-runs 1 --libp4a-build blas-omp` against `/tmp/smoke.csv`.
+   --threads 1 --n-runs 1 --libn4m-build blas-omp` against `/tmp/smoke.csv`.
    Confirm OK rows for the algos declaring the handle, "not bound" rows
    for the others.
 5. **Orchestrator switch**: add `build_sweep` to backend tuple, swap to

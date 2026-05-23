@@ -9,7 +9,7 @@
 #include <cstdio>
 #include <vector>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "fixtures/aom_pop_selection_fixtures.hpp"
 #include "harness.hpp"

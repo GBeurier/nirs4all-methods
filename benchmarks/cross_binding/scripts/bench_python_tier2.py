@@ -190,9 +190,9 @@ def _fit_kwargs(cls, extras: dict) -> dict:
     return out
 
 
-def _fit_simpls_model(p4a_sklearn, X, Y, n_components: int):
+def _fit_simpls_model(n4m_sklearn, X, Y, n_components: int):
     yarg = Y if Y.shape[1] > 1 else Y.ravel()
-    est = p4a_sklearn.PLSRegression(
+    est = n4m_sklearn.PLSRegression(
         n_components=int(n_components),
         solver="simpls",
         center_x=True,
@@ -205,7 +205,7 @@ def _fit_simpls_model(p4a_sklearn, X, Y, n_components: int):
     return est._ensure_model_handle()
 
 
-def _run_function_binding(algo: str, p4a_sklearn, X, y, Y, params: dict,
+def _run_function_binding(algo: str, n4m_sklearn, X, y, Y, params: dict,
                           prediction_key: str) -> np.ndarray:
     if algo in {"aom_pls", "pop_pls"}:
         import pls4all
@@ -221,12 +221,12 @@ def _run_function_binding(algo: str, p4a_sklearn, X, y, Y, params: dict,
             finally:
                 result.close()
     if algo == "aom_preprocess":
-        return np.asarray(p4a_sklearn.aom_preprocess(
+        return np.asarray(n4m_sklearn.aom_preprocess(
             X, Y,
             n_operators=int(params["n_operators"]),
             gating_mode=int(params["gating_mode"])))
     if algo == "approximate_press":
-        return np.asarray(p4a_sklearn.approximate_press(
+        return np.asarray(n4m_sklearn.approximate_press(
             X, Y, max_components=int(params["max_components"]))).reshape(1, -1)
     if algo == "one_se_rule":
         max_components = int(params["max_components"])
@@ -234,7 +234,7 @@ def _run_function_binding(algo: str, p4a_sklearn, X, y, Y, params: dict,
         idx = np.arange(max_components * n_folds,
                         dtype=np.float64).reshape(max_components, n_folds)
         fold_rmse = 0.5 + 0.5 * np.mod(idx * 37.0 + 11.0, 997.0) / 996.0
-        result = p4a_sklearn.one_se_rule(
+        result = n4m_sklearn.one_se_rule(
             fold_rmse,
             max_components=max_components,
             n_folds=n_folds,
@@ -242,19 +242,19 @@ def _run_function_binding(algo: str, p4a_sklearn, X, y, Y, params: dict,
         return np.asarray(result[prediction_key], dtype=np.float64).reshape(1, -1)
     if algo in {"pls_diagnostic_dmodx", "pls_diagnostic_q", "pls_diagnostic_t2"}:
         _ctx, model = _fit_simpls_model(
-            p4a_sklearn, X, Y, int(params["n_components"]))
-        fn = getattr(p4a_sklearn, _FUNCTION_BINDINGS[algo])
+            n4m_sklearn, X, Y, int(params["n_components"]))
+        fn = getattr(n4m_sklearn, _FUNCTION_BINDINGS[algo])
         return np.asarray(fn(model, X), dtype=np.float64).reshape(1, -1)
     if algo == "pls_monitoring":
         split = X.shape[0] // 2
         _ctx, model = _fit_simpls_model(
-            p4a_sklearn, X[:split], Y[:split], int(params["n_components"]))
-        result = p4a_sklearn.pls_monitoring(
+            n4m_sklearn, X[:split], Y[:split], int(params["n_components"]))
+        result = n4m_sklearn.pls_monitoring(
             model, X[:split], X[split:],
             alpha=1.0 - float(params["alpha"]))
         return np.asarray(result[prediction_key], dtype=np.float64).reshape(1, -1)
     if algo == "on_pls":
-        result = p4a_sklearn.on_pls(
+        result = n4m_sklearn.on_pls(
             X,
             n_blocks=int(params["n_blocks"]),
             n_joint=int(params["n_joint"]),
@@ -275,12 +275,12 @@ def main():
         raise RuntimeError(
             f"python_tier2: algo '{algo}' not declared in _SKLEARN_CLASS")
 
-    from pls4all import sklearn as p4a_sklearn
+    from pls4all import sklearn as n4m_sklearn
     from pls4all._context import Context
 
     cls = None
     if class_name is not None:
-        cls = getattr(p4a_sklearn, class_name, None)
+        cls = getattr(n4m_sklearn, class_name, None)
         if cls is None:
             raise RuntimeError(
                 f"python_tier2: pls4all.sklearn.{class_name} missing for '{algo}'")
@@ -293,7 +293,7 @@ def main():
         Y, extras = benchmark_inputs(method, X, y, params, seed)
         if algo in _FUNCTION_BINDINGS:
             return _run_function_binding(
-                algo, p4a_sklearn, X, y, Y, params, method.prediction_key)
+                algo, n4m_sklearn, X, y, Y, params, method.prediction_key)
         # Some array extras (group_assignment, block_sizes) are
         # constructor kwargs on the sklearn class, not fit kwargs.
         ctor_kwargs = _constructor_kwargs(algo, cls, params)

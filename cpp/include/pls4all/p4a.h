@@ -86,8 +86,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "pls4all/p4a_export.h"
-#include "pls4all/p4a_version.h"
+#include "n4m/n4m_export.h"
+#include "n4m/n4m_version.h"
 #include "n4m/n4m.h"  /* Common-core: status/backend/dtype/matrix_view/context/version */
 
 #ifdef __cplusplus

@@ -213,7 +213,7 @@ def main() -> int:
                         "backend":      "cpp",
                         "language":     "C++",
                         "tier":         "direct",
-                        "kind":         "pls4all_core",
+                        "kind":         "n4m_core",
                         "libp4a_build": "blas-omp",
                         "ms":           cpp_ms,
                     },

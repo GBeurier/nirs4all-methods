@@ -161,7 +161,7 @@ fi
 
 {
   echo "# $(date -u +%Y-%m-%dT%H:%M:%SZ) starting pls4all overnight benchmark"
-  echo "# build_presets=${build_presets[*]} clean_build=${CLEAN_BUILD} libp4a=${LIBP4A_BUILD} algorithms=${ALGORITHMS} registry_cells=${REGISTRY_CELLS} sizes=${SIZES:-default} threads=${THREADS} adaptive_max_total_runs=${N_RUNS}"
+  echo "# build_presets=${build_presets[*]} clean_build=${CLEAN_BUILD} libn4m=${LIBP4A_BUILD} algorithms=${ALGORITHMS} registry_cells=${REGISTRY_CELLS} sizes=${SIZES:-default} threads=${THREADS} adaptive_max_total_runs=${N_RUNS}"
   echo "# references=${REFERENCE_BACKENDS} canonical_only=${CANONICAL_ONLY} full_matrix=${FULL_MATRIX} resume=${RESUME} force=${FORCE} rerun_failed=${RERUN_FAILED} render_docs=${RENDER_DOCS} build_site=${BUILD_SITE} publish_web=${PUBLISH_WEB} deploy_pages=${DEPLOY_PAGES} pages_branch=${PAGES_BRANCH} timeout=${TIMEOUT}"
 
   for preset in "${build_presets[@]}"; do
@@ -180,7 +180,7 @@ fi
     --threads "${thread_args[@]}" \
     --n-runs "${N_RUNS}" \
     --timeout "${TIMEOUT}" \
-    --libp4a-build "${LIBP4A_BUILD}" \
+    --libn4m-build "${LIBP4A_BUILD}" \
     "${canonical_flags[@]}" \
     "${resume_flags[@]}" \
     --flush-each-cell \

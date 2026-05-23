@@ -10,7 +10,7 @@ The donor (`nirs4all-methods`) and the base (`pls4all`) both ship a
 "common-core" of infrastructure: `context`, `status`, `matrix_view`,
 `version`, `parallel`, `linalg.hpp`. **A side-by-side comparison shows
 the implementations are 100 % equivalent — the only difference is the
-symbol/namespace prefix (`p4a_*` / `pls4all::core` vs `n4m_*` /
+symbol/namespace prefix (`n4m_*` / `n4m::core` vs `n4m_*` /
 `n4m::core`).** Enums, struct fields, error-buffer size, and backend
 codes all map 1-for-1.
 
@@ -21,7 +21,7 @@ therefore the unified winners as-is — no semantic rewrite needed.
 ## Comparison evidence
 
 ```
-context.cpp      pls4all=2632  donor=2620   delta=12 bytes (p4a_ vs n4m_ on each token)
+context.cpp      pls4all=2632  donor=2620   delta=12 bytes (n4m_ vs n4m_ on each token)
 context.hpp      pls4all=3173  donor=3157   delta=16 bytes (same prefix-only diff)
 status.cpp       pls4all=1752  donor=1744   delta=8  bytes
 status.hpp       pls4all=437   donor=425    delta=12 bytes
@@ -34,7 +34,7 @@ linalg.hpp       pls4all=10968 donor=10936  delta=32 bytes
 ```
 
 After normalising the pls4all-side prefix (`p4a/n4m`, `P4A/N4M`,
-`pls4all::core/n4m::core`, `pls4all::cuda_dispatch/n4m::cuda_dispatch`,
+`n4m::core/n4m::core`, `n4m::cuda_dispatch/n4m::cuda_dispatch`,
 `pls4all/p4a.h/n4m/n4m.h`) the diffs vanish on every pair. The pls4all
 files are a mechanical rename of the same source.
 
@@ -42,25 +42,25 @@ files are a mechanical rename of the same source.
 
 | Code | Donor | pls4all |
 |------|-------|---------|
-| 0    | `N4M_OK` | `P4A_OK` |
-| 1    | `N4M_ERR_INVALID_ARGUMENT` | `P4A_ERR_INVALID_ARGUMENT` |
-| 2    | `N4M_ERR_NULL_POINTER` | `P4A_ERR_NULL_POINTER` |
-| 3    | `N4M_ERR_SHAPE_MISMATCH` | `P4A_ERR_SHAPE_MISMATCH` |
-| 4    | `N4M_ERR_DTYPE_MISMATCH` | `P4A_ERR_DTYPE_MISMATCH` |
-| 5    | `N4M_ERR_STRIDE_INVALID` | `P4A_ERR_STRIDE_INVALID` |
-| 6    | `N4M_ERR_NOT_FITTED` | `P4A_ERR_NOT_FITTED` |
-| 7    | `N4M_ERR_NUMERICAL_FAILURE` | `P4A_ERR_NUMERICAL_FAILURE` |
-| 8    | `N4M_ERR_CONVERGENCE_FAILED` | `P4A_ERR_CONVERGENCE_FAILED` |
-| 9    | `N4M_ERR_OUT_OF_MEMORY` | `P4A_ERR_OUT_OF_MEMORY` |
-| 10   | `N4M_ERR_UNSUPPORTED` | `P4A_ERR_UNSUPPORTED` |
-| 11   | `N4M_ERR_NOT_IMPLEMENTED` | `P4A_ERR_NOT_IMPLEMENTED` |
-| 12   | `N4M_ERR_ABI_MISMATCH` | `P4A_ERR_ABI_MISMATCH` |
-| 13   | `N4M_ERR_IO` | `P4A_ERR_IO` |
-| 14   | `N4M_ERR_CORRUPT_BUFFER` | `P4A_ERR_CORRUPT_BUFFER` |
-| 15   | `N4M_ERR_VERSION_INCOMPATIBLE` | `P4A_ERR_VERSION_INCOMPATIBLE` |
-| 16   | `N4M_ERR_BACKEND_UNAVAILABLE` | `P4A_ERR_BACKEND_UNAVAILABLE` |
-| 17   | `N4M_ERR_CANCELLED` | `P4A_ERR_CANCELLED` |
-| 255  | `N4M_ERR_INTERNAL` | `P4A_ERR_INTERNAL` |
+| 0    | `N4M_OK` | `N4M_OK` |
+| 1    | `N4M_ERR_INVALID_ARGUMENT` | `N4M_ERR_INVALID_ARGUMENT` |
+| 2    | `N4M_ERR_NULL_POINTER` | `N4M_ERR_NULL_POINTER` |
+| 3    | `N4M_ERR_SHAPE_MISMATCH` | `N4M_ERR_SHAPE_MISMATCH` |
+| 4    | `N4M_ERR_DTYPE_MISMATCH` | `N4M_ERR_DTYPE_MISMATCH` |
+| 5    | `N4M_ERR_STRIDE_INVALID` | `N4M_ERR_STRIDE_INVALID` |
+| 6    | `N4M_ERR_NOT_FITTED` | `N4M_ERR_NOT_FITTED` |
+| 7    | `N4M_ERR_NUMERICAL_FAILURE` | `N4M_ERR_NUMERICAL_FAILURE` |
+| 8    | `N4M_ERR_CONVERGENCE_FAILED` | `N4M_ERR_CONVERGENCE_FAILED` |
+| 9    | `N4M_ERR_OUT_OF_MEMORY` | `N4M_ERR_OUT_OF_MEMORY` |
+| 10   | `N4M_ERR_UNSUPPORTED` | `N4M_ERR_UNSUPPORTED` |
+| 11   | `N4M_ERR_NOT_IMPLEMENTED` | `N4M_ERR_NOT_IMPLEMENTED` |
+| 12   | `N4M_ERR_ABI_MISMATCH` | `N4M_ERR_ABI_MISMATCH` |
+| 13   | `N4M_ERR_IO` | `N4M_ERR_IO` |
+| 14   | `N4M_ERR_CORRUPT_BUFFER` | `N4M_ERR_CORRUPT_BUFFER` |
+| 15   | `N4M_ERR_VERSION_INCOMPATIBLE` | `N4M_ERR_VERSION_INCOMPATIBLE` |
+| 16   | `N4M_ERR_BACKEND_UNAVAILABLE` | `N4M_ERR_BACKEND_UNAVAILABLE` |
+| 17   | `N4M_ERR_CANCELLED` | `N4M_ERR_CANCELLED` |
+| 255  | `N4M_ERR_INTERNAL` | `N4M_ERR_INTERNAL` |
 
 Identical numeric values across the board. M5 (ABI rename) will collapse
 this into the `n4m_*` names; until then the M5-generated mapping table
@@ -155,19 +155,19 @@ The `PLACEHOLDER.md` files previously in `cpp/src/core/common/` and
 
 Per the roadmap (M2.5 lands the unified files; M3 moves donor sources
 out of `_donor/`; M4 splits `model.cpp` / `extra_pls.cpp`; M5 renames
-`p4a_* → n4m_*` everywhere), this commit deliberately:
+`n4m_* → n4m_*` everywhere), this commit deliberately:
 
 - **Does not** modify `cpp/include/pls4all/p4a.h` (the existing public
-  header). pls4all sources still see `p4a_*` symbols at compile time.
+  header). pls4all sources still see `n4m_*` symbols at compile time.
 - **Does not** modify `pls4all`'s `cpp/src/CMakeLists.txt`. The flat
   files at `cpp/src/core/{context,status,matrix_view,version}.cpp` are
-  still listed there and still compiled into `libp4a.so.1.16.0`.
+  still listed there and still compiled into `libn4m.so.1.16.0`.
 - **Does not** delete the duplicate files at
   `_donor/nirs4all-methods/cpp/src/core/{context,status,matrix_view,version,parallel,linalg}.{cpp,hpp}`
   or `_donor/nirs4all-methods/cpp/src/core/common/*`. Those will be
   removed in M3 when the donor source move lifts them under their final
   paths anyway.
-- **Does not** alias `p4a_*` → `n4m_*` symbols. That alias generation
+- **Does not** alias `n4m_*` → `n4m_*` symbols. That alias generation
   is M5 territory (the ABI rename script) and would otherwise expand
   this phase well beyond the roadmap's 3-day budget.
 
@@ -179,8 +179,8 @@ out of `_donor/`; M4 splits `model.cpp` / `extra_pls.cpp`; M5 renames
 $ cmake --build --preset dev-release
 ninja: no work to do.
 $ ctest --preset dev-release --output-on-failure
-1/1 Test #1: pls4all_tests ....................   Passed
-$ ./build/dev-release/cpp/tests/pls4all_tests
+1/1 Test #1: n4m_tests ....................   Passed
+$ ./build/dev-release/cpp/tests/n4m_tests
 === 265 run, 0 failures, 0 skipped ===
 ```
 
@@ -199,13 +199,13 @@ Achieved partially in this phase:
 
 - ✅ **No duplicate symbol in the linker** — the unified common/ files
   are not built yet, so they contribute no symbol. pls4all sources
-  continue to build against their flat copies with `p4a_*` symbols.
+  continue to build against their flat copies with `n4m_*` symbols.
 - ✅ **pls4all-fixture C++ tests pass** — verified above (265/265).
 - ⚠️ **Donor-fixture C++ tests pass against unified common-core** —
   achievable only after M5 (ABI rename) wires both sides into one
   build. Carried forward to M5's gate. The donor's tests existed at
   `_donor/.../cpp/tests/` and pass against donor's own flat copies of
-  the common files; pls4all's `pls4all_tests` binary doesn't link them
+  the common files; pls4all's `n4m_tests` binary doesn't link them
   in yet.
 
 The unification work (file landing + reconciliation evidence) is done.
@@ -215,7 +215,7 @@ The build-system collapse onto the unified files lands in M5.
 
 | Risk listed in M2.5 row | Status |
 |---|---|
-| `n4m_context_create` collides with `p4a_context_create` on naive rename | Mitigated: the unified `n4m_*` symbols live at the new common/ location; pls4all flat sources keep their `p4a_*` symbols until M5 cleanly renames them in one pass. No collision possible because both name sets currently come from disjoint TUs. |
+| `n4m_context_create` collides with `n4m_context_create` on naive rename | Mitigated: the unified `n4m_*` symbols live at the new common/ location; pls4all flat sources keep their `n4m_*` symbols until M5 cleanly renames them in one pass. No collision possible because both name sets currently come from disjoint TUs. |
 | Donor and base implementations disagree subtly | Resolved: side-by-side diff shows the only delta is prefix renaming. Enums, struct fields, backend codes, error-buffer size match exactly. |
 | Donor's `linalg.hpp` (more-tested?) vs base's | Donor wins (per roadmap). Same content though — both ship identical kernel signatures. |
 | Reconciling enum values | No-op — all 19 status codes and 6 backend codes are numerically identical. |

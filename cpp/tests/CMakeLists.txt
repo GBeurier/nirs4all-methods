@@ -5,7 +5,7 @@
 # vendored in a future PR if richer ergonomics become worth the policy
 # departure.
 
-add_executable(pls4all_tests
+add_executable(n4m_tests
     main.cpp
     abi/test_aom_global_public_abi.cpp
     abi/test_aom_operators.cpp
@@ -68,8 +68,8 @@ add_executable(pls4all_tests
     abi/test_blas_backend.cpp
     abi/test_openmp_backend.cpp
     abi/test_cuda_backend.cpp)
-target_link_libraries(pls4all_tests PRIVATE pls4all_c pls4all_core n4m_core)
-target_include_directories(pls4all_tests
+target_link_libraries(n4m_tests PRIVATE n4m_c n4m_core n4m_core)
+target_include_directories(n4m_tests
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${PROJECT_SOURCE_DIR}/cpp/src
@@ -77,37 +77,37 @@ target_include_directories(pls4all_tests
 if(PLS4ALL_WITH_BLAS)
     # test_blas_backend.cpp uses #if defined(N4M_USE_BLAS) to pick its
     # expected return value from n4m_backend_is_available.
-    target_compile_definitions(pls4all_tests PRIVATE N4M_USE_BLAS=1)
-    # pls4all_tests embeds pls4all_core OBJECTS directly (via the
-    # PRIVATE pls4all_core link). Those objects reference cblas_* under
+    target_compile_definitions(n4m_tests PRIVATE N4M_USE_BLAS=1)
+    # n4m_tests embeds n4m_core OBJECTS directly (via the
+    # PRIVATE n4m_core link). Those objects reference cblas_* under
     # N4M_USE_BLAS, so the test target must also carry the BLAS link.
-    target_link_libraries(pls4all_tests PRIVATE ${BLAS_LIBRARIES})
+    target_link_libraries(n4m_tests PRIVATE ${BLAS_LIBRARIES})
     if(BLAS_LINKER_FLAGS)
-        target_link_options(pls4all_tests PRIVATE ${BLAS_LINKER_FLAGS})
+        target_link_options(n4m_tests PRIVATE ${BLAS_LINKER_FLAGS})
     endif()
 endif()
 if(PLS4ALL_WITH_OPENMP)
-    target_compile_definitions(pls4all_tests PRIVATE N4M_USE_OPENMP=1)
-    # Same gotcha as BLAS: the test target embeds pls4all_core objects
+    target_compile_definitions(n4m_tests PRIVATE N4M_USE_OPENMP=1)
+    # Same gotcha as BLAS: the test target embeds n4m_core objects
     # directly, so it must carry the OpenMP runtime link.
-    target_link_libraries(pls4all_tests PRIVATE OpenMP::OpenMP_CXX)
+    target_link_libraries(n4m_tests PRIVATE OpenMP::OpenMP_CXX)
 endif()
 if(PLS4ALL_WITH_CUDA)
-    target_compile_definitions(pls4all_tests PRIVATE N4M_USE_CUDA=1)
-    target_include_directories(pls4all_tests PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
-    # Same gotcha as BLAS / OpenMP — the test target embeds pls4all_core
+    target_compile_definitions(n4m_tests PRIVATE N4M_USE_CUDA=1)
+    target_include_directories(n4m_tests PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
+    # Same gotcha as BLAS / OpenMP — the test target embeds n4m_core
     # objects directly so it needs the CUDA runtime + cuBLAS link.
-    target_link_libraries(pls4all_tests PRIVATE CUDA::cudart CUDA::cublas)
+    target_link_libraries(n4m_tests PRIVATE CUDA::cudart CUDA::cublas)
 endif()
-pls4all_add_warnings(pls4all_tests)
+pls4all_add_warnings(n4m_tests)
 
-if(WIN32 AND TARGET pls4all_c)
-    add_custom_command(TARGET pls4all_tests POST_BUILD
+if(WIN32 AND TARGET n4m_c)
+    add_custom_command(TARGET n4m_tests POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                $<TARGET_FILE:pls4all_c>
-                $<TARGET_FILE_DIR:pls4all_tests>)
+                $<TARGET_FILE:n4m_c>
+                $<TARGET_FILE_DIR:n4m_tests>)
 endif()
 
-add_test(NAME pls4all_tests
-         COMMAND pls4all_tests)
-set_tests_properties(pls4all_tests PROPERTIES TIMEOUT 60)
+add_test(NAME n4m_tests
+         COMMAND n4m_tests)
+set_tests_properties(n4m_tests PROPERTIES TIMEOUT 60)

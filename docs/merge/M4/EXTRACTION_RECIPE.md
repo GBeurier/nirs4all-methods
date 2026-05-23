@@ -2,7 +2,7 @@
 
 **Status**: scaffolded — 39 target stub files landed at their final paths.
 The actual function-body extraction is deferred to a focused refactor
-session because each cut must keep `pls4all_tests` (265/265) green
+session because each cut must keep `n4m_tests` (265/265) green
 between commits and the surgery is genuinely 4 days of careful work per
 the roadmap budget. This document is the maintenance protocol that
 guides that session.
@@ -14,7 +14,7 @@ Explore agent in parallel with M3).
 
 Before any single extraction commit:
 
-1. `pls4all_tests` is currently green (`./build/dev-release/cpp/tests/pls4all_tests` reports `265 run, 0 failures, 0 skipped`).
+1. `n4m_tests` is currently green (`./build/dev-release/cpp/tests/n4m_tests` reports `265 run, 0 failures, 0 skipped`).
 2. Work on the `merge/import-donor` branch.
 3. The pls4all CMakeLists at `cpp/src/CMakeLists.txt` still references the source monoliths (`core/model.cpp`, `core/extra_pls.cpp`).
 
@@ -26,7 +26,7 @@ helpers cannot be called across translation units:
 
 | Helper block | Lines in source | Target file | Linkage transition |
 |--------------|-----------------|-------------|---------------------|
-| model.cpp anon-namespace (L18–L1524, ~1500 lines) — `center_scale_in_place`, `copy_matrix_checked`, `validate_fit_request`, `invert_square`, `dot`, `matrix_vector_product`, `read_value`/`write_value` | model.cpp:18-1524 | `cpp/src/core/models/core/_common.{cpp,hpp}` | anonymous → `n4m::core::detail::` (or `pls4all::core::detail::` pre-M5) namespace; declare in `_common.hpp` |
+| model.cpp anon-namespace (L18–L1524, ~1500 lines) — `center_scale_in_place`, `copy_matrix_checked`, `validate_fit_request`, `invert_square`, `dot`, `matrix_vector_product`, `read_value`/`write_value` | model.cpp:18-1524 | `cpp/src/core/models/core/_common.{cpp,hpp}` | anonymous → `n4m::core::detail::` (or `n4m::core::detail::` pre-M5) namespace; declare in `_common.hpp` |
 | model.cpp PLS-shared helpers (`simple_simpls` is the cross-call from extra_pls; `dominant_svd_pair`, `largest_symmetric_eigenvector`, `canonicalize_direction_sign`, `canonicalize_svd_pair_sign`) | model.cpp:281-1524 selectively | `cpp/src/core/models/pls/_common.{cpp,hpp}` | same |
 | extra_pls.cpp anon-namespace (L18–L306, ~290 lines) — `soft_threshold`, `column_means`, `subtract_means`, `copy_matrix`, `squared_norm` | extra_pls.cpp:18-306 | `cpp/src/core/models/sparse/_common.{cpp,hpp}` | same |
 
@@ -44,7 +44,7 @@ M4 phase 1: extract models/core/_common — N anonymous-namespace helpers
   - cpp/src/core/models/core/_common.hpp (+~80 lines, declarations)
   - cpp/src/core/model.cpp (−~300 lines, replaced by include of _common.hpp)
   - cpp/src/CMakeLists.txt (+1 entry: core/models/core/_common.cpp)
-  - Verify: pls4all_tests 265/265 still green
+  - Verify: n4m_tests 265/265 still green
 ```
 
 Repeat for `pls/_common` and `sparse/_common`. After Phase 1 (3
@@ -126,15 +126,15 @@ After all 7 phases land:
 Each phase's individual commit must pass:
 
 1. `cmake --build --preset dev-release` builds without errors.
-2. `./build/dev-release/cpp/tests/pls4all_tests` reports `265 run, 0 failures, 0 skipped`.
-3. `./build/dev-release/cpp/cli/pls4all_cli --selfcheck` reports `selfcheck OK`.
-4. Optional: `objdump -T build/dev-release/cpp/src/libp4a.so.1 | grep ' p4a_' | wc -l` returns the same count as before the extraction (no symbol drop or duplication).
+2. `./build/dev-release/cpp/tests/n4m_tests` reports `265 run, 0 failures, 0 skipped`.
+3. `./build/dev-release/cpp/cli/n4m_cli --selfcheck` reports `selfcheck OK`.
+4. Optional: `objdump -T build/dev-release/cpp/src/libn4m.so.1 | grep ' n4m_' | wc -l` returns the same count as before the extraction (no symbol drop or duplication).
 
 ## What is in M4 today (this commit)
 
 - **39 stub files** at all target paths under `cpp/src/core/models/{pls,opls,pcr,sparse,multiblock,local,ensembles,specialized,classification,glm,core}/` and `cpp/src/core/transfer/`. Each stub carries a structured header naming the origin source, the line range to extract, and the function(s) it will receive.
 - **Two reports** (`SPLIT_PLAN.md` from the Explore agent + this `EXTRACTION_RECIPE.md`).
-- **No changes** to `model.cpp`, `extra_pls.cpp`, or `cpp/src/CMakeLists.txt`. pls4all builds unchanged, `pls4all_tests` 265/265 green.
+- **No changes** to `model.cpp`, `extra_pls.cpp`, or `cpp/src/CMakeLists.txt`. pls4all builds unchanged, `n4m_tests` 265/265 green.
 
 ## What is NOT done in M4
 
@@ -156,7 +156,7 @@ The M4 scaffold unblocks M5 (ABI rename) because M5 operates on the
 monoliths in place. After M5, the post-rename monoliths can be extracted
 into the M4 stubs as planned here. The execution becomes:
 
-1. M5 mechanical `p4a_* → n4m_*` rename on `model.cpp`, `extra_pls.cpp`
+1. M5 mechanical `n4m_* → n4m_*` rename on `model.cpp`, `extra_pls.cpp`
    in place.
 2. M4 Phase 1 (extract helpers) on the renamed monoliths.
 3. M4 Phases 2–7 on each algorithm.

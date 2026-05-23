@@ -2,7 +2,7 @@
 
 #include <new>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/gating_strategy.hpp"
 

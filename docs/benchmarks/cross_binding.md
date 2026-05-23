@@ -785,10 +785,10 @@ Each column in the per-algorithm tables above is one of the entries below. Colum
 
 | Column | Language | Tier | What it actually runs |
 |---|---|---|---|
-| `pls4all.cpp.native` | C++ | pls4all native scalar | libp4a built with `PLS4ALL_WITH_BLAS=OFF, OPENMP=OFF` — pure scalar native C++ loops, no acceleration. Used as one C++ implementation column; binding parity still uses cpp @ blas-omp when available. |
-| `pls4all.cpp.blas` | C++ | pls4all + BLAS | libp4a built with `PLS4ALL_WITH_BLAS=ON` only — links system BLAS (OpenBLAS in this env), benefits from BLAS thread parallelism. |
-| `pls4all.cpp.omp` | C++ | pls4all + OpenMP | libp4a built with `PLS4ALL_WITH_OPENMP=ON` only — OpenMP parallelism in the C kernel loops, no BLAS. |
-| `pls4all.cpp.blas+omp` | C++ | pls4all + BLAS + OpenMP | libp4a built with both `PLS4ALL_WITH_BLAS=ON` and `PLS4ALL_WITH_OPENMP=ON` — the recommended production config. |
+| `pls4all.cpp.native` | C++ | pls4all native scalar | libn4m built with `PLS4ALL_WITH_BLAS=OFF, OPENMP=OFF` — pure scalar native C++ loops, no acceleration. Used as one C++ implementation column; binding parity still uses cpp @ blas-omp when available. |
+| `pls4all.cpp.blas` | C++ | pls4all + BLAS | libn4m built with `PLS4ALL_WITH_BLAS=ON` only — links system BLAS (OpenBLAS in this env), benefits from BLAS thread parallelism. |
+| `pls4all.cpp.omp` | C++ | pls4all + OpenMP | libn4m built with `PLS4ALL_WITH_OPENMP=ON` only — OpenMP parallelism in the C kernel loops, no BLAS. |
+| `pls4all.cpp.blas+omp` | C++ | pls4all + BLAS + OpenMP | libn4m built with both `PLS4ALL_WITH_BLAS=ON` and `PLS4ALL_WITH_OPENMP=ON` — the recommended production config. |
 | `pls4all.registry` | Python | pls4all canonical | `benchmarks.parity_timing.registry.MethodSpec.pls4all_fn` — the canonical per-method pls4all entry point |
 | `pls4all.python` | Python | pls4all raw | `pls4all._methods.<algo>_fit(ctx, cfg, X, y, …)` — direct FFI binding |
 | `pls4all.sklearn` | Python | pls4all idiomatic | `pls4all.sklearn.<Class>` — sklearn-style BaseEstimator with `.fit() / .predict()` |
@@ -838,10 +838,10 @@ Each column in the per-algorithm tables above is one of the entries below. Colum
 
 | Column | Versions |
 |---|---|
-| `pls4all.cpp.native` | `language=C++ (via ctypes bridge) (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `libp4a=0.97.0+abi.1.16.0`; `numpy=2.3.5`; `registry_method=pls`; `timing_schema=adaptive-v1` |
-| `pls4all.cpp.blas` | `language=C++ (via ctypes bridge) (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.30 blas=1`; `libp4a=0.97.0+abi.1.16.0`; `numpy=2.3.5`; `registry_method=pls`; `timing_schema=adaptive-v1` |
-| `pls4all.cpp.omp` | `language=C++ (via ctypes bridge) (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1; libomp ? openmp=1`; `libp4a=0.97.0+abi.1.16.0`; `numpy=2.3.5`; `registry_method=pls`; `timing_schema=adaptive-v1` |
-| `pls4all.cpp.blas+omp` | `language=C++ (via ctypes bridge) (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1`; `libp4a=0.97.0+abi.1.16.0`; `numpy=2.3.5`; `registry_method=pls`; `timing_schema=adaptive-v1` |
+| `pls4all.cpp.native` | `language=C++ (via ctypes bridge) (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1`; `libn4m=0.97.0+abi.1.16.0`; `numpy=2.3.5`; `registry_method=pls`; `timing_schema=adaptive-v1` |
+| `pls4all.cpp.blas` | `language=C++ (via ctypes bridge) (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.30 blas=1`; `libn4m=0.97.0+abi.1.16.0`; `numpy=2.3.5`; `registry_method=pls`; `timing_schema=adaptive-v1` |
+| `pls4all.cpp.omp` | `language=C++ (via ctypes bridge) (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1; libomp ? openmp=1`; `libn4m=0.97.0+abi.1.16.0`; `numpy=2.3.5`; `registry_method=pls`; `timing_schema=adaptive-v1` |
+| `pls4all.cpp.blas+omp` | `language=C++ (via ctypes bridge) (host Linux x86_64)`; `blas=libscipy_openblas 0.3.30 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1`; `libn4m=0.97.0+abi.1.16.0`; `numpy=2.3.5`; `registry_method=pls`; `timing_schema=adaptive-v1` |
 | `pls4all.registry` | `language=Python 3.13.13`; `blas=libscipy_openblas 0.3.30 blas=1`; `pls4all=0.97.0`; `numpy=2.3.5`; `registry_method=pls`; `timing_schema=adaptive-v1` |
 | `pls4all.python` | `language=Python 3.13.13`; `blas=libscipy_openblas 0.3.30 blas=1`; `pls4all=0.97.0`; `numpy=2.3.5`; `registry_method=pls`; `timing_schema=adaptive-v1` |
 | `pls4all.sklearn` | `language=Python 3.13.13`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `pls4all=0.97.0`; `numpy=2.3.5`; `sklearn_class=PLSRegression`; `timing_schema=adaptive-v1` |
@@ -849,8 +849,8 @@ Each column in the per-algorithm tables above is one of the entries below. Colum
 | `pls4all.R.formula` | `language=R 4.3.3`; `pls4all=0.97.0`; `registry_method=pls`; `formula_facade=True`; `blas=linked-BLAS`; `timing_schema=adaptive-v1` |
 | `pls4all.R.pls_compat` | `language=R 4.3.3`; `pls4all=0.97.0`; `registry_method=pls`; `facade=pls_compat`; `formula_facade=True`; `blas=linked-BLAS`; `timing_schema=adaptive-v1` |
 | `pls4all.R.mdatools_compat` | `language=R 4.3.3`; `pls4all=0.97.0`; `registry_method=pls`; `facade=mdatools_compat`; `matrix_facade=True`; `blas=linked-BLAS`; `timing_schema=adaptive-v1` |
-| `pls4all.matlab` | `language=Octave 10.3.0`; `pls4all=from libp4a-linked MEX`; `registry_method=pls`; `blas=linked-BLAS`; `timing_schema=adaptive-v1` |
-| `pls4all.matlab.classdef` | `language=Octave 10.3.0`; `pls4all=from libp4a-linked MEX + classdefs`; `registry_method=pls`; `blas=linked-BLAS`; `timing_schema=adaptive-v1` |
+| `pls4all.matlab` | `language=Octave 10.3.0`; `pls4all=from libn4m-linked MEX`; `registry_method=pls`; `blas=linked-BLAS`; `timing_schema=adaptive-v1` |
+| `pls4all.matlab.classdef` | `language=Octave 10.3.0`; `pls4all=from libn4m-linked MEX + classdefs`; `registry_method=pls`; `blas=linked-BLAS`; `timing_schema=adaptive-v1` |
 | `sklearn` | `language=Python 3.13.13`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `sklearn=1.8.0`; `numpy=2.3.5`; `timing_schema=adaptive-v1` |
 | `ikpls` | `language=Python 3.13.13`; `blas=libscipy_openblas 0.3.30 blas=1; libscipy_openblas 0.3.30 blas=1; libgomp ? openmp=1`; `ikpls=4.0.1.post1`; `numpy=2.3.5`; `timing_schema=adaptive-v1` |
 | `pls` | `language=R 4.3.3`; `pls=2.8.5`; `timing_schema=adaptive-v1` |
@@ -888,11 +888,11 @@ Each column in the per-algorithm tables above is one of the entries below. Colum
 
 ## Methodology
 
-- Gate 1 reference: `cpp` cell at 1 thread (libp4a via ctypes), or `python_tier1` when `cpp` is unavailable for an algorithm
+- Gate 1 reference: `cpp` cell at 1 thread (libn4m via ctypes), or `python_tier1` when `cpp` is unavailable for an algorithm
 - Gate 2 reference: the registry-declared canonical external reference for the method
 - Gate 1 tolerance: 1e-6 max-abs-diff; Gate 2 tolerance: `MethodSpec.rmse_rel_tol` (also emitted as `reference_parity_tolerance` by newer CSVs)
 - All backends read the same orchestrator-generated CSV dataset (`benchmarks/cross_binding/data/data_<n>x<p>_seed<seed>.csv`)
 - Adaptive timing: warmstart run #1; if there is any subsequent run, run #1 is excluded from the score. 2 total runs report run #2 alone; 3 total runs report the mean of runs #2-#3; 10/20/40 total runs report the median after the warmstart.
 - Per-cell timeout guard: 24 h
 - Thread control via `OMP_NUM_THREADS = OPENBLAS_NUM_THREADS = MKL_NUM_THREADS = BLIS_NUM_THREADS` set in the subprocess env, plus `Context.num_threads` for Python pls4all and `maxNumCompThreads()` for Octave
-- pls4all libp4a build: `build/blas-omp/cpp/src/libp4a.so` (BLAS + OpenMP enabled)
+- pls4all libn4m build: `build/blas-omp/cpp/src/libn4m.so` (BLAS + OpenMP enabled)

@@ -62,7 +62,7 @@ The v1 of this report used the wrong baseline (local `main` at `a05b192`). Codex
 | JS binding (`bindings/js/src/*.ts`) | **8** | Real source (267 inserts / 141 deletes) |
 | Julia binding (`bindings/julia/`) | **5** | Real source (130/87) |
 | Python binding (`bindings/python/`) | **3** | Real source (107/58) |
-| R binding (`bindings/r/pls4all/src/libp4a/core/`) | **3** | Real source (vendored under R src) |
+| R binding (`bindings/r/pls4all/src/libn4m/core/`) | **3** | Real source (vendored under R src) |
 | C++ core (`cpp/src/core/`) | **2** | Real source: `extra_pls.cpp`, `wvc_selection.cpp` (35/7) |
 | Benchmark code (`benchmarks/cross_binding/{render_docs,tests}.py`, `parity_timing/registry.py`) | **3** | Real source (45/17) |
 | Root docs (`README.md`, `DISTRIBUTION.md`, `.gitignore`) | **3** | Real text |
@@ -120,7 +120,7 @@ Codex was correct that Options B/C in v1 used a stale local `main`. Both are uns
 2. **Commit the in-flight real source work on `codex/parity-30x30-dashboard-fixes`** in 5 focused commits:
    - `bindings: JS sklearn + AOM + methods native bindings`
    - `bindings: Julia MLJ + TablesSupport + tests`
-   - `bindings: Python ffi + R libp4a updates`
+   - `bindings: Python ffi + R libn4m updates`
    - `cpp: extra_pls + wvc_selection diagnostic fixes`
    - `benchmarks: validation registry + render_docs + parity_timing registry + 30x30 strict CSV`
 

@@ -37,7 +37,7 @@ Default kernel: RBF with length scale $\ell$ and amplitude $\sigma_f^2$, plus an
 
 ### Implementation
 
-`p4a_gpr_pls_fit`. Reference: sklearn `GaussianProcessRegressor` with an RBF kernel applied to the score matrix from a separate sklearn `PLSRegression`.
+`n4m_gpr_pls_fit`. Reference: sklearn `GaussianProcessRegressor` with an RBF kernel applied to the score matrix from a separate sklearn `PLSRegression`.
 
 R roxygen note (`methods_extra.R::gpr_pls_fit`):
 
@@ -65,21 +65,21 @@ Every pls4all binding tab dispatches into the same C kernel; the external librar
 ::::{tab-set}
 :class: pls4all-bindings
 
-:::{tab-item} C ABI · libp4a
+:::{tab-item} C ABI · libn4m
 :sync: c
 :class-label: lang-c
 
 ```c
-/* C ABI — libp4a */
-p4a_context_t* ctx = p4a_context_create();
-p4a_config_t*  cfg = p4a_config_create();
-p4a_method_result_t* res = NULL;
-p4a_gpr_pls_fit(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
+/* C ABI — libn4m */
+n4m_context_t* ctx = n4m_context_create();
+n4m_config_t*  cfg = n4m_config_create();
+n4m_method_result_t* res = NULL;
+n4m_gpr_pls_fit(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
 /* … read coefficients / mask / scores via */
-/* p4a_method_result_get_double_matrix / vector / scalar … */
-p4a_method_result_destroy(res);
-p4a_config_destroy(cfg);
-p4a_context_destroy(ctx);
+/* n4m_method_result_get_double_matrix / vector / scalar … */
+n4m_method_result_destroy(res);
+n4m_config_destroy(cfg);
+n4m_context_destroy(ctx);
 ```
 
 :::
@@ -186,7 +186,7 @@ Median wall-clock per cell from [`benchmarks/cross_binding/results/full_matrix.c
 <div class="parity-table-wrap">
 <table class="docutils parity-grouped">
 <thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">100×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libp4a</th></tr>
+<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas</code></td><td class="parity parity-exact">✓ 5e-10</td><td class="ms">1.31 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-exact">✓ 5e-10</td><td class="ms">1.25 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.omp</code></td><td class="parity parity-exact">✓ 5e-10</td><td class="ms ms-best">1.22 ms<span class="medal" title="fastest">🏆</span></td></tr>

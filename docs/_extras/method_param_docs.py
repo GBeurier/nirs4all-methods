@@ -17,7 +17,7 @@ from __future__ import annotations
 
 # Generic, method-agnostic parameter descriptions.
 PARAM_DOCS: dict[str, str] = {
-    # ---- Shared PLS core knobs (libp4a Config) ----
+    # ---- Shared PLS core knobs (libn4m Config) ----
     "n_components": "Number of latent components extracted (k).",
     "solver": "Inner algorithm: 'nipals', 'simpls', 'svd', 'kernel', 'orthogonal-scores', 'power', 'randomized-svd', 'wide-kernel'.",
     "center_x": "Subtract the column mean of X before fitting.",

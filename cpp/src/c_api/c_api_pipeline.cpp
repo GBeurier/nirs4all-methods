@@ -9,7 +9,7 @@
 #include <memory>
 #include <new>
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 #include "core/common/context.hpp"
 #include "core/model.hpp"

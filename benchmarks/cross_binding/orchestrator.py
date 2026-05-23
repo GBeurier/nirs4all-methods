@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cross-binding × threads × sizes × algorithms × libp4a-build
+"""Cross-binding × threads × sizes × algorithms × libn4m-build
 timing + parity orchestrator.
 
 For each (algo, backend, n, p, threads, libp4a_build) cell:
@@ -78,12 +78,12 @@ DEFAULT_TIMEOUT_S = 24 * 60 * 60
 TIMING_SCHEMA = "adaptive-v1"
 
 # (name, script, language, tier, kind)
-#   kind ∈ {"pls4all_core", "pls4all_binding", "external"}
-#   For pls4all_core / pls4all_binding entries we sweep both libp4a builds
-#   when --libp4a-build=both; externals only get one row.
+#   kind ∈ {"n4m_core", "pls4all_binding", "external"}
+#   For n4m_core / pls4all_binding entries we sweep both libn4m builds
+#   when --libn4m-build=both; externals only get one row.
 BACKENDS = [
     ("registry_pls4all", "bench_registry_pls4all.py", "Python", "canonical", "pls4all_binding"),
-    ("cpp",          "bench_cpp.py",          "C++",    "direct",   "pls4all_core"),
+    ("cpp",          "bench_cpp.py",          "C++",    "direct",   "n4m_core"),
     ("python_tier1", "bench_python_tier1.py", "Python", "tier 1",   "pls4all_binding"),
     ("python_tier2", "bench_python_tier2.py", "Python", "tier 2",   "pls4all_binding"),
     ("sklearn",      "bench_sklearn.py",      "Python", "external", "external"),
@@ -130,7 +130,7 @@ def registry_reference_backends_for(algo: str) -> list[tuple[str, str, str, str,
                     display_lang, ref["library"], "external"))
     return out
 
-# libp4a build → libpath. Used for the cpp variant sweep: each build
+# libn4m build → libpath. Used for the cpp variant sweep: each build
 # corresponds to a distinct OpenMP / BLAS / CUDA tier of the C kernel.
 LIBP4A_BUILDS = {
     "dev-release": str(REPO / "build/dev-release/cpp/src"),  # native scalar, no BLAS, no OMP
@@ -417,7 +417,7 @@ def run_backend(name: str, script: str, language: str, tier: str,
         return {"backend": name, "ok": False,
                  "reason": f"script not found: {script}"}
 
-    # Per-cell env: thread caps + libp4a build choice + seed base.
+    # Per-cell env: thread caps + libn4m build choice + seed base.
     env = os.environ.copy()
     env["OMP_NUM_THREADS"]      = str(threads)
     env["OPENBLAS_NUM_THREADS"] = str(threads)
@@ -426,18 +426,18 @@ def run_backend(name: str, script: str, language: str, tier: str,
     env["BENCH_THREADS"]        = str(threads)
     env["BENCH_SEED_BASE"]      = str(seed_base)
     env["BENCH_CELL_TIMEOUT"]   = str(timeout)
-    # Externals don't care about libp4a build; pls4all backends do.
+    # Externals don't care about libn4m build; pls4all backends do.
     lib_dir = LIBP4A_BUILDS[libp4a_build]
     env["PLS4ALL_LIB_DIR"] = lib_dir
     # PLS4ALL_LIB_PATH is the env var actually honoured by
     # `pls4all._ffi._load_library` to override library discovery. Without
-    # it the per-build sweep silently runs against whichever libp4a the
+    # it the per-build sweep silently runs against whichever libn4m the
     # importer finds first (auditwheel sibling / pip-installed wheel /
     # build/dev-release), making the build column degenerate.
-    # Post-merge rename: libp4a.so -> libn4m.so. Prefer the new name and
-    # fall back to the legacy one for build trees that still produce libp4a.
+    # Post-merge rename: libn4m.so -> libn4m.so. Prefer the new name and
+    # fall back to the legacy one for build trees that still produce libn4m.
     _libn4m = os.path.join(lib_dir, "libn4m.so")
-    _libp4a = os.path.join(lib_dir, "libp4a.so")
+    _libp4a = os.path.join(lib_dir, "libn4m.so")
     env["PLS4ALL_LIB_PATH"] = _libn4m if os.path.exists(_libn4m) else _libp4a
     env["BENCH_LIBP4A_BUILD"] = libp4a_build
     env["LD_LIBRARY_PATH"] = ":".join([
@@ -673,7 +673,7 @@ def compute_parity(records: list[dict]) -> None:
 
             # Gate 1: binding consistency vs cpp. External libraries are
             # compared by Gate 2 only; they are not pls4all bindings.
-            is_pls4all = r.get("kind") in {"pls4all_core", "pls4all_binding"}
+            is_pls4all = r.get("kind") in {"n4m_core", "pls4all_binding"}
             if not is_pls4all:
                 r["binding_parity_max_diff"] = float("nan")
                 r["binding_parity_ok"] = None
@@ -957,12 +957,12 @@ def main():
                          help="Dataset sizes 'NxP' (default: 11-size matrix)")
     parser.add_argument("--threads", nargs="+", type=int, default=[1, 3, 10],
                          help="Thread counts to sweep")
-    parser.add_argument("--libp4a-build",
+    parser.add_argument("--libn4m-build",
                          choices=["dev-release", "blas-on", "omp-on",
                                   "blas-omp", "cuda-on", "both",
                                   "all-cpu", "all"],
                          default="blas-omp",
-                         help="libp4a build for pls4all backends. 'both' = "
+                         help="libn4m build for pls4all backends. 'both' = "
                               "dev-release + blas-omp; 'all-cpu' = native + "
                               "blas + omp + blasomp; 'all' = the full "
                               "5-build sweep including cuda-on.")

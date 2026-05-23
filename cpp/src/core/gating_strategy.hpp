@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 
 namespace n4m::core {
 

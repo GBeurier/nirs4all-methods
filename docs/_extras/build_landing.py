@@ -55,15 +55,15 @@ CPP_BUILD_SUFFIX = {
 
 CPP_TIER_DESC = {
     "dev-release": ("pls4all native scalar",
-                    "libp4a built with `PLS4ALL_WITH_BLAS=OFF, OPENMP=OFF` — pure scalar native C++ loops, no acceleration. Used as one C++ implementation column; binding parity still uses cpp @ blas-omp when available."),
+                    "libn4m built with `PLS4ALL_WITH_BLAS=OFF, OPENMP=OFF` — pure scalar native C++ loops, no acceleration. Used as one C++ implementation column; binding parity still uses cpp @ blas-omp when available."),
     "blas-on":     ("pls4all + BLAS",
-                    "libp4a built with `PLS4ALL_WITH_BLAS=ON` only — links system BLAS (OpenBLAS), benefits from BLAS thread parallelism."),
+                    "libn4m built with `PLS4ALL_WITH_BLAS=ON` only — links system BLAS (OpenBLAS), benefits from BLAS thread parallelism."),
     "omp-on":      ("pls4all + OpenMP",
-                    "libp4a built with `PLS4ALL_WITH_OPENMP=ON` only — OpenMP in C kernel loops, no BLAS."),
+                    "libn4m built with `PLS4ALL_WITH_OPENMP=ON` only — OpenMP in C kernel loops, no BLAS."),
     "blas-omp":    ("pls4all + BLAS + OpenMP",
-                    "libp4a built with both `BLAS=ON` and `OPENMP=ON` — the recommended production config."),
+                    "libn4m built with both `BLAS=ON` and `OPENMP=ON` — the recommended production config."),
     "cuda-on":     ("pls4all + CUDA",
-                    "libp4a built with `PLS4ALL_WITH_CUDA=ON` — GEMM kernels offloaded to GPU via cuBLAS. Overhead-dominated at small matrices; wins at large ones."),
+                    "libn4m built with `PLS4ALL_WITH_CUDA=ON` — GEMM kernels offloaded to GPU via cuBLAS. Overhead-dominated at small matrices; wins at large ones."),
 }
 
 BACKEND_LONG: dict[str, tuple[str, str, str]] = {
@@ -98,7 +98,7 @@ BACKEND_ORDER = [
 ]
 
 GROUP_LABELS = {
-    "cpp":     "pls4all · C++ (libp4a)",
+    "cpp":     "pls4all · C++ (libn4m)",
     "python":  "pls4all · Python",
     "r":       "pls4all · R",
     "matlab":  "pls4all · MATLAB/Octave",
@@ -504,7 +504,7 @@ def divergence_fields(row: dict) -> dict:
 
     Source rules (Codex spec):
       - kind == "pls4all_binding"            → binding gate (vs C++)
-      - kind in {"pls4all_core", "external"} → reference gate (vs MethodSpec ref)
+      - kind in {"n4m_core", "external"} → reference gate (vs MethodSpec ref)
       - is_canonical_reference=True          → basis="self", no numeric value
 
     Returns a dict ready for cell merge:
@@ -530,7 +530,7 @@ def divergence_fields(row: dict) -> dict:
             "divergence_basis": "binding",
             "divergence_quality": "binding",
         }
-    if kind in ("pls4all_core", "external"):
+    if kind in ("n4m_core", "external"):
         # rmse_rel only — the tooltip says "rmse_rel" so falling back to
         # rmse_abs (different units, very different magnitude scale)
         # would be a silent lie about what the number means.
@@ -761,7 +761,7 @@ def build_payload(results_dir: Path) -> dict:
             seen[key] = r
 
     # Non-C++ dashboard columns are unique even when the CSV contains one
-    # row per libp4a build sweep. Prefer the production `blas-omp` row so
+    # row per libn4m build sweep. Prefer the production `blas-omp` row so
     # stale dev/blas/omp duplicate rows cannot keep an old gate verdict.
     preferred: dict[tuple, dict] = {}
     for r in seen.values():
@@ -950,7 +950,7 @@ def build_payload(results_dir: Path) -> dict:
                 "_rank": _row_rank(r)}
         # Divergence fields — feed the dashboard's "divergence δ" viz.
         # Source rule depends on `kind`: binding-gate for pls4all_binding,
-        # reference-gate for pls4all_core/external, basis="self" for the
+        # reference-gate for n4m_core/external, basis="self" for the
         # canonical reference row. See divergence_fields() docstring.
         cell.update(divergence_fields(r))
         if ms is not None and ms == ms:   # not NaN

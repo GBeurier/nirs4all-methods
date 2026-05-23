@@ -14,7 +14,7 @@ ctest --preset dev-release --output-on-failure
 ```
 
 May 2026 audit result: `ctest --preset dev-release` passed locally
-(`pls4all_tests`, 1/1).
+(`n4m_tests`, 1/1).
 
 ## Fixture determinism
 
@@ -67,7 +67,7 @@ Small reference-parity sample:
 ```bash
 python benchmarks/cross_binding/orchestrator.py \
   --algorithms pls pcr --registry-cells --threads 1 \
-  --libp4a-build blas-omp --n-runs 2 \
+  --libn4m-build blas-omp --n-runs 2 \
   --canonical-pls4all-only --reference-backends registry \
   --timeout 180 --out-csv /tmp/pls4all_audit_cross_binding.csv --force
 ```
@@ -89,7 +89,7 @@ Slow-method smoke:
 ```bash
 python benchmarks/cross_binding/orchestrator.py \
   --algorithms pcr iriv_select vissa_select bve_select pso_select \
-  --registry-cells --threads 1 --libp4a-build blas-omp --n-runs 2 \
+  --registry-cells --threads 1 --libn4m-build blas-omp --n-runs 2 \
   --only-pls4all --timeout 240 \
   --out-csv /tmp/pls4all_audit_slow_methods.csv --force
 ```
@@ -104,21 +104,21 @@ registry-reference run. If a snapshot is missing, the run fails Gate 2 with
 ```bash
 scripts/bump_version.sh --check
 
-nm -D --defined-only build/dev-release/cpp/src/libp4a.so.1.16.0 \
+nm -D --defined-only build/dev-release/cpp/src/libn4m.so.1.16.0 \
   | awk '{print $3}' | sort -u \
   | diff -u cpp/abi/expected_symbols_linux.txt -
 
-readelf -d build/dev-release/cpp/src/libp4a.so.1.16.0 \
+readelf -d build/dev-release/cpp/src/libn4m.so.1.16.0 \
   | grep -E 'SONAME|NEEDED|RPATH|RUNPATH'
 ```
 
-The ABI symbol snapshot must match intentionally. If a new `p4a_*`
+The ABI symbol snapshot must match intentionally. If a new `n4m_*`
 symbol is public, update `cpp/abi/expected_symbols_linux.txt` and explain
 the ABI change in `docs/abi/changes_log.md`.
 
-May 2026 audit result: version sync passed, SONAME was `libp4a.so.1`,
+May 2026 audit result: version sync passed, SONAME was `libn4m.so.1`,
 but the Linux symbol diff failed because the current shared library
-exports additional public `p4a_*` symbols not present in
+exports additional public `n4m_*` symbols not present in
 `cpp/abi/expected_symbols_linux.txt`.
 
 ## Docs and dashboard

@@ -5,7 +5,7 @@
 // here we only exercise the success paths and verify NULL-output handling
 // — sanitizer-enabled CI catches actual leaks.
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 #include "harness.hpp"
 
 TEST(oom, context_create_null_out_does_not_leak) {

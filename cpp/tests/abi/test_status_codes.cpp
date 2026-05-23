@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CECILL-2.1
 
-#include "pls4all/p4a.h"
+#include "n4m/n4m.h"
 #include "harness.hpp"
 
 namespace {

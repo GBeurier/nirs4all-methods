@@ -81,7 +81,7 @@ arg (e.g. `"sparse_simpls"`, `"cppls"`, `"opls"`, `"cars_select"`).
 
 ```matlab
 % from bindings/matlab/
-build_mex                          % produces +pls4all/p4a_*_mex.mex
+build_mex                          % produces +pls4all/n4m_*_mex.mex
 addpath(pwd);                      % make +pls4all visible
 ```
 
@@ -109,7 +109,7 @@ module:
 ```javascript
 import init, { Context, Config, fitPls } from '@pls4all/wasm';
 
-await init();   // loads libp4a.wasm
+await init();   // loads libn4m.wasm
 const ctx = new Context();
 const cfg = new Config({ algorithm: 'pls_regression', nComponents: 5 });
 const model = fitPls(ctx, cfg, X, y);

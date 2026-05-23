@@ -30,7 +30,7 @@
       "group": "cpp",
       "tier": "pls4all native scalar",
       "lang": "C++",
-      "what": "libp4a built with `PLS4ALL_WITH_BLAS=OFF, OPENMP=OFF` \u2014 pure scalar native C++ loops, no acceleration. Used as one C++ implementation column; binding parity still uses cpp @ blas-omp when available.",
+      "what": "libn4m built with `PLS4ALL_WITH_BLAS=OFF, OPENMP=OFF` \u2014 pure scalar native C++ loops, no acceleration. Used as one C++ implementation column; binding parity still uses cpp @ blas-omp when available.",
       "build": "dev-release",
       "kind": "pls4all"
     },
@@ -41,7 +41,7 @@
       "group": "cpp",
       "tier": "pls4all + BLAS",
       "lang": "C++",
-      "what": "libp4a built with `PLS4ALL_WITH_BLAS=ON` only \u2014 links system BLAS (OpenBLAS), benefits from BLAS thread parallelism.",
+      "what": "libn4m built with `PLS4ALL_WITH_BLAS=ON` only \u2014 links system BLAS (OpenBLAS), benefits from BLAS thread parallelism.",
       "build": "blas-on",
       "kind": "pls4all"
     },
@@ -52,7 +52,7 @@
       "group": "cpp",
       "tier": "pls4all + OpenMP",
       "lang": "C++",
-      "what": "libp4a built with `PLS4ALL_WITH_OPENMP=ON` only \u2014 OpenMP in C kernel loops, no BLAS.",
+      "what": "libn4m built with `PLS4ALL_WITH_OPENMP=ON` only \u2014 OpenMP in C kernel loops, no BLAS.",
       "build": "omp-on",
       "kind": "pls4all"
     },
@@ -63,7 +63,7 @@
       "group": "cpp",
       "tier": "pls4all + BLAS + OpenMP",
       "lang": "C++",
-      "what": "libp4a built with both `BLAS=ON` and `OPENMP=ON` \u2014 the recommended production config.",
+      "what": "libn4m built with both `BLAS=ON` and `OPENMP=ON` \u2014 the recommended production config.",
       "build": "blas-omp",
       "kind": "pls4all"
     },
@@ -1468,7 +1468,7 @@
           "divergence_basis": "binding",
           "divergence_quality": "binding",
           "reference_parity_tolerance": 5.0,
-          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-omp/cpp/src/libn4m.so: undefined symbol: p4a_gating_strategy_create"
+          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-omp/cpp/src/libn4m.so: undefined symbol: n4m_gating_strategy_create"
         },
         "pls4all.cpp.blas": {
           "parity": "error",
@@ -1480,7 +1480,7 @@
           "divergence_basis": "reference",
           "divergence_quality": "qualitative",
           "reference_parity_tolerance": 5.0,
-          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-on/cpp/src/libn4m.so: undefined symbol: p4a_gating_strategy_create"
+          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-on/cpp/src/libn4m.so: undefined symbol: n4m_gating_strategy_create"
         },
         "pls4all.cpp.omp": {
           "parity": "error",
@@ -1492,7 +1492,7 @@
           "divergence_basis": "reference",
           "divergence_quality": "qualitative",
           "reference_parity_tolerance": 5.0,
-          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/omp-on/cpp/src/libn4m.so: undefined symbol: p4a_gating_strategy_create"
+          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/omp-on/cpp/src/libn4m.so: undefined symbol: n4m_gating_strategy_create"
         },
         "pls4all.python": {
           "parity": "error",
@@ -1504,7 +1504,7 @@
           "divergence_basis": "binding",
           "divergence_quality": "binding",
           "reference_parity_tolerance": 5.0,
-          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-omp/cpp/src/libn4m.so: undefined symbol: p4a_gating_strategy_create"
+          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-omp/cpp/src/libn4m.so: undefined symbol: n4m_gating_strategy_create"
         },
         "pls4all.sklearn": {
           "parity": "exact",
@@ -1714,7 +1714,7 @@
           "divergence_basis": "reference",
           "divergence_quality": "qualitative",
           "reference_parity_tolerance": 5.0,
-          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/dev-release/cpp/src/libn4m.so: undefined symbol: p4a_gating_strategy_create"
+          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/dev-release/cpp/src/libn4m.so: undefined symbol: n4m_gating_strategy_create"
         },
         "pls4all.cpp.blas+omp": {
           "parity": "error",
@@ -1726,7 +1726,7 @@
           "divergence_basis": "reference",
           "divergence_quality": "qualitative",
           "reference_parity_tolerance": 5.0,
-          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-omp/cpp/src/libn4m.so: undefined symbol: p4a_gating_strategy_create"
+          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-omp/cpp/src/libn4m.so: undefined symbol: n4m_gating_strategy_create"
         },
         "nirs4all": {
           "parity": "error",
@@ -1758,7 +1758,7 @@
           "divergence_basis": "binding",
           "divergence_quality": "binding",
           "reference_parity_tolerance": 5.0,
-          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-omp/cpp/src/libn4m.so: undefined symbol: p4a_gating_strategy_create"
+          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-omp/cpp/src/libn4m.so: undefined symbol: n4m_gating_strategy_create"
         },
         "pls4all.cpp.blas": {
           "parity": "error",
@@ -1770,7 +1770,7 @@
           "divergence_basis": "reference",
           "divergence_quality": "qualitative",
           "reference_parity_tolerance": 5.0,
-          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-on/cpp/src/libn4m.so: undefined symbol: p4a_gating_strategy_create"
+          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-on/cpp/src/libn4m.so: undefined symbol: n4m_gating_strategy_create"
         },
         "pls4all.cpp.omp": {
           "parity": "error",
@@ -1782,7 +1782,7 @@
           "divergence_basis": "reference",
           "divergence_quality": "qualitative",
           "reference_parity_tolerance": 5.0,
-          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/omp-on/cpp/src/libn4m.so: undefined symbol: p4a_gating_strategy_create"
+          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/omp-on/cpp/src/libn4m.so: undefined symbol: n4m_gating_strategy_create"
         },
         "pls4all.python": {
           "parity": "error",
@@ -1794,7 +1794,7 @@
           "divergence_basis": "binding",
           "divergence_quality": "binding",
           "reference_parity_tolerance": 5.0,
-          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-omp/cpp/src/libn4m.so: undefined symbol: p4a_gating_strategy_create"
+          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-omp/cpp/src/libn4m.so: undefined symbol: n4m_gating_strategy_create"
         },
         "pls4all.sklearn": {
           "parity": "exact",
@@ -2004,7 +2004,7 @@
           "divergence_basis": "reference",
           "divergence_quality": "qualitative",
           "reference_parity_tolerance": 5.0,
-          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/dev-release/cpp/src/libn4m.so: undefined symbol: p4a_gating_strategy_create"
+          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/dev-release/cpp/src/libn4m.so: undefined symbol: n4m_gating_strategy_create"
         },
         "pls4all.cpp.blas+omp": {
           "parity": "error",
@@ -2016,7 +2016,7 @@
           "divergence_basis": "reference",
           "divergence_quality": "qualitative",
           "reference_parity_tolerance": 5.0,
-          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-omp/cpp/src/libn4m.so: undefined symbol: p4a_gating_strategy_create"
+          "reason": "AttributeError: /home/delete/nirs4all/nirs4all-methods/build/blas-omp/cpp/src/libn4m.so: undefined symbol: n4m_gating_strategy_create"
         },
         "nirs4all": {
           "parity": "error",
@@ -70685,8 +70685,8 @@
   ],
   "versions": {
     "pls4all.registry": "language=Python 3.13.13; pls4all=0.97.4+parity-fixes-2026-05-22; timing_schema=adaptive-v1; source=n4m_tests",
-    "pls4all.cpp.blas": "language=C++ (via ctypes bridge) (host Linux x86_64); blas=libscipy_openblas 0.3.29 blas=1; libopenblas 0.3.33 blas=1; libscipy_openblas 0.3.28 blas=1; libgomp ? openmp=1; libp4a=0.1.0+abi.1.9.0; numpy=2.2.6; registry_method=vip_spa_select; timing_schema=adaptive-v1",
-    "pls4all.cpp.omp": "language=C++ (via ctypes bridge) (host Linux x86_64); blas=libscipy_openblas 0.3.29 blas=1; libomp ? openmp=1; libscipy_openblas 0.3.28 blas=1; libgomp ? openmp=1; libp4a=0.1.0+abi.1.9.0; numpy=2.2.6; registry_method=vip_spa_select; timing_schema=adaptive-v1",
+    "pls4all.cpp.blas": "language=C++ (via ctypes bridge) (host Linux x86_64); blas=libscipy_openblas 0.3.29 blas=1; libopenblas 0.3.33 blas=1; libscipy_openblas 0.3.28 blas=1; libgomp ? openmp=1; libn4m=0.1.0+abi.1.9.0; numpy=2.2.6; registry_method=vip_spa_select; timing_schema=adaptive-v1",
+    "pls4all.cpp.omp": "language=C++ (via ctypes bridge) (host Linux x86_64); blas=libscipy_openblas 0.3.29 blas=1; libomp ? openmp=1; libscipy_openblas 0.3.28 blas=1; libgomp ? openmp=1; libn4m=0.1.0+abi.1.9.0; numpy=2.2.6; registry_method=vip_spa_select; timing_schema=adaptive-v1",
     "pls4all.python": "language=Python 3.10.12; blas=libscipy_openblas 0.3.29 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1; libscipy_openblas 0.3.28 blas=1; libgomp ? openmp=1; pls4all=0.1.0; numpy=2.2.6; registry_method=vip_spa_select; timing_schema=adaptive-v1",
     "pls4all.sklearn": "language=Python 3.10.12; blas=libscipy_openblas 0.3.29 blas=1; libopenblas 0.3.33 blas=1; libomp ? openmp=1; libscipy_openblas 0.3.28 blas=1; libgomp ? openmp=1; pls4all=0.1.0; numpy=2.2.6; sklearn_class=VIPSPASelector; timing_schema=adaptive-v1",
     "pls4all.R": "language=R 4.6.0; pls4all=0.97.3; registry_method=vip_spa_select; blas=linked-BLAS; timing_schema=adaptive-v1",
@@ -70696,10 +70696,10 @@
     "sklearn": "language=Python 3.10.12; blas=libscipy_openblas 0.3.29 blas=1; libscipy_openblas 0.3.28 blas=1; libgomp ? openmp=1; numpy=2.2.6; reference_id=python_scikit_learn; reference_library=scikit-learn; reference_version=1.8.0; timing_schema=adaptive-v1",
     "pls": "timing_schema=adaptive-v1",
     "plsregress": "language=Octave 10.3.0; statistics=linked Octave statistics pkg; timing_schema=adaptive-v1",
-    "pls4all.matlab": "language=Octave 10.3.0; pls4all=from libp4a-linked MEX; registry_method=vip_spa_select; blas=linked-BLAS; timing_schema=adaptive-v1",
-    "pls4all.matlab.classdef": "language=Octave 10.3.0; pls4all=from libp4a-linked MEX + classdefs; registry_method=vip_spa_select; blas=linked-BLAS; timing_schema=adaptive-v1",
+    "pls4all.matlab": "language=Octave 10.3.0; pls4all=from libn4m-linked MEX; registry_method=vip_spa_select; blas=linked-BLAS; timing_schema=adaptive-v1",
+    "pls4all.matlab.classdef": "language=Octave 10.3.0; pls4all=from libn4m-linked MEX + classdefs; registry_method=vip_spa_select; blas=linked-BLAS; timing_schema=adaptive-v1",
     "ikpls": "language=Python 3.10.12; blas=libscipy_openblas 0.3.29 blas=1; ikpls=MISSING; numpy=2.2.6; timing_schema=adaptive-v1",
-    "pls4all.cpp.native": "language=C++ (via ctypes bridge) (host Linux x86_64); blas=libscipy_openblas 0.3.29 blas=1; libscipy_openblas 0.3.28 blas=1; libgomp ? openmp=1; libp4a=0.1.0+abi.1.9.0; numpy=2.2.6; registry_method=vip_spa_select; timing_schema=adaptive-v1",
+    "pls4all.cpp.native": "language=C++ (via ctypes bridge) (host Linux x86_64); blas=libscipy_openblas 0.3.29 blas=1; libscipy_openblas 0.3.28 blas=1; libgomp ? openmp=1; libn4m=0.1.0+abi.1.9.0; numpy=2.2.6; registry_method=vip_spa_select; timing_schema=adaptive-v1",
     "pls4all.cpp.blas+omp": "language=Python 3.13.13; pls4all=0.97.4+parity-fixes-2026-05-22; timing_schema=adaptive-v1; source=n4m_tests",
     "python_chun_keles_spls": "language=Python 3.10.12; blas=libscipy_openblas 0.3.29 blas=1; libscipy_openblas 0.3.28 blas=1; libgomp ? openmp=1; numpy=2.2.6; reference_id=python_chun_keles_spls; reference_library=chun_keles_spls; reference_version=1.0; timing_schema=adaptive-v1",
     "spls": "language=R (host Linux x86_64); blas=libscipy_openblas 0.3.29 blas=1; numpy=2.2.6; reference_id=r_spls; reference_library=spls; reference_version=2.3.2; timing_driver=rscript-batch; timing_schema=adaptive-v1",

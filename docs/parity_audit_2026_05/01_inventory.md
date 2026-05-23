@@ -7,15 +7,15 @@ externally parity-checked. Built from `cpp/include/pls4all/p4a.h`,
 and `cpp/tests/abi/test_*`.
 
 Legend for **Reach** column:
-- **public-fit**: dedicated `p4a_<name>_fit/_run/_compute` ABI symbol,
+- **public-fit**: dedicated `n4m_<name>_fit/_run/_compute` ABI symbol,
   exposed in Python via `pls4all._methods`.
-- **dispatch**: routed through `p4a_model_fit` by setting
+- **dispatch**: routed through `n4m_model_fit` by setting
   `Algorithm × Solver × Deflation`. Reachable from Python via
   `pls4all.Model.fit(ctx, cfg, X, Y)`.
-- **pipeline**: routed through `p4a_pipeline_fit / _transform` with an
+- **pipeline**: routed through `n4m_pipeline_fit / _transform` with an
   `OperatorKind` enum.
-- **aom-public**: routed through `p4a_aom_global_select` /
-  `p4a_aom_per_component_select`.
+- **aom-public**: routed through `n4m_aom_global_select` /
+  `n4m_aom_per_component_select`.
 - **internal-only**: implemented in C++ but not exposed via the C ABI;
   currently only reachable from `cpp/tests/abi/*`. Needs ABI exposure
   before it can be parity-gated by the Python runner.
@@ -26,7 +26,7 @@ Legend for **Registry** column:
 
 ---
 
-## 1. Core PLS regression algorithms (P4A_ALGO_PLS_REGRESSION)
+## 1. Core PLS regression algorithms (N4M_ALGO_PLS_REGRESSION)
 
 | # | Method | Solver enum | Deflation | Reach | Registry | Notes |
 |---|--------|-------------|-----------|-------|----------|-------|
@@ -51,12 +51,12 @@ Legend for **Registry** column:
 | 14 | OPLS-DA                | `OPLS_DA`       | `NIPALS` | `ORTHOGONAL`| dispatch | MISSING | One predictive + ortho. |
 | 15 | OPLS-DA (multiclass)   | `OPLS_DA`       | `NIPALS` | `ORTHOGONAL`| dispatch | MISSING | Phase 4m. |
 | 16 | PCR                    | `PCR`           | `SVD`    | `REGRESSION`| dispatch | MISSING | PCA + OLS. |
-| 17 | MB-PLS                 | `MB_PLS` enum exists, NOT dispatched | n/a | n/a | **internal-only** | MISSING | `cpp/src/core/mb_pls.{cpp,hpp}` exists; `p4a_model_fit` rejects `P4A_ALGO_MB_PLS` and there is no `p4a_mb_pls_fit` symbol. |
+| 17 | MB-PLS                 | `MB_PLS` enum exists, NOT dispatched | n/a | n/a | **internal-only** | MISSING | `cpp/src/core/mb_pls.{cpp,hpp}` exists; `n4m_model_fit` rejects `N4M_ALGO_MB_PLS` and there is no `n4m_mb_pls_fit` symbol. |
 | 18 | LW-PLS                 | `LW_PLS` enum exists, NOT dispatched | n/a | n/a | **internal-only** | MISSING | Same situation: `cpp/src/core/lw_pls.{cpp,hpp}` exists; no public ABI wrapper. |
 | 19 | PLS-LDA                | derived from PLS_DA | n/a | n/a | **internal-only** | MISSING | Phase 4p; needs ABI exposure. |
 | 20 | PLS-Logistic           | derived from PLS_DA | n/a | n/a | **internal-only** | MISSING | Phase 4q; needs ABI exposure. |
 
-> **NOTE (codex review)**: `p4a_model_fit` actually only dispatches `PLS_REGRESSION`, `PLS_CANONICAL`, `PLS_SVD`, `PLS_DA`, `OPLS`, `OPLS_DA`, `PCR`. It rejects `MB_PLS`, `LW_PLS`, `AOM_PLS`, `SPARSE_PLS` even though those enums exist. So MB-PLS and LW-PLS are **not** reachable from any public ABI today; their C++ implementations are exercised only by `cpp/tests/abi/test_mb_pls.cpp` and `cpp/tests/abi/test_lw_pls.cpp`. They join PLS-LDA / PLS-Logistic in the "needs ABI shim" bucket.
+> **NOTE (codex review)**: `n4m_model_fit` actually only dispatches `PLS_REGRESSION`, `PLS_CANONICAL`, `PLS_SVD`, `PLS_DA`, `OPLS`, `OPLS_DA`, `PCR`. It rejects `MB_PLS`, `LW_PLS`, `AOM_PLS`, `SPARSE_PLS` even though those enums exist. So MB-PLS and LW-PLS are **not** reachable from any public ABI today; their C++ implementations are exercised only by `cpp/tests/abi/test_mb_pls.cpp` and `cpp/tests/abi/test_lw_pls.cpp`. They join PLS-LDA / PLS-Logistic in the "needs ABI shim" bucket.
 
 ## 3. Existing extra-PLS public-fit entries
 
@@ -64,51 +64,51 @@ These ALREADY have a `MethodSpec` in the registry. Listed for completeness.
 
 | # | Method | ABI symbol | Registry name |
 |---|--------|------------|---------------|
-| 21 | sparse SIMPLS | `p4a_sparse_simpls_fit` | `sparse_simpls` |
-| 22 | DI-PLS | `p4a_di_pls_fit` | `di_pls` |
-| 23 | Recursive PLS | `p4a_recursive_pls_run` | `recursive_pls` |
-| 24 | CPPLS | `p4a_cppls_fit` | `cppls` |
-| 25 | Weighted PLS | `p4a_weighted_pls_fit` | `weighted_pls` |
-| 26 | Robust PLS | `p4a_robust_pls_fit` | `robust_pls` |
-| 27 | Ridge PLS | `p4a_ridge_pls_fit` | `ridge_pls` |
-| 28 | Continuum regression | `p4a_continuum_regression_fit` | `continuum_regression` |
-| 29 | N-PLS | `p4a_n_pls_fit` | `n_pls` |
-| 30 | Kernel PLS (RBF) | `p4a_kernel_pls_fit` | `kernel_pls_rbf` |
-| 31 | O2PLS | `p4a_o2pls_fit` | `o2pls` |
-| 32 | Approximate-PRESS | `p4a_approximate_press_compute` | `approximate_press` |
-| 33 | Sparse PLS-DA | `p4a_sparse_pls_da_fit` | `sparse_pls_da` |
-| 34 | Group sparse PLS | `p4a_group_sparse_pls_fit` | `group_sparse_pls` |
-| 35 | Fused sparse PLS | `p4a_fused_sparse_pls_fit` | `fused_sparse_pls` |
-| 36 | PLS monitoring | `p4a_pls_monitoring_run` | `pls_monitoring` |
-| 37 | One-SE rule | `p4a_one_se_rule_compute` | `one_se_rule` |
-| 38 | SO-PLS | `p4a_so_pls_fit` | `so_pls` |
-| 39 | OnPLS | `p4a_on_pls_fit` | `on_pls` |
-| 40 | ROSA | `p4a_rosa_fit` | `rosa` |
-| 41 | Bagging PLS | `p4a_bagging_pls_fit` | `bagging_pls` |
-| 42 | Boosting PLS | `p4a_boosting_pls_fit` | `boosting_pls` |
-| 43 | Random-subspace PLS | `p4a_random_subspace_pls_fit` | `random_subspace_pls` |
-| 44 | PLS-GLM | `p4a_pls_glm_fit` | `pls_glm` |
-| 45 | PLS-QDA | `p4a_pls_qda_fit` | `pls_qda` |
-| 46 | PLS-Cox | `p4a_pls_cox_fit` | `pls_cox` |
-| 47 | PDS | `p4a_pds_fit` | `pds` |
-| 48 | DS  | `p4a_ds_fit`  | `ds` |
-| 49 | MIR-PLS | `p4a_mir_pls_fit` | `mir_pls` |
-| 50 | Missing-aware NIPALS | `p4a_missing_aware_nipals_fit` | `missing_aware_nipals` |
-| 51 | PLS Hotelling T² | `p4a_pls_diagnostics_compute` | `pls_diagnostic_t2` |
-| 52 | PLS Q residuals  | `p4a_pls_diagnostics_compute` | `pls_diagnostic_q` |
-| 53 | PLS DModX | `p4a_pls_diagnostics_compute` | `pls_diagnostic_dmodx` |
+| 21 | sparse SIMPLS | `n4m_sparse_simpls_fit` | `sparse_simpls` |
+| 22 | DI-PLS | `n4m_di_pls_fit` | `di_pls` |
+| 23 | Recursive PLS | `n4m_recursive_pls_run` | `recursive_pls` |
+| 24 | CPPLS | `n4m_cppls_fit` | `cppls` |
+| 25 | Weighted PLS | `n4m_weighted_pls_fit` | `weighted_pls` |
+| 26 | Robust PLS | `n4m_robust_pls_fit` | `robust_pls` |
+| 27 | Ridge PLS | `n4m_ridge_pls_fit` | `ridge_pls` |
+| 28 | Continuum regression | `n4m_continuum_regression_fit` | `continuum_regression` |
+| 29 | N-PLS | `n4m_n_pls_fit` | `n_pls` |
+| 30 | Kernel PLS (RBF) | `n4m_kernel_pls_fit` | `kernel_pls_rbf` |
+| 31 | O2PLS | `n4m_o2pls_fit` | `o2pls` |
+| 32 | Approximate-PRESS | `n4m_approximate_press_compute` | `approximate_press` |
+| 33 | Sparse PLS-DA | `n4m_sparse_pls_da_fit` | `sparse_pls_da` |
+| 34 | Group sparse PLS | `n4m_group_sparse_pls_fit` | `group_sparse_pls` |
+| 35 | Fused sparse PLS | `n4m_fused_sparse_pls_fit` | `fused_sparse_pls` |
+| 36 | PLS monitoring | `n4m_pls_monitoring_run` | `pls_monitoring` |
+| 37 | One-SE rule | `n4m_one_se_rule_compute` | `one_se_rule` |
+| 38 | SO-PLS | `n4m_so_pls_fit` | `so_pls` |
+| 39 | OnPLS | `n4m_on_pls_fit` | `on_pls` |
+| 40 | ROSA | `n4m_rosa_fit` | `rosa` |
+| 41 | Bagging PLS | `n4m_bagging_pls_fit` | `bagging_pls` |
+| 42 | Boosting PLS | `n4m_boosting_pls_fit` | `boosting_pls` |
+| 43 | Random-subspace PLS | `n4m_random_subspace_pls_fit` | `random_subspace_pls` |
+| 44 | PLS-GLM | `n4m_pls_glm_fit` | `pls_glm` |
+| 45 | PLS-QDA | `n4m_pls_qda_fit` | `pls_qda` |
+| 46 | PLS-Cox | `n4m_pls_cox_fit` | `pls_cox` |
+| 47 | PDS | `n4m_pds_fit` | `pds` |
+| 48 | DS  | `n4m_ds_fit`  | `ds` |
+| 49 | MIR-PLS | `n4m_mir_pls_fit` | `mir_pls` |
+| 50 | Missing-aware NIPALS | `n4m_missing_aware_nipals_fit` | `missing_aware_nipals` |
+| 51 | PLS Hotelling T² | `n4m_pls_diagnostics_compute` | `pls_diagnostic_t2` |
+| 52 | PLS Q residuals  | `n4m_pls_diagnostics_compute` | `pls_diagnostic_q` |
+| 53 | PLS DModX | `n4m_pls_diagnostics_compute` | `pls_diagnostic_dmodx` |
 
 ## 4. AOM / POP public ABI
 
 | # | Method | ABI symbol | Registry | Notes |
 |---|--------|------------|----------|-------|
-| 54 | Global AOM-SIMPLS selection | `p4a_aom_global_select` | MISSING | Phase 6f. Bench oracle: `nirs4all/bench/AOM_v0/aompls`. |
-| 55 | Per-component POP-PLS selection | `p4a_aom_per_component_select` | MISSING | Phase 6f. Same bench oracle. |
-| 56 | AOM preprocessing fit/transform | **not on public ABI** | MISSING | Phase 6a. `aom_preprocessing.{cpp,hpp}` is reachable only via the AOM selectors (`aom_global_select` / `aom_per_component_select`) which use it internally. There is no `p4a_aom_preprocess_fit` ABI symbol. |
+| 54 | Global AOM-SIMPLS selection | `n4m_aom_global_select` | MISSING | Phase 6f. Bench oracle: `nirs4all/bench/AOM_v0/aompls`. |
+| 55 | Per-component POP-PLS selection | `n4m_aom_per_component_select` | MISSING | Phase 6f. Same bench oracle. |
+| 56 | AOM preprocessing fit/transform | **not on public ABI** | MISSING | Phase 6a. `aom_preprocessing.{cpp,hpp}` is reachable only via the AOM selectors (`aom_global_select` / `aom_per_component_select`) which use it internally. There is no `n4m_aom_preprocess_fit` ABI symbol. |
 
-## 5. Preprocessing operators (P4A_OP_*)
+## 5. Preprocessing operators (N4M_OP_*)
 
-Reach: pipeline (via `p4a_pipeline_fit/_transform`).
+Reach: pipeline (via `n4m_pipeline_fit/_transform`).
 
 | # | Operator | Enum | Registry | Notes |
 |---|----------|------|----------|-------|
@@ -193,10 +193,10 @@ candidates and the runner deliberately ignores them.
 |----------|-------------|------------------------------|-------------|-------------------|
 | Core PLS regression solvers (§1, items 1-8) | 8 | 8 (via `Model.fit` + Algorithm/Solver) | 0 | wire 8 new MethodSpecs |
 | Other core algos (§2 items 9-16) — PLSCanonical, PLSSVD, PLS-DA, OPLS, OPLS-DA, multiclass OPLS-DA, PCR | 8 | 8 (via `Model.fit`) | 0 | wire 8 new MethodSpecs |
-| Other core algos (§2 items 17-20) — MB-PLS, LW-PLS, PLS-LDA, PLS-Logistic | 4 | **0 — ABI gap** | 0 | needs 4 ABI shims (`p4a_mb_pls_fit`, `p4a_lw_pls_fit`, `p4a_pls_lda_fit`, `p4a_pls_logistic_fit`) |
+| Other core algos (§2 items 17-20) — MB-PLS, LW-PLS, PLS-LDA, PLS-Logistic | 4 | **0 — ABI gap** | 0 | needs 4 ABI shims (`n4m_mb_pls_fit`, `n4m_lw_pls_fit`, `n4m_pls_lda_fit`, `n4m_pls_logistic_fit`) |
 | Extra-PLS public-fit (§3) | 33 | 33 | 33 | upgrade refs (drop paper-only where possible) |
 | AOM / POP public ABI (§4 items 54-55) | 2 | 2 | 0 | wire 2 new MethodSpecs (bench oracle) |
-| AOM preprocessing public (§4 item 56) | 1 | **0 — ABI gap** | 0 | needs `p4a_aom_preprocess_fit` shim |
+| AOM preprocessing public (§4 item 56) | 1 | **0 — ABI gap** | 0 | needs `n4m_aom_preprocess_fit` shim |
 | Pipeline preprocessing operators (§5 items 57-71) | 15 | 15 (via `pipeline_fit/transform`) | 0 | wire 15 new MethodSpecs |
 | AOM-only operators (§5 items 72-74) — FCK, Whittaker, finite-diff | 3 | reachable only via the `OperatorBank` inside AOM selectors | 0 | wire via bench oracle |
 | Variable selectors (§6 items 75-97) | 23 | **0 — ABI gap** | 0 | needs ABI shims OR cpp-test harness (Step 4 decision) |
@@ -210,7 +210,7 @@ non-Python harness, and 3 AOM-only operators need bench-oracle plumbing.
 ABI exposure work that gates the registry-coverage ceiling, in priority
 order:
 
-1. **§4 item 56** — `p4a_aom_preprocess_fit` (small; parity already
+1. **§4 item 56** — `n4m_aom_preprocess_fit` (small; parity already
    defined against bench oracle).
 2. **§2 items 17-20** — MB-PLS, LW-PLS, PLS-LDA, PLS-Logistic
    public-fit symbols (4 new ABI entries).

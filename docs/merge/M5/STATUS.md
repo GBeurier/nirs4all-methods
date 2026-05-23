@@ -1,4 +1,4 @@
-# M5 — ABI rename `p4a_*` → `n4m_*`: STATUS
+# M5 — ABI rename `n4m_*` → `n4m_*`: STATUS
 
 **Status**: 🟡 **SCRIPT READY, EXECUTION DEFERRED**
 **Date**: 2026-05-21 (same merge sprint)
@@ -21,7 +21,7 @@
 | **Total** | ~600 files | **~18500 token replacements** |
 
 3. **Pre-rename tag landed**: `abi-p4a-final/v0.97.3-pre-merge` (pushed to
-   origin) so the historical `p4a_*` symbol surface stays recoverable.
+   origin) so the historical `n4m_*` symbol surface stays recoverable.
 
 ## What is NOT done (why M5 is deferred)
 
@@ -62,7 +62,7 @@ an inconsistent state.
    python scripts/migrate_p4a_to_n4m.py --apply --stage core
    # Build + test gate
    cmake --build --preset dev-release && \
-   ./build/dev-release/cpp/tests/pls4all_tests
+   ./build/dev-release/cpp/tests/n4m_tests
    # Should now report 265/265 with n4m_* symbols
    ```
 
@@ -106,11 +106,11 @@ git checkout 9472dd9 -- cpp/ CMakeLists.txt
 - M4/EXTRACTION_RECIPE.md doesn't yet make "M4 partial" explicit at the
   top — should be updated to reflect that the actual extraction lands
   AFTER M5 rename so the new files start life with `n4m_*` naming, not
-  `p4a_*`.
+  `n4m_*`.
 - `SPLIT_PLAN.md` says `approximate_press → dispatch.cpp` while we placed
   it at `models/core/approximate_press.cpp` — should reconcile.
 - After M5 rename, M4 phase-1 helper extractions need to use `n4m::core`
-  and `n4m::detail` namespaces, not `pls4all::core`.
+  and `n4m::detail` namespaces, not `n4m::core`.
 
 These caveats are written into the M5 plan above; they apply to the
 focused session that executes both M5 and M6.

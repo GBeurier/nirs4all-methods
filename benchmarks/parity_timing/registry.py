@@ -2889,7 +2889,7 @@ def _build_default_plan(n_samples: int, n_folds: int = 3,
 
     Contiguous (non-shuffled) so the R + MATLAB binding-side helpers
     (`make_default_plan` in `bindings/r/pls4all/src/r_dispatch.c` and
-    `bindings/matlab/mex/p4a_method_fit_mex.c`) produce the identical
+    `bindings/matlab/mex/n4m_method_fit_mex.c`) produce the identical
     plan. Shuffling the fold composition required serialising the
     permutation across language boundaries; the simpler invariant is to
     drop the shuffle on the Python side too. With identical folds and
@@ -3089,13 +3089,13 @@ def _aom_preprocess_pls4all(ctx, cfg, X, Y, *, n_operators, gating_mode,
     from pls4all._ffi import lib
 
     # Ensure the gating-strategy entry points are loaded into ctypes.
-    if not hasattr(lib.p4a_gating_strategy_create, "restype") or \
-            lib.p4a_gating_strategy_create.restype is None:
-        lib.p4a_gating_strategy_create.restype = ctypes.c_int
-        lib.p4a_gating_strategy_create.argtypes = [
+    if not hasattr(lib.n4m_gating_strategy_create, "restype") or \
+            lib.n4m_gating_strategy_create.restype is None:
+        lib.n4m_gating_strategy_create.restype = ctypes.c_int
+        lib.n4m_gating_strategy_create.argtypes = [
             ctypes.POINTER(ctypes.c_void_p), ctypes.c_int]
-        lib.p4a_gating_strategy_destroy.restype = None
-        lib.p4a_gating_strategy_destroy.argtypes = [ctypes.c_void_p]
+        lib.n4m_gating_strategy_destroy.restype = None
+        lib.n4m_gating_strategy_destroy.argtypes = [ctypes.c_void_p]
 
     bank = pls4all.OperatorBank()
     canon = [
@@ -3109,15 +3109,15 @@ def _aom_preprocess_pls4all(ctx, cfg, X, Y, *, n_operators, gating_mode,
         bank.add(k)
 
     gate_handle = ctypes.c_void_p(0)
-    status = lib.p4a_gating_strategy_create(
+    status = lib.n4m_gating_strategy_create(
         ctypes.byref(gate_handle), int(gating_mode))
     if status != 0 or not gate_handle:
         raise RuntimeError(
-            f"p4a_gating_strategy_create failed (status={status})")
+            f"n4m_gating_strategy_create failed (status={status})")
     try:
         return pls4all.aom_preprocess_fit(ctx, bank, gate_handle, X, Y)
     finally:
-        lib.p4a_gating_strategy_destroy(gate_handle)
+        lib.n4m_gating_strategy_destroy(gate_handle)
         bank.close()
 
 

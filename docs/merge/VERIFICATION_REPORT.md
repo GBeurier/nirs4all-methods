@@ -5,15 +5,15 @@
 **Tip**: `e376b24`
 
 This document records the **actual** end-to-end verification of the merge
-sprint, not just per-commit `pls4all_tests` passing.
+sprint, not just per-commit `n4m_tests` passing.
 
 ## TL;DR
 
 | What | Status | Evidence |
 |---|:---:|---|
 | pls4all C++ build (dev-release preset) | ✅ green | `cmake --build --preset dev-release` clean |
-| pls4all C++ test suite | ✅ green | `pls4all_tests` reports `265 run, 0 failures, 0 skipped` |
-| pls4all CLI selfcheck | ✅ green | `pls4all_cli --selfcheck` returns `selfcheck OK` |
+| pls4all C++ test suite | ✅ green | `n4m_tests` reports `265 run, 0 failures, 0 skipped` |
+| pls4all CLI selfcheck | ✅ green | `n4m_cli --selfcheck` returns `selfcheck OK` |
 | Catalog validation | ✅ PASS | 160 unique methods, 2 active subset closures non-empty |
 | License audit | ✅ PASS | 2 vendored entries, 10 referenced libs, all with LICENSE files |
 | Benchmark matrix (pls4all-side 73 methods) | ✅ runs | smoke test 4 algos × 10 backends = 40 cells, all OK |
@@ -23,7 +23,7 @@ sprint, not just per-commit `pls4all_tests` passing.
 | Python slim `pls4all` package (new) | ⚪ scaffold | `__init__.py` raises ImportError until M10 lands |
 | R `n4m` + `pls4all` packages (new) | ⚪ scaffold | DESCRIPTION + README only, no `src/libn4m_*/` build yet |
 | cibuildwheel matrix | ⚪ scaffold | `release-wheels.yml` gated `if: false` |
-| ABI rename `p4a_*` → `n4m_*` | 🟡 deferred | script `migrate_p4a_to_n4m.py` ready, execution requires M6 header merge first |
+| ABI rename `n4m_*` → `n4m_*` | 🟡 deferred | script `migrate_p4a_to_n4m.py` ready, execution requires M6 header merge first |
 
 ## Evidence — what actually works
 
@@ -36,11 +36,11 @@ $ cmake --preset dev-release
 -- Build files have been written to: build/dev-release
 $ cmake --build --preset dev-release -j 4
 ninja: no work to do.   # post M0-M17, no rebuild needed since pls4all CMakeLists unchanged
-$ ./build/dev-release/cpp/tests/pls4all_tests
+$ ./build/dev-release/cpp/tests/n4m_tests
 === 265 run, 0 failures, 0 skipped ===
-$ ./build/dev-release/cpp/cli/pls4all_cli --version
+$ ./build/dev-release/cpp/cli/n4m_cli --version
 pls4all 0.97.3+abi.1.16.0
-$ ./build/dev-release/cpp/cli/pls4all_cli --selfcheck
+$ ./build/dev-release/cpp/cli/n4m_cli --selfcheck
 selfcheck OK
 ```
 
@@ -99,7 +99,7 @@ CSV writes.
 ```
 $ python benchmarks/cross_binding/orchestrator.py \
     --algorithms snv --sizes 30x30 --threads 1 \
-    --libp4a-build dev-release --n-runs 2 --only-pls4all \
+    --libn4m-build dev-release --n-runs 2 --only-pls4all \
     --out-csv /tmp/donor_smoke.csv --force
 [1] snv     30×30  t=1  dev-release registry_pls4all: WARN: could not build BENCH_R_PARAMS_JSON for snv: KeyError('unknown method: snv')
 FAIL — unknown algo failed: invalid argument
@@ -135,7 +135,7 @@ Until then, `pls 4all` methods benchmark; donor methods do not.
 - **M11** CRAN cleanup pass (existing 1 WARNING + 4 NOTEs from M0
   still need to be fixed before submission)
 - **M13** secondary binding refresh (12 pls4all bindings still use
-  `p4a_*` symbols — refresh after M5 lands)
+  `n4m_*` symbols — refresh after M5 lands)
 - **M15** cibuildwheel matrix activation (workflow gated `if: false`
   until M9+M10 land their build glue)
 
@@ -162,7 +162,7 @@ The merge sprint delivered:
 
 The merge sprint did NOT deliver:
 - ❌ Function-level extraction of model.cpp + extra_pls.cpp into the M4 stubs (the 39 stubs are placeholders)
-- ❌ ABI rename `p4a_*` → `n4m_*` (script ready, execution paired with M6)
+- ❌ ABI rename `n4m_*` → `n4m_*` (script ready, execution paired with M6)
 - ❌ Donor methods in `benchmarks/parity_timing/registry.py` (87 methods catalogued but not benchmarked)
 - ❌ Donor C++ tests (`n4m_tests`) compiled and runnable from pls4all's build
 - ❌ Python/R packages actually building from vendored sources
