@@ -2813,4 +2813,11 @@ N4M_STATIC_ASSERT(sizeof(n4m_matrix_view_t) == 48,
                   "n4m_matrix_view_t layout must be 48 bytes on LP64/LLP64");
 #endif
 
+/* PLS-domain surface (model, config, pipeline, validation, AOM/POP,
+ * variable selection, diagnostics, multi-block, transfer). Lives in a
+ * dedicated header so the umbrella file's core surface stays focused;
+ * included here unconditionally so that consumers continue to need only
+ * a single `#include "n4m/n4m.h"`. */
+#include "n4m/pls.h"
+
 #endif /* N4M_N4M_H */

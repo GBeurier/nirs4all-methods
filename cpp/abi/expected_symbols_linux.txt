@@ -1,3 +1,4 @@
+N4M_1
 n4m_aom_global_result_destroy
 n4m_aom_global_result_get_best_score
 n4m_aom_global_result_get_max_components
@@ -155,6 +156,7 @@ n4m_config_clone
 n4m_config_create
 n4m_config_destroy
 n4m_config_get_algorithm
+n4m_config_get_approximate_press_legacy
 n4m_config_get_center_x
 n4m_config_get_center_y
 n4m_config_get_deflation
@@ -164,13 +166,16 @@ n4m_config_get_max_iter
 n4m_config_get_n_components
 n4m_config_get_operator_bank
 n4m_config_get_pipeline
+n4m_config_get_robust_pls_legacy
 n4m_config_get_scale_x
 n4m_config_get_scale_y
 n4m_config_get_solver
+n4m_config_get_sparse_simpls_legacy
 n4m_config_get_store_diagnostics
 n4m_config_get_store_scores
 n4m_config_get_tol
 n4m_config_set_algorithm
+n4m_config_set_approximate_press_legacy
 n4m_config_set_center_x
 n4m_config_set_center_y
 n4m_config_set_deflation
@@ -180,9 +185,11 @@ n4m_config_set_max_iter
 n4m_config_set_n_components
 n4m_config_set_operator_bank
 n4m_config_set_pipeline
+n4m_config_set_robust_pls_legacy
 n4m_config_set_scale_x
 n4m_config_set_scale_y
 n4m_config_set_solver
+n4m_config_set_sparse_simpls_legacy
 n4m_config_set_store_diagnostics
 n4m_config_set_store_scores
 n4m_config_set_tol
