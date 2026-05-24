@@ -1,6 +1,6 @@
-# Status — refactor state on `main`
+# Status — refactor state on `codex/phase-b-catalog`
 
-> Snapshot: 2026-05-23 · after Phase A landing.
+> Snapshot: 2026-05-25 · after Phase B catalog foundation + threading audit.
 > Founding document: [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md).
 
 Use this file as the **first read** when picking up the refactor. It
@@ -13,10 +13,17 @@ work item is.
 
 - **Phase A — Rename cleanup**: ✅ **landed on `main`** (5 commits).
   See [`roadmap/phase-A-rename-cleanup.md`](roadmap/phase-A-rename-cleanup.md).
+- **Greg audit — GIL / multithreading / sklearn jobs**: ✅ Python bindings use
+  `ctypes.CDLL` (GIL released during native calls), contexts are per-thread,
+  and benchmark sklearn-style references now honor `BENCH_SKLEARN_N_JOBS`
+  with `BENCH_THREADS` fallback.
+- **Phase B — Catalog foundation**: ✅ on branch `codex/phase-b-catalog`.
+  Split method files, schema, validator, render/migration scaffolding, and
+  catalog CI are in place. ABI-symbol reconciliation is still outstanding.
 - **Build**: ✅ `cmake --preset dev-debug && cmake --build` green; `ctest` green
   (`libn4m.so.1.9.0`, `libn4m_static.a`, `n4m_cli`, `n4m_tests` produced;
   266 doctest cases pass).
-- **Phases B–F**: not started.
+- **Phases C–F**: not started.
 
 ## Where Phase A landed
 
@@ -29,6 +36,15 @@ ba05aac Phase A14-A26: docs, templates, dev shell, doctor + bootstrap
 ```
 
 Pushed to `origin/main`.
+
+## Current branch commits
+
+```
+70271b1 fix(benchmarks): honor sklearn thread budget
+a8bd3c9 feat(catalog): split method catalog foundation
+```
+
+Pushed to `origin/codex/phase-b-catalog`.
 
 ## Repo shape now
 
@@ -76,6 +92,19 @@ ctest --preset dev-debug --output-on-failure
 # Tool resolution
 make doctor
 
+# Catalog foundation checks
+python catalog/scripts/selftest.py
+python catalog/scripts/split_legacy_methods.py --check
+python catalog/scripts/validate.py
+python catalog/scripts/validate_catalog.py
+
+# Full registry parity sweep, sequential cells, 8 native threads per cell
+BENCH_SKLEARN_N_JOBS=8 python benchmarks/cross_binding/orchestrator.py \
+  --algorithms all --registry-cells --threads 8 --workers 1 \
+  --libn4m-build blas-omp --n-runs 2 \
+  --canonical-pls4all-only --reference-backends registry \
+  --timeout 180 --out-csv /tmp/n4m_full_parity.csv --force
+
 # No legacy refs in active code
 grep -rE '\b(p4a_|P4A_)\b' cpp/ catalog/ parity/ bindings/ \
   --include='*.h' --include='*.hpp' --include='*.cpp' --include='*.c' \
@@ -109,10 +138,11 @@ grep -rE '\b(p4a_|P4A_)\b' cpp/ catalog/ parity/ bindings/ \
    - `catalog/subsets/pls4all.yaml` — the manifest for that subset
    - `bindings/_archive/*` — frozen PoC bindings (not in scope)
 
-4. **Stale catalog**: `benchmarks/parity_timing/registry.py` (~10k
-   LOC) is the legacy method catalog; `catalog/methods.yaml` +
-   `methods.discovered.yaml` are duplicates. Phase B replaces all
-   of these with `catalog/methods/<id>.yaml` (one YAML per method).
+4. **Catalog transition**: `catalog/methods/<id>.yaml` now exists for
+   all 160 legacy method rows and new scripts prefer the split files.
+   During the transition, `catalog/methods.yaml` remains the editable
+   source for split regeneration and `benchmarks/parity_timing/registry.py`
+   still drives full parity/timing.
 
 5. **Snapshot version-tag handling**: `cpp/abi/expected_symbols_*.txt`
    stores bare symbol names; the linker version script (adopted in
@@ -127,25 +157,29 @@ grep -rE '\b(p4a_|P4A_)\b' cpp/ catalog/ parity/ bindings/ \
 
 ## Next concrete work item
 
-**Phase B — Unified catalog + auto-generation**
+**Finish Phase B — Unified catalog + auto-generation**
 (see `docs/REFACTOR_PLAN.md` §3 "Phase B" — 10 tasks B1–B10).
 
-| Step | Action |
-|------|--------|
-| B1 | Write the YAML schema for a method file (`catalog/schema/method.json`); document in `catalog/README.md` |
-| B2 | Implement `catalog/scripts/split_legacy_methods.py` — one-shot script that splits `catalog/methods.yaml` into `catalog/methods/<id>.yaml` (one file per method) |
-| B3 | Migrate `benchmarks/parity_timing/registry.py` data into the per-method YAMLs (data stays in YAML, logic stays in Python but reads the YAMLs) |
-| B4 | Migrate `parity/tolerances.md` → `parity.tolerances` field in each YAML |
-| B5 | Implement `catalog/scripts/validate.py` — all the structural invariants listed in §3 Phase B B5 |
-| B6 | Implement `catalog/scripts/render_api.py` with per-language Jinja templates from day one |
-| B7 | Add CI workflow `catalog-validate.yml` — hard blocker on PR merge |
-| B8 | Implement `catalog/scripts/migrate_schema.py` (catalog_version bump tool) |
-| B9 | Delete `catalog/methods.yaml`, `methods.discovered.yaml`, `benchmarks/parity_timing/registry.py` once B2–B5 are stable |
-| B10 | Delete `roadmap/phase-*.md` files that describe implemented methods (replaced by the catalog YAMLs) |
+| Step | State | Action |
+|------|-------|--------|
+| B1 | ✅ | `catalog/schema/method.json` + `catalog/README.md` added |
+| B2 | ✅ | `split_legacy_methods.py` generates/prunes 160 split files |
+| B3 | ⏳ | Migrate registry data (canonical references, alternates, params) into YAML while keeping Python logic as a reader |
+| B4 | ⏳ | Migrate `parity/tolerances.md` rows into `parity.tolerances` per method |
+| B5 | ⚠️ | `validate.py` exists; strict ABI is advisory until symbol guesses are reconciled |
+| B6 | ⚠️ | `render_api.py` has per-language Jinja templates but currently renders metadata only under `build/catalog/rendered_api/` |
+| B7 | ✅ | `.github/workflows/catalog-validate.yml` added |
+| B8 | ✅ | `migrate_schema.py` no-op v1 tool added |
+| B9 | ⏳ | Delete legacy YAMLs and `registry.py` after B3–B5 are stable |
+| B10 | ⏳ | Delete implemented-method roadmap files after YAML owns those records |
 
 **Phase B exit criterion**: `python catalog/scripts/validate.py`
 returns 0 errors, `render_api.py` reproduces existing APIs identically,
 `registry.py` is gone.
+
+Current validation status: `validate.py` returns 0 with 419 ABI warnings from
+auto-discovered symbol guesses. Do not enable `--strict-abi` in CI until those
+symbols are reconciled against `cpp/abi/expected_symbols_*.txt`.
 
 ## Subsequent phases (not started)
 
@@ -162,7 +196,7 @@ All detailed under `docs/REFACTOR_PLAN.md` §3.
    [`roadmap/phase-A-rename-cleanup.md`](roadmap/phase-A-rename-cleanup.md).
 2. Verify the build still works: `cmake --preset dev-debug && cmake --build`.
 3. Open [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md) § "Phase B"
-   for the next batch.
+   and continue at B3/B4/B5 strict-ABI reconciliation.
 4. Optionally enter the dev shell: `make bootstrap` (or
    `make shell` if Docker is already running).
 
