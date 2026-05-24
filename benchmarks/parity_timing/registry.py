@@ -52,6 +52,18 @@ R_ENV = {
     "PATH": f"/home/delete/miniconda3/envs/pls4all_r/bin:{os.environ.get('PATH', '')}",
     "CC": R_CC,
 }
+
+
+def _sklearn_n_jobs() -> int:
+    """Thread budget for sklearn-compatible references that expose n_jobs."""
+    raw = os.environ.get("BENCH_SKLEARN_N_JOBS", os.environ.get("BENCH_THREADS", "1"))
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return 1
+    return max(1, value)
+
+
 # Inproc R via rpy2 — must set R_HOME / LD_LIBRARY_PATH before importing.
 os.environ.setdefault("R_HOME", R_HOME)
 os.environ["LD_LIBRARY_PATH"] = (
@@ -1548,7 +1560,7 @@ def _vissa_auswahl_indices(X: np.ndarray, Y: np.ndarray, *,
         pls=PLSRegression(n_components=int(n_components), scale=False),
         n_cv_folds=3,
         random_state=int(seed),
-        n_jobs=1,
+        n_jobs=_sklearn_n_jobs(),
     )
     sel.fit(X64, Y2)
     return np.where(sel.support_)[0].astype(np.int64)
@@ -3998,7 +4010,7 @@ def _random_frog_indices_via_auswahl(X: np.ndarray, Y: np.ndarray, *,
         n_initial_features=int(initial_size),
         pls=PLSRegression(n_components=int(n_components), scale=False),
         n_cv_folds=3,
-        n_jobs=1,
+        n_jobs=_sklearn_n_jobs(),
         random_state=int(seed),
     )
     sel.fit(X64, Y2)
@@ -4577,7 +4589,7 @@ def _vip_spa_indices_via_auswahl(X: np.ndarray, Y: np.ndarray, *,
         n_features_to_select=int(top_k),
         n_cv_folds=3,
         pls=PLSRegression(n_components=int(n_components), scale=False),
-        n_jobs=1,
+        n_jobs=_sklearn_n_jobs(),
     )
     sel.fit(X64, Y2)
     return np.where(sel.support_)[0].astype(np.int64)
@@ -7511,7 +7523,7 @@ def _irf_indices_via_auswahl(X: np.ndarray, Y: np.ndarray, *,
         n_initial_intervals=int(initial_intervals),
         pls=PLSRegression(n_components=int(n_components), scale=False),
         n_cv_folds=3,
-        n_jobs=1,
+        n_jobs=_sklearn_n_jobs(),
         random_state=int(seed),
     )
     sel.fit(X64, Y2)

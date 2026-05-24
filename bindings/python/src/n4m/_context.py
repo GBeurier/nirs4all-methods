@@ -30,6 +30,20 @@ class Context:
         check(lib.n4m_context_set_seed(self._handle, ctypes.c_uint64(seed)),
               "n4m_context_set_seed")
 
+    @property
+    def num_threads(self) -> int:
+        out = ctypes.c_int32()
+        check(lib.n4m_context_get_num_threads(self._handle, ctypes.byref(out)),
+              "n4m_context_get_num_threads")
+        return int(out.value)
+
+    @num_threads.setter
+    def num_threads(self, value: int) -> None:
+        check(
+            lib.n4m_context_set_num_threads(self._handle, ctypes.c_int32(int(value))),
+            "n4m_context_set_num_threads",
+        )
+
     def close(self) -> None:
         if getattr(self, "_handle", None) is not None and self._handle.value:
             lib.n4m_context_destroy(self._handle)
