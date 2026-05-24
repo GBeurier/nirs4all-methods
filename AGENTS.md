@@ -24,7 +24,7 @@ fixtures, performance/parity tooling, and issue/PR templates.
 - `python catalog/scripts/selftest.py && python catalog/scripts/validate.py`:
   run the Phase B catalog parser and structural checks.
 - Full registry parity sweep with 8 native/sklearn jobs per cell:
-  `BENCH_SKLEARN_N_JOBS=8 python benchmarks/cross_binding/orchestrator.py --algorithms all --registry-cells --threads 8 --workers 1 --libn4m-build blas-omp --n-runs 2 --canonical-pls4all-only --reference-backends registry --timeout 180 --out-csv /tmp/n4m_full_parity.csv --force`.
+  `BENCH_SKLEARN_N_JOBS=8 python benchmarks/cross_binding/orchestrator.py --algorithms all --registry-cells --threads 8 --workers 1 --libn4m-build blas-omp --n-runs 2 --canonical-pls4all-only --reference-backends registry --timeout 180 --out-csv /tmp/n4m_full_parity.csv --force --flush-each-cell`.
 
 ## Coding Style & Naming Conventions
 

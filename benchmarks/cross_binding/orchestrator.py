@@ -402,6 +402,8 @@ def _subprocess_failure_reason(out: subprocess.CompletedProcess) -> str:
             continue
         if low.startswith("error: ignoring const execution_exception"):
             continue
+        if low.startswith("warning: ignoring environment value of r_home"):
+            continue
         return clean[:200]
     return "exit != 0"
 

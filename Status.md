@@ -103,7 +103,8 @@ BENCH_SKLEARN_N_JOBS=8 python benchmarks/cross_binding/orchestrator.py \
   --algorithms all --registry-cells --threads 8 --workers 1 \
   --libn4m-build blas-omp --n-runs 2 \
   --canonical-pls4all-only --reference-backends registry \
-  --timeout 180 --out-csv /tmp/n4m_full_parity.csv --force
+  --timeout 180 --out-csv /tmp/n4m_full_parity.csv --force \
+  --flush-each-cell
 
 # No legacy refs in active code
 grep -rE '\b(p4a_|P4A_)\b' cpp/ catalog/ parity/ bindings/ \
@@ -180,6 +181,29 @@ returns 0 errors, `render_api.py` reproduces existing APIs identically,
 Current validation status: `validate.py` returns 0 with 419 ABI warnings from
 auto-discovered symbol guesses. Do not enable `--strict-abi` in CI until those
 symbols are reconciled against `cpp/abi/expected_symbols_*.txt`.
+
+## Full parity run — 2026-05-25
+
+Command run:
+
+```bash
+BENCH_SKLEARN_N_JOBS=8 python benchmarks/cross_binding/orchestrator.py \
+  --algorithms all --registry-cells --threads 8 --workers 1 \
+  --libn4m-build blas-omp --n-runs 2 \
+  --canonical-pls4all-only --reference-backends registry \
+  --timeout 180 --out-csv /tmp/n4m_full_parity.csv --force \
+  --flush-each-cell
+```
+
+Result CSV: `/tmp/n4m_full_parity.csv`.
+
+- 153 rows planned/run.
+- 151 subprocess successes; 2 subprocess failures:
+  `pls/ref_r_mixomics`, `opls/ref_r_ropls`.
+- 0 binding-parity failures.
+- 145 reference-parity passes; 3 reference-parity failures:
+  `pcr/ref_r_pls`, `opls/registry_pls4all` (missing oracle because
+  `ref_r_ropls` failed), `continuum_regression/ref_r_jico`.
 
 ## Subsequent phases (not started)
 

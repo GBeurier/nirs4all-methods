@@ -93,7 +93,8 @@ BENCH_SKLEARN_N_JOBS=8 python benchmarks/cross_binding/orchestrator.py \
   --algorithms all --registry-cells --threads 8 --workers 1 \
   --libn4m-build blas-omp --n-runs 2 \
   --canonical-pls4all-only --reference-backends registry \
-  --timeout 180 --out-csv /tmp/n4m_full_parity.csv --force
+  --timeout 180 --out-csv /tmp/n4m_full_parity.csv --force \
+  --flush-each-cell
 
 # Overnight matrix (registry cells + registry-declared externals)
 benchmarks/cross_binding/run_overnight.sh
