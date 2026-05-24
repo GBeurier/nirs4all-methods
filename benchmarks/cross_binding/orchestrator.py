@@ -957,7 +957,8 @@ def main():
                          help="Dataset sizes 'NxP' (default: 11-size matrix)")
     parser.add_argument("--threads", nargs="+", type=int, default=[1, 3, 10],
                          help="Thread counts to sweep")
-    parser.add_argument("--libn4m-build",
+    parser.add_argument("--libn4m-build", "--libp4a-build",
+                         dest="libp4a_build",
                          choices=["dev-release", "blas-on", "omp-on",
                                   "blas-omp", "cuda-on", "both",
                                   "all-cpu", "all"],
