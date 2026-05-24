@@ -33,9 +33,12 @@ CATALOG = REPO / "catalog"
 SCHEMA_DIR = CATALOG / "schema"
 
 
-# ----------- minimal YAML parser (whitespace-significant, no anchors / flow) -----------
-# Supports: top-level scalar:value, scalar: <newline> indented block, list items "- ", inline empty {} / [].
-# Sufficient for methods.yaml (emitted by us) + the subset YAMLs (hand-written but disciplined).
+# ----------- minimal YAML parser -----------
+# Whitespace-significant; no anchors or flow collections.
+# Supports top-level scalar:value, indented blocks, list items, and inline
+# empty {} / [].
+# Sufficient for methods.yaml and the disciplined hand-written subset YAMLs.
+
 
 def parse_yaml(text: str) -> Any:
     lines = text.splitlines()
@@ -60,7 +63,7 @@ def parse_yaml(text: str) -> Any:
         # unquoted '#' preceded by whitespace.
         in_dq = False
         in_sq = False
-        prev_ws = True   # start-of-line counts as whitespace boundary
+        prev_ws = True  # start-of-line counts as whitespace boundary
         for i, c in enumerate(token):
             if c == '"' and not in_sq:
                 in_dq = not in_dq
@@ -86,11 +89,15 @@ def parse_yaml(text: str) -> Any:
         if token == "{}":
             return {}
         # quoted string
-        if (token.startswith('"') and token.endswith('"')) or (token.startswith("'") and token.endswith("'")):
+        if token.startswith('"') and token.endswith('"'):
+            try:
+                return json.loads(token)
+            except json.JSONDecodeError:
+                pass
             inner = token[1:-1]
-            # minimal unescape
-            if token.startswith('"'):
-                inner = inner.replace('\\"', '"').replace("\\\\", "\\")
+            return inner.replace('\\"', '"').replace("\\\\", "\\")
+        if token.startswith("'") and token.endswith("'"):
+            inner = token[1:-1]
             return inner
         # block-literal start
         if token == "|":
@@ -118,7 +125,11 @@ def parse_yaml(text: str) -> Any:
             ind = peek_indent(pos[0])
             if ind <= base_indent:
                 break
-            out_lines.append(s[base_indent + 2:] if ind >= base_indent + 2 else s[base_indent:].lstrip())
+            out_lines.append(
+                s[base_indent + 2 :]
+                if ind >= base_indent + 2
+                else s[base_indent:].lstrip()
+            )
             pos[0] += 1
         return "\n".join(out_lines).rstrip() + "\n"
 
@@ -162,9 +173,11 @@ def parse_yaml(text: str) -> Any:
                 pos[0] += 1
                 child = parse_block(indent + 1)
                 out.append(child)
-            elif ":" in rest and not (rest.strip().startswith('"') or rest.strip().startswith("'")):
+            elif ":" in rest and not (
+                rest.strip().startswith('"') or rest.strip().startswith("'")
+            ):
                 # inline first key of a mapping list item
-                # Treat rest as the first line of a mapping, then continue parsing more keys at indent+2
+                # Treat rest as the first mapping line, then collect more keys.
                 key, _, val = rest.partition(":")
                 key = key.strip()
                 val_raw = val.strip()
@@ -203,7 +216,11 @@ def parse_yaml(text: str) -> Any:
                     else:
                         pos[0] += 1
                         sc = parse_scalar(v2)
-                        if isinstance(sc, tuple) and sc and sc[0] == "__BLOCK_LITERAL__":
+                        if (
+                            isinstance(sc, tuple)
+                            and sc
+                            and sc[0] == "__BLOCK_LITERAL__"
+                        ):
                             mapping[k2] = parse_block_literal(child_indent)
                         else:
                             mapping[k2] = sc
@@ -261,6 +278,7 @@ def parse_yaml(text: str) -> Any:
 # Covers what we use in method_v1 and subset_v1: type, enum, required, properties,
 # additionalProperties, pattern, items, minItems, default. Skips $ref / oneOf / allOf.
 
+
 def validate_schema(obj: Any, schema: dict, path: str = "$") -> list[str]:
     errs: list[str] = []
     # Type-Match shortcut for nullable
@@ -269,13 +287,24 @@ def validate_schema(obj: Any, schema: dict, path: str = "$") -> list[str]:
         types = typ if isinstance(typ, list) else [typ]
         type_ok = False
         for t in types:
-            if t == "string"  and isinstance(obj, str):  type_ok = True
-            if t == "integer" and isinstance(obj, int) and not isinstance(obj, bool): type_ok = True
-            if t == "number"  and isinstance(obj, (int, float)) and not isinstance(obj, bool): type_ok = True
-            if t == "boolean" and isinstance(obj, bool): type_ok = True
-            if t == "null"    and obj is None: type_ok = True
-            if t == "object"  and isinstance(obj, dict): type_ok = True
-            if t == "array"   and isinstance(obj, list): type_ok = True
+            if t == "string" and isinstance(obj, str):
+                type_ok = True
+            if t == "integer" and isinstance(obj, int) and not isinstance(obj, bool):
+                type_ok = True
+            if (
+                t == "number"
+                and isinstance(obj, (int, float))
+                and not isinstance(obj, bool)
+            ):
+                type_ok = True
+            if t == "boolean" and isinstance(obj, bool):
+                type_ok = True
+            if t == "null" and obj is None:
+                type_ok = True
+            if t == "object" and isinstance(obj, dict):
+                type_ok = True
+            if t == "array" and isinstance(obj, list):
+                type_ok = True
         if not type_ok:
             errs.append(f"{path}: type {typ} expected, got {type(obj).__name__}")
             return errs
@@ -285,10 +314,14 @@ def validate_schema(obj: Any, schema: dict, path: str = "$") -> list[str]:
         errs.append(f"{path}: value {obj!r} not in enum {schema['enum']}")
     if "pattern" in schema and isinstance(obj, str):
         if not re.search(schema["pattern"], obj):
-            errs.append(f"{path}: value {obj!r} does not match pattern {schema['pattern']!r}")
+            errs.append(
+                f"{path}: value {obj!r} does not match pattern {schema['pattern']!r}"
+            )
     if "minItems" in schema and isinstance(obj, list):
         if len(obj) < schema["minItems"]:
-            errs.append(f"{path}: array has {len(obj)} items, minItems={schema['minItems']}")
+            errs.append(
+                f"{path}: array has {len(obj)} items, minItems={schema['minItems']}"
+            )
     if isinstance(obj, dict):
         for req in schema.get("required", []):
             if req not in obj:
@@ -329,7 +362,10 @@ def main() -> int:
         return 1
     methods_doc = load_yaml(methods_path)
     if not isinstance(methods_doc, dict) or "methods" not in methods_doc:
-        print(f"FAIL: methods.yaml top-level must be a mapping with 'methods'; got {type(methods_doc).__name__}")
+        print(
+            "FAIL: methods.yaml top-level must be a mapping with 'methods'; "
+            f"got {type(methods_doc).__name__}"
+        )
         return 1
     methods = methods_doc["methods"]
     print(f"  methods.yaml — {len(methods)} entries")
@@ -404,12 +440,18 @@ def main() -> int:
         for cat in inc.get("categories") or []:
             ids = method_categories.get(cat, set())
             if not ids:
-                print(f"  FAIL: {sf.name} active subset includes category {cat!r} but methods.yaml has 0 entries in it")
+                print(
+                    f"  FAIL: {sf.name} active subset includes category "
+                    f"{cat!r} but methods.yaml has 0 entries in it"
+                )
                 fail_count += 1
             included_ids.update(ids)
         for mid in inc.get("method_ids") or []:
             if mid not in method_index:
-                print(f"  FAIL: {sf.name} active subset includes method_id {mid!r} not in methods.yaml")
+                print(
+                    f"  FAIL: {sf.name} active subset includes method_id "
+                    f"{mid!r} not in methods.yaml"
+                )
                 fail_count += 1
             else:
                 included_ids.add(mid)
@@ -424,7 +466,9 @@ def main() -> int:
         for mid in exc.get("method_ids") or []:
             excluded_ids.add(mid)
         for pat in exc.get("patterns") or []:
-            excluded_ids.update(mid for mid in method_index if fnmatch.fnmatch(mid, pat))
+            excluded_ids.update(
+                mid for mid in method_index if fnmatch.fnmatch(mid, pat)
+            )
 
         final_ids = included_ids - excluded_ids
         if not final_ids:

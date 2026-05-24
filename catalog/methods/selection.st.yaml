@@ -1,0 +1,34 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "selection.st"
+family: "selection.wrapper"
+category: "selection"
+subcategory: "wrapper"
+since_abi: "1.0.0"
+abi_symbols:
+  - "n4m_selection_st_run"
+  - "n4m_selection_st_destroy"
+tu:
+  - "cpp/src/core/st_selection.cpp"
+headers:
+  - "cpp/include/n4m/selection.h"
+carry_along_tu:
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "selection.st"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings: {}
+publications: []
+notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."

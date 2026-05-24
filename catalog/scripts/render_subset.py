@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Render the vendored-source distribution for a subset.
 
-Reads catalog/methods.yaml + catalog/subsets/<name>.yaml, computes the
-closure via build_closure.py, then emits a target source tree under
-build/render/<name>/ containing:
+Reads the split method catalog, falling back to catalog/methods.yaml when
+needed, plus catalog/subsets/<name>.yaml. Computes the closure via
+build_closure.py, then emits a target source tree under build/render/<name>/
+containing:
 
     build/render/<name>/
         subset_manifest.json         (the closure report, for audit)
@@ -115,8 +116,17 @@ def copy_sources(report: dict, root: Path) -> tuple[int, list[str]]:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("subset", help="subset name (file stem under catalog/subsets/)")
-    ap.add_argument("--copy", action="store_true", help="actually copy TUs + headers (default: manifest-only)")
-    ap.add_argument("--out", type=Path, default=None, help="output directory (default: build/render/<subset>)")
+    ap.add_argument(
+        "--copy",
+        action="store_true",
+        help="actually copy TUs + headers (default: manifest-only)",
+    )
+    ap.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="output directory (default: build/render/<subset>)",
+    )
     args = ap.parse_args(argv)
 
     s = _bc.load_subset(args.subset)
@@ -127,13 +137,13 @@ def main(argv: list[str] | None = None) -> int:
     ids = _bc.closure_for(s, methods, index)
     artifacts = _bc.collect_artifacts(ids, index)
     report = {
-        "subset":        args.subset,
-        "package":       s.get("package"),
-        "status":        s.get("status"),
+        "subset": args.subset,
+        "package": s.get("package"),
+        "status": s.get("status"),
         "since_release": s.get("since_release"),
-        "abi":           s.get("abi"),
-        "publish":       s.get("publish"),
-        "closure":       artifacts,
+        "abi": s.get("abi"),
+        "publish": s.get("publish"),
+        "closure": artifacts,
     }
 
     out_root = args.out if args.out else BUILD / args.subset
@@ -142,7 +152,12 @@ def main(argv: list[str] | None = None) -> int:
     rel = out_root.relative_to(REPO) if out_root.is_relative_to(REPO) else out_root
     print(f"manifest: {rel}/subset_manifest.json")
     print(f"summary:  {rel}/VENDORED.md")
-    print(f"methods:  {artifacts['method_count']}    categories: {artifacts['category_count']}    TUs: {len(artifacts['translation_units'])}    headers: {len(artifacts['headers'])}")
+    print(
+        f"methods:  {artifacts['method_count']}    "
+        f"categories: {artifacts['category_count']}    "
+        f"TUs: {len(artifacts['translation_units'])}    "
+        f"headers: {len(artifacts['headers'])}"
+    )
 
     if args.copy:
         copied, missing = copy_sources(report, out_root)

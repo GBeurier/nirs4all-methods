@@ -1,0 +1,6 @@
+# Catalog-derived Python export inventory.
+# This file is generated metadata; hand-written package APIs are not overwritten.
+method_count = {{ method_count }}
+{% for method in methods %}
+{{ method.method_id }}: {{ method.abi_symbols | join(", ") }}
+{% endfor %}

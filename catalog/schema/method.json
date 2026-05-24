@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nirs4all-methods.example/schemas/method.json",
+  "title": "n4m method catalog entry",
+  "description": "One method per file. Drives build closure, parity fixtures and tolerances, benchmark metadata, binding generation, and docs. Validated by catalog/scripts/validate.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "catalog_version",
+    "method_id",
+    "family",
+    "category",
+    "subcategory",
+    "since_abi",
+    "abi_symbols",
+    "tu"
+  ],
+  "properties": {
+    "catalog_version": {
+      "type": "integer",
+      "enum": [1],
+      "description": "Catalog schema version. Bumped by catalog/scripts/migrate_schema.py."
+    },
+    "method_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)+$",
+      "description": "Dotted hierarchy: category.subcategory.operator (e.g. preprocessing.scatter.snv, models.pls.simpls, selection.cars). Sub-segments may start with an underscore to denote internal aggregates pending split (e.g. models.pls._aggregate_v097)."
+    },
+    "family": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)*$",
+      "description": "Coarse grouping for analytics. Often equals category.subcategory."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "preprocessing",
+        "augmentation",
+        "splitters",
+        "filters",
+        "utilities",
+        "models",
+        "selection",
+        "diagnostics",
+        "aom_pop",
+        "transfer",
+        "pipeline"
+      ]
+    },
+    "subcategory": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Second-level grouping (e.g. 'scatter' under 'preprocessing', 'pls' under 'models', 'multiblock' under 'models')."
+    },
+    "since_abi": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-z0-9.+]+)?$",
+      "description": "First ABI version this method was exported in (semver)."
+    },
+    "deprecated_in_abi": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "If non-null, ABI version where the method was marked deprecated."
+    },
+    "removed_in_abi": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "If non-null, ABI version where the method was removed from the public surface."
+    },
+    "abi_symbols": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^n4m_[a-z0-9_]+$"},
+      "minItems": 1,
+      "description": "All C ABI symbols this method exports. Joined against cpp/abi/expected_symbols_*.txt during release."
+    },
+    "tu": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 1,
+      "description": "Translation units (relative paths from repo root) that implement the method. May include partial-match syntax 'file.cpp:n4m_models_pls_simpls_*' for files that contain multiple methods."
+    },
+    "headers": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Public headers needed by callers (relative paths)."
+    },
+    "carry_along_tu": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Shared utility TUs the method requires (resolved transitively by build_closure.py). Examples: cpp/src/core/common/linalg.{c,hpp}, common/context.{cpp,hpp}."
+    },
+    "parity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fixtures": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Relative paths to JSON fixtures under parity/fixtures/."
+        },
+        "tolerance_row": {
+          "type": "string",
+          "description": "Row key in parity/tolerances.md."
+        },
+        "tolerances": {
+          "type": "array",
+          "description": "Per-reference tolerance rows migrated from parity/tolerances.md.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "row_key": {"type": "string"},
+              "reference": {"type": "string"},
+              "abs_tol": {"type": ["string", "number"]},
+              "rel_tol": {"type": ["string", "number"]},
+              "comparison_set": {"type": "string"},
+              "notes": {"type": "string"}
+            }
+          }
+        },
+        "divergence_id": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "If non-null, entry id in parity/divergences.json explaining a known skip or weak-tolerance."
+        },
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["library", "version", "function"],
+            "properties": {
+              "library": {"type": "string"},
+              "version": {"type": "string"},
+              "function": {"type": "string"},
+              "doi_or_url": {"type": ["string", "null"]},
+              "publication_ref": {"type": ["string", "null"]}
+            }
+          }
+        }
+      }
+    },
+    "bench": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bench_id": {"type": "string"},
+        "registry_entry": {"type": ["string", "null"], "description": "e.g. benchmarks/parity_timing/registry.py:models.pls.simpls"}
+      }
+    },
+    "feature_flags": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^N4M_[A-Z0-9_]+$"},
+      "description": "CMake feature flags gating this method (e.g. N4M_ENABLE_BLAS, N4M_ENABLE_OPENMP, N4M_HAVE_FITPACK)."
+    },
+    "vendored_licenses": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Vendored third-party code license tokens this method ships (FITPACK, PyWavelets-coeffs, IsolationForest, etc.). Reviewed in M14 license audit."
+    },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "python": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "class": {"type": "string"},
+            "module": {"type": "string"},
+            "legacy_aliases": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "r": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "function": {"type": "string"},
+            "legacy_aliases": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "matlab": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "classdef": {"type": "string"},
+            "factory_key": {"type": "string"}
+          }
+        }
+      },
+      "description": "Idiomatic surface per binding. legacy_aliases are used by contract tests in the slim pls4all + future subset packages."
+    },
+    "publications": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Citations for the docs page bibliography."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free-text notes (provenance, caveats, etc.)."
+    }
+  }
+}
