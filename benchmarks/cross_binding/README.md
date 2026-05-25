@@ -93,8 +93,8 @@ slower than the actual warm fit/predict path.
 
 ## Standalone interactive matrix
 
-For local inspection of a single orchestrator CSV, render a self-contained
-HTML dashboard without rebuilding Sphinx:
+For local inspection of a single orchestrator CSV, render a standalone HTML
+dashboard without rebuilding Sphinx:
 
 ```bash
 python benchmarks/cross_binding/render_matrix_dashboard.py \
@@ -102,9 +102,11 @@ python benchmarks/cross_binding/render_matrix_dashboard.py \
   --out build/cross_binding_dashboard/index.html
 ```
 
-Open `build/cross_binding_dashboard/index.html` in a browser. The page shows a
-method x backend matrix with status filters, failure focus mode, search, and a
-cell detail panel.
+Open `build/cross_binding_dashboard/index.html` in a browser. The page reuses
+the rich docs dashboard shell, with column presets, language-grouped backend
+bands, method filters, failure focus mode, tooltips, and per-cell timing/parity
+details. Matrix interactions are self-contained; method/footer navigation links
+still target the docs tree and may not resolve from the `build/` output path.
 
 ## Timing protocol
 
