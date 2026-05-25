@@ -91,6 +91,21 @@ Refresh rows used for the dashboard must be produced by the current
 protocol and can make fast C++ cells look hundreds of milliseconds
 slower than the actual warm fit/predict path.
 
+## Standalone interactive matrix
+
+For local inspection of a single orchestrator CSV, render a self-contained
+HTML dashboard without rebuilding Sphinx:
+
+```bash
+python benchmarks/cross_binding/render_matrix_dashboard.py \
+  --csv /tmp/n4m_full_parity.csv \
+  --out build/cross_binding_dashboard/index.html
+```
+
+Open `build/cross_binding_dashboard/index.html` in a browser. The page shows a
+method x backend matrix with status filters, failure focus mode, search, and a
+cell detail panel.
+
 ## Timing protocol
 
 Every scheduled cell starts with run #1 as a timed warmstart. If this
