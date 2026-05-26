@@ -7653,14 +7653,35 @@ def _iriv_indices_numpy(X: np.ndarray, Y: np.ndarray, *,
 
     def _generate_binary_matrix(nv: int, row: int) -> np.ndarray:
         """Each column is a random permutation of 1..row; values <= row/2
-        become 0, rest become 1 (libPLS heuristic)."""
-        while True:
+        become 0, rest become 1 (libPLS heuristic). Every sub-model (row)
+        must select at least 2 variables.
+
+        Each column is ~half ones, so ``P(all rows select > 1)`` collapses
+        toward zero as ``nv`` shrinks (it is exactly 0 in the limit for
+        ``nv == 2``). Unbounded rejection sampling therefore hangs once a
+        round drops to very few candidate variables. We keep the exact
+        rejection-sampling output for the common case (a valid matrix is
+        almost always drawn on the first attempt) but cap the attempts and
+        then deterministically repair any deficient row, which guarantees
+        termination without changing the typical large-``nv`` behaviour.
+        """
+        max_attempts = 10000
+        mat = np.zeros((row, nv), dtype=np.int8)
+        for _attempt in range(max_attempts):
             mat = np.zeros((row, nv), dtype=np.int8)
             for j in range(nv):
                 perm = rng.permutation(row) + 1
                 mat[:, j] = (perm > row / 2).astype(np.int8)
             if np.all(mat.sum(axis=1) > 1):
                 return mat
+        # Deterministic repair for the pathological small-``nv`` regime:
+        # force the lowest-index excluded variables into any sub-model that
+        # selected fewer than two, so every row keeps at least two variables.
+        for r in np.nonzero(mat.sum(axis=1) <= 1)[0]:
+            zeros = np.nonzero(mat[r] == 0)[0]
+            deficit = 2 - int(mat[r].sum())
+            mat[r, zeros[:deficit]] = 1
+        return mat
 
     # Pre-compute K-fold splits once per round (independent of variable
     # mask), reuses the same train/test arrays for every PLS fit.

@@ -205,6 +205,116 @@ Result CSV: `/tmp/n4m_full_parity.csv`.
   `pcr/ref_r_pls`, `opls/registry_pls4all` (missing oracle because
   `ref_r_ropls` failed), `continuum_regression/ref_r_jico`.
 
+## Clean parity matrix + harness fixes — 2026-05-25 (uncommitted)
+
+Re-ran the registry parity matrix at `--n-runs 40` (robust timing) and
+root-caused/fixed the failures above. Result written to the canonical
+`benchmarks/cross_binding/results/full_matrix.csv` (459 rows = 73 methods
+× threads {1,3,10}, blas-omp). Each thread count was run to its own CSV
+with non-oversubscribing workers (12/8/2) and concatenated.
+
+**Outcome (all three thread counts identical):**
+- 153/153 cells run, **0 subprocess failures** (iriv no longer times out).
+- **73/73 binding-parity pass.**
+- 150/152 reference-parity pass. The only two failures are external-library
+  convention differences, not pls4all/harness bugs (the pls4all binding
+  matches its canonical oracle in both):
+  - `pcr/ref_r_pls` — R `pls` PCR centering/scaling convention vs sklearn.
+  - `continuum_regression/ref_r_jico` — `JICO` convention vs the
+    `stone_brooks_1990` oracle.
+
+**Fixes applied (working tree, not committed — for Codex review):**
+1. `orchestrator.py` resolves `Rscript`/`octave` against the subprocess
+   `PATH` (which prepends `N4M_R_ENV`), so the configured R env wins over
+   whatever `Rscript` sits on the orchestrator's own PATH. Previously the
+   `pls4all_r` env was never used and `mixOmics`/`ropls`/`JICO`/… cells
+   failed with "no package called …".
+2. **Parity prediction snapshotted at `seed_base`** instead of the last
+   adaptive timed run. The timing loop regenerates the dataset per run
+   (`seed_base + i`), so the old "last run" snapshot keyed the prediction
+   (and oracle) by a backend-dependent run count — fast bindings and slow
+   references then compared predictions on *different* datasets, producing
+   "reference oracle missing" and spurious binding-parity failures at
+   `--n-runs 40`. Now `prediction_seed == seed_base` for every backend.
+   Touches `scripts/_common.py`, `scripts/_npy.R`,
+   `scripts/bench_registry_reference.py`, and
+   `orchestrator.py::record_prediction_seed`. This is why the maintainer's
+   `--n-runs 2` run mostly worked (uniform run counts) while `--n-runs 40`
+   exposed it. Regenerated reference oracles accompany the change.
+3. `benchmarks/parity_timing/registry.py::_iriv_indices_numpy` —
+   `_generate_binary_matrix` used unbounded rejection sampling
+   (`while True`) requiring every sub-model row to select >1 variable;
+   `P(all rows)` → 0 once a round drops to very few variables, so iriv hung
+   (>300s) on datasets that reached that regime. Now bounded (10000
+   attempts) + deterministic row repair; `seed_base` behaviour unchanged.
+
+**Also added (timing):** `dashboard_refresh_2026_05_25_builds.csv` — the
+pls4all binding-tier timing across the four CPU builds
+(`dev-release`/`blas-on`/`omp-on`/`blas-omp`) × threads {1,3,10}.
+`registry_pls4all` is 73/73 clean on every build; the only failures are
+pre-existing binding-tier surface gaps (`on_pls` R tiers, `python_tier2`
+for a few methods), unrelated to the build dimension.
+
+Dashboards re-rendered: `docs/_static/bench-data.json`,
+`docs/benchmarks/cross_binding{,_threads}.md`, and the standalone
+`build/cross_binding_dashboard/index.html`.
+
+### Binding-tier gap fix (Codex) — 2026-05-25
+
+The `--only-pls4all` build sweep surfaced hard failures in two methods'
+secondary tiers (they pass in the canonical `registry_pls4all` binding).
+Fixed via Codex:
+- `cars_select` × python_tier2: the sklearn `CARSSelector` legitimately
+  lacks `top_k`/enpls ranking semantics → now emits a clean `not_available`
+  skip (only for the exact `top_k`-only unsupported case).
+- `on_pls` (multi-block `block_reconstruction_0`): wired the export into
+  `pls4all.sklearn.on_pls` so python_tier2 now passes (`exact`); the 4 R
+  tiers emit clean `not_available` (no idiomatic block-reconstruction).
+- `docs/_extras/build_landing.py::parity_code` now treats the canonical
+  `not_available` reason prefix as not-available (not `error`), and
+  classifies timing-only cells (ran, no parity verdict) as `not_run`
+  instead of a false `drift`.
+Verified: 0 cells misclassified as error; canonical path unchanged.
+Files: `scripts/bench_python_tier2.py`, `scripts/bench_r_{tier1,tier2,pls_compat,mdatools_compat}.R`,
+`bindings/python/src/pls4all/sklearn/_diagnostics.py`, `docs/_extras/build_landing.py`.
+Delta: `dashboard_refresh_2026_05_25_tiergap.csv`.
+
+### Size-scaling timing sweep — 2026-05-26 (complete, Codex-validated)
+
+`dashboard_refresh_2026_05_25_sizes.csv`: the full 11-size matrix —
+**73/73 methods × 11 sizes (100–10000 samples × 50–2500 features) × 4 CPU
+builds × {registry_pls4all, cpp} = 6424 cells**, threads=1, `--n-runs 40`,
+`--timeout 900`. Ran to completion including the final parity pass (~14.5 h
+on 12 workers).
+
+- **6068 cells completed; binding parity 6068/6068 (100%) within `1e-6`**
+  (Codex independently recomputed the `.npy` predictions: max diff 4.6e-8,
+  5330 zero-diff + 738 within-tolerance, 0 mismatches). **Scope of this
+  parity:** `registry_pls4all` and `cpp` both route through
+  `MethodSpec.pls4all_fn`, so this validates **build/backend consistency**
+  across the 4 libn4m builds — NOT an independent C-ABI-vs-Python path.
+- **356 failures** (binding parity empty): **340 timeouts** = legitimate
+  "method doesn't scale to this size" (all `subprocess_s=900`; the same
+  methods complete at smaller sizes; p-driven), concentrated in interval/
+  wrapper selectors (iriv 56, emcuve 48, rep 40, uve 32, bipls/stability/
+  bve 24 each) + kernel/GP/PRESS/PCR at the largest sizes. **16 non-timeout
+  errors** = a real isolated bug (see below).
+
+**Two follow-up findings (Codex, not yet fixed):**
+1. `vip_spa_select` fails at p=50 with many samples (2500×50, 10000×50):
+   `ValueError: n_features_to_select has to be either an int in {1,…,n}`.
+   The registry calls `auswahl.VIP_SPA(n_features_to_select=top_k=6)`; VIP
+   pre-filtering leaves <6 candidate features at those cells, making 6
+   invalid. Param-derivation bug, isolated to `vip_spa_select`.
+2. Asymmetry: `gpr_pls 10000×500` completed on all 4 `cpp` builds but timed
+   out on all 4 `registry_pls4all` builds — the only partial-OK group.
+
+The earlier disk constraint (shared 1 TB disk was ~99% full) is resolved —
+≈700 GB free now — so the full sweep with `--n-runs 40` ran with no pruning
+and the parity pass completed. The `--timeout 900` (vs 300) was the key
+change: it lets ~200 s/run p=2500 cells finish (whole-subprocess timeout =
+warmup + probe + reps) instead of being lost as false timeouts.
+
 ## Subsequent phases (not started)
 
 - **Phase C — Parity infra rebuild** (scenario-based) — 20 tasks

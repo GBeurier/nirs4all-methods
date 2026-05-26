@@ -67,6 +67,22 @@ needs_x_target     <- Sys.getenv("BENCH_R_NEEDS_X_TARGET", unset = "") == "1"
 x_target_dir       <- Sys.getenv("BENCH_R_X_TARGET_DIR", unset = "")
 registry_pkey      <- Sys.getenv("BENCH_PREDICTION_KEY", unset = "predictions")
 
+if (a$algo == "on_pls") {
+    cat(toJSON(list(
+        ok = FALSE,
+        reason = "not_available: r_tier2 does not expose on_pls block_reconstruction_0",
+        skipped = TRUE,
+        versions = list(
+            language = paste0("R ", R.version$major, ".", R.version$minor),
+            pls4all  = as.character(tryCatch(packageVersion("pls4all"),
+                                              error = function(e) "?")),
+            registry_method = a$algo,
+            formula_facade = TRUE,
+            blas = "linked-BLAS"
+        )), auto_unbox = TRUE), "\n", sep = "")
+    quit(save = "no")
+}
+
 .formula_design <- function(xy) {
     df <- as.data.frame(xy$X)
     df$y <- xy$y
