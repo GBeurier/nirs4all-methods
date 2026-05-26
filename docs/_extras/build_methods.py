@@ -3394,14 +3394,17 @@ def _class_c_prefix(node: ast.ClassDef,
                 if (isinstance(t, ast.Name) and t.id == "_C_PREFIX") or \
                         (isinstance(t, ast.Attribute) and t.attr == "_C_PREFIX"):
                     return item.value.value
-    # (2) derive from lib.n4m_<prefix>_<op>(...) symbol usage
+    # (2) derive from lib.n4m_<prefix>_<op>(...) symbol usage. Only consider
+    # attributes accessed on a bare `lib` name, and strip the longest matching
+    # operation suffix first so e.g. `_fit_transform` isn't mistaken for `_fit`.
     from collections import Counter
+    suffixes_longest_first = sorted(_C_OP_SUFFIXES, key=len, reverse=True)
     stems: list[str] = []
     for item in ast.walk(node):
         if isinstance(item, ast.Attribute) and item.attr.startswith("n4m_") \
-                and not isinstance(getattr(item, "value", None), ast.Attribute):
+                and isinstance(item.value, ast.Name) and item.value.id == "lib":
             sym = item.attr
-            for suf in _C_OP_SUFFIXES:
+            for suf in suffixes_longest_first:
                 if sym.endswith(suf) and len(sym) > len(suf) + 4:
                     stems.append(sym[: -len(suf)])
                     break

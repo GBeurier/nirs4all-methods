@@ -761,22 +761,43 @@ _DOC_ALIAS = {
 
 
 def _resolve_doc_page(algo: str, pages: set[str]) -> str | None:
-    """Resolve a dashboard algo name to an existing doc-page stem, or None.
+    """Resolve a dashboard algo name to an *existing* doc-page stem, or None.
 
-    Tries the name itself, the `aug_`-prefixed variant (the fixture run dropped
-    the category prefix for some augmenters), a parameter-variant parent
-    (`filter_y_outlier_iqr` → `filter_y_outlier`), then the explicit alias map.
+    Order: the name itself → its `aug_`-prefixed variant (the fixture run
+    dropped the category prefix for some augmenters) → an explicit alias →
+    a parameter-variant parent (`filter_y_outlier_iqr` → `filter_y_outlier`).
+    Every candidate is verified against `pages`, so a stale alias can never
+    emit a 404 link.
     """
     if algo in pages:
         return algo
     if ("aug_" + algo) in pages:
         return "aug_" + algo
+    alias = _DOC_ALIAS.get(algo)
+    if alias and alias in pages:
+        return alias
     parts = algo.split("_")
     for i in range(len(parts) - 1, 1, -1):
         cand = "_".join(parts[:i])
         if cand in pages:
             return cand
-    return _DOC_ALIAS.get(algo)
+    return None
+
+
+def _row_is_dense(row: dict) -> bool:
+    """True if the row has a populated cell from a backend other than the
+    pls4all registry entry-point or a C++ build — i.e. a genuine
+    cross-binding / external-reference comparison rather than a
+    registry-vs-cpp timing-sweep cell.
+    """
+    for cid, cell in row["cells"].items():
+        if cid == "__reference" or cid == "pls4all.registry" \
+                or cid.startswith("pls4all.cpp."):
+            continue
+        if (cell.get("ms") is not None or cell.get("parity")
+                or cell.get("binding_parity") or cell.get("reference_parity")):
+            return True
+    return False
 
 
 def build_payload(results_dir: Path) -> dict:
@@ -1195,6 +1216,23 @@ def build_payload(results_dir: Path) -> dict:
             "cells": cells,
         })
 
+    # Separate the all-backend parity matrix from registry-vs-cpp timing-sweep
+    # rows. The size/build sweeps were run with `--only registry_pls4all cpp`,
+    # so for a method that also has a real cross-binding / reference parity run
+    # those rows are mostly empty (5/48 columns) and would swamp the matrix.
+    # Route them to `scaling_rows` (kept in the payload for a dedicated scaling
+    # view) while the parity matrix keeps the dense rows. A method that has no
+    # dense row at all (a pure cpp-only operator) keeps all of its rows.
+    algos_with_parity = {r["algo"] for r in rows_out if _row_is_dense(r)}
+    parity_rows: list[dict] = []
+    scaling_rows: list[dict] = []
+    for r in rows_out:
+        if r["algo"] in algos_with_parity and not _row_is_dense(r):
+            scaling_rows.append(r)
+        else:
+            parity_rows.append(r)
+    rows_out = parity_rows
+
     # Register the synthetic Reference column at the very front so the
     # renderer pins it before any backend column. `kind="reference"`
     # tells the JS layer to apply the special per-row language-tint +
@@ -1425,6 +1463,7 @@ def build_payload(results_dir: Path) -> dict:
         "columns":      columns,
         "presets":      presets,
         "rows":         rows_out,
+        "scaling":      scaling_rows,
         "versions":     versions,
         "algo_to_group":algo_to_group,
         "algo_groups":  algo_groups,
