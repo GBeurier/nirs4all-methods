@@ -580,6 +580,7 @@ def parity_code(row: dict) -> str:
             "unsupported algo",
             "unsupported algorithm",
             "unsupported method",
+            "not_available",
             "not available",
             "does not expose",
         )
@@ -593,10 +594,17 @@ def parity_code(row: dict) -> str:
             return "error"
         return "error"
     parity_ok = row.get("binding_parity_ok", row.get("parity_ok"))
-    if is_true(parity_ok):
-        return "exact"
     diff_val = row.get("binding_parity_max_diff",
                         row.get("parity_max_diff", "nan"))
+    # Timing-only cell: the cell ran and produced timing, but binding parity
+    # was never computed (no verdict and no diff) — e.g. a timing sweep that
+    # stopped before its final parity pass. Report it as not-measured rather
+    # than collapsing it into a false `drift`, which carries an actual verdict.
+    if (parity_ok in (None, "", "None")
+            and str(diff_val).strip().lower() in ("", "nan", "none")):
+        return "not_run"
+    if is_true(parity_ok):
+        return "exact"
     try:
         d = float(diff_val)
     except (TypeError, ValueError):
@@ -1304,6 +1312,14 @@ def build_payload(results_dir: Path) -> dict:
         a: "pls4all" if algo_to_group[a] in PLS4ALL_GROUPS else "n4m_donor"
         for a in present_algos
     }
+    # Which algos have a committed per-method doc page (docs/methods/<algo>.md).
+    # The dashboard links the method name only when the page exists, so catalog
+    # rows without a dedicated page (augmentation / operator entries) render as
+    # plain text instead of 404-ing.
+    _methods_dir = Path(__file__).resolve().parent.parent / "methods"
+    _doc_pages = ({p.stem for p in _methods_dir.glob("*.md")}
+                  if _methods_dir.exists() else set())
+    algo_has_doc = {a: (a in _doc_pages) for a in present_algos}
     # Languages actually present in the columns.
     present_langs = []
     seen_lang = set()
@@ -1343,6 +1359,7 @@ def build_payload(results_dir: Path) -> dict:
         "algo_to_group":algo_to_group,
         "algo_groups":  algo_groups,
         "algo_origin":  algo_origin,
+        "algo_has_doc": algo_has_doc,
         "languages":    present_langs,
         "stats": {
             "algos":    len(present_algos),

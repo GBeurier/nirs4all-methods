@@ -715,6 +715,13 @@
       flex: 1 1 auto;
       min-width: 0;
     }
+    /* Catalog rows without a dedicated doc page: plain (non-link) label. */
+    .algo-wrap .algo-nodoc {
+      flex: 1 1 auto;
+      min-width: 0;
+      color: var(--fg-2);
+      cursor: default;
+    }
     .row-score-toggle {
       flex: 0 0 20px;
       width: 20px;
@@ -2317,7 +2324,13 @@ function renderTable() {
         : 'keep only columns with a score on this row';
       const rowOrigin = (DATA.algo_origin || {})[row.algo] || 'pls4all';
       const rowCls = rowOrigin === 'pls4all' ? 'row-pls4all' : 'row-n4m';
-      let tr = `<tr class="${rowCls}"><td class="algo-cell"><div class="algo-wrap"><a href="methods/${row.algo}.html" title="open ${rowAlgoLabel} method documentation">${rowAlgoLabel}</a><button type="button" class="row-score-toggle${focusActive ? ' active' : ''}" data-row-key="${escAttr(rKey)}" title="${focusTitle}" aria-label="${focusTitle}">◫</button></div></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
+      // Link the method name only when a dedicated doc page exists; otherwise
+      // render plain text so catalog rows without a page don't 404.
+      const rowHasDoc = (DATA.algo_has_doc || {})[row.algo];
+      const algoLabelHtml = rowHasDoc
+        ? `<a href="methods/${row.algo}.html" title="open ${rowAlgoLabel} method documentation">${rowAlgoLabel}</a>`
+        : `<span class="algo-nodoc" title="no dedicated documentation page yet">${rowAlgoLabel}</span>`;
+      let tr = `<tr class="${rowCls}"><td class="algo-cell"><div class="algo-wrap">${algoLabelHtml}<button type="button" class="row-score-toggle${focusActive ? ' active' : ''}" data-row-key="${escAttr(rKey)}" title="${focusTitle}" aria-label="${focusTitle}">◫</button></div></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
       for (const id of cols) {
         const meta = colsById[id];
         // The synthetic "canonical reference" leading column needs a
