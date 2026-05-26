@@ -109,6 +109,12 @@ struct BenchCtx {
     n4m_matrix_view_t X;    /* n x p input  */
     n4m_matrix_view_t wl;   /* 1 x p wavelength axis (edge augmenters use it) */
     n4m_matrix_view_t out;  /* n x p output */
+    n4m_matrix_view_t Y;    /* n x 1 target matrix (Y-aware splitters)        */
+    int64_t n;              /* rows */
+    int64_t p;              /* cols */
+    const double* y;        /* n-length target vector (y-outlier filters)    */
+    uint8_t* mask;          /* n-length keep-mask scratch (filters)          */
+    const int64_t* groups;  /* n-length group ids (group-aware splitters)    */
 };
 
 /* ----- donor operator registry ----------------------------------------- */
@@ -408,6 +414,177 @@ const DonorOp kOps[] = {
          return n4m_aug_random_x_op_create(&h, r, 0, 0.9, 1.1) == N4M_OK ? h : nullptr; },
      RUN_APPLY(n4m_aug_random_x_op_apply, n4m_aug_random_x_op_handle_t),
      DESTROY(n4m_aug_random_x_op_destroy, n4m_aug_random_x_op_handle_t)},
+
+    /* ---- filters (Phase 12-14). Timed operation is fit + apply (the full
+     *      cost of learning the bounds then producing the keep-mask). The
+     *      X-outlier variants share one ABI op selected by `method`; the
+     *      Y-outlier variants operate on a target vector. CompositeFilter
+     *      (needs externally-owned sub-filters) and the y-outlier validation
+     *      scenarios (constant_input / nan_exclusion) are left parity-only. */
+#define X_OUTLIER(name, method, ncomp)                                            \
+    {name,                                                                        \
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {                      \
+         n4m_filter_x_outlier_handle_t* h = nullptr;                              \
+         return n4m_filter_x_outlier_create(&h, method, 0, 0.0, ncomp, 0.1,       \
+                                            42u, 100, 256) == N4M_OK ? h : nullptr; }, \
+     [](void* h, BenchCtx& c) {                                                   \
+         auto* H = static_cast<n4m_filter_x_outlier_handle_t*>(h);                \
+         n4m_filter_stats_t st{};                                                 \
+         n4m_status_t s = n4m_filter_x_outlier_fit(H, c.X);                        \
+         return s == N4M_OK ? n4m_filter_x_outlier_apply(H, c.X, c.mask, &st) : s; }, \
+     DESTROY(n4m_filter_x_outlier_destroy, n4m_filter_x_outlier_handle_t)}
+    X_OUTLIER("filter_x_outlier_mahalanobis", N4M_X_OUTLIER_MAHALANOBIS, 0),
+    X_OUTLIER("filter_x_outlier_robust_mahalanobis", N4M_X_OUTLIER_ROBUST_MAHALANOBIS, 0),
+    X_OUTLIER("filter_x_outlier_pca_residual", N4M_X_OUTLIER_PCA_RESIDUAL, 5),
+    X_OUTLIER("filter_x_outlier_pca_leverage", N4M_X_OUTLIER_PCA_LEVERAGE, 5),
+    X_OUTLIER("filter_x_outlier_isolation_forest", N4M_X_OUTLIER_ISOLATION_FOREST, 0),
+    X_OUTLIER("filter_x_outlier_lof", N4M_X_OUTLIER_LOF, 0),
+#undef X_OUTLIER
+
+#define Y_OUTLIER(name, method)                                                   \
+    {name,                                                                        \
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {                      \
+         n4m_filter_y_outlier_handle_t* h = nullptr;                              \
+         return n4m_filter_y_outlier_create(&h, method, 3.0, 5.0, 95.0)           \
+                == N4M_OK ? h : nullptr; },                                       \
+     [](void* h, BenchCtx& c) {                                                   \
+         auto* H = static_cast<n4m_filter_y_outlier_handle_t*>(h);                \
+         n4m_filter_stats_t st{};                                                 \
+         n4m_status_t s = n4m_filter_y_outlier_fit(H, c.y, c.n);                   \
+         return s == N4M_OK ? n4m_filter_y_outlier_apply(H, c.y, c.n, c.mask, &st) : s; }, \
+     DESTROY(n4m_filter_y_outlier_destroy, n4m_filter_y_outlier_handle_t)}
+    Y_OUTLIER("filter_y_outlier_iqr", N4M_Y_OUTLIER_IQR),
+    Y_OUTLIER("filter_y_outlier_zscore", N4M_Y_OUTLIER_ZSCORE),
+    Y_OUTLIER("filter_y_outlier_percentile", N4M_Y_OUTLIER_PERCENTILE),
+    Y_OUTLIER("filter_y_outlier_mad", N4M_Y_OUTLIER_MAD),
+#undef Y_OUTLIER
+
+    {"filter_leverage",
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
+         n4m_filter_leverage_handle_t* h = nullptr;
+         return n4m_filter_leverage_create(&h, 0, 3.0, 0, 0.0, 0, 1) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         auto* H = static_cast<n4m_filter_leverage_handle_t*>(h);
+         n4m_filter_stats_t st{};
+         n4m_status_t s = n4m_filter_leverage_fit(H, c.X);
+         return s == N4M_OK ? n4m_filter_leverage_apply(H, c.X, c.mask, &st) : s; },
+     DESTROY(n4m_filter_leverage_destroy, n4m_filter_leverage_handle_t)},
+
+    {"filter_quality",  /* stateless: apply only, no fit */
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
+         n4m_filter_quality_handle_t* h = nullptr;
+         return n4m_filter_quality_create(&h, 0.1, 0.5, 1e-6, 0, 0.0, 0, 0.0, 1) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         n4m_filter_stats_t st{};
+         return n4m_filter_quality_apply(static_cast<n4m_filter_quality_handle_t*>(h),
+                                         c.X, c.mask, &st); },
+     DESTROY(n4m_filter_quality_destroy, n4m_filter_quality_handle_t)},
+
+    /* ---- splitters (Phase 11). Timed operation is one split() (or
+     *      split_fold(0) for the k-fold variants), including the heap
+     *      train/test index allocation it returns and the matching
+     *      result_destroy — that allocation IS part of producing a split. */
+    {"split_kennard_stone",
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
+         n4m_split_kennard_stone_handle_t* h = nullptr;
+         return n4m_split_kennard_stone_create(&h, 0.25) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         n4m_split_result_t res{};
+         n4m_status_t s = n4m_split_kennard_stone_split(
+             static_cast<n4m_split_kennard_stone_handle_t*>(h), c.X, &res);
+         n4m_split_result_destroy(&res); return s; },
+     DESTROY(n4m_split_kennard_stone_destroy, n4m_split_kennard_stone_handle_t)},
+
+    {"split_spxy",
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
+         n4m_split_spxy_handle_t* h = nullptr;
+         return n4m_split_spxy_create(&h, 0.25) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         n4m_split_result_t res{};
+         n4m_status_t s = n4m_split_spxy_split(
+             static_cast<n4m_split_spxy_handle_t*>(h), c.X, c.Y, &res);
+         n4m_split_result_destroy(&res); return s; },
+     DESTROY(n4m_split_spxy_destroy, n4m_split_spxy_handle_t)},
+
+    {"split_spxy_fold",
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
+         n4m_split_spxy_fold_handle_t* h = nullptr;
+         return n4m_split_spxy_fold_create(&h, 5, N4M_SPLIT_Y_METRIC_EUCLIDEAN) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         n4m_split_result_t res{};
+         n4m_status_t s = n4m_split_spxy_fold_split_fold(
+             static_cast<n4m_split_spxy_fold_handle_t*>(h), c.X, c.Y, 0, &res);
+         n4m_split_result_destroy(&res); return s; },
+     DESTROY(n4m_split_spxy_fold_destroy, n4m_split_spxy_fold_handle_t)},
+
+    {"split_spxy_g_fold",
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
+         n4m_split_spxy_g_fold_handle_t* h = nullptr;
+         return n4m_split_spxy_g_fold_create(&h, 5, N4M_SPLIT_Y_METRIC_EUCLIDEAN,
+                                             N4M_SPLIT_AGGREGATION_MEAN) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         n4m_split_result_t res{};
+         n4m_status_t s = n4m_split_spxy_g_fold_split_fold(
+             static_cast<n4m_split_spxy_g_fold_handle_t*>(h), c.X, c.Y,
+             c.groups, c.n, 0, &res);
+         n4m_split_result_destroy(&res); return s; },
+     DESTROY(n4m_split_spxy_g_fold_destroy, n4m_split_spxy_g_fold_handle_t)},
+
+    {"split_kmeans",
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
+         n4m_split_kmeans_handle_t* h = nullptr;
+         return n4m_split_kmeans_create(&h, 0.25, 42u, 100) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         n4m_split_result_t res{};
+         n4m_status_t s = n4m_split_kmeans_split(
+             static_cast<n4m_split_kmeans_handle_t*>(h), c.X, &res);
+         n4m_split_result_destroy(&res); return s; },
+     DESTROY(n4m_split_kmeans_destroy, n4m_split_kmeans_handle_t)},
+
+    {"split_kbins_stratified",
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
+         n4m_split_kbins_stratified_handle_t* h = nullptr;
+         return n4m_split_kbins_stratified_create(&h, 0.25, 42u, 5, N4M_SPLIT_KBINS_UNIFORM) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         n4m_split_result_t res{};
+         n4m_status_t s = n4m_split_kbins_stratified_split(
+             static_cast<n4m_split_kbins_stratified_handle_t*>(h), c.Y, &res);
+         n4m_split_result_destroy(&res); return s; },
+     DESTROY(n4m_split_kbins_stratified_destroy, n4m_split_kbins_stratified_handle_t)},
+
+    {"split_bsgk",  /* BinnedStratifiedGroupKFold */
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
+         n4m_split_binned_strat_group_kfold_handle_t* h = nullptr;
+         return n4m_split_binned_strat_group_kfold_create(&h, 5, 5, N4M_SPLIT_KBINS_UNIFORM, 1, 42u) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         n4m_split_result_t res{};
+         n4m_status_t s = n4m_split_binned_strat_group_kfold_split_fold(
+             static_cast<n4m_split_binned_strat_group_kfold_handle_t*>(h),
+             c.Y, c.groups, c.n, 0, &res);
+         n4m_split_result_destroy(&res); return s; },
+     DESTROY(n4m_split_binned_strat_group_kfold_destroy, n4m_split_binned_strat_group_kfold_handle_t)},
+
+    {"split_systematic_circular",
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
+         n4m_split_systematic_circular_handle_t* h = nullptr;
+         return n4m_split_systematic_circular_create(&h, 0.25, 42u) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         n4m_split_result_t res{};
+         n4m_status_t s = n4m_split_systematic_circular_split(
+             static_cast<n4m_split_systematic_circular_handle_t*>(h), c.Y, &res);
+         n4m_split_result_destroy(&res); return s; },
+     DESTROY(n4m_split_systematic_circular_destroy, n4m_split_systematic_circular_handle_t)},
+
+    {"split_split_splitter",  /* SPlit (data twinning) */
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
+         n4m_split_split_splitter_handle_t* h = nullptr;
+         return n4m_split_split_splitter_create(&h, 0.25, 42u) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         n4m_split_result_t res{};
+         n4m_status_t s = n4m_split_split_splitter_split(
+             static_cast<n4m_split_split_splitter_handle_t*>(h), c.X, &res);
+         n4m_split_result_destroy(&res); return s; },
+     DESTROY(n4m_split_split_splitter_destroy, n4m_split_split_splitter_handle_t)},
 };
 
 #undef DESTROY
@@ -471,12 +648,23 @@ int main(int argc, char** argv) {
     std::vector<double> X(static_cast<size_t>(n) * static_cast<size_t>(p));
     std::vector<double> out(X.size());
     std::vector<double> wl = wavelength_axis(p);
+    std::vector<double> y(static_cast<size_t>(n));
+    std::vector<uint8_t> mask(static_cast<size_t>(n), 0);
+    std::vector<int64_t> groups(static_cast<size_t>(n));
     fill_matrix(X, seed);
+    fill_matrix(y, seed ^ 0xABCDEFULL);  /* deterministic target vector */
+    for (int64_t i = 0; i < n; ++i) groups[static_cast<size_t>(i)] = i % 8;  /* 8 groups */
 
     BenchCtx ctx;
+    ctx.n = n;
+    ctx.p = p;
+    ctx.y = y.data();
+    ctx.mask = mask.data();
+    ctx.groups = groups.data();
     if (n4m_matrix_view_init_rowmajor(&ctx.X, X.data(), n, p, N4M_DTYPE_F64) != N4M_OK ||
         n4m_matrix_view_init_rowmajor(&ctx.out, out.data(), n, p, N4M_DTYPE_F64) != N4M_OK ||
-        n4m_matrix_view_init_rowmajor(&ctx.wl, wl.data(), 1, p, N4M_DTYPE_F64) != N4M_OK) {
+        n4m_matrix_view_init_rowmajor(&ctx.wl, wl.data(), 1, p, N4M_DTYPE_F64) != N4M_OK ||
+        n4m_matrix_view_init_rowmajor(&ctx.Y, y.data(), n, 1, N4M_DTYPE_F64) != N4M_OK) {
         die("matrix view init failed");
     }
 
