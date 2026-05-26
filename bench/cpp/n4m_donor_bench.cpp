@@ -108,8 +108,9 @@ std::vector<double> wavelength_axis(int64_t p) {
 struct BenchCtx {
     n4m_matrix_view_t X;    /* n x p input  */
     n4m_matrix_view_t wl;   /* 1 x p wavelength axis (edge augmenters use it) */
-    n4m_matrix_view_t out;  /* n x p output */
-    n4m_matrix_view_t Y;    /* n x 1 target matrix (Y-aware splitters)        */
+    n4m_matrix_view_t out;     /* n x p output (F64) */
+    n4m_matrix_view_t out_i32; /* n x p output (I32; discretizers)           */
+    n4m_matrix_view_t Y;       /* n x 1 target matrix (Y-aware splitters)    */
     int64_t n;              /* rows */
     int64_t p;              /* cols */
     const double* y;        /* n-length target vector (y-outlier filters)    */
@@ -585,6 +586,81 @@ const DonorOp kOps[] = {
              static_cast<n4m_split_split_splitter_handle_t*>(h), c.X, &res);
          n4m_split_result_destroy(&res); return s; },
      DESTROY(n4m_split_split_splitter_destroy, n4m_split_split_splitter_handle_t)},
+
+    /* ---- preprocessing, dim-preserving (output is n x p, so it reuses the
+     *      n x p out buffer). Timed op = transform, or fit + transform for
+     *      stateful ops. The dim-changing pp ops (crop/derivate/wavelet/PCA/
+     *      resample/...) are handled with output_cols-aware runs below. */
+#define PP_T(base)  [](void* h, BenchCtx& c) {                                    \
+        return n4m_pp_##base##_transform(static_cast<n4m_pp_##base##_handle_t*>(h), c.X, c.out); }
+#define PP_FT(base) [](void* h, BenchCtx& c) {                                    \
+        auto* H = static_cast<n4m_pp_##base##_handle_t*>(h);                      \
+        n4m_status_t s = n4m_pp_##base##_fit(H, c.X);                             \
+        return s == N4M_OK ? n4m_pp_##base##_transform(H, c.X, c.out) : s; }
+#define PP_D(base) DESTROY(n4m_pp_##base##_destroy, n4m_pp_##base##_handle_t)
+#define PP_MAKE(base, ...) [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* { \
+        n4m_pp_##base##_handle_t* h = nullptr;                                    \
+        return n4m_pp_##base##_create(&h, ##__VA_ARGS__) == N4M_OK ? h : nullptr; }
+#define PP_MAKE0(base) [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {     \
+        n4m_pp_##base##_handle_t* h = nullptr;                                    \
+        return n4m_pp_##base##_create(&h) == N4M_OK ? h : nullptr; }
+
+    {"pp_snv",  PP_MAKE(snv, 1, 1, 0), PP_T(snv), PP_D(snv)},
+    {"pp_rnv",  PP_MAKE(rnv, 1, 1, 0.25), PP_T(rnv), PP_D(rnv)},
+    {"pp_lsnv", PP_MAKE(lsnv, 11, 0, 0.0), PP_T(lsnv), PP_D(lsnv)},
+    {"pp_area", PP_MAKE(area, 0), PP_T(area), PP_D(area)},
+    {"pp_normalize", PP_MAKE(normalize, 0.0, 1.0), PP_T(normalize), PP_D(normalize)},
+    {"pp_simple_scale", PP_MAKE0(simple_scale), PP_T(simple_scale), PP_D(simple_scale)},
+    {"pp_detrend", PP_MAKE(detrend, 1), PP_T(detrend), PP_D(detrend)},
+    {"pp_gaussian", PP_MAKE(gaussian, 2.0, 0, N4M_PP_GAUSSIAN_REFLECT, 0.0, 4.0), PP_T(gaussian), PP_D(gaussian)},
+    {"pp_savgol", PP_MAKE(savgol, 11, 2, 0, 1.0, N4M_PP_SAVGOL_MIRROR, 0.0), PP_T(savgol), PP_D(savgol)},
+    {"pp_first_derivative", PP_MAKE(first_derivative, 1.0, 2), PP_T(first_derivative), PP_D(first_derivative)},
+    {"pp_second_derivative", PP_MAKE(second_derivative, 1.0, 2), PP_T(second_derivative), PP_D(second_derivative)},
+    {"pp_norris_williams", PP_MAKE(norris_williams, 5, 3, 1, 1.0), PP_T(norris_williams), PP_D(norris_williams)},
+    {"pp_frac_to_pct", PP_MAKE0(frac_to_pct), PP_T(frac_to_pct), PP_D(frac_to_pct)},
+    {"pp_pct_to_frac", PP_MAKE0(pct_to_frac), PP_T(pct_to_frac), PP_D(pct_to_frac)},
+    {"pp_from_absorbance", PP_MAKE(from_absorbance, 0), PP_T(from_absorbance), PP_D(from_absorbance)},
+    {"pp_to_absorbance", PP_MAKE(to_absorbance, 0, 1e-6, 1), PP_T(to_absorbance), PP_D(to_absorbance)},
+    {"pp_kubelka_munk", PP_MAKE(kubelka_munk, 0, 1e-6), PP_T(kubelka_munk), PP_D(kubelka_munk)},
+    {"pp_range_disc",  /* discretizer → int32 bin indices */
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
+         static const double bins[3] = {0.4, 0.6, 0.8};
+         n4m_pp_range_disc_handle_t* h = nullptr;
+         return n4m_pp_range_disc_create(&h, bins, 3) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         return n4m_pp_range_disc_transform(static_cast<n4m_pp_range_disc_handle_t*>(h), c.X, c.out_i32); },
+     PP_D(range_disc)},
+    /* baseline-correction family (iterative) */
+    {"pp_airpls", PP_MAKE(airpls, 1e5, 15, 1e-3), PP_T(airpls), PP_D(airpls)},
+    {"pp_arpls",  PP_MAKE(arpls, 1e5, 50, 1e-3), PP_T(arpls), PP_D(arpls)},
+    {"pp_asls",   PP_MAKE(asls, 1e5, 0.01, 10, 1e-3), PP_T(asls), PP_D(asls)},
+    {"pp_iasls",  PP_MAKE(iasls, 1e5, 0.01, 2, 10, 1e-3), PP_T(iasls), PP_D(iasls)},
+    {"pp_modpoly",  PP_MAKE(modpoly, 2, 100, 1e-3), PP_T(modpoly), PP_D(modpoly)},
+    {"pp_imodpoly", PP_MAKE(imodpoly, 2, 100, 1e-3), PP_T(imodpoly), PP_D(imodpoly)},
+    {"pp_beads", PP_MAKE(beads, 0.5, 5.0, 4.0, 20, 1e-2), PP_T(beads), PP_D(beads)},
+    {"pp_snip", PP_MAKE(snip, 20), PP_T(snip), PP_D(snip)},
+    {"pp_rolling_ball", PP_MAKE(rolling_ball, 10, 5), PP_T(rolling_ball), PP_D(rolling_ball)},
+    /* stateful, X-only fit */
+    {"pp_msc", PP_MAKE0(msc), PP_FT(msc), PP_D(msc)},
+    {"pp_emsc", PP_MAKE(emsc, 2), PP_FT(emsc), PP_D(emsc)},
+    {"pp_baseline", PP_MAKE0(baseline), PP_FT(baseline), PP_D(baseline)},
+    {"pp_kbins_disc", PP_MAKE(kbins_disc, 5, 0),  /* discretizer → int32 bins */
+     [](void* h, BenchCtx& c) {
+         auto* H = static_cast<n4m_pp_kbins_disc_handle_t*>(h);
+         n4m_status_t s = n4m_pp_kbins_disc_fit(H, c.X);
+         return s == N4M_OK ? n4m_pp_kbins_disc_transform(H, c.X, c.out_i32) : s; },
+     PP_D(kbins_disc)},
+    {"pp_log", PP_MAKE(log, 10.0, 0.0, 1, 1e-6), PP_FT(log), PP_D(log)},
+    /* stateful, fit needs an extra vector */
+    {"pp_osc",  PP_MAKE(osc, 2, 1),
+     [](void* h, BenchCtx& c) {
+         auto* H = static_cast<n4m_pp_osc_handle_t*>(h);
+         n4m_status_t s = n4m_pp_osc_fit(H, c.X, c.y, c.n);
+         return s == N4M_OK ? n4m_pp_osc_transform(H, c.X, c.out) : s; },
+     PP_D(osc)},
+    /* pp_epo: EPO needs a calibrated difference/clutter direction set for
+     * fit(); a synthetic spectrum yields a degenerate projection, so it is
+     * left parity-only until a representative `d` is wired in. */
 };
 
 #undef DESTROY
@@ -650,6 +726,7 @@ int main(int argc, char** argv) {
     std::vector<double> wl = wavelength_axis(p);
     std::vector<double> y(static_cast<size_t>(n));
     std::vector<uint8_t> mask(static_cast<size_t>(n), 0);
+    std::vector<int32_t> out_i32(X.size(), 0);
     std::vector<int64_t> groups(static_cast<size_t>(n));
     fill_matrix(X, seed);
     fill_matrix(y, seed ^ 0xABCDEFULL);  /* deterministic target vector */
@@ -664,7 +741,8 @@ int main(int argc, char** argv) {
     if (n4m_matrix_view_init_rowmajor(&ctx.X, X.data(), n, p, N4M_DTYPE_F64) != N4M_OK ||
         n4m_matrix_view_init_rowmajor(&ctx.out, out.data(), n, p, N4M_DTYPE_F64) != N4M_OK ||
         n4m_matrix_view_init_rowmajor(&ctx.wl, wl.data(), 1, p, N4M_DTYPE_F64) != N4M_OK ||
-        n4m_matrix_view_init_rowmajor(&ctx.Y, y.data(), n, 1, N4M_DTYPE_F64) != N4M_OK) {
+        n4m_matrix_view_init_rowmajor(&ctx.Y, y.data(), n, 1, N4M_DTYPE_F64) != N4M_OK ||
+        n4m_matrix_view_init_rowmajor(&ctx.out_i32, out_i32.data(), n, p, N4M_DTYPE_I32) != N4M_OK) {
         die("matrix view init failed");
     }
 
