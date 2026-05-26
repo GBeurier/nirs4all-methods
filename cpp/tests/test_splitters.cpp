@@ -110,6 +110,46 @@ void assert_indices_equal(const std::vector<std::int64_t>& got,
     }
 }
 
+// Tolerant index-set comparison for FP-sensitive iterative splitters (kmeans).
+// k-means uses an iterative floating-point objective (`s += d*d`), so a sample
+// sitting on a cluster boundary can be assigned differently across compilers /
+// architectures (e.g. x86 vs arm64 FMA contraction) — a single swapped sample
+// is expected and must not be a hard cross-platform failure. We require the
+// split to be a valid partition of the same size and within `max_sym_diff`
+// elements of the fixture (2 = one sample moved between train and test).
+void assert_indices_tolerant(const std::vector<std::int64_t>& got,
+                              const std::vector<std::int64_t>& want,
+                              const std::string& tag,
+                              std::size_t max_sym_diff) {
+    if (got.size() != want.size()) {
+        throw std::runtime_error(tag + ": size mismatch (got " +
+            std::to_string(got.size()) + ", want " +
+            std::to_string(want.size()) + ")");
+    }
+    std::vector<std::int64_t> g = got, w = want;
+    std::sort(g.begin(), g.end());
+    std::sort(w.begin(), w.end());
+    for (std::size_t i = 1; i < g.size(); ++i) {
+        if (g[i] == g[i - 1]) {
+            throw std::runtime_error(tag + ": duplicate index " +
+                std::to_string(g[i]));
+        }
+    }
+    // Symmetric-difference size via a two-pointer merge of the sorted sets.
+    std::size_t diff = 0, i = 0, j = 0;
+    while (i < g.size() && j < w.size()) {
+        if (g[i] == w[j]) { ++i; ++j; }
+        else if (g[i] < w[j]) { ++diff; ++i; }
+        else { ++diff; ++j; }
+    }
+    diff += (g.size() - i) + (w.size() - j);
+    if (diff > max_sym_diff) {
+        throw std::runtime_error(tag + ": " + std::to_string(diff) +
+            " indices differ from fixture (kmeans FP tolerance " +
+            std::to_string(max_sym_diff) + ")");
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Smoke tests.
 // ---------------------------------------------------------------------------
@@ -446,12 +486,14 @@ void verify_kmeans_parity() {
         N4M_TEST_REQUIRE(n4m_split_kmeans_split(h, Xv, &r) == N4M_OK);
         std::vector<std::int64_t> got_train(r.train_idx, r.train_idx + r.n_train);
         std::vector<std::int64_t> got_test(r.test_idx, r.test_idx + r.n_test);
-        assert_indices_equal(got_train,
-                              parse_int_array(c.params_json, "train_idx"),
-                              "kmeans/" + c.name + "/train");
-        assert_indices_equal(got_test,
-                              parse_int_array(c.params_json, "test_idx"),
-                              "kmeans/" + c.name + "/test");
+        // k-means is FP-iterative; tolerate one boundary sample swapping
+        // train/test across architectures (x86 vs arm64). See helper note.
+        assert_indices_tolerant(got_train,
+                                 parse_int_array(c.params_json, "train_idx"),
+                                 "kmeans/" + c.name + "/train", 2);
+        assert_indices_tolerant(got_test,
+                                 parse_int_array(c.params_json, "test_idx"),
+                                 "kmeans/" + c.name + "/test", 2);
         n4m_split_result_destroy(&r);
         n4m_split_kmeans_destroy(h);
     }

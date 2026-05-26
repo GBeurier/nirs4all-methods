@@ -27,9 +27,11 @@ _PACKAGE_DIR = Path(__file__).resolve().parent
 _SIBLING_LIBS = _PACKAGE_DIR.parent / f"{_PACKAGE_DIR.name}.libs"
 _REPO_ROOT = _PACKAGE_DIR.parents[3] if _PACKAGE_DIR.parents[3].name == "pls4all" else None
 
-# auditwheel renames the bundled library to ``libn4m-<8hexhash>.so.1.16.0``,
+# auditwheel renames the bundled library to ``libn4m-<8hexhash>.so.1``,
 # so we must accept the form ``libn4m*.so*`` in addition to ``libn4m.so*``.
-_LIB_PATTERNS = ("libn4m*.so*", "libn4m*.dylib", "p4a*.dll", "libn4m*.dll")
+# On Windows the MSVC DLL is ``n4m.dll`` (CMake OUTPUT_NAME "n4m", no lib
+# prefix); MinGW produces ``libn4m.dll``. Match both.
+_LIB_PATTERNS = ("libn4m*.so*", "libn4m*.dylib", "n4m*.dll", "libn4m*.dll")
 
 
 def _glob_libs(directory: Path) -> list[Path]:
@@ -67,11 +69,11 @@ def _candidate_paths() -> list[Path]:
 
     # (5) System search path (ctypes.util.find_library or DLL search path).
     if sys.platform.startswith("linux") or sys.platform == "darwin":
-        sys_path = ctypes.util.find_library("p4a")
+        sys_path = ctypes.util.find_library("n4m")
         if sys_path:
             paths.append(Path(sys_path))
     elif sys.platform == "win32":
-        for name in ("p4a.dll", "libn4m.dll"):
+        for name in ("n4m.dll", "libn4m.dll"):
             paths.append(Path(name))
     return paths
 
@@ -88,7 +90,7 @@ def _load_library() -> ctypes.CDLL:
         msg.append(f"  - {p}: {e}")
     msg.append(
         "Set the PLS4ALL_LIB_PATH environment variable to the absolute path of "
-        "libn4m.so / libn4m.dylib / p4a.dll."
+        "libn4m.so / libn4m.dylib / n4m.dll."
     )
     raise ImportError("\n".join(msg))
 
