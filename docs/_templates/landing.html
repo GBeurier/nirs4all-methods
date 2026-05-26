@@ -2324,11 +2324,12 @@ function renderTable() {
         : 'keep only columns with a score on this row';
       const rowOrigin = (DATA.algo_origin || {})[row.algo] || 'pls4all';
       const rowCls = rowOrigin === 'pls4all' ? 'row-pls4all' : 'row-n4m';
-      // Link the method name only when a dedicated doc page exists; otherwise
-      // render plain text so catalog rows without a page don't 404.
-      const rowHasDoc = (DATA.algo_has_doc || {})[row.algo];
-      const algoLabelHtml = rowHasDoc
-        ? `<a href="methods/${row.algo}.html" title="open ${rowAlgoLabel} method documentation">${rowAlgoLabel}</a>`
+      // Link the method name to its resolved doc page (algo_has_doc maps the
+      // algo to an existing page stem, which may differ from the algo name);
+      // otherwise render plain text so rows without a page don't 404.
+      const rowDocPage = (DATA.algo_has_doc || {})[row.algo];
+      const algoLabelHtml = rowDocPage
+        ? `<a href="methods/${rowDocPage}.html" title="open ${rowAlgoLabel} method documentation">${rowAlgoLabel}</a>`
         : `<span class="algo-nodoc" title="no dedicated documentation page yet">${rowAlgoLabel}</span>`;
       let tr = `<tr class="${rowCls}"><td class="algo-cell"><div class="algo-wrap">${algoLabelHtml}<button type="button" class="row-score-toggle${focusActive ? ' active' : ''}" data-row-key="${escAttr(rKey)}" title="${focusTitle}" aria-label="${focusTitle}">◫</button></div></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
       for (const id of cols) {

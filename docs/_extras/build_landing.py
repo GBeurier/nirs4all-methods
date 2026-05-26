@@ -717,6 +717,68 @@ def host_info() -> dict:
     return info
 
 
+# Benchmark fixture rows that are ABI-level probes / lifecycle + smoke tests
+# / RNG primitive checks rather than user-facing methods. They are dropped
+# from the public matrix so every shown row is a real, documentable method.
+_NON_METHOD_SUFFIXES = (
+    "_not_fitted", "_refit", "_output_cols", "_inverse", "_create_validation",
+    "_fit_apply_validation", "_fit_transform_split", "_kernel_properties",
+    "_simplify_stub", "_stub",
+)
+_NON_METHOD_EXACT = {
+    "context", "metrics", "matrix_view_rowmajor", "status_strings_nonnull",
+    "version_string_nonempty", "transfer_metrics_invalid_args",
+    "fck_output_cols", "aug_phase17", "signal_detect",
+}
+
+
+def _is_non_method(algo: str) -> bool:
+    """True for ABI/smoke/lifecycle/RNG benchmark fixtures (not real methods)."""
+    if algo in _NON_METHOD_EXACT:
+        return True
+    if algo.startswith("rng_pcg64"):
+        return True
+    if "smoke" in algo:
+        return True
+    return any(algo.endswith(s) for s in _NON_METHOD_SUFFIXES)
+
+
+# Dashboard fixture name → doc page stem, for real operators whose page is
+# named differently (abbreviations / diagnostics). The prefix resolver in
+# `_resolve_doc_page` handles the common `aug_`/parameter-variant cases; this
+# map covers the rest.
+_DOC_ALIAS = {
+    "aug_spline_smoothing":       "aug_spline_smooth",
+    "aug_spline_x_perturbations": "aug_spline_x_perturb",
+    "aug_spline_y_perturbations": "aug_spline_y_perturb",
+    "aug_edge_curvature":         "aug_edge_curve",
+    "aug_random_x_operation":     "aug_random_x_op",
+    "hotelling_t2":               "pls_diagnostic_t2",
+    "q_residuals":                "pls_diagnostic_q",
+    "fck":                        "pp_fck_static",
+    "split_bsgk":                 "split_binned_strat_group_kfold",
+}
+
+
+def _resolve_doc_page(algo: str, pages: set[str]) -> str | None:
+    """Resolve a dashboard algo name to an existing doc-page stem, or None.
+
+    Tries the name itself, the `aug_`-prefixed variant (the fixture run dropped
+    the category prefix for some augmenters), a parameter-variant parent
+    (`filter_y_outlier_iqr` → `filter_y_outlier`), then the explicit alias map.
+    """
+    if algo in pages:
+        return algo
+    if ("aug_" + algo) in pages:
+        return "aug_" + algo
+    parts = algo.split("_")
+    for i in range(len(parts) - 1, 1, -1):
+        cand = "_".join(parts[:i])
+        if cand in pages:
+            return cand
+    return _DOC_ALIAS.get(algo)
+
+
 def build_payload(results_dir: Path) -> dict:
     """Read canonical cross-binding CSVs and build the dashboard payload."""
     rows_in: list[dict] = []
@@ -1126,6 +1188,8 @@ def build_payload(results_dir: Path) -> dict:
                                             key=lambda x: (x[0][0],
                                                             x[0][1] * x[0][2],
                                                             x[0][3])):
+        if _is_non_method(algo):
+            continue  # drop ABI/smoke/lifecycle/RNG fixtures from the matrix
         rows_out.append({
             "algo": algo, "n": n, "p": p_, "threads": t,
             "cells": cells,
@@ -1319,7 +1383,13 @@ def build_payload(results_dir: Path) -> dict:
     _methods_dir = Path(__file__).resolve().parent.parent / "methods"
     _doc_pages = ({p.stem for p in _methods_dir.glob("*.md")}
                   if _methods_dir.exists() else set())
-    algo_has_doc = {a: (a in _doc_pages) for a in present_algos}
+    # Map each algo to its resolved doc-page stem (or absent if none). The
+    # landing template links the method name to `methods/<stem>.html`.
+    algo_has_doc = {}
+    for a in present_algos:
+        page = _resolve_doc_page(a, _doc_pages)
+        if page:
+            algo_has_doc[a] = page
     # Languages actually present in the columns.
     present_langs = []
     seen_lang = set()

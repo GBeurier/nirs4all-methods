@@ -3361,11 +3361,67 @@ def _operator_init_params(cls_node: ast.ClassDef,
     return out
 
 
+# C ABI operation suffixes stripped when deriving a method prefix from
+# `lib.n4m_<prefix>_<op>(...)` calls inside a binding class.
+_C_OP_SUFFIXES = (
+    "_create", "_destroy", "_fit", "_apply", "_run", "_split", "_compute",
+    "_transform", "_fit_transform", "_predict", "_output_cols", "_set_seed",
+    "_advance", "_inverse", "_refit", "_result_destroy",
+)
+
+
+def _class_c_prefix(node: ast.ClassDef,
+                    classes_by_name: dict[str, ast.ClassDef],
+                    _seen: set | None = None) -> str | None:
+    """Best-effort C ABI prefix (`n4m_<name>`) for a binding operator class.
+
+    Looks for (1) a `_C_PREFIX` assignment, class-level OR `self._C_PREFIX`
+    inside __init__; (2) failing that, the common `lib.n4m_<prefix>_<op>()`
+    symbol stem used in the class body (covers filters that call the C ABI
+    directly without a `_C_PREFIX` attribute); (3) recurses into in-module
+    base classes.
+    """
+    _seen = _seen if _seen is not None else set()
+    if node.name in _seen:
+        return None
+    _seen.add(node.name)
+    # (1) explicit _C_PREFIX (class- or instance-level)
+    for item in ast.walk(node):
+        if isinstance(item, ast.Assign) and isinstance(item.value, ast.Constant) \
+                and isinstance(item.value.value, str) \
+                and item.value.value.startswith("n4m_"):
+            for t in item.targets:
+                if (isinstance(t, ast.Name) and t.id == "_C_PREFIX") or \
+                        (isinstance(t, ast.Attribute) and t.attr == "_C_PREFIX"):
+                    return item.value.value
+    # (2) derive from lib.n4m_<prefix>_<op>(...) symbol usage
+    from collections import Counter
+    stems: list[str] = []
+    for item in ast.walk(node):
+        if isinstance(item, ast.Attribute) and item.attr.startswith("n4m_") \
+                and not isinstance(getattr(item, "value", None), ast.Attribute):
+            sym = item.attr
+            for suf in _C_OP_SUFFIXES:
+                if sym.endswith(suf) and len(sym) > len(suf) + 4:
+                    stems.append(sym[: -len(suf)])
+                    break
+    if stems:
+        return Counter(stems).most_common(1)[0][0]
+    # (3) base classes within the same module
+    for base in node.bases:
+        bname = base.id if isinstance(base, ast.Name) else None
+        if bname and bname in classes_by_name:
+            found = _class_c_prefix(classes_by_name[bname], classes_by_name, _seen)
+            if found:
+                return found
+    return None
+
+
 def parse_operator_bindings(src_dir: Path) -> list[dict]:
     """AST-parse the n4m sklearn binding into operator spec dicts.
 
-    One spec per class declaring `_C_PREFIX = "n4m_<name>"`. Deduplicated by
-    `<name>`, keeping the entry with the richest docstring.
+    One spec per operator class (prefix resolved by `_class_c_prefix`).
+    Deduplicated by `<name>`, keeping the entry with the richest docstring.
     """
     specs: dict[str, dict] = {}
     if not src_dir.exists():
@@ -3381,13 +3437,10 @@ def parse_operator_bindings(src_dir: Path) -> list[dict]:
         classes_by_name = {n.name: n for n in ast.walk(tree)
                            if isinstance(n, ast.ClassDef)}
         for node in classes_by_name.values():
-            cprefix = None
-            for item in node.body:
-                if isinstance(item, ast.Assign) and any(
-                        isinstance(t, ast.Name) and t.id == "_C_PREFIX"
-                        for t in item.targets) and isinstance(
-                            item.value, ast.Constant):
-                    cprefix = item.value.value
+            # skip private/abstract base classes (e.g. _AugmenterBase, _SplitHandle)
+            if node.name.startswith("_"):
+                continue
+            cprefix = _class_c_prefix(node, classes_by_name)
             if not isinstance(cprefix, str) or not cprefix.startswith("n4m_"):
                 continue
             name = cprefix[len("n4m_"):]

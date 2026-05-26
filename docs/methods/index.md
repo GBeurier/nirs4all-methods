@@ -2,7 +2,7 @@
 
 Every method in the library — the PLS / selection algorithms from `benchmarks.parity_timing.registry.METHODS` and the C++ preprocessing / augmentation / filter / splitter operators from the n4m binding — documented with parameters, bibliographic source, mathematical principle, binding signatures, and benchmark rows.
 
-_Total methods_: **183** (73 PLS / selection · 110 operators). Grouped by family below.
+_Total methods_: **191** (73 PLS / selection · 118 operators). Grouped by family below.
 
 ```{toctree}
 :hidden:
@@ -272,13 +272,26 @@ _Total methods_: **183** (73 PLS / selection · 110 operators). Grouped by famil
 | [`pp_wavelet_pca`](pp_wavelet_pca.md) | `n4m.sklearn.WaveletPCA` | DWT coefficient projection through PCA scores. |
 | [`pp_wavelet_svd`](pp_wavelet_svd.md) | `n4m.sklearn.WaveletSVD` | DWT coefficient projection through SVD scores. |
 
+## Sample / feature filters
+
+| Operator | Binding | Description |
+|----------|---------|-------------|
+| [`filter_composite`](filter_composite.md) | `n4m.sklearn.CompositeFilter` | Boolean composition of leverage and quality filters. |
+| [`filter_leverage`](filter_leverage.md) | `n4m.sklearn.HighLeverageFilter` | Hat-matrix or PCA score-space leverage filter. |
+| [`filter_quality`](filter_quality.md) | `n4m.sklearn.SpectralQualityFilter` | Stateless row-level spectrum quality filter. |
+| [`filter_x_outlier`](filter_x_outlier.md) | `n4m.sklearn.XOutlierFilter` | Multivariate outlier filter on the design matrix ``X``. |
+| [`filter_y_outlier`](filter_y_outlier.md) | `n4m.sklearn.YOutlierFilter` | Univariate outlier filter on the target vector ``y``. |
+
 ## Splitters
 
 | Operator | Binding | Description |
 |----------|---------|-------------|
 | [`split_binned_strat_group_kfold`](split_binned_strat_group_kfold.md) | `n4m.sklearn.BinnedStratifiedGroupKFoldSplitter` | Stratified group k-fold splitter after binning continuous ``y``. |
+| [`split_kbins_stratified`](split_kbins_stratified.md) | `n4m.sklearn.KBinsStratifiedSplitter` | Stratified split using K equal-width or quantile bins of ``y``. |
+| [`split_kennard_stone`](split_kennard_stone.md) | `n4m.sklearn.KennardStoneSplitter` | Kennard-Stone train/test split. |
 | [`split_kmeans`](split_kmeans.md) | `n4m.sklearn.KMeansSplitter` | K-means++ diversity splitter. |
 | [`split_split_splitter`](split_split_splitter.md) | `n4m.sklearn.SPlitSplitter` | SPlit data-twinning splitter. |
+| [`split_spxy`](split_spxy.md) | `n4m.sklearn.SPXYSplitter` | SPXY (Sample set Partitioning based on X and Y) train/test split. |
 | [`split_spxy_fold`](split_spxy_fold.md) | `n4m.sklearn.SPXYFoldSplitter` | SPXY k-fold splitter over paired ``X`` and ``y`` matrices. |
 | [`split_spxy_g_fold`](split_spxy_g_fold.md) | `n4m.sklearn.SPXYGroupFoldSplitter` | Group-aware SPXY k-fold splitter. |
 | [`split_systematic_circular`](split_systematic_circular.md) | `n4m.sklearn.SystematicCircularSplitter` | Systematic circular split over sorted or ordered targets. |
