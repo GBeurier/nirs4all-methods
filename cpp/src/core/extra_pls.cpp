@@ -1049,7 +1049,7 @@ n4m_status_t fit_fused_sparse_pls(Context& ctx,
 // only a (sign-irrelevant) scalar rescaling of w = X^T Y. Operates on
 // already-centered X/Y and produces (p × q) regression coefficients in
 // centered space.
-void cppls_nipals_pls1(std::vector<double> xk,
+static void cppls_nipals_pls1(std::vector<double> xk,
                        const std::vector<double>& yk_orig,
                        std::size_t n, std::size_t p, std::size_t q,
                        std::size_t a,

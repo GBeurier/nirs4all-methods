@@ -68,19 +68,29 @@ n4m_status_t require_out_shape(const MatrixIn& x, const MatrixOut& out) noexcept
     return (x.rows == out.rows && x.cols == out.cols) ? N4M_OK : N4M_ERR_SHAPE_MISMATCH;
 }
 
-double at(const MatrixIn& m, std::int64_t i, std::int64_t j) noexcept {
-    return m.data[static_cast<std::size_t>(i) * static_cast<std::size_t>(m.cols)
-                  + static_cast<std::size_t>(j)];
+std::size_t to_index(std::int64_t value) noexcept {
+    return static_cast<std::size_t>(value);
+}
+
+std::size_t row_major(std::size_t row, std::size_t cols, std::size_t col) noexcept {
+    return row * cols + col;
+}
+
+template <typename Row, typename Col>
+double at(const MatrixIn& m, Row i, Col j) noexcept {
+    return m.data[row_major(static_cast<std::size_t>(i), to_index(m.cols),
+                            static_cast<std::size_t>(j))];
 }
 
 bool solve_linear(std::vector<double> a, std::vector<double> b,
                   std::int64_t n, std::vector<double>& x) {
-    x.assign(static_cast<std::size_t>(n), 0.0);
-    for (std::int64_t k = 0; k < n; ++k) {
-        std::int64_t pivot = k;
-        double best = std::fabs(a[static_cast<std::size_t>(k) * n + k]);
-        for (std::int64_t i = k + 1; i < n; ++i) {
-            const double v = std::fabs(a[static_cast<std::size_t>(i) * n + k]);
+    const std::size_t n_sz = to_index(n);
+    x.assign(n_sz, 0.0);
+    for (std::size_t k = 0; k < n_sz; ++k) {
+        std::size_t pivot = k;
+        double best = std::fabs(a[row_major(k, n_sz, k)]);
+        for (std::size_t i = k + 1; i < n_sz; ++i) {
+            const double v = std::fabs(a[row_major(i, n_sz, k)]);
             if (v > best) {
                 best = v;
                 pivot = i;
@@ -88,31 +98,30 @@ bool solve_linear(std::vector<double> a, std::vector<double> b,
         }
         if (best <= std::numeric_limits<double>::epsilon()) return false;
         if (pivot != k) {
-            for (std::int64_t j = k; j < n; ++j) {
-                std::swap(a[static_cast<std::size_t>(k) * n + j],
-                          a[static_cast<std::size_t>(pivot) * n + j]);
+            for (std::size_t j = k; j < n_sz; ++j) {
+                std::swap(a[row_major(k, n_sz, j)],
+                          a[row_major(pivot, n_sz, j)]);
             }
-            std::swap(b[static_cast<std::size_t>(k)], b[static_cast<std::size_t>(pivot)]);
+            std::swap(b[k], b[pivot]);
         }
-        const double diag = a[static_cast<std::size_t>(k) * n + k];
-        for (std::int64_t i = k + 1; i < n; ++i) {
-            const double factor = a[static_cast<std::size_t>(i) * n + k] / diag;
-            a[static_cast<std::size_t>(i) * n + k] = 0.0;
-            for (std::int64_t j = k + 1; j < n; ++j) {
-                a[static_cast<std::size_t>(i) * n + j] -=
-                    factor * a[static_cast<std::size_t>(k) * n + j];
+        const double diag = a[row_major(k, n_sz, k)];
+        for (std::size_t i = k + 1; i < n_sz; ++i) {
+            const double factor = a[row_major(i, n_sz, k)] / diag;
+            a[row_major(i, n_sz, k)] = 0.0;
+            for (std::size_t j = k + 1; j < n_sz; ++j) {
+                a[row_major(i, n_sz, j)] -= factor * a[row_major(k, n_sz, j)];
             }
-            b[static_cast<std::size_t>(i)] -= factor * b[static_cast<std::size_t>(k)];
+            b[i] -= factor * b[k];
         }
     }
-    for (std::int64_t i = n - 1; i >= 0; --i) {
-        double s = b[static_cast<std::size_t>(i)];
-        for (std::int64_t j = i + 1; j < n; ++j) {
-            s -= a[static_cast<std::size_t>(i) * n + j] * x[static_cast<std::size_t>(j)];
+    for (std::size_t i = n_sz; i-- > 0; ) {
+        double s = b[i];
+        for (std::size_t j = i + 1; j < n_sz; ++j) {
+            s -= a[row_major(i, n_sz, j)] * x[j];
         }
-        const double diag = a[static_cast<std::size_t>(i) * n + i];
+        const double diag = a[row_major(i, n_sz, i)];
         if (diag == 0.0) return false;
-        x[static_cast<std::size_t>(i)] = s / diag;
+        x[i] = s / diag;
     }
     return true;
 }
@@ -123,54 +132,60 @@ std::vector<double> fit_ols(const MatrixIn& x, const MatrixIn& y,
                             std::int64_t lo = 0, std::int64_t hi = -1) {
     const std::int64_t x_cols = (hi < 0) ? x.cols : (hi - lo);
     const std::int64_t params = x_cols + (intercept ? 1 : 0);
-    std::vector<double> xtx(static_cast<std::size_t>(params * params), 0.0);
-    std::vector<double> coef(static_cast<std::size_t>(params * y.cols), 0.0);
-    std::vector<double> xty(static_cast<std::size_t>(params), 0.0);
-    const std::int64_t n_rows = rows ? static_cast<std::int64_t>(rows->size()) : x.rows;
+    const std::size_t params_sz = to_index(params);
+    const std::size_t y_cols_sz = to_index(y.cols);
+    const std::size_t n_rows_sz = rows ? rows->size() : to_index(x.rows);
+    std::vector<double> xtx(params_sz * params_sz, 0.0);
+    std::vector<double> coef(params_sz * y_cols_sz, 0.0);
+    std::vector<double> xty(params_sz, 0.0);
 
-    for (std::int64_t rr = 0; rr < n_rows; ++rr) {
-        const std::int64_t i = rows ? (*rows)[static_cast<std::size_t>(rr)] : rr;
-        for (std::int64_t a = 0; a < params; ++a) {
-            const double va = (intercept && a == params - 1) ? 1.0 : at(x, i, lo + a);
-            for (std::int64_t b = 0; b < params; ++b) {
-                const double vb = (intercept && b == params - 1) ? 1.0 : at(x, i, lo + b);
-                xtx[static_cast<std::size_t>(a) * params + b] += va * vb;
+    for (std::size_t rr = 0; rr < n_rows_sz; ++rr) {
+        const std::int64_t i = rows ? (*rows)[rr] : static_cast<std::int64_t>(rr);
+        for (std::size_t a = 0; a < params_sz; ++a) {
+            const std::int64_t a_i = static_cast<std::int64_t>(a);
+            const double va = (intercept && a_i == params - 1) ? 1.0 : at(x, i, lo + a_i);
+            for (std::size_t b = 0; b < params_sz; ++b) {
+                const std::int64_t b_i = static_cast<std::int64_t>(b);
+                const double vb = (intercept && b_i == params - 1) ? 1.0 : at(x, i, lo + b_i);
+                xtx[row_major(a, params_sz, b)] += va * vb;
             }
         }
     }
     if (ridge > 0.0) {
-        for (std::int64_t a = 0; a < params; ++a) {
-            xtx[static_cast<std::size_t>(a) * params + a] += ridge;
+        for (std::size_t a = 0; a < params_sz; ++a) {
+            xtx[row_major(a, params_sz, a)] += ridge;
         }
     }
-    for (std::int64_t out_col = 0; out_col < y.cols; ++out_col) {
+    for (std::size_t out_col = 0; out_col < y_cols_sz; ++out_col) {
+        const std::int64_t out_col_i = static_cast<std::int64_t>(out_col);
         std::fill(xty.begin(), xty.end(), 0.0);
-        for (std::int64_t rr = 0; rr < n_rows; ++rr) {
-            const std::int64_t i = rows ? (*rows)[static_cast<std::size_t>(rr)] : rr;
-            const double yy = at(y, i, out_col);
-            for (std::int64_t a = 0; a < params; ++a) {
-                const double va = (intercept && a == params - 1) ? 1.0 : at(x, i, lo + a);
-                xty[static_cast<std::size_t>(a)] += va * yy;
+        for (std::size_t rr = 0; rr < n_rows_sz; ++rr) {
+            const std::int64_t i = rows ? (*rows)[rr] : static_cast<std::int64_t>(rr);
+            const double yy = at(y, i, out_col_i);
+            for (std::size_t a = 0; a < params_sz; ++a) {
+                const std::int64_t a_i = static_cast<std::int64_t>(a);
+                const double va = (intercept && a_i == params - 1) ? 1.0 : at(x, i, lo + a_i);
+                xty[a] += va * yy;
             }
         }
         std::vector<double> sol;
         if (!solve_linear(xtx, xty, params, sol)) {
             std::vector<double> regularized = xtx;
             double diag_scale = 0.0;
-            for (std::int64_t a = 0; a < params; ++a) {
-                diag_scale += std::fabs(xtx[static_cast<std::size_t>(a) * params + a]);
+            for (std::size_t a = 0; a < params_sz; ++a) {
+                diag_scale += std::fabs(xtx[row_major(a, params_sz, a)]);
             }
             diag_scale = diag_scale > 0.0 ? diag_scale / static_cast<double>(params) : 1.0;
             const double jitter = (ridge > 0.0 ? ridge * 1e-8 : 1e-12) * diag_scale;
-            for (std::int64_t a = 0; a < params; ++a) {
-                regularized[static_cast<std::size_t>(a) * params + a] += jitter;
+            for (std::size_t a = 0; a < params_sz; ++a) {
+                regularized[row_major(a, params_sz, a)] += jitter;
             }
             if (!solve_linear(regularized, xty, params, sol)) {
                 throw N4M_ERR_NUMERICAL_FAILURE;
             }
         }
-        for (std::int64_t a = 0; a < params; ++a) {
-            coef[static_cast<std::size_t>(a) * y.cols + out_col] = sol[static_cast<std::size_t>(a)];
+        for (std::size_t a = 0; a < params_sz; ++a) {
+            coef[row_major(a, y_cols_sz, out_col)] = sol[a];
         }
     }
     return coef;
@@ -246,17 +261,20 @@ n4m_status_t ds_transform(const DSState& s, const n4m_matrix_view_t& x_v,
     if (x.cols != s.features || out.rows != x.rows || out.cols != s.features) {
         return N4M_ERR_SHAPE_MISMATCH;
     }
-    const std::int64_t params = s.features + (s.fit_intercept ? 1 : 0);
-    for (std::int64_t i = 0; i < x.rows; ++i) {
-        const double* row = x.data + static_cast<std::size_t>(i) * x.cols;
-        double* dst = out.data + static_cast<std::size_t>(i) * out.cols;
-        for (std::int64_t j = 0; j < s.features; ++j) {
+    const std::size_t x_cols = to_index(x.cols);
+    const std::size_t out_cols = to_index(out.cols);
+    const std::size_t features = to_index(s.features);
+    const std::size_t params = features + (s.fit_intercept ? 1U : 0U);
+    for (std::size_t i = 0; i < to_index(x.rows); ++i) {
+        const double* row = x.data + row_major(i, x_cols, 0);
+        double* dst = out.data + row_major(i, out_cols, 0);
+        for (std::size_t j = 0; j < features; ++j) {
             double value = 0.0;
-            for (std::int64_t k = 0; k < s.features; ++k) {
-                value += row[k] * s.coef[static_cast<std::size_t>(k) * s.features + j];
+            for (std::size_t k = 0; k < features; ++k) {
+                value += row[k] * s.coef[row_major(k, features, j)];
             }
             if (s.fit_intercept) {
-                value += s.coef[static_cast<std::size_t>(params - 1) * s.features + j];
+                value += s.coef[row_major(params - 1, features, j)];
             }
             dst[j] = value;
         }
@@ -315,12 +333,15 @@ n4m_status_t pds_transform(const PDSState& s, const n4m_matrix_view_t& x_v,
     if (x.cols != s.features || out.rows != x.rows || out.cols != s.features) {
         return N4M_ERR_SHAPE_MISMATCH;
     }
-    for (std::int64_t i = 0; i < x.rows; ++i) {
-        const double* row = x.data + static_cast<std::size_t>(i) * x.cols;
-        double* dst = out.data + static_cast<std::size_t>(i) * out.cols;
-        for (std::int64_t j = 0; j < s.features; ++j) {
-            const auto [lo, hi] = s.windows[static_cast<std::size_t>(j)];
-            const auto& coef = s.coefs[static_cast<std::size_t>(j)];
+    const std::size_t x_cols = to_index(x.cols);
+    const std::size_t out_cols = to_index(out.cols);
+    const std::size_t features = to_index(s.features);
+    for (std::size_t i = 0; i < to_index(x.rows); ++i) {
+        const double* row = x.data + row_major(i, x_cols, 0);
+        double* dst = out.data + row_major(i, out_cols, 0);
+        for (std::size_t j = 0; j < features; ++j) {
+            const auto [lo, hi] = s.windows[j];
+            const auto& coef = s.coefs[j];
             double value = 0.0;
             for (std::int64_t k = lo; k < hi; ++k) {
                 value += row[k] * coef[static_cast<std::size_t>(k - lo)];
@@ -346,30 +367,33 @@ struct SAPSState {
 };
 
 void fit_power_components(SAPSState& s, const MatrixIn& x) {
-    s.mean.assign(static_cast<std::size_t>(x.cols), 0.0);
-    for (std::int64_t i = 0; i < x.rows; ++i) {
-        for (std::int64_t j = 0; j < x.cols; ++j) s.mean[j] += at(x, i, j);
+    const std::size_t rows = to_index(x.rows);
+    const std::size_t cols = to_index(x.cols);
+    s.mean.assign(cols, 0.0);
+    for (std::size_t i = 0; i < rows; ++i) {
+        for (std::size_t j = 0; j < cols; ++j) s.mean[j] += at(x, i, j);
     }
     for (double& v : s.mean) v /= static_cast<double>(x.rows);
     s.components = std::min<std::int64_t>(std::max<std::int32_t>(1, s.n_components), x.cols);
-    s.loadings.assign(static_cast<std::size_t>(s.components * x.cols), 0.0);
-    std::vector<double> cov(static_cast<std::size_t>(x.cols * x.cols), 0.0);
-    for (std::int64_t i = 0; i < x.rows; ++i) {
-        for (std::int64_t a = 0; a < x.cols; ++a) {
+    const std::size_t components = to_index(s.components);
+    s.loadings.assign(components * cols, 0.0);
+    std::vector<double> cov(cols * cols, 0.0);
+    for (std::size_t i = 0; i < rows; ++i) {
+        for (std::size_t a = 0; a < cols; ++a) {
             const double va = at(x, i, a) - s.mean[a];
-            for (std::int64_t b = 0; b < x.cols; ++b) {
-                cov[static_cast<std::size_t>(a) * x.cols + b] += va * (at(x, i, b) - s.mean[b]);
+            for (std::size_t b = 0; b < cols; ++b) {
+                cov[row_major(a, cols, b)] += va * (at(x, i, b) - s.mean[b]);
             }
         }
     }
-    for (std::int64_t comp = 0; comp < s.components; ++comp) {
-        std::vector<double> v(static_cast<std::size_t>(x.cols), 0.0);
-        v[static_cast<std::size_t>(comp % x.cols)] = 1.0;
+    for (std::size_t comp = 0; comp < components; ++comp) {
+        std::vector<double> v(cols, 0.0);
+        v[comp % cols] = 1.0;
         for (int iter = 0; iter < 30; ++iter) {
-            std::vector<double> next(static_cast<std::size_t>(x.cols), 0.0);
-            for (std::int64_t a = 0; a < x.cols; ++a) {
-                for (std::int64_t b = 0; b < x.cols; ++b) {
-                    next[a] += cov[static_cast<std::size_t>(a) * x.cols + b] * v[b];
+            std::vector<double> next(cols, 0.0);
+            for (std::size_t a = 0; a < cols; ++a) {
+                for (std::size_t b = 0; b < cols; ++b) {
+                    next[a] += cov[row_major(a, cols, b)] * v[b];
                 }
             }
             double norm = 0.0;
@@ -380,17 +404,17 @@ void fit_power_components(SAPSState& s, const MatrixIn& x) {
             v.swap(next);
         }
         double lambda = 0.0;
-        for (std::int64_t a = 0; a < x.cols; ++a) {
-            for (std::int64_t b = 0; b < x.cols; ++b) {
-                lambda += v[a] * cov[static_cast<std::size_t>(a) * x.cols + b] * v[b];
+        for (std::size_t a = 0; a < cols; ++a) {
+            for (std::size_t b = 0; b < cols; ++b) {
+                lambda += v[a] * cov[row_major(a, cols, b)] * v[b];
             }
         }
-        for (std::int64_t a = 0; a < x.cols; ++a) {
-            s.loadings[static_cast<std::size_t>(comp) * x.cols + a] = v[a];
+        for (std::size_t a = 0; a < cols; ++a) {
+            s.loadings[row_major(comp, cols, a)] = v[a];
         }
-        for (std::int64_t a = 0; a < x.cols; ++a) {
-            for (std::int64_t b = 0; b < x.cols; ++b) {
-                cov[static_cast<std::size_t>(a) * x.cols + b] -= lambda * v[a] * v[b];
+        for (std::size_t a = 0; a < cols; ++a) {
+            for (std::size_t b = 0; b < cols; ++b) {
+                cov[row_major(a, cols, b)] -= lambda * v[a] * v[b];
             }
         }
     }
@@ -398,19 +422,22 @@ void fit_power_components(SAPSState& s, const MatrixIn& x) {
 
 std::vector<double> augmented_matrix(const SAPSState& s, const MatrixIn& x) {
     const std::int64_t cols = x.cols + s.components;
-    std::vector<double> out(static_cast<std::size_t>(x.rows * cols), 0.0);
-    for (std::int64_t i = 0; i < x.rows; ++i) {
-        for (std::int64_t j = 0; j < x.cols; ++j) {
-            out[static_cast<std::size_t>(i) * cols + j] = at(x, i, j);
+    const std::size_t rows_sz = to_index(x.rows);
+    const std::size_t x_cols = to_index(x.cols);
+    const std::size_t components = to_index(s.components);
+    const std::size_t cols_sz = to_index(cols);
+    std::vector<double> out(rows_sz * cols_sz, 0.0);
+    for (std::size_t i = 0; i < rows_sz; ++i) {
+        for (std::size_t j = 0; j < x_cols; ++j) {
+            out[row_major(i, cols_sz, j)] = at(x, i, j);
         }
-        for (std::int64_t c = 0; c < s.components; ++c) {
+        for (std::size_t c = 0; c < components; ++c) {
             double score = 0.0;
-            for (std::int64_t j = 0; j < x.cols; ++j) {
+            for (std::size_t j = 0; j < x_cols; ++j) {
                 score += (at(x, i, j) - s.mean[j]) *
-                         s.loadings[static_cast<std::size_t>(c) * x.cols + j];
+                         s.loadings[row_major(c, x_cols, j)];
             }
-            out[static_cast<std::size_t>(i) * cols + x.cols + c] =
-                s.score_weight * score;
+            out[row_major(i, cols_sz, x_cols + c)] = s.score_weight * score;
         }
     }
     return out;
@@ -448,18 +475,22 @@ n4m_status_t saps_transform(const SAPSState& s, const n4m_matrix_view_t& x_v,
     }
     std::vector<double> aug = augmented_matrix(s, x);
     const std::int64_t a_cols = x.cols + s.components;
-    const std::int64_t params = a_cols + (s.fit_intercept ? 1 : 0);
-    for (std::int64_t i = 0; i < x.rows; ++i) {
-        for (std::int64_t j = 0; j < s.features; ++j) {
+    const std::size_t rows = to_index(x.rows);
+    const std::size_t a_cols_sz = to_index(a_cols);
+    const std::size_t features = to_index(s.features);
+    const std::size_t out_cols = to_index(out.cols);
+    const std::size_t params = a_cols_sz + (s.fit_intercept ? 1U : 0U);
+    for (std::size_t i = 0; i < rows; ++i) {
+        for (std::size_t j = 0; j < features; ++j) {
             double value = 0.0;
-            for (std::int64_t k = 0; k < a_cols; ++k) {
-                value += aug[static_cast<std::size_t>(i) * a_cols + k] *
-                         s.coef[static_cast<std::size_t>(k) * s.features + j];
+            for (std::size_t k = 0; k < a_cols_sz; ++k) {
+                value += aug[row_major(i, a_cols_sz, k)] *
+                         s.coef[row_major(k, features, j)];
             }
             if (s.fit_intercept) {
-                value += s.coef[static_cast<std::size_t>(params - 1) * s.features + j];
+                value += s.coef[row_major(params - 1, features, j)];
             }
-            out.data[static_cast<std::size_t>(i) * out.cols + j] = value;
+            out.data[row_major(i, out_cols, j)] = value;
         }
     }
     return N4M_OK;
@@ -530,10 +561,12 @@ n4m_status_t vsn_fit(VectorWeightsState& s, const n4m_matrix_view_t& x_v) {
     MatrixIn x;
     n4m_status_t st = require_f64_rowmajor(x_v, x);
     if (st != N4M_OK) return st;
-    std::vector<double> col_mean(static_cast<std::size_t>(x.cols), 0.0);
-    std::vector<double> row_mean(static_cast<std::size_t>(x.rows), 0.0);
-    for (std::int64_t i = 0; i < x.rows; ++i) {
-        for (std::int64_t j = 0; j < x.cols; ++j) {
+    const std::size_t rows = to_index(x.rows);
+    const std::size_t cols = to_index(x.cols);
+    std::vector<double> col_mean(cols, 0.0);
+    std::vector<double> row_mean(rows, 0.0);
+    for (std::size_t i = 0; i < rows; ++i) {
+        for (std::size_t j = 0; j < cols; ++j) {
             const double value = at(x, i, j);
             col_mean[j] += value;
             row_mean[i] += value;
@@ -547,11 +580,11 @@ n4m_status_t vsn_fit(VectorWeightsState& s, const n4m_matrix_view_t& x_v) {
     double row_norm = 0.0;
     for (double v : row_mean) row_norm += (v - row_grand) * (v - row_grand);
     row_norm = std::sqrt(row_norm);
-    s.weights.assign(static_cast<std::size_t>(x.cols), s.eps);
-    for (std::int64_t j = 0; j < x.cols; ++j) {
+    s.weights.assign(cols, s.eps);
+    for (std::size_t j = 0; j < cols; ++j) {
         double dot = 0.0;
         double col_norm = 0.0;
-        for (std::int64_t i = 0; i < x.rows; ++i) {
+        for (std::size_t i = 0; i < rows; ++i) {
             const double xc = at(x, i, j) - col_mean[j];
             dot += xc * (row_mean[i] - row_grand);
             col_norm += xc * xc;
@@ -579,11 +612,14 @@ n4m_status_t weighted_snv_transform(const VectorWeightsState& s,
     st = require_out_shape(x, out);
     if (st != N4M_OK) return st;
     if (static_cast<std::int64_t>(s.weights.size()) != x.cols) return N4M_ERR_SHAPE_MISMATCH;
-    for (std::int64_t i = 0; i < x.rows; ++i) {
+    const std::size_t rows = to_index(x.rows);
+    const std::size_t cols = to_index(x.cols);
+    const std::size_t out_cols = to_index(out.cols);
+    for (std::size_t i = 0; i < rows; ++i) {
         double mean = 0.0;
-        for (std::int64_t j = 0; j < x.cols; ++j) mean += at(x, i, j) * s.weights[j];
+        for (std::size_t j = 0; j < cols; ++j) mean += at(x, i, j) * s.weights[j];
         double var = 0.0;
-        for (std::int64_t j = 0; j < x.cols; ++j) {
+        for (std::size_t j = 0; j < cols; ++j) {
             const double c = at(x, i, j) - mean;
             var += c * c * s.weights[j];
         }
@@ -591,8 +627,8 @@ n4m_status_t weighted_snv_transform(const VectorWeightsState& s,
             var *= static_cast<double>(x.cols) / static_cast<double>(x.cols - s.ddof);
         }
         const double scale = std::sqrt(std::max(var, s.eps));
-        for (std::int64_t j = 0; j < x.cols; ++j) {
-            out.data[static_cast<std::size_t>(i) * out.cols + j] = (at(x, i, j) - mean) / scale;
+        for (std::size_t j = 0; j < cols; ++j) {
+            out.data[row_major(i, out_cols, j)] = (at(x, i, j) - mean) / scale;
         }
     }
     return N4M_OK;
@@ -629,23 +665,27 @@ n4m_status_t piecewise_snv_transform(const PiecewiseSNVState& s,
     if (st != N4M_OK) return st;
     st = require_out_shape(x, out);
     if (st != N4M_OK || x.cols != s.features) return N4M_ERR_SHAPE_MISMATCH;
+    const std::size_t rows = to_index(x.rows);
+    const std::size_t out_cols = to_index(out.cols);
     for (const auto& band : s.bands) {
         const std::int64_t lo = band.first;
         const std::int64_t hi = band.second;
+        const std::size_t lo_sz = to_index(lo);
+        const std::size_t hi_sz = to_index(hi);
         const double width = static_cast<double>(hi - lo);
-        for (std::int64_t i = 0; i < x.rows; ++i) {
+        for (std::size_t i = 0; i < rows; ++i) {
             double mean = 0.0;
-            for (std::int64_t j = lo; j < hi; ++j) mean += at(x, i, j);
+            for (std::size_t j = lo_sz; j < hi_sz; ++j) mean += at(x, i, j);
             mean /= width;
             double var = 0.0;
-            for (std::int64_t j = lo; j < hi; ++j) {
+            for (std::size_t j = lo_sz; j < hi_sz; ++j) {
                 const double c = at(x, i, j) - mean;
                 var += c * c;
             }
             const double denom = (hi - lo - s.ddof) > 0 ? static_cast<double>(hi - lo - s.ddof) : width;
             const double scale = std::sqrt(std::max(var / denom, s.eps));
-            for (std::int64_t j = lo; j < hi; ++j) {
-                out.data[static_cast<std::size_t>(i) * out.cols + j] = (at(x, i, j) - mean) / scale;
+            for (std::size_t j = lo_sz; j < hi_sz; ++j) {
+                out.data[row_major(i, out_cols, j)] = (at(x, i, j) - mean) / scale;
             }
         }
     }
@@ -675,9 +715,11 @@ n4m_status_t msc_fit(MSCState& s, const n4m_matrix_view_t& x_v) {
         }
         s.reference = s.initial_reference;
     } else {
-        s.reference.assign(static_cast<std::size_t>(x.cols), 0.0);
-        for (std::int64_t i = 0; i < x.rows; ++i) {
-            for (std::int64_t j = 0; j < x.cols; ++j) s.reference[j] += at(x, i, j);
+        const std::size_t rows = to_index(x.rows);
+        const std::size_t cols = to_index(x.cols);
+        s.reference.assign(cols, 0.0);
+        for (std::size_t i = 0; i < rows; ++i) {
+            for (std::size_t j = 0; j < cols; ++j) s.reference[j] += at(x, i, j);
         }
         for (double& v : s.reference) v /= static_cast<double>(x.rows);
     }
@@ -690,9 +732,15 @@ void apply_msc_segment(const MatrixIn& x, MatrixOut& out, const MSCState& s,
                        std::int64_t row_idx, std::int64_t lo, std::int64_t hi,
                        std::int64_t write_lo, std::int64_t write_hi) {
     const double width = static_cast<double>(hi - lo);
+    const std::size_t row_sz = to_index(row_idx);
+    const std::size_t out_cols = to_index(out.cols);
+    const std::size_t lo_sz = to_index(lo);
+    const std::size_t hi_sz = to_index(hi);
+    const std::size_t write_lo_sz = to_index(write_lo);
+    const std::size_t write_hi_sz = to_index(write_hi);
     double ref_mean = 0.0;
     double row_mean = 0.0;
-    for (std::int64_t j = lo; j < hi; ++j) {
+    for (std::size_t j = lo_sz; j < hi_sz; ++j) {
         ref_mean += s.reference[j];
         row_mean += at(x, row_idx, j);
     }
@@ -700,7 +748,7 @@ void apply_msc_segment(const MatrixIn& x, MatrixOut& out, const MSCState& s,
     row_mean /= width;
     double denom = 0.0;
     double numer = 0.0;
-    for (std::int64_t j = lo; j < hi; ++j) {
+    for (std::size_t j = lo_sz; j < hi_sz; ++j) {
         const double rc = s.reference[j] - ref_mean;
         denom += rc * rc;
         numer += (at(x, row_idx, j) - row_mean) * rc;
@@ -711,8 +759,8 @@ void apply_msc_segment(const MatrixIn& x, MatrixOut& out, const MSCState& s,
     if (!std::isfinite(scale) || std::fabs(scale) <= s.eps) {
         scale = scale < 0.0 ? -s.eps : s.eps;
     }
-    for (std::int64_t j = write_lo; j < write_hi; ++j) {
-        out.data[static_cast<std::size_t>(row_idx) * out.cols + j] =
+    for (std::size_t j = write_lo_sz; j < write_hi_sz; ++j) {
+        out.data[row_major(row_sz, out_cols, j)] =
             (at(x, row_idx, j) - intercept) / scale;
     }
 }
@@ -764,9 +812,11 @@ n4m_status_t align_fit(AlignState& s, const n4m_matrix_view_t& x_v) {
     if (st != N4M_OK) return st;
     s.features = x.cols;
     if (s.reference.empty()) {
-        s.reference.assign(static_cast<std::size_t>(x.cols), 0.0);
-        for (std::int64_t i = 0; i < x.rows; ++i) {
-            for (std::int64_t j = 0; j < x.cols; ++j) s.reference[j] += at(x, i, j);
+        const std::size_t rows = to_index(x.rows);
+        const std::size_t cols = to_index(x.cols);
+        s.reference.assign(cols, 0.0);
+        for (std::size_t i = 0; i < rows; ++i) {
+            for (std::size_t j = 0; j < cols; ++j) s.reference[j] += at(x, i, j);
         }
         for (double& v : s.reference) v /= static_cast<double>(x.rows);
     } else if (static_cast<std::int64_t>(s.reference.size()) != x.cols) {
@@ -778,10 +828,14 @@ n4m_status_t align_fit(AlignState& s, const n4m_matrix_view_t& x_v) {
 
 void align_segment(const MatrixIn& x, MatrixOut& out, const AlignState& s,
                    std::int64_t row, std::int64_t lo, std::int64_t hi) {
+    const std::size_t row_sz = to_index(row);
+    const std::size_t x_cols = to_index(x.cols);
+    const std::size_t out_cols = to_index(out.cols);
+    const std::size_t lo_sz = to_index(lo);
     double ref_mean = 0.0;
-    for (std::int64_t j = lo; j < hi; ++j) ref_mean += s.reference[j];
+    for (std::int64_t j = lo; j < hi; ++j) ref_mean += s.reference[to_index(j)];
     ref_mean /= static_cast<double>(hi - lo);
-    const double* row_ptr = x.data + static_cast<std::size_t>(row) * x.cols + lo;
+    const double* row_ptr = x.data + row_major(row_sz, x_cols, lo_sz);
     int best_shift = 0;
     double best_score = -std::numeric_limits<double>::infinity();
     for (int shift = -s.max_shift; shift <= s.max_shift; ++shift) {
@@ -799,7 +853,7 @@ void align_segment(const MatrixIn& x, MatrixOut& out, const AlignState& s,
         }
     }
     for (std::int64_t j = 0; j < hi - lo; ++j) {
-        out.data[static_cast<std::size_t>(row) * out.cols + lo + j] =
+        out.data[row_major(row_sz, out_cols, to_index(lo + j))] =
             shift_sample(row_ptr, hi - lo, j, best_shift);
     }
 }
@@ -807,30 +861,33 @@ void align_segment(const MatrixIn& x, MatrixOut& out, const AlignState& s,
 void dtw_row(const MatrixIn& x, MatrixOut& out, const AlignState& s,
              std::int64_t row) {
     const std::int64_t n = x.cols;
-    std::vector<double> cost(static_cast<std::size_t>((n + 1) * (n + 1)),
-                             std::numeric_limits<double>::infinity());
+    const std::size_t n_sz = to_index(n);
+    const std::size_t stride = n_sz + 1U;
+    const std::size_t row_sz = to_index(row);
+    const std::size_t out_cols = to_index(out.cols);
+    std::vector<double> cost(stride * stride, std::numeric_limits<double>::infinity());
     cost.at(0) = 0.0;
-    for (std::int64_t i = 1; i <= n; ++i) {
-        for (std::int64_t j = 1; j <= n; ++j) {
+    for (std::size_t i = 1; i <= n_sz; ++i) {
+        for (std::size_t j = 1; j <= n_sz; ++j) {
             const double d = std::fabs(s.reference[static_cast<std::size_t>(i - 1)] - at(x, row, j - 1));
             const double prev = std::min({
-                cost[static_cast<std::size_t>(i - 1) * (n + 1) + j],
-                cost[static_cast<std::size_t>(i) * (n + 1) + j - 1],
-                cost[static_cast<std::size_t>(i - 1) * (n + 1) + j - 1],
+                cost[row_major(i - 1, stride, j)],
+                cost[row_major(i, stride, j - 1)],
+                cost[row_major(i - 1, stride, j - 1)],
             });
-            cost[static_cast<std::size_t>(i) * (n + 1) + j] = d + prev;
+            cost[row_major(i, stride, j)] = d + prev;
         }
     }
-    std::vector<double> sums(static_cast<std::size_t>(n), 0.0);
-    std::vector<std::int64_t> counts(static_cast<std::size_t>(n), 0);
-    std::int64_t i = n;
-    std::int64_t j = n;
+    std::vector<double> sums(n_sz, 0.0);
+    std::vector<std::int64_t> counts(n_sz, 0);
+    std::size_t i = n_sz;
+    std::size_t j = n_sz;
     while (i > 0 && j > 0) {
-        sums[static_cast<std::size_t>(i - 1)] += at(x, row, j - 1);
-        counts[static_cast<std::size_t>(i - 1)] += 1;
-        const double diag = cost[static_cast<std::size_t>(i - 1) * (n + 1) + j - 1];
-        const double up = cost[static_cast<std::size_t>(i - 1) * (n + 1) + j];
-        const double left = cost[static_cast<std::size_t>(i) * (n + 1) + j - 1];
+        sums[i - 1] += at(x, row, j - 1);
+        counts[i - 1] += 1;
+        const double diag = cost[row_major(i - 1, stride, j - 1)];
+        const double up = cost[row_major(i - 1, stride, j)];
+        const double left = cost[row_major(i, stride, j - 1)];
         if (diag <= up && diag <= left) {
             --i; --j;
         } else if (up <= left) {
@@ -839,10 +896,10 @@ void dtw_row(const MatrixIn& x, MatrixOut& out, const AlignState& s,
             --j;
         }
     }
-    for (std::int64_t col = 0; col < n; ++col) {
-        out.data[static_cast<std::size_t>(row) * out.cols + col] =
-            counts[static_cast<std::size_t>(col)] > 0
-                ? sums[static_cast<std::size_t>(col)] / static_cast<double>(counts[static_cast<std::size_t>(col)])
+    for (std::size_t col = 0; col < n_sz; ++col) {
+        out.data[row_major(row_sz, out_cols, col)] =
+            counts[col] > 0
+                ? sums[col] / static_cast<double>(counts[col])
                 : at(x, row, col);
     }
 }
@@ -934,7 +991,10 @@ void cow_row(const MatrixIn& x, MatrixOut& out, const AlignState& s,
     std::vector<double> best(static_cast<std::size_t>(num_intervals * states), -1.0);
     std::vector<std::int64_t> possible(static_cast<std::size_t>(num_intervals * states), -1);
     std::vector<std::int64_t> best_end(static_cast<std::size_t>((num_intervals - 1) * states), -1);
-    const double* row_ptr = x.data + static_cast<std::size_t>(row) * x.cols;
+    const std::size_t row_sz = to_index(row);
+    const std::size_t x_cols = to_index(x.cols);
+    const std::size_t out_cols = to_index(out.cols);
+    const double* row_ptr = x.data + row_major(row_sz, x_cols, 0);
 
     std::int64_t start_idx = 0;
     std::int64_t interval_start = boundaries[static_cast<std::size_t>(num_intervals - 1)] - slack;
@@ -1031,7 +1091,7 @@ void cow_row(const MatrixIn& x, MatrixOut& out, const AlignState& s,
         const std::int64_t dst_len = dst_hi - dst_lo;
         std::vector<double> segment = resample_segment(row_ptr, src_lo, src_hi, dst_len);
         for (std::int64_t j = 0; j < dst_len; ++j) {
-            out.data[static_cast<std::size_t>(row) * out.cols + dst_lo + j] =
+            out.data[row_major(row_sz, out_cols, to_index(dst_lo + j))] =
                 segment[static_cast<std::size_t>(j)];
         }
     }
@@ -1081,21 +1141,23 @@ n4m_status_t variance_fit(SelectorState& s, const n4m_matrix_view_t& x_v,
     n4m_status_t st = require_f64_rowmajor(x_v, x);
     if (st != N4M_OK) return st;
     if (s.correlation && (y == nullptr || y_len != x.rows)) return N4M_ERR_SHAPE_MISMATCH;
-    std::vector<double> scores(static_cast<std::size_t>(x.cols), 0.0);
+    const std::size_t rows = to_index(x.rows);
+    const std::size_t cols = to_index(x.cols);
+    std::vector<double> scores(cols, 0.0);
     if (s.correlation) {
         double y_mean = 0.0;
-        for (std::int64_t i = 0; i < x.rows; ++i) y_mean += y[i];
+        for (std::size_t i = 0; i < rows; ++i) y_mean += y[i];
         y_mean /= static_cast<double>(x.rows);
         double y_norm = 0.0;
-        for (std::int64_t i = 0; i < x.rows; ++i) y_norm += (y[i] - y_mean) * (y[i] - y_mean);
+        for (std::size_t i = 0; i < rows; ++i) y_norm += (y[i] - y_mean) * (y[i] - y_mean);
         y_norm = std::sqrt(y_norm);
-        for (std::int64_t j = 0; j < x.cols; ++j) {
+        for (std::size_t j = 0; j < cols; ++j) {
             double mean = 0.0;
-            for (std::int64_t i = 0; i < x.rows; ++i) mean += at(x, i, j);
+            for (std::size_t i = 0; i < rows; ++i) mean += at(x, i, j);
             mean /= static_cast<double>(x.rows);
             double dot = 0.0;
             double norm = 0.0;
-            for (std::int64_t i = 0; i < x.rows; ++i) {
+            for (std::size_t i = 0; i < rows; ++i) {
                 const double xc = at(x, i, j) - mean;
                 dot += xc * (y[i] - y_mean);
                 norm += xc * xc;
@@ -1104,12 +1166,12 @@ n4m_status_t variance_fit(SelectorState& s, const n4m_matrix_view_t& x_v,
             scores[j] = denom > 0.0 ? std::fabs(dot / denom) : 0.0;
         }
     } else {
-        for (std::int64_t j = 0; j < x.cols; ++j) {
+        for (std::size_t j = 0; j < cols; ++j) {
             double mean = 0.0;
-            for (std::int64_t i = 0; i < x.rows; ++i) mean += at(x, i, j);
+            for (std::size_t i = 0; i < rows; ++i) mean += at(x, i, j);
             mean /= static_cast<double>(x.rows);
             double var = 0.0;
-            for (std::int64_t i = 0; i < x.rows; ++i) {
+            for (std::size_t i = 0; i < rows; ++i) {
                 const double d = at(x, i, j) - mean;
                 var += d * d;
             }
@@ -1118,16 +1180,16 @@ n4m_status_t variance_fit(SelectorState& s, const n4m_matrix_view_t& x_v,
     }
     std::vector<std::int64_t> idx;
     if (s.top_k > 0) {
-        idx.resize(static_cast<std::size_t>(x.cols));
-        for (std::int64_t j = 0; j < x.cols; ++j) idx[j] = j;
+        idx.resize(cols);
+        for (std::size_t j = 0; j < cols; ++j) idx[j] = static_cast<std::int64_t>(j);
         std::stable_sort(idx.begin(), idx.end(), [&](std::int64_t a, std::int64_t b) {
-            return scores[a] < scores[b];
+            return scores[to_index(a)] < scores[to_index(b)];
         });
         const std::int64_t keep = std::min<std::int64_t>(s.top_k, x.cols);
         idx.erase(idx.begin(), idx.end() - keep);
     } else {
-        for (std::int64_t j = 0; j < x.cols; ++j) {
-            if (scores[j] > s.threshold) idx.push_back(j);
+        for (std::size_t j = 0; j < cols; ++j) {
+            if (scores[j] > s.threshold) idx.push_back(static_cast<std::int64_t>(j));
         }
     }
     s.indices = idx;
@@ -1150,10 +1212,11 @@ n4m_status_t selector_transform(const SelectorState& s,
         out.cols != static_cast<std::int64_t>(s.indices.size())) {
         return N4M_ERR_SHAPE_MISMATCH;
     }
-    for (std::int64_t i = 0; i < x.rows; ++i) {
-        for (std::int64_t k = 0; k < out.cols; ++k) {
-            out.data[static_cast<std::size_t>(i) * out.cols + k] =
-                at(x, i, s.indices[static_cast<std::size_t>(k)]);
+    const std::size_t rows = to_index(x.rows);
+    const std::size_t out_cols = to_index(out.cols);
+    for (std::size_t i = 0; i < rows; ++i) {
+        for (std::size_t k = 0; k < out_cols; ++k) {
+            out.data[row_major(i, out_cols, k)] = at(x, i, s.indices[k]);
         }
     }
     return N4M_OK;
@@ -1197,11 +1260,13 @@ n4m_status_t interval_transform(const IntervalState& s,
     if (x.cols != s.features || out.rows != x.rows || out.cols != interval_output_cols(s)) {
         return N4M_ERR_SHAPE_MISMATCH;
     }
-    std::int64_t dst_col = 0;
+    const std::size_t rows = to_index(x.rows);
+    const std::size_t out_cols = to_index(out.cols);
+    std::size_t dst_col = 0;
     for (const auto& band : s.bands) {
         for (std::int64_t j = band.first; j < band.second; ++j, ++dst_col) {
-            for (std::int64_t i = 0; i < x.rows; ++i) {
-                out.data[static_cast<std::size_t>(i) * out.cols + dst_col] = at(x, i, j);
+            for (std::size_t i = 0; i < rows; ++i) {
+                out.data[row_major(i, out_cols, dst_col)] = at(x, i, j);
             }
         }
     }
@@ -1320,8 +1385,10 @@ extern "C" N4M_API n4m_status_t n4m_pp_robust_direct_standardization_fit(
         if (st != N4M_OK) return st;
         st = require_same_shape(source, target);
         if (st != N4M_OK) return st;
-        std::vector<std::int64_t> keep(static_cast<std::size_t>(source.rows));
-        for (std::int64_t i = 0; i < source.rows; ++i) keep[i] = i;
+        const std::size_t source_rows = to_index(source.rows);
+        const std::size_t source_cols = to_index(source.cols);
+        std::vector<std::int64_t> keep(source_rows);
+        for (std::size_t i = 0; i < source_rows; ++i) keep[i] = static_cast<std::int64_t>(i);
         std::vector<double> coef;
         for (std::int32_t iter = 0; iter < std::max<std::int32_t>(1, h->max_iter); ++iter) {
             coef = fit_ols(source, target, h->s.fit_intercept, h->s.ridge, &keep);
@@ -1329,27 +1396,27 @@ extern "C" N4M_API n4m_status_t n4m_pp_robust_direct_standardization_fit(
             tmp.fitted = true;
             tmp.features = source.cols;
             tmp.coef = coef;
-            std::vector<double> mapped(static_cast<std::size_t>(source.rows * source.cols));
+            std::vector<double> mapped(source_rows * source_cols);
             n4m_matrix_view_t out_v{mapped.data(), source.rows, source.cols, source.cols, 1, N4M_DTYPE_F64, 0};
             st = ds_transform(tmp, source_v, out_v);
             if (st != N4M_OK) return st;
-            std::vector<double> residual(static_cast<std::size_t>(source.rows), 0.0);
-            for (std::int64_t i = 0; i < source.rows; ++i) {
+            std::vector<double> residual(source_rows, 0.0);
+            for (std::size_t i = 0; i < source_rows; ++i) {
                 double sum = 0.0;
-                for (std::int64_t j = 0; j < source.cols; ++j) {
-                    const double d = mapped[static_cast<std::size_t>(i) * source.cols + j] - at(target, i, j);
+                for (std::size_t j = 0; j < source_cols; ++j) {
+                    const double d = mapped[row_major(i, source_cols, j)] - at(target, i, j);
                     sum += d * d;
                 }
                 residual[i] = std::sqrt(sum);
             }
             const double cutoff = quantile_sorted(residual, h->trim_quantile);
             std::vector<std::int64_t> next;
-            for (std::int64_t i = 0; i < source.rows; ++i) {
-                if (residual[i] <= cutoff) next.push_back(i);
+            for (std::size_t i = 0; i < source_rows; ++i) {
+                if (residual[i] <= cutoff) next.push_back(static_cast<std::int64_t>(i));
             }
             if (static_cast<std::int64_t>(next.size()) <= source.cols) {
-                next.resize(static_cast<std::size_t>(source.rows));
-                for (std::int64_t i = 0; i < source.rows; ++i) next[i] = i;
+                next.resize(source_rows);
+                for (std::size_t i = 0; i < source_rows; ++i) next[i] = static_cast<std::int64_t>(i);
             }
             keep.swap(next);
         }
@@ -1470,9 +1537,13 @@ extern "C" N4M_API n4m_status_t n4m_pp_local_centering_fit(n4m_pp_local_centerin
         st = require_same_shape(source, target);
         if (st != N4M_OK) return st;
         h->features = source.cols;
-        h->delta.assign(static_cast<std::size_t>(source.cols), 0.0);
-        for (int64_t i = 0; i < source.rows; ++i) {
-            for (int64_t j = 0; j < source.cols; ++j) h->delta[j] += at(target, i, j) - at(source, i, j);
+        const std::size_t source_rows = to_index(source.rows);
+        const std::size_t source_cols = to_index(source.cols);
+        h->delta.assign(source_cols, 0.0);
+        for (std::size_t i = 0; i < source_rows; ++i) {
+            for (std::size_t j = 0; j < source_cols; ++j) {
+                h->delta[j] += at(target, i, j) - at(source, i, j);
+            }
         }
         for (double& v : h->delta) v /= static_cast<double>(source.rows);
         h->fitted = true;
@@ -1492,9 +1563,12 @@ extern "C" N4M_API n4m_status_t n4m_pp_local_centering_transform(
         if (st != N4M_OK) return st;
         st = require_out_shape(x, out);
         if (st != N4M_OK || x.cols != h->features) return N4M_ERR_SHAPE_MISMATCH;
-        for (int64_t i = 0; i < x.rows; ++i) {
-            for (int64_t j = 0; j < x.cols; ++j) {
-                out.data[static_cast<std::size_t>(i) * out.cols + j] = at(x, i, j) + h->delta[j];
+        const std::size_t rows = to_index(x.rows);
+        const std::size_t cols = to_index(x.cols);
+        const std::size_t out_cols = to_index(out.cols);
+        for (std::size_t i = 0; i < rows; ++i) {
+            for (std::size_t j = 0; j < cols; ++j) {
+                out.data[row_major(i, out_cols, j)] = at(x, i, j) + h->delta[j];
             }
         }
         return N4M_OK;
