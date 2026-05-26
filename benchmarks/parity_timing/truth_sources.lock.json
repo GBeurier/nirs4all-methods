@@ -26,7 +26,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 10.0,
+      "rmse_rel_tol": 1e-10,
       "prediction_key": "press_per_component"
     },
     {
@@ -35,7 +35,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 2.0,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "predictions"
     },
     {
@@ -53,7 +53,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 10.0,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "predictions"
     },
     {
@@ -62,7 +62,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.4,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -71,16 +71,16 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.4,
+      "rmse_rel_tol": 0.0,
       "prediction_key": "mask"
     },
     {
       "name": "continuum_regression",
       "paper_only": false,
-      "has_python_reference": false,
+      "has_python_reference": true,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.2,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "predictions"
     },
     {
@@ -89,7 +89,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 10.0,
+      "rmse_rel_tol": 0.1,
       "prediction_key": "predictions"
     },
     {
@@ -98,7 +98,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.02,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "predictions"
     },
     {
@@ -125,7 +125,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.6,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -143,7 +143,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.3,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -158,10 +158,10 @@
     {
       "name": "group_sparse_pls",
       "paper_only": false,
-      "has_python_reference": false,
+      "has_python_reference": true,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 10.0,
+      "rmse_rel_tol": 0.05,
       "prediction_key": "predictions"
     },
     {
@@ -170,7 +170,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.0,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -179,7 +179,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.0,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -188,7 +188,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.3,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -197,7 +197,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.0,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -251,7 +251,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 10.0,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "predictions"
     },
     {
@@ -260,7 +260,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.0,
+      "rmse_rel_tol": 1e-10,
       "prediction_key": "predictions"
     },
     {
@@ -269,8 +269,8 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 10.0,
-      "prediction_key": "joint_loadings_0"
+      "rmse_rel_tol": 1e-06,
+      "prediction_key": "block_reconstruction_0"
     },
     {
       "name": "one_se_rule",
@@ -278,7 +278,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 10.0,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mean_rmse_per_component"
     },
     {
@@ -323,10 +323,10 @@
     {
       "name": "pls_cox",
       "paper_only": false,
-      "has_python_reference": false,
-      "has_r_reference": true,
+      "has_python_reference": true,
+      "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 5.0,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "predictions"
     },
     {
@@ -362,7 +362,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.5,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "predictions"
     },
     {
@@ -398,7 +398,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 10.0,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "predictions"
     },
     {
@@ -416,7 +416,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.4,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -425,7 +425,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.35,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -434,7 +434,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 2.0,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "predictions"
     },
     {
@@ -443,7 +443,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.3,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -461,7 +461,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.8,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -479,25 +479,25 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 2.0,
+      "rmse_rel_tol": 0.1,
       "prediction_key": "predictions"
     },
     {
       "name": "rosa",
       "paper_only": false,
-      "has_python_reference": false,
+      "has_python_reference": true,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.0,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "predictions"
     },
     {
       "name": "scars_select",
-      "paper_only": true,
-      "has_python_reference": false,
+      "paper_only": false,
+      "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.0,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -506,7 +506,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.8,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -524,7 +524,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.0,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "predictions"
     },
     {
@@ -533,13 +533,13 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.2,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
       "name": "sparse_pls_da",
       "paper_only": false,
-      "has_python_reference": false,
+      "has_python_reference": true,
       "has_r_reference": true,
       "extra_reference_roles": [],
       "rmse_rel_tol": 2.0,
@@ -548,7 +548,7 @@
     {
       "name": "sparse_simpls",
       "paper_only": false,
-      "has_python_reference": false,
+      "has_python_reference": true,
       "has_r_reference": true,
       "extra_reference_roles": [],
       "rmse_rel_tol": 1.0,
@@ -560,7 +560,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 2.1,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -569,7 +569,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.35,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -587,7 +587,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.72,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -605,7 +605,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.3,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -614,7 +614,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.8,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -623,7 +623,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.3,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -632,7 +632,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 2.5,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     },
     {
@@ -659,7 +659,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.7,
+      "rmse_rel_tol": 1e-06,
       "prediction_key": "mask"
     }
   ]
