@@ -7,7 +7,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ## [Unreleased]
 
 Next track: language bindings (Rust, Go, Ruby, Lua, Nim, …) catch-up to
-the new ABI 1.16 symbols.
+the n4m ABI 1.9 symbols.
+
+## [0.98.0] — 2026-05-26
+
+First tagged release under the unified `n4m` / nirs4all-methods name — the
+`p4a`/`pls4all` → `n4m` rename and donor merge are complete. Primarily a
+build-system, CI and packaging-consistency hardening pass on the 0.97.x lineage.
+
+### Fixed
+- C++ core compiles cleanly under the strict `-Werror` CI warning set across
+  gcc-12/13, clang-16, MSVC and MinGW (dead-code / `static` / missing-declaration
+  cleanups; ~330 `int64`↔`size_t` sign-conversion fixes at the C ABI boundary).
+- Windows C ABI export: `n4m_export.h` honours `N4M_BUILDING_C_DLL` and the
+  static target defines `N4M_STATIC` — fixes MSVC C2491 / MinGW dllimport errors.
+- Version-sync release gate repaired; every active manifest synced to 0.98.0.
+- Python wheel loader locates the Windows `n4m.dll` (MSVC `OUTPUT_NAME "n4m"`).
+- k-means splitter parity tolerates cross-architecture floating-point variation.
+- abi-check allows the ELF version node `N4M_1`; parity-reference lockfile
+  regenerated.
+
+### Known limitations
+- The R CRAN package (`bindings/r/n4m`) vendoring is a Phase-F deliverable; its
+  release workflow is manual-only (`workflow_dispatch`) until that work lands.
 
 ## [phase-54-bindings-tier2] — 2026-05-16
 
