@@ -20,8 +20,6 @@
 name: release-r
 
 on:
-  workflow_dispatch:
-      - ".github/workflows/release-r.yml"
   workflow_dispatch: {}
 
 concurrency:
