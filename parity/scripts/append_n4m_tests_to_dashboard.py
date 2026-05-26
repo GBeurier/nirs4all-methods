@@ -23,7 +23,7 @@ from collections import defaultdict
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-N4M_TESTS = REPO / "build/dev-release/cpp/tests_n4m/n4m_tests"
+N4M_TESTS = REPO / "build/dev-release/cpp/tests/n4m_tests"
 FIXTURE_DIR = REPO / "parity/fixtures"
 OUT_CSV = REPO / "benchmarks/cross_binding/results/dashboard_refresh_2026_05_22_n4m_fixtures.csv"
 

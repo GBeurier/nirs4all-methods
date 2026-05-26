@@ -2396,11 +2396,31 @@ function renderTable() {
           tr += notAvailableCell(lcls);
           continue;
         }
+        // Cells with no usable wall-clock time: hard failures (!c.ok) and
+        // parity-only cells. The latter are donor methods validated by the
+        // C++ `n4m_tests` fixture suite but never timed (ms is null by
+        // construction), so a bare ✓ here must read as "validated, not
+        // timed" — not as broken/missing data.
         if (!c.ok || !Number.isFinite(c.ms)) {
-          const title = c.reason ? ` title="${escAttr(c.reason)}"` : '';
-          const verdict = effectiveParity(c, meta);
-          tr += `<td class="${lcls}"${title}><span class="p-${verdict}">${PARITY_ICON[verdict] || '-'}</span></td>`;
-          continue;
+          const notTimed = c.ok && !Number.isFinite(c.ms);
+          // In divergence-δ mode a parity-only cell still carries a δ to
+          // show (reference-gate rmse_rel, or "source" for the canonical
+          // reference). Fall through to the divergence renderer below so
+          // that value isn't swallowed by this no-timing shortcut.
+          if (!(notTimed && state.viz === 'divergence')) {
+            const verdict = effectiveParity(c, meta);
+            const reason = c.reason
+              ? escAttr(c.reason)
+              : notTimed
+                ? 'parity-validated (C++ fixture) · not timed'
+                : '';
+            const title = reason ? ` title="${reason}"` : '';
+            const mark = (notTimed && c.is_canonical_reference)
+              ? `<span class="reference-mark" title="canonical reference · not timed">${REFERENCE_ICON}</span>`
+              : `<span class="p-${verdict}">${PARITY_ICON[verdict] || '-'}</span>`;
+            tr += `<td class="${lcls}"${title}>${mark}</td>`;
+            continue;
+          }
         }
         // build value (wrapped in .cell-value so per-language tint can target text only)
         let display;
