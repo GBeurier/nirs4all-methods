@@ -1329,7 +1329,7 @@ struct n4m_filter_variance_handle_t { SelectorState s; };
 struct n4m_filter_correlation_handle_t { SelectorState s; };
 struct n4m_interval_generator_handle_t { IntervalState s; };
 
-extern "C" n4m_status_t n4m_pp_direct_standardization_create(
+extern "C" N4M_API n4m_status_t n4m_pp_direct_standardization_create(
     n4m_pp_direct_standardization_handle_t** out, int fit_intercept, double ridge) {
     n4m_pp_direct_standardization_handle_t init;
     init.s.fit_intercept = fit_intercept != 0;
@@ -1337,29 +1337,29 @@ extern "C" n4m_status_t n4m_pp_direct_standardization_create(
     return make_handle(out, init);
 }
 
-extern "C" void n4m_pp_direct_standardization_destroy(
+extern "C" N4M_API void n4m_pp_direct_standardization_destroy(
     n4m_pp_direct_standardization_handle_t* h) { delete h; }
 
-extern "C" n4m_status_t n4m_pp_direct_standardization_fit(
+extern "C" N4M_API n4m_status_t n4m_pp_direct_standardization_fit(
     n4m_pp_direct_standardization_handle_t* h, n4m_matrix_view_t source,
     n4m_matrix_view_t target) {
     return call_status([&] { return h ? ds_fit(h->s, source, target) : N4M_ERR_NULL_POINTER; });
 }
 
-extern "C" n4m_status_t n4m_pp_direct_standardization_transform(
+extern "C" N4M_API n4m_status_t n4m_pp_direct_standardization_transform(
     const n4m_pp_direct_standardization_handle_t* h, n4m_matrix_view_t x,
     n4m_matrix_view_t out) {
     return call_status([&] { return h ? ds_transform(h->s, x, out) : N4M_ERR_NULL_POINTER; });
 }
 
-extern "C" n4m_status_t n4m_pp_direct_standardization_is_fitted(
+extern "C" N4M_API n4m_status_t n4m_pp_direct_standardization_is_fitted(
     const n4m_pp_direct_standardization_handle_t* h, int* out) {
     if (!out) return N4M_ERR_NULL_POINTER;
     *out = (h && h->s.fitted) ? 1 : 0;
     return N4M_OK;
 }
 
-extern "C" n4m_status_t n4m_pp_robust_direct_standardization_create(
+extern "C" N4M_API n4m_status_t n4m_pp_robust_direct_standardization_create(
     n4m_pp_robust_direct_standardization_handle_t** out, int fit_intercept,
     double ridge, double trim_quantile, int32_t max_iter) {
     n4m_pp_robust_direct_standardization_handle_t init;
@@ -1370,10 +1370,10 @@ extern "C" n4m_status_t n4m_pp_robust_direct_standardization_create(
     return make_handle(out, init);
 }
 
-extern "C" void n4m_pp_robust_direct_standardization_destroy(
+extern "C" N4M_API void n4m_pp_robust_direct_standardization_destroy(
     n4m_pp_robust_direct_standardization_handle_t* h) { delete h; }
 
-extern "C" n4m_status_t n4m_pp_robust_direct_standardization_fit(
+extern "C" N4M_API n4m_status_t n4m_pp_robust_direct_standardization_fit(
     n4m_pp_robust_direct_standardization_handle_t* h, n4m_matrix_view_t source_v,
     n4m_matrix_view_t target_v) {
     return call_status([&] {
@@ -1427,20 +1427,20 @@ extern "C" n4m_status_t n4m_pp_robust_direct_standardization_fit(
     });
 }
 
-extern "C" n4m_status_t n4m_pp_robust_direct_standardization_transform(
+extern "C" N4M_API n4m_status_t n4m_pp_robust_direct_standardization_transform(
     const n4m_pp_robust_direct_standardization_handle_t* h, n4m_matrix_view_t x,
     n4m_matrix_view_t out) {
     return call_status([&] { return h ? ds_transform(h->s, x, out) : N4M_ERR_NULL_POINTER; });
 }
 
-extern "C" n4m_status_t n4m_pp_robust_direct_standardization_is_fitted(
+extern "C" N4M_API n4m_status_t n4m_pp_robust_direct_standardization_is_fitted(
     const n4m_pp_robust_direct_standardization_handle_t* h, int* out) {
     if (!out) return N4M_ERR_NULL_POINTER;
     *out = (h && h->s.fitted) ? 1 : 0;
     return N4M_OK;
 }
 
-extern "C" n4m_status_t n4m_pp_piecewise_direct_standardization_create(
+extern "C" N4M_API n4m_status_t n4m_pp_piecewise_direct_standardization_create(
     n4m_pp_piecewise_direct_standardization_handle_t** out, int32_t window_size,
     int fit_intercept, double ridge) {
     n4m_pp_piecewise_direct_standardization_handle_t init;
@@ -1450,29 +1450,29 @@ extern "C" n4m_status_t n4m_pp_piecewise_direct_standardization_create(
     return make_handle(out, init);
 }
 
-extern "C" void n4m_pp_piecewise_direct_standardization_destroy(
+extern "C" N4M_API void n4m_pp_piecewise_direct_standardization_destroy(
     n4m_pp_piecewise_direct_standardization_handle_t* h) { delete h; }
 
-extern "C" n4m_status_t n4m_pp_piecewise_direct_standardization_fit(
+extern "C" N4M_API n4m_status_t n4m_pp_piecewise_direct_standardization_fit(
     n4m_pp_piecewise_direct_standardization_handle_t* h, n4m_matrix_view_t source,
     n4m_matrix_view_t target) {
     return call_status([&] { return h ? pds_fit(h->s, source, target) : N4M_ERR_NULL_POINTER; });
 }
 
-extern "C" n4m_status_t n4m_pp_piecewise_direct_standardization_transform(
+extern "C" N4M_API n4m_status_t n4m_pp_piecewise_direct_standardization_transform(
     const n4m_pp_piecewise_direct_standardization_handle_t* h, n4m_matrix_view_t x,
     n4m_matrix_view_t out) {
     return call_status([&] { return h ? pds_transform(h->s, x, out) : N4M_ERR_NULL_POINTER; });
 }
 
-extern "C" n4m_status_t n4m_pp_piecewise_direct_standardization_is_fitted(
+extern "C" N4M_API n4m_status_t n4m_pp_piecewise_direct_standardization_is_fitted(
     const n4m_pp_piecewise_direct_standardization_handle_t* h, int* out) {
     if (!out) return N4M_ERR_NULL_POINTER;
     *out = (h && h->s.fitted) ? 1 : 0;
     return N4M_OK;
 }
 
-extern "C" n4m_status_t n4m_pp_saps_create(
+extern "C" N4M_API n4m_status_t n4m_pp_saps_create(
     n4m_pp_saps_handle_t** out, int32_t n_components, double score_weight,
     int fit_intercept, double ridge) {
     n4m_pp_saps_handle_t init;
@@ -1483,49 +1483,49 @@ extern "C" n4m_status_t n4m_pp_saps_create(
     return make_handle(out, init);
 }
 
-extern "C" void n4m_pp_saps_destroy(n4m_pp_saps_handle_t* h) { delete h; }
-extern "C" n4m_status_t n4m_pp_saps_fit(n4m_pp_saps_handle_t* h,
+extern "C" N4M_API void n4m_pp_saps_destroy(n4m_pp_saps_handle_t* h) { delete h; }
+extern "C" N4M_API n4m_status_t n4m_pp_saps_fit(n4m_pp_saps_handle_t* h,
     n4m_matrix_view_t source, n4m_matrix_view_t target) {
     return call_status([&] { return h ? saps_fit(h->s, source, target) : N4M_ERR_NULL_POINTER; });
 }
-extern "C" n4m_status_t n4m_pp_saps_transform(const n4m_pp_saps_handle_t* h,
+extern "C" N4M_API n4m_status_t n4m_pp_saps_transform(const n4m_pp_saps_handle_t* h,
     n4m_matrix_view_t x, n4m_matrix_view_t out) {
     return call_status([&] { return h ? saps_transform(h->s, x, out) : N4M_ERR_NULL_POINTER; });
 }
-extern "C" n4m_status_t n4m_pp_saps_is_fitted(const n4m_pp_saps_handle_t* h,
+extern "C" N4M_API n4m_status_t n4m_pp_saps_is_fitted(const n4m_pp_saps_handle_t* h,
     int* out) {
     if (!out) return N4M_ERR_NULL_POINTER;
     *out = (h && h->s.fitted) ? 1 : 0;
     return N4M_OK;
 }
 
-extern "C" n4m_status_t n4m_pp_slope_bias_create(n4m_pp_slope_bias_handle_t** out) {
+extern "C" N4M_API n4m_status_t n4m_pp_slope_bias_create(n4m_pp_slope_bias_handle_t** out) {
     return make_handle(out, n4m_pp_slope_bias_handle_t{});
 }
-extern "C" void n4m_pp_slope_bias_destroy(n4m_pp_slope_bias_handle_t* h) { delete h; }
-extern "C" n4m_status_t n4m_pp_slope_bias_fit(n4m_pp_slope_bias_handle_t* h,
+extern "C" N4M_API void n4m_pp_slope_bias_destroy(n4m_pp_slope_bias_handle_t* h) { delete h; }
+extern "C" N4M_API n4m_status_t n4m_pp_slope_bias_fit(n4m_pp_slope_bias_handle_t* h,
     const double* source, const double* target, int64_t n) {
     return call_status([&] { return h ? slope_fit(h->s, source, target, n) : N4M_ERR_NULL_POINTER; });
 }
-extern "C" n4m_status_t n4m_pp_slope_bias_transform(const n4m_pp_slope_bias_handle_t* h,
+extern "C" N4M_API n4m_status_t n4m_pp_slope_bias_transform(const n4m_pp_slope_bias_handle_t* h,
     const double* y, int64_t n, double* out) {
     if (!h || !y || !out) return N4M_ERR_NULL_POINTER;
     if (!h->s.fitted) return N4M_ERR_NOT_FITTED;
     for (int64_t i = 0; i < n; ++i) out[i] = h->s.slope * y[i] + h->s.bias;
     return N4M_OK;
 }
-extern "C" n4m_status_t n4m_pp_slope_bias_is_fitted(const n4m_pp_slope_bias_handle_t* h,
+extern "C" N4M_API n4m_status_t n4m_pp_slope_bias_is_fitted(const n4m_pp_slope_bias_handle_t* h,
     int* out) {
     if (!out) return N4M_ERR_NULL_POINTER;
     *out = (h && h->s.fitted) ? 1 : 0;
     return N4M_OK;
 }
 
-extern "C" n4m_status_t n4m_pp_local_centering_create(n4m_pp_local_centering_handle_t** out) {
+extern "C" N4M_API n4m_status_t n4m_pp_local_centering_create(n4m_pp_local_centering_handle_t** out) {
     return make_handle(out, n4m_pp_local_centering_handle_t{});
 }
-extern "C" void n4m_pp_local_centering_destroy(n4m_pp_local_centering_handle_t* h) { delete h; }
-extern "C" n4m_status_t n4m_pp_local_centering_fit(n4m_pp_local_centering_handle_t* h,
+extern "C" N4M_API void n4m_pp_local_centering_destroy(n4m_pp_local_centering_handle_t* h) { delete h; }
+extern "C" N4M_API n4m_status_t n4m_pp_local_centering_fit(n4m_pp_local_centering_handle_t* h,
     n4m_matrix_view_t source_v, n4m_matrix_view_t target_v) {
     return call_status([&] {
         if (!h) return N4M_ERR_NULL_POINTER;
@@ -1550,7 +1550,7 @@ extern "C" n4m_status_t n4m_pp_local_centering_fit(n4m_pp_local_centering_handle
         return N4M_OK;
     });
 }
-extern "C" n4m_status_t n4m_pp_local_centering_transform(
+extern "C" N4M_API n4m_status_t n4m_pp_local_centering_transform(
     const n4m_pp_local_centering_handle_t* h, n4m_matrix_view_t x_v, n4m_matrix_view_t out_v) {
     return call_status([&] {
         if (!h) return N4M_ERR_NULL_POINTER;
@@ -1574,14 +1574,14 @@ extern "C" n4m_status_t n4m_pp_local_centering_transform(
         return N4M_OK;
     });
 }
-extern "C" n4m_status_t n4m_pp_local_centering_is_fitted(
+extern "C" N4M_API n4m_status_t n4m_pp_local_centering_is_fitted(
     const n4m_pp_local_centering_handle_t* h, int* out) {
     if (!out) return N4M_ERR_NULL_POINTER;
     *out = (h && h->fitted) ? 1 : 0;
     return N4M_OK;
 }
 
-extern "C" n4m_status_t n4m_pp_weighted_snv_create(
+extern "C" N4M_API n4m_status_t n4m_pp_weighted_snv_create(
     n4m_pp_weighted_snv_handle_t** out, const double* weights, int64_t n_weights,
     int32_t ddof, double eps) {
     n4m_pp_weighted_snv_handle_t init;
@@ -1593,42 +1593,42 @@ extern "C" n4m_status_t n4m_pp_weighted_snv_create(
     }
     return make_handle(out, init);
 }
-extern "C" void n4m_pp_weighted_snv_destroy(n4m_pp_weighted_snv_handle_t* h) { delete h; }
-extern "C" n4m_status_t n4m_pp_weighted_snv_fit(n4m_pp_weighted_snv_handle_t* h,
+extern "C" N4M_API void n4m_pp_weighted_snv_destroy(n4m_pp_weighted_snv_handle_t* h) { delete h; }
+extern "C" N4M_API n4m_status_t n4m_pp_weighted_snv_fit(n4m_pp_weighted_snv_handle_t* h,
     n4m_matrix_view_t x) {
     return call_status([&] { return h ? weighted_snv_fit(h->s, x) : N4M_ERR_NULL_POINTER; });
 }
-extern "C" n4m_status_t n4m_pp_weighted_snv_transform(const n4m_pp_weighted_snv_handle_t* h,
+extern "C" N4M_API n4m_status_t n4m_pp_weighted_snv_transform(const n4m_pp_weighted_snv_handle_t* h,
     n4m_matrix_view_t x, n4m_matrix_view_t out) {
     return call_status([&] { return h ? weighted_snv_transform(h->s, x, out) : N4M_ERR_NULL_POINTER; });
 }
-extern "C" n4m_status_t n4m_pp_weighted_snv_is_fitted(const n4m_pp_weighted_snv_handle_t* h,
+extern "C" N4M_API n4m_status_t n4m_pp_weighted_snv_is_fitted(const n4m_pp_weighted_snv_handle_t* h,
     int* out) {
     if (!out) return N4M_ERR_NULL_POINTER;
     *out = (h && h->s.fitted) ? 1 : 0;
     return N4M_OK;
 }
 
-extern "C" n4m_status_t n4m_pp_vsn_create(n4m_pp_vsn_handle_t** out, double eps) {
+extern "C" N4M_API n4m_status_t n4m_pp_vsn_create(n4m_pp_vsn_handle_t** out, double eps) {
     n4m_pp_vsn_handle_t init;
     init.s.eps = eps;
     return make_handle(out, init);
 }
-extern "C" void n4m_pp_vsn_destroy(n4m_pp_vsn_handle_t* h) { delete h; }
-extern "C" n4m_status_t n4m_pp_vsn_fit(n4m_pp_vsn_handle_t* h, n4m_matrix_view_t x) {
+extern "C" N4M_API void n4m_pp_vsn_destroy(n4m_pp_vsn_handle_t* h) { delete h; }
+extern "C" N4M_API n4m_status_t n4m_pp_vsn_fit(n4m_pp_vsn_handle_t* h, n4m_matrix_view_t x) {
     return call_status([&] { return h ? vsn_fit(h->s, x) : N4M_ERR_NULL_POINTER; });
 }
-extern "C" n4m_status_t n4m_pp_vsn_transform(const n4m_pp_vsn_handle_t* h,
+extern "C" N4M_API n4m_status_t n4m_pp_vsn_transform(const n4m_pp_vsn_handle_t* h,
     n4m_matrix_view_t x, n4m_matrix_view_t out) {
     return call_status([&] { return h ? weighted_snv_transform(h->s, x, out) : N4M_ERR_NULL_POINTER; });
 }
-extern "C" n4m_status_t n4m_pp_vsn_is_fitted(const n4m_pp_vsn_handle_t* h, int* out) {
+extern "C" N4M_API n4m_status_t n4m_pp_vsn_is_fitted(const n4m_pp_vsn_handle_t* h, int* out) {
     if (!out) return N4M_ERR_NULL_POINTER;
     *out = (h && h->s.fitted) ? 1 : 0;
     return N4M_OK;
 }
 
-extern "C" n4m_status_t n4m_pp_piecewise_snv_create(
+extern "C" N4M_API n4m_status_t n4m_pp_piecewise_snv_create(
     n4m_pp_piecewise_snv_handle_t** out, int32_t window, int32_t ddof, double eps) {
     n4m_pp_piecewise_snv_handle_t init;
     init.s.window = window;
@@ -1636,16 +1636,16 @@ extern "C" n4m_status_t n4m_pp_piecewise_snv_create(
     init.s.eps = eps;
     return make_handle(out, init);
 }
-extern "C" void n4m_pp_piecewise_snv_destroy(n4m_pp_piecewise_snv_handle_t* h) { delete h; }
-extern "C" n4m_status_t n4m_pp_piecewise_snv_fit(n4m_pp_piecewise_snv_handle_t* h,
+extern "C" N4M_API void n4m_pp_piecewise_snv_destroy(n4m_pp_piecewise_snv_handle_t* h) { delete h; }
+extern "C" N4M_API n4m_status_t n4m_pp_piecewise_snv_fit(n4m_pp_piecewise_snv_handle_t* h,
     n4m_matrix_view_t x) {
     return call_status([&] { return h ? piecewise_snv_fit(h->s, x) : N4M_ERR_NULL_POINTER; });
 }
-extern "C" n4m_status_t n4m_pp_piecewise_snv_transform(const n4m_pp_piecewise_snv_handle_t* h,
+extern "C" N4M_API n4m_status_t n4m_pp_piecewise_snv_transform(const n4m_pp_piecewise_snv_handle_t* h,
     n4m_matrix_view_t x, n4m_matrix_view_t out) {
     return call_status([&] { return h ? piecewise_snv_transform(h->s, x, out) : N4M_ERR_NULL_POINTER; });
 }
-extern "C" n4m_status_t n4m_pp_piecewise_snv_is_fitted(const n4m_pp_piecewise_snv_handle_t* h,
+extern "C" N4M_API n4m_status_t n4m_pp_piecewise_snv_is_fitted(const n4m_pp_piecewise_snv_handle_t* h,
     int* out) {
     if (!out) return N4M_ERR_NULL_POINTER;
     *out = (h && h->s.fitted) ? 1 : 0;
@@ -1653,19 +1653,19 @@ extern "C" n4m_status_t n4m_pp_piecewise_snv_is_fitted(const n4m_pp_piecewise_sn
 }
 
 #define DEFINE_MSC_API(prefix, HandleType, localized_flag) \
-extern "C" n4m_status_t prefix##_create(HandleType** out, const double* reference, int64_t n_reference, int32_t window, double eps) { \
+extern "C" N4M_API n4m_status_t prefix##_create(HandleType** out, const double* reference, int64_t n_reference, int32_t window, double eps) { \
     HandleType init; init.s.window = window; init.s.eps = eps; init.s.localized = localized_flag; \
     if (reference != nullptr && n_reference > 0) { init.s.has_reference = true; init.s.initial_reference.assign(reference, reference + n_reference); } \
     return make_handle(out, init); \
 } \
-extern "C" void prefix##_destroy(HandleType* h) { delete h; } \
-extern "C" n4m_status_t prefix##_fit(HandleType* h, n4m_matrix_view_t x) { \
+extern "C" N4M_API void prefix##_destroy(HandleType* h) { delete h; } \
+extern "C" N4M_API n4m_status_t prefix##_fit(HandleType* h, n4m_matrix_view_t x) { \
     return call_status([&] { return h ? msc_fit(h->s, x) : N4M_ERR_NULL_POINTER; }); \
 } \
-extern "C" n4m_status_t prefix##_transform(const HandleType* h, n4m_matrix_view_t x, n4m_matrix_view_t out) { \
+extern "C" N4M_API n4m_status_t prefix##_transform(const HandleType* h, n4m_matrix_view_t x, n4m_matrix_view_t out) { \
     return call_status([&] { return h ? msc_transform(h->s, x, out) : N4M_ERR_NULL_POINTER; }); \
 } \
-extern "C" n4m_status_t prefix##_is_fitted(const HandleType* h, int* out) { \
+extern "C" N4M_API n4m_status_t prefix##_is_fitted(const HandleType* h, int* out) { \
     if (!out) return N4M_ERR_NULL_POINTER; \
     *out = (h && h->s.fitted) ? 1 : 0; \
     return N4M_OK; \
@@ -1675,19 +1675,19 @@ DEFINE_MSC_API(n4m_pp_piecewise_msc, n4m_pp_piecewise_msc_handle_t, false)
 DEFINE_MSC_API(n4m_pp_localized_msc, n4m_pp_localized_msc_handle_t, true)
 
 #define DEFINE_ALIGN_API(prefix, HandleType, interval_flag, dtw_flag, cow_flag) \
-extern "C" n4m_status_t prefix##_create(HandleType** out, const double* reference, int64_t n_reference, int32_t interval_size, int32_t max_shift) { \
+extern "C" N4M_API n4m_status_t prefix##_create(HandleType** out, const double* reference, int64_t n_reference, int32_t interval_size, int32_t max_shift) { \
     HandleType init; init.s.interval_mode = interval_flag; init.s.dtw = dtw_flag; init.s.cow = cow_flag; init.s.interval_size = interval_size; init.s.max_shift = max_shift; \
     if (reference != nullptr && n_reference > 0) init.s.reference.assign(reference, reference + n_reference); \
     return make_handle(out, init); \
 } \
-extern "C" void prefix##_destroy(HandleType* h) { delete h; } \
-extern "C" n4m_status_t prefix##_fit(HandleType* h, n4m_matrix_view_t x) { \
+extern "C" N4M_API void prefix##_destroy(HandleType* h) { delete h; } \
+extern "C" N4M_API n4m_status_t prefix##_fit(HandleType* h, n4m_matrix_view_t x) { \
     return call_status([&] { return h ? align_fit(h->s, x) : N4M_ERR_NULL_POINTER; }); \
 } \
-extern "C" n4m_status_t prefix##_transform(const HandleType* h, n4m_matrix_view_t x, n4m_matrix_view_t out) { \
+extern "C" N4M_API n4m_status_t prefix##_transform(const HandleType* h, n4m_matrix_view_t x, n4m_matrix_view_t out) { \
     return call_status([&] { return h ? align_transform(h->s, x, out) : N4M_ERR_NULL_POINTER; }); \
 } \
-extern "C" n4m_status_t prefix##_is_fitted(const HandleType* h, int* out) { \
+extern "C" N4M_API n4m_status_t prefix##_is_fitted(const HandleType* h, int* out) { \
     if (!out) return N4M_ERR_NULL_POINTER; \
     *out = (h && h->s.fitted) ? 1 : 0; \
     return N4M_OK; \
@@ -1699,61 +1699,61 @@ DEFINE_ALIGN_API(n4m_pp_cow_align, n4m_pp_cow_align_handle_t, false, false, true
 DEFINE_ALIGN_API(n4m_pp_dtw_align, n4m_pp_dtw_align_handle_t, false, true, false)
 
 #define DEFINE_SELECTOR_CREATE(prefix, HandleType, corr_flag) \
-extern "C" n4m_status_t prefix##_create(HandleType** out, double threshold, int32_t top_k) { \
+extern "C" N4M_API n4m_status_t prefix##_create(HandleType** out, double threshold, int32_t top_k) { \
     HandleType init; init.s.correlation = corr_flag; init.s.threshold = threshold; init.s.top_k = top_k; return make_handle(out, init); \
 } \
-extern "C" void prefix##_destroy(HandleType* h) { delete h; } \
-extern "C" n4m_status_t prefix##_transform(const HandleType* h, n4m_matrix_view_t x, n4m_matrix_view_t out) { \
+extern "C" N4M_API void prefix##_destroy(HandleType* h) { delete h; } \
+extern "C" N4M_API n4m_status_t prefix##_transform(const HandleType* h, n4m_matrix_view_t x, n4m_matrix_view_t out) { \
     return call_status([&] { return h ? selector_transform(h->s, x, out) : N4M_ERR_NULL_POINTER; }); \
 } \
-extern "C" n4m_status_t prefix##_output_cols(const HandleType* h, int64_t* out) { \
+extern "C" N4M_API n4m_status_t prefix##_output_cols(const HandleType* h, int64_t* out) { \
     if (!out) return N4M_ERR_NULL_POINTER; \
     if (!h || !h->s.fitted) return N4M_ERR_NOT_FITTED; \
     *out = static_cast<int64_t>(h->s.indices.size()); \
     return N4M_OK; \
 } \
-extern "C" n4m_status_t prefix##_is_fitted(const HandleType* h, int* out) { \
+extern "C" N4M_API n4m_status_t prefix##_is_fitted(const HandleType* h, int* out) { \
     if (!out) return N4M_ERR_NULL_POINTER; \
     *out = (h && h->s.fitted) ? 1 : 0; \
     return N4M_OK; \
 }
 
 DEFINE_SELECTOR_CREATE(n4m_filter_variance, n4m_filter_variance_handle_t, false)
-extern "C" n4m_status_t n4m_filter_variance_fit(n4m_filter_variance_handle_t* h,
+extern "C" N4M_API n4m_status_t n4m_filter_variance_fit(n4m_filter_variance_handle_t* h,
     n4m_matrix_view_t x) {
     return call_status([&] { return h ? variance_fit(h->s, x, nullptr, 0) : N4M_ERR_NULL_POINTER; });
 }
 
 DEFINE_SELECTOR_CREATE(n4m_filter_correlation, n4m_filter_correlation_handle_t, true)
-extern "C" n4m_status_t n4m_filter_correlation_fit(n4m_filter_correlation_handle_t* h,
+extern "C" N4M_API n4m_status_t n4m_filter_correlation_fit(n4m_filter_correlation_handle_t* h,
     n4m_matrix_view_t x, const double* y, int64_t n_y) {
     return call_status([&] { return h ? variance_fit(h->s, x, y, n_y) : N4M_ERR_NULL_POINTER; });
 }
 
-extern "C" n4m_status_t n4m_interval_generator_create(
+extern "C" N4M_API n4m_status_t n4m_interval_generator_create(
     n4m_interval_generator_handle_t** out, int32_t interval_size, int32_t step) {
     n4m_interval_generator_handle_t init;
     init.s.width = interval_size;
     init.s.step = step;
     return make_handle(out, init);
 }
-extern "C" void n4m_interval_generator_destroy(n4m_interval_generator_handle_t* h) { delete h; }
-extern "C" n4m_status_t n4m_interval_generator_fit(n4m_interval_generator_handle_t* h,
+extern "C" N4M_API void n4m_interval_generator_destroy(n4m_interval_generator_handle_t* h) { delete h; }
+extern "C" N4M_API n4m_status_t n4m_interval_generator_fit(n4m_interval_generator_handle_t* h,
     n4m_matrix_view_t x) {
     return call_status([&] { return h ? interval_fit(h->s, x) : N4M_ERR_NULL_POINTER; });
 }
-extern "C" n4m_status_t n4m_interval_generator_transform(
+extern "C" N4M_API n4m_status_t n4m_interval_generator_transform(
     const n4m_interval_generator_handle_t* h, n4m_matrix_view_t x, n4m_matrix_view_t out) {
     return call_status([&] { return h ? interval_transform(h->s, x, out) : N4M_ERR_NULL_POINTER; });
 }
-extern "C" n4m_status_t n4m_interval_generator_output_cols(
+extern "C" N4M_API n4m_status_t n4m_interval_generator_output_cols(
     const n4m_interval_generator_handle_t* h, int64_t* out) {
     if (!out) return N4M_ERR_NULL_POINTER;
     if (!h || !h->s.fitted) return N4M_ERR_NOT_FITTED;
     *out = interval_output_cols(h->s);
     return N4M_OK;
 }
-extern "C" n4m_status_t n4m_interval_generator_is_fitted(
+extern "C" N4M_API n4m_status_t n4m_interval_generator_is_fitted(
     const n4m_interval_generator_handle_t* h, int* out) {
     if (!out) return N4M_ERR_NULL_POINTER;
     *out = (h && h->s.fitted) ? 1 : 0;

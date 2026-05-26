@@ -244,6 +244,7 @@ if(N4M_BUILD_STATIC)
             ${CMAKE_SOURCE_DIR}/cpp/src
     )
     target_compile_features(n4m_c_static PUBLIC cxx_std_17)
+    target_compile_definitions(n4m_c_static PRIVATE N4M_STATIC=1)
     set_target_properties(n4m_c_static PROPERTIES
         OUTPUT_NAME "n4m_static"
         POSITION_INDEPENDENT_CODE ON

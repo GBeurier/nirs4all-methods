@@ -13,7 +13,7 @@
 #define N4M_N4M_EXPORT_H
 
 #if defined(_WIN32) || defined(__CYGWIN__)
-#  ifdef N4M_BUILDING_DLL
+#  if defined(N4M_BUILDING_DLL) || defined(N4M_BUILDING_C_DLL)
 #    ifdef __GNUC__
 #      define N4M_API __attribute__((dllexport))
 #    else
