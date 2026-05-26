@@ -1,0 +1,29 @@
+name: Catalog Validate
+
+on:
+  pull_request:
+    paths:
+      - "catalog/**"
+      - "cpp/abi/**"
+      - ".github/workflows/catalog-validate.yml"
+  push:
+    branches: [main]
+    paths:
+      - "catalog/**"
+      - "cpp/abi/**"
+      - ".github/workflows/catalog-validate.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate catalog
+        run: python catalog/scripts/validate.py
+      - name: Check split catalog
+        run: python catalog/scripts/split_legacy_methods.py --check
+      - name: Catalog parser self-test
+        run: python catalog/scripts/selftest.py

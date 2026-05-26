@@ -332,13 +332,16 @@ def _time_r_reference_batched(reference, method, params, csv_dir, n: int,
         with meta_path.open() as f:
             meta_rows = list(__import__("csv").DictReader(f))
         meta = meta_rows[0] if meta_rows else {}
-        last_case = int(float(meta.get("last_case") or 0))
-        last = cases[last_case]
-        if last["is_mask"]:
-            last_preds = _mask_from_indices(last["idx"], int(last["p"]))
+        # Parity prediction is always the seed_base case (case 0), so it is
+        # comparable across backends regardless of how many adaptive timing
+        # runs executed. (`last_case` in the meta only drives timing stats.)
+        parity_case = cases[0]
+        if parity_case["is_mask"]:
+            parity_preds = _mask_from_indices(parity_case["idx"],
+                                              int(parity_case["p"]))
         else:
-            last_preds = _read_csv_array(last["pred"])
-        return _stats_from_samples(
+            parity_preds = _read_csv_array(parity_case["pred"])
+        stats = _stats_from_samples(
             samples_f,
             statistic=str(meta.get("timing_statistic") or "median"),
             warmup_ms=float(meta.get("warmup_ms") or 0.0),
@@ -347,7 +350,9 @@ def _time_r_reference_batched(reference, method, params, csv_dir, n: int,
             total_runs=int(float(meta.get("total_runs") or len(samples_f))),
             warmup_included=str(meta.get("warmup_included") or "").lower()
             == "true",
-        ), last_preds
+        )
+        stats["prediction_seed"] = int(seed_base)
+        return stats, parity_preds
 
 
 def main():

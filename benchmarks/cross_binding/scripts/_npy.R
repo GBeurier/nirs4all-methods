@@ -103,7 +103,8 @@ pls4all_bench_adaptive_target <- function(probe_ms, max_runs) {
 
 pls4all_bench_stats <- function(samples, statistic, warmup_ms, decision,
                                 max_runs, total_runs,
-                                warmup_included = FALSE) {
+                                warmup_included = FALSE,
+                                prediction_seed = NA_real_) {
     if (length(samples) == 1L) {
         statistic <- "single"
     }
@@ -111,6 +112,9 @@ pls4all_bench_stats <- function(samples, statistic, warmup_ms, decision,
     list(
         ok = TRUE,
         n_runs = length(samples),
+        # Always seed_base: the persisted parity prediction is the seed_base
+        # run, comparable across backends regardless of adaptive run count.
+        prediction_seed = prediction_seed,
         median_ms = unname(reported),
         reported_ms = unname(reported),
         sample_median_ms = unname(median(samples)),
@@ -136,7 +140,7 @@ pls4all_bench_time_runs <- function(fit_predict_seeded, runs, seed_base) {
         return(list(
             stats = pls4all_bench_stats(
                 c(warmup_ms), "single", warmup_ms, "warmup_gt_5min",
-                max_runs, 1L, TRUE),
+                max_runs, 1L, TRUE, prediction_seed = seed_base),
             last_preds = warmup_preds
         ))
     }
@@ -144,14 +148,15 @@ pls4all_bench_time_runs <- function(fit_predict_seeded, runs, seed_base) {
         return(list(
             stats = pls4all_bench_stats(
                 c(warmup_ms), "single", warmup_ms,
-                "max_runs_1_warmup_only", max_runs, 1L, TRUE),
+                "max_runs_1_warmup_only", max_runs, 1L, TRUE,
+                prediction_seed = seed_base),
             last_preds = warmup_preds
         ))
     }
 
     samples <- numeric(0)
     t0 <- pls4all_bench_now_ms()
-    last_preds <- fit_predict_seeded(seed_base)
+    fit_predict_seeded(seed_base)
     samples <- c(samples, pls4all_bench_now_ms() - t0)
 
     target <- pls4all_bench_adaptive_target(samples[[1]], max_runs)
@@ -159,14 +164,17 @@ pls4all_bench_time_runs <- function(fit_predict_seeded, runs, seed_base) {
     if (target_samples > 1L) {
         for (i in 2:target_samples) {
             t0 <- pls4all_bench_now_ms()
-            last_preds <- fit_predict_seeded(seed_base + (i - 1L))
+            fit_predict_seeded(seed_base + (i - 1L))
             samples <- c(samples, pls4all_bench_now_ms() - t0)
         }
     }
+    # Parity prediction is always the seed_base run (warmup_preds), never the
+    # last timed run, so it is comparable across backends.
     list(stats = pls4all_bench_stats(samples, target$statistic, warmup_ms,
                                      target$decision, max_runs,
-                                     1L + length(samples)),
-         last_preds = last_preds)
+                                     1L + length(samples),
+                                     prediction_seed = seed_base),
+         last_preds = warmup_preds)
 }
 
 # Common 8-arg parse — `runs` is the adaptive total-run cap.

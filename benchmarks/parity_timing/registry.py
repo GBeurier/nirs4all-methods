@@ -52,6 +52,18 @@ R_ENV = {
     "PATH": f"/home/delete/miniconda3/envs/pls4all_r/bin:{os.environ.get('PATH', '')}",
     "CC": R_CC,
 }
+
+
+def _sklearn_n_jobs() -> int:
+    """Thread budget for sklearn-compatible references that expose n_jobs."""
+    raw = os.environ.get("BENCH_SKLEARN_N_JOBS", os.environ.get("BENCH_THREADS", "1"))
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return 1
+    return max(1, value)
+
+
 # Inproc R via rpy2 — must set R_HOME / LD_LIBRARY_PATH before importing.
 os.environ.setdefault("R_HOME", R_HOME)
 os.environ["LD_LIBRARY_PATH"] = (
@@ -1548,7 +1560,7 @@ def _vissa_auswahl_indices(X: np.ndarray, Y: np.ndarray, *,
         pls=PLSRegression(n_components=int(n_components), scale=False),
         n_cv_folds=3,
         random_state=int(seed),
-        n_jobs=1,
+        n_jobs=_sklearn_n_jobs(),
     )
     sel.fit(X64, Y2)
     return np.where(sel.support_)[0].astype(np.int64)
@@ -3998,7 +4010,7 @@ def _random_frog_indices_via_auswahl(X: np.ndarray, Y: np.ndarray, *,
         n_initial_features=int(initial_size),
         pls=PLSRegression(n_components=int(n_components), scale=False),
         n_cv_folds=3,
-        n_jobs=1,
+        n_jobs=_sklearn_n_jobs(),
         random_state=int(seed),
     )
     sel.fit(X64, Y2)
@@ -4577,7 +4589,7 @@ def _vip_spa_indices_via_auswahl(X: np.ndarray, Y: np.ndarray, *,
         n_features_to_select=int(top_k),
         n_cv_folds=3,
         pls=PLSRegression(n_components=int(n_components), scale=False),
-        n_jobs=1,
+        n_jobs=_sklearn_n_jobs(),
     )
     sel.fit(X64, Y2)
     return np.where(sel.support_)[0].astype(np.int64)
@@ -7511,7 +7523,7 @@ def _irf_indices_via_auswahl(X: np.ndarray, Y: np.ndarray, *,
         n_initial_intervals=int(initial_intervals),
         pls=PLSRegression(n_components=int(n_components), scale=False),
         n_cv_folds=3,
-        n_jobs=1,
+        n_jobs=_sklearn_n_jobs(),
         random_state=int(seed),
     )
     sel.fit(X64, Y2)
@@ -7641,14 +7653,35 @@ def _iriv_indices_numpy(X: np.ndarray, Y: np.ndarray, *,
 
     def _generate_binary_matrix(nv: int, row: int) -> np.ndarray:
         """Each column is a random permutation of 1..row; values <= row/2
-        become 0, rest become 1 (libPLS heuristic)."""
-        while True:
+        become 0, rest become 1 (libPLS heuristic). Every sub-model (row)
+        must select at least 2 variables.
+
+        Each column is ~half ones, so ``P(all rows select > 1)`` collapses
+        toward zero as ``nv`` shrinks (it is exactly 0 in the limit for
+        ``nv == 2``). Unbounded rejection sampling therefore hangs once a
+        round drops to very few candidate variables. We keep the exact
+        rejection-sampling output for the common case (a valid matrix is
+        almost always drawn on the first attempt) but cap the attempts and
+        then deterministically repair any deficient row, which guarantees
+        termination without changing the typical large-``nv`` behaviour.
+        """
+        max_attempts = 10000
+        mat = np.zeros((row, nv), dtype=np.int8)
+        for _attempt in range(max_attempts):
             mat = np.zeros((row, nv), dtype=np.int8)
             for j in range(nv):
                 perm = rng.permutation(row) + 1
                 mat[:, j] = (perm > row / 2).astype(np.int8)
             if np.all(mat.sum(axis=1) > 1):
                 return mat
+        # Deterministic repair for the pathological small-``nv`` regime:
+        # force the lowest-index excluded variables into any sub-model that
+        # selected fewer than two, so every row keeps at least two variables.
+        for r in np.nonzero(mat.sum(axis=1) <= 1)[0]:
+            zeros = np.nonzero(mat[r] == 0)[0]
+            deficit = 2 - int(mat[r].sum())
+            mat[r, zeros[:deficit]] = 1
+        return mat
 
     # Pre-compute K-fold splits once per round (independent of variable
     # mask), reuses the same train/test arrays for every PLS fit.

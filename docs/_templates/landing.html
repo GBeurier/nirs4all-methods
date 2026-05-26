@@ -715,6 +715,16 @@
       flex: 1 1 auto;
       min-width: 0;
     }
+    /* Catalog rows without a dedicated doc page: plain (non-link) label. */
+    .algo-wrap .algo-nodoc {
+      flex: 1 1 auto;
+      min-width: 0;
+      color: var(--fg-2);
+      cursor: default;
+    }
+    /* Size-scaling sparkline */
+    svg.spark { vertical-align: middle; display: inline-block; }
+    #scaling-table td.ms { font-family: var(--mono); text-align: right; white-space: nowrap; }
     .row-score-toggle {
       flex: 0 0 20px;
       width: 20px;
@@ -1392,6 +1402,13 @@
       <div class="menu" id="col-picker"></div>
     </div>
     <div class="control">
+      <span class="control-label">view</span>
+      <select id="view-mode">
+        <option value="parity">parity matrix</option>
+        <option value="scaling">size scaling</option>
+      </select>
+    </div>
+    <div class="control">
       <span class="control-label">density</span>
       <select id="density-select">
         <option value="comfortable">comfortable</option>
@@ -1417,7 +1434,7 @@
 </div>
 
 <!-- TABLE -->
-<div class="table-shell reveal reveal-3">
+<div class="table-shell reveal reveal-3" id="parity-shell">
   <div class="legend">
     <span class="legend-item"><span class="ico p-exact">✓</span> exact (≤ 1e-6)</span>
     <span class="legend-item"><span class="ico p-drift">≈</span> drift (≤ 1e-3)</span>
@@ -1440,6 +1457,22 @@
     <span id="table-meta-left">—</span>
     <span id="table-meta-right">—</span>
   </div>
+</div>
+
+<!-- SIZE-SCALING VIEW (hidden until view=scaling) -->
+<div class="table-shell reveal reveal-3" id="scaling-shell" hidden>
+  <div class="legend">
+    <span class="legend-item">Wall-clock (ms) of the C++ core (<code>pls4all.cpp.blas+omp</code>) and the canonical Python binding (<code>pls4all.registry</code>) as dataset size grows — the registry-vs-cpp timing sweep.</span>
+    <span class="legend-item">Each cell shows <b>cpp ms</b>; hover for the registry binding time and the binding/core ratio. The sparkline traces cpp ms across sizes (log scale).</span>
+    <span class="legend-item" style="margin-left:auto;color:var(--fg-2);font-size:10px">threads = 1 · all-CPU build</span>
+  </div>
+  <div class="table-wrap">
+    <table class="bench" id="scaling-table">
+      <thead id="scaling-head"></thead>
+      <tbody id="scaling-body"></tbody>
+    </table>
+  </div>
+  <div class="table-meta"><span id="scaling-meta">—</span></div>
 </div>
 
 <!-- INFO CARDS -->
@@ -1515,7 +1548,7 @@ const ALGO_ALIASES = {
 };
 
 // ---------- state + url persistence ----------
-const URL_KEYS = ['algo','group','lang','libGroup','lib','size','threads','parity','origin','search','cols','sort','density','viz'];
+const URL_KEYS = ['algo','group','lang','libGroup','lib','size','threads','parity','origin','search','cols','sort','density','viz','view'];
 const ORIGIN_VALUES = ['pls4all', 'n4m_donor'];
 function parseOrigin(raw) {
   if (!raw) return new Set(ORIGIN_VALUES);
@@ -1568,6 +1601,7 @@ function loadState() {
     sort:    parseSort(p.get('sort')),
     density: DENSITY_VALUES.includes(density) ? density : 'comfortable',
     viz,
+    view: (p.get('view') === 'scaling' && (DATA.scaling || []).length) ? 'scaling' : 'parity',
   };
 }
 function parseSort(s) {
@@ -1595,6 +1629,7 @@ function saveState() {
   if (state.sort) p.set('sort', `${state.sort.col}:${state.sort.dir === 1 ? 'asc' : 'desc'}`);
   if (state.density && state.density !== 'comfortable') p.set('density', state.density);
   if (state.viz && state.viz !== 'duration') p.set('viz', state.viz);
+  if (state.view && state.view !== 'parity') p.set('view', state.view);
   if (state.origin && state.origin.size !== ORIGIN_VALUES.length) {
     p.set('origin', [...state.origin].join(','));
   }
@@ -2128,6 +2163,8 @@ function renderControls() {
   }
 
   $('viz-mode').value = state.viz;
+  const viewSel = $('view-mode');
+  if (viewSel) viewSel.value = state.view;
   $('density-select').value = state.density;
   document.body.classList.remove('density-comfortable', 'density-compact', 'density-ultra');
   document.body.classList.add(`density-${state.density}`);
@@ -2317,7 +2354,14 @@ function renderTable() {
         : 'keep only columns with a score on this row';
       const rowOrigin = (DATA.algo_origin || {})[row.algo] || 'pls4all';
       const rowCls = rowOrigin === 'pls4all' ? 'row-pls4all' : 'row-n4m';
-      let tr = `<tr class="${rowCls}"><td class="algo-cell"><div class="algo-wrap"><a href="methods/${row.algo}.html" title="open ${rowAlgoLabel} method documentation">${rowAlgoLabel}</a><button type="button" class="row-score-toggle${focusActive ? ' active' : ''}" data-row-key="${escAttr(rKey)}" title="${focusTitle}" aria-label="${focusTitle}">◫</button></div></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
+      // Link the method name to its resolved doc page (algo_has_doc maps the
+      // algo to an existing page stem, which may differ from the algo name);
+      // otherwise render plain text so rows without a page don't 404.
+      const rowDocPage = (DATA.algo_has_doc || {})[row.algo];
+      const algoLabelHtml = rowDocPage
+        ? `<a href="methods/${rowDocPage}.html" title="open ${rowAlgoLabel} method documentation">${rowAlgoLabel}</a>`
+        : `<span class="algo-nodoc" title="no dedicated documentation page yet">${rowAlgoLabel}</span>`;
+      let tr = `<tr class="${rowCls}"><td class="algo-cell"><div class="algo-wrap">${algoLabelHtml}<button type="button" class="row-score-toggle${focusActive ? ' active' : ''}" data-row-key="${escAttr(rKey)}" title="${focusTitle}" aria-label="${focusTitle}">◫</button></div></td><td class="size-cell">${sizeHtml}</td><td class="thread-cell"><span class="${tCls}">${row.threads}t</span></td>`;
       for (const id of cols) {
         const meta = colsById[id];
         // The synthetic "canonical reference" leading column needs a
@@ -2672,10 +2716,94 @@ function renderBackendsAccordion() {
   };
 }
 
+// ---------- size-scaling view ----------
+function _scalingFmt(ms) {
+  if (ms == null) return '—';
+  return ms >= 1000 ? (ms / 1000).toFixed(2) + 's' : ms.toFixed(1);
+}
+function _sparkline(vals) {
+  const pts = vals.map((v, i) => [i, v]).filter(p => p[1] != null && p[1] > 0);
+  if (pts.length < 2) return '';
+  const ys = pts.map(p => Math.log10(p[1]));
+  const W = 72, H = 18;
+  const x0 = pts[0][0], x1 = pts[pts.length - 1][0];
+  const y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const sx = i => x1 === x0 ? 0 : (i - x0) / (x1 - x0) * (W - 2) + 1;
+  const sy = v => y1 === y0 ? H / 2 : H - 1 - (v - y0) / (y1 - y0) * (H - 2);
+  const d = pts.map(p => `${sx(p[0]).toFixed(1)},${sy(Math.log10(p[1])).toFixed(1)}`).join(' ');
+  return `<svg width="${W}" height="${H}" class="spark" aria-hidden="true">` +
+         `<polyline points="${d}" fill="none" stroke="var(--phosphor)" stroke-width="1.5"/></svg>`;
+}
+function renderScaling() {
+  const data = DATA.scaling || [];
+  const CPP = 'pls4all.cpp.blas+omp', REG = 'pls4all.registry';
+  // sizes present, sorted by (n, p)
+  const sizeMap = new Map();
+  for (const r of data) sizeMap.set(`${r.n}×${r.p}`, [r.n, r.p]);
+  const sizes = [...sizeMap.entries()]
+    .sort((a, b) => a[1][0] - b[1][0] || a[1][1] - b[1][1]).map(e => e[0]);
+  // group by algo, preferring threads=1 (the size sweep)
+  const byAlgo = new Map();
+  for (const r of data) {
+    const t = String(r.threads);
+    let g = byAlgo.get(r.algo);
+    if (!g) { g = { threads: t, sizes: {} }; byAlgo.set(r.algo, g); }
+    if (g.threads !== '1' && t === '1') { g.threads = '1'; g.sizes = {}; }
+    if (g.threads !== t) continue;
+    g.sizes[`${r.n}×${r.p}`] = {
+      reg: (r.cells[REG] || {}).ms, cpp: (r.cells[CPP] || {}).ms,
+    };
+  }
+  // apply the algo / group / origin / search filters for consistency
+  const docMap = DATA.algo_has_doc || {};
+  let algos = [...byAlgo.keys()];
+  if (state.algo) algos = algos.filter(a => a === state.algo);
+  if (state.group) algos = algos.filter(a => (DATA.algo_to_group || {})[a] === state.group);
+  if (state.origin && state.origin.size !== ORIGIN_VALUES.length)
+    algos = algos.filter(a => state.origin.has((DATA.algo_origin || {})[a] || 'pls4all'));
+  if (state.search) {
+    const q = state.search.toLowerCase();
+    algos = algos.filter(a => a.toLowerCase().includes(q));
+  }
+  algos.sort();
+  $('scaling-head').innerHTML = '<tr><th class="algo-col">method</th>' +
+    sizes.map(s => `<th class="size-col">${s}</th>`).join('') +
+    '<th class="size-col">curve</th></tr>';
+  const body = [];
+  for (const a of algos) {
+    const g = byAlgo.get(a);
+    const page = docMap[a];
+    const label = page
+      ? `<a href="methods/${page}.html">${a}</a>`
+      : `<span class="algo-nodoc">${a}</span>`;
+    const cells = sizes.map(s => {
+      const v = g.sizes[s];
+      if (!v || v.cpp == null) return '<td class="ms">—</td>';
+      const ratio = (v.reg != null && v.cpp > 0) ? (v.reg / v.cpp).toFixed(2) : '?';
+      const title = `registry ${_scalingFmt(v.reg)} · cpp ${_scalingFmt(v.cpp)} · binding/core ×${ratio}`;
+      return `<td class="ms" title="${title}">${_scalingFmt(v.cpp)}</td>`;
+    });
+    const spark = _sparkline(sizes.map(s => (g.sizes[s] || {}).cpp));
+    body.push(`<tr><td class="algo-cell"><div class="algo-wrap">${label}</div></td>` +
+              `${cells.join('')}<td>${spark}</td></tr>`);
+  }
+  $('scaling-body').innerHTML = body.join('');
+  $('scaling-meta').textContent =
+    `${algos.length} methods · ${sizes.length} sizes · cpp blas+omp wall-clock (threads=1)`;
+}
+
+function _applyView() {
+  const scaling = state.view === 'scaling' && (DATA.scaling || []).length;
+  $('parity-shell').hidden = scaling;
+  $('scaling-shell').hidden = !scaling;
+  if (scaling) renderScaling();
+}
+
 function render() {
   renderStatStrip();
   renderControls();
   renderTable();
+  _applyView();
   renderInfo();
   saveState();
 }
@@ -2733,6 +2861,10 @@ function wire() {
   });
   $('viz-mode').addEventListener('change', e => {
     state.viz = VIZ_VALUES.includes(e.target.value) ? e.target.value : 'duration';
+    rerender();
+  });
+  $('view-mode').addEventListener('change', e => {
+    state.view = e.target.value === 'scaling' ? 'scaling' : 'parity';
     rerender();
   });
   $('reset-btn').addEventListener('click', () => {
@@ -2852,6 +2984,7 @@ function wire() {
 function rerender() {
   renderControls();
   renderTable();
+  _applyView();
   renderInfo();
   saveState();
 }

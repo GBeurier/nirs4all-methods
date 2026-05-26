@@ -19,8 +19,6 @@ Functions:
 
 from __future__ import annotations
 
-from typing import Any
-
 import numpy as np
 
 from .. import _methods
@@ -47,7 +45,6 @@ def _basic_cfg(n_components: int) -> Config:
 
 def _t2_q_dmodx(model, X, key: str, X_reference=None) -> np.ndarray:
     """Compute T², Q or DModX via the C diagnostics kernel."""
-    import pls4all
     if not isinstance(model, Model):
         raise TypeError(
             "diagnostic functions require a pls4all.Model instance "
@@ -254,7 +251,8 @@ def on_pls(X, *, n_blocks: int, n_joint: int,
     try:
         out = {}
         for block in range(len(blocks)):
-            for prefix in ("joint_loadings", "unique_loadings", "joint_scores"):
+            for prefix in ("joint_loadings", "unique_loadings",
+                            "joint_scores", "block_reconstruction"):
                 key = f"{prefix}_{block}"
                 try:
                     out[key] = np.asarray(res.matrix(key), dtype=np.float64)

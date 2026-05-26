@@ -3072,17 +3072,26 @@ def render_method_page(spec: dict, cat: dict | None,
 # Index page
 # ---------------------------------------------------------------------------
 
-def render_index(methods: list[dict]) -> str:
+def render_index(methods: list[dict],
+                 operators: list[dict] | None = None) -> str:
+    operators = operators or []
     by_group: dict[str, list[dict]] = defaultdict(list)
     for m in methods:
         by_group[method_group(m["name"])].append(m)
+    op_by_group: dict[str, list[dict]] = defaultdict(list)
+    for op in operators:
+        op_by_group[op["group"]].append(op)
+    total = len(methods) + len(operators)
     out: list[str] = [
         "# Methods catalogue\n",
-        "Every algorithm in `benchmarks.parity_timing.registry.METHODS` "
-        "documented with its parameters, bibliographic source, math "
-        "principle, every binding's signature, and its parity + timing "
-        "rows.\n",
-        f"_Total methods_: **{len(methods)}**. Grouped by family below.\n",
+        "Every method in the library — the PLS / selection algorithms from "
+        "`benchmarks.parity_timing.registry.METHODS` and the C++ "
+        "preprocessing / augmentation / filter / splitter operators from the "
+        "n4m binding — documented with parameters, bibliographic source, "
+        "mathematical principle, binding signatures, and benchmark rows.\n",
+        f"_Total methods_: **{total}** "
+        f"({len(methods)} PLS / selection · {len(operators)} operators). "
+        "Grouped by family below.\n",
         "```{toctree}\n:hidden:\n:glob:\n:maxdepth: 1\n\n*\n```\n",
     ]
     order = ["core", "sparse", "ensemble", "robust", "nonlinear",
@@ -3107,12 +3116,416 @@ def render_index(methods: list[dict]) -> str:
             desc = (m.get("desc") or "").replace("|", "\\|")
             out.append(f"| [`{n}`]({n}.md) | {desc} | `{m['rmse_tol']}` | {ref_str} |")
         out.append("")
+
+    # Operator families (preprocessing / augmentation / filters / splitters)
+    for g in OPERATOR_GROUP_ORDER:
+        if g not in op_by_group:
+            continue
+        out.append(f"## {OPERATOR_GROUP_LABELS[g]}\n")
+        out.append("| Operator | Binding | Description |")
+        out.append("|----------|---------|-------------|")
+        for op in sorted(op_by_group[g], key=lambda x: x["name"]):
+            n = op["name"]
+            desc = (_docstring_summary(op["doc"]) or "").replace("|", "\\|")
+            out.append(f"| [`{n}`]({n}.md) | `n4m.sklearn.{op['class']}` | {desc} |")
+        out.append("")
+
     out.append("---")
     out.append("\nSee the [benchmark overview](../benchmarks/overview.md) "
                 "for how parity and timing are measured, and the "
                 "[GitHub Pages dashboard](../landing/dashboard.md) for an "
                 "interactive cross-method comparison.")
     return "\n".join(out)
+
+
+# ---------------------------------------------------------------------------
+# Operator pages (augmentation / preprocessing / baseline / filters /
+# splitters / signal transforms)
+#
+# The 73 methods above come from the parity registry. The C++ library also
+# ships ~110 stateless/stochastic operators exposed through the n4m Python
+# binding (bindings/python/src/n4m/sklearn/*.py). Each such class declares a
+# `_C_PREFIX = "n4m_<name>"` that maps 1:1 to the benchmark / dashboard algo
+# name (`<name>`), so a page per operator (a) documents the whole library and
+# (b) makes the dashboard method links resolve. Content is auto-derived from
+# the binding docstring + constructor parameters, and enriched for flagship
+# operators from OPERATOR_BIB (curated from the standard chemometrics
+# literature and the nirs4all preprocessing / augmentation handbooks).
+# ---------------------------------------------------------------------------
+
+N4M_SKLEARN_DIR = ROOT / "bindings" / "python" / "src" / "n4m" / "sklearn"
+
+OPERATOR_MODULE_GROUP = {
+    "augmentation":       "augmentation",
+    "preprocessing":      "preprocessing",
+    "baseline":           "baseline",
+    "filters":            "filter",
+    "splitters":          "splitter",
+    "resampling":         "preprocessing",
+    "feature_extraction": "feature-extraction",
+    "advanced":           "transform",
+}
+
+OPERATOR_GROUP_LABELS = {
+    "augmentation":      "Augmentation",
+    "preprocessing":     "Preprocessing",
+    "baseline":          "Baseline correction",
+    "filter":            "Sample / feature filters",
+    "splitter":          "Splitters",
+    "feature-extraction": "Feature extraction",
+    "transform":         "Signal transforms",
+}
+
+OPERATOR_GROUP_ORDER = ["preprocessing", "baseline", "transform",
+                        "feature-extraction", "augmentation", "filter",
+                        "splitter"]
+
+# Flagship operators: curated bibliographic reference + mathematical
+# principle on top of the auto-derived docstring. Standard chemometrics
+# literature — verified references, not generated.
+OPERATOR_BIB: dict[str, dict] = {
+    "pp_snv": {
+        "title": "Standard Normal Variate (SNV)",
+        "paper": "Barnes, R. J., Dhanoa, M. S. & Lister, S. J. (1989). "
+                 "*Standard Normal Variate Transformation and De-trending of "
+                 "Near-Infrared Diffuse Reflectance Spectra*. Applied "
+                 "Spectroscopy 43(5), 772–777.",
+        "principle": (
+            "Each spectrum $\\mathbf{x}_i$ is centred and scaled by its own "
+            "row statistics: $\\mathrm{SNV}(\\mathbf{x}_i) = "
+            "(\\mathbf{x}_i - \\bar{x}_i)/s_i$, where $\\bar{x}_i$ and $s_i$ "
+            "are the mean and standard deviation across the wavelengths of "
+            "that single spectrum. This removes multiplicative scatter and "
+            "additive baseline shifts on a per-sample basis without needing a "
+            "reference spectrum, which is why SNV is robust to sample-to-sample "
+            "path-length variation in diffuse-reflectance NIR."),
+    },
+    "pp_rnv": {
+        "title": "Robust Normal Variate (RNV)",
+        "paper": "Guo, Q., Wu, W. & Massart, D. L. (1999). *The robust normal "
+                 "variate transform for pattern recognition with near-infrared "
+                 "data*. Analytica Chimica Acta 382(1–2), 87–103.",
+        "principle": (
+            "A median/IQR analogue of SNV: each spectrum is corrected as "
+            "$(\\mathbf{x}_i - \\mathrm{median}(\\mathbf{x}_i)) / "
+            "\\mathrm{IQR}(\\mathbf{x}_i)$. Replacing the mean and standard "
+            "deviation with robust location/scale estimators makes the "
+            "normalisation insensitive to a small number of strong absorption "
+            "bands or outlying channels."),
+    },
+    "pp_msc": {
+        "title": "Multiplicative Scatter Correction (MSC)",
+        "paper": "Geladi, P., MacDougall, D. & Martens, H. (1985). "
+                 "*Linearization and Scatter-Correction for Near-Infrared "
+                 "Reflectance Spectra of Meat*. Applied Spectroscopy 39(3), "
+                 "491–500.",
+        "principle": (
+            "Each spectrum is regressed on a reference spectrum (typically the "
+            "training-set mean $\\bar{\\mathbf{x}}$): "
+            "$\\mathbf{x}_i = a_i + b_i\\,\\bar{\\mathbf{x}} + \\mathbf{e}_i$. "
+            "The corrected spectrum $(\\mathbf{x}_i - a_i)/b_i$ removes the "
+            "additive ($a_i$) and multiplicative ($b_i$) scatter estimated by "
+            "ordinary least squares. Unlike SNV, MSC needs a reference and so "
+            "is stateful (the reference is fit on training data)."),
+    },
+    "pp_emsc": {
+        "title": "Extended Multiplicative Scatter Correction (EMSC)",
+        "paper": "Martens, H. & Stark, E. (1991). *Extended multiplicative "
+                 "signal correction and spectral interference subtraction*. "
+                 "Journal of Pharmaceutical and Biomedical Analysis 9(8), "
+                 "625–635.",
+        "principle": (
+            "EMSC augments the MSC regression basis with polynomial wavelength "
+            "terms (and optionally known interferent spectra), so the model "
+            "$\\mathbf{x}_i = a_i + b_i\\bar{\\mathbf{x}} + d_i\\boldsymbol{\\lambda} "
+            "+ e_i\\boldsymbol{\\lambda}^2 + \\dots$ separates chemical signal "
+            "from smooth physical baselines more flexibly than plain MSC."),
+    },
+    "pp_savgol": {
+        "title": "Savitzky–Golay smoothing / derivative",
+        "paper": "Savitzky, A. & Golay, M. J. E. (1964). *Smoothing and "
+                 "Differentiation of Data by Simplified Least Squares "
+                 "Procedures*. Analytical Chemistry 36(8), 1627–1639.",
+        "principle": (
+            "Within a sliding window of odd length $w$, a polynomial of order "
+            "$p$ is fit by least squares; the smoothed value (or its "
+            "$d$-th derivative) at the window centre is a fixed linear "
+            "combination of the windowed points. Because the convolution "
+            "coefficients are precomputed, SG simultaneously denoises and "
+            "differentiates while preserving peak shape far better than a "
+            "moving average."),
+    },
+    "pp_first_derivative": {
+        "title": "First derivative",
+        "paper": "Standard finite-difference / gap derivative; see Savitzky & "
+                 "Golay (1964) and Norris & Williams (1984).",
+        "principle": (
+            "Approximates $\\mathrm{d}\\mathbf{x}/\\mathrm{d}\\lambda$ by finite "
+            "differences. The first derivative removes constant baseline "
+            "offsets (additive scatter) and accentuates inflection points of "
+            "overlapping bands."),
+    },
+    "pp_second_derivative": {
+        "title": "Second derivative",
+        "paper": "Standard finite-difference / gap derivative; see Savitzky & "
+                 "Golay (1964) and Norris & Williams (1984).",
+        "principle": (
+            "Approximates $\\mathrm{d}^2\\mathbf{x}/\\mathrm{d}\\lambda^2$. The "
+            "second derivative removes both constant and linear baselines and "
+            "resolves overlapping peaks into sharp negative lobes at the "
+            "original band positions, at the cost of amplifying high-frequency "
+            "noise (hence it is usually paired with smoothing)."),
+    },
+    "pp_gaussian": {
+        "title": "Gaussian smoothing",
+        "paper": "Classical Gaussian-kernel convolution smoothing.",
+        "principle": (
+            "Convolves each spectrum with a discretised Gaussian kernel of a "
+            "given standard deviation, a low-pass filter that attenuates "
+            "high-frequency noise with minimal ringing compared with a boxcar "
+            "average."),
+    },
+    "pp_detrend": {
+        "title": "De-trending",
+        "paper": "Barnes, R. J., Dhanoa, M. S. & Lister, S. J. (1989). Applied "
+                 "Spectroscopy 43(5), 772–777.",
+        "principle": (
+            "Fits and subtracts a low-order polynomial (commonly linear or "
+            "quadratic) along the wavelength axis of each spectrum, removing "
+            "wavelength-dependent baseline curvature that SNV alone leaves "
+            "behind."),
+    },
+    "aug_gaussian_noise": {
+        "title": "Gaussian additive-noise augmentation",
+        "paper": "Standard data-augmentation perturbation; see the nirs4all "
+                 "augmentation handbook.",
+        "principle": (
+            "Adds i.i.d. Gaussian noise $\\mathbf{x} + \\boldsymbol{\\varepsilon}$, "
+            "$\\varepsilon \\sim \\mathcal{N}(0,\\sigma^2)$, to each element, "
+            "simulating detector/shot noise to regularise models and enlarge "
+            "small calibration sets."),
+    },
+    "aug_linear_drift": {
+        "title": "Linear baseline-drift augmentation",
+        "paper": "Physical baseline-perturbation augmentation; see the nirs4all "
+                 "augmentation handbook.",
+        "principle": (
+            "Adds a random linear ramp $a + b\\,\\boldsymbol{\\lambda}$ across "
+            "the wavelength axis, emulating instrument baseline drift and "
+            "temperature-dependent offsets so that downstream models learn "
+            "drift invariance."),
+    },
+    "aug_mixup": {
+        "title": "Mixup augmentation",
+        "paper": "Zhang, H., Cisse, M., Dauphin, Y. N. & Lopez-Paz, D. (2018). "
+                 "*mixup: Beyond Empirical Risk Minimization*. ICLR 2018.",
+        "principle": (
+            "Forms convex combinations of sample pairs, "
+            "$\\tilde{\\mathbf{x}} = \\lambda\\mathbf{x}_i + (1-\\lambda)\\mathbf{x}_j$ "
+            "and $\\tilde{y} = \\lambda y_i + (1-\\lambda) y_j$ with "
+            "$\\lambda \\sim \\mathrm{Beta}(\\alpha,\\alpha)$, encouraging "
+            "linear behaviour between training examples and regularising the "
+            "calibration model."),
+    },
+}
+
+
+def _operator_init_params(cls_node: ast.ClassDef,
+                          classes_by_name: dict[str, ast.ClassDef]) -> list[dict]:
+    """Constructor params for an operator class, resolving a single level of
+    in-module base-class inheritance when the class has no own __init__."""
+    init = next((n for n in cls_node.body
+                 if isinstance(n, ast.FunctionDef) and n.name == "__init__"), None)
+    if init is None:
+        for base in cls_node.bases:
+            bname = base.id if isinstance(base, ast.Name) else None
+            if bname and bname in classes_by_name:
+                return _operator_init_params(classes_by_name[bname], classes_by_name)
+        return []
+    out: list[dict] = []
+    pos = init.args.args[1:]  # skip self
+    defaults = init.args.defaults
+    offset = len(pos) - len(defaults)
+    for i, arg in enumerate(pos):
+        if arg.arg in ("self",):
+            continue
+        default = "—"
+        if i >= offset:
+            node = defaults[i - offset]
+            try:
+                default = repr(ast.literal_eval(node))
+            except (ValueError, SyntaxError):
+                default = ast.unparse(node)
+        ann = ast.unparse(arg.annotation) if arg.annotation else "—"
+        out.append({"name": arg.arg, "type": ann, "default": default})
+    return out
+
+
+# C ABI operation suffixes stripped when deriving a method prefix from
+# `lib.n4m_<prefix>_<op>(...)` calls inside a binding class.
+_C_OP_SUFFIXES = (
+    "_create", "_destroy", "_fit", "_apply", "_run", "_split", "_compute",
+    "_transform", "_fit_transform", "_predict", "_output_cols", "_set_seed",
+    "_advance", "_inverse", "_refit", "_result_destroy",
+)
+
+
+def _class_c_prefix(node: ast.ClassDef,
+                    classes_by_name: dict[str, ast.ClassDef],
+                    _seen: set | None = None) -> str | None:
+    """Best-effort C ABI prefix (`n4m_<name>`) for a binding operator class.
+
+    Looks for (1) a `_C_PREFIX` assignment, class-level OR `self._C_PREFIX`
+    inside __init__; (2) failing that, the common `lib.n4m_<prefix>_<op>()`
+    symbol stem used in the class body (covers filters that call the C ABI
+    directly without a `_C_PREFIX` attribute); (3) recurses into in-module
+    base classes.
+    """
+    _seen = _seen if _seen is not None else set()
+    if node.name in _seen:
+        return None
+    _seen.add(node.name)
+    # (1) explicit _C_PREFIX (class- or instance-level)
+    for item in ast.walk(node):
+        if isinstance(item, ast.Assign) and isinstance(item.value, ast.Constant) \
+                and isinstance(item.value.value, str) \
+                and item.value.value.startswith("n4m_"):
+            for t in item.targets:
+                if (isinstance(t, ast.Name) and t.id == "_C_PREFIX") or \
+                        (isinstance(t, ast.Attribute) and t.attr == "_C_PREFIX"):
+                    return item.value.value
+    # (2) derive from lib.n4m_<prefix>_<op>(...) symbol usage. Only consider
+    # attributes accessed on a bare `lib` name, and strip the longest matching
+    # operation suffix first so e.g. `_fit_transform` isn't mistaken for `_fit`.
+    from collections import Counter
+    suffixes_longest_first = sorted(_C_OP_SUFFIXES, key=len, reverse=True)
+    stems: list[str] = []
+    for item in ast.walk(node):
+        if isinstance(item, ast.Attribute) and item.attr.startswith("n4m_") \
+                and isinstance(item.value, ast.Name) and item.value.id == "lib":
+            sym = item.attr
+            for suf in suffixes_longest_first:
+                if sym.endswith(suf) and len(sym) > len(suf) + 4:
+                    stems.append(sym[: -len(suf)])
+                    break
+    if stems:
+        return Counter(stems).most_common(1)[0][0]
+    # (3) base classes within the same module
+    for base in node.bases:
+        bname = base.id if isinstance(base, ast.Name) else None
+        if bname and bname in classes_by_name:
+            found = _class_c_prefix(classes_by_name[bname], classes_by_name, _seen)
+            if found:
+                return found
+    return None
+
+
+def parse_operator_bindings(src_dir: Path) -> list[dict]:
+    """AST-parse the n4m sklearn binding into operator spec dicts.
+
+    One spec per operator class (prefix resolved by `_class_c_prefix`).
+    Deduplicated by `<name>`, keeping the entry with the richest docstring.
+    """
+    specs: dict[str, dict] = {}
+    if not src_dir.exists():
+        return []
+    for py in sorted(src_dir.glob("*.py")):
+        if py.name.startswith("_"):
+            continue
+        group = OPERATOR_MODULE_GROUP.get(py.stem, "transform")
+        try:
+            tree = ast.parse(py.read_text(encoding="utf-8"))
+        except SyntaxError:
+            continue
+        classes_by_name = {n.name: n for n in ast.walk(tree)
+                           if isinstance(n, ast.ClassDef)}
+        for node in classes_by_name.values():
+            # skip private/abstract base classes (e.g. _AugmenterBase, _SplitHandle)
+            if node.name.startswith("_"):
+                continue
+            cprefix = _class_c_prefix(node, classes_by_name)
+            if not isinstance(cprefix, str) or not cprefix.startswith("n4m_"):
+                continue
+            name = cprefix[len("n4m_"):]
+            doc = ast.get_docstring(node) or ""
+            spec = {
+                "name": name, "class": node.name, "module": py.stem,
+                "group": group, "doc": doc, "c_prefix": cprefix,
+                "params": _operator_init_params(node, classes_by_name),
+            }
+            prev = specs.get(name)
+            if prev is None or len(doc) > len(prev["doc"]):
+                specs[name] = spec
+    return sorted(specs.values(), key=lambda s: s["name"])
+
+
+def _operator_param_example(spec: dict) -> str:
+    return ""  # default-constructed in the usage snippet
+
+
+def render_operator_page(spec: dict, bench_rows: list[dict] | None = None) -> str:
+    """Markdown page for one C++ operator, mirroring the method-page format."""
+    name = spec["name"]
+    cls = spec["class"]
+    bib = OPERATOR_BIB.get(name, {})
+    grp = spec["group"]
+    grp_label = OPERATOR_GROUP_LABELS.get(grp, grp.capitalize())
+    title = bib.get("title") or _humanize_class(cls)
+    summary = _docstring_summary(spec["doc"]) or "_No binding description._"
+
+    p: list[str] = []
+    p.append(f"# `{name}` — {title}\n")
+    p.append(f"_Group_: **{grp_label}** · _Binding_: `n4m.sklearn.{cls}` · "
+             f"_C ABI_: `{spec['c_prefix']}_*`\n")
+
+    p.append("## Description\n")
+    p.append(summary + "\n")
+    if spec["doc"] and len(spec["doc"].strip()) > len(summary) + 24:
+        p.append("<details>\n<summary>Full binding docstring</summary>\n\n"
+                 "```text\n" + spec["doc"].strip() + "\n```\n</details>\n")
+
+    p.append("### Parameters\n")
+    if spec["params"]:
+        p.append("| Name | Type | Default |")
+        p.append("|------|------|---------|")
+        for prm in spec["params"]:
+            p.append(f"| `{prm['name']}` | `{prm['type']}` | `{prm['default']}` |")
+    else:
+        p.append("_No constructor parameters._")
+    p.append("")
+
+    p.append("## Explanations\n")
+    p.append("### Bibliographic source\n")
+    p.append(bib.get("paper") or
+             "_Standard spectroscopic operator — see the nirs4all "
+             "preprocessing / augmentation handbook and the cited literature "
+             "within the binding docstring._")
+    p.append("\n### Mathematical principle\n")
+    p.append(bib.get("principle") or summary)
+    p.append("\n### Implementation\n")
+    p.append(f"C ABI `{spec['c_prefix']}_*` in libn4m "
+             f"(create / apply / destroy lifecycle), wrapped by "
+             f"`n4m.sklearn.{cls}`. The same numerical kernel backs every "
+             f"language binding.")
+
+    p.append("\n### Usage\n")
+    p.append("```python\nfrom n4m.sklearn import " + cls + "\n"
+             "op = " + cls + "()\nX_transformed = op.fit_transform(X)\n```")
+
+    if bench_rows:
+        p.append("")
+        p.append(parity_table(name, bench_rows))
+
+    p.append("")
+    p.append("---")
+    p.append("\n_See also_: [methods index](index.md) · "
+             "[interactive dashboard](../landing/dashboard.md)")
+    return "\n".join(p)
+
+
+def _humanize_class(cls: str) -> str:
+    """`GaussianAdditiveNoise` → `Gaussian Additive Noise`."""
+    return re.sub(r"(?<!^)(?=[A-Z])", " ", cls).replace("_", " ")
 
 
 # ---------------------------------------------------------------------------
@@ -3171,7 +3584,8 @@ def main() -> None:
                     method_to_cat[n] = e
                     break
 
-    # Render
+    # Render registry methods
+    method_names = {m["name"] for m in methods}
     for m in methods:
         rows = bench_rows.get(m["name"], [])
         page = render_method_page(
@@ -3180,9 +3594,20 @@ def main() -> None:
             truth_sources=truth_sources.get(m["name"], {}))
         (out_dir / f"{m['name']}.md").write_text(page, encoding="utf-8")
 
-    (out_dir / "index.md").write_text(render_index(methods), encoding="utf-8")
+    # Render C++ operator pages (augmentation / preprocessing / baseline /
+    # filters / splitters / transforms) from the n4m binding. Skip any whose
+    # name collides with a registry method (registry page wins).
+    operators = [op for op in parse_operator_bindings(N4M_SKLEARN_DIR)
+                 if op["name"] not in method_names]
+    for op in operators:
+        page = render_operator_page(op, bench_rows.get(op["name"]))
+        (out_dir / f"{op['name']}.md").write_text(page, encoding="utf-8")
 
-    print(f"wrote {len(methods)} method pages + index in {out_dir} "
+    (out_dir / "index.md").write_text(
+        render_index(methods, operators), encoding="utf-8")
+
+    print(f"wrote {len(methods)} method + {len(operators)} operator pages "
+            f"+ index in {out_dir} "
             f"(py docstrings: {len(py_docs)}, R sigs: {len(r_docs)}, "
             f"MATLAB sigs: {len(m_docs)})")
 

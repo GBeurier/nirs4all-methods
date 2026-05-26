@@ -116,6 +116,21 @@ x_target_path     <- Sys.getenv("BENCH_R_X_TARGET_PATH", unset = "")
 x_target_dir      <- Sys.getenv("BENCH_R_X_TARGET_DIR", unset = "")
 registry_pkey      <- Sys.getenv("BENCH_PREDICTION_KEY", unset = "predictions")
 
+if (a$algo == "on_pls") {
+    cat(toJSON(list(
+        ok = FALSE,
+        reason = "not_available: r_tier1 does not expose on_pls block_reconstruction_0",
+        skipped = TRUE,
+        versions = list(
+            language = paste0("R ", R.version$major, ".", R.version$minor),
+            pls4all  = as.character(tryCatch(packageVersion("pls4all"),
+                                              error = function(e) "?")),
+            registry_method = a$algo,
+            blas = "linked-BLAS"
+        )), auto_unbox = TRUE), "\n", sep = "")
+    quit(save = "no")
+}
+
 .fold_rmse_matrix <- function(max_components, n_folds) {
     idx <- matrix(seq_len(max_components * n_folds) - 1L,
                   nrow = max_components, ncol = n_folds, byrow = TRUE)

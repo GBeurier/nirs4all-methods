@@ -93,6 +93,25 @@ in the Acceleration Roadmap), so the core-pinning variables only affect
 the reference implementations and any BLAS used by the kernel-algorithm
 PLS variants.
 
+For the cross-binding orchestrator, `--threads N` sets `OMP_NUM_THREADS`,
+`OPENBLAS_NUM_THREADS`, `MKL_NUM_THREADS`, `BLIS_NUM_THREADS`, and the
+binding context thread budget for each launched cell. Sklearn-compatible
+reference adapters that expose `n_jobs` read `BENCH_SKLEARN_N_JOBS`, falling
+back to that same `BENCH_THREADS` value:
+
+```bash
+# Run registry-backed sklearn/auswahl references with eight jobs per cell.
+python benchmarks/cross_binding/orchestrator.py \
+  --algorithms all --registry-cells --threads 8 \
+  --reference-backends registry --workers 1
+
+# Override only sklearn n_jobs while keeping BLAS/OpenMP at one thread.
+BENCH_SKLEARN_N_JOBS=8 \
+  python benchmarks/cross_binding/orchestrator.py \
+  --algorithms selection.random_frog --registry-cells --threads 1 \
+  --reference-backends registry --workers 1
+```
+
 ## Layout
 
 ```

@@ -836,7 +836,7 @@ methods:
     tu:
       - cpp/src/core/pipeline.cpp
     headers:
-      - cpp/include/n4m/pipeline.h
+      - cpp/include/n4m/n4m.h
     carry_along_tu:
       - cpp/src/core/common/context.cpp
       - cpp/src/core/common/status.cpp

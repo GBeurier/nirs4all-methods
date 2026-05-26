@@ -31,13 +31,13 @@ REPO = Path(__file__).resolve().parents[2]
 CATALOG = REPO / "catalog"
 
 _spec = importlib.util.spec_from_file_location(
-    "_validate_catalog",
-    Path(__file__).parent / "validate_catalog.py",
+    "_catalog_loader",
+    Path(__file__).parent / "catalog_loader.py",
 )
-_vc = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
+_loader = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
 assert _spec and _spec.loader
-_spec.loader.exec_module(_vc)  # type: ignore[union-attr]
-parse_yaml = _vc.parse_yaml
+_spec.loader.exec_module(_loader)  # type: ignore[union-attr]
+parse_yaml = _loader.parse_yaml
 
 
 def load_subset(name: str) -> dict:
@@ -48,8 +48,7 @@ def load_subset(name: str) -> dict:
 
 
 def load_methods() -> tuple[list[dict], dict[str, dict]]:
-    doc = parse_yaml((CATALOG / "methods.yaml").read_text(encoding="utf-8"))
-    methods: list[dict] = doc["methods"]
+    methods: list[dict] = _loader.load_methods(prefer_split=True)
     index = {m["method_id"]: m for m in methods}
     return methods, index
 

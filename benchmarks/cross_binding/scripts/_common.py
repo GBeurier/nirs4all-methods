@@ -100,6 +100,7 @@ def _reported_value(samples: list[float], statistic: str) -> float:
 
 def _stats(samples: list[float], *, statistic: str, warmup_ms: float,
            decision: str, max_runs: int, total_runs: int,
+           prediction_seed: int,
            warmup_included: bool = False) -> dict:
     if len(samples) == 1:
         statistic = "single"
@@ -107,6 +108,11 @@ def _stats(samples: list[float], *, statistic: str, warmup_ms: float,
     return {
         "ok": True,
         "n_runs": len(samples),
+        # Seed of the dataset the persisted parity prediction was computed
+        # on. Always seed_base: the parity prediction is the seed_base run,
+        # independent of how many adaptive timing runs executed, so it is
+        # comparable across backends with different run counts.
+        "prediction_seed": prediction_seed,
         # Compatibility: legacy renderers read median_ms as the score.
         # For adaptive-v1 this is the reported score, which may be a mean
         # for slow cells. New renderers should prefer reported_ms.
@@ -140,12 +146,15 @@ def time_runs_seeded(fit_predict_seeded, n_runs: int, seed_base: int):
          -> up to 40 runs / median.
 
     Returns:
-      (stats_dict, last_predictions_array)
+      (stats_dict, parity_predictions_array)
       - stats_dict: ok / n_runs / reported_ms / timing_statistic /
-        median_ms / mean_ms / min_ms / max_ms
-      - last_predictions_array: the predictions array from the LAST
-        timed run (seed_base + n_runs - 1). The caller persists it to
-        the predictions file for post-hoc parity computation.
+        median_ms / mean_ms / min_ms / max_ms / prediction_seed
+      - parity_predictions_array: the predictions array from the
+        `seed_base` run. The caller persists it to the predictions file
+        for post-hoc parity computation. It is always the seed_base run
+        (never the last timed run) so the oracle key and the compared
+        vector stay identical across backends regardless of how many
+        adaptive timing runs each backend executed.
 
       `fit_predict_seeded(seed)` must return a numpy.ndarray of predictions
       (any shape, will be flattened for parity comparison).
@@ -153,22 +162,24 @@ def time_runs_seeded(fit_predict_seeded, n_runs: int, seed_base: int):
     max_runs = max(1, int(n_runs))
 
     t0 = time.perf_counter()
-    warmup_preds = fit_predict_seeded(seed_base)
+    parity_preds = fit_predict_seeded(seed_base)
     warmup_ms = (time.perf_counter() - t0) * 1000.0
     if warmup_ms > WARMUP_ABORT_MS:
         return _stats([warmup_ms], statistic="single", warmup_ms=warmup_ms,
                       decision="warmup_gt_5min", max_runs=max_runs,
-                      total_runs=1, warmup_included=True), warmup_preds
+                      total_runs=1, prediction_seed=seed_base,
+                      warmup_included=True), parity_preds
 
     if max_runs < 2:
         return _stats([warmup_ms], statistic="single", warmup_ms=warmup_ms,
                       decision="max_runs_1_warmup_only",
                       max_runs=max_runs, total_runs=1,
-                      warmup_included=True), warmup_preds
+                      prediction_seed=seed_base,
+                      warmup_included=True), parity_preds
 
     samples = []
     t0 = time.perf_counter()
-    last_preds = fit_predict_seeded(seed_base)
+    fit_predict_seeded(seed_base)
     probe_ms = (time.perf_counter() - t0) * 1000.0
     samples.append(probe_ms)
 
@@ -177,12 +188,13 @@ def time_runs_seeded(fit_predict_seeded, n_runs: int, seed_base: int):
     for i in range(1, target_samples):
         seed = seed_base + i
         t0 = time.perf_counter()
-        last_preds = fit_predict_seeded(seed)
+        fit_predict_seeded(seed)
         samples.append((time.perf_counter() - t0) * 1000.0)
 
     return _stats(samples, statistic=statistic, warmup_ms=warmup_ms,
                   decision=decision, max_runs=max_runs,
-                  total_runs=1 + len(samples)), last_preds
+                  total_runs=1 + len(samples),
+                  prediction_seed=seed_base), parity_preds
 
 
 # ----------------------------------------------------------------------

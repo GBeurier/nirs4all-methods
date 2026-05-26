@@ -12,6 +12,7 @@ estimator for <algo>"` and render `—` in the dashboard, honestly.
 from __future__ import annotations
 
 import inspect
+import json
 import os
 
 import numpy as np
@@ -146,6 +147,15 @@ _BENCH_CTOR_OVERRIDES: dict[str, dict[str, object]] = {
     # empty-selection semantics here explicitly.
     "uve_select": {"min_features": 0},
 }
+
+
+def _emit_not_available(reason: str, versions: dict) -> None:
+    print(json.dumps({
+        "ok": False,
+        "reason": f"not_available: {reason}",
+        "skipped": True,
+        "versions": versions,
+    }))
 
 
 def _constructor_kwargs(algo: str, cls, params: dict) -> dict:
@@ -286,6 +296,31 @@ def main():
                 f"python_tier2: pls4all.sklearn.{class_name} missing for '{algo}'")
 
     method = load_method(algo)
+    if algo == "cars_select":
+        params = adapted_params(method, n, p, nc)
+        ctor_sig_params = set(inspect.signature(cls.__init__).parameters) - {"self"}
+        unsupported = sorted(
+            key for key in params
+            if (key not in _REGISTRY_DATA_PARAMS
+                and _PARAM_ALIASES.get(algo, {}).get(key, key)
+                not in ctor_sig_params
+                and key not in _REFERENCE_ONLY_PARAMS.get(algo, set()))
+        )
+        if unsupported == ["top_k"]:
+            import pls4all
+            versions = collect_versions(
+                "Python",
+                pls4all=getattr(pls4all, "__version__", "?"),
+                numpy=_safe_version("numpy"),
+                sklearn_class=class_name,
+            )
+            _emit_not_available(
+                "python_tier2 CARSSelector exposes native CARS "
+                "n_iterations/min_features semantics, while registry "
+                "cars_select requires top_k/enpls ranking semantics",
+                versions,
+            )
+            return
 
     def fit_predict(seed: int) -> np.ndarray:
         X, y = load_dataset(csv_dir, n, p, seed)

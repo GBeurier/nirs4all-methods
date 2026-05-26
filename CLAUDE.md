@@ -56,6 +56,12 @@ scripts/bootstrap-bare-metal-macos.sh    # macOS (brew)
 scripts/bootstrap-bare-metal-windows.ps1 # Windows (Chocolatey)
 ```
 
+The `Makefile` is a **thin convenience layer over CMake** — `make build PRESET=<p>`
+and `make test PRESET=<p>` (default `dev-debug`) wrap the preset commands above.
+The `parity`, `snapshot`, `dashboard-*`, and `new-binding` targets are **Phase-gated
+stubs** that print a "not yet wired" message and exit 0 — they are placeholders
+documenting the future interface (Phases C/D/F-prep), not working commands yet.
+
 ## Test commands
 
 ```bash
@@ -77,9 +83,18 @@ cd bindings/matlab && octave --no-gui --eval "addpath(genpath('.')); n4m_smoke_t
 # Cross-binding orchestrator (parity + timing). Registry-driven.
 python benchmarks/cross_binding/orchestrator.py \
   --algorithms pls pcr --registry-cells --threads 1 \
-  --libp4a-build blas-omp --n-runs 2 \
+  --libn4m-build blas-omp --n-runs 2 \
   --canonical-pls4all-only --reference-backends registry \
   --timeout 180 --out-csv /tmp/audit.csv --force
+
+# Full registry sweep, sequential cells, 8 native threads per cell.
+# BENCH_SKLEARN_N_JOBS overrides sklearn-style references that expose n_jobs.
+BENCH_SKLEARN_N_JOBS=8 python benchmarks/cross_binding/orchestrator.py \
+  --algorithms all --registry-cells --threads 8 --workers 1 \
+  --libn4m-build blas-omp --n-runs 2 \
+  --canonical-pls4all-only --reference-backends registry \
+  --timeout 180 --out-csv /tmp/n4m_full_parity.csv --force \
+  --flush-each-cell
 
 # Overnight matrix (registry cells + registry-declared externals)
 benchmarks/cross_binding/run_overnight.sh
@@ -117,19 +132,41 @@ These are the four hard constraints in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 3. **Never free across the language boundary.** Two output APIs: caller-allocated (`n4m_predict(model, X, out_buf, out_size)`) and core-allocated + `n4m_array_free(arr)`. Error strings live in a context-owned thread-local buffer invalidated by the next call.
 4. **Stride-aware everything.** `n4m_matrix_view_t` carries explicit `row_stride` / `col_stride` so NumPy row-major, R/MATLAB column-major, transposes and slice views never trigger a copy at the boundary.
 
+## Python binding threading
+
+Both Python packages (`n4m` and the slim `pls4all` subset) load libn4m with
+`ctypes.CDLL`, not `ctypes.PyDLL`. `ctypes` releases the Python GIL during
+native calls through that handle, so long-running C calls can run while other
+Python threads make progress. The libn4m `Context` object itself is not
+thread-safe: create one context per thread and do not share model/context
+handles across threads unless the C ABI documents that exact use.
+
+`n4m.Context.num_threads` and `pls4all.Context.num_threads` wrap
+`n4m_context_get/set_num_threads`. The cross-binding benchmark also sets
+`OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, `MKL_NUM_THREADS`,
+`BLIS_NUM_THREADS`, and `BENCH_THREADS` from `--threads`; sklearn-compatible
+references use `BENCH_SKLEARN_N_JOBS`, falling back to `BENCH_THREADS`.
+Use `--workers 1` for high `--threads` values to avoid `workers * threads`
+oversubscription.
+
 ## Repository layout (post-Phase-A)
 
 ```
 cpp/
-  include/n4m/                    # THE public C ABI: n4m.h + 13 per-category headers
+  include/n4m/                    # THE public C ABI: n4m.h (umbrella) + pls.h
+                                  # (PLS-domain umbrella, restored in A27) + 11
+                                  # per-category headers (preprocessing, models,
+                                  # selection, splitters, aom_pop, filters,
+                                  # augmentation, diagnostics, transfer, context,
+                                  # utilities).
   include/n4m/n4m_version.h       # Canonical version source of truth — read by CMake
   src/core/                       # C++17 numerical core (PLS variants, AOM/POP,
                                   # preprocessing, splitters, diagnostics, selection,
                                   # CV, metrics, linalg). Never installed standalone.
-  src/c_api/                      # extern "C" wrappers (32 files, one per category).
-                                  # c_api_method_result.cpp is the ~4k LOC registry
-                                  # dispatcher. Single surface — no more c_api / c_api_n4m
-                                  # split.
+  src/c_api/                      # extern "C" wrappers (~30 .cpp files, grouped by
+                                  # category). c_api_method_result.cpp is the ~4k LOC
+                                  # registry dispatcher (the single biggest source file).
+                                  # Single surface — no more c_api / c_api_n4m split.
   cli/n4m_cli.cpp                 # `n4m_cli` — --version / --abi-info / --selfcheck
   tests/                          # doctest binary `n4m_tests` (post-A5: ex tests_n4m/)
   abi/expected_symbols_*.txt      # ABI snapshots (per-platform), diffed in CI
@@ -138,7 +175,8 @@ bindings/
   python/src/n4m/                 # Full n4m Python binding (Phase F-bootstrap target)
   python/src/pls4all/             # Mature pls4all subset (slim PLS-only re-export)
   r/n4m/                          # CRAN n4m package (post-A10 rename from bindings/r/pls4all/)
-  matlab/                         # +n4m classdefs + MEX dispatcher. COMPAT.md documents
+  matlab/                         # +pls4all classdef package + MEX dispatcher
+                                  # (n4m_*_mex entry points). COMPAT.md documents
                                   # MATLAB-vs-Octave divergences (CI runs Octave only)
   js/                             # JS / WASM binding (Emscripten)
   julia/, jni/, android/, octave/ # Active bindings
@@ -146,11 +184,14 @@ bindings/
 
 benchmarks/
   parity_timing/registry.py       # Legacy canonical method catalog (~10k LOC).
-                                  # To be replaced in Phase B by catalog/methods/*.yaml
+                                  # Still drives full parity/timing until Phase B
+                                  # migrates registry data into YAML.
   cross_binding/orchestrator.py   # Dual-gate (binding parity + reference parity) runner
 
-catalog/                          # Single-source-of-truth (Phase B target):
-                                  # catalog/methods/<id>.yaml + catalog/subsets/<id>.yaml
+catalog/                          # Phase B catalog source. catalog/methods/<id>.yaml
+                                  # now exists for all 160 legacy method rows.
+                                  # During transition, edit catalog/methods.yaml and
+                                  # regenerate split files with split_legacy_methods.py.
 parity/                           # Reference fixture generators + comparator
 roadmap/phase-*.md                # Phase-by-phase implementation roadmaps
 docs/REFACTOR_PLAN.md             # Post-merge refactor founding document
@@ -226,6 +267,8 @@ Each template embeds the §2.10 invariants checklist the reviewer (human + Codex
 - The token-level `p4a` → `n4m` rename is **complete**. If you see `p4a_*` anywhere outside `bindings/_archive/`, `CHANGELOG.md`, or historical merge logs under `docs/merge/` / `docs/reviews/`, that's a regression — flag it.
 - `pls4all` references still exist intentionally in: (a) the slim subset package name (`bindings/python/src/pls4all/`, `catalog/subsets/pls4all.yaml`), (b) the github.com URL, (c) historical Authors@R contributor tag. Other references are bugs.
 - `benchmarks/parity_timing/registry.py` is the legacy method catalog (~10k LOC). Phase B replaces it with `catalog/methods/<id>.yaml` (one YAML per method). When touching the registry, check whether the same fact already exists in the catalog or vice versa.
+- `catalog/scripts/validate.py` currently reports ABI symbol mismatches as warnings unless `--strict-abi` is passed. The split catalog still contains many auto-discovered symbol guesses; reconcile them against `cpp/abi/expected_symbols_*.txt` before enabling strict ABI in CI.
+- `catalog/scripts/render_api.py` renders generated metadata under `build/catalog/rendered_api/`; it does not overwrite hand-written binding APIs yet.
 - The dashboard distinguishes **binding parity** (internal n4m bindings) from **reference parity** (vs external libs). They aren't interchangeable.
 - `parity/fixtures/` will be migrated to `parity/snapshots/current/<method_id>/<scenario_id>.json` in Phase C; both layouts may briefly coexist.
 - ABI symbol diff fails closed. If you add a public `n4m_*` symbol, regenerate `cpp/abi/expected_symbols_*.txt` for **all three platforms** in the same PR and update `docs/abi/changes_log.md`.

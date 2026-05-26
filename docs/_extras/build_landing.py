@@ -580,6 +580,7 @@ def parity_code(row: dict) -> str:
             "unsupported algo",
             "unsupported algorithm",
             "unsupported method",
+            "not_available",
             "not available",
             "does not expose",
         )
@@ -593,10 +594,17 @@ def parity_code(row: dict) -> str:
             return "error"
         return "error"
     parity_ok = row.get("binding_parity_ok", row.get("parity_ok"))
-    if is_true(parity_ok):
-        return "exact"
     diff_val = row.get("binding_parity_max_diff",
                         row.get("parity_max_diff", "nan"))
+    # Timing-only cell: the cell ran and produced timing, but binding parity
+    # was never computed (no verdict and no diff) — e.g. a timing sweep that
+    # stopped before its final parity pass. Report it as not-measured rather
+    # than collapsing it into a false `drift`, which carries an actual verdict.
+    if (parity_ok in (None, "", "None")
+            and str(diff_val).strip().lower() in ("", "nan", "none")):
+        return "not_run"
+    if is_true(parity_ok):
+        return "exact"
     try:
         d = float(diff_val)
     except (TypeError, ValueError):
@@ -707,6 +715,89 @@ def host_info() -> dict:
     except Exception:
         pass
     return info
+
+
+# Benchmark fixture rows that are ABI-level probes / lifecycle + smoke tests
+# / RNG primitive checks rather than user-facing methods. They are dropped
+# from the public matrix so every shown row is a real, documentable method.
+_NON_METHOD_SUFFIXES = (
+    "_not_fitted", "_refit", "_output_cols", "_inverse", "_create_validation",
+    "_fit_apply_validation", "_fit_transform_split", "_kernel_properties",
+    "_simplify_stub", "_stub",
+)
+_NON_METHOD_EXACT = {
+    "context", "metrics", "matrix_view_rowmajor", "status_strings_nonnull",
+    "version_string_nonempty", "transfer_metrics_invalid_args",
+    "fck_output_cols", "aug_phase17", "signal_detect",
+}
+
+
+def _is_non_method(algo: str) -> bool:
+    """True for ABI/smoke/lifecycle/RNG benchmark fixtures (not real methods)."""
+    if algo in _NON_METHOD_EXACT:
+        return True
+    if algo.startswith("rng_pcg64"):
+        return True
+    if "smoke" in algo:
+        return True
+    return any(algo.endswith(s) for s in _NON_METHOD_SUFFIXES)
+
+
+# Dashboard fixture name → doc page stem, for real operators whose page is
+# named differently (abbreviations / diagnostics). The prefix resolver in
+# `_resolve_doc_page` handles the common `aug_`/parameter-variant cases; this
+# map covers the rest.
+_DOC_ALIAS = {
+    "aug_spline_smoothing":       "aug_spline_smooth",
+    "aug_spline_x_perturbations": "aug_spline_x_perturb",
+    "aug_spline_y_perturbations": "aug_spline_y_perturb",
+    "aug_edge_curvature":         "aug_edge_curve",
+    "aug_random_x_operation":     "aug_random_x_op",
+    "hotelling_t2":               "pls_diagnostic_t2",
+    "q_residuals":                "pls_diagnostic_q",
+    "fck":                        "pp_fck_static",
+    "split_bsgk":                 "split_binned_strat_group_kfold",
+}
+
+
+def _resolve_doc_page(algo: str, pages: set[str]) -> str | None:
+    """Resolve a dashboard algo name to an *existing* doc-page stem, or None.
+
+    Order: the name itself → its `aug_`-prefixed variant (the fixture run
+    dropped the category prefix for some augmenters) → an explicit alias →
+    a parameter-variant parent (`filter_y_outlier_iqr` → `filter_y_outlier`).
+    Every candidate is verified against `pages`, so a stale alias can never
+    emit a 404 link.
+    """
+    if algo in pages:
+        return algo
+    if ("aug_" + algo) in pages:
+        return "aug_" + algo
+    alias = _DOC_ALIAS.get(algo)
+    if alias and alias in pages:
+        return alias
+    parts = algo.split("_")
+    for i in range(len(parts) - 1, 1, -1):
+        cand = "_".join(parts[:i])
+        if cand in pages:
+            return cand
+    return None
+
+
+def _row_is_dense(row: dict) -> bool:
+    """True if the row has a populated cell from a backend other than the
+    pls4all registry entry-point or a C++ build — i.e. a genuine
+    cross-binding / external-reference comparison rather than a
+    registry-vs-cpp timing-sweep cell.
+    """
+    for cid, cell in row["cells"].items():
+        if cid == "__reference" or cid == "pls4all.registry" \
+                or cid.startswith("pls4all.cpp."):
+            continue
+        if (cell.get("ms") is not None or cell.get("parity")
+                or cell.get("binding_parity") or cell.get("reference_parity")):
+            return True
+    return False
 
 
 def build_payload(results_dir: Path) -> dict:
@@ -1118,10 +1209,29 @@ def build_payload(results_dir: Path) -> dict:
                                             key=lambda x: (x[0][0],
                                                             x[0][1] * x[0][2],
                                                             x[0][3])):
+        if _is_non_method(algo):
+            continue  # drop ABI/smoke/lifecycle/RNG fixtures from the matrix
         rows_out.append({
             "algo": algo, "n": n, "p": p_, "threads": t,
             "cells": cells,
         })
+
+    # Separate the all-backend parity matrix from registry-vs-cpp timing-sweep
+    # rows. The size/build sweeps were run with `--only registry_pls4all cpp`,
+    # so for a method that also has a real cross-binding / reference parity run
+    # those rows are mostly empty (5/48 columns) and would swamp the matrix.
+    # Route them to `scaling_rows` (kept in the payload for a dedicated scaling
+    # view) while the parity matrix keeps the dense rows. A method that has no
+    # dense row at all (a pure cpp-only operator) keeps all of its rows.
+    algos_with_parity = {r["algo"] for r in rows_out if _row_is_dense(r)}
+    parity_rows: list[dict] = []
+    scaling_rows: list[dict] = []
+    for r in rows_out:
+        if r["algo"] in algos_with_parity and not _row_is_dense(r):
+            scaling_rows.append(r)
+        else:
+            parity_rows.append(r)
+    rows_out = parity_rows
 
     # Register the synthetic Reference column at the very front so the
     # renderer pins it before any backend column. `kind="reference"`
@@ -1304,6 +1414,20 @@ def build_payload(results_dir: Path) -> dict:
         a: "pls4all" if algo_to_group[a] in PLS4ALL_GROUPS else "n4m_donor"
         for a in present_algos
     }
+    # Which algos have a committed per-method doc page (docs/methods/<algo>.md).
+    # The dashboard links the method name only when the page exists, so catalog
+    # rows without a dedicated page (augmentation / operator entries) render as
+    # plain text instead of 404-ing.
+    _methods_dir = Path(__file__).resolve().parent.parent / "methods"
+    _doc_pages = ({p.stem for p in _methods_dir.glob("*.md")}
+                  if _methods_dir.exists() else set())
+    # Map each algo to its resolved doc-page stem (or absent if none). The
+    # landing template links the method name to `methods/<stem>.html`.
+    algo_has_doc = {}
+    for a in present_algos:
+        page = _resolve_doc_page(a, _doc_pages)
+        if page:
+            algo_has_doc[a] = page
     # Languages actually present in the columns.
     present_langs = []
     seen_lang = set()
@@ -1339,10 +1463,12 @@ def build_payload(results_dir: Path) -> dict:
         "columns":      columns,
         "presets":      presets,
         "rows":         rows_out,
+        "scaling":      scaling_rows,
         "versions":     versions,
         "algo_to_group":algo_to_group,
         "algo_groups":  algo_groups,
         "algo_origin":  algo_origin,
+        "algo_has_doc": algo_has_doc,
         "languages":    present_langs,
         "stats": {
             "algos":    len(present_algos),

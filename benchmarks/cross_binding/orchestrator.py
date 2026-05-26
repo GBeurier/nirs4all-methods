@@ -233,7 +233,12 @@ def record_prediction_seed(record: dict) -> int:
     except (TypeError, ValueError):
         measured_runs_int = 1
     if record_timing_schema(record) == TIMING_SCHEMA:
-        return seed_base + max(1, measured_runs_int) - 1
+        # adaptive-v1 bench scripts persist the seed_base run as the parity
+        # prediction (see scripts/_common.py::time_runs_seeded), so the
+        # oracle key is seed_base regardless of the adaptive run count. This
+        # is also emitted as `prediction_seed` and handled above; the
+        # fallback exists for records that predate the emitted field.
+        return seed_base
     # Legacy CSVs did not record the exact last timed seed. Use seed_base as
     # the safest value for one-shot runs. For warmup-discarded rows, bench
     # scripts stored n_runs=input_runs-1, so the last seed is base+n_runs.
@@ -402,6 +407,8 @@ def _subprocess_failure_reason(out: subprocess.CompletedProcess) -> str:
             continue
         if low.startswith("error: ignoring const execution_exception"):
             continue
+        if low.startswith("warning: ignoring environment value of r_home"):
+            continue
         return clean[:200]
     return "exit != 0"
 
@@ -504,10 +511,13 @@ def run_backend(name: str, script: str, language: str, tier: str,
     if script.endswith(".py"):
         cmd = [sys.executable, str(script_path), *argv8]
     elif script.endswith(".R"):
-        rscript = shutil.which("Rscript") or f"{PLS4ALL_R_ENV}/bin/Rscript"
+        # Resolve against the subprocess PATH (which prepends
+        # PLS4ALL_R_ENV/bin) so the configured R env wins over whatever
+        # Rscript happens to sit on the orchestrator's own PATH.
+        rscript = shutil.which("Rscript", path=env["PATH"]) or f"{PLS4ALL_R_ENV}/bin/Rscript"
         cmd = [rscript, str(script_path), *argv8]
     elif script.endswith(".m"):
-        oct_bin = shutil.which("octave") or f"{PLS4ALL_R_ENV}/bin/octave"
+        oct_bin = shutil.which("octave", path=env["PATH"]) or f"{PLS4ALL_R_ENV}/bin/octave"
         env.update({
             "BENCH_ALGO": algo,
             "BENCH_CSV_DIR": str(DATA_DIR),
@@ -957,7 +967,8 @@ def main():
                          help="Dataset sizes 'NxP' (default: 11-size matrix)")
     parser.add_argument("--threads", nargs="+", type=int, default=[1, 3, 10],
                          help="Thread counts to sweep")
-    parser.add_argument("--libn4m-build",
+    parser.add_argument("--libn4m-build", "--libp4a-build",
+                         dest="libp4a_build",
                          choices=["dev-release", "blas-on", "omp-on",
                                   "blas-omp", "cuda-on", "both",
                                   "all-cpu", "all"],

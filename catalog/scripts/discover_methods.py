@@ -254,6 +254,8 @@ def guess_abi_symbols(method_id: str, category: str, subcategory: str) -> list[s
 
 
 def header_for_category(category: str) -> str:
+    if category == "pipeline":
+        return "cpp/include/n4m/n4m.h"
     return f"cpp/include/n4m/{category}.h"
 
 
