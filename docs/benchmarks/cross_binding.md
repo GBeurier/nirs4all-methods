@@ -2,8 +2,8 @@
 
 Single-thread numbers — the cleanest cross-language comparison. **Most external libraries don't honour OMP_NUM_THREADS at the algorithm level** (sklearn, pls::plsr, plsregress, ikpls all run the PLS algo serially even when BLAS is multi-threaded), so a multi-thread comparison would compare pls4all's OpenMP path against everyone else's single-threaded loop. That's a real, useful number — see the [thread sweep page](cross_binding_threads.md) — but this main page sticks to 1 thread for honest apples-to-apples timing.
 
-_Generated: 2026-05-25 11:52:44 UTC_
-_CSV: `tmp489rmt74.csv` (153 cells)_
+_Generated: 2026-05-26 13:38:04 UTC_
+_CSV: `tmpg0yot9y0.csv` (153 cells)_
 
 
 ## Host

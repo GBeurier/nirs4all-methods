@@ -29,6 +29,8 @@ help:
 	@printf "                                       Regenerate reference snapshot inside the right env image\n"
 	@printf "    \033[36mmake parity-paper-only METHOD=<id>\033[0m\n"
 	@printf "                                       Run self-consistency checks for paper_only methods\n\n"
+	@printf "  \033[1mDocs\033[0m\n"
+	@printf "    \033[36mmake docs-refresh\033[0m     Rebuild method/operator pages + benchmark matrix from results/\n\n"
 	@printf "  \033[1mDashboard\033[0m\n"
 	@printf "    \033[36mmake dashboard-data\033[0m   Aggregate parity + bench JSON into dashboard/public/dashboard.json\n"
 	@printf "    \033[36mmake dashboard-serve\033[0m  Local preview (vite dev server)\n"
@@ -95,6 +97,14 @@ parity-paper-only:
 		exit 0; \
 	fi
 	python parity/comparator/self_consistency.py --method $(METHOD)
+
+# ---------------------------------------------------------------------------
+# Docs (Sphinx site — method/operator pages + interactive benchmark matrix)
+# ---------------------------------------------------------------------------
+.PHONY: docs-refresh
+
+docs-refresh:  ## Rebuild all doc artifacts from benchmarks/cross_binding/results
+	scripts/refresh_docs.sh
 
 # ---------------------------------------------------------------------------
 # Dashboard (wired in Phase D — placeholders document the interface)
