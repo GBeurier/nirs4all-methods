@@ -900,6 +900,8 @@
     .p-deferred { color: var(--indigo); }
     .p-not_run { color: var(--indigo); }
     .p-not_available { color: var(--fg-3); }
+    /* build-tier sentinel: "≡ native" for ops with no BLAS/OpenMP path */
+    .cell-sentinel { color: var(--fg-3); font-size: 0.95em; opacity: 0.7; }
     .p-ok      { color: var(--phosphor); }
     .p-warn    { color: var(--amber); }
     .p-fail    { color: var(--crimson); }
@@ -2402,6 +2404,13 @@ function renderTable() {
         // construction), so a bare ✓ here must read as "validated, not
         // timed" — not as broken/missing data.
         if (!c.ok || !Number.isFinite(c.ms)) {
+          // Build-tier sentinel: an elementwise op with no BLAS/OpenMP code
+          // path runs identically across tiers, so this blas-only / omp-only
+          // cell is marked "≡ native" instead of a redundant duplicate time.
+          if (c.build_insensitive) {
+            tr += `<td class="${lcls} cell-build-insensitive" title="≡ native — no BLAS/OpenMP code path, so this tier matches the native build"><span class="cell-sentinel">≡</span></td>`;
+            continue;
+          }
           const notTimed = c.ok && !Number.isFinite(c.ms);
           // In divergence-δ mode a parity-only cell still carries a δ to
           // show (reference-gate rmse_rel, or "source" for the canonical

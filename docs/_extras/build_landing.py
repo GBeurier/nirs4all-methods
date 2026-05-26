@@ -1049,6 +1049,11 @@ def build_payload(results_dir: Path) -> dict:
             cell["fmt"] = fmt_ms(raw_ms)
         if r.get("timing_statistic"):
             cell["timing_statistic"] = r["timing_statistic"]
+        # Sentinel: an elementwise op with no BLAS/OMP code path runs the same
+        # across tiers, so the blas-only / omp-only cells are flagged "≡ native"
+        # rather than carrying a redundant duplicate timing.
+        if r.get("timing_decision") == "build_insensitive":
+            cell["build_insensitive"] = True
         if r.get("n_runs"):
             cell["n_runs"] = int(float(r["n_runs"]))
         if r.get("total_runs"):

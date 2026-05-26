@@ -33,7 +33,16 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-DEFAULT_BENCH = REPO / "build/blas-omp/bench/cpp/n4m_donor_bench"
+# C++ build tiers → the n4m_donor_bench binary linked against that libn4m
+# build. Each tier becomes its own dashboard cpp column (build_landing maps
+# dev-release→native, blas-on→blas, omp-on→omp, blas-omp→blas+omp). Only the
+# tiers whose binary is actually built get timed.
+CPP_BUILDS = ["dev-release", "blas-on", "omp-on", "blas-omp"]
+
+
+def bench_bin_for(build: str) -> Path:
+    return REPO / f"build/{build}/bench/cpp/n4m_donor_bench"
+
 
 # The dashboard donor method names come from the n4m_tests test-group names
 # (via append_n4m_tests_to_dashboard.py), which sometimes differ from the C
@@ -104,14 +113,19 @@ def load_existing(path: Path) -> dict[tuple, dict]:
     existing: dict[tuple, dict] = {}
     with path.open(newline="") as f:
         for row in csv.DictReader(f):
-            if str(row.get("ok")).lower() == "true" and (row.get("reported_ms") or "").strip():
+            done = (str(row.get("ok")).lower() == "true"
+                    and ((row.get("reported_ms") or "").strip()
+                         or row.get("timing_decision") == "build_insensitive"))
+            if done:
                 existing[cell_key(row)] = row
     return existing
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--bench-bin", type=Path, default=DEFAULT_BENCH)
+    ap.add_argument("--builds", nargs="+", default=CPP_BUILDS,
+                    help="cpp build tiers to time (each becomes a cpp column); "
+                         "tiers whose n4m_donor_bench binary is missing are skipped")
     ap.add_argument("--fixtures-csv", type=Path, default=DEFAULT_FIXTURES)
     ap.add_argument("--out-csv", type=Path, default=DEFAULT_OUT)
     ap.add_argument("--sizes", nargs="+", default=["250x50", "50x250"],
@@ -127,14 +141,16 @@ def main() -> int:
                     help="re-time every cell even if already present")
     args = ap.parse_args()
 
-    if not args.bench_bin.exists():
-        print(f"bench tool not built at {args.bench_bin}; "
-              f"`cmake --preset blas-omp -DN4M_BUILD_BENCH=ON && "
-              f"cmake --build --preset blas-omp --target n4m_donor_bench`",
-              file=sys.stderr)
+    # Discover which build tiers are actually built.
+    builds = [(b, bench_bin_for(b)) for b in args.builds if bench_bin_for(b).exists()]
+    if not builds:
+        print(f"no n4m_donor_bench binary found for any of {args.builds}; build with "
+              f"`cmake --preset <tier> -DN4M_BUILD_BENCH=ON && "
+              f"cmake --build --preset <tier> --target n4m_donor_bench`", file=sys.stderr)
         return 1
+    print(f"timing cpp build tiers: {', '.join(b for b, _ in builds)}", file=sys.stderr)
 
-    timeable = bench_methods(args.bench_bin)
+    timeable = bench_methods(builds[0][1])  # op list is identical across builds
     sizes = [tuple(int(x) for x in s.lower().split("x")) for s in args.sizes]
 
     with args.fixtures_csv.open(newline="") as f:
@@ -163,27 +179,70 @@ def main() -> int:
     # Resume: keep previously-timed cells; --force re-times everything.
     out: dict[tuple, dict] = {} if args.force else load_existing(args.out_csv)
 
-    timed = skipped = failed = 0
-    for base, bench_op in cells:
-        n, p = int(base["n"]), int(base["p"])
-        key = cell_key(base)
-        if key in out and not args.force:
-            skipped += 1
-            continue
-        rec = run_cell(args.bench_bin, bench_op, n, p, args.runs, args.seed)
-        if not rec.get("ok"):
-            failed += 1
-            print(f"  FAIL {base['algorithm']} ({bench_op}) {n}x{p}: "
-                  f"{rec.get('reason', 'unknown')}", file=sys.stderr)
-            continue
-        row = dict(base)
+    # Sentinel: an elementwise op (no BLAS/OMP code path) runs identically
+    # across tiers, so timing blas-only / omp-only is redundant. We always
+    # time the `native` baseline and the `blas+omp` production build; if they
+    # match within noise the op is build-insensitive and the blas-only /
+    # omp-only cells get a "≡ native" sentinel (timing_decision=
+    # build_insensitive, no ms) instead of a repeated number. Anchor tiers
+    # always get a real timing; only the two middle tiers can be sentineled.
+    INSENSITIVE_REL = 0.20  # |blas+omp − native| / native below this ⇒ no effect
+    builds_map = dict(builds)
+    anchors = [b for b in ("dev-release", "blas-omp") if b in builds_map]
+    middles = [b for b in ("blas-on", "omp-on") if b in builds_map]
+
+    def emit(build, base, n, p, key, rec):
+        row = dict(base); row["libp4a_build"] = build
         for col in TIMING_FIELDS:
             if col in rec:
                 row[col] = rec[col]
         out[key] = row
-        timed += 1
-        print(f"  timed {base['algorithm']:30s} {n}x{p}: {rec['reported_ms']:.4f} ms "
-              f"({rec['timing_statistic']}, {rec['n_runs']} runs)")
+
+    def sentinel(build, base):
+        row = dict(base); row["libp4a_build"] = build
+        for col in TIMING_FIELDS:
+            row[col] = ""
+        row["ok"] = "True"
+        row["timing_decision"] = "build_insensitive"
+        out[cell_key(row)] = row
+
+    timed = skipped = failed = sentineled = 0
+    for base, bench_op in cells:
+        n, p = int(base["n"]), int(base["p"])
+        recs: dict[str, dict] = {}
+        for build in anchors:
+            row = dict(base); row["libp4a_build"] = build
+            key = cell_key(row)
+            if key in out and not args.force:
+                skipped += 1; recs[build] = out[key]; continue
+            rec = run_cell(builds_map[build], bench_op, n, p, args.runs, args.seed)
+            if not rec.get("ok"):
+                failed += 1
+                print(f"  FAIL {base['algorithm']} ({bench_op}) {n}x{p} [{build}]: "
+                      f"{rec.get('reason', 'unknown')}", file=sys.stderr)
+                continue
+            emit(build, base, n, p, key, rec); recs[build] = rec; timed += 1
+        # decide build-sensitivity from the two anchors
+        nat = recs.get("dev-release", {}).get("reported_ms")
+        bo = recs.get("blas-omp", {}).get("reported_ms")
+        try:
+            insensitive = (nat and bo and abs(float(bo) - float(nat)) / float(nat) < INSENSITIVE_REL)
+        except (TypeError, ValueError):
+            insensitive = False
+        for build in middles:
+            row = dict(base); row["libp4a_build"] = build
+            key = cell_key(row)
+            if key in out and not args.force:
+                skipped += 1; continue
+            if insensitive:
+                sentinel(build, base); sentineled += 1
+            else:
+                rec = run_cell(builds_map[build], bench_op, n, p, args.runs, args.seed)
+                if not rec.get("ok"):
+                    failed += 1; continue
+                emit(build, base, n, p, key, rec); timed += 1
+        print(f"  {base['algorithm']:28s} {n}x{p}: native={nat} blas+omp={bo}"
+              f"{' (blas/omp ≡ native)' if insensitive else ''}")
 
     if skipped_unmapped:
         print(f"  (no ABI op for {len(skipped_unmapped)} dashboard method(s), "
@@ -194,8 +253,9 @@ def main() -> int:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(out.values())
-    print(f"\nWrote {len(out)} timed cpp rows "
-          f"(timed={timed}, skipped={skipped}, failed={failed}) to {args.out_csv}")
+    print(f"\nWrote {len(out)} cpp rows "
+          f"(timed={timed}, sentinel={sentineled}, skipped={skipped}, "
+          f"failed={failed}) to {args.out_csv}")
     return 0
 
 
